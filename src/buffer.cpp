@@ -339,8 +339,18 @@ bool REHex::Buffer::erase_data(size_t offset, size_t length)
 		
 		block->state = Block::DIRTY;
 		
-		erased -= to_erase;
+		/* Shift the offset back by however many bytes we've already
+		 * erased from previous blocks.
+		*/
+		block->virt_offset -= erased;
+		
+		erased += to_erase;
 		++block;
+		
+		/* Set the offset to the start of the next block where we'll
+		 * pick up the erasing at.
+		*/
+		offset = block->virt_offset;
 	}
 	
 	/* Shift the virtual offset of any subsequent blocks back. */

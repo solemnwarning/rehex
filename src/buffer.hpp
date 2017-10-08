@@ -65,8 +65,6 @@ namespace REHex {
 			void _load_block(Block *block);
 			
 		public:
-			static const unsigned int BLOCK_SIZE = 4194304; /* 4MiB */
-			
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
 			const size_t block_size;
 			

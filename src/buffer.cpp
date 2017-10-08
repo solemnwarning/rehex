@@ -371,10 +371,20 @@ REHex::Buffer::Block::Block(size_t offset, size_t length):
 
 void REHex::Buffer::Block::grow(size_t min_size)
 {
-	/* Resize to min_size, rounded up to the nearest block. */
-	if((min_size % BLOCK_SIZE) > 0)
+	if(min_size < data.size())
 	{
-		min_size += BLOCK_SIZE - (min_size % BLOCK_SIZE);
+		/* Don't ever shrink the buffer here. */
+		return;
+	}
+	
+	if(min_size == data.size() + 1)
+	{
+		/* If we've been asked to grow the block by one byte, someone
+		 * is probably typing new bytes in insert mode. Grow the buffer
+		 * by 64 bytes instead so we don't have to grow it and move the
+		 * whole buffer around on each keypress.
+		*/
+		min_size += 63;
 	}
 	
 	data.resize(min_size);

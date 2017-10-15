@@ -1099,6 +1099,312 @@ static void erase_tests()
 	}
 }
 
+#define INSERT_PREPARE() \
+	const unsigned char file_data[] = { \
+		0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01, \
+		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, \
+		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, \
+	}; \
+	\
+	write_file(TMPFILE, file_data, sizeof(file_data)); \
+	\
+	REHex::Buffer b(TMPFILE, 8);
+
+#define INSERT_DIRTY(block_i, len) \
+{ \
+	ok((b.blocks[block_i].state == REHex::Buffer::Block::DIRTY), "Changed block marked dirty"); \
+	ok((b.blocks[block_i].data.size() >= len), "Changed block has data buffer"); \
+}
+
+#define INSERT_UNLOADED(block_i) \
+{ \
+	ok((b.blocks[block_i].state == REHex::Buffer::Block::UNLOADED), "Unchanged block not loaded"); \
+	ok(b.blocks[block_i].data.empty(), "Unchanged block has no data buffer"); \
+}
+
+static void insert_tests()
+{
+	{
+		diag("Inserting data at start of first block...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(0, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(11, b.blocks[0].virt_length, "First block length increased");
+		INSERT_DIRTY(0, 11);
+		
+		is_int(11, b.blocks[1].virt_offset, "Second block offset increased");
+		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
+		INSERT_UNLOADED(1);
+		
+		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
+		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
+		INSERT_UNLOADED(2);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			/* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data in the middle of first block...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(3, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(11, b.blocks[0].virt_length, "First block length increased");
+		INSERT_DIRTY(0, 11);
+		
+		is_int(11, b.blocks[1].virt_offset, "Second block offset increased");
+		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
+		INSERT_UNLOADED(1);
+		
+		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
+		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
+		INSERT_UNLOADED(2);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, /* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data at the start of second block...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(8, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
+		INSERT_UNLOADED(0);
+		
+		is_int(8,  b.blocks[1].virt_offset, "Second block offset unchanged");
+		is_int(11, b.blocks[1].virt_length, "Second block length increased");
+		INSERT_DIRTY(1, 11);
+		
+		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
+		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
+		INSERT_UNLOADED(2);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			/* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data in the middle of second block...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(15, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
+		INSERT_UNLOADED(0);
+		
+		is_int(8,  b.blocks[1].virt_offset, "Second block offset unchanged");
+		is_int(11, b.blocks[1].virt_length, "Second block length increased");
+		INSERT_DIRTY(1, 11);
+		
+		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
+		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
+		INSERT_UNLOADED(2);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, /* > */ 0xBA, 0xD0, 0x0D, /* < */ 0xF8,
+			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data at the start of third block...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(16, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
+		INSERT_UNLOADED(0);
+		
+		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
+		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
+		INSERT_UNLOADED(1);
+		
+		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
+		is_int(10, b.blocks[2].virt_length, "Third block length increased");
+		INSERT_DIRTY(2, 10);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			/* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data in the middle of third block...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(18, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
+		INSERT_UNLOADED(0);
+		
+		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
+		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
+		INSERT_UNLOADED(1);
+		
+		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
+		is_int(10, b.blocks[2].virt_length, "Third block length increased");
+		INSERT_DIRTY(2, 10);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			0x8B, 0xC8, /* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data at the end of the file...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(b.insert_data(23, ins_data, 3), "Buffer::insert_data() returns true");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
+		INSERT_UNLOADED(0);
+		
+		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
+		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
+		INSERT_UNLOADED(1);
+		
+		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
+		is_int(10, b.blocks[2].virt_length, "Third block length increased");
+		INSERT_DIRTY(2, 10);
+		
+		is_int(26, b.length(), "Buffer::length() reflects new file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, /* > */ 0xBA, 0xD0, 0x0D, /* < */
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+	
+	{
+		diag("Inserting data beyond the end of the file...");
+		
+		INSERT_PREPARE();
+		
+		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
+		
+		ok(!b.insert_data(24, ins_data, 3), "Buffer::insert_data() returns false");
+		
+		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
+		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
+		INSERT_UNLOADED(0);
+		
+		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
+		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
+		INSERT_UNLOADED(1);
+		
+		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
+		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
+		INSERT_UNLOADED(2);
+		
+		is_int(23, b.length(), "Buffer::length() reflects unchanged file length");
+		
+		const unsigned char expect_data[] = {
+			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
+			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
+			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		};
+		
+		std::vector<unsigned char> data = b.read_data(0, 40);
+		
+		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
+			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+	}
+}
+
 int main()
 {
 	plan_lazy();
@@ -1107,6 +1413,7 @@ int main()
 	read_data_tests();
 	overwrite_tests();
 	erase_tests();
+	insert_tests();
 	
 	return 0;
 }

@@ -114,6 +114,16 @@ static std::vector<unsigned char> read_file(const char *filename)
 	is_int(expect_length, b.length(), "Buffer::length() returns correct length"); \
 }
 
+#define TEST_OVERWRITE_OK(offset, data) \
+{ \
+	ok(b.overwrite_data(offset, data, sizeof(data)), "Buffer::overwrite_data() returns true"); \
+}
+
+#define TEST_OVERWRITE_FAIL(offset, data) \
+{ \
+	ok(!b.overwrite_data(offset, data, sizeof(data)), "Buffer::overwrite_data() returns false"); \
+}
+
 #define TEST_INSERT_OK(offset, data) \
 { \
 	ok(b.insert_data(offset, data, sizeof(data)), "Buffer::insert_data() returns true"); \
@@ -340,199 +350,599 @@ static void read_data_tests()
 	}
 }
 
-#define OVERWRITE_PREPARE() \
-	const unsigned char file_data[] = { \
-		0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01, \
-		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, \
-		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, \
-	}; \
-	\
-	write_file(TMPFILE, file_data, sizeof(file_data)); \
-	\
-	REHex::Buffer b(TMPFILE, 8);
-
-#define OVERWRITE_DIRTY(block_i, len) \
-{ \
-	ok((b.blocks[block_i].state == REHex::Buffer::Block::DIRTY), "Changed block marked dirty"); \
-	ok((b.blocks[block_i].data.size() >= len), "Changed block has data buffer"); \
-}
-
-#define OVERWRITE_UNLOADED(block_i) \
-{ \
-	ok((b.blocks[block_i].state == REHex::Buffer::Block::UNLOADED), "Unchanged block not loaded"); \
-	ok(b.blocks[block_i].data.empty(), "Unchanged block has no data buffer"); \
-}
-
-#define OVERWRITE_SANITY() \
-{ \
-	is_int(3, b.blocks.size(), "Block count unchanged"); \
-	\
-	is_int(0,  b.blocks[0].virt_offset, "Block offset unchanged"); \
-	is_int(8,  b.blocks[0].virt_length, "Block length unchanged"); \
-	is_int(8,  b.blocks[1].virt_offset, "Block offset unchanged"); \
-	is_int(8,  b.blocks[1].virt_length, "Block length unchanged"); \
-	is_int(16, b.blocks[2].virt_offset, "Block offset unchanged"); \
-	is_int(7,  b.blocks[2].virt_length, "Block length unchanged"); \
-}
-
 static void overwrite_tests()
 {
 	{
-		diag("Overwriting start of first block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(b.overwrite_data(0, pattern, 4), "Buffer::overwrite_data() returns true");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_DIRTY(0, 8);
-		OVERWRITE_UNLOADED(1);
-		OVERWRITE_UNLOADED(2);
-		
-		const unsigned char new_block0[] = { 0x5E, 0xF6, 0xDB, 0x36, 0x7B, 0xDA, 0x7B, 0x01 };
-		
-		is_blob(new_block0, b.blocks[0].data.data(), 8, "Block data loaded and updated correctly");
-	}
-	
-	{
-		diag("Overwriting end of first block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(b.overwrite_data(4, pattern, 4), "Buffer::overwrite_data() returns true");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_DIRTY(0, 8);
-		OVERWRITE_UNLOADED(1);
-		OVERWRITE_UNLOADED(2);
-		
-		const unsigned char new_block0[] = { 0x60, 0x96, 0x45, 0x74, 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		is_blob(new_block0, b.blocks[0].data.data(), 8, "Block data loaded and updated correctly");
-	}
-	
-	{
-		diag("Overwriting start of second block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(b.overwrite_data(8, pattern, 4), "Buffer::overwrite_data() returns true");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_UNLOADED(0);
-		OVERWRITE_DIRTY(1, 8);
-		OVERWRITE_UNLOADED(2);
-		
-		const unsigned char new_block1[] = { 0x5E, 0xF6, 0xDB, 0x36, 0x8D, 0xAC, 0xFC, 0xF8 };
-		
-		is_blob(new_block1, b.blocks[1].data.data(), 8, "Block data loaded and updated correctly");
-	}
-	
-	{
-		diag("Overwriting part of first and second block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(b.overwrite_data(6, pattern, 4), "Buffer::overwrite_data() returns true");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_DIRTY(0, 8);
-		OVERWRITE_DIRTY(1, 8);
-		OVERWRITE_UNLOADED(2);
-		
-		const unsigned char new_block0[] = { 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x5E, 0xF6 };
-		const unsigned char new_block1[] = { 0xDB, 0x36, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8 };
-		
-		is_blob(new_block0, b.blocks[0].data.data(), 8, "Block data loaded and updated correctly");
-		is_blob(new_block1, b.blocks[1].data.data(), 8, "Block data loaded and updated correctly");
-	}
-	
-	{
-		diag("Overwriting end of last block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(b.overwrite_data(19, pattern, 4), "Buffer::overwrite_data() returns true");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_UNLOADED(0);
-		OVERWRITE_UNLOADED(1);
-		OVERWRITE_DIRTY(2, 7);
-		
-		const unsigned char new_block2[] = { 0x8B, 0xC8, 0x97, 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		is_blob(new_block2, b.blocks[2].data.data(), 7, "Block data loaded and updated correctly");
-	}
-	
-	{
-		diag("Overwriting past end of last block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(!b.overwrite_data(20, pattern, 4), "Buffer::overwrite_data() returns false");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_UNLOADED(0);
-		OVERWRITE_UNLOADED(1);
-		OVERWRITE_UNLOADED(2);
-	}
-	
-	{
-		diag("Overwriting from past end of last block...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = { 0x5E, 0xF6, 0xDB, 0x36 };
-		
-		ok(!b.overwrite_data(30, pattern, 4), "Buffer::overwrite_data() returns false");
-		
-		OVERWRITE_SANITY();
-		
-		OVERWRITE_UNLOADED(0);
-		OVERWRITE_UNLOADED(1);
-		OVERWRITE_UNLOADED(2);
-	}
-	
-	{
-		diag("Overwriting whole buffer...");
-		
-		OVERWRITE_PREPARE();
-		
-		const unsigned char pattern[] = {
-			0xFA, 0x7C, 0xB2, 0x77, 0xA1, 0x46, 0x66, 0x1D,
-			0x5C, 0x74, 0x1D, 0x97, 0x0E, 0x1E, 0x8E, 0x5C,
-			0x8E, 0x7D, 0xA3, 0x9E, 0x7B, 0xE5, 0x55,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		ok(b.overwrite_data(0, pattern, 23), "Buffer::overwrite_data() returns true");
+		const unsigned char END_DATA[] = {
+			0xF0, 0x0D, 0x77, 0xA4, 0xE2,
+		};
 		
-		OVERWRITE_SANITY();
+		TEST_BUFFER_MANIP(
+			"Overwriting start of a <1 block file",
+			{
+				TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
 		
-		OVERWRITE_DIRTY(0, 8);
-		OVERWRITE_DIRTY(1, 8);
-		OVERWRITE_DIRTY(2, 7);
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xF0, 0x0D,
+		};
 		
-		is_blob(pattern,      b.blocks[0].data.data(), 8, "Block data updated correctly");
-		is_blob(pattern + 8,  b.blocks[1].data.data(), 8, "Block data updated correctly");
-		is_blob(pattern + 16, b.blocks[2].data.data(), 7, "Block data updated correctly");
+		TEST_BUFFER_MANIP(
+			"Overwriting end of a <1 block file",
+			{
+				TEST_OVERWRITE_OK(3, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x65, 0x87, 0x49, 0x7A, 0x06,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting all of a <1 block file",
+			{
+				TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0x65, 0x87, 0x49, 0x7A, 0x06, }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting more than all of a <1 block file",
+			{
+				TEST_OVERWRITE_FAIL(0, ((const unsigned char[]){ 0x65, 0x87, 0x49, 0x7A, 0x06, 0xAA }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting beyond end of a <1 block file",
+			{
+				TEST_OVERWRITE_FAIL(5, ((const unsigned char[]){ 0x65 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xF0, 0x0D, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting start of a 1 block file",
+			{
+				TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0xF0, 0x0D,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting end of a 1 block file",
+			{
+				TEST_OVERWRITE_OK(6, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting all of a 1 block file",
+			{
+				TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0, }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting more than all of a 1 block file",
+			{
+				TEST_OVERWRITE_FAIL(0, ((const unsigned char[]){ 0x87, 0x6A, 0x6E, 0xCB, 0xB3, 0x99, 0xF4, 0xE7, 0xAA }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting beyond end of a 1 block file",
+			{
+				TEST_OVERWRITE_FAIL(8, ((const unsigned char[]){ 0x65 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xF0, 0x0D, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting start of the first block in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0xF0, 0x0D,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting end of the first block in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(6, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xF0, 0x0D, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting start of the second block in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(8, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(DIRTY,    8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0xF0, 0x0D,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting end of the second block in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(14, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(DIRTY,    8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0xF0, 0x0D, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting start of the last block in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(24, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0xF0, 0x0D,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting end of the last block in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(28, ((const unsigned char[]){ 0xF0, 0x0D }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0xF0, 0x0D,
+			0xB4, 0x70, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting part of first and second blocks in a 4 block file",
+			{
+				TEST_OVERWRITE_OK(6, ((const unsigned char[]){ 0xF0, 0x0D, 0xB4, 0x70 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  8);
+					TEST_BLOCK_DEF(DIRTY,    8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x6A, 0xD1, 0xBE, 0x3A, 0x09, 0x75, 0xD8, 0x7E,
+			0x27, 0x4F, 0xEF, 0xAF, 0xE2, 0x4E, 0x04, 0xAA,
+			0x35, 0x0C, 0xFD, 0xCF, 0x07, 0xDD, 0xE4, 0x7F,
+			0xF5, 0x69, 0x64, 0x35, 0xB1, 0x9A,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting all of a 4 block file",
+			{
+				TEST_OVERWRITE_OK(0, END_DATA);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0,  8);
+					TEST_BLOCK_DEF(DIRTY, 8,  8);
+					TEST_BLOCK_DEF(DIRTY, 16, 8);
+					TEST_BLOCK_DEF(DIRTY, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char TOOMUCH[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9, 0xAA
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting more than all of a 4 block file",
+			{
+				TEST_OVERWRITE_FAIL(0, TOOMUCH);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting beyond end of a 4 block file",
+			{
+				TEST_OVERWRITE_FAIL(30, ((const unsigned char[]){ 0x65 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {};
+		const unsigned char END_DATA[]   = {};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting at start of an empty file",
+			{
+				TEST_OVERWRITE_FAIL(0, ((const unsigned char[]){ 0x65 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {};
+		const unsigned char END_DATA[]   = {};
+		
+		TEST_BUFFER_MANIP(
+			"Overwriting in an empty file",
+			{
+				TEST_OVERWRITE_FAIL(2, ((const unsigned char[]){ 0x65 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
 	}
 }
 

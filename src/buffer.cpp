@@ -72,11 +72,14 @@ void REHex::Buffer::_load_block(Block *block)
 	 * lot loaded in.
 	*/
 	
-	assert(fseeko(fh, block->real_offset, SEEK_SET) == 0);
-	
-	block->grow(block->virt_length);
-	
-	assert(fread(block->data.data(), block->virt_length, 1, fh) == 1);
+	if(block->virt_length > 0)
+	{
+		assert(fseeko(fh, block->real_offset, SEEK_SET) == 0);
+		
+		block->grow(block->virt_length);
+		
+		assert(fread(block->data.data(), block->virt_length, 1, fh) == 1);
+	}
 	
 	block->state = Block::CLEAN;
 }
@@ -191,8 +194,11 @@ void REHex::Buffer::write_copy(const std::string &filename)
 	
 	for(auto b = blocks.begin(); b != blocks.end(); ++b)
 	{
-		_load_block(&(*b));
-		assert(fwrite(b->data.data(), b->virt_length, 1, out) == 1);
+		if(b->virt_length > 0)
+		{
+			_load_block(&(*b));
+			assert(fwrite(b->data.data(), b->virt_length, 1, out) == 1);
+		}
 	}
 	
 	fclose(out);

@@ -26,7 +26,8 @@
 #define UNIT_TEST
 #include "../src/buffer.hpp"
 
-#define TMPFILE "tests/.tmpfile"
+#define TMPFILE  "tests/.tmpfile"
+#define TMPFILE2 "tests/.tmpfile2"
 
 static void write_file(const char *filename, const void *data, size_t length)
 {
@@ -58,6 +59,69 @@ static std::vector<unsigned char> read_file(const char *filename)
 	fclose(fh);
 	
 	return data;
+}
+
+#define TEST_BUFFER_MANIP(desc, buffer_manip_code) \
+{ \
+	diag(desc ", checking result with read_data()"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	std::vector<unsigned char> data = b.read_data(0, 40); \
+	is_int(sizeof(END_DATA), data.size(), "Buffer::read_data() returns correct number of bytes") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "Buffer::read_data() returns correct data"); \
+} \
+{ \
+	diag(desc ", checking result with write_inplace()"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	b.write_inplace(); \
+	std::vector<unsigned char> data = read_file(TMPFILE); \
+	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \
+} \
+{ \
+	diag(desc ", checking result with write_copy()"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	b.write_copy(TMPFILE2); \
+	std::vector<unsigned char> data = read_file(TMPFILE2); \
+	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \
+}
+
+#define TEST_BLOCKS(blocks_code) \
+{ \
+	int n_blocks = 0; \
+	blocks_code; \
+	is_int(n_blocks, b.blocks.size(), "Buffer has correct number of blocks"); \
+}
+
+#define TEST_BLOCK_DEF(expect_state, expect_vo, expect_vl) \
+{ \
+	if(b.blocks.size() > (unsigned)(n_blocks)) { \
+		ok((b.blocks[n_blocks].state == REHex::Buffer::Block::expect_state), "blocks[%d] has correct state", n_blocks); \
+		is_int(expect_vo, b.blocks[n_blocks].virt_offset, "blocks[%d] has correct virt_offset", n_blocks); \
+		is_int(expect_vl, b.blocks[n_blocks].virt_length, "blocks[%d] has correct virt_length", n_blocks); \
+	} \
+	++n_blocks; \
+}
+
+#define TEST_LENGTH(expect_length) \
+{ \
+	is_int(expect_length, b.length(), "Buffer::length() returns correct length"); \
+}
+
+#define TEST_INSERT_OK(offset, data) \
+{ \
+	ok(b.insert_data(offset, data, sizeof(data)), "Buffer::insert_data() returns true"); \
+}
+
+#define TEST_INSERT_FAIL(offset, data) \
+{ \
+	ok(!b.insert_data(offset, data, sizeof(data)), "Buffer::insert_data() returns false"); \
 }
 
 static void ctor_tests()
@@ -1099,309 +1163,627 @@ static void erase_tests()
 	}
 }
 
-#define INSERT_PREPARE() \
-	const unsigned char file_data[] = { \
-		0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01, \
-		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, \
-		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, \
-	}; \
-	\
-	write_file(TMPFILE, file_data, sizeof(file_data)); \
-	\
-	REHex::Buffer b(TMPFILE, 8);
-
-#define INSERT_DIRTY(block_i, len) \
-{ \
-	ok((b.blocks[block_i].state == REHex::Buffer::Block::DIRTY), "Changed block marked dirty"); \
-	ok((b.blocks[block_i].data.size() >= len), "Changed block has data buffer"); \
-}
-
-#define INSERT_UNLOADED(block_i) \
-{ \
-	ok((b.blocks[block_i].state == REHex::Buffer::Block::UNLOADED), "Unchanged block not loaded"); \
-	ok(b.blocks[block_i].data.empty(), "Unchanged block has no data buffer"); \
-}
-
 static void insert_tests()
 {
 	{
-		diag("Inserting data at start of first block...");
+		const unsigned char BEGIN_DATA[] = {};
+		const unsigned char END_DATA[]   = { 0xAA, 0xBB, 0xCC, 0xDD };
 		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(0, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(11, b.blocks[0].virt_length, "First block length increased");
-		INSERT_DIRTY(0, 11);
-		
-		is_int(11, b.blocks[1].virt_offset, "Second block offset increased");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		INSERT_UNLOADED(1);
-		
-		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		INSERT_UNLOADED(2);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			/* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
-		};
-		
-		std::vector<unsigned char> data = b.read_data(0, 40);
-		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Inserting into an empty file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 4);
+				});
+				
+				TEST_LENGTH(4);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data in the middle of first block...");
+		const unsigned char BEGIN_DATA[] = {};
+		const unsigned char END_DATA[]   = { 0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xEE, 0xFF, 0xDD };
 		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(3, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(11, b.blocks[0].virt_length, "First block length increased");
-		INSERT_DIRTY(0, 11);
-		
-		is_int(11, b.blocks[1].virt_offset, "Second block offset increased");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		INSERT_UNLOADED(1);
-		
-		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		INSERT_UNLOADED(2);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, /* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
-		};
-		
-		std::vector<unsigned char> data = b.read_data(0, 40);
-		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Multiple inserts into an empty file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				TEST_INSERT_OK(3, ((const unsigned char[]){ 0xEE, 0xFF }));
+				TEST_INSERT_OK(1, ((const unsigned char[]){ 0x00, 0x11 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data at the start of second block...");
+		const unsigned char BEGIN_DATA[] = {};
+		const unsigned char END_DATA[]   = {};
 		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(8, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		INSERT_UNLOADED(0);
-		
-		is_int(8,  b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(11, b.blocks[1].virt_length, "Second block length increased");
-		INSERT_DIRTY(1, 11);
-		
-		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		INSERT_UNLOADED(2);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			/* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
-		};
-		
-		std::vector<unsigned char> data = b.read_data(0, 40);
-		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Inserting beyond the end of an empty file",
+			{
+				TEST_INSERT_FAIL(1, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data in the middle of second block...");
-		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(15, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		INSERT_UNLOADED(0);
-		
-		is_int(8,  b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(11, b.blocks[1].virt_length, "Second block length increased");
-		INSERT_DIRTY(1, 11);
-		
-		is_int(19, b.blocks[2].virt_offset, "Third block offset increased");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		INSERT_UNLOADED(2);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, /* > */ 0xBA, 0xD0, 0x0D, /* < */ 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Inserting at the start of a <1 block file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 10);
+				});
+				
+				TEST_LENGTH(10);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data at the start of third block...");
-		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(16, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		INSERT_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		INSERT_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(10, b.blocks[2].virt_length, "Third block length increased");
-		INSERT_DIRTY(2, 10);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			/* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x68, 0xAB,
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0x8A, 0xEF, 0x5F, 0xCA,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Inserting into a <1 block file",
+			{
+				TEST_INSERT_OK(2, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 10);
+				});
+				
+				TEST_LENGTH(10);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data in the middle of third block...");
-		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(18, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		INSERT_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		INSERT_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(10, b.blocks[2].virt_length, "Third block length increased");
-		INSERT_DIRTY(2, 10);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, /* > */ 0xBA, 0xD0, 0x0D, /* < */ 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
+			0xAA, 0xBB, 0xCC, 0xDD,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Inserting at the end of a <1 block file",
+			{
+				TEST_INSERT_OK(6, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 10);
+				});
+				
+				TEST_LENGTH(10);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data at the end of the file...");
-		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(b.insert_data(23, ins_data, 3), "Buffer::insert_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		INSERT_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		INSERT_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(10, b.blocks[2].virt_length, "Third block length increased");
-		INSERT_DIRTY(2, 10);
-		
-		is_int(26, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, /* > */ 0xBA, 0xD0, 0x0D, /* < */
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			/* > */ 0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xDD, /* < */
+			0x68, 0xAB, /* > */ 0xEE, 0xFF, /* < */ 0x8A, 0xEF, 0x5F, 0xCA,
+			
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Multiple inserts into a <1 block file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 10);
+				});
+				
+				TEST_INSERT_OK(6, ((const unsigned char[]){ 0xEE, 0xFF }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 12);
+				});
+				
+				TEST_INSERT_OK(1, ((const unsigned char[]){ 0x00, 0x11 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 14);
+				});
+				
+				TEST_LENGTH(14);
+			}
+		);
 	}
 	
 	{
-		diag("Inserting data beyond the end of the file...");
-		
-		INSERT_PREPARE();
-		
-		const unsigned char ins_data[] = { 0xBA, 0xD0, 0x0D };
-		
-		ok(!b.insert_data(24, ins_data, 3), "Buffer::insert_data() returns false");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		INSERT_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		INSERT_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		INSERT_UNLOADED(2);
-		
-		is_int(23, b.length(), "Buffer::length() reflects unchanged file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Inserting beyond the end of a <1 block file",
+			{
+				TEST_INSERT_FAIL(7, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 6);
+				});
+				
+				TEST_LENGTH(6);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting at the start of a 1 block file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 12);
+				});
+				
+				TEST_LENGTH(12);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x68, 0xAB,
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting into a 1 block file",
+			{
+				TEST_INSERT_OK(2, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 12);
+				});
+				
+				TEST_LENGTH(12);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+			0xAA, 0xBB, 0xCC, 0xDD,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting at the end of a 1 block file",
+			{
+				TEST_INSERT_OK(8, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 12);
+				});
+				
+				TEST_LENGTH(12);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xDD,
+			0x68, 0xAB, 0xEE, 0xFF, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Multiple inserts into a 1 block file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 12);
+				});
+				
+				TEST_INSERT_OK(6, ((const unsigned char[]){ 0xEE, 0xFF }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 14);
+				});
+				
+				TEST_INSERT_OK(1, ((const unsigned char[]){ 0x00, 0x11 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 16);
+				});
+				
+				TEST_LENGTH(16);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting beyond the end of a 1 block file",
+			{
+				TEST_INSERT_FAIL(9, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting at the start of a 4 block file",
+			{
+				TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  12);
+					TEST_BLOCK_DEF(UNLOADED, 12, 8);
+					TEST_BLOCK_DEF(UNLOADED, 20, 8);
+					TEST_BLOCK_DEF(UNLOADED, 28, 5);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8,
+			                              0xAA, 0xBB, 0xCC, 0xDD,
+			                              0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting into the first block in a 4 block file",
+			{
+				TEST_INSERT_OK(5, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  12);
+					TEST_BLOCK_DEF(UNLOADED, 12, 8);
+					TEST_BLOCK_DEF(UNLOADED, 20, 8);
+					TEST_BLOCK_DEF(UNLOADED, 28, 5);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting at the start of a block in a 4 block file",
+			{
+				TEST_INSERT_OK(16, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(DIRTY,    16, 12);
+					TEST_BLOCK_DEF(UNLOADED, 28, 5);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0,
+			      0xAA, 0xBB, 0xCC, 0xDD,
+			      0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting into a block in a 4 block file",
+			{
+				TEST_INSERT_OK(17, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(DIRTY,    16, 12);
+					TEST_BLOCK_DEF(UNLOADED, 28, 5);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0xAA, 0xBB, 0xCC, 0xDD,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting at the start of the last block in a 4 block file",
+			{
+				TEST_INSERT_OK(24, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 9);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24,
+			            0xAA, 0xBB, 0xCC, 0xDD,
+			            0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting into the last block in a 4 block file",
+			{
+				TEST_INSERT_OK(26, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 9);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+			                              0xAA, 0xBB, 0xCC, 0xDD,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting at the end of the last block in a 4 block file",
+			{
+				TEST_INSERT_OK(29, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 9);
+				});
+				
+				TEST_LENGTH(33);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, /* > */ 0xAA, 0xBB, 0xCC, 0xDD, /* < */ 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, /* > */ 0x00, 0x11, /* < */ 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, /* > */ 0xEE, 0xFF, /* < */ 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Multiple inserts into a 4 block file",
+			{
+				TEST_INSERT_OK(4,  ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				TEST_INSERT_OK(22, ((const unsigned char[]){ 0xEE, 0xFF }));
+				TEST_INSERT_OK(16, ((const unsigned char[]){ 0x00, 0x11 }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  12);
+					TEST_BLOCK_DEF(DIRTY,    12, 10);
+					TEST_BLOCK_DEF(DIRTY,    22, 10);
+					TEST_BLOCK_DEF(UNLOADED, 32, 5);
+				});
+				
+				TEST_LENGTH(37);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
+			0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
+			0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
+			0x7D, 0x24, 0x3C, 0x43, 0xE1,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Inserting beyond the end of a 4 block file",
+			{
+				TEST_INSERT_FAIL(30, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 5);
+				});
+				
+				TEST_LENGTH(29);
+			}
+		);
 	}
 }
 

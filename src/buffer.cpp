@@ -145,10 +145,13 @@ void REHex::Buffer::write_inplace()
 			continue;
 		}
 		
-		_load_block(&(*b));
-		
-		assert(fseeko(fh, b->virt_offset, SEEK_SET) == 0);
-		assert(fwrite(b->data.data(), b->virt_length, 1, fh) == 1);
+		if(b->virt_length > 0)
+		{
+			_load_block(&(*b));
+			
+			assert(fseeko(fh, b->virt_offset, SEEK_SET) == 0);
+			assert(fwrite(b->data.data(), b->virt_length, 1, fh) == 1);
+		}
 		
 		b = pending.erase(b);
 		

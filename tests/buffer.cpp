@@ -124,6 +124,16 @@ static std::vector<unsigned char> read_file(const char *filename)
 	ok(!b.overwrite_data(offset, data, sizeof(data)), "Buffer::overwrite_data() returns false"); \
 }
 
+#define TEST_ERASE_OK(offset, length) \
+{ \
+	ok(b.erase_data(offset, length), "Buffer::erase_data() returns true"); \
+}
+
+#define TEST_ERASE_FAIL(offset, length) \
+{ \
+	ok(!b.erase_data(offset, length), "Buffer::erase_data() returns false"); \
+}
+
 #define TEST_INSERT_OK(offset, data) \
 { \
 	ok(b.insert_data(offset, data, sizeof(data)), "Buffer::insert_data() returns true"); \
@@ -946,591 +956,668 @@ static void overwrite_tests()
 	}
 }
 
-#define ERASE_PREPARE() \
-	const unsigned char file_data[] = { \
-		0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01, \
-		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, \
-		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, \
-	}; \
-	\
-	write_file(TMPFILE, file_data, sizeof(file_data)); \
-	\
-	REHex::Buffer b(TMPFILE, 8);
-
-#define ERASE_DIRTY(block_i, len) \
-{ \
-	ok((b.blocks[block_i].state == REHex::Buffer::Block::DIRTY), "Changed block marked dirty"); \
-	ok((b.blocks[block_i].data.size() >= len), "Changed block has data buffer"); \
-}
-
-#define ERASE_UNLOADED(block_i) \
-{ \
-	ok((b.blocks[block_i].state == REHex::Buffer::Block::UNLOADED), "Unchanged block not loaded"); \
-	ok(b.blocks[block_i].data.empty(), "Unchanged block has no data buffer"); \
-}
-
 static void erase_tests()
 {
 	{
-		diag("Erasing data from start of first block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(0, 2), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(6, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 6);
-		
-		is_int(6, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(14, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(21, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			/* 0x60, 0x96, */ 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x77, 0xA4, 0xE2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing start of a <1 block file",
+			{
+				TEST_ERASE_OK(0, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 3);
+				});
+				
+				TEST_LENGTH(3);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing data from middle of first block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(2, 2), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(6, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 6);
-		
-		is_int(6, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(14, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(21, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, /* 0x45, 0x74, */ 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing end of a <1 block file",
+			{
+				TEST_ERASE_OK(2, 3);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 2);
+				});
+				
+				TEST_LENGTH(2);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing data from end of first block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(4, 4), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(4, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 4);
-		
-		is_int(4, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(12, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(19, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, /* 0x7B, 0xDA, 0x7B, 0x01, */
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1, 0xE2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing part of a <1 block file",
+			{
+				TEST_ERASE_OK(2, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 3);
+				});
+				
+				TEST_LENGTH(3);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing whole first block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(0, 8), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(0, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 0);
-		
-		is_int(0, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(8, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7, b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(15, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			/* 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01, */
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing all of a <1 block file",
+			{
+				TEST_ERASE_OK(0, 5);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing data from start of second block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(8, 3), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(5, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 5);
-		
-		is_int(13, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(20, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			/* 0x1B, 0x84, 0x09, */ 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing more than all of a <1 block file",
+			{
+				TEST_ERASE_FAIL(0, 6);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing data from end of second block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(14, 2), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(6, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 6);
-		
-		is_int(14, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(21, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, /* 0xFC, 0xF8, */
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0xF8, 0xD1, 0x77, 0xA4, 0xE2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
-		
+		TEST_BUFFER_MANIP(
+			"Erasing beyond end of a <1 block file",
+			{
+				TEST_ERASE_FAIL(5, 1);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing second block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(8, 8), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(0, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 0);
-		
-		is_int(8, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7, b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(15, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			/* 0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, */
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			/* 0xF0, 0x0D, */ 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing start of a 1 block file",
+			{
+				TEST_ERASE_OK(0, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 6);
+				});
+				
+				TEST_LENGTH(6);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing part of first and second blocks...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(6, 8), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(6, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 6);
-		
-		is_int(6, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(2, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 2);
-		
-		is_int(8, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7, b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(15, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, /* 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, */ 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, /* 0x74, 0x50, 0xD2, */
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing end of a 1 block file",
+			{
+				TEST_ERASE_OK(5, 3);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 5);
+				});
+				
+				TEST_LENGTH(5);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing all of first and second blocks...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(0, 16), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(0, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 0);
-		
-		is_int(0, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(0, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 0);
-		
-		is_int(0, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(7, b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(7, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			/* 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, */
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, /* 0x9B, 0x25, 0xCB, 0x74, */ 0x50, 0xD2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing part of a 1 block file",
+			{
+				TEST_ERASE_OK(2, 4);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 4);
+				});
+				
+				TEST_LENGTH(4);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing start of third block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(16, 2), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(5,  b.blocks[2].virt_length, "Third block length reduced");
-		ERASE_DIRTY(2, 5);
-		
-		is_int(21, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			/* 0x8B, 0xC8, */ 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			/* 0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0, */
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing all of a 1 block file",
+			{
+				TEST_ERASE_OK(0, 8);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing end of third block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(20, 3), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(4,  b.blocks[2].virt_length, "Third block length reduced");
-		ERASE_DIRTY(2, 4);
-		
-		is_int(20, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, /* 0xC4, 0x26, 0x2C, */
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing more than all of a 1 block file",
+			{
+				TEST_ERASE_FAIL(0, 9);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing third block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(16, 7), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(0,  b.blocks[2].virt_length, "Third block length reduced");
-		ERASE_DIRTY(2, 0);
-		
-		is_int(16, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			/* 0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, */
+		const unsigned char BEGIN_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing beyond end of a 1 block file",
+			{
+				TEST_ERASE_FAIL(8, 1);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing whole file...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(0, 23), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(0, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 0);
-		
-		is_int(0, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(0, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 0);
-		
-		is_int(0, b.blocks[2].virt_offset, "Third block offset reduced");
-		is_int(0, b.blocks[2].virt_length, "Third block length reduced");
-		ERASE_DIRTY(2, 0);
-		
-		is_int(0, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			/* 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, */
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			/* 0x06, 0x96, */ 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing start of the first block in a 4 block file",
+			{
+				TEST_ERASE_OK(0, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  6);
+					TEST_BLOCK_DEF(UNLOADED, 6,  8);
+					TEST_BLOCK_DEF(UNLOADED, 14, 8);
+					TEST_BLOCK_DEF(UNLOADED, 22, 6);
+				});
+				
+				TEST_LENGTH(28);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing beyond end of third block...");
-		
-		ERASE_PREPARE();
-		
-		ok(!b.erase_data(20, 4), "Buffer::erase_data() returns false");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(23, b.length(), "Buffer::length() reflects unchanged file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, /* 0xB5, 0x99, 0x4E, */
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing end of the first block in a 4 block file",
+			{
+				TEST_ERASE_OK(5, 3);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  5);
+					TEST_BLOCK_DEF(UNLOADED, 5,  8);
+					TEST_BLOCK_DEF(UNLOADED, 13, 8);
+					TEST_BLOCK_DEF(UNLOADED, 21, 6);
+				});
+				
+				TEST_LENGTH(27);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing from end of third block...");
-		
-		ERASE_PREPARE();
-		
-		ok(!b.erase_data(23, 4), "Buffer::erase_data() returns false");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(23, b.length(), "Buffer::length() reflects unchanged file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			/* 0xE7, 0xA8, 0x06, */ 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing start of the second block in a 4 block file",
+			{
+				TEST_ERASE_OK(8, 3);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(DIRTY,    8,  5);
+					TEST_BLOCK_DEF(UNLOADED, 13, 8);
+					TEST_BLOCK_DEF(UNLOADED, 21, 6);
+				});
+				
+				TEST_LENGTH(27);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing from beyond end of third block...");
-		
-		ERASE_PREPARE();
-		
-		ok(!b.erase_data(30, 4), "Buffer::erase_data() returns false");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(23, b.length(), "Buffer::length() reflects unchanged file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, /* 0x8C, 0xD1, */
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing end of the second block in a 4 block file",
+			{
+				TEST_ERASE_OK(14, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(DIRTY,    8,  6);
+					TEST_BLOCK_DEF(UNLOADED, 14, 8);
+					TEST_BLOCK_DEF(UNLOADED, 22, 6);
+				});
+				
+				TEST_LENGTH(28);
+			}
+		);
 	}
 	
 	{
-		diag("Erasing zero bytes from first block...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(0, 0), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(8, b.blocks[0].virt_length, "First block length unchanged");
-		ERASE_UNLOADED(0);
-		
-		is_int(8, b.blocks[1].virt_offset, "Second block offset unchanged");
-		is_int(8, b.blocks[1].virt_length, "Second block length unchanged");
-		ERASE_UNLOADED(1);
-		
-		is_int(16, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(7,  b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_UNLOADED(2);
-		
-		is_int(23, b.length(), "Buffer::length() reflects unchanged file length");
-		
-		const unsigned char expect_data[] = {
-			0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			/* 0x51, 0xA0, */ 0x0D, 0xAD, 0x67, 0xC9,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing start of the last block in a 4 block file",
+			{
+				TEST_ERASE_OK(24, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 4);
+				});
+				
+				TEST_LENGTH(28);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, /* 0x67, 0xC9, */
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing end of the last block in a 4 block file",
+			{
+				TEST_ERASE_OK(28, 2);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(DIRTY,    24, 4);
+				});
+				
+				TEST_LENGTH(28);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, /* 0x99, 0x4E,
+			0xE7, 0xA8, */ 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing part of first and second blocks in a 4 block file",
+			{
+				TEST_ERASE_OK(6, 4);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  6);
+					TEST_BLOCK_DEF(DIRTY,    6,  6);
+					TEST_BLOCK_DEF(UNLOADED, 12, 8);
+					TEST_BLOCK_DEF(UNLOADED, 20, 6);
+				});
+				
+				TEST_LENGTH(26);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, /* 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, */ 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing all but the start/end in a 4 block file",
+			{
+				TEST_ERASE_OK(3, 24);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 3);
+					TEST_BLOCK_DEF(DIRTY, 3, 0);
+					TEST_BLOCK_DEF(DIRTY, 3, 0);
+					TEST_BLOCK_DEF(DIRTY, 3, 3);
+				});
+				
+				TEST_LENGTH(6);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing all of a 4 block file",
+			{
+				TEST_ERASE_OK(0, 30);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY, 0, 0);
+					TEST_BLOCK_DEF(DIRTY, 0, 0);
+					TEST_BLOCK_DEF(DIRTY, 0, 0);
+					TEST_BLOCK_DEF(DIRTY, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing more than all of a 4 block file",
+			{
+				TEST_ERASE_FAIL(0, 31);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing beyond end of a 4 block file",
+			{
+				TEST_ERASE_FAIL(30, 1);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 8);
+					TEST_BLOCK_DEF(UNLOADED, 24, 6);
+				});
+				
+				TEST_LENGTH(30);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {};
+		const unsigned char END_DATA[]   = {};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing at start of an empty file",
+			{
+				TEST_ERASE_FAIL(0, 1);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 0);
+				});
+				
+				TEST_LENGTH(0);
+			}
+		);
+	}
+	
+	{
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		};
+		
+		const unsigned char END_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing zero bytes from a file",
+			{
+				TEST_ERASE_OK(0, 0);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+				});
+				
+				TEST_LENGTH(8);
+			}
+		);
 	}
 	
 	{
@@ -1538,38 +1625,115 @@ static void erase_tests()
 		 * zero-length blocks and blocks with the same offset correctly.
 		*/
 		
-		diag("Erasing all blocks, in sequence...");
-		
-		ERASE_PREPARE();
-		
-		ok(b.erase_data(0, 8), "Buffer::erase_data() returns true");
-		ok(b.erase_data(0, 8), "Buffer::erase_data() returns true");
-		ok(b.erase_data(0, 7), "Buffer::erase_data() returns true");
-		
-		is_int(0, b.blocks[0].virt_offset, "First block offset unchanged");
-		is_int(0, b.blocks[0].virt_length, "First block length reduced");
-		ERASE_DIRTY(0, 0);
-		
-		is_int(0, b.blocks[1].virt_offset, "Second block offset reduced");
-		is_int(0, b.blocks[1].virt_length, "Second block length reduced");
-		ERASE_DIRTY(1, 0);
-		
-		is_int(0, b.blocks[2].virt_offset, "Third block offset unchanged");
-		is_int(0, b.blocks[2].virt_length, "Third block length unchanged");
-		ERASE_DIRTY(2, 0);
-		
-		is_int(0, b.length(), "Buffer::length() reflects new file length");
-		
-		const unsigned char expect_data[] = {
-			/* 0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
-			0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
-			0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, */
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 		};
 		
-		std::vector<unsigned char> data = b.read_data(0, 40);
+		const unsigned char END_DATA[] = {
+			/* 0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E, */
+			/* 0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1, */
+			/* 0xE0, 0x3B, 0x0F, 0x7C, */ 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
 		
-		is_int(sizeof(expect_data), data.size(), "Buffer::read_data() returns correct number of bytes")
-			&& is_blob(expect_data, data.data(), sizeof(expect_data), "Buffer::read_data() returns correct data");
+		TEST_BUFFER_MANIP(
+			"Erasing blocks in sequence",
+			{
+				TEST_ERASE_OK(0, 8);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  0);
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 6);
+				});
+				
+				TEST_LENGTH(22);
+				
+				TEST_ERASE_OK(0, 8);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+					TEST_BLOCK_DEF(UNLOADED, 8, 6);
+				});
+				
+				TEST_LENGTH(14);
+				
+				TEST_ERASE_OK(0, 4);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(DIRTY,    0, 4);
+					TEST_BLOCK_DEF(UNLOADED, 4, 6);
+				});
+				
+				TEST_LENGTH(10);
+			}
+		);
+	}
+	
+	{
+		/* Test erasing in sequence so we can see erase_data() handles
+		 * zero-length blocks and blocks with the same offset correctly.
+		*/
+		
+		const unsigned char BEGIN_DATA[] = {
+			0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+			0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+		};
+		
+		const unsigned char END_DATA[] = {
+			/* 0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E, */
+			/* 0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1, */
+			0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+			/* 0x51, 0xA0, 0x0D, 0xAD, */ 0x67, 0xC9,
+		};
+		
+		TEST_BUFFER_MANIP(
+			"Erasing blocks in non-contiguous sequence",
+			{
+				TEST_ERASE_OK(0, 8);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0,  0);
+					TEST_BLOCK_DEF(UNLOADED, 0,  8);
+					TEST_BLOCK_DEF(UNLOADED, 8,  8);
+					TEST_BLOCK_DEF(UNLOADED, 16, 6);
+				});
+				
+				TEST_LENGTH(22);
+				
+				TEST_ERASE_OK(0, 8);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+					TEST_BLOCK_DEF(UNLOADED, 8, 6);
+				});
+				
+				TEST_LENGTH(14);
+				
+				TEST_ERASE_OK(8, 4);
+				
+				TEST_BLOCKS({
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(DIRTY,    0, 0);
+					TEST_BLOCK_DEF(UNLOADED, 0, 8);
+					TEST_BLOCK_DEF(DIRTY,    8, 2);
+				});
+				
+				TEST_LENGTH(10);
+			}
+		);
 	}
 }
 

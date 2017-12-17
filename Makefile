@@ -14,15 +14,21 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+WX_CXXFLAGS := $(shell wx-config --cxxflags)
+WX_LIBS     := $(shell wx-config --libs)
+
 CFLAGS   := -Wall -std=c99   -ggdb -I./
-CXXFLAGS := -Wall -std=c++11 -ggdb -I./
+CXXFLAGS := -Wall -std=c++11 -ggdb -I./ $(WX_CXXFLAGS)
 
 TESTS := tests/buffer.t
 
-all:
+all: rehex
 
 check: $(TESTS)
 	prove -v tests/
+
+rehex: src/app.o src/mainwindow.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(WX_LIBS)
 
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o
 	$(CXX) $(CXXFLAGS) -o $@ $^

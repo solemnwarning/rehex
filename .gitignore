@@ -1,0 +1,4 @@
+*.o
+/rehex
+/tests/.tmpfile*
+/tests/buffer.t

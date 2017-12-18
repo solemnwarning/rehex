@@ -15,16 +15,31 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "mainwindow.hpp"
+#ifndef REHEX_DOCUMENT_HPP
+#define REHEX_DOCUMENT_HPP
 
-BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
-END_EVENT_TABLE()
+#include <wx/wx.h>
 
-REHex::MainWindow::MainWindow():
-	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineer's Hex Editor"))
-{
-	doc = new REHex::Document(this, wxID_ANY, wxPoint(0,0), wxSize(200, 100));
-	
-	CreateStatusBar(2);
-	SetStatusText(wxT("Test"));
+namespace REHex {
+	class Document: public wxControl {
+		public:
+			Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size);
+			
+			void OnPaint(wxPaintEvent &event);
+			void OnSize(wxSizeEvent &event);
+			void OnScroll(wxScrollWinEvent &event);
+			
+		private:
+			wxFont *hex_font;
+			
+			unsigned int line_bytes_cfg{16};
+			unsigned int line_bytes_calc;
+			unsigned int group_bytes{4};
+			
+			unsigned int scroll_xoff{0};
+			
+			DECLARE_EVENT_TABLE()
+	};
 }
+
+#endif /* !REHEX_DOCUMENT_HPP */

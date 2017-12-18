@@ -20,6 +20,8 @@
 
 #include <wx/wx.h>
 
+#include "document.hpp"
+
 namespace REHex {
 	class MainWindow: public wxFrame
 	{
@@ -27,6 +29,7 @@ namespace REHex {
 			MainWindow();
 			
 		private:
+			REHex::Document *doc;
 			DECLARE_EVENT_TABLE()
 	};
 }

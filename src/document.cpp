@@ -15,12 +15,15 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <ctype.h>
+
 #include "document.hpp"
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_PAINT(REHex::Document::OnPaint)
 	EVT_SIZE(REHex::Document::OnSize)
 	EVT_SCROLLWIN(REHex::Document::OnScroll)
+	EVT_CHAR(REHex::Document::OnChar)
 END_EVENT_TABLE()
 
 REHex::Document::Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, REHex::Buffer *buffer):
@@ -46,8 +49,8 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	unsigned int char_width  = char_size.GetWidth();
 	unsigned int char_height = char_size.GetHeight();
 	
-	std::vector<unsigned char> data = this->buffer->read_data((this->scroll_yoff * this->line_bytes_calc), (this->line_bytes_calc * ((client_height / char_height) + 1)));
-	printf("Fetched %u bytes\n", (unsigned)(data.size()));
+	size_t buf_off = this->scroll_yoff * this->line_bytes_calc;
+	std::vector<unsigned char> data = this->buffer->read_data(buf_off, (this->line_bytes_calc * ((client_height / char_height) + 1)));
 	
 	unsigned int y = 0;
 	for(auto di = data.begin(); di != data.end() && y < client_height;)
@@ -65,12 +68,33 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			static const char nibble_to_hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+			auto draw_nibble = [&x,y,&dc,char_width](unsigned char nibble, bool invert)
+			{
+				const char *nibble_to_hex = "0123456789ABCDEF";
+				
+				if(invert)
+				{
+					dc.SetTextForeground(*wxWHITE);
+					dc.SetTextBackground(*wxBLACK);
+					dc.SetBackgroundMode(wxSOLID);
+				}
+				
+				char str[] = { nibble_to_hex[nibble], '\0' };
+				dc.DrawText(str, x, y);
+				
+				if(invert)
+				{
+					dc.SetTextForeground(*wxBLACK);
+					dc.SetBackgroundMode(wxTRANSPARENT);
+				}
+				
+				x += char_width;
+			};
 			
-			char str[] = { nibble_to_hex[high_nibble], nibble_to_hex[low_nibble], '\0' };
-			dc.DrawText(str, x, y);
+			draw_nibble(high_nibble, (buf_off == this->cpos_off && this->cpos_high));
+			draw_nibble(low_nibble,  (buf_off == this->cpos_off && !this->cpos_high));
 			
-			x += (2 * char_width);
+			++buf_off;
 		}
 		
 		y += char_height;
@@ -165,5 +189,96 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 	{
 		this->scroll_yoff = event.GetPosition();
 		this->Refresh();
+	}
+}
+
+void REHex::Document::OnChar(wxKeyEvent &event)
+{
+	int key = event.GetKeyCode();
+	
+	auto cpos_inc = [this]()
+	{
+		if(this->cpos_high)
+		{
+			this->cpos_high = false;
+		}
+		else if(this->cpos_off + 1 < this->buffer->length())
+		{
+			++(this->cpos_off);
+			this->cpos_high = true;
+		}
+	};
+	
+	auto cpos_dec = [this]()
+	{
+		if(this->cpos_high)
+		{
+			if(this->cpos_off > 0)
+			{
+				--(this->cpos_off);
+				this->cpos_high = false;
+			}
+		}
+		else{
+			this->cpos_high = true;
+		}
+	};
+	
+	if(key == WXK_LEFT)
+	{
+		cpos_dec();
+		
+		/* TODO: Limit paint to affected area */
+		this->Refresh();
+	}
+	else if(key == WXK_RIGHT)
+	{
+		cpos_inc();
+		
+		/* TODO: Limit paint to affected area */
+		this->Refresh();
+	}
+	else if(isxdigit(key))
+	{
+		std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
+		
+		if(!byte.empty())
+		{
+			unsigned char nibble;
+			switch(key)
+			{
+				case '0':           nibble = 0x0; break;
+				case '1':           nibble = 0x1; break;
+				case '2':           nibble = 0x2; break;
+				case '3':           nibble = 0x3; break;
+				case '4':           nibble = 0x4; break;
+				case '5':           nibble = 0x5; break;
+				case '6':           nibble = 0x6; break;
+				case '7':           nibble = 0x7; break;
+				case '8':           nibble = 0x8; break;
+				case '9':           nibble = 0x9; break;
+				case 'A': case 'a': nibble = 0xA; break;
+				case 'B': case 'b': nibble = 0xB; break;
+				case 'C': case 'c': nibble = 0xC; break;
+				case 'D': case 'd': nibble = 0xD; break;
+				case 'E': case 'e': nibble = 0xE; break;
+				case 'F': case 'f': nibble = 0xF; break;
+			}
+			
+			if(cpos_high)
+			{
+				byte[0] = (byte[0] & 0x0F) | (nibble << 4);
+			}
+			else{
+				byte[0] = (byte[0] & 0xF0) | nibble;
+			}
+			
+			this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
+			
+			cpos_inc();
+			
+			/* TODO: Limit paint to affected area */
+			this->Refresh();
+		}
 	}
 }

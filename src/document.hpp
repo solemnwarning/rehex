@@ -31,6 +31,7 @@ namespace REHex {
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
+			void OnChar(wxKeyEvent &event);
 			
 		private:
 			Buffer *buffer;
@@ -43,6 +44,9 @@ namespace REHex {
 			
 			unsigned int scroll_xoff{0};
 			uint64_t     scroll_yoff{0};
+			
+			size_t cpos_off{0};
+			bool cpos_high{true};
 			
 			DECLARE_EVENT_TABLE()
 	};

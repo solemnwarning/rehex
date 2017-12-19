@@ -27,7 +27,7 @@ all: rehex
 check: $(TESTS)
 	prove -v tests/
 
-rehex: src/app.o src/mainwindow.o src/document.o
+rehex: src/app.o src/mainwindow.o src/document.o src/buffer.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(WX_LIBS)
 
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o

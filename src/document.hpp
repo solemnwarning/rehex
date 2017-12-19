@@ -20,16 +20,20 @@
 
 #include <wx/wx.h>
 
+#include "buffer.hpp"
+
 namespace REHex {
 	class Document: public wxControl {
 		public:
-			Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size);
+			Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, REHex::Buffer *buffer);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			
 		private:
+			Buffer *buffer;
+			
 			wxFont *hex_font;
 			
 			unsigned int line_bytes_cfg{16};

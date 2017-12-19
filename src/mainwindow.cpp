@@ -23,7 +23,7 @@ END_EVENT_TABLE()
 REHex::MainWindow::MainWindow():
 	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineer's Hex Editor"))
 {
-	doc = new REHex::Document(this, wxID_ANY, wxPoint(0,0), wxSize(200, 100));
+	doc = new REHex::Document(this, wxID_ANY, wxPoint(0,0), wxSize(200, 100), new REHex::Buffer("test.bin"));
 	
 	CreateStatusBar(2);
 	SetStatusText(wxT("Test"));

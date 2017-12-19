@@ -23,8 +23,9 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_SCROLLWIN(REHex::Document::OnScroll)
 END_EVENT_TABLE()
 
-REHex::Document::Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size):
-	wxControl(parent, id, pos, size, wxVSCROLL | wxHSCROLL)
+REHex::Document::Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, REHex::Buffer *buffer):
+	wxControl(parent, id, pos, size, wxVSCROLL | wxHSCROLL),
+	buffer(buffer)
 {
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
@@ -36,27 +37,37 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);
 	
-	wxSize client_size = dc.GetSize();
+	wxSize client_size         = dc.GetSize();
+	unsigned int client_height = client_size.GetHeight();
 	
 	dc.SetFont(*hex_font);
 	
 	wxSize char_size        = dc.GetTextExtent("X");
 	unsigned int char_width = char_size.GetWidth();
 	
-	unsigned int draw_rows = (client_size.GetHeight() / char_size.GetHeight()) + 1;
+	std::vector<unsigned char> data = this->buffer->read_data(0, 0xFFF);
 	
-	for(unsigned int r = 0, y = 0; r < draw_rows; ++r)
+	unsigned int y = 0;
+	for(auto di = data.begin(); di != data.end() && y < client_height;)
 	{
 		int x = (0 - this->scroll_xoff);
 		
-		for(unsigned int c = 0; c < this->line_bytes_calc; ++c)
+		for(unsigned int c = 0; c < this->line_bytes_calc && di != data.end(); ++c)
 		{
 			if(c > 0 && (c % this->group_bytes) == 0)
 			{
 				x += char_width;
 			}
 			
-			dc.DrawText(wxT("AA"), x, y);
+			unsigned char byte        = *(di++);
+			unsigned char high_nibble = (byte & 0xF0) >> 4;
+			unsigned char low_nibble  = (byte & 0x0F);
+			
+			static const char nibble_to_hex[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+			
+			char str[] = { nibble_to_hex[high_nibble], nibble_to_hex[low_nibble], '\0' };
+			dc.DrawText(str, x, y);
+			
 			x += (2 * char_width);
 		}
 		

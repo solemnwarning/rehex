@@ -18,6 +18,7 @@
 #ifndef REHEX_DOCUMENT_HPP
 #define REHEX_DOCUMENT_HPP
 
+#include <stdint.h>
 #include <wx/wx.h>
 
 #include "buffer.hpp"
@@ -41,6 +42,7 @@ namespace REHex {
 			unsigned int group_bytes{4};
 			
 			unsigned int scroll_xoff{0};
+			uint64_t     scroll_yoff{0};
 			
 			DECLARE_EVENT_TABLE()
 	};

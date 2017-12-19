@@ -46,7 +46,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	unsigned int char_width  = char_size.GetWidth();
 	unsigned int char_height = char_size.GetHeight();
 	
-	std::vector<unsigned char> data = this->buffer->read_data(0, (this->line_bytes_calc * ((client_height / char_height) + 1)));
+	std::vector<unsigned char> data = this->buffer->read_data((this->scroll_yoff * this->line_bytes_calc), (this->line_bytes_calc * ((client_height / char_height) + 1)));
 	printf("Fetched %u bytes\n", (unsigned)(data.size()));
 	
 	unsigned int y = 0;
@@ -89,15 +89,17 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	/* Get the size of the area we can draw into */
 	
-	wxSize client_size        = this->GetClientSize();
-	unsigned int client_width = client_size.GetWidth();
+	wxSize client_size         = this->GetClientSize();
+	unsigned int client_width  = client_size.GetWidth();
+	unsigned int client_height = client_size.GetHeight();
 	
 	/* Get the size of a character in the (fixed-width) font we use for the hex bytes. */
 	
 	dc.SetFont(*hex_font);
-	wxSize char_size        = dc.GetTextExtent("X");
-	unsigned int char_width = char_size.GetWidth();
-	unsigned int byte_width = 2 * char_width;
+	wxSize char_size         = dc.GetTextExtent("X");
+	unsigned int char_width  = char_size.GetWidth();
+	unsigned int char_height = char_size.GetHeight();
+	unsigned int byte_width  = 2 * char_width;
 	
 	auto calc_row_width = [this, char_width, byte_width](unsigned int line_bytes)
 	{
@@ -136,6 +138,16 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 	}
 	
+	{
+		scroll_yoff = 0; /* just always reset for now */
+		
+		unsigned int lines_per_screen = client_height / char_height;
+		unsigned int lines_for_buffer = (this->buffer->length() / this->line_bytes_calc)
+			+ !!(this->buffer->length() % this->line_bytes_calc);
+		
+		this->SetScrollbar(wxVERTICAL, this->scroll_yoff, lines_per_screen, lines_for_buffer);
+	}
+	
 	/* Force a redraw of the whole control since resizing can change the entire control, not
 	 * just the newly visible areas.
 	*/
@@ -147,6 +159,11 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 	if(event.GetOrientation() == wxHORIZONTAL)
 	{
 		this->scroll_xoff = event.GetPosition();
+		this->Refresh();
+	}
+	else if(event.GetOrientation() == wxVERTICAL)
+	{
+		this->scroll_yoff = event.GetPosition();
 		this->Refresh();
 	}
 }

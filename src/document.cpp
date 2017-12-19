@@ -42,10 +42,12 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	
 	dc.SetFont(*hex_font);
 	
-	wxSize char_size        = dc.GetTextExtent("X");
-	unsigned int char_width = char_size.GetWidth();
+	wxSize char_size         = dc.GetTextExtent("X");
+	unsigned int char_width  = char_size.GetWidth();
+	unsigned int char_height = char_size.GetHeight();
 	
-	std::vector<unsigned char> data = this->buffer->read_data(0, 0xFFF);
+	std::vector<unsigned char> data = this->buffer->read_data(0, (this->line_bytes_calc * ((client_height / char_height) + 1)));
+	printf("Fetched %u bytes\n", (unsigned)(data.size()));
 	
 	unsigned int y = 0;
 	for(auto di = data.begin(); di != data.end() && y < client_height;)
@@ -71,7 +73,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 			x += (2 * char_width);
 		}
 		
-		y += char_size.GetHeight();
+		y += char_height;
 	}
 }
 

@@ -88,13 +88,8 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	auto calc_row_width = [this, char_width, byte_width](unsigned int line_bytes)
 	{
-		unsigned int px = (line_bytes * byte_width);
-		if(line_bytes > this->group_bytes)
-		{
-			px += (((line_bytes - this->group_bytes) / this->group_bytes) * char_width);
-		}
-		
-		return px;
+		return (line_bytes * byte_width)
+			+ (((line_bytes - 1) / this->group_bytes) * char_width);
 	};
 	
 	/* Decide how many bytes to display per line */
@@ -127,6 +122,11 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	else{
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 	}
+	
+	/* Force a redraw of the whole control since resizing can change the entire control, not
+	 * just the newly visible areas.
+	*/
+	this->Refresh();
 }
 
 void REHex::Document::OnScroll(wxScrollWinEvent &event)

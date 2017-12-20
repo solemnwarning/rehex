@@ -18,6 +18,7 @@
 #ifndef REHEX_DOCUMENT_HPP
 #define REHEX_DOCUMENT_HPP
 
+#include <list>
 #include <stdint.h>
 #include <wx/wx.h>
 
@@ -34,7 +35,30 @@ namespace REHex {
 			void OnChar(wxKeyEvent &event);
 			
 		private:
+			struct LineRange {
+				uint64_t start; /* First line in range */
+				uint64_t lines; /* Number of lines in range */
+				
+				enum {
+					LR_DATA,
+					LR_COMMENT,
+				} type;
+				
+				union {
+					struct {
+						size_t offset;
+						size_t length;
+					} data;
+					
+					struct {
+						
+					} comment;
+				};
+			};
+			
 			Buffer *buffer;
+			
+			std::list<LineRange> lineranges;
 			
 			wxFont *hex_font;
 			
@@ -49,6 +73,8 @@ namespace REHex {
 			bool cpos_high{true};
 			
 			DECLARE_EVENT_TABLE()
+			
+			void _build_line_ranges();
 	};
 }
 

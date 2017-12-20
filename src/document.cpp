@@ -16,6 +16,7 @@
 */
 
 #include <ctype.h>
+#include <iterator>
 
 #include "document.hpp"
 
@@ -49,55 +50,95 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	unsigned int char_width  = char_size.GetWidth();
 	unsigned int char_height = char_size.GetHeight();
 	
-	size_t buf_off = this->scroll_yoff * this->line_bytes_calc;
-	std::vector<unsigned char> data = this->buffer->read_data(buf_off, (this->line_bytes_calc * ((client_height / char_height) + 1)));
+	/* Iterate over the LineRanges to find the last block which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto begin_lr = this->lineranges.begin();
+	for(auto next_lr = std::next(begin_lr); next_lr != this->lineranges.end() && next_lr->start < scroll_yoff; ++next_lr)
+	{
+		begin_lr = next_lr;
+	}
+	
+	/* If we are scrolled past the start of the LineRange, will need to skip some of the first one. */
+	unsigned int skip_lines_in_lr = (this->scroll_yoff - begin_lr->start);
 	
 	unsigned int y = 0;
-	for(auto di = data.begin(); di != data.end() && y < client_height;)
+	while(begin_lr != this->lineranges.end() && y < client_height)
 	{
-		int x = (0 - this->scroll_xoff);
-		
-		for(unsigned int c = 0; c < this->line_bytes_calc && di != data.end(); ++c)
+		if(begin_lr->type == REHex::Document::LineRange::LR_DATA)
 		{
-			if(c > 0 && (c % this->group_bytes) == 0)
+			/* The maximum number of bytes that can be drawn on the screen before we're past the
+			 * bottom of the client area. Drawing more than this would be pointless.
+			*/
+			unsigned int max_bytes_to_draw = (((client_height - y) / char_height) + 1) * this->line_bytes_calc;
+			
+			/* Fetch the data to be rendered from this LineRange. */
+			size_t buf_off = begin_lr->data.offset + (skip_lines_in_lr * this->line_bytes_calc);
+			size_t buf_len = std::min(begin_lr->data.length - (skip_lines_in_lr * this->line_bytes_calc), max_bytes_to_draw);
+			std::vector<unsigned char> data = this->buffer->read_data(buf_off, buf_len);
+			
+			/* Only the first LineRange should have lines skipped. */
+			skip_lines_in_lr = 0;
+			
+			//printf("Rendering LR_DATA at y = %u, buf_off = %u, buf_len = %u\n", y, (unsigned)(buf_off), (unsigned)(buf_len));
+			
+			for(auto di = data.begin(); di != data.end() && y < client_height;)
 			{
-				x += char_width;
+				int x = (0 - this->scroll_xoff);
+				
+				for(unsigned int c = 0; c < this->line_bytes_calc && di != data.end(); ++c)
+				{
+					if(c > 0 && (c % this->group_bytes) == 0)
+					{
+						x += char_width;
+					}
+					
+					unsigned char byte        = *(di++);
+					unsigned char high_nibble = (byte & 0xF0) >> 4;
+					unsigned char low_nibble  = (byte & 0x0F);
+					
+					auto draw_nibble = [&x,y,&dc,char_width](unsigned char nibble, bool invert)
+					{
+						const char *nibble_to_hex = "0123456789ABCDEF";
+						
+						if(invert)
+						{
+							dc.SetTextForeground(*wxWHITE);
+							dc.SetTextBackground(*wxBLACK);
+							dc.SetBackgroundMode(wxSOLID);
+						}
+						
+						char str[] = { nibble_to_hex[nibble], '\0' };
+						dc.DrawText(str, x, y);
+						
+						if(invert)
+						{
+							dc.SetTextForeground(*wxBLACK);
+							dc.SetBackgroundMode(wxTRANSPARENT);
+						}
+						
+						x += char_width;
+					};
+					
+					draw_nibble(high_nibble, (buf_off == this->cpos_off && this->cpos_high));
+					draw_nibble(low_nibble,  (buf_off == this->cpos_off && !this->cpos_high));
+					
+					++buf_off;
+				}
+				
+				y += char_height;
 			}
+		}
+		else if(begin_lr->type == REHex::Document::LineRange::LR_COMMENT)
+		{
+			//printf("Rendering LR_COMMENT at y = %u\n", y);
 			
-			unsigned char byte        = *(di++);
-			unsigned char high_nibble = (byte & 0xF0) >> 4;
-			unsigned char low_nibble  = (byte & 0x0F);
-			
-			auto draw_nibble = [&x,y,&dc,char_width](unsigned char nibble, bool invert)
-			{
-				const char *nibble_to_hex = "0123456789ABCDEF";
-				
-				if(invert)
-				{
-					dc.SetTextForeground(*wxWHITE);
-					dc.SetTextBackground(*wxBLACK);
-					dc.SetBackgroundMode(wxSOLID);
-				}
-				
-				char str[] = { nibble_to_hex[nibble], '\0' };
-				dc.DrawText(str, x, y);
-				
-				if(invert)
-				{
-					dc.SetTextForeground(*wxBLACK);
-					dc.SetBackgroundMode(wxTRANSPARENT);
-				}
-				
-				x += char_width;
-			};
-			
-			draw_nibble(high_nibble, (buf_off == this->cpos_off && this->cpos_high));
-			draw_nibble(low_nibble,  (buf_off == this->cpos_off && !this->cpos_high));
-			
-			++buf_off;
+			dc.DrawText("--------------------------------", 0, y);
+			y += char_height;
 		}
 		
-		y += char_height;
+		++begin_lr;
 	}
 }
 
@@ -162,14 +203,16 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 	}
 	
+	this->_build_line_ranges();
+	
 	{
 		scroll_yoff = 0; /* just always reset for now */
 		
 		unsigned int lines_per_screen = client_height / char_height;
-		unsigned int lines_for_buffer = (this->buffer->length() / this->line_bytes_calc)
-			+ !!(this->buffer->length() % this->line_bytes_calc);
+		/*unsigned int lines_for_buffer = (this->buffer->length() / this->line_bytes_calc)
+			+ !!(this->buffer->length() % this->line_bytes_calc);*/
 		
-		this->SetScrollbar(wxVERTICAL, this->scroll_yoff, lines_per_screen, lines_for_buffer);
+		this->SetScrollbar(wxVERTICAL, this->scroll_yoff, lines_per_screen, this->lineranges.back().start + this->lineranges.back().lines);
 	}
 	
 	/* Force a redraw of the whole control since resizing can change the entire control, not
@@ -281,4 +324,41 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			this->Refresh();
 		}
 	}
+}
+
+void REHex::Document::_build_line_ranges()
+{
+	this->lineranges.clear();
+	
+	size_t next_line = 0, comment_in = 32, data_off = 0, remain = this->buffer->length();
+	
+	do {
+		{
+			REHex::Document::LineRange r;
+			r.start = next_line;
+			r.lines = 1;
+			r.type  = REHex::Document::LineRange::LR_COMMENT;
+			
+			this->lineranges.push_back(r);
+			next_line += r.lines;
+		}
+		
+		size_t block_len = std::min(remain, comment_in);
+		
+		REHex::Document::LineRange r;
+		r.start = next_line;
+		r.lines = (block_len / this->line_bytes_calc)
+			+ !!(block_len % this->line_bytes_calc);
+		
+		r.type  = REHex::Document::LineRange::LR_DATA;
+		r.data.offset = data_off;
+		r.data.length = block_len;
+		
+		this->lineranges.push_back(r);
+		next_line += r.lines;
+		
+		comment_in = std::min(comment_in * 2, (unsigned)(4096));
+		data_off += block_len;
+		remain   -= block_len;
+	} while(remain > 0);
 }

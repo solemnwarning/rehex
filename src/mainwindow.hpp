@@ -29,10 +29,12 @@ namespace REHex {
 			MainWindow();
 			
 			void OnNew(wxCommandEvent &event);
+			void OnOpen(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
 		private:
-			REHex::Document *doc;
+			wxNotebook *notebook;
+			
 			DECLARE_EVENT_TABLE()
 	};
 }

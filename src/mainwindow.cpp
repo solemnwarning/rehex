@@ -16,11 +16,13 @@
 */
 
 #include <wx/artprov.h>
+#include <wx/notebook.h>
 
 #include "mainwindow.hpp"
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_NEW,  REHex::MainWindow::OnNew)
+	EVT_MENU(wxID_OPEN, REHex::MainWindow::OnOpen)
 	EVT_MENU(wxID_EXIT, REHex::MainWindow::OnExit)
 END_EVENT_TABLE()
 
@@ -49,15 +51,30 @@ REHex::MainWindow::MainWindow():
 	toolbar->AddTool(wxID_SAVE,   "Save",    artp.GetBitmap(wxART_FILE_SAVE,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", artp.GetBitmap(wxART_FILE_SAVE_AS, wxART_TOOLBAR));
 	
-	doc = new REHex::Document(this, wxID_ANY, wxPoint(0,0), wxSize(200, 100), new REHex::Buffer("test.bin"));
+	notebook = new wxNotebook(this, wxID_ANY);
 	
 	CreateStatusBar(2);
 	SetStatusText(wxT("Test"));
+	
+	ProcessCommand(wxID_NEW);
 }
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
-	printf("Test\n");
+	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, wxPoint(0,0), wxSize(200, 100), new REHex::Buffer());
+	notebook->AddPage(doc, "New file", true);
+}
+
+void REHex::MainWindow::OnOpen(wxCommandEvent &event)
+{
+	wxFileDialog openFileDialog(this, wxT("Open File"), "", "", "*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	REHex::Buffer *buffer = new REHex::Buffer(openFileDialog.GetPath().ToStdString());
+	
+	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, wxPoint(0,0), wxSize(200, 100), buffer);
+	notebook->AddPage(doc, openFileDialog.GetFilename(), true);
 }
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)

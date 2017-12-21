@@ -119,9 +119,12 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 						
 						if(invert)
 						{
-							inv_x = x;
 							inv_str.append(1, nibble_to_hex[nibble]);
-							inv_en = true;
+							if(!inv_en)
+							{
+								inv_x  = x;
+								inv_en = true;
+							}
 							
 							norm_str.append(1, ' ');
 						}
@@ -132,8 +135,8 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 						x += char_width;
 					};
 					
-					draw_nibble(high_nibble, (buf_off == this->cpos_off && this->cpos_high));
-					draw_nibble(low_nibble,  (buf_off == this->cpos_off && !this->cpos_high));
+					draw_nibble(high_nibble, (buf_off == this->cpos_off && !this->editing_byte));
+					draw_nibble(low_nibble,  (buf_off == this->cpos_off));
 					
 					++buf_off;
 				}
@@ -297,30 +300,22 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	auto cpos_inc = [this]()
 	{
-		if(this->cpos_high)
-		{
-			this->cpos_high = false;
-		}
-		else if(this->cpos_off + 1 < this->buffer->length())
+		if(this->cpos_off + 1 < this->buffer->length())
 		{
 			++(this->cpos_off);
-			this->cpos_high = true;
 		}
+		
+		this->editing_byte = false;
 	};
 	
 	auto cpos_dec = [this]()
 	{
-		if(this->cpos_high)
+		if(this->cpos_off > 0)
 		{
-			if(this->cpos_off > 0)
-			{
-				--(this->cpos_off);
-				this->cpos_high = false;
-			}
+			--(this->cpos_off);
 		}
-		else{
-			this->cpos_high = true;
-		}
+		
+		this->editing_byte = false;
 	};
 	
 	if(key == WXK_LEFT)
@@ -364,17 +359,19 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				case 'F': case 'f': nibble = 0xF; break;
 			}
 			
-			if(cpos_high)
+			if(this->editing_byte)
 			{
-				byte[0] = (byte[0] & 0x0F) | (nibble << 4);
+				byte[0] = (byte[0] & 0xF0) | nibble;
+				this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
+				
+				cpos_inc();
 			}
 			else{
-				byte[0] = (byte[0] & 0xF0) | nibble;
+				byte[0] = (byte[0] & 0x0F) | (nibble << 4);
+				this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
+				
+				this->editing_byte = true;
 			}
-			
-			this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
-			
-			cpos_inc();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();

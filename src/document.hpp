@@ -70,7 +70,7 @@ namespace REHex {
 			uint64_t     scroll_yoff{0};
 			
 			size_t cpos_off{0};
-			bool cpos_high{true};
+			bool editing_byte{false};
 			
 			DECLARE_EVENT_TABLE()
 			

@@ -20,6 +20,11 @@ WX_LIBS     := $(shell wx-config --libs)
 CFLAGS   := -Wall -std=c99   -ggdb -I./
 CXXFLAGS := -Wall -std=c++11 -ggdb -I./ $(WX_CXXFLAGS)
 
+DEPDIR := .d
+$(shell mkdir -p $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
+DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
+DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
+
 TESTS := tests/buffer.t
 
 all: rehex
@@ -34,7 +39,11 @@ tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+include $(shell find .d/ -name '*.d' -type f)

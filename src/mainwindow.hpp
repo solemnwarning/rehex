@@ -18,6 +18,7 @@
 #ifndef REHEX_MAINWINDOW_HPP
 #define REHEX_MAINWINDOW_HPP
 
+#include <wx/notebook.h>
 #include <wx/wx.h>
 
 #include "document.hpp"

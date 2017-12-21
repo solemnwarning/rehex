@@ -97,10 +97,6 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 				int norm_x = x;
 				wxString norm_str;
 				
-				bool inv_en = false;
-				int inv_x;
-				wxString inv_str;
-				
 				for(unsigned int c = 0; c < this->line_bytes_calc && di != data.end(); ++c)
 				{
 					if(c > 0 && (c % this->group_bytes) == 0)
@@ -113,18 +109,21 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 					unsigned char high_nibble = (byte & 0xF0) >> 4;
 					unsigned char low_nibble  = (byte & 0x0F);
 					
-					auto draw_nibble = [&x,char_width,&norm_str,&inv_en,&inv_x,&inv_str](unsigned char nibble, bool invert)
+					auto draw_nibble = [&x,y,&dc,char_width,&norm_str](unsigned char nibble, bool invert)
 					{
 						const char *nibble_to_hex = "0123456789ABCDEF";
 						
 						if(invert)
 						{
-							inv_str.append(1, nibble_to_hex[nibble]);
-							if(!inv_en)
-							{
-								inv_x  = x;
-								inv_en = true;
-							}
+							dc.SetTextForeground(*wxWHITE);
+							dc.SetTextBackground(*wxBLACK);
+							dc.SetBackgroundMode(wxSOLID);
+							
+							char str[] = { nibble_to_hex[nibble], '\0' };
+							dc.DrawText(str, x, y);
+							
+							dc.SetTextForeground(*wxBLACK);
+							dc.SetBackgroundMode(wxTRANSPARENT);
 							
 							norm_str.append(1, ' ');
 						}
@@ -142,18 +141,6 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 				}
 				
 				dc.DrawText(norm_str, norm_x, y);
-				
-				if(inv_en)
-				{
-					dc.SetTextForeground(*wxWHITE);
-					dc.SetTextBackground(*wxBLACK);
-					dc.SetBackgroundMode(wxSOLID);
-					
-					dc.DrawText(inv_str, inv_x, y);
-					
-					dc.SetTextForeground(*wxBLACK);
-					dc.SetBackgroundMode(wxTRANSPARENT);
-				}
 				
 				y += char_height;
 			}

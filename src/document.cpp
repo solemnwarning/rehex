@@ -94,10 +94,18 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 			{
 				int x = (0 - this->scroll_xoff);
 				
+				int norm_x = x;
+				wxString norm_str;
+				
+				bool inv_en = false;
+				int inv_x;
+				wxString inv_str;
+				
 				for(unsigned int c = 0; c < this->line_bytes_calc && di != data.end(); ++c)
 				{
 					if(c > 0 && (c % this->group_bytes) == 0)
 					{
+						norm_str.append(1, ' ');
 						x += char_width;
 					}
 					
@@ -105,24 +113,20 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 					unsigned char high_nibble = (byte & 0xF0) >> 4;
 					unsigned char low_nibble  = (byte & 0x0F);
 					
-					auto draw_nibble = [&x,y,&dc,char_width](unsigned char nibble, bool invert)
+					auto draw_nibble = [&x,char_width,&norm_str,&inv_en,&inv_x,&inv_str](unsigned char nibble, bool invert)
 					{
 						const char *nibble_to_hex = "0123456789ABCDEF";
 						
 						if(invert)
 						{
-							dc.SetTextForeground(*wxWHITE);
-							dc.SetTextBackground(*wxBLACK);
-							dc.SetBackgroundMode(wxSOLID);
+							inv_x = x;
+							inv_str.append(1, nibble_to_hex[nibble]);
+							inv_en = true;
+							
+							norm_str.append(1, ' ');
 						}
-						
-						char str[] = { nibble_to_hex[nibble], '\0' };
-						dc.DrawText(str, x, y);
-						
-						if(invert)
-						{
-							dc.SetTextForeground(*wxBLACK);
-							dc.SetBackgroundMode(wxTRANSPARENT);
+						else{
+							norm_str.append(1, nibble_to_hex[nibble]);
 						}
 						
 						x += char_width;
@@ -132,6 +136,20 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 					draw_nibble(low_nibble,  (buf_off == this->cpos_off && !this->cpos_high));
 					
 					++buf_off;
+				}
+				
+				dc.DrawText(norm_str, norm_x, y);
+				
+				if(inv_en)
+				{
+					dc.SetTextForeground(*wxWHITE);
+					dc.SetTextBackground(*wxBLACK);
+					dc.SetBackgroundMode(wxSOLID);
+					
+					dc.DrawText(inv_str, inv_x, y);
+					
+					dc.SetTextForeground(*wxBLACK);
+					dc.SetBackgroundMode(wxTRANSPARENT);
 				}
 				
 				y += char_height;

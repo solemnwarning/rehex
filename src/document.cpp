@@ -20,12 +20,12 @@
 
 #include "document.hpp"
 
-static const char *COMMENT_TEXT = "There remains a very delicate balance in this world..."
-	" Between those who create and those who will experience the creations of others."
-	" I can't say that I wasn't aware of this. However, I had never experienced it."
-	" Now, thanks to you, I finally have."
-	" As long as there is someone who will appreciate the work involved in creation, the effort is time well spent."
-	" To this end, I will continue to create for as long as I can.";
+static const char *COMMENT_TEXT = "There remains a very delicate balance in this world...\n"
+	"Between those who create and those who will experience the creations of others.\n"
+	"I can't say that I wasn't aware of this. However, I had never experienced it.\n"
+	"Now, thanks to you, I finally have.\n"
+	"As long as there is someone who will appreciate the work involved in creation, the effort is time well spent.\n"
+	"To this end, I will continue to create for as long as I can.";
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_PAINT(REHex::Document::OnPaint)
@@ -368,7 +368,7 @@ void REHex::Document::_build_line_ranges(unsigned int cols)
 {
 	this->lineranges.clear();
 	
-	size_t next_line = 0, comment_in = 32, data_off = 0, remain = this->buffer->length();
+	size_t next_line = 0, comment_in = 128, data_off = 0, remain = this->buffer->length();
 	
 	auto comment_lines = _format_text(COMMENT_TEXT, cols);
 	
@@ -403,18 +403,39 @@ void REHex::Document::_build_line_ranges(unsigned int cols)
 	} while(remain > 0);
 }
 
-std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_line)
+std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
 {
-	/* TODO: Do this more intelligently; break at whitespace rather than in the middle of
-	 * words, handle newlines properly, etc.
+	/* TODO: Throw myself into the abyss and support Unicode properly...
+	 * (This function assumes one byte is one full-width character on the screen.
 	*/
 	
 	std::list<std::string> lines;
 	
-	for(size_t at = (cols * from_line); at < text.size(); at += cols)
+	for(size_t at = 0; at < text.size();)
 	{
-		lines.push_back(text.substr(at, cols)); /* std::string::substr() will clamp length. */
+		size_t newline_at = text.find_first_of('\n', at);
+		
+		if(newline_at != std::string::npos && newline_at <= (at + cols))
+		{
+			/* There is a newline within one row's worth of text of our current position.
+			 * Add all the text up to it and continue from after it.
+			*/
+			lines.push_back(text.substr(at, newline_at - at));
+			at = newline_at + 1;
+		}
+		else{
+			/* The line is too long, just wrap it at whatever character is on the boundary.
+			 *
+			 * std::string::substr() will clamp the length if it goes beyond the end of
+			 * the string.
+			*/
+			lines.push_back(text.substr(at, cols));
+			at += cols;
+		}
 	}
+	
+	lines.erase(lines.begin(), std::next(lines.begin(), std::min(from_line, lines.size())));
+	lines.erase(std::next(lines.begin(), std::min(max_lines, lines.size())), lines.end());
 	
 	return lines;
 }

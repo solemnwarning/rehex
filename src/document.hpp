@@ -62,7 +62,7 @@ namespace REHex {
 			
 			wxFont *hex_font;
 			
-			unsigned int line_bytes_cfg{16};
+			unsigned int line_bytes_cfg{0};
 			unsigned int line_bytes_calc;
 			unsigned int group_bytes{4};
 			
@@ -76,7 +76,7 @@ namespace REHex {
 			
 			void _build_line_ranges(unsigned int cols);
 			
-			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_line = -1);
+			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 	};
 }
 

@@ -28,6 +28,9 @@ namespace REHex {
 		public:
 			MainWindow();
 			
+			void OnNew(wxCommandEvent &event);
+			void OnExit(wxCommandEvent &event);
+			
 		private:
 			REHex::Document *doc;
 			DECLARE_EVENT_TABLE()

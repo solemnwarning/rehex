@@ -27,7 +27,7 @@
 namespace REHex {
 	class Document: public wxControl {
 		public:
-			Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, REHex::Buffer *buffer);
+			Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

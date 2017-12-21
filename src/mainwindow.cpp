@@ -61,7 +61,7 @@ REHex::MainWindow::MainWindow():
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
-	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, wxPoint(0,0), wxSize(200, 100), new REHex::Buffer());
+	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, new REHex::Buffer());
 	notebook->AddPage(doc, "New file", true);
 }
 
@@ -73,7 +73,7 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	
 	REHex::Buffer *buffer = new REHex::Buffer(openFileDialog.GetPath().ToStdString());
 	
-	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, wxPoint(0,0), wxSize(200, 100), buffer);
+	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, buffer);
 	notebook->AddPage(doc, openFileDialog.GetFilename(), true);
 }
 

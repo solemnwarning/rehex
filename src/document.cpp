@@ -34,8 +34,8 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_CHAR(REHex::Document::OnChar)
 END_EVENT_TABLE()
 
-REHex::Document::Document(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, REHex::Buffer *buffer):
-	wxControl(parent, id, pos, size, wxVSCROLL | wxHSCROLL),
+REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer):
+	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
 	buffer(buffer)
 {
 	wxFontInfo finfo;

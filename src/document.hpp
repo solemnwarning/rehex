@@ -74,7 +74,9 @@ namespace REHex {
 			
 			DECLARE_EVENT_TABLE()
 			
-			void _build_line_ranges();
+			void _build_line_ranges(unsigned int cols);
+			
+			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_line = -1);
 	};
 }
 

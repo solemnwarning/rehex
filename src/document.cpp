@@ -20,6 +20,13 @@
 
 #include "document.hpp"
 
+static const char *COMMENT_TEXT = "There remains a very delicate balance in this world..."
+	" Between those who create and those who will experience the creations of others."
+	" I can't say that I wasn't aware of this. However, I had never experienced it."
+	" Now, thanks to you, I finally have."
+	" As long as there is someone who will appreciate the work involved in creation, the effort is time well spent."
+	" To this end, I will continue to create for as long as I can.";
+
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_PAINT(REHex::Document::OnPaint)
 	EVT_SIZE(REHex::Document::OnSize)
@@ -42,6 +49,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	wxPaintDC dc(this);
 	
 	wxSize client_size         = dc.GetSize();
+	unsigned int client_width  = client_size.GetWidth();
 	unsigned int client_height = client_size.GetHeight();
 	
 	dc.SetFont(*hex_font);
@@ -66,20 +74,19 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	unsigned int y = 0;
 	while(begin_lr != this->lineranges.end() && y < client_height)
 	{
+		/* The maximum number of lines of text that can be drawn on the screen before we're past
+		 * the bottom of the client area. Drawing more than this would be pointless.
+		*/
+		unsigned int max_lines = ((client_height - y) / char_height) + 1;
+		
 		if(begin_lr->type == REHex::Document::LineRange::LR_DATA)
 		{
-			/* The maximum number of bytes that can be drawn on the screen before we're past the
-			 * bottom of the client area. Drawing more than this would be pointless.
-			*/
-			unsigned int max_bytes_to_draw = (((client_height - y) / char_height) + 1) * this->line_bytes_calc;
+			unsigned int max_bytes_to_draw = max_lines * this->line_bytes_calc;
 			
 			/* Fetch the data to be rendered from this LineRange. */
 			size_t buf_off = begin_lr->data.offset + (skip_lines_in_lr * this->line_bytes_calc);
 			size_t buf_len = std::min(begin_lr->data.length - (skip_lines_in_lr * this->line_bytes_calc), max_bytes_to_draw);
 			std::vector<unsigned char> data = this->buffer->read_data(buf_off, buf_len);
-			
-			/* Only the first LineRange should have lines skipped. */
-			skip_lines_in_lr = 0;
 			
 			//printf("Rendering LR_DATA at y = %u, buf_off = %u, buf_len = %u\n", y, (unsigned)(buf_off), (unsigned)(buf_len));
 			
@@ -134,9 +141,40 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 		{
 			//printf("Rendering LR_COMMENT at y = %u\n", y);
 			
-			dc.DrawText("--------------------------------", 0, y);
-			y += char_height;
+			unsigned int box_y_sub = 0;
+			if(skip_lines_in_lr > 0)
+			{
+				box_y_sub = char_height;
+				--skip_lines_in_lr;
+			}
+			
+			auto lines = _format_text(COMMENT_TEXT, (client_width / char_width) - 1, skip_lines_in_lr, max_lines);
+			
+			{
+				unsigned int box_x = char_width / 4;
+				unsigned int box_y = (y + (char_height / 4)) - box_y_sub;
+				
+				unsigned int box_w = client_width - (char_width / 2);
+				unsigned int box_h = (lines.size() * char_height) + (char_height / 2);
+				
+				dc.SetBrush(*wxLIGHT_GREY_BRUSH);
+				dc.DrawRectangle(box_x, box_y, box_w, box_h);
+			}
+			
+			y -= box_y_sub;
+			y += char_height / 2;
+			
+			for(auto li = lines.begin(); li != lines.end(); ++li)
+			{
+				dc.DrawText(*li, (char_width / 2), y);
+				y += char_height;
+			}
+			
+			y += (char_height / 2) + (char_height % 2);
 		}
+		
+		/* Only the first LineRange should have lines skipped. */
+		skip_lines_in_lr = 0;
 		
 		++begin_lr;
 	}
@@ -203,7 +241,7 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 	}
 	
-	this->_build_line_ranges();
+	this->_build_line_ranges((client_width / char_width) - 2);
 	
 	{
 		scroll_yoff = 0; /* just always reset for now */
@@ -326,17 +364,19 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	}
 }
 
-void REHex::Document::_build_line_ranges()
+void REHex::Document::_build_line_ranges(unsigned int cols)
 {
 	this->lineranges.clear();
 	
 	size_t next_line = 0, comment_in = 32, data_off = 0, remain = this->buffer->length();
 	
+	auto comment_lines = _format_text(COMMENT_TEXT, cols);
+	
 	do {
 		{
 			REHex::Document::LineRange r;
 			r.start = next_line;
-			r.lines = 1;
+			r.lines = comment_lines.size() + 1;
 			r.type  = REHex::Document::LineRange::LR_COMMENT;
 			
 			this->lineranges.push_back(r);
@@ -361,4 +401,20 @@ void REHex::Document::_build_line_ranges()
 		data_off += block_len;
 		remain   -= block_len;
 	} while(remain > 0);
+}
+
+std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_line)
+{
+	/* TODO: Do this more intelligently; break at whitespace rather than in the middle of
+	 * words, handle newlines properly, etc.
+	*/
+	
+	std::list<std::string> lines;
+	
+	for(size_t at = (cols * from_line); at < text.size(); at += cols)
+	{
+		lines.push_back(text.substr(at, cols)); /* std::string::substr() will clamp length. */
+	}
+	
+	return lines;
 }

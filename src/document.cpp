@@ -63,7 +63,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	*/
 	
 	auto begin_lr = this->lineranges.begin();
-	for(auto next_lr = std::next(begin_lr); next_lr != this->lineranges.end() && next_lr->start < scroll_yoff; ++next_lr)
+	for(auto next_lr = std::next(begin_lr); next_lr != this->lineranges.end() && next_lr->start <= scroll_yoff; ++next_lr)
 	{
 		begin_lr = next_lr;
 	}

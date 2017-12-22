@@ -32,6 +32,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_SIZE(REHex::Document::OnSize)
 	EVT_SCROLLWIN(REHex::Document::OnScroll)
 	EVT_CHAR(REHex::Document::OnChar)
+	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
 END_EVENT_TABLE()
 
 REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer):
@@ -373,6 +374,81 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
+		}
+	}
+}
+
+void REHex::Document::OnLeftDown(wxMouseEvent &event)
+{
+	wxClientDC dc(this);
+	
+	unsigned int mouse_x = event.GetX();
+	unsigned int rel_x   = mouse_x + this->scroll_xoff;
+	unsigned int mouse_y = event.GetY();
+	
+	printf("Mouse click at (%u, %u) (rel_x = %u)\n", mouse_x, mouse_y, rel_x);
+	
+	dc.SetFont(*hex_font);
+	
+	wxSize char_size         = dc.GetTextExtent("X");
+	unsigned int char_width  = char_size.GetWidth();
+	unsigned int char_height = char_size.GetHeight();
+	
+	/* Iterate over the LineRanges to find the last block which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto begin_lr = this->lineranges.begin();
+	for(auto next_lr = std::next(begin_lr); next_lr != this->lineranges.end() && next_lr->start <= scroll_yoff; ++next_lr)
+	{
+		begin_lr = next_lr;
+	}
+	
+	/* If we are scrolled past the start of the LineRange, will need to skip some of the first one. */
+	unsigned int skip_lines_in_lr = (this->scroll_yoff - begin_lr->start);
+	
+	unsigned int line_off = (mouse_y / char_height) + skip_lines_in_lr;
+	
+	while(begin_lr != this->lineranges.end() && line_off >= begin_lr->lines)
+	{
+		line_off -= begin_lr->lines;
+		++begin_lr;
+	}
+	
+	if(begin_lr != this->lineranges.end())
+	{
+		printf("...at line %u in %s block (%u lines)\n", line_off, (begin_lr->type == REHex::Document::LineRange::LR_DATA ? "data" : "comment"), (unsigned)(begin_lr->lines));
+		
+		if(begin_lr->type == REHex::Document::LineRange::LR_DATA)
+		{
+			unsigned int char_offset = (rel_x / char_width);
+			printf("...character offset %u\n", char_offset);
+			if(((char_offset + 1) % ((this->group_bytes * 2) + 1)) == 0)
+			{
+				printf("...in a space\n");
+			}
+			else{
+				unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((this->group_bytes * 2) + 1));
+				printf("...character offset sub spaces %u\n", char_offset_sub_spaces);
+				
+				size_t line_data_off = this->line_bytes_calc * line_off;
+				size_t byte_off = begin_lr->data.offset + line_data_off + (char_offset_sub_spaces / 2);
+				size_t data_len_clamp = std::min(begin_lr->data.length, (line_data_off + this->line_bytes_calc));
+				
+				if(byte_off < (begin_lr->data.offset + data_len_clamp))
+				{
+					printf("...which is byte offset %u\n", (unsigned)(byte_off));
+					
+					this->cpos_off = byte_off;
+					this->editing_byte = false;
+					
+					/* TODO: Limit paint to affected area */
+					this->Refresh();
+				}
+				else{
+					printf("...which is past the end of the data\n");
+				}
+			}
 		}
 	}
 }

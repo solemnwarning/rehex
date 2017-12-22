@@ -33,6 +33,7 @@ namespace REHex {
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			void OnChar(wxKeyEvent &event);
+			void OnLeftDown(wxMouseEvent &event);
 			
 		private:
 			struct LineRange {

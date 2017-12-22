@@ -249,7 +249,7 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 	}
 	
-	this->_build_line_ranges((client_width / char_width) - 2);
+	this->_build_line_ranges((client_width / char_width));
 	
 	{
 		scroll_yoff = 0; /* just always reset for now */
@@ -383,7 +383,7 @@ void REHex::Document::_build_line_ranges(unsigned int cols)
 	
 	size_t next_line = 0, comment_in = 128, data_off = 0, remain = this->buffer->length();
 	
-	auto comment_lines = _format_text(COMMENT_TEXT, cols);
+	auto comment_lines = _format_text(COMMENT_TEXT, cols - 1);
 	
 	do {
 		{

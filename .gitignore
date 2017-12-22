@@ -1,4 +1,5 @@
 *.o
+/.d/
 /rehex
 /tests/.tmpfile*
 /tests/buffer.t

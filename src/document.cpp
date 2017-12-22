@@ -283,7 +283,8 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 
 void REHex::Document::OnChar(wxKeyEvent &event)
 {
-	int key = event.GetKeyCode();
+	int key       = event.GetKeyCode();
+	int modifiers = event.GetModifiers();
 	
 	auto cpos_inc = [this]()
 	{
@@ -305,21 +306,14 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		this->editing_byte = false;
 	};
 	
-	if(key == WXK_LEFT)
+	if(modifiers == wxMOD_CONTROL)
 	{
-		cpos_dec();
-		
-		/* TODO: Limit paint to affected area */
-		this->Refresh();
+		if(key == 1 + ('G' - 'A'))
+		{
+			/* Ctrl+G - Go to offset */
+		}
 	}
-	else if(key == WXK_RIGHT)
-	{
-		cpos_inc();
-		
-		/* TODO: Limit paint to affected area */
-		this->Refresh();
-	}
-	else if(isxdigit(key))
+	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isxdigit(key))
 	{
 		std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
 		
@@ -359,6 +353,23 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				
 				this->editing_byte = true;
 			}
+			
+			/* TODO: Limit paint to affected area */
+			this->Refresh();
+		}
+	}
+	else if(modifiers == wxMOD_NONE)
+	{
+		if(key == WXK_LEFT)
+		{
+			cpos_dec();
+			
+			/* TODO: Limit paint to affected area */
+			this->Refresh();
+		}
+		else if(key == WXK_RIGHT)
+		{
+			cpos_inc();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();

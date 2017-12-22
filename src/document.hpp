@@ -36,30 +36,52 @@ namespace REHex {
 			void OnLeftDown(wxMouseEvent &event);
 			
 		private:
-			struct LineRange {
-				uint64_t start; /* First line in range */
-				uint64_t lines; /* Number of lines in range */
+			struct Region
+			{
+				uint64_t y_offset; /* First on-screen line in region */
+				uint64_t y_lines;  /* Number of on-screen lines in region */
 				
-				enum {
-					LR_DATA,
-					LR_COMMENT,
-				} type;
+				virtual ~Region();
 				
-				union {
-					struct {
-						size_t offset;
-						size_t length;
-					} data;
-					
-					struct {
-						
-					} comment;
-				};
+				/* Draw this region on the screen.
+				 * 
+				 * doc - The parent Document object
+				 * dc  - The wxDC to draw in
+				 * x,y - The top-left co-ordinates of this Region in the DC (MAY BE NEGATIVE)
+				 *
+				 * The implementation MAY skip rendering outside of the client area
+				 * of the DC to improve performance.
+				*/
+				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int y) = 0;
+				
+				struct Data;
+				struct Comment;
 			};
 			
+		public:
+			friend Region::Data;
+			struct Region::Data: public REHex::Document::Region
+			{
+				size_t d_offset;
+				size_t d_length;
+				
+				Data(REHex::Document &doc, uint64_t y_offset, size_t d_offset, size_t d_length);
+				
+				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int y);
+			};
+			
+			friend Region::Comment;
+			struct Region::Comment: public REHex::Document::Region
+			{
+				Comment(REHex::Document &doc, wxDC &dc, uint64_t y_offset);
+				
+				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int y);
+			};
+			
+		private:
 			Buffer *buffer;
 			
-			std::list<LineRange> lineranges;
+			std::list<Region*> regions;
 			
 			wxFont *hex_font;
 			
@@ -75,7 +97,7 @@ namespace REHex {
 			
 			DECLARE_EVENT_TABLE()
 			
-			void _build_line_ranges(unsigned int cols);
+			void _build_line_ranges(wxDC &dc);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 	};

@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <assert.h>
 #include <ctype.h>
 #include <iterator>
 
@@ -73,7 +74,12 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
 	{
 		int x_px = 0 - scroll_xoff;
-		int y_px = ((int)((*region)->y_offset) - this->scroll_yoff) * char_height;
+		
+		int64_t y_px = (*region)->y_offset;
+		assert(y_px >= 0);
+		
+		y_px -= scroll_yoff;
+		y_px *= char_height;
 		
 		(*region)->draw(*this, dc, x_px, y_px);
 	}
@@ -425,7 +431,7 @@ REHex::Document::Region::Data::Data(REHex::Document &doc, uint64_t y_offset, siz
 	y_lines = (d_length / doc.line_bytes_calc) + !!(d_length % doc.line_bytes_calc);
 }
 
-void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int y)
+void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
 	/* Get the size of the area we can draw into */
 	
@@ -439,20 +445,24 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	int char_width  = char_size.GetWidth();
 	int char_height = char_size.GetHeight();
 	
+	/* If we are scrolled part-way into a data region, don't render data above the client area
+	 * as it would get expensive very quickly with large files.
+	*/
+	int64_t skip_lines = (y < 0 ? (-y / char_height) : 0);
+	size_t skip_bytes  = skip_lines * doc.line_bytes_calc;
+	
+	/* Increment y up to our real drawing start point. We can now trust it to be within a
+	 * char_height of zero, not the stratospheric integer-overflow-causing values it could
+	 * previously have on huge files.
+	*/
+	y += skip_lines * char_height;
+	
 	/* The maximum amount of data that can be drawn on the screen before we're past the bottom
 	 * of the client area. Drawing more than this would be pointless and very expensive in the
 	 * case of large files.
 	*/
 	int max_lines = ((client_height - y) / char_height) + 1;
 	int max_bytes = max_lines * doc.line_bytes_calc;
-	
-	/* If we are scrolled part-way into a data region, don't render data above the client area
-	 * as it would get expensive very quickly with large files.
-	*/
-	int skip_lines    = (y < 0 ? (-y / char_height) : 0);
-	size_t skip_bytes = skip_lines * doc.line_bytes_calc;
-	
-	y += skip_lines * char_height;
 	
 	/* Fetch the data to be drawn. */
 	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((size_t)(max_bytes), (d_length - skip_bytes)));
@@ -532,7 +542,7 @@ REHex::Document::Region::Comment::Comment(REHex::Document &doc, wxDC &dc, uint64
 	this->y_lines  = comment_lines.size() + 1;
 }
 
-void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int y)
+void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
 	/* Comments are currently drawn at the width of the client area, always being fully visible
 	 * (along their X axis) and not scrolling with the file data.

@@ -52,7 +52,7 @@ namespace REHex {
 				 * The implementation MAY skip rendering outside of the client area
 				 * of the DC to improve performance.
 				*/
-				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int y) = 0;
+				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) = 0;
 				
 				struct Data;
 				struct Comment;
@@ -67,7 +67,7 @@ namespace REHex {
 				
 				Data(REHex::Document &doc, uint64_t y_offset, size_t d_offset, size_t d_length);
 				
-				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int y);
+				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 			};
 			
 			friend Region::Comment;
@@ -75,7 +75,7 @@ namespace REHex {
 			{
 				Comment(REHex::Document &doc, wxDC &dc, uint64_t y_offset);
 				
-				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int y);
+				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 			};
 			
 		private:

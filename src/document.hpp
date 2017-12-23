@@ -94,6 +94,7 @@ namespace REHex {
 			
 			size_t cpos_off{0};
 			bool editing_byte{false};
+			bool insert_mode{false};
 			
 			DECLARE_EVENT_TABLE()
 			

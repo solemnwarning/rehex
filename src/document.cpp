@@ -185,7 +185,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	auto cpos_inc = [this]()
 	{
-		if(this->cpos_off + 1 < this->buffer->length())
+		if(this->cpos_off + !insert_mode < this->buffer->length())
 		{
 			++(this->cpos_off);
 		}
@@ -205,55 +205,70 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	if(modifiers == wxMOD_CONTROL)
 	{
-		if(key == 1 + ('G' - 'A'))
+		if(key == WXK_CONTROL_G)
 		{
 			/* Ctrl+G - Go to offset */
+			printf("TODO: Implement jump to offset\n");
 		}
 	}
 	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isxdigit(key))
 	{
-		std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
-		
-		if(!byte.empty())
+		unsigned char nibble;
+		switch(key)
 		{
-			unsigned char nibble;
-			switch(key)
-			{
-				case '0':           nibble = 0x0; break;
-				case '1':           nibble = 0x1; break;
-				case '2':           nibble = 0x2; break;
-				case '3':           nibble = 0x3; break;
-				case '4':           nibble = 0x4; break;
-				case '5':           nibble = 0x5; break;
-				case '6':           nibble = 0x6; break;
-				case '7':           nibble = 0x7; break;
-				case '8':           nibble = 0x8; break;
-				case '9':           nibble = 0x9; break;
-				case 'A': case 'a': nibble = 0xA; break;
-				case 'B': case 'b': nibble = 0xB; break;
-				case 'C': case 'c': nibble = 0xC; break;
-				case 'D': case 'd': nibble = 0xD; break;
-				case 'E': case 'e': nibble = 0xE; break;
-				case 'F': case 'f': nibble = 0xF; break;
-			}
+			case '0':           nibble = 0x0; break;
+			case '1':           nibble = 0x1; break;
+			case '2':           nibble = 0x2; break;
+			case '3':           nibble = 0x3; break;
+			case '4':           nibble = 0x4; break;
+			case '5':           nibble = 0x5; break;
+			case '6':           nibble = 0x6; break;
+			case '7':           nibble = 0x7; break;
+			case '8':           nibble = 0x8; break;
+			case '9':           nibble = 0x9; break;
+			case 'A': case 'a': nibble = 0xA; break;
+			case 'B': case 'b': nibble = 0xB; break;
+			case 'C': case 'c': nibble = 0xC; break;
+			case 'D': case 'd': nibble = 0xD; break;
+			case 'E': case 'e': nibble = 0xE; break;
+			case 'F': case 'f': nibble = 0xF; break;
+		}
+		
+		if(this->editing_byte)
+		{
+			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
+			assert(!byte.empty());
 			
-			if(this->editing_byte)
+			byte[0] = (byte[0] & 0xF0) | nibble;
+			this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
+			
+			cpos_inc();
+		}
+		else if(this->insert_mode)
+		{
+			unsigned char byte = (nibble << 4);
+			this->buffer->insert_data(this->cpos_off, &byte, 1);
+			
+			this->editing_byte = true;
+			
+			/* Changing offsets/lengths means we need to update the regions... */
+			wxClientDC dc(this);
+			_build_line_ranges(dc);
+		}
+		else{
+			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
+			
+			if(!byte.empty())
 			{
-				byte[0] = (byte[0] & 0xF0) | nibble;
-				this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
-				
-				cpos_inc();
-			}
-			else{
 				byte[0] = (byte[0] & 0x0F) | (nibble << 4);
 				this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
 				
 				this->editing_byte = true;
 			}
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
 		}
+		
+		/* TODO: Limit paint to affected area */
+		this->Refresh();
 	}
 	else if(modifiers == wxMOD_NONE)
 	{
@@ -270,6 +285,51 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
+		}
+		else if(key == WXK_INSERT)
+		{
+			insert_mode  = !insert_mode;
+			
+			if(!insert_mode && cpos_off == buffer->length())
+			{
+				/* Move cursor back if going from insert to overwrite mode and it
+				 * was at the end of the file.
+				*/
+				cpos_dec();
+			}
+			
+			/* TODO: Limit paint to affected area */
+			this->Refresh();
+		}
+		else if(key == WXK_DELETE)
+		{
+			if(this->cpos_off < this->buffer->length())
+			{
+				this->buffer->erase_data(this->cpos_off, 1);
+				this->editing_byte = false;
+				
+				/* Changing offsets/lengths means we need to update the regions... */
+				wxClientDC dc(this);
+				_build_line_ranges(dc);
+				
+				/* TODO: Limit paint to affected area */
+				this->Refresh();
+			}
+		}
+		else if(key == WXK_BACK)
+		{
+			if(this->cpos_off > 0)
+			{
+				this->buffer->erase_data(--(this->cpos_off), 1);
+				this->editing_byte = false;
+				
+				/* Changing offsets/lengths means we need to update the regions... */
+				wxClientDC dc(this);
+				_build_line_ranges(dc);
+				
+				/* TODO: Limit paint to affected area */
+				this->Refresh();
+			}
 		}
 	}
 }
@@ -514,10 +574,25 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				line_x += char_width;
 			};
 			
-			draw_nibble(high_nibble, (cur_off == doc.cpos_off && !doc.editing_byte));
-			draw_nibble(low_nibble,  (cur_off == doc.cpos_off));
+			if(cur_off == doc.cpos_off && doc.insert_mode && !doc.editing_byte)
+			{
+				dc.DrawLine(line_x, y, line_x, y + char_height);
+			}
+			
+			draw_nibble(high_nibble, (cur_off == doc.cpos_off && !doc.editing_byte && !doc.insert_mode));
+			draw_nibble(low_nibble,  (cur_off == doc.cpos_off && (doc.editing_byte || !doc.insert_mode)));
 			
 			++cur_off;
+		}
+		
+		if(cur_off == doc.cpos_off && cur_off == doc.buffer->length())
+		{
+			/* Draw the insert cursor past the end of the line if we've just written
+			 * the last byte to the screen.
+			 *
+			 * TODO: Draw on next line if we're at the end of one.
+			*/
+			dc.DrawLine(line_x, y, line_x, y + char_height);
 		}
 		
 		dc.DrawText(norm_str, norm_x, y);

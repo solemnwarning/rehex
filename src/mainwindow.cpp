@@ -18,6 +18,7 @@
 #include <wx/artprov.h>
 #include <wx/notebook.h>
 
+#include "app.hpp"
 #include "mainwindow.hpp"
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -56,7 +57,23 @@ REHex::MainWindow::MainWindow():
 	CreateStatusBar(2);
 	SetStatusText(wxT("Test"));
 	
-	ProcessCommand(wxID_NEW);
+	/* Temporary hack to open files provided on the command line */
+	
+	REHex::App &app = wxGetApp();
+	
+	if(app.argc > 1)
+	{
+		for(int i = 1; i < app.argc; ++i)
+		{
+			REHex::Buffer *buffer = new REHex::Buffer(app.argv[i].ToStdString());
+			
+			REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, buffer);
+			notebook->AddPage(doc, app.argv[i], true);
+		}
+	}
+	else{
+		ProcessCommand(wxID_NEW);
+	}
 }
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)

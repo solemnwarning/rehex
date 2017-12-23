@@ -28,4 +28,6 @@ namespace REHex {
 	};
 }
 
+DECLARE_APP(REHex::App);
+
 #endif /* !REHEX_APP_HPP */

@@ -375,7 +375,7 @@ void REHex::Document::_build_line_ranges(wxDC &dc)
 		regions.push_back(dr);
 		next_line += dr->y_lines;
 		
-		comment_in = std::min(comment_in * 2, (unsigned)(4096));
+		comment_in = std::min(comment_in * 2, (size_t)(4096));
 		data_off += block_len;
 		remain   -= block_len;
 	} while(remain > 0);
@@ -412,8 +412,8 @@ std::list<std::string> REHex::Document::_format_text(const std::string &text, un
 		}
 	}
 	
-	lines.erase(lines.begin(), std::next(lines.begin(), std::min(from_line, lines.size())));
-	lines.erase(std::next(lines.begin(), std::min(max_lines, lines.size())), lines.end());
+	lines.erase(lines.begin(), std::next(lines.begin(), std::min((size_t)(from_line), lines.size())));
+	lines.erase(std::next(lines.begin(), std::min((size_t)(max_lines), lines.size())), lines.end());
 	
 	return lines;
 }

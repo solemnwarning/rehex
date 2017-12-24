@@ -705,6 +705,7 @@ void REHex::Document::_set_comment_text(wxDC &dc, size_t offset, const std::stri
 				
 				auto ci = regions.insert(region, new REHex::Document::Region::Comment(offset, text));
 				regions.insert(ci, new REHex::Document::Region::Data(dr->d_offset, rel_off));
+				++data_regions_count;
 				
 				dr->d_offset += rel_off;
 				dr->d_length -= rel_off;
@@ -751,6 +752,7 @@ void REHex::Document::_delete_comment(wxDC &dc, size_t offset)
 				/* ...and make the second go away. */
 				delete *region;
 				region = regions.erase(region);
+				--data_regions_count;
 				
 				/* Set the y_offset for regions after this to begin at. */
 				next_yo = dr1->y_offset + dr1->y_lines;

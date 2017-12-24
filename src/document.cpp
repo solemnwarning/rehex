@@ -40,6 +40,8 @@ REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
 	buffer(buffer)
 {
+	_init_regions();
+	
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
 	
@@ -146,7 +148,7 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 	}
 	
-	this->_build_line_ranges(dc);
+	this->_recalc_regions(dc);
 	
 	{
 		scroll_yoff = 0; /* just always reset for now */
@@ -240,20 +242,20 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			assert(!byte.empty());
 			
 			byte[0] = (byte[0] & 0xF0) | nibble;
-			this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
+			
+			wxClientDC dc(this);
+			_overwrite_data(dc, this->cpos_off, byte.data(), 1);
 			
 			cpos_inc();
 		}
 		else if(this->insert_mode)
 		{
 			unsigned char byte = (nibble << 4);
-			this->buffer->insert_data(this->cpos_off, &byte, 1);
+			
+			wxClientDC dc(this);
+			_insert_data(dc, this->cpos_off, &byte, 1);
 			
 			this->editing_byte = true;
-			
-			/* Changing offsets/lengths means we need to update the regions... */
-			wxClientDC dc(this);
-			_build_line_ranges(dc);
 		}
 		else{
 			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
@@ -261,7 +263,9 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			if(!byte.empty())
 			{
 				byte[0] = (byte[0] & 0x0F) | (nibble << 4);
-				this->buffer->overwrite_data(this->cpos_off, byte.data(), 1);
+				
+				wxClientDC dc(this);
+				_overwrite_data(dc, this->cpos_off, byte.data(), 1);
 				
 				this->editing_byte = true;
 			}
@@ -305,12 +309,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			if(this->cpos_off < this->buffer->length())
 			{
-				this->buffer->erase_data(this->cpos_off, 1);
-				this->editing_byte = false;
-				
-				/* Changing offsets/lengths means we need to update the regions... */
 				wxClientDC dc(this);
-				_build_line_ranges(dc);
+				_erase_data(dc, this->cpos_off, 1);
+				
+				this->editing_byte = false;
 				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
@@ -320,12 +322,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			if(this->cpos_off > 0)
 			{
-				this->buffer->erase_data(--(this->cpos_off), 1);
-				this->editing_byte = false;
-				
-				/* Changing offsets/lengths means we need to update the regions... */
 				wxClientDC dc(this);
-				_build_line_ranges(dc);
+				_erase_data(dc, --(this->cpos_off), 1);
+				
+				this->editing_byte = false;
 				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
@@ -410,35 +410,219 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	}
 }
 
-void REHex::Document::_build_line_ranges(wxDC &dc)
+void REHex::Document::_init_regions()
 {
-	/* Clear the old regions list. */
-	while(!regions.empty())
-	{
-		delete regions.front();
-		regions.pop_front();
-	}
+	assert(regions.empty());
 	
-	size_t next_line = 0, comment_in = 128, data_off = 0, remain = this->buffer->length();
+	data_regions_count = 0;
+	
+#if 1
+	size_t comment_in = 128, data_off = 0, remain = this->buffer->length();
 	
 	do {
 		/* Add the fake comment. */
-		REHex::Document::Region::Comment *cr = new REHex::Document::Region::Comment(*this, dc, next_line);
-		
+		REHex::Document::Region::Comment *cr = new REHex::Document::Region::Comment();
 		regions.push_back(cr);
-		next_line += cr->y_lines;
 		
 		/* Add some actual data from the Buffer. */
 		size_t block_len = std::min(remain, comment_in);
-		REHex::Document::Region::Data *dr = new REHex::Document::Region::Data(*this, next_line, data_off, block_len);
-		
+		REHex::Document::Region::Data *dr = new REHex::Document::Region::Data(data_off, block_len);
 		regions.push_back(dr);
-		next_line += dr->y_lines;
+		
+		++data_regions_count;
 		
 		comment_in = std::min(comment_in * 2, (size_t)(4096));
 		data_off += block_len;
 		remain   -= block_len;
 	} while(remain > 0);
+#else
+	regions.push_back(new REHex::Document::Region::Data(*this, 0, 0, buffer->length()));
+#endif
+	
+	printf("regions.size() = %u\n", (unsigned int)(regions.size()));
+}
+
+void REHex::Document::_recalc_regions(wxDC &dc)
+{
+	uint64_t next_yo = 0;
+	auto i = regions.begin();
+	
+	for(; i != regions.end(); ++i)
+	{
+		(*i)->y_offset = next_yo;
+		(*i)->update_lines(*this, dc);
+		
+		next_yo += (*i)->y_lines;
+	}
+}
+
+void REHex::Document::_overwrite_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length)
+{
+	bool ok = buffer->overwrite_data(offset, data, length);
+	assert(ok);
+}
+
+/* Insert some data into the Buffer and update our own data structures. */
+void REHex::Document::_insert_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length)
+{
+	bool ok = buffer->insert_data(offset, data, length);
+	assert(ok);
+	
+	if(ok)
+	{
+		auto region = regions.begin();
+		
+		/* Increment region until it is pointing at the Data region which encompasses the
+		 * point we have inserted at.
+		*/
+		for(;; ++region)
+		{
+			auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+			
+			if(dr == NULL)
+			{
+				/* Not a data region, carry on searching... */
+				continue;
+			}
+			
+			if((dr->d_offset + dr->d_length) > offset)
+			{
+				/* Regions are ordered, so the first one whose offset plus length
+				 * encompasses our starting point is the one.
+				*/
+				break;
+			}
+			
+			if((dr->d_offset + dr->d_length) == offset && offset == buffer->length())
+			{
+				/* Special case: Inserting at the end of the last region. */
+				break;
+			}
+		}
+		
+		assert(region != regions.end());
+		
+		/* Grow the length of the region. */
+		
+		{
+			auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+			assert(dr != NULL);
+			
+			dr->d_length += length;
+			
+			dr->update_lines(*this, dc);
+		}
+		
+		/* Shuffle the rest of the regions along. */
+		
+		uint64_t next_yo = (*region)->y_offset + (*region)->y_lines;
+		++region;
+		
+		while(region != regions.end())
+		{
+			auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+			if(dr != NULL)
+			{
+				dr->d_offset += length;
+			}
+			
+			(*region)->y_offset = next_yo;
+			next_yo += (*region)->y_lines;
+			
+			++region;
+		}
+	}
+	
+}
+
+/* Erase a range of data from the Buffer and update our own data structures. */
+void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
+{
+	bool ok = buffer->erase_data(offset, length);
+	assert(ok);
+	
+	if(ok)
+	{
+		auto region = regions.begin();
+		
+		/* Increment region until it is pointing at the Data region which encompasses the
+		 * start of the data being erased.
+		*/
+		for(REHex::Document::Region::Data *d; (d = dynamic_cast<REHex::Document::Region::Data*>(*region)) == NULL || (d->d_offset + d->d_length) <= offset; ++region) {}
+		assert(region != regions.end());
+		
+		uint64_t next_yo = (*region)->y_offset;
+		
+		size_t to_shift  = 0;
+		size_t to_shrink = length;
+		
+		while(region != regions.end())
+		{
+			auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+			if(dr != NULL)
+			{
+				/* This is a data region, so we need to munge the d_offset and
+				 * d_length values according to our state within the erase.
+				*/
+				
+				size_t to_shrink_here = std::min(to_shrink, dr->d_length);
+				
+				dr->d_offset -= to_shift;
+				dr->d_length -= to_shrink_here;
+				
+				to_shift  += to_shrink_here;
+				to_shrink -= to_shrink_here;
+				
+				if(region != regions.begin() && dr->d_length == 0)
+				{
+					/* If this isn't the first region, it is now zero bytes long
+					 * and was preceeded by a comment, delete that comment.
+					*/
+					
+					auto prev = std::prev(region);
+					auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*prev);
+					if(cr != NULL)
+					{
+						next_yo = (*prev)->y_offset;
+						
+						delete *prev;
+						region = regions.erase(prev);
+					}
+				}
+				
+				if(dr->d_length == 0 && data_regions_count > 1)
+				{
+					/* If we've shrunk this region to zero bytes and it isn't
+					 * the last one, get rid of it.
+					*/
+					
+					delete *region;
+					region = regions.erase(region);
+					
+					--data_regions_count;
+					
+					/* ...and carry on to the next one. */
+					continue;
+				}
+				else if(to_shrink_here > 0)
+				{
+					(*region)->update_lines(*this, dc);
+				}
+			}
+			
+			/* All blocks from the point where we started erasing must have their
+			 * y_offset values updated, since region heights may have changed.
+			*/
+			
+			(*region)->y_offset = next_yo;
+			next_yo += (*region)->y_lines;
+			
+			++region;
+		}
+		
+		assert(to_shift == length);
+		assert(to_shrink == 0);
+	}
 }
 
 std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
@@ -480,11 +664,11 @@ std::list<std::string> REHex::Document::_format_text(const std::string &text, un
 
 REHex::Document::Region::~Region() {}
 
-REHex::Document::Region::Data::Data(REHex::Document &doc, uint64_t y_offset, size_t d_offset, size_t d_length):
-	d_offset(d_offset), d_length(d_length)
+REHex::Document::Region::Data::Data(size_t d_offset, size_t d_length):
+	d_offset(d_offset), d_length(d_length) {}
+
+void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 {
-	this->y_offset = y_offset;
-	
 	/* Height of the region is simply the number of complete lines of data plus an incomplete
 	 * one if the data isn't a round number of lines.
 	*/
@@ -601,7 +785,9 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(REHex::Document &doc, wxDC &dc, uint64_t y_offset)
+REHex::Document::Region::Comment::Comment() {}
+
+void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
 	wxSize client_size        = doc.GetClientSize();
 	unsigned int client_width = client_size.GetWidth();

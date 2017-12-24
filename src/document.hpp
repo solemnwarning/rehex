@@ -43,6 +43,8 @@ namespace REHex {
 				
 				virtual ~Region();
 				
+				virtual void update_lines(REHex::Document &doc, wxDC &dc) = 0;
+				
 				/* Draw this region on the screen.
 				 * 
 				 * doc - The parent Document object
@@ -65,16 +67,18 @@ namespace REHex {
 				size_t d_offset;
 				size_t d_length;
 				
-				Data(REHex::Document &doc, uint64_t y_offset, size_t d_offset, size_t d_length);
+				Data(size_t d_offset, size_t d_length);
 				
+				virtual void update_lines(REHex::Document &doc, wxDC &dc);
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 			};
 			
 			friend Region::Comment;
 			struct Region::Comment: public REHex::Document::Region
 			{
-				Comment(REHex::Document &doc, wxDC &dc, uint64_t y_offset);
+				Comment();
 				
+				virtual void update_lines(REHex::Document &doc, wxDC &dc);
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 			};
 			
@@ -82,6 +86,7 @@ namespace REHex {
 			Buffer *buffer;
 			
 			std::list<Region*> regions;
+			size_t data_regions_count;
 			
 			wxFont *hex_font;
 			
@@ -98,7 +103,12 @@ namespace REHex {
 			
 			DECLARE_EVENT_TABLE()
 			
-			void _build_line_ranges(wxDC &dc);
+			void _init_regions();
+			void _recalc_regions(wxDC &dc);
+			
+			void _overwrite_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length);
+			void _insert_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length);
+			void _erase_data(wxDC &dc, size_t offset, size_t length);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 	};

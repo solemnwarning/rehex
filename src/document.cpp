@@ -20,6 +20,7 @@
 #include <iterator>
 
 #include "document.hpp"
+#include "textentrydialog.hpp"
 
 static const char *COMMENT_TEXT = "There remains a very delicate balance in this world...\n"
 	"Between those who create and those who will experience the creations of others.\n"
@@ -331,6 +332,20 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				this->Refresh();
 			}
 		}
+		else if(key == '/')
+		{
+			REHex::TextEntryDialog te(this, "Enter comment", _get_comment_text(cpos_off));
+			
+			int rc = te.ShowModal();
+			if(rc == wxID_OK)
+			{
+				wxClientDC dc(this);
+				_set_comment_text(dc, cpos_off, te.get_text());
+				
+				/* TODO: Limit paint to affected area */
+				this->Refresh();
+			}
+		}
 	}
 }
 
@@ -421,7 +436,7 @@ void REHex::Document::_init_regions()
 	
 	do {
 		/* Add the fake comment. */
-		REHex::Document::Region::Comment *cr = new REHex::Document::Region::Comment();
+		REHex::Document::Region::Comment *cr = new REHex::Document::Region::Comment(data_off, COMMENT_TEXT);
 		regions.push_back(cr);
 		
 		/* Add some actual data from the Buffer. */
@@ -526,6 +541,12 @@ void REHex::Document::_insert_data(wxDC &dc, size_t offset, const unsigned char 
 				dr->d_offset += length;
 			}
 			
+			auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+			if(cr != NULL)
+			{
+				cr->d_offset += length;
+			}
+			
 			(*region)->y_offset = next_yo;
 			next_yo += (*region)->y_lines;
 			
@@ -610,6 +631,12 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 				}
 			}
 			
+			auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+			if(cr != NULL)
+			{
+				cr->d_offset -= to_shift;
+			}
+			
 			/* All blocks from the point where we started erasing must have their
 			 * y_offset values updated, since region heights may have changed.
 			*/
@@ -623,6 +650,63 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 		assert(to_shift == length);
 		assert(to_shrink == 0);
 	}
+}
+
+std::string REHex::Document::_get_comment_text(size_t offset)
+{
+	for(auto region = regions.begin(); region != regions.end(); ++region)
+	{
+		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+		if(cr != NULL && cr->d_offset == offset)
+		{
+			return cr->text;
+		}
+	}
+	
+	return "";
+}
+
+void REHex::Document::_set_comment_text(wxDC &dc, size_t offset, const std::string &text)
+{
+	for(auto region = regions.begin(); region != regions.end(); ++region)
+	{
+		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+		if(cr != NULL && cr->d_offset == offset)
+		{
+			/* Updating an existing comment. */
+			cr->text = text;
+			break;
+		}
+		
+		auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+		if(dr != NULL)
+		{
+			if(dr->d_offset == offset)
+			{
+				/* Placing a comment at the start of a Data region. */
+				regions.insert(region, new REHex::Document::Region::Comment(offset, text));
+				break;
+			}
+			else if((dr->d_offset + dr->d_length) > offset)
+			{
+				/* Splitting a Data region in two and placing a comment in between
+				 * them.
+				*/
+				
+				size_t rel_off = offset - dr->d_offset;
+				
+				auto ci = regions.insert(region, new REHex::Document::Region::Comment(offset, text));
+				regions.insert(ci, new REHex::Document::Region::Data(dr->d_offset, rel_off));
+				
+				dr->d_offset += rel_off;
+				dr->d_length -= rel_off;
+				
+				break;
+			}
+		}
+	}
+	
+	_recalc_regions(dc);
 }
 
 std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
@@ -785,7 +869,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment() {}
+REHex::Document::Region::Comment::Comment(size_t d_offset, const std::string &text):
+	d_offset(d_offset), text(text) {}
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
@@ -797,7 +882,7 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 	
 	unsigned int row_chars = client_width / char_width;
 	
-	auto comment_lines = _format_text(COMMENT_TEXT, row_chars - 1);
+	auto comment_lines = _format_text(text, row_chars - 1);
 	
 	this->y_offset = y_offset;
 	this->y_lines  = comment_lines.size() + 1;
@@ -823,7 +908,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	unsigned int char_width  = char_size.GetWidth();
 	unsigned int char_height = char_size.GetHeight();
 	
-	auto lines = _format_text(COMMENT_TEXT, (client_width / char_width) - 1);
+	auto lines = _format_text(text, (client_width / char_width) - 1);
 	
 	{
 		int box_x = x + (char_width / 4);

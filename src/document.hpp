@@ -76,7 +76,10 @@ namespace REHex {
 			friend Region::Comment;
 			struct Region::Comment: public REHex::Document::Region
 			{
-				Comment();
+				size_t d_offset;
+				std::string text;
+				
+				Comment(size_t d_offset, const std::string &text);
 				
 				virtual void update_lines(REHex::Document &doc, wxDC &dc);
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
@@ -109,6 +112,9 @@ namespace REHex {
 			void _overwrite_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length);
 			void _insert_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length);
 			void _erase_data(wxDC &dc, size_t offset, size_t length);
+			
+			std::string _get_comment_text(size_t offset);
+			void _set_comment_text(wxDC &dc, size_t offset, const std::string &text);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 	};

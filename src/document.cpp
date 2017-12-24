@@ -439,7 +439,7 @@ void REHex::Document::_init_regions()
 	
 	data_regions_count = 0;
 	
-#if 1
+#if 0
 	size_t comment_in = 128, data_off = 0, remain = this->buffer->length();
 	
 	do {
@@ -459,7 +459,8 @@ void REHex::Document::_init_regions()
 		remain   -= block_len;
 	} while(remain > 0);
 #else
-	regions.push_back(new REHex::Document::Region::Data(*this, 0, 0, buffer->length()));
+	regions.push_back(new REHex::Document::Region::Data(0, buffer->length()));
+	++data_regions_count;
 #endif
 	
 	printf("regions.size() = %u\n", (unsigned int)(regions.size()));

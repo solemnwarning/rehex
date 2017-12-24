@@ -339,8 +339,16 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			int rc = te.ShowModal();
 			if(rc == wxID_OK)
 			{
+				std::string comment_text = te.get_text();
 				wxClientDC dc(this);
-				_set_comment_text(dc, cpos_off, te.get_text());
+				
+				if(comment_text.empty())
+				{
+					_delete_comment(dc, cpos_off);
+				}
+				else{
+					_set_comment_text(dc, cpos_off, te.get_text());
+				}
 				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
@@ -707,6 +715,57 @@ void REHex::Document::_set_comment_text(wxDC &dc, size_t offset, const std::stri
 	}
 	
 	_recalc_regions(dc);
+}
+
+void REHex::Document::_delete_comment(wxDC &dc, size_t offset)
+{
+	auto region = regions.begin();
+	uint64_t next_yo = 0;
+	
+	for(; region != regions.end(); ++region)
+	{
+		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+		if(cr != NULL && cr->d_offset == offset)
+		{
+			/* Found the requested comment Region, destroy it. */
+			delete *region;
+			region = regions.erase(region);
+			
+			/* ...and merge the Data regions from either side
+			 * (unless we deleted a comment from the beginning).
+			*/
+			if(region != regions.begin())
+			{
+				/* ...get the Data region from before the comment... */
+				auto dr1 = dynamic_cast<REHex::Document::Region::Data*>(*(std::prev(region)));
+				assert(dr1 != NULL);
+				
+				/* ...get the Data region from after the comment... */
+				auto dr2 = dynamic_cast<REHex::Document::Region::Data*>(*region);
+				assert(dr2 != NULL);
+				
+				/* ...extend the first to encompass the second... */
+				dr1->d_length += dr2->d_length;
+				dr1->update_lines(*this, dc);
+				
+				/* ...and make the second go away. */
+				delete *region;
+				region = regions.erase(region);
+				
+				/* Set the y_offset for regions after this to begin at. */
+				next_yo = dr1->y_offset + dr1->y_lines;
+			}
+			
+			break;
+		}
+	}
+	
+	/* Fixup the y_offset of all following regions */
+	for(; region != regions.end(); ++region)
+	{
+		(*region)->y_offset = next_yo;
+		next_yo += (*region)->y_lines;
+	}
 }
 
 std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)

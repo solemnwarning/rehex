@@ -115,6 +115,7 @@ namespace REHex {
 			
 			std::string _get_comment_text(size_t offset);
 			void _set_comment_text(wxDC &dc, size_t offset, const std::string &text);
+			void _delete_comment(wxDC &dc, size_t offset);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 	};

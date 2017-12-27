@@ -501,6 +501,7 @@ void REHex::Document::_insert_data(wxDC &dc, size_t offset, const unsigned char 
 		*/
 		for(;; ++region)
 		{
+			assert(region != regions.end());
 			auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
 			
 			if(dr == NULL)
@@ -517,14 +518,12 @@ void REHex::Document::_insert_data(wxDC &dc, size_t offset, const unsigned char 
 				break;
 			}
 			
-			if((dr->d_offset + dr->d_length) == offset && offset == buffer->length())
+			if((dr->d_offset + dr->d_length) == offset && std::next(region) == regions.end())
 			{
 				/* Special case: Inserting at the end of the last region. */
 				break;
 			}
 		}
-		
-		assert(region != regions.end());
 		
 		/* Grow the length of the region. */
 		

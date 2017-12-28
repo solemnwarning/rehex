@@ -35,7 +35,9 @@ namespace REHex {
 			void OnChar(wxKeyEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
 			
+		#ifndef UNIT_TEST
 		private:
+		#endif
 			struct Region
 			{
 				uint64_t y_offset; /* First on-screen line in region */
@@ -85,7 +87,9 @@ namespace REHex {
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 			};
 			
+		#ifndef UNIT_TEST
 		private:
+		#endif
 			Buffer *buffer;
 			
 			std::list<Region*> regions;
@@ -104,8 +108,6 @@ namespace REHex {
 			bool editing_byte{false};
 			bool insert_mode{false};
 			
-			DECLARE_EVENT_TABLE()
-			
 			void _init_regions();
 			void _recalc_regions(wxDC &dc);
 			
@@ -118,6 +120,9 @@ namespace REHex {
 			void _delete_comment(wxDC &dc, size_t offset);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			
+			/* Stays at the bottom because it changes the protection... */
+			DECLARE_EVENT_TABLE()
 	};
 }
 

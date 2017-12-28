@@ -3,3 +3,4 @@
 /rehex
 /tests/.tmpfile*
 /tests/buffer.t
+/tests/document.t

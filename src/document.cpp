@@ -462,8 +462,6 @@ void REHex::Document::_init_regions()
 	regions.push_back(new REHex::Document::Region::Data(0, buffer->length()));
 	++data_regions_count;
 #endif
-	
-	printf("regions.size() = %u\n", (unsigned int)(regions.size()));
 }
 
 void REHex::Document::_recalc_regions(wxDC &dc)

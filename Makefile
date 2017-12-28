@@ -25,7 +25,7 @@ $(shell mkdir -p $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
-TESTS := tests/buffer.t
+TESTS := tests/buffer.t tests/document.t
 
 all: rehex
 
@@ -37,6 +37,9 @@ rehex: src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialo
 
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+
+tests/document.t: src/document.o src/buffer.o src/textentrydialog.o tests/document.o tests/tap/basic.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(WX_LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<

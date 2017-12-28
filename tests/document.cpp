@@ -501,6 +501,954 @@ static void insert_tests()
 	/* TODO: Check y_* values */
 }
 
+static void erase_tests()
+{
+	{
+		diag("Erasing the start of a Document with a single data region");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
+		unsigned char buffer_final[]   = {0x03,0x04,0x05,0x06,0x07};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
+		doc->data_regions_count = 1;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 0, 3);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 1);
+		is_int(1, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_offset, 0);
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_length, 5);
+	}
+	
+	{
+		diag("Erasing the middle of a Document with a single data region");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
+		unsigned char buffer_final[]   = {0x00,0x01,0x03,0x04,0x05,0x06,0x07};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
+		doc->data_regions_count = 1;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 2, 1);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 1);
+		is_int(1, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_offset, 0);
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_length, 7);
+	}
+	
+	{
+		diag("Erasing the end of a Document with a single data region");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
+		doc->data_regions_count = 1;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 6, 2);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 1);
+		is_int(1, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_offset, 0);
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_length, 6);
+	}
+	
+	{
+		diag("Erasing all of a Document with a single data region");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
+		unsigned char buffer_final[]   = {};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
+		doc->data_regions_count = 1;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 0, 8);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 1);
+		is_int(1, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_offset, 0);
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_length, 0);
+	}
+	
+	{
+		diag("Erasing the start of data region 1/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 0, 2);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 7);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 7);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing the middle of data region 1/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 1, 3);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 2);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 2);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 2);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 6);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 6);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing the end of data region 1/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 1, 4);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 1);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 1);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 1);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing all of data region 1/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 0, 5);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 4);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 4);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing the start of data region 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 5, 1);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing the middle of data region 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 6, 1);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing the end of data region 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 8, 1);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing all of data region 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 5, 4);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing the start of data region 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 9, 3);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 1);
+	}
+	
+	{
+		diag("Erasing the middle of data region 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 11, 1);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 3);
+	}
+	
+	{
+		diag("Erasing the end of data region 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 10, 3);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 1);
+	}
+	
+	{
+		diag("Erasing all of data region 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 9, 4);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing some of data region 1/3 and 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 3, 4);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 2);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing some of data region 1/3 and all of 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 3, 6);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing all of data region 1/3 and some of 2/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 0, 6);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
+	}
+	
+	{
+		diag("Erasing some of data region 1/3, all of 2/3 and some of 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 4, 7);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 4);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 4);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 4);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 2);
+	}
+	
+	{
+		diag("Erasing some of data region 2/3, and some of 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x0A,0x0B,0x0C};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 8, 2);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 6);
+		is_int(3, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
+		
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
+		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 3);
+	}
+	
+	{
+		diag("Erasing some of data region 2/3, and all of 3/3 in a Document");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 8, 5);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 4);
+		is_int(2, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
+		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
+		
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
+		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
+	}
+	
+	{
+		diag("Erasing all data from a Document with 3 data regions");
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		doc->SetSize(0,0, 640,480);
+		
+		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
+		unsigned char buffer_final[]   = {};
+		
+		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		
+		doc->regions.clear();
+		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
+		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
+		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
+		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
+		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
+		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
+		doc->data_regions_count = 3;
+		
+		wxClientDC dc(doc);
+		doc->_erase_data(dc, 0, 13);
+		
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		
+		assert(doc->regions.size() == 1);
+		is_int(1, doc->data_regions_count, "Document::data_regions_count");
+		
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_offset, 0);
+		TEST_REGION_INT(0, REHex::Document::Region::Data, d_length, 0);
+	}
+	
+	/* TODO: Check y_* values */
+}
+
 int main(int argc, char **argv)
 {
 	wxApp::SetInstance(new wxApp());
@@ -510,6 +1458,7 @@ int main(int argc, char **argv)
 	plan_lazy();
 	
 	insert_tests();
+	erase_tests();
 	
 	wxTheApp->OnExit();
 	wxEntryCleanup();

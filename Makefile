@@ -14,8 +14,10 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-WX_CXXFLAGS := $(shell wx-config --cxxflags)
-WX_LIBS     := $(shell wx-config --libs)
+WX_CONFIG ?= "wx-config"
+
+WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags)
+WX_LIBS     := $(shell $(WX_CONFIG) --libs)
 
 CFLAGS   := -Wall -std=c99   -ggdb -I./
 CXXFLAGS := -Wall -std=c++11 -ggdb -I./ $(WX_CXXFLAGS)

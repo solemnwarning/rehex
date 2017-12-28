@@ -582,6 +582,7 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 		
 		size_t to_shift  = 0;
 		size_t to_shrink = length;
+		size_t dr_offset = offset - dynamic_cast<REHex::Document::Region::Data*>(*region)->d_offset;
 		
 		while(region != regions.end())
 		{
@@ -592,13 +593,14 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 				 * d_length values according to our state within the erase.
 				*/
 				
-				size_t to_shrink_here = std::min(to_shrink, dr->d_length);
+				size_t to_shrink_here = std::min(to_shrink, dr->d_length - dr_offset);
 				
 				dr->d_offset -= to_shift;
 				dr->d_length -= to_shrink_here;
 				
 				to_shift  += to_shrink_here;
 				to_shrink -= to_shrink_here;
+				dr_offset = 0;
 				
 				if(region != regions.begin() && dr->d_length == 0)
 				{

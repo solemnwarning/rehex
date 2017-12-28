@@ -49,6 +49,14 @@ REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer
 	hex_font = new wxFont(finfo);
 }
 
+REHex::Document::~Document()
+{
+	for(auto region = regions.begin(); region != regions.end(); ++region)
+	{
+		delete *region;
+	}
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

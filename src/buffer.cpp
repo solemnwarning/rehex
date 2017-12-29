@@ -16,11 +16,13 @@
 */
 
 #include <assert.h>
+#include <fcntl.h>
 #include <list>
 #include <stdio.h>
 #include <string>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
 
@@ -93,9 +95,9 @@ REHex::Buffer::Buffer():
 }
 
 REHex::Buffer::Buffer(const std::string &filename, size_t block_size):
-	block_size(block_size)
+	filename(filename), block_size(block_size)
 {
-	fh = fopen(filename.c_str(), "r+b");
+	fh = fopen(filename.c_str(), "rb");
 	assert(fh);
 	
 	/* Find out the length of the file. */
@@ -120,13 +122,44 @@ REHex::Buffer::Buffer(const std::string &filename, size_t block_size):
 
 void REHex::Buffer::write_inplace()
 {
+	write_inplace(filename, false);
+}
+
+void REHex::Buffer::write_inplace(const std::string &filename, bool force)
+{
+	/* Need to open the file with open() since fopen() can't be told to open
+	 * the file, creating it if it doesn't exist, WITHOUT truncating and letting
+	 * us write at arbitrary positions.
+	*/
+	int fd = open(filename.c_str(), (O_RDWR | O_CREAT | O_NOCTTY), 0777);
+	assert(fd != -1);
+	
+	FILE *wfh = fdopen(fd, "r+b");
+	assert(wfh != NULL);
+	
 	size_t out_length = this->length();
+	
+	/* Reserve space in the output file if it isn't already at least as large
+	 * as the file we want to write out.
+	*/
+	
+	{
+		assert(fseek(wfh, 0, SEEK_END) == 0);
+		
+		off_t wfh_initial_size = ftello(wfh);
+		assert(wfh_initial_size >= 0);
+		
+		if(wfh_initial_size < out_length)
+		{
+			assert(ftruncate(fileno(wfh), out_length) == 0);
+		}
+	}
 	
 	std::list<Block> pending(blocks.begin(), blocks.end());
 	
 	for(auto b = pending.begin(); b != pending.end();)
 	{
-		if(b->virt_offset == b->real_offset && b->state != Block::DIRTY)
+		if(!force && (b->virt_offset == b->real_offset && b->state != Block::DIRTY))
 		{
 			/* Don't need to rewrite this block */
 			b = pending.erase(b);
@@ -149,8 +182,8 @@ void REHex::Buffer::write_inplace()
 		{
 			_load_block(&(*b));
 			
-			assert(fseeko(fh, b->virt_offset, SEEK_SET) == 0);
-			assert(fwrite(b->data.data(), b->virt_length, 1, fh) == 1);
+			assert(fseeko(wfh, b->virt_offset, SEEK_SET) == 0);
+			assert(fwrite(b->data.data(), b->virt_length, 1, wfh) == 1);
 		}
 		
 		b = pending.erase(b);
@@ -168,9 +201,9 @@ void REHex::Buffer::write_inplace()
 		}
 	}
 	
-	assert(fflush(fh) == 0);
+	assert(fflush(wfh) == 0);
 	
-	assert(ftruncate(fileno(fh), out_length) == 0);
+	assert(ftruncate(fileno(wfh), out_length) == 0);
 	
 	/* All changes are flushed to disk now. Rebuild the blocks list so we
 	 * don't hang on to the old dirty blocks or try loading data from the
@@ -188,6 +221,16 @@ void REHex::Buffer::write_inplace()
 	{
 		blocks.push_back(Block(0,0));
 	}
+	
+	if(fh != NULL)
+	{
+		fclose(fh);
+	}
+	
+	/* The Buffer is now backed by the new file (which might be the old one). */
+	
+	fh = wfh;
+	this->filename = filename;
 }
 
 void REHex::Buffer::write_copy(const std::string &filename)

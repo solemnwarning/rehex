@@ -16,10 +16,13 @@
 */
 
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "tests/tap/basic.h"
 
@@ -87,6 +90,52 @@ static std::vector<unsigned char> read_file(const char *filename)
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
 	b.write_copy(TMPFILE2); \
+	std::vector<unsigned char> data = read_file(TMPFILE2); \
+	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \
+} \
+{ \
+	diag(desc ", checking result with write_inplace(<filename>) (same file)"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	b.write_inplace(TMPFILE); \
+	std::vector<unsigned char> data = read_file(TMPFILE); \
+	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \
+} \
+{ \
+	diag(desc ", checking result with write_inplace(<filename>) (new file)"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	assert(unlink(TMPFILE2) == 0 || errno == ENOENT);\
+	b.write_inplace(TMPFILE2); \
+	std::vector<unsigned char> data = read_file(TMPFILE2); \
+	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \
+} \
+if(sizeof(END_DATA) > 0) \
+{ \
+	diag(desc ", checking result with write_inplace(<filename>) (smaller file)"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	std::vector<unsigned char> tf2data((sizeof(END_DATA) - 1), 0xFF); \
+	write_file(TMPFILE2, tf2data.data(), tf2data.size()); \
+	b.write_inplace(TMPFILE2); \
+	std::vector<unsigned char> data = read_file(TMPFILE2); \
+	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
+		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \
+} \
+{ \
+	diag(desc ", checking result with write_inplace(<filename>) (larger file)"); \
+	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	REHex::Buffer b(TMPFILE, 8); \
+	buffer_manip_code; \
+	std::vector<unsigned char> tf2data((sizeof(END_DATA) + 1), 0xFF); \
+	write_file(TMPFILE2, tf2data.data(), tf2data.size()); \
+	b.write_inplace(TMPFILE2); \
 	std::vector<unsigned char> data = read_file(TMPFILE2); \
 	is_int(sizeof(END_DATA), data.size(), "File is correct length") \
 		&& is_blob(END_DATA, data.data(), sizeof(END_DATA), "File contains correct data"); \

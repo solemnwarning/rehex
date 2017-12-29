@@ -26,6 +26,7 @@ namespace REHex {
 	{
 		private:
 			FILE *fh;
+			std::string filename;
 			
 		#ifdef UNIT_TEST
 		/* Make the block list public when unit testing so we can examine the
@@ -72,7 +73,7 @@ namespace REHex {
 			Buffer(const std::string &filename, size_t block_size = DEFAULT_BLOCK_SIZE);
 			
 			void write_inplace();
-			void write_replace();
+			void write_inplace(const std::string &filename, bool force = true);
 			void write_copy(const std::string &filename);
 			
 			size_t length();

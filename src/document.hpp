@@ -82,10 +82,10 @@ namespace REHex {
 			friend Region::Comment;
 			struct Region::Comment: public REHex::Document::Region
 			{
-				off_t d_offset;
-				std::string text;
+				off_t c_offset;
+				std::string c_text;
 				
-				Comment(off_t d_offset, const std::string &text);
+				Comment(off_t c_offset, const std::string &c_text);
 				
 				virtual void update_lines(REHex::Document &doc, wxDC &dc);
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

@@ -206,18 +206,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 2);
 	}
@@ -252,18 +252,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 2);
 	}
@@ -298,18 +298,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 6);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 2);
 	}
@@ -344,18 +344,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 6);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 2);
 	}
@@ -390,18 +390,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 7);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 7);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 7);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -436,18 +436,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 7);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 7);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 7);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 6);
 	}
@@ -482,18 +482,18 @@ static void insert_tests()
 		
 		assert(doc->regions.size() == 6);
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 7);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 7);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 7);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -649,18 +649,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 7);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 7);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 7);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -695,18 +695,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 2);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 2);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 2);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 2);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 6);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 6);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 6);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -741,18 +741,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 1);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 1);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 1);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 1);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -787,13 +787,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 4);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 4);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 4);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -828,18 +828,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -874,18 +874,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -920,18 +920,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -966,13 +966,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -1007,18 +1007,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 1);
 	}
@@ -1053,18 +1053,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 3);
 	}
@@ -1099,18 +1099,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 9);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 9);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 9);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 1);
 	}
@@ -1145,13 +1145,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -1186,18 +1186,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 2);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -1232,13 +1232,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -1273,13 +1273,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 3);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 3);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 3);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 4);
 	}
@@ -1314,13 +1314,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 4);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 4);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 4);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 4);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 2);
 	}
@@ -1355,18 +1355,18 @@ static void erase_tests()
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
 		
-		TEST_REGION_INT(4, REHex::Document::Region::Comment, d_offset, 8);
-		TEST_REGION_STR(4, REHex::Document::Region::Comment, text,     "c");
+		TEST_REGION_INT(4, REHex::Document::Region::Comment, c_offset, 8);
+		TEST_REGION_STR(4, REHex::Document::Region::Comment, c_text,   "c");
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_offset, 8);
 		TEST_REGION_INT(5, REHex::Document::Region::Data,    d_length, 3);
 	}
@@ -1401,13 +1401,13 @@ static void erase_tests()
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
 		
-		TEST_REGION_INT(0, REHex::Document::Region::Comment, d_offset, 0);
-		TEST_REGION_STR(0, REHex::Document::Region::Comment, text,     "a");
+		TEST_REGION_INT(0, REHex::Document::Region::Comment, c_offset, 0);
+		TEST_REGION_STR(0, REHex::Document::Region::Comment, c_text,   "a");
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_offset, 0);
 		TEST_REGION_INT(1, REHex::Document::Region::Data,    d_length, 5);
 		
-		TEST_REGION_INT(2, REHex::Document::Region::Comment, d_offset, 5);
-		TEST_REGION_STR(2, REHex::Document::Region::Comment, text,     "b");
+		TEST_REGION_INT(2, REHex::Document::Region::Comment, c_offset, 5);
+		TEST_REGION_STR(2, REHex::Document::Region::Comment, c_text,   "b");
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_offset, 5);
 		TEST_REGION_INT(3, REHex::Document::Region::Data,    d_length, 3);
 	}

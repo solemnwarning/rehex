@@ -568,7 +568,7 @@ void REHex::Document::_insert_data(wxDC &dc, off_t offset, const unsigned char *
 			auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
 			if(cr != NULL)
 			{
-				cr->d_offset += length;
+				cr->c_offset += length;
 			}
 			
 			(*region)->y_offset = next_yo;
@@ -660,7 +660,7 @@ void REHex::Document::_erase_data(wxDC &dc, off_t offset, off_t length)
 			auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
 			if(cr != NULL)
 			{
-				cr->d_offset -= to_shift;
+				cr->c_offset -= to_shift;
 			}
 			
 			/* All blocks from the point where we started erasing must have their
@@ -683,9 +683,9 @@ std::string REHex::Document::_get_comment_text(off_t offset)
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
 		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr != NULL && cr->d_offset == offset)
+		if(cr != NULL && cr->c_offset == offset)
 		{
-			return cr->text;
+			return cr->c_text;
 		}
 	}
 	
@@ -697,10 +697,10 @@ void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const std::strin
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
 		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr != NULL && cr->d_offset == offset)
+		if(cr != NULL && cr->c_offset == offset)
 		{
 			/* Updating an existing comment. */
-			cr->text = text;
+			cr->c_text = text;
 			break;
 		}
 		
@@ -744,7 +744,7 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 	for(; region != regions.end(); ++region)
 	{
 		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr != NULL && cr->d_offset == offset)
+		if(cr != NULL && cr->c_offset == offset)
 		{
 			/* Found the requested comment Region, destroy it. */
 			delete *region;
@@ -948,8 +948,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(off_t d_offset, const std::string &text):
-	d_offset(d_offset), text(text) {}
+REHex::Document::Region::Comment::Comment(off_t c_offset, const std::string &c_text):
+	c_offset(c_offset), c_text(c_text) {}
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
@@ -961,7 +961,7 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 	
 	unsigned int row_chars = client_width / char_width;
 	
-	auto comment_lines = _format_text(text, row_chars - 1);
+	auto comment_lines = _format_text(c_text, row_chars - 1);
 	
 	this->y_offset = y_offset;
 	this->y_lines  = comment_lines.size() + 1;
@@ -987,7 +987,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	unsigned int char_width  = char_size.GetWidth();
 	unsigned int char_height = char_size.GetHeight();
 	
-	auto lines = _format_text(text, (client_width / char_width) - 1);
+	auto lines = _format_text(c_text, (client_width / char_width) - 1);
 	
 	{
 		int box_x = x + (char_width / 4);

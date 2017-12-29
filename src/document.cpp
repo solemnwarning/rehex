@@ -429,9 +429,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((this->group_bytes * 2) + 1));
 				printf("...character offset sub spaces %u\n", char_offset_sub_spaces);
 				
-				size_t line_data_off = this->line_bytes_calc * line_off;
-				size_t byte_off = dr->d_offset + line_data_off + (char_offset_sub_spaces / 2);
-				size_t data_len_clamp = std::min(dr->d_length, (line_data_off + this->line_bytes_calc));
+				off_t line_data_off = this->line_bytes_calc * line_off;
+				off_t byte_off = dr->d_offset + line_data_off + (char_offset_sub_spaces / 2);
+				off_t data_len_clamp = std::min(dr->d_length, (line_data_off + this->line_bytes_calc));
 				
 				if(byte_off < (dr->d_offset + data_len_clamp))
 				{
@@ -496,14 +496,14 @@ void REHex::Document::_recalc_regions(wxDC &dc)
 	}
 }
 
-void REHex::Document::_overwrite_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length)
+void REHex::Document::_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
 	bool ok = buffer->overwrite_data(offset, data, length);
 	assert(ok);
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
-void REHex::Document::_insert_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length)
+void REHex::Document::_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
@@ -581,7 +581,7 @@ void REHex::Document::_insert_data(wxDC &dc, size_t offset, const unsigned char 
 }
 
 /* Erase a range of data from the Buffer and update our own data structures. */
-void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
+void REHex::Document::_erase_data(wxDC &dc, off_t offset, off_t length)
 {
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
@@ -598,9 +598,9 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 		
 		uint64_t next_yo = (*region)->y_offset;
 		
-		size_t to_shift  = 0;
-		size_t to_shrink = length;
-		size_t dr_offset = offset - dynamic_cast<REHex::Document::Region::Data*>(*region)->d_offset;
+		off_t to_shift  = 0;
+		off_t to_shrink = length;
+		off_t dr_offset = offset - dynamic_cast<REHex::Document::Region::Data*>(*region)->d_offset;
 		
 		while(region != regions.end())
 		{
@@ -611,7 +611,7 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 				 * d_length values according to our state within the erase.
 				*/
 				
-				size_t to_shrink_here = std::min(to_shrink, dr->d_length - dr_offset);
+				off_t to_shrink_here = std::min(to_shrink, dr->d_length - dr_offset);
 				
 				dr->d_offset -= to_shift;
 				dr->d_length -= to_shrink_here;
@@ -678,7 +678,7 @@ void REHex::Document::_erase_data(wxDC &dc, size_t offset, size_t length)
 	}
 }
 
-std::string REHex::Document::_get_comment_text(size_t offset)
+std::string REHex::Document::_get_comment_text(off_t offset)
 {
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
@@ -692,7 +692,7 @@ std::string REHex::Document::_get_comment_text(size_t offset)
 	return "";
 }
 
-void REHex::Document::_set_comment_text(wxDC &dc, size_t offset, const std::string &text)
+void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const std::string &text)
 {
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
@@ -719,7 +719,7 @@ void REHex::Document::_set_comment_text(wxDC &dc, size_t offset, const std::stri
 				 * them.
 				*/
 				
-				size_t rel_off = offset - dr->d_offset;
+				off_t rel_off = offset - dr->d_offset;
 				
 				auto ci = regions.insert(region, new REHex::Document::Region::Comment(offset, text));
 				regions.insert(ci, new REHex::Document::Region::Data(dr->d_offset, rel_off));
@@ -736,7 +736,7 @@ void REHex::Document::_set_comment_text(wxDC &dc, size_t offset, const std::stri
 	_recalc_regions(dc);
 }
 
-void REHex::Document::_delete_comment(wxDC &dc, size_t offset)
+void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 {
 	auto region = regions.begin();
 	uint64_t next_yo = 0;
@@ -827,7 +827,7 @@ std::list<std::string> REHex::Document::_format_text(const std::string &text, un
 
 REHex::Document::Region::~Region() {}
 
-REHex::Document::Region::Data::Data(size_t d_offset, size_t d_length):
+REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length):
 	d_offset(d_offset), d_length(d_length) {}
 
 void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
@@ -856,7 +856,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * as it would get expensive very quickly with large files.
 	*/
 	int64_t skip_lines = (y < 0 ? (-y / char_height) : 0);
-	size_t skip_bytes  = skip_lines * doc.line_bytes_calc;
+	off_t skip_bytes  = skip_lines * doc.line_bytes_calc;
 	
 	/* Increment y up to our real drawing start point. We can now trust it to be within a
 	 * char_height of zero, not the stratospheric integer-overflow-causing values it could
@@ -872,10 +872,10 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	int max_bytes = max_lines * doc.line_bytes_calc;
 	
 	/* Fetch the data to be drawn. */
-	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((size_t)(max_bytes), (d_length - skip_bytes)));
+	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((off_t)(max_bytes), (d_length - skip_bytes)));
 	
 	/* The offset of the character in the Buffer currently being drawn. */
-	size_t cur_off = d_offset + skip_bytes;
+	off_t cur_off = d_offset + skip_bytes;
 	
 	for(auto di = data.begin(); di != data.end();)
 	{
@@ -948,7 +948,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(size_t d_offset, const std::string &text):
+REHex::Document::Region::Comment::Comment(off_t d_offset, const std::string &text):
 	d_offset(d_offset), text(text) {}
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)

@@ -28,7 +28,7 @@
 
 #include "buffer.hpp"
 
-REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(size_t virt_offset)
+REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 {
 	if(virt_offset >= this->length())
 	{
@@ -36,8 +36,8 @@ REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(size_t virt_offset)
 		return nullptr;
 	}
 	
-	size_t begin = 0, end = blocks.size();
-	size_t at = end / 2;
+	off_t begin = 0, end = blocks.size();
+	off_t at = end / 2;
 	
 	while(1)
 	{
@@ -94,7 +94,7 @@ REHex::Buffer::Buffer():
 	blocks.back().state = Block::CLEAN;
 }
 
-REHex::Buffer::Buffer(const std::string &filename, size_t block_size):
+REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	filename(filename), block_size(block_size)
 {
 	fh = fopen(filename.c_str(), "rb");
@@ -137,7 +137,7 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 	FILE *wfh = fdopen(fd, "r+b");
 	assert(wfh != NULL);
 	
-	size_t out_length = this->length();
+	off_t out_length = this->length();
 	
 	/* Reserve space in the output file if it isn't already at least as large
 	 * as the file we want to write out.
@@ -212,9 +212,9 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 	
 	blocks.clear();
 	
-	for(size_t offset = 0; offset < out_length; offset += block_size)
+	for(off_t offset = 0; offset < out_length; offset += block_size)
 	{
-		blocks.push_back(Block(offset, std::min((out_length - offset), (size_t)(block_size))));
+		blocks.push_back(Block(offset, std::min((out_length - offset), block_size)));
 	}
 	
 	if(out_length == 0)
@@ -250,12 +250,12 @@ void REHex::Buffer::write_copy(const std::string &filename)
 	fclose(out);
 }
 
-size_t REHex::Buffer::length()
+off_t REHex::Buffer::length()
 {
 	return blocks.back().virt_offset + blocks.back().virt_length;
 }
 
-std::vector<unsigned char> REHex::Buffer::read_data(size_t offset, size_t max_length)
+std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_length)
 {
 	Block *block = _block_by_virt_offset(offset);
 	if(block == nullptr)
@@ -269,9 +269,9 @@ std::vector<unsigned char> REHex::Buffer::read_data(size_t offset, size_t max_le
 	{
 		_load_block(block);
 		
-		size_t block_rel_off = offset - block->virt_offset;
-		size_t block_rel_len = block->virt_length - block_rel_off;
-		size_t to_copy = std::min(block_rel_len, max_length);
+		off_t block_rel_off = offset - block->virt_offset;
+		off_t block_rel_len = block->virt_length - block_rel_off;
+		off_t to_copy = std::min(block_rel_len, max_length);
 		
 		const unsigned char *base = block->data.data() + block_rel_off;
 		data.insert(data.end(), base, base + to_copy);
@@ -285,7 +285,7 @@ std::vector<unsigned char> REHex::Buffer::read_data(size_t offset, size_t max_le
 	return data;
 }
 
-bool REHex::Buffer::overwrite_data(size_t offset, unsigned const char *data, size_t length)
+bool REHex::Buffer::overwrite_data(off_t offset, unsigned const char *data, off_t length)
 {
 	if((offset + length) > this->length())
 	{
@@ -300,8 +300,8 @@ bool REHex::Buffer::overwrite_data(size_t offset, unsigned const char *data, siz
 	{
 		_load_block(block);
 		
-		size_t block_rel_off = offset - block->virt_offset;
-		size_t to_copy = std::min((block->virt_length - block_rel_off), length);
+		off_t block_rel_off = offset - block->virt_offset;
+		off_t to_copy = std::min((block->virt_length - block_rel_off), length);
 		
 		memcpy((block->data.data() + block_rel_off), data, to_copy);
 		
@@ -317,7 +317,7 @@ bool REHex::Buffer::overwrite_data(size_t offset, unsigned const char *data, siz
 	return true;
 }
 
-bool REHex::Buffer::insert_data(size_t offset, unsigned const char *data, size_t length)
+bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t length)
 {
 	if(offset > this->length())
 	{
@@ -341,7 +341,7 @@ bool REHex::Buffer::insert_data(size_t offset, unsigned const char *data, size_t
 	
 	/* Insert the new data, shifting the rest of the buffer along if necessary */
 	
-	size_t block_rel_off = offset - block->virt_offset;
+	off_t block_rel_off = offset - block->virt_offset;
 	unsigned char *dst = block->data.data() + block_rel_off;
 	
 	memmove(dst + length, dst, block->virt_length - block_rel_off);
@@ -360,7 +360,7 @@ bool REHex::Buffer::insert_data(size_t offset, unsigned const char *data, size_t
 	return true;
 }
 
-bool REHex::Buffer::erase_data(size_t offset, size_t length)
+bool REHex::Buffer::erase_data(off_t offset, off_t length)
 {
 	if((offset + length) > this->length())
 	{
@@ -371,10 +371,10 @@ bool REHex::Buffer::erase_data(size_t offset, size_t length)
 	Block *block = _block_by_virt_offset(offset);
 	assert(block != nullptr);
 	
-	for(size_t erased = 0; erased < length;)
+	for(off_t erased = 0; erased < length;)
 	{
-		size_t block_rel_off = offset - block->virt_offset;
-		size_t to_erase = std::min((block->virt_length - block_rel_off), (length - erased));
+		off_t block_rel_off = offset - block->virt_offset;
+		off_t to_erase = std::min((block->virt_length - block_rel_off), (length - erased));
 		
 		if(block_rel_off == 0 && to_erase == block->virt_length)
 		{
@@ -415,13 +415,13 @@ bool REHex::Buffer::erase_data(size_t offset, size_t length)
 	return true;
 }
 
-REHex::Buffer::Block::Block(size_t offset, size_t length):
+REHex::Buffer::Block::Block(off_t offset, off_t length):
 	real_offset(offset),
 	virt_offset(offset),
 	virt_length(length),
 	state(UNLOADED) {}
 
-void REHex::Buffer::Block::grow(size_t min_size)
+void REHex::Buffer::Block::grow(off_t min_size)
 {
 	if(min_size < data.size())
 	{

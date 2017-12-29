@@ -38,10 +38,10 @@ namespace REHex {
 			class Block
 			{
 				public:
-					const size_t real_offset;
+					const off_t real_offset;
 					
-					size_t virt_offset;
-					size_t virt_length;
+					off_t virt_offset;
+					off_t virt_length;
 					
 					enum State {
 						UNLOADED,
@@ -53,36 +53,36 @@ namespace REHex {
 					
 					std::vector<unsigned char> data;
 					
-					Block(size_t offset, size_t length);
+					Block(off_t offset, off_t length);
 					
-					void grow(size_t min_size);
+					void grow(off_t min_size);
 					void trim();
 			};
 			
 			std::vector<Block> blocks;
 			
 		private:
-			Block *_block_by_virt_offset(size_t virt_offset);
+			Block *_block_by_virt_offset(off_t virt_offset);
 			void _load_block(Block *block);
 			
 		public:
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
-			const size_t block_size;
+			const off_t block_size;
 			
 			Buffer();
-			Buffer(const std::string &filename, size_t block_size = DEFAULT_BLOCK_SIZE);
+			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
 			
 			void write_inplace();
 			void write_inplace(const std::string &filename, bool force = true);
 			void write_copy(const std::string &filename);
 			
-			size_t length();
+			off_t length();
 			
-			std::vector<unsigned char> read_data(size_t offset, size_t max_length);
+			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			
-			bool overwrite_data(size_t offset, unsigned const char *data, size_t length);
-			bool insert_data(size_t offset, unsigned const char *data, size_t length);
-			bool erase_data(size_t offset, size_t length);
+			bool overwrite_data(off_t offset, unsigned const char *data, off_t length);
+			bool insert_data(off_t offset, unsigned const char *data, off_t length);
+			bool erase_data(off_t offset, off_t length);
 	};
 }
 

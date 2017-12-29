@@ -70,10 +70,10 @@ namespace REHex {
 			friend Region::Data;
 			struct Region::Data: public REHex::Document::Region
 			{
-				size_t d_offset;
-				size_t d_length;
+				off_t d_offset;
+				off_t d_length;
 				
-				Data(size_t d_offset, size_t d_length);
+				Data(off_t d_offset, off_t d_length);
 				
 				virtual void update_lines(REHex::Document &doc, wxDC &dc);
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
@@ -82,10 +82,10 @@ namespace REHex {
 			friend Region::Comment;
 			struct Region::Comment: public REHex::Document::Region
 			{
-				size_t d_offset;
+				off_t d_offset;
 				std::string text;
 				
-				Comment(size_t d_offset, const std::string &text);
+				Comment(off_t d_offset, const std::string &text);
 				
 				virtual void update_lines(REHex::Document &doc, wxDC &dc);
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
@@ -108,20 +108,20 @@ namespace REHex {
 			unsigned int scroll_xoff{0};
 			uint64_t     scroll_yoff{0};
 			
-			size_t cpos_off{0};
+			off_t cpos_off{0};
 			bool editing_byte{false};
 			bool insert_mode{false};
 			
 			void _init_regions();
 			void _recalc_regions(wxDC &dc);
 			
-			void _overwrite_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length);
-			void _insert_data(wxDC &dc, size_t offset, const unsigned char *data, size_t length);
-			void _erase_data(wxDC &dc, size_t offset, size_t length);
+			void _overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
+			void _insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
+			void _erase_data(wxDC &dc, off_t offset, off_t length);
 			
-			std::string _get_comment_text(size_t offset);
-			void _set_comment_text(wxDC &dc, size_t offset, const std::string &text);
-			void _delete_comment(wxDC &dc, size_t offset);
+			std::string _get_comment_text(off_t offset);
+			void _set_comment_text(wxDC &dc, off_t offset, const std::string &text);
+			void _delete_comment(wxDC &dc, off_t offset);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			

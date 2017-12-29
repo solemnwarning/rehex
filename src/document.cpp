@@ -62,6 +62,11 @@ void REHex::Document::save()
 	buffer->write_inplace();
 }
 
+void REHex::Document::save(const std::string &filename)
+{
+	buffer->write_inplace(filename);
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

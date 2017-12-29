@@ -31,6 +31,7 @@ namespace REHex {
 			~Document();
 			
 			void save();
+			void save(const std::string &filename);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

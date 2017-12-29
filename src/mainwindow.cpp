@@ -22,10 +22,11 @@
 #include "mainwindow.hpp"
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
-	EVT_MENU(wxID_NEW,  REHex::MainWindow::OnNew)
-	EVT_MENU(wxID_OPEN, REHex::MainWindow::OnOpen)
-	EVT_MENU(wxID_SAVE, REHex::MainWindow::OnSave)
-	EVT_MENU(wxID_EXIT, REHex::MainWindow::OnExit)
+	EVT_MENU(wxID_NEW,    REHex::MainWindow::OnNew)
+	EVT_MENU(wxID_OPEN,   REHex::MainWindow::OnOpen)
+	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
+	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
+	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
@@ -104,6 +105,23 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	assert(doc != NULL);
 	
 	doc->save();
+}
+
+void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
+{
+	wxFileDialog saveFileDialog(this, wxT("Save As"), "", "", "*.*", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	doc->save(saveFileDialog.GetPath().ToStdString());
+	
+	notebook->SetPageText(notebook->GetSelection(), saveFileDialog.GetFilename());
 }
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)

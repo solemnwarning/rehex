@@ -24,6 +24,7 @@
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_NEW,  REHex::MainWindow::OnNew)
 	EVT_MENU(wxID_OPEN, REHex::MainWindow::OnOpen)
+	EVT_MENU(wxID_SAVE, REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_EXIT, REHex::MainWindow::OnExit)
 END_EVENT_TABLE()
 
@@ -92,6 +93,17 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	
 	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, buffer);
 	notebook->AddPage(doc, openFileDialog.GetFilename(), true);
+}
+
+void REHex::MainWindow::OnSave(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	doc->save();
 }
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)

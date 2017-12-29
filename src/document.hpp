@@ -30,6 +30,8 @@ namespace REHex {
 			Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer);
 			~Document();
 			
+			void save();
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);

@@ -31,6 +31,7 @@ namespace REHex {
 			
 			void OnNew(wxCommandEvent &event);
 			void OnOpen(wxCommandEvent &event);
+			void OnSave(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
 		private:

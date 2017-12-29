@@ -57,6 +57,11 @@ REHex::Document::~Document()
 	}
 }
 
+void REHex::Document::save()
+{
+	buffer->write_inplace();
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

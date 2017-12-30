@@ -86,7 +86,7 @@ void REHex::MainWindow::OnNew(wxCommandEvent &event)
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 {
-	wxFileDialog openFileDialog(this, wxT("Open File"), "", "", "*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	wxFileDialog openFileDialog(this, wxT("Open File"), "", "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
@@ -109,7 +109,7 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 {
-	wxFileDialog saveFileDialog(this, wxT("Save As"), "", "", "*.*", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	wxFileDialog saveFileDialog(this, wxT("Save As"), "", "", "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 	if(saveFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	

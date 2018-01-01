@@ -105,6 +105,9 @@ namespace REHex {
 			unsigned int line_bytes_calc;
 			unsigned int group_bytes{4};
 			
+			bool offset_column{true};
+			unsigned int offset_column_width;
+			
 			unsigned int scroll_xoff{0};
 			uint64_t     scroll_yoff{0};
 			

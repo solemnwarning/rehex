@@ -136,6 +136,17 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 			+ (((line_bytes - 1) / this->group_bytes) * char_width);
 	};
 	
+	/* Calculate how much space (if any) to reserve for the offsets to the left. */
+	
+	if(offset_column)
+	{
+		offset_column_width = 18 * char_width;
+		client_width -= offset_column_width;
+	}
+	else{
+		offset_column_width = 0;
+	}
+	
 	/* Decide how many bytes to display per line */
 	
 	if(this->line_bytes_cfg == 0) /* 0 is "as many as will fit in the window" */
@@ -416,9 +427,19 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	{
 		printf("...at line %u in region (%u lines)\n", line_off, (unsigned)((*region)->y_lines));
 		
+		/* TODO: Move this logic into the Region::Data class */
+		
 		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
 		if(dr != NULL)
 		{
+			if(rel_x < offset_column_width)
+			{
+				/* Click was within the offset area */
+				return;
+			}
+			
+			rel_x -= offset_column_width;
+			
 			unsigned int char_offset = (rel_x / char_width);
 			printf("...character offset %u\n", char_offset);
 			if(((char_offset + 1) % ((this->group_bytes * 2) + 1)) == 0)
@@ -880,6 +901,21 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	for(auto di = data.begin(); di != data.end();)
 	{
 		int line_x = x;
+		
+		if(doc.offset_column)
+		{
+			/* Draw the offsets to the left */
+			char offset_str[64];
+			snprintf(offset_str, sizeof(offset_str), "%08X:%08X",
+				(unsigned)((cur_off & 0xFFFFFFFF00000000) >> 32),
+				(unsigned)(cur_off & 0xFFFFFFFF));
+			
+			dc.DrawText(offset_str, line_x, y);
+			line_x += doc.offset_column_width;
+			
+			dc.DrawLine((line_x - (char_width / 2)), y,
+				    (line_x - (char_width / 2)), y + char_height);
+		}
 		
 		int norm_x = line_x;
 		wxString norm_str;

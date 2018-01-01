@@ -48,6 +48,7 @@ REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer
 	finfo.Family(wxFONTFAMILY_MODERN);
 	
 	hex_font = new wxFont(finfo);
+	assert(hex_font->IsFixedWidth());
 }
 
 REHex::Document::~Document()
@@ -426,7 +427,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		printf("...at line %" PRIu64 " in region (%" PRIu64 " lines)\n", line_off, (*region)->y_lines);
+		// printf("...at line %" PRIu64 " in region (%" PRIu64 " lines)\n", line_off, (*region)->y_lines);
 		
 		/* TODO: Move this logic into the Region::Data class */
 		

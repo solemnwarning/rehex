@@ -26,6 +26,10 @@
 #include <unistd.h>
 #include <vector>
 
+#ifdef _WIN32
+#define O_NOCTTY 0
+#endif
+
 #include "buffer.hpp"
 
 REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)

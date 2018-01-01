@@ -29,12 +29,12 @@ DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
 TESTS := tests/buffer.t tests/document.t
 
-all: rehex
+all: rehex$(EXE)
 
 check: $(TESTS)
 	prove -v tests/
 
-rehex: src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o
+rehex$(EXE): src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(WX_LIBS)
 
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o

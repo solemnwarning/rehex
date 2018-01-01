@@ -114,7 +114,6 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	/* Force a vertical scrollbar so the bytes per line doesn't jump around and screw us over.
 	 * TODO: Do this less hackily (is this possible on non-win32 wxWidgets?)
-	 * TODO: Compute real vertical scrollbar size after deciding if we need a horizontal one.
 	*/
 	this->SetScrollbar(wxVERTICAL, 0, 1, 2);
 	
@@ -203,11 +202,13 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 	if(event.GetOrientation() == wxHORIZONTAL)
 	{
 		this->scroll_xoff = event.GetPosition();
+		this->SetScrollPos(wxHORIZONTAL, this->scroll_xoff);
 		this->Refresh();
 	}
 	else if(event.GetOrientation() == wxVERTICAL)
 	{
 		this->scroll_yoff = event.GetPosition();
+		this->SetScrollPos(wxVERTICAL, this->scroll_yoff);
 		this->Refresh();
 	}
 }

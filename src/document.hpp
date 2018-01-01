@@ -66,34 +66,9 @@ namespace REHex {
 				struct Comment;
 			};
 			
-		public:
 			friend Region::Data;
-			struct Region::Data: public REHex::Document::Region
-			{
-				off_t d_offset;
-				off_t d_length;
-				
-				Data(off_t d_offset, off_t d_length);
-				
-				virtual void update_lines(REHex::Document &doc, wxDC &dc);
-				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
-			};
-			
 			friend Region::Comment;
-			struct Region::Comment: public REHex::Document::Region
-			{
-				off_t c_offset;
-				std::string c_text;
-				
-				Comment(off_t c_offset, const std::string &c_text);
-				
-				virtual void update_lines(REHex::Document &doc, wxDC &dc);
-				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
-			};
 			
-		#ifndef UNIT_TEST
-		private:
-		#endif
 			Buffer *buffer;
 			
 			std::list<Region*> regions;
@@ -132,6 +107,28 @@ namespace REHex {
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()
+	};
+	
+	struct Document::Region::Data: public REHex::Document::Region
+	{
+		off_t d_offset;
+		off_t d_length;
+		
+		Data(off_t d_offset, off_t d_length);
+		
+		virtual void update_lines(REHex::Document &doc, wxDC &dc);
+		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+	};
+	
+	struct Document::Region::Comment: public REHex::Document::Region
+	{
+		off_t c_offset;
+		std::string c_text;
+		
+		Comment(off_t c_offset, const std::string &c_text);
+		
+		virtual void update_lines(REHex::Document &doc, wxDC &dc);
+		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 	};
 }
 

@@ -126,6 +126,8 @@ namespace REHex {
 			void _set_comment_text(wxDC &dc, off_t offset, const std::string &text);
 			void _delete_comment(wxDC &dc, off_t offset);
 			
+			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
+			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			
 			/* Stays at the bottom because it changes the protection... */

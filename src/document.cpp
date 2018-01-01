@@ -323,6 +323,104 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
 		}
+		else if(key == WXK_UP)
+		{
+			auto cur_region = _data_region_by_offset(cpos_off);
+			assert(cur_region != NULL);
+			
+			off_t offset_within_cur = cpos_off - cur_region->d_offset;
+			
+			if(offset_within_cur >= line_bytes_calc)
+			{
+				/* We are at least on the second line of the current
+				 * region, can jump to the previous one.
+				*/
+				cpos_off -= line_bytes_calc;
+			}
+			else if(cur_region->d_offset > 0)
+			{
+				/* We are on the first line of the current region, but there is at
+				 * last one region before us.
+				*/
+				auto prev_region = _data_region_by_offset(cur_region->d_offset - 1);
+				assert(prev_region != NULL);
+				
+				/* How many bytes on the last line of prev_region? */
+				off_t pr_last_line_len = (prev_region->d_length % line_bytes_calc);
+				if(pr_last_line_len == 0)
+				{
+					pr_last_line_len = line_bytes_calc;
+				}
+				
+				if(pr_last_line_len > offset_within_cur)
+				{
+					/* The last line of the previous block is at least long
+					 * enough to have a byte above the current cursor position
+					 * on the screen.
+					*/
+					
+					cpos_off -= offset_within_cur;
+					cpos_off -= pr_last_line_len - offset_within_cur;
+				}
+				else{
+					/* The last line of the previous block falls short of the
+					 * horizontal position of the cursor, just jump to the end
+					 * of it.
+					*/
+					
+					cpos_off = cur_region->d_offset - 1;
+				}
+			}
+			
+			/* TODO: Limit paint to affected area */
+			this->Refresh();
+		}
+		else if(key == WXK_DOWN)
+		{
+			auto cur_region = _data_region_by_offset(cpos_off);
+			assert(cur_region != NULL);
+			
+			off_t offset_within_cur = cpos_off - cur_region->d_offset;
+			off_t remain_within_cur = cur_region->d_length - offset_within_cur;
+			
+			off_t last_line_within_cur = cur_region->d_length
+				- (((cur_region->d_length % line_bytes_calc) == 0)
+					? line_bytes_calc
+					: (cur_region->d_length % line_bytes_calc));
+			
+			if(remain_within_cur > line_bytes_calc)
+			{
+				/* There is at least one more line's worth of bytes in the
+				 * current region, can just skip ahead.
+				*/
+				cpos_off += line_bytes_calc;
+			}
+			else if(offset_within_cur < last_line_within_cur)
+			{
+				/* There is another line in the current region which falls short of
+				 * the cursor's horizontal position, jump to its end.
+				*/
+				cpos_off = cur_region->d_offset + cur_region->d_length - 1;
+			}
+			else{
+				auto next_region = _data_region_by_offset(cur_region->d_offset + cur_region->d_length);
+				
+				if(next_region != NULL)
+				{
+					/* There is another region after this one, jump to the same
+					 * it, offset by our offset in the current line.
+					*/
+					cpos_off = next_region->d_offset + (offset_within_cur % line_bytes_calc);
+					
+					/* Clamp to the end of the next region. */
+					off_t max_pos = (next_region->d_offset + next_region->d_length - 1);
+					cpos_off = std::min(max_pos, cpos_off);
+				}
+			}
+			
+			/* TODO: Limit paint to affected area */
+			this->Refresh();
+		}
 		else if(key == WXK_INSERT)
 		{
 			insert_mode  = !insert_mode;
@@ -810,6 +908,23 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 		(*region)->y_offset = next_yo;
 		next_yo += (*region)->y_lines;
 	}
+}
+
+REHex::Document::Region::Data *REHex::Document::_data_region_by_offset(off_t offset)
+{
+	for(auto region = regions.begin(); region != regions.end(); ++region)
+	{
+		auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+		if(dr != NULL
+			&& dr->d_offset <= offset
+			&& ((dr->d_offset + dr->d_length) > offset
+				|| ((dr->d_offset + dr->d_length) == offset && buffer->length() == offset)))
+		{
+			return dr;
+		}
+	}
+	
+	return NULL;
 }
 
 std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)

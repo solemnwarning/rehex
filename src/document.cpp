@@ -17,6 +17,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <iterator>
 
 #include "document.hpp"
@@ -413,9 +414,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	unsigned int skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	unsigned int line_off = (mouse_y / char_height) + skip_lines_in_region;
+	uint64_t line_off = (mouse_y / char_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -425,7 +426,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		printf("...at line %u in region (%u lines)\n", line_off, (unsigned)((*region)->y_lines));
+		printf("...at line %" PRIu64 " in region (%" PRIu64 " lines)\n", line_off, (*region)->y_lines);
 		
 		/* TODO: Move this logic into the Region::Data class */
 		
@@ -450,7 +451,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((this->group_bytes * 2) + 1));
 				printf("...character offset sub spaces %u\n", char_offset_sub_spaces);
 				
-				off_t line_data_off = this->line_bytes_calc * line_off;
+				off_t line_data_off = (off_t)(this->line_bytes_calc) * (off_t)(line_off);
 				off_t byte_off = dr->d_offset + line_data_off + (char_offset_sub_spaces / 2);
 				off_t data_len_clamp = std::min(dr->d_length, (line_data_off + this->line_bytes_calc));
 				

@@ -16,8 +16,10 @@
 */
 
 #include <assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <list>
+#include <stdexcept>
 #include <stdio.h>
 #include <string>
 #include <string.h>
@@ -80,11 +82,24 @@ void REHex::Buffer::_load_block(Block *block)
 	
 	if(block->virt_length > 0)
 	{
-		assert(fseeko(fh, block->real_offset, SEEK_SET) == 0);
+		if(fseeko(fh, block->real_offset, SEEK_SET) != 0)
+		{
+			throw std::runtime_error(std::string("fseeko: ") + strerror(errno));
+		}
 		
 		block->grow(block->virt_length);
 		
-		assert(fread(block->data.data(), block->virt_length, 1, fh) == 1);
+		if(fread(block->data.data(), block->virt_length, 1, fh) == 0)
+		{
+			if(feof(fh))
+			{
+				clearerr(fh);
+				throw std::runtime_error("Read error: unexpected end of file");
+			}
+			else{
+				throw std::runtime_error(std::string("Read error: ") + strerror(errno));
+			}
+		}
 	}
 	
 	block->state = Block::CLEAN;
@@ -102,14 +117,27 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	filename(filename), block_size(block_size)
 {
 	fh = fopen(filename.c_str(), "rb");
-	assert(fh);
+	if(fh == NULL)
+	{
+		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
 	
 	/* Find out the length of the file. */
 	
-	assert(fseeko(fh, 0, SEEK_END) == 0);
+	if(fseeko(fh, 0, SEEK_END) != 0)
+	{
+		int err = errno;
+		fclose(fh);
+		throw std::runtime_error(std::string("fseeko: ") + strerror(err));
+	}
 	
 	off_t file_length = ftello(fh);
-	assert(file_length != -1);
+	if(file_length == -1)
+	{
+		int err = errno;
+		fclose(fh);
+		throw std::runtime_error(std::string("ftello: ") + strerror(err));
+	}
 	
 	/* Populate the blocks list with appropriate offsets and sizes. */
 	
@@ -145,10 +173,20 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 	 * us write at arbitrary positions.
 	*/
 	int fd = open(filename.c_str(), (O_RDWR | O_CREAT | O_NOCTTY), 0777);
-	assert(fd != -1);
+	if(fd == -1)
+	{
+		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
 	
 	FILE *wfh = fdopen(fd, "r+b");
-	assert(wfh != NULL);
+	if(wfh == NULL)
+	{
+		close(fd);
+		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	
+	/* Disable write buffering */
+	setbuf(wfh, NULL);
 	
 	off_t out_length = this->length();
 	
@@ -157,22 +195,41 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 	*/
 	
 	{
-		assert(fseek(wfh, 0, SEEK_END) == 0);
+		if(fseeko(wfh, 0, SEEK_END) != 0)
+		{
+			int err = errno;
+			fclose(wfh);
+			throw std::runtime_error(std::string("fseeko: ") + strerror(err));
+		}
 		
 		off_t wfh_initial_size = ftello(wfh);
-		assert(wfh_initial_size >= 0);
+		if(wfh_initial_size == -1)
+		{
+			int err = errno;
+			fclose(wfh);
+			throw std::runtime_error(std::string("ftello: ") + strerror(err));
+		}
 		
 		if(wfh_initial_size < out_length)
 		{
-			assert(ftruncate(fileno(wfh), out_length) == 0);
+			if(ftruncate(fileno(wfh), out_length) == -1)
+			{
+				int err = errno;
+				fclose(wfh);
+				throw std::runtime_error(std::string("Could not expand file: ") + strerror(err));
+			}
 		}
 	}
 	
-	std::list<Block> pending(blocks.begin(), blocks.end());
+	std::list<Block*> pending;
+	for(auto b = blocks.begin(); b != blocks.end(); ++b)
+	{
+		pending.push_back(&(*b));
+	}
 	
 	for(auto b = pending.begin(); b != pending.end();)
 	{
-		if(!force && (b->virt_offset == b->real_offset && b->state != Block::DIRTY))
+		if(!force && ((*b)->virt_offset == (*b)->real_offset && (*b)->state != Block::DIRTY))
 		{
 			/* Don't need to rewrite this block */
 			b = pending.erase(b);
@@ -181,7 +238,7 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 		
 		auto next = std::next(b);
 		
-		if(next != pending.end() && b->virt_offset + b->virt_length > next->real_offset)
+		if(next != pending.end() && (*b)->virt_offset + (*b)->virt_length > (*next)->real_offset)
 		{
 			/* Can't flush this block yet; we'd write into
 			 * the data of the next one.
@@ -191,12 +248,29 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 			continue;
 		}
 		
-		if(b->virt_length > 0)
+		if((*b)->virt_length > 0)
 		{
-			_load_block(&(*b));
+			_load_block(*b);
 			
-			assert(fseeko(wfh, b->virt_offset, SEEK_SET) == 0);
-			assert(fwrite(b->data.data(), b->virt_length, 1, wfh) == 1);
+			if(fseeko(wfh, (*b)->virt_offset, SEEK_SET) != 0)
+			{
+				int err = errno;
+				fclose(wfh);
+				throw std::runtime_error(std::string("fseeko: ") + strerror(err));
+			}
+			
+			if(fwrite((*b)->data.data(), (*b)->virt_length, 1, wfh) == 0)
+			{
+				/* Ensure the block is marked as dirty, since we may have partially
+				 * rewritten it in the underlying file and no longer be able to
+				 * correctly reload it.
+				*/
+				(*b)->state = Block::DIRTY;
+				
+				int err = errno;
+				fclose(wfh);
+				throw std::runtime_error(std::string("Write error: ") + strerror(err));
+			}
 		}
 		
 		b = pending.erase(b);
@@ -214,9 +288,12 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 		}
 	}
 	
-	assert(fflush(wfh) == 0);
-	
-	assert(ftruncate(fileno(wfh), out_length) == 0);
+	if(ftruncate(fileno(wfh), out_length) == -1)
+	{
+		int err = errno;
+		fclose(wfh);
+		throw std::runtime_error(std::string("Could not truncate file: ") + strerror(err));
+	}
 	
 	/* All changes are flushed to disk now. Rebuild the blocks list so we
 	 * don't hang on to the old dirty blocks or try loading data from the
@@ -249,14 +326,25 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 void REHex::Buffer::write_copy(const std::string &filename)
 {
 	FILE *out = fopen(filename.c_str(), "wb");
-	assert(out);
+	if(out == NULL)
+	{
+		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	
+	/* Disable write buffering */
+	setbuf(out, NULL);
 	
 	for(auto b = blocks.begin(); b != blocks.end(); ++b)
 	{
 		if(b->virt_length > 0)
 		{
 			_load_block(&(*b));
-			assert(fwrite(b->data.data(), b->virt_length, 1, out) == 1);
+			
+			if(fwrite(b->data.data(), b->virt_length, 1, out) == 0)
+			{
+				fclose(out);
+				throw std::runtime_error(std::string("Write error: ") + strerror(errno));
+			}
 		}
 	}
 	

@@ -74,7 +74,19 @@ namespace REHex {
 			std::list<Region*> regions;
 			size_t data_regions_count;
 			
+			/* Fixed-width font used for drawing hex data. */
 			wxFont *hex_font;
+			
+			/* Size of a character in hex_font. */
+			unsigned char hf_width;
+			unsigned char hf_height;
+			
+			/* Size of the client area in pixels. */
+			unsigned int client_width;
+			unsigned int client_height;
+			
+			/* Height of client area in lines. */
+			unsigned int visible_lines;
 			
 			unsigned int line_bytes_cfg{0};
 			unsigned int line_bytes_calc;
@@ -102,6 +114,11 @@ namespace REHex {
 			void _delete_comment(wxDC &dc, off_t offset);
 			
 			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
+			
+			void _make_line_visible(uint64_t line);
+			void _make_x_visible(unsigned int x_px, unsigned int width_px);
+			
+			void _make_byte_visible(off_t offset);
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			

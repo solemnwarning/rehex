@@ -49,6 +49,15 @@ REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer
 	
 	hex_font = new wxFont(finfo);
 	assert(hex_font->IsFixedWidth());
+	
+	{
+		wxClientDC dc(this);
+		dc.SetFont(*hex_font);
+		
+		wxSize hf_char_size = dc.GetTextExtent("X");
+		hf_width            = hf_char_size.GetWidth();
+		hf_height           = hf_char_size.GetHeight();
+	}
 }
 
 REHex::Document::~Document()
@@ -119,9 +128,15 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	/* Get the size of the area we can draw into */
 	
-	wxSize client_size         = this->GetClientSize();
-	unsigned int client_width  = client_size.GetWidth();
-	unsigned int client_height = client_size.GetHeight();
+	wxSize client_size = this->GetClientSize();
+	client_width       = client_size.GetWidth();
+	client_height      = client_size.GetHeight();
+	
+	/* Mask client_width/client_height since we bugger about with them in this function.
+	 * TODO: Refactor.
+	*/
+	unsigned int client_width  = this->client_width;
+	unsigned int client_height = this->client_height;
 	
 	/* Get the size of a character in the (fixed-width) font we use for the hex bytes. */
 	
@@ -184,11 +199,10 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	{
 		scroll_yoff = 0; /* just always reset for now */
 		
-		unsigned int lines_per_screen = client_height / char_height;
-		/*unsigned int lines_for_buffer = (this->buffer->length() / this->line_bytes_calc)
-			+ !!(this->buffer->length() % this->line_bytes_calc);*/
+		visible_lines = this->client_height / char_height;
 		
-		this->SetScrollbar(wxVERTICAL, this->scroll_yoff, lines_per_screen, this->regions.back()->y_offset + this->regions.back()->y_lines);
+		this->SetScrollbar(wxVERTICAL, scroll_yoff, visible_lines,
+			(regions.back()->y_offset + regions.back()->y_lines));
 	}
 	
 	/* Force a redraw of the whole control since resizing can change the entire control, not
@@ -223,6 +237,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		if(this->cpos_off + !insert_mode < this->buffer->length())
 		{
 			++(this->cpos_off);
+			_make_byte_visible(cpos_off);
 		}
 		
 		this->editing_byte = false;
@@ -233,6 +248,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		if(this->cpos_off > 0)
 		{
 			--(this->cpos_off);
+			_make_byte_visible(cpos_off);
 		}
 		
 		this->editing_byte = false;
@@ -304,6 +320,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 		}
 		
+		_make_byte_visible(cpos_off);
+		
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
 	}
@@ -372,6 +390,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				}
 			}
 			
+			_make_byte_visible(cpos_off);
+			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
 		}
@@ -418,6 +438,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				}
 			}
 			
+			_make_byte_visible(cpos_off);
+			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
 		}
@@ -445,6 +467,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				
 				this->editing_byte = false;
 				
+				_make_byte_visible(cpos_off);
+				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
 			}
@@ -457,6 +481,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				_erase_data(dc, --(this->cpos_off), 1);
 				
 				this->editing_byte = false;
+				
+				_make_byte_visible(cpos_off);
 				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
@@ -925,6 +951,82 @@ REHex::Document::Region::Data *REHex::Document::_data_region_by_offset(off_t off
 	}
 	
 	return NULL;
+}
+
+/* Scroll the Document vertically to make the given line visible.
+ * Does nothing if the line is already on-screen.
+*/
+void REHex::Document::_make_line_visible(uint64_t line)
+{
+	if(scroll_yoff > line)
+	{
+		/* Need to scroll up, line will be at the top. */
+		scroll_yoff = line;
+	}
+	else if((scroll_yoff + visible_lines) <= line)
+	{
+		/* Need to scroll down, line will be the last fully-visible one. */
+		scroll_yoff = (line - visible_lines) + !!visible_lines;
+	}
+	else{
+		/* Don't need to scroll. */
+		return;
+	}
+	
+	assert(scroll_yoff <= line);
+	assert((scroll_yoff + visible_lines + !visible_lines) > line);
+	
+	SetScrollPos(wxVERTICAL, scroll_yoff);
+	Refresh();
+}
+
+/* Scroll the Document horizontally to (try to) make the given range of X co-ordinates visible.
+ * Does nothing if the range is fully visible.
+*/
+void REHex::Document::_make_x_visible(unsigned int x_px, unsigned int width_px)
+{
+	if(scroll_xoff > x_px)
+	{
+		/* Scroll to the left */
+		scroll_xoff = x_px;
+	}
+	else if((scroll_xoff + client_width) < (x_px + width_px) && width_px <= client_width)
+	{
+		/* Scroll to the right. */
+		scroll_xoff = x_px - (client_width - width_px);
+	}
+	else{
+		/* Don't need to scroll. */
+		return;
+	}
+	
+	assert(scroll_xoff <= x_px);
+	assert((scroll_xoff + client_width) >= (x_px + width_px) || width_px > client_width);
+	
+	SetScrollPos(wxHORIZONTAL, scroll_xoff);
+	Refresh();
+}
+
+/* Scroll the Document to make the byte at the given offset visible.
+ * Does nothing if the byte is already on-screen.
+*/
+void REHex::Document::_make_byte_visible(off_t offset)
+{
+	auto dr = _data_region_by_offset(offset);
+	assert(dr != NULL);
+	
+	/* TODO: Move these maths into Region::Data */
+	
+	off_t region_offset = offset - dr->d_offset;
+	
+	uint64_t region_line = dr->y_offset + (region_offset / line_bytes_calc);
+	_make_line_visible(region_line);
+	
+	off_t line_off      = region_offset % line_bytes_calc;
+	unsigned int line_x = offset_column_width
+		+ (line_off * 2 * hf_width)
+		+ ((line_off / group_bytes) * hf_width);
+	_make_x_visible(line_x, (2 * hf_width));
 }
 
 std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)

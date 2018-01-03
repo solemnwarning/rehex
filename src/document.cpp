@@ -40,7 +40,9 @@ END_EVENT_TABLE()
 
 REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
-	buffer(buffer)
+	buffer(buffer),
+	bytes_per_line(0),
+	bytes_per_group(4)
 {
 	_init_regions();
 	
@@ -76,6 +78,34 @@ void REHex::Document::save()
 void REHex::Document::save(const std::string &filename)
 {
 	buffer->write_inplace(filename);
+}
+
+unsigned int REHex::Document::get_bytes_per_line()
+{
+	return bytes_per_line;
+}
+
+void REHex::Document::set_bytes_per_line(unsigned int bytes_per_line)
+{
+	this->bytes_per_line = bytes_per_line;
+	
+	/* TODO: Do this properly rather than faking a resize. */
+	wxSizeEvent ugh;
+	OnSize(ugh);
+}
+
+unsigned int REHex::Document::get_bytes_per_group()
+{
+	return bytes_per_group;
+}
+
+void REHex::Document::set_bytes_per_group(unsigned int bytes_per_group)
+{
+	this->bytes_per_group = bytes_per_group;
+	
+	/* TODO: Do this properly rather than faking a resize. */
+	wxSizeEvent ugh;
+	OnSize(ugh);
 }
 
 void REHex::Document::OnPaint(wxPaintEvent &event)
@@ -142,31 +172,31 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	{
 		return offset_column_width
 			+ (line_bytes * 2 * hf_width)
-			+ (((line_bytes - 1) / this->group_bytes) * hf_width);
+			+ (((line_bytes - 1) / this->bytes_per_group) * hf_width);
 	};
 	
 	/* Decide how many bytes to display per line */
 	
-	if(this->line_bytes_cfg == 0) /* 0 is "as many as will fit in the window" */
+	if(this->bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
 	{
 		/* TODO: Can I do this algorithmically? */
 		
-		this->line_bytes_calc = 1;
+		this->bytes_per_line_calc = 1;
 		
-		while(calc_row_width(this->line_bytes_calc + 1) <= client_width)
+		while(calc_row_width(this->bytes_per_line_calc + 1) <= client_width)
 		{
-			++(this->line_bytes_calc);
+			++(this->bytes_per_line_calc);
 		}
 	}
 	else{
-		this->line_bytes_calc = this->line_bytes_cfg;
+		this->bytes_per_line_calc = this->bytes_per_line;
 	}
 	
 	/* Calculate the number of pixels necessary to render a full line and decide if we need a
 	 * horizontal scroll bar.
 	*/
 	
-	unsigned int row_width_px = calc_row_width(this->line_bytes_calc);
+	unsigned int row_width_px = calc_row_width(this->bytes_per_line_calc);
 	
 	if(row_width_px > client_width)
 	{
@@ -328,12 +358,12 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			off_t offset_within_cur = cpos_off - cur_region->d_offset;
 			
-			if(offset_within_cur >= line_bytes_calc)
+			if(offset_within_cur >= bytes_per_line_calc)
 			{
 				/* We are at least on the second line of the current
 				 * region, can jump to the previous one.
 				*/
-				cpos_off -= line_bytes_calc;
+				cpos_off -= bytes_per_line_calc;
 			}
 			else if(cur_region->d_offset > 0)
 			{
@@ -344,10 +374,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				assert(prev_region != NULL);
 				
 				/* How many bytes on the last line of prev_region? */
-				off_t pr_last_line_len = (prev_region->d_length % line_bytes_calc);
+				off_t pr_last_line_len = (prev_region->d_length % bytes_per_line_calc);
 				if(pr_last_line_len == 0)
 				{
-					pr_last_line_len = line_bytes_calc;
+					pr_last_line_len = bytes_per_line_calc;
 				}
 				
 				if(pr_last_line_len > offset_within_cur)
@@ -384,16 +414,16 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			off_t remain_within_cur = cur_region->d_length - offset_within_cur;
 			
 			off_t last_line_within_cur = cur_region->d_length
-				- (((cur_region->d_length % line_bytes_calc) == 0)
-					? line_bytes_calc
-					: (cur_region->d_length % line_bytes_calc));
+				- (((cur_region->d_length % bytes_per_line_calc) == 0)
+					? bytes_per_line_calc
+					: (cur_region->d_length % bytes_per_line_calc));
 			
-			if(remain_within_cur > line_bytes_calc)
+			if(remain_within_cur > bytes_per_line_calc)
 			{
 				/* There is at least one more line's worth of bytes in the
 				 * current region, can just skip ahead.
 				*/
-				cpos_off += line_bytes_calc;
+				cpos_off += bytes_per_line_calc;
 			}
 			else if(offset_within_cur < last_line_within_cur)
 			{
@@ -410,7 +440,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					/* There is another region after this one, jump to the same
 					 * it, offset by our offset in the current line.
 					*/
-					cpos_off = next_region->d_offset + (offset_within_cur % line_bytes_calc);
+					cpos_off = next_region->d_offset + (offset_within_cur % bytes_per_line_calc);
 					
 					/* Clamp to the end of the next region. */
 					off_t max_pos = (next_region->d_offset + next_region->d_length - 1);
@@ -549,17 +579,17 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			
 			unsigned int char_offset = (rel_x / char_width);
 			printf("...character offset %u\n", char_offset);
-			if(((char_offset + 1) % ((this->group_bytes * 2) + 1)) == 0)
+			if(((char_offset + 1) % ((this->bytes_per_group * 2) + 1)) == 0)
 			{
 				printf("...in a space\n");
 			}
 			else{
-				unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((this->group_bytes * 2) + 1));
+				unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((this->bytes_per_group * 2) + 1));
 				printf("...character offset sub spaces %u\n", char_offset_sub_spaces);
 				
-				off_t line_data_off = (off_t)(this->line_bytes_calc) * (off_t)(line_off);
+				off_t line_data_off = (off_t)(this->bytes_per_line_calc) * (off_t)(line_off);
 				off_t byte_off = dr->d_offset + line_data_off + (char_offset_sub_spaces / 2);
-				off_t data_len_clamp = std::min(dr->d_length, (line_data_off + this->line_bytes_calc));
+				off_t data_len_clamp = std::min(dr->d_length, (line_data_off + this->bytes_per_line_calc));
 				
 				if(byte_off < (dr->d_offset + data_len_clamp))
 				{
@@ -999,13 +1029,13 @@ void REHex::Document::_make_byte_visible(off_t offset)
 	
 	off_t region_offset = offset - dr->d_offset;
 	
-	uint64_t region_line = dr->y_offset + (region_offset / line_bytes_calc);
+	uint64_t region_line = dr->y_offset + (region_offset / bytes_per_line_calc);
 	_make_line_visible(region_line);
 	
-	off_t line_off      = region_offset % line_bytes_calc;
+	off_t line_off      = region_offset % bytes_per_line_calc;
 	unsigned int line_x = offset_column_width
 		+ (line_off * 2 * hf_width)
-		+ ((line_off / group_bytes) * hf_width);
+		+ ((line_off / bytes_per_group) * hf_width);
 	_make_x_visible(line_x, (2 * hf_width));
 }
 
@@ -1056,7 +1086,7 @@ void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 	/* Height of the region is simply the number of complete lines of data plus an incomplete
 	 * one if the data isn't a round number of lines.
 	*/
-	y_lines = (d_length / doc.line_bytes_calc) + !!(d_length % doc.line_bytes_calc);
+	y_lines = (d_length / doc.bytes_per_line_calc) + !!(d_length % doc.bytes_per_line_calc);
 }
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
@@ -1067,7 +1097,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * as it would get expensive very quickly with large files.
 	*/
 	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
-	off_t skip_bytes  = skip_lines * doc.line_bytes_calc;
+	off_t skip_bytes  = skip_lines * doc.bytes_per_line_calc;
 	
 	/* Increment y up to our real drawing start point. We can now trust it to be within a
 	 * hf_height of zero, not the stratospheric integer-overflow-causing values it could
@@ -1080,7 +1110,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * case of large files.
 	*/
 	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
-	int max_bytes = max_lines * doc.line_bytes_calc;
+	int max_bytes = max_lines * doc.bytes_per_line_calc;
 	
 	/* Fetch the data to be drawn. */
 	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((off_t)(max_bytes), (d_length - skip_bytes)));
@@ -1110,9 +1140,9 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		int norm_x = line_x;
 		wxString norm_str;
 		
-		for(unsigned int c = 0; c < doc.line_bytes_calc && di != data.end(); ++c)
+		for(unsigned int c = 0; c < doc.bytes_per_line_calc && di != data.end(); ++c)
 		{
-			if(c > 0 && (c % doc.group_bytes) == 0)
+			if(c > 0 && (c % doc.bytes_per_group) == 0)
 			{
 				norm_str.append(1, ' ');
 				line_x += doc.hf_width;

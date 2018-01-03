@@ -35,6 +35,9 @@ namespace REHex {
 			void OnSaveAs(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
+			void OnSetBytesPerLine(wxCommandEvent &event);
+			void OnSetBytesPerGroup(wxCommandEvent &event);
+			
 		private:
 			wxNotebook *notebook;
 			

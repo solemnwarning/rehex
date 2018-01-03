@@ -33,6 +33,12 @@ namespace REHex {
 			void save();
 			void save(const std::string &filename);
 			
+			unsigned int get_bytes_per_line();
+			void set_bytes_per_line(unsigned int bytes_per_line);
+			
+			unsigned int get_bytes_per_group();
+			void set_bytes_per_group(unsigned int bytes_per_group);
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
@@ -88,9 +94,12 @@ namespace REHex {
 			/* Height of client area in lines. */
 			unsigned int visible_lines;
 			
-			unsigned int line_bytes_cfg{0};
-			unsigned int line_bytes_calc;
-			unsigned int group_bytes{4};
+			/* Display options */
+			unsigned int bytes_per_line;
+			unsigned int bytes_per_group;
+			
+			/* bytes_per_line, after adjusting for auto option. */
+			unsigned int bytes_per_line_calc;
 			
 			bool offset_column{true};
 			unsigned int offset_column_width;

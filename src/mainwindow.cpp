@@ -17,9 +17,15 @@
 
 #include <wx/artprov.h>
 #include <wx/notebook.h>
+#include <wx/numdlg.h>
 
 #include "app.hpp"
 #include "mainwindow.hpp"
+
+enum {
+	ID_BYTES_LINE = 1,
+	ID_BYTES_GROUP,
+};
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_NEW,    REHex::MainWindow::OnNew)
@@ -27,6 +33,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
+	
+	EVT_MENU(ID_BYTES_LINE,  REHex::MainWindow::OnSetBytesPerLine)
+	EVT_MENU(ID_BYTES_GROUP, REHex::MainWindow::OnSetBytesPerGroup)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
@@ -41,8 +50,14 @@ REHex::MainWindow::MainWindow():
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
 	
+	wxMenu *doc_menu = new wxMenu;
+	
+	doc_menu->Append(ID_BYTES_LINE,  wxT("Set bytes per line"));
+	doc_menu->Append(ID_BYTES_GROUP, wxT("Set bytes per group"));
+	
 	wxMenuBar *menu_bar = new wxMenuBar;
 	menu_bar->Append(file_menu, wxT("&File"));
+	menu_bar->Append(doc_menu,  wxT("&Document"));
 	
 	SetMenuBar(menu_bar);
 	
@@ -127,4 +142,61 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 void REHex::MainWindow::OnExit(wxCommandEvent &event)
 {
 	Close();
+}
+
+void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
+{
+	/* I doubt anyone even wants remotely this many. We enforce a limit just
+	 * to avoid performance/rendering issues with insanely long lines.
+	*/
+	const int MAX_BYTES_PER_LINE = 512;
+	
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	/* TODO: Make a dialog with an explicit "auto" radio choice? */
+	int new_value = wxGetNumberFromUser(
+		"Number of bytes to show on each line\n(0 fits to the window width)",
+		"Bytes",
+		"Set bytes per line",
+		doc->get_bytes_per_line(),
+		0,
+		MAX_BYTES_PER_LINE,
+		this);
+	
+	/* We get a negative value if the user cancels. */
+	if(new_value >= 0)
+	{
+		doc->set_bytes_per_line(new_value);
+	}
+}
+
+void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
+{
+	/* There's no real limit to this, but wxWidgets needs one. */
+	const int MAX_BYTES_PER_GROUP = 1024;
+	
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	int new_value = wxGetNumberFromUser(
+		"Number of bytes to group",
+		"Bytes",
+		"Set bytes per group",
+		doc->get_bytes_per_group(),
+		0,
+		MAX_BYTES_PER_GROUP,
+		this);
+	
+	/* We get a negative value if the user cancels. */
+	if(new_value >= 0)
+	{
+		doc->set_bytes_per_group(new_value);
+	}
 }

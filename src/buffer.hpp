@@ -71,6 +71,7 @@ namespace REHex {
 			
 			Buffer();
 			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
+			~Buffer();
 			
 			void write_inplace();
 			void write_inplace(const std::string &filename, bool force = true);

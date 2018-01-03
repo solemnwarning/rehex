@@ -124,6 +124,15 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	}
 }
 
+REHex::Buffer::~Buffer()
+{
+	if(fh != NULL)
+	{
+		fclose(fh);
+		fh = NULL;
+	}
+}
+
 void REHex::Buffer::write_inplace()
 {
 	write_inplace(filename, false);

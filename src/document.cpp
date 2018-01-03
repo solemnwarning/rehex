@@ -82,15 +82,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);
 	
-	wxSize client_size         = GetClientSize();
-	unsigned int client_width  = client_size.GetWidth();
-	unsigned int client_height = client_size.GetHeight();
-	
 	dc.SetFont(*hex_font);
-	
-	wxSize char_size         = dc.GetTextExtent("X");
-	unsigned int char_width  = char_size.GetWidth();
-	unsigned int char_height = char_size.GetHeight();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
@@ -102,7 +94,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 		region = next;
 	}
 	
-	uint64_t yo_end = scroll_yoff + (client_height / char_height) + 1;
+	uint64_t yo_end = scroll_yoff + visible_lines + 1;
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
 	{
 		int x_px = 0 - scroll_xoff;
@@ -111,7 +103,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 		assert(y_px >= 0);
 		
 		y_px -= scroll_yoff;
-		y_px *= char_height;
+		y_px *= hf_height;
 		
 		(*region)->draw(*this, dc, x_px, y_px);
 	}
@@ -132,36 +124,26 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	client_width       = client_size.GetWidth();
 	client_height      = client_size.GetHeight();
 	
-	/* Mask client_width/client_height since we bugger about with them in this function.
-	 * TODO: Refactor.
-	*/
-	unsigned int client_width  = this->client_width;
-	unsigned int client_height = this->client_height;
-	
-	/* Get the size of a character in the (fixed-width) font we use for the hex bytes. */
+	visible_lines = client_height / hf_height;
 	
 	dc.SetFont(*hex_font);
-	wxSize char_size         = dc.GetTextExtent("X");
-	unsigned int char_width  = char_size.GetWidth();
-	unsigned int char_height = char_size.GetHeight();
-	unsigned int byte_width  = 2 * char_width;
-	
-	auto calc_row_width = [this, char_width, byte_width](unsigned int line_bytes)
-	{
-		return (line_bytes * byte_width)
-			+ (((line_bytes - 1) / this->group_bytes) * char_width);
-	};
 	
 	/* Calculate how much space (if any) to reserve for the offsets to the left. */
 	
 	if(offset_column)
 	{
-		offset_column_width = 18 * char_width;
-		client_width -= offset_column_width;
+		offset_column_width = 18 * hf_width;
 	}
 	else{
 		offset_column_width = 0;
 	}
+	
+	auto calc_row_width = [this](unsigned int line_bytes)
+	{
+		return offset_column_width
+			+ (line_bytes * 2 * hf_width)
+			+ (((line_bytes - 1) / this->group_bytes) * hf_width);
+	};
 	
 	/* Decide how many bytes to display per line */
 	
@@ -198,8 +180,6 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	{
 		scroll_yoff = 0; /* just always reset for now */
-		
-		visible_lines = this->client_height / char_height;
 		
 		this->SetScrollbar(wxVERTICAL, scroll_yoff, visible_lines,
 			(regions.back()->y_offset + regions.back()->y_lines));
@@ -1081,35 +1061,25 @@ void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
-	/* Get the size of the area we can draw into */
-	
-	wxSize client_size         = doc.GetClientSize();
-	int client_height = client_size.GetHeight();
-	
-	/* Get the size of a character in the (fixed-width) font we use for the hex bytes. */
-	
 	dc.SetFont(*(doc.hex_font));
-	wxSize char_size         = dc.GetTextExtent("X");
-	int char_width  = char_size.GetWidth();
-	int char_height = char_size.GetHeight();
 	
 	/* If we are scrolled part-way into a data region, don't render data above the client area
 	 * as it would get expensive very quickly with large files.
 	*/
-	int64_t skip_lines = (y < 0 ? (-y / char_height) : 0);
+	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
 	off_t skip_bytes  = skip_lines * doc.line_bytes_calc;
 	
 	/* Increment y up to our real drawing start point. We can now trust it to be within a
-	 * char_height of zero, not the stratospheric integer-overflow-causing values it could
+	 * hf_height of zero, not the stratospheric integer-overflow-causing values it could
 	 * previously have on huge files.
 	*/
-	y += skip_lines * char_height;
+	y += skip_lines * doc.hf_height;
 	
 	/* The maximum amount of data that can be drawn on the screen before we're past the bottom
 	 * of the client area. Drawing more than this would be pointless and very expensive in the
 	 * case of large files.
 	*/
-	int max_lines = ((client_height - y) / char_height) + 1;
+	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
 	int max_bytes = max_lines * doc.line_bytes_calc;
 	
 	/* Fetch the data to be drawn. */
@@ -1133,8 +1103,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			dc.DrawText(offset_str, line_x, y);
 			line_x += doc.offset_column_width;
 			
-			dc.DrawLine((line_x - (char_width / 2)), y,
-				    (line_x - (char_width / 2)), y + char_height);
+			dc.DrawLine((line_x - (doc.hf_width / 2)), y,
+				    (line_x - (doc.hf_width / 2)), y + doc.hf_height);
 		}
 		
 		int norm_x = line_x;
@@ -1145,14 +1115,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			if(c > 0 && (c % doc.group_bytes) == 0)
 			{
 				norm_str.append(1, ' ');
-				line_x += char_width;
+				line_x += doc.hf_width;
 			}
 			
 			unsigned char byte        = *(di++);
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&line_x,y,&dc,char_width,&norm_str](unsigned char nibble, bool invert)
+			auto draw_nibble = [&line_x,y,&dc,&doc,&norm_str](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
@@ -1174,12 +1144,12 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					norm_str.append(1, nibble_to_hex[nibble]);
 				}
 				
-				line_x += char_width;
+				line_x += doc.hf_width;
 			};
 			
 			if(cur_off == doc.cpos_off && doc.insert_mode && !doc.editing_byte)
 			{
-				dc.DrawLine(line_x, y, line_x, y + char_height);
+				dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
 			}
 			
 			draw_nibble(high_nibble, (cur_off == doc.cpos_off && !doc.editing_byte && !doc.insert_mode));
@@ -1195,12 +1165,12 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			 *
 			 * TODO: Draw on next line if we're at the end of one.
 			*/
-			dc.DrawLine(line_x, y, line_x, y + char_height);
+			dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
 		}
 		
 		dc.DrawText(norm_str, norm_x, y);
 		
-		y += char_height;
+		y += doc.hf_height;
 	}
 }
 
@@ -1209,13 +1179,7 @@ REHex::Document::Region::Comment::Comment(off_t c_offset, const std::string &c_t
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
-	wxSize client_size        = doc.GetClientSize();
-	unsigned int client_width = client_size.GetWidth();
-	
-	dc.SetFont(*(doc.hex_font));
-	unsigned int char_width = dc.GetCharWidth();
-	
-	unsigned int row_chars = client_width / char_width;
+	unsigned int row_chars = doc.client_width / doc.hf_width;
 	
 	auto comment_lines = _format_text(c_text, row_chars - 1);
 	
@@ -1230,37 +1194,26 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	*/
 	x = 0;
 	
-	/* Get the size of the area we can draw into */
-	
-	wxSize client_size        = doc.GetClientSize();
-	unsigned int client_width = client_size.GetWidth();
-	
-	/* Get the size of a character in the (fixed-width) font we use for the hex bytes. */
-	
 	dc.SetFont(*(doc.hex_font));
 	
-	wxSize char_size         = dc.GetTextExtent("X");
-	unsigned int char_width  = char_size.GetWidth();
-	unsigned int char_height = char_size.GetHeight();
-	
-	auto lines = _format_text(c_text, (client_width / char_width) - 1);
+	auto lines = _format_text(c_text, (doc.client_width / doc.hf_width) - 1);
 	
 	{
-		int box_x = x + (char_width / 4);
-		int box_y = y + (char_height / 4);
+		int box_x = x + (doc.hf_width / 4);
+		int box_y = y + (doc.hf_height / 4);
 		
-		unsigned int box_w = client_width - (char_width / 2);
-		unsigned int box_h = (lines.size() * char_height) + (char_height / 2);
+		unsigned int box_w = doc.client_width - (doc.hf_width / 2);
+		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
 		dc.SetBrush(*wxLIGHT_GREY_BRUSH);
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
 	}
 	
-	y += char_height / 2;
+	y += doc.hf_height / 2;
 	
 	for(auto li = lines.begin(); li != lines.end(); ++li)
 	{
-		dc.DrawText(*li, (x + (char_width / 2)), y);
-		y += char_height;
+		dc.DrawText(*li, (x + (doc.hf_width / 2)), y);
+		y += doc.hf_height;
 	}
 }

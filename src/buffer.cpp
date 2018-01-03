@@ -15,6 +15,10 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -212,7 +216,15 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 		
 		if(wfh_initial_size < out_length)
 		{
+			/* Windows (or GCC/MinGW) provides an ftruncate(), but for some reason it
+			 * fails with "File too large" if you try expanding a file with it.
+			*/
+			
+			#ifdef _WIN32
+			if(_chsize_s(fileno(wfh), out_length) != 0)
+			#else
 			if(ftruncate(fileno(wfh), out_length) == -1)
+			#endif
 			{
 				int err = errno;
 				fclose(wfh);

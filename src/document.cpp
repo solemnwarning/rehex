@@ -172,7 +172,9 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	{
 		return offset_column_width
 			+ (line_bytes * 2 * hf_width)
-			+ (((line_bytes - 1) / this->bytes_per_group) * hf_width);
+			+ (((line_bytes - 1) / this->bytes_per_group) * hf_width)
+			+ (ascii_view * hf_width)
+			+ (ascii_view * line_bytes * hf_width);
 	};
 	
 	/* Decide how many bytes to display per line */
@@ -196,14 +198,15 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	 * horizontal scroll bar.
 	*/
 	
-	unsigned int row_width_px = calc_row_width(this->bytes_per_line_calc);
+	virtual_width = calc_row_width(this->bytes_per_line_calc);
 	
-	if(row_width_px > client_width)
+	if(virtual_width > client_width)
 	{
-		this->SetScrollbar(wxHORIZONTAL, 0, client_width, row_width_px);
+		this->SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
 	}
 	else{
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
+		virtual_width = client_width;
 	}
 	
 	this->_recalc_regions(dc);
@@ -1138,7 +1141,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		}
 		
 		int norm_x = line_x;
-		wxString norm_str;
+		wxString norm_str, ascii_string;
 		
 		for(unsigned int c = 0; c < doc.bytes_per_line_calc && di != data.end(); ++c)
 		{
@@ -1185,6 +1188,11 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			draw_nibble(high_nibble, (cur_off == doc.cpos_off && !doc.editing_byte && !doc.insert_mode));
 			draw_nibble(low_nibble,  (cur_off == doc.cpos_off && (doc.editing_byte || !doc.insert_mode)));
 			
+			if(doc.ascii_view)
+			{
+				ascii_string.append(1, (char)(isprint(byte) ? byte : '.'));
+			}
+			
 			++cur_off;
 		}
 		
@@ -1199,6 +1207,17 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		}
 		
 		dc.DrawText(norm_str, norm_x, y);
+		
+		if(doc.ascii_view)
+		{
+			int ascii_x = (doc.virtual_width - (doc.bytes_per_line_calc * doc.hf_width))
+				- doc.scroll_xoff;
+			
+			dc.DrawText(ascii_string, ascii_x, y);
+			
+			dc.DrawLine(ascii_x - (doc.hf_width / 2), y,
+			            ascii_x - (doc.hf_width / 2), y + doc.hf_height);
+		}
 		
 		y += doc.hf_height;
 	}

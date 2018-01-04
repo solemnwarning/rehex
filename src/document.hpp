@@ -94,6 +94,9 @@ namespace REHex {
 			/* Height of client area in lines. */
 			unsigned int visible_lines;
 			
+			/* Width of the scrollable area. */
+			unsigned int virtual_width;
+			
 			/* Display options */
 			unsigned int bytes_per_line;
 			unsigned int bytes_per_group;
@@ -103,6 +106,8 @@ namespace REHex {
 			
 			bool offset_column{true};
 			unsigned int offset_column_width;
+			
+			bool ascii_view{true};
 			
 			unsigned int scroll_xoff{0};
 			uint64_t     scroll_yoff{0};

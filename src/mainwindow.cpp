@@ -25,6 +25,8 @@
 enum {
 	ID_BYTES_LINE = 1,
 	ID_BYTES_GROUP,
+	ID_SHOW_OFFSETS,
+	ID_SHOW_ASCII,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -34,8 +36,12 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
 	
-	EVT_MENU(ID_BYTES_LINE,  REHex::MainWindow::OnSetBytesPerLine)
-	EVT_MENU(ID_BYTES_GROUP, REHex::MainWindow::OnSetBytesPerGroup)
+	EVT_MENU(ID_BYTES_LINE,   REHex::MainWindow::OnSetBytesPerLine)
+	EVT_MENU(ID_BYTES_GROUP,  REHex::MainWindow::OnSetBytesPerGroup)
+	EVT_MENU(ID_SHOW_OFFSETS, REHex::MainWindow::OnShowOffsets)
+	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
+	
+	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
@@ -50,10 +56,12 @@ REHex::MainWindow::MainWindow():
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
 	
-	wxMenu *doc_menu = new wxMenu;
+	doc_menu = new wxMenu;
 	
 	doc_menu->Append(ID_BYTES_LINE,  wxT("Set bytes per line"));
 	doc_menu->Append(ID_BYTES_GROUP, wxT("Set bytes per group"));
+	doc_menu->AppendCheckItem(ID_SHOW_OFFSETS, wxT("Show offsets"));
+	doc_menu->AppendCheckItem(ID_SHOW_ASCII, wxT("Show ASCII"));
 	
 	wxMenuBar *menu_bar = new wxMenuBar;
 	menu_bar->Append(file_menu, wxT("&File"));
@@ -199,4 +207,38 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 	{
 		doc->set_bytes_per_group(new_value);
 	}
+}
+
+void REHex::MainWindow::OnShowOffsets(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	doc->set_show_offsets(event.IsChecked());
+}
+
+void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	doc->set_show_ascii(event.IsChecked());
+}
+
+void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(doc != NULL);
+	
+	doc_menu->Check(ID_SHOW_OFFSETS, doc->get_show_offsets());
+	doc_menu->Check(ID_SHOW_ASCII,   doc->get_show_ascii());
 }

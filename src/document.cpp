@@ -108,6 +108,34 @@ void REHex::Document::set_bytes_per_group(unsigned int bytes_per_group)
 	OnSize(ugh);
 }
 
+bool REHex::Document::get_show_offsets()
+{
+	return offset_column;
+}
+
+void REHex::Document::set_show_offsets(bool show_offsets)
+{
+	offset_column = show_offsets;
+	
+	/* TODO: Do this properly rather than faking a resize. */
+	wxSizeEvent ugh;
+	OnSize(ugh);
+}
+
+bool REHex::Document::get_show_ascii()
+{
+	return ascii_view;
+}
+
+void REHex::Document::set_show_ascii(bool show_ascii)
+{
+	ascii_view = show_ascii;
+	
+	/* TODO: Do this properly rather than faking a resize. */
+	wxSizeEvent ugh;
+	OnSize(ugh);
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

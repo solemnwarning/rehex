@@ -39,6 +39,12 @@ namespace REHex {
 			unsigned int get_bytes_per_group();
 			void set_bytes_per_group(unsigned int bytes_per_group);
 			
+			bool get_show_offsets();
+			void set_show_offsets(bool show_offsets);
+			
+			bool get_show_ascii();
+			void set_show_ascii(bool show_ascii);
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);

@@ -37,8 +37,13 @@ namespace REHex {
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);
 			void OnSetBytesPerGroup(wxCommandEvent &event);
+			void OnShowOffsets(wxCommandEvent &event);
+			void OnShowASCII(wxCommandEvent &event);
+			
+			void OnDocumentChange(wxBookCtrlEvent &event);
 			
 		private:
+			wxMenu *doc_menu;
 			wxNotebook *notebook;
 			
 			DECLARE_EVENT_TABLE()

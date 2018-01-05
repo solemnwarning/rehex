@@ -140,7 +140,7 @@ bool REHex::Buffer::_same_file(FILE *file1, const std::string &name1, FILE *file
 	if(fstat(fileno(file1), &st1) == 0)
 	{
 		struct stat st2;
-		if(fstat(fileno(file2), &st2) != 0)
+		if(fstat(fileno(file2), &st2) == 0)
 		{
 			return st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino;
 		}

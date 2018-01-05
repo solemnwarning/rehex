@@ -38,7 +38,7 @@ namespace REHex {
 			class Block
 			{
 				public:
-					const off_t real_offset;
+					off_t real_offset;
 					
 					off_t virt_offset;
 					off_t virt_length;
@@ -65,6 +65,8 @@ namespace REHex {
 			Block *_block_by_virt_offset(off_t virt_offset);
 			void _load_block(Block *block);
 			
+			static bool _same_file(FILE *file1, const std::string &name1, FILE *file2, const std::string &name2);
+			
 		public:
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
 			const off_t block_size;
@@ -74,7 +76,7 @@ namespace REHex {
 			~Buffer();
 			
 			void write_inplace();
-			void write_inplace(const std::string &filename, bool force = true);
+			void write_inplace(const std::string &filename);
 			void write_copy(const std::string &filename);
 			
 			off_t length();

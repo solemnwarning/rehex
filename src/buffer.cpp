@@ -37,6 +37,7 @@
 #endif
 
 #include "buffer.hpp"
+#include "win32lib.hpp"
 
 REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 {
@@ -109,6 +110,55 @@ void REHex::Buffer::_load_block(Block *block)
 	block->state = Block::CLEAN;
 }
 
+/* Returns true if the given FILE handles refer to the same underlying file.
+ * Falls back to comparing the filenames if we cannot identify the actual files.
+*/
+bool REHex::Buffer::_same_file(FILE *file1, const std::string &name1, FILE *file2, const std::string &name2)
+{
+	#ifdef _WIN32
+	BY_HANDLE_FILE_INFORMATION fi1;
+	if(GetFileInformationByHandle((HANDLE)(_get_osfhandle(fileno(file1))), &fi1))
+	{
+		BY_HANDLE_FILE_INFORMATION fi2;
+		if(GetFileInformationByHandle((HANDLE)(_get_osfhandle(fileno(file2))), &fi2))
+		{
+			return fi1.dwVolumeSerialNumber == fi2.dwVolumeSerialNumber
+				&& fi1.nFileIndexHigh == fi2.nFileIndexHigh
+				&& fi1.nFileIndexLow == fi2.nFileIndexLow;
+		}
+		else{
+			fprintf(stderr, "Could not GetFileInformationByHandle() open file \"%s\": %s\n",
+				name2.c_str(), GetLastError_strerror(GetLastError()).c_str());
+		}
+	}
+	else{
+		fprintf(stderr, "Could not GetFileInformationByHandle() open file \"%s\": %s\n",
+			name1.c_str(), GetLastError_strerror(GetLastError()).c_str());
+	}
+	#else
+	struct stat st1;
+	if(fstat(fileno(file1), &st1) == 0)
+	{
+		struct stat st2;
+		if(fstat(fileno(file2), &st2) != 0)
+		{
+			return st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino;
+		}
+		else{
+			fprintf(stderr, "Could not fstat() open file \"%s\": %s\n",
+				name2.c_str(), strerror(errno));
+		}
+	}
+	else{
+		fprintf(stderr, "Could not fstat() open file \"%s\": %s\n",
+			name1.c_str(), strerror(errno));
+	}
+	#endif
+	
+	/* TODO: Compare canonicalised paths? */
+	return file1 == file2;
+}
+
 REHex::Buffer::Buffer():
 	fh(nullptr),
 	block_size(DEFAULT_BLOCK_SIZE)
@@ -167,10 +217,10 @@ REHex::Buffer::~Buffer()
 
 void REHex::Buffer::write_inplace()
 {
-	write_inplace(filename, false);
+	write_inplace(filename);
 }
 
-void REHex::Buffer::write_inplace(const std::string &filename, bool force)
+void REHex::Buffer::write_inplace(const std::string &filename)
 {
 	/* Need to open the file with open() since fopen() can't be told to open
 	 * the file, creating it if it doesn't exist, WITHOUT truncating and letting
@@ -233,6 +283,9 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 		}
 	}
 	
+	/* Are we updating the file we originally read data in from? */
+	bool updating_file = (fh != NULL && _same_file(fh, this->filename, wfh, filename));
+	
 	std::list<Block*> pending;
 	for(auto b = blocks.begin(); b != blocks.end(); ++b)
 	{
@@ -241,9 +294,11 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 	
 	for(auto b = pending.begin(); b != pending.end();)
 	{
-		if(!force && ((*b)->virt_offset == (*b)->real_offset && (*b)->state != Block::DIRTY))
+		if(updating_file && ((*b)->virt_offset == (*b)->real_offset && (*b)->state != Block::DIRTY))
 		{
-			/* Don't need to rewrite this block */
+			/* We're updating the file we originally read data in from and this block
+			 * hasn't changed (in contents or offset), don't need to do anything.
+			*/
 			b = pending.erase(b);
 			continue;
 		}
@@ -252,8 +307,13 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 		
 		if(next != pending.end() && (*b)->virt_offset + (*b)->virt_length > (*next)->real_offset)
 		{
-			/* Can't flush this block yet; we'd write into
-			 * the data of the next one.
+			/* Can't flush this block yet; we'd write into the data of the next one.
+			 *
+			 * In order for this to happen, the set of blocks before the next one must
+			 * have grown in length, which means the virt_offset of the next block MUST
+			 * be greater than its real_offset and so it won't be written to the file
+			 * preceeding it, where it could overwrite data still needed to shuffle
+			 * clean blocks to higher offsets.
 			*/
 			
 			++b;
@@ -273,15 +333,28 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 			
 			if(fwrite((*b)->data.data(), (*b)->virt_length, 1, wfh) == 0)
 			{
-				/* Ensure the block is marked as dirty, since we may have partially
-				 * rewritten it in the underlying file and no longer be able to
-				 * correctly reload it.
-				*/
-				(*b)->state = Block::DIRTY;
+				if(updating_file)
+				{
+					/* Ensure the block is marked as dirty, since we may have
+					 * partially rewritten it in the underlying file and no
+					 * longer be able to correctly reload it.
+					*/
+					(*b)->state = Block::DIRTY;
+				}
 				
 				int err = errno;
 				fclose(wfh);
 				throw std::runtime_error(std::string("Write error: ") + strerror(err));
+			}
+			
+			if(updating_file)
+			{
+				/* We've successfuly updated this block in the underlying file.
+				 * Mark it as clean and fix the offsets.
+				*/
+				
+				(*b)->real_offset = (*b)->virt_offset;
+				(*b)->state       = Block::CLEAN;
 			}
 		}
 		
@@ -307,21 +380,23 @@ void REHex::Buffer::write_inplace(const std::string &filename, bool force)
 		throw std::runtime_error(std::string("Could not truncate file: ") + strerror(err));
 	}
 	
-	/* All changes are flushed to disk now. Rebuild the blocks list so we
-	 * don't hang on to the old dirty blocks or try loading data from the
-	 * old offsets.
-	*/
-	
-	blocks.clear();
-	
-	for(off_t offset = 0; offset < out_length; offset += block_size)
+	if(!updating_file)
 	{
-		blocks.push_back(Block(offset, std::min((out_length - offset), block_size)));
-	}
-	
-	if(out_length == 0)
-	{
-		blocks.push_back(Block(0,0));
+		/* We've written out a complete new file, and it is now the backing store for this
+		 * Buffer. Rebuild the block list so the offsets are correct.
+		*/
+		
+		blocks.clear();
+		
+		for(off_t offset = 0; offset < out_length; offset += block_size)
+		{
+			blocks.push_back(Block(offset, std::min((out_length - offset), block_size)));
+		}
+		
+		if(out_length == 0)
+		{
+			blocks.push_back(Block(0,0));
+		}
 	}
 	
 	if(fh != NULL)

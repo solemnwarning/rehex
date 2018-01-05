@@ -27,11 +27,14 @@
 namespace REHex {
 	class Document: public wxControl {
 		public:
-			Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer);
+			Document(wxWindow *parent);
+			Document(wxWindow *parent, const std::string &filename);
 			~Document();
 			
 			void save();
 			void save(const std::string &filename);
+			
+			std::string get_title();
 			
 			unsigned int get_bytes_per_line();
 			void set_bytes_per_line(unsigned int bytes_per_line);
@@ -82,6 +85,7 @@ namespace REHex {
 			friend Region::Comment;
 			
 			Buffer *buffer;
+			std::string title;
 			
 			std::list<Region*> regions;
 			size_t data_regions_count;
@@ -121,6 +125,9 @@ namespace REHex {
 			off_t cpos_off{0};
 			bool editing_byte{false};
 			bool insert_mode{false};
+			
+			void _ctor_pre();
+			void _ctor_post();
 			
 			void _init_regions();
 			void _recalc_regions(wxDC &dc);

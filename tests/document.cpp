@@ -48,7 +48,7 @@ static void insert_tests()
 		diag("Inserting into an empty file...");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char z4[] = {0x00,0x00,0x00,0x00};
@@ -78,7 +78,7 @@ static void insert_tests()
 		diag("Prepending to a file with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char z4[]   = {0x00,0x00,0x00,0x00};
@@ -112,7 +112,7 @@ static void insert_tests()
 		diag("Inserting into a file with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char z4[]     = {0x00,0x00,0x00,0x00};
@@ -146,7 +146,7 @@ static void insert_tests()
 		diag("Appending to a file with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char z4[]   = {0x00,0x00,0x00,0x00};
@@ -180,7 +180,7 @@ static void insert_tests()
 		diag("Prepending to data region 1/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
@@ -226,7 +226,7 @@ static void insert_tests()
 		diag("Inserting into data region 1/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
@@ -272,7 +272,7 @@ static void insert_tests()
 		diag("Prepending to data region 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
@@ -318,7 +318,7 @@ static void insert_tests()
 		diag("Inserting into data region 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
@@ -364,7 +364,7 @@ static void insert_tests()
 		diag("Prepending to data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
@@ -410,7 +410,7 @@ static void insert_tests()
 		diag("Inserting into data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02,0x02,0x02};
@@ -456,7 +456,7 @@ static void insert_tests()
 		diag("Appending to data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
@@ -507,7 +507,7 @@ static void erase_tests()
 		diag("Erasing the start of a Document with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
@@ -536,7 +536,7 @@ static void erase_tests()
 		diag("Erasing the middle of a Document with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
@@ -565,7 +565,7 @@ static void erase_tests()
 		diag("Erasing the end of a Document with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
@@ -594,7 +594,7 @@ static void erase_tests()
 		diag("Erasing all of a Document with a single data region");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
@@ -623,7 +623,7 @@ static void erase_tests()
 		diag("Erasing the start of data region 1/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -669,7 +669,7 @@ static void erase_tests()
 		diag("Erasing the middle of data region 1/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -715,7 +715,7 @@ static void erase_tests()
 		diag("Erasing the end of data region 1/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -761,7 +761,7 @@ static void erase_tests()
 		diag("Erasing all of data region 1/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -802,7 +802,7 @@ static void erase_tests()
 		diag("Erasing the start of data region 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -848,7 +848,7 @@ static void erase_tests()
 		diag("Erasing the middle of data region 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -894,7 +894,7 @@ static void erase_tests()
 		diag("Erasing the end of data region 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -940,7 +940,7 @@ static void erase_tests()
 		diag("Erasing all of data region 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -981,7 +981,7 @@ static void erase_tests()
 		diag("Erasing the start of data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1027,7 +1027,7 @@ static void erase_tests()
 		diag("Erasing the middle of data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1073,7 +1073,7 @@ static void erase_tests()
 		diag("Erasing the end of data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1119,7 +1119,7 @@ static void erase_tests()
 		diag("Erasing all of data region 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1160,7 +1160,7 @@ static void erase_tests()
 		diag("Erasing some of data region 1/3 and 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1206,7 +1206,7 @@ static void erase_tests()
 		diag("Erasing some of data region 1/3 and all of 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1247,7 +1247,7 @@ static void erase_tests()
 		diag("Erasing all of data region 1/3 and some of 2/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1288,7 +1288,7 @@ static void erase_tests()
 		diag("Erasing some of data region 1/3, all of 2/3 and some of 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1329,7 +1329,7 @@ static void erase_tests()
 		diag("Erasing some of data region 2/3, and some of 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1375,7 +1375,7 @@ static void erase_tests()
 		diag("Erasing some of data region 2/3, and all of 3/3 in a Document");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
@@ -1416,7 +1416,7 @@ static void erase_tests()
 		diag("Erasing all data from a Document with 3 data regions");
 		
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document *doc = new REHex::Document(&frame, wxID_ANY, new REHex::Buffer());
+		REHex::Document *doc = new REHex::Document(&frame);
 		doc->SetSize(0,0, 640,480);
 		
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};

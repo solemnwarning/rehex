@@ -90,10 +90,8 @@ REHex::MainWindow::MainWindow():
 	{
 		for(int i = 1; i < app.argc; ++i)
 		{
-			REHex::Buffer *buffer = new REHex::Buffer(app.argv[i].ToStdString());
-			
-			REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, buffer);
-			notebook->AddPage(doc, app.argv[i], true);
+			REHex::Document *doc = new REHex::Document(notebook, app.argv[i].ToStdString());
+			notebook->AddPage(doc, doc->get_title(), true);
 		}
 	}
 	else{
@@ -103,8 +101,8 @@ REHex::MainWindow::MainWindow():
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
-	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, new REHex::Buffer());
-	notebook->AddPage(doc, "New file", true);
+	REHex::Document *doc = new REHex::Document(notebook);
+	notebook->AddPage(doc, doc->get_title(), true);
 }
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
@@ -113,10 +111,8 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
-	REHex::Buffer *buffer = new REHex::Buffer(openFileDialog.GetPath().ToStdString());
-	
-	REHex::Document *doc = new REHex::Document(notebook, wxID_ANY, buffer);
-	notebook->AddPage(doc, openFileDialog.GetFilename(), true);
+	REHex::Document *doc = new REHex::Document(notebook, openFileDialog.GetPath().ToStdString());
+	notebook->AddPage(doc, doc->get_title(), true);
 }
 
 void REHex::MainWindow::OnSave(wxCommandEvent &event)
@@ -144,7 +140,7 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	
 	doc->save(saveFileDialog.GetPath().ToStdString());
 	
-	notebook->SetPageText(notebook->GetSelection(), saveFileDialog.GetFilename());
+	notebook->SetPageText(notebook->GetSelection(), doc->get_title());
 }
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)

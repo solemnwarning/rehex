@@ -38,28 +38,28 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
 END_EVENT_TABLE()
 
-REHex::Document::Document(wxWindow *parent, wxWindowID id, REHex::Buffer *buffer):
-	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
-	buffer(buffer),
-	bytes_per_line(0),
-	bytes_per_group(4)
+REHex::Document::Document(wxWindow *parent):
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL)
 {
-	_init_regions();
+	_ctor_pre();
 	
-	wxFontInfo finfo;
-	finfo.Family(wxFONTFAMILY_MODERN);
+	buffer = new REHex::Buffer();
+	title  = "Untitled";
 	
-	hex_font = new wxFont(finfo);
-	assert(hex_font->IsFixedWidth());
+	_ctor_post();
+}
+
+REHex::Document::Document(wxWindow *parent, const std::string &filename):
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL)
+{
+	_ctor_pre();
 	
-	{
-		wxClientDC dc(this);
-		dc.SetFont(*hex_font);
-		
-		wxSize hf_char_size = dc.GetTextExtent("X");
-		hf_width            = hf_char_size.GetWidth();
-		hf_height           = hf_char_size.GetHeight();
-	}
+	buffer = new REHex::Buffer(filename);
+	
+	size_t last_slash = filename.find_last_of("/\\");
+	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	
+	_ctor_post();
 }
 
 REHex::Document::~Document()
@@ -68,6 +68,8 @@ REHex::Document::~Document()
 	{
 		delete *region;
 	}
+	
+	delete buffer;
 }
 
 void REHex::Document::save()
@@ -78,6 +80,14 @@ void REHex::Document::save()
 void REHex::Document::save(const std::string &filename)
 {
 	buffer->write_inplace(filename);
+	
+	size_t last_slash = filename.find_last_of("/\\");
+	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+}
+
+std::string REHex::Document::get_title()
+{
+	return title;
 }
 
 unsigned int REHex::Document::get_bytes_per_line()
@@ -637,6 +647,32 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				}
 			}
 		}
+	}
+}
+
+void REHex::Document::_ctor_pre()
+{
+	bytes_per_line  = 0;
+	bytes_per_group = 4;
+}
+
+void REHex::Document::_ctor_post()
+{
+	_init_regions();
+	
+	wxFontInfo finfo;
+	finfo.Family(wxFONTFAMILY_MODERN);
+	
+	hex_font = new wxFont(finfo);
+	assert(hex_font->IsFixedWidth());
+	
+	{
+		wxClientDC dc(this);
+		dc.SetFont(*hex_font);
+		
+		wxSize hf_char_size = dc.GetTextExtent("X");
+		hf_width            = hf_char_size.GetWidth();
+		hf_height           = hf_char_size.GetHeight();
 	}
 }
 

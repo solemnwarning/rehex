@@ -15,7 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <exception>
 #include <wx/artprov.h>
+#include <wx/msgdlg.h>
 #include <wx/notebook.h>
 #include <wx/numdlg.h>
 
@@ -111,7 +113,18 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
-	REHex::Document *doc = new REHex::Document(notebook, openFileDialog.GetPath().ToStdString());
+	REHex::Document *doc;
+	try {
+		doc = new REHex::Document(notebook, openFileDialog.GetPath().ToStdString());
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + openFileDialog.GetFilename().ToStdString() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
+	
 	notebook->AddPage(doc, doc->get_title(), true);
 }
 
@@ -123,7 +136,16 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	auto doc = dynamic_cast<REHex::Document*>(cpage);
 	assert(doc != NULL);
 	
-	doc->save();
+	try {
+		doc->save();
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error saving ") + doc->get_title() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
 }
 
 void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
@@ -138,7 +160,16 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	auto doc = dynamic_cast<REHex::Document*>(cpage);
 	assert(doc != NULL);
 	
-	doc->save(saveFileDialog.GetPath().ToStdString());
+	try {
+		doc->save(saveFileDialog.GetPath().ToStdString());
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error saving ") + doc->get_title() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
 	
 	notebook->SetPageText(notebook->GetSelection(), doc->get_title());
 }

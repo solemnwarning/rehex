@@ -1200,7 +1200,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
 	
-	for(auto di = data.begin(); di != data.end();)
+	for(auto di = data.begin();;)
 	{
 		int line_x = x;
 		
@@ -1279,7 +1279,21 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			 *
 			 * TODO: Draw on next line if we're at the end of one.
 			*/
-			dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
+			
+			if(doc.insert_mode)
+			{
+				dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
+			}
+			else{
+				/* Draw the cursor in red if trying to overwrite at an invalid
+				 * position. Should only happen in empty files.
+				*/
+				wxPen old_pen = dc.GetPen();
+				
+				dc.SetPen(*wxRED_PEN);
+				dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
+				dc.SetPen(old_pen);
+			}
 		}
 		
 		dc.DrawText(norm_str, norm_x, y);
@@ -1293,6 +1307,11 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		}
 		
 		y += doc.hf_height;
+		
+		if(di == data.end())
+		{
+			break;
+		}
 	}
 }
 

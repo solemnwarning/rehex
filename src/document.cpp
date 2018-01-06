@@ -152,6 +152,21 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	
 	dc.SetFont(*hex_font);
 	
+	if(offset_column)
+	{
+		int offset_vl_x = (offset_column_width - scroll_xoff) - (hf_width / 2);
+		
+		dc.DrawLine(offset_vl_x, 0, offset_vl_x, client_height);
+	}
+	
+	if(ascii_view)
+	{
+		int ascii_vl_x = ((virtual_width - (bytes_per_line_calc * hf_width))
+			- scroll_xoff) - (hf_width / 2);
+		
+		dc.DrawLine(ascii_vl_x, 0, ascii_vl_x, client_height);
+	}
+	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
 	*/
@@ -1199,9 +1214,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			dc.DrawText(offset_str, line_x, y);
 			line_x += doc.offset_column_width;
-			
-			dc.DrawLine((line_x - (doc.hf_width / 2)), y,
-				    (line_x - (doc.hf_width / 2)), y + doc.hf_height);
 		}
 		
 		int norm_x = line_x;
@@ -1278,9 +1290,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				- doc.scroll_xoff;
 			
 			dc.DrawText(ascii_string, ascii_x, y);
-			
-			dc.DrawLine(ascii_x - (doc.hf_width / 2), y,
-			            ascii_x - (doc.hf_width / 2), y + doc.hf_height);
 		}
 		
 		y += doc.hf_height;

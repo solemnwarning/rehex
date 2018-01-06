@@ -491,7 +491,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			else{
 				auto next_region = _data_region_by_offset(cur_region->d_offset + cur_region->d_length);
 				
-				if(next_region != NULL)
+				if(next_region != NULL && cur_region != next_region)
 				{
 					/* There is another region after this one, jump to the same
 					 * it, offset by our offset in the current line.

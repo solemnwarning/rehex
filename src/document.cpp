@@ -192,18 +192,29 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 
 void REHex::Document::OnSize(wxSizeEvent &event)
 {
+	/* Get the size of the area we can draw into */
+	
+	wxSize       client_size       = GetClientSize();
+	unsigned int new_client_width  = client_size.GetWidth();
+	unsigned int new_client_height = client_size.GetHeight();
+	
+	if(new_client_width == client_width && new_client_height == client_height)
+	{
+		/* Do nothing if the client size hasn't changed since we were last called.
+		 * Avoids recursion between OnSize and SetScrollbar in OS X.
+		*/
+		return;
+	}
+	
+	client_width  = new_client_width;
+	client_height = new_client_height;
+	
 	wxClientDC dc(this);
 	
 	/* Force a vertical scrollbar so the bytes per line doesn't jump around and screw us over.
 	 * TODO: Do this less hackily (is this possible on non-win32 wxWidgets?)
 	*/
 	this->SetScrollbar(wxVERTICAL, 0, 1, 2);
-	
-	/* Get the size of the area we can draw into */
-	
-	wxSize client_size = this->GetClientSize();
-	client_width       = client_size.GetWidth();
-	client_height      = client_size.GetHeight();
 	
 	visible_lines = client_height / hf_height;
 	
@@ -731,6 +742,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 
 void REHex::Document::_ctor_pre()
 {
+	client_width    = 0;
+	client_height   = 0;
 	bytes_per_line  = 0;
 	bytes_per_group = 4;
 	show_ascii      = true;

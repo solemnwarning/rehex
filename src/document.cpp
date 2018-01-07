@@ -590,14 +590,6 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	unsigned int rel_x   = mouse_x + this->scroll_xoff;
 	unsigned int mouse_y = event.GetY();
 	
-	printf("Mouse click at (%u, %u) (rel_x = %u)\n", mouse_x, mouse_y, rel_x);
-	
-	dc.SetFont(*hex_font);
-	
-	wxSize char_size         = dc.GetTextExtent("X");
-	unsigned int char_width  = char_size.GetWidth();
-	unsigned int char_height = char_size.GetHeight();
-	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
 	*/
@@ -611,7 +603,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / char_height) + skip_lines_in_region;
+	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -621,47 +613,70 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		// printf("...at line %" PRIu64 " in region (%" PRIu64 " lines)\n", line_off, (*region)->y_lines);
-		
 		/* TODO: Move this logic into the Region::Data class */
 		
 		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
 		if(dr != NULL)
 		{
+			/* Calculate the offset within the Buffer of the first byte on this line
+			 * and the offset (plus one) of the last byte on this line.
+			*/
+			off_t line_data_begin = dr->d_offset + ((off_t)(bytes_per_line_calc) * line_off);
+			off_t line_data_end   = std::min((line_data_begin + bytes_per_line_calc), (dr->d_offset + dr->d_length));
+			
 			if(rel_x < offset_column_width)
 			{
 				/* Click was within the offset area */
-				return;
 			}
-			
-			rel_x -= offset_column_width;
-			
-			unsigned int char_offset = (rel_x / char_width);
-			printf("...character offset %u\n", char_offset);
-			if(((char_offset + 1) % ((this->bytes_per_group * 2) + 1)) == 0)
+			else if(show_ascii && rel_x >= ascii_text_x)
 			{
-				printf("...in a space\n");
-			}
-			else{
-				unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((this->bytes_per_group * 2) + 1));
-				printf("...character offset sub spaces %u\n", char_offset_sub_spaces);
+				/* Click was within the ASCII area */
 				
-				off_t line_data_off = (off_t)(this->bytes_per_line_calc) * (off_t)(line_off);
-				off_t byte_off = dr->d_offset + line_data_off + (char_offset_sub_spaces / 2);
-				off_t data_len_clamp = std::min(dr->d_length, (line_data_off + this->bytes_per_line_calc));
+				unsigned int char_offset = (rel_x - ascii_text_x) / hf_width;
+				off_t clicked_offset     = line_data_begin + char_offset;
 				
-				if(byte_off < (dr->d_offset + data_len_clamp))
+				if(clicked_offset < line_data_end)
 				{
-					printf("...which is byte offset %u\n", (unsigned)(byte_off));
+					/* Clicked on a character */
 					
-					this->cpos_off = byte_off;
-					this->editing_byte = false;
+					cpos_off     = clicked_offset;
+					editing_byte = false;
 					
 					/* TODO: Limit paint to affected area */
-					this->Refresh();
+					Refresh();
 				}
 				else{
-					printf("...which is past the end of the data\n");
+					/* Clicked past the end of the line */
+				}
+			}
+			else{
+				/* Click was within the hex area */
+				
+				rel_x -= offset_column_width;
+				
+				unsigned int char_offset = rel_x / hf_width;
+				if(((char_offset + 1) % ((bytes_per_group * 2) + 1)) == 0)
+				{
+					/* Click was over a space between byte groups. */
+				}
+				else{
+					unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
+					unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
+					off_t clicked_offset                = line_data_begin + line_offset_bytes;
+					
+					if(clicked_offset < line_data_end)
+					{
+						/* Clicked on a byte */
+						
+						cpos_off     = clicked_offset;
+						editing_byte = false;
+						
+						/* TODO: Limit paint to affected area */
+						Refresh();
+					}
+					else{
+						/* Clicked past the end of the line */
+					}
 				}
 			}
 		}

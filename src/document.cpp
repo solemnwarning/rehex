@@ -134,12 +134,12 @@ void REHex::Document::set_show_offsets(bool show_offsets)
 
 bool REHex::Document::get_show_ascii()
 {
-	return ascii_view;
+	return show_ascii;
 }
 
 void REHex::Document::set_show_ascii(bool show_ascii)
 {
-	ascii_view = show_ascii;
+	this->show_ascii = show_ascii;
 	
 	/* TODO: Do this properly rather than faking a resize. */
 	wxSizeEvent ugh;
@@ -159,11 +159,9 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 		dc.DrawLine(offset_vl_x, 0, offset_vl_x, client_height);
 	}
 	
-	if(ascii_view)
+	if(show_ascii)
 	{
-		int ascii_vl_x = ((virtual_width - (bytes_per_line_calc * hf_width))
-			- scroll_xoff) - (hf_width / 2);
-		
+		int ascii_vl_x = ((int)(ascii_text_x) - (hf_width / 2)) - scroll_xoff;
 		dc.DrawLine(ascii_vl_x, 0, ascii_vl_x, client_height);
 	}
 	
@@ -226,8 +224,8 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 		return offset_column_width
 			+ (line_bytes * 2 * hf_width)
 			+ (((line_bytes - 1) / this->bytes_per_group) * hf_width)
-			+ (ascii_view * hf_width)
-			+ (ascii_view * line_bytes * hf_width);
+			+ (show_ascii * hf_width)
+			+ (show_ascii * line_bytes * hf_width);
 	};
 	
 	/* Decide how many bytes to display per line */
@@ -260,6 +258,11 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	else{
 		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
 		virtual_width = client_width;
+	}
+	
+	if(show_ascii)
+	{
+		ascii_text_x = virtual_width - (bytes_per_line_calc * hf_width);
 	}
 	
 	this->_recalc_regions(dc);
@@ -669,6 +672,7 @@ void REHex::Document::_ctor_pre()
 {
 	bytes_per_line  = 0;
 	bytes_per_group = 4;
+	show_ascii      = true;
 }
 
 void REHex::Document::_ctor_post()
@@ -1202,7 +1206,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	
 	for(auto di = data.begin();;)
 	{
-		int line_x = x;
+		int hex_base_x = x;
+		int hex_x      = hex_base_x;
 		
 		if(doc.offset_column)
 		{
@@ -1212,26 +1217,30 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				(unsigned)((cur_off & 0xFFFFFFFF00000000) >> 32),
 				(unsigned)(cur_off & 0xFFFFFFFF));
 			
-			dc.DrawText(offset_str, line_x, y);
-			line_x += doc.offset_column_width;
+			dc.DrawText(offset_str, x, y);
+			
+			hex_base_x += doc.offset_column_width;
+			hex_x      += doc.offset_column_width;
 		}
 		
-		int norm_x = line_x;
-		wxString norm_str, ascii_string;
+		int ascii_base_x = x + doc.ascii_text_x;
+		int ascii_x      = ascii_base_x;
+		
+		wxString hex_str, ascii_string;
 		
 		for(unsigned int c = 0; c < doc.bytes_per_line_calc && di != data.end(); ++c)
 		{
 			if(c > 0 && (c % doc.bytes_per_group) == 0)
 			{
-				norm_str.append(1, ' ');
-				line_x += doc.hf_width;
+				hex_str.append(1, ' ');
+				hex_x += doc.hf_width;
 			}
 			
 			unsigned char byte        = *(di++);
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&line_x,y,&dc,&doc,&norm_str](unsigned char nibble, bool invert)
+			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
@@ -1242,31 +1251,51 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					dc.SetBackgroundMode(wxSOLID);
 					
 					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, line_x, y);
+					dc.DrawText(str, hex_x, y);
 					
 					dc.SetTextForeground(*wxBLACK);
 					dc.SetBackgroundMode(wxTRANSPARENT);
 					
-					norm_str.append(1, ' ');
+					hex_str.append(1, ' ');
 				}
 				else{
-					norm_str.append(1, nibble_to_hex[nibble]);
+					hex_str.append(1, nibble_to_hex[nibble]);
 				}
 				
-				line_x += doc.hf_width;
+				hex_x += doc.hf_width;
 			};
 			
 			if(cur_off == doc.cpos_off && doc.insert_mode && !doc.editing_byte)
 			{
-				dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
+				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
 			draw_nibble(high_nibble, (cur_off == doc.cpos_off && !doc.editing_byte && !doc.insert_mode));
 			draw_nibble(low_nibble,  (cur_off == doc.cpos_off && (doc.editing_byte || !doc.insert_mode)));
 			
-			if(doc.ascii_view)
+			if(doc.show_ascii)
 			{
-				ascii_string.append(1, (char)(isprint(byte) ? byte : '.'));
+				char ascii_byte = (isprint(byte) ? byte : '.');
+				
+				if(cur_off == doc.cpos_off)
+				{
+					dc.SetTextForeground(*wxWHITE);
+					dc.SetTextBackground(*wxBLACK);
+					dc.SetBackgroundMode(wxSOLID);
+					
+					char str[] = { ascii_byte, '\0' };
+					dc.DrawText(str, ascii_x, y);
+					
+					dc.SetTextForeground(*wxBLACK);
+					dc.SetBackgroundMode(wxTRANSPARENT);
+					
+					ascii_string.append(" ");
+				}
+				else{
+					ascii_string.append(1, ascii_byte);
+				}
+				
+				ascii_x += doc.hf_width;
 			}
 			
 			++cur_off;
@@ -1282,7 +1311,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(doc.insert_mode)
 			{
-				dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
+				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			else{
 				/* Draw the cursor in red if trying to overwrite at an invalid
@@ -1291,19 +1320,16 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				wxPen old_pen = dc.GetPen();
 				
 				dc.SetPen(*wxRED_PEN);
-				dc.DrawLine(line_x, y, line_x, y + doc.hf_height);
+				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 				dc.SetPen(old_pen);
 			}
 		}
 		
-		dc.DrawText(norm_str, norm_x, y);
+		dc.DrawText(hex_str, hex_base_x, y);
 		
-		if(doc.ascii_view)
+		if(doc.show_ascii)
 		{
-			int ascii_x = (doc.virtual_width - (doc.bytes_per_line_calc * doc.hf_width))
-				- doc.scroll_xoff;
-			
-			dc.DrawText(ascii_string, ascii_x, y);
+			dc.DrawText(ascii_string, ascii_base_x, y);
 		}
 		
 		y += doc.hf_height;

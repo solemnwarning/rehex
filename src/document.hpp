@@ -117,7 +117,8 @@ namespace REHex {
 			bool offset_column{true};
 			unsigned int offset_column_width;
 			
-			bool ascii_view{true};
+			bool show_ascii;
+			unsigned int ascii_text_x;
 			
 			unsigned int scroll_xoff{0};
 			uint64_t     scroll_yoff{0};

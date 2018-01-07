@@ -1179,6 +1179,22 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 {
 	dc.SetFont(*(doc.hex_font));
 	
+	dc.SetTextForeground(*wxBLACK);
+	dc.SetTextBackground(*wxBLACK);
+	dc.SetBackgroundMode(wxTRANSPARENT);
+	
+	auto normal_text_colour = [&dc]()
+	{
+		dc.SetTextForeground(*wxBLACK);
+		dc.SetBackgroundMode(wxTRANSPARENT);
+	};
+	
+	auto inverted_text_colour = [&dc]()
+	{
+		dc.SetTextForeground(*wxWHITE);
+		dc.SetBackgroundMode(wxSOLID);
+	};
+	
 	/* If we are scrolled part-way into a data region, don't render data above the client area
 	 * as it would get expensive very quickly with large files.
 	*/
@@ -1217,6 +1233,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				(unsigned)((cur_off & 0xFFFFFFFF00000000) >> 32),
 				(unsigned)(cur_off & 0xFFFFFFFF));
 			
+			normal_text_colour();
 			dc.DrawText(offset_str, x, y);
 			
 			hex_base_x += doc.offset_column_width;
@@ -1240,21 +1257,16 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str](unsigned char nibble, bool invert)
+			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
 				if(invert)
 				{
-					dc.SetTextForeground(*wxWHITE);
-					dc.SetTextBackground(*wxBLACK);
-					dc.SetBackgroundMode(wxSOLID);
+					inverted_text_colour();
 					
 					char str[] = { nibble_to_hex[nibble], '\0' };
 					dc.DrawText(str, hex_x, y);
-					
-					dc.SetTextForeground(*wxBLACK);
-					dc.SetBackgroundMode(wxTRANSPARENT);
 					
 					hex_str.append(1, ' ');
 				}
@@ -1275,19 +1287,16 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(doc.show_ascii)
 			{
-				char ascii_byte = (isprint(byte) ? byte : '.');
+				char ascii_byte = isprint(byte)
+					? byte
+					: '.';
 				
 				if(cur_off == doc.cpos_off)
 				{
-					dc.SetTextForeground(*wxWHITE);
-					dc.SetTextBackground(*wxBLACK);
-					dc.SetBackgroundMode(wxSOLID);
+					inverted_text_colour();
 					
 					char str[] = { ascii_byte, '\0' };
 					dc.DrawText(str, ascii_x, y);
-					
-					dc.SetTextForeground(*wxBLACK);
-					dc.SetBackgroundMode(wxTRANSPARENT);
 					
 					ascii_string.append(" ");
 				}
@@ -1324,6 +1333,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				dc.SetPen(old_pen);
 			}
 		}
+		
+		normal_text_colour();
 		
 		dc.DrawText(hex_str, hex_base_x, y);
 		

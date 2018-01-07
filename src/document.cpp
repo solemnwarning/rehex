@@ -309,7 +309,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			_make_byte_visible(cpos_off);
 		}
 		
-		this->editing_byte = false;
+		if(cursor_state == CSTATE_HEX_MID)
+		{
+			cursor_state = CSTATE_HEX;
+		}
 	};
 	
 	auto cpos_dec = [this]()
@@ -320,7 +323,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			_make_byte_visible(cpos_off);
 		}
 		
-		this->editing_byte = false;
+		if(cursor_state == CSTATE_HEX_MID)
+		{
+			cursor_state = CSTATE_HEX;
+		}
 	};
 	
 	if(modifiers == wxMOD_CONTROL)
@@ -331,7 +337,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			printf("TODO: Implement jump to offset\n");
 		}
 	}
-	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isxdigit(key))
+	else if(cursor_state != CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isxdigit(key))
 	{
 		unsigned char nibble;
 		switch(key)
@@ -354,7 +360,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			case 'F': case 'f': nibble = 0xF; break;
 		}
 		
-		if(this->editing_byte)
+		if(cursor_state == CSTATE_HEX_MID)
 		{
 			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
 			assert(!byte.empty());
@@ -373,7 +379,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			wxClientDC dc(this);
 			_insert_data(dc, this->cpos_off, &byte, 1);
 			
-			this->editing_byte = true;
+			cursor_state = CSTATE_HEX_MID;
 		}
 		else{
 			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
@@ -385,8 +391,32 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				wxClientDC dc(this);
 				_overwrite_data(dc, this->cpos_off, byte.data(), 1);
 				
-				this->editing_byte = true;
+				cursor_state = CSTATE_HEX_MID;
 			}
+		}
+		
+		_make_byte_visible(cpos_off);
+		
+		/* TODO: Limit paint to affected area */
+		this->Refresh();
+	}
+	else if(cursor_state == CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isprint(key))
+	{
+		unsigned char byte = key;
+		
+		if(this->insert_mode)
+		{
+			wxClientDC dc(this);
+			_insert_data(dc, this->cpos_off, &byte, 1);
+			
+			cpos_inc();
+		}
+		else if(cpos_off < buffer->length())
+		{
+			wxClientDC dc(this);
+			_overwrite_data(dc, this->cpos_off, &byte, 1);
+			
+			cpos_inc();
 		}
 		
 		_make_byte_visible(cpos_off);
@@ -459,6 +489,11 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				}
 			}
 			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+			
 			_make_byte_visible(cpos_off);
 			
 			/* TODO: Limit paint to affected area */
@@ -507,6 +542,11 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				}
 			}
 			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+			
 			_make_byte_visible(cpos_off);
 			
 			/* TODO: Limit paint to affected area */
@@ -534,7 +574,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				wxClientDC dc(this);
 				_erase_data(dc, this->cpos_off, 1);
 				
-				this->editing_byte = false;
+				if(cursor_state == CSTATE_HEX_MID)
+				{
+					cursor_state = CSTATE_HEX;
+				}
 				
 				_make_byte_visible(cpos_off);
 				
@@ -549,7 +592,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				wxClientDC dc(this);
 				_erase_data(dc, --(this->cpos_off), 1);
 				
-				this->editing_byte = false;
+				if(cursor_state == CSTATE_HEX_MID)
+				{
+					cursor_state = CSTATE_HEX;
+				}
 				
 				_make_byte_visible(cpos_off);
 				
@@ -640,7 +686,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					/* Clicked on a character */
 					
 					cpos_off     = clicked_offset;
-					editing_byte = false;
+					cursor_state = CSTATE_ASCII;
 					
 					/* TODO: Limit paint to affected area */
 					Refresh();
@@ -669,7 +715,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						/* Clicked on a byte */
 						
 						cpos_off     = clicked_offset;
-						editing_byte = false;
+						cursor_state = CSTATE_HEX;
 						
 						/* TODO: Limit paint to affected area */
 						Refresh();
@@ -688,6 +734,7 @@ void REHex::Document::_ctor_pre()
 	bytes_per_line  = 0;
 	bytes_per_group = 4;
 	show_ascii      = true;
+	cursor_state    = CSTATE_HEX;
 }
 
 void REHex::Document::_ctor_post()
@@ -1292,13 +1339,13 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				hex_x += doc.hf_width;
 			};
 			
-			if(cur_off == doc.cpos_off && doc.insert_mode && !doc.editing_byte)
+			if(cur_off == doc.cpos_off && doc.insert_mode && doc.cursor_state == CSTATE_HEX)
 			{
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
-			draw_nibble(high_nibble, (cur_off == doc.cpos_off && !doc.editing_byte && !doc.insert_mode));
-			draw_nibble(low_nibble,  (cur_off == doc.cpos_off && (doc.editing_byte || !doc.insert_mode)));
+			draw_nibble(high_nibble, (cur_off == doc.cpos_off && doc.cursor_state == CSTATE_HEX && !doc.insert_mode));
+			draw_nibble(low_nibble,  (cur_off == doc.cpos_off && (doc.cursor_state == CSTATE_HEX_MID || (doc.cursor_state == CSTATE_HEX && !doc.insert_mode))));
 			
 			if(doc.show_ascii)
 			{

@@ -124,8 +124,13 @@ namespace REHex {
 			uint64_t     scroll_yoff{0};
 			
 			off_t cpos_off{0};
-			bool editing_byte{false};
 			bool insert_mode{false};
+			
+			enum {
+				CSTATE_HEX,
+				CSTATE_HEX_MID,
+				CSTATE_ASCII,
+			} cursor_state;
 			
 			void _ctor_pre();
 			void _ctor_post();

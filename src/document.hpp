@@ -153,6 +153,10 @@ namespace REHex {
 			
 			void _make_byte_visible(off_t offset);
 			
+			void _handle_width_change();
+			void _handle_height_change();
+			void _update_vscroll();
+			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			
 			/* Stays at the bottom because it changes the protection... */

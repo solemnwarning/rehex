@@ -98,10 +98,7 @@ unsigned int REHex::Document::get_bytes_per_line()
 void REHex::Document::set_bytes_per_line(unsigned int bytes_per_line)
 {
 	this->bytes_per_line = bytes_per_line;
-	
-	/* TODO: Do this properly rather than faking a resize. */
-	wxSizeEvent ugh;
-	OnSize(ugh);
+	_handle_width_change();
 }
 
 unsigned int REHex::Document::get_bytes_per_group()
@@ -112,10 +109,7 @@ unsigned int REHex::Document::get_bytes_per_group()
 void REHex::Document::set_bytes_per_group(unsigned int bytes_per_group)
 {
 	this->bytes_per_group = bytes_per_group;
-	
-	/* TODO: Do this properly rather than faking a resize. */
-	wxSizeEvent ugh;
-	OnSize(ugh);
+	_handle_width_change();
 }
 
 bool REHex::Document::get_show_offsets()
@@ -126,10 +120,7 @@ bool REHex::Document::get_show_offsets()
 void REHex::Document::set_show_offsets(bool show_offsets)
 {
 	offset_column = show_offsets;
-	
-	/* TODO: Do this properly rather than faking a resize. */
-	wxSizeEvent ugh;
-	OnSize(ugh);
+	_handle_width_change();
 }
 
 bool REHex::Document::get_show_ascii()
@@ -140,10 +131,7 @@ bool REHex::Document::get_show_ascii()
 void REHex::Document::set_show_ascii(bool show_ascii)
 {
 	this->show_ascii = show_ascii;
-	
-	/* TODO: Do this properly rather than faking a resize. */
-	wxSizeEvent ugh;
-	OnSize(ugh);
+	_handle_width_change();
 }
 
 void REHex::Document::OnPaint(wxPaintEvent &event)
@@ -198,28 +186,26 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	unsigned int new_client_width  = client_size.GetWidth();
 	unsigned int new_client_height = client_size.GetHeight();
 	
-	if(new_client_width == client_width && new_client_height == client_height)
-	{
-		/* Do nothing if the client size hasn't changed since we were last called.
-		 * Avoids recursion between OnSize and SetScrollbar in OS X.
-		*/
-		return;
-	}
+	bool width_changed  = (new_client_width  != client_width);
+	bool height_changed = (new_client_height != client_height);
 	
 	client_width  = new_client_width;
 	client_height = new_client_height;
-	
-	wxClientDC dc(this);
-	
-	/* Force a vertical scrollbar so the bytes per line doesn't jump around and screw us over.
-	 * TODO: Do this less hackily (is this possible on non-win32 wxWidgets?)
-	*/
-	this->SetScrollbar(wxVERTICAL, 0, 1, 2);
-	
 	visible_lines = client_height / hf_height;
 	
-	dc.SetFont(*hex_font);
-	
+	if(width_changed)
+	{
+		_handle_width_change();
+	}
+	else if(height_changed)
+	{
+		/* _handle_height_change() is a subset of _handle_width_change() */
+		_handle_height_change();
+	}
+}
+
+void REHex::Document::_handle_width_change()
+{
 	/* Calculate how much space (if any) to reserve for the offsets to the left. */
 	
 	if(offset_column)
@@ -233,62 +219,101 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	auto calc_row_width = [this](unsigned int line_bytes)
 	{
 		return offset_column_width
+			/* hex data */
 			+ (line_bytes * 2 * hf_width)
-			+ (((line_bytes - 1) / this->bytes_per_group) * hf_width)
+			+ (((line_bytes - 1) / bytes_per_group) * hf_width)
+			
+			/* ASCII data */
 			+ (show_ascii * hf_width)
 			+ (show_ascii * line_bytes * hf_width);
 	};
 	
 	/* Decide how many bytes to display per line */
 	
-	if(this->bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
+	if(bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
 	{
 		/* TODO: Can I do this algorithmically? */
 		
-		this->bytes_per_line_calc = 1;
+		bytes_per_line_calc = 1;
 		
-		while(calc_row_width(this->bytes_per_line_calc + 1) <= client_width)
+		while(calc_row_width(bytes_per_line_calc + 1) <= client_width)
 		{
-			++(this->bytes_per_line_calc);
+			++bytes_per_line_calc;
 		}
 	}
 	else{
-		this->bytes_per_line_calc = this->bytes_per_line;
+		bytes_per_line_calc = bytes_per_line;
 	}
 	
 	/* Calculate the number of pixels necessary to render a full line and decide if we need a
 	 * horizontal scroll bar.
 	*/
-	
-	virtual_width = calc_row_width(this->bytes_per_line_calc);
-	
-	if(virtual_width > client_width)
+	virtual_width = calc_row_width(bytes_per_line_calc);
+	if(virtual_width < client_width)
 	{
-		this->SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
-	}
-	else{
-		this->SetScrollbar(wxHORIZONTAL, 0, 0, 0);
+		/* Raise virtual_width to client_width, so that things drawn relative to the right
+		 * edge of the virtual client area don't end up in the middle.
+		*/
 		virtual_width = client_width;
 	}
+	
+	/* TODO: Preserve/scale the position as the window size changes. */
+	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
 	
 	if(show_ascii)
 	{
 		ascii_text_x = virtual_width - (bytes_per_line_calc * hf_width);
 	}
 	
-	this->_recalc_regions(dc);
+	/* Recalculate the height and y offset of each region. */
 	
 	{
-		scroll_yoff = 0; /* just always reset for now */
-		
-		this->SetScrollbar(wxVERTICAL, scroll_yoff, visible_lines,
-			(regions.back()->y_offset + regions.back()->y_lines));
+		wxClientDC dc(this);
+		_recalc_regions(dc);
 	}
 	
-	/* Force a redraw of the whole control since resizing can change the entire control, not
-	 * just the newly visible areas.
+	/* Update vertical scrollbar, since we just recalculated the height of the document. */
+	_update_vscroll();
+	
+	/* Force a redraw of the whole control since resizing can change pretty much the entire
+	 * thing depending on rendering settings.
 	*/
-	this->Refresh();
+	Refresh();
+}
+
+void REHex::Document::_handle_height_change()
+{
+	/* Update vertical scrollbar, since the client area height has changed. */
+	_update_vscroll();
+	
+	/* Force a redraw of the whole control since resizing can change pretty much the entire
+	 * thing depending on rendering settings.
+	*/
+	Refresh();
+}
+
+void REHex::Document::_update_vscroll()
+{
+	uint64_t total_lines = regions.back()->y_offset + regions.back()->y_lines;
+	
+	/* TODO: Scale scroll_yoff in a better way when the window size changes. */
+	scroll_yoff = 0;
+	
+	if(total_lines > visible_lines)
+	{
+		SetScrollbar(wxVERTICAL, scroll_yoff, visible_lines, total_lines);
+	}
+	else{
+		/* We don't need a vertical scroll bar, but force one to appear anyway so
+			* the bytes per line can't change within OnSize and get us stuck in a loop.
+		*/
+		#ifdef _WIN32
+		SetScrollbar(wxVERTICAL, 0, 0, -1);
+		#else
+		/* TODO: Do this in a non-crappy way on non-win32 */
+		SetScrollbar(wxVERTICAL, 0, 1, 2);
+		#endif
+	}
 }
 
 void REHex::Document::OnScroll(wxScrollWinEvent &event)

@@ -23,6 +23,12 @@
 #include "document.hpp"
 #include "textentrydialog.hpp"
 
+/* Is the given byte a printable 7-bit ASCII character? */
+static bool isasciiprint(unsigned char c)
+{
+	return (c >= ' ' && c <= '~');
+}
+
 static const char *COMMENT_TEXT = "There remains a very delicate balance in this world...\n"
 	"Between those who create and those who will experience the creations of others.\n"
 	"I can't say that I wasn't aware of this. However, I had never experienced it.\n"
@@ -436,7 +442,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
 	}
-	else if(cursor_state == CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isprint(key))
+	else if(cursor_state == CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
 	{
 		unsigned char byte = key;
 		
@@ -1428,7 +1434,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(doc.show_ascii)
 			{
-				char ascii_byte = isprint(byte)
+				char ascii_byte = isasciiprint(byte)
 					? byte
 					: '.';
 				

@@ -1283,6 +1283,10 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	dc.SetTextBackground(*wxBLACK);
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
+	wxPen black_1px(*wxBLACK, 1);
+	dc.SetPen(black_1px);
+	dc.SetBrush(*wxTRANSPARENT_BRUSH);
+	
 	auto normal_text_colour = [&dc]()
 	{
 		dc.SetTextForeground(*wxBLACK);
@@ -1377,13 +1381,50 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				hex_x += doc.hf_width;
 			};
 			
-			if(cur_off == doc.cpos_off && doc.insert_mode && doc.cursor_state == CSTATE_HEX)
+			bool inv_high, inv_low, draw_box, draw_ins;
+			if(cur_off == doc.cpos_off)
+			{
+				if(doc.cursor_state == CSTATE_HEX)
+				{
+					inv_high = !doc.insert_mode;
+					inv_low  = !doc.insert_mode;
+					draw_box = false;
+					draw_ins = doc.insert_mode;
+				}
+				else if(doc.cursor_state == CSTATE_HEX_MID)
+				{
+					inv_high = false;
+					inv_low  = true;
+					draw_box = false;
+					draw_ins = false;
+				}
+				else if(doc.cursor_state == CSTATE_ASCII)
+				{
+					inv_high = false;
+					inv_low  = false;
+					draw_box = !doc.insert_mode;
+					draw_ins = false; // TODO: Draw a different insert cursor
+				}
+			}
+			else{
+				inv_high = false;
+				inv_low  = false;
+				draw_box = false;
+				draw_ins = false;
+			}
+			
+			if(draw_ins)
 			{
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
-			draw_nibble(high_nibble, (cur_off == doc.cpos_off && doc.cursor_state == CSTATE_HEX && !doc.insert_mode));
-			draw_nibble(low_nibble,  (cur_off == doc.cpos_off && (doc.cursor_state == CSTATE_HEX_MID || (doc.cursor_state == CSTATE_HEX && !doc.insert_mode))));
+			if(draw_box)
+			{
+				dc.DrawRectangle(hex_x, y, doc.hf_width * 2, doc.hf_height);
+			}
+			
+			draw_nibble(high_nibble, inv_high);
+			draw_nibble(low_nibble,  inv_low);
 			
 			if(doc.show_ascii)
 			{
@@ -1391,7 +1432,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					? byte
 					: '.';
 				
-				if(cur_off == doc.cpos_off)
+				if(cur_off == doc.cpos_off && doc.cursor_state == CSTATE_ASCII && !doc.insert_mode)
 				{
 					inverted_text_colour();
 					
@@ -1401,6 +1442,23 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					ascii_string.append(" ");
 				}
 				else{
+					if(cur_off == doc.cpos_off)
+					{
+						if(doc.insert_mode)
+						{
+							if(doc.cursor_state == CSTATE_ASCII)
+							{
+								dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+							}
+							else{
+								// TODO: Draw different insert cursor
+							}
+						}
+						else{
+							dc.DrawRectangle(ascii_x, y, doc.hf_width, doc.hf_height);
+						}
+					}
+					
 					ascii_string.append(1, ascii_byte);
 				}
 				

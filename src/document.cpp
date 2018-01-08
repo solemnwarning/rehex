@@ -24,7 +24,7 @@
 #include "textentrydialog.hpp"
 
 /* Is the given byte a printable 7-bit ASCII character? */
-static bool isasciiprint(unsigned char c)
+static bool isasciiprint(int c)
 {
 	return (c >= ' ' && c <= '~');
 }

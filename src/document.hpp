@@ -18,6 +18,7 @@
 #ifndef REHEX_DOCUMENT_HPP
 #define REHEX_DOCUMENT_HPP
 
+#include <jansson.h>
 #include <list>
 #include <stdint.h>
 #include <wx/wx.h>
@@ -85,6 +86,8 @@ namespace REHex {
 			friend Region::Comment;
 			
 			Buffer *buffer;
+			std::string filename;
+			
 			std::string title;
 			
 			std::list<Region*> regions;
@@ -145,6 +148,9 @@ namespace REHex {
 			std::string _get_comment_text(off_t offset);
 			void _set_comment_text(wxDC &dc, off_t offset, const std::string &text);
 			void _delete_comment(wxDC &dc, off_t offset);
+			
+			json_t *_dump_metadata();
+			void _save_metadata(const std::string &filename);
 			
 			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
 			

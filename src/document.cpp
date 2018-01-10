@@ -19,9 +19,14 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <iterator>
+#include <jansson.h>
+#include <limits>
 
 #include "document.hpp"
 #include "textentrydialog.hpp"
+
+static_assert(std::numeric_limits<json_int_t>::max() >= std::numeric_limits<off_t>::max(),
+	"json_int_t must be large enough to store any offset in an off_t");
 
 /* Is the given byte a printable 7-bit ASCII character? */
 static bool isasciiprint(int c)
@@ -56,7 +61,8 @@ REHex::Document::Document(wxWindow *parent):
 }
 
 REHex::Document::Document(wxWindow *parent, const std::string &filename):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL)
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
+	filename(filename)
 {
 	_ctor_pre();
 	
@@ -81,14 +87,18 @@ REHex::Document::~Document()
 void REHex::Document::save()
 {
 	buffer->write_inplace();
+	_save_metadata(filename + ".rehex-meta");
 }
 
 void REHex::Document::save(const std::string &filename)
 {
 	buffer->write_inplace(filename);
+	this->filename = filename;
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	
+	_save_metadata(filename + ".rehex-meta");
 }
 
 std::string REHex::Document::get_title()
@@ -1136,6 +1146,50 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 		(*region)->y_offset = next_yo;
 		next_yo += (*region)->y_lines;
 	}
+}
+
+json_t *REHex::Document::_dump_metadata()
+{
+	json_t *root = json_object();
+	if(root == NULL)
+	{
+		return NULL;
+	}
+	
+	json_t *comments = json_array();
+	if(json_object_set_new(root, "comments", comments) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto region = regions.begin(); region != regions.end(); ++region)
+	{
+		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+		if(cr == NULL)
+		{
+			continue;
+		}
+		
+		json_t *comment = json_object();
+		if(json_array_append(comments, comment) == -1
+			|| json_object_set_new(comment, "offset", json_integer(cr->c_offset)) == -1
+			|| json_object_set_new(comment, "text",   json_stringn(cr->c_text.data(), cr->c_text.size())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+	}
+	
+	return root;
+}
+
+void REHex::Document::_save_metadata(const std::string &filename)
+{
+	/* TODO: Report errors, atomically replace file? */
+	json_t *meta = _dump_metadata();
+	json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
+	json_decref(meta);
 }
 
 REHex::Document::Region::Data *REHex::Document::_data_region_by_offset(off_t offset)

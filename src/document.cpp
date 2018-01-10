@@ -868,6 +868,16 @@ void REHex::Document::_init_regions(const json_t *meta)
 		next_data   += dr_length;
 		remain_data -= dr_length;
 	}
+	
+	if(regions.empty())
+	{
+		/* Empty buffers need a data region too! */
+		
+		assert(buffer->length() == 0);
+		
+		regions.push_back(new REHex::Document::Region::Data(0, 0));
+		++data_regions_count;
+	}
 }
 
 void REHex::Document::_recalc_regions(wxDC &dc)

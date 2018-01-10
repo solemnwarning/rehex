@@ -138,7 +138,7 @@ namespace REHex {
 			void _ctor_pre();
 			void _ctor_post();
 			
-			void _init_regions();
+			void _init_regions(const json_t *meta);
 			void _recalc_regions(wxDC &dc);
 			
 			void _overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);

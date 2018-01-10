@@ -21,6 +21,8 @@
 #include <iterator>
 #include <jansson.h>
 #include <limits>
+#include <map>
+#include <string>
 
 #include "document.hpp"
 #include "textentrydialog.hpp"
@@ -33,13 +35,6 @@ static bool isasciiprint(int c)
 {
 	return (c >= ' ' && c <= '~');
 }
-
-static const char *COMMENT_TEXT = "There remains a very delicate balance in this world...\n"
-	"Between those who create and those who will experience the creations of others.\n"
-	"I can't say that I wasn't aware of this. However, I had never experienced it.\n"
-	"Now, thanks to you, I finally have.\n"
-	"As long as there is someone who will appreciate the work involved in creation, the effort is time well spent.\n"
-	"To this end, I will continue to create for as long as I can.";
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_PAINT(REHex::Document::OnPaint)
@@ -57,6 +52,8 @@ REHex::Document::Document(wxWindow *parent):
 	buffer = new REHex::Buffer();
 	title  = "Untitled";
 	
+	_init_regions(NULL);
+	
 	_ctor_post();
 }
 
@@ -70,6 +67,15 @@ REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	
+	/* TODO: Report errors (except ENOENT) */
+	
+	json_error_t json_err;
+	json_t *meta = json_load_file((filename + ".rehex-meta").c_str(), 0, &json_err);
+	
+	_init_regions(meta);
+	
+	json_decref(meta);
 	
 	_ctor_post();
 }
@@ -793,8 +799,6 @@ void REHex::Document::_ctor_pre()
 
 void REHex::Document::_ctor_post()
 {
-	_init_regions();
-	
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
 	
@@ -811,35 +815,59 @@ void REHex::Document::_ctor_post()
 	}
 }
 
-void REHex::Document::_init_regions()
+void REHex::Document::_init_regions(const json_t *meta)
 {
 	assert(regions.empty());
 	
+	/* Load any comments from the document metadata into a std::map, which ensures they are
+	 * sorted by their offset.
+	*/
+	
+	std::map<off_t,std::string> comments;
+	
+	{
+		/* TODO: Validate JSON structure */
+		
+		json_t *j_comments = json_object_get(meta, "comments");
+		
+		size_t index;
+		json_t *value;
+		
+		json_array_foreach(j_comments, index, value)
+		{
+			comments[json_integer_value(json_object_get(value, "offset"))]
+				= json_string_value(json_object_get(value, "text"));
+		}
+	}
+	
+	/* Construct a list of interlaced comment/data regions. */
+	
 	data_regions_count = 0;
 	
-#if 0
-	size_t comment_in = 128, data_off = 0, remain = this->buffer->length();
+	auto next_comment = comments.begin();
+	off_t next_data = 0, remain_data = buffer->length();
 	
-	do {
-		/* Add the fake comment. */
-		REHex::Document::Region::Comment *cr = new REHex::Document::Region::Comment(data_off, COMMENT_TEXT);
-		regions.push_back(cr);
+	while(remain_data > 0)
+	{
+		off_t dr_length = remain_data;
 		
-		/* Add some actual data from the Buffer. */
-		size_t block_len = std::min(remain, comment_in);
-		REHex::Document::Region::Data *dr = new REHex::Document::Region::Data(data_off, block_len);
-		regions.push_back(dr);
+		if(next_comment != comments.end() && next_comment->first == next_data)
+		{
+			regions.push_back(new REHex::Document::Region::Comment(next_comment->first, next_comment->second));
+			++next_comment;
+		}
 		
+		if(next_comment != comments.end() && next_comment->first > next_data)
+		{
+			dr_length = std::min(dr_length, (next_comment->first - next_data));
+		}
+		
+		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length));
 		++data_regions_count;
 		
-		comment_in = std::min(comment_in * 2, (size_t)(4096));
-		data_off += block_len;
-		remain   -= block_len;
-	} while(remain > 0);
-#else
-	regions.push_back(new REHex::Document::Region::Data(0, buffer->length()));
-	++data_regions_count;
-#endif
+		next_data   += dr_length;
+		remain_data -= dr_length;
+	}
 }
 
 void REHex::Document::_recalc_regions(wxDC &dc)

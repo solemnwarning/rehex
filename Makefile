@@ -39,6 +39,9 @@ check: $(TESTS)
 rehex$(EXE): src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o src/win32lib.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
+reltest: src/relativevalue.o src/buffer.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o src/win32lib.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 

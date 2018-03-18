@@ -21,6 +21,7 @@
 #include <wx/notebook.h>
 #include <wx/wx.h>
 
+#include "decodepanel.hpp"
 #include "document.hpp"
 
 namespace REHex {
@@ -39,10 +40,21 @@ namespace REHex {
 			void OnSetBytesPerGroup(wxCommandEvent &event);
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
+			void OnShowDecodes(wxCommandEvent &event);
 			
 			void OnDocumentChange(wxBookCtrlEvent &event);
 			
 		private:
+			class Tab: public wxPanel
+			{
+				public:
+					Tab(wxWindow *parent);
+					Tab(wxWindow *parent, const std::string &filename);
+					
+					REHex::Document    *doc;
+					REHex::DecodePanel *dp;
+			};
+			
 			wxMenu *doc_menu;
 			wxNotebook *notebook;
 			

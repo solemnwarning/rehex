@@ -20,8 +20,10 @@
 #include <wx/msgdlg.h>
 #include <wx/notebook.h>
 #include <wx/numdlg.h>
+#include <wx/sizer.h>
 
 #include "app.hpp"
+#include "decodepanel.hpp"
 #include "mainwindow.hpp"
 
 enum {
@@ -29,6 +31,7 @@ enum {
 	ID_BYTES_GROUP,
 	ID_SHOW_OFFSETS,
 	ID_SHOW_ASCII,
+	ID_SHOW_DECODES,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -42,6 +45,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_BYTES_GROUP,  REHex::MainWindow::OnSetBytesPerGroup)
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::MainWindow::OnShowOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
+	EVT_MENU(ID_SHOW_DECODES, REHex::MainWindow::OnShowDecodes)
 	
 	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
 END_EVENT_TABLE()
@@ -64,6 +68,7 @@ REHex::MainWindow::MainWindow():
 	doc_menu->Append(ID_BYTES_GROUP, wxT("Set bytes per group"));
 	doc_menu->AppendCheckItem(ID_SHOW_OFFSETS, wxT("Show offsets"));
 	doc_menu->AppendCheckItem(ID_SHOW_ASCII, wxT("Show ASCII"));
+	doc_menu->AppendCheckItem(ID_SHOW_DECODES, wxT("Show decode table"));
 	
 	wxMenuBar *menu_bar = new wxMenuBar;
 	menu_bar->Append(file_menu, wxT("&File"));
@@ -92,8 +97,8 @@ REHex::MainWindow::MainWindow():
 	{
 		for(int i = 1; i < app.argc; ++i)
 		{
-			REHex::Document *doc = new REHex::Document(notebook, app.argv[i].ToStdString());
-			notebook->AddPage(doc, doc->get_title(), true);
+			Tab *tab = new Tab(notebook, app.argv[i].ToStdString());
+			notebook->AddPage(tab, tab->doc->get_title(), true);
 		}
 	}
 	else{
@@ -103,8 +108,8 @@ REHex::MainWindow::MainWindow():
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
-	REHex::Document *doc = new REHex::Document(notebook);
-	notebook->AddPage(doc, doc->get_title(), true);
+	Tab *tab = new Tab(notebook);
+	notebook->AddPage(tab, tab->doc->get_title(), true);
 }
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
@@ -113,9 +118,9 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
-	REHex::Document *doc;
+	Tab *tab;
 	try {
-		doc = new REHex::Document(notebook, openFileDialog.GetPath().ToStdString());
+		tab = new Tab(notebook, openFileDialog.GetPath().ToStdString());
 	}
 	catch(const std::exception &e)
 	{
@@ -125,7 +130,7 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 		return;
 	}
 	
-	notebook->AddPage(doc, doc->get_title(), true);
+	notebook->AddPage(tab, tab->doc->get_title(), true);
 }
 
 void REHex::MainWindow::OnSave(wxCommandEvent &event)
@@ -133,16 +138,16 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
 	try {
-		doc->save();
+		tab->doc->save();
 	}
 	catch(const std::exception &e)
 	{
 		wxMessageBox(
-			std::string("Error saving ") + doc->get_title() + ":\n" + e.what(),
+			std::string("Error saving ") + tab->doc->get_title() + ":\n" + e.what(),
 			"Error", wxICON_ERROR, this);
 		return;
 	}
@@ -157,21 +162,21 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
 	try {
-		doc->save(saveFileDialog.GetPath().ToStdString());
+		tab->doc->save(saveFileDialog.GetPath().ToStdString());
 	}
 	catch(const std::exception &e)
 	{
 		wxMessageBox(
-			std::string("Error saving ") + doc->get_title() + ":\n" + e.what(),
+			std::string("Error saving ") + tab->doc->get_title() + ":\n" + e.what(),
 			"Error", wxICON_ERROR, this);
 		return;
 	}
 	
-	notebook->SetPageText(notebook->GetSelection(), doc->get_title());
+	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
 }
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)
@@ -189,15 +194,15 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
 	/* TODO: Make a dialog with an explicit "auto" radio choice? */
 	int new_value = wxGetNumberFromUser(
 		"Number of bytes to show on each line\n(0 fits to the window width)",
 		"Bytes",
 		"Set bytes per line",
-		doc->get_bytes_per_line(),
+		tab->doc->get_bytes_per_line(),
 		0,
 		MAX_BYTES_PER_LINE,
 		this);
@@ -205,7 +210,7 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 	/* We get a negative value if the user cancels. */
 	if(new_value >= 0)
 	{
-		doc->set_bytes_per_line(new_value);
+		tab->doc->set_bytes_per_line(new_value);
 	}
 }
 
@@ -217,14 +222,14 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
 	int new_value = wxGetNumberFromUser(
 		"Number of bytes to group",
 		"Bytes",
 		"Set bytes per group",
-		doc->get_bytes_per_group(),
+		tab->doc->get_bytes_per_group(),
 		0,
 		MAX_BYTES_PER_GROUP,
 		this);
@@ -232,7 +237,7 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 	/* We get a negative value if the user cancels. */
 	if(new_value >= 0)
 	{
-		doc->set_bytes_per_group(new_value);
+		tab->doc->set_bytes_per_group(new_value);
 	}
 }
 
@@ -241,10 +246,10 @@ void REHex::MainWindow::OnShowOffsets(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
-	doc->set_show_offsets(event.IsChecked());
+	tab->doc->set_show_offsets(event.IsChecked());
 }
 
 void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
@@ -252,10 +257,22 @@ void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
-	doc->set_show_ascii(event.IsChecked());
+	tab->doc->set_show_ascii(event.IsChecked());
+}
+
+void REHex::MainWindow::OnShowDecodes(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->dp->Show(event.IsChecked());
+	tab->GetSizer()->Layout();
 }
 
 void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
@@ -263,9 +280,63 @@ void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(cpage);
-	assert(doc != NULL);
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
 	
-	doc_menu->Check(ID_SHOW_OFFSETS, doc->get_show_offsets());
-	doc_menu->Check(ID_SHOW_ASCII,   doc->get_show_ascii());
+	doc_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
+	doc_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
+	doc_menu->Check(ID_SHOW_DECODES, tab->dp->IsShown());
+}
+
+REHex::MainWindow::Tab::Tab(wxWindow *parent):
+	wxPanel(parent), doc(NULL), dp(NULL)
+{
+	wxBoxSizer *v_sizer = NULL;
+	
+	try {
+		v_sizer = new wxBoxSizer(wxVERTICAL);
+		
+		doc = new REHex::Document(this);
+		v_sizer->Add(doc, 1, wxEXPAND | wxALL, 0);
+		
+		dp = new REHex::DecodePanel(this);
+		v_sizer->Add(dp, 0, wxALIGN_LEFT, 0);
+		
+		SetSizerAndFit(v_sizer);
+	}
+	catch(const std::exception &e)
+	{
+		delete dp;
+		delete doc;
+		delete v_sizer;
+		
+		throw e;
+	}
+}
+
+
+REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
+	wxPanel(parent), doc(NULL), dp(NULL)
+{
+	wxBoxSizer *v_sizer = NULL;
+	
+	try {
+		v_sizer = new wxBoxSizer(wxVERTICAL);
+		
+		doc = new REHex::Document(this, filename);
+		v_sizer->Add(doc, 1, wxEXPAND | wxALL, 0);
+		
+		dp = new REHex::DecodePanel(this);
+		v_sizer->Add(dp, 0, wxALIGN_LEFT, 0);
+		
+		SetSizerAndFit(v_sizer);
+	}
+	catch(const std::exception &e)
+	{
+		delete dp;
+		delete doc;
+		delete v_sizer;
+		
+		throw e;
+	}
 }

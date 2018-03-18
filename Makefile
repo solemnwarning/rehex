@@ -36,7 +36,7 @@ all: rehex$(EXE)
 check: $(TESTS)
 	prove -v tests/
 
-rehex$(EXE): src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o src/win32lib.o
+rehex$(EXE): src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o src/win32lib.o src/decodepanel.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o src/win32lib.o

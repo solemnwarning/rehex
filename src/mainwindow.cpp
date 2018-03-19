@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <wx/artprov.h>
+#include <wx/event.h>
 #include <wx/msgdlg.h>
 #include <wx/notebook.h>
 #include <wx/numdlg.h>
@@ -44,6 +45,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
 	
 	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
+	
+	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,   REHex::MainWindow::OnCursorMove)
+	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED, REHex::MainWindow::OnInsertToggle)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
@@ -82,7 +86,6 @@ REHex::MainWindow::MainWindow():
 	notebook = new wxNotebook(this, wxID_ANY);
 	
 	CreateStatusBar(2);
-	SetStatusText(wxT("Test"));
 	
 	/* Temporary hack to open files provided on the command line */
 	
@@ -268,4 +271,70 @@ void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
 	
 	doc_menu->Check(ID_SHOW_OFFSETS, doc->get_show_offsets());
 	doc_menu->Check(ID_SHOW_ASCII,   doc->get_show_ascii());
+	
+	_update_status_offset(doc);
+	_update_status_mode(doc);
+}
+
+void REHex::MainWindow::OnCursorMove(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto cp_doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(cp_doc != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
+	assert(doc != NULL);
+	
+	if(doc == cp_doc)
+	{
+		/* Only update the status bar if the event originated from the
+		 * active document.
+		*/
+		_update_status_offset(doc);
+	}
+}
+
+void REHex::MainWindow::OnInsertToggle(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto cp_doc = dynamic_cast<REHex::Document*>(cpage);
+	assert(cp_doc != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
+	assert(doc != NULL);
+	
+	if(doc == cp_doc)
+	{
+		/* Only update the status bar if the event originated from the
+		 * active document.
+		*/
+		_update_status_mode(doc);
+	}
+}
+
+void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
+{
+	off_t off = doc->get_offset();
+	
+	char buf[64];
+	snprintf(buf, sizeof(buf), "Offset: %08x:%08x",
+		(unsigned int)((off & 0x00000000FFFFFFFF) << 32),
+		(unsigned int)(off & 0xFFFFFFFF));
+	
+	SetStatusText(buf, 0);
+}
+
+void REHex::MainWindow::_update_status_mode(REHex::Document *doc)
+{
+	if(doc->get_insert_mode())
+	{
+		SetStatusText("Mode: Insert", 1);
+	}
+	else{
+		SetStatusText("Mode: Overwrite", 1);
+	}
 }

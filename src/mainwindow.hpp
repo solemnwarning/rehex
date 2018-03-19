@@ -42,9 +42,15 @@ namespace REHex {
 			
 			void OnDocumentChange(wxBookCtrlEvent &event);
 			
+			void OnCursorMove(wxCommandEvent &event);
+			void OnInsertToggle(wxCommandEvent &event);
+			
 		private:
 			wxMenu *doc_menu;
 			wxNotebook *notebook;
+			
+			void _update_status_offset(REHex::Document *doc);
+			void _update_status_mode(REHex::Document *doc);
 			
 			DECLARE_EVENT_TABLE()
 	};

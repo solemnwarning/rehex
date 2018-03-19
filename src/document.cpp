@@ -44,6 +44,9 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
 END_EVENT_TABLE()
 
+wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,   wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED, wxCommandEvent);
+
 REHex::Document::Document(wxWindow *parent):
 	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL)
 {
@@ -154,6 +157,16 @@ void REHex::Document::set_show_ascii(bool show_ascii)
 {
 	this->show_ascii = show_ascii;
 	_handle_width_change();
+}
+
+off_t REHex::Document::get_offset()
+{
+	return this->cpos_off;
+}
+
+bool REHex::Document::get_insert_mode()
+{
+	return this->insert_mode;
 }
 
 void REHex::Document::OnPaint(wxPaintEvent &event)
@@ -365,6 +378,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			++(this->cpos_off);
 			_make_byte_visible(cpos_off);
+			_raise_moved();
 		}
 		
 		if(cursor_state == CSTATE_HEX_MID)
@@ -379,6 +393,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			--(this->cpos_off);
 			_make_byte_visible(cpos_off);
+			_raise_moved();
 		}
 		
 		if(cursor_state == CSTATE_HEX_MID)
@@ -553,6 +568,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 			
 			_make_byte_visible(cpos_off);
+			_raise_moved();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -606,6 +622,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 			
 			_make_byte_visible(cpos_off);
+			_raise_moved();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -613,6 +630,13 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		else if(key == WXK_INSERT)
 		{
 			insert_mode  = !insert_mode;
+			
+			{
+				wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
+				event.SetEventObject(this);
+				
+				wxPostEvent(this, event);
+			}
 			
 			if(!insert_mode && cpos_off == buffer->length())
 			{
@@ -638,6 +662,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				}
 				
 				_make_byte_visible(cpos_off);
+				_raise_moved();
 				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
@@ -656,6 +681,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				}
 				
 				_make_byte_visible(cpos_off);
+				_raise_moved();
 				
 				/* TODO: Limit paint to affected area */
 				this->Refresh();
@@ -746,6 +772,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					cpos_off     = clicked_offset;
 					cursor_state = CSTATE_ASCII;
 					
+					_raise_moved();
+					
 					/* TODO: Limit paint to affected area */
 					Refresh();
 				}
@@ -774,6 +802,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						
 						cpos_off     = clicked_offset;
 						cursor_state = CSTATE_HEX;
+						
+						_raise_moved();
 						
 						/* TODO: Limit paint to affected area */
 						Refresh();
@@ -1358,6 +1388,14 @@ std::list<std::string> REHex::Document::_format_text(const std::string &text, un
 	lines.erase(std::next(lines.begin(), std::min((size_t)(max_lines), lines.size())), lines.end());
 	
 	return lines;
+}
+
+void REHex::Document::_raise_moved()
+{
+	wxCommandEvent event(REHex::EV_CURSOR_MOVED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
 }
 
 REHex::Document::Region::~Region() {}

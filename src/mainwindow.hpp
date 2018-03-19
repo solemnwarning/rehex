@@ -58,6 +58,7 @@ namespace REHex {
 					REHex::DecodePanel *dp;
 					
 					void OnCursorMove(wxCommandEvent &event);
+					void OnValueChange(wxCommandEvent &event);
 					
 				private:
 					DECLARE_EVENT_TABLE()

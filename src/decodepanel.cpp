@@ -15,10 +15,29 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <assert.h>
 #include <endian.h>
 #include <inttypes.h>
 
 #include "decodepanel.hpp"
+
+wxDEFINE_EVENT(REHex::EV_VALUE_CHANGE, REHex::ValueChange);
+
+/* Endianness conversion functions for use with the OnText() template method. */
+static uint8_t  hto8_u   (uint8_t  host_8bits)  { return host_8bits; }
+static int8_t   hto8_s   (int8_t   host_8bits)  { return host_8bits; }
+static uint16_t htobe16_u(uint16_t host_16bits) { return htobe16(host_16bits); }
+static int16_t  htobe16_s( int16_t host_16bits) { return htobe16(host_16bits); }
+static uint16_t htole16_u(uint16_t host_16bits) { return htole16(host_16bits); }
+static int16_t  htole16_s( int16_t host_16bits) { return htole16(host_16bits); }
+static uint32_t htobe32_u(uint32_t host_32bits) { return htobe32(host_32bits); }
+static int32_t  htobe32_s( int32_t host_32bits) { return htobe32(host_32bits); }
+static uint32_t htole32_u(uint32_t host_32bits) { return htole32(host_32bits); }
+static int32_t  htole32_s( int32_t host_32bits) { return htole32(host_32bits); }
+static uint64_t htobe64_u(uint64_t host_64bits) { return htobe64(host_64bits); }
+static int64_t  htobe64_s( int64_t host_64bits) { return htobe64(host_64bits); }
+static uint64_t htole64_u(uint64_t host_64bits) { return htole64(host_64bits); }
+static int64_t  htole64_s( int64_t host_64bits) { return htole64(host_64bits); }
 
 REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	wxPanel(parent, id)
@@ -62,11 +81,21 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	add_tc(h8, 2);
 	add_tc(o8, 3);
 	
+	s8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int8_t,  10, &hto8_s>, this);
+	u8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint8_t, 10, &hto8_u>, this);
+	h8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint8_t, 16, &hto8_u>, this);
+	o8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint8_t,  8, &hto8_u>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "16 bit BE"));
 	add_tc(s16be, 6);
 	add_tc(u16be, 5);
 	add_tc(h16be, 4);
 	add_tc(o16be, 6);
+	
+	s16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int16_t,  10, &htobe16_s>, this);
+	u16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 10, &htobe16_u>, this);
+	h16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 16, &htobe16_u>, this);
+	o16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t,  8, &htobe16_u>, this);
 	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "16 bit LE"));
 	add_tc(s16le, 6);
@@ -74,11 +103,21 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	add_tc(h16le, 4);
 	add_tc(o16le, 6);
 	
+	s16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int16_t,  10, &htole16_s>, this);
+	u16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 10, &htole16_u>, this);
+	h16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 16, &htole16_u>, this);
+	o16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t,  8, &htole16_u>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit BE"));
 	add_tc(s32be, 11);
 	add_tc(u32be, 10);
 	add_tc(h32be, 8);
 	add_tc(o32be, 11);
+	
+	s32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int32_t,  10, &htobe32_s>, this);
+	u32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 10, &htobe32_u>, this);
+	h32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 16, &htobe32_u>, this);
+	o32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t,  8, &htobe32_u>, this);
 	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit LE"));
 	add_tc(s32le, 11);
@@ -86,17 +125,32 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	add_tc(h32le, 8);
 	add_tc(o32le, 11);
 	
+	s32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int32_t,  10, &htole32_s>, this);
+	u32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 10, &htole32_u>, this);
+	h32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 16, &htole32_u>, this);
+	o32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t,  8, &htole32_u>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit BE"));
 	add_tc(s64be, 21);
 	add_tc(u64be, 20);
 	add_tc(h64be, 16);
 	add_tc(o64be, 22);
 	
+	s64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int64_t,  10, &htobe64_s>, this);
+	u64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 10, &htobe64_u>, this);
+	h64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 16, &htobe64_u>, this);
+	o64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t,  8, &htobe64_u>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit LE"));
 	add_tc(s64le, 21);
 	add_tc(u64le, 20);
 	add_tc(h64le, 16);
 	add_tc(o64le, 22);
+	
+	s64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<int64_t,  10, &htole64_s>, this);
+	u64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 10, &htole64_u>, this);
+	h64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 16, &htole64_u>, this);
+	o64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t,  8, &htole64_u>, this);
 	
 	SetSizerAndFit(sizer);
 }
@@ -151,4 +205,70 @@ void REHex::DecodePanel::update(const unsigned char *data, size_t size)
 	TC_UPDATE(u64le, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
 	TC_UPDATE(h64le, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
 	TC_UPDATE(o64le, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
+}
+
+template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnText(wxCommandEvent &event)
+{
+	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
+	assert(tc != NULL);
+	
+	std::string sval = tc->GetValue().ToStdString();
+	if(sval.length() == 0)
+	{
+		return;
+	}
+	
+	errno = 0;
+	char *endptr;
+	
+	T tval;
+	
+	if(std::numeric_limits<T>::is_signed)
+	{
+		long long int ival = strtoll(sval.c_str(), &endptr, base);
+		if(*endptr != '\0')
+		{
+			/* Invalid characters */
+			return;
+		}
+		if((ival == LLONG_MIN || ival == LLONG_MAX) && errno == ERANGE)
+		{
+			/* Out of range of long long */
+			return;
+		}
+		
+		if(ival < std::numeric_limits<T>::min() || ival > std::numeric_limits<T>::max())
+		{
+			/* Out of range of T */
+			return;
+		}
+		
+		tval = htoX(ival);
+	}
+	else{
+		unsigned long long int uval = strtoll(sval.c_str(), &endptr, base);
+		if(*endptr != '\0')
+		{
+			/* Invalid characters */
+			return;
+		}
+		if(uval == ULLONG_MAX && errno == ERANGE)
+		{
+			/* Out of range of unsigned long long */
+			return;
+		}
+		
+		if(uval > std::numeric_limits<T>::max())
+		{
+			/* Out of range of T */
+			return;
+		}
+		
+		tval = htoX(uval);
+	}
+	
+	ValueChange change_ev(tval);
+	change_ev.SetEventObject(this);
+	
+	wxPostEvent(this, change_ev);
 }

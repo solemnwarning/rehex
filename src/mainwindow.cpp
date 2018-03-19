@@ -388,6 +388,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 
 BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
+	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_CHANGE, REHex::MainWindow::Tab::OnValueChange)
 END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -426,4 +427,15 @@ void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
 	
 	/* Let the event propogate on up to MainWindow to update the status bar. */
 	event.Skip();
+}
+
+void REHex::MainWindow::Tab::OnValueChange(wxCommandEvent &event)
+{
+	auto vc = dynamic_cast<REHex::ValueChange*>(&event);
+	assert(vc != NULL);
+	
+	off_t offset = doc->get_offset();
+	std::vector<unsigned char> data = vc->get_data();
+	
+	doc->overwrite_data(offset, data.data(), data.size());
 }

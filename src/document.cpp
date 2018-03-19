@@ -174,6 +174,14 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 	return buffer->read_data(offset, max_length);
 }
 
+void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, off_t length)
+{
+	buffer->overwrite_data(offset, data, length);
+	
+	/* TODO: Limit paint to affected area */
+	Refresh();
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

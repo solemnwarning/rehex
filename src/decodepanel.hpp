@@ -18,10 +18,42 @@
 #ifndef REHEX_VALUEPANEL_HPP
 #define REHEX_VALUEPANEL_HPP
 
+#include <vector>
 #include <wx/panel.h>
 #include <wx/wx.h>
 
 namespace REHex {
+	class ValueChange;
+	wxDECLARE_EVENT(EV_VALUE_CHANGE, REHex::ValueChange);
+	
+	class ValueChange: public wxCommandEvent
+	{
+		public:
+			template<typename T> ValueChange(const T &data):
+				wxCommandEvent(EV_VALUE_CHANGE)
+			{
+				this->data.insert(this->data.end(),
+					(const unsigned char*)(&data),
+					(const unsigned char*)(&data) + sizeof(data));
+			}
+			
+			ValueChange(const ValueChange &event):
+				wxCommandEvent(EV_VALUE_CHANGE), data(event.data) {}
+		
+			wxEvent* Clone() const
+			{
+				return new ValueChange(*this);
+			}
+			
+			std::vector<unsigned char> get_data() const
+			{
+				return data;
+			}
+			
+		private:
+			std::vector<unsigned char> data;
+	};
+	
 	class DecodePanel: public wxPanel
 	{
 		public:
@@ -37,6 +69,8 @@ namespace REHex {
 			wxTextCtrl *s32le, *u32le, *h32le, *o32le;
 			wxTextCtrl *s64be, *u64be, *h64be, *o64be;
 			wxTextCtrl *s64le, *u64le, *h64le, *o64le;
+			
+			template<typename T, int base, T (*htoX)(T)> void OnText(wxCommandEvent &event);
 	};
 }
 

@@ -26,6 +26,9 @@
 #include "buffer.hpp"
 
 namespace REHex {
+	wxDECLARE_EVENT(EV_CURSOR_MOVED,   wxCommandEvent);
+	wxDECLARE_EVENT(EV_INSERT_TOGGLED, wxCommandEvent);
+	
 	class Document: public wxControl {
 		public:
 			Document(wxWindow *parent);
@@ -48,6 +51,9 @@ namespace REHex {
 			
 			bool get_show_ascii();
 			void set_show_ascii(bool show_ascii);
+			
+			off_t get_offset();
+			bool get_insert_mode();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
@@ -164,6 +170,8 @@ namespace REHex {
 			void _update_vscroll();
 			
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			
+			void _raise_moved();
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

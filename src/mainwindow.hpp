@@ -56,6 +56,11 @@ namespace REHex {
 					
 					REHex::Document    *doc;
 					REHex::DecodePanel *dp;
+					
+					void OnCursorMove(wxCommandEvent &event);
+					
+				private:
+					DECLARE_EVENT_TABLE()
 			};
 			
 			wxMenu *doc_menu;

@@ -54,6 +54,7 @@ namespace REHex {
 			
 			off_t get_offset();
 			bool get_insert_mode();
+			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

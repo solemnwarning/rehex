@@ -169,6 +169,11 @@ bool REHex::Document::get_insert_mode()
 	return this->insert_mode;
 }
 
+std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length)
+{
+	return buffer->read_data(offset, max_length);
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

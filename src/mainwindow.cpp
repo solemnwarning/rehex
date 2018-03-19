@@ -372,6 +372,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		v_sizer->Add(dp, 0, wxALIGN_LEFT, 0);
 		
 		SetSizerAndFit(v_sizer);
+		
+		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_offset(), 8);
+		dp->update(data_at_off.data(), data_at_off.size());
 	}
 	catch(const std::exception &e)
 	{
@@ -383,6 +386,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	}
 }
 
+BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
+	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
+END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxPanel(parent), doc(NULL), dp(NULL)
@@ -399,6 +405,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		v_sizer->Add(dp, 0, wxALIGN_LEFT, 0);
 		
 		SetSizerAndFit(v_sizer);
+		
+		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_offset(), 8);
+		dp->update(data_at_off.data(), data_at_off.size());
 	}
 	catch(const std::exception &e)
 	{
@@ -408,4 +417,13 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		
 		throw e;
 	}
+}
+
+void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
+{
+	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_offset(), 8);
+	dp->update(data_at_off.data(), data_at_off.size());
+	
+	/* Let the event propogate on up to MainWindow to update the status bar. */
+	event.Skip();
 }

@@ -15,6 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <endian.h>
+#include <inttypes.h>
+
 #include "decodepanel.hpp"
 
 REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
@@ -96,4 +99,56 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	add_tc(o64le, 22);
 	
 	SetSizerAndFit(sizer);
+}
+
+/* TODO: Make this is templated lambda whenever I move to C++14 */
+#define TC_UPDATE(field, T, format, expr) \
+	if(size >= sizeof(T)) \
+	{ \
+		char buf[64]; \
+		snprintf(buf, sizeof(buf), format, expr); \
+		field->ChangeValue(buf); \
+		field->Enable(); \
+	} \
+	else{ \
+		field->ChangeValue(""); \
+		field->Disable(); \
+	}
+
+void REHex::DecodePanel::update(const unsigned char *data, size_t size)
+{
+	TC_UPDATE(s8, int8_t,  "%" PRId8, (*(int8_t*)(data)));
+	TC_UPDATE(u8, uint8_t, "%" PRIu8, (*(uint8_t*)(data)));
+	TC_UPDATE(h8, uint8_t, "%" PRIx8, (*(uint8_t*)(data)));
+	TC_UPDATE(o8, uint8_t, "%" PRIo8, (*(uint8_t*)(data)));
+	
+	TC_UPDATE(s16be, int16_t, "%" PRId16, be16toh(*(int16_t*)(data)));
+	TC_UPDATE(u16be, int16_t, "%" PRIu16, be16toh(*(uint16_t*)(data)));
+	TC_UPDATE(h16be, int16_t, "%" PRIx16, be16toh(*(uint16_t*)(data)));
+	TC_UPDATE(o16be, int16_t, "%" PRIo16, be16toh(*(uint16_t*)(data)));
+	
+	TC_UPDATE(s16le, int16_t, "%" PRId16, le16toh(*(int16_t*)(data)));
+	TC_UPDATE(u16le, int16_t, "%" PRIu16, le16toh(*(uint16_t*)(data)));
+	TC_UPDATE(h16le, int16_t, "%" PRIx16, le16toh(*(uint16_t*)(data)));
+	TC_UPDATE(o16le, int16_t, "%" PRIo16, le16toh(*(uint16_t*)(data)));
+	
+	TC_UPDATE(s32be, int32_t, "%" PRId32, be32toh(*(int32_t*)(data)));
+	TC_UPDATE(u32be, int32_t, "%" PRIu32, be32toh(*(uint32_t*)(data)));
+	TC_UPDATE(h32be, int32_t, "%" PRIx32, be32toh(*(uint32_t*)(data)));
+	TC_UPDATE(o32be, int32_t, "%" PRIo32, be32toh(*(uint32_t*)(data)));
+	
+	TC_UPDATE(s32le, int32_t, "%" PRId32, le32toh(*(int32_t*)(data)));
+	TC_UPDATE(u32le, int32_t, "%" PRIu32, le32toh(*(uint32_t*)(data)));
+	TC_UPDATE(h32le, int32_t, "%" PRIx32, le32toh(*(uint32_t*)(data)));
+	TC_UPDATE(o32le, int32_t, "%" PRIo32, le32toh(*(uint32_t*)(data)));
+	
+	TC_UPDATE(s64be, int64_t, "%" PRId64, be64toh(*(int64_t*)(data)));
+	TC_UPDATE(u64be, int64_t, "%" PRIu64, be64toh(*(uint64_t*)(data)));
+	TC_UPDATE(h64be, int64_t, "%" PRIx64, be64toh(*(uint64_t*)(data)));
+	TC_UPDATE(o64be, int64_t, "%" PRIo64, be64toh(*(uint64_t*)(data)));
+	
+	TC_UPDATE(s64le, int64_t, "%" PRId64, le64toh(*(int64_t*)(data)));
+	TC_UPDATE(u64le, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
+	TC_UPDATE(h64le, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
+	TC_UPDATE(o64le, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
 }

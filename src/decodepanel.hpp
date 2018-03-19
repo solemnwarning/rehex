@@ -27,6 +27,8 @@ namespace REHex {
 		public:
 			DecodePanel(wxWindow *parent, wxWindowID id = wxID_ANY);
 			
+			void update(const unsigned char *data, size_t size);
+			
 		private:
 			wxTextCtrl *s8,    *u8,    *h8,    *o8;
 			wxTextCtrl *s16be, *u16be, *h16be, *o16be;

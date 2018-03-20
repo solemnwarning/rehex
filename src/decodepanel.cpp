@@ -70,7 +70,9 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	
 	auto add_tc = [this,&sizer,textbox_char_width,textbox_height](wxTextCtrl* &tc, int width_chars)
 	{
-		tc = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize((width_chars + 1) * textbox_char_width, textbox_height));
+		tc = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition,
+			wxSize((width_chars + 1) * textbox_char_width, textbox_height),
+			wxTE_RIGHT);
 		
 		sizer->Add(tc, wxSizerFlags().Right());
 	};

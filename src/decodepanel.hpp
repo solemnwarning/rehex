@@ -29,8 +29,8 @@ namespace REHex {
 	class ValueChange: public wxCommandEvent
 	{
 		public:
-			template<typename T> ValueChange(const T &data):
-				wxCommandEvent(EV_VALUE_CHANGE)
+			template<typename T> ValueChange(const T &data, wxWindow *source):
+				wxCommandEvent(EV_VALUE_CHANGE), source(source)
 			{
 				this->data.insert(this->data.end(),
 					(const unsigned char*)(&data),
@@ -38,7 +38,7 @@ namespace REHex {
 			}
 			
 			ValueChange(const ValueChange &event):
-				wxCommandEvent(EV_VALUE_CHANGE), data(event.data) {}
+				wxCommandEvent(EV_VALUE_CHANGE), data(event.data), source(event.source) {}
 		
 			wxEvent* Clone() const
 			{
@@ -50,8 +50,14 @@ namespace REHex {
 				return data;
 			}
 			
+			wxWindow *get_source() const
+			{
+				return source;
+			}
+			
 		private:
 			std::vector<unsigned char> data;
+			wxWindow *source;
 	};
 	
 	class DecodePanel: public wxPanel
@@ -59,7 +65,7 @@ namespace REHex {
 		public:
 			DecodePanel(wxWindow *parent, wxWindowID id = wxID_ANY);
 			
-			void update(const unsigned char *data, size_t size);
+			void update(const unsigned char *data, size_t size, wxWindow *skip_control = NULL);
 			
 		private:
 			wxTextCtrl *s8,    *u8,    *h8,    *o8;

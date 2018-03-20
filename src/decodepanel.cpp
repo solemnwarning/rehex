@@ -157,19 +157,22 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 
 /* TODO: Make this is templated lambda whenever I move to C++14 */
 #define TC_UPDATE(field, T, format, expr) \
-	if(size >= sizeof(T)) \
+	if(field != skip_control) \
 	{ \
-		char buf[64]; \
-		snprintf(buf, sizeof(buf), format, expr); \
-		field->ChangeValue(buf); \
-		field->Enable(); \
-	} \
-	else{ \
-		field->ChangeValue(""); \
-		field->Disable(); \
+		if(size >= sizeof(T)) \
+		{ \
+			char buf[64]; \
+			snprintf(buf, sizeof(buf), format, expr); \
+			field->ChangeValue(buf); \
+			field->Enable(); \
+		} \
+		else{ \
+			field->ChangeValue(""); \
+			field->Disable(); \
+		} \
 	}
 
-void REHex::DecodePanel::update(const unsigned char *data, size_t size)
+void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxWindow *skip_control)
 {
 	TC_UPDATE(s8, int8_t,  "%" PRId8, (*(int8_t*)(data)));
 	TC_UPDATE(u8, uint8_t, "%" PRIu8, (*(uint8_t*)(data)));
@@ -267,7 +270,7 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnText(wxC
 		tval = htoX(uval);
 	}
 	
-	ValueChange change_ev(tval);
+	ValueChange change_ev(tval, tc);
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);

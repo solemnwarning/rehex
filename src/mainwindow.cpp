@@ -438,4 +438,7 @@ void REHex::MainWindow::Tab::OnValueChange(wxCommandEvent &event)
 	std::vector<unsigned char> data = vc->get_data();
 	
 	doc->overwrite_data(offset, data.data(), data.size());
+	
+	std::vector<unsigned char> data_at_off = doc->read_data(offset, 8);
+	dp->update(data_at_off.data(), data_at_off.size(), vc->get_source());
 }

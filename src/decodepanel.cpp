@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#define __STDC_FORMAT_MACROS
+
 #include <assert.h>
 #include <inttypes.h>
 #include <portable_endian.h>

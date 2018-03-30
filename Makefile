@@ -19,8 +19,8 @@ WX_CONFIG ?= "wx-config"
 WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags)
 WX_LIBS     := $(shell $(WX_CONFIG) --libs)
 
-CFLAGS   := -Wall -std=c99   -ggdb -I.
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. $(WX_CXXFLAGS)
+CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS)
 
 LIBS := $(WX_LIBS) -ljansson
 

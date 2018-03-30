@@ -16,8 +16,8 @@
 */
 
 #include <assert.h>
-#include <endian.h>
 #include <inttypes.h>
+#include <portable_endian.h>
 
 #include "decodepanel.hpp"
 

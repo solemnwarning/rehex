@@ -59,6 +59,7 @@ namespace REHex {
 					
 					void OnCursorMove(wxCommandEvent &event);
 					void OnValueChange(wxCommandEvent &event);
+					void OnValueFocus(wxCommandEvent &event);
 					
 				private:
 					DECLARE_EVENT_TABLE()

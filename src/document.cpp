@@ -169,6 +169,15 @@ bool REHex::Document::get_insert_mode()
 	return this->insert_mode;
 }
 
+void REHex::Document::set_selection(off_t off, off_t length)
+{
+	selection_off    = off;
+	selection_length = length;
+	
+	/* TODO: Limit paint to affected area */
+	Refresh();
+}
+
 std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length)
 {
 	return buffer->read_data(offset, max_length);
@@ -828,16 +837,20 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			}
 		}
 	}
+	
+	/* Document takes focus when clicked. */
+	SetFocus();
 }
 
 void REHex::Document::_ctor_pre()
 {
-	client_width    = 0;
-	client_height   = 0;
-	bytes_per_line  = 0;
-	bytes_per_group = 4;
-	show_ascii      = true;
-	cursor_state    = CSTATE_HEX;
+	client_width     = 0;
+	client_height    = 0;
+	bytes_per_line   = 0;
+	bytes_per_group  = 4;
+	show_ascii       = true;
+	selection_length = 0;
+	cursor_state     = CSTATE_HEX;
 }
 
 void REHex::Document::_ctor_post()
@@ -1445,6 +1458,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	auto inverted_text_colour = [&dc]()
 	{
 		dc.SetTextForeground(*wxWHITE);
+		dc.SetTextBackground(*wxBLACK);
+		dc.SetBackgroundMode(wxSOLID);
+	};
+	
+	auto selected_text_colour = [&dc]()
+	{
+		dc.SetTextForeground(*wxWHITE);
+		dc.SetTextBackground(*wxBLUE);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
@@ -1510,13 +1531,24 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour](unsigned char nibble, bool invert)
+			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&cur_off](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
 				if(invert)
 				{
 					inverted_text_colour();
+					
+					char str[] = { nibble_to_hex[nibble], '\0' };
+					dc.DrawText(str, hex_x, y);
+					
+					hex_str.append(1, ' ');
+				}
+				else if(cur_off >= doc.selection_off
+					&& cur_off < (doc.selection_off + doc.selection_length)
+					&& doc.cursor_state != CSTATE_ASCII)
+				{
+					selected_text_colour();
 					
 					char str[] = { nibble_to_hex[nibble], '\0' };
 					dc.DrawText(str, hex_x, y);

@@ -22,6 +22,7 @@
 #include "decodepanel.hpp"
 
 wxDEFINE_EVENT(REHex::EV_VALUE_CHANGE, REHex::ValueChange);
+wxDEFINE_EVENT(REHex::EV_VALUE_FOCUS,  REHex::ValueFocus);
 
 /* Endianness conversion functions for use with the OnText() template method. */
 static uint8_t  hto8_u   (uint8_t  host_8bits)  { return host_8bits; }
@@ -88,6 +89,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	h8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint8_t, 16, &hto8_u>, this);
 	o8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint8_t,  8, &hto8_u>, this);
 	
+	s8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int8_t>,  this);
+	u8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint8_t>, this);
+	h8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint8_t>, this);
+	o8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint8_t>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "16 bit BE"));
 	add_tc(s16be, 6);
 	add_tc(u16be, 5);
@@ -98,6 +104,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	u16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 10, &htobe16_u>, this);
 	h16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 16, &htobe16_u>, this);
 	o16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t,  8, &htobe16_u>, this);
+	
+	s16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int16_t>,  this);
+	u16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
+	h16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
+	o16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
 	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "16 bit LE"));
 	add_tc(s16le, 6);
@@ -110,6 +121,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	h16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t, 16, &htole16_u>, this);
 	o16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint16_t,  8, &htole16_u>, this);
 	
+	s16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int16_t>,  this);
+	u16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
+	h16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
+	o16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit BE"));
 	add_tc(s32be, 11);
 	add_tc(u32be, 10);
@@ -120,6 +136,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	u32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 10, &htobe32_u>, this);
 	h32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 16, &htobe32_u>, this);
 	o32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t,  8, &htobe32_u>, this);
+	
+	s32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int32_t>,  this);
+	u32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
+	h32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
+	o32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
 	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit LE"));
 	add_tc(s32le, 11);
@@ -132,6 +153,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	h32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t, 16, &htole32_u>, this);
 	o32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint32_t,  8, &htole32_u>, this);
 	
+	s32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int32_t>,  this);
+	u32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
+	h32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
+	o32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit BE"));
 	add_tc(s64be, 21);
 	add_tc(u64be, 20);
@@ -143,6 +169,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	h64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 16, &htobe64_u>, this);
 	o64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t,  8, &htobe64_u>, this);
 	
+	s64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int64_t>,  this);
+	u64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
+	h64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
+	o64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
+	
 	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit LE"));
 	add_tc(s64le, 21);
 	add_tc(u64le, 20);
@@ -153,6 +184,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	u64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 10, &htole64_u>, this);
 	h64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t, 16, &htole64_u>, this);
 	o64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnText<uint64_t,  8, &htole64_u>, this);
+	
+	s64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int64_t>,  this);
+	u64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
+	h64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
+	o64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
 	
 	SetSizerAndFit(sizer);
 }
@@ -276,4 +312,12 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnText(wxC
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);
+}
+
+template<typename T> void REHex::DecodePanel::OnSetFocus(wxFocusEvent &event)
+{
+	ValueFocus focus_ev(sizeof(T));
+	focus_ev.SetEventObject(this);
+	
+	wxPostEvent(this, focus_ev);
 }

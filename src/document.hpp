@@ -54,6 +54,9 @@ namespace REHex {
 			
 			off_t get_offset();
 			bool get_insert_mode();
+			
+			void set_selection(off_t off, off_t length);
+			
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			void overwrite_data(off_t offset, const unsigned char *data, off_t length);
 			
@@ -136,6 +139,9 @@ namespace REHex {
 			
 			off_t cpos_off{0};
 			bool insert_mode{false};
+			
+			off_t selection_off;
+			off_t selection_length;
 			
 			enum {
 				CSTATE_HEX,

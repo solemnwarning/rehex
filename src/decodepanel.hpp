@@ -60,6 +60,32 @@ namespace REHex {
 			wxWindow *source;
 	};
 	
+	class ValueFocus;
+	wxDECLARE_EVENT(EV_VALUE_FOCUS, REHex::ValueFocus);
+	
+	class ValueFocus: public wxCommandEvent
+	{
+		public:
+			ValueFocus(size_t size):
+				wxCommandEvent(EV_VALUE_FOCUS), size(size) {}
+			
+			ValueFocus(const ValueFocus &event):
+				wxCommandEvent(EV_VALUE_FOCUS), size(event.size) {}
+		
+			wxEvent* Clone() const
+			{
+				return new ValueFocus(*this);
+			}
+			
+			size_t get_size() const
+			{
+				return size;
+			}
+			
+		private:
+			size_t size;
+	};
+	
 	class DecodePanel: public wxPanel
 	{
 		public:
@@ -77,6 +103,7 @@ namespace REHex {
 			wxTextCtrl *s64le, *u64le, *h64le, *o64le;
 			
 			template<typename T, int base, T (*htoX)(T)> void OnText(wxCommandEvent &event);
+			template<typename T> void OnSetFocus(wxFocusEvent &event);
 	};
 }
 

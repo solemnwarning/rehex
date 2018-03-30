@@ -389,6 +389,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
 	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_CHANGE, REHex::MainWindow::Tab::OnValueChange)
+	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_FOCUS,  REHex::MainWindow::Tab::OnValueFocus)
 END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -441,4 +442,15 @@ void REHex::MainWindow::Tab::OnValueChange(wxCommandEvent &event)
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(offset, 8);
 	dp->update(data_at_off.data(), data_at_off.size(), vc->get_source());
+}
+
+void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)
+{
+	auto vf = dynamic_cast<REHex::ValueFocus*>(&event);
+	assert(vf != NULL);
+	
+	off_t cur_pos = doc->get_offset();
+	off_t length  = vf->get_size();
+	
+	doc->set_selection(cur_pos, length);
 }

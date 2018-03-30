@@ -19,9 +19,13 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <portable_endian.h>
 
 #include "decodepanel.hpp"
+
+/* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
+ * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
+*/
+#include <portable_endian.h>
 
 wxDEFINE_EVENT(REHex::EV_VALUE_CHANGE, REHex::ValueChange);
 wxDEFINE_EVENT(REHex::EV_VALUE_FOCUS,  REHex::ValueFocus);

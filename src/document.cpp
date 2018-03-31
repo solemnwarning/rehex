@@ -36,19 +36,25 @@ static bool isasciiprint(int c)
 	return (c >= ' ' && c <= '~');
 }
 
+enum {
+	ID_REDRAW_CURSOR = 1,
+};
+
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_PAINT(REHex::Document::OnPaint)
 	EVT_SIZE(REHex::Document::OnSize)
 	EVT_SCROLLWIN(REHex::Document::OnScroll)
 	EVT_CHAR(REHex::Document::OnChar)
 	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
+	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 END_EVENT_TABLE()
 
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,   wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED, wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL)
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
+	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
 {
 	_ctor_pre();
 	
@@ -62,7 +68,8 @@ REHex::Document::Document(wxWindow *parent):
 
 REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
-	filename(filename)
+	filename(filename),
+	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
 {
 	_ctor_pre();
 	
@@ -862,6 +869,14 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	SetFocus();
 }
 
+void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
+{
+	cursor_visible = !cursor_visible;
+	
+	/* TODO: Limit paint to cursor area */
+	Refresh();
+}
+
 void REHex::Document::_ctor_pre()
 {
 	client_width     = 0;
@@ -870,6 +885,7 @@ void REHex::Document::_ctor_pre()
 	bytes_per_group  = 4;
 	show_ascii       = true;
 	selection_length = 0;
+	cursor_visible   = true;
 	cursor_state     = CSTATE_HEX;
 }
 
@@ -889,6 +905,8 @@ void REHex::Document::_ctor_post()
 		hf_width            = hf_char_size.GetWidth();
 		hf_height           = hf_char_size.GetHeight();
 	}
+	
+	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
 }
 
 void REHex::Document::_init_regions(const json_t *meta)
@@ -1555,7 +1573,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
-				if(invert)
+				if(invert && doc.cursor_visible)
 				{
 					inverted_text_colour();
 					
@@ -1614,7 +1632,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				draw_ins = false;
 			}
 			
-			if(draw_ins)
+			if(draw_ins && doc.cursor_visible)
 			{
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
@@ -1635,12 +1653,18 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				
 				if(cur_off == doc.cpos_off && doc.cursor_state == CSTATE_ASCII && !doc.insert_mode)
 				{
-					inverted_text_colour();
-					
-					char str[] = { ascii_byte, '\0' };
-					dc.DrawText(str, ascii_x, y);
-					
-					ascii_string.append(" ");
+					if(doc.cursor_visible)
+					{
+						inverted_text_colour();
+						
+						char str[] = { ascii_byte, '\0' };
+						dc.DrawText(str, ascii_x, y);
+						
+						ascii_string.append(" ");
+					}
+					else{
+						ascii_string.append(1, ascii_byte);
+					}
 				}
 				else{
 					if(cur_off == doc.cpos_off)
@@ -1649,7 +1673,10 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 						{
 							if(doc.cursor_state == CSTATE_ASCII)
 							{
-								dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+								if(doc.cursor_visible)
+								{
+									dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+								}
 							}
 							else{
 								// TODO: Draw different insert cursor

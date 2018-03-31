@@ -65,6 +65,7 @@ namespace REHex {
 			void OnScroll(wxScrollWinEvent &event);
 			void OnChar(wxKeyEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
+			void OnRedrawCursor(wxTimerEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:
@@ -142,6 +143,9 @@ namespace REHex {
 			
 			off_t selection_off;
 			off_t selection_length;
+			
+			bool cursor_visible;
+			wxTimer redraw_cursor_timer;
 			
 			enum {
 				CSTATE_HEX,

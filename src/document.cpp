@@ -36,6 +36,14 @@ static bool isasciiprint(int c)
 	return (c >= ' ' && c <= '~');
 }
 
+/* Is the given value a 7-bit ASCII character representing a hex digit? */
+static bool isasciihex(int c)
+{
+	return (c >= '0' && c <= '9')
+		|| (c >= 'A' && c <= 'F')
+		|| (c >= 'a' && c <= 'f');
+}
+
 enum {
 	ID_REDRAW_CURSOR = 1,
 };
@@ -53,7 +61,7 @@ wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,   wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED, wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL | wxWANTS_CHARS),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
 {
 	_ctor_pre();
@@ -67,7 +75,7 @@ REHex::Document::Document(wxWindow *parent):
 }
 
 REHex::Document::Document(wxWindow *parent, const std::string &filename):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL),
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL | wxWANTS_CHARS),
 	filename(filename),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
 {
@@ -439,7 +447,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			printf("TODO: Implement jump to offset\n");
 		}
 	}
-	else if(cursor_state != CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isxdigit(key))
+	else if(cursor_state != CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
 	{
 		unsigned char nibble;
 		switch(key)

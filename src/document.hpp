@@ -65,6 +65,8 @@ namespace REHex {
 			void OnScroll(wxScrollWinEvent &event);
 			void OnChar(wxKeyEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
+			void OnLeftUp(wxMouseEvent &event);
+			void OnMotion(wxMouseEvent &event);
 			void OnRedrawCursor(wxTimerEvent &event);
 			
 		#ifndef UNIT_TEST
@@ -147,6 +149,9 @@ namespace REHex {
 			bool cursor_visible;
 			wxTimer redraw_cursor_timer;
 			
+			bool mouse_down_in_hex{false}, mouse_down_in_ascii{false};
+			off_t mouse_down_at_offset;
+			
 			enum {
 				CSTATE_HEX,
 				CSTATE_HEX_MID,
@@ -198,6 +203,12 @@ namespace REHex {
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		
+		off_t offset_at_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
+		off_t offset_at_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
+		
+		off_t offset_near_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
+		off_t offset_near_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
 	};
 	
 	struct Document::Region::Comment: public REHex::Document::Region

@@ -54,6 +54,8 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_SCROLLWIN(REHex::Document::OnScroll)
 	EVT_CHAR(REHex::Document::OnChar)
 	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
+	EVT_LEFT_UP(REHex::Document::OnLeftUp)
+	EVT_MOTION(REHex::Document::OnMotion)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 END_EVENT_TABLE()
 
@@ -796,17 +798,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		/* TODO: Move this logic into the Region::Data class */
-		
 		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
 		if(dr != NULL)
 		{
-			/* Calculate the offset within the Buffer of the first byte on this line
-			 * and the offset (plus one) of the last byte on this line.
-			*/
-			off_t line_data_begin = dr->d_offset + ((off_t)(bytes_per_line_calc) * line_off);
-			off_t line_data_end   = std::min((line_data_begin + bytes_per_line_calc), (dr->d_offset + dr->d_length));
-			
 			if(rel_x < offset_column_width)
 			{
 				/* Click was within the offset area */
@@ -815,10 +809,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			{
 				/* Click was within the ASCII area */
 				
-				unsigned int char_offset = (rel_x - ascii_text_x) / hf_width;
-				off_t clicked_offset     = line_data_begin + char_offset;
-				
-				if(clicked_offset < line_data_end)
+				off_t clicked_offset = dr->offset_at_xy_ascii(*this, rel_x, line_off);
+				if(clicked_offset >= 0)
 				{
 					/* Clicked on a character */
 					
@@ -829,45 +821,33 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					
 					_raise_moved();
 					
+					mouse_down_at_offset = clicked_offset;
+					mouse_down_in_ascii  = true;
+					
 					/* TODO: Limit paint to affected area */
 					Refresh();
-				}
-				else{
-					/* Clicked past the end of the line */
 				}
 			}
 			else{
 				/* Click was within the hex area */
 				
-				rel_x -= offset_column_width;
-				
-				unsigned int char_offset = rel_x / hf_width;
-				if(((char_offset + 1) % ((bytes_per_group * 2) + 1)) == 0)
+				off_t clicked_offset = dr->offset_at_xy_hex(*this, rel_x, line_off);
+				if(clicked_offset >= 0)
 				{
-					/* Click was over a space between byte groups. */
-				}
-				else{
-					unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
-					unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
-					off_t clicked_offset                = line_data_begin + line_offset_bytes;
+					/* Clicked on a byte */
 					
-					if(clicked_offset < line_data_end)
-					{
-						/* Clicked on a byte */
-						
-						cpos_off     = clicked_offset;
-						cursor_state = CSTATE_HEX;
-						
-						selection_length = 0;
-						
-						_raise_moved();
-						
-						/* TODO: Limit paint to affected area */
-						Refresh();
-					}
-					else{
-						/* Clicked past the end of the line */
-					}
+					cpos_off     = clicked_offset;
+					cursor_state = CSTATE_HEX;
+					
+					selection_length = 0;
+					
+					_raise_moved();
+					
+					mouse_down_at_offset = clicked_offset;
+					mouse_down_in_hex    = true;
+					
+					/* TODO: Limit paint to affected area */
+					Refresh();
 				}
 			}
 		}
@@ -875,6 +855,92 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	
 	/* Document takes focus when clicked. */
 	SetFocus();
+}
+
+void REHex::Document::OnLeftUp(wxMouseEvent &event)
+{
+	mouse_down_in_hex   = false;
+	mouse_down_in_ascii = false;
+}
+
+void REHex::Document::OnMotion(wxMouseEvent &event)
+{
+	wxClientDC dc(this);
+	
+	unsigned int mouse_x = event.GetX();
+	unsigned int rel_x   = mouse_x + this->scroll_xoff;
+	unsigned int mouse_y = event.GetY();
+	
+	/* Iterate over the regions to find the last one which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto region = regions.begin();
+	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
+	{
+		region = next;
+	}
+	
+	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
+	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	
+	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	
+	while(region != regions.end() && line_off >= (*region)->y_lines)
+	{
+		line_off -= (*region)->y_lines;
+		++region;
+	}
+	
+	if(region != regions.end())
+	{
+		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+		if(dr != NULL)
+		{
+			if(mouse_down_in_hex)
+			{
+				/* Started dragging in hex area */
+				
+				off_t select_to_offset = dr->offset_near_xy_hex(*this, rel_x, line_off);
+				if(select_to_offset >= 0)
+				{
+					if(select_to_offset >= mouse_down_at_offset)
+					{
+						selection_off    = mouse_down_at_offset;
+						selection_length = (select_to_offset - mouse_down_at_offset) + 1;
+					}
+					else{
+						selection_off    = select_to_offset;
+						selection_length = (mouse_down_at_offset - select_to_offset) + 1;
+					}
+					
+					/* TODO: Limit paint to affected area */
+					Refresh();
+				}
+			}
+			else if(mouse_down_in_ascii)
+			{
+				/* Started dragging in ASCII area */
+				
+				off_t select_to_offset = dr->offset_near_xy_ascii(*this, rel_x, line_off);
+				if(select_to_offset >= 0)
+				{
+					if(select_to_offset >= mouse_down_at_offset)
+					{
+						selection_off    = mouse_down_at_offset;
+						selection_length = (select_to_offset - mouse_down_at_offset) + 1;
+					}
+					else{
+						selection_off    = select_to_offset;
+						selection_length = (mouse_down_at_offset - select_to_offset) + 1;
+					}
+					
+					/* TODO: Limit paint to affected area */
+					Refresh();
+				}
+			}
+		}
+	}
 }
 
 void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
@@ -1743,6 +1809,136 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		{
 			break;
 		}
+	}
+}
+
+off_t REHex::Document::Region::Data::offset_at_xy_hex(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
+{
+	if(mouse_x_px < (int)(doc.offset_column_width))
+	{
+		return -1;
+	}
+	
+	mouse_x_px -= doc.offset_column_width;
+	
+	/* Calculate the offset within the Buffer of the first byte on this line
+	 * and the offset (plus one) of the last byte on this line.
+	*/
+	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	
+	unsigned int char_offset = mouse_x_px / doc.hf_width;
+	if(((char_offset + 1) % ((doc.bytes_per_group * 2) + 1)) == 0)
+	{
+		/* Click was over a space between byte groups. */
+		return -1;
+	}
+	else{
+		unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((doc.bytes_per_group * 2) + 1));
+		unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
+		off_t clicked_offset                = line_data_begin + line_offset_bytes;
+		
+		if(clicked_offset < line_data_end)
+		{
+			/* Clicked on a byte */
+			return clicked_offset;
+		}
+		else{
+			/* Clicked past the end of the line */
+			return -1;
+		}
+	}
+}
+
+off_t REHex::Document::Region::Data::offset_at_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
+{
+	if(!doc.show_ascii || mouse_x_px < (int)(doc.ascii_text_x))
+	{
+		return -1;
+	}
+	
+	mouse_x_px -= doc.ascii_text_x;
+	
+	/* Calculate the offset within the Buffer of the first byte on this line
+	 * and the offset (plus one) of the last byte on this line.
+	*/
+	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	
+	unsigned int char_offset = mouse_x_px / doc.hf_width;
+	off_t clicked_offset     = line_data_begin + char_offset;
+	
+	if(clicked_offset < line_data_end)
+	{
+		/* Clicked on a character */
+		return clicked_offset;
+	}
+	else{
+		/* Clicked past the end of the line */
+		return -1;
+	}
+}
+
+off_t REHex::Document::Region::Data::offset_near_xy_hex(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
+{
+	/* Calculate the offset within the Buffer of the first byte on this line
+	 * and the offset (plus one) of the last byte on this line.
+	*/
+	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	
+	if(mouse_x_px < (int)(doc.offset_column_width))
+	{
+		/* Mouse is in offset area, return offset of last byte of previous line. */
+		return line_data_begin - 1;
+	}
+	
+	mouse_x_px -= doc.offset_column_width;
+	
+	unsigned int char_offset = mouse_x_px / doc.hf_width;
+	
+	unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((doc.bytes_per_group * 2)));
+	unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
+	off_t clicked_offset                = line_data_begin + line_offset_bytes;
+	
+	if(clicked_offset < line_data_end)
+	{
+		/* Mouse is on a byte. */
+		return clicked_offset;
+	}
+	else{
+		/* Mouse is past end of line, return last byte of this line. */
+		return line_data_end - 1;
+	}
+}
+
+off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
+{
+	/* Calculate the offset within the Buffer of the first byte on this line
+	 * and the offset (plus one) of the last byte on this line.
+	*/
+	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	
+	if(!doc.show_ascii || mouse_x_px < (int)(doc.ascii_text_x))
+	{
+		/* Mouse is left of ASCII area, return last byte of previous line. */
+		return line_data_begin - 1;
+	}
+	
+	mouse_x_px -= doc.ascii_text_x;
+	
+	unsigned int char_offset = mouse_x_px / doc.hf_width;
+	off_t clicked_offset     = line_data_begin + char_offset;
+	
+	if(clicked_offset < line_data_end)
+	{
+		/* Mouse is on a character. */
+		return clicked_offset;
+	}
+	else{
+		/* Mouse is beyond end of line, return last byte of this line. */
+		return line_data_end - 1;
 	}
 }
 

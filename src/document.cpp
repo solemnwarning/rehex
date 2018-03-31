@@ -490,6 +490,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 		}
 		
+		selection_length = 0;
+		
 		_make_byte_visible(cpos_off);
 		
 		/* TODO: Limit paint to affected area */
@@ -514,6 +516,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			cpos_inc();
 		}
 		
+		selection_length = 0;
+		
 		_make_byte_visible(cpos_off);
 		
 		/* TODO: Limit paint to affected area */
@@ -525,12 +529,16 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			cpos_dec();
 			
+			selection_length = 0;
+			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
 		}
 		else if(key == WXK_RIGHT)
 		{
 			cpos_inc();
+			
+			selection_length = 0;
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -589,6 +597,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 			
+			selection_length = 0;
+			
 			_make_byte_visible(cpos_off);
 			_raise_moved();
 			
@@ -643,6 +653,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 			
+			selection_length = 0;
+			
 			_make_byte_visible(cpos_off);
 			_raise_moved();
 			
@@ -683,6 +695,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					cursor_state = CSTATE_HEX;
 				}
 				
+				selection_length = 0;
+				
 				_make_byte_visible(cpos_off);
 				_raise_moved();
 				
@@ -701,6 +715,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				{
 					cursor_state = CSTATE_HEX;
 				}
+				
+				selection_length = 0;
 				
 				_make_byte_visible(cpos_off);
 				_raise_moved();
@@ -794,6 +810,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					cpos_off     = clicked_offset;
 					cursor_state = CSTATE_ASCII;
 					
+					selection_length = 0;
+					
 					_raise_moved();
 					
 					/* TODO: Limit paint to affected area */
@@ -824,6 +842,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						
 						cpos_off     = clicked_offset;
 						cursor_state = CSTATE_HEX;
+						
+						selection_length = 0;
 						
 						_raise_moved();
 						

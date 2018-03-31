@@ -176,6 +176,28 @@ bool REHex::Document::get_insert_mode()
 	return this->insert_mode;
 }
 
+void REHex::Document::set_selection(off_t off, off_t length)
+{
+	selection_off    = off;
+	selection_length = length;
+	
+	/* TODO: Limit paint to affected area */
+	Refresh();
+}
+
+std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length)
+{
+	return buffer->read_data(offset, max_length);
+}
+
+void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, off_t length)
+{
+	buffer->overwrite_data(offset, data, length);
+	
+	/* TODO: Limit paint to affected area */
+	Refresh();
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);
@@ -475,6 +497,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 		}
 		
+		selection_length = 0;
+		
 		_make_byte_visible(cpos_off);
 		
 		/* TODO: Limit paint to affected area */
@@ -499,6 +523,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			cpos_inc();
 		}
 		
+		selection_length = 0;
+		
 		_make_byte_visible(cpos_off);
 		
 		/* TODO: Limit paint to affected area */
@@ -510,12 +536,16 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			cpos_dec();
 			
+			selection_length = 0;
+			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
 		}
 		else if(key == WXK_RIGHT)
 		{
 			cpos_inc();
+			
+			selection_length = 0;
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -574,6 +604,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 			
+			selection_length = 0;
+			
 			_make_byte_visible(cpos_off);
 			_raise_moved();
 			
@@ -628,6 +660,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 			
+			selection_length = 0;
+			
 			_make_byte_visible(cpos_off);
 			_raise_moved();
 			
@@ -668,6 +702,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					cursor_state = CSTATE_HEX;
 				}
 				
+				selection_length = 0;
+				
 				_make_byte_visible(cpos_off);
 				_raise_moved();
 				
@@ -686,6 +722,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				{
 					cursor_state = CSTATE_HEX;
 				}
+				
+				selection_length = 0;
 				
 				_make_byte_visible(cpos_off);
 				_raise_moved();
@@ -779,6 +817,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					cpos_off     = clicked_offset;
 					cursor_state = CSTATE_ASCII;
 					
+					selection_length = 0;
+					
 					_raise_moved();
 					
 					/* TODO: Limit paint to affected area */
@@ -810,6 +850,8 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						cpos_off     = clicked_offset;
 						cursor_state = CSTATE_HEX;
 						
+						selection_length = 0;
+						
 						_raise_moved();
 						
 						/* TODO: Limit paint to affected area */
@@ -822,6 +864,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			}
 		}
 	}
+	
+	/* Document takes focus when clicked. */
+	SetFocus();
 }
 
 void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
@@ -839,6 +884,7 @@ void REHex::Document::_ctor_pre()
 	bytes_per_line   = 0;
 	bytes_per_group  = 4;
 	show_ascii       = true;
+	selection_length = 0;
 	cursor_visible   = true;
 	cursor_state     = CSTATE_HEX;
 }
@@ -1450,6 +1496,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	auto inverted_text_colour = [&dc]()
 	{
 		dc.SetTextForeground(*wxWHITE);
+		dc.SetTextBackground(*wxBLACK);
+		dc.SetBackgroundMode(wxSOLID);
+	};
+	
+	auto selected_text_colour = [&dc]()
+	{
+		dc.SetTextForeground(*wxWHITE);
+		dc.SetTextBackground(*wxBLUE);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
@@ -1515,13 +1569,24 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour](unsigned char nibble, bool invert)
+			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&cur_off](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
 				if(invert && doc.cursor_visible)
 				{
 					inverted_text_colour();
+					
+					char str[] = { nibble_to_hex[nibble], '\0' };
+					dc.DrawText(str, hex_x, y);
+					
+					hex_str.append(1, ' ');
+				}
+				else if(cur_off >= doc.selection_off
+					&& cur_off < (doc.selection_off + doc.selection_length)
+					&& doc.cursor_state != CSTATE_ASCII)
+				{
+					selected_text_colour();
 					
 					char str[] = { nibble_to_hex[nibble], '\0' };
 					dc.DrawText(str, hex_x, y);

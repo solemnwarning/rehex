@@ -19,8 +19,8 @@ WX_CONFIG ?= "wx-config"
 WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags)
 WX_LIBS     := $(shell $(WX_CONFIG) --libs)
 
-CFLAGS   := -Wall -std=c99   -ggdb -I.
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. $(WX_CXXFLAGS)
+CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS)
 
 LIBS := $(WX_LIBS) -ljansson
 
@@ -36,7 +36,7 @@ all: rehex$(EXE)
 check: $(TESTS)
 	prove -v tests/
 
-rehex$(EXE): src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o src/win32lib.o
+rehex$(EXE): src/app.o src/mainwindow.o src/document.o src/buffer.o src/textentrydialog.o src/win32lib.o src/decodepanel.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o src/win32lib.o

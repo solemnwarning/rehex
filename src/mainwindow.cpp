@@ -50,8 +50,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
 	
-	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,   REHex::MainWindow::OnCursorMove)
-	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED, REHex::MainWindow::OnInsertToggle)
+	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,      REHex::MainWindow::OnCursorMove)
+	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
+	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED,    REHex::MainWindow::OnInsertToggle)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
@@ -90,7 +91,7 @@ REHex::MainWindow::MainWindow():
 	
 	notebook = new wxNotebook(this, wxID_ANY);
 	
-	CreateStatusBar(2);
+	CreateStatusBar(3);
 	
 	/* Temporary hack to open files provided on the command line */
 	
@@ -291,6 +292,7 @@ void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
 	doc_menu->Check(ID_SHOW_DECODES, tab->dp->IsShown());
 	
 	_update_status_offset(tab->doc);
+	_update_status_selection(tab->doc);
 	_update_status_mode(tab->doc);
 }
 
@@ -311,6 +313,26 @@ void REHex::MainWindow::OnCursorMove(wxCommandEvent &event)
 		 * active document.
 		*/
 		_update_status_offset(doc);
+	}
+}
+
+void REHex::MainWindow::OnSelectionChange(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
+	assert(doc != NULL);
+	
+	if(doc == tab->doc)
+	{
+		/* Only update the status bar if the event originated from the
+		 * active document.
+		*/
+		_update_status_selection(doc);
 	}
 }
 
@@ -346,14 +368,42 @@ void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
 	SetStatusText(buf, 0);
 }
 
+void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
+{
+	std::pair<off_t,off_t> selection = doc->get_selection();
+	
+	off_t selection_off    = selection.first;
+	off_t selection_length = selection.second;
+	
+	if(selection_length > 0)
+	{
+		off_t selection_end = (selection_off + selection_length) - 1;
+		
+		char buf[64];
+		snprintf(buf, sizeof(buf), "Selection: %08x:%08x - %08x:%08x (%u bytes)",
+			(unsigned int)((selection_off & 0x00000000FFFFFFFF) << 32),
+			(unsigned int)(selection_off & 0xFFFFFFFF),
+			
+			(unsigned int)((selection_end & 0x00000000FFFFFFFF) << 32),
+			(unsigned int)(selection_end & 0xFFFFFFFF),
+			
+			(unsigned int)(selection_length));
+		
+		SetStatusText(buf, 1);
+	}
+	else{
+		SetStatusText("", 1);
+	}
+}
+
 void REHex::MainWindow::_update_status_mode(REHex::Document *doc)
 {
 	if(doc->get_insert_mode())
 	{
-		SetStatusText("Mode: Insert", 1);
+		SetStatusText("Mode: Insert", 2);
 	}
 	else{
-		SetStatusText("Mode: Overwrite", 1);
+		SetStatusText("Mode: Overwrite", 2);
 	}
 }
 

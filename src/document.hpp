@@ -21,13 +21,15 @@
 #include <jansson.h>
 #include <list>
 #include <stdint.h>
+#include <utility>
 #include <wx/wx.h>
 
 #include "buffer.hpp"
 
 namespace REHex {
-	wxDECLARE_EVENT(EV_CURSOR_MOVED,   wxCommandEvent);
-	wxDECLARE_EVENT(EV_INSERT_TOGGLED, wxCommandEvent);
+	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_INSERT_TOGGLED,    wxCommandEvent);
+	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
@@ -56,6 +58,8 @@ namespace REHex {
 			bool get_insert_mode();
 			
 			void set_selection(off_t off, off_t length);
+			void clear_selection();
+			std::pair<off_t, off_t> get_selection();
 			
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			void overwrite_data(off_t offset, const unsigned char *data, off_t length);

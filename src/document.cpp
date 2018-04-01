@@ -59,8 +59,9 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 END_EVENT_TABLE()
 
-wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,   wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED, wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,    wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL | wxWANTS_CHARS),
@@ -191,8 +192,25 @@ void REHex::Document::set_selection(off_t off, off_t length)
 	selection_off    = off;
 	selection_length = length;
 	
+	{
+		wxCommandEvent event(REHex::EV_SELECTION_CHANGED);
+		event.SetEventObject(this);
+		
+		wxPostEvent(this, event);
+	}
+	
 	/* TODO: Limit paint to affected area */
 	Refresh();
+}
+
+void REHex::Document::clear_selection()
+{
+	set_selection(0, 0);
+}
+
+std::pair<off_t, off_t> REHex::Document::get_selection()
+{
+	return std::make_pair(selection_off, selection_length);
 }
 
 std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length)
@@ -507,7 +525,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 		}
 		
-		selection_length = 0;
+		clear_selection();
 		
 		_make_byte_visible(cpos_off);
 		
@@ -533,7 +551,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			cpos_inc();
 		}
 		
-		selection_length = 0;
+		clear_selection();
 		
 		_make_byte_visible(cpos_off);
 		
@@ -546,7 +564,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			cpos_dec();
 			
-			selection_length = 0;
+			clear_selection();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -555,7 +573,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			cpos_inc();
 			
-			selection_length = 0;
+			clear_selection();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -614,7 +632,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 			
-			selection_length = 0;
+			clear_selection();
 			
 			_make_byte_visible(cpos_off);
 			_raise_moved();
@@ -670,7 +688,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 			
-			selection_length = 0;
+			clear_selection();
 			
 			_make_byte_visible(cpos_off);
 			_raise_moved();
@@ -712,7 +730,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					cursor_state = CSTATE_HEX;
 				}
 				
-				selection_length = 0;
+				clear_selection();
 				
 				_make_byte_visible(cpos_off);
 				_raise_moved();
@@ -733,7 +751,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					cursor_state = CSTATE_HEX;
 				}
 				
-				selection_length = 0;
+				clear_selection();
 				
 				_make_byte_visible(cpos_off);
 				_raise_moved();
@@ -817,7 +835,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					cpos_off     = clicked_offset;
 					cursor_state = CSTATE_ASCII;
 					
-					selection_length = 0;
+					clear_selection();
 					
 					_raise_moved();
 					
@@ -839,7 +857,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					cpos_off     = clicked_offset;
 					cursor_state = CSTATE_HEX;
 					
-					selection_length = 0;
+					clear_selection();
 					
 					_raise_moved();
 					
@@ -906,12 +924,12 @@ void REHex::Document::OnMotion(wxMouseEvent &event)
 				{
 					if(select_to_offset >= mouse_down_at_offset)
 					{
-						selection_off    = mouse_down_at_offset;
-						selection_length = (select_to_offset - mouse_down_at_offset) + 1;
+						set_selection(mouse_down_at_offset,
+							((select_to_offset - mouse_down_at_offset) + 1));
 					}
 					else{
-						selection_off    = select_to_offset;
-						selection_length = (mouse_down_at_offset - select_to_offset) + 1;
+						set_selection(select_to_offset,
+							((mouse_down_at_offset - select_to_offset) + 1));
 					}
 					
 					/* TODO: Limit paint to affected area */
@@ -927,12 +945,12 @@ void REHex::Document::OnMotion(wxMouseEvent &event)
 				{
 					if(select_to_offset >= mouse_down_at_offset)
 					{
-						selection_off    = mouse_down_at_offset;
-						selection_length = (select_to_offset - mouse_down_at_offset) + 1;
+						set_selection(mouse_down_at_offset,
+							((select_to_offset - mouse_down_at_offset) + 1));
 					}
 					else{
-						selection_off    = select_to_offset;
-						selection_length = (mouse_down_at_offset - select_to_offset) + 1;
+						set_selection(select_to_offset,
+							((mouse_down_at_offset - select_to_offset) + 1));
 					}
 					
 					/* TODO: Limit paint to affected area */

@@ -226,6 +226,21 @@ void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, of
 	Refresh();
 }
 
+void REHex::Document::erase_data(off_t offset, off_t length)
+{
+	buffer->erase_data(offset, length);
+	
+	off_t max_pos = insert_mode ? buffer->length() : (buffer->length() - 1);
+	if(cpos_off > max_pos)
+	{
+		cpos_off = max_pos;
+		_raise_moved();
+	}
+	
+	/* TODO: Limit paint to affected area */
+	Refresh();
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);
@@ -465,6 +480,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			/* Ctrl+G - Go to offset */
 			printf("TODO: Implement jump to offset\n");
+		}
+		else{
+			/* Some other control sequence, pass it on. */
+			event.Skip();
 		}
 	}
 	else if(cursor_state != CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))

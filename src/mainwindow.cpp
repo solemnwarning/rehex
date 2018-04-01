@@ -17,6 +17,8 @@
 
 #include <exception>
 #include <wx/artprov.h>
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 #include <wx/event.h>
 #include <wx/msgdlg.h>
 #include <wx/notebook.h>
@@ -41,6 +43,10 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
+	
+	EVT_MENU(wxID_CUT,   REHex::MainWindow::OnCut)
+	EVT_MENU(wxID_COPY,  REHex::MainWindow::OnCopy)
+	EVT_MENU(wxID_PASTE, REHex::MainWindow::OnPaste)
 	
 	EVT_MENU(ID_BYTES_LINE,   REHex::MainWindow::OnSetBytesPerLine)
 	EVT_MENU(ID_BYTES_GROUP,  REHex::MainWindow::OnSetBytesPerGroup)
@@ -67,6 +73,12 @@ REHex::MainWindow::MainWindow():
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
 	
+	wxMenu *edit_menu = new wxMenu;
+	
+	edit_menu->Append(wxID_CUT,   "&Cut");
+	edit_menu->Append(wxID_COPY,  "&Copy");
+	edit_menu->Append(wxID_PASTE, "&Paste");
+	
 	doc_menu = new wxMenu;
 	
 	doc_menu->Append(ID_BYTES_LINE,  wxT("Set bytes per line"));
@@ -77,6 +89,7 @@ REHex::MainWindow::MainWindow():
 	
 	wxMenuBar *menu_bar = new wxMenuBar;
 	menu_bar->Append(file_menu, wxT("&File"));
+	menu_bar->Append(edit_menu, wxT("&Edit"));
 	menu_bar->Append(doc_menu,  wxT("&Document"));
 	
 	SetMenuBar(menu_bar);
@@ -186,6 +199,21 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 void REHex::MainWindow::OnExit(wxCommandEvent &event)
 {
 	Close();
+}
+
+void REHex::MainWindow::OnCut(wxCommandEvent &event)
+{
+	_clipboard_copy(true);
+}
+
+void REHex::MainWindow::OnCopy(wxCommandEvent &event)
+{
+	_clipboard_copy(false);
+}
+
+void REHex::MainWindow::OnPaste(wxCommandEvent &event)
+{
+	wxMessageBox("Paste!");
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
@@ -404,6 +432,56 @@ void REHex::MainWindow::_update_status_mode(REHex::Document *doc)
 	}
 	else{
 		SetStatusText("Mode: Overwrite", 2);
+	}
+}
+
+void REHex::MainWindow::_clipboard_copy(bool cut)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	std::pair<off_t,off_t> selection = tab->doc->get_selection();
+	
+	off_t selection_off    = selection.first;
+	off_t selection_length = selection.second;
+	
+	if(selection_length > 0)
+	{
+		std::vector<unsigned char> selection_data = tab->doc->read_data(selection_off, selection_length);
+		assert((off_t)(selection_data.size()) == selection_length);
+		
+		std::string hex_string;
+		hex_string.reserve(selection_data.size() * 2);
+		
+		for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+		{
+			const char *nibble_to_hex = "0123456789ABCDEF";
+			
+			unsigned char high_nibble = (*c & 0xF0) >> 4;
+			unsigned char low_nibble  = (*c & 0x0F);
+			
+			hex_string.push_back(nibble_to_hex[high_nibble]);
+			hex_string.push_back(nibble_to_hex[low_nibble]);
+		}
+		
+		/* TODO: Clipboard open in a RAIIy way. */
+		
+		if(wxTheClipboard->Open())
+		{
+			// This data objects are held by the clipboard,
+			// so do not delete them in the app.
+			wxTheClipboard->SetData(new wxTextDataObject(hex_string));
+			wxTheClipboard->Close();
+			
+			if(cut)
+			{
+				tab->doc->erase_data(selection_off, selection_data.size());
+				tab->doc->clear_selection();
+			}
+		}
 	}
 }
 

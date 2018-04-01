@@ -36,6 +36,10 @@ namespace REHex {
 			void OnSaveAs(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
+			void OnCut(wxCommandEvent &event);
+			void OnCopy(wxCommandEvent &event);
+			void OnPaste(wxCommandEvent &event);
+			
 			void OnSetBytesPerLine(wxCommandEvent &event);
 			void OnSetBytesPerGroup(wxCommandEvent &event);
 			void OnShowOffsets(wxCommandEvent &event);
@@ -72,6 +76,8 @@ namespace REHex {
 			void _update_status_offset(REHex::Document *doc);
 			void _update_status_selection(REHex::Document *doc);
 			void _update_status_mode(REHex::Document *doc);
+			
+			void _clipboard_copy(bool cut);
 			
 			DECLARE_EVENT_TABLE()
 	};

@@ -76,38 +76,95 @@ REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 
 void REHex::Buffer::_load_block(Block *block)
 {
-	if(block->state != Block::UNLOADED)
+	if(block->state == Block::UNLOADED)
 	{
-		return;
-	}
-	
-	/* TODO: Cycle out not-recently-used CLEAN data buffers if we have a
-	 * lot loaded in.
-	*/
-	
-	if(block->virt_length > 0)
-	{
-		if(fseeko(fh, block->real_offset, SEEK_SET) != 0)
+		if(block->virt_length > 0)
 		{
-			throw std::runtime_error(std::string("fseeko: ") + strerror(errno));
-		}
-		
-		block->grow(block->virt_length);
-		
-		if(fread(block->data.data(), block->virt_length, 1, fh) == 0)
-		{
-			if(feof(fh))
+			if(fseeko(fh, block->real_offset, SEEK_SET) != 0)
 			{
-				clearerr(fh);
-				throw std::runtime_error("Read error: unexpected end of file");
+				throw std::runtime_error(std::string("fseeko: ") + strerror(errno));
 			}
-			else{
-				throw std::runtime_error(std::string("Read error: ") + strerror(errno));
+			
+			block->grow(block->virt_length);
+			
+			if(fread(block->data.data(), block->virt_length, 1, fh) == 0)
+			{
+				if(feof(fh))
+				{
+					clearerr(fh);
+					throw std::runtime_error("Read error: unexpected end of file");
+				}
+				else{
+					throw std::runtime_error(std::string("Read error: ") + strerror(errno));
+				}
 			}
+		}
+		
+		block->state = Block::CLEAN;
+	}
+	
+	if(block->state == Block::CLEAN && block->virt_length > 0)
+	{
+		/* Mark this block as most-recently-accessed. */
+		_last_access_bump(block);
+		
+		if(last_accessed_blocks.size() > MAX_CLEAN_BLOCKS)
+		{
+			/* We've gone over the threshold of blocks eligible to be unloaded, unload
+			 * the least-recently accessed one.
+			*/
+			
+			Block *unload_me = last_accessed_blocks.back();
+			assert(unload_me->state == Block::CLEAN);
+			
+			_last_access_remove(unload_me);
+			
+			unload_me->state = Block::UNLOADED;
+			
+			unload_me->data.clear();
+			unload_me->data.shrink_to_fit();
+		}
+	}
+}
+
+/* Ensure the given Block is at the head of last_accessed_blocks, removing it if it was already
+ * inserted at a later point.
+*/
+void REHex::Buffer::_last_access_bump(Block *block)
+{
+	assert(block->state == Block::CLEAN);
+	
+	auto map_it = last_accessed_blocks_map.find(block);
+	if(map_it != last_accessed_blocks_map.end())
+	{
+		/* Block is in last_accessed_blocks */
+		
+		if(map_it->second == last_accessed_blocks.begin())
+		{
+			/* Block is already at head of last_accessed_blocks */
+			return;
+		}
+		else{
+			/* Block is somewhere beyond the start of last_accessed_blocks */
+			last_accessed_blocks.erase(map_it->second);
 		}
 	}
 	
-	block->state = Block::CLEAN;
+	/* Block isn't in last_accessed_blocks, or it wasn't the first one so we removed it */
+	
+	last_accessed_blocks.push_front(block);
+	last_accessed_blocks_map[block] = last_accessed_blocks.begin();
+}
+
+/* Remove the given block from last_accessed_blocks. */
+void REHex::Buffer::_last_access_remove(Block *block)
+{
+	auto map_it = last_accessed_blocks_map.find(block);
+	if(map_it != last_accessed_blocks_map.end())
+	{
+		last_accessed_blocks.erase(map_it->second);
+		last_accessed_blocks_map.erase(map_it);
+	}
 }
 
 /* Returns true if the given FILE handles refer to the same underlying file.
@@ -340,6 +397,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 					 * longer be able to correctly reload it.
 					*/
 					(*b)->state = Block::DIRTY;
+					_last_access_remove(*b);
 				}
 				
 				int err = errno;
@@ -397,6 +455,11 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 		{
 			blocks.push_back(Block(0,0));
 		}
+		
+		/* Drop the now-invalid last_accessed_blocks structures. */
+		
+		last_accessed_blocks.clear();
+		last_accessed_blocks_map.clear();
 	}
 	
 	if(fh != NULL)
@@ -494,6 +557,7 @@ bool REHex::Buffer::overwrite_data(off_t offset, unsigned const char *data, off_
 		memcpy((block->data.data() + block_rel_off), data, to_copy);
 		
 		block->state = Block::DIRTY;
+		_last_access_remove(block);
 		
 		data   += to_copy;
 		offset += to_copy;
@@ -537,6 +601,7 @@ bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t l
 	
 	block->virt_length += length;
 	block->state = Block::DIRTY;
+	_last_access_remove(block);
 	
 	/* Shift the virtual offset of any subsequent blocks along. */
 	
@@ -578,6 +643,7 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 		}
 		
 		block->state = Block::DIRTY;
+		_last_access_remove(block);
 		
 		/* Shift the offset back by however many bytes we've already
 		 * erased from previous blocks.

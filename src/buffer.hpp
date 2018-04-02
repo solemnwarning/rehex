@@ -18,6 +18,8 @@
 #ifndef REHEX_BUFFER_HPP
 #define REHEX_BUFFER_HPP
 
+#include <list>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -61,14 +63,35 @@ namespace REHex {
 			
 			std::vector<Block> blocks;
 			
+			/* last_accessed_blocks is a list of the most recently loaded CLEAN blocks.
+			 *
+			 * last_accessed_blocks_map is a map of Block* pointers to iterators within
+			 * last_accessed_blocks.
+			 *
+			 * When the number of loaded clean blocks in last_accessed_blocks exceeds
+			 * MAX_CLEAN_BLOCKS, the oldest block in last_accessed_blocks is unloaded to
+			 * save memory.
+			 *
+			 * When a block is unloaded or dirtied it is removed from last_accessed_blocks
+			 * to make it no longer eligible for unloading.
+			*/
+			
+			std::list<Block*> last_accessed_blocks;
+			std::map< Block*, std::list<Block*>::iterator > last_accessed_blocks_map;
+			
 		private:
 			Block *_block_by_virt_offset(off_t virt_offset);
 			void _load_block(Block *block);
+			
+			void _last_access_bump(Block *block);
+			void _last_access_remove(Block *block);
 			
 			static bool _same_file(FILE *file1, const std::string &name1, FILE *file2, const std::string &name2);
 			
 		public:
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
+			static const unsigned int MAX_CLEAN_BLOCKS   = 4;
+			
 			const off_t block_size;
 			
 			Buffer();

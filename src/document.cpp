@@ -1595,7 +1595,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
 	wxPen black_1px(*wxBLACK, 1);
-	dc.SetPen(black_1px);
+	wxPen blue_1px (*wxBLUE,  1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
 	auto normal_text_colour = [&dc]()
@@ -1745,11 +1745,13 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(draw_ins && doc.cursor_visible)
 			{
+				dc.SetPen(black_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
 			if(draw_box)
 			{
+				dc.SetPen(black_1px);
 				dc.DrawRectangle(hex_x, y, doc.hf_width * 2, doc.hf_height);
 			}
 			
@@ -1762,11 +1764,20 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					? byte
 					: '.';
 				
-				if(cur_off == doc.cpos_off && doc.cursor_state == CSTATE_ASCII && !doc.insert_mode)
+				if(doc.cursor_state == CSTATE_ASCII)
 				{
-					if(doc.cursor_visible)
+					if(cur_off == doc.cpos_off && !doc.insert_mode && doc.cursor_visible)
 					{
 						inverted_text_colour();
+						
+						char str[] = { ascii_byte, '\0' };
+						dc.DrawText(str, ascii_x, y);
+						
+						ascii_string.append(" ");
+					}
+					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
+					{
+						selected_text_colour();
 						
 						char str[] = { ascii_byte, '\0' };
 						dc.DrawText(str, ascii_x, y);
@@ -1778,27 +1789,47 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					}
 				}
 				else{
-					if(cur_off == doc.cpos_off)
+					ascii_string.append(1, ascii_byte);
+					
+					if(cur_off == doc.cpos_off && !doc.insert_mode)
 					{
-						if(doc.insert_mode)
+						dc.SetPen(black_1px);
+						dc.DrawRectangle(ascii_x, y, doc.hf_width, doc.hf_height);
+					}
+					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
+					{
+						dc.SetPen(blue_1px);
+						
+						if(cur_off == doc.selection_off || c == 0)
 						{
-							if(doc.cursor_state == CSTATE_ASCII)
-							{
-								if(doc.cursor_visible)
-								{
-									dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
-								}
-							}
-							else{
-								// TODO: Draw different insert cursor
-							}
+							/* Draw vertical line left of selection. */
+							dc.DrawLine(ascii_x, y, ascii_x, (y + doc.hf_height));
 						}
-						else{
-							dc.DrawRectangle(ascii_x, y, doc.hf_width, doc.hf_height);
+						
+						if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (doc.bytes_per_line_calc - 1))
+						{
+							/* Draw vertical line right of selection. */
+							dc.DrawLine((ascii_x + doc.hf_width - 1), y, (ascii_x + doc.hf_width - 1), (y + doc.hf_height));
+						}
+						
+						if(cur_off < (doc.selection_off + doc.bytes_per_line_calc))
+						{
+							/* Draw horizontal line above selection. */
+							dc.DrawLine(ascii_x, y, (ascii_x + doc.hf_width), y);
+						}
+						
+						if(cur_off >= (doc.selection_off + doc.selection_length - doc.bytes_per_line_calc))
+						{
+							/* Draw horizontal line below selection. */
+							dc.DrawLine(ascii_x, (y + doc.hf_height - 1), (ascii_x + doc.hf_width), (y + doc.hf_height - 1));
 						}
 					}
-					
-					ascii_string.append(1, ascii_byte);
+				}
+				
+				if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || doc.cursor_state != CSTATE_ASCII))
+				{
+					dc.SetPen(black_1px);
+					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
 				}
 				
 				ascii_x += doc.hf_width;
@@ -1817,17 +1848,15 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(doc.insert_mode)
 			{
+				dc.SetPen(black_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			else{
 				/* Draw the cursor in red if trying to overwrite at an invalid
 				 * position. Should only happen in empty files.
 				*/
-				wxPen old_pen = dc.GetPen();
-				
 				dc.SetPen(*wxRED_PEN);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
-				dc.SetPen(old_pen);
 			}
 		}
 		

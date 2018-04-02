@@ -1711,7 +1711,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				hex_x += doc.hf_width;
 			};
 			
-			bool inv_high, inv_low, draw_box, draw_ins;
+			bool inv_high, inv_low, draw_box;
 			if(cur_off == doc.cpos_off)
 			{
 				if(doc.cursor_state == CSTATE_HEX)
@@ -1719,38 +1719,77 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					inv_high = !doc.insert_mode;
 					inv_low  = !doc.insert_mode;
 					draw_box = false;
-					draw_ins = doc.insert_mode;
 				}
 				else if(doc.cursor_state == CSTATE_HEX_MID)
 				{
 					inv_high = false;
 					inv_low  = true;
 					draw_box = false;
-					draw_ins = false;
 				}
 				else if(doc.cursor_state == CSTATE_ASCII)
 				{
 					inv_high = false;
 					inv_low  = false;
 					draw_box = !doc.insert_mode;
-					draw_ins = false; // TODO: Draw a different insert cursor
 				}
 			}
 			else{
 				inv_high = false;
 				inv_low  = false;
 				draw_box = false;
-				draw_ins = false;
 			}
 			
-			if(draw_ins && doc.cursor_visible)
+			if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length) && doc.cursor_state == CSTATE_ASCII)
 			{
+				dc.SetPen(blue_1px);
+				
+				if(cur_off == doc.selection_off || c == 0)
+				{
+					/* Draw vertical line left of selection. */
+					dc.DrawLine(hex_x, y, hex_x, (y + doc.hf_height));
+				}
+				
+				if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (doc.bytes_per_line_calc - 1))
+				{
+					/* Draw vertical line right of selection. */
+					dc.DrawLine((hex_x + (doc.hf_width * 2) - 1), y, (hex_x + (doc.hf_width * 2) - 1), (y + doc.hf_height));
+				}
+				
+				if(cur_off < (doc.selection_off + doc.bytes_per_line_calc))
+				{
+					/* Draw horizontal line above selection. */
+					dc.DrawLine(hex_x, y, (hex_x + (doc.hf_width * 2)), y);
+				}
+				
+				if(cur_off > doc.selection_off && cur_off <= (doc.selection_off + doc.bytes_per_line_calc) && c > 0 && (c % doc.bytes_per_group) == 0)
+				{
+					/* Draw horizontal line above gap along top of selection. */
+					dc.DrawLine((hex_x - doc.hf_width), y, hex_x, y);
+				}
+				
+				if(cur_off >= (doc.selection_off + doc.selection_length - doc.bytes_per_line_calc))
+				{
+					/* Draw horizontal line below selection. */
+					dc.DrawLine(hex_x, (y + doc.hf_height - 1), (hex_x + (doc.hf_width * 2)), (y + doc.hf_height - 1));
+					
+					if(c > 0 && (c % doc.bytes_per_group) == 0)
+					{
+						/* Draw horizontal line below gap along bottom of selection. */
+						dc.DrawLine((hex_x - doc.hf_width), (y + doc.hf_height - 1), hex_x, (y + doc.hf_height - 1));
+					}
+				}
+			}
+			
+			if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || doc.cursor_state == CSTATE_ASCII))
+			{
+				/* Draw insert cursor. */
 				dc.SetPen(black_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
 			if(draw_box)
 			{
+				/* Draw inactive overwrite cursor. */
 				dc.SetPen(black_1px);
 				dc.DrawRectangle(hex_x, y, doc.hf_width * 2, doc.hf_height);
 			}

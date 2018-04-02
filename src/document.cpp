@@ -1643,6 +1643,9 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
 	
+	bool hex_active   = doc.HasFocus() && doc.cursor_state != CSTATE_ASCII;
+	bool ascii_active = doc.HasFocus() && doc.cursor_state == CSTATE_ASCII;
+	
 	for(auto di = data.begin();;)
 	{
 		int hex_base_x = x;
@@ -1680,7 +1683,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&cur_off](unsigned char nibble, bool invert)
+			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&cur_off,&hex_active](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
@@ -1695,7 +1698,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				}
 				else if(cur_off >= doc.selection_off
 					&& cur_off < (doc.selection_off + doc.selection_length)
-					&& doc.cursor_state != CSTATE_ASCII)
+					&& hex_active)
 				{
 					selected_text_colour();
 					
@@ -1711,35 +1714,26 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				hex_x += doc.hf_width;
 			};
 			
-			bool inv_high, inv_low, draw_box;
-			if(cur_off == doc.cpos_off)
+			bool inv_high, inv_low;
+			if(cur_off == doc.cpos_off && hex_active)
 			{
 				if(doc.cursor_state == CSTATE_HEX)
 				{
 					inv_high = !doc.insert_mode;
 					inv_low  = !doc.insert_mode;
-					draw_box = false;
 				}
 				else if(doc.cursor_state == CSTATE_HEX_MID)
 				{
 					inv_high = false;
 					inv_low  = true;
-					draw_box = false;
-				}
-				else if(doc.cursor_state == CSTATE_ASCII)
-				{
-					inv_high = false;
-					inv_low  = false;
-					draw_box = !doc.insert_mode;
 				}
 			}
 			else{
 				inv_high = false;
 				inv_low  = false;
-				draw_box = false;
 			}
 			
-			if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length) && doc.cursor_state == CSTATE_ASCII)
+			if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length) && !hex_active)
 			{
 				dc.SetPen(blue_1px);
 				
@@ -1780,18 +1774,25 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				}
 			}
 			
-			if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || doc.cursor_state == CSTATE_ASCII))
+			if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || !hex_active))
 			{
 				/* Draw insert cursor. */
 				dc.SetPen(black_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
-			if(draw_box)
+			if(cur_off == doc.cpos_off && !doc.insert_mode && !hex_active)
 			{
 				/* Draw inactive overwrite cursor. */
 				dc.SetPen(black_1px);
-				dc.DrawRectangle(hex_x, y, doc.hf_width * 2, doc.hf_height);
+				
+				if(doc.cursor_state == CSTATE_HEX_MID)
+				{
+					dc.DrawRectangle(hex_x + doc.hf_width, y, doc.hf_width, doc.hf_height);
+				}
+				else{
+					dc.DrawRectangle(hex_x, y, doc.hf_width * 2, doc.hf_height);
+				}
 			}
 			
 			draw_nibble(high_nibble, inv_high);
@@ -1803,7 +1804,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					? byte
 					: '.';
 				
-				if(doc.cursor_state == CSTATE_ASCII)
+				if(ascii_active)
 				{
 					if(cur_off == doc.cpos_off && !doc.insert_mode && doc.cursor_visible)
 					{
@@ -1865,7 +1866,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					}
 				}
 				
-				if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || doc.cursor_state != CSTATE_ASCII))
+				if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || !ascii_active))
 				{
 					dc.SetPen(black_1px);
 					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);

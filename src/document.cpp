@@ -486,6 +486,42 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			event.Skip();
 		}
 	}
+	else if(key == WXK_TAB && modifiers == wxMOD_NONE)
+	{
+		if(cursor_state != CSTATE_ASCII)
+		{
+			/* Hex view is focused, focus the ASCII view. */
+			
+			cursor_state = CSTATE_ASCII;
+			Refresh();
+		}
+		else{
+			/* ASCII view is focused, get wxWidgets to process this and focus the next
+			 * control in the window.
+			*/
+			
+			HandleAsNavigationKey(event);
+		}
+		
+		return;
+	}
+	else if(key == WXK_TAB && modifiers == wxMOD_SHIFT)
+	{
+		if(cursor_state == CSTATE_ASCII)
+		{
+			/* ASCII view is focused, focus the hex view. */
+			
+			cursor_state = CSTATE_HEX;
+			Refresh();
+		}
+		else{
+			/* Hex view is focused, get wxWidgets to process this and focus the previous
+			 * control in the window.
+			*/
+			
+			HandleAsNavigationKey(event);
+		}
+	}
 	else if(cursor_state != CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
 	{
 		unsigned char nibble;

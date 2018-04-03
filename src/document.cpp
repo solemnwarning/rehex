@@ -241,6 +241,11 @@ void REHex::Document::erase_data(off_t offset, off_t length)
 	Refresh();
 }
 
+off_t REHex::Document::buffer_length()
+{
+	return buffer->length();
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);

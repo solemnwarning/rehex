@@ -64,6 +64,7 @@ namespace REHex {
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			void overwrite_data(off_t offset, const unsigned char *data, off_t length);
 			void erase_data(off_t offset, off_t length);
+			off_t buffer_length();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

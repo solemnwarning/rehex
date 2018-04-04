@@ -141,7 +141,7 @@ void REHex::Search::require_alignment(off_t alignment, off_t relative_to_offset)
 	align_from = relative_to_offset;
 }
 
-off_t REHex::Search::find_next(off_t from_offset)
+off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 {
 	from_offset = std::max(from_offset, range_begin);
 	
@@ -152,9 +152,37 @@ off_t REHex::Search::find_next(off_t from_offset)
 	
 	off_t end = (range_end >= 0 ? range_end : doc.buffer_length());
 	
+	size_t want_window = test_max_window();
+	
+	assert(window_size >= want_window);
+	
+	std::vector<unsigned char> window = doc.read_data(from_offset, window_size);
+	off_t window_base = from_offset;
+	
 	for(off_t at = from_offset; at < end; at += align_to)
 	{
-		if(test(at, (end - at)))
+		assert(window_base <= at);
+		
+		off_t  window_off   = at - window_base;
+		size_t window_avail = std::min((window.size() - window_off), (size_t)(end - at));
+		
+		if(want_window > window_avail
+			&& (window_base + (off_t)(window.size())) < doc.buffer_length())
+		{
+			/* The test() method wants more data than is available in the current
+			 * window and there is more data in the buffer past the end of it.
+			 *
+			 * Remake the window starting at the current position.
+			*/
+			
+			window      = doc.read_data(at, window_size);
+			window_base = at;
+			
+			window_off   = 0;
+			window_avail = window.size();
+		}
+		
+		if(test((window.data() + window_off), window_avail))
 		{
 			return at;
 		}
@@ -266,21 +294,22 @@ REHex::Search::Text::Text(wxWindow *parent, REHex::Document &doc, const std::str
 	setup_window();
 }
 
-bool REHex::Search::Text::test(off_t offset, off_t max_length)
+bool REHex::Search::Text::test(const unsigned char *data, size_t data_size)
 {
-	off_t read_bytes = std::min(max_length, (off_t)(search_for.size()));
-	
-	std::vector<unsigned char> data = doc.read_data(offset, read_bytes);
-	
 	if(case_sensitive)
 	{
-		return (data.size() >= search_for.size()
-			&& strncmp((char*)(data.data()), search_for.c_str(), search_for.size()) == 0);
+		return (data_size >= search_for.size()
+			&& strncmp((const char*)(data), search_for.c_str(), search_for.size()) == 0);
 	}
 	else{
-		return (data.size() >= search_for.size()
-			&& strncasecmp((char*)(data.data()), search_for.c_str(), search_for.size()) == 0);
+		return (data_size >= search_for.size()
+			&& strncasecmp((const char*)(data), search_for.c_str(), search_for.size()) == 0);
 	}
+}
+
+size_t REHex::Search::Text::test_max_window()
+{
+	return search_for.size();
 }
 
 void REHex::Search::Text::setup_window_controls(wxWindow *parent, wxSizer *sizer)

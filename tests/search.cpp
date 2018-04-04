@@ -261,6 +261,35 @@ int main(int argc, char **argv)
 		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() is case-insensitive when case sensitivity is disabled");
 	}
 	
+	/* Window sizing */
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
+		
+		REHex::Search::Text s(&frame, *doc, "de");
+		
+		is_int(3, s.find_next(0, 4), "REHEX::Search::Text::find_next() finds strings which span multiple search windows");
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
+		
+		REHex::Search::Text s(&frame, *doc, "efg");
+		
+		is_int(4, s.find_next(0, 4), "REHEX::Search::Text::find_next() finds strings beyond the first search window");
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
+		
+		REHex::Search::Text s(&frame, *doc, "efgh");
+		
+		is_int(4, s.find_next(0, 4), "REHEX::Search::Text::find_next() finds strings which span an entire search window");
+	}
+	
 	wxTheApp->OnExit();
 	wxEntryCleanup();
 	

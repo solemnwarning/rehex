@@ -32,6 +32,8 @@ namespace REHex {
 			class ByteSequence;
 			class Value;
 			
+			static const size_t DEFAULT_WINDOW_SIZE = 2134016; /* 2MiB */
+			
 		protected:
 			REHex::Document &doc;
 			
@@ -51,7 +53,8 @@ namespace REHex {
 		protected:
 			Search(wxWindow *parent, REHex::Document &doc);
 			
-			virtual bool test(off_t offset, off_t max_length) = 0;
+			virtual bool test(const unsigned char *data, size_t data_size) = 0;
+			virtual size_t test_max_window() = 0;
 			
 			void setup_window();
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) = 0;
@@ -61,7 +64,7 @@ namespace REHex {
 			void limit_range(off_t range_begin, off_t range_end);
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
 			
-			virtual off_t find_next(off_t from_offset);
+			virtual off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
@@ -87,7 +90,8 @@ namespace REHex {
 			Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for = "", bool case_sensitive = true);
 			
 		protected:
-			virtual bool test(off_t offset, off_t max_length);
+			virtual bool test(const unsigned char *data, size_t data_size);
+			virtual size_t test_max_window();
 			
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);
 			virtual bool read_window_controls();

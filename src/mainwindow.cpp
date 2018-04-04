@@ -28,6 +28,7 @@
 #include "app.hpp"
 #include "decodepanel.hpp"
 #include "mainwindow.hpp"
+#include "search.hpp"
 
 enum {
 	ID_BYTES_LINE = 1,
@@ -35,6 +36,7 @@ enum {
 	ID_SHOW_OFFSETS,
 	ID_SHOW_ASCII,
 	ID_SHOW_DECODES,
+	ID_SEARCH_TEXT,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -43,6 +45,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
+	
+	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	
 	EVT_MENU(wxID_CUT,   REHex::MainWindow::OnCut)
 	EVT_MENU(wxID_COPY,  REHex::MainWindow::OnCopy)
@@ -74,6 +78,10 @@ REHex::MainWindow::MainWindow():
 	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
 	
 	wxMenu *edit_menu = new wxMenu;
+	
+	edit_menu->Append(ID_SEARCH_TEXT, "Search for text...");
+	
+	edit_menu->AppendSeparator();
 	
 	edit_menu->Append(wxID_CUT,   "&Cut");
 	edit_menu->Append(wxID_COPY,  "&Copy");
@@ -199,6 +207,18 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 void REHex::MainWindow::OnExit(wxCommandEvent &event)
 {
 	Close();
+}
+
+void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	REHex::Search::Text *t = new REHex::Search::Text(this, *(tab->doc));
+	t->Show(true);
 }
 
 void REHex::MainWindow::OnCut(wxCommandEvent &event)

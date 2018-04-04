@@ -55,6 +55,7 @@ namespace REHex {
 			void set_show_ascii(bool show_ascii);
 			
 			off_t get_offset();
+			void set_cursor_position(off_t off);
 			bool get_insert_mode();
 			
 			void set_selection(off_t off, off_t length);

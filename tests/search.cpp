@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "abc");
+		REHex::Search::Text s(&frame, *doc, "abc");
 		
 		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() finds string at start of file");
 	}
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		is_int(3, s.find_next(0), "REHEX::Search::Text::find_next() finds string in middle of file");
 	}
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "nop");
+		REHex::Search::Text s(&frame, *doc, "nop");
 		
 		is_int(13, s.find_next(0), "REHEX::Search::Text::find_next() finds string at end of file");
 	}
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "abcdefghijklmnop");
+		REHex::Search::Text s(&frame, *doc, "abcdefghijklmnop");
 		
 		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() finds string which is whole file");
 	}
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		is_int(3, s.find_next(2), "REHEX::Search::Text::find_next() finds string starting after from_offset");
 	}
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		is_int(3, s.find_next(3), "REHEX::Search::Text::find_next() finds string starting at from_offset");
 	}
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		is_int(-1, s.find_next(4), "REHEX::Search::Text::find_next() doesn't find string starting before from_offset");
 	}
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "bcd");
+		REHex::Search::Text s(&frame, *doc, "bcd");
 		
 		s.limit_range(1, 15);
 		
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		s.limit_range(1, 15);
 		
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "mno");
+		REHex::Search::Text s(&frame, *doc, "mno");
 		
 		s.limit_range(1, 15);
 		
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "bcdefghijklmno");
+		REHex::Search::Text s(&frame, *doc, "bcdefghijklmno");
 		
 		s.limit_range(1, 15);
 		
@@ -155,7 +155,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "abc");
+		REHex::Search::Text s(&frame, *doc, "abc");
 		
 		s.limit_range(1, 15);
 		
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "nop");
+		REHex::Search::Text s(&frame, *doc, "nop");
 		
 		s.limit_range(1, 15);
 		
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		s.require_alignment(3);
 		
@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "def");
+		REHex::Search::Text s(&frame, *doc, "def");
 		
 		s.require_alignment(2);
 		
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "efg");
+		REHex::Search::Text s(&frame, *doc, "efg");
 		
 		s.require_alignment(3, 1);
 		
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "efg");
+		REHex::Search::Text s(&frame, *doc, "efg");
 		
 		s.require_alignment(2, 1);
 		
@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "efg");
+		REHex::Search::Text s(&frame, *doc, "efg");
 		
 		s.require_alignment(3, 10);
 		
@@ -234,7 +234,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "efg");
+		REHex::Search::Text s(&frame, *doc, "efg");
 		
 		s.require_alignment(2, 3);
 		
@@ -247,7 +247,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "ABC", true);
+		REHex::Search::Text s(&frame, *doc, "ABC", true);
 		
 		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() is case-sensitive when case sensitivity is enabled");
 	}
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::Document *doc = new REHex::Document(&frame, TMPFILE);
 		
-		REHex::Search::Text s(*doc, "ABC", false);
+		REHex::Search::Text s(&frame, *doc, "ABC", false);
 		
 		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() is case-insensitive when case sensitivity is disabled");
 	}

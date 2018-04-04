@@ -182,6 +182,18 @@ off_t REHex::Document::get_offset()
 	return this->cpos_off;
 }
 
+void REHex::Document::set_cursor_position(off_t off)
+{
+	off_t max_cpos = insert_mode
+		? buffer->length()
+		: (buffer->length() - 1);
+	
+	assert(off >= 0 && off <= max_cpos);
+	
+	cpos_off = off;
+	_make_byte_visible(cpos_off);
+}
+
 bool REHex::Document::get_insert_mode()
 {
 	return this->insert_mode;

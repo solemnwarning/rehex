@@ -164,7 +164,7 @@ off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 		assert(window_base <= at);
 		
 		off_t  window_off   = at - window_base;
-		size_t window_avail = std::min((window.size() - window_off), (size_t)(end - at));
+		size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(end - at));
 		
 		if(want_window > window_avail
 			&& (window_base + (off_t)(window.size())) < doc.buffer_length())

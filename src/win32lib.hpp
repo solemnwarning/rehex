@@ -22,6 +22,7 @@
 
 #include <windows.h>
 #include <string>
+#include <string.h>
 
 std::string GetLastError_strerror(DWORD errnum);
 

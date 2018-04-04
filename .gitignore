@@ -4,3 +4,4 @@
 /tests/.tmpfile*
 /tests/buffer.t
 /tests/document.t
+/tests/search.t

@@ -55,6 +55,7 @@ namespace REHex {
 			void set_show_ascii(bool show_ascii);
 			
 			off_t get_offset();
+			void set_cursor_position(off_t off);
 			bool get_insert_mode();
 			
 			void set_selection(off_t off, off_t length);
@@ -64,6 +65,7 @@ namespace REHex {
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			void overwrite_data(off_t offset, const unsigned char *data, off_t length);
 			void erase_data(off_t offset, off_t length);
+			off_t buffer_length();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

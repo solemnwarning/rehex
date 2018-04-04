@@ -1075,6 +1075,8 @@ void REHex::Document::_ctor_post()
 	}
 	
 	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
+	
+	SetMinClientSize(wxSize(300, 200));
 }
 
 void REHex::Document::_init_regions(const json_t *meta)

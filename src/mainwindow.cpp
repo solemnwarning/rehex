@@ -129,6 +129,8 @@ REHex::MainWindow::MainWindow():
 	else{
 		ProcessCommand(wxID_NEW);
 	}
+	
+	SetClientSize(notebook->GetBestSize());
 }
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)

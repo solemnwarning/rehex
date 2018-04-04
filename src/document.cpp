@@ -264,6 +264,9 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	
 	dc.SetFont(*hex_font);
 	
+	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.Clear();
+	
 	if(offset_column)
 	{
 		int offset_vl_x = (offset_column_width - scroll_xoff) - (hf_width / 2);
@@ -1643,17 +1646,18 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 {
 	dc.SetFont(*(doc.hex_font));
 	
-	dc.SetTextForeground(*wxBLACK);
-	dc.SetTextBackground(*wxBLACK);
-	dc.SetBackgroundMode(wxTRANSPARENT);
-	
 	wxPen black_1px(*wxBLACK, 1);
 	wxPen blue_1px (*wxBLUE,  1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
-	auto normal_text_colour = [&dc]()
+	wxColour main_text_colour      = wxColour(0x00, 0x00, 0x00);
+	wxColour alternate_text_colour = wxColour(0x69, 0x69, 0x69);
+	
+	bool alternate_row = true;
+	
+	auto normal_text_colour = [&dc,&main_text_colour,&alternate_text_colour,&alternate_row]()
 	{
-		dc.SetTextForeground(*wxBLACK);
+		dc.SetTextForeground(alternate_row ? alternate_text_colour : main_text_colour);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
@@ -1703,6 +1707,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	{
 		int hex_base_x = x;
 		int hex_x      = hex_base_x;
+		
+		alternate_row = !alternate_row;
 		
 		if(doc.offset_column)
 		{
@@ -2132,11 +2138,16 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		unsigned int box_w = doc.client_width - (doc.hf_width / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
+		dc.SetPen(wxPen(*wxBLACK, 1));
 		dc.SetBrush(*wxLIGHT_GREY_BRUSH);
+		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
 	}
 	
 	y += doc.hf_height / 2;
+	
+	dc.SetTextForeground(*wxBLACK);
+	dc.SetBackgroundMode(wxTRANSPARENT);
 	
 	for(auto li = lines.begin(); li != lines.end(); ++li)
 	{

@@ -563,6 +563,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			case 'D': case 'd': nibble = 0xD; break;
 			case 'E': case 'e': nibble = 0xE; break;
 			case 'F': case 'f': nibble = 0xF; break;
+			default:            abort();
 		}
 		
 		if(cursor_state == CSTATE_HEX_MID)
@@ -1781,7 +1782,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					inv_high = !doc.insert_mode;
 					inv_low  = !doc.insert_mode;
 				}
-				else if(doc.cursor_state == CSTATE_HEX_MID)
+				else /* if(doc.cursor_state == CSTATE_HEX_MID) */
 				{
 					inv_high = false;
 					inv_low  = true;

@@ -675,7 +675,7 @@ REHex::Buffer::Block::Block(off_t offset, off_t length):
 	virt_length(length),
 	state(UNLOADED) {}
 
-void REHex::Buffer::Block::grow(off_t min_size)
+void REHex::Buffer::Block::grow(size_t min_size)
 {
 	if(min_size < data.size())
 	{

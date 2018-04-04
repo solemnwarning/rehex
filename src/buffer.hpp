@@ -57,7 +57,7 @@ namespace REHex {
 					
 					Block(off_t offset, off_t length);
 					
-					void grow(off_t min_size);
+					void grow(size_t min_size);
 					void trim();
 			};
 			

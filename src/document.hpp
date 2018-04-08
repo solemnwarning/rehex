@@ -165,7 +165,7 @@ namespace REHex {
 				CSTATE_ASCII,
 			} cursor_state;
 			
-			void _ctor_pre();
+			void _ctor_pre(wxWindow *parent);
 			void _ctor_post();
 			
 			void _init_regions(const json_t *meta);

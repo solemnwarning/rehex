@@ -110,6 +110,8 @@ REHex::MainWindow::MainWindow():
 	toolbar->AddTool(wxID_SAVE,   "Save",    artp.GetBitmap(wxART_FILE_SAVE,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", artp.GetBitmap(wxART_FILE_SAVE_AS, wxART_TOOLBAR));
 	
+	toolbar->Realize();
+	
 	notebook = new wxNotebook(this, wxID_ANY);
 	
 	CreateStatusBar(3);

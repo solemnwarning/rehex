@@ -23,6 +23,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <wx/dcbuffer.h>
 
 #include "document.hpp"
 #include "textentrydialog.hpp"
@@ -64,10 +65,10 @@ wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,    wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL | wxWANTS_CHARS),
+	wxControl(),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
 {
-	_ctor_pre();
+	_ctor_pre(parent);
 	
 	buffer = new REHex::Buffer();
 	title  = "Untitled";
@@ -78,11 +79,11 @@ REHex::Document::Document(wxWindow *parent):
 }
 
 REHex::Document::Document(wxWindow *parent, const std::string &filename):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxHSCROLL | wxWANTS_CHARS),
+	wxControl(),
 	filename(filename),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
 {
-	_ctor_pre();
+	_ctor_pre(parent);
 	
 	buffer = new REHex::Buffer(filename);
 	
@@ -260,7 +261,7 @@ off_t REHex::Document::buffer_length()
 
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
-	wxPaintDC dc(this);
+	wxBufferedPaintDC dc(this);
 	
 	dc.SetFont(*hex_font);
 	
@@ -1045,8 +1046,13 @@ void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
 	Refresh();
 }
 
-void REHex::Document::_ctor_pre()
+void REHex::Document::_ctor_pre(wxWindow *parent)
 {
+	/* The background style MUST be set before the control is created. */
+	SetBackgroundStyle(wxBG_STYLE_PAINT);
+	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
+	
 	client_width     = 0;
 	client_height    = 0;
 	bytes_per_line   = 0;
@@ -1076,6 +1082,7 @@ void REHex::Document::_ctor_post()
 	
 	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
 	
+	SetDoubleBuffered(true);
 	SetMinClientSize(wxSize(300, 200));
 }
 

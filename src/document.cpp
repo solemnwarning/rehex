@@ -308,6 +308,14 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 
 void REHex::Document::OnSize(wxSizeEvent &event)
 {
+	if(regions.empty())
+	{
+		/* Great big dirty hack: If regions is empty, we're being invoked within the
+		 * Create() method call and we aren't set up properly yet, do nothing.
+		*/
+		return;
+	}
+	
 	/* Get the size of the area we can draw into */
 	
 	wxSize       client_size       = GetClientSize();

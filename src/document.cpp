@@ -27,6 +27,7 @@
 
 #include "document.hpp"
 #include "textentrydialog.hpp"
+#include "util.hpp"
 
 static_assert(std::numeric_limits<json_int_t>::max() >= std::numeric_limits<off_t>::max(),
 	"json_int_t must be large enough to store any offset in an off_t");
@@ -553,27 +554,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	}
 	else if(cursor_state != CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
 	{
-		unsigned char nibble;
-		switch(key)
-		{
-			case '0':           nibble = 0x0; break;
-			case '1':           nibble = 0x1; break;
-			case '2':           nibble = 0x2; break;
-			case '3':           nibble = 0x3; break;
-			case '4':           nibble = 0x4; break;
-			case '5':           nibble = 0x5; break;
-			case '6':           nibble = 0x6; break;
-			case '7':           nibble = 0x7; break;
-			case '8':           nibble = 0x8; break;
-			case '9':           nibble = 0x9; break;
-			case 'A': case 'a': nibble = 0xA; break;
-			case 'B': case 'b': nibble = 0xB; break;
-			case 'C': case 'c': nibble = 0xC; break;
-			case 'D': case 'd': nibble = 0xD; break;
-			case 'E': case 'e': nibble = 0xE; break;
-			case 'F': case 'f': nibble = 0xF; break;
-			default:            abort();
-		}
+		unsigned char nibble = REHex::parse_ascii_nibble(key);
 		
 		if(cursor_state == CSTATE_HEX_MID)
 		{

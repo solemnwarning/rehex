@@ -1,0 +1,136 @@
+/* Reverse Engineer's Hex Editor
+ * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+#include "tests/tap/basic.h"
+
+#include "../src/util.hpp"
+
+#define PARSE_ASCII_NIBBLE_OK(c, expect) \
+	try { \
+		unsigned char r = REHex::parse_ascii_nibble(c); \
+		is_int(expect, r, "REHex::parse_ascii_nibble(" #c ") returns correct value"); \
+	} \
+	catch(const REHex::ParseError &e) \
+	{ \
+		ok(0, "REHex::parse_ascii_nibble(" #c ") returns correct value"); \
+		diag("(Threw ParseError)"); \
+	}
+
+#define PARSE_ASCII_NIBBLE_BAD(c) \
+	try { \
+		REHex::parse_ascii_nibble(c); \
+		ok(0, "REHex::parse_ascii_nibble(" #c ") throws ParseError"); \
+	} \
+	catch(const REHex::ParseError &e) \
+	{ \
+		ok(1, "REHex::parse_ascii_nibble(" #c ") throws ParseError"); \
+	}
+
+#define PARSE_HEX_STRING_OK(hex, ...) \
+	try { \
+		unsigned const char expect_data[] = { __VA_ARGS__ }; \
+		std::vector<unsigned char> got_data = REHex::parse_hex_string(hex); \
+		is_int(sizeof(expect_data), got_data.size(), "REHex::parse_hex_string(" #hex ") returns correct length") \
+			&& is_blob(expect_data, got_data.data(), got_data.size(), "REHex::parse_hex_string(" #hex ") returns correct data"); \
+	} \
+	catch(const REHex::ParseError &e) \
+	{ \
+		ok(0, "REHex::parse_hex_string(" #hex ") returns correct data"); \
+		diag("(Threw ParseError)"); \
+	}
+
+#define PARSE_HEX_STRING_BAD(hex) \
+	try { \
+		REHex::parse_hex_string(hex); \
+		ok(0, "REHex::parse_hex_string(" #hex ") throws ParseError"); \
+	} \
+	catch(const REHex::ParseError &e) \
+	{ \
+		ok(1, "REHex::parse_hex_string(" #hex ") throws ParseError"); \
+	}
+
+int main(int argc, char **argv)
+{
+	plan_lazy();
+	
+	PARSE_ASCII_NIBBLE_BAD('\0');
+	
+	PARSE_ASCII_NIBBLE_BAD('/');
+	PARSE_ASCII_NIBBLE_OK ('0', 0x0);
+	PARSE_ASCII_NIBBLE_OK ('1', 0x1);
+	PARSE_ASCII_NIBBLE_OK ('2', 0x2);
+	PARSE_ASCII_NIBBLE_OK ('3', 0x3);
+	PARSE_ASCII_NIBBLE_OK ('4', 0x4);
+	PARSE_ASCII_NIBBLE_OK ('5', 0x5);
+	PARSE_ASCII_NIBBLE_OK ('6', 0x6);
+	PARSE_ASCII_NIBBLE_OK ('7', 0x7);
+	PARSE_ASCII_NIBBLE_OK ('8', 0x8);
+	PARSE_ASCII_NIBBLE_OK ('9', 0x9);
+	PARSE_ASCII_NIBBLE_BAD(':');
+	
+	PARSE_ASCII_NIBBLE_BAD('@');
+	PARSE_ASCII_NIBBLE_OK ('A', 0xA);
+	PARSE_ASCII_NIBBLE_OK ('B', 0xB);
+	PARSE_ASCII_NIBBLE_OK ('C', 0xC);
+	PARSE_ASCII_NIBBLE_OK ('D', 0xD);
+	PARSE_ASCII_NIBBLE_OK ('E', 0xE);
+	PARSE_ASCII_NIBBLE_OK ('F', 0xF);
+	PARSE_ASCII_NIBBLE_BAD('G');
+	
+	PARSE_ASCII_NIBBLE_BAD('`');
+	PARSE_ASCII_NIBBLE_OK ('a', 0xA);
+	PARSE_ASCII_NIBBLE_OK ('b', 0xB);
+	PARSE_ASCII_NIBBLE_OK ('c', 0xC);
+	PARSE_ASCII_NIBBLE_OK ('d', 0xD);
+	PARSE_ASCII_NIBBLE_OK ('e', 0xE);
+	PARSE_ASCII_NIBBLE_OK ('f', 0xF);
+	PARSE_ASCII_NIBBLE_BAD('g');
+	
+	PARSE_ASCII_NIBBLE_BAD(0xFF);
+	
+	PARSE_HEX_STRING_OK("");
+	PARSE_HEX_STRING_OK(" ");
+	PARSE_HEX_STRING_OK("\t");
+	PARSE_HEX_STRING_OK("\r");
+	PARSE_HEX_STRING_OK("\n");
+	
+	PARSE_HEX_STRING_OK("00",     0x00);
+	PARSE_HEX_STRING_OK("1002",   0x10, 0x02);
+	PARSE_HEX_STRING_OK("AAFF",   0xAA, 0xFF);
+	PARSE_HEX_STRING_OK(" AAFF",  0xAA, 0xFF);
+	PARSE_HEX_STRING_OK("AA FF",  0xAA, 0xFF);
+	PARSE_HEX_STRING_OK("AA FF ", 0xAA, 0xFF);
+	PARSE_HEX_STRING_OK("AAF F",  0xAA, 0xFF);
+	PARSE_HEX_STRING_OK("A AFF",  0xAA, 0xFF);
+	
+	PARSE_HEX_STRING_OK("0123456789ABCDEFabcdef",
+		0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xAB, 0xCD, 0xEF);
+	
+	PARSE_HEX_STRING_BAD("A");
+	PARSE_HEX_STRING_BAD("AA B");
+	PARSE_HEX_STRING_BAD("A BB");
+	PARSE_HEX_STRING_BAD("ABB");
+	
+	PARSE_HEX_STRING_BAD("/");
+	PARSE_HEX_STRING_BAD(":");
+	PARSE_HEX_STRING_BAD("@");
+	PARSE_HEX_STRING_BAD("G");
+	PARSE_HEX_STRING_BAD("`");
+	PARSE_HEX_STRING_BAD("g");
+	
+	return 0;
+}

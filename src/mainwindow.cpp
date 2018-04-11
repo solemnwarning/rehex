@@ -237,7 +237,24 @@ void REHex::MainWindow::OnCopy(wxCommandEvent &event)
 
 void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 {
-	wxMessageBox("Paste!");
+	if(wxTheClipboard->Open())
+	{
+		if(wxTheClipboard->IsSupported(wxDF_TEXT))
+		{
+			wxTextDataObject data;
+			wxTheClipboard->GetData(data);
+			
+			wxWindow *cpage = notebook->GetCurrentPage();
+			assert(cpage != NULL);
+			
+			auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+			assert(tab != NULL);
+			
+			tab->doc->handle_paste(data.GetText().ToStdString());
+		}
+		
+		wxTheClipboard->Close();
+	}
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)

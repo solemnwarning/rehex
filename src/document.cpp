@@ -240,6 +240,12 @@ void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, of
 	Refresh();
 }
 
+void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
+{
+	wxClientDC dc(this);
+	_insert_data(dc, offset, data, length);
+}
+
 void REHex::Document::erase_data(off_t offset, off_t length)
 {
 	buffer->erase_data(offset, length);
@@ -258,6 +264,73 @@ void REHex::Document::erase_data(off_t offset, off_t length)
 off_t REHex::Document::buffer_length()
 {
 	return buffer->length();
+}
+
+void REHex::Document::handle_paste(const std::string &clipboard_text)
+{
+	auto paste_data = [this](const unsigned char* data, size_t size)
+	{
+		if(selection_length > 0)
+		{
+			/* Some data is selected, replace it. */
+			
+			off_t old_sel_off = selection_off;
+			
+			erase_data(selection_off, selection_length);
+			
+			wxClientDC dc(this);
+			_insert_data(dc, old_sel_off, data, size);
+			
+			clear_selection();
+			
+			cpos_off = old_sel_off + size;
+		}
+		else if(insert_mode)
+		{
+			/* We are in insert mode, insert at the cursor. */
+			
+			wxClientDC dc(this);
+			_insert_data(dc, cpos_off, data, size);
+			
+			cpos_off += size;
+		}
+		else{
+			/* We are in overwrite mode, overwrite up to the end of the file. */
+			
+			off_t to_end = buffer->length() - cpos_off;
+			off_t to_write = std::min(to_end, (off_t)(size));
+			
+			overwrite_data(cpos_off, data, to_write);
+			
+			cpos_off += to_write;
+		}
+		
+		if(cpos_off == buffer->length() && !insert_mode)
+		{
+			--cpos_off;
+		}
+		
+		Refresh();
+	};
+	
+	if(cursor_state == CSTATE_ASCII)
+	{
+		/* Paste into ASCII view, handle as string of characters. */
+		
+		paste_data((const unsigned char*)(clipboard_text.data()), clipboard_text.size());
+	}
+	else{
+		/* Paste into hex view, handle as hex string of bytes. */
+		
+		try {
+			std::vector<unsigned char> clipboard_data = REHex::parse_hex_string(clipboard_text);
+			paste_data(clipboard_data.data(), clipboard_data.size());
+		}
+		catch(const REHex::ParseError &e)
+		{
+			/* Ignore paste if clipboard didn't contain a valid hex string. */
+		}
+	}
 }
 
 void REHex::Document::OnPaint(wxPaintEvent &event)

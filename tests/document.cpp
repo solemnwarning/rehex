@@ -1449,6 +1449,1500 @@ static void erase_tests()
 	/* TODO: Check y_* values */
 }
 
+static void paste_ovr_nosel_hex_tests()
+{
+	{
+		const char *TEST = "Pasting a hex string at offset 0 in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(3, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 0 in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 0 in OVERWRITE mode and CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites up to EOF", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string at offset 4 in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 4 in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 4 in OVERWRITE mode and CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites up to EOF", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		/* Make sure strings which aren't valid hex strings are ignored. */
+		const char *TEST = "Pasting an invalid hex string at offset 0 in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98!");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting an empty string at offset 0 in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+}
+
+void paste_ovr_nosel_hex_mid_tests()
+{
+	{
+		const char *TEST = "Pasting a hex string at offset 0 in OVERWRITE mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(3, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 0 in OVERWRITE mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 0 in OVERWRITE mode and CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites up to EOF", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string at offset 4 in OVERWRITE mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 4 in OVERWRITE mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing data", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 4 in OVERWRITE mode and CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites up to EOF", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		/* Make sure strings which aren't valid hex strings are ignored. */
+		const char *TEST = "Pasting an invalid hex string at offset 0 in OVERWRITE mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98!");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting an empty string at offset 0 in OVERWRITE mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+}
+
+void paste_ovr_nosel_ascii_tests()
+{
+	{
+		const char *TEST = "Pasting a text string at offset 0 in OVERWRITE mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foo");
+		
+		const unsigned char MUNGED_DATA[] = { 'f', 'o', 'o', 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing text", TEST);
+		
+		is_int(3, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs to EOF at offset 0 in OVERWRITE mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foobarba");
+		
+		const unsigned char MUNGED_DATA[] = { 'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a' };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing text", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs past EOF at offset 0 in OVERWRITE mode and CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foobarbazquxquuxfoobarbazquxquux");
+		
+		const unsigned char MUNGED_DATA[] = { 'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a' };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites up to EOF", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string at offset 4 in OVERWRITE mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("fo");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 'f', 'o', 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing text", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs to EOF at offset 4 in OVERWRITE mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foob");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 'f', 'o', 'o', 'b' };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing text", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs past EOF at offset 4 in OVERWRITE mode and CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foobarbazquxquuxfoobarbazquxquux");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 'f', 'o', 'o', 'b' };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites up to EOF", TEST);
+		
+		is_int(7, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		/* Make sure strings which are valid hex get treated as text. */
+		const char *TEST = "Pasting a hex string at offset 0 in OVERWRITE mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("999897");
+		
+		const unsigned char MUNGED_DATA[] = { '9', '9', '9', '8', '9', '7', 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites existing text", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting an empty string at offset 0 in OVERWRITE mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+}
+
+void paste_ins_nosel_hex_tests()
+{
+	{
+		const char *TEST = "Pasting a hex string at offset 0 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(11, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(3, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 0 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(16, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(8, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 0 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92, 0x91, 0x90, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(18, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(10, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string at offset 4 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 4 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(12, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(8, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 4 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92, 0x91, 0x90, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(18, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(14, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		/* Make sure strings which aren't valid hex strings are ignored. */
+		const char *TEST = "Pasting an invalid hex string at offset 0 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98!");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting an empty string at offset 0 in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+}
+
+void paste_ins_nosel_hex_mid_tests()
+{
+	{
+		const char *TEST = "Pasting a hex string at offset 0 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(11, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(3, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 0 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(16, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(8, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 0 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92, 0x91, 0x90, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(18, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(10, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string at offset 4 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs to EOF at offset 4 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(12, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(8, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string which runs past EOF at offset 4 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92 91 90");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92, 0x91, 0x90, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(18, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts data", TEST);
+		
+		is_int(14, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		/* Make sure strings which aren't valid hex strings are ignored. */
+		const char *TEST = "Pasting an invalid hex string at offset 0 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("99 98!");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting an empty string at offset 0 in INSERT mode with CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		doc->handle_paste("");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+}
+
+void paste_ins_nosel_ascii_tests()
+{
+	{
+		const char *TEST = "Pasting a text string at offset 0 in INSERT mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foo");
+		
+		const unsigned char MUNGED_DATA[] = { 'f', 'o', 'o', 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(11, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(3, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs to EOF at offset 0 in INSERT mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foobarba");
+		
+		const unsigned char MUNGED_DATA[] = { 'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(16, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(8, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs past EOF at offset 0 in INSERT mode and CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foobarbazqux");
+		
+		const unsigned char MUNGED_DATA[] = { 'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z', 'q', 'u', 'x', 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(20, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(12, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string at offset 4 in INSERT mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("fo");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 'f', 'o', 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs to EOF at offset 4 in INSERT mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foob");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 'f', 'o', 'o', 'b', 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(12, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(8, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a text string which runs past EOF at offset 4 in INSERT mode and CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 4;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("foobar");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 'f', 'o', 'o', 'b', 'a', 'r', 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(14, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(10, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		/* Make sure strings which are valid hex get treated as text. */
+		const char *TEST = "Pasting a hex string at offset 0 in INSERT mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("999897");
+		
+		const unsigned char MUNGED_DATA[] = { '9', '9', '9', '8', '9', '7', 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(14, doc->buffer->length(), "%s increases the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s inserts text", TEST);
+		
+		is_int(6, doc->cpos_off, "%s advances the cursor", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting an empty string at offset 0 in INSERT mode with CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		doc->handle_paste("");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(8, doc->buffer->length(), "%s doesn't change the buffer size", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s doesn't change existing data", TEST);
+		
+		is_int(0, doc->cpos_off, "%s doesn't advance the cursor", TEST);
+	}
+}
+
+static void paste_ovr_sel_hex_tests()
+{
+	{
+		const char *TEST = "Pasting a hex string with the start of the document selected in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->set_selection(0, 4);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(7, doc->buffer->length(), "%s resizes the buffer", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites the selected data", TEST);
+		
+		is_int(3, doc->cpos_off,         "%s moves the cursor", TEST);
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string with the middle of the document selected in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->set_selection(3, 2);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x99, 0x98, 0x97, 0x96, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, doc->buffer->length(), "%s resizes the buffer", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites the selected data", TEST);
+		
+		is_int(7, doc->cpos_off,         "%s moves the cursor", TEST);
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string with the end of the document selected in OVERWRITE mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = false;
+		doc->set_selection(5, 3);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(13, doc->buffer->length(), "%s resizes the buffer", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites the selected data", TEST);
+		
+		is_int(12, doc->cpos_off,         "%s moves the cursor", TEST);
+		is_int(0,  doc->selection_length, "%s clears the selection", TEST);
+	}
+}
+
+static void paste_ins_sel_hex_tests()
+{
+	{
+		const char *TEST = "Pasting a hex string with the start of the document selected in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->set_selection(0, 4);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97");
+		
+		const unsigned char MUNGED_DATA[] = { 0x99, 0x98, 0x97, 0x04, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(7, doc->buffer->length(), "%s resizes the buffer", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites the selected data", TEST);
+		
+		is_int(3, doc->cpos_off,         "%s moves the cursor", TEST);
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string with the middle of the document selected in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->set_selection(3, 2);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x99, 0x98, 0x97, 0x96, 0x05, 0x06, 0x07 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, doc->buffer->length(), "%s resizes the buffer", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites the selected data", TEST);
+		
+		is_int(7, doc->cpos_off,         "%s moves the cursor", TEST);
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+	
+	{
+		const char *TEST = "Pasting a hex string with the end of the document selected in INSERT mode with CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->cpos_off = 0;
+		doc->insert_mode = true;
+		doc->set_selection(5, 3);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		doc->handle_paste("99 98 97 96 95 94 93 92");
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x99, 0x98, 0x97, 0x96, 0x95, 0x94, 0x93, 0x92 };
+		auto got_data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(13, doc->buffer->length(), "%s resizes the buffer", TEST)
+			&& is_blob(MUNGED_DATA, got_data.data(), got_data.size(), "%s overwrites the selected data", TEST);
+		
+		is_int(13, doc->cpos_off,         "%s moves the cursor", TEST);
+		is_int(0,  doc->selection_length, "%s clears the selection", TEST);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	wxApp::SetInstance(new wxApp());
@@ -1459,6 +2953,15 @@ int main(int argc, char **argv)
 	
 	insert_tests();
 	erase_tests();
+	
+	paste_ovr_nosel_hex_tests();
+	paste_ovr_nosel_hex_mid_tests();
+	paste_ovr_nosel_ascii_tests();
+	paste_ins_nosel_hex_tests();
+	paste_ins_nosel_hex_mid_tests();
+	paste_ins_nosel_ascii_tests();
+	paste_ovr_sel_hex_tests();
+	paste_ins_sel_hex_tests();
 	
 	wxTheApp->OnExit();
 	wxEntryCleanup();

@@ -4,4 +4,6 @@
 /tests/.tmpfile*
 /tests/buffer.t
 /tests/document.t
-/tests/search.t
+/tests/search-bseq.t
+/tests/search-text.t
+/tests/util.t

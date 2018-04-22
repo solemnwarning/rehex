@@ -37,6 +37,7 @@ namespace REHex {
 			void OnExit(wxCommandEvent &event);
 			
 			void OnSearchText(wxCommandEvent &event);
+			void OnSearchBSeq(wxCommandEvent &event);
 			void OnCut(wxCommandEvent &event);
 			void OnCopy(wxCommandEvent &event);
 			void OnPaste(wxCommandEvent &event);

@@ -23,6 +23,7 @@
 #include <wx/msgdlg.h>
 
 #include "search.hpp"
+#include "util.hpp"
 
 enum {
 	ID_FIND_NEXT = 1,
@@ -52,8 +53,8 @@ BEGIN_EVENT_TABLE(REHex::Search, wxDialog)
 	EVT_BUTTON(ID_FIND_NEXT, REHex::Search::OnFindNext)
 END_EVENT_TABLE()
 
-REHex::Search::Search(wxWindow *parent, REHex::Document &doc):
-	wxDialog(parent, wxID_ANY, "Search"),
+REHex::Search::Search(wxWindow *parent, REHex::Document &doc, const char *title):
+	wxDialog(parent, wxID_ANY, title),
 	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0)
 {}
 
@@ -203,7 +204,7 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 		off_t found_at = find_next(doc.get_offset() + 1);
 		if(found_at < 0)
 		{
-			wxMessageBox("String not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
+			wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
 		}
 		else{
 			doc.set_cursor_position(found_at);
@@ -289,7 +290,9 @@ bool REHex::Search::read_base_window_controls()
 }
 
 REHex::Search::Text::Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for, bool case_sensitive):
-	Search(parent, doc), search_for(search_for), case_sensitive(case_sensitive)
+	Search(parent, doc, "Search for text"),
+	search_for(search_for),
+	case_sensitive(case_sensitive)
 {
 	setup_window();
 }
@@ -339,6 +342,59 @@ bool REHex::Search::Text::read_window_controls()
 	if(search_for.empty())
 	{
 		wxMessageBox("Please enter a string to search for", "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
+		return false;
+	}
+	
+	return true;
+}
+
+REHex::Search::ByteSequence::ByteSequence(wxWindow *parent, REHex::Document &doc, const std::vector<unsigned char> &search_for):
+	Search(parent, doc, "Search for byte sequence"),
+	search_for(search_for)
+{
+	setup_window();
+}
+
+bool REHex::Search::ByteSequence::test(const unsigned char *data, size_t data_size)
+{
+	return (data_size >= search_for.size()
+		&& memcmp(data, search_for.data(), search_for.size()) == 0);
+}
+
+size_t REHex::Search::ByteSequence::test_max_window()
+{
+	return search_for.size();
+}
+
+void REHex::Search::ByteSequence::setup_window_controls(wxWindow *parent, wxSizer *sizer)
+{
+	{
+		wxBoxSizer *text_sizer = new wxBoxSizer(wxHORIZONTAL);
+		
+		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Data: "), 0, wxALIGN_CENTER_VERTICAL);
+		
+		search_for_tc = new wxTextCtrl(parent, wxID_ANY, "");
+		text_sizer->Add(search_for_tc, 1);
+		
+		sizer->Add(text_sizer, 0, wxEXPAND | wxALL, 2);
+	}
+}
+
+bool REHex::Search::ByteSequence::read_window_controls()
+{
+	std::string search_for_text = search_for_tc->GetValue().ToStdString();
+	
+	if(search_for_text.empty())
+	{
+		wxMessageBox("Please enter a hex string to search for", "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
+		return false;
+	}
+	
+	try {
+		search_for = REHex::parse_hex_string(search_for_text);
+	}
+	catch(const REHex::ParseError &e) {
+		wxMessageBox(e.what(), "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
 		return false;
 	}
 	

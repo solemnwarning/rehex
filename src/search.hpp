@@ -51,7 +51,7 @@ namespace REHex {
 			wxTextCtrl *ralign_tc;
 			
 		protected:
-			Search(wxWindow *parent, REHex::Document &doc);
+			Search(wxWindow *parent, REHex::Document &doc, const char *title);
 			
 			virtual bool test(const unsigned char *data, size_t data_size) = 0;
 			virtual size_t test_max_window() = 0;
@@ -99,7 +99,20 @@ namespace REHex {
 	
 	class Search::ByteSequence: public Search
 	{
-		
+		private:
+			std::vector<unsigned char> search_for;
+			
+			wxTextCtrl *search_for_tc;
+			
+		public:
+			ByteSequence(wxWindow *parent, REHex::Document &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
+			
+		protected:
+			virtual bool test(const unsigned char *data, size_t data_size);
+			virtual size_t test_max_window();
+			
+			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);
+			virtual bool read_window_controls();
 	};
 	
 	class Search::Value: public Search

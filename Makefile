@@ -29,7 +29,7 @@ $(shell mkdir -p $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
-TESTS := tests/buffer.t tests/document.t tests/search.t tests/util.t
+TESTS := tests/buffer.t tests/document.t tests/search-bseq.t tests/search-text.t tests/util.t
 
 all: rehex$(EXE)
 
@@ -45,7 +45,10 @@ tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o src/win32lib.o
 tests/document.t: src/document.o src/buffer.o src/textentrydialog.o tests/document.o tests/tap/basic.o src/win32lib.o src/util.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-tests/search.t: tests/search.o src/document.o src/buffer.o src/textentrydialog.o tests/tap/basic.o src/win32lib.o src/search.o src/util.o
+tests/search-bseq.t: tests/search-bseq.o src/document.o src/buffer.o src/textentrydialog.o tests/tap/basic.o src/win32lib.o src/search.o src/util.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+tests/search-text.t: tests/search-text.o src/document.o src/buffer.o src/textentrydialog.o tests/tap/basic.o src/win32lib.o src/search.o src/util.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 tests/util.t: tests/util.o src/util.o tests/tap/basic.o

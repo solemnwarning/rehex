@@ -1144,7 +1144,11 @@ void REHex::Document::_ctor_post()
 	
 	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
 	
+	/* SetDoubleBuffered() isn't implemented on all platforms. */
+	#if defined(__WXMSW__) || defined(__WXGTK__)
 	SetDoubleBuffered(true);
+	#endif
+	
 	SetMinClientSize(wxSize(300, 200));
 }
 

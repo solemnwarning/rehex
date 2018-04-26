@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -121,7 +121,6 @@ namespace REHex {
 			wxFont *hex_font;
 			
 			/* Size of a character in hex_font. */
-			unsigned char hf_width;
 			unsigned char hf_height;
 			
 			/* Size of the client area in pixels. */
@@ -199,6 +198,13 @@ namespace REHex {
 			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			
 			void _raise_moved();
+			
+			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
+			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
+			
+			int hf_char_width();
+			int hf_string_width(int length);
+			int hf_char_at_x(int x_px);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

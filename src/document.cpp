@@ -54,6 +54,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_PAINT(REHex::Document::OnPaint)
 	EVT_SIZE(REHex::Document::OnSize)
 	EVT_SCROLLWIN(REHex::Document::OnScroll)
+	EVT_MOUSEWHEEL(REHex::Document::OnWheel)
 	EVT_CHAR(REHex::Document::OnChar)
 	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
 	EVT_LEFT_UP(REHex::Document::OnLeftUp)
@@ -512,6 +513,8 @@ void REHex::Document::_update_vscroll()
 	if(total_lines > visible_lines)
 	{
 		SetScrollbar(wxVERTICAL, scroll_yoff, visible_lines, total_lines);
+		
+		scroll_yoff_max = total_lines - visible_lines;
 	}
 	else{
 		/* We don't need a vertical scroll bar, but force one to appear anyway so
@@ -523,22 +526,106 @@ void REHex::Document::_update_vscroll()
 		/* TODO: Do this in a non-crappy way on non-win32 */
 		SetScrollbar(wxVERTICAL, 0, 1, 2);
 		#endif
+		
+		scroll_yoff_max = 0;
 	}
 }
 
 void REHex::Document::OnScroll(wxScrollWinEvent &event)
 {
-	if(event.GetOrientation() == wxHORIZONTAL)
+	wxEventType type = event.GetEventType();
+	int orientation  = event.GetOrientation();
+	
+	if(orientation == wxVERTICAL)
 	{
+		if(type == wxEVT_SCROLLWIN_THUMBTRACK || type == wxEVT_SCROLLWIN_THUMBRELEASE)
+		{
+			scroll_yoff = event.GetPosition();
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_TOP)
+		{
+			scroll_yoff = 0;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_BOTTOM)
+		{
+			scroll_yoff = scroll_yoff_max;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_LINEUP)
+		{
+			--scroll_yoff;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_LINEDOWN)
+		{
+			++scroll_yoff;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_PAGEUP)
+		{
+			scroll_yoff -= visible_lines;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_PAGEDOWN)
+		{
+			scroll_yoff += visible_lines;
+		}
+		
+		if(scroll_yoff < 0)
+		{
+			scroll_yoff = 0;
+		}
+		else if(scroll_yoff > scroll_yoff_max)
+		{
+			scroll_yoff = scroll_yoff_max;
+		}
+		
+		SetScrollPos(wxVERTICAL, scroll_yoff);
+		Refresh();
+	}
+	else if(orientation == wxHORIZONTAL)
+	{
+		/* TODO: Handle horizontal scrolling properly (see above) */
 		this->scroll_xoff = event.GetPosition();
 		this->SetScrollPos(wxHORIZONTAL, this->scroll_xoff);
 		this->Refresh();
 	}
-	else if(event.GetOrientation() == wxVERTICAL)
+}
+
+void REHex::Document::OnWheel(wxMouseEvent &event)
+{
+	wxMouseWheelAxis axis = event.GetWheelAxis();
+	int delta             = event.GetWheelDelta();
+	int lines_per_delta   = event.GetLinesPerAction();
+	
+	if(axis == wxMOUSE_WHEEL_VERTICAL)
 	{
-		this->scroll_yoff = event.GetPosition();
-		this->SetScrollPos(wxVERTICAL, this->scroll_yoff);
-		this->Refresh();
+		wheel_vert_accum += event.GetWheelRotation();
+		
+		scroll_yoff -= (wheel_vert_accum / delta) * lines_per_delta;
+		
+		wheel_vert_accum = (wheel_vert_accum % delta);
+		
+		if(scroll_yoff < 0)
+		{
+			scroll_yoff = 0;
+		}
+		else if(scroll_yoff > scroll_yoff_max)
+		{
+			scroll_yoff = scroll_yoff_max;
+		}
+		
+		SetScrollPos(wxVERTICAL, scroll_yoff);
+		Refresh();
+	}
+	else if(axis == wxMOUSE_WHEEL_HORIZONTAL)
+	{
+		wheel_horiz_accum += event.GetWheelRotation();
+		
+		scroll_xoff -= (wheel_horiz_accum / delta) * lines_per_delta;
+		
+		wheel_horiz_accum = (wheel_horiz_accum % delta);
+		
+		/* TODO: Clamp scroll_xoff */
+		
+		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		Refresh();
 	}
 }
 
@@ -1115,14 +1202,16 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
 	
-	client_width     = 0;
-	client_height    = 0;
-	bytes_per_line   = 0;
-	bytes_per_group  = 4;
-	show_ascii       = true;
-	selection_length = 0;
-	cursor_visible   = true;
-	cursor_state     = CSTATE_HEX;
+	client_width      = 0;
+	client_height     = 0;
+	bytes_per_line    = 0;
+	bytes_per_group   = 4;
+	show_ascii        = true;
+	wheel_vert_accum  = 0;
+	wheel_horiz_accum = 0;
+	selection_length  = 0;
+	cursor_visible    = true;
+	cursor_state      = CSTATE_HEX;
 }
 
 void REHex::Document::_ctor_post()

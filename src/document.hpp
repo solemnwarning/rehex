@@ -73,6 +73,7 @@ namespace REHex {
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
+			void OnWheel(wxMouseEvent &event);
 			void OnChar(wxKeyEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);
@@ -148,6 +149,10 @@ namespace REHex {
 			
 			unsigned int scroll_xoff{0};
 			uint64_t     scroll_yoff{0};
+			uint64_t     scroll_yoff_max;
+			
+			int wheel_vert_accum;
+			int wheel_horiz_accum;
 			
 			off_t cpos_off{0};
 			bool insert_mode{false};

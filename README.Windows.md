@@ -1,36 +1,49 @@
 # Building for Windows
 
-## Cross compiling
+## Cross compiling (from Linux)
 
-Easier to set up than a native Windows toolchain, only downside is you can't (easily) run the tests. The following steps are based on a Debian host.
-
-NOTE: Replace x86_64 with i686 if you want to produce 32-bit binaries.
+These steps are how I set up my (64-bit) toolchain up on Debian. Making a 32-bit one is almost identical.
 
 1) Install the MinGW cross-compiling toolchain.
 
-  $ sudo apt-get install mingw-w64
+    $ sudo apt-get install mingw-w64
 
-2) Build wxWidgets and install under your toolchain directory
+2) Build and install wxWidgets
 
-  $ cd wxWidgets-XXX
-  $ ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32/
-  $ make
-  $ sudo make install
+    $ cd wxWidgets-XXX
+    $ mkdir build-release-static-w64
+    $ cd build-release-static-w64
+    $ ../configure --host=x86_64-w64-mingw32 \
+                   --prefix=/usr/x86_64-w64-mingw32/wxWidgets-XXX-release-static/ \
+                   --disable-shared
+    $ make
+    $ sudo make install
+    
+    $ cd wxWidgets-XXX
+    $ mkdir build-debug-static-w64
+    $ cd build-debug-static-w64
+    $ ../configure --host=x86_64-w64-mingw32 \
+                   --prefix=/usr/x86_64-w64-mingw32/wxWidgets-XXX-debug-static/ \
+                   --disable-shared \
+                   --enable-debug
+    $ make
+    $ sudo make install
 
-3) Build and install Jansson in the same way
+3) Build and install Jansson
+
+    $ cd jansson-XXX
+    $ ./configure --host=x86_64-w64-mingw32 \
+                  --prefix=/usr/x86_64-w64-mingw32/ \
+                  --enable-shared=no \
+                  --enable-static=yes
+    $ make
+    $ sudo make install
 
 4) Now build rehex.exe with the following command:
 
-  $ CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
-    WX_CONFIG=/usr/x86_64-w64-mingw32/bin/wx-config EXE=.exe make
-
-You will need to copy the following DLLs (version numbers or paths may differ) from your build host alongside rehex.exe:
-
- * /usr/x86_64-w64-mingw32/bin/libjansson-4.dll
- * /usr/x86_64-w64-mingw32/lib/wxbase30u_gcc_custom.dll
- * /usr/x86_64-w64-mingw32/lib/wxmsw30u_core_gcc_custom.dll
- * /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll
- * /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libstdc++-6.dll
+    $ CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
+      WX_CONFIG=/usr/x86_64-w64-mingw32/wxWidgets-XXX-XXX-static/bin/wx-config \
+      LIBS="-static-libstdc++ -static-libgcc" EXE=.exe make
 
 ## Compiling on Windows
 

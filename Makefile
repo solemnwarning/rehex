@@ -19,10 +19,10 @@ WX_CONFIG ?= "wx-config"
 WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags)
 WX_LIBS     := $(shell $(WX_CONFIG) --libs)
 
-CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS)
+CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/                $(CFLAGS)
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS) $(CXXFLAGS)
 
-LIBS := $(WX_LIBS) -ljansson
+LIBS := $(WX_LIBS) -ljansson $(LIBS)
 
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)

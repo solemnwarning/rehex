@@ -581,10 +581,40 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 	}
 	else if(orientation == wxHORIZONTAL)
 	{
-		/* TODO: Handle horizontal scrolling properly (see above) */
-		this->scroll_xoff = event.GetPosition();
-		this->SetScrollPos(wxHORIZONTAL, this->scroll_xoff);
-		this->Refresh();
+		if(type == wxEVT_SCROLLWIN_THUMBTRACK || type == wxEVT_SCROLLWIN_THUMBRELEASE)
+		{
+			scroll_xoff = event.GetPosition();
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_TOP)
+		{
+			scroll_xoff = 0;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_BOTTOM)
+		{
+			scroll_xoff = virtual_width - client_width;
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_LINEUP)
+		{
+			scroll_xoff -= hf_char_width();
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_LINEDOWN)
+		{
+			scroll_xoff += hf_char_width();
+		}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_PAGEUP)   {}
+		else if(event.GetEventType() == wxEVT_SCROLLWIN_PAGEDOWN) {}
+		
+		if(scroll_xoff < 0)
+		{
+			scroll_xoff = 0;
+		}
+		else if(scroll_xoff > (virtual_width - client_width))
+		{
+			scroll_xoff = virtual_width - client_width;
+		}
+		
+		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		Refresh();
 	}
 }
 
@@ -592,13 +622,13 @@ void REHex::Document::OnWheel(wxMouseEvent &event)
 {
 	wxMouseWheelAxis axis = event.GetWheelAxis();
 	int delta             = event.GetWheelDelta();
-	int lines_per_delta   = event.GetLinesPerAction();
+	int ticks_per_delta   = event.GetLinesPerAction();
 	
 	if(axis == wxMOUSE_WHEEL_VERTICAL)
 	{
 		wheel_vert_accum += event.GetWheelRotation();
 		
-		scroll_yoff -= (wheel_vert_accum / delta) * lines_per_delta;
+		scroll_yoff -= (wheel_vert_accum / delta) * ticks_per_delta;
 		
 		wheel_vert_accum = (wheel_vert_accum % delta);
 		
@@ -616,13 +646,22 @@ void REHex::Document::OnWheel(wxMouseEvent &event)
 	}
 	else if(axis == wxMOUSE_WHEEL_HORIZONTAL)
 	{
+		ticks_per_delta *= hf_char_width();
+		
 		wheel_horiz_accum += event.GetWheelRotation();
 		
-		scroll_xoff -= (wheel_horiz_accum / delta) * lines_per_delta;
+		scroll_xoff += (wheel_horiz_accum / delta) * ticks_per_delta;
 		
 		wheel_horiz_accum = (wheel_horiz_accum % delta);
 		
-		/* TODO: Clamp scroll_xoff */
+		if(scroll_xoff < 0)
+		{
+			scroll_xoff = 0;
+		}
+		else if(scroll_xoff > (virtual_width - client_width))
+		{
+			scroll_xoff = virtual_width - client_width;
+		}
 		
 		SetScrollPos(wxHORIZONTAL, scroll_xoff);
 		Refresh();

@@ -147,9 +147,9 @@ namespace REHex {
 			bool show_ascii;
 			unsigned int ascii_text_x;
 			
-			unsigned int scroll_xoff{0};
-			uint64_t     scroll_yoff{0};
-			uint64_t     scroll_yoff_max;
+			int     scroll_xoff{0};
+			int64_t scroll_yoff{0};
+			int64_t scroll_yoff_max;
 			
 			int wheel_vert_accum;
 			int wheel_horiz_accum;

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -499,44 +499,16 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	std::pair<off_t,off_t> selection = tab->doc->get_selection();
+	/* TODO: Open clipboard in a RAII-y way. */
 	
-	off_t selection_off    = selection.first;
-	off_t selection_length = selection.second;
-	
-	if(selection_length > 0)
+	if(wxTheClipboard->Open())
 	{
-		std::vector<unsigned char> selection_data = tab->doc->read_data(selection_off, selection_length);
-		assert((off_t)(selection_data.size()) == selection_length);
+		std::string copy_text = tab->doc->handle_copy(cut);
 		
-		std::string hex_string;
-		hex_string.reserve(selection_data.size() * 2);
-		
-		for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+		if(!copy_text.empty())
 		{
-			const char *nibble_to_hex = "0123456789ABCDEF";
-			
-			unsigned char high_nibble = (*c & 0xF0) >> 4;
-			unsigned char low_nibble  = (*c & 0x0F);
-			
-			hex_string.push_back(nibble_to_hex[high_nibble]);
-			hex_string.push_back(nibble_to_hex[low_nibble]);
-		}
-		
-		/* TODO: Clipboard open in a RAIIy way. */
-		
-		if(wxTheClipboard->Open())
-		{
-			// This data objects are held by the clipboard,
-			// so do not delete them in the app.
-			wxTheClipboard->SetData(new wxTextDataObject(hex_string));
+			wxTheClipboard->SetData(new wxTextDataObject(copy_text));
 			wxTheClipboard->Close();
-			
-			if(cut)
-			{
-				tab->doc->erase_data(selection_off, selection_data.size());
-				tab->doc->clear_selection();
-			}
 		}
 	}
 }

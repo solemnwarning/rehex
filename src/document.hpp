@@ -69,6 +69,7 @@ namespace REHex {
 			off_t buffer_length();
 			
 			void handle_paste(const std::string &clipboard_text);
+			std::string handle_copy(bool cut);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

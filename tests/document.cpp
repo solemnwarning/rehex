@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -2943,6 +2943,345 @@ static void paste_ins_sel_hex_tests()
 	}
 }
 
+static void copy_tests()
+{
+	{
+		const char *TEST = "REHex::Document::handle_copy(false) when nothing is selected in CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		std::string copy_text = doc->handle_copy(false);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(0, copy_text.length(), "%s returns empty string", TEST)
+			&& is_string("", copy_text.c_str(), "%s returns empty string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(0, doc->selection_length, "%s doesn't set selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(false) when something is selected in CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->set_selection(1, 5);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		std::string copy_text = doc->handle_copy(false);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, copy_text.length(), "%s returns the data as a hex string", TEST)
+			&& is_string("016142020A", copy_text.c_str(), "%s returns the data as a hex string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(1, doc->selection_off,    "%s doesn't modify selection", TEST);
+		is_int(5, doc->selection_length, "%s doesn't modify selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(false) when nothing is selected in CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		std::string copy_text = doc->handle_copy(false);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(0, copy_text.length(), "%s returns empty string", TEST)
+			&& is_string("", copy_text.c_str(), "%s returns empty string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(0, doc->selection_length, "%s doesn't set selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(false) when something is selected in CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->set_selection(1, 5);
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		std::string copy_text = doc->handle_copy(false);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, copy_text.length(), "%s returns the data as a hex string", TEST)
+			&& is_string("016142020A", copy_text.c_str(), "%s returns the data as a hex string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(1, doc->selection_off,    "%s doesn't modify selection", TEST);
+		is_int(5, doc->selection_length, "%s doesn't modify selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(false) when nothing is selected in CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		std::string copy_text = doc->handle_copy(false);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(0, copy_text.length(), "%s returns empty string", TEST)
+			&& is_string("", copy_text.c_str(), "%s returns empty string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(0, doc->selection_length, "%s doesn't set selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(false) when something is selected in CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->set_selection(1, 10);
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		std::string copy_text = doc->handle_copy(false);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(5, copy_text.length(), "%s returns the safe characters as a string", TEST)
+			&& is_string("aB\n3~", copy_text.c_str(), "%s returns the safe characters as a string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(1,  doc->selection_off,    "%s doesn't modify selection", TEST);
+		is_int(10, doc->selection_length, "%s doesn't modify selection", TEST);
+	}
+}
+
+static void cut_tests()
+{
+	{
+		const char *TEST = "REHex::Document::handle_copy(true) when nothing is selected in CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		std::string copy_text = doc->handle_copy(true);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(0, copy_text.length(), "%s returns empty string", TEST)
+			&& is_string("", copy_text.c_str(), "%s returns empty string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(0, doc->selection_length, "%s doesn't set selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(true) when something is selected in CSTATE_HEX";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->set_selection(1, 5);
+		doc->cursor_state = REHex::Document::CSTATE_HEX;
+		
+		std::string copy_text = doc->handle_copy(true);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, copy_text.length(), "%s returns the data as a hex string", TEST)
+			&& is_string("016142020A", copy_text.c_str(), "%s returns the data as a hex string", TEST);
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, '\0', '3', '~', 0x03, 0x04 };
+		
+		is_int(6, data.size(), "%s erases the selection", TEST)
+			&& is_blob(MUNGED_DATA, data.data(), data.size(), "%s erases the selection", TEST);
+		
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(true) when nothing is selected in CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		std::string copy_text = doc->handle_copy(true);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(0, copy_text.length(), "%s returns empty string", TEST)
+			&& is_string("", copy_text.c_str(), "%s returns empty string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(0, doc->selection_length, "%s doesn't set selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(true) when something is selected in CSTATE_HEX_MID";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->set_selection(1, 5);
+		doc->cursor_state = REHex::Document::CSTATE_HEX_MID;
+		
+		std::string copy_text = doc->handle_copy(true);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(10, copy_text.length(), "%s returns the data as a hex string", TEST)
+			&& is_string("016142020A", copy_text.c_str(), "%s returns the data as a hex string", TEST);
+		
+		const unsigned char MUNGED_DATA[] = { 0x00, '\0', '3', '~', 0x03, 0x04 };
+		
+		is_int(6, data.size(), "%s erases the selection", TEST)
+			&& is_blob(MUNGED_DATA, data.data(), data.size(), "%s erases the selection", TEST);
+		
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(true) when nothing is selected in CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->clear_selection();
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		std::string copy_text = doc->handle_copy(true);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(0, copy_text.length(), "%s returns empty string", TEST)
+			&& is_string("", copy_text.c_str(), "%s returns empty string", TEST);
+		
+		is_int(11, data.size(), "%s doesn't modify buffer", TEST)
+			&& is_blob(INITIAL_DATA, data.data(), data.size(), "%s doesn't modify buffer", TEST);
+		
+		is_int(0, doc->selection_length, "%s doesn't set selection", TEST);
+	}
+	
+	{
+		const char *TEST = "REHex::Document::handle_copy(true) when something is selected in CSTATE_ASCII";
+		
+		const unsigned char INITIAL_DATA[] = { 0x00, 0x01, 'a', 'B', 0x02, '\n', '\0', '3', '~', 0x03, 0x04 };
+		
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::Document *doc = new REHex::Document(&frame);
+		doc->SetSize(0,0, 640,480);
+		
+		doc->insert_data(0, INITIAL_DATA, sizeof(INITIAL_DATA));
+		
+		doc->set_selection(1, 10);
+		doc->cursor_state = REHex::Document::CSTATE_ASCII;
+		
+		std::string copy_text = doc->handle_copy(true);
+		
+		auto data = doc->buffer->read_data(0, 0xFFFF);
+		
+		is_int(5, copy_text.length(), "%s returns the safe characters as a string", TEST)
+			&& is_string("aB\n3~", copy_text.c_str(), "%s returns the safe characters as a string", TEST);
+		
+		const unsigned char MUNGED_DATA[] = { 0x00 };
+		
+		is_int(1, data.size(), "%s erases the selection", TEST)
+			&& is_blob(MUNGED_DATA, data.data(), data.size(), "%s erases the selection", TEST);
+		
+		is_int(0, doc->selection_length, "%s clears the selection", TEST);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	wxApp::SetInstance(new wxApp());
@@ -2962,6 +3301,9 @@ int main(int argc, char **argv)
 	paste_ins_nosel_ascii_tests();
 	paste_ovr_sel_hex_tests();
 	paste_ins_sel_hex_tests();
+	
+	copy_tests();
+	cut_tests();
 	
 	wxTheApp->OnExit();
 	wxEntryCleanup();

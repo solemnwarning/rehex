@@ -334,6 +334,58 @@ void REHex::Document::handle_paste(const std::string &clipboard_text)
 	}
 }
 
+std::string REHex::Document::handle_copy(bool cut)
+{
+	if(selection_length > 0)
+	{
+		std::vector<unsigned char> selection_data = read_data(selection_off, selection_length);
+		assert((off_t)(selection_data.size()) == selection_length);
+		
+		if(cut)
+		{
+			erase_data(selection_off, selection_data.size());
+			clear_selection();
+		}
+		
+		if(cursor_state == CSTATE_ASCII)
+		{
+			std::string ascii_string;
+			ascii_string.reserve(selection_data.size());
+			
+			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			{
+				if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+				{
+					ascii_string.push_back(*c);
+				}
+			}
+			
+			return ascii_string;
+		}
+		else{
+			std::string hex_string;
+			hex_string.reserve(selection_data.size() * 2);
+			
+			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			{
+				const char *nibble_to_hex = "0123456789ABCDEF";
+				
+				unsigned char high_nibble = (*c & 0xF0) >> 4;
+				unsigned char low_nibble  = (*c & 0x0F);
+				
+				hex_string.push_back(nibble_to_hex[high_nibble]);
+				hex_string.push_back(nibble_to_hex[low_nibble]);
+			}
+			
+			return hex_string;
+		}
+	}
+	else{
+		/* Nothing selected */
+		return "";
+	}
+}
+
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
 	wxBufferedPaintDC dc(this);

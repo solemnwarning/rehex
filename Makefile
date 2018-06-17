@@ -29,7 +29,7 @@ $(shell mkdir -p $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
-TESTS := tests/buffer.t tests/document.t tests/search-bseq.t tests/search-text.t tests/util.t
+TESTS := tests/buffer.t tests/document.t tests/search-bseq.t tests/search-text.t tests/util.t tests/NumericTextCtrl.t
 
 all: rehex$(EXE)
 
@@ -43,6 +43,9 @@ tests/buffer.t: src/buffer.o tests/buffer.o tests/tap/basic.o src/win32lib.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 tests/document.t: src/document.o src/buffer.o src/textentrydialog.o tests/document.o tests/tap/basic.o src/win32lib.o src/util.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+tests/NumericTextCtrl.t: tests/NumericTextCtrl.cpp tests/tap/basic.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 tests/search-bseq.t: tests/search-bseq.o src/document.o src/buffer.o src/textentrydialog.o tests/tap/basic.o src/win32lib.o src/search.o src/util.o

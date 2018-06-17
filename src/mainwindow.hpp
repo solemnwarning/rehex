@@ -34,6 +34,7 @@ namespace REHex {
 			void OnOpen(wxCommandEvent &event);
 			void OnSave(wxCommandEvent &event);
 			void OnSaveAs(wxCommandEvent &event);
+			void OnClose(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
 			void OnSearchText(wxCommandEvent &event);

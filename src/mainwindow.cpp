@@ -46,6 +46,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_OPEN,   REHex::MainWindow::OnOpen)
 	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
+	EVT_MENU(wxID_CLOSE,  REHex::MainWindow::OnClose)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
@@ -78,6 +79,7 @@ REHex::MainWindow::MainWindow():
 	file_menu->Append(wxID_OPEN,   wxT("&Open"));
 	file_menu->Append(wxID_SAVE,   wxT("&Save"));
 	file_menu->Append(wxID_SAVEAS, wxT("&Save As"));
+	file_menu->Append(wxID_CLOSE,  wxT("&Close"));
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
 	
@@ -115,6 +117,7 @@ REHex::MainWindow::MainWindow():
 	toolbar->AddTool(wxID_OPEN,   "Open",    artp.GetBitmap(wxART_FILE_OPEN,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVE,   "Save",    artp.GetBitmap(wxART_FILE_SAVE,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", artp.GetBitmap(wxART_FILE_SAVE_AS, wxART_TOOLBAR));
+	toolbar->AddTool(wxID_CLOSE,  "Close",   artp.GetBitmap(wxART_CLOSE,        wxART_TOOLBAR));
 	
 	toolbar->Realize();
 	
@@ -212,6 +215,19 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
+}
+
+void REHex::MainWindow::OnClose(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	notebook->DeletePage(notebook->FindPage(cpage));
+	
+	if(notebook->GetPageCount() == 0)
+	{
+		ProcessCommand(wxID_NEW);
+	}
 }
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)

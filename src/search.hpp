@@ -24,6 +24,7 @@
 #include <wx/textctrl.h>
 
 #include "document.hpp"
+#include "NumericTextCtrl.hpp"
 
 namespace REHex {
 	class Search: public wxDialog {
@@ -117,7 +118,27 @@ namespace REHex {
 	
 	class Search::Value: public Search
 	{
+		private:
+			std::list< std::vector<unsigned char> > search_for;
+			
+			NumericTextCtrl *search_for_tc;
+			wxCheckBox *t_u8_cb, *t_s8_cb;
+			wxCheckBox *t_u16be_cb, *t_u16le_cb, *t_s16be_cb, *t_s16le_cb;
+			wxCheckBox *t_u32be_cb, *t_u32le_cb, *t_s32be_cb, *t_s32le_cb;
+			wxCheckBox *t_u64be_cb, *t_u64le_cb, *t_s64be_cb, *t_s64le_cb;
 		
+		public:
+			Value(wxWindow *parent, REHex::Document &doc);
+			
+		protected:
+			virtual bool test(const unsigned char *data, size_t data_size);
+			virtual size_t test_max_window();
+			
+			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);
+			virtual bool read_window_controls();
+			
+		private:
+			void OnText(wxCommandEvent &event);
 	};
 }
 

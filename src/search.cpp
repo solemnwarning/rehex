@@ -16,12 +16,14 @@
 */
 
 #include <assert.h>
+#include <functional>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <utility>
 #include <wx/msgdlg.h>
 
+#include "NumericTextCtrl.hpp"
 #include "search.hpp"
 #include "util.hpp"
 
@@ -399,4 +401,333 @@ bool REHex::Search::ByteSequence::read_window_controls()
 	}
 	
 	return true;
+}
+
+REHex::Search::Value::Value(wxWindow *parent, REHex::Document &doc):
+	Search(parent, doc, "Search for value")
+{
+	setup_window();
+}
+
+bool REHex::Search::Value::test(const unsigned char *data, size_t data_size)
+{
+	for(auto i = search_for.begin(); i != search_for.end(); ++i)
+	{
+		if(data_size >= i->size() && memcmp(data, i->data(), i->size()) == 0)
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+size_t REHex::Search::Value::test_max_window()
+{
+	size_t search_for_max = 0;
+	
+	for(auto i = search_for.begin(); i != search_for.end(); ++i)
+	{
+		search_for_max = std::max(search_for_max, i->size());
+	}
+	
+	return search_for_max;
+}
+
+void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *sizer)
+{
+	{
+		wxBoxSizer *text_sizer = new wxBoxSizer(wxHORIZONTAL);
+		
+		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Value: "), 0, wxALIGN_CENTER_VERTICAL);
+		
+		search_for_tc = new NumericTextCtrl(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
+		set_width_chars(search_for_tc, 12);
+		text_sizer->Add(search_for_tc, 1);
+		
+		search_for_tc->Bind(wxEVT_TEXT, &REHex::Search::Value::OnText, this);
+		
+		sizer->Add(text_sizer, 0);
+	}
+	
+	{
+		wxBoxSizer *t_outer_sizer = new wxBoxSizer(wxHORIZONTAL);
+		
+		t_outer_sizer->Add(new wxStaticText(parent, wxID_ANY, "Encoded as: "));
+		
+		wxBoxSizer *t_inner_sizer = new wxBoxSizer(wxVERTICAL);
+		wxBoxSizer *t_final_sizer;
+		
+		auto new_type_cb = [&t_final_sizer,&parent](const char *label)
+		{
+			wxCheckBox *cb = new wxCheckBox(parent, wxID_ANY, label);
+			cb->SetValue(true);
+			t_final_sizer->Add(cb, 0);
+			
+			return cb;
+		};
+		
+		{
+			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
+			
+			t_u8_cb = new_type_cb("8-bit unsigned");
+			t_s8_cb = new_type_cb("8-bit unsigned");
+			
+			t_inner_sizer->Add(t_final_sizer);
+		}
+		
+		{
+			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
+			
+			t_u16be_cb = new_type_cb("16-bit unsigned (big endian)");
+			t_s16be_cb = new_type_cb("16-bit signed (big endian)");
+			t_u16le_cb = new_type_cb("16-bit unsigned (little endian)");
+			t_s16le_cb = new_type_cb("16-bit signed (little endian)");
+			
+			t_inner_sizer->Add(t_final_sizer);
+		}
+		
+		{
+			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
+			
+			t_u32be_cb = new_type_cb("32-bit unsigned (big endian)");
+			t_s32be_cb = new_type_cb("32-bit signed (big endian)");
+			t_u32le_cb = new_type_cb("32-bit unsigned (little endian)");
+			t_s32le_cb = new_type_cb("32-bit signed (little endian)");
+			
+			t_inner_sizer->Add(t_final_sizer);
+		}
+		
+		{
+			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
+			
+			t_u64be_cb = new_type_cb("64-bit unsigned (big endian)");
+			t_s64be_cb = new_type_cb("64-bit signed (big endian)");
+			t_u64le_cb = new_type_cb("64-bit unsigned (little endian)");
+			t_s64le_cb = new_type_cb("64-bit signed (little endian)");
+			
+			t_inner_sizer->Add(t_final_sizer);
+		}
+		
+		t_outer_sizer->Add(t_inner_sizer);
+		sizer->Add(t_outer_sizer);
+	}
+}
+
+bool REHex::Search::Value::read_window_controls()
+{
+	search_for.clear();
+	
+	auto try_type = [this](wxCheckBox *cb, std::function<void()> func)
+	{
+		try {
+			func();
+		}
+		catch(const REHex::NumericTextCtrl::RangeError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+	};
+	
+	try_type(t_s8_cb, [this]()
+	{
+		int8_t v = search_for_tc->GetValueSigned<int8_t>();
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u8_cb, [this]()
+	{
+		uint8_t v = search_for_tc->GetValueUnsigned<uint8_t>();
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_s16be_cb, [this]()
+	{
+		int16_t v = be16toh(search_for_tc->GetValueSigned<int16_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u16be_cb, [this]()
+	{
+		uint16_t v = be16toh(search_for_tc->GetValueUnsigned<uint16_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_s16le_cb, [this]()
+	{
+		int16_t v = le16toh(search_for_tc->GetValueSigned<int16_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u16le_cb, [this]()
+	{
+		uint16_t v = le16toh(search_for_tc->GetValueUnsigned<uint16_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_s32be_cb, [this]()
+	{
+		int32_t v = be32toh(search_for_tc->GetValueSigned<int32_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u32be_cb, [this]()
+	{
+		uint32_t v = be32toh(search_for_tc->GetValueUnsigned<uint32_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_s32le_cb, [this]()
+	{
+		int32_t v = le32toh(search_for_tc->GetValueSigned<int32_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u32le_cb, [this]()
+	{
+		uint32_t v = le32toh(search_for_tc->GetValueUnsigned<uint32_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_s16be_cb, [this]()
+	{
+		int16_t v = be16toh(search_for_tc->GetValueSigned<int16_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u64be_cb, [this]()
+	{
+		uint64_t v = be64toh(search_for_tc->GetValueUnsigned<uint64_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_s64le_cb, [this]()
+	{
+		int64_t v = le64toh(search_for_tc->GetValueSigned<int64_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	try_type(t_u64le_cb, [this]()
+	{
+		uint64_t v = le64toh(search_for_tc->GetValueUnsigned<uint64_t>());
+		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+	});
+	
+	if(search_for.empty())
+	{
+		wxMessageBox("Please enter a valid value to search for", "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
+		return false;
+	}
+	
+	return true;
+}
+
+void REHex::Search::Value::OnText(wxCommandEvent &event)
+{
+	try {
+		try { search_for_tc->GetValueSigned<int8_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_s8_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_s8_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueUnsigned<uint8_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_u8_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_u8_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueSigned<int16_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_s16be_cb->Enable();
+		t_s16le_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_s16be_cb->Disable();
+		t_s16le_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueUnsigned<uint16_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_u16be_cb->Enable();
+		t_u16le_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_u16be_cb->Disable();
+		t_u16le_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueSigned<int32_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_s32be_cb->Enable();
+		t_s32le_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_s32be_cb->Disable();
+		t_s32le_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueUnsigned<uint32_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_u32be_cb->Enable();
+		t_u32le_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_u32be_cb->Disable();
+		t_u32le_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueSigned<int64_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_s64be_cb->Enable();
+		t_s64le_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_s64be_cb->Disable();
+		t_s64le_cb->Disable();
+	}
+	
+	try {
+		try { search_for_tc->GetValueUnsigned<uint64_t>(); }
+		catch(const REHex::NumericTextCtrl::EmptyError e) {}
+		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		
+		t_u64be_cb->Enable();
+		t_u64le_cb->Enable();
+	}
+	catch(const REHex::NumericTextCtrl::RangeError e)
+	{
+		t_u64be_cb->Disable();
+		t_u64le_cb->Disable();
+	}
 }

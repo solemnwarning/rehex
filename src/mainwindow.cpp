@@ -38,6 +38,7 @@ enum {
 	ID_SHOW_DECODES,
 	ID_SEARCH_TEXT,
 	ID_SEARCH_BSEQ,
+    ID_SEARCH_VALUE,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -49,6 +50,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
+    EVT_MENU(ID_SEARCH_VALUE,  REHex::MainWindow::OnSearchValue)
 	
 	EVT_MENU(wxID_CUT,   REHex::MainWindow::OnCut)
 	EVT_MENU(wxID_COPY,  REHex::MainWindow::OnCopy)
@@ -83,6 +85,7 @@ REHex::MainWindow::MainWindow():
 	
 	edit_menu->Append(ID_SEARCH_TEXT, "Search for text...");
 	edit_menu->Append(ID_SEARCH_BSEQ, "Search for byte sequence...");
+    edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
 	
 	edit_menu->AppendSeparator();
 	
@@ -237,6 +240,18 @@ void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
 	assert(tab != NULL);
 	
 	REHex::Search::ByteSequence *t = new REHex::Search::ByteSequence(this, *(tab->doc));
+	t->Show(true);
+}
+
+void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	REHex::Search::Value *t = new REHex::Search::Value(this, *(tab->doc));
 	t->Show(true);
 }
 

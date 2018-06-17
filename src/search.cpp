@@ -17,7 +17,6 @@
 
 #include <assert.h>
 #include <functional>
-#include <portable_endian.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -27,6 +26,11 @@
 #include "NumericTextCtrl.hpp"
 #include "search.hpp"
 #include "util.hpp"
+
+/* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
+ * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
+*/
+#include <portable_endian.h>
 
 enum {
 	ID_FIND_NEXT = 1,

@@ -20,7 +20,7 @@
 
 #include "textentrydialog.hpp"
 
-REHex::TextEntryDialog::TextEntryDialog(wxWindow *parent, const std::string &title, const std::string &initial_text):
+REHex::TextEntryDialog::TextEntryDialog(wxWindow *parent, const std::string &title, const wxString &initial_text):
 	wxDialog(parent, wxID_ANY, title)
 {
 	wxBoxSizer *topsizer = new wxBoxSizer(wxVERTICAL);
@@ -38,7 +38,7 @@ REHex::TextEntryDialog::TextEntryDialog(wxWindow *parent, const std::string &tit
 	SetSizerAndFit(topsizer);
 }
 
-std::string REHex::TextEntryDialog::get_text()
+wxString REHex::TextEntryDialog::get_text()
 {
-	return textbox->GetValue().ToStdString();
+	return textbox->GetValue();
 }

@@ -25,9 +25,9 @@ namespace REHex {
 	class TextEntryDialog: public wxDialog
 	{
 		public:
-			TextEntryDialog(wxWindow *parent, const std::string &title, const std::string &initial_text);
+			TextEntryDialog(wxWindow *parent, const std::string &title, const wxString &initial_text);
 			
-			std::string get_text();
+			wxString get_text();
 			
 		private:
 			wxTextCtrl *textbox;

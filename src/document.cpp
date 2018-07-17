@@ -1084,7 +1084,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			int rc = te.ShowModal();
 			if(rc == wxID_OK)
 			{
-				std::string comment_text = te.get_text();
+				wxString comment_text = te.get_text();
 				wxClientDC dc(this);
 				
 				if(comment_text.empty())
@@ -1347,7 +1347,7 @@ void REHex::Document::_init_regions(const json_t *meta)
 	 * sorted by their offset.
 	*/
 	
-	std::map<off_t,std::string> comments;
+	std::map<off_t,wxString> comments;
 	
 	{
 		/* TODO: Validate JSON structure */
@@ -1360,7 +1360,7 @@ void REHex::Document::_init_regions(const json_t *meta)
 		json_array_foreach(j_comments, index, value)
 		{
 			comments[json_integer_value(json_object_get(value, "offset"))]
-				= json_string_value(json_object_get(value, "text"));
+				= wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
 		}
 	}
 	
@@ -1600,7 +1600,7 @@ void REHex::Document::_erase_data(wxDC &dc, off_t offset, off_t length)
 	}
 }
 
-std::string REHex::Document::_get_comment_text(off_t offset)
+wxString REHex::Document::_get_comment_text(off_t offset)
 {
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
@@ -1614,7 +1614,7 @@ std::string REHex::Document::_get_comment_text(off_t offset)
 	return "";
 }
 
-void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const std::string &text)
+void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const wxString &text)
 {
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
@@ -1733,10 +1733,12 @@ json_t *REHex::Document::_dump_metadata()
 			continue;
 		}
 		
+		const wxScopedCharBuffer utf8_text = cr->c_text.utf8_str();
+		
 		json_t *comment = json_object();
 		if(json_array_append(comments, comment) == -1
 			|| json_object_set_new(comment, "offset", json_integer(cr->c_offset)) == -1
-			|| json_object_set_new(comment, "text",   json_stringn(cr->c_text.data(), cr->c_text.size())) == -1)
+			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
 		{
 			json_decref(root);
 			return NULL;
@@ -1847,13 +1849,13 @@ void REHex::Document::_make_byte_visible(off_t offset)
 	_make_x_visible(line_x, hf_string_width(2));
 }
 
-std::list<std::string> REHex::Document::_format_text(const std::string &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
+std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
 {
 	/* TODO: Throw myself into the abyss and support Unicode properly...
 	 * (This function assumes one byte is one full-width character on the screen.
 	*/
 	
-	std::list<std::string> lines;
+	std::list<wxString> lines;
 	
 	for(size_t at = 0; at < text.size();)
 	{
@@ -2412,7 +2414,7 @@ off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(off_t c_offset, const std::string &c_text):
+REHex::Document::Region::Comment::Comment(off_t c_offset, const wxString &c_text):
 	c_offset(c_offset), c_text(c_text) {}
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)

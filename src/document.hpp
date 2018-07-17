@@ -183,8 +183,8 @@ namespace REHex {
 			void _insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
 			void _erase_data(wxDC &dc, off_t offset, off_t length);
 			
-			std::string _get_comment_text(off_t offset);
-			void _set_comment_text(wxDC &dc, off_t offset, const std::string &text);
+			wxString _get_comment_text(off_t offset);
+			void _set_comment_text(wxDC &dc, off_t offset, const wxString &text);
 			void _delete_comment(wxDC &dc, off_t offset);
 			
 			json_t *_dump_metadata();
@@ -201,7 +201,7 @@ namespace REHex {
 			void _handle_height_change();
 			void _update_vscroll();
 			
-			static std::list<std::string> _format_text(const std::string &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			
 			void _raise_moved();
 			
@@ -236,9 +236,9 @@ namespace REHex {
 	struct Document::Region::Comment: public REHex::Document::Region
 	{
 		off_t c_offset;
-		std::string c_text;
+		wxString c_text;
 		
-		Comment(off_t c_offset, const std::string &c_text);
+		Comment(off_t c_offset, const wxString &c_text);
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

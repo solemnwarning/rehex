@@ -48,6 +48,7 @@ static bool isasciihex(int c)
 
 enum {
 	ID_REDRAW_CURSOR = 1,
+	ID_SET_COMMENT,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -61,6 +62,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_RIGHT_DOWN(REHex::Document::OnRightDown)
 	EVT_MOTION(REHex::Document::OnMotion)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
+	EVT_MENU(ID_SET_COMMENT, REHex::Document::OnSetComment)
 END_EVENT_TABLE()
 
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
@@ -1080,25 +1082,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == '/')
 		{
-			REHex::TextEntryDialog te(this, "Enter comment", _get_comment_text(cpos_off));
-			
-			int rc = te.ShowModal();
-			if(rc == wxID_OK)
-			{
-				wxString comment_text = te.get_text();
-				wxClientDC dc(this);
-				
-				if(comment_text.empty())
-				{
-					_delete_comment(dc, cpos_off);
-				}
-				else{
-					_set_comment_text(dc, cpos_off, te.get_text());
-				}
-				
-				/* TODO: Limit paint to affected area */
-				this->Refresh();
-			}
+			_edit_comment_popup(cpos_off);
 		}
 	}
 }
@@ -1134,7 +1118,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+		REHex::Document::Region::Data    *dr = dynamic_cast<REHex::Document::Region::Data*>   (*region);
+		REHex::Document::Region::Comment *cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+		
 		if(dr != NULL)
 		{
 			if(rel_x < offset_column_width)
@@ -1185,6 +1171,23 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					/* TODO: Limit paint to affected area */
 					Refresh();
 				}
+			}
+		}
+		else if(cr != NULL)
+		{
+			/* Mouse was clicked within a Comment region, ensure we are within the border drawn around the
+			 * comment text.
+			*/
+			
+			int hf_width = hf_char_width();
+			
+			if(
+				(line_off > 0 || (mouse_y % hf_height) >= (hf_height / 4)) /* Not above top edge. */
+				&& (line_off < (cr->y_lines - 1) || (mouse_y % hf_height) <= ((hf_height / 4) * 3)) /* Not below bottom edge. */
+				&& rel_x >= (hf_width / 4) /* Not left of left edge. */
+				&& rel_x < (virtual_width - (hf_width / 4))) /* Not right of right edge. */
+			{
+				_edit_comment_popup(cr->c_offset);
 			}
 		}
 	}
@@ -1282,23 +1285,33 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 					Refresh();
 				}
 			}
+			
+			wxMenu menu;
+			
+			menu.Append(wxID_CUT, "&Cut");
+			menu.Enable(wxID_CUT,  (selection_length > 0));
+			
+			menu.Append(wxID_COPY,  "&Copy");
+			menu.Enable(wxID_COPY, (selection_length > 0));
+			
+			menu.Append(wxID_PASTE, "&Paste");
+			
+			menu.AppendSeparator();
+			
+			if(_get_comment_text(cpos_off).empty())
+			{
+				menu.Append(ID_SET_COMMENT, "Insert comment...");
+			}
+			else{
+				menu.Append(ID_SET_COMMENT, "Edit comment...");
+			}
+			
+			PopupMenu(&menu);
 		}
 	}
 	
 	/* Document takes focus when clicked. */
 	SetFocus();
-	
-	wxMenu menu;
-	
-	menu.Append(wxID_CUT, "&Cut");
-	menu.Enable(wxID_CUT,  (selection_length > 0));
-	
-	menu.Append(wxID_COPY,  "&Copy");
-	menu.Enable(wxID_COPY, (selection_length > 0));
-	
-	menu.Append(wxID_PASTE, "&Paste");
-	
-	PopupMenu(&menu);
 }
 
 void REHex::Document::OnMotion(wxMouseEvent &event)
@@ -1387,6 +1400,12 @@ void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
 	
 	/* TODO: Limit paint to cursor area */
 	Refresh();
+}
+
+/* Handles the "Insert comment" context menu option */
+void REHex::Document::OnSetComment(wxCommandEvent &event)
+{
+	_edit_comment_popup(cpos_off);
 }
 
 void REHex::Document::_ctor_pre(wxWindow *parent)
@@ -1810,6 +1829,29 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 	{
 		(*region)->y_offset = next_yo;
 		next_yo += (*region)->y_lines;
+	}
+}
+
+void REHex::Document::_edit_comment_popup(off_t offset)
+{
+	REHex::TextEntryDialog te(this, "Enter comment", _get_comment_text(offset));
+	
+	int rc = te.ShowModal();
+	if(rc == wxID_OK)
+	{
+		wxString comment_text = te.get_text();
+		wxClientDC dc(this);
+		
+		if(comment_text.empty())
+		{
+			_delete_comment(dc, offset);
+		}
+		else{
+			_set_comment_text(dc, offset, te.get_text());
+		}
+		
+		/* TODO: Limit paint to affected area */
+		Refresh();
 	}
 }
 

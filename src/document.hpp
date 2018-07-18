@@ -81,6 +81,7 @@ namespace REHex {
 			void OnRightDown(wxMouseEvent &event);
 			void OnMotion(wxMouseEvent &event);
 			void OnRedrawCursor(wxTimerEvent &event);
+			void OnSetComment(wxCommandEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:
@@ -187,6 +188,7 @@ namespace REHex {
 			wxString _get_comment_text(off_t offset);
 			void _set_comment_text(wxDC &dc, off_t offset, const wxString &text);
 			void _delete_comment(wxDC &dc, off_t offset);
+			void _edit_comment_popup(off_t offset);
 			
 			json_t *_dump_metadata();
 			void _save_metadata(const std::string &filename);

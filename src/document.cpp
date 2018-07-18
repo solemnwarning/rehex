@@ -58,6 +58,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_CHAR(REHex::Document::OnChar)
 	EVT_LEFT_DOWN(REHex::Document::OnLeftDown)
 	EVT_LEFT_UP(REHex::Document::OnLeftUp)
+	EVT_RIGHT_DOWN(REHex::Document::OnRightDown)
 	EVT_MOTION(REHex::Document::OnMotion)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 END_EVENT_TABLE()
@@ -1196,6 +1197,108 @@ void REHex::Document::OnLeftUp(wxMouseEvent &event)
 {
 	mouse_down_in_hex   = false;
 	mouse_down_in_ascii = false;
+}
+
+void REHex::Document::OnRightDown(wxMouseEvent &event)
+{
+	wxClientDC dc(this);
+	
+	unsigned int mouse_x = event.GetX();
+	unsigned int rel_x   = mouse_x + this->scroll_xoff;
+	unsigned int mouse_y = event.GetY();
+	
+	/* Iterate over the regions to find the last one which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto region = regions.begin();
+	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
+	{
+		region = next;
+	}
+	
+	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
+	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	
+	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	
+	while(region != regions.end() && line_off >= (*region)->y_lines)
+	{
+		line_off -= (*region)->y_lines;
+		++region;
+	}
+	
+	if(region != regions.end())
+	{
+		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+		if(dr != NULL)
+		{
+			if(rel_x < offset_column_width)
+			{
+				/* Click was within the offset area */
+			}
+			else if(show_ascii && rel_x >= ascii_text_x)
+			{
+				/* Click was within the ASCII area */
+				
+				off_t clicked_offset = dr->offset_at_xy_ascii(*this, rel_x, line_off);
+				if(clicked_offset >= 0)
+				{
+					/* Clicked on a character */
+					
+					cpos_off     = clicked_offset;
+					cursor_state = CSTATE_ASCII;
+					
+					if(cpos_off < selection_off || cpos_off >= selection_off + selection_length)
+					{
+						clear_selection();
+					}
+					
+					_raise_moved();
+					
+					/* TODO: Limit paint to affected area */
+					Refresh();
+				}
+			}
+			else{
+				/* Click was within the hex area */
+				
+				off_t clicked_offset = dr->offset_at_xy_hex(*this, rel_x, line_off);
+				if(clicked_offset >= 0)
+				{
+					/* Clicked on a byte */
+					
+					cpos_off     = clicked_offset;
+					cursor_state = CSTATE_HEX;
+					
+					if(cpos_off < selection_off || cpos_off >= selection_off + selection_length)
+					{
+						clear_selection();
+					}
+					
+					_raise_moved();
+					
+					/* TODO: Limit paint to affected area */
+					Refresh();
+				}
+			}
+		}
+	}
+	
+	/* Document takes focus when clicked. */
+	SetFocus();
+	
+	wxMenu menu;
+	
+	menu.Append(wxID_CUT, "&Cut");
+	menu.Enable(wxID_CUT,  (selection_length > 0));
+	
+	menu.Append(wxID_COPY,  "&Copy");
+	menu.Enable(wxID_COPY, (selection_length > 0));
+	
+	menu.Append(wxID_PASTE, "&Paste");
+	
+	PopupMenu(&menu);
 }
 
 void REHex::Document::OnMotion(wxMouseEvent &event)

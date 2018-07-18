@@ -78,6 +78,7 @@ namespace REHex {
 			void OnChar(wxKeyEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);
+			void OnRightDown(wxMouseEvent &event);
 			void OnMotion(wxMouseEvent &event);
 			void OnRedrawCursor(wxTimerEvent &event);
 			

@@ -247,32 +247,30 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 
 void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, off_t length)
 {
-	buffer->overwrite_data(offset, data, length);
-	
-	/* TODO: Limit paint to affected area */
-	Refresh();
+	_tracked_overwrite_data("change data", offset, data, length);
 }
 
-void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
-{
-	wxClientDC dc(this);
-	_insert_data(dc, offset, data, length);
-}
+// void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
+// {
+// 	_tracked_insert_data("change data", offset, data, length);
+// }
 
-void REHex::Document::erase_data(off_t offset, off_t length)
-{
-	buffer->erase_data(offset, length);
-	
-	off_t max_pos = insert_mode ? buffer->length() : (buffer->length() - 1);
-	if(cpos_off > max_pos)
-	{
-		cpos_off = max_pos;
-		_raise_moved();
-	}
-	
-	/* TODO: Limit paint to affected area */
-	Refresh();
-}
+// void REHex::Document::erase_data(off_t offset, off_t length)
+// {
+// 	_tracked_erase_data("change data", offset, data, length);
+// 	
+// 	buffer->erase_data(offset, length);
+// 	
+// 	off_t max_pos = insert_mode ? buffer->length() : (buffer->length() - 1);
+// 	if(cpos_off > max_pos)
+// 	{
+// 		cpos_off = max_pos;
+// 		_raise_moved();
+// 	}
+// 	
+// 	/* TODO: Limit paint to affected area */
+// 	Refresh();
+// }
 
 off_t REHex::Document::buffer_length()
 {
@@ -289,10 +287,7 @@ void REHex::Document::handle_paste(const std::string &clipboard_text)
 			
 			off_t old_sel_off = selection_off;
 			
-			erase_data(selection_off, selection_length);
-			
-			wxClientDC dc(this);
-			_insert_data(dc, old_sel_off, data, size);
+			_tracked_replace_data("paste", selection_off, selection_length, data, size);
 			
 			clear_selection();
 			
@@ -302,8 +297,7 @@ void REHex::Document::handle_paste(const std::string &clipboard_text)
 		{
 			/* We are in insert mode, insert at the cursor. */
 			
-			wxClientDC dc(this);
-			_insert_data(dc, cpos_off, data, size);
+			_tracked_insert_data("paste", cpos_off, data, size);
 			
 			cpos_off += size;
 		}
@@ -355,8 +349,7 @@ std::string REHex::Document::handle_copy(bool cut)
 		
 		if(cut)
 		{
-			erase_data(selection_off, selection_data.size());
-			clear_selection();
+			_tracked_erase_data("cut selection", selection_off, selection_data.size());
 		}
 		
 		if(cursor_state == CSTATE_ASCII)
@@ -395,6 +388,37 @@ std::string REHex::Document::handle_copy(bool cut)
 	else{
 		/* Nothing selected */
 		return "";
+	}
+}
+
+void REHex::Document::undo()
+{
+	if(!undo_stack.empty())
+	{
+		auto &act = undo_stack.back();
+		act.undo();
+		
+		cpos_off     = act.old_cpos_off;
+		cursor_state = act.old_cursor_state;
+		
+		redo_stack.push_back(act);
+		undo_stack.pop_back();
+		
+		Refresh();
+	}
+}
+
+void REHex::Document::redo()
+{
+	if(!redo_stack.empty())
+	{
+		auto &act = redo_stack.back();
+		act.redo();
+		
+		undo_stack.push_back(act);
+		redo_stack.pop_back();
+		
+		Refresh();
 	}
 }
 
@@ -767,9 +791,9 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 	};
 	
-	if(modifiers == wxMOD_CONTROL)
+	if(modifiers & wxMOD_CONTROL)
 	{
-		if(key == WXK_CONTROL_G)
+		if(modifiers == wxMOD_CONTROL && key == WXK_CONTROL_G)
 		{
 			/* Ctrl+G - Go to offset */
 			printf("TODO: Implement jump to offset\n");
@@ -821,36 +845,63 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		
 		if(cursor_state == CSTATE_HEX_MID)
 		{
-			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
-			assert(!byte.empty());
+			std::vector<unsigned char> cur_data = buffer->read_data(cpos_off, 1);
+			assert(cur_data.size() == 1);
 			
-			byte[0] = (byte[0] & 0xF0) | nibble;
+			unsigned char old_byte = cur_data[0];
+			unsigned char new_byte = (old_byte & 0xF0) | nibble;
 			
-			wxClientDC dc(this);
-			_overwrite_data(dc, this->cpos_off, byte.data(), 1);
+			off_t write_off = cpos_off;
 			
-			cpos_inc();
+			_tracked_change("Change data",
+				[this, write_off, new_byte, cpos_inc]()
+				{
+					wxClientDC dc(this);
+					_UNTRACKED_overwrite_data(dc, write_off, &new_byte, 1);
+					
+					cpos_off = write_off;
+					cpos_inc();
+				},
+				
+				[this, write_off, old_byte]()
+				{
+					wxClientDC dc(this);
+					_UNTRACKED_overwrite_data(dc, write_off, &old_byte, 1);
+				});
 		}
 		else if(this->insert_mode)
 		{
 			unsigned char byte = (nibble << 4);
 			
-			wxClientDC dc(this);
-			_insert_data(dc, this->cpos_off, &byte, 1);
+			_tracked_insert_data("change data", this->cpos_off, &byte, 1);
 			
 			cursor_state = CSTATE_HEX_MID;
 		}
 		else{
-			std::vector<unsigned char> byte = this->buffer->read_data(this->cpos_off, 1);
+			std::vector<unsigned char> cur_data = buffer->read_data(this->cpos_off, 1);
 			
-			if(!byte.empty())
+			if(!cur_data.empty())
 			{
-				byte[0] = (byte[0] & 0x0F) | (nibble << 4);
+				unsigned char old_byte = cur_data[0];
+				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
 				
-				wxClientDC dc(this);
-				_overwrite_data(dc, this->cpos_off, byte.data(), 1);
+				off_t write_off = cpos_off;
 				
-				cursor_state = CSTATE_HEX_MID;
+				_tracked_change("Change data",
+					[this, write_off, new_byte, cpos_inc]()
+					{
+						wxClientDC dc(this);
+						_UNTRACKED_overwrite_data(dc, write_off, &new_byte, 1);
+						
+						cpos_off     = write_off;
+						cursor_state = CSTATE_HEX_MID;
+					},
+					
+					[this, write_off, old_byte]()
+					{
+						wxClientDC dc(this);
+						_UNTRACKED_overwrite_data(dc, write_off, &old_byte, 1);
+					});
 			}
 		}
 		
@@ -867,17 +918,35 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		
 		if(this->insert_mode)
 		{
-			wxClientDC dc(this);
-			_insert_data(dc, this->cpos_off, &byte, 1);
+			_tracked_insert_data("change data", this->cpos_off, &byte, 1);
 			
 			cpos_inc();
 		}
 		else if(cpos_off < buffer->length())
 		{
-			wxClientDC dc(this);
-			_overwrite_data(dc, this->cpos_off, &byte, 1);
+			std::vector<unsigned char> cur_data = buffer->read_data(cpos_off, 1);
+			assert(cur_data.size() == 1);
 			
-			cpos_inc();
+			unsigned char old_byte = cur_data[0];
+			unsigned char new_byte = byte;
+			
+			off_t write_off = cpos_off;
+			
+			_tracked_change("Change data",
+				[this, write_off, new_byte, cpos_inc]()
+				{
+					wxClientDC dc(this);
+					_UNTRACKED_overwrite_data(dc, write_off, &new_byte, 1);
+					
+					cpos_off = write_off;
+					cpos_inc();
+				},
+				
+				[this, write_off, old_byte]()
+				{
+					wxClientDC dc(this);
+					_UNTRACKED_overwrite_data(dc, write_off, &old_byte, 1);
+				});
 		}
 		
 		clear_selection();
@@ -1049,44 +1118,31 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_DELETE)
 		{
-			if(this->cpos_off < this->buffer->length())
+			if(selection_length > 0)
 			{
-				wxClientDC dc(this);
-				_erase_data(dc, this->cpos_off, 1);
-				
-				if(cursor_state == CSTATE_HEX_MID)
-				{
-					cursor_state = CSTATE_HEX;
-				}
-				
-				clear_selection();
-				
-				_make_byte_visible(cpos_off);
-				_raise_moved();
-				
-				/* TODO: Limit paint to affected area */
-				this->Refresh();
+				_tracked_erase_data("delete selection", selection_off, selection_length);
+			}
+			else if(this->cpos_off < this->buffer->length())
+			{
+				_tracked_erase_data("delete", cpos_off, 1);
 			}
 		}
 		else if(key == WXK_BACK)
 		{
-			if(this->cpos_off > 0)
+			if(selection_length > 0)
 			{
-				wxClientDC dc(this);
-				_erase_data(dc, --(this->cpos_off), 1);
-				
-				if(cursor_state == CSTATE_HEX_MID)
-				{
-					cursor_state = CSTATE_HEX;
-				}
-				
-				clear_selection();
-				
-				_make_byte_visible(cpos_off);
-				_raise_moved();
-				
-				/* TODO: Limit paint to affected area */
-				this->Refresh();
+				_tracked_erase_data("delete selection", selection_off, selection_length);
+			}
+			else if(cursor_state == CSTATE_HEX_MID)
+			{
+				/* Backspace while waiting for the second nibble in a byte should erase the current byte
+				 * rather than the previous one.
+				*/
+				_tracked_erase_data("delete", cpos_off, 1);
+			}
+			else if(cpos_off > 0)
+			{
+				_tracked_erase_data("delete", cpos_off - 1, 1);
 			}
 		}
 		else if(key == '/')
@@ -1550,7 +1606,7 @@ void REHex::Document::_recalc_regions(wxDC &dc)
 	}
 }
 
-void REHex::Document::_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
 	bool ok = buffer->overwrite_data(offset, data, length);
 	assert(ok);
@@ -1562,7 +1618,7 @@ void REHex::Document::_overwrite_data(wxDC &dc, off_t offset, const unsigned cha
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
-void REHex::Document::_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
@@ -1642,7 +1698,7 @@ void REHex::Document::_insert_data(wxDC &dc, off_t offset, const unsigned char *
 }
 
 /* Erase a range of data from the Buffer and update our own data structures. */
-void REHex::Document::_erase_data(wxDC &dc, off_t offset, off_t length)
+void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length)
 {
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
@@ -1739,6 +1795,119 @@ void REHex::Document::_erase_data(wxDC &dc, off_t offset, off_t length)
 		assert(to_shift == length);
 		assert(to_shrink == 0);
 	}
+}
+
+void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length)
+{
+	std::vector<unsigned char> old_data = read_data(offset, length);
+	assert(old_data.size() == length);
+	
+	std::vector<unsigned char> new_data(data, data + length);
+	
+	_tracked_change(change_desc,
+		[this, offset, new_data]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_overwrite_data(dc, offset, new_data.data(), new_data.size());
+		},
+		 
+		[this, offset, old_data]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_overwrite_data(dc, offset, old_data.data(), old_data.size());
+		});
+}
+
+void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length)
+{
+	std::vector<unsigned char> data_copy(data, data + length);
+	
+	_tracked_change(change_desc,
+		[this, offset, data_copy]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_insert_data(dc, offset, data_copy.data(), data_copy.size());
+		},
+		 
+		[this, offset, length]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_erase_data(dc, offset, length);
+		});
+}
+
+void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length)
+{
+	std::vector<unsigned char> erase_data = read_data(offset, length);
+	assert(erase_data.size() == length);
+	
+	_tracked_change(change_desc,
+		[this, offset, erase_data]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_erase_data(dc, offset, erase_data.size());
+			
+			clear_selection();
+			
+			off_t max_cursor_off = buffer->length() - !insert_mode;
+			cpos_off = std::min(offset, max_cursor_off);
+			
+			_make_byte_visible(cpos_off);
+			_raise_moved();
+			
+			/* TODO: Limit paint to affected area */
+			Refresh();
+		},
+		
+		[this, offset, erase_data]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_insert_data(dc, offset, erase_data.data(), erase_data.size());
+		});
+}
+
+void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length)
+{
+	if(old_data_length == new_data_length)
+	{
+		/* Save unnecessary shuffling of the Buffer pages. */
+		/* TODO */
+	}
+	
+	std::vector<unsigned char> old_data_copy = buffer->read_data(offset, old_data_length);
+	std::vector<unsigned char> new_data_copy(new_data, new_data + new_data_length);
+	
+	_tracked_change(change_desc,
+		[this, offset, old_data_length, new_data_copy]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_erase_data(dc, offset, old_data_length);
+			_UNTRACKED_insert_data(dc, offset, new_data_copy.data(), new_data_copy.size());
+		},
+		
+		[this, offset, old_data_copy, new_data_length]()
+		{
+			wxClientDC dc(this);
+			_UNTRACKED_erase_data(dc, offset, new_data_length);
+			_UNTRACKED_insert_data(dc, offset, old_data_copy.data(), old_data_copy.size());
+		});
+}
+
+void REHex::Document::_tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func)
+{
+	struct TrackedChange change;
+	
+	change.desc = desc;
+	change.undo = undo_func;
+	change.redo = do_func;
+	
+	change.old_cpos_off     = cpos_off;
+	change.old_cursor_state = cursor_state;
+	
+	do_func();
+	
+	undo_stack.push_back(change);
+	redo_stack.clear();
 }
 
 wxString REHex::Document::_get_comment_text(off_t offset)
@@ -1855,20 +2024,59 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 
 void REHex::Document::_edit_comment_popup(off_t offset)
 {
-	REHex::TextEntryDialog te(this, "Enter comment", _get_comment_text(offset));
+	wxString old_comment = _get_comment_text(offset);
+	REHex::TextEntryDialog te(this, "Enter comment", old_comment);
 	
 	int rc = te.ShowModal();
 	if(rc == wxID_OK)
 	{
-		wxString comment_text = te.get_text();
-		wxClientDC dc(this);
+		wxString new_comment = te.get_text();
 		
-		if(comment_text.empty())
+		if(new_comment.empty() && old_comment.empty())
 		{
-			_delete_comment(dc, offset);
+			return;
+		}
+		
+		if(new_comment.empty())
+		{
+			_tracked_change("delete comment",
+				[this, offset]()
+				{
+					wxClientDC dc(this);
+					_delete_comment(dc, offset);
+				},
+				[this, offset, old_comment]()
+				{
+					wxClientDC dc(this);
+					_set_comment_text(dc, offset, old_comment);
+				});
+		}
+		else if(old_comment.empty())
+		{
+			_tracked_change("insert comment",
+				[this, offset, new_comment]()
+				{
+					wxClientDC dc(this);
+					_set_comment_text(dc, offset, new_comment);
+				},
+				[this, offset]()
+				{
+					wxClientDC dc(this);
+					_delete_comment(dc, offset);
+				});
 		}
 		else{
-			_set_comment_text(dc, offset, te.get_text());
+			_tracked_change("modify comment",
+				[this, offset, new_comment]()
+				{
+					wxClientDC dc(this);
+					_set_comment_text(dc, offset, new_comment);
+				},
+				[this, offset, old_comment]()
+				{
+					wxClientDC dc(this);
+					_set_comment_text(dc, offset, old_comment);
+				});
 		}
 		
 		/* TODO: Limit paint to affected area */

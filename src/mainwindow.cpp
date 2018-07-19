@@ -51,9 +51,12 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_CLOSE,  REHex::MainWindow::OnClose)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
 	
+	EVT_MENU(wxID_UNDO, REHex::MainWindow::OnUndo)
+	EVT_MENU(wxID_REDO, REHex::MainWindow::OnRedo)
+	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
-    EVT_MENU(ID_SEARCH_VALUE,  REHex::MainWindow::OnSearchValue)
+	EVT_MENU(ID_SEARCH_VALUE,  REHex::MainWindow::OnSearchValue)
 	
 	EVT_MENU(wxID_CUT,   REHex::MainWindow::OnCut)
 	EVT_MENU(wxID_COPY,  REHex::MainWindow::OnCopy)
@@ -89,9 +92,14 @@ REHex::MainWindow::MainWindow():
 	
 	wxMenu *edit_menu = new wxMenu;
 	
-	edit_menu->Append(ID_SEARCH_TEXT, "Search for text...");
-	edit_menu->Append(ID_SEARCH_BSEQ, "Search for byte sequence...");
-    edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
+	edit_menu->Append(wxID_UNDO, "&Undo\tCtrl-Z");
+	edit_menu->Append(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+	
+	edit_menu->AppendSeparator();
+	
+	edit_menu->Append(ID_SEARCH_TEXT,  "Search for text...");
+	edit_menu->Append(ID_SEARCH_BSEQ,  "Search for byte sequence...");
+	edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
 	
 	edit_menu->AppendSeparator();
 	
@@ -388,6 +396,28 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		wxTheClipboard->Close();
 	}
+}
+
+void REHex::MainWindow::OnUndo(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->doc->undo();
+}
+
+void REHex::MainWindow::OnRedo(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->doc->redo();
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)

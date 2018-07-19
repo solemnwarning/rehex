@@ -18,6 +18,7 @@
 #ifndef REHEX_DOCUMENT_HPP
 #define REHEX_DOCUMENT_HPP
 
+#include <functional>
 #include <jansson.h>
 #include <list>
 #include <stdint.h>
@@ -65,12 +66,15 @@ namespace REHex {
 			
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			void overwrite_data(off_t offset, const unsigned char *data, off_t length);
-			void insert_data(off_t offset, const unsigned char *data, off_t length);
-			void erase_data(off_t offset, off_t length);
+// 			void insert_data(off_t offset, const unsigned char *data, off_t length);
+// 			void erase_data(off_t offset, off_t length);
 			off_t buffer_length();
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
+			
+			void undo();
+			void redo();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
@@ -87,6 +91,12 @@ namespace REHex {
 		#ifndef UNIT_TEST
 		private:
 		#endif
+			enum CursorState {
+				CSTATE_HEX,
+				CSTATE_HEX_MID,
+				CSTATE_ASCII,
+			};
+			
 			struct Region
 			{
 				uint64_t y_offset; /* First on-screen line in region */
@@ -109,6 +119,17 @@ namespace REHex {
 				
 				struct Data;
 				struct Comment;
+			};
+			
+			struct TrackedChange
+			{
+				const char *desc;
+				
+				std::function< void() > undo;
+				std::function< void() > redo;
+				
+				off_t       old_cpos_off;
+				CursorState old_cursor_state;
 			};
 			
 			friend Region::Data;
@@ -171,11 +192,10 @@ namespace REHex {
 			bool mouse_down_in_hex{false}, mouse_down_in_ascii{false};
 			off_t mouse_down_at_offset;
 			
-			enum {
-				CSTATE_HEX,
-				CSTATE_HEX_MID,
-				CSTATE_ASCII,
-			} cursor_state;
+			enum CursorState cursor_state;
+			
+			std::list<REHex::Document::TrackedChange> undo_stack;
+			std::list<REHex::Document::TrackedChange> redo_stack;
 			
 			void _ctor_pre(wxWindow *parent);
 			void _ctor_post();
@@ -183,9 +203,15 @@ namespace REHex {
 			void _init_regions(const json_t *meta);
 			void _recalc_regions(wxDC &dc);
 			
-			void _overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
-			void _insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
-			void _erase_data(wxDC &dc, off_t offset, off_t length);
+			void _UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
+			void _UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
+			void _UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length);
+			
+			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length);
+			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length);
+			void _tracked_erase_data(const char *change_desc, off_t offset, off_t length);
+			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length);
+			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
 			
 			wxString _get_comment_text(off_t offset);
 			void _set_comment_text(wxDC &dc, off_t offset, const wxString &text);

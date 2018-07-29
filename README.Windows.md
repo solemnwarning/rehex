@@ -43,11 +43,11 @@ These steps are how I set up my (64-bit) toolchain up on Debian. Making a 32-bit
 
     $ CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
       WX_CONFIG=/usr/x86_64-w64-mingw32/wxWidgets-XXX-XXX-static/bin/wx-config \
-      LIBS="-static-libstdc++ -static-libgcc" EXE=.exe make
+      make -f Makefile.win
 
 ## Compiling on Windows
 
-Somewhat of a faff to set up a toolchain, but read on...
+Compiling on Windows is accomplished using MSYS and GCC.
 
 1) MSYS2
 
@@ -57,7 +57,7 @@ Download and install MSYS2 from http://www.msys2.org/
 
 Download and run the win-builds installer from http://win-builds.org/
 
-Choose architecture and install to C:\i686-w64-mingw32 or C:\x86_64-w64-mingw32 depending whether you want to make 32-bit or 64-bit binaries. You may install both.
+Choose architecture and install to `C:\i686-w64-mingw32` or `C:\x86_64-w64-mingw32` depending whether you want to make 32-bit or 64-bit binaries. You may install both.
 
 You may change the install paths, but it MUST NOT contain spaces, else the wxWidgets build process will fail.
 
@@ -69,30 +69,45 @@ NOTE: In all commands below, substitute `$ARCH` for i686 or x86_64, depending wh
 
 Add the win-builds toolchain to your PATH:
 
-  export PATH="$PATH:/c/$ARCH-w64-mingw32/bin"
+    $ export PATH="$PATH:/c/$ARCH-w64-mingw32/bin"
 
-Configure and install wxWidgets in the traditional way:
+Configure and install wxWidgets:
 
-  ./configure --host=$ARCH-w64-mingw32 --build=$ARCH-w64-mingw32 --prefix=/c/$ARCH-w64-mingw32
-  make
-  make install
+    $ cd wxWidgets-XXX
+    $ mkdir build-release-static-$ARCH
+    $ cd build-release-static-$ARCH
+    $ ../configure --host=$ARCH-w64-mingw32 \
+                   --build=$ARCH-w64-mingw32 \
+                   --prefix=/c/$ARCH-w64-mingw32/wxWidgets-XXX-release-static/ \
+                   --disable-shared \
+                    --with-zlib=builtin \
+                    --with-expat=builtin \
+                    --without-libjpeg \
+                    --without-libtiff \
+                    --without-regex
+    $ make
+    $ make install
 
 If you find GCC silently exits with status 1 while building wxWidgets, try running configure with `--disable-precomp-headers`.
 
-Copy the wxWidgets DLLs to your toolchain bin directory so they can be found when you try running executables linked against them:
-
-  cp /c/$ARCH-w64-mingw32/lib/wx*.dll /c/$ARCH-w64-mingw32/bin/
-
 4) jansson
 
-Same as above, but you don't need to copy the DLLs to bin/ (make install will do it)
+    $ cd jansson-XXX
+    $ ./configure --host=$ARCH-w64-mingw32 \
+                  --build=$ARCH-w64-mingw32 \
+                  --prefix=/c/$ARCH-w64-mingw32/$ARCH-w64-mingw32/ \
+                  --enable-shared=no \
+                  --enable-static=yes
+    $ make
+    $ make install
 
 5) Build rehex
 
 Once the above steps are done, you should be able to build inside msys so long as you have the appropriate toolchain in your PATH.
 
-  make
-  make check
+    $ export WX_CONFIG=/c/$ARCH-w64-mingw32/wxWidgets-XXX-release-static/bin/wx-config
+    $ make -f Makefile.win
+    $ make -f Makefile.win check
 
 # Buildkite
 

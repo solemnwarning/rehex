@@ -121,6 +121,8 @@ void REHex::Document::save()
 {
 	buffer->write_inplace();
 	_save_metadata(filename + ".rehex-meta");
+	
+	dirty = false;
 }
 
 void REHex::Document::save(const std::string &filename)
@@ -132,11 +134,18 @@ void REHex::Document::save(const std::string &filename)
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
 	_save_metadata(filename + ".rehex-meta");
+	
+	dirty = false;
 }
 
 std::string REHex::Document::get_title()
 {
 	return title;
+}
+
+bool REHex::Document::is_dirty()
+{
+	return dirty;
 }
 
 unsigned int REHex::Document::get_bytes_per_line()
@@ -1415,6 +1424,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
 	
+	dirty             = false;
 	client_width      = 0;
 	client_height     = 0;
 	bytes_per_line    = 0;
@@ -1544,6 +1554,11 @@ void REHex::Document::_overwrite_data(wxDC &dc, off_t offset, const unsigned cha
 {
 	bool ok = buffer->overwrite_data(offset, data, length);
 	assert(ok);
+	
+	if(ok)
+	{
+		dirty = true;
+	}
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
@@ -1554,6 +1569,8 @@ void REHex::Document::_insert_data(wxDC &dc, off_t offset, const unsigned char *
 	
 	if(ok)
 	{
+		dirty = true;
+		
 		auto region = regions.begin();
 		
 		/* Increment region until it is pointing at the Data region which encompasses the
@@ -1632,6 +1649,8 @@ void REHex::Document::_erase_data(wxDC &dc, off_t offset, off_t length)
 	
 	if(ok)
 	{
+		dirty = true;
+		
 		auto region = regions.begin();
 		
 		/* Increment region until it is pointing at the Data region which encompasses the
@@ -1776,6 +1795,8 @@ void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const wxString &
 			}
 		}
 	}
+	
+	dirty = true;
 	
 	_recalc_regions(dc);
 }

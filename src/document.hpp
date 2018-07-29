@@ -41,6 +41,7 @@ namespace REHex {
 			void save(const std::string &filename);
 			
 			std::string get_title();
+			bool is_dirty();
 			
 			unsigned int get_bytes_per_line();
 			void set_bytes_per_line(unsigned int bytes_per_line);
@@ -115,6 +116,7 @@ namespace REHex {
 			
 			Buffer *buffer;
 			std::string filename;
+			bool dirty;
 			
 			std::string title;
 			

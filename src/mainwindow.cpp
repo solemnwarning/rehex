@@ -21,7 +21,7 @@
 #include <wx/dataobj.h>
 #include <wx/event.h>
 #include <wx/msgdlg.h>
-#include <wx/notebook.h>
+#include <wx/aui/auibook.h>
 #include <wx/numdlg.h>
 #include <wx/sizer.h>
 
@@ -42,6 +42,8 @@ enum {
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
+	EVT_CLOSE(REHex::MainWindow::OnWindowClose)
+	
 	EVT_MENU(wxID_NEW,    REHex::MainWindow::OnNew)
 	EVT_MENU(wxID_OPEN,   REHex::MainWindow::OnOpen)
 	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
@@ -63,7 +65,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
 	EVT_MENU(ID_SHOW_DECODES, REHex::MainWindow::OnShowDecodes)
 	
-	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
+	EVT_AUINOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
+	EVT_AUINOTEBOOK_PAGE_CLOSE(  wxID_ANY, REHex::MainWindow::OnDocumentClose)
+	EVT_AUINOTEBOOK_PAGE_CLOSED( wxID_ANY, REHex::MainWindow::OnDocumentClosed)
 	
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,      REHex::MainWindow::OnCursorMove)
 	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
@@ -117,11 +121,11 @@ REHex::MainWindow::MainWindow():
 	toolbar->AddTool(wxID_OPEN,   "Open",    artp.GetBitmap(wxART_FILE_OPEN,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVE,   "Save",    artp.GetBitmap(wxART_FILE_SAVE,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", artp.GetBitmap(wxART_FILE_SAVE_AS, wxART_TOOLBAR));
-	toolbar->AddTool(wxID_CLOSE,  "Close",   artp.GetBitmap(wxART_CLOSE,        wxART_TOOLBAR));
 	
 	toolbar->Realize();
 	
-	notebook = new wxNotebook(this, wxID_ANY);
+	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+		(wxAUI_NB_TOP | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ALL_TABS));
 	
 	CreateStatusBar(3);
 	
@@ -141,7 +145,71 @@ REHex::MainWindow::MainWindow():
 		ProcessCommand(wxID_NEW);
 	}
 	
-	SetClientSize(notebook->GetBestSize());
+	/* NOTE: wxAuiNotebook doesn't seem to implement GetBestSize() correctly, so we just use
+	 * the best size of the Tab instead.
+	*/
+	
+	SetClientSize(notebook->GetPage(0)->GetBestSize());
+}
+
+void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
+{
+	std::vector<wxString> dirty_files;
+	
+	size_t num_tabs = notebook->GetPageCount();
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		assert(page != NULL);
+		
+		auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		assert(tab != NULL);
+		
+		if(tab->doc->is_dirty())
+		{
+			dirty_files.push_back(tab->doc->get_title());
+		}
+	}
+	
+	if(dirty_files.size() == 1)
+	{
+		wxMessageDialog confirm(this, (wxString("The file ") + dirty_files[0] + " has unsaved changes.\nClose anyway?"), wxT("Unsaved changes"),
+			(wxYES | wxNO | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		
+		if(response == wxID_NO)
+		{
+			/* Stop the window from being closed. */
+			event.Veto();
+			return;
+		}
+	}
+	else if(dirty_files.size() > 1)
+	{
+		wxString message = "The following files have unsaved changes, close anyway?\n";
+		
+		for(auto i = dirty_files.begin(); i != dirty_files.end(); ++i)
+		{
+			message.Append('\n');
+			message.Append(*i);
+		}
+		
+		wxMessageDialog confirm(this, message, wxT("Unsaved changes"),
+			(wxYES | wxNO | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		
+		if(response == wxID_NO)
+		{
+			/* Stop the window from being closed. */
+			event.Veto();
+			return;
+		}
+	}
+	
+	/* Base implementation will deal with cleaning up the window. */
+	event.Skip();
 }
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
@@ -222,7 +290,23 @@ void REHex::MainWindow::OnClose(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	notebook->DeletePage(notebook->FindPage(cpage));
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	if(tab->doc->is_dirty())
+	{
+		wxMessageDialog confirm(this, (wxString("The file ") + tab->doc->get_title() + " has unsaved changes.\nClose anyway?"), wxT("Unsaved changes"),
+			(wxYES | wxNO | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		
+		if(response == wxID_NO)
+		{
+			return;
+		}
+	}
+	
+	notebook->DeletePage(notebook->GetPageIndex(cpage));
 	
 	if(notebook->GetPageCount() == 0)
 	{
@@ -394,7 +478,7 @@ void REHex::MainWindow::OnShowDecodes(wxCommandEvent &event)
 	tab->GetSizer()->Layout();
 }
 
-void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
+void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
@@ -409,6 +493,37 @@ void REHex::MainWindow::OnDocumentChange(wxBookCtrlEvent& event)
 	_update_status_offset(tab->doc);
 	_update_status_selection(tab->doc);
 	_update_status_mode(tab->doc);
+}
+
+void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
+{
+	wxWindow *page = notebook->GetPage(event.GetSelection());
+	assert(page != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+	assert(tab != NULL);
+	
+	if(tab->doc->is_dirty())
+	{
+		wxMessageDialog confirm(this, (wxString("The file ") + tab->doc->get_title() + " has unsaved changes.\nClose anyway?"), wxT("Unsaved changes"),
+			(wxYES | wxNO | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		
+		if(response == wxID_NO)
+		{
+			event.Veto();
+		}
+	}
+}
+
+void REHex::MainWindow::OnDocumentClosed(wxAuiNotebookEvent &event)
+{
+	/* Create a new tab if the only one was just closed. */
+	if(notebook->GetPageCount() == 0)
+	{
+		ProcessCommand(wxID_NEW);
+	}
 }
 
 void REHex::MainWindow::OnCursorMove(wxCommandEvent &event)

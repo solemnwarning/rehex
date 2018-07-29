@@ -18,7 +18,7 @@
 #ifndef REHEX_MAINWINDOW_HPP
 #define REHEX_MAINWINDOW_HPP
 
-#include <wx/notebook.h>
+#include <wx/aui/auibook.h>
 #include <wx/wx.h>
 
 #include "decodepanel.hpp"
@@ -29,6 +29,8 @@ namespace REHex {
 	{
 		public:
 			MainWindow();
+			
+			void OnWindowClose(wxCloseEvent& event);
 			
 			void OnNew(wxCommandEvent &event);
 			void OnOpen(wxCommandEvent &event);
@@ -50,7 +52,9 @@ namespace REHex {
 			void OnShowASCII(wxCommandEvent &event);
 			void OnShowDecodes(wxCommandEvent &event);
 			
-			void OnDocumentChange(wxBookCtrlEvent &event);
+			void OnDocumentChange(wxAuiNotebookEvent &event);
+			void OnDocumentClose(wxAuiNotebookEvent &event);
+			void OnDocumentClosed(wxAuiNotebookEvent &event);
 			
 			void OnCursorMove(wxCommandEvent &event);
 			void OnSelectionChange(wxCommandEvent &event);
@@ -75,7 +79,7 @@ namespace REHex {
 			};
 			
 			wxMenu *doc_menu;
-			wxNotebook *notebook;
+			wxAuiNotebook *notebook;
 			
 			void _update_status_offset(REHex::Document *doc);
 			void _update_status_selection(REHex::Document *doc);

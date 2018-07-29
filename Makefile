@@ -83,9 +83,6 @@ APP_OBJS := \
 
 $(EXE): $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-ifeq ($(DEBUG),0)
-	strip -s $(EXE)
-endif
 
 TESTS_BUFFER_OBJS := \
 	src/buffer.o \

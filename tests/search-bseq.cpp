@@ -15,7 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#undef NDEBUG
 #include <assert.h>
+
 #include <stdio.h>
 #include <vector>
 #include <wx/init.h>

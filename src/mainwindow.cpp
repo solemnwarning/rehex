@@ -139,6 +139,7 @@ REHex::MainWindow::MainWindow():
 		{
 			Tab *tab = new Tab(notebook, app.argv[i].ToStdString());
 			notebook->AddPage(tab, tab->doc->get_title(), true);
+			tab->doc->SetFocus();
 		}
 	}
 	else{
@@ -216,6 +217,7 @@ void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
 	Tab *tab = new Tab(notebook);
 	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc->SetFocus();
 }
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
@@ -237,6 +239,7 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	}
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc->SetFocus();
 }
 
 void REHex::MainWindow::OnSave(wxCommandEvent &event)

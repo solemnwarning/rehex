@@ -330,7 +330,7 @@ void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::Text *t = new REHex::Search::Text(this, *(tab->doc));
+	REHex::Search::Text *t = new REHex::Search::Text(tab, *(tab->doc));
 	t->Show(true);
 }
 
@@ -342,7 +342,7 @@ void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::ByteSequence *t = new REHex::Search::ByteSequence(this, *(tab->doc));
+	REHex::Search::ByteSequence *t = new REHex::Search::ByteSequence(tab, *(tab->doc));
 	t->Show(true);
 }
 
@@ -354,7 +354,7 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::Value *t = new REHex::Search::Value(this, *(tab->doc));
+	REHex::Search::Value *t = new REHex::Search::Value(tab, *(tab->doc));
 	t->Show(true);
 }
 

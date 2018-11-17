@@ -57,11 +57,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,0));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 0, z4, 4);
+		doc->insert_data(0, z4, 4);
 		
-		is_int(4, doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(z4, doc->buffer->read_data(0, 1024).data(), 4, "Document::_insert_data() inserts correct data into Buffer");
+		is_int(4, doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(z4, doc->buffer->read_data(0, 1024).data(), 4, "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 1);
 		
@@ -91,11 +90,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 0, f2, 2);
+		doc->insert_data(0, f2, 2);
 		
-		is_int(6, doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(f2z4, doc->buffer->read_data(0, 1024).data(), 6, "Document::_insert_data() inserts correct data into Buffer");
+		is_int(6, doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(f2z4, doc->buffer->read_data(0, 1024).data(), 6, "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 1);
 		
@@ -125,11 +123,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 2, f2, 2);
+		doc->insert_data(2, f2, 2);
 		
-		is_int(6, doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(z2f2z2, doc->buffer->read_data(0, 1024).data(), 6, "Document::_insert_data() inserts correct data into Buffer");
+		is_int(6, doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(z2f2z2, doc->buffer->read_data(0, 1024).data(), 6, "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 1);
 		
@@ -159,11 +156,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 4, f2, 2);
+		doc->insert_data(4, f2, 2);
 		
-		is_int(6, doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(z4f2, doc->buffer->read_data(0, 1024).data(), 6, "Document::_insert_data() inserts correct data into Buffer");
+		is_int(6, doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(z4f2, doc->buffer->read_data(0, 1024).data(), 6, "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 1);
 		
@@ -198,11 +194,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 0, to_insert, sizeof(to_insert));
+		doc->insert_data(0, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -244,11 +239,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 2, to_insert, sizeof(to_insert));
+		doc->insert_data(2, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -290,11 +284,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 3, to_insert, sizeof(to_insert));
+		doc->insert_data(3, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -336,11 +329,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 6, to_insert, sizeof(to_insert));
+		doc->insert_data(6, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -382,11 +374,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 7, to_insert, sizeof(to_insert));
+		doc->insert_data(7, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -428,11 +419,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 8, to_insert, sizeof(to_insert));
+		doc->insert_data(8, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -474,11 +464,10 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_insert_data(dc, 9, to_insert, sizeof(to_insert));
+		doc->insert_data(9, to_insert, sizeof(to_insert));
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_insert_data() expands Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_insert_data() inserts correct data into Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::insert_data() expands Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::insert_data() inserts correct data into Buffer");
 		
 		assert(doc->regions.size() == 6);
 		
@@ -519,11 +508,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 0, 3);
+		doc->erase_data(0, 3);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 1);
 		is_int(1, doc->data_regions_count, "Document::data_regions_count");
@@ -548,11 +536,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 2, 1);
+		doc->erase_data(2, 1);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 1);
 		is_int(1, doc->data_regions_count, "Document::data_regions_count");
@@ -577,11 +564,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 6, 2);
+		doc->erase_data(6, 2);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 1);
 		is_int(1, doc->data_regions_count, "Document::data_regions_count");
@@ -606,11 +592,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 0, 8);
+		doc->erase_data(0, 8);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 1);
 		is_int(1, doc->data_regions_count, "Document::data_regions_count");
@@ -640,11 +625,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 0, 2);
+		doc->erase_data(0, 2);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -686,11 +670,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 1, 3);
+		doc->erase_data(1, 3);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -732,11 +715,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 1, 4);
+		doc->erase_data(1, 4);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -778,11 +760,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 0, 5);
+		doc->erase_data(0, 5);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -819,11 +800,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 5, 1);
+		doc->erase_data(5, 1);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -865,11 +845,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 6, 1);
+		doc->erase_data(6, 1);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -911,11 +890,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 8, 1);
+		doc->erase_data(8, 1);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -957,11 +935,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 5, 4);
+		doc->erase_data(5, 4);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -998,11 +975,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 9, 3);
+		doc->erase_data(9, 3);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -1044,11 +1020,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 11, 1);
+		doc->erase_data(11, 1);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -1090,11 +1065,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 10, 3);
+		doc->erase_data(10, 3);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -1136,11 +1110,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 9, 4);
+		doc->erase_data(9, 4);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -1177,11 +1150,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 3, 4);
+		doc->erase_data(3, 4);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -1223,11 +1195,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 3, 6);
+		doc->erase_data(3, 6);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -1264,11 +1235,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 0, 6);
+		doc->erase_data(0, 6);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -1305,11 +1275,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 4, 7);
+		doc->erase_data(4, 7);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -1346,11 +1315,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 8, 2);
+		doc->erase_data(8, 2);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 6);
 		is_int(3, doc->data_regions_count, "Document::data_regions_count");
@@ -1392,11 +1360,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 8, 5);
+		doc->erase_data(8, 5);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 4);
 		is_int(2, doc->data_regions_count, "Document::data_regions_count");
@@ -1433,11 +1400,10 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
 		
-		wxClientDC dc(doc);
-		doc->_erase_data(dc, 0, 13);
+		doc->erase_data(0, 13);
 		
-		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::_erase_data() shrinks Buffer")
-			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::_erase_data() erases correct data from Buffer");
+		is_int(sizeof(buffer_final), doc->buffer->length(), "Document::erase_data() shrinks Buffer")
+			&& is_blob(buffer_final, doc->buffer->read_data(0, 1024).data(), sizeof(buffer_final), "Document::erase_data() erases correct data from Buffer");
 		
 		assert(doc->regions.size() == 1);
 		is_int(1, doc->data_regions_count, "Document::data_regions_count");

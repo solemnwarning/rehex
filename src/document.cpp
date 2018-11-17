@@ -206,7 +206,7 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 {
 	assert(position >= 0 && position <= buffer->length());
 	
-	if(!insert_mode && position == buffer->length())
+	if(!insert_mode && position > 0 && position == buffer->length())
 	{
 		--position;
 	}
@@ -274,27 +274,15 @@ void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, of
 	_tracked_overwrite_data("change data", offset, data, length, offset + length, CSTATE_GOTO);
 }
 
-// void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
-// {
-// 	_tracked_insert_data("change data", offset, data, length);
-// }
+void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
+{
+	_tracked_insert_data("change data", offset, data, length, offset + length, CSTATE_GOTO);
+}
 
-// void REHex::Document::erase_data(off_t offset, off_t length)
-// {
-// 	_tracked_erase_data("change data", offset, data, length);
-// 	
-// 	buffer->erase_data(offset, length);
-// 	
-// 	off_t max_pos = insert_mode ? buffer->length() : (buffer->length() - 1);
-// 	if(cpos_off > max_pos)
-// 	{
-// 		cpos_off = max_pos;
-// 		_raise_moved();
-// 	}
-// 	
-// 	/* TODO: Limit paint to affected area */
-// 	Refresh();
-// }
+void REHex::Document::erase_data(off_t offset, off_t length)
+{
+	_tracked_erase_data("change data", offset, length);
+}
 
 off_t REHex::Document::buffer_length()
 {
@@ -311,7 +299,7 @@ void REHex::Document::handle_paste(const std::string &clipboard_text)
 		{
 			/* Some data is selected, replace it. */
 			
-			_tracked_replace_data("paste", selection_off, selection_length, data, size, selection_off + selection_length, CSTATE_GOTO);
+			_tracked_replace_data("paste", selection_off, selection_length, data, size, selection_off + size, CSTATE_GOTO);
 			clear_selection();
 		}
 		else if(insert_mode)
@@ -1766,13 +1754,8 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 			wxClientDC dc(this);
 			_UNTRACKED_erase_data(dc, offset, erase_data.size());
 			
+			set_cursor_position(offset);
 			clear_selection();
-			
-			off_t max_cursor_off = buffer->length() - !insert_mode;
-			cpos_off = std::min(offset, max_cursor_off);
-			
-			_make_byte_visible(cpos_off);
-			_raise_moved();
 			
 			/* TODO: Limit paint to affected area */
 			Refresh();

@@ -24,7 +24,9 @@
 #include <sys/types.h>
 #include <thread>
 #include <wx/checkbox.h>
+#include <wx/progdlg.h>
 #include <wx/textctrl.h>
+#include <wx/timer.h>
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
@@ -60,6 +62,13 @@ namespace REHex {
 			std::atomic<off_t> match_found_at;
 			std::atomic<bool> running;
 			
+			/* Start and end (inclusive) of current search. */
+			off_t search_base;
+			off_t search_end;
+			
+			wxProgressDialog *progress;
+			wxTimer timer;
+			
 		protected:
 			Search(wxWindow *parent, REHex::Document &doc, const char *title);
 			
@@ -80,11 +89,12 @@ namespace REHex {
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
+			void OnTimer(wxTimerEvent &event);
 			
 		private:
 			void enable_controls();
 			bool read_base_window_controls();
-			void thread_main(size_t window_size, size_t compare_size, off_t end);
+			void thread_main(size_t window_size, size_t compare_size);
 			
 		/* Stays at the bottom because it changes the protection... */
 		DECLARE_EVENT_TABLE()

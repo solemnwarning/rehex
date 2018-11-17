@@ -34,6 +34,7 @@
 
 enum {
 	ID_FIND_NEXT = 1,
+	ID_TIMER,
 	
 	ID_RANGE_CB,
 	ID_ALIGN_CB,
@@ -58,11 +59,13 @@ BEGIN_EVENT_TABLE(REHex::Search, wxDialog)
 	EVT_CHECKBOX(ID_RALIGN_CB, REHex::Search::OnCheckBox)
 	
 	EVT_BUTTON(ID_FIND_NEXT, REHex::Search::OnFindNext)
+	EVT_TIMER(ID_TIMER, REHex::Search::OnTimer)
 END_EVENT_TABLE()
 
 REHex::Search::Search(wxWindow *parent, REHex::Document &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
-	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), running(false)
+	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), running(false),
+	timer(this, ID_TIMER)
 {}
 
 void REHex::Search::setup_window()
@@ -168,19 +171,23 @@ void REHex::Search::begin_search(off_t from_offset, size_t window_size)
 	
 	size_t compare_size = test_max_window();
 	
-	off_t end = (range_end >= 0 ? range_end : doc.buffer_length());
-	
 	next_window_start = std::max(from_offset, range_begin);
 	match_found_at    = -1;
 	running           = true;
+	
+	search_base = next_window_start;
+	search_end  = (range_end >= 0 ? range_end : doc.buffer_length());
 	
 	/* Number of threads to spawn */
 	unsigned int thread_count = std::thread::hardware_concurrency();
 	
 	while(threads.size() < thread_count)
 	{
-		threads.emplace_back(&REHex::Search::thread_main, this, window_size, compare_size, end);
+		threads.emplace_back(&REHex::Search::thread_main, this, window_size, compare_size);
 	}
+	
+	progress = new wxProgressDialog("Searching", "Search in progress...", 100, this, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
+	timer.Start(200, wxTIMER_CONTINUOUS);
 }
 
 void REHex::Search::end_search()
@@ -194,6 +201,9 @@ void REHex::Search::end_search()
 		threads.back().join();
 		threads.pop_back();
 	}
+	
+	timer.Stop();
+	delete progress;
 }
 
 void REHex::Search::OnCheckBox(wxCommandEvent &event)
@@ -205,14 +215,32 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		off_t found_at = find_next(doc.get_cursor_position() + 1);
-		if(found_at < 0)
+		begin_search(doc.get_cursor_position() + 1);
+	}
+}
+
+void REHex::Search::OnTimer(wxTimerEvent &event)
+{
+	if(progress->WasCancelled())
+	{
+		end_search();
+		return;
+	}
+	
+	if(match_found_at >= 0 || next_window_start > search_end)
+	{
+		end_search();
+		
+		if(match_found_at >= 0)
 		{
-			wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
+			doc.set_cursor_position(match_found_at);
 		}
 		else{
-			doc.set_cursor_position(found_at);
+			wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
 		}
+	}
+	else{
+		progress->Update(((double)(100) / ((search_end - search_base) + 1)) * (next_window_start - search_base));
 	}
 }
 
@@ -293,14 +321,14 @@ bool REHex::Search::read_base_window_controls()
 	return ok;
 }
 
-void REHex::Search::thread_main(size_t window_size, size_t compare_size, off_t end)
+void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 {
 	while(running && match_found_at < 0)
 	{
 		off_t window_base = next_window_start.fetch_add(window_size);
-		off_t next_window = std::min((off_t)(window_base + window_size), (end + 1));
+		off_t next_window = std::min((off_t)(window_base + window_size), (search_end + 1));
 		
-		if(window_base > end)
+		if(window_base > search_end)
 		{
 			break;
 		}
@@ -316,7 +344,7 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size, off_t e
 		for(off_t at = search_base; at < next_window; at += align_to)
 		{
 			off_t  window_off   = at - window_base;
-			size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(end - at));
+			size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(search_end - at));
 			
 			if(test((window.data() + window_off), window_avail))
 			{

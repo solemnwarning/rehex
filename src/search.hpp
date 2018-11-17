@@ -18,8 +18,11 @@
 #ifndef REHEX_SEARCH_HPP
 #define REHEX_SEARCH_HPP
 
+#include <atomic>
+#include <mutex>
 #include <string>
 #include <sys/types.h>
+#include <thread>
 #include <wx/checkbox.h>
 #include <wx/textctrl.h>
 
@@ -51,6 +54,12 @@ namespace REHex {
 			wxCheckBox *ralign_cb;
 			wxTextCtrl *ralign_tc;
 			
+			std::mutex lock;
+			std::list<std::thread> threads;
+			std::atomic<off_t> next_window_start;
+			std::atomic<off_t> match_found_at;
+			std::atomic<bool> running;
+			
 		protected:
 			Search(wxWindow *parent, REHex::Document &doc, const char *title);
 			
@@ -65,7 +74,9 @@ namespace REHex {
 			void limit_range(off_t range_begin, off_t range_end);
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
 			
-			virtual off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
+			off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
+			void begin_search(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
+			void end_search();
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
@@ -73,6 +84,7 @@ namespace REHex {
 		private:
 			void enable_controls();
 			bool read_base_window_controls();
+			void thread_main(size_t window_size, size_t compare_size, off_t end);
 			
 		/* Stays at the bottom because it changes the protection... */
 		DECLARE_EVENT_TABLE()

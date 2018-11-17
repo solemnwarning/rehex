@@ -41,7 +41,7 @@
 
 REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 {
-	if(virt_offset >= this->length())
+	if(virt_offset >= _length())
 	{
 		/* Been asked for an offset beyond the end of the file. */
 		return nullptr;
@@ -279,6 +279,8 @@ void REHex::Buffer::write_inplace()
 
 void REHex::Buffer::write_inplace(const std::string &filename)
 {
+	std::unique_lock<std::mutex> l(lock);
+	
 	/* Need to open the file with open() since fopen() can't be told to open
 	 * the file, creating it if it doesn't exist, WITHOUT truncating and letting
 	 * us write at arbitrary positions.
@@ -299,7 +301,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	/* Disable write buffering */
 	setbuf(wfh, NULL);
 	
-	off_t out_length = this->length();
+	off_t out_length = _length();
 	
 	/* Reserve space in the output file if it isn't already at least as large
 	 * as the file we want to write out.
@@ -475,6 +477,8 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 
 void REHex::Buffer::write_copy(const std::string &filename)
 {
+	std::unique_lock<std::mutex> l(lock);
+	
 	FILE *out = fopen(filename.c_str(), "wb");
 	if(out == NULL)
 	{
@@ -503,11 +507,19 @@ void REHex::Buffer::write_copy(const std::string &filename)
 
 off_t REHex::Buffer::length()
 {
+	std::unique_lock<std::mutex> l(lock);
+	return _length();
+}
+
+off_t REHex::Buffer::_length()
+{
 	return blocks.back().virt_offset + blocks.back().virt_length;
 }
 
 std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_length)
 {
+	std::unique_lock<std::mutex> l(lock);
+	
 	Block *block = _block_by_virt_offset(offset);
 	if(block == nullptr)
 	{
@@ -538,7 +550,9 @@ std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_leng
 
 bool REHex::Buffer::overwrite_data(off_t offset, unsigned const char *data, off_t length)
 {
-	if((offset + length) > this->length())
+	std::unique_lock<std::mutex> l(lock);
+	
+	if((offset + length) > _length())
 	{
 		/* Runs past the end of the buffer. */
 		return false;
@@ -571,7 +585,9 @@ bool REHex::Buffer::overwrite_data(off_t offset, unsigned const char *data, off_
 
 bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t length)
 {
-	if(offset > this->length())
+	std::unique_lock<std::mutex> l(lock);
+	
+	if(offset > _length())
 	{
 		/* Starts past the end of the buffer. */
 		return false;
@@ -579,7 +595,7 @@ bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t l
 	
 	/* Need to special-case the block to be the last one when appending. */
 	
-	Block *block = (offset == this->length()
+	Block *block = (offset == _length()
 		? &(blocks.back())
 		: _block_by_virt_offset(offset));
 	
@@ -615,7 +631,9 @@ bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t l
 
 bool REHex::Buffer::erase_data(off_t offset, off_t length)
 {
-	if((offset + length) > this->length())
+	std::unique_lock<std::mutex> l(lock);
+	
+	if((offset + length) > _length())
 	{
 		/* Runs past the end of the buffer. */
 		return false;

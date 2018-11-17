@@ -20,6 +20,7 @@
 
 #include <list>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,7 @@ namespace REHex {
 		private:
 			FILE *fh;
 			std::string filename;
+			std::mutex lock;
 			
 		#ifdef UNIT_TEST
 		/* Make the block list public when unit testing so we can examine the
@@ -82,6 +84,8 @@ namespace REHex {
 		private:
 			Block *_block_by_virt_offset(off_t virt_offset);
 			void _load_block(Block *block);
+			
+			off_t _length();
 			
 			void _last_access_bump(Block *block);
 			void _last_access_remove(Block *block);

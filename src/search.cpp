@@ -62,7 +62,7 @@ END_EVENT_TABLE()
 
 REHex::Search::Search(wxWindow *parent, REHex::Document &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
-	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0)
+	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), running(false)
 {}
 
 void REHex::Search::setup_window()
@@ -151,52 +151,49 @@ void REHex::Search::require_alignment(off_t alignment, off_t relative_to_offset)
 
 off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 {
-	from_offset = std::max(from_offset, range_begin);
+	begin_search(from_offset, window_size);
 	
-	if(((from_offset - align_from) % align_to) != 0)
+	while(!threads.empty())
 	{
-		from_offset += (align_to - ((from_offset - align_from) % align_to));
+		threads.back().join();
+		threads.pop_back();
 	}
+	
+	return match_found_at;
+}
+
+void REHex::Search::begin_search(off_t from_offset, size_t window_size)
+{
+	assert(!running);
+	
+	size_t compare_size = test_max_window();
 	
 	off_t end = (range_end >= 0 ? range_end : doc.buffer_length());
 	
-	size_t want_window = test_max_window();
+	next_window_start = std::max(from_offset, range_begin);
+	match_found_at    = -1;
+	running           = true;
 	
-	assert(window_size >= want_window);
+	/* Number of threads to spawn */
+	unsigned int thread_count = std::thread::hardware_concurrency();
 	
-	std::vector<unsigned char> window = doc.read_data(from_offset, window_size);
-	off_t window_base = from_offset;
-	
-	for(off_t at = from_offset; at < end; at += align_to)
+	while(threads.size() < thread_count)
 	{
-		assert(window_base <= at);
-		
-		off_t  window_off   = at - window_base;
-		size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(end - at));
-		
-		if(want_window > window_avail
-			&& (window_base + (off_t)(window.size())) < doc.buffer_length())
-		{
-			/* The test() method wants more data than is available in the current
-			 * window and there is more data in the buffer past the end of it.
-			 *
-			 * Remake the window starting at the current position.
-			*/
-			
-			window      = doc.read_data(at, window_size);
-			window_base = at;
-			
-			window_off   = 0;
-			window_avail = window.size();
-		}
-		
-		if(test((window.data() + window_off), window_avail))
-		{
-			return at;
-		}
+		threads.emplace_back(&REHex::Search::thread_main, this, window_size, compare_size, end);
 	}
+}
+
+void REHex::Search::end_search()
+{
+	assert(running);
 	
-	return -1;
+	running = false;
+	
+	while(!threads.empty())
+	{
+		threads.back().join();
+		threads.pop_back();
+	}
 }
 
 void REHex::Search::OnCheckBox(wxCommandEvent &event)
@@ -294,6 +291,45 @@ bool REHex::Search::read_base_window_controls()
 	}
 	
 	return ok;
+}
+
+void REHex::Search::thread_main(size_t window_size, size_t compare_size, off_t end)
+{
+	while(running && match_found_at < 0)
+	{
+		off_t window_base = next_window_start.fetch_add(window_size);
+		off_t next_window = std::min((off_t)(window_base + window_size), (end + 1));
+		
+		if(window_base > end)
+		{
+			break;
+		}
+		
+		std::vector<unsigned char> window = doc.read_data(window_base, window_size + compare_size);
+		
+		off_t search_base = window_base;
+		if(((search_base - align_from) % align_to) != 0)
+		{
+			search_base += (align_to - ((search_base - align_from) % align_to));
+		}
+		
+		for(off_t at = search_base; at < next_window; at += align_to)
+		{
+			off_t  window_off   = at - window_base;
+			size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(end - at));
+			
+			if(test((window.data() + window_off), window_avail))
+			{
+				std::unique_lock<std::mutex> l(lock);
+				
+				if(match_found_at < 0 || match_found_at > at)
+				{
+					match_found_at = at;
+					return;
+				}
+			}
+		}
+	}
 }
 
 REHex::Search::Text::Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for, bool case_sensitive):

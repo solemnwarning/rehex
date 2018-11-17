@@ -56,7 +56,7 @@ namespace REHex {
 			bool get_show_ascii();
 			void set_show_ascii(bool show_ascii);
 			
-			off_t get_offset();
+			off_t get_cursor_position();
 			void set_cursor_position(off_t off);
 			bool get_insert_mode();
 			
@@ -95,6 +95,11 @@ namespace REHex {
 				CSTATE_HEX,
 				CSTATE_HEX_MID,
 				CSTATE_ASCII,
+				
+				/* Only valid as parameter to _set_cursor_position(), will go
+				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.
+				*/
+				CSTATE_GOTO,
 			};
 			
 			struct Region
@@ -203,14 +208,16 @@ namespace REHex {
 			void _init_regions(const json_t *meta);
 			void _recalc_regions(wxDC &dc);
 			
+			void _set_cursor_position(off_t position, enum CursorState cursor_state);
+			
 			void _UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
 			void _UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
 			void _UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length);
 			
-			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length);
-			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length);
+			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
+			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_erase_data(const char *change_desc, off_t offset, off_t length);
-			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length);
+			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
 			
 			wxString _get_comment_text(off_t offset);

@@ -192,21 +192,45 @@ void REHex::Document::set_show_ascii(bool show_ascii)
 	_handle_width_change();
 }
 
-off_t REHex::Document::get_offset()
+off_t REHex::Document::get_cursor_position()
 {
 	return this->cpos_off;
 }
 
 void REHex::Document::set_cursor_position(off_t off)
 {
-	off_t max_cpos = insert_mode
-		? buffer->length()
-		: (buffer->length() - 1);
+	_set_cursor_position(off, CSTATE_GOTO);
+}
+
+void REHex::Document::_set_cursor_position(off_t position, enum CursorState cursor_state)
+{
+	assert(position >= 0 && position <= buffer->length());
 	
-	assert(off >= 0 && off <= max_cpos);
+	if(!insert_mode && position == buffer->length())
+	{
+		--position;
+	}
 	
-	cpos_off = off;
+	if(cursor_state == CSTATE_GOTO)
+	{
+		if(this->cursor_state == CSTATE_HEX_MID)
+		{
+			cursor_state = CSTATE_HEX;
+		}
+		else{
+			cursor_state = this->cursor_state;
+		}
+	}
+	
+	/* Blink cursor to visibility and reset timer */
+	cursor_visible = true;
+	redraw_cursor_timer.Start();
+	
+	cpos_off = position;
+	this->cursor_state = cursor_state;
+	
 	_make_byte_visible(cpos_off);
+	_raise_moved();
 }
 
 bool REHex::Document::get_insert_mode()
@@ -247,7 +271,7 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 
 void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, off_t length)
 {
-	_tracked_overwrite_data("change data", offset, data, length);
+	_tracked_overwrite_data("change data", offset, data, length, offset + length, CSTATE_GOTO);
 }
 
 // void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
@@ -281,40 +305,27 @@ void REHex::Document::handle_paste(const std::string &clipboard_text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)
 	{
+		off_t cursor_pos = get_cursor_position();
+		
 		if(selection_length > 0)
 		{
 			/* Some data is selected, replace it. */
 			
-			off_t old_sel_off = selection_off;
-			
-			_tracked_replace_data("paste", selection_off, selection_length, data, size);
-			
+			_tracked_replace_data("paste", selection_off, selection_length, data, size, selection_off + selection_length, CSTATE_GOTO);
 			clear_selection();
-			
-			cpos_off = old_sel_off + size;
 		}
 		else if(insert_mode)
 		{
 			/* We are in insert mode, insert at the cursor. */
-			
-			_tracked_insert_data("paste", cpos_off, data, size);
-			
-			cpos_off += size;
+			_tracked_insert_data("paste", cursor_pos, data, size, cursor_pos + size, CSTATE_GOTO);
 		}
 		else{
 			/* We are in overwrite mode, overwrite up to the end of the file. */
 			
-			off_t to_end = buffer->length() - cpos_off;
+			off_t to_end = buffer->length() - cursor_pos;
 			off_t to_write = std::min(to_end, (off_t)(size));
 			
-			overwrite_data(cpos_off, data, to_write);
-			
-			cpos_off += to_write;
-		}
-		
-		if(cpos_off == buffer->length() && !insert_mode)
-		{
-			--cpos_off;
+			_tracked_overwrite_data("paste", cursor_pos, data, to_write, cursor_pos + to_write, CSTATE_GOTO);
 		}
 		
 		Refresh();
@@ -761,35 +772,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	int key       = event.GetKeyCode();
 	int modifiers = event.GetModifiers();
 	
-	auto cpos_inc = [this]()
-	{
-		if(this->cpos_off + !insert_mode < this->buffer->length())
-		{
-			++(this->cpos_off);
-			_make_byte_visible(cpos_off);
-			_raise_moved();
-		}
-		
-		if(cursor_state == CSTATE_HEX_MID)
-		{
-			cursor_state = CSTATE_HEX;
-		}
-	};
-	
-	auto cpos_dec = [this]()
-	{
-		if(this->cpos_off > 0)
-		{
-			--(this->cpos_off);
-			_make_byte_visible(cpos_off);
-			_raise_moved();
-		}
-		
-		if(cursor_state == CSTATE_HEX_MID)
-		{
-			cursor_state = CSTATE_HEX;
-		}
-	};
+	off_t cursor_pos = get_cursor_position();
 	
 	if(modifiers & wxMOD_CONTROL)
 	{
@@ -845,69 +828,44 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		
 		if(cursor_state == CSTATE_HEX_MID)
 		{
-			std::vector<unsigned char> cur_data = buffer->read_data(cpos_off, 1);
+			/* Overwrite least significant nibble of current byte, then move onto
+			 * inserting or overwriting at the next byte.
+			*/
+			
+			std::vector<unsigned char> cur_data = buffer->read_data(cursor_pos, 1);
 			assert(cur_data.size() == 1);
 			
 			unsigned char old_byte = cur_data[0];
 			unsigned char new_byte = (old_byte & 0xF0) | nibble;
 			
-			off_t write_off = cpos_off;
-			
-			_tracked_change("Change data",
-				[this, write_off, new_byte, cpos_inc]()
-				{
-					wxClientDC dc(this);
-					_UNTRACKED_overwrite_data(dc, write_off, &new_byte, 1);
-					
-					cpos_off = write_off;
-					cpos_inc();
-				},
-				
-				[this, write_off, old_byte]()
-				{
-					wxClientDC dc(this);
-					_UNTRACKED_overwrite_data(dc, write_off, &old_byte, 1);
-				});
+			_tracked_overwrite_data("Change data", cursor_pos, &new_byte, 1, cursor_pos + 1, CSTATE_HEX);
 		}
 		else if(this->insert_mode)
 		{
+			/* Inserting a new byte. Initialise the most significant nibble then move
+			 * onto overwriting the least significant.
+			*/
+			
 			unsigned char byte = (nibble << 4);
-			
-			_tracked_insert_data("change data", this->cpos_off, &byte, 1);
-			
-			cursor_state = CSTATE_HEX_MID;
+			_tracked_insert_data("change data", cursor_pos, &byte, 1, cursor_pos, CSTATE_HEX_MID);
 		}
 		else{
-			std::vector<unsigned char> cur_data = buffer->read_data(this->cpos_off, 1);
+			/* Overwrite most significant nibble of current byte, then move onto
+			 * overwriting the least significant.
+			*/
+			
+			std::vector<unsigned char> cur_data = buffer->read_data(cursor_pos, 1);
 			
 			if(!cur_data.empty())
 			{
 				unsigned char old_byte = cur_data[0];
 				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
 				
-				off_t write_off = cpos_off;
-				
-				_tracked_change("Change data",
-					[this, write_off, new_byte, cpos_inc]()
-					{
-						wxClientDC dc(this);
-						_UNTRACKED_overwrite_data(dc, write_off, &new_byte, 1);
-						
-						cpos_off     = write_off;
-						cursor_state = CSTATE_HEX_MID;
-					},
-					
-					[this, write_off, old_byte]()
-					{
-						wxClientDC dc(this);
-						_UNTRACKED_overwrite_data(dc, write_off, &old_byte, 1);
-					});
+				_tracked_overwrite_data("Change data", cursor_pos, &new_byte, 1, cursor_pos, CSTATE_HEX_MID);
 			}
 		}
 		
 		clear_selection();
-		
-		_make_byte_visible(cpos_off);
 		
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
@@ -918,40 +876,17 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		
 		if(this->insert_mode)
 		{
-			_tracked_insert_data("change data", this->cpos_off, &byte, 1);
-			
-			cpos_inc();
+			_tracked_insert_data("Change data", cursor_pos, &byte, 1, cursor_pos + 1, CSTATE_ASCII);
 		}
-		else if(cpos_off < buffer->length())
+		else if(cursor_pos < buffer->length())
 		{
-			std::vector<unsigned char> cur_data = buffer->read_data(cpos_off, 1);
+			std::vector<unsigned char> cur_data = buffer->read_data(cursor_pos, 1);
 			assert(cur_data.size() == 1);
 			
-			unsigned char old_byte = cur_data[0];
-			unsigned char new_byte = byte;
-			
-			off_t write_off = cpos_off;
-			
-			_tracked_change("Change data",
-				[this, write_off, new_byte, cpos_inc]()
-				{
-					wxClientDC dc(this);
-					_UNTRACKED_overwrite_data(dc, write_off, &new_byte, 1);
-					
-					cpos_off = write_off;
-					cpos_inc();
-				},
-				
-				[this, write_off, old_byte]()
-				{
-					wxClientDC dc(this);
-					_UNTRACKED_overwrite_data(dc, write_off, &old_byte, 1);
-				});
+			_tracked_overwrite_data("Change data", cursor_pos, &byte, 1, cursor_pos + 1, CSTATE_ASCII);
 		}
 		
 		clear_selection();
-		
-		_make_byte_visible(cpos_off);
 		
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
@@ -960,8 +895,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	{
 		if(key == WXK_LEFT)
 		{
-			cpos_dec();
-			
+			set_cursor_position(cursor_pos - (cursor_pos > 0));
 			clear_selection();
 			
 			/* TODO: Limit paint to affected area */
@@ -969,8 +903,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_RIGHT)
 		{
-			cpos_inc();
-			
+			set_cursor_position(cursor_pos + 1);
 			clear_selection();
 			
 			/* TODO: Limit paint to affected area */
@@ -978,17 +911,17 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_UP)
 		{
-			auto cur_region = _data_region_by_offset(cpos_off);
+			auto cur_region = _data_region_by_offset(cursor_pos);
 			assert(cur_region != NULL);
 			
-			off_t offset_within_cur = cpos_off - cur_region->d_offset;
+			off_t offset_within_cur = cursor_pos - cur_region->d_offset;
 			
 			if(offset_within_cur >= bytes_per_line_calc)
 			{
 				/* We are at least on the second line of the current
 				 * region, can jump to the previous one.
 				*/
-				cpos_off -= bytes_per_line_calc;
+				set_cursor_position(cursor_pos - bytes_per_line_calc);
 			}
 			else if(cur_region->d_offset > 0)
 			{
@@ -1012,8 +945,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					 * on the screen.
 					*/
 					
-					cpos_off -= offset_within_cur;
-					cpos_off -= pr_last_line_len - offset_within_cur;
+					set_cursor_position((cursor_pos - offset_within_cur) - (pr_last_line_len - offset_within_cur));
 				}
 				else{
 					/* The last line of the previous block falls short of the
@@ -1021,7 +953,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					 * of it.
 					*/
 					
-					cpos_off = cur_region->d_offset - 1;
+					set_cursor_position(cur_region->d_offset - 1);
 				}
 			}
 			
@@ -1032,18 +964,15 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			clear_selection();
 			
-			_make_byte_visible(cpos_off);
-			_raise_moved();
-			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
 		}
 		else if(key == WXK_DOWN)
 		{
-			auto cur_region = _data_region_by_offset(cpos_off);
+			auto cur_region = _data_region_by_offset(cursor_pos);
 			assert(cur_region != NULL);
 			
-			off_t offset_within_cur = cpos_off - cur_region->d_offset;
+			off_t offset_within_cur = cursor_pos - cur_region->d_offset;
 			off_t remain_within_cur = cur_region->d_length - offset_within_cur;
 			
 			off_t last_line_within_cur = cur_region->d_length
@@ -1056,14 +985,14 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				/* There is at least one more line's worth of bytes in the
 				 * current region, can just skip ahead.
 				*/
-				cpos_off += bytes_per_line_calc;
+				set_cursor_position(cursor_pos + bytes_per_line_calc);
 			}
 			else if(offset_within_cur < last_line_within_cur)
 			{
 				/* There is another line in the current region which falls short of
 				 * the cursor's horizontal position, jump to its end.
 				*/
-				cpos_off = cur_region->d_offset + cur_region->d_length - 1;
+				set_cursor_position(cur_region->d_offset + cur_region->d_length - 1);
 			}
 			else{
 				auto next_region = _data_region_by_offset(cur_region->d_offset + cur_region->d_length);
@@ -1073,11 +1002,13 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					/* There is another region after this one, jump to the same
 					 * it, offset by our offset in the current line.
 					*/
-					cpos_off = next_region->d_offset + (offset_within_cur % bytes_per_line_calc);
+					off_t new_cursor_pos = next_region->d_offset + (offset_within_cur % bytes_per_line_calc);
 					
 					/* Clamp to the end of the next region. */
 					off_t max_pos = (next_region->d_offset + next_region->d_length - 1);
-					cpos_off = std::min(max_pos, cpos_off);
+					new_cursor_pos = std::min(max_pos, new_cursor_pos);
+					
+					set_cursor_position(new_cursor_pos);
 				}
 			}
 			
@@ -1087,9 +1018,6 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			}
 			
 			clear_selection();
-			
-			_make_byte_visible(cpos_off);
-			_raise_moved();
 			
 			/* TODO: Limit paint to affected area */
 			this->Refresh();
@@ -1105,12 +1033,13 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				wxPostEvent(this, event);
 			}
 			
-			if(!insert_mode && cpos_off == buffer->length())
+			off_t cursor_pos = get_cursor_position();
+			if(!insert_mode && cursor_pos == buffer->length())
 			{
 				/* Move cursor back if going from insert to overwrite mode and it
 				 * was at the end of the file.
 				*/
-				cpos_dec();
+				set_cursor_position(cursor_pos - 1);
 			}
 			
 			/* TODO: Limit paint to affected area */
@@ -1122,9 +1051,9 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			{
 				_tracked_erase_data("delete selection", selection_off, selection_length);
 			}
-			else if(this->cpos_off < this->buffer->length())
+			else if(cursor_pos < this->buffer->length())
 			{
-				_tracked_erase_data("delete", cpos_off, 1);
+				_tracked_erase_data("delete", cursor_pos, 1);
 			}
 		}
 		else if(key == WXK_BACK)
@@ -1138,16 +1067,16 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				/* Backspace while waiting for the second nibble in a byte should erase the current byte
 				 * rather than the previous one.
 				*/
-				_tracked_erase_data("delete", cpos_off, 1);
+				_tracked_erase_data("delete", cursor_pos, 1);
 			}
-			else if(cpos_off > 0)
+			else if(cursor_pos > 0)
 			{
-				_tracked_erase_data("delete", cpos_off - 1, 1);
+				_tracked_erase_data("delete", cursor_pos - 1, 1);
 			}
 		}
 		else if(key == '/')
 		{
-			_edit_comment_popup(cpos_off);
+			_edit_comment_popup(cursor_pos);
 		}
 	}
 }
@@ -1201,12 +1130,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				{
 					/* Clicked on a character */
 					
-					cpos_off     = clicked_offset;
-					cursor_state = CSTATE_ASCII;
+					_set_cursor_position(clicked_offset, CSTATE_ASCII);
 					
 					clear_selection();
-					
-					_raise_moved();
 					
 					mouse_down_at_offset = clicked_offset;
 					mouse_down_in_ascii  = true;
@@ -1223,12 +1149,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				{
 					/* Clicked on a byte */
 					
-					cpos_off     = clicked_offset;
-					cursor_state = CSTATE_HEX;
+					_set_cursor_position(clicked_offset, CSTATE_HEX);
 					
 					clear_selection();
-					
-					_raise_moved();
 					
 					mouse_down_at_offset = clicked_offset;
 					mouse_down_in_hex    = true;
@@ -1314,15 +1237,12 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				{
 					/* Clicked on a character */
 					
-					cpos_off     = clicked_offset;
-					cursor_state = CSTATE_ASCII;
+					_set_cursor_position(clicked_offset, CSTATE_ASCII);
 					
-					if(cpos_off < selection_off || cpos_off >= selection_off + selection_length)
+					if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
 					{
 						clear_selection();
 					}
-					
-					_raise_moved();
 					
 					/* TODO: Limit paint to affected area */
 					Refresh();
@@ -1336,15 +1256,12 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				{
 					/* Clicked on a byte */
 					
-					cpos_off     = clicked_offset;
-					cursor_state = CSTATE_HEX;
+					_set_cursor_position(clicked_offset, CSTATE_HEX);
 					
-					if(cpos_off < selection_off || cpos_off >= selection_off + selection_length)
+					if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
 					{
 						clear_selection();
 					}
-					
-					_raise_moved();
 					
 					/* TODO: Limit paint to affected area */
 					Refresh();
@@ -1363,7 +1280,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			
 			menu.AppendSeparator();
 			
-			if(_get_comment_text(cpos_off).empty())
+			if(_get_comment_text(get_cursor_position()).empty())
 			{
 				menu.Append(ID_SET_COMMENT, "Insert comment...");
 			}
@@ -1470,7 +1387,7 @@ void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
 /* Handles the "Insert comment" context menu option */
 void REHex::Document::OnSetComment(wxCommandEvent &event)
 {
-	_edit_comment_popup(cpos_off);
+	_edit_comment_popup(get_cursor_position());
 }
 
 void REHex::Document::_ctor_pre(wxWindow *parent)
@@ -1797,7 +1714,7 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 	}
 }
 
-void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
 	std::vector<unsigned char> old_data = read_data(offset, length);
 	assert(old_data.size() == length);
@@ -1805,10 +1722,11 @@ void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t off
 	std::vector<unsigned char> new_data(data, data + length);
 	
 	_tracked_change(change_desc,
-		[this, offset, new_data]()
+		[this, offset, new_data, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_overwrite_data(dc, offset, new_data.data(), new_data.size());
+			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
 		[this, offset, old_data]()
@@ -1818,15 +1736,16 @@ void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t off
 		});
 }
 
-void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
 	std::vector<unsigned char> data_copy(data, data + length);
 	
 	_tracked_change(change_desc,
-		[this, offset, data_copy]()
+		[this, offset, data_copy, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_insert_data(dc, offset, data_copy.data(), data_copy.size());
+			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
 		[this, offset, length]()
@@ -1866,7 +1785,7 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 		});
 }
 
-void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length)
+void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
 	if(old_data_length == new_data_length)
 	{
@@ -1878,11 +1797,12 @@ void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offse
 	std::vector<unsigned char> new_data_copy(new_data, new_data + new_data_length);
 	
 	_tracked_change(change_desc,
-		[this, offset, old_data_length, new_data_copy]()
+		[this, offset, old_data_length, new_data_copy, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_erase_data(dc, offset, old_data_length);
 			_UNTRACKED_insert_data(dc, offset, new_data_copy.data(), new_data_copy.size());
+			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		
 		[this, offset, old_data_copy, new_data_length]()
@@ -2381,6 +2301,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	bool hex_active   = doc.HasFocus() && doc.cursor_state != CSTATE_ASCII;
 	bool ascii_active = doc.HasFocus() && doc.cursor_state == CSTATE_ASCII;
 	
+	off_t cursor_pos = doc.get_cursor_position();
+	
 	for(auto di = data.begin();;)
 	{
 		int hex_base_x = x;
@@ -2455,7 +2377,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			};
 			
 			bool inv_high, inv_low;
-			if(cur_off == doc.cpos_off && hex_active)
+			if(cur_off == cursor_pos && hex_active)
 			{
 				if(doc.cursor_state == CSTATE_HEX)
 				{
@@ -2514,14 +2436,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				}
 			}
 			
-			if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || !hex_active))
+			if(cur_off == cursor_pos && doc.insert_mode && ((doc.cursor_visible && doc.cursor_state == CSTATE_HEX) || !hex_active))
 			{
 				/* Draw insert cursor. */
 				dc.SetPen(black_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
-			if(cur_off == doc.cpos_off && !doc.insert_mode && !hex_active)
+			if(cur_off == cursor_pos && !doc.insert_mode && !hex_active)
 			{
 				/* Draw inactive overwrite cursor. */
 				dc.SetPen(black_1px);
@@ -2546,7 +2468,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				
 				if(ascii_active)
 				{
-					if(cur_off == doc.cpos_off && !doc.insert_mode && doc.cursor_visible)
+					if(cur_off == cursor_pos && !doc.insert_mode && doc.cursor_visible)
 					{
 						inverted_text_colour();
 						
@@ -2571,7 +2493,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				else{
 					ascii_string.append(1, ascii_byte);
 					
-					if(cur_off == doc.cpos_off && !doc.insert_mode)
+					if(cur_off == cursor_pos && !doc.insert_mode)
 					{
 						dc.SetPen(black_1px);
 						dc.DrawRectangle(ascii_x, y, doc.hf_char_width(), doc.hf_height);
@@ -2606,7 +2528,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					}
 				}
 				
-				if(cur_off == doc.cpos_off && doc.insert_mode && (doc.cursor_visible || !ascii_active))
+				if(cur_off == cursor_pos && doc.insert_mode && (doc.cursor_visible || !ascii_active))
 				{
 					dc.SetPen(black_1px);
 					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
@@ -2618,7 +2540,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			++cur_off;
 		}
 		
-		if(cur_off == doc.cpos_off && cur_off == doc.buffer->length())
+		if(cur_off == cursor_pos && cur_off == doc.buffer->length())
 		{
 			/* Draw the insert cursor past the end of the line if we've just written
 			 * the last byte to the screen.

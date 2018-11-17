@@ -208,7 +208,7 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		off_t found_at = find_next(doc.get_offset() + 1);
+		off_t found_at = find_next(doc.get_cursor_position() + 1);
 		if(found_at < 0)
 		{
 			wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);

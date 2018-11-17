@@ -621,7 +621,7 @@ void REHex::MainWindow::OnInsertToggle(wxCommandEvent &event)
 
 void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
 {
-	off_t off = doc->get_offset();
+	off_t off = doc->get_cursor_position();
 	
 	char buf[64];
 	snprintf(buf, sizeof(buf), "Offset: %08x:%08x",
@@ -708,7 +708,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		
 		SetSizerAndFit(v_sizer);
 		
-		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_offset(), 8);
+		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
 	}
 	catch(const std::exception &e)
@@ -743,7 +743,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		
 		SetSizerAndFit(v_sizer);
 		
-		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_offset(), 8);
+		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
 	}
 	catch(const std::exception &e)
@@ -758,7 +758,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 
 void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
 {
-	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_offset(), 8);
+	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
 	
 	/* Let the event propogate on up to MainWindow to update the status bar. */
@@ -770,7 +770,7 @@ void REHex::MainWindow::Tab::OnValueChange(wxCommandEvent &event)
 	auto vc = dynamic_cast<REHex::ValueChange*>(&event);
 	assert(vc != NULL);
 	
-	off_t offset = doc->get_offset();
+	off_t offset = doc->get_cursor_position();
 	std::vector<unsigned char> data = vc->get_data();
 	
 	doc->overwrite_data(offset, data.data(), data.size());
@@ -784,7 +784,7 @@ void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)
 	auto vf = dynamic_cast<REHex::ValueFocus*>(&event);
 	assert(vf != NULL);
 	
-	off_t cur_pos = doc->get_offset();
+	off_t cur_pos = doc->get_cursor_position();
 	off_t length  = vf->get_size();
 	
 	doc->set_selection(cur_pos, length);

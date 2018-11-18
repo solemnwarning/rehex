@@ -152,15 +152,19 @@ void REHex::Search::require_alignment(off_t alignment, off_t relative_to_offset)
 	align_from = relative_to_offset;
 }
 
+/* This method is only used by the unit tests. */
 off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 {
 	begin_search(from_offset, window_size);
 	
+	/* Wait for the workers to finish searching. */
 	while(!threads.empty())
 	{
 		threads.back().join();
 		threads.pop_back();
 	}
+	
+	end_search();
 	
 	return match_found_at;
 }

@@ -541,7 +541,7 @@ std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_leng
 		
 		++block;
 		
-		offset      = block->virt_offset;
+		offset     += to_copy;
 		max_length -= to_copy;
 	}
 	
@@ -655,7 +655,7 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 			_load_block(block);
 			
 			unsigned char *base = block->data.data() + block_rel_off;
-			memmove(base, base + to_erase, block->virt_length - block_rel_off);
+			memmove(base, base + to_erase, (block->virt_length - block_rel_off) - to_erase);
 			
 			block->virt_length -= to_erase;
 		}
@@ -674,7 +674,7 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 		/* Set the offset to the start of the next block where we'll
 		 * pick up the erasing at.
 		*/
-		offset = block->virt_offset;
+		offset += to_erase;
 	}
 	
 	/* Shift the virtual offset of any subsequent blocks back. */

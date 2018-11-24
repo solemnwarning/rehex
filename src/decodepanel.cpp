@@ -196,6 +196,18 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	h64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
 	o64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
 	
+	sizer->Add(new wxStaticText(this, wxID_ANY, ""));
+	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit float"), wxSizerFlags().Align(wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL));
+	add_tc(float_txt, 20);
+	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit double"), wxSizerFlags().Align(wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL));
+	add_tc(double_txt, 22);
+	
+	float_txt ->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnFloatValue,  this);
+	double_txt->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnDoubleValue, this);
+	
+	float_txt ->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<float>,  this);
+	double_txt->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<double>, this);
+	
 	SetSizerAndFit(sizer);
 }
 
@@ -252,6 +264,9 @@ void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxWindow
 	TC_UPDATE(u64le, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
 	TC_UPDATE(h64le, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
 	TC_UPDATE(o64le, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
+	
+	TC_UPDATE(float_txt,  float,  "%.9g", (double)(*(float*)(data)));
+	TC_UPDATE(double_txt, double, "%.17g", (*(double*)(data)));
 }
 
 template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedValue(wxCommandEvent &event)
@@ -335,6 +350,70 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsigned
 	T tval = htoX(uval);
 	
 	ValueChange change_ev(tval, tc);
+	change_ev.SetEventObject(this);
+	
+	wxPostEvent(this, change_ev);
+}
+
+void REHex::DecodePanel::OnFloatValue(wxCommandEvent &event)
+{
+	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
+	assert(tc != NULL);
+	
+	std::string sval = tc->GetValue().ToStdString();
+	if(sval.length() == 0)
+	{
+		return;
+	}
+	
+	errno = 0;
+	char *endptr;
+	
+	float uval = strtof(sval.c_str(), &endptr);
+	if(*endptr != '\0')
+	{
+		/* Invalid characters */
+		return;
+	}
+	if((uval == HUGE_VALF || uval == -HUGE_VALF) && errno == ERANGE)
+	{
+		/* Out of range of float */
+		return;
+	}
+	
+	ValueChange change_ev(uval, tc);
+	change_ev.SetEventObject(this);
+	
+	wxPostEvent(this, change_ev);
+}
+
+void REHex::DecodePanel::OnDoubleValue(wxCommandEvent &event)
+{
+	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
+	assert(tc != NULL);
+	
+	std::string sval = tc->GetValue().ToStdString();
+	if(sval.length() == 0)
+	{
+		return;
+	}
+	
+	errno = 0;
+	char *endptr;
+	
+	double uval = strtod(sval.c_str(), &endptr);
+	if(*endptr != '\0')
+	{
+		/* Invalid characters */
+		return;
+	}
+	if((uval == HUGE_VAL || uval == -HUGE_VAL) && errno == ERANGE)
+	{
+		/* Out of range of double */
+		return;
+	}
+	
+	ValueChange change_ev(uval, tc);
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);

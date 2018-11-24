@@ -101,9 +101,12 @@ namespace REHex {
 			wxTextCtrl *s32le, *u32le, *h32le, *o32le;
 			wxTextCtrl *s64be, *u64be, *h64be, *o64be;
 			wxTextCtrl *s64le, *u64le, *h64le, *o64le;
+			wxTextCtrl *float_txt, *double_txt;
 			
 			template<typename T, int base, T (*htoX)(T)> void OnSignedValue(wxCommandEvent &event);
 			template<typename T, int base, T (*htoX)(T)> void OnUnsignedValue(wxCommandEvent &event);
+			void OnFloatValue(wxCommandEvent &event);
+			void OnDoubleValue(wxCommandEvent &event);
 			
 			template<typename T> void OnSetFocus(wxFocusEvent &event);
 	};

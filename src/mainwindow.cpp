@@ -703,10 +703,17 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		doc = new REHex::Document(this);
 		v_sizer->Add(doc, 1, wxEXPAND | wxALL, 0);
 		
-		dp = new REHex::DecodePanel(this);
-		v_sizer->Add(dp, 0, wxALIGN_LEFT, 0);
+		h_tools = new wxAuiNotebook(this, ID_HTOOLS, wxDefaultPosition, wxDefaultSize,
+			(wxAUI_NB_BOTTOM | wxAUI_NB_SCROLL_BUTTONS));
+		v_sizer->Add(h_tools, 0, wxEXPAND | wxALL, 0);
 		
 		SetSizerAndFit(v_sizer);
+		
+		dp = new REHex::DecodePanel(this);
+		h_tools->AddPage(dp, "Decode values");
+		
+		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
+		h_tools->AddPage(tc, "Text");
 		
 		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
@@ -725,6 +732,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
 	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_CHANGE, REHex::MainWindow::Tab::OnValueChange)
 	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_FOCUS,  REHex::MainWindow::Tab::OnValueFocus)
+	
+	EVT_AUINOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::MainWindow::Tab::OnHToolChange)
 END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -738,10 +747,17 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		doc = new REHex::Document(this, filename);
 		v_sizer->Add(doc, 1, wxEXPAND | wxALL, 0);
 		
-		dp = new REHex::DecodePanel(this);
-		v_sizer->Add(dp, 0, wxALIGN_LEFT, 0);
+		h_tools = new wxAuiNotebook(this, ID_HTOOLS, wxDefaultPosition, wxDefaultSize,
+			(wxAUI_NB_BOTTOM | wxAUI_NB_SCROLL_BUTTONS));
+		v_sizer->Add(h_tools, 0, wxEXPAND | wxALL, 0);
 		
 		SetSizerAndFit(v_sizer);
+		
+		dp = new REHex::DecodePanel(this);
+		h_tools->AddPage(dp, "Decode values", true);
+		
+		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
+		h_tools->AddPage(tc, "Test input");
 		
 		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
@@ -754,6 +770,32 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		
 		throw e;
 	}
+}
+
+/* HACK: wxAuiNotebook() doesn't seem to correctly account for the size of its
+ * own borders/controls when calculating minimum size, so we calculate how much
+ * space they are taking and override the minimum size.
+*/
+void REHex::MainWindow::Tab::fix_htools_size()
+{
+	wxWindow *cpage = h_tools->GetCurrentPage();
+	
+	/* Arbitrary chosen size. Should be large enough to fit the selected tool. */
+	h_tools->SetSize(1024, 1024);
+	
+	wxSize ht_size = h_tools->GetSize();
+	wxSize cp_size = cpage->GetSize();
+	
+	wxSize cp_best_size = cpage->GetBestSize();
+	
+	wxSize ht_min_size(
+		(cp_best_size.GetWidth()  + (ht_size.GetWidth()  - cp_size.GetWidth())),
+		(cp_best_size.GetHeight() + (ht_size.GetHeight() - cp_size.GetHeight())));
+	
+	h_tools->SetMinClientSize(ht_min_size);
+	
+	/* Kick the wxSizer to rearrange itself. */
+	GetSizer()->Layout();
 }
 
 void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
@@ -788,4 +830,9 @@ void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)
 	off_t length  = vf->get_size();
 	
 	doc->set_selection(cur_pos, length);
+}
+
+void REHex::MainWindow::Tab::OnHToolChange(wxAuiNotebookEvent& event)
+{
+	fix_htools_size();
 }

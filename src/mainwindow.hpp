@@ -70,13 +70,21 @@ namespace REHex {
 					Tab(wxWindow *parent, const std::string &filename);
 					
 					REHex::Document    *doc;
+					wxAuiNotebook      *h_tools;
 					REHex::DecodePanel *dp;
+					
+					void fix_htools_size();
 					
 					void OnCursorMove(wxCommandEvent &event);
 					void OnValueChange(wxCommandEvent &event);
 					void OnValueFocus(wxCommandEvent &event);
+					void OnHToolChange(wxAuiNotebookEvent &event);
 					
 				private:
+					enum {
+						ID_HTOOLS = 1,
+					};
+					
 					DECLARE_EVENT_TABLE()
 			};
 			

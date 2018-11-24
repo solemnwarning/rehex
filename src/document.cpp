@@ -226,11 +226,17 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	cursor_visible = true;
 	redraw_cursor_timer.Start();
 	
+	bool cursor_moved = (cpos_off != position);
+	
 	cpos_off = position;
 	this->cursor_state = cursor_state;
 	
 	_make_byte_visible(cpos_off);
-	_raise_moved();
+	
+	if(cursor_moved)
+	{
+		_raise_moved();
+	}
 }
 
 bool REHex::Document::get_insert_mode()
@@ -271,12 +277,12 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 
 void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, off_t length)
 {
-	_tracked_overwrite_data("change data", offset, data, length, offset + length, CSTATE_GOTO);
+	_tracked_overwrite_data("change data", offset, data, length, get_cursor_position(), cursor_state);
 }
 
 void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
 {
-	_tracked_insert_data("change data", offset, data, length, offset + length, CSTATE_GOTO);
+	_tracked_insert_data("change data", offset, data, length, get_cursor_position(), cursor_state);
 }
 
 void REHex::Document::erase_data(off_t offset, off_t length)

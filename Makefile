@@ -18,8 +18,8 @@ WX_CONFIG ?= "wx-config"
 
 EXE ?= "rehex"
 
-WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags base core aui)
-WX_LIBS     := $(shell $(WX_CONFIG) --libs     base core aui)
+WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags base core aui propgrid)
+WX_LIBS     := $(shell $(WX_CONFIG) --libs     base core aui propgrid)
 
 CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/                $(CFLAGS)
 CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS) $(CXXFLAGS)

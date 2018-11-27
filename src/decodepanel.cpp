@@ -46,167 +46,93 @@ static int64_t  htobe64_s( int64_t host_64bits) { return htobe64(host_64bits); }
 static uint64_t htole64_u(uint64_t host_64bits) { return htole64(host_64bits); }
 static int64_t  htole64_s( int64_t host_64bits) { return htole64(host_64bits); }
 
+/* Endian conversion for floats.
+ * These won't work on crazy platforms where integers and floats have different
+ * endianness.
+*/
+
+static_assert(sizeof(float) == sizeof(int32_t), "float must be the same size as int32_t");
+static_assert(sizeof(double) == sizeof(int64_t), "double must be the same size as int64_t");
+
+static float beftoh(float be_float)
+{
+	int32_t he_float = be32toh(*(int32_t*)(&be_float));
+	return *(float*)(&he_float);
+}
+
+static double bedtoh(double be_double)
+{
+	int64_t he_double = be64toh(*(int64_t*)(&be_double));
+	return *(double*)(&he_double);
+}
+
+static float leftoh(float le_float)
+{
+	int32_t he_float = le32toh(*(int32_t*)(&le_float));
+	return *(float*)(&he_float);
+}
+
+static double ledtoh(double le_double)
+{
+	int64_t he_double = le64toh(*(int64_t*)(&le_double));
+	return *(double*)(&he_double);
+}
+
+static float  htobef(float  he_float)  { return beftoh(he_float); }
+static double htobed(double he_double) { return bedtoh(he_double); }
+static float  htolef(float  he_float)  { return leftoh(he_float); }
+static double htoled(double he_double) { return ledtoh(he_double); }
+
 REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	wxPanel(parent, id)
 {
-	wxFlexGridSizer *sizer = new wxFlexGridSizer(5, 0, 10);
+	endian = new wxChoice(this, wxID_ANY);
 	
-	auto add_st = [this,sizer](const char *text)
-	{
-		sizer->Add(new wxStaticText(this, wxID_ANY, text), wxSizerFlags().Center());
-	};
+	endian->Append("Big endian");
+	endian->Append("Little endian");
+	endian->SetSelection(1);
 	
-	add_st("");
-	add_st("Signed");
-	add_st("Unsigned");
-	add_st("Hex");
-	add_st("Octal");
+	endian->Bind(wxEVT_CHOICE, &REHex::DecodePanel::OnEndian, this);
 	
-	int textbox_char_width;
-	int textbox_height;
+	pgrid = new wxPropertyGrid(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+		wxPG_STATIC_SPLITTER);
 	
-	{
-		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
-		textbox_height = tc->GetSize().GetHeight();
-		
-		wxSize te = tc->GetTextExtent("O");
-		textbox_char_width = te.GetWidth();
-		
-		delete tc;
-	}
+	pgrid->Append(c8 = new wxPropertyCategory("8 bit integer"));
+	pgrid->AppendIn(c8, (s8 = new wxStringProperty("S Dec")));
+	pgrid->AppendIn(c8, (u8 = new wxStringProperty("U Dec")));
+	pgrid->AppendIn(c8, (h8 = new wxStringProperty("U Hex")));
+	pgrid->AppendIn(c8, (o8 = new wxStringProperty("U Oct")));
 	
-	auto add_tc = [this,&sizer,textbox_char_width,textbox_height](wxTextCtrl* &tc, int width_chars)
-	{
-		tc = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition,
-			wxSize((width_chars + 1) * textbox_char_width, textbox_height),
-			wxTE_RIGHT);
-		
-		sizer->Add(tc, wxSizerFlags().Right());
-	};
+	pgrid->Append(c16 = new wxPropertyCategory("16 bit integer"));
+	pgrid->AppendIn(c16, (s16 = new wxStringProperty("S Dec")));
+	pgrid->AppendIn(c16, (u16 = new wxStringProperty("U Dec")));
+	pgrid->AppendIn(c16, (h16 = new wxStringProperty("U Hex")));
+	pgrid->AppendIn(c16, (o16 = new wxStringProperty("U Oct")));
 	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "8 bit"));
-	add_tc(s8, 4);
-	add_tc(u8, 3);
-	add_tc(h8, 2);
-	add_tc(o8, 3);
+	pgrid->Append(c32 = new wxPropertyCategory("32 bit integer"));
+	pgrid->AppendIn(c32, (s32 = new wxStringProperty("S Dec")));
+	pgrid->AppendIn(c32, (u32 = new wxStringProperty("U Dec")));
+	pgrid->AppendIn(c32, (h32 = new wxStringProperty("U Hex")));
+	pgrid->AppendIn(c32, (o32 = new wxStringProperty("U Oct")));
 	
-	s8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int8_t,  10, &hto8_s>, this);
-	u8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint8_t, 10, &hto8_u>, this);
-	h8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint8_t, 16, &hto8_u>, this);
-	o8->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint8_t,  8, &hto8_u>, this);
+	pgrid->Append(c64 = new wxPropertyCategory("64 bit integer"));
+	pgrid->AppendIn(c64, (s64 = new wxStringProperty("S Dec")));
+	pgrid->AppendIn(c64, (u64 = new wxStringProperty("U Dec")));
+	pgrid->AppendIn(c64, (h64 = new wxStringProperty("U Hex")));
+	pgrid->AppendIn(c64, (o64 = new wxStringProperty("U Oct")));
 	
-	s8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int8_t>,  this);
-	u8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint8_t>, this);
-	h8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint8_t>, this);
-	o8->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint8_t>, this);
+	pgrid->Append(c32f = new wxPropertyCategory("32 bit float"));
+	pgrid->AppendIn(c32f, (f32 = new wxStringProperty("Dec")));
 	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "16 bit BE"));
-	add_tc(s16be, 6);
-	add_tc(u16be, 5);
-	add_tc(h16be, 4);
-	add_tc(o16be, 6);
+	pgrid->Append(c64f = new wxPropertyCategory("64 bit float (double)"));
+	pgrid->AppendIn(c64f, (f64 = new wxStringProperty("Dec")));
 	
-	s16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int16_t,  10, &htobe16_s>, this);
-	u16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint16_t, 10, &htobe16_u>, this);
-	h16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint16_t, 16, &htobe16_u>, this);
-	o16be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint16_t,  8, &htobe16_u>, this);
+	pgrid->Bind(wxEVT_PG_CHANGED, &REHex::DecodePanel::OnPropertyGridChanged, this);
 	
-	s16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int16_t>,  this);
-	u16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
-	h16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
-	o16be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
+	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "16 bit LE"));
-	add_tc(s16le, 6);
-	add_tc(u16le, 5);
-	add_tc(h16le, 4);
-	add_tc(o16le, 6);
-	
-	s16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int16_t,  10, &htole16_s>, this);
-	u16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint16_t, 10, &htole16_u>, this);
-	h16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint16_t, 16, &htole16_u>, this);
-	o16le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint16_t,  8, &htole16_u>, this);
-	
-	s16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int16_t>,  this);
-	u16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
-	h16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
-	o16le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint16_t>, this);
-	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit BE"));
-	add_tc(s32be, 11);
-	add_tc(u32be, 10);
-	add_tc(h32be, 8);
-	add_tc(o32be, 11);
-	
-	s32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int32_t,  10, &htobe32_s>, this);
-	u32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint32_t, 10, &htobe32_u>, this);
-	h32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint32_t, 16, &htobe32_u>, this);
-	o32be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint32_t,  8, &htobe32_u>, this);
-	
-	s32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int32_t>,  this);
-	u32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
-	h32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
-	o32be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
-	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit LE"));
-	add_tc(s32le, 11);
-	add_tc(u32le, 10);
-	add_tc(h32le, 8);
-	add_tc(o32le, 11);
-	
-	s32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int32_t,  10, &htole32_s>, this);
-	u32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint32_t, 10, &htole32_u>, this);
-	h32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint32_t, 16, &htole32_u>, this);
-	o32le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint32_t,  8, &htole32_u>, this);
-	
-	s32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int32_t>,  this);
-	u32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
-	h32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
-	o32le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint32_t>, this);
-	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit BE"));
-	add_tc(s64be, 21);
-	add_tc(u64be, 20);
-	add_tc(h64be, 16);
-	add_tc(o64be, 22);
-	
-	s64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int64_t,  10, &htobe64_s>, this);
-	u64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint64_t, 10, &htobe64_u>, this);
-	h64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint64_t, 16, &htobe64_u>, this);
-	o64be->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint64_t,  8, &htobe64_u>, this);
-	
-	s64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int64_t>,  this);
-	u64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
-	h64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
-	o64be->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
-	
-	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit LE"));
-	add_tc(s64le, 21);
-	add_tc(u64le, 20);
-	add_tc(h64le, 16);
-	add_tc(o64le, 22);
-	
-	s64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnSignedValue  <int64_t,  10, &htole64_s>, this);
-	u64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint64_t, 10, &htole64_u>, this);
-	h64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint64_t, 16, &htole64_u>, this);
-	o64le->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnUnsignedValue<uint64_t,  8, &htole64_u>, this);
-	
-	s64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<int64_t>,  this);
-	u64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
-	h64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
-	o64le->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<uint64_t>, this);
-	
-	sizer->Add(new wxStaticText(this, wxID_ANY, ""));
-	sizer->Add(new wxStaticText(this, wxID_ANY, "32 bit float"), wxSizerFlags().Align(wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL));
-	add_tc(float_txt, 20);
-	sizer->Add(new wxStaticText(this, wxID_ANY, "64 bit double"), wxSizerFlags().Align(wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL));
-	add_tc(double_txt, 22);
-	
-	float_txt ->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnFloatValue,  this);
-	double_txt->Bind(wxEVT_TEXT, &REHex::DecodePanel::OnDoubleValue, this);
-	
-	float_txt ->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<float>,  this);
-	double_txt->Bind(wxEVT_SET_FOCUS, &REHex::DecodePanel::OnSetFocus<double>, this);
+	sizer->Add(endian, 0, wxEXPAND | wxALL, 0);
+	sizer->Add(pgrid, 1, wxEXPAND | wxALL, 0);
 	
 	SetSizerAndFit(sizer);
 }
@@ -219,65 +145,138 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 		{ \
 			char buf[64]; \
 			snprintf(buf, sizeof(buf), format, expr); \
-			field->ChangeValue(buf); \
-			field->Enable(); \
+			field->SetValueFromString(buf); \
+			pgrid->EnableProperty(field); \
 		} \
 		else{ \
-			field->ChangeValue(""); \
-			field->Disable(); \
+			field->SetValueFromString(""); \
+			pgrid->DisableProperty(field); \
 		} \
 	}
 
-void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxWindow *skip_control)
+void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxPGProperty *skip_control)
 {
+	/* TODO: Do SetSplitterLeft() when the control resizes instead. */
+	pgrid->SetSplitterLeft();
+	
 	TC_UPDATE(s8, int8_t,  "%" PRId8, (*(int8_t*)(data)));
 	TC_UPDATE(u8, uint8_t, "%" PRIu8, (*(uint8_t*)(data)));
 	TC_UPDATE(h8, uint8_t, "%" PRIx8, (*(uint8_t*)(data)));
 	TC_UPDATE(o8, uint8_t, "%" PRIo8, (*(uint8_t*)(data)));
 	
-	TC_UPDATE(s16be, int16_t, "%" PRId16, be16toh(*(int16_t*)(data)));
-	TC_UPDATE(u16be, int16_t, "%" PRIu16, be16toh(*(uint16_t*)(data)));
-	TC_UPDATE(h16be, int16_t, "%" PRIx16, be16toh(*(uint16_t*)(data)));
-	TC_UPDATE(o16be, int16_t, "%" PRIo16, be16toh(*(uint16_t*)(data)));
+	if(endian->GetSelection() == 0)
+	{
+		/* Big endian */
+		
+		TC_UPDATE(s16, int16_t, "%" PRId16, be16toh(*(int16_t*)(data)));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, be16toh(*(uint16_t*)(data)));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, be16toh(*(uint16_t*)(data)));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, be16toh(*(uint16_t*)(data)));
+		
+		TC_UPDATE(s32, int32_t, "%" PRId32, be32toh(*(int32_t*)(data)));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, be32toh(*(uint32_t*)(data)));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, be32toh(*(uint32_t*)(data)));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, be32toh(*(uint32_t*)(data)));
+		
+		TC_UPDATE(s64, int64_t, "%" PRId64, be64toh(*(int64_t*)(data)));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, be64toh(*(uint64_t*)(data)));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, be64toh(*(uint64_t*)(data)));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, be64toh(*(uint64_t*)(data)));
+		
+		TC_UPDATE(f32, float,  "%.9g", beftoh(*(float*)(data)));
+		TC_UPDATE(f64, double, "%.9g", bedtoh(*(double*)(data)));
+	}
+	else{
+		/* Little endian */
+		
+		TC_UPDATE(s16, int16_t, "%" PRId16, le16toh(*(int16_t*)(data)));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, le16toh(*(uint16_t*)(data)));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, le16toh(*(uint16_t*)(data)));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, le16toh(*(uint16_t*)(data)));
+		
+		TC_UPDATE(s32, int32_t, "%" PRId32, le32toh(*(int32_t*)(data)));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, le32toh(*(uint32_t*)(data)));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, le32toh(*(uint32_t*)(data)));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, le32toh(*(uint32_t*)(data)));
+		
+		TC_UPDATE(s64, int64_t, "%" PRId64, le64toh(*(int64_t*)(data)));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
+		
+		TC_UPDATE(f32, float,  "%.9g", leftoh(*(float*)(data)));
+		TC_UPDATE(f64, double, "%.9g", ledtoh(*(double*)(data)));
+	}
 	
-	TC_UPDATE(s16le, int16_t, "%" PRId16, le16toh(*(int16_t*)(data)));
-	TC_UPDATE(u16le, int16_t, "%" PRIu16, le16toh(*(uint16_t*)(data)));
-	TC_UPDATE(h16le, int16_t, "%" PRIx16, le16toh(*(uint16_t*)(data)));
-	TC_UPDATE(o16le, int16_t, "%" PRIo16, le16toh(*(uint16_t*)(data)));
-	
-	TC_UPDATE(s32be, int32_t, "%" PRId32, be32toh(*(int32_t*)(data)));
-	TC_UPDATE(u32be, int32_t, "%" PRIu32, be32toh(*(uint32_t*)(data)));
-	TC_UPDATE(h32be, int32_t, "%" PRIx32, be32toh(*(uint32_t*)(data)));
-	TC_UPDATE(o32be, int32_t, "%" PRIo32, be32toh(*(uint32_t*)(data)));
-	
-	TC_UPDATE(s32le, int32_t, "%" PRId32, le32toh(*(int32_t*)(data)));
-	TC_UPDATE(u32le, int32_t, "%" PRIu32, le32toh(*(uint32_t*)(data)));
-	TC_UPDATE(h32le, int32_t, "%" PRIx32, le32toh(*(uint32_t*)(data)));
-	TC_UPDATE(o32le, int32_t, "%" PRIo32, le32toh(*(uint32_t*)(data)));
-	
-	TC_UPDATE(s64be, int64_t, "%" PRId64, be64toh(*(int64_t*)(data)));
-	TC_UPDATE(u64be, int64_t, "%" PRIu64, be64toh(*(uint64_t*)(data)));
-	TC_UPDATE(h64be, int64_t, "%" PRIx64, be64toh(*(uint64_t*)(data)));
-	TC_UPDATE(o64be, int64_t, "%" PRIo64, be64toh(*(uint64_t*)(data)));
-	
-	TC_UPDATE(s64le, int64_t, "%" PRId64, le64toh(*(int64_t*)(data)));
-	TC_UPDATE(u64le, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
-	TC_UPDATE(h64le, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
-	TC_UPDATE(o64le, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
-	
-	TC_UPDATE(float_txt,  float,  "%.9g", (double)(*(float*)(data)));
-	TC_UPDATE(double_txt, double, "%.17g", (*(double*)(data)));
+	last_data.resize(size);
+	memmove(last_data.data(), data, size);
 }
 
-template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedValue(wxCommandEvent &event)
+void REHex::DecodePanel::OnPropertyGridChanged(wxPropertyGridEvent &event)
+{
+	wxPGProperty *property = event.GetProperty();
+	
+	     if(property == (wxPGProperty*)(s8)) { OnSignedValue  <int8_t,  10, &hto8_s>((wxStringProperty*)(property)); }
+	else if(property == (wxPGProperty*)(u8)) { OnUnsignedValue<uint8_t, 10, &hto8_u>((wxStringProperty*)(property)); }
+	else if(property == (wxPGProperty*)(h8)) { OnUnsignedValue<uint8_t, 16, &hto8_u>((wxStringProperty*)(property)); }
+	else if(property == (wxPGProperty*)(o8)) { OnUnsignedValue<uint8_t,  8, &hto8_u>((wxStringProperty*)(property)); }
+	
+	if(endian->GetSelection() == 0)
+	{
+		/* Big endian */
+		
+		     if(property == (wxPGProperty*)(s16)) { OnSignedValue  <int16_t,  10, &htobe16_s>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u16)) { OnUnsignedValue<uint16_t, 10, &htobe16_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h16)) { OnUnsignedValue<uint16_t, 16, &htobe16_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o16)) { OnUnsignedValue<uint16_t,  8, &htobe16_u>((wxStringProperty*)(property)); }
+		
+		else if(property == (wxPGProperty*)(s32)) { OnSignedValue  <int32_t,  10, &htobe32_s>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u32)) { OnUnsignedValue<uint32_t, 10, &htobe32_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h32)) { OnUnsignedValue<uint32_t, 16, &htobe32_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o32)) { OnUnsignedValue<uint32_t,  8, &htobe32_u>((wxStringProperty*)(property)); }
+		
+		else if(property == (wxPGProperty*)(s64)) { OnSignedValue  <int64_t,  10, &htobe64_s>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u64)) { OnUnsignedValue<uint64_t, 10, &htobe64_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h64)) { OnUnsignedValue<uint64_t, 16, &htobe64_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o64)) { OnUnsignedValue<uint64_t,  8, &htobe64_u>((wxStringProperty*)(property)); }
+		
+		else if(property == (wxPGProperty*)(f32)) { OnFloatValue<&htobef>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(f64)) { OnDoubleValue<&htobed>((wxStringProperty*)(property)); }
+	}
+	else{
+		/* Little endian */
+		
+		     if(property == (wxPGProperty*)(s16)) { OnSignedValue  <int16_t,  10, &htole16_s>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u16)) { OnUnsignedValue<uint16_t, 10, &htole16_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h16)) { OnUnsignedValue<uint16_t, 16, &htole16_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o16)) { OnUnsignedValue<uint16_t,  8, &htole16_u>((wxStringProperty*)(property)); }
+		
+		else if(property == (wxPGProperty*)(s32)) { OnSignedValue  <int32_t,  10, &htole32_s>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u32)) { OnUnsignedValue<uint32_t, 10, &htole32_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h32)) { OnUnsignedValue<uint32_t, 16, &htole32_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o32)) { OnUnsignedValue<uint32_t,  8, &htole32_u>((wxStringProperty*)(property)); }
+		
+		else if(property == (wxPGProperty*)(s64)) { OnSignedValue  <int64_t,  10, &htole64_s>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u64)) { OnUnsignedValue<uint64_t, 10, &htole64_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h64)) { OnUnsignedValue<uint64_t, 16, &htole64_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o64)) { OnUnsignedValue<uint64_t,  8, &htole64_u>((wxStringProperty*)(property)); }
+		
+		else if(property == (wxPGProperty*)(f32)) { OnFloatValue<&htolef>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(f64)) { OnDoubleValue<&htoled>((wxStringProperty*)(property)); }
+	}
+}
+
+void REHex::DecodePanel::OnEndian(wxCommandEvent &event)
+{
+	update(last_data.data(), last_data.size(), NULL);
+}
+
+template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedValue(wxStringProperty *property)
 {
 	static_assert(std::numeric_limits<T>::is_integer, "OnSignedValue() instantiated with non-integer type");
 	static_assert(std::numeric_limits<T>::is_signed,  "OnSignedValue() instantiated with unsigned type");
 	
-	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
-	assert(tc != NULL);
-	
-	std::string sval = tc->GetValue().ToStdString();
+	std::string sval = property->GetValueAsString().ToStdString();
 	if(sval.length() == 0)
 	{
 		return;
@@ -306,21 +305,18 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedVa
 	
 	T tval = htoX(ival);
 	
-	ValueChange change_ev(tval, tc);
+	ValueChange change_ev(tval, property);
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);
 }
 
-template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsignedValue(wxCommandEvent &event)
+template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsignedValue(wxStringProperty *property)
 {
 	static_assert(std::numeric_limits<T>::is_integer, "OnUnsignedValue() instantiated with non-integer type");
 	static_assert(!std::numeric_limits<T>::is_signed, "OnUnsignedValue() instantiated with signed type");
 	
-	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
-	assert(tc != NULL);
-	
-	std::string sval = tc->GetValue().ToStdString();
+	std::string sval = property->GetValueAsString().ToStdString();
 	if(sval.length() == 0)
 	{
 		return;
@@ -349,18 +345,15 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsigned
 	
 	T tval = htoX(uval);
 	
-	ValueChange change_ev(tval, tc);
+	ValueChange change_ev(tval, property);
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);
 }
 
-void REHex::DecodePanel::OnFloatValue(wxCommandEvent &event)
+template<float (*htoX)(float)> void REHex::DecodePanel::OnFloatValue(wxStringProperty *property)
 {
-	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
-	assert(tc != NULL);
-	
-	std::string sval = tc->GetValue().ToStdString();
+	std::string sval = property->GetValueAsString().ToStdString();
 	if(sval.length() == 0)
 	{
 		return;
@@ -381,18 +374,17 @@ void REHex::DecodePanel::OnFloatValue(wxCommandEvent &event)
 		return;
 	}
 	
-	ValueChange change_ev(uval, tc);
+	float tval = htoX(uval);
+	
+	ValueChange change_ev(tval, property);
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);
 }
 
-void REHex::DecodePanel::OnDoubleValue(wxCommandEvent &event)
+template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxStringProperty *property)
 {
-	auto tc = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
-	assert(tc != NULL);
-	
-	std::string sval = tc->GetValue().ToStdString();
+	std::string sval = property->GetValueAsString().ToStdString();
 	if(sval.length() == 0)
 	{
 		return;
@@ -413,7 +405,9 @@ void REHex::DecodePanel::OnDoubleValue(wxCommandEvent &event)
 		return;
 	}
 	
-	ValueChange change_ev(uval, tc);
+	double tval = htoX(uval);
+	
+	ValueChange change_ev(tval, property);
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);

@@ -71,6 +71,7 @@ namespace REHex {
 					
 					REHex::Document    *doc;
 					wxAuiNotebook      *h_tools;
+					wxNotebook         *v_tools;
 					REHex::DecodePanel *dp;
 					
 					void fix_htools_size();
@@ -83,6 +84,7 @@ namespace REHex {
 				private:
 					enum {
 						ID_HTOOLS = 1,
+						ID_VTOOLS,
 					};
 					
 					DECLARE_EVENT_TABLE()

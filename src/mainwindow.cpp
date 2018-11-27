@@ -695,10 +695,14 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	wxPanel(parent), doc(NULL), dp(NULL)
 {
+	wxBoxSizer *h_sizer = NULL;
 	wxBoxSizer *v_sizer = NULL;
 	
 	try {
+		h_sizer = new wxBoxSizer(wxHORIZONTAL);
+		
 		v_sizer = new wxBoxSizer(wxVERTICAL);
+		h_sizer->Add(v_sizer, 1, wxEXPAND | wxALL, 0);
 		
 		doc = new REHex::Document(this);
 		v_sizer->Add(doc, 1, wxEXPAND | wxALL, 0);
@@ -707,13 +711,23 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 			(wxAUI_NB_BOTTOM | wxAUI_NB_SCROLL_BUTTONS));
 		v_sizer->Add(h_tools, 0, wxEXPAND | wxALL, 0);
 		
-		SetSizerAndFit(v_sizer);
+		v_tools = new wxNotebook(this, ID_VTOOLS, wxDefaultPosition, wxDefaultSize,
+			wxNB_RIGHT);
+		h_sizer->Add(v_tools, 0, wxEXPAND | wxALL, 0);
 		
-		dp = new REHex::DecodePanel(this);
-		h_tools->AddPage(dp, "Decode values");
+		SetSizerAndFit(h_sizer);
+		
+		dp = new REHex::DecodePanel(v_tools);
+		v_tools->AddPage(dp, "Decode values", true);
 		
 		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
-		h_tools->AddPage(tc, "Text");
+		h_tools->AddPage(tc, "Test input");
+		
+		wxTextCtrl *tc2 = new wxTextCtrl(v_tools, wxID_ANY);
+		v_tools->AddPage(tc2, "Test input 1");
+		
+		wxTextCtrl *tc3 = new wxTextCtrl(v_tools, wxID_ANY);
+		v_tools->AddPage(tc3, "Test input 2");
 		
 		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
@@ -723,6 +737,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		delete dp;
 		delete doc;
 		delete v_sizer;
+		delete h_sizer;
 		
 		throw e;
 	}
@@ -739,10 +754,14 @@ END_EVENT_TABLE()
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxPanel(parent), doc(NULL), dp(NULL)
 {
+	wxBoxSizer *h_sizer = NULL;
 	wxBoxSizer *v_sizer = NULL;
 	
 	try {
+		h_sizer = new wxBoxSizer(wxHORIZONTAL);
+		
 		v_sizer = new wxBoxSizer(wxVERTICAL);
+		h_sizer->Add(v_sizer, 1, wxEXPAND | wxALL, 0);
 		
 		doc = new REHex::Document(this, filename);
 		v_sizer->Add(doc, 1, wxEXPAND | wxALL, 0);
@@ -751,13 +770,23 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 			(wxAUI_NB_BOTTOM | wxAUI_NB_SCROLL_BUTTONS));
 		v_sizer->Add(h_tools, 0, wxEXPAND | wxALL, 0);
 		
-		SetSizerAndFit(v_sizer);
+		v_tools = new wxNotebook(this, ID_VTOOLS, wxDefaultPosition, wxDefaultSize,
+			wxNB_RIGHT);
+		h_sizer->Add(v_tools, 0, wxEXPAND | wxALL, 0);
 		
-		dp = new REHex::DecodePanel(this);
-		h_tools->AddPage(dp, "Decode values", true);
+		SetSizerAndFit(h_sizer);
+		
+		dp = new REHex::DecodePanel(v_tools);
+		v_tools->AddPage(dp, "Decode values", true);
 		
 		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
 		h_tools->AddPage(tc, "Test input");
+		
+		wxTextCtrl *tc2 = new wxTextCtrl(v_tools, wxID_ANY);
+		v_tools->AddPage(tc2, "Test input 1");
+		
+		wxTextCtrl *tc3 = new wxTextCtrl(v_tools, wxID_ANY);
+		v_tools->AddPage(tc3, "Test input 2");
 		
 		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
@@ -767,6 +796,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		delete dp;
 		delete doc;
 		delete v_sizer;
+		delete h_sizer;
 		
 		throw e;
 	}

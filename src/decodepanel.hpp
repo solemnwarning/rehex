@@ -121,14 +121,17 @@ namespace REHex {
 			std::vector<unsigned char> last_data;
 			
 			void OnPropertyGridChanged(wxPropertyGridEvent& event);
+			void OnPropertyGridSelected(wxPropertyGridEvent &event);
 			void OnEndian(wxCommandEvent &event);
+			void OnSize(wxSizeEvent &event);
 			
 			template<typename T, int base, T (*htoX)(T)> void OnSignedValue(wxStringProperty *property);
 			template<typename T, int base, T (*htoX)(T)> void OnUnsignedValue(wxStringProperty *property);
 			template<float (*htoX)(float)> void OnFloatValue(wxStringProperty *property);
 			template<double (*htoX)(double)> void OnDoubleValue(wxStringProperty *property);
 			
-			template<typename T> void OnSetFocus(wxFocusEvent &event);
+			/* Stays at the bottom because it changes the protection... */
+			DECLARE_EVENT_TABLE()
 	};
 }
 

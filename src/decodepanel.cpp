@@ -83,6 +83,13 @@ static double htobed(double he_double) { return bedtoh(he_double); }
 static float  htolef(float  he_float)  { return leftoh(he_float); }
 static double htoled(double he_double) { return ledtoh(he_double); }
 
+BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
+	EVT_PG_CHANGED(wxID_ANY, REHex::DecodePanel::OnPropertyGridChanged)
+	EVT_PG_SELECTED(wxID_ANY, REHex::DecodePanel::OnPropertyGridSelected)
+	EVT_CHOICE(wxID_ANY, REHex::DecodePanel::OnEndian)
+	EVT_SIZE(REHex::DecodePanel::OnSize)
+END_EVENT_TABLE()
+
 REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	wxPanel(parent, id)
 {
@@ -91,8 +98,6 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	endian->Append("Big endian");
 	endian->Append("Little endian");
 	endian->SetSelection(1);
-	
-	endian->Bind(wxEVT_CHOICE, &REHex::DecodePanel::OnEndian, this);
 	
 	pgrid = new wxPropertyGrid(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		wxPG_STATIC_SPLITTER);
@@ -127,14 +132,14 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	pgrid->Append(c64f = new wxPropertyCategory("64 bit float (double)"));
 	pgrid->AppendIn(c64f, (f64 = new wxStringProperty("Dec")));
 	
-	pgrid->Bind(wxEVT_PG_CHANGED, &REHex::DecodePanel::OnPropertyGridChanged, this);
-	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
 	sizer->Add(endian, 0, wxEXPAND | wxALL, 0);
 	sizer->Add(pgrid, 1, wxEXPAND | wxALL, 0);
 	
 	SetSizerAndFit(sizer);
+	
+	pgrid->SetSplitterLeft();
 }
 
 /* TODO: Make this is templated lambda whenever I move to C++14 */
@@ -156,9 +161,6 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 
 void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxPGProperty *skip_control)
 {
-	/* TODO: Do SetSplitterLeft() when the control resizes instead. */
-	pgrid->SetSplitterLeft();
-	
 	TC_UPDATE(s8, int8_t,  "%" PRId8, (*(int8_t*)(data)));
 	TC_UPDATE(u8, uint8_t, "%" PRIu8, (*(uint8_t*)(data)));
 	TC_UPDATE(h8, uint8_t, "%" PRIx8, (*(uint8_t*)(data)));
@@ -266,9 +268,56 @@ void REHex::DecodePanel::OnPropertyGridChanged(wxPropertyGridEvent &event)
 	}
 }
 
+void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
+{
+	wxPGProperty *property = event.GetProperty();
+	int size = 0;
+	
+	if(property == s8 || property == u8 || property == h8 || property == o8)
+	{
+		size = sizeof(uint8_t);
+	}
+	else if(property == s16 || property == u16 || property == h16 || property == o16)
+	{
+		size = sizeof(uint16_t);
+	}
+	else if(property == s32 || property == u32 || property == h32 || property == o32)
+	{
+		size = sizeof(uint32_t);
+	}
+	else if(property == s64 || property == u64 || property == h64 || property == o64)
+	{
+		size = sizeof(uint64_t);
+	}
+	else if(property == f32)
+	{
+		size = sizeof(float);
+	}
+	else if(property == f64)
+	{
+		size = sizeof(double);
+	}
+	
+	if(size > 0)
+	{
+		ValueFocus focus_ev(size);
+		focus_ev.SetEventObject(this);
+		
+		wxPostEvent(this, focus_ev);
+	}
+}
+
 void REHex::DecodePanel::OnEndian(wxCommandEvent &event)
 {
 	update(last_data.data(), last_data.size(), NULL);
+}
+
+void REHex::DecodePanel::OnSize(wxSizeEvent &event)
+{
+	pgrid->SetSplitterLeft();
+	
+	/* Continue propogation of EVT_SIZE event. */
+	event.Skip();
 }
 
 template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedValue(wxStringProperty *property)
@@ -411,12 +460,4 @@ template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxString
 	change_ev.SetEventObject(this);
 	
 	wxPostEvent(this, change_ev);
-}
-
-template<typename T> void REHex::DecodePanel::OnSetFocus(wxFocusEvent &event)
-{
-	ValueFocus focus_ev(sizeof(T));
-	focus_ev.SetEventObject(this);
-	
-	wxPostEvent(this, focus_ev);
 }

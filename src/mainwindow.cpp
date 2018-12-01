@@ -30,6 +30,50 @@
 #include "mainwindow.hpp"
 #include "search.hpp"
 
+class TestPanel: public wxControl {
+	public:
+		TestPanel(wxWindow *parent, int width, int height);
+		virtual wxSize DoGetBestSize() const override;
+		
+	private:
+		int width, height;
+		
+		void OnPaint(wxPaintEvent &event);
+		DECLARE_EVENT_TABLE()
+};
+
+BEGIN_EVENT_TABLE(TestPanel, wxControl)
+	EVT_PAINT(TestPanel::OnPaint)
+END_EVENT_TABLE()
+
+TestPanel::TestPanel(wxWindow *parent, int width, int height):
+	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE),
+	width(width), height(height) {}
+
+wxSize TestPanel::DoGetBestSize() const
+{
+	return wxSize(width, height);
+}
+
+void TestPanel::OnPaint(wxPaintEvent &event)
+{
+	wxPaintDC dc(this);
+	
+	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.Clear();
+	
+	wxSize size = GetSize();
+	
+	int xe = (width > 0 ? (width - 1) : (size.GetWidth() - 1));
+	int ye = (height > 0 ? (height - 1) : (size.GetHeight() - 1));
+	
+	dc.SetPen(*wxRED);
+	dc.DrawLine(0, 0, xe, 0);
+	dc.DrawLine(0, 0, 0, ye);
+	dc.DrawLine(xe, 0, xe, ye);
+	dc.DrawLine(0, ye, xe, ye);
+}
+
 enum {
 	ID_BYTES_LINE = 1,
 	ID_BYTES_GROUP,
@@ -711,8 +755,8 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 			(wxAUI_NB_BOTTOM | wxAUI_NB_SCROLL_BUTTONS));
 		v_sizer->Add(h_tools, 0, wxEXPAND | wxALL, 0);
 		
-		v_tools = new wxNotebook(this, ID_VTOOLS, wxDefaultPosition, wxDefaultSize,
-			wxNB_RIGHT);
+		v_tools = new wxNotebook(this, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
+		v_tools->SetFitToCurrentPage(true);
 		h_sizer->Add(v_tools, 0, wxEXPAND | wxALL, 0);
 		
 		SetSizerAndFit(h_sizer);
@@ -720,14 +764,11 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		dp = new REHex::DecodePanel(v_tools);
 		v_tools->AddPage(dp, "Decode values", true);
 		
-		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
-		h_tools->AddPage(tc, "Test input");
+		h_tools->AddPage(new TestPanel(h_tools, 0, 20) , "Short thing");
+		h_tools->AddPage(new TestPanel(h_tools, 0, 200) , "Tall thing");
 		
-		wxTextCtrl *tc2 = new wxTextCtrl(v_tools, wxID_ANY);
-		v_tools->AddPage(tc2, "Test input 1");
-		
-		wxTextCtrl *tc3 = new wxTextCtrl(v_tools, wxID_ANY);
-		v_tools->AddPage(tc3, "Test input 2");
+		v_tools->AddPage(new TestPanel(v_tools, 20, 0), "Narrow thing");
+		v_tools->AddPage(new TestPanel(v_tools, 200, 0), "Wide thing");
 		
 		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
@@ -749,6 +790,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_FOCUS,  REHex::MainWindow::Tab::OnValueFocus)
 	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::MainWindow::Tab::OnHToolChange)
+	EVT_NOTEBOOK_PAGE_CHANGED(ID_VTOOLS, REHex::MainWindow::Tab::OnVToolChange)
 END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -770,8 +812,8 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 			(wxAUI_NB_BOTTOM | wxAUI_NB_SCROLL_BUTTONS));
 		v_sizer->Add(h_tools, 0, wxEXPAND | wxALL, 0);
 		
-		v_tools = new wxNotebook(this, ID_VTOOLS, wxDefaultPosition, wxDefaultSize,
-			wxNB_RIGHT);
+		v_tools = new wxNotebook(this, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
+		v_tools->SetFitToCurrentPage(true);
 		h_sizer->Add(v_tools, 0, wxEXPAND | wxALL, 0);
 		
 		SetSizerAndFit(h_sizer);
@@ -779,14 +821,11 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		dp = new REHex::DecodePanel(v_tools);
 		v_tools->AddPage(dp, "Decode values", true);
 		
-		wxTextCtrl *tc = new wxTextCtrl(this, wxID_ANY);
-		h_tools->AddPage(tc, "Test input");
+		h_tools->AddPage(new TestPanel(h_tools, 0, 20) , "Short thing");
+		h_tools->AddPage(new TestPanel(h_tools, 0, 200) , "Tall thing");
 		
-		wxTextCtrl *tc2 = new wxTextCtrl(v_tools, wxID_ANY);
-		v_tools->AddPage(tc2, "Test input 1");
-		
-		wxTextCtrl *tc3 = new wxTextCtrl(v_tools, wxID_ANY);
-		v_tools->AddPage(tc3, "Test input 2");
+		v_tools->AddPage(new TestPanel(v_tools, 20, 0), "Narrow thing");
+		v_tools->AddPage(new TestPanel(v_tools, 200, 0), "Wide thing");
 		
 		std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 		dp->update(data_at_off.data(), data_at_off.size());
@@ -865,4 +904,13 @@ void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)
 void REHex::MainWindow::Tab::OnHToolChange(wxAuiNotebookEvent& event)
 {
 	fix_htools_size();
+}
+
+void REHex::MainWindow::Tab::OnVToolChange(wxBookCtrlEvent &event)
+{
+	/* Invalidate cached best size in wxNotebook. */
+	v_tools->InvalidateBestSize();
+	
+	/* Update layout with new size. */
+	GetSizer()->Layout();
 }

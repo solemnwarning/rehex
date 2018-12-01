@@ -80,6 +80,7 @@ namespace REHex {
 					void OnValueChange(wxCommandEvent &event);
 					void OnValueFocus(wxCommandEvent &event);
 					void OnHToolChange(wxAuiNotebookEvent &event);
+					void OnVToolChange(wxBookCtrlEvent &event);
 					
 				private:
 					enum {

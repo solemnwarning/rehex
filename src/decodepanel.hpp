@@ -19,7 +19,10 @@
 #define REHEX_VALUEPANEL_HPP
 
 #include <vector>
+#include <wx/choice.h>
 #include <wx/panel.h>
+#include <wx/propgrid/propgrid.h>
+#include <wx/propgrid/props.h>
 #include <wx/wx.h>
 
 namespace REHex {
@@ -29,7 +32,7 @@ namespace REHex {
 	class ValueChange: public wxCommandEvent
 	{
 		public:
-			template<typename T> ValueChange(const T &data, wxWindow *source):
+			template<typename T> ValueChange(const T &data, wxPGProperty *source):
 				wxCommandEvent(EV_VALUE_CHANGE), source(source)
 			{
 				this->data.insert(this->data.end(),
@@ -50,14 +53,14 @@ namespace REHex {
 				return data;
 			}
 			
-			wxWindow *get_source() const
+			wxPGProperty *get_source() const
 			{
 				return source;
 			}
 			
 		private:
 			std::vector<unsigned char> data;
-			wxWindow *source;
+			wxPGProperty *source;
 	};
 	
 	class ValueFocus;
@@ -91,24 +94,44 @@ namespace REHex {
 		public:
 			DecodePanel(wxWindow *parent, wxWindowID id = wxID_ANY);
 			
-			void update(const unsigned char *data, size_t size, wxWindow *skip_control = NULL);
+			void update(const unsigned char *data, size_t size, wxPGProperty *skip_control = NULL);
 			
 		private:
-			wxTextCtrl *s8,    *u8,    *h8,    *o8;
-			wxTextCtrl *s16be, *u16be, *h16be, *o16be;
-			wxTextCtrl *s16le, *u16le, *h16le, *o16le;
-			wxTextCtrl *s32be, *u32be, *h32be, *o32be;
-			wxTextCtrl *s32le, *u32le, *h32le, *o32le;
-			wxTextCtrl *s64be, *u64be, *h64be, *o64be;
-			wxTextCtrl *s64le, *u64le, *h64le, *o64le;
-			wxTextCtrl *float_txt, *double_txt;
+			wxChoice *endian;
+			wxPropertyGrid *pgrid;
 			
-			template<typename T, int base, T (*htoX)(T)> void OnSignedValue(wxCommandEvent &event);
-			template<typename T, int base, T (*htoX)(T)> void OnUnsignedValue(wxCommandEvent &event);
-			void OnFloatValue(wxCommandEvent &event);
-			void OnDoubleValue(wxCommandEvent &event);
+			wxPropertyCategory *c8;
+			wxStringProperty *s8, *u8, *h8, *o8;
 			
-			template<typename T> void OnSetFocus(wxFocusEvent &event);
+			wxPropertyCategory *c16;
+			wxStringProperty *s16, *u16, *h16, *o16;
+			
+			wxPropertyCategory *c32;
+			wxStringProperty *s32, *u32, *h32, *o32;
+			
+			wxPropertyCategory *c64;
+			wxStringProperty *s64, *u64, *h64, *o64;
+			
+			wxPropertyCategory *c32f;
+			wxStringProperty *f32;
+			
+			wxPropertyCategory *c64f;
+			wxStringProperty *f64;
+			
+			std::vector<unsigned char> last_data;
+			
+			void OnPropertyGridChanged(wxPropertyGridEvent& event);
+			void OnPropertyGridSelected(wxPropertyGridEvent &event);
+			void OnEndian(wxCommandEvent &event);
+			void OnSize(wxSizeEvent &event);
+			
+			template<typename T, int base, T (*htoX)(T)> void OnSignedValue(wxStringProperty *property);
+			template<typename T, int base, T (*htoX)(T)> void OnUnsignedValue(wxStringProperty *property);
+			template<float (*htoX)(float)> void OnFloatValue(wxStringProperty *property);
+			template<double (*htoX)(double)> void OnDoubleValue(wxStringProperty *property);
+			
+			/* Stays at the bottom because it changes the protection... */
+			DECLARE_EVENT_TABLE()
 	};
 }
 

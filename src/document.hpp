@@ -56,7 +56,7 @@ namespace REHex {
 			bool get_show_ascii();
 			void set_show_ascii(bool show_ascii);
 			
-			off_t get_cursor_position();
+			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off);
 			bool get_insert_mode();
 			
@@ -64,7 +64,7 @@ namespace REHex {
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
 			
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
+			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
 			void overwrite_data(off_t offset, const unsigned char *data, off_t length);
 			void insert_data(off_t offset, const unsigned char *data, off_t length);
 			void erase_data(off_t offset, off_t length);

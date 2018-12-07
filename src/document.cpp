@@ -192,7 +192,7 @@ void REHex::Document::set_show_ascii(bool show_ascii)
 	_handle_width_change();
 }
 
-off_t REHex::Document::get_cursor_position()
+off_t REHex::Document::get_cursor_position() const
 {
 	return this->cpos_off;
 }
@@ -270,7 +270,7 @@ std::pair<off_t, off_t> REHex::Document::get_selection()
 	return std::make_pair(selection_off, selection_length);
 }
 
-std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length)
+std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length) const
 {
 	return buffer->read_data(offset, max_length);
 }

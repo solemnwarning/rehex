@@ -20,27 +20,41 @@
 
 #include <llvm-c/Disassembler.h>
 #include <llvm-c/Target.h>
+#include <map>
+#include <string>
 #include <wx/choice.h>
 #include <wx/panel.h>
 #include <wx/textctrl.h>
 #include <wx/wx.h>
 
+#include "document.hpp"
+
 namespace REHex {
 	class Disassemble: public wxPanel
 	{
 		public:
-			Disassemble(wxWindow *parent, wxWindowID id = wxID_ANY);
+			Disassemble(wxWindow *parent, const REHex::Document &document);
 			virtual ~Disassemble();
 			
-			void update(off_t offset, const unsigned char *data, size_t size, off_t position);
+			void set_position(off_t position);
+			void update();
 			
 		private:
+			struct Instruction {
+				off_t length;
+				std::string disasm;
+			};
+			
+			const REHex::Document &document;
+			off_t position;
+			
 			LLVMDisasmContextRef disassembler;
 			
 			wxChoice *arch;
 			wxTextCtrl *assembly;
 			
 			void reinit_disassembler();
+			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
 			
 			void OnArch(wxCommandEvent &event);
 			

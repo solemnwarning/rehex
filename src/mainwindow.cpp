@@ -765,7 +765,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		dp = new REHex::DecodePanel(v_tools);
 		v_tools->AddPage(dp, "Decode values", true);
 		
-		disasm = new REHex::Disassemble(v_tools);
+		disasm = new REHex::Disassemble(v_tools, *doc);
 		v_tools->AddPage(disasm, "Disassembly", true);
 		
 		h_tools->AddPage(new TestPanel(h_tools, 0, 20) , "Short thing");
@@ -826,7 +826,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		dp = new REHex::DecodePanel(v_tools);
 		v_tools->AddPage(dp, "Decode values", true);
 		
-		disasm = new REHex::Disassemble(v_tools);
+		disasm = new REHex::Disassemble(v_tools, *doc);
 		v_tools->AddPage(disasm, "Disassembly", true);
 		
 		h_tools->AddPage(new TestPanel(h_tools, 0, 20) , "Short thing");
@@ -880,7 +880,8 @@ void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
 {
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
-	disasm->update(0, data_at_off.data(), data_at_off.size(), 0);
+	
+	disasm->set_position(doc->get_cursor_position());
 	
 	/* Let the event propogate on up to MainWindow to update the status bar. */
 	event.Skip();
@@ -898,7 +899,8 @@ void REHex::MainWindow::Tab::OnValueChange(wxCommandEvent &event)
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(offset, 8);
 	dp->update(data_at_off.data(), data_at_off.size(), vc->get_source());
-	disasm->update(0, data_at_off.data(), data_at_off.size(), 0);
+	
+	disasm->update();
 }
 
 void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)

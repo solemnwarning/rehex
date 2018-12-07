@@ -22,6 +22,7 @@
 #include <wx/wx.h>
 
 #include "decodepanel.hpp"
+#include "disassemble.hpp"
 #include "document.hpp"
 
 namespace REHex {
@@ -73,6 +74,7 @@ namespace REHex {
 					wxAuiNotebook      *h_tools;
 					wxNotebook         *v_tools;
 					REHex::DecodePanel *dp;
+					REHex::Disassemble *disasm;
 					
 					void fix_htools_size();
 					

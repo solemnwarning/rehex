@@ -15,16 +15,23 @@
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 WX_CONFIG ?= "wx-config"
+LLVM_CONFIG ?= "llvm-config"
 
 EXE ?= "rehex"
 
 WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags base core aui propgrid adv)
 WX_LIBS     := $(shell $(WX_CONFIG) --libs     base core aui propgrid adv)
 
-CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/                $(CFLAGS)
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS) $(CXXFLAGS)
+# I would use llvm-config --cxxflags, but that specifies more crap it has no
+# business interfering with (e.g. warnings) than things it actually needs.
+# Hopefully this is enough to get by everywhere.
+LLVM_CXXFLAGS := -I$(shell $(LLVM_CONFIG) --includedir)
+LLVM_LIBS     := $(shell $(LLVM_CONFIG) --ldflags --libs --system-libs)
 
-LIBS := $(WX_LIBS) -ljansson $(LIBS)
+CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CFLAGS)
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(LLVM_CXXFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+
+LIBS := $(LLVM_LIBS) $(WX_LIBS) -ljansson $(LIBS)
 
 ifeq ($(DEBUG),)
 	DEBUG=0
@@ -74,6 +81,7 @@ APP_OBJS := \
 	src/app.o \
 	src/buffer.o \
 	src/decodepanel.o \
+	src/disassemble.o \
 	src/document.o \
 	src/mainwindow.o \
 	src/search.o \

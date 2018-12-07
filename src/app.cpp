@@ -15,6 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <llvm-c/Disassembler.h>
+#include <llvm-c/Target.h>
+
 #include "app.hpp"
 #include "mainwindow.hpp"
 
@@ -22,6 +25,12 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	LLVMInitializeAllAsmPrinters();
+	LLVMInitializeAllTargets();
+	LLVMInitializeAllTargetInfos();
+	LLVMInitializeAllTargetMCs();
+	LLVMInitializeAllDisassemblers();
+	
 	REHex::MainWindow *window = new REHex::MainWindow();
 	window->Show(true);
 	

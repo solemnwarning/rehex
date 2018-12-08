@@ -1,169 +1,161 @@
 # Building for Windows
 
-## Cross compiling (from Linux)
+This is a rough guide of how I have set up my 64-bit Windows build environment. Things may need changing e.g. to install a 32-bit one, or when version numbers change.
 
-These steps are how I set up my (64-bit) toolchain up on Debian. Making a 32-bit one is almost identical.
+## Toolchain setup
 
-1) Install the MinGW cross-compiling toolchain.
+### mingw-w64
 
-    $ sudo apt-get install mingw-w64
+Download the installer from http://mingw-w64.org/ and use the following settings:
 
-2) Build and install wxWidgets
+Architecture: x86_64
+Threads: posix
+Install path: C:\x86_64-w64-mingw32\
 
-    $ cd wxWidgets-XXX
-    $ mkdir build-release-static-w64
-    $ cd build-release-static-w64
-    $ ../configure --host=x86_64-w64-mingw32 \
-                   --prefix=/usr/x86_64-w64-mingw32/wxWidgets-XXX-release-static/ \
-                   --disable-shared
-    $ make
-    $ sudo make install
-    
-    $ cd wxWidgets-XXX
-    $ mkdir build-debug-static-w64
-    $ cd build-debug-static-w64
-    $ ../configure --host=x86_64-w64-mingw32 \
-                   --prefix=/usr/x86_64-w64-mingw32/wxWidgets-XXX-debug-static/ \
-                   --disable-shared \
-                   --enable-debug
-    $ make
-    $ sudo make install
+You can use a different install path, but it will impact the following steps, and it MUST NOT contain any spaces.
 
-3) Build and install Jansson
+### CMake (required to build LLVM)
 
-    $ cd jansson-XXX
-    $ ./configure --host=x86_64-w64-mingw32 \
-                  --prefix=/usr/x86_64-w64-mingw32/ \
-                  --enable-shared=no \
-                  --enable-static=yes
-    $ make
-    $ sudo make install
+Download and run the official CMake installer, enable the option to add it to your PATH.
 
-4) Now build rehex.exe with the following command:
+### Python (required to build LLVM)
 
-    $ CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
-      WX_CONFIG=/usr/x86_64-w64-mingw32/wxWidgets-XXX-XXX-static/bin/wx-config \
-      make -f Makefile.win
+Download and run the official Python 3 installer, enable the option to add it to your PATH.
 
-## Compiling on Windows
+### LLVM
 
-Compiling on Windows is accomplished using MSYS and GCC.
+Unpack the LLVM source code and create a `build-release-static-x86_64` directory under it.
 
-1) MSYS2
+Use the Start Menu shortcut created by the mingw-w64 installer to open a terminal and change to the `build-release-static-x86_64` directory.
+
+Run the following commands:
+
+    > cmake .. -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:\x86_64-w64-mingw32\llvm-7.0.0-release-static\ -DLLVM_BUILD_LLVM_DYLIB=OFF -G"MinGW Makefiles"
+    > cmake --build .
+    > cmake --build . --target install
+
+### MSYS2
 
 Download and install MSYS2 from http://www.msys2.org/
 
-2) win-builds
+Open the MSYS2 command line and install additional packages.
 
-Download and run the win-builds installer from http://win-builds.org/
+    $ pacman -S make
+    $ pacman -S perl
 
-Choose architecture and install to `C:\i686-w64-mingw32` or `C:\x86_64-w64-mingw32` depending whether you want to make 32-bit or 64-bit binaries. You may install both.
+### wxWidgets
 
-You may change the install paths, but it MUST NOT contain spaces, else the wxWidgets build process will fail.
+Open the MSYS2 command line and add the appropriate mingw-w64 toolchain to your PATH.
 
-3) wxwidgets
+    $ export PATH="$PATH:/c/x86_64-w64-mingw32/mingw64/bin"
 
-Run the MSYS command line.
+Unpack the wxWidgets source and set up a build directory.
 
-NOTE: In all commands below, substitute `$ARCH` for i686 or x86_64, depending which you chose above.
+    $ cd wxWidgets-3.0.4
+    $ mkdir build-release-static-x86_64
+    $ cd build-release-static-x86_64
 
-Add the win-builds toolchain to your PATH:
+Build and install wxWidgets.
 
-    $ export PATH="$PATH:/c/$ARCH-w64-mingw32/bin"
-
-Configure and install wxWidgets:
-
-    $ cd wxWidgets-XXX
-    $ mkdir build-release-static-$ARCH
-    $ cd build-release-static-$ARCH
-    $ ../configure --host=$ARCH-w64-mingw32 \
-                   --build=$ARCH-w64-mingw32 \
-                   --prefix=/c/$ARCH-w64-mingw32/wxWidgets-XXX-release-static/ \
+    $ ../configure --host=x86_64-w64-mingw32 \
+                   --build=x86_64-w64-mingw32 \
+                   --prefix=/c/x86_64-w64-mingw32/wxWidgets-3.0.4-release-static/ \
                    --disable-shared \
-                    --with-zlib=builtin \
-                    --with-expat=builtin \
-                    --without-libjpeg \
-                    --without-libtiff \
-                    --without-regex
+                   --with-zlib=builtin \
+                   --with-expat=builtin \
+                   --without-libjpeg \
+                   --without-libtiff \
+                   --without-regex
     $ make
     $ make install
 
-If you find GCC silently exits with status 1 while building wxWidgets, try running configure with `--disable-precomp-headers`.
+### Jansson
 
-4) jansson
+Open the MSYS2 command line and add the appropriate mingw-w64 toolchain to your PATH.
 
-    $ cd jansson-XXX
-    $ ./configure --host=$ARCH-w64-mingw32 \
-                  --build=$ARCH-w64-mingw32 \
-                  --prefix=/c/$ARCH-w64-mingw32/$ARCH-w64-mingw32/ \
+    $ export PATH="$PATH:/c/x86_64-w64-mingw32/mingw64/bin"
+
+Build and install Jansson.
+
+    $ cd jansson-2.10
+    $ ./configure --host=x86_64-w64-mingw32 \
+                  --build=x86_64-w64-mingw32 \
+                  --prefix=/c/x86_64-w64-mingw32/mingw64/x86_64-w64-mingw32/ \
                   --enable-shared=no \
                   --enable-static=yes
     $ make
     $ make install
 
-5) Build rehex
+## Build rehex
 
-Once the above steps are done, you should be able to build inside msys so long as you have the appropriate toolchain in your PATH.
+Once the above steps are done, you should be able to build from the MSYS2 command line so long as you have the appropriate environment variables set.
 
-    $ export WX_CONFIG=/c/$ARCH-w64-mingw32/wxWidgets-XXX-release-static/bin/wx-config
+    $ export PATH="$PATH:/c/x86_64-w64-mingw32/mingw64/bin"
+    $ export CC=x86_64-w64-mingw32-gcc
+    $ export CXX=x86_64-w64-mingw32-g++
+    $ export WX_CONFIG=/c/x86_64-w64-mingw32/wxWidgets-3.0.4-release-static/bin/wx-config
+    $ export LLVM_CONFIG=/c/x86_64-w64-mingw32/llvm-7.0.0-release-static/bin/llvm-config
+    
     $ make -f Makefile.win
     $ make -f Makefile.win check
 
-# Buildkite
+# Buildkite Agent deployment
 
 Create a "buildkite" user
 
-1) Install the Buildkite Agent somewhere (e.g. `C:\Program Files\Buildkite`)
+Install the Buildkite Agent somewhere (e.g. `C:\Program Files\Buildkite`)
 
-2) Create a "builds" folder under the installation directory, give the buildkite user permission to write under it.
+Create a "builds" folder under the installation directory, give the buildkite user permission to write under it.
 
-3) Create buildkite-agent-i686.cfg, e.g:
+Create buildkite-agent-i686.cfg, e.g:
 
-  # The token from your Buildkite "Agents" page
-  token="XXX"
-  
-  # The name of the agent
-  name="%hostname-%n"
-  
-  # The priority of the agent (higher priorities are assigned work first)
-  # priority=1
-  
-  # Meta-data for the agent (default is "queue=default")
-  meta-data="queue=windows-i686"
-  
-  # Path to the bootstrap script. You should avoid changing this file as it will
-  # be overridden when you update your agent. If you need to make changes to this
-  # file: use the hooks provided, or copy the file and reference it here.
-  bootstrap-script="bootstrap.bat"
-  
-  # Path to where the builds will run from
-  build-path="builds"
-  
-  # Directory where the hook scripts are found
-  hooks-path="hooks"
-  
-  # Flags to pass to the `git clean` command
-  git-clean-flags="-fdqx"
+    # The token from your Buildkite "Agents" page
+    token="XXX"
+    
+    # The name of the agent
+    name="%hostname-%n"
+    
+    # The priority of the agent (higher priorities are assigned work first)
+    # priority=1
+    
+    # Meta-data for the agent (default is "queue=default")
+    meta-data="queue=windows-i686"
+    
+    # Path to the bootstrap script. You should avoid changing this file as it will
+    # be overridden when you update your agent. If you need to make changes to this
+    # file: use the hooks provided, or copy the file and reference it here.
+    bootstrap-script="bootstrap.bat"
+    
+    # Path to where the builds will run from
+    build-path="builds"
+    
+    # Directory where the hook scripts are found
+    hooks-path="hooks"
+    
+    # Flags to pass to the `git clean` command
+    git-clean-flags="-fdqx"
 
-4) Create run-agent-i686.bat:
+Create run-agent-i686.bat:
 
-  C:
-  cd "\Program Files\Buildkite"
-  
-  set PATH=%PATH%;C:\i686-w64-mingw32\bin;C:\msys64\usr\bin
-  
-  buildkite-agent.exe start --config buildkite-agent-i686.cfg
+    C:
+    cd "\Program Files\Buildkite"
+    
+    set PATH=%PATH%;C:\i686-w64-mingw32\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\bin\core_perl
+    set CC=x86_64-w64-mingw32-gcc
+    set CXX=x86_64-w64-mingw32-g++
+    
+    buildkite-agent.exe start --config buildkite-agent-i686.cfg
 
-5) Setup service(s) to run the Agent using NSSM (https://nssm.cc/)
+Setup service(s) to run the Agent using NSSM (https://nssm.cc/)
 
 ## Appendix: HTTP proxy
 
 If your build agent needs to access the internet via a HTTP proxy, put lines like the following in your agent startup batch script:
 
-  set http_proxy=http://10.52.13.1:8080/
-  set https_proxy=http://10.52.13.1:8080/
-  
-  set HTTP_PROXY=http://10.52.13.1:8080/
-  set HTTPS_PROXY=http://10.52.13.1:8080/
+    set http_proxy=http://10.52.13.1:8080/
+    set https_proxy=http://10.52.13.1:8080/
+    
+    set HTTP_PROXY=http://10.52.13.1:8080/
+    set HTTPS_PROXY=http://10.52.13.1:8080/
 
-You may also need to change the user's Windows proxy settings, you can do this from your own account by running Internet Explorer as the buildkite user and changing the Internet Options within.
+You may also need to change the buildkite user's Windows proxy settings, you can do this from your own account by running Internet Explorer as the buildkite user and changing the Internet Options within.

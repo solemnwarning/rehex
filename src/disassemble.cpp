@@ -111,7 +111,7 @@ void REHex::Disassemble::update()
 	for(off_t i = window_base; i <= position; ++i)
 	{
 		off_t rel_off = i - window_base;
-		std::map<off_t, Instruction> i_instructions = disassemble(window_base, data.data() + rel_off, data.size() - rel_off);
+		std::map<off_t, Instruction> i_instructions = disassemble(i, data.data() + rel_off, data.size() - rel_off);
 		
 		if(i_instructions.find(position) != i_instructions.end())
 		{
@@ -130,7 +130,7 @@ void REHex::Disassemble::update()
 		for(off_t i = window_base; i <= position; ++i)
 		{
 			off_t rel_off = i - window_base;
-			std::map<off_t, Instruction> i_instructions = disassemble(window_base, data.data() + rel_off, data.size() - rel_off);
+			std::map<off_t, Instruction> i_instructions = disassemble(i, data.data() + rel_off, data.size() - rel_off);
 			
 			auto ii = i_instructions.lower_bound(position);
 			if(ii != i_instructions.begin()

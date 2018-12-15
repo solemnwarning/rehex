@@ -15,52 +15,55 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef REHEX_DISASSEMBLE_HPP
-#define REHEX_DISASSEMBLE_HPP
+#ifndef REHEX_CODECTRL_HPP
+#define REHEX_CODECTRL_HPP
 
-#include <llvm-c/Disassembler.h>
-#include <llvm-c/Target.h>
-#include <map>
 #include <string>
-#include <wx/choice.h>
-#include <wx/panel.h>
+#include <list>
+#include <wx/control.h>
 #include <wx/wx.h>
 
-#include "CodeCtrl.hpp"
-#include "document.hpp"
-
 namespace REHex {
-	class Disassemble: public wxPanel
-	{
+	class CodeCtrl: public wxControl {
 		public:
-			Disassemble(wxWindow *parent, const REHex::Document &document);
-			virtual ~Disassemble();
+			CodeCtrl(wxWindow *parent, wxWindowID id = wxID_ANY);
 			
-			void set_position(off_t position);
-			void update();
+			void append_line(off_t offset, const std::string &text, bool active = false);
+			void clear();
+			
+			void center_line(int line);
 			
 		private:
-			struct Instruction {
-				off_t length;
-				std::string disasm;
+			struct Line {
+				off_t offset;
+				std::string text;
+				bool active;
+				
+				Line(off_t offset, const std::string &text, bool active):
+					offset(offset), text(text), active(active) {}
 			};
 			
-			const REHex::Document &document;
-			off_t position;
+			wxFont *font;
+			int font_width;
+			int font_height;
 			
-			LLVMDisasmContextRef disassembler;
+			std::list<Line> lines;
+			int max_line_width;
 			
-			wxChoice *arch;
-			CodeCtrl *assembly;
+			int scroll_xoff, scroll_xoff_max;
+			int scroll_yoff, scroll_yoff_max;
+			int wheel_vert_accum;
+			int wheel_horiz_accum;
 			
-			void reinit_disassembler();
-			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
+			void update_scrollbars();
 			
-			void OnArch(wxCommandEvent &event);
+			void OnPaint(wxPaintEvent &event);
+			void OnScroll(wxScrollWinEvent &event);
+			void OnWheel(wxMouseEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()
 	};
 }
 
-#endif /* !REHEX_DISASSEMBLE_HPP */
+#endif /* !REHEX_CODECTRL_HPP */

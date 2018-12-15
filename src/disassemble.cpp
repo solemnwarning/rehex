@@ -54,11 +54,10 @@ REHex::Disassemble::Disassemble(wxWindow *parent, const REHex::Document &documen
 		}
 	}
 	
-	assembly = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		(wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH | wxHSCROLL));
+	assembly = new CodeCtrl(this, wxID_ANY);
 	
 	/* TODO: Calculate size properly. */
-	assembly->SetMinSize(wxSize(200, 100));
+	assembly->SetMinSize(wxSize(250, 100));
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -90,12 +89,13 @@ void REHex::Disassemble::update()
 {
 	if(disassembler == NULL)
 	{
-		assembly->SetValue("<error>");
+		assembly->clear();
+		assembly->append_line(0, "<error>");
 		return;
 	}
 	
 	/* Size of window to load to try disassembling. */
-	static const off_t WINDOW_SIZE = 64;
+	static const off_t WINDOW_SIZE = 256;
 	
 	off_t window_base = std::max((position - (WINDOW_SIZE / 2)), (off_t)(0));
 	
@@ -145,37 +145,26 @@ void REHex::Disassemble::update()
 	
 	if(!instructions.empty())
 	{
-		wxTextAttr normal = assembly->GetDefaultStyle();
+		assembly->clear();
+		int this_line = 0, highlighted_line = 0;
 		
-		assembly->SetValue("");
-		
-		for(auto i = instructions.begin(); i != instructions.end(); ++i)
+		for(auto i = instructions.begin(); i != instructions.end(); ++i, ++this_line)
 		{
-			if(i != instructions.begin())
-			{
-				assembly->AppendText("\n");
-			}
-			
 			if(i->first <= position && (i->first + i->second.length) > position)
 			{
-				wxTextAttr active = normal;
-				active.SetTextColour(*wxRED);
-				
-				assembly->SetDefaultStyle(active);
+				assembly->append_line(i->first, i->second.disasm.c_str(), true);
+				highlighted_line = this_line;
 			}
-			
-			char tmp[256];
-			snprintf(tmp, sizeof(tmp), "%08X  %s", (unsigned)(i->first), i->second.disasm.c_str());
-			assembly->AppendText(tmp);
-			
-			if(i->first <= position && (i->first + i->second.length) > position)
-			{
-				assembly->SetDefaultStyle(normal);
+			else{
+				assembly->append_line(i->first, i->second.disasm.c_str(), false);
 			}
 		}
+		
+		assembly->center_line(highlighted_line);
 	}
 	else{
-		assembly->SetValue("<invalid instruction>");
+		assembly->clear();
+		assembly->append_line(position, "<invalid instruction>", true);
 	}
 }
 

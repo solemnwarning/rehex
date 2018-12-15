@@ -80,6 +80,7 @@ clean:
 APP_OBJS := \
 	src/app.o \
 	src/buffer.o \
+	src/CodeCtrl.o \
 	src/decodepanel.o \
 	src/disassemble.o \
 	src/document.o \

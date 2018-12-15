@@ -15,6 +15,6 @@
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 export EXE  := rehex.exe
-export LIBS += -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
+export LIBS += -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
 
 include Makefile

@@ -71,17 +71,15 @@ namespace REHex {
 					Tab(wxWindow *parent, const std::string &filename);
 					
 					REHex::Document    *doc;
-					wxAuiNotebook      *h_tools;
+					wxNotebook         *h_tools;
 					wxNotebook         *v_tools;
 					REHex::DecodePanel *dp;
 					REHex::Disassemble *disasm;
 					
-					void fix_htools_size();
-					
 					void OnCursorMove(wxCommandEvent &event);
 					void OnValueChange(wxCommandEvent &event);
 					void OnValueFocus(wxCommandEvent &event);
-					void OnHToolChange(wxAuiNotebookEvent &event);
+					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
 					
 				private:

@@ -627,8 +627,7 @@ void REHex::Document::_update_vscroll()
 		
 		assert(range > 0);
 		assert(range <= MAX_STEPS);
-		assert(thumb > 0);
-		assert(position > 0);
+		assert(position >= 0);
 		assert(position <= range);
 		
 		SetScrollbar(wxVERTICAL, position, thumb, range);

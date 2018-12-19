@@ -598,6 +598,8 @@ void REHex::Document::_handle_height_change()
 
 void REHex::Document::_update_vscroll()
 {
+	static const int MAX_STEPS = 10000;
+	
 	uint64_t total_lines = regions.back()->y_offset + regions.back()->y_lines;
 	
 	/* TODO: Scale scroll_yoff in a better way when the window size changes. */
@@ -605,8 +607,31 @@ void REHex::Document::_update_vscroll()
 	
 	if(total_lines > visible_lines)
 	{
-		SetScrollbar(wxVERTICAL, scroll_yoff, visible_lines, total_lines);
+		int range, thumb, position;
 		
+		if(total_lines <= (uint64_t)(MAX_STEPS))
+		{
+			scroll_ydiv = 1;
+			
+			range    = total_lines;
+			thumb    = visible_lines;
+			position = scroll_yoff;
+		}
+		else{
+			scroll_ydiv = (total_lines + MAX_STEPS - 1) / MAX_STEPS;
+			
+			range    = MAX_STEPS;
+			thumb    = visible_lines / scroll_ydiv;
+			position = scroll_yoff / scroll_ydiv;
+		}
+		
+		assert(range > 0);
+		assert(range <= MAX_STEPS);
+		assert(thumb > 0);
+		assert(position > 0);
+		assert(position <= range);
+		
+		SetScrollbar(wxVERTICAL, position, thumb, range);
 		scroll_yoff_max = total_lines - visible_lines;
 	}
 	else{
@@ -624,6 +649,29 @@ void REHex::Document::_update_vscroll()
 	}
 }
 
+void REHex::Document::_update_vscroll_pos()
+{
+	if(scroll_yoff == scroll_yoff_max)
+	{
+		/* Last line, overcome any rounding and set scroll bar to max. */
+		int range = GetScrollRange(wxVERTICAL);
+		SetScrollPos(wxVERTICAL, range);
+	}
+	else{
+		int position = scroll_yoff / scroll_ydiv;
+		if(position == 0 && scroll_yoff > 0)
+		{
+			/* Past the first line, but not the first scrollbar division.
+			 * Skip to the next so the scrollbar doesn't appear fully scrolled
+			 * up when there's a bit to go.
+			*/
+			position = 1;
+		}
+		
+		SetScrollPos(wxVERTICAL, position);
+	}
+}
+
 void REHex::Document::OnScroll(wxScrollWinEvent &event)
 {
 	wxEventType type = event.GetEventType();
@@ -633,7 +681,17 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 	{
 		if(type == wxEVT_SCROLLWIN_THUMBTRACK || type == wxEVT_SCROLLWIN_THUMBRELEASE)
 		{
-			scroll_yoff = event.GetPosition();
+			int position = event.GetPosition();
+			int range = GetScrollRange(wxVERTICAL);
+			
+			if(position == range)
+			{
+				/* Dragged to the end of the scroll bar, jump to last line. */
+				scroll_yoff = scroll_yoff_max;
+			}
+			else{
+				scroll_yoff = position * scroll_ydiv;
+			}
 		}
 		else if(event.GetEventType() == wxEVT_SCROLLWIN_TOP)
 		{
@@ -669,7 +727,7 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 			scroll_yoff = scroll_yoff_max;
 		}
 		
-		SetScrollPos(wxVERTICAL, scroll_yoff);
+		_update_vscroll_pos();
 		Refresh();
 	}
 	else if(orientation == wxHORIZONTAL)
@@ -734,7 +792,7 @@ void REHex::Document::OnWheel(wxMouseEvent &event)
 			scroll_yoff = scroll_yoff_max;
 		}
 		
-		SetScrollPos(wxVERTICAL, scroll_yoff);
+		_update_vscroll_pos();
 		Refresh();
 	}
 	else if(axis == wxMOUSE_WHEEL_HORIZONTAL)
@@ -2079,7 +2137,7 @@ void REHex::Document::_make_line_visible(uint64_t line)
 	assert(scroll_yoff <= line);
 	assert((scroll_yoff + visible_lines + !visible_lines) > line);
 	
-	SetScrollPos(wxVERTICAL, scroll_yoff);
+	_update_vscroll_pos();
 	Refresh();
 }
 

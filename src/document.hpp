@@ -181,6 +181,7 @@ namespace REHex {
 			int     scroll_xoff{0};
 			int64_t scroll_yoff{0};
 			int64_t scroll_yoff_max;
+			int64_t scroll_ydiv;
 			
 			int wheel_vert_accum;
 			int wheel_horiz_accum;
@@ -238,6 +239,7 @@ namespace REHex {
 			void _handle_width_change();
 			void _handle_height_change();
 			void _update_vscroll();
+			void _update_vscroll_pos();
 			
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			

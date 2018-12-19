@@ -182,6 +182,7 @@ namespace REHex {
 			int64_t scroll_yoff{0};
 			int64_t scroll_yoff_max;
 			int64_t scroll_ydiv;
+			int     scroll_yrange;
 			
 			int wheel_vert_accum;
 			int wheel_horiz_accum;

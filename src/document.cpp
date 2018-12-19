@@ -633,11 +633,10 @@ void REHex::Document::_update_vscroll()
 		
 		SetScrollbar(wxVERTICAL, position, thumb, range);
 		scroll_yoff_max = total_lines - visible_lines;
-		scroll_yrange   = range;
 	}
 	else{
 		/* We don't need a vertical scroll bar, but force one to appear anyway so
-		 * the bytes per line can't change within OnSize and get us stuck in a loop.
+			* the bytes per line can't change within OnSize and get us stuck in a loop.
 		*/
 		#ifdef _WIN32
 		SetScrollbar(wxVERTICAL, 0, 0, -1);
@@ -647,7 +646,6 @@ void REHex::Document::_update_vscroll()
 		#endif
 		
 		scroll_yoff_max = 0;
-		scroll_yrange   = 0;
 	}
 }
 
@@ -656,7 +654,8 @@ void REHex::Document::_update_vscroll_pos()
 	if(scroll_yoff == scroll_yoff_max)
 	{
 		/* Last line, overcome any rounding and set scroll bar to max. */
-		SetScrollPos(wxVERTICAL, scroll_yrange);
+		int range = GetScrollRange(wxVERTICAL);
+		SetScrollPos(wxVERTICAL, range);
 	}
 	else{
 		int position = scroll_yoff / scroll_ydiv;
@@ -683,8 +682,9 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 		if(type == wxEVT_SCROLLWIN_THUMBTRACK || type == wxEVT_SCROLLWIN_THUMBRELEASE)
 		{
 			int position = event.GetPosition();
+			int range = GetScrollRange(wxVERTICAL);
 			
-			if(position == scroll_yrange)
+			if(position == range)
 			{
 				/* Dragged to the end of the scroll bar, jump to last line. */
 				scroll_yoff = scroll_yoff_max;
@@ -1456,7 +1456,6 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	bytes_per_group   = 4;
 	show_ascii        = true;
 	scroll_ydiv       = 1;
-	scroll_yrange     = 0;
 	wheel_vert_accum  = 0;
 	wheel_horiz_accum = 0;
 	selection_length  = 0;

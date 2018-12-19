@@ -1455,6 +1455,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	bytes_per_line    = 0;
 	bytes_per_group   = 4;
 	show_ascii        = true;
+	scroll_ydiv       = 1;
 	wheel_vert_accum  = 0;
 	wheel_horiz_accum = 0;
 	selection_length  = 0;

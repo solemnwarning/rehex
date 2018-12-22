@@ -58,6 +58,7 @@ namespace REHex {
 			void update_scrollbars();
 			
 			void OnPaint(wxPaintEvent &event);
+			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			void OnWheel(wxMouseEvent &event);
 			

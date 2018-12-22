@@ -21,12 +21,14 @@
 
 BEGIN_EVENT_TABLE(REHex::CodeCtrl, wxControl)
 	EVT_PAINT(REHex::CodeCtrl::OnPaint)
+	EVT_SIZE(REHex::CodeCtrl::OnSize)
 	EVT_SCROLLWIN(REHex::CodeCtrl::OnScroll)
 	EVT_MOUSEWHEEL(REHex::CodeCtrl::OnWheel)
 END_EVENT_TABLE()
 
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL)),
+	max_line_width(0),
 	scroll_xoff(0), scroll_xoff_max(0),
 	scroll_yoff(0), scroll_yoff_max(0)
 {
@@ -49,13 +51,26 @@ void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool ac
 	wxClientDC dc(this);
 	dc.SetFont(*font);
 	
-	wxSize extent = dc.GetTextExtent(std::string("00000000  ") + text);
+	/* GetTextExtent() doesn't seem to handle tabs correctly, so we expand
+	 * them into spaces.
+	*/
+	
+	std::string text_no_tabs = text;
+	static const int TAB_WIDTH = 8;
+	
+	for(size_t p = 0; (p = text_no_tabs.find('\t', p)) != std::string::npos;)
+	{
+		size_t n_spaces = TAB_WIDTH - (p % TAB_WIDTH);
+		text_no_tabs.replace(p, 1, n_spaces, ' ');
+	}
+	
+	wxSize extent = dc.GetTextExtent(std::string("00000000  ") + text_no_tabs);
 	if(max_line_width < extent.GetWidth())
 	{
 		max_line_width = extent.GetWidth();
 	}
 	
-	lines.emplace_back(offset, text, active);
+	lines.emplace_back(offset, text_no_tabs, active);
 	
 	update_scrollbars();
 	Refresh();
@@ -93,57 +108,42 @@ void REHex::CodeCtrl::center_line(int line)
 
 void REHex::CodeCtrl::update_scrollbars()
 {
-	SetScrollbar(wxVERTICAL, 0, 0, 0);
-	SetScrollbar(wxHORIZONTAL, 0, 0, 0);
+	wxSize client_size = GetClientSize();
 	
-	auto update_vert = [this]()
+	int virt_height = lines.size() * font_height;
+	if(virt_height > client_size.GetHeight())
 	{
-		wxSize client_size = GetClientSize();
-		int virt_height = lines.size() * font_height;
-		
-		if(virt_height > client_size.GetHeight())
+		scroll_yoff_max = virt_height - client_size.GetHeight();
+		if(scroll_yoff > scroll_yoff_max)
 		{
-			scroll_yoff_max = virt_height - client_size.GetHeight();
-			if(scroll_yoff > scroll_yoff_max)
-			{
-				scroll_yoff = scroll_xoff_max;
-			}
-			
-			SetScrollbar(wxVERTICAL, scroll_yoff, client_size.GetHeight(), virt_height);
+			scroll_yoff = scroll_yoff_max;
 		}
-		else{
-			scroll_yoff_max = 0;
-			scroll_yoff     = 0;
-			
-			SetScrollbar(wxVERTICAL, 0, 0, 0);
-		}
-	};
+		
+		SetScrollbar(wxVERTICAL, scroll_yoff, client_size.GetHeight(), virt_height);
+	}
+	else{
+		scroll_yoff_max = 0;
+		scroll_yoff     = 0;
+		
+		SetScrollbar(wxVERTICAL, 0, 0, 0);
+	}
 	
-	auto update_horiz = [this]()
+	if(max_line_width > client_size.GetWidth())
 	{
-		wxSize client_size = GetClientSize();
-		
-		if(max_line_width > client_size.GetWidth())
+		scroll_xoff_max = max_line_width - client_size.GetWidth();
+		if(scroll_xoff > scroll_xoff_max)
 		{
-			scroll_xoff_max = max_line_width - client_size.GetWidth();
-			if(scroll_xoff > scroll_xoff_max)
-			{
-				scroll_xoff = scroll_xoff_max;
-			}
-			
-			SetScrollbar(wxHORIZONTAL, scroll_xoff, client_size.GetWidth(), max_line_width);
+			scroll_xoff = scroll_xoff_max;
 		}
-		else{
-			scroll_xoff_max = 0;
-			scroll_xoff     = 0;
-			
-			SetScrollbar(wxHORIZONTAL, 0, 0, 0);
-		}
-	};
-	
-	update_vert();
-	update_horiz();
-	update_vert();
+		
+		SetScrollbar(wxHORIZONTAL, scroll_xoff, client_size.GetWidth(), max_line_width);
+	}
+	else{
+		scroll_xoff_max = 0;
+		scroll_xoff     = 0;
+		
+		SetScrollbar(wxHORIZONTAL, 0, 0, 0);
+	}
 }
 
 void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
@@ -179,6 +179,11 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 		
 		dc.DrawText(line->text, x + off_extent.GetWidth(), y);
 	}
+}
+
+void REHex::CodeCtrl::OnSize(wxSizeEvent &event)
+{
+	update_scrollbars();
 }
 
 void REHex::CodeCtrl::OnScroll(wxScrollWinEvent &event)

@@ -618,10 +618,10 @@ void REHex::Document::_update_vscroll()
 			position = scroll_yoff;
 		}
 		else{
-			scroll_ydiv = (total_lines + MAX_STEPS - 1) / MAX_STEPS;
+			scroll_ydiv = total_lines / MAX_STEPS;
 			
 			range    = MAX_STEPS;
-			thumb    = visible_lines / scroll_ydiv;
+			thumb    = 1;
 			position = scroll_yoff / scroll_ydiv;
 		}
 		
@@ -650,11 +650,13 @@ void REHex::Document::_update_vscroll()
 
 void REHex::Document::_update_vscroll_pos()
 {
+	int range = GetScrollRange(wxVERTICAL);
+	int thumb = GetScrollThumb(wxVERTICAL);
+	
 	if(scroll_yoff == scroll_yoff_max)
 	{
 		/* Last line, overcome any rounding and set scroll bar to max. */
-		int range = GetScrollRange(wxVERTICAL);
-		SetScrollPos(wxVERTICAL, range);
+		SetScrollPos(wxVERTICAL, (range - thumb));
 	}
 	else{
 		int position = scroll_yoff / scroll_ydiv;
@@ -665,6 +667,11 @@ void REHex::Document::_update_vscroll_pos()
 			 * up when there's a bit to go.
 			*/
 			position = 1;
+		}
+		else if(position == (range - thumb) && scroll_yoff < scroll_yoff_max)
+		{
+			/* Ditto, but for the bottom of the document. */
+			--position;
 		}
 		
 		SetScrollPos(wxVERTICAL, position);
@@ -682,8 +689,9 @@ void REHex::Document::OnScroll(wxScrollWinEvent &event)
 		{
 			int position = event.GetPosition();
 			int range = GetScrollRange(wxVERTICAL);
+			int thumb = GetScrollThumb(wxVERTICAL);
 			
-			if(position == range)
+			if(position == (range - thumb))
 			{
 				/* Dragged to the end of the scroll bar, jump to last line. */
 				scroll_yoff = scroll_yoff_max;

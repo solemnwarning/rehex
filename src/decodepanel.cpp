@@ -103,34 +103,49 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 		wxPG_STATIC_SPLITTER);
 	
 	pgrid->Append(c8 = new wxPropertyCategory("8 bit integer"));
-	pgrid->AppendIn(c8, (s8 = new wxStringProperty("S Dec", "s8")));
-	pgrid->AppendIn(c8, (u8 = new wxStringProperty("U Dec", "u8")));
-	pgrid->AppendIn(c8, (h8 = new wxStringProperty("U Hex", "h8")));
-	pgrid->AppendIn(c8, (o8 = new wxStringProperty("U Oct", "o8")));
+	pgrid->AppendIn(c8, (s8 = new wxStringProperty("S Dec", "s8", "0000000000000000")));
+	pgrid->AppendIn(c8, (u8 = new wxStringProperty("U Dec", "u8", "0000000000000000")));
+	pgrid->AppendIn(c8, (h8 = new wxStringProperty("U Hex", "h8", "0000000000000000")));
+	pgrid->AppendIn(c8, (o8 = new wxStringProperty("U Oct", "o8", "0000000000000000")));
 	
 	pgrid->Append(c16 = new wxPropertyCategory("16 bit integer"));
-	pgrid->AppendIn(c16, (s16 = new wxStringProperty("S Dec", "s16")));
-	pgrid->AppendIn(c16, (u16 = new wxStringProperty("U Dec", "u16")));
-	pgrid->AppendIn(c16, (h16 = new wxStringProperty("U Hex", "h16")));
-	pgrid->AppendIn(c16, (o16 = new wxStringProperty("U Oct", "o16")));
+	pgrid->AppendIn(c16, (s16 = new wxStringProperty("S Dec", "s16", "0000000000000000")));
+	pgrid->AppendIn(c16, (u16 = new wxStringProperty("U Dec", "u16", "0000000000000000")));
+	pgrid->AppendIn(c16, (h16 = new wxStringProperty("U Hex", "h16", "0000000000000000")));
+	pgrid->AppendIn(c16, (o16 = new wxStringProperty("U Oct", "o16", "0000000000000000")));
 	
 	pgrid->Append(c32 = new wxPropertyCategory("32 bit integer"));
-	pgrid->AppendIn(c32, (s32 = new wxStringProperty("S Dec", "s32")));
-	pgrid->AppendIn(c32, (u32 = new wxStringProperty("U Dec", "u32")));
-	pgrid->AppendIn(c32, (h32 = new wxStringProperty("U Hex", "h32")));
-	pgrid->AppendIn(c32, (o32 = new wxStringProperty("U Oct", "o32")));
+	pgrid->AppendIn(c32, (s32 = new wxStringProperty("S Dec", "s32", "0000000000000000")));
+	pgrid->AppendIn(c32, (u32 = new wxStringProperty("U Dec", "u32", "0000000000000000")));
+	pgrid->AppendIn(c32, (h32 = new wxStringProperty("U Hex", "h32", "0000000000000000")));
+	pgrid->AppendIn(c32, (o32 = new wxStringProperty("U Oct", "o32", "0000000000000000")));
 	
 	pgrid->Append(c64 = new wxPropertyCategory("64 bit integer"));
-	pgrid->AppendIn(c64, (s64 = new wxStringProperty("S Dec", "s64")));
-	pgrid->AppendIn(c64, (u64 = new wxStringProperty("U Dec", "u64")));
-	pgrid->AppendIn(c64, (h64 = new wxStringProperty("U Hex", "h64")));
-	pgrid->AppendIn(c64, (o64 = new wxStringProperty("U Oct", "o64")));
+	pgrid->AppendIn(c64, (s64 = new wxStringProperty("S Dec", "s64", "0000000000000000")));
+	pgrid->AppendIn(c64, (u64 = new wxStringProperty("U Dec", "u64", "0000000000000000")));
+	pgrid->AppendIn(c64, (h64 = new wxStringProperty("U Hex", "h64", "0000000000000000")));
+	pgrid->AppendIn(c64, (o64 = new wxStringProperty("U Oct", "o64", "0000000000000000")));
 	
 	pgrid->Append(c32f = new wxPropertyCategory("32 bit float"));
-	pgrid->AppendIn(c32f, (f32 = new wxStringProperty("Dec", "f32")));
+	pgrid->AppendIn(c32f, (f32 = new wxStringProperty("Dec", "f32", "0000000000000000")));
 	
 	pgrid->Append(c64f = new wxPropertyCategory("64 bit float (double)"));
-	pgrid->AppendIn(c64f, (f64 = new wxStringProperty("Dec", "f64")));
+	pgrid->AppendIn(c64f, (f64 = new wxStringProperty("Dec", "f64", "0000000000000000")));
+	
+	/* Compute minimum width needed to render without cutting off labels or reasonable numeric
+	 * values in the wxPropertyGrid.
+	 *
+	 * Size is initially set to a large value, where everything will fit. Then we call
+	 * FitColumns() to lay out the columns nicely, yielding the minimum internal grid size.
+	 * Finally we add that to the margin and scrollbar width to come to the minimum width. No
+	 * minimum height is enforced.
+	*/
+	
+	pgrid->SetSize(wxSize(1024, 1024));
+	wxSize min_grid_size = pgrid->FitColumns();
+	int margin_width     = pgrid->GetMarginWidth();
+	int v_scroll_width   = wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
+	pgrid->SetMinClientSize(wxSize((min_grid_size.GetWidth() + margin_width + v_scroll_width), 0));
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	

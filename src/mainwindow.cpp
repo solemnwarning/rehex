@@ -96,6 +96,16 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_CLOSE,  REHex::MainWindow::OnClose)
 	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
 	
+	EVT_MENU(wxID_FILE1, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE2, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE3, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE4, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE5, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE6, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE7, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE8, REHex::MainWindow::OnRecentOpen)
+	EVT_MENU(wxID_FILE9, REHex::MainWindow::OnRecentOpen)
+	
 	EVT_MENU(wxID_UNDO, REHex::MainWindow::OnUndo)
 	EVT_MENU(wxID_REDO, REHex::MainWindow::OnRedo)
 	
@@ -126,9 +136,11 @@ REHex::MainWindow::MainWindow():
 	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineer's Hex Editor"))
 {
 	wxMenu *file_menu = new wxMenu;
+	recent_files_menu = new wxMenu;
 	
 	file_menu->Append(wxID_NEW,    wxT("&New"));
 	file_menu->Append(wxID_OPEN,   wxT("&Open"));
+	file_menu->AppendSubMenu(recent_files_menu, wxT("Open &Recent"));
 	file_menu->Append(wxID_SAVE,   wxT("&Save"));
 	file_menu->Append(wxID_SAVEAS, wxT("&Save As"));
 	file_menu->Append(wxID_CLOSE,  wxT("&Close"));
@@ -167,6 +179,9 @@ REHex::MainWindow::MainWindow():
 	
 	SetMenuBar(menu_bar);
 	
+	wxGetApp().recent_files->UseMenu(recent_files_menu);
+	wxGetApp().recent_files->AddFilesToMenu(recent_files_menu);
+	
 	wxToolBar *toolbar = CreateToolBar();
 	wxArtProvider artp;
 	
@@ -204,6 +219,11 @@ REHex::MainWindow::MainWindow():
 	*/
 	
 	SetClientSize(notebook->GetPage(0)->GetBestSize());
+}
+
+REHex::MainWindow::~MainWindow()
+{
+	wxGetApp().recent_files->RemoveMenu(recent_files_menu);
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
@@ -290,6 +310,31 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 			"Error", wxICON_ERROR, this);
 		return;
 	}
+	
+	wxGetApp().recent_files->AddFileToHistory(openFileDialog.GetPath());
+	
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc->SetFocus();
+}
+
+void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
+{
+	wxFileHistory *recent_files = wxGetApp().recent_files;
+	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
+	
+	Tab *tab;
+	try {
+		tab = new Tab(notebook, file.ToStdString());
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + file.ToStdString() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
+	
+	wxGetApp().recent_files->AddFileToHistory(file);
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc->SetFocus();

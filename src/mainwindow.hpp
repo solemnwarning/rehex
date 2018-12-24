@@ -30,11 +30,13 @@ namespace REHex {
 	{
 		public:
 			MainWindow();
+			virtual ~MainWindow();
 			
 			void OnWindowClose(wxCloseEvent& event);
 			
 			void OnNew(wxCommandEvent &event);
 			void OnOpen(wxCommandEvent &event);
+			void OnRecentOpen(wxCommandEvent &event);
 			void OnSave(wxCommandEvent &event);
 			void OnSaveAs(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);
@@ -91,6 +93,7 @@ namespace REHex {
 					DECLARE_EVENT_TABLE()
 			};
 			
+			wxMenu *recent_files_menu;
 			wxMenu *doc_menu;
 			wxAuiNotebook *notebook;
 			

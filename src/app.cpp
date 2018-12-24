@@ -25,6 +25,12 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	config = new wxConfig("REHex");
+	recent_files = new wxFileHistory();
+	
+	config->SetPath("/recent-files/");
+	recent_files->Load(*config);
+	
 	LLVMInitializeAllAsmPrinters();
 	LLVMInitializeAllTargets();
 	LLVMInitializeAllTargetInfos();
@@ -35,4 +41,15 @@ bool REHex::App::OnInit()
 	window->Show(true);
 	
 	return true;
+}
+
+int REHex::App::OnExit()
+{
+	config->SetPath("/recent-files/");
+	recent_files->Save(*config);
+	
+	delete recent_files;
+	delete config;
+	
+	return 0;
 }

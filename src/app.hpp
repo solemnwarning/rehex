@@ -18,13 +18,19 @@
 #ifndef REHEX_APP_HPP
 #define REHEX_APP_HPP
 
+#include <wx/config.h>
+#include <wx/filehistory.h>
 #include <wx/wx.h>
 
 namespace REHex {
 	class App: public wxApp
 	{
 		public:
+			wxConfig *config;
+			wxFileHistory *recent_files;
+			
 			virtual bool OnInit();
+			virtual int OnExit();
 	};
 }
 

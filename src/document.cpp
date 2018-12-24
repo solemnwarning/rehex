@@ -2255,11 +2255,20 @@ void REHex::Document::_make_byte_visible(off_t offset)
 	uint64_t region_line = dr->y_offset + (region_offset / bytes_per_line_calc);
 	_make_line_visible(region_line);
 	
-	off_t line_off      = region_offset % bytes_per_line_calc;
-	unsigned int line_x = offset_column_width
-		+ hf_string_width(line_off * 2)
-		+ hf_string_width(line_off / bytes_per_group);
-	_make_x_visible(line_x, hf_string_width(2));
+	off_t line_off = region_offset % bytes_per_line_calc;
+	
+	if(cursor_state == CSTATE_HEX || cursor_state == CSTATE_HEX_MID)
+	{
+		unsigned int line_x = offset_column_width
+			+ hf_string_width(line_off * 2)
+			+ hf_string_width(line_off / bytes_per_group);
+		_make_x_visible(line_x, hf_string_width(2));
+	}
+	else if(cursor_state == CSTATE_ASCII)
+	{
+		off_t byte_x = ascii_text_x + hf_string_width(line_off);
+		_make_x_visible(byte_x, hf_char_width());
+	}
 }
 
 std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)

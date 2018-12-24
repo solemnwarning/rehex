@@ -85,6 +85,8 @@ namespace REHex {
 			void OnLeftUp(wxMouseEvent &event);
 			void OnRightDown(wxMouseEvent &event);
 			void OnMotion(wxMouseEvent &event);
+			void OnSelectTick(wxTimerEvent &event);
+			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnSetComment(wxCommandEvent &event);
 			
@@ -195,8 +197,11 @@ namespace REHex {
 			bool cursor_visible;
 			wxTimer redraw_cursor_timer;
 			
+			static const int MOUSE_SELECT_INTERVAL = 100;
+			
 			bool mouse_down_in_hex{false}, mouse_down_in_ascii{false};
 			off_t mouse_down_at_offset;
+			wxTimer mouse_select_timer;
 			
 			enum CursorState cursor_state;
 			

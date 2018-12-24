@@ -49,6 +49,7 @@ static bool isasciihex(int c)
 enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SET_COMMENT,
+	ID_SELECT_TIMER,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -61,6 +62,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_LEFT_UP(REHex::Document::OnLeftUp)
 	EVT_RIGHT_DOWN(REHex::Document::OnRightDown)
 	EVT_MOTION(REHex::Document::OnMotion)
+	EVT_TIMER(ID_SELECT_TIMER, REHex::Document::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 	EVT_MENU(ID_SET_COMMENT, REHex::Document::OnSetComment)
 END_EVENT_TABLE()
@@ -71,7 +73,8 @@ wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
-	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
+	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
+	mouse_select_timer(this, ID_SELECT_TIMER)
 {
 	_ctor_pre(parent);
 	
@@ -86,7 +89,8 @@ REHex::Document::Document(wxWindow *parent):
 REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	wxControl(),
 	filename(filename),
-	redraw_cursor_timer(this, ID_REDRAW_CURSOR)
+	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
+	mouse_select_timer(this, ID_SELECT_TIMER)
 {
 	_ctor_pre(parent);
 	
@@ -1196,6 +1200,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					mouse_down_at_offset = clicked_offset;
 					mouse_down_in_ascii  = true;
 					
+					CaptureMouse();
+					mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
+					
 					/* TODO: Limit paint to affected area */
 					Refresh();
 				}
@@ -1214,6 +1221,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 					
 					mouse_down_at_offset = clicked_offset;
 					mouse_down_in_hex    = true;
+					
+					CaptureMouse();
+					mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
 					
 					/* TODO: Limit paint to affected area */
 					Refresh();
@@ -1245,6 +1255,12 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 
 void REHex::Document::OnLeftUp(wxMouseEvent &event)
 {
+	if(mouse_down_in_hex || mouse_down_in_ascii)
+	{
+		mouse_select_timer.Stop();
+		ReleaseMouse();
+	}
+	
 	mouse_down_in_hex   = false;
 	mouse_down_in_ascii = false;
 }
@@ -1357,11 +1373,59 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 
 void REHex::Document::OnMotion(wxMouseEvent &event)
 {
+	OnMotionTick(event.GetX(), event.GetY());
+}
+
+void REHex::Document::OnSelectTick(wxTimerEvent &event)
+{
+	wxPoint window_pos = GetScreenPosition();
+	wxPoint mouse_pos  = wxGetMousePosition();
+	
+	OnMotionTick((mouse_pos.x - window_pos.x), (mouse_pos.y - window_pos.y));
+}
+
+void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
+{
+	if(!mouse_down_in_ascii && !mouse_down_in_hex)
+	{
+		return;
+	}
+	
 	wxClientDC dc(this);
 	
-	unsigned int mouse_x = event.GetX();
-	unsigned int rel_x   = mouse_x + this->scroll_xoff;
-	unsigned int mouse_y = event.GetY();
+	int scroll_xoff_max = GetScrollRange(wxHORIZONTAL) - GetScrollThumb(wxHORIZONTAL);
+	
+	if(mouse_x < 0)
+	{
+		scroll_xoff -= std::min(abs(mouse_x), scroll_xoff);
+		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		
+		mouse_x = 0;
+	}
+	else if(mouse_x >= client_width)
+	{
+		scroll_xoff += std::min((int)(mouse_x - client_width), (scroll_xoff_max - scroll_xoff));
+		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		
+		mouse_x = client_width - 1;
+	}
+	
+	if(mouse_y < 0)
+	{
+		scroll_yoff -= std::min((int64_t)(abs(mouse_y) / hf_height + 1), scroll_yoff);
+		_update_vscroll_pos();
+		
+		mouse_y = 0;
+	}
+	else if(mouse_y >= client_height)
+	{
+		scroll_yoff += std::min((int64_t)((mouse_y - client_height) / hf_height + 1), (scroll_yoff_max - scroll_yoff));
+		_update_vscroll_pos();
+		
+		mouse_y = client_height - 1;
+	}
+	
+	int rel_x = mouse_x + scroll_xoff;
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.

@@ -631,8 +631,10 @@ void REHex::Document::_update_vscroll()
 		
 		assert(range > 0);
 		assert(range <= MAX_STEPS);
+		assert(thumb > 0);
+		assert(thumb <= range);
 		assert(position >= 0);
-		assert(position <= range);
+		assert(position <= (range - thumb));
 		
 		SetScrollbar(wxVERTICAL, position, thumb, range);
 		scroll_yoff_max = total_lines - visible_lines;

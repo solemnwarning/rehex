@@ -849,10 +849,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 		delete disasm;
 		delete dp;
 		delete doc;
-		delete v_sizer;
 		delete h_sizer;
 		
-		throw e;
+		throw;
 	}
 }
 
@@ -910,10 +909,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 		delete disasm;
 		delete dp;
 		delete doc;
-		delete v_sizer;
 		delete h_sizer;
 		
-		throw e;
+		throw;
 	}
 }
 

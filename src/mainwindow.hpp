@@ -19,6 +19,7 @@
 #define REHEX_MAINWINDOW_HPP
 
 #include <wx/aui/auibook.h>
+#include <wx/dnd.h>
 #include <wx/wx.h>
 
 #include "decodepanel.hpp"
@@ -31,6 +32,8 @@ namespace REHex {
 		public:
 			MainWindow();
 			virtual ~MainWindow();
+			
+			void open_file(const std::string &filename);
 			
 			void OnWindowClose(wxCloseEvent& event);
 			
@@ -91,6 +94,18 @@ namespace REHex {
 					};
 					
 					DECLARE_EVENT_TABLE()
+			};
+			
+			class DropTarget: public wxFileDropTarget
+			{
+				private:
+					MainWindow *window;
+					
+				public:
+					DropTarget(MainWindow *window);
+					virtual ~DropTarget();
+					
+					virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString &filenames) override;
 			};
 			
 			wxMenu *recent_files_menu;

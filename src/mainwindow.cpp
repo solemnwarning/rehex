@@ -197,6 +197,8 @@ REHex::MainWindow::MainWindow():
 	
 	CreateStatusBar(3);
 	
+	SetDropTarget(new DropTarget(this));
+	
 	/* Temporary hack to open files provided on the command line */
 	
 	REHex::App &app = wxGetApp();
@@ -224,6 +226,26 @@ REHex::MainWindow::MainWindow():
 REHex::MainWindow::~MainWindow()
 {
 	wxGetApp().recent_files->RemoveMenu(recent_files_menu);
+}
+
+void REHex::MainWindow::open_file(const std::string &filename)
+{
+	Tab *tab;
+	try {
+		tab = new Tab(notebook, filename);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + filename + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
+	
+	wxGetApp().recent_files->AddFileToHistory(filename);
+	
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc->SetFocus();
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
@@ -949,4 +971,19 @@ void REHex::MainWindow::Tab::OnVToolChange(wxBookCtrlEvent &event)
 	
 	/* Update layout with new size. */
 	GetSizer()->Layout();
+}
+
+REHex::MainWindow::DropTarget::DropTarget(MainWindow *window):
+	window(window) {}
+
+REHex::MainWindow::DropTarget::~DropTarget() {}
+
+bool REHex::MainWindow::DropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString &filenames)
+{
+	for(size_t i = 0; i < filenames.GetCount(); ++i)
+	{
+		window->open_file(filenames[i].ToStdString());
+	}
+	
+	return true;
 }

@@ -28,25 +28,31 @@ namespace REHex {
 		using wxTextCtrl::wxTextCtrl; /* Inherit wxTextCtrl c'tors */
 		
 		public:
-			class RangeError: public std::runtime_error
+			class InputError: public std::runtime_error
 			{
-				public:
-					RangeError(): runtime_error("Number is out of range") {}
+				protected:
+					InputError(const char *what): runtime_error(what) {}
 			};
 			
-			class FormatError: public std::runtime_error
+			class RangeError: public InputError
 			{
 				public:
-					FormatError(): runtime_error("Number is not of a known format") {}
+					RangeError(): InputError("Number is out of range") {}
 			};
 			
-			class EmptyError: public std::runtime_error
+			class FormatError: public InputError
 			{
 				public:
-					EmptyError(): runtime_error("No number provided") {}
+					FormatError(): InputError("Number is not of a known format") {}
 			};
 			
-			template<typename T> T GetValueSigned()
+			class EmptyError: public InputError
+			{
+				public:
+					EmptyError(): InputError("No number provided") {}
+			};
+			
+			template<typename T> T GetValueSigned(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValueSigned() instantiated with non-integer type");
 				static_assert(std::numeric_limits<T>::is_signed,  "GetValueSigned() instantiated with unsigned type");
@@ -79,16 +85,16 @@ namespace REHex {
 					throw RangeError();
 				}
 				
-				if(ival < std::numeric_limits<T>::min() || ival > std::numeric_limits<T>::max())
+				if(ival < min || ival > max)
 				{
-					/* Out of range of T */
+					/* Out of range of T or constraint */
 					throw RangeError();
 				}
 				
 				return ival;
 			}
 			
-			template<typename T> T GetValueUnsigned()
+			template<typename T> T GetValueUnsigned(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValueUnsigned() instantiated with non-integer type");
 				static_assert(!std::numeric_limits<T>::is_signed, "GetValueUnsigned() instantiated with signed type");
@@ -129,9 +135,9 @@ namespace REHex {
 					throw RangeError();
 				}
 				
-				if(ival < std::numeric_limits<T>::min() || ival > std::numeric_limits<T>::max())
+				if(ival < min || ival > max)
 				{
-					/* Out of range of T */
+					/* Out of range of T or constraint */
 					throw RangeError();
 				}
 				

@@ -846,15 +846,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	if(modifiers & wxMOD_CONTROL)
 	{
-		if(modifiers == wxMOD_CONTROL && key == WXK_CONTROL_G)
-		{
-			/* Ctrl+G - Go to offset */
-			printf("TODO: Implement jump to offset\n");
-		}
-		else{
-			/* Some other control sequence, pass it on. */
-			event.Skip();
-		}
+		/* Some control sequence, pass it on. */
+		event.Skip();
 	}
 	else if(key == WXK_TAB && modifiers == wxMOD_NONE)
 	{

@@ -30,6 +30,7 @@
 #include "decodepanel.hpp"
 #include "disassemble.hpp"
 #include "mainwindow.hpp"
+#include "NumericEntryDialog.hpp"
 #include "search.hpp"
 
 class TestPanel: public wxControl {
@@ -84,7 +85,8 @@ enum {
 	ID_SHOW_DECODES,
 	ID_SEARCH_TEXT,
 	ID_SEARCH_BSEQ,
-    ID_SEARCH_VALUE,
+	ID_SEARCH_VALUE,
+	ID_GOTO_OFFSET,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -113,6 +115,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
 	EVT_MENU(ID_SEARCH_VALUE,  REHex::MainWindow::OnSearchValue)
+	
+	EVT_MENU(ID_GOTO_OFFSET, REHex::MainWindow::OnGotoOffset)
 	
 	EVT_MENU(wxID_CUT,   REHex::MainWindow::OnCut)
 	EVT_MENU(wxID_COPY,  REHex::MainWindow::OnCopy)
@@ -158,6 +162,10 @@ REHex::MainWindow::MainWindow():
 	edit_menu->Append(ID_SEARCH_TEXT,  "Search for text...");
 	edit_menu->Append(ID_SEARCH_BSEQ,  "Search for byte sequence...");
 	edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
+	
+	edit_menu->AppendSeparator();
+	
+	edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...\tCtrl-G");
 	
 	edit_menu->AppendSeparator();
 	
@@ -450,6 +458,26 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	
 	REHex::Search::Value *t = new REHex::Search::Value(tab, *(tab->doc));
 	t->Show(true);
+}
+
+void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	off_t current_pos = tab->doc->get_cursor_position();
+	off_t max_pos     = tab->doc->buffer_length() - !tab->doc->get_insert_mode();
+	
+	REHex::NumericEntryDialog<off_t> ni(this, "Jump to offset", current_pos, 0, max_pos);
+	
+	int rc = ni.ShowModal();
+	if(rc == wxID_OK)
+	{
+		tab->doc->set_cursor_position(ni.GetValue());
+	}
 }
 
 void REHex::MainWindow::OnCut(wxCommandEvent &event)

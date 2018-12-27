@@ -20,6 +20,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/event.h>
+#include <wx/filename.h>
 #include <wx/msgdlg.h>
 #include <wx/aui/auibook.h>
 #include <wx/numdlg.h>
@@ -199,22 +200,8 @@ REHex::MainWindow::MainWindow():
 	
 	SetDropTarget(new DropTarget(this));
 	
-	/* Temporary hack to open files provided on the command line */
-	
-	REHex::App &app = wxGetApp();
-	
-	if(app.argc > 1)
-	{
-		for(int i = 1; i < app.argc; ++i)
-		{
-			Tab *tab = new Tab(notebook, app.argv[i].ToStdString());
-			notebook->AddPage(tab, tab->doc->get_title(), true);
-			tab->doc->SetFocus();
-		}
-	}
-	else{
-		ProcessCommand(wxID_NEW);
-	}
+	/* Start with an "Untitled" tab. */
+	ProcessCommand(wxID_NEW);
 	
 	/* NOTE: wxAuiNotebook doesn't seem to implement GetBestSize() correctly, so we just use
 	 * the best size of the Tab instead.
@@ -242,7 +229,24 @@ void REHex::MainWindow::open_file(const std::string &filename)
 		return;
 	}
 	
-	wxGetApp().recent_files->AddFileToHistory(filename);
+	/* Discard default "Untitled" tab if not modified. */
+	if(notebook->GetPageCount() == 1)
+	{
+		wxWindow *page = notebook->GetPage(0);
+		assert(page != NULL);
+		
+		auto page_tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		assert(page_tab != NULL);
+		
+		if(page_tab->doc->get_filename() == "" && !page_tab->doc->is_dirty())
+		{
+			notebook->DeletePage(0);
+		}
+	}
+	
+	wxFileName wxfn(filename);
+	wxfn.MakeAbsolute();
+	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc->SetFocus();
@@ -321,22 +325,7 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
-	Tab *tab;
-	try {
-		tab = new Tab(notebook, openFileDialog.GetPath().ToStdString());
-	}
-	catch(const std::exception &e)
-	{
-		wxMessageBox(
-			std::string("Error opening ") + openFileDialog.GetFilename().ToStdString() + ":\n" + e.what(),
-			"Error", wxICON_ERROR, this);
-		return;
-	}
-	
-	wxGetApp().recent_files->AddFileToHistory(openFileDialog.GetPath());
-	
-	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	open_file(openFileDialog.GetPath().ToStdString());
 }
 
 void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
@@ -344,22 +333,7 @@ void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
 	wxFileHistory *recent_files = wxGetApp().recent_files;
 	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
 	
-	Tab *tab;
-	try {
-		tab = new Tab(notebook, file.ToStdString());
-	}
-	catch(const std::exception &e)
-	{
-		wxMessageBox(
-			std::string("Error opening ") + file.ToStdString() + ":\n" + e.what(),
-			"Error", wxICON_ERROR, this);
-		return;
-	}
-	
-	wxGetApp().recent_files->AddFileToHistory(file);
-	
-	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	open_file(file.ToStdString());
 }
 
 void REHex::MainWindow::OnSave(wxCommandEvent &event)

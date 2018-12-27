@@ -147,6 +147,11 @@ std::string REHex::Document::get_title()
 	return title;
 }
 
+std::string REHex::Document::get_filename()
+{
+	return filename;
+}
+
 bool REHex::Document::is_dirty()
 {
 	return dirty;

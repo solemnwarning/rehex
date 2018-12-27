@@ -42,6 +42,7 @@ namespace REHex {
 			void save(const std::string &filename);
 			
 			std::string get_title();
+			std::string get_filename();
 			bool is_dirty();
 			
 			unsigned int get_bytes_per_line();

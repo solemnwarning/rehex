@@ -141,7 +141,7 @@ namespace REHex {
 					r = i;
 				}
 				
-				if(i == map.end())
+				if(i == map.begin())
 				{
 					break;
 				}

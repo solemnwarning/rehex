@@ -53,6 +53,7 @@ DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 ALL_TESTS := \
 	tests/buffer.t \
 	tests/document.t \
+	tests/NestedOffsetLengthMap.t \
 	tests/NumericTextCtrl.t \
 	tests/search-bseq.t \
 	tests/search-text.t \
@@ -112,6 +113,13 @@ TESTS_DOCUMENT_OBJS := \
 	tests/tap/basic.o
 
 tests/document.t: $(TESTS_DOCUMENT_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+TESTS_NESTEDOFFSETLENGTHMAP_OBJS := \
+	tests/NestedOffsetLengthMap.o \
+	tests/tap/basic.o
+
+tests/NestedOffsetLengthMap.t: $(TESTS_NESTEDOFFSETLENGTHMAP_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 TESTS_NUMERICTEXTCTRL_OBJS := \

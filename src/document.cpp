@@ -611,11 +611,15 @@ void REHex::Document::_update_vscroll()
 	
 	uint64_t total_lines = regions.back()->y_offset + regions.back()->y_lines;
 	
-	/* TODO: Scale scroll_yoff in a better way when the window size changes. */
-	scroll_yoff = 0;
-	
 	if(total_lines > visible_lines)
 	{
+		int64_t new_scroll_yoff_max = total_lines - visible_lines;
+		
+		/* Try to keep the vertical scroll position at roughly the same point in the file. */
+		scroll_yoff = (scroll_yoff > 0)
+			? ((double)(scroll_yoff) * ((double)(new_scroll_yoff_max) / (double)(scroll_yoff_max)))
+			: 0;
+		
 		int range, thumb, position;
 		
 		if(total_lines <= (uint64_t)(MAX_STEPS))
@@ -642,7 +646,7 @@ void REHex::Document::_update_vscroll()
 		assert(position <= (range - thumb));
 		
 		SetScrollbar(wxVERTICAL, position, thumb, range);
-		scroll_yoff_max = total_lines - visible_lines;
+		scroll_yoff_max = new_scroll_yoff_max;
 	}
 	else{
 		/* We don't need a vertical scroll bar, but force one to appear anyway so

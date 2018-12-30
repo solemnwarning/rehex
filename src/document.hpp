@@ -26,6 +26,7 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "NestedOffsetLengthMap.hpp"
 
 namespace REHex {
 	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
@@ -146,6 +147,8 @@ namespace REHex {
 			Buffer *buffer;
 			std::string filename;
 			bool dirty;
+			
+			NestedOffsetLengthMap<int> highlights;
 			
 			std::string title;
 			

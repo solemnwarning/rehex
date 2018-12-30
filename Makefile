@@ -86,6 +86,7 @@ APP_OBJS := \
 	src/disassemble.o \
 	src/document.o \
 	src/mainwindow.o \
+	src/Palette.o \
 	src/search.o \
 	src/textentrydialog.o \
 	src/util.o \

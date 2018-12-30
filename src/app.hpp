@@ -22,12 +22,16 @@
 #include <wx/filehistory.h>
 #include <wx/wx.h>
 
+#include "Palette.hpp"
+
 namespace REHex {
 	class App: public wxApp
 	{
 		public:
 			wxConfig *config;
 			wxFileHistory *recent_files;
+			
+			REHex::Palette palette;
 			
 			virtual bool OnInit();
 			virtual int OnExit();

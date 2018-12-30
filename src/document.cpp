@@ -52,6 +52,7 @@ enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SET_COMMENT,
 	ID_SELECT_TIMER,
+	ID_CLEAR_HIGHLIGHT,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -67,6 +68,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::Document::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 	EVT_MENU(ID_SET_COMMENT, REHex::Document::OnSetComment)
+	EVT_MENU(ID_CLEAR_HIGHLIGHT, REHex::Document::OnClearHighlight)
 END_EVENT_TABLE()
 
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
@@ -1404,6 +1406,12 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				menu.AppendSubMenu(hlmenu, "Set Highlight");
 			}
 			
+			auto highlight = NestedOffsetLengthMap_get(highlights, get_cursor_position());
+			if(highlight != highlights.end())
+			{
+				menu.Append(ID_CLEAR_HIGHLIGHT, "Remove Highlight");
+			}
+			
 			PopupMenu(&menu);
 		}
 	}
@@ -1552,6 +1560,15 @@ void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
 void REHex::Document::OnSetComment(wxCommandEvent &event)
 {
 	_edit_comment_popup(get_cursor_position());
+}
+
+void REHex::Document::OnClearHighlight(wxCommandEvent &event)
+{
+	auto highlight = NestedOffsetLengthMap_get(highlights, get_cursor_position());
+	highlights.erase(highlight);
+	
+	/* TODO: Limit paint to highlighted area. */
+	Refresh();
 }
 
 void REHex::Document::_ctor_pre(wxWindow *parent)

@@ -91,6 +91,7 @@ namespace REHex {
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnSetComment(wxCommandEvent &event);
+			void OnClearHighlight(wxCommandEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:

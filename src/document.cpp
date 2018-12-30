@@ -1622,7 +1622,8 @@ void REHex::Document::_init_regions(const json_t *meta)
 	{
 		/* TODO: Validate JSON structure */
 		
-		json_t *j_comments = json_object_get(meta, "comments");
+		json_t *j_comments   = json_object_get(meta, "comments");
+		json_t *j_highlights = json_object_get(meta, "highlights");
 		
 		size_t index;
 		json_t *value;
@@ -1631,6 +1632,15 @@ void REHex::Document::_init_regions(const json_t *meta)
 		{
 			comments[json_integer_value(json_object_get(value, "offset"))]
 				= wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
+		}
+		
+		json_array_foreach(j_highlights, index, value)
+		{
+			off_t h_offset = json_integer_value(json_object_get(value, "offset"));
+			off_t h_length = json_integer_value(json_object_get(value, "length"));
+			int   h_colour = json_integer_value(json_object_get(value, "colour-idx"));
+			
+			NestedOffsetLengthMap_set(highlights, h_offset, h_length, h_colour);
 		}
 	}
 	
@@ -2193,6 +2203,26 @@ json_t *REHex::Document::_dump_metadata()
 		if(json_array_append(comments, comment) == -1
 			|| json_object_set_new(comment, "offset", json_integer(cr->c_offset)) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+	}
+	
+	json_t *highlights = json_array();
+	if(json_object_set_new(root, "highlights", highlights) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto h = this->highlights.begin(); h != this->highlights.end(); ++h)
+	{
+		json_t *highlight = json_object();
+		if(json_array_append(highlights, highlight) == -1
+			|| json_object_set_new(highlight, "offset",     json_integer(h->first.offset)) == -1
+			|| json_object_set_new(highlight, "length",     json_integer(h->first.length)) == -1
+			|| json_object_set_new(highlight, "colour-idx", json_integer(h->second)) == -1)
 		{
 			json_decref(root);
 			return NULL;

@@ -28,7 +28,24 @@
 #include "tests/tap/basic.h"
 
 #define UNIT_TEST
+#include "../src/app.hpp"
 #include "../src/document.hpp"
+
+bool REHex::App::OnInit()
+{
+	return true;
+}
+
+int REHex::App::OnExit()
+{
+	return 0;
+}
+
+REHex::App &wxGetApp()
+{
+	static REHex::App instance;
+	return instance;
+}
 
 #define TEST_REGION_INT(region_i, type, field, expect) { \
 	auto r = dynamic_cast<type*>(*(std::next(doc->regions.begin(), region_i))); \

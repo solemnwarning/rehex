@@ -25,8 +25,25 @@
 
 #include "tests/tap/basic.h"
 
+#include "../src/app.hpp"
 #include "../src/document.hpp"
 #include "../src/search.hpp"
+
+bool REHex::App::OnInit()
+{
+	return true;
+}
+
+int REHex::App::OnExit()
+{
+	return 0;
+}
+
+REHex::App &wxGetApp()
+{
+	static REHex::App instance;
+	return instance;
+}
 
 #define TMPFILE  "tests/.tmpfile"
 

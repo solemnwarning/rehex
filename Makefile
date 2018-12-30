@@ -107,6 +107,7 @@ tests/buffer.t: $(TESTS_BUFFER_OBJS)
 TESTS_DOCUMENT_OBJS := \
 	src/buffer.o \
 	src/document.o \
+	src/Palette.o \
 	src/textentrydialog.o \
 	src/util.o \
 	src/win32lib.o \
@@ -133,6 +134,7 @@ tests/NumericTextCtrl.t: $(TESTS_NUMERICTEXTCTRL_OBJS)
 TESTS_SEARCH_BSEQ_OBJS := \
 	src/buffer.o \
 	src/document.o \
+	src/Palette.o \
 	src/search.o \
 	src/textentrydialog.o \
 	src/util.o \
@@ -146,6 +148,7 @@ tests/search-bseq.t: $(TESTS_SEARCH_BSEQ_OBJS)
 TESTS_SEARCH_TEXT_OBJS := \
 	src/buffer.o \
 	src/document.o \
+	src/Palette.o \
 	src/search.o \
 	src/textentrydialog.o \
 	src/util.o \

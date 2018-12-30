@@ -124,6 +124,11 @@ namespace REHex {
 		auto i = map.lower_bound(NestedOffsetLengthMapKey(offset, 1));
 		auto r = map.end();
 		
+		if(i == map.end() && !map.empty())
+		{
+			--i;
+		}
+		
 		if(i != map.end())
 		{
 			for(;; --i)

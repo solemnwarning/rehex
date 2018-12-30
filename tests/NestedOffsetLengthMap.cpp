@@ -67,6 +67,7 @@ int main(int argc, char **argv)
 	OK_SET(30, 10, 8 ); /* Overwrite */
 	OK_SET(15, 15, 9 );
 	OK_SET(40, 0,  10);
+	OK_SET(50, 1,  11);
 	
 	BAD_SET(15, 14, "Overlapping start of existing range");
 	BAD_SET(25, 6,  "Overlapping end of existing range");
@@ -77,6 +78,7 @@ int main(int argc, char **argv)
 	OK_GET(24, 5);
 	OK_GET(25, 6);
 	OK_GET(30, 8);
+	OK_GET(50, 11);
 	
 	BAD_GET(10);
 	BAD_GET(14);

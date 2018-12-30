@@ -2277,6 +2277,8 @@ void REHex::Document::_make_byte_visible(off_t offset)
 
 std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
 {
+	assert(cols > 0);
+	
 	/* TODO: Throw myself into the abyss and support Unicode properly...
 	 * (This function assumes one byte is one full-width character on the screen.
 	*/
@@ -2848,11 +2850,15 @@ REHex::Document::Region::Comment::Comment(off_t c_offset, const wxString &c_text
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
 	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
-	
-	auto comment_lines = _format_text(c_text, row_chars);
-	
-	this->y_offset = y_offset;
-	this->y_lines  = comment_lines.size() + 1;
+	if(row_chars == 0)
+	{
+		/* Zero columns of width. Probably still initialising. */
+		this->y_lines = 1;
+	}
+	else{
+		auto comment_lines = _format_text(c_text, row_chars);
+		this->y_lines  = comment_lines.size() + 1;
+	}
 }
 
 void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
@@ -2864,7 +2870,14 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	
 	dc.SetFont(*(doc.hex_font));
 	
-	auto lines = _format_text(c_text, doc.hf_char_at_x(doc.client_width) - 1);
+	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
+	if(row_chars == 0)
+	{
+		/* Zero columns of width. Probably still initialising. */
+		return;
+	}
+	
+	auto lines = _format_text(c_text, row_chars);
 	
 	{
 		int box_x = x + (doc.hf_char_width() / 4);

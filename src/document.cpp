@@ -1380,7 +1380,25 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				wxMenu *hlmenu = new wxMenu();
 				hlmenu->Bind(wxEVT_MENU, [this](wxCommandEvent &event)
 				{
-					NestedOffsetLengthMap_set(highlights, selection_off, selection_length, event.GetId());
+					off_t off    = selection_off;
+					off_t length = selection_length;
+					int colour   = event.GetId();
+					
+					_tracked_change("set highlight",
+						[this, off, length, colour]()
+						{
+							NestedOffsetLengthMap_set(highlights, off, length, colour);
+							
+							/* TODO: Limit paint to affected area. */
+							Refresh();
+						},
+						
+						[]()
+						{
+							/* Highlight is implicitly undone by undo()
+							 * restoring the highlights map.
+							*/
+						});
 				});
 				
 				const REHex::Palette &pal = wxGetApp().palette;
@@ -1565,11 +1583,22 @@ void REHex::Document::OnSetComment(wxCommandEvent &event)
 
 void REHex::Document::OnClearHighlight(wxCommandEvent &event)
 {
-	auto highlight = NestedOffsetLengthMap_get(highlights, get_cursor_position());
-	highlights.erase(highlight);
+	off_t cursor_pos = get_cursor_position();
 	
-	/* TODO: Limit paint to highlighted area. */
-	Refresh();
+	_tracked_change("remove highlight",
+		[this, cursor_pos]()
+		{
+			auto highlight = NestedOffsetLengthMap_get(highlights, cursor_pos);
+			highlights.erase(highlight);
+			
+			/* TODO: Limit paint to affected area. */
+			Refresh();
+		},
+		
+		[]()
+		{
+			/* Highlighting is implicitly restored by undo() */
+		});
 }
 
 void REHex::Document::_ctor_pre(wxWindow *parent)

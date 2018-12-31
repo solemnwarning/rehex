@@ -418,6 +418,7 @@ void REHex::Document::undo()
 		
 		cpos_off     = act.old_cpos_off;
 		cursor_state = act.old_cursor_state;
+		highlights   = act.old_highlights;
 		
 		redo_stack.push_back(act);
 		undo_stack.pop_back();
@@ -1802,6 +1803,8 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			
 			++region;
 		}
+		
+		NestedOffsetLengthMap_data_inserted(highlights, offset, length);
 	}
 	
 }
@@ -1903,6 +1906,8 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 		
 		assert(to_shift == length);
 		assert(to_shrink == 0);
+		
+		NestedOffsetLengthMap_data_erased(highlights, offset, length);
 	}
 }
 
@@ -2010,6 +2015,7 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	
 	change.old_cpos_off     = cpos_off;
 	change.old_cursor_state = cursor_state;
+	change.old_highlights   = highlights;
 	
 	do_func();
 	

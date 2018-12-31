@@ -155,6 +155,68 @@ namespace REHex {
 		
 		return r;
 	}
+	
+	template<typename T> void NestedOffsetLengthMap_data_inserted(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
+	{
+		NestedOffsetLengthMap<T> new_map;
+		
+		for(auto i = map.begin(); i != map.end(); ++i)
+		{
+			off_t i_offset = i->first.offset;
+			off_t i_length = i->first.length;
+			
+			if(i_offset >= offset)
+			{
+				new_map.emplace(NestedOffsetLengthMapKey((i_offset + length), i_length), i->second);
+			}
+			else if(i_offset < offset && (i_offset + i_length) > offset)
+			{
+				new_map.emplace(NestedOffsetLengthMapKey(i_offset, (i_length + length)), i->second);
+			}
+			else{
+				new_map.emplace(*i);
+			}
+		}
+		
+		map.swap(new_map);
+	}
+	
+	template<typename T> void NestedOffsetLengthMap_data_erased(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
+	{
+		off_t end = offset + length;
+		
+		NestedOffsetLengthMap<T> new_map;
+		
+		for(auto i = map.begin(); i != map.end(); ++i)
+		{
+			off_t i_offset = i->first.offset;
+			off_t i_length = i->first.length;
+			
+			if(offset <= i_offset && end > (i_offset + i_length - (i_length > 0)))
+			{
+				/* This key is wholly encompassed by the deleted range. */
+				continue;
+			}
+			
+			if(offset >= i_offset && offset < (i_offset + i_length))
+			{
+				i_length -= std::min(length, (i_length - (offset - i_offset)));
+			}
+			else if(end > i_offset && end < (i_offset + i_length))
+			{
+				i_length -= end - i_offset;
+			}
+			
+			if(i_offset > offset)
+			{
+				i_offset -= std::min(length, (i_offset - offset));
+			}
+			
+			new_map.emplace(NestedOffsetLengthMapKey(i_offset, i_length), i->second);
+		}
+		
+		map.swap(new_map);
+	}
 }
 
 #endif /* !REHEX_NESTEDOFFSETLENGTHMAP_HPP */

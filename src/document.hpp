@@ -140,6 +140,7 @@ namespace REHex {
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
+				NestedOffsetLengthMap<int> old_highlights;
 			};
 			
 			friend Region::Data;

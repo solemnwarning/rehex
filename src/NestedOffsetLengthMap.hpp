@@ -34,8 +34,8 @@
 namespace REHex {
 	struct NestedOffsetLengthMapKey
 	{
-		const off_t offset;
-		const off_t length;
+		off_t offset;
+		off_t length;
 		
 		NestedOffsetLengthMapKey(off_t offset, off_t length):
 			offset(offset), length(length) {}

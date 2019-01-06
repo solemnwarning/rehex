@@ -625,6 +625,16 @@ void REHex::Document::_update_vscroll()
 			? ((double)(scroll_yoff) * ((double)(new_scroll_yoff_max) / (double)(scroll_yoff_max)))
 			: 0;
 		
+		/* In case of rounding errors. */
+		if(scroll_yoff > scroll_yoff_max)
+		{
+			scroll_yoff = scroll_yoff_max;
+		}
+		else if(scroll_yoff < 0)
+		{
+			scroll_yoff = 0;
+		}
+		
 		int range, thumb, position;
 		
 		if(total_lines <= (uint64_t)(MAX_STEPS))
@@ -640,7 +650,21 @@ void REHex::Document::_update_vscroll()
 			
 			range    = MAX_STEPS;
 			thumb    = 1;
-			position = scroll_yoff / scroll_ydiv;
+			position = std::min((int)(scroll_yoff / scroll_ydiv), (range - thumb));
+			
+			if(position == 0 && scroll_yoff > 0)
+			{
+				/* Past the first line, but not the first scrollbar division.
+				 * Skip to the next so the scrollbar doesn't appear fully scrolled
+				 * up when there's a bit to go.
+				*/
+				position = 1;
+			}
+			else if(position == (range - thumb) && scroll_yoff < scroll_yoff_max)
+			{
+				/* Ditto, but for the bottom of the document. */
+				--position;
+			}
 		}
 		
 		assert(range > 0);
@@ -655,7 +679,7 @@ void REHex::Document::_update_vscroll()
 	}
 	else{
 		/* We don't need a vertical scroll bar, but force one to appear anyway so
-			* the bytes per line can't change within OnSize and get us stuck in a loop.
+		 * the bytes per line can't change within OnSize and get us stuck in a loop.
 		*/
 		#ifdef _WIN32
 		SetScrollbar(wxVERTICAL, 0, 0, -1);
@@ -679,7 +703,7 @@ void REHex::Document::_update_vscroll_pos()
 		SetScrollPos(wxVERTICAL, (range - thumb));
 	}
 	else{
-		int position = scroll_yoff / scroll_ydiv;
+		int position = std::min((int)(scroll_yoff / scroll_ydiv), (range - thumb));
 		if(position == 0 && scroll_yoff > 0)
 		{
 			/* Past the first line, but not the first scrollbar division.
@@ -693,6 +717,9 @@ void REHex::Document::_update_vscroll_pos()
 			/* Ditto, but for the bottom of the document. */
 			--position;
 		}
+		
+		assert(position >= 0);
+		assert(position <= (range - thumb));
 		
 		SetScrollPos(wxVERTICAL, position);
 	}

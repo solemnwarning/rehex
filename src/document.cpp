@@ -1432,7 +1432,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				
 				for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
 				{
-					wxMenuItem *itm = new wxMenuItem(hlmenu, i);
+					wxMenuItem *itm = new wxMenuItem(hlmenu, i, " ");
 					
 					wxColour bg_colour = pal.get_highlight_bg(i);
 					

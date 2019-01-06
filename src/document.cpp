@@ -1405,34 +1405,12 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			if(selection_length > 0)
 			{
 				wxMenu *hlmenu = new wxMenu();
-				hlmenu->Bind(wxEVT_MENU, [this](wxCommandEvent &event)
-				{
-					off_t off    = selection_off;
-					off_t length = selection_length;
-					int colour   = event.GetId();
-					
-					_tracked_change("set highlight",
-						[this, off, length, colour]()
-						{
-							NestedOffsetLengthMap_set(highlights, off, length, colour);
-							
-							/* TODO: Limit paint to affected area. */
-							Refresh();
-						},
-						
-						[]()
-						{
-							/* Highlight is implicitly undone by undo()
-							 * restoring the highlights map.
-							*/
-						});
-				});
 				
 				const REHex::Palette &pal = wxGetApp().palette;
 				
 				for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
 				{
-					wxMenuItem *itm = new wxMenuItem(hlmenu, i, " ");
+					wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
 					
 					wxColour bg_colour = pal.get_highlight_bg(i);
 					
@@ -1447,6 +1425,37 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 					itm->SetBitmap(bitmaps.back());
 					
 					hlmenu->Append(itm);
+					
+					/* On Windows, event bindings on a submenu don't work.
+					 * On OS X, event bindings on a parent menu don't work.
+					 * On GTK, both work.
+					*/
+					#ifdef _WIN32
+					menu.Bind(wxEVT_MENU, [this, i](wxCommandEvent &event)
+					#else
+					hlmenu->Bind(wxEVT_MENU, [this, i](wxCommandEvent &event)
+					#endif
+					{
+						off_t off    = selection_off;
+						off_t length = selection_length;
+						int colour   = i;
+						
+						_tracked_change("set highlight",
+							[this, off, length, colour]()
+							{
+								NestedOffsetLengthMap_set(highlights, off, length, colour);
+								
+								/* TODO: Limit paint to affected area. */
+								Refresh();
+							},
+							
+							[]()
+							{
+								/* Highlight is implicitly undone by undo()
+								* restoring the highlights map.
+								*/
+							});
+					}, itm->GetId(), itm->GetId());
 				}
 				
 				menu.AppendSubMenu(hlmenu, "Set Highlight");

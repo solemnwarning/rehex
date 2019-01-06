@@ -56,6 +56,7 @@ static void insert_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,0));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(0, z4, 4);
 		
@@ -89,6 +90,7 @@ static void insert_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(0, f2, 2);
 		
@@ -122,6 +124,7 @@ static void insert_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(2, f2, 2);
 		
@@ -155,6 +158,7 @@ static void insert_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(4, f2, 2);
 		
@@ -193,6 +197,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(0, to_insert, sizeof(to_insert));
 		
@@ -238,6 +243,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(2, to_insert, sizeof(to_insert));
 		
@@ -283,6 +289,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(3, to_insert, sizeof(to_insert));
 		
@@ -328,6 +335,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(6, to_insert, sizeof(to_insert));
 		
@@ -373,6 +381,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(7, to_insert, sizeof(to_insert));
 		
@@ -418,6 +427,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(8, to_insert, sizeof(to_insert));
 		
@@ -463,6 +473,7 @@ static void insert_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->insert_data(9, to_insert, sizeof(to_insert));
 		
@@ -507,6 +518,7 @@ static void erase_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(0, 3);
 		
@@ -535,6 +547,7 @@ static void erase_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(2, 1);
 		
@@ -563,6 +576,7 @@ static void erase_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(6, 2);
 		
@@ -591,6 +605,7 @@ static void erase_tests()
 		doc->regions.clear();
 		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
 		doc->data_regions_count = 1;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(0, 8);
 		
@@ -624,6 +639,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(0, 2);
 		
@@ -669,6 +685,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(1, 3);
 		
@@ -714,6 +731,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(1, 4);
 		
@@ -759,6 +777,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(0, 5);
 		
@@ -799,6 +818,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(5, 1);
 		
@@ -844,6 +864,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(6, 1);
 		
@@ -889,6 +910,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(8, 1);
 		
@@ -934,6 +956,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(5, 4);
 		
@@ -974,6 +997,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(9, 3);
 		
@@ -1019,6 +1043,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(11, 1);
 		
@@ -1064,6 +1089,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(10, 3);
 		
@@ -1109,6 +1135,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(9, 4);
 		
@@ -1149,6 +1176,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(3, 4);
 		
@@ -1194,6 +1222,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(3, 6);
 		
@@ -1234,6 +1263,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(0, 6);
 		
@@ -1274,6 +1304,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(4, 7);
 		
@@ -1314,6 +1345,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(8, 2);
 		
@@ -1359,6 +1391,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(8, 5);
 		
@@ -1399,6 +1432,7 @@ static void erase_tests()
 		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
 		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
 		doc->data_regions_count = 3;
+		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
 		
 		doc->erase_data(0, 13);
 		

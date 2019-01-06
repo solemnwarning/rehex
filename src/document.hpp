@@ -186,8 +186,8 @@ namespace REHex {
 			bool show_ascii;
 			unsigned int ascii_text_x;
 			
-			int     scroll_xoff{0};
-			int64_t scroll_yoff{0};
+			int     scroll_xoff;
+			int64_t scroll_yoff;
 			int64_t scroll_yoff_max;
 			int64_t scroll_ydiv;
 			

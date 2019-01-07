@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -14,10 +14,11 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-WX_CONFIG ?= "wx-config"
-LLVM_CONFIG ?= "llvm-config"
+WX_CONFIG ?= wx-config
+LLVM_CONFIG ?= llvm-config
 
-EXE ?= "rehex"
+EXE ?= rehex
+EMBED_EXE ?= ./tools/embed
 
 WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags base core aui propgrid adv)
 WX_LIBS     := $(shell $(WX_CONFIG) --libs     base core aui propgrid adv)
@@ -46,7 +47,7 @@ else
 endif
 
 DEPDIR := .d
-$(shell mkdir -p $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
+$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
@@ -76,8 +77,15 @@ clean:
 	rm -f $(TESTS_SEARCH_TEXT_OBJS)
 	rm -f $(TESTS_UTIL_OBJS)
 	rm -f $(ALL_TESTS)
+	rm -f $(EMBED_EXE)
+	rm -f res/icon16.c res/icon16.h res/icon16.o
+	rm -f res/icon32.c res/icon32.h res/icon32.o
+	rm -f res/icon48.c res/icon48.h res/icon48.o
 
 APP_OBJS := \
+	res/icon16.o \
+	res/icon32.o \
+	res/icon48.o \
 	src/app.o \
 	src/buffer.o \
 	src/CodeCtrl.o \
@@ -88,7 +96,8 @@ APP_OBJS := \
 	src/search.o \
 	src/textentrydialog.o \
 	src/util.o \
-	src/win32lib.o
+	src/win32lib.o \
+	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
@@ -154,6 +163,13 @@ TESTS_UTIL_OBJS := \
 
 tests/util.t: $(TESTS_UTIL_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+$(EMBED_EXE): tools/embed.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+res/%.h: res/%.png $(EMBED_EXE)
+res/%.c: res/%.png $(EMBED_EXE)
+	$(EMBED_EXE) $< $*_png res/$*.c res/$*.h
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<

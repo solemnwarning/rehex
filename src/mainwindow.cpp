@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -32,6 +32,10 @@
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "search.hpp"
+
+#include "../res/icon16.h"
+#include "../res/icon32.h"
+#include "../res/icon48.h"
 
 class TestPanel: public wxControl {
 	public:
@@ -207,6 +211,29 @@ REHex::MainWindow::MainWindow():
 	CreateStatusBar(3);
 	
 	SetDropTarget(new DropTarget(this));
+	
+	/* TODO: Construct a single wxIconBundle instance somewhere. */
+	
+	wxIconBundle icons;
+	
+	{
+		wxBitmap b16 = wxBITMAP_PNG_FROM_DATA(icon16);
+		wxIcon i16;
+		i16.CopyFromBitmap(b16);
+		icons.AddIcon(i16);
+		
+		wxBitmap b32 = wxBITMAP_PNG_FROM_DATA(icon32);
+		wxIcon i32;
+		i32.CopyFromBitmap(b32);
+		icons.AddIcon(i32);
+		
+		wxBitmap b48 = wxBITMAP_PNG_FROM_DATA(icon48);
+		wxIcon i48;
+		i48.CopyFromBitmap(b48);
+		icons.AddIcon(i48);
+	}
+	
+	SetIcons(icons);
 	
 	/* Start with an "Untitled" tab. */
 	ProcessCommand(wxID_NEW);

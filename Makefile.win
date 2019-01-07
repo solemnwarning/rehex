@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -14,7 +14,12 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-export EXE  := rehex.exe
-export LIBS += -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
+EXE            := rehex.exe
+EXTRA_APP_OBJS := res/winres.o
+LIBS           += -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
+EMBED_EXE      := tools/embed.exe
 
 include Makefile
+
+res/winres.o: res/winres.rc res/winres.h
+	windres $< $@

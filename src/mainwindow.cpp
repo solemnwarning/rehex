@@ -36,6 +36,7 @@
 #include "../res/icon16.h"
 #include "../res/icon32.h"
 #include "../res/icon48.h"
+#include "../res/icon64.h"
 
 class TestPanel: public wxControl {
 	public:
@@ -231,6 +232,11 @@ REHex::MainWindow::MainWindow():
 		wxIcon i48;
 		i48.CopyFromBitmap(b48);
 		icons.AddIcon(i48);
+		
+		wxBitmap b64 = wxBITMAP_PNG_FROM_DATA(icon64);
+		wxIcon i64;
+		i64.CopyFromBitmap(b64);
+		icons.AddIcon(i64);
 	}
 	
 	SetIcons(icons);

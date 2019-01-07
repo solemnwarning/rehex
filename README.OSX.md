@@ -48,4 +48,8 @@
 
     $ WX_CONFIG=/opt/wxWidgets-3.0.4-debug/bin/wx-config \
         LLVM_CONFIG=/opt/llvm-7.0.0-release-static/bin/llvm-config \
-        make
+        make -f Makefile.osx
+
+To build a dmg, run:
+
+    make -f Makefile.osx REHex.dmg

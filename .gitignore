@@ -7,6 +7,8 @@
 /res/icon32.h
 /res/icon48.c
 /res/icon48.h
+/res/icon64.c
+/res/icon64.h
 /tests/.tmpfile*
 /tests/buffer.t
 /tests/document.t

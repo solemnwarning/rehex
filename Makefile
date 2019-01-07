@@ -86,6 +86,7 @@ APP_OBJS := \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
+	res/icon64.o \
 	src/app.o \
 	src/buffer.o \
 	src/CodeCtrl.o \

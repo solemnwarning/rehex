@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>REHex</string>
+	
+	<key>CFBundleDisplayName</key>
+	<string>REHex</string>
+	
+	<key>CFBundleIdentifier</key>
+	<string>net.solemnwarning.rehex</string>
+	
+	<key>CFBundleVersion</key>
+	<string>0.0.0</string>
+	
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	
+	<key>CFBundleExecutable</key>
+	<string>REHex</string>
+	
+	<key>LSMinimumSystemVersion</key>
+	<string>10.10</string>
+	
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	
+	<key>CFBundleIconFile</key>
+	<string>REHex.icns</string>
+</dict>
+</plist>

@@ -1402,7 +1402,29 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			/* We need to maintain bitmap instances for lifespan of menu. */
 			std::list<wxBitmap> bitmaps;
 			
+			off_t highlight_off;
+			off_t highlight_length = 0;
+			
+			off_t cursor_pos = get_cursor_position();
+			auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
+			
 			if(selection_length > 0)
+			{
+				highlight_off    = selection_off;
+				highlight_length = selection_length;
+			}
+			else if(highlight_at_cur != highlights.end())
+			{
+				highlight_off    = highlight_at_cur->first.offset;
+				highlight_length = highlight_at_cur->first.length;
+			}
+			else if(cursor_pos < buffer_length())
+			{
+				highlight_off    = cursor_pos;
+				highlight_length = 1;
+			}
+			
+			if(highlight_length > 0 && NestedOffsetLengthMap_can_set(highlights, highlight_off, highlight_length))
 			{
 				wxMenu *hlmenu = new wxMenu();
 				
@@ -1431,19 +1453,16 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 					 * On GTK, both work.
 					*/
 					#ifdef _WIN32
-					menu.Bind(wxEVT_MENU, [this, i](wxCommandEvent &event)
+					menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
 					#else
-					hlmenu->Bind(wxEVT_MENU, [this, i](wxCommandEvent &event)
+					hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
 					#endif
 					{
-						off_t off    = selection_off;
-						off_t length = selection_length;
-						int colour   = i;
-						
+						int colour = i;
 						_tracked_change("set highlight",
-							[this, off, length, colour]()
+							[this, highlight_off, highlight_length, colour]()
 							{
-								NestedOffsetLengthMap_set(highlights, off, length, colour);
+								NestedOffsetLengthMap_set(highlights, highlight_off, highlight_length, colour);
 								
 								/* TODO: Limit paint to affected area. */
 								Refresh();
@@ -1451,9 +1470,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 							
 							[]()
 							{
-								/* Highlight is implicitly undone by undo()
-								* restoring the highlights map.
-								*/
+								/* Highlight changes are undone implicitly. */
 							});
 					}, itm->GetId(), itm->GetId());
 				}
@@ -1461,8 +1478,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				menu.AppendSubMenu(hlmenu, "Set Highlight");
 			}
 			
-			auto highlight = NestedOffsetLengthMap_get(highlights, get_cursor_position());
-			if(highlight != highlights.end())
+			if(highlight_at_cur != highlights.end())
 			{
 				menu.Append(ID_CLEAR_HIGHLIGHT, "Remove Highlight");
 			}

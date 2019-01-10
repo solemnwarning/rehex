@@ -54,16 +54,14 @@ namespace REHex {
 	
 	template<typename T> using NestedOffsetLengthMap = std::map<NestedOffsetLengthMapKey, T>;
 	
-	/* Attempt to insert or replace a value into the map.
-	 * Returns true on success, false if the insertion failed due to an overlap with one or
-	 * more existing elements.
+	/* Check if a key can be inserted without overlapping the start/end of another.
+	 * Returns true if possible, false if it conflicts.
 	*/
-	template<typename T> bool NestedOffsetLengthMap_set(NestedOffsetLengthMap<T> &map, off_t offset, off_t length, const T &value)
+	template<typename T> bool NestedOffsetLengthMap_can_set(const NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
 		auto i = map.find(NestedOffsetLengthMapKey(offset, length));
 		if(i != map.end())
 		{
-			i->second = value;
 			return true;
 		}
 		
@@ -113,6 +111,27 @@ namespace REHex {
 				/* We extend into the next element, but do not encompass it. */
 				return false;
 			}
+		}
+		
+		return true;
+	}
+	
+	/* Attempt to insert or replace a value into the map.
+	 * Returns true on success, false if the insertion failed due to an overlap with one or
+	 * more existing elements.
+	*/
+	template<typename T> bool NestedOffsetLengthMap_set(NestedOffsetLengthMap<T> &map, off_t offset, off_t length, const T &value)
+	{
+		auto i = map.find(NestedOffsetLengthMapKey(offset, length));
+		if(i != map.end())
+		{
+			i->second = value;
+			return true;
+		}
+		
+		if(!NestedOffsetLengthMap_can_set(map, offset, length))
+		{
+			return false;
 		}
 		
 		map.insert(std::make_pair(NestedOffsetLengthMapKey(offset, length), value));

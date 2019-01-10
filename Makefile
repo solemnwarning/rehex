@@ -168,8 +168,9 @@ tests/util.t: $(TESTS_UTIL_OBJS)
 $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
-res/%.h: res/%.png $(EMBED_EXE)
-res/%.c: res/%.png $(EMBED_EXE)
+src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
+
+res/%.c res/%.h: res/%.png $(EMBED_EXE)
 	$(EMBED_EXE) $< $*_png res/$*.c res/$*.h
 
 %.o: %.c

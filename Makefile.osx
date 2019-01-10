@@ -1,0 +1,53 @@
+# Reverse Engineer's Hex Editor
+# Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as published by
+# the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 51
+# Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+all: REHex.app
+
+include Makefile
+
+ICONSET := res/REHex.iconset
+ICNS    := res/REHex.icns
+DMGTMP  := tmp/dmg
+
+REHex.app: res/Info.plist $(EXE) $(ICNS)
+	mkdir -p                  $@/
+	mkdir -p                  $@/Contents/
+	cp        res/Info.plist  $@/Contents/Info.plist
+	mkdir -p                  $@/Contents/MacOS/
+	cp        $(EXE)          $@/Contents/MacOS/REHex
+	mkdir -p                  $@/Contents/Resources/
+	cp        $(ICNS)         $@/Contents/Resources/REHex.icns
+
+$(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
+	rm -rf $(ICONSET)
+	mkdir $(ICONSET)
+	cp res/icon16.png   $(ICONSET)/icon_16x16.png
+	cp res/icon32.png   $(ICONSET)/icon_16x16@2x.png
+	cp res/icon32.png   $(ICONSET)/icon_32x32.png
+	cp res/icon64.png   $(ICONSET)/icon_32x32@2x.png
+	cp res/icon128.png  $(ICONSET)/icon_128x128.png
+	cp res/icon256.png  $(ICONSET)/icon_128x128@2x.png
+	cp res/icon256.png  $(ICONSET)/icon_256x256.png
+	cp res/icon512.png  $(ICONSET)/icon_256x256@2x.png
+	cp res/icon512.png  $(ICONSET)/icon_512x512.png
+	cp res/icon1024.png $(ICONSET)/icon_512x512@2x.png
+	iconutil -c icns -o $@ $(ICONSET)
+
+REHex.dmg: REHex.app
+	rm -rf $(DMGTMP)
+	mkdir -p $(DMGTMP)
+	cp -a REHex.app $(DMGTMP)/REHex.app
+	hdiutil create $@ -ov -volname "REHex" -format UDZO -srcfolder $(DMGTMP)

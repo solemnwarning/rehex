@@ -1,6 +1,14 @@
 *.o
 /.d/
 /rehex
+/res/icon16.c
+/res/icon16.h
+/res/icon32.c
+/res/icon32.h
+/res/icon48.c
+/res/icon48.h
+/res/icon64.c
+/res/icon64.h
 /tests/.tmpfile*
 /tests/buffer.t
 /tests/document.t

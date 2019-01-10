@@ -1298,6 +1298,21 @@ void REHex::Document::OnLeftUp(wxMouseEvent &event)
 
 void REHex::Document::OnRightDown(wxMouseEvent &event)
 {
+	/* If the user right clicks while selecting, and then releases the left button over the
+	 * menu, we never receive the EVT_LEFT_UP event. Release the mouse and cancel the selection
+	 * now, else we wind up keeping the mouse grabbed and stop it interacting with any other
+	 * windows...
+	*/
+	
+	if(mouse_down_in_hex || mouse_down_in_ascii)
+	{
+		mouse_select_timer.Stop();
+		ReleaseMouse();
+		
+		mouse_down_in_hex   = false;
+		mouse_down_in_ascii = false;
+	}
+	
 	wxClientDC dc(this);
 	
 	unsigned int mouse_x = event.GetX();

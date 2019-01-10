@@ -70,7 +70,12 @@ namespace REHex {
 		off_t end = offset + length;
 		
 		i = map.lower_bound(NestedOffsetLengthMapKey(offset, 0));
-		if(i != map.end() && !map.empty())
+		if(i == map.end() && !map.empty())
+		{
+			--i;
+		}
+		
+		if(!map.empty())
 		{
 			for(;; --i)
 			{

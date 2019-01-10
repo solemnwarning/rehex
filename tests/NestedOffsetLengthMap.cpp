@@ -76,9 +76,6 @@ int main(int argc, char **argv)
 		OK_SET(40, 0,  10);
 		OK_SET(50, 1,  11);
 		
-		BAD_SET(15, 14, "Overlapping start of existing range");
-		BAD_SET(25, 6,  "Overlapping end of existing range");
-		
 		OK_GET(0, 2);
 		OK_GET(20, 5);
 		OK_GET(21, 5);
@@ -90,6 +87,22 @@ int main(int argc, char **argv)
 		BAD_GET(10);
 		BAD_GET(14);
 		BAD_GET(40);
+	}
+	
+	{
+		NestedOffsetLengthMap<int> map;
+		
+		OK_SET(10, 10, 1);
+		OK_SET(30, 10, 2);
+		OK_SET(50, 10, 3);
+		
+		BAD_SET(9, 2, "Overlapping start of existing range at start of map");
+		BAD_SET(29, 2, "Overlapping start of existing range in middle of map");
+		BAD_SET(49, 2, "Overlapping start of existing range at end of map");
+		
+		BAD_SET(29, 2, "Overlapping end of existing range at start of map");
+		BAD_SET(39, 2, "Overlapping end of existing range in middle of map");
+		BAD_SET(59, 2, "Overlapping end of existing range at end of map");
 	}
 	
 	/* Testing:

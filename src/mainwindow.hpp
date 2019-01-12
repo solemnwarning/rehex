@@ -20,6 +20,7 @@
 
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
+#include <wx/splitter.h>
 #include <wx/wx.h>
 
 #include "decodepanel.hpp"
@@ -76,17 +77,22 @@ namespace REHex {
 					Tab(wxWindow *parent);
 					Tab(wxWindow *parent, const std::string &filename);
 					
-					REHex::Document    *doc;
-					wxNotebook         *h_tools;
+					wxSplitterWindow   *v_splitter;
+					wxSplitterWindow   *h_splitter;
 					wxNotebook         *v_tools;
 					REHex::DecodePanel *dp;
 					REHex::Disassemble *disasm;
+					REHex::Document    *doc;
+					wxNotebook         *h_tools;
 					
 					void OnCursorMove(wxCommandEvent &event);
 					void OnValueChange(wxCommandEvent &event);
 					void OnValueFocus(wxCommandEvent &event);
 					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
+					
+					void vtools_adjust();
+					void htools_adjust();
 					
 				private:
 					enum {

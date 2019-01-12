@@ -39,50 +39,6 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
-class TestPanel: public wxControl {
-	public:
-		TestPanel(wxWindow *parent, int width, int height);
-		virtual wxSize DoGetBestSize() const override;
-		
-	private:
-		int width, height;
-		
-		void OnPaint(wxPaintEvent &event);
-		DECLARE_EVENT_TABLE()
-};
-
-BEGIN_EVENT_TABLE(TestPanel, wxControl)
-	EVT_PAINT(TestPanel::OnPaint)
-END_EVENT_TABLE()
-
-TestPanel::TestPanel(wxWindow *parent, int width, int height):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE),
-	width(width), height(height) {}
-
-wxSize TestPanel::DoGetBestSize() const
-{
-	return wxSize(width, height);
-}
-
-void TestPanel::OnPaint(wxPaintEvent &event)
-{
-	wxPaintDC dc(this);
-	
-	dc.SetBackground(*wxWHITE_BRUSH);
-	dc.Clear();
-	
-	wxSize size = GetSize();
-	
-	int xe = (width > 0 ? (width - 1) : (size.GetWidth() - 1));
-	int ye = (height > 0 ? (height - 1) : (size.GetHeight() - 1));
-	
-	dc.SetPen(*wxRED);
-	dc.DrawLine(0, 0, xe, 0);
-	dc.DrawLine(0, 0, 0, ye);
-	dc.DrawLine(xe, 0, xe, ye);
-	dc.DrawLine(0, ye, xe, ye);
-}
-
 enum {
 	ID_BYTES_LINE = 1,
 	ID_BYTES_GROUP,
@@ -878,11 +834,8 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
-	h_tools->AddPage(new TestPanel(h_tools, 0, 20) , "Short thing");
-	h_tools->AddPage(new TestPanel(h_tools, 0, 200) , "Tall thing");
-	
-	v_tools->AddPage(new TestPanel(v_tools, 20, 0), "Narrow thing");
-	v_tools->AddPage(new TestPanel(v_tools, 200, 0), "Wide thing");
+	vtools_adjust();
+	htools_adjust();
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
@@ -920,11 +873,8 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
-	h_tools->AddPage(new TestPanel(h_tools, 0, 20) , "Short thing");
-	h_tools->AddPage(new TestPanel(h_tools, 0, 200) , "Tall thing");
-	
-	v_tools->AddPage(new TestPanel(v_tools, 20, 0), "Narrow thing");
-	v_tools->AddPage(new TestPanel(v_tools, 200, 0), "Wide thing");
+	vtools_adjust();
+	htools_adjust();
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());

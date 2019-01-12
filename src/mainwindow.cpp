@@ -870,22 +870,27 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 }
 
 BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
+	EVT_SIZE(REHex::MainWindow::Tab::OnSize)
+	
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
 	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_CHANGE, REHex::MainWindow::Tab::OnValueChange)
 	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_FOCUS,  REHex::MainWindow::Tab::OnValueFocus)
 	
 	EVT_NOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::MainWindow::Tab::OnHToolChange)
 	EVT_NOTEBOOK_PAGE_CHANGED(ID_VTOOLS, REHex::MainWindow::Tab::OnVToolChange)
+	
+	EVT_SPLITTER_SASH_POS_CHANGING(ID_HSPLITTER, REHex::MainWindow::Tab::OnHSplitterSashPosChanging)
+	EVT_SPLITTER_SASH_POS_CHANGING(ID_VSPLITTER, REHex::MainWindow::Tab::OnVSplitterSashPosChanging)
 END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	wxPanel(parent)
 {
-	v_splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
+	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
 	v_splitter->SetMinimumPaneSize(20);
 	
-	h_splitter = new wxSplitterWindow(v_splitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
+	h_splitter = new wxSplitterWindow(v_splitter, ID_HSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
@@ -903,6 +908,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
+	
+	htools_adjust();
+	vtools_adjust();
 	
 	dp = new REHex::DecodePanel(v_tools);
 	v_tools->AddPage(dp, "Decode values", true);
@@ -923,11 +931,11 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxPanel(parent)
 {
-	v_splitter = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
+	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
 	v_splitter->SetMinimumPaneSize(20);
 	
-	h_splitter = new wxSplitterWindow(v_splitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
+	h_splitter = new wxSplitterWindow(v_splitter, ID_HSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
@@ -946,6 +954,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
+	htools_adjust();
+	vtools_adjust();
+	
 	dp = new REHex::DecodePanel(v_tools);
 	v_tools->AddPage(dp, "Decode values", true);
 	
@@ -960,6 +971,34 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
+}
+
+void REHex::MainWindow::Tab::OnSize(wxSizeEvent &event)
+{
+	if(h_splitter->IsSplit())
+	{
+		int hs_sp = h_splitter->GetSashPosition();
+		int hs_cp = hsplit_clamp_sash(hs_sp);
+		
+		if(hs_sp != hs_cp)
+		{
+			h_splitter->SetSashPosition(hs_cp);
+		}
+	}
+	
+	if(v_splitter->IsSplit())
+	{
+		int vs_sp = v_splitter->GetSashPosition();
+		int vs_cp = vsplit_clamp_sash(vs_sp);
+		
+		if(vs_sp != vs_cp)
+		{
+			v_splitter->SetSashPosition(vs_cp);
+		}
+	}
+	
+	/* Continue propogation of EVT_SIZE event. */
+	event.Skip();
 }
 
 void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
@@ -1000,14 +1039,6 @@ void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)
 	doc->set_selection(cur_pos, length);
 }
 
-/* When changing tool, we make the wxNotebook recalculate its "best" size, which
- * is derived from the minimum size of the selected page and the extra space
- * occupied by the wxNotebook itself, then we make that the minimum size of the
- * wxNotebook, preventing the user from shrinking the wxSplitterWindow pane
- * beyond the minimum size enforced by the page, THEN, finally, we reposition
- * the split as far left/down as allowable.
-*/
-
 void REHex::MainWindow::Tab::OnHToolChange(wxNotebookEvent& event)
 {
 	htools_adjust();
@@ -1016,6 +1047,110 @@ void REHex::MainWindow::Tab::OnHToolChange(wxNotebookEvent& event)
 void REHex::MainWindow::Tab::OnVToolChange(wxBookCtrlEvent &event)
 {
 	vtools_adjust();
+}
+
+void REHex::MainWindow::Tab::OnHSplitterSashPosChanging(wxSplitterEvent &event)
+{
+	int pos = event.GetSashPosition();
+	int clamp = hsplit_clamp_sash(pos);
+	
+	if(pos != clamp)
+	{
+		event.SetSashPosition(clamp);
+	}
+}
+
+void REHex::MainWindow::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
+{
+	int pos = event.GetSashPosition();
+	int clamp = vsplit_clamp_sash(pos);
+	
+	if(pos != clamp)
+	{
+		event.SetSashPosition(clamp);
+	}
+}
+
+int REHex::MainWindow::Tab::hsplit_clamp_sash(int sash_position)
+{
+	/* Prevent the user resizing a tool panel beyond its min/max size.
+	 * NOTE: Minimuim size is clamped >= 0 to prevent the size shrinking past the wxNotebook
+	 * control itself, else weird rendering/input glitches happen.
+	*/
+	
+	wxWindow *ht_current_page = h_tools->GetCurrentPage();
+	if(ht_current_page == NULL)
+	{
+		/* No active page to reference. */
+		return sash_position;
+	}
+	
+	int htp_mh = std::max(ht_current_page->GetMinSize().GetHeight(), 0);
+	int htp_Mh = ht_current_page->GetMaxSize().GetHeight();
+	
+	int hs_ch = h_splitter->GetClientSize().GetHeight();
+	int hs_ss = h_splitter->GetSashSize();
+	
+	/* Size oherhead added by h_tools wxNotebook. */
+	int extra_h = h_tools->GetSize().GetHeight() - ht_current_page->GetSize().GetHeight();
+	
+	int sash_max = hs_ch - (htp_mh + extra_h + hs_ss);
+	if(sash_position > sash_max)
+	{
+		return sash_max;
+	}
+	
+	if(htp_Mh > 0)
+	{
+		int sash_min = hs_ch - (htp_Mh + extra_h + hs_ss);
+		if(sash_position < sash_min)
+		{
+			return sash_min;
+		}
+	}
+	
+	return sash_position;
+}
+
+int REHex::MainWindow::Tab::vsplit_clamp_sash(int sash_position)
+{
+	/* Prevent the user resizing a tool panel beyond its min/max size.
+	 * NOTE: Minimuim size is clamped >= 0 to prevent the size shrinking past the wxNotebook
+	 * control itself, else weird rendering/input glitches happen.
+	*/
+	
+	wxWindow *vt_current_page = v_tools->GetCurrentPage();
+	if(vt_current_page == NULL)
+	{
+		/* No active page to reference. */
+		return sash_position;
+	}
+	
+	int vtp_mw = std::max(vt_current_page->GetMinSize().GetWidth(), 0);
+	int vtp_Mw = vt_current_page->GetMaxSize().GetWidth();
+	
+	int vs_cw = v_splitter->GetClientSize().GetWidth();
+	int vs_ss = v_splitter->GetSashSize();
+	
+	/* Size overhead added by v_tools wxNotebook. */
+	int extra_w = v_tools->GetSize().GetWidth() - vt_current_page->GetSize().GetWidth();
+	
+	int sash_max = vs_cw - (vtp_mw + extra_w + vs_ss);
+	if(sash_position > sash_max)
+	{
+		return sash_max;
+	}
+	
+	if(vtp_Mw > 0)
+	{
+		int sash_min = vs_cw - (vtp_Mw + extra_w + vs_ss);
+		if(sash_position < sash_min)
+		{
+			return sash_min;
+		}
+	}
+	
+	return sash_position;
 }
 
 void REHex::MainWindow::Tab::vtools_adjust()
@@ -1036,15 +1171,16 @@ void REHex::MainWindow::Tab::vtools_adjust()
 			v_splitter->SplitVertically(h_splitter, v_tools);
 		}
 		
-		/* Invalidate cached best size in wxNotebook. */
-		v_tools->SetMinSize(wxSize(0,0));
-		v_tools->InvalidateBestSize();
+		int vtp_bw = std::max(vt_current_page->GetBestSize().GetWidth(), 0);
 		
-		wxSize vt_s = v_tools->GetBestSize();
-		v_tools->SetMinSize(vt_s);
+		/* Size overhead added by v_tools wxNotebook. */
+		int extra_w = v_tools->GetSize().GetWidth() - vt_current_page->GetSize().GetWidth();
 		
-		wxSize vs_s = v_splitter->GetClientSize();
-		v_splitter->SetSashPosition(vs_s.GetWidth() - (vt_s.GetWidth() + v_splitter->GetSashSize()));
+		/* Set the current position of the splitter to display the best size of the current
+		 * page and overhead.
+		*/
+		int vs_cw = v_splitter->GetClientSize().GetWidth();
+		v_splitter->SetSashPosition(vs_cw - (vtp_bw + extra_w + v_splitter->GetSashSize()));
 	}
 }
 
@@ -1066,15 +1202,14 @@ void REHex::MainWindow::Tab::htools_adjust()
 			h_splitter->SplitHorizontally(doc, h_tools);
 		}
 		
-		/* Invalidate cached best size in wxNotebook. */
-		h_tools->SetMinSize(wxSize(0,0));
-		h_tools->InvalidateBestSize();
+		int htp_bh = std::max(ht_current_page->GetBestSize().GetHeight(), 0);
 		
-		wxSize ht_s = h_tools->GetBestSize();
-		h_tools->SetMinSize(ht_s);
+		/* Size overhead added by h_tools wxNotebook. */
+		int extra_h = h_tools->GetSize().GetHeight() - ht_current_page->GetSize().GetHeight();
 		
-		wxSize hs_s = h_splitter->GetClientSize();
-		h_splitter->SetSashPosition(hs_s.GetHeight() - (ht_s.GetHeight() + h_splitter->GetSashSize()));
+		/* Set the sash position to display the tool page's best size. */
+		int hs_ch = h_splitter->GetClientSize().GetHeight();
+		h_splitter->SetSashPosition(hs_ch - (htp_bh + extra_h + h_splitter->GetSashSize()));
 	}
 }
 

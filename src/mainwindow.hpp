@@ -85,11 +85,14 @@ namespace REHex {
 					REHex::Document    *doc;
 					wxNotebook         *h_tools;
 					
+					void OnSize(wxSizeEvent &size);
 					void OnCursorMove(wxCommandEvent &event);
 					void OnValueChange(wxCommandEvent &event);
 					void OnValueFocus(wxCommandEvent &event);
 					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
+					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
+					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
 					
 					void vtools_adjust();
 					void htools_adjust();
@@ -98,7 +101,12 @@ namespace REHex {
 					enum {
 						ID_HTOOLS = 1,
 						ID_VTOOLS,
+						ID_HSPLITTER,
+						ID_VSPLITTER,
 					};
+					
+					int hsplit_clamp_sash(int sash_position);
+					int vsplit_clamp_sash(int sash_position);
 					
 					DECLARE_EVENT_TABLE()
 			};

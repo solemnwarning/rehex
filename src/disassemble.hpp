@@ -36,6 +36,8 @@ namespace REHex {
 			Disassemble(wxWindow *parent, const REHex::Document &document);
 			virtual ~Disassemble();
 			
+			virtual wxSize DoGetBestClientSize() const override;
+			
 			void set_position(off_t position);
 			void update();
 			

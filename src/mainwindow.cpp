@@ -39,82 +39,6 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
-class TestPanel: public wxControl {
-	public:
-		TestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height);
-		virtual wxSize DoGetBestClientSize() const override;
-		
-	private:
-		int min_width, min_height;
-		int best_width, best_height;
-		int max_width, max_height;
-		
-		void OnPaint(wxPaintEvent &event);
-		DECLARE_EVENT_TABLE()
-};
-
-BEGIN_EVENT_TABLE(TestPanel, wxControl)
-	EVT_PAINT(TestPanel::OnPaint)
-END_EVENT_TABLE()
-
-TestPanel::TestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height):
-	wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE),
-	min_width(min_width), min_height(min_height),
-	best_width(best_width), best_height(best_height),
-	max_width(max_width), max_height(max_height)
-{
-	SetMinClientSize(wxSize(min_width, min_height));
-	SetMaxClientSize(wxSize(max_width, max_height));
-}
-
-wxSize TestPanel::DoGetBestClientSize() const
-{
-	return wxSize(best_width, best_height);
-}
-
-void TestPanel::OnPaint(wxPaintEvent &event)
-{
-	wxPaintDC dc(this);
-	
-	dc.SetBackground(*wxWHITE_BRUSH);
-	dc.Clear();
-	
-	wxSize size = GetSize();
-	
-	{
-		int xe = (min_width > 0 ? (min_width - 1) : (size.GetWidth() - 1));
-		int ye = (min_height > 0 ? (min_height - 1) : (size.GetHeight() - 1));
-		
-		dc.SetPen(*wxRED);
-		dc.DrawLine(0, 0, xe, 0);
-		dc.DrawLine(0, 0, 0, ye);
-		dc.DrawLine(xe, 0, xe, ye);
-		dc.DrawLine(0, ye, xe, ye);
-	}
-	
-	{
-		int xe = (best_width > 0 ? (best_width - 1) : (size.GetWidth() - 1));
-		int ye = (best_height > 0 ? (best_height - 1) : (size.GetHeight() - 1));
-		
-		dc.SetPen(*wxBLUE);
-		dc.DrawLine(0, 0, xe, 0);
-		dc.DrawLine(0, 0, 0, ye);
-		dc.DrawLine(xe, 0, xe, ye);
-		dc.DrawLine(0, ye, xe, ye);
-	}
-	
-	{
-		int xe = (max_width > 0 ? (max_width - 1) : (size.GetWidth() - 1));
-		int ye = (max_height > 0 ? (max_height - 1) : (size.GetHeight() - 1));
-		
-		dc.SetPen(*wxBLACK);
-		dc.DrawLine(0, 0, xe, 0);
-		dc.DrawLine(0, 0, 0, ye);
-		dc.DrawLine(xe, 0, xe, ye);
-		dc.DrawLine(0, ye, xe, ye);
-	}
-}
-
 enum {
 	ID_BYTES_LINE = 1,
 	ID_BYTES_GROUP,
@@ -918,12 +842,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
-	h_tools->AddPage(new TestPanel(h_tools, 0, 20, 0, 40, 10000, 80) , "Short thing");
-	h_tools->AddPage(new TestPanel(h_tools, 0, 200, 0, 250, 10000, 300) , "Tall thing");
-	
-	v_tools->AddPage(new TestPanel(v_tools, 20, 0, 40, 0, 80, 10000), "Narrow thing");
-	v_tools->AddPage(new TestPanel(v_tools, 200, 0, 250, 0, 300, 10000), "Wide thing");
-	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
 }
@@ -962,12 +880,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
-	
-	h_tools->AddPage(new TestPanel(h_tools, 0, 20, 0, 40, 10000, 80) , "Short thing");
-	h_tools->AddPage(new TestPanel(h_tools, 0, 200, 0, 250, 10000, 300) , "Tall thing");
-	
-	v_tools->AddPage(new TestPanel(v_tools, 20, 0, 40, 0, 80, 10000), "Narrow thing");
-	v_tools->AddPage(new TestPanel(v_tools, 200, 0, 250, 0, 300, 10000), "Wide thing");
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());

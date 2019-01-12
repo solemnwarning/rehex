@@ -16,6 +16,7 @@
 */
 
 #include <exception>
+#include <limits>
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -569,10 +570,10 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 {
-	/* I doubt anyone even wants remotely this many. We enforce a limit just
-	 * to avoid performance/rendering issues with insanely long lines.
+	/* There are rendering/performance issues with very large values here, which we just bypass
+	 * with a nice arbitrary limit for now.
 	*/
-	const int MAX_BYTES_PER_LINE = 512;
+	const int MAX_BYTES_PER_LINE = 128;
 	
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
@@ -599,9 +600,6 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 {
-	/* There's no real limit to this, but wxWidgets needs one. */
-	const int MAX_BYTES_PER_GROUP = 1024;
-	
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
@@ -613,8 +611,8 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 		"Bytes",
 		"Set bytes per group",
 		tab->doc->get_bytes_per_group(),
-		0,
-		MAX_BYTES_PER_GROUP,
+		1,
+		std::numeric_limits<int>::max(),
 		this);
 	
 	/* We get a negative value if the user cancels. */

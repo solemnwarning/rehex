@@ -257,6 +257,32 @@ bool REHex::Document::get_insert_mode()
 	return this->insert_mode;
 }
 
+void REHex::Document::set_insert_mode(bool enabled)
+{
+	if(insert_mode == enabled)
+	{
+		return;
+	}
+	
+	insert_mode = enabled;
+	
+	off_t cursor_pos = get_cursor_position();
+	if(!insert_mode && cursor_pos > 0 && cursor_pos == buffer_length())
+	{
+		/* Move cursor back if going from insert to overwrite mode and it
+		 * was at the end of the file.
+		*/
+		set_cursor_position(cursor_pos - 1);
+	}
+	
+	wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
+	event.SetEventObject(this);
+	wxPostEvent(this, event);
+	
+	/* TODO: Limit paint to affected area */
+	this->Refresh();
+}
+
 void REHex::Document::set_selection(off_t off, off_t length)
 {
 	selection_off    = off;
@@ -473,7 +499,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 		region = next;
 	}
 	
-	uint64_t yo_end = scroll_yoff + visible_lines + 1;
+	int64_t yo_end = scroll_yoff + visible_lines + 1;
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
 	{
 		int x_px = 0 - scroll_xoff;
@@ -500,9 +526,9 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	/* Get the size of the area we can draw into */
 	
-	wxSize       client_size       = GetClientSize();
-	unsigned int new_client_width  = client_size.GetWidth();
-	unsigned int new_client_height = client_size.GetHeight();
+	wxSize client_size    = GetClientSize();
+	int new_client_width  = client_size.GetWidth();
+	int new_client_height = client_size.GetHeight();
 	
 	bool width_changed  = (new_client_width  != client_width);
 	bool height_changed = (new_client_height != client_height);
@@ -1002,7 +1028,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_RIGHT)
 		{
-			set_cursor_position(cursor_pos + 1);
+			off_t max_pos = std::max((buffer_length() - !get_insert_mode()), (off_t)(0));
+			set_cursor_position(std::min((cursor_pos + 1), max_pos));
 			clear_selection();
 			
 			/* TODO: Limit paint to affected area */
@@ -1123,26 +1150,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_INSERT)
 		{
-			insert_mode  = !insert_mode;
-			
-			{
-				wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
-				event.SetEventObject(this);
-				
-				wxPostEvent(this, event);
-			}
-			
-			off_t cursor_pos = get_cursor_position();
-			if(!insert_mode && cursor_pos == buffer->length())
-			{
-				/* Move cursor back if going from insert to overwrite mode and it
-				 * was at the end of the file.
-				*/
-				set_cursor_position(cursor_pos - 1);
-			}
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
+			set_insert_mode(!get_insert_mode());
 		}
 		else if(key == WXK_DELETE)
 		{
@@ -1184,9 +1192,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 {
 	wxClientDC dc(this);
 	
-	unsigned int mouse_x = event.GetX();
-	unsigned int rel_x   = mouse_x + this->scroll_xoff;
-	unsigned int mouse_y = event.GetY();
+	int mouse_x = event.GetX();
+	int rel_x   = mouse_x + this->scroll_xoff;
+	int mouse_y = event.GetY();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
@@ -1199,9 +1207,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -1303,11 +1311,26 @@ void REHex::Document::OnLeftUp(wxMouseEvent &event)
 
 void REHex::Document::OnRightDown(wxMouseEvent &event)
 {
+	/* If the user right clicks while selecting, and then releases the left button over the
+	 * menu, we never receive the EVT_LEFT_UP event. Release the mouse and cancel the selection
+	 * now, else we wind up keeping the mouse grabbed and stop it interacting with any other
+	 * windows...
+	*/
+	
+	if(mouse_down_in_hex || mouse_down_in_ascii)
+	{
+		mouse_select_timer.Stop();
+		ReleaseMouse();
+		
+		mouse_down_in_hex   = false;
+		mouse_down_in_ascii = false;
+	}
+	
 	wxClientDC dc(this);
 	
-	unsigned int mouse_x = event.GetX();
-	unsigned int rel_x   = mouse_x + this->scroll_xoff;
-	unsigned int mouse_y = event.GetY();
+	int mouse_x = event.GetX();
+	int rel_x   = mouse_x + this->scroll_xoff;
+	int mouse_y = event.GetY();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
@@ -1320,9 +1343,9 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -1558,9 +1581,9 @@ void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -2367,7 +2390,7 @@ REHex::Document::Region::Data *REHex::Document::_data_region_by_offset(off_t off
 /* Scroll the Document vertically to make the given line visible.
  * Does nothing if the line is already on-screen.
 */
-void REHex::Document::_make_line_visible(uint64_t line)
+void REHex::Document::_make_line_visible(int64_t line)
 {
 	if(scroll_yoff > line)
 	{
@@ -2394,7 +2417,7 @@ void REHex::Document::_make_line_visible(uint64_t line)
 /* Scroll the Document horizontally to (try to) make the given range of X co-ordinates visible.
  * Does nothing if the range is fully visible.
 */
-void REHex::Document::_make_x_visible(unsigned int x_px, unsigned int width_px)
+void REHex::Document::_make_x_visible(int x_px, int width_px)
 {
 	if(scroll_xoff > x_px)
 	{

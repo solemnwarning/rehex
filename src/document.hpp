@@ -61,6 +61,7 @@ namespace REHex {
 			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off);
 			bool get_insert_mode();
+			void set_insert_mode(bool enabled);
 			
 			void set_selection(off_t off, off_t length);
 			void clear_selection();
@@ -109,8 +110,8 @@ namespace REHex {
 			
 			struct Region
 			{
-				uint64_t y_offset; /* First on-screen line in region */
-				uint64_t y_lines;  /* Number of on-screen lines in region */
+				int64_t y_offset; /* First on-screen line in region */
+				int64_t y_lines;  /* Number of on-screen lines in region */
 				
 				virtual ~Region();
 				
@@ -164,14 +165,14 @@ namespace REHex {
 			unsigned char hf_height;
 			
 			/* Size of the client area in pixels. */
-			unsigned int client_width;
-			unsigned int client_height;
+			int client_width;
+			int client_height;
 			
 			/* Height of client area in lines. */
 			unsigned int visible_lines;
 			
 			/* Width of the scrollable area. */
-			unsigned int virtual_width;
+			int virtual_width;
 			
 			/* Display options */
 			unsigned int bytes_per_line;
@@ -181,10 +182,10 @@ namespace REHex {
 			unsigned int bytes_per_line_calc;
 			
 			bool offset_column{true};
-			unsigned int offset_column_width;
+			int offset_column_width;
 			
 			bool show_ascii;
-			unsigned int ascii_text_x;
+			int ascii_text_x;
 			
 			int     scroll_xoff;
 			int64_t scroll_yoff;
@@ -242,8 +243,8 @@ namespace REHex {
 			
 			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
 			
-			void _make_line_visible(uint64_t line);
-			void _make_x_visible(unsigned int x_px, unsigned int width_px);
+			void _make_line_visible(int64_t line);
+			void _make_x_visible(int x_px, int width_px);
 			
 			void _make_byte_visible(off_t offset);
 			

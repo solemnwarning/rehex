@@ -20,6 +20,7 @@
 
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
+#include <wx/splitter.h>
 #include <wx/wx.h>
 
 #include "decodepanel.hpp"
@@ -54,6 +55,7 @@ namespace REHex {
 			void OnPaste(wxCommandEvent &event);
 			void OnUndo(wxCommandEvent &event);
 			void OnRedo(wxCommandEvent &event);
+			void OnOverwriteMode(wxCommandEvent &event);
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);
 			void OnSetBytesPerGroup(wxCommandEvent &event);
@@ -76,23 +78,36 @@ namespace REHex {
 					Tab(wxWindow *parent);
 					Tab(wxWindow *parent, const std::string &filename);
 					
-					REHex::Document    *doc;
-					wxNotebook         *h_tools;
+					wxSplitterWindow   *v_splitter;
+					wxSplitterWindow   *h_splitter;
 					wxNotebook         *v_tools;
 					REHex::DecodePanel *dp;
 					REHex::Disassemble *disasm;
+					REHex::Document    *doc;
+					wxNotebook         *h_tools;
 					
+					void OnSize(wxSizeEvent &size);
 					void OnCursorMove(wxCommandEvent &event);
 					void OnValueChange(wxCommandEvent &event);
 					void OnValueFocus(wxCommandEvent &event);
 					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
+					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
+					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
+					
+					void vtools_adjust();
+					void htools_adjust();
 					
 				private:
 					enum {
 						ID_HTOOLS = 1,
 						ID_VTOOLS,
+						ID_HSPLITTER,
+						ID_VSPLITTER,
 					};
+					
+					int hsplit_clamp_sash(int sash_position);
+					int vsplit_clamp_sash(int sash_position);
 					
 					DECLARE_EVENT_TABLE()
 			};
@@ -110,6 +125,7 @@ namespace REHex {
 			};
 			
 			wxMenu *recent_files_menu;
+			wxMenu *edit_menu;
 			wxMenu *doc_menu;
 			wxAuiNotebook *notebook;
 			

@@ -56,9 +56,6 @@ REHex::Disassemble::Disassemble(wxWindow *parent, const REHex::Document &documen
 	
 	assembly = new CodeCtrl(this, wxID_ANY);
 	
-	/* TODO: Calculate size properly. */
-	assembly->SetMinSize(wxSize(250, 100));
-	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
 	sizer->Add(arch, 0, wxEXPAND | wxALL, 0);
@@ -77,6 +74,12 @@ REHex::Disassemble::~Disassemble()
 		LLVMDisasmDispose(disassembler);
 		disassembler = NULL;
 	}
+}
+
+wxSize REHex::Disassemble::DoGetBestClientSize() const
+{
+	/* TODO: Calculate size properly. */
+	return wxSize(250, 100);
 }
 
 void REHex::Disassemble::set_position(off_t position)

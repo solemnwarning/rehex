@@ -55,6 +55,7 @@ namespace REHex {
 			void OnPaste(wxCommandEvent &event);
 			void OnUndo(wxCommandEvent &event);
 			void OnRedo(wxCommandEvent &event);
+			void OnOverwriteMode(wxCommandEvent &event);
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);
 			void OnSetBytesPerGroup(wxCommandEvent &event);
@@ -124,6 +125,7 @@ namespace REHex {
 			};
 			
 			wxMenu *recent_files_menu;
+			wxMenu *edit_menu;
 			wxMenu *doc_menu;
 			wxAuiNotebook *notebook;
 			

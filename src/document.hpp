@@ -60,6 +60,7 @@ namespace REHex {
 			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off);
 			bool get_insert_mode();
+			void set_insert_mode(bool enabled);
 			
 			void set_selection(off_t off, off_t length);
 			void clear_selection();

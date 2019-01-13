@@ -253,6 +253,32 @@ bool REHex::Document::get_insert_mode()
 	return this->insert_mode;
 }
 
+void REHex::Document::set_insert_mode(bool enabled)
+{
+	if(insert_mode == enabled)
+	{
+		return;
+	}
+	
+	insert_mode = enabled;
+	
+	off_t cursor_pos = get_cursor_position();
+	if(!insert_mode && cursor_pos > 0 && cursor_pos == buffer_length())
+	{
+		/* Move cursor back if going from insert to overwrite mode and it
+		 * was at the end of the file.
+		*/
+		set_cursor_position(cursor_pos - 1);
+	}
+	
+	wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
+	event.SetEventObject(this);
+	wxPostEvent(this, event);
+	
+	/* TODO: Limit paint to affected area */
+	this->Refresh();
+}
+
 void REHex::Document::set_selection(off_t off, off_t length)
 {
 	selection_off    = off;
@@ -1119,26 +1145,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_INSERT)
 		{
-			insert_mode  = !insert_mode;
-			
-			{
-				wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
-				event.SetEventObject(this);
-				
-				wxPostEvent(this, event);
-			}
-			
-			off_t cursor_pos = get_cursor_position();
-			if(!insert_mode && cursor_pos == buffer->length())
-			{
-				/* Move cursor back if going from insert to overwrite mode and it
-				 * was at the end of the file.
-				*/
-				set_cursor_position(cursor_pos - 1);
-			}
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
+			set_insert_mode(!get_insert_mode());
 		}
 		else if(key == WXK_DELETE)
 		{

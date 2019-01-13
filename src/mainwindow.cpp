@@ -49,6 +49,7 @@ enum {
 	ID_SEARCH_BSEQ,
 	ID_SEARCH_VALUE,
 	ID_GOTO_OFFSET,
+	ID_OVERWRITE_MODE,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -73,6 +74,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(wxID_UNDO, REHex::MainWindow::OnUndo)
 	EVT_MENU(wxID_REDO, REHex::MainWindow::OnRedo)
+	
+	EVT_MENU(ID_OVERWRITE_MODE, REHex::MainWindow::OnOverwriteMode)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
@@ -114,10 +117,18 @@ REHex::MainWindow::MainWindow():
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
 	
-	wxMenu *edit_menu = new wxMenu;
+	edit_menu = new wxMenu;
 	
 	edit_menu->Append(wxID_UNDO, "&Undo\tCtrl-Z");
 	edit_menu->Append(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+	
+	edit_menu->AppendSeparator();
+	
+	#ifdef __APPLE__
+	edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode");
+	#else
+	edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode\tIns");
+	#endif
 	
 	edit_menu->AppendSeparator();
 	
@@ -524,6 +535,17 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 	tab->doc->redo();
 }
 
+void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->doc->set_insert_mode(!event.IsChecked());
+}
+
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 {
 	/* There are rendering/performance issues with very large values here, which we just bypass
@@ -620,6 +642,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
+	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	doc_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
 	doc_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
 	doc_menu->Check(ID_SHOW_DECODES, tab->dp->IsShown());
@@ -717,6 +740,7 @@ void REHex::MainWindow::OnInsertToggle(wxCommandEvent &event)
 		 * active document.
 		*/
 		_update_status_mode(doc);
+		edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	}
 }
 

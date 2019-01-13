@@ -997,7 +997,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_RIGHT)
 		{
-			set_cursor_position(cursor_pos + 1);
+			off_t max_pos = std::max((buffer_length() - !get_insert_mode()), (off_t)(0));
+			set_cursor_position(std::min((cursor_pos + 1), max_pos));
 			clear_selection();
 			
 			/* TODO: Limit paint to affected area */

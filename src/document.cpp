@@ -494,7 +494,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 		region = next;
 	}
 	
-	uint64_t yo_end = scroll_yoff + visible_lines + 1;
+	int64_t yo_end = scroll_yoff + visible_lines + 1;
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
 	{
 		int x_px = 0 - scroll_xoff;
@@ -521,9 +521,9 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	/* Get the size of the area we can draw into */
 	
-	wxSize       client_size       = GetClientSize();
-	unsigned int new_client_width  = client_size.GetWidth();
-	unsigned int new_client_height = client_size.GetHeight();
+	wxSize client_size    = GetClientSize();
+	int new_client_width  = client_size.GetWidth();
+	int new_client_height = client_size.GetHeight();
 	
 	bool width_changed  = (new_client_width  != client_width);
 	bool height_changed = (new_client_height != client_height);
@@ -1187,9 +1187,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 {
 	wxClientDC dc(this);
 	
-	unsigned int mouse_x = event.GetX();
-	unsigned int rel_x   = mouse_x + this->scroll_xoff;
-	unsigned int mouse_y = event.GetY();
+	int mouse_x = event.GetX();
+	int rel_x   = mouse_x + this->scroll_xoff;
+	int mouse_y = event.GetY();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
@@ -1202,9 +1202,9 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -1323,9 +1323,9 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 	
 	wxClientDC dc(this);
 	
-	unsigned int mouse_x = event.GetX();
-	unsigned int rel_x   = mouse_x + this->scroll_xoff;
-	unsigned int mouse_y = event.GetY();
+	int mouse_x = event.GetX();
+	int rel_x   = mouse_x + this->scroll_xoff;
+	int mouse_y = event.GetY();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
@@ -1338,9 +1338,9 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -1492,9 +1492,9 @@ void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
 	}
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	uint64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
 	
-	uint64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
 	
 	while(region != regions.end() && line_off >= (*region)->y_lines)
 	{
@@ -2246,7 +2246,7 @@ REHex::Document::Region::Data *REHex::Document::_data_region_by_offset(off_t off
 /* Scroll the Document vertically to make the given line visible.
  * Does nothing if the line is already on-screen.
 */
-void REHex::Document::_make_line_visible(uint64_t line)
+void REHex::Document::_make_line_visible(int64_t line)
 {
 	if(scroll_yoff > line)
 	{
@@ -2273,7 +2273,7 @@ void REHex::Document::_make_line_visible(uint64_t line)
 /* Scroll the Document horizontally to (try to) make the given range of X co-ordinates visible.
  * Does nothing if the range is fully visible.
 */
-void REHex::Document::_make_x_visible(unsigned int x_px, unsigned int width_px)
+void REHex::Document::_make_x_visible(int x_px, int width_px)
 {
 	if(scroll_xoff > x_px)
 	{

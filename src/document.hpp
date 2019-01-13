@@ -26,6 +26,7 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "NestedOffsetLengthMap.hpp"
 
 namespace REHex {
 	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
@@ -91,6 +92,7 @@ namespace REHex {
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnSetComment(wxCommandEvent &event);
+			void OnClearHighlight(wxCommandEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:
@@ -139,6 +141,7 @@ namespace REHex {
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
+				NestedOffsetLengthMap<int> old_highlights;
 			};
 			
 			friend Region::Data;
@@ -147,6 +150,8 @@ namespace REHex {
 			Buffer *buffer;
 			std::string filename;
 			bool dirty;
+			
+			NestedOffsetLengthMap<int> highlights;
 			
 			std::string title;
 			

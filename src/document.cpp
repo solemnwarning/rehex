@@ -25,7 +25,9 @@
 #include <string>
 #include <wx/dcbuffer.h>
 
+#include "app.hpp"
 #include "document.hpp"
+#include "Palette.hpp"
 #include "textentrydialog.hpp"
 #include "util.hpp"
 
@@ -50,6 +52,7 @@ enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SET_COMMENT,
 	ID_SELECT_TIMER,
+	ID_CLEAR_HIGHLIGHT,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -65,6 +68,7 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::Document::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 	EVT_MENU(ID_SET_COMMENT, REHex::Document::OnSetComment)
+	EVT_MENU(ID_CLEAR_HIGHLIGHT, REHex::Document::OnClearHighlight)
 END_EVENT_TABLE()
 
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
@@ -440,6 +444,7 @@ void REHex::Document::undo()
 		
 		cpos_off     = act.old_cpos_off;
 		cursor_state = act.old_cursor_state;
+		highlights   = act.old_highlights;
 		
 		redo_stack.push_back(act);
 		undo_stack.pop_back();
@@ -1417,6 +1422,90 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				menu.Append(ID_SET_COMMENT, "Edit comment...");
 			}
 			
+			/* We need to maintain bitmap instances for lifespan of menu. */
+			std::list<wxBitmap> bitmaps;
+			
+			off_t highlight_off;
+			off_t highlight_length = 0;
+			
+			off_t cursor_pos = get_cursor_position();
+			auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
+			
+			if(selection_length > 0)
+			{
+				highlight_off    = selection_off;
+				highlight_length = selection_length;
+			}
+			else if(highlight_at_cur != highlights.end())
+			{
+				highlight_off    = highlight_at_cur->first.offset;
+				highlight_length = highlight_at_cur->first.length;
+			}
+			else if(cursor_pos < buffer_length())
+			{
+				highlight_off    = cursor_pos;
+				highlight_length = 1;
+			}
+			
+			if(highlight_length > 0 && NestedOffsetLengthMap_can_set(highlights, highlight_off, highlight_length))
+			{
+				wxMenu *hlmenu = new wxMenu();
+				
+				const REHex::Palette &pal = wxGetApp().palette;
+				
+				for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
+				{
+					wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
+					
+					wxColour bg_colour = pal.get_highlight_bg(i);
+					
+					/* TODO: Get appropriate size for menu bitmap.
+					 * TODO: Draw a character in image using foreground colour.
+					*/
+					wxImage img(16, 16);
+					img.SetRGB(wxRect(0, 0, img.GetWidth(), img.GetHeight()),
+						bg_colour.Red(), bg_colour.Green(), bg_colour.Blue());
+					
+					bitmaps.emplace_back(img);
+					itm->SetBitmap(bitmaps.back());
+					
+					hlmenu->Append(itm);
+					
+					/* On Windows, event bindings on a submenu don't work.
+					 * On OS X, event bindings on a parent menu don't work.
+					 * On GTK, both work.
+					*/
+					#ifdef _WIN32
+					menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+					#else
+					hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+					#endif
+					{
+						int colour = i;
+						_tracked_change("set highlight",
+							[this, highlight_off, highlight_length, colour]()
+							{
+								NestedOffsetLengthMap_set(highlights, highlight_off, highlight_length, colour);
+								
+								/* TODO: Limit paint to affected area. */
+								Refresh();
+							},
+							
+							[]()
+							{
+								/* Highlight changes are undone implicitly. */
+							});
+					}, itm->GetId(), itm->GetId());
+				}
+				
+				menu.AppendSubMenu(hlmenu, "Set Highlight");
+			}
+			
+			if(highlight_at_cur != highlights.end())
+			{
+				menu.Append(ID_CLEAR_HIGHLIGHT, "Remove Highlight");
+			}
+			
 			PopupMenu(&menu);
 		}
 	}
@@ -1567,6 +1656,26 @@ void REHex::Document::OnSetComment(wxCommandEvent &event)
 	_edit_comment_popup(get_cursor_position());
 }
 
+void REHex::Document::OnClearHighlight(wxCommandEvent &event)
+{
+	off_t cursor_pos = get_cursor_position();
+	
+	_tracked_change("remove highlight",
+		[this, cursor_pos]()
+		{
+			auto highlight = NestedOffsetLengthMap_get(highlights, cursor_pos);
+			highlights.erase(highlight);
+			
+			/* TODO: Limit paint to affected area. */
+			Refresh();
+		},
+		
+		[]()
+		{
+			/* Highlighting is implicitly restored by undo() */
+		});
+}
+
 void REHex::Document::_ctor_pre(wxWindow *parent)
 {
 	/* The background style MUST be set before the control is created. */
@@ -1638,7 +1747,8 @@ void REHex::Document::_init_regions(const json_t *meta)
 	{
 		/* TODO: Validate JSON structure */
 		
-		json_t *j_comments = json_object_get(meta, "comments");
+		json_t *j_comments   = json_object_get(meta, "comments");
+		json_t *j_highlights = json_object_get(meta, "highlights");
 		
 		size_t index;
 		json_t *value;
@@ -1647,6 +1757,15 @@ void REHex::Document::_init_regions(const json_t *meta)
 		{
 			comments[json_integer_value(json_object_get(value, "offset"))]
 				= wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
+		}
+		
+		json_array_foreach(j_highlights, index, value)
+		{
+			off_t h_offset = json_integer_value(json_object_get(value, "offset"));
+			off_t h_length = json_integer_value(json_object_get(value, "length"));
+			int   h_colour = json_integer_value(json_object_get(value, "colour-idx"));
+			
+			NestedOffsetLengthMap_set(highlights, h_offset, h_length, h_colour);
 		}
 	}
 	
@@ -1791,6 +1910,8 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			
 			++region;
 		}
+		
+		NestedOffsetLengthMap_data_inserted(highlights, offset, length);
 	}
 	
 }
@@ -1892,6 +2013,8 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 		
 		assert(to_shift == length);
 		assert(to_shrink == 0);
+		
+		NestedOffsetLengthMap_data_erased(highlights, offset, length);
 	}
 }
 
@@ -1999,6 +2122,7 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	
 	change.old_cpos_off     = cpos_off;
 	change.old_cursor_state = cursor_state;
+	change.old_highlights   = highlights;
 	
 	do_func();
 	
@@ -2209,6 +2333,26 @@ json_t *REHex::Document::_dump_metadata()
 		if(json_array_append(comments, comment) == -1
 			|| json_object_set_new(comment, "offset", json_integer(cr->c_offset)) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+	}
+	
+	json_t *highlights = json_array();
+	if(json_object_set_new(root, "highlights", highlights) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto h = this->highlights.begin(); h != this->highlights.end(); ++h)
+	{
+		json_t *highlight = json_object();
+		if(json_array_append(highlights, highlight) == -1
+			|| json_object_set_new(highlight, "offset",     json_integer(h->first.offset)) == -1
+			|| json_object_set_new(highlight, "length",     json_integer(h->first.length)) == -1
+			|| json_object_set_new(highlight, "colour-idx", json_integer(h->second)) == -1)
 		{
 			json_decref(root);
 			return NULL;
@@ -2429,34 +2573,40 @@ void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
+	const REHex::Palette &pal = wxGetApp().palette;
+	
 	dc.SetFont(*(doc.hex_font));
 	
-	wxPen black_1px(*wxBLACK, 1);
-	wxPen blue_1px (*wxBLUE,  1);
+	wxPen norm_fg_1px(pal[Palette::PAL_NORMAL_TEXT_FG], 1);
+	wxPen selected_bg_1px(pal[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
-	
-	wxColour main_text_colour      = wxColour(0x00, 0x00, 0x00);
-	wxColour alternate_text_colour = wxColour(0x69, 0x69, 0x69);
 	
 	bool alternate_row = true;
 	
-	auto normal_text_colour = [&dc,&main_text_colour,&alternate_text_colour,&alternate_row]()
+	auto normal_text_colour = [&dc,&pal,&alternate_row]()
 	{
-		dc.SetTextForeground(alternate_row ? alternate_text_colour : main_text_colour);
+		dc.SetTextForeground(pal[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto inverted_text_colour = [&dc]()
+	auto inverted_text_colour = [&dc,&pal]()
 	{
-		dc.SetTextForeground(*wxWHITE);
-		dc.SetTextBackground(*wxBLACK);
+		dc.SetTextForeground(pal[Palette::PAL_INVERT_TEXT_FG]);
+		dc.SetTextBackground(pal[Palette::PAL_INVERT_TEXT_BG]);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
-	auto selected_text_colour = [&dc]()
+	auto selected_text_colour = [&dc,&pal]()
 	{
-		dc.SetTextForeground(*wxWHITE);
-		dc.SetTextBackground(*wxBLUE);
+		dc.SetTextForeground(pal[Palette::PAL_SELECTED_TEXT_FG]);
+		dc.SetTextBackground(pal[Palette::PAL_SELECTED_TEXT_BG]);
+		dc.SetBackgroundMode(wxSOLID);
+	};
+	
+	auto highlighted_text_colour = [&dc,&pal](int highlight_idx)
+	{
+		dc.SetTextForeground(pal.get_highlight_fg(highlight_idx));
+		dc.SetTextBackground(pal.get_highlight_bg(highlight_idx));
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
@@ -2532,7 +2682,9 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
 			
-			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&cur_off,&hex_active,&hex_base_x,&hex_x_char](unsigned char nibble, bool invert)
+			auto highlight = NestedOffsetLengthMap_get(doc.highlights, cur_off);
+			
+			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&highlighted_text_colour,&cur_off,&hex_active,&hex_base_x,&hex_x_char,&highlight](unsigned char nibble, bool invert)
 			{
 				const char *nibble_to_hex = "0123456789ABCDEF";
 				
@@ -2550,6 +2702,15 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					&& hex_active)
 				{
 					selected_text_colour();
+					
+					char str[] = { nibble_to_hex[nibble], '\0' };
+					dc.DrawText(str, hex_x, y);
+					
+					hex_str.append(1, ' ');
+				}
+				else if(highlight != doc.highlights.end() && hex_active)
+				{
+					highlighted_text_colour(highlight->second);
 					
 					char str[] = { nibble_to_hex[nibble], '\0' };
 					dc.DrawText(str, hex_x, y);
@@ -2584,7 +2745,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length) && !hex_active)
 			{
-				dc.SetPen(blue_1px);
+				dc.SetPen(selected_bg_1px);
 				
 				if(cur_off == doc.selection_off || c == 0)
 				{
@@ -2622,18 +2783,61 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					}
 				}
 			}
+			else if(highlight != doc.highlights.end() && !hex_active)
+			{
+				dc.SetPen(wxPen(pal.get_highlight_bg(highlight->second), 1));
+				
+				off_t highlight_off    = highlight->first.offset;
+				off_t highlight_length = highlight->first.length;
+				
+				if(cur_off == highlight_off || c == 0)
+				{
+					/* Draw vertical line left of highlight. */
+					dc.DrawLine(hex_x, y, hex_x, (y + doc.hf_height));
+				}
+				
+				if(cur_off == (highlight_off + highlight_length - 1) || c == (doc.bytes_per_line_calc - 1))
+				{
+					/* Draw vertical line right of highlight. */
+					dc.DrawLine((hex_x + doc.hf_string_width(2) - 1), y, (hex_x + doc.hf_string_width(2) - 1), (y + doc.hf_height));
+				}
+				
+				if(cur_off < (highlight_off + doc.bytes_per_line_calc))
+				{
+					/* Draw horizontal line above highlight. */
+					dc.DrawLine(hex_x, y, (hex_x + doc.hf_string_width(2)), y);
+				}
+				
+				if(cur_off > highlight_off && cur_off <= (highlight_off + doc.bytes_per_line_calc) && c > 0 && (c % doc.bytes_per_group) == 0)
+				{
+					/* Draw horizontal line above gap along top of highlight. */
+					dc.DrawLine((hex_x - doc.hf_char_width()), y, hex_x, y);
+				}
+				
+				if(cur_off >= (highlight_off + highlight_length - doc.bytes_per_line_calc))
+				{
+					/* Draw horizontal line below highlight. */
+					dc.DrawLine(hex_x, (y + doc.hf_height - 1), (hex_x + doc.hf_string_width(2)), (y + doc.hf_height - 1));
+					
+					if(c > 0 && (c % doc.bytes_per_group) == 0)
+					{
+						/* Draw horizontal line below gap along bottom of highlight. */
+						dc.DrawLine((hex_x - doc.hf_char_width()), (y + doc.hf_height - 1), hex_x, (y + doc.hf_height - 1));
+					}
+				}
+			}
 			
 			if(cur_off == cursor_pos && doc.insert_mode && ((doc.cursor_visible && doc.cursor_state == CSTATE_HEX) || !hex_active))
 			{
 				/* Draw insert cursor. */
-				dc.SetPen(black_1px);
+				dc.SetPen(norm_fg_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			
 			if(cur_off == cursor_pos && !doc.insert_mode && !hex_active)
 			{
 				/* Draw inactive overwrite cursor. */
-				dc.SetPen(black_1px);
+				dc.SetPen(norm_fg_1px);
 				
 				if(doc.cursor_state == CSTATE_HEX_MID)
 				{
@@ -2673,6 +2877,15 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 						
 						ascii_string.append(" ");
 					}
+					else if(highlight != doc.highlights.end())
+					{
+						highlighted_text_colour(highlight->second);
+						
+						char str[] = { ascii_byte, '\0' };
+						dc.DrawText(str, ascii_x, y);
+						
+						ascii_string.append(" ");
+					}
 					else{
 						ascii_string.append(1, ascii_byte);
 					}
@@ -2682,12 +2895,12 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					
 					if(cur_off == cursor_pos && !doc.insert_mode)
 					{
-						dc.SetPen(black_1px);
+						dc.SetPen(norm_fg_1px);
 						dc.DrawRectangle(ascii_x, y, doc.hf_char_width(), doc.hf_height);
 					}
 					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
 					{
-						dc.SetPen(blue_1px);
+						dc.SetPen(selected_bg_1px);
 						
 						if(cur_off == doc.selection_off || c == 0)
 						{
@@ -2713,11 +2926,42 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 							dc.DrawLine(ascii_x, (y + doc.hf_height - 1), (ascii_x + doc.hf_char_width()), (y + doc.hf_height - 1));
 						}
 					}
+					else if(highlight != doc.highlights.end())
+					{
+						dc.SetPen(wxPen(pal.get_highlight_bg(highlight->second), 1));
+						
+						off_t highlight_off    = highlight->first.offset;
+						off_t highlight_length = highlight->first.length;
+						
+						if(cur_off == highlight_off || c == 0)
+						{
+							/* Draw vertical line left of highlight. */
+							dc.DrawLine(ascii_x, y, ascii_x, (y + doc.hf_height));
+						}
+						
+						if(cur_off == (highlight_off + highlight_length - 1) || c == (doc.bytes_per_line_calc - 1))
+						{
+							/* Draw vertical line right of highlight. */
+							dc.DrawLine((ascii_x + doc.hf_char_width() - 1), y, (ascii_x + doc.hf_char_width() - 1), (y + doc.hf_height));
+						}
+						
+						if(cur_off < (highlight_off + doc.bytes_per_line_calc))
+						{
+							/* Draw horizontal line above highlight. */
+							dc.DrawLine(ascii_x, y, (ascii_x + doc.hf_char_width()), y);
+						}
+						
+						if(cur_off >= (highlight_off + highlight_length - doc.bytes_per_line_calc))
+						{
+							/* Draw horizontal line below highlight. */
+							dc.DrawLine(ascii_x, (y + doc.hf_height - 1), (ascii_x + doc.hf_char_width()), (y + doc.hf_height - 1));
+						}
+					}
 				}
 				
 				if(cur_off == cursor_pos && doc.insert_mode && (doc.cursor_visible || !ascii_active))
 				{
-					dc.SetPen(black_1px);
+					dc.SetPen(norm_fg_1px);
 					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
 				}
 				
@@ -2737,7 +2981,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			if(doc.insert_mode)
 			{
-				dc.SetPen(black_1px);
+				dc.SetPen(norm_fg_1px);
 				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
 			}
 			else{

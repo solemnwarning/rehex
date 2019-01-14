@@ -106,7 +106,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
-	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineer's Hex Editor"))
+	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineers' Hex Editor"))
 {
 	wxMenu *file_menu = new wxMenu;
 	recent_files_menu = new wxMenu;
@@ -397,6 +397,7 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
+	SetTitle(tab->doc->get_title() + " - Reverse Engineers' Hex Editor");
 }
 
 void REHex::MainWindow::OnClose(wxCommandEvent &event)
@@ -655,6 +656,8 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
+	
+	SetTitle(tab->doc->get_title() + " - Reverse Engineers' Hex Editor");
 	
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	doc_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());

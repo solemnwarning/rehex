@@ -88,12 +88,17 @@ APP_OBJS := \
 	res/icon32.o \
 	res/icon48.o \
 	res/icon64.o \
+	res/icon128.o \
+	res/license.o \
+	src/AboutDialog.o \
 	src/app.o \
 	src/buffer.o \
+	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/decodepanel.o \
 	src/disassemble.o \
 	src/document.o \
+	src/LicenseDialog.o \
 	src/mainwindow.o \
 	src/Palette.o \
 	src/search.o \
@@ -180,7 +185,11 @@ tests/util.t: $(TESTS_UTIL_OBJS)
 $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
+src/AboutDialog.o: res/icon128.h
 src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
+
+res/license.c res/license.h: LICENSE.txt $(EMBED_EXE)
+	$(EMBED_EXE) $< LICENSE_TXT res/license.c res/license.h
 
 res/%.c res/%.h: res/%.png $(EMBED_EXE)
 	$(EMBED_EXE) $< $*_png res/$*.c res/$*.h

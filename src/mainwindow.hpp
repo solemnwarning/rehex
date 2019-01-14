@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -62,6 +62,8 @@ namespace REHex {
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
 			void OnShowDecodes(wxCommandEvent &event);
+			
+			void OnAbout(wxCommandEvent &event);
 			
 			void OnDocumentChange(wxAuiNotebookEvent &event);
 			void OnDocumentClose(wxAuiNotebookEvent &event);

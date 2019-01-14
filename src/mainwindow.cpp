@@ -27,6 +27,7 @@
 #include <wx/numdlg.h>
 #include <wx/sizer.h>
 
+#include "AboutDialog.hpp"
 #include "app.hpp"
 #include "decodepanel.hpp"
 #include "disassemble.hpp"
@@ -93,6 +94,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
 	EVT_MENU(ID_SHOW_DECODES, REHex::MainWindow::OnShowDecodes)
 	
+	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
+	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
 	EVT_AUINOTEBOOK_PAGE_CLOSE(  wxID_ANY, REHex::MainWindow::OnDocumentClose)
 	EVT_AUINOTEBOOK_PAGE_CLOSED( wxID_ANY, REHex::MainWindow::OnDocumentClosed)
@@ -154,10 +157,15 @@ REHex::MainWindow::MainWindow():
 	doc_menu->AppendCheckItem(ID_SHOW_ASCII, wxT("Show ASCII"));
 	doc_menu->AppendCheckItem(ID_SHOW_DECODES, wxT("Show decode table"));
 	
+	wxMenu *help_menu = new wxMenu;
+	
+	help_menu->Append(wxID_ABOUT, "&About");
+	
 	wxMenuBar *menu_bar = new wxMenuBar;
 	menu_bar->Append(file_menu, wxT("&File"));
 	menu_bar->Append(edit_menu, wxT("&Edit"));
 	menu_bar->Append(doc_menu,  wxT("&Document"));
+	menu_bar->Append(help_menu, "&Help");
 	
 	SetMenuBar(menu_bar);
 	
@@ -632,6 +640,12 @@ void REHex::MainWindow::OnShowDecodes(wxCommandEvent &event)
 	
 	tab->dp->Show(event.IsChecked());
 	tab->vtools_adjust();
+}
+
+void REHex::MainWindow::OnAbout(wxCommandEvent &event)
+{
+	REHex::AboutDialog about(this);
+	about.ShowModal();
 }
 
 void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)

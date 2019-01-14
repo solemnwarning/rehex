@@ -42,9 +42,15 @@ bool REHex::App::OnInit()
 	REHex::MainWindow *window = new REHex::MainWindow();
 	window->Show(true);
 	
-	for(int i = 1; i < argc; ++i)
+	if(argc > 1)
 	{
-		window->open_file(argv[i].ToStdString());
+		for(int i = 1; i < argc; ++i)
+		{
+			window->open_file(argv[i].ToStdString());
+		}
+	}
+	else{
+		window->new_file();
 	}
 	
 	return true;

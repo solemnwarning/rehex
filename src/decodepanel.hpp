@@ -94,11 +94,14 @@ namespace REHex {
 		public:
 			DecodePanel(wxWindow *parent, wxWindowID id = wxID_ANY);
 			
+			virtual wxSize DoGetBestClientSize() const override;
+			
 			void update(const unsigned char *data, size_t size, wxPGProperty *skip_control = NULL);
 			
 		private:
 			wxChoice *endian;
 			wxPropertyGrid *pgrid;
+			int pgrid_best_width;
 			
 			wxPropertyCategory *c8;
 			wxStringProperty *s8, *u8, *h8, *o8;

@@ -34,6 +34,7 @@ namespace REHex {
 			MainWindow();
 			virtual ~MainWindow();
 			
+			void new_file();
 			void open_file(const std::string &filename);
 			
 			void OnWindowClose(wxCloseEvent& event);
@@ -96,6 +97,7 @@ namespace REHex {
 					void OnVToolChange(wxBookCtrlEvent &event);
 					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
 					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
+					void OnFirstIdle(wxIdleEvent &event);
 					
 					void vtools_adjust();
 					void htools_adjust();

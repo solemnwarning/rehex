@@ -139,13 +139,22 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	 * FitColumns() to lay out the columns nicely, yielding the minimum internal grid size.
 	 * Finally we add that to the margin and scrollbar width to come to the minimum width. No
 	 * minimum height is enforced.
+	 *
+	 * TODO: Do it in a way that doesn't require us to change our size.
 	*/
 	
 	pgrid->SetSize(wxSize(1024, 1024));
-	wxSize min_grid_size = pgrid->FitColumns();
-	int margin_width     = pgrid->GetMarginWidth();
-	int v_scroll_width   = wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
-	pgrid->SetMinClientSize(wxSize((min_grid_size.GetWidth() + margin_width + v_scroll_width), 0));
+	
+	int pg_min_grid_width = pgrid->FitColumns().GetWidth();
+	int pg_margin_width   = pgrid->GetMarginWidth();
+	int pg_border_width   = pgrid->GetWindowBorderSize().GetWidth();
+	int v_scroll_width    = wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
+	
+	pgrid_best_width = pg_min_grid_width + pg_margin_width + v_scroll_width + pg_border_width;
+	
+	/* Arbitrary minimum size for panel. */
+	endian->SetMinSize(wxSize(80, -1));
+	pgrid->SetMinSize(wxSize(80, -1));
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -155,6 +164,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	SetSizerAndFit(sizer);
 	
 	pgrid->SetSplitterLeft();
+}
+
+wxSize REHex::DecodePanel::DoGetBestClientSize() const
+{
+	return wxSize(pgrid_best_width, -1);
 }
 
 /* TODO: Make this is templated lambda whenever I move to C++14 */

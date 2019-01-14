@@ -106,7 +106,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
-	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineers' Hex Editor"))
+	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineers' Hex Editor"), wxDefaultPosition, wxSize(740, 540))
 {
 	wxMenu *file_menu = new wxMenu;
 	recent_files_menu = new wxMenu;
@@ -216,20 +216,18 @@ REHex::MainWindow::MainWindow():
 	}
 	
 	SetIcons(icons);
-	
-	/* Start with an "Untitled" tab. */
-	ProcessCommand(wxID_NEW);
-	
-	/* NOTE: wxAuiNotebook doesn't seem to implement GetBestSize() correctly, so we just use
-	 * the best size of the Tab instead.
-	*/
-	
-	SetClientSize(notebook->GetPage(0)->GetBestSize());
 }
 
 REHex::MainWindow::~MainWindow()
 {
 	wxGetApp().recent_files->RemoveMenu(recent_files_menu);
+}
+
+void REHex::MainWindow::new_file()
+{
+	Tab *tab = new Tab(notebook);
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc->SetFocus();
 }
 
 void REHex::MainWindow::open_file(const std::string &filename)
@@ -331,9 +329,7 @@ void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
-	Tab *tab = new Tab(notebook);
-	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	new_file();
 }
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
@@ -880,9 +876,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	htools_adjust();
-	vtools_adjust();
-	
 	dp = new REHex::DecodePanel(v_tools);
 	v_tools->AddPage(dp, "Decode values", true);
 	
@@ -891,6 +884,8 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
+	
+	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
 }
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -919,9 +914,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	htools_adjust();
-	vtools_adjust();
-	
 	dp = new REHex::DecodePanel(v_tools);
 	v_tools->AddPage(dp, "Decode values", true);
 	
@@ -930,6 +922,8 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
+	
+	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
 }
 
 void REHex::MainWindow::Tab::OnSize(wxSizeEvent &event)
@@ -1028,6 +1022,20 @@ void REHex::MainWindow::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
 	{
 		event.SetSashPosition(clamp);
 	}
+}
+
+/* The size of a wxNotebook page doesn't seem to be set correctly during
+ * initialisation, so we can't use it to determine how much size overhead the
+ * wxNotebook adds at that point. Instead we defer initial setting of the tool
+ * pane sizes until the first idle tick, by which point the sizes seem to have
+ * been set up properly (on GTK anyway).
+*/
+void REHex::MainWindow::Tab::OnFirstIdle(wxIdleEvent &event)
+{
+	Unbind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
+	
+	htools_adjust();
+	vtools_adjust();
 }
 
 int REHex::MainWindow::Tab::hsplit_clamp_sash(int sash_position)

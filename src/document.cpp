@@ -1731,7 +1731,7 @@ void REHex::Document::_ctor_post()
 	SetDoubleBuffered(true);
 	#endif
 	
-	SetMinClientSize(wxSize(300, 200));
+	SetMinClientSize(wxSize(hf_string_width(60), (hf_height * 20)));
 }
 
 void REHex::Document::_init_regions(const json_t *meta)

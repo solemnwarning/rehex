@@ -78,8 +78,8 @@ REHex::Disassemble::~Disassemble()
 
 wxSize REHex::Disassemble::DoGetBestClientSize() const
 {
-	/* TODO: Calculate size properly. */
-	return wxSize(250, 100);
+	/* TODO: Calculate a reasonable initial size. */
+	return wxPanel::DoGetBestClientSize();
 }
 
 void REHex::Disassemble::set_position(off_t position)

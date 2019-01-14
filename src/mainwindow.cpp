@@ -361,6 +361,12 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
+	if(tab->doc->get_filename() == "")
+	{
+		OnSaveAs(event);
+		return;
+	}
+	
 	try {
 		tab->doc->save();
 	}

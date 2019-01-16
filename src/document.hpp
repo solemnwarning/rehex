@@ -21,6 +21,7 @@
 #include <functional>
 #include <jansson.h>
 #include <list>
+#include <memory>
 #include <stdint.h>
 #include <utility>
 #include <wx/wx.h>
@@ -132,6 +133,22 @@ namespace REHex {
 				struct Comment;
 			};
 			
+			struct Comment
+			{
+				/* We use a shared_ptr here so that unmodified comment text isn't
+				 * duplicated throughout undo_stack and redo_stack. This might be
+				 * made obsolete in the future if we apply a similar technique to
+				 * the comments/highlights copies as a whole.
+				 *
+				 * wxString is used rather than std::string as it is unicode-aware
+				 * and will keep everything in order in memory and on-screen.
+				*/
+				
+				std::shared_ptr<const wxString> text;
+				
+				Comment(const wxString &text);
+			};
+			
 			struct TrackedChange
 			{
 				const char *desc;
@@ -141,6 +158,7 @@ namespace REHex {
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
+				NestedOffsetLengthMap<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
 			};
 			
@@ -151,6 +169,7 @@ namespace REHex {
 			std::string filename;
 			bool dirty;
 			
+			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
 			
 			std::string title;
@@ -218,7 +237,7 @@ namespace REHex {
 			void _ctor_pre(wxWindow *parent);
 			void _ctor_post();
 			
-			void _init_regions(const json_t *meta);
+			void _reinit_regions();
 			void _recalc_regions(wxDC &dc);
 			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
@@ -240,6 +259,10 @@ namespace REHex {
 			
 			json_t *_dump_metadata();
 			void _save_metadata(const std::string &filename);
+			
+			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
+			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			void _load_metadata(const std::string &filename);
 			
 			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
 			
@@ -288,7 +311,7 @@ namespace REHex {
 	struct Document::Region::Comment: public REHex::Document::Region
 	{
 		off_t c_offset;
-		wxString c_text;
+		const wxString &c_text;
 		
 		Comment(off_t c_offset, const wxString &c_text);
 		

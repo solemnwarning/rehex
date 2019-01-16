@@ -85,7 +85,7 @@ REHex::Document::Document(wxWindow *parent):
 	buffer = new REHex::Buffer();
 	title  = "Untitled";
 	
-	_init_regions(NULL);
+	_reinit_regions();
 	
 	_ctor_post();
 }
@@ -103,14 +103,13 @@ REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	/* TODO: Report errors (except ENOENT) */
+	std::string meta_filename = filename + ".rehex-meta";
+	if(wxFileExists(meta_filename))
+	{
+		_load_metadata(meta_filename);
+	}
 	
-	json_error_t json_err;
-	json_t *meta = json_load_file((filename + ".rehex-meta").c_str(), 0, &json_err);
-	
-	_init_regions(meta);
-	
-	json_decref(meta);
+	_reinit_regions();
 	
 	_ctor_post();
 }
@@ -444,7 +443,13 @@ void REHex::Document::undo()
 		
 		cpos_off     = act.old_cpos_off;
 		cursor_state = act.old_cursor_state;
+		comments     = act.old_comments;
 		highlights   = act.old_highlights;
+		
+		_reinit_regions();
+		
+		wxClientDC dc(this);
+		_recalc_regions(dc);
 		
 		redo_stack.push_back(act);
 		undo_stack.pop_back();
@@ -1734,40 +1739,9 @@ void REHex::Document::_ctor_post()
 	SetMinClientSize(wxSize(hf_string_width(60), (hf_height * 20)));
 }
 
-void REHex::Document::_init_regions(const json_t *meta)
+void REHex::Document::_reinit_regions()
 {
-	assert(regions.empty());
-	
-	/* Load any comments from the document metadata into a std::map, which ensures they are
-	 * sorted by their offset.
-	*/
-	
-	std::map<off_t,wxString> comments;
-	
-	{
-		/* TODO: Validate JSON structure */
-		
-		json_t *j_comments   = json_object_get(meta, "comments");
-		json_t *j_highlights = json_object_get(meta, "highlights");
-		
-		size_t index;
-		json_t *value;
-		
-		json_array_foreach(j_comments, index, value)
-		{
-			comments[json_integer_value(json_object_get(value, "offset"))]
-				= wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
-		}
-		
-		json_array_foreach(j_highlights, index, value)
-		{
-			off_t h_offset = json_integer_value(json_object_get(value, "offset"));
-			off_t h_length = json_integer_value(json_object_get(value, "length"));
-			int   h_colour = json_integer_value(json_object_get(value, "colour-idx"));
-			
-			NestedOffsetLengthMap_set(highlights, h_offset, h_length, h_colour);
-		}
-	}
+	regions.clear();
 	
 	/* Construct a list of interlaced comment/data regions. */
 	
@@ -1780,15 +1754,17 @@ void REHex::Document::_init_regions(const json_t *meta)
 	{
 		off_t dr_length = remain_data;
 		
-		if(next_comment != comments.end() && next_comment->first == next_data)
+		assert(next_comment == comments.end() || next_comment->first.offset >= next_data);
+		
+		while(next_comment != comments.end() && next_comment->first.offset == next_data)
 		{
-			regions.push_back(new REHex::Document::Region::Comment(next_comment->first, next_comment->second));
+			regions.push_back(new REHex::Document::Region::Comment(next_comment->first.offset, *(next_comment->second.text)));
 			++next_comment;
 		}
 		
-		if(next_comment != comments.end() && next_comment->first > next_data)
+		if(next_comment != comments.end())
 		{
-			dr_length = std::min(dr_length, (next_comment->first - next_data));
+			dr_length = next_comment->first.offset - next_data;
 		}
 		
 		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length));
@@ -1911,6 +1887,7 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			++region;
 		}
 		
+		NestedOffsetLengthMap_data_inserted(comments, offset, length);
 		NestedOffsetLengthMap_data_inserted(highlights, offset, length);
 	}
 	
@@ -2014,6 +1991,7 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 		assert(to_shift == length);
 		assert(to_shrink == 0);
 		
+		NestedOffsetLengthMap_data_erased(comments, offset, length);
 		NestedOffsetLengthMap_data_erased(highlights, offset, length);
 	}
 }
@@ -2122,6 +2100,7 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	
 	change.old_cpos_off     = cpos_off;
 	change.old_cursor_state = cursor_state;
+	change.old_comments     = comments;
 	change.old_highlights   = highlights;
 	
 	do_func();
@@ -2132,13 +2111,10 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 
 wxString REHex::Document::_get_comment_text(off_t offset)
 {
-	for(auto region = regions.begin(); region != regions.end(); ++region)
+	auto c = comments.find(NestedOffsetLengthMapKey(offset, 0));
+	if(c != comments.end())
 	{
-		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr != NULL && cr->c_offset == offset)
-		{
-			return cr->c_text;
-		}
+		return *(c->second.text);
 	}
 	
 	return "";
@@ -2146,99 +2122,23 @@ wxString REHex::Document::_get_comment_text(off_t offset)
 
 void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const wxString &text)
 {
-	for(auto region = regions.begin(); region != regions.end(); ++region)
+	if(NestedOffsetLengthMap_set(comments, offset, 0, Comment(text)))
 	{
-		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr != NULL && cr->c_offset == offset)
-		{
-			/* Updating an existing comment. */
-			cr->c_text = text;
-			break;
-		}
+		dirty = true;
 		
-		auto dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
-		if(dr != NULL)
-		{
-			if(dr->d_offset == offset)
-			{
-				/* Placing a comment at the start of a Data region. */
-				regions.insert(region, new REHex::Document::Region::Comment(offset, text));
-				break;
-			}
-			else if((dr->d_offset + dr->d_length) > offset)
-			{
-				/* Splitting a Data region in two and placing a comment in between
-				 * them.
-				*/
-				
-				off_t rel_off = offset - dr->d_offset;
-				
-				auto ci = regions.insert(region, new REHex::Document::Region::Comment(offset, text));
-				regions.insert(ci, new REHex::Document::Region::Data(dr->d_offset, rel_off));
-				++data_regions_count;
-				
-				dr->d_offset += rel_off;
-				dr->d_length -= rel_off;
-				
-				break;
-			}
-		}
+		_reinit_regions();
+		_recalc_regions(dc);
 	}
-	
-	dirty = true;
-	
-	_recalc_regions(dc);
 }
 
 void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
 {
-	auto region = regions.begin();
-	uint64_t next_yo = 0;
-	
-	for(; region != regions.end(); ++region)
+	if(comments.erase(NestedOffsetLengthMapKey(offset, 0)) > 0)
 	{
-		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr != NULL && cr->c_offset == offset)
-		{
-			/* Found the requested comment Region, destroy it. */
-			delete *region;
-			region = regions.erase(region);
-			
-			/* ...and merge the Data regions from either side
-			 * (unless we deleted a comment from the beginning).
-			*/
-			if(region != regions.begin())
-			{
-				/* ...get the Data region from before the comment... */
-				auto dr1 = dynamic_cast<REHex::Document::Region::Data*>(*(std::prev(region)));
-				assert(dr1 != NULL);
-				
-				/* ...get the Data region from after the comment... */
-				auto dr2 = dynamic_cast<REHex::Document::Region::Data*>(*region);
-				assert(dr2 != NULL);
-				
-				/* ...extend the first to encompass the second... */
-				dr1->d_length += dr2->d_length;
-				dr1->update_lines(*this, dc);
-				
-				/* ...and make the second go away. */
-				delete *region;
-				region = regions.erase(region);
-				--data_regions_count;
-				
-				/* Set the y_offset for regions after this to begin at. */
-				next_yo = dr1->y_offset + dr1->y_lines;
-			}
-			
-			break;
-		}
-	}
-	
-	/* Fixup the y_offset of all following regions */
-	for(; region != regions.end(); ++region)
-	{
-		(*region)->y_offset = next_yo;
-		next_yo += (*region)->y_lines;
+		dirty = true;
+		
+		_reinit_regions();
+		_recalc_regions(dc);
 	}
 }
 
@@ -2265,10 +2165,9 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 					wxClientDC dc(this);
 					_delete_comment(dc, offset);
 				},
-				[this, offset, old_comment]()
+				[]()
 				{
-					wxClientDC dc(this);
-					_set_comment_text(dc, offset, old_comment);
+					/* Comments are restored implicitly. */
 				});
 		}
 		else if(old_comment.empty())
@@ -2279,10 +2178,9 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 					wxClientDC dc(this);
 					_set_comment_text(dc, offset, new_comment);
 				},
-				[this, offset]()
+				[]()
 				{
-					wxClientDC dc(this);
-					_delete_comment(dc, offset);
+					/* Comments are restored implicitly. */
 				});
 		}
 		else{
@@ -2292,10 +2190,9 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 					wxClientDC dc(this);
 					_set_comment_text(dc, offset, new_comment);
 				},
-				[this, offset, old_comment]()
+				[]()
 				{
-					wxClientDC dc(this);
-					_set_comment_text(dc, offset, old_comment);
+					/* Comments are restored implicitly. */
 				});
 		}
 		
@@ -2319,19 +2216,13 @@ json_t *REHex::Document::_dump_metadata()
 		return NULL;
 	}
 	
-	for(auto region = regions.begin(); region != regions.end(); ++region)
+	for(auto c = this->comments.begin(); c != this->comments.end(); ++c)
 	{
-		auto cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
-		if(cr == NULL)
-		{
-			continue;
-		}
-		
-		const wxScopedCharBuffer utf8_text = cr->c_text.utf8_str();
+		const wxScopedCharBuffer utf8_text = c->second.text->utf8_str();
 		
 		json_t *comment = json_object();
 		if(json_array_append(comments, comment) == -1
-			|| json_object_set_new(comment, "offset", json_integer(cr->c_offset)) == -1
+			|| json_object_set_new(comment, "offset", json_integer(c->first.offset)) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
 		{
 			json_decref(root);
@@ -2367,6 +2258,68 @@ void REHex::Document::_save_metadata(const std::string &filename)
 	/* TODO: Report errors, atomically replace file? */
 	json_t *meta = _dump_metadata();
 	json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
+	json_decref(meta);
+}
+
+REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
+{
+	NestedOffsetLengthMap<Comment> comments;
+	
+	json_t *j_comments = json_object_get(meta, "comments");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_comments, index, value)
+	{
+		off_t offset  = json_integer_value(json_object_get(value, "offset"));
+		wxString text = wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
+		
+		if(offset >= 0 && offset < buffer_length)
+		{
+			NestedOffsetLengthMap_set(comments, offset, 0, Comment(text));
+		}
+	}
+	
+	return comments;
+}
+
+REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length)
+{
+	NestedOffsetLengthMap<int> highlights;
+	
+	json_t *j_highlights = json_object_get(meta, "highlights");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_highlights, index, value)
+	{
+		off_t offset = json_integer_value(json_object_get(value, "offset"));
+		off_t length = json_integer_value(json_object_get(value, "length"));
+		int   colour = json_integer_value(json_object_get(value, "colour-idx"));
+		
+		if(offset >= 0 && offset < buffer_length
+			&& length > 0 && (offset + length) <= buffer_length
+			&& colour >= 0 && colour < Palette::NUM_HIGHLIGHT_COLOURS)
+		{
+			NestedOffsetLengthMap_set(highlights, offset, length, colour);
+		}
+	}
+	
+	return highlights;
+}
+
+void REHex::Document::_load_metadata(const std::string &filename)
+{
+	/* TODO: Report errors */
+	
+	json_error_t json_err;
+	json_t *meta = json_load_file(filename.c_str(), 0, &json_err);
+	
+	comments = _load_comments(meta, buffer_length());
+	highlights = _load_highlights(meta, buffer_length());
+	
 	json_decref(meta);
 }
 
@@ -2557,6 +2510,9 @@ int REHex::Document::hf_char_at_x(int x_px)
 		}
 	}
 }
+
+REHex::Document::Comment::Comment(const wxString &text):
+	text(new wxString(text)) {}
 
 REHex::Document::Region::~Region() {}
 

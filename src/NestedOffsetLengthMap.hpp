@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -180,9 +180,13 @@ namespace REHex {
 		return r;
 	}
 	
-	template<typename T> void NestedOffsetLengthMap_data_inserted(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
+	/* Update the keys in the map for data being inserted into the file.
+	 * Returns the number of keys MODIFIED.
+	*/
+	template<typename T> size_t NestedOffsetLengthMap_data_inserted(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
 		NestedOffsetLengthMap<T> new_map;
+		size_t keys_modified = 0;
 		
 		for(auto i = map.begin(); i != map.end(); ++i)
 		{
@@ -192,10 +196,12 @@ namespace REHex {
 			if(i_offset >= offset)
 			{
 				new_map.emplace(NestedOffsetLengthMapKey((i_offset + length), i_length), i->second);
+				++keys_modified;
 			}
 			else if(i_offset < offset && (i_offset + i_length) > offset)
 			{
 				new_map.emplace(NestedOffsetLengthMapKey(i_offset, (i_length + length)), i->second);
+				++keys_modified;
 			}
 			else{
 				new_map.emplace(*i);
@@ -203,13 +209,18 @@ namespace REHex {
 		}
 		
 		map.swap(new_map);
+		return keys_modified;
 	}
 	
-	template<typename T> void NestedOffsetLengthMap_data_erased(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
+	/* Update the keys in the map for data being erased from the file.
+	 * Returns the number of keys MODIFIED or ERASED.
+	*/
+	template<typename T> size_t NestedOffsetLengthMap_data_erased(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
 		off_t end = offset + length;
 		
 		NestedOffsetLengthMap<T> new_map;
+		size_t keys_modified = 0;
 		
 		for(auto i = map.begin(); i != map.end(); ++i)
 		{
@@ -219,6 +230,7 @@ namespace REHex {
 			if(offset <= i_offset && end > (i_offset + i_length - (i_length > 0)))
 			{
 				/* This key is wholly encompassed by the deleted range. */
+				++keys_modified;
 				continue;
 			}
 			
@@ -236,10 +248,16 @@ namespace REHex {
 				i_offset -= std::min(length, (i_offset - offset));
 			}
 			
+			if(i_offset != i->first.offset || i_length != i->first.length)
+			{
+				++keys_modified;
+			}
+			
 			new_map.emplace(NestedOffsetLengthMapKey(i_offset, i_length), i->second);
 		}
 		
 		map.swap(new_map);
+		return keys_modified;
 	}
 }
 

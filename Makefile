@@ -95,6 +95,7 @@ APP_OBJS := \
 	src/buffer.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \
+	src/CommentTree.o \
 	src/decodepanel.o \
 	src/disassemble.o \
 	src/document.o \

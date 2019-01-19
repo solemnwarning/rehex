@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -74,6 +74,7 @@ END_EVENT_TABLE()
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,    wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,  wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -331,6 +332,11 @@ void REHex::Document::erase_data(off_t offset, off_t length)
 off_t REHex::Document::buffer_length()
 {
 	return buffer->length();
+}
+
+const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &REHex::Document::get_comments() const
+{
+	return comments;
 }
 
 void REHex::Document::handle_paste(const std::string &clipboard_text)
@@ -1887,7 +1893,11 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			++region;
 		}
 		
-		NestedOffsetLengthMap_data_inserted(comments, offset, length);
+		if(NestedOffsetLengthMap_data_inserted(comments, offset, length) > 0)
+		{
+			_raise_comment_modified();
+		}
+		
 		NestedOffsetLengthMap_data_inserted(highlights, offset, length);
 	}
 	
@@ -1991,7 +2001,11 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 		assert(to_shift == length);
 		assert(to_shrink == 0);
 		
-		NestedOffsetLengthMap_data_erased(comments, offset, length);
+		if(NestedOffsetLengthMap_data_erased(comments, offset, length) > 0)
+		{
+			_raise_comment_modified();
+		}
+		
 		NestedOffsetLengthMap_data_erased(highlights, offset, length);
 	}
 }
@@ -2164,10 +2178,12 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 				{
 					wxClientDC dc(this);
 					_delete_comment(dc, offset);
+					_raise_comment_modified();
 				},
-				[]()
+				[this]()
 				{
 					/* Comments are restored implicitly. */
+					_raise_comment_modified();
 				});
 		}
 		else if(old_comment.empty())
@@ -2177,10 +2193,12 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 				{
 					wxClientDC dc(this);
 					_set_comment_text(dc, offset, new_comment);
+					_raise_comment_modified();
 				},
-				[]()
+				[this]()
 				{
 					/* Comments are restored implicitly. */
+					_raise_comment_modified();
 				});
 		}
 		else{
@@ -2189,10 +2207,12 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 				{
 					wxClientDC dc(this);
 					_set_comment_text(dc, offset, new_comment);
+					_raise_comment_modified();
 				},
-				[]()
+				[this]()
 				{
 					/* Comments are restored implicitly. */
+					_raise_comment_modified();
 				});
 		}
 		
@@ -2467,6 +2487,14 @@ std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned
 void REHex::Document::_raise_moved()
 {
 	wxCommandEvent event(REHex::EV_CURSOR_MOVED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
+}
+
+void REHex::Document::_raise_comment_modified()
+{
+	wxCommandEvent event(REHex::EV_COMMENT_MODIFIED);
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);

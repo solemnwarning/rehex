@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,9 +33,26 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
 	wxDECLARE_EVENT(EV_INSERT_TOGGLED,    wxCommandEvent);
 	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
+	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
+			struct Comment
+			{
+				/* We use a shared_ptr here so that unmodified comment text isn't
+				 * duplicated throughout undo_stack and redo_stack. This might be
+				 * made obsolete in the future if we apply a similar technique to
+				 * the comments/highlights copies as a whole.
+				 *
+				 * wxString is used rather than std::string as it is unicode-aware
+				 * and will keep everything in order in memory and on-screen.
+				*/
+				
+				std::shared_ptr<const wxString> text;
+				
+				Comment(const wxString &text);
+			};
+			
 			Document(wxWindow *parent);
 			Document(wxWindow *parent, const std::string &filename);
 			~Document();
@@ -73,6 +90,8 @@ namespace REHex {
 			void insert_data(off_t offset, const unsigned char *data, off_t length);
 			void erase_data(off_t offset, off_t length);
 			off_t buffer_length();
+			
+			const NestedOffsetLengthMap<Comment> &get_comments() const;
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
@@ -131,22 +150,6 @@ namespace REHex {
 				
 				struct Data;
 				struct Comment;
-			};
-			
-			struct Comment
-			{
-				/* We use a shared_ptr here so that unmodified comment text isn't
-				 * duplicated throughout undo_stack and redo_stack. This might be
-				 * made obsolete in the future if we apply a similar technique to
-				 * the comments/highlights copies as a whole.
-				 *
-				 * wxString is used rather than std::string as it is unicode-aware
-				 * and will keep everything in order in memory and on-screen.
-				*/
-				
-				std::shared_ptr<const wxString> text;
-				
-				Comment(const wxString &text);
 			};
 			
 			struct TrackedChange
@@ -279,6 +282,7 @@ namespace REHex {
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			
 			void _raise_moved();
+			void _raise_comment_modified();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];

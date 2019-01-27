@@ -50,7 +50,6 @@ static bool isasciihex(int c)
 
 enum {
 	ID_REDRAW_CURSOR = 1,
-	ID_SET_COMMENT,
 	ID_SELECT_TIMER,
 	ID_CLEAR_HIGHLIGHT,
 };
@@ -67,7 +66,6 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_MOTION(REHex::Document::OnMotion)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::Document::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
-	EVT_MENU(ID_SET_COMMENT, REHex::Document::OnSetComment)
 	EVT_MENU(ID_CLEAR_HIGHLIGHT, REHex::Document::OnClearHighlight)
 END_EVENT_TABLE()
 
@@ -1194,7 +1192,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == '/')
 		{
-			_edit_comment_popup(cursor_pos);
+			_edit_comment_popup(cursor_pos, 0);
 		}
 	}
 }
@@ -1299,7 +1297,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				&& rel_x >= (hf_width / 4) /* Not left of left edge. */
 				&& rel_x < (virtual_width - (hf_width / 4))) /* Not right of right edge. */
 			{
-				_edit_comment_popup(cr->c_offset);
+				_edit_comment_popup(cr->c_offset, cr->c_length);
 			}
 		}
 	}
@@ -1425,13 +1423,47 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			
 			menu.AppendSeparator();
 			
-			if(_get_comment_text(get_cursor_position()).empty())
+			off_t cursor_pos = get_cursor_position();
+			
+			auto comments_at_cur = NestedOffsetLengthMap_get_all(comments, cursor_pos);
+			for(auto i = comments_at_cur.begin(); i != comments_at_cur.end(); ++i)
 			{
-				menu.Append(ID_SET_COMMENT, "Insert comment...");
+				NestedOffsetLengthMap<Comment>::const_iterator ci = *i;
+				
+				wxString text = ci->second.menu_preview();
+				wxMenuItem *itm = menu.Append(wxID_ANY, wxString("Edit \"") + text + "\"...");
+				
+				menu.Bind(wxEVT_MENU, [this, ci](wxCommandEvent &event)
+				{
+					_edit_comment_popup(ci->first.offset, ci->first.length);
+				}, itm->GetId(), itm->GetId());
 			}
-			else{
-				menu.Append(ID_SET_COMMENT, "Edit comment...");
+			
+			if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end())
+			{
+				wxMenuItem *itm = menu.Append(wxID_ANY, "Insert comment here...");
+				
+				menu.Bind(wxEVT_MENU, [this, cursor_pos](wxCommandEvent &event)
+				{
+					_edit_comment_popup(cursor_pos, 0);
+				}, itm->GetId(), itm->GetId());
 			}
+			
+			if(selection_length > 0
+				&& comments.find(NestedOffsetLengthMapKey(selection_off, selection_length)) == comments.end()
+				&& NestedOffsetLengthMap_can_set(comments, selection_off, selection_length))
+			{
+				char menu_label[64];
+				snprintf(menu_label, sizeof(menu_label), "Set comment on %lld bytes...", (long long)(selection_length));
+				wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
+				
+				menu.Bind(wxEVT_MENU, [this](wxCommandEvent &event)
+				{
+					_edit_comment_popup(selection_off, selection_length);
+				}, itm->GetId(), itm->GetId());
+			}
+			
+			menu.AppendSeparator();
 			
 			/* We need to maintain bitmap instances for lifespan of menu. */
 			std::list<wxBitmap> bitmaps;
@@ -1439,7 +1471,6 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			off_t highlight_off;
 			off_t highlight_length = 0;
 			
-			off_t cursor_pos = get_cursor_position();
 			auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
 			
 			if(selection_length > 0)
@@ -1661,12 +1692,6 @@ void REHex::Document::OnRedrawCursor(wxTimerEvent &event)
 	Refresh();
 }
 
-/* Handles the "Insert comment" context menu option */
-void REHex::Document::OnSetComment(wxCommandEvent &event)
-{
-	_edit_comment_popup(get_cursor_position());
-}
-
 void REHex::Document::OnClearHighlight(wxCommandEvent &event)
 {
 	off_t cursor_pos = get_cursor_position();
@@ -1764,7 +1789,7 @@ void REHex::Document::_reinit_regions()
 		
 		while(next_comment != comments.end() && next_comment->first.offset == next_data)
 		{
-			regions.push_back(new REHex::Document::Region::Comment(next_comment->first.offset, *(next_comment->second.text)));
+			regions.push_back(new REHex::Document::Region::Comment(next_comment->first.offset, next_comment->first.length, *(next_comment->second.text)));
 			++next_comment;
 		}
 		
@@ -2123,42 +2148,35 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	redo_stack.clear();
 }
 
-wxString REHex::Document::_get_comment_text(off_t offset)
+void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text)
 {
-	auto c = comments.find(NestedOffsetLengthMapKey(offset, 0));
-	if(c != comments.end())
+	if(NestedOffsetLengthMap_set(comments, offset, length, Comment(text)))
 	{
-		return *(c->second.text);
+		dirty = true;
+		
+		_reinit_regions();
+		_recalc_regions(dc);
 	}
+}
+
+void REHex::Document::_delete_comment(wxDC &dc, off_t offset, off_t length)
+{
+	if(comments.erase(NestedOffsetLengthMapKey(offset, length)) > 0)
+	{
+		dirty = true;
+		
+		_reinit_regions();
+		_recalc_regions(dc);
+	}
+}
+
+void REHex::Document::_edit_comment_popup(off_t offset, off_t length)
+{
+	auto ci = comments.find(NestedOffsetLengthMapKey(offset, length));
+	wxString old_comment = ci != comments.end()
+		? *(ci->second.text)
+		: "";
 	
-	return "";
-}
-
-void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, const wxString &text)
-{
-	if(NestedOffsetLengthMap_set(comments, offset, 0, Comment(text)))
-	{
-		dirty = true;
-		
-		_reinit_regions();
-		_recalc_regions(dc);
-	}
-}
-
-void REHex::Document::_delete_comment(wxDC &dc, off_t offset)
-{
-	if(comments.erase(NestedOffsetLengthMapKey(offset, 0)) > 0)
-	{
-		dirty = true;
-		
-		_reinit_regions();
-		_recalc_regions(dc);
-	}
-}
-
-void REHex::Document::_edit_comment_popup(off_t offset)
-{
-	wxString old_comment = _get_comment_text(offset);
 	REHex::TextEntryDialog te(this, "Enter comment", old_comment);
 	
 	int rc = te.ShowModal();
@@ -2174,10 +2192,10 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 		if(new_comment.empty())
 		{
 			_tracked_change("delete comment",
-				[this, offset]()
+				[this, offset, length]()
 				{
 					wxClientDC dc(this);
-					_delete_comment(dc, offset);
+					_delete_comment(dc, offset, length);
 					_raise_comment_modified();
 				},
 				[this]()
@@ -2189,10 +2207,10 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 		else if(old_comment.empty())
 		{
 			_tracked_change("insert comment",
-				[this, offset, new_comment]()
+				[this, offset, length, new_comment]()
 				{
 					wxClientDC dc(this);
-					_set_comment_text(dc, offset, new_comment);
+					_set_comment_text(dc, offset, length, new_comment);
 					_raise_comment_modified();
 				},
 				[this]()
@@ -2203,10 +2221,10 @@ void REHex::Document::_edit_comment_popup(off_t offset)
 		}
 		else{
 			_tracked_change("modify comment",
-				[this, offset, new_comment]()
+				[this, offset, length, new_comment]()
 				{
 					wxClientDC dc(this);
-					_set_comment_text(dc, offset, new_comment);
+					_set_comment_text(dc, offset, length, new_comment);
 					_raise_comment_modified();
 				},
 				[this]()
@@ -2243,6 +2261,7 @@ json_t *REHex::Document::_dump_metadata()
 		json_t *comment = json_object();
 		if(json_array_append(comments, comment) == -1
 			|| json_object_set_new(comment, "offset", json_integer(c->first.offset)) == -1
+			|| json_object_set_new(comment, "length", json_integer(c->first.length)) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
 		{
 			json_decref(root);
@@ -2293,11 +2312,13 @@ REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::Document::_load_co
 	json_array_foreach(j_comments, index, value)
 	{
 		off_t offset  = json_integer_value(json_object_get(value, "offset"));
+		off_t length  = json_integer_value(json_object_get(value, "length"));
 		wxString text = wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
 		
-		if(offset >= 0 && offset < buffer_length)
+		if(offset >= 0 && offset < buffer_length
+			&& length >= 0 && (offset + length) <= buffer_length)
 		{
-			NestedOffsetLengthMap_set(comments, offset, 0, Comment(text));
+			NestedOffsetLengthMap_set(comments, offset, length, Comment(text));
 		}
 	}
 	
@@ -2541,6 +2562,47 @@ int REHex::Document::hf_char_at_x(int x_px)
 
 REHex::Document::Comment::Comment(const wxString &text):
 	text(new wxString(text)) {}
+
+/* Get a preview of the comment suitable for use as a wxMenuItem label. */
+wxString REHex::Document::Comment::menu_preview() const
+{
+	/* Get the first line of the comment. */
+	size_t line_len = text->find_first_of("\r\n");
+	wxString first_line = text->substr(0, line_len);
+	
+	/* Escape any ampersands in the comment. */
+	for(size_t i = 0; (i = first_line.find_first_of("&", i)) < first_line.length();)
+	{
+		/* TODO: Make this actually be an ampersand. Posts suggest &&
+		 * should work, but others say not portable.
+		*/
+		first_line.replace(i, 1, "_");
+	}
+	
+	/* Remove any control characters from the first line. */
+	
+	wxString ctrl_chars;
+	for(char i = 0; i < 32; ++i)
+	{
+		ctrl_chars.append(1, i);
+	}
+	
+	for(size_t i = 0; (i = first_line.find_first_of(ctrl_chars, i)) < first_line.length();)
+	{
+		first_line.erase(i, 1);
+	}
+	
+	/* TODO: Truncate on characters rather than bytes. */
+	
+	static const int MAX_CHARS = 32;
+	if(first_line.length() > MAX_CHARS)
+	{
+		return first_line.substr(0, MAX_CHARS) + "...";
+	}
+	else{
+		return first_line;
+	}
+}
 
 REHex::Document::Region::~Region() {}
 
@@ -3125,8 +3187,8 @@ off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(off_t c_offset, const wxString &c_text):
-	c_offset(c_offset), c_text(c_text) {}
+REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text):
+	c_offset(c_offset), c_length(c_length), c_text(c_text) {}
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {

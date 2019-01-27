@@ -51,6 +51,8 @@ namespace REHex {
 				std::shared_ptr<const wxString> text;
 				
 				Comment(const wxString &text);
+				
+				wxString menu_preview() const;
 			};
 			
 			Document(wxWindow *parent);
@@ -111,7 +113,6 @@ namespace REHex {
 			void OnSelectTick(wxTimerEvent &event);
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
-			void OnSetComment(wxCommandEvent &event);
 			void OnClearHighlight(wxCommandEvent &event);
 			
 		#ifndef UNIT_TEST
@@ -255,10 +256,9 @@ namespace REHex {
 			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
 			
-			wxString _get_comment_text(off_t offset);
-			void _set_comment_text(wxDC &dc, off_t offset, const wxString &text);
-			void _delete_comment(wxDC &dc, off_t offset);
-			void _edit_comment_popup(off_t offset);
+			void _set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text);
+			void _delete_comment(wxDC &dc, off_t offset, off_t length);
+			void _edit_comment_popup(off_t offset, off_t length);
 			
 			json_t *_dump_metadata();
 			void _save_metadata(const std::string &filename);
@@ -314,10 +314,10 @@ namespace REHex {
 	
 	struct Document::Region::Comment: public REHex::Document::Region
 	{
-		off_t c_offset;
+		off_t c_offset, c_length;
 		const wxString &c_text;
 		
-		Comment(off_t c_offset, const wxString &c_text);
+		Comment(off_t c_offset, off_t c_length, const wxString &c_text);
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

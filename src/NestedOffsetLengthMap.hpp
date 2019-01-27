@@ -28,6 +28,7 @@
 
 #include <iterator>
 #include <limits>
+#include <list>
 #include <map>
 #include <stdio.h>
 
@@ -175,6 +176,57 @@ namespace REHex {
 					break;
 				}
 			}
+		}
+		
+		return r;
+	}
+	
+	/* Search for any elements which apply to the given offset.
+	 * Returns a list of iterators, from most specific to least.
+	 *
+	 * NOTE: Unlike NestedOffsetLengthMap_get(), this will match keys with
+	 * a length of zero.
+	*/
+	template<typename T> std::list<typename NestedOffsetLengthMap<T>::const_iterator> NestedOffsetLengthMap_get_all(const NestedOffsetLengthMap<T> &map, off_t offset)
+	{
+		std::list<typename NestedOffsetLengthMap<T>::const_iterator> r;
+		
+		auto i = map.upper_bound(NestedOffsetLengthMapKey(offset, std::numeric_limits<off_t>::max()));
+		if(i == map.end() && !map.empty())
+		{
+			--i;
+		}
+		
+		if(i != map.end())
+		{
+			off_t this_off = i->first.offset;
+			std::list<typename NestedOffsetLengthMap<T>::const_iterator> this_r;
+			
+			for(;; --i)
+			{
+				off_t i_offset = i->first.offset;
+				off_t i_end    = i_offset + i->first.length;
+				
+				if(i_offset != this_off)
+				{
+					r.insert(r.end(), this_r.begin(), this_r.end());
+					this_r.clear();
+					
+					this_off = i_offset;
+				}
+				
+				if((i_offset <= offset && i_end > offset) || i_offset == offset)
+				{
+					this_r.push_front(i);
+				}
+				
+				if(i == map.begin())
+				{
+					break;
+				}
+			}
+			
+			r.insert(r.end(), this_r.begin(), this_r.end());
 		}
 		
 		return r;

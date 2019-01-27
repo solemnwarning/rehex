@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <iterator>
+
 #include "tests/tap/basic.h"
 
 #include "../src/NestedOffsetLengthMap.hpp"
@@ -47,6 +49,25 @@
 	ok((i == map.end()), \
 		"NestedOffsetLengthMap_get(map, %d) finds no match (%s:%d)", offset, __FILE__, __LINE__) \
 		|| diag("Found value: %d", i->second); \
+}
+
+#define GET_ALL_SIZE(get_all_result, expect_size) \
+{ \
+	is_int(expect_size, get_all_result.size(), # get_all_result ".size() (%s:%d)", __FILE__, __LINE__); \
+}
+
+#define GET_ALL_ELEM(get_all_result, get_all_index, map_index) \
+{ \
+	if(get_all_result.size() > get_all_index) \
+	{ \
+		auto gar_map_iter = *(std::next(get_all_result.begin(), get_all_index)); \
+		auto map_iter = std::next(map.begin(), map_index); \
+		if(!ok((gar_map_iter == map_iter), # get_all_result "[%d] (%s:%d)", get_all_index, __FILE__, __LINE__)) \
+		{ \
+			diag("got    key.offset = %d, key.length = %d", (int)(gar_map_iter->first.offset), (int)(gar_map_iter->first.length)); \
+			diag("expect key.offset = %d, key.length = %d", (int)(map_iter->first.offset), (int)(map_iter->first.length)); \
+		} \
+	} \
 }
 
 using namespace REHex;
@@ -103,6 +124,65 @@ int main(int argc, char **argv)
 		BAD_SET(29, 2, "Overlapping end of existing range at start of map");
 		BAD_SET(39, 2, "Overlapping end of existing range in middle of map");
 		BAD_SET(59, 2, "Overlapping end of existing range at end of map");
+	}
+	
+	/* Testing:
+	 *
+	 * NestedOffsetLengthMap_get_all()
+	*/
+	
+	{
+		NestedOffsetLengthMap<int> map;
+		
+		OK_SET(5,  4,  0);  /* 0 */
+		OK_SET(5,  5,  0);  /* 1 */
+		OK_SET(5,  20, 0);  /* 2 */
+		OK_SET(10, 0,  0);  /* 3 */
+		OK_SET(10, 5,  0);  /* 4 */
+		OK_SET(10, 10, 0);  /* 5 */
+		
+		auto r4 = NestedOffsetLengthMap_get_all(map, 4);
+		GET_ALL_SIZE(r4, 0);
+		
+		auto r5 = NestedOffsetLengthMap_get_all(map, 5);
+		GET_ALL_SIZE(r5, 3);
+		GET_ALL_ELEM(r5, 0, 0);
+		GET_ALL_ELEM(r5, 1, 1);
+		GET_ALL_ELEM(r5, 2, 2);
+		
+		auto r8 = NestedOffsetLengthMap_get_all(map, 8);
+		GET_ALL_SIZE(r8, 3);
+		GET_ALL_ELEM(r8, 0, 0);
+		GET_ALL_ELEM(r8, 1, 1);
+		GET_ALL_ELEM(r8, 2, 2);
+		
+		auto r9 = NestedOffsetLengthMap_get_all(map, 9);
+		GET_ALL_SIZE(r9, 2);
+		GET_ALL_ELEM(r9, 0, 1);
+		GET_ALL_ELEM(r9, 1, 2);
+		
+		auto r10 = NestedOffsetLengthMap_get_all(map, 10);
+		GET_ALL_SIZE(r10, 4);
+		GET_ALL_ELEM(r10, 0, 3);
+		GET_ALL_ELEM(r10, 1, 4);
+		GET_ALL_ELEM(r10, 2, 5);
+		GET_ALL_ELEM(r10, 3, 2);
+		
+		auto r11 = NestedOffsetLengthMap_get_all(map, 11);
+		GET_ALL_SIZE(r11, 3);
+		GET_ALL_ELEM(r11, 0, 4);
+		GET_ALL_ELEM(r11, 1, 5);
+		GET_ALL_ELEM(r11, 2, 2);
+		
+		auto r19 = NestedOffsetLengthMap_get_all(map, 19);
+		GET_ALL_SIZE(r19, 2);
+		GET_ALL_ELEM(r19, 0, 5);
+		GET_ALL_ELEM(r19, 1, 2);
+		
+		auto r20 = NestedOffsetLengthMap_get_all(map, 20);
+		GET_ALL_SIZE(r20, 1);
+		GET_ALL_ELEM(r20, 0, 2);
+		
 	}
 	
 	/* Testing:

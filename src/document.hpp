@@ -319,6 +319,10 @@ namespace REHex {
 		
 		Comment(off_t c_offset, off_t c_length, const wxString &c_text);
 		
+		/* Kludge for unit tests which really need to be redesigned... */
+		Comment(off_t c_offset, const wxString &c_text):
+			Comment(c_offset, 0, c_text) {}
+		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 	};

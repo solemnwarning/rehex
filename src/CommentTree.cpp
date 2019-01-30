@@ -16,6 +16,7 @@
 */
 
 #include <stack>
+#include <utility>
 
 #include "CommentTree.hpp"
 
@@ -27,8 +28,14 @@ REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document &document):
 	model = new CommentTreeModel(document);
 	
 	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_NO_HEADER);
-	dvc->AppendTextColumn("Comment", 0);
+	
+	wxDataViewColumn *col = dvc->AppendTextColumn("Comment", 0);
+	col->SetSortable(true);
+	
 	dvc->AssociateModel(model);
+	
+	/* NOTE: This has to come after AssociateModel, or it will segfault. */
+	col->SetSortOrder(true);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
@@ -68,6 +75,7 @@ void REHex::CommentTree::unbind_events()
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
+	dvc->Refresh();
 }
 
 void REHex::CommentTree::OnDocumentDestroy(wxWindowDestroyEvent &event)
@@ -89,20 +97,40 @@ void REHex::CommentTreeModel::refresh_comments()
 {
 	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document.get_comments();
 	
-	/* TODO: Intelligently add/remove elements rather than repopulating. */
+	/* Erase any comments which no longer exist, or are children of such. */
 	
-	root.clear();
-	values.clear();
-	Cleared();
+	for(auto i = values.begin(); i != values.end();)
+	{
+		values_elem_t *value = &(*i);
+		
+		if(comments.find(value->first) == comments.end())
+		{
+			i = erase_value(i);
+		}
+		else{
+			++i;
+		}
+	}
 	
+	/* Add any comments which we don't already have registered. */
+	
+	/* Stack of comments the point we are processing is nested within. */
 	std::stack<values_elem_t*> parents;
 	
 	for(auto offset_base = comments.begin(); offset_base != comments.end();)
 	{
+		/* Pop any comments off parents which we have gone past the end of. */
 		while(!parents.empty() && (parents.top()->first.offset + parents.top()->first.length) <= offset_base->first.offset)
 		{
 			parents.pop();
 		}
+		
+		/* We process any comments at the same offset from largest to smallest, ensuring
+		 * smaller comments are parented to the next-larger one at the same offset.
+		 *
+		 * This could be optimised by changing the order of keys in the comments map, but
+		 * that'll probably break something...
+		*/
 		
 		auto next_offset = offset_base;
 		while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
@@ -119,21 +147,52 @@ void REHex::CommentTreeModel::refresh_comments()
 			auto x = values.emplace(std::make_pair(c->first, CommentData(parent)));
 			values_elem_t *value = &(*(x.first));
 			
-			if(parent == NULL)
-			{
-				root.insert(value);
-			}
-			else{
-				parent->second.children.insert(value);
-			}
-			
 			parents.push(value);
 			
-			ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+			if(x.second)
+			{
+				/* Add the item if it wasn't already in the values map. */
+				
+				if(parent == NULL)
+				{
+					root.insert(value);
+				}
+				else{
+					parent->second.children.insert(value);
+				}
+				
+				ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+			}
 		} while(c != offset_base);
 		
 		offset_base = next_offset;
 	}
+}
+
+std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator REHex::CommentTreeModel::erase_value(std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator value_i)
+{
+	values_elem_t *value  = &(*value_i);
+	values_elem_t *parent = value->second.parent;
+	
+	for(std::set<values_elem_t*>::iterator c; (c = value->second.children.begin()) != value->second.children.end();)
+	{
+		values_elem_t *child = *c;
+		erase_value(values.find(child->first));
+	}
+	
+	if(parent == NULL)
+	{
+		root.erase(value);
+	}
+	else{
+		parent->second.children.erase(value);
+	}
+	
+	auto next_value_i = values.erase(value_i);
+	
+	ItemDeleted(wxDataViewItem(parent), wxDataViewItem(value));
+	
+	return next_value_i;
 }
 
 int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const

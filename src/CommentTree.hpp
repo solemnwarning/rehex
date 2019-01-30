@@ -58,6 +58,8 @@ namespace REHex {
 			
 			std::map<NestedOffsetLengthMapKey, CommentData> values;
 			std::set<values_elem_t*> root;
+			
+			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
 	};
 	
 	class CommentTree: public wxPanel

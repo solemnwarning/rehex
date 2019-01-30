@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <stack>
+
 #include "CommentTree.hpp"
 
 REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document &document):
@@ -87,18 +89,50 @@ void REHex::CommentTreeModel::refresh_comments()
 {
 	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document.get_comments();
 	
-	/* TODO: Handle nested comments. */
 	/* TODO: Intelligently add/remove elements rather than repopulating. */
 	
+	root.clear();
 	values.clear();
 	Cleared();
 	
-	for(auto c = comments.begin(); c != comments.end(); ++c)
+	std::stack<values_elem_t*> parents;
+	
+	for(auto offset_base = comments.begin(); offset_base != comments.end();)
 	{
-		auto x = values.insert(c->first);
-		const NestedOffsetLengthMapKey *key = &(*(x.first));
+		while(!parents.empty() && (parents.top()->first.offset + parents.top()->first.length) <= offset_base->first.offset)
+		{
+			parents.pop();
+		}
 		
-		ItemAdded(wxDataViewItem(NULL), wxDataViewItem((void*)(key)));
+		auto next_offset = offset_base;
+		while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
+		{
+			++next_offset;
+		}
+		
+		auto c = next_offset;
+		do {
+			--c;
+			
+			values_elem_t *parent = parents.empty() ? NULL : parents.top();
+			
+			auto x = values.emplace(std::make_pair(c->first, CommentData(parent)));
+			values_elem_t *value = &(*(x.first));
+			
+			if(parent == NULL)
+			{
+				root.insert(value);
+			}
+			else{
+				parent->second.children.insert(value);
+			}
+			
+			parents.push(value);
+			
+			ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+		} while(c != offset_base);
+		
+		offset_base = next_offset;
 	}
 }
 
@@ -144,24 +178,18 @@ int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataVi
 
 unsigned int REHex::CommentTreeModel::GetChildren(const wxDataViewItem &item, wxDataViewItemArray &children) const
 {
-	/* TODO: Handle nested comments. */
+	values_elem_t *value = (values_elem_t*)(item.GetID());
+	auto v_children = (value != NULL ? &(value->second.children) : &root);
 	
-	const NestedOffsetLengthMapKey *key = (const NestedOffsetLengthMapKey*)(item.GetID());
-	if(key == NULL)
+	children.Alloc(v_children->size());
+	
+	for(auto v = v_children->begin(); v != v_children->end(); ++v)
 	{
-		children.Alloc(values.size());
-		
-		for(auto v = values.begin(); v != values.end(); ++v)
-		{
-			const NestedOffsetLengthMapKey *vk = &(*v);
-			children.Add(wxDataViewItem((void*)(vk)));
-		}
-		
-		return values.size();
+		values_elem_t *v_data = *v;
+		children.Add(wxDataViewItem((void*)(v_data)));
 	}
-	else{
-		return 0;
-	}
+	
+	return v_children->size();
 }
 
 unsigned int REHex::CommentTreeModel::GetColumnCount() const
@@ -177,8 +205,8 @@ wxString REHex::CommentTreeModel::GetColumnType(unsigned int col) const
 
 wxDataViewItem REHex::CommentTreeModel::GetParent(const wxDataViewItem &item) const
 {
-	/* TODO: Handle nested comments. */
-	return wxDataViewItem(NULL);
+	values_elem_t *value = (values_elem_t*)(item.GetID());
+	return wxDataViewItem(value->second.parent);
 }
 
 void REHex::CommentTreeModel::GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const

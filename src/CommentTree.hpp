@@ -45,7 +45,19 @@ namespace REHex {
 		private:
 			REHex::Document &document;
 			
-			std::set<NestedOffsetLengthMapKey> values;
+			struct CommentData;
+			typedef std::pair<const NestedOffsetLengthMapKey, CommentData> values_elem_t;
+			
+			struct CommentData
+			{
+				values_elem_t *parent;
+				std::set<values_elem_t*> children;
+				
+				CommentData(values_elem_t *parent): parent(parent) {}
+			};
+			
+			std::map<NestedOffsetLengthMapKey, CommentData> values;
+			std::set<values_elem_t*> root;
 	};
 	
 	class CommentTree: public wxPanel

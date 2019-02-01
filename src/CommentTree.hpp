@@ -29,7 +29,7 @@ namespace REHex {
 	class CommentTreeModel: public wxDataViewModel
 	{
 		public:
-			CommentTreeModel(REHex::Document &document);
+			CommentTreeModel(REHex::Document * const &document);
 			
 			void refresh_comments();
 			
@@ -43,7 +43,7 @@ namespace REHex {
 			virtual bool SetValue(const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
 			
 		private:
-			REHex::Document &document;
+			REHex::Document * const &document;
 			
 			struct CommentData;
 			typedef std::pair<const NestedOffsetLengthMapKey, CommentData> values_elem_t;
@@ -65,13 +65,13 @@ namespace REHex {
 	class CommentTree: public wxPanel
 	{
 		public:
-			CommentTree(wxWindow *parent, REHex::Document &document);
+			CommentTree(wxWindow *parent, REHex::Document *document);
 			virtual ~CommentTree();
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			
 		private:
-			REHex::Document &document;
+			REHex::Document *document;
 			
 			wxDataViewCtrl *dvc;
 			CommentTreeModel *model;

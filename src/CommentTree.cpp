@@ -20,12 +20,12 @@
 
 #include "CommentTree.hpp"
 
-REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document &document):
+REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
 	wxPanel(parent, wxID_ANY),
 	document(document),
 	events_bound(false)
 {
-	model = new CommentTreeModel(document);
+	model = new CommentTreeModel(this->document); /* Reference /class/ document pointer! */
 	
 	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_NO_HEADER);
 	
@@ -41,8 +41,8 @@ REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document &document):
 	sizer->Add(dvc, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	document.Bind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
-	document.Bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
+	document->Bind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
+	document->Bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
 	
 	events_bound = true;
 	
@@ -65,8 +65,8 @@ void REHex::CommentTree::unbind_events()
 {
 	if(events_bound)
 	{
-		document.Unbind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
-		document.Unbind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
+		document->Unbind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
+		document->Unbind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
 		
 		events_bound = false;
 	}
@@ -81,6 +81,7 @@ void REHex::CommentTree::refresh_comments()
 void REHex::CommentTree::OnDocumentDestroy(wxWindowDestroyEvent &event)
 {
 	unbind_events();
+	document = NULL;
 	event.Skip();
 }
 
@@ -90,12 +91,17 @@ void REHex::CommentTree::OnCommentModified(wxCommandEvent &event)
 	event.Skip();
 }
 
-REHex::CommentTreeModel::CommentTreeModel(REHex::Document &document):
+REHex::CommentTreeModel::CommentTreeModel(REHex::Document * const &document):
 	document(document) {}
 
 void REHex::CommentTreeModel::refresh_comments()
 {
-	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document.get_comments();
+	if(document == NULL)
+	{
+		return;
+	}
+	
+	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document->get_comments();
 	
 	/* Erase any comments which no longer exist, or are children of such. */
 	
@@ -272,8 +278,14 @@ void REHex::CommentTreeModel::GetValue(wxVariant &variant, const wxDataViewItem 
 {
 	assert(col == 0);
 	
+	if(document == NULL)
+	{
+		variant = "BUG: Document destroyed";
+		return;
+	}
+	
 	const NestedOffsetLengthMapKey *key = (const NestedOffsetLengthMapKey*)(item.GetID());
-	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document.get_comments();
+	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document->get_comments();
 	
 	auto c = comments.find(*key);
 	if(c != comments.end())

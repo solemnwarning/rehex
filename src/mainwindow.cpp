@@ -883,7 +883,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
-	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, *doc);
+	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
 	v_tools->AddPage(ct, "Comments");
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
@@ -924,7 +924,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
-	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, *doc);
+	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
 	v_tools->AddPage(ct, "Comments");
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);

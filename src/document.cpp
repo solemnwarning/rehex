@@ -337,6 +337,40 @@ const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &REHex::Document::g
 	return comments;
 }
 
+bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &comment)
+{
+	if(NestedOffsetLengthMap_set(comments, offset, length, comment))
+	{
+		_reinit_regions();
+		
+		wxClientDC dc(this);
+		_recalc_regions(dc);
+		
+		_raise_comment_modified();
+		
+		return true;
+	}
+	
+	return false;
+}
+
+bool REHex::Document::erase_comment(off_t offset, off_t length)
+{
+	if(comments.erase(NestedOffsetLengthMapKey(offset, length)) > 0)
+	{
+		_reinit_regions();
+		
+		wxClientDC dc(this);
+		_recalc_regions(dc);
+		
+		_raise_comment_modified();
+		
+		return true;
+	}
+	
+	return false;
+}
+
 void REHex::Document::handle_paste(const std::string &clipboard_text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)

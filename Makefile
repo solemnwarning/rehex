@@ -53,6 +53,7 @@ DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
 ALL_TESTS := \
 	tests/buffer.t \
+	tests/CommentTree.t \
 	tests/document.t \
 	tests/NestedOffsetLengthMap.t \
 	tests/NumericTextCtrl.t \
@@ -118,6 +119,20 @@ TESTS_BUFFER_OBJS := \
 	tests/tap/basic.o
 
 tests/buffer.t: $(TESTS_BUFFER_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+TESTS_COMMENTTREE_OBJS := \
+	src/buffer.o \
+	src/CommentTree.o \
+	src/document.o \
+	src/Palette.o \
+	src/textentrydialog.o \
+	src/util.o \
+	src/win32lib.o \
+	tests/CommentTree.o \
+	tests/tap/basic.o
+
+tests/CommentTree.t: $(TESTS_COMMENTTREE_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 TESTS_DOCUMENT_OBJS := \

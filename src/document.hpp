@@ -94,6 +94,8 @@ namespace REHex {
 			off_t buffer_length();
 			
 			const NestedOffsetLengthMap<Comment> &get_comments() const;
+			bool set_comment(off_t offset, off_t length, const Comment &comment);
+			bool erase_comment(off_t offset, off_t length);
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);

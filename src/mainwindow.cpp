@@ -29,6 +29,7 @@
 
 #include "AboutDialog.hpp"
 #include "app.hpp"
+#include "CommentTree.hpp"
 #include "decodepanel.hpp"
 #include "disassemble.hpp"
 #include "mainwindow.hpp"
@@ -882,6 +883,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
+	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
+	v_tools->AddPage(ct, "Comments");
+	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());
 	
@@ -919,6 +923,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	disasm = new REHex::Disassemble(v_tools, *doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
+	
+	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
+	v_tools->AddPage(ct, "Comments");
 	
 	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
 	dp->update(data_at_off.data(), data_at_off.size());

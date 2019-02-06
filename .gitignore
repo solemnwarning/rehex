@@ -15,6 +15,7 @@
 /res/license.h
 /tests/.tmpfile*
 /tests/buffer.t
+/tests/CommentTree.t
 /tests/document.t
 /tests/NestedOffsetLengthMap.t
 /tests/NumericTextCtrl.t

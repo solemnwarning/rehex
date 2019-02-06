@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,7 @@
 #include <functional>
 #include <jansson.h>
 #include <list>
+#include <memory>
 #include <stdint.h>
 #include <utility>
 #include <wx/wx.h>
@@ -32,9 +33,28 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
 	wxDECLARE_EVENT(EV_INSERT_TOGGLED,    wxCommandEvent);
 	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
+	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
+			struct Comment
+			{
+				/* We use a shared_ptr here so that unmodified comment text isn't
+				 * duplicated throughout undo_stack and redo_stack. This might be
+				 * made obsolete in the future if we apply a similar technique to
+				 * the comments/highlights copies as a whole.
+				 *
+				 * wxString is used rather than std::string as it is unicode-aware
+				 * and will keep everything in order in memory and on-screen.
+				*/
+				
+				std::shared_ptr<const wxString> text;
+				
+				Comment(const wxString &text);
+				
+				wxString menu_preview() const;
+			};
+			
 			Document(wxWindow *parent);
 			Document(wxWindow *parent, const std::string &filename);
 			~Document();
@@ -73,6 +93,10 @@ namespace REHex {
 			void erase_data(off_t offset, off_t length);
 			off_t buffer_length();
 			
+			const NestedOffsetLengthMap<Comment> &get_comments() const;
+			bool set_comment(off_t offset, off_t length, const Comment &comment);
+			bool erase_comment(off_t offset, off_t length);
+			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
 			
@@ -91,7 +115,6 @@ namespace REHex {
 			void OnSelectTick(wxTimerEvent &event);
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
-			void OnSetComment(wxCommandEvent &event);
 			void OnClearHighlight(wxCommandEvent &event);
 			
 		#ifndef UNIT_TEST
@@ -141,6 +164,7 @@ namespace REHex {
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
+				NestedOffsetLengthMap<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
 			};
 			
@@ -151,6 +175,7 @@ namespace REHex {
 			std::string filename;
 			bool dirty;
 			
+			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
 			
 			std::string title;
@@ -218,7 +243,7 @@ namespace REHex {
 			void _ctor_pre(wxWindow *parent);
 			void _ctor_post();
 			
-			void _init_regions(const json_t *meta);
+			void _reinit_regions();
 			void _recalc_regions(wxDC &dc);
 			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
@@ -233,13 +258,16 @@ namespace REHex {
 			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
 			
-			wxString _get_comment_text(off_t offset);
-			void _set_comment_text(wxDC &dc, off_t offset, const wxString &text);
-			void _delete_comment(wxDC &dc, off_t offset);
-			void _edit_comment_popup(off_t offset);
+			void _set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text);
+			void _delete_comment(wxDC &dc, off_t offset, off_t length);
+			void _edit_comment_popup(off_t offset, off_t length);
 			
 			json_t *_dump_metadata();
 			void _save_metadata(const std::string &filename);
+			
+			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
+			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			void _load_metadata(const std::string &filename);
 			
 			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
 			
@@ -256,6 +284,7 @@ namespace REHex {
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			
 			void _raise_moved();
+			void _raise_comment_modified();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
@@ -287,10 +316,14 @@ namespace REHex {
 	
 	struct Document::Region::Comment: public REHex::Document::Region
 	{
-		off_t c_offset;
-		wxString c_text;
+		off_t c_offset, c_length;
+		const wxString &c_text;
 		
-		Comment(off_t c_offset, const wxString &c_text);
+		Comment(off_t c_offset, off_t c_length, const wxString &c_text);
+		
+		/* Kludge for unit tests which really need to be redesigned... */
+		Comment(off_t c_offset, const wxString &c_text):
+			Comment(c_offset, 0, c_text) {}
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

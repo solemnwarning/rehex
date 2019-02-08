@@ -96,6 +96,7 @@ namespace REHex {
 			const NestedOffsetLengthMap<Comment> &get_comments() const;
 			bool set_comment(off_t offset, off_t length, const Comment &comment);
 			bool erase_comment(off_t offset, off_t length);
+			void edit_comment_popup(off_t offset, off_t length);
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
@@ -260,7 +261,6 @@ namespace REHex {
 			
 			void _set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text);
 			void _delete_comment(wxDC &dc, off_t offset, off_t length);
-			void _edit_comment_popup(off_t offset, off_t length);
 			
 			json_t *_dump_metadata();
 			void _save_metadata(const std::string &filename);

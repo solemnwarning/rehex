@@ -20,6 +20,16 @@
 
 #include "CommentTree.hpp"
 
+enum {
+	ID_EDIT_COMMENT = 1,
+	ID_GOTO,
+	ID_SELECT,
+};
+
+BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
+	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
+END_EVENT_TABLE()
+
 REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
 	wxPanel(parent, wxID_ANY),
 	document(document),
@@ -89,6 +99,53 @@ void REHex::CommentTree::OnCommentModified(wxCommandEvent &event)
 {
 	refresh_comments();
 	event.Skip();
+}
+
+void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
+{
+	assert(document != NULL);
+	
+	const NestedOffsetLengthMapKey *key = CommentTreeModel::dv_item_to_key(event.GetItem());
+	if(key == NULL)
+	{
+		/* Click wasn't over an item. */
+		return;
+	}
+	
+	wxMenu menu;
+	
+	menu.Append(ID_GOTO, "&Jump to offset");
+	
+	menu.Append(ID_SELECT, "&Select bytes");
+	menu.Enable(ID_SELECT, (key->length > 0));
+	
+	menu.AppendSeparator();
+	
+	menu.Append(ID_EDIT_COMMENT,  "&Edit comment");
+	
+	menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
+	{
+		switch(event.GetId())
+		{
+			case ID_GOTO:
+				document->set_cursor_position(key->offset);
+				break;
+				
+			case ID_SELECT:
+				document->set_cursor_position(key->offset);
+				document->set_selection(key->offset, key->length);
+				break;
+				
+			case ID_EDIT_COMMENT:
+				document->edit_comment_popup(key->offset, key->length);
+				break;
+				
+			default:
+				break;
+		}
+	});
+	
+	PopupMenu(&menu);
 }
 
 REHex::CommentTreeModel::CommentTreeModel(REHex::Document * const &document):
@@ -173,6 +230,11 @@ void REHex::CommentTreeModel::refresh_comments()
 		
 		offset_base = next_offset;
 	}
+}
+
+const REHex::NestedOffsetLengthMapKey *REHex::CommentTreeModel::dv_item_to_key(const wxDataViewItem &item)
+{
+	return (const NestedOffsetLengthMapKey*)(item.GetID());
 }
 
 std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator REHex::CommentTreeModel::erase_value(std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator value_i)

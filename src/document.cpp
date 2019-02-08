@@ -1226,7 +1226,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == '/')
 		{
-			_edit_comment_popup(cursor_pos, 0);
+			edit_comment_popup(cursor_pos, 0);
 		}
 	}
 }
@@ -1331,7 +1331,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				&& rel_x >= (hf_width / 4) /* Not left of left edge. */
 				&& rel_x < (virtual_width - (hf_width / 4))) /* Not right of right edge. */
 			{
-				_edit_comment_popup(cr->c_offset, cr->c_length);
+				edit_comment_popup(cr->c_offset, cr->c_length);
 			}
 		}
 	}
@@ -1469,7 +1469,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				
 				menu.Bind(wxEVT_MENU, [this, ci](wxCommandEvent &event)
 				{
-					_edit_comment_popup(ci->first.offset, ci->first.length);
+					edit_comment_popup(ci->first.offset, ci->first.length);
 				}, itm->GetId(), itm->GetId());
 			}
 			
@@ -1479,7 +1479,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				
 				menu.Bind(wxEVT_MENU, [this, cursor_pos](wxCommandEvent &event)
 				{
-					_edit_comment_popup(cursor_pos, 0);
+					edit_comment_popup(cursor_pos, 0);
 				}, itm->GetId(), itm->GetId());
 			}
 			
@@ -1493,7 +1493,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				
 				menu.Bind(wxEVT_MENU, [this](wxCommandEvent &event)
 				{
-					_edit_comment_popup(selection_off, selection_length);
+					edit_comment_popup(selection_off, selection_length);
 				}, itm->GetId(), itm->GetId());
 			}
 			
@@ -2204,7 +2204,7 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset, off_t length)
 	}
 }
 
-void REHex::Document::_edit_comment_popup(off_t offset, off_t length)
+void REHex::Document::edit_comment_popup(off_t offset, off_t length)
 {
 	auto ci = comments.find(NestedOffsetLengthMapKey(offset, length));
 	wxString old_comment = ci != comments.end()

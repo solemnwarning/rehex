@@ -32,6 +32,7 @@ namespace REHex {
 			CommentTreeModel(REHex::Document * const &document);
 			
 			void refresh_comments();
+			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
 			
 			virtual int Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
 			virtual unsigned int GetChildren(const wxDataViewItem &item, wxDataViewItemArray &children) const override;
@@ -83,6 +84,11 @@ namespace REHex {
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCommentModified(wxCommandEvent &event);
+			
+			void OnContextMenu(wxDataViewEvent &event);
+			
+		/* Keep at end. */
+		DECLARE_EVENT_TABLE()
 	};
 }
 

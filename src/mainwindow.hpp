@@ -90,7 +90,6 @@ namespace REHex {
 					wxNotebook         *h_tools;
 					
 					void OnSize(wxSizeEvent &size);
-					void OnCursorMove(wxCommandEvent &event);
 					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
 					void OnHSplitterSashPosChanging(wxSplitterEvent &event);

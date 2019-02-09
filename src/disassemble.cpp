@@ -37,11 +37,9 @@ static LLVMArchitecture arch_list[] = {
 
 static const char *DEFAULT_ARCH = "x86_64";
 
-REHex::Disassemble::Disassemble(wxWindow *parent, const REHex::Document &document):
+REHex::Disassemble::Disassemble(wxWindow *parent, REHex::Document *document):
 	wxPanel(parent, wxID_ANY), document(document), disassembler(NULL)
 {
-	position = document.get_cursor_position();
-	
 	arch = new wxChoice(this, wxID_ANY);
 	
 	for(int i = 0; arch_list[i].triple != NULL; ++i)
@@ -63,6 +61,9 @@ REHex::Disassemble::Disassemble(wxWindow *parent, const REHex::Document &documen
 	
 	SetSizerAndFit(sizer);
 	
+	document->Bind(wxEVT_DESTROY, &REHex::Disassemble::OnDocumentDestroy, this);
+	document->Bind(EV_CURSOR_MOVED, &REHex::Disassemble::OnCursorMove, this);
+	
 	reinit_disassembler();
 	update();
 }
@@ -74,18 +75,24 @@ REHex::Disassemble::~Disassemble()
 		LLVMDisasmDispose(disassembler);
 		disassembler = NULL;
 	}
+	
+	if(document != NULL)
+	{
+		document_unbind();
+		document = NULL;
+	}
+}
+
+void REHex::Disassemble::document_unbind()
+{
+	document->Unbind(EV_CURSOR_MOVED, &REHex::Disassemble::OnCursorMove, this);
+	document->Unbind(wxEVT_DESTROY, &REHex::Disassemble::OnDocumentDestroy, this);
 }
 
 wxSize REHex::Disassemble::DoGetBestClientSize() const
 {
 	/* TODO: Calculate a reasonable initial size. */
 	return wxPanel::DoGetBestClientSize();
-}
-
-void REHex::Disassemble::set_position(off_t position)
-{
-	this->position = position;
-	update();
 }
 
 void REHex::Disassemble::update()
@@ -100,9 +107,11 @@ void REHex::Disassemble::update()
 	/* Size of window to load to try disassembling. */
 	static const off_t WINDOW_SIZE = 256;
 	
+	off_t position = document->get_cursor_position();
+	
 	off_t window_base = std::max((position - (WINDOW_SIZE / 2)), (off_t)(0));
 	
-	std::vector<unsigned char> data = document.read_data(window_base, WINDOW_SIZE);
+	std::vector<unsigned char> data = document->read_data(window_base, WINDOW_SIZE);
 	
 	std::map<off_t, Instruction> instructions;
 	
@@ -225,6 +234,23 @@ std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble
 	}
 	
 	return instructions;
+}
+
+void REHex::Disassemble::OnDocumentDestroy(wxWindowDestroyEvent &event)
+{
+	document_unbind();
+	document = NULL;
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::Disassemble::OnCursorMove(wxCommandEvent &event)
+{
+	update();
+	
+	/* Continue propogation. */
+	event.Skip();
 }
 
 void REHex::Disassemble::OnArch(wxCommandEvent &event)

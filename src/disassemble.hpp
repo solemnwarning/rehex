@@ -33,13 +33,10 @@ namespace REHex {
 	class Disassemble: public wxPanel
 	{
 		public:
-			Disassemble(wxWindow *parent, const REHex::Document &document);
+			Disassemble(wxWindow *parent, REHex::Document *document);
 			virtual ~Disassemble();
 			
 			virtual wxSize DoGetBestClientSize() const override;
-			
-			void set_position(off_t position);
-			void update();
 			
 		private:
 			struct Instruction {
@@ -47,17 +44,20 @@ namespace REHex {
 				std::string disasm;
 			};
 			
-			const REHex::Document &document;
-			off_t position;
+			REHex::Document *document;
 			
 			LLVMDisasmContextRef disassembler;
 			
 			wxChoice *arch;
 			CodeCtrl *assembly;
 			
+			void document_unbind();
 			void reinit_disassembler();
+			void update();
 			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
 			
+			void OnDocumentDestroy(wxWindowDestroyEvent &event);
+			void OnCursorMove(wxCommandEvent &event);
 			void OnArch(wxCommandEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */

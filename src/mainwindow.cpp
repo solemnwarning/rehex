@@ -840,8 +840,6 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	EVT_SIZE(REHex::MainWindow::Tab::OnSize)
 	
-	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
-	
 	EVT_NOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::MainWindow::Tab::OnHToolChange)
 	EVT_NOTEBOOK_PAGE_CHANGED(ID_VTOOLS, REHex::MainWindow::Tab::OnVToolChange)
 	
@@ -878,7 +876,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	dp = new REHex::DecodePanel(v_tools, doc);
 	v_tools->AddPage(dp, "Decode values", true);
 	
-	disasm = new REHex::Disassemble(v_tools, *doc);
+	disasm = new REHex::Disassemble(v_tools, doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
 	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
@@ -916,7 +914,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	dp = new REHex::DecodePanel(v_tools, doc);
 	v_tools->AddPage(dp, "Decode values", true);
 	
-	disasm = new REHex::Disassemble(v_tools, *doc);
+	disasm = new REHex::Disassemble(v_tools, doc);
 	v_tools->AddPage(disasm, "Disassembly", true);
 	
 	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
@@ -950,14 +948,6 @@ void REHex::MainWindow::Tab::OnSize(wxSizeEvent &event)
 	}
 	
 	/* Continue propogation of EVT_SIZE event. */
-	event.Skip();
-}
-
-void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
-{
-	disasm->set_position(doc->get_cursor_position());
-	
-	/* Let the event propogate on up to MainWindow to update the status bar. */
 	event.Skip();
 }
 

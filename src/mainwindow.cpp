@@ -841,8 +841,6 @@ BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	EVT_SIZE(REHex::MainWindow::Tab::OnSize)
 	
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED, REHex::MainWindow::Tab::OnCursorMove)
-	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_CHANGE, REHex::MainWindow::Tab::OnValueChange)
-	EVT_COMMAND(wxID_ANY, REHex::EV_VALUE_FOCUS,  REHex::MainWindow::Tab::OnValueFocus)
 	
 	EVT_NOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::MainWindow::Tab::OnHToolChange)
 	EVT_NOTEBOOK_PAGE_CHANGED(ID_VTOOLS, REHex::MainWindow::Tab::OnVToolChange)
@@ -877,7 +875,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	dp = new REHex::DecodePanel(v_tools);
+	dp = new REHex::DecodePanel(v_tools, doc);
 	v_tools->AddPage(dp, "Decode values", true);
 	
 	disasm = new REHex::Disassemble(v_tools, *doc);
@@ -885,9 +883,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	
 	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
 	v_tools->AddPage(ct, "Comments");
-	
-	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
-	dp->update(data_at_off.data(), data_at_off.size());
 	
 	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
 }
@@ -918,7 +913,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	dp = new REHex::DecodePanel(v_tools);
+	dp = new REHex::DecodePanel(v_tools, doc);
 	v_tools->AddPage(dp, "Decode values", true);
 	
 	disasm = new REHex::Disassemble(v_tools, *doc);
@@ -926,9 +921,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
 	v_tools->AddPage(ct, "Comments");
-	
-	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
-	dp->update(data_at_off.data(), data_at_off.size());
 	
 	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
 }
@@ -963,40 +955,10 @@ void REHex::MainWindow::Tab::OnSize(wxSizeEvent &event)
 
 void REHex::MainWindow::Tab::OnCursorMove(wxCommandEvent &event)
 {
-	std::vector<unsigned char> data_at_off = doc->read_data(doc->get_cursor_position(), 8);
-	dp->update(data_at_off.data(), data_at_off.size());
-	
 	disasm->set_position(doc->get_cursor_position());
 	
 	/* Let the event propogate on up to MainWindow to update the status bar. */
 	event.Skip();
-}
-
-void REHex::MainWindow::Tab::OnValueChange(wxCommandEvent &event)
-{
-	auto vc = dynamic_cast<REHex::ValueChange*>(&event);
-	assert(vc != NULL);
-	
-	off_t offset = doc->get_cursor_position();
-	std::vector<unsigned char> data = vc->get_data();
-	
-	doc->overwrite_data(offset, data.data(), data.size());
-	
-	std::vector<unsigned char> data_at_off = doc->read_data(offset, 8);
-	dp->update(data_at_off.data(), data_at_off.size(), vc->get_source());
-	
-	disasm->update();
-}
-
-void REHex::MainWindow::Tab::OnValueFocus(wxCommandEvent &event)
-{
-	auto vf = dynamic_cast<REHex::ValueFocus*>(&event);
-	assert(vf != NULL);
-	
-	off_t cur_pos = doc->get_cursor_position();
-	off_t length  = vf->get_size();
-	
-	doc->set_selection(cur_pos, length);
 }
 
 void REHex::MainWindow::Tab::OnHToolChange(wxNotebookEvent& event)

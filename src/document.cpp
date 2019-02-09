@@ -73,6 +73,7 @@ wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,    wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,  wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -312,9 +313,9 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 	return buffer->read_data(offset, max_length);
 }
 
-void REHex::Document::overwrite_data(off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length)
 {
-	_tracked_overwrite_data("change data", offset, data, length, get_cursor_position(), cursor_state);
+	_tracked_overwrite_data("change data", offset, (const unsigned char*)(data), length, get_cursor_position(), cursor_state);
 }
 
 void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
@@ -1872,6 +1873,7 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 	if(ok)
 	{
 		dirty = true;
+		_raise_data_modified();
 	}
 }
 
@@ -1951,6 +1953,8 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			
 			++region;
 		}
+		
+		_raise_data_modified();
 		
 		if(NestedOffsetLengthMap_data_inserted(comments, offset, length) > 0)
 		{
@@ -2056,6 +2060,8 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 			
 			++region;
 		}
+		
+		_raise_data_modified();
 		
 		assert(to_shift == length);
 		assert(to_shrink == 0);
@@ -2550,6 +2556,14 @@ void REHex::Document::_raise_moved()
 void REHex::Document::_raise_comment_modified()
 {
 	wxCommandEvent event(REHex::EV_COMMENT_MODIFIED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
+}
+
+void REHex::Document::_raise_data_modified()
+{
+	wxCommandEvent event(REHex::EV_DATA_MODIFIED);
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);

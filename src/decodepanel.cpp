@@ -27,9 +27,6 @@
 */
 #include <portable_endian.h>
 
-wxDEFINE_EVENT(REHex::EV_VALUE_CHANGE, REHex::ValueChange);
-wxDEFINE_EVENT(REHex::EV_VALUE_FOCUS,  REHex::ValueFocus);
-
 /* Endianness conversion functions for use with the OnXXXValue() template methods. */
 static uint8_t  hto8_u   (uint8_t  host_8bits)  { return host_8bits; }
 static int8_t   hto8_s   (int8_t   host_8bits)  { return host_8bits; }
@@ -90,8 +87,9 @@ BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
 	EVT_SIZE(REHex::DecodePanel::OnSize)
 END_EVENT_TABLE()
 
-REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
-	wxPanel(parent, id)
+REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
+	wxPanel(parent),
+	document(document)
 {
 	endian = new wxChoice(this, wxID_ANY);
 	
@@ -164,6 +162,27 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, wxWindowID id):
 	SetSizerAndFit(sizer);
 	
 	pgrid->SetSplitterLeft();
+	
+	document->Bind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
+	document->Bind(EV_CURSOR_MOVED, &REHex::DecodePanel::OnCursorMove, this);
+	document->Bind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);
+	
+	update();
+}
+
+REHex::DecodePanel::~DecodePanel()
+{
+	if(document != NULL)
+	{
+		document_unbind();
+	}
+}
+
+void REHex::DecodePanel::document_unbind()
+{
+	document->Unbind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);
+	document->Unbind(EV_CURSOR_MOVED, &REHex::DecodePanel::OnCursorMove, this);
+	document->Unbind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
 }
 
 wxSize REHex::DecodePanel::DoGetBestClientSize() const
@@ -173,23 +192,29 @@ wxSize REHex::DecodePanel::DoGetBestClientSize() const
 
 /* TODO: Make this is templated lambda whenever I move to C++14 */
 #define TC_UPDATE(field, T, format, expr) \
-	if(field != skip_control) \
+{ \
+	if(size >= sizeof(T)) \
 	{ \
-		if(size >= sizeof(T)) \
-		{ \
-			char buf[64]; \
-			snprintf(buf, sizeof(buf), format, expr); \
-			field->SetValueFromString(buf); \
-			pgrid->EnableProperty(field); \
-		} \
-		else{ \
-			field->SetValueFromString(""); \
-			pgrid->DisableProperty(field); \
-		} \
-	}
+		char buf[64]; \
+		snprintf(buf, sizeof(buf), format, expr); \
+		field->SetValueFromString(buf); \
+		pgrid->EnableProperty(field); \
+	} \
+	else{ \
+		field->SetValueFromString(""); \
+		pgrid->DisableProperty(field); \
+	} \
+}
 
-void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxPGProperty *skip_control)
+void REHex::DecodePanel::update()
 {
+	assert(document != NULL);
+	
+	std::vector<unsigned char> data_at_cur = document->read_data(document->get_cursor_position(), 8);
+	
+	const unsigned char *data = data_at_cur.data();
+	size_t               size = data_at_cur.size();
+	
 	TC_UPDATE(s8, int8_t,  "%" PRId8, (*(int8_t*)(data)));
 	TC_UPDATE(u8, uint8_t, "%" PRIu8, (*(uint8_t*)(data)));
 	TC_UPDATE(h8, uint8_t, "%" PRIx8, (*(uint8_t*)(data)));
@@ -241,6 +266,31 @@ void REHex::DecodePanel::update(const unsigned char *data, size_t size, wxPGProp
 	
 	last_data.resize(size);
 	memmove(last_data.data(), data, size);
+}
+
+void REHex::DecodePanel::OnDocumentDestroy(wxWindowDestroyEvent &event)
+{
+	document_unbind();
+	document = NULL;
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::DecodePanel::OnCursorMove(wxCommandEvent &event)
+{
+	update();
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::DecodePanel::OnDataModified(wxCommandEvent &event)
+{
+	update();
+	
+	/* Continue propogation. */
+	event.Skip();
 }
 
 void REHex::DecodePanel::OnPropertyGridChanged(wxPropertyGridEvent &event)
@@ -327,18 +377,15 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 		size = sizeof(double);
 	}
 	
-	if(size > 0)
+	if(size > 0 && document != NULL)
 	{
-		ValueFocus focus_ev(size);
-		focus_ev.SetEventObject(this);
-		
-		wxPostEvent(this, focus_ev);
+		document->set_selection(document->get_cursor_position(), size);
 	}
 }
 
 void REHex::DecodePanel::OnEndian(wxCommandEvent &event)
 {
-	update(last_data.data(), last_data.size(), NULL);
+	update();
 }
 
 void REHex::DecodePanel::OnSize(wxSizeEvent &event)
@@ -381,12 +428,11 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedVa
 		return;
 	}
 	
-	T tval = htoX(ival);
-	
-	ValueChange change_ev(tval, property);
-	change_ev.SetEventObject(this);
-	
-	wxPostEvent(this, change_ev);
+	if(document != NULL)
+	{
+		T tval = htoX(ival);
+		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+	}
 }
 
 template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsignedValue(wxStringProperty *property)
@@ -421,12 +467,11 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsigned
 		return;
 	}
 	
-	T tval = htoX(uval);
-	
-	ValueChange change_ev(tval, property);
-	change_ev.SetEventObject(this);
-	
-	wxPostEvent(this, change_ev);
+	if(document != NULL)
+	{
+		T tval = htoX(uval);
+		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+	}
 }
 
 template<float (*htoX)(float)> void REHex::DecodePanel::OnFloatValue(wxStringProperty *property)
@@ -452,12 +497,11 @@ template<float (*htoX)(float)> void REHex::DecodePanel::OnFloatValue(wxStringPro
 		return;
 	}
 	
-	float tval = htoX(uval);
-	
-	ValueChange change_ev(tval, property);
-	change_ev.SetEventObject(this);
-	
-	wxPostEvent(this, change_ev);
+	if(document != NULL)
+	{
+		float tval = htoX(uval);
+		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+	}
 }
 
 template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxStringProperty *property)
@@ -483,10 +527,9 @@ template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxString
 		return;
 	}
 	
-	double tval = htoX(uval);
-	
-	ValueChange change_ev(tval, property);
-	change_ev.SetEventObject(this);
-	
-	wxPostEvent(this, change_ev);
+	if(document != NULL)
+	{
+		double tval = htoX(uval);
+		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+	}
 }

@@ -25,80 +25,20 @@
 #include <wx/propgrid/props.h>
 #include <wx/wx.h>
 
+#include "document.hpp"
+
 namespace REHex {
-	class ValueChange;
-	wxDECLARE_EVENT(EV_VALUE_CHANGE, REHex::ValueChange);
-	
-	class ValueChange: public wxCommandEvent
-	{
-		public:
-			template<typename T> ValueChange(const T &data, wxPGProperty *source):
-				wxCommandEvent(EV_VALUE_CHANGE), source(source)
-			{
-				this->data.insert(this->data.end(),
-					(const unsigned char*)(&data),
-					(const unsigned char*)(&data) + sizeof(data));
-			}
-			
-			ValueChange(const ValueChange &event):
-				wxCommandEvent(EV_VALUE_CHANGE), data(event.data), source(event.source) {}
-		
-			wxEvent* Clone() const
-			{
-				return new ValueChange(*this);
-			}
-			
-			std::vector<unsigned char> get_data() const
-			{
-				return data;
-			}
-			
-			wxPGProperty *get_source() const
-			{
-				return source;
-			}
-			
-		private:
-			std::vector<unsigned char> data;
-			wxPGProperty *source;
-	};
-	
-	class ValueFocus;
-	wxDECLARE_EVENT(EV_VALUE_FOCUS, REHex::ValueFocus);
-	
-	class ValueFocus: public wxCommandEvent
-	{
-		public:
-			ValueFocus(size_t size):
-				wxCommandEvent(EV_VALUE_FOCUS), size(size) {}
-			
-			ValueFocus(const ValueFocus &event):
-				wxCommandEvent(EV_VALUE_FOCUS), size(event.size) {}
-		
-			wxEvent* Clone() const
-			{
-				return new ValueFocus(*this);
-			}
-			
-			size_t get_size() const
-			{
-				return size;
-			}
-			
-		private:
-			size_t size;
-	};
-	
 	class DecodePanel: public wxPanel
 	{
 		public:
-			DecodePanel(wxWindow *parent, wxWindowID id = wxID_ANY);
+			DecodePanel(wxWindow *parent, REHex::Document *document);
+			virtual ~DecodePanel();
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			
-			void update(const unsigned char *data, size_t size, wxPGProperty *skip_control = NULL);
-			
 		private:
+			REHex::Document *document;
+			
 			wxChoice *endian;
 			wxPropertyGrid *pgrid;
 			int pgrid_best_width;
@@ -123,6 +63,12 @@ namespace REHex {
 			
 			std::vector<unsigned char> last_data;
 			
+			void document_unbind();
+			void update();
+			
+			void OnDocumentDestroy(wxWindowDestroyEvent &event);
+			void OnCursorMove(wxCommandEvent &event);
+			void OnDataModified(wxCommandEvent &event);
 			void OnPropertyGridChanged(wxPropertyGridEvent& event);
 			void OnPropertyGridSelected(wxPropertyGridEvent &event);
 			void OnEndian(wxCommandEvent &event);

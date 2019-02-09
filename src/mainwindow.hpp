@@ -91,8 +91,6 @@ namespace REHex {
 					
 					void OnSize(wxSizeEvent &size);
 					void OnCursorMove(wxCommandEvent &event);
-					void OnValueChange(wxCommandEvent &event);
-					void OnValueFocus(wxCommandEvent &event);
 					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
 					void OnHSplitterSashPosChanging(wxSplitterEvent &event);

@@ -34,6 +34,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_INSERT_TOGGLED,    wxCommandEvent);
 	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
 	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
+	wxDECLARE_EVENT(EV_DATA_MODIFIED,     wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
@@ -88,7 +89,7 @@ namespace REHex {
 			std::pair<off_t, off_t> get_selection();
 			
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
-			void overwrite_data(off_t offset, const unsigned char *data, off_t length);
+			void overwrite_data(off_t offset, const void *data, off_t length);
 			void insert_data(off_t offset, const unsigned char *data, off_t length);
 			void erase_data(off_t offset, off_t length);
 			off_t buffer_length();
@@ -285,6 +286,7 @@ namespace REHex {
 			
 			void _raise_moved();
 			void _raise_comment_modified();
+			void _raise_data_modified();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];

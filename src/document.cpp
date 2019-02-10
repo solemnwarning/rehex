@@ -249,6 +249,9 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	{
 		_raise_moved();
 	}
+	
+	/* TODO: Limit paint to affected area */
+	Refresh();
 }
 
 bool REHex::Document::get_insert_mode()
@@ -1060,24 +1063,19 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
 	}
-	else if(modifiers == wxMOD_NONE)
+	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT)
+		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN))
 	{
+		off_t new_cursor_pos = cursor_pos;
+		
 		if(key == WXK_LEFT)
 		{
-			set_cursor_position(cursor_pos - (cursor_pos > 0));
-			clear_selection();
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
+			new_cursor_pos = cursor_pos - (cursor_pos > 0);
 		}
 		else if(key == WXK_RIGHT)
 		{
 			off_t max_pos = std::max((buffer_length() - !get_insert_mode()), (off_t)(0));
-			set_cursor_position(std::min((cursor_pos + 1), max_pos));
-			clear_selection();
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
+			new_cursor_pos = std::min((cursor_pos + 1), max_pos);
 		}
 		else if(key == WXK_UP)
 		{
@@ -1091,7 +1089,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				/* We are at least on the second line of the current
 				 * region, can jump to the previous one.
 				*/
-				set_cursor_position(cursor_pos - bytes_per_line_calc);
+				new_cursor_pos = cursor_pos - bytes_per_line_calc;
 			}
 			else if(cur_region->d_offset > 0)
 			{
@@ -1115,7 +1113,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					 * on the screen.
 					*/
 					
-					set_cursor_position((cursor_pos - offset_within_cur) - (pr_last_line_len - offset_within_cur));
+					new_cursor_pos = (cursor_pos - offset_within_cur) - (pr_last_line_len - offset_within_cur);
 				}
 				else{
 					/* The last line of the previous block falls short of the
@@ -1123,7 +1121,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					 * of it.
 					*/
 					
-					set_cursor_position(cur_region->d_offset - 1);
+					new_cursor_pos = cur_region->d_offset - 1;
 				}
 			}
 			
@@ -1131,11 +1129,6 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			{
 				cursor_state = CSTATE_HEX;
 			}
-			
-			clear_selection();
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
 		}
 		else if(key == WXK_DOWN)
 		{
@@ -1155,14 +1148,14 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				/* There is at least one more line's worth of bytes in the
 				 * current region, can just skip ahead.
 				*/
-				set_cursor_position(cursor_pos + bytes_per_line_calc);
+				new_cursor_pos = cursor_pos + bytes_per_line_calc;
 			}
 			else if(offset_within_cur < last_line_within_cur)
 			{
 				/* There is another line in the current region which falls short of
 				 * the cursor's horizontal position, jump to its end.
 				*/
-				set_cursor_position(cur_region->d_offset + cur_region->d_length - 1);
+				new_cursor_pos = cur_region->d_offset + cur_region->d_length - 1;
 			}
 			else{
 				auto next_region = _data_region_by_offset(cur_region->d_offset + cur_region->d_length);
@@ -1172,13 +1165,11 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					/* There is another region after this one, jump to the same
 					 * it, offset by our offset in the current line.
 					*/
-					off_t new_cursor_pos = next_region->d_offset + (offset_within_cur % bytes_per_line_calc);
+					new_cursor_pos = next_region->d_offset + (offset_within_cur % bytes_per_line_calc);
 					
 					/* Clamp to the end of the next region. */
 					off_t max_pos = (next_region->d_offset + next_region->d_length - 1);
 					new_cursor_pos = std::min(max_pos, new_cursor_pos);
-					
-					set_cursor_position(new_cursor_pos);
 				}
 			}
 			
@@ -1186,13 +1177,67 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			{
 				cursor_state = CSTATE_HEX;
 			}
-			
-			clear_selection();
-			
-			/* TODO: Limit paint to affected area */
-			this->Refresh();
 		}
-		else if(key == WXK_INSERT)
+		
+		set_cursor_position(new_cursor_pos);
+		
+		if(modifiers == wxMOD_SHIFT)
+		{
+			off_t selection_end = selection_off + selection_length;
+			
+			if(new_cursor_pos < cursor_pos)
+			{
+				if(selection_length > 0)
+				{
+					if(selection_off >= cursor_pos)
+					{
+						assert(selection_end >= new_cursor_pos);
+						set_selection(new_cursor_pos, (selection_end - new_cursor_pos));
+					}
+					else{
+						if(new_cursor_pos < selection_off)
+						{
+							set_selection(new_cursor_pos, (selection_off - new_cursor_pos));
+						}
+						else{
+							set_selection(selection_off, (new_cursor_pos - selection_off));
+						}
+					}
+				}
+				else{
+					set_selection(new_cursor_pos, (cursor_pos - new_cursor_pos));
+				}
+			}
+			else if(new_cursor_pos > cursor_pos)
+			{
+				if(selection_length > 0)
+				{
+					if(selection_off >= cursor_pos)
+					{
+						if(new_cursor_pos >= selection_end)
+						{
+							set_selection(selection_end, (new_cursor_pos - selection_end));
+						}
+						else{
+							set_selection(new_cursor_pos, (selection_end - new_cursor_pos));
+						}
+					}
+					else{
+						set_selection(selection_off, (new_cursor_pos - selection_off));
+					}
+				}
+				else{
+					set_selection(cursor_pos, (new_cursor_pos - cursor_pos));
+				}
+			}
+		}
+		else{
+			clear_selection();
+		}
+	}
+	else if(modifiers == wxMOD_NONE)
+	{
+		if(key == WXK_INSERT)
 		{
 			set_insert_mode(!get_insert_mode());
 		}

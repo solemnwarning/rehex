@@ -18,14 +18,14 @@
 #ifndef REHEX_MAINWINDOW_HPP
 #define REHEX_MAINWINDOW_HPP
 
+#include <map>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
 #include <wx/splitter.h>
 #include <wx/wx.h>
 
-#include "decodepanel.hpp"
-#include "disassemble.hpp"
 #include "document.hpp"
+#include "ToolPanel.hpp"
 
 namespace REHex {
 	class MainWindow: public wxFrame
@@ -62,7 +62,7 @@ namespace REHex {
 			void OnSetBytesPerGroup(wxCommandEvent &event);
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
-			void OnShowDecodes(wxCommandEvent &event);
+			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
 			
 			void OnAbout(wxCommandEvent &event);
 			
@@ -81,23 +81,30 @@ namespace REHex {
 					Tab(wxWindow *parent);
 					Tab(wxWindow *parent, const std::string &filename);
 					
+					REHex::Document    *doc;
 					wxSplitterWindow   *v_splitter;
 					wxSplitterWindow   *h_splitter;
 					wxNotebook         *v_tools;
-					REHex::DecodePanel *dp;
-					REHex::Disassemble *disasm;
-					REHex::Document    *doc;
 					wxNotebook         *h_tools;
+					
+					std::map<std::string, wxWindow*> tools;
+					
+					bool tool_active(const std::string &name);
+					void tool_create(const std::string &name, bool switch_to, bool adjust = true);
+					void tool_destroy(const std::string &name);
 					
 					void OnSize(wxSizeEvent &size);
 					void OnHToolChange(wxBookCtrlEvent &event);
 					void OnVToolChange(wxBookCtrlEvent &event);
 					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
 					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
-					void OnFirstIdle(wxIdleEvent &event);
 					
 					void vtools_adjust();
 					void htools_adjust();
+					void vtools_adjust_on_idle();
+					void vtools_adjust_now_idle(wxIdleEvent &event);
+					void htools_adjust_on_idle();
+					void htools_adjust_now_idle(wxIdleEvent &event);
 					
 				private:
 					enum {
@@ -129,6 +136,9 @@ namespace REHex {
 			wxMenu *edit_menu;
 			wxMenu *doc_menu;
 			wxAuiNotebook *notebook;
+			
+			wxMenu *tool_panels_menu;
+			std::map<std::string, int> tool_panel_name_to_tpm_id;
 			
 			void _update_status_offset(REHex::Document *doc);
 			void _update_status_selection(REHex::Document *doc);

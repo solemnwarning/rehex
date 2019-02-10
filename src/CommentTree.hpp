@@ -24,6 +24,7 @@
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
+#include "ToolPanel.hpp"
 
 namespace REHex {
 	class CommentTreeModel: public wxDataViewModel
@@ -63,11 +64,15 @@ namespace REHex {
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
 	};
 	
-	class CommentTree: public wxPanel
+	class CommentTree: public ToolPanel
 	{
 		public:
 			CommentTree(wxWindow *parent, REHex::Document *document);
 			virtual ~CommentTree();
+			
+// 			virtual std::string name() const override;
+// 			virtual std::string label() const override;
+// 			virtual Shape shape() const override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			

@@ -20,6 +20,13 @@
 
 #include "disassemble.hpp"
 
+static REHex::ToolPanel *Disassemble_factory(wxWindow *parent, REHex::Document *document)
+{
+	return new REHex::Disassemble(parent, document);
+}
+
+static REHex::ToolPanelRegistration tpr("Disassemble", "Disassembly", REHex::ToolPanel::TPS_TALL, &Disassemble_factory);
+
 BEGIN_EVENT_TABLE(REHex::Disassemble, wxPanel)
 	EVT_CHOICE(wxID_ANY, REHex::Disassemble::OnArch)
 END_EVENT_TABLE()
@@ -38,7 +45,7 @@ static LLVMArchitecture arch_list[] = {
 static const char *DEFAULT_ARCH = "x86_64";
 
 REHex::Disassemble::Disassemble(wxWindow *parent, REHex::Document *document):
-	wxPanel(parent, wxID_ANY), document(document), disassembler(NULL)
+	ToolPanel(parent), document(document), disassembler(NULL)
 {
 	arch = new wxChoice(this, wxID_ANY);
 	

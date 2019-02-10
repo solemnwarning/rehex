@@ -20,6 +20,13 @@
 
 #include "CommentTree.hpp"
 
+static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::Document *document)
+{
+	return new REHex::CommentTree(parent, document);
+}
+
+static REHex::ToolPanelRegistration tpr("CommentTree", "Comments", REHex::ToolPanel::TPS_TALL, &CommentTree_factory);
+
 enum {
 	ID_EDIT_COMMENT = 1,
 	ID_GOTO,
@@ -31,7 +38,7 @@ BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 END_EVENT_TABLE()
 
 REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
-	wxPanel(parent, wxID_ANY),
+	ToolPanel(parent),
 	document(document),
 	events_bound(false)
 {

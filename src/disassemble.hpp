@@ -28,13 +28,18 @@
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
+#include "ToolPanel.hpp"
 
 namespace REHex {
-	class Disassemble: public wxPanel
+	class Disassemble: public ToolPanel
 	{
 		public:
 			Disassemble(wxWindow *parent, REHex::Document *document);
 			virtual ~Disassemble();
+			
+// 			virtual std::string name() const override;
+// 			virtual std::string label() const override;
+// 			virtual Shape shape() const override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			

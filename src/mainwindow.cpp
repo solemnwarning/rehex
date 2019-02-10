@@ -35,6 +35,7 @@
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "search.hpp"
+#include "ToolPanel.hpp"
 
 #include "../res/icon16.h"
 #include "../res/icon32.h"
@@ -46,7 +47,6 @@ enum {
 	ID_BYTES_GROUP,
 	ID_SHOW_OFFSETS,
 	ID_SHOW_ASCII,
-	ID_SHOW_DECODES,
 	ID_SEARCH_TEXT,
 	ID_SEARCH_BSEQ,
 	ID_SEARCH_VALUE,
@@ -93,7 +93,6 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_BYTES_GROUP,  REHex::MainWindow::OnSetBytesPerGroup)
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::MainWindow::OnShowOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
-	EVT_MENU(ID_SHOW_DECODES, REHex::MainWindow::OnShowDecodes)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -156,7 +155,22 @@ REHex::MainWindow::MainWindow():
 	doc_menu->Append(ID_BYTES_GROUP, wxT("Set bytes per group"));
 	doc_menu->AppendCheckItem(ID_SHOW_OFFSETS, wxT("Show offsets"));
 	doc_menu->AppendCheckItem(ID_SHOW_ASCII, wxT("Show ASCII"));
-	doc_menu->AppendCheckItem(ID_SHOW_DECODES, wxT("Show decode table"));
+	
+	tool_panels_menu = new wxMenu;
+	doc_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
+	
+	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
+	{
+		const ToolPanelRegistration *tpr = i->second;
+		wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->label);
+		
+		Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)
+		{
+			OnShowToolPanel(event, tpr);
+		}, itm->GetId(), itm->GetId());
+		
+		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+	}
 	
 	wxMenu *help_menu = new wxMenu;
 	
@@ -634,7 +648,7 @@ void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
 	tab->doc->set_show_ascii(event.IsChecked());
 }
 
-void REHex::MainWindow::OnShowDecodes(wxCommandEvent &event)
+void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
@@ -642,8 +656,13 @@ void REHex::MainWindow::OnShowDecodes(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	tab->dp->Show(event.IsChecked());
-	tab->vtools_adjust();
+	if(event.IsChecked())
+	{
+		tab->tool_create(tpr->name, true);
+	}
+	else{
+		tab->tool_destroy(tpr->name);
+	}
 }
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)
@@ -665,7 +684,16 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	doc_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
 	doc_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
-	doc_menu->Check(ID_SHOW_DECODES, tab->dp->IsShown());
+	
+	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
+	{
+		const ToolPanelRegistration *tpr = i->second;
+		
+		int menu_id = tool_panel_name_to_tpm_id[tpr->name];
+		bool active = tab->tool_active(tpr->name);
+		
+		tool_panels_menu->Check(menu_id, active);
+	}
 	
 	_update_status_offset(tab->doc);
 	_update_status_selection(tab->doc);
@@ -873,16 +901,11 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	dp = new REHex::DecodePanel(v_tools, doc);
-	v_tools->AddPage(dp, "Decode values", true);
+	tool_create("DecodePanel", true, false);
+	tool_create("CommentTree", false, false);
 	
-	disasm = new REHex::Disassemble(v_tools, doc);
-	v_tools->AddPage(disasm, "Disassembly", true);
-	
-	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
-	v_tools->AddPage(ct, "Comments");
-	
-	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
+	htools_adjust_on_idle();
+	vtools_adjust_on_idle();
 }
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -911,16 +934,81 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	dp = new REHex::DecodePanel(v_tools, doc);
-	v_tools->AddPage(dp, "Decode values", true);
+	tool_create("DecodePanel", true, false);
+	tool_create("CommentTree", false, false);
 	
-	disasm = new REHex::Disassemble(v_tools, doc);
-	v_tools->AddPage(disasm, "Disassembly", true);
+	htools_adjust_on_idle();
+	vtools_adjust_on_idle();
+}
+
+bool REHex::MainWindow::Tab::tool_active(const std::string &name)
+{
+	return tools.find(name) != tools.end();
+}
+
+void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to, bool adjust)
+{
+	if(tool_active(name))
+	{
+		return;
+	}
 	
-	REHex::CommentTree *ct = new REHex::CommentTree(v_tools, doc);
-	v_tools->AddPage(ct, "Comments");
+	const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
+	assert(tpr != NULL);
 	
-	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
+	if(tpr->shape == ToolPanel::TPS_TALL)
+	{
+		wxWindow *tool_window = tpr->factory(v_tools, doc);
+		v_tools->AddPage(tool_window, tpr->label, switch_to);
+		
+		tools.insert(std::make_pair(name, tool_window));
+		
+		if(adjust)
+		{
+			vtools_adjust_on_idle();
+		}
+	}
+	else if(tpr->shape == ToolPanel::TPS_WIDE)
+	{
+		wxWindow *tool_window = tpr->factory(h_tools, doc);
+		h_tools->AddPage(tool_window, tpr->label, switch_to);
+		
+		tools.insert(std::make_pair(name, tool_window));
+		
+		if(adjust)
+		{
+			htools_adjust_on_idle();
+		}
+	}
+}
+
+void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
+{
+	auto ti = tools.find(name);
+	if(ti == tools.end())
+	{
+		return;
+	}
+	
+	wxWindow *tool_window = ti->second;
+	tools.erase(ti);
+	
+	wxNotebook *notebook = dynamic_cast<wxNotebook*>(tool_window->GetParent());
+	assert(notebook != NULL);
+	
+	size_t page_idx = notebook->FindPage(tool_window);
+	assert(page_idx != wxNOT_FOUND);
+	
+	notebook->DeletePage(page_idx);
+	
+	if(notebook == v_tools)
+	{
+		vtools_adjust();
+	}
+	else if(notebook == h_tools)
+	{
+		htools_adjust();
+	}
 }
 
 void REHex::MainWindow::Tab::OnSize(wxSizeEvent &event)
@@ -981,20 +1069,6 @@ void REHex::MainWindow::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
 	{
 		event.SetSashPosition(clamp);
 	}
-}
-
-/* The size of a wxNotebook page doesn't seem to be set correctly during
- * initialisation, so we can't use it to determine how much size overhead the
- * wxNotebook adds at that point. Instead we defer initial setting of the tool
- * pane sizes until the first idle tick, by which point the sizes seem to have
- * been set up properly (on GTK anyway).
-*/
-void REHex::MainWindow::Tab::OnFirstIdle(wxIdleEvent &event)
-{
-	Unbind(wxEVT_IDLE, &REHex::MainWindow::Tab::OnFirstIdle, this);
-	
-	htools_adjust();
-	vtools_adjust();
 }
 
 int REHex::MainWindow::Tab::hsplit_clamp_sash(int sash_position)
@@ -1137,6 +1211,39 @@ void REHex::MainWindow::Tab::htools_adjust()
 		int hs_ch = h_splitter->GetClientSize().GetHeight();
 		h_splitter->SetSashPosition(hs_ch - (htp_bh + extra_h + h_splitter->GetSashSize()));
 	}
+}
+
+/* The size of a wxNotebook page doesn't seem to be set correctly during
+ * initialisation (or immediately after adding a page), so we can't use it to
+ * determine how much size overhead the wxNotebook adds at that point. Instead
+ * we defer setting of the tool pane sizes until the first idle tick, by which
+ * point the sizes seem to have been set up properly (on GTK anyway).
+*/
+
+void REHex::MainWindow::Tab::vtools_adjust_on_idle()
+{
+	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::vtools_adjust_now_idle, this);
+}
+
+void REHex::MainWindow::Tab::vtools_adjust_now_idle(wxIdleEvent &event)
+{
+	Unbind(wxEVT_IDLE, &REHex::MainWindow::Tab::vtools_adjust_now_idle, this);
+	event.Skip();
+	
+	vtools_adjust();
+}
+
+void REHex::MainWindow::Tab::htools_adjust_on_idle()
+{
+	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::htools_adjust_now_idle, this);
+}
+
+void REHex::MainWindow::Tab::htools_adjust_now_idle(wxIdleEvent &event)
+{
+	Unbind(wxEVT_IDLE, &REHex::MainWindow::Tab::htools_adjust_now_idle, this);
+	event.Skip();
+	
+	htools_adjust();
 }
 
 REHex::MainWindow::DropTarget::DropTarget(MainWindow *window):

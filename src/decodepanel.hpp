@@ -26,13 +26,18 @@
 #include <wx/wx.h>
 
 #include "document.hpp"
+#include "ToolPanel.hpp"
 
 namespace REHex {
-	class DecodePanel: public wxPanel
+	class DecodePanel: public ToolPanel
 	{
 		public:
 			DecodePanel(wxWindow *parent, REHex::Document *document);
 			virtual ~DecodePanel();
+			
+// 			virtual std::string name() const override;
+// 			virtual std::string label() const override;
+// 			virtual Shape shape() const override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			

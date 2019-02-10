@@ -105,6 +105,7 @@ APP_OBJS := \
 	src/Palette.o \
 	src/search.o \
 	src/textentrydialog.o \
+	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
 	$(EXTRA_APP_OBJS)

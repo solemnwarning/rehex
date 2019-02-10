@@ -27,6 +27,13 @@
 */
 #include <portable_endian.h>
 
+static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::Document *document)
+{
+	return new REHex::DecodePanel(parent, document);
+}
+
+static REHex::ToolPanelRegistration tpr("DecodePanel", "Decode values", REHex::ToolPanel::TPS_TALL, &DecodePanel_factory);
+
 /* Endianness conversion functions for use with the OnXXXValue() template methods. */
 static uint8_t  hto8_u   (uint8_t  host_8bits)  { return host_8bits; }
 static int8_t   hto8_s   (int8_t   host_8bits)  { return host_8bits; }
@@ -88,7 +95,7 @@ BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
 END_EVENT_TABLE()
 
 REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
-	wxPanel(parent),
+	ToolPanel(parent),
 	document(document)
 {
 	endian = new wxChoice(this, wxID_ANY);

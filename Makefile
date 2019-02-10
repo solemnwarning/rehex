@@ -128,6 +128,7 @@ TESTS_COMMENTTREE_OBJS := \
 	src/document.o \
 	src/Palette.o \
 	src/textentrydialog.o \
+	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
 	tests/CommentTree.o \

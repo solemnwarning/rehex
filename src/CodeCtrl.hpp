@@ -19,7 +19,8 @@
 #define REHEX_CODECTRL_HPP
 
 #include <string>
-#include <list>
+#include <utility>
+#include <vector>
 #include <wx/control.h>
 #include <wx/wx.h>
 
@@ -34,6 +35,8 @@ namespace REHex {
 			void center_line(int line);
 			
 		private:
+			static const int MOUSE_SELECT_INTERVAL = 100;
+			
 			struct Line {
 				off_t offset;
 				std::string text;
@@ -43,11 +46,14 @@ namespace REHex {
 					offset(offset), text(text), active(active) {}
 			};
 			
+			typedef std::pair<int, int> CodeCharRef;
+			
 			wxFont *font;
 			int font_width;
 			int font_height;
+			int code_xoff;
 			
-			std::list<Line> lines;
+			std::vector<Line> lines;
 			int max_line_width;
 			
 			int scroll_xoff, scroll_xoff_max;
@@ -55,12 +61,38 @@ namespace REHex {
 			int wheel_vert_accum;
 			int wheel_horiz_accum;
 			
+			bool mouse_selecting;
+			wxTimer mouse_selecting_timer;
+			CodeCharRef mouse_selecting_from;
+			CodeCharRef mouse_selecting_to;
+			
+			/* If text has been selected, selection_end will be greater than selection_end.
+			 *
+			 * selection_begin points to first character in selection.
+			 * selection_end points one past the last character on the final line.
+			*/
+			CodeCharRef selection_begin;
+			CodeCharRef selection_end;
+			
 			void update_scrollbars();
+			CodeCharRef char_near_abs_xy(int abs_x, int abs_y);
+			CodeCharRef char_near_rel_xy(int rel_x, int rel_y);
+			void copy_selection();
+			void select_all();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			void OnWheel(wxMouseEvent &event);
+			void OnChar(wxKeyEvent &event);
+			void OnLeftDown(wxMouseEvent &event);
+			void OnLeftUp(wxMouseEvent &event);
+			void OnRightDown(wxMouseEvent &event);
+			void OnCopy(wxCommandEvent &event);
+			void OnSelectAll(wxCommandEvent &event);
+			void OnMotion(wxMouseEvent &event);
+			void OnSelectTick(wxTimerEvent &event);
+			void OnMotionTick(int mouse_x, int mouse_y);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

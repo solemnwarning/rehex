@@ -15,22 +15,42 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <assert.h>
+#include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
 #include "CodeCtrl.hpp"
+
+enum {
+	ID_SELECT_TIMER = 1,
+};
 
 BEGIN_EVENT_TABLE(REHex::CodeCtrl, wxControl)
 	EVT_PAINT(REHex::CodeCtrl::OnPaint)
 	EVT_SIZE(REHex::CodeCtrl::OnSize)
 	EVT_SCROLLWIN(REHex::CodeCtrl::OnScroll)
 	EVT_MOUSEWHEEL(REHex::CodeCtrl::OnWheel)
+	EVT_CHAR(REHex::CodeCtrl::OnChar)
+	EVT_LEFT_DOWN(REHex::CodeCtrl::OnLeftDown)
+	EVT_LEFT_UP(REHex::CodeCtrl::OnLeftUp)
+	EVT_RIGHT_DOWN(REHex::CodeCtrl::OnRightDown)
+	EVT_MENU(wxID_COPY, REHex::CodeCtrl::OnCopy)
+	EVT_MENU(wxID_SELECTALL, REHex::CodeCtrl::OnSelectAll)
+	EVT_MOTION(REHex::CodeCtrl::OnMotion)
+	EVT_TIMER(ID_SELECT_TIMER, REHex::CodeCtrl::OnSelectTick)
 END_EVENT_TABLE()
 
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
-	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL)),
+	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
 	max_line_width(0),
 	scroll_xoff(0), scroll_xoff_max(0),
-	scroll_yoff(0), scroll_yoff_max(0)
+	scroll_yoff(0), scroll_yoff_max(0),
+	wheel_vert_accum(0),
+	wheel_horiz_accum(0),
+	mouse_selecting(false),
+	mouse_selecting_timer(this, ID_SELECT_TIMER),
+	selection_begin(-1, -1),
+	selection_end(-1, -1)
 {
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
@@ -44,6 +64,8 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxSize char_extent = dc.GetTextExtent("X");
 	font_width  = char_extent.GetWidth();
 	font_height = char_extent.GetHeight();
+	
+	code_xoff = dc.GetTextExtent("00000000  ").GetWidth();
 }
 
 void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool active)
@@ -64,10 +86,10 @@ void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool ac
 		text_no_tabs.replace(p, 1, n_spaces, ' ');
 	}
 	
-	wxSize extent = dc.GetTextExtent(std::string("00000000  ") + text_no_tabs);
-	if(max_line_width < extent.GetWidth())
+	int line_width = code_xoff + dc.GetTextExtent(text_no_tabs).GetWidth();
+	if(max_line_width < line_width)
 	{
-		max_line_width = extent.GetWidth();
+		max_line_width = line_width;
 	}
 	
 	lines.emplace_back(offset, text_no_tabs, active);
@@ -78,6 +100,9 @@ void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool ac
 
 void REHex::CodeCtrl::clear()
 {
+	selection_begin = CodeCharRef(-1, -1);
+	selection_end   = CodeCharRef(-1, -1);
+	
 	max_line_width = 0;
 	lines.clear();
 	
@@ -146,6 +171,79 @@ void REHex::CodeCtrl::update_scrollbars()
 	}
 }
 
+REHex::CodeCtrl::CodeCharRef REHex::CodeCtrl::char_near_abs_xy(int abs_x, int abs_y)
+{
+	if(lines.empty())
+	{
+		return CodeCharRef(-1, -1);
+	}
+	
+	int line_idx = std::min((abs_y / font_height), (int)(lines.size() - 1));
+	const Line &line = *(std::next(lines.begin(), line_idx));
+	
+	int col = 0;
+	
+	wxClientDC dc(this);
+	dc.SetFont(*font);
+	
+	while((code_xoff + dc.GetTextExtent(std::string((col + 1), 'X')).GetWidth()) < abs_x && col < (int)(line.text.length()))
+	{
+		++col;
+	}
+	
+	return CodeCharRef(line_idx, col);
+}
+
+REHex::CodeCtrl::CodeCharRef REHex::CodeCtrl::char_near_rel_xy(int rel_x, int rel_y)
+{
+	return char_near_abs_xy((rel_x + scroll_xoff), (rel_y + scroll_yoff));
+}
+
+void REHex::CodeCtrl::copy_selection()
+{
+	if(selection_end > selection_begin && wxTheClipboard->Open())
+	{
+		std::string copy_text;
+		
+		for(int i = selection_begin.first; i <= selection_end.first; ++i)
+		{
+			assert(i >= 0);
+			assert((unsigned)(i) < lines.size());
+			
+			const std::string &line_text = lines[i].text;
+			
+			if(i > selection_begin.first)
+			{
+				copy_text += '\n';
+			}
+			
+			int substr_off = (i == selection_begin.first ? selection_begin.second : 0);
+			assert(substr_off >= 0);
+			assert((unsigned)(substr_off) <= line_text.length());
+			
+			int substr_len = (i == selection_end.first ? selection_end.second : line_text.length()) - substr_off;
+			assert(substr_len >= 0);
+			assert((unsigned)(substr_off + substr_len) <= line_text.length());
+			
+			copy_text += line_text.substr(substr_off, substr_len);
+		}
+		
+		wxTheClipboard->SetData(new wxTextDataObject(copy_text));
+		wxTheClipboard->Close();
+	}
+}
+
+void REHex::CodeCtrl::select_all()
+{
+	if(!lines.empty())
+	{
+		selection_begin = CodeCharRef(0, 0);
+		selection_end = CodeCharRef((lines.size() - 1), lines.back().text.length());
+		
+		Refresh();
+	}
+}
+
 void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 {
 	wxSize client_size = GetClientSize();
@@ -158,12 +256,11 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 	
 	dc.Clear();
 	
-	wxSize off_extent = dc.GetTextExtent("00000000  ");
-	
 	int x = -scroll_xoff;
 	int y = -scroll_yoff;
 	
-	for(auto line = lines.begin(); line != lines.end(); ++line, y += font_height)
+	int line_idx = 0;
+	for(auto line = lines.begin(); line != lines.end(); ++line, y += font_height, ++line_idx)
 	{
 		if((y + font_height) <= 0 || y >= client_size.GetHeight())
 		{
@@ -171,13 +268,65 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 			continue;
 		}
 		
-		dc.SetTextForeground(line->active ? *wxRED : *wxBLACK);
+		wxColour fg_colour;
+		wxColour bg_colour;
+		
+		int line_x = x + code_xoff;
+		std::string pending;
+		
+		auto flush = [&dc, &line_x, &pending, &y]()
+		{
+			if(!pending.empty())
+			{
+				dc.DrawText(pending, line_x, y);
+				line_x += dc.GetTextExtent(pending).GetWidth();
+				
+				pending.clear();
+			}
+		};
+		
+		auto set = [&dc, &fg_colour, &bg_colour, &flush](const wxColour &fg, const wxColour &bg, bool force = false)
+		{
+			if(fg != fg_colour || bg != bg_colour || force)
+			{
+				flush();
+				
+				dc.SetTextForeground(fg_colour = fg);
+				dc.SetTextBackground(bg_colour = bg);
+				dc.SetBackgroundMode(bg_colour == *wxWHITE ? wxTRANSPARENT : wxSOLID);
+			}
+		};
+		
+		if(line->active)
+		{
+			set(*wxRED, *wxWHITE, true);
+		}
+		else{
+			set(*wxBLACK, *wxWHITE, true);
+		}
 		
 		char offset_str[16];
 		snprintf(offset_str, sizeof(offset_str), "%08X", (unsigned)(line->offset & 0xFFFFFFFF));
 		dc.DrawText(offset_str, x, y);
 		
-		dc.DrawText(line->text, x + off_extent.GetWidth(), y);
+		for(size_t c = 0; c < line->text.length(); ++c)
+		{
+			if(selection_begin <= CodeCharRef(line_idx, c) && selection_end > CodeCharRef(line_idx, c))
+			{
+				set(*wxWHITE, *wxBLUE);
+			}
+			else if(line->active)
+			{
+				set(*wxRED, *wxWHITE);
+			}
+			else{
+				set(*wxBLACK, *wxWHITE);
+			}
+			
+			pending.push_back(line->text[c]);
+		}
+		
+		flush();
 	}
 }
 
@@ -329,6 +478,137 @@ void REHex::CodeCtrl::OnWheel(wxMouseEvent &event)
 		}
 		
 		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		Refresh();
+	}
+}
+
+void REHex::CodeCtrl::OnChar(wxKeyEvent &event)
+{
+	int key       = event.GetKeyCode();
+	int modifiers = event.GetModifiers();
+	
+	if((modifiers & wxMOD_CONTROL) && key == WXK_CONTROL_A)
+	{
+		select_all();
+	}
+	else if((modifiers & wxMOD_CONTROL) && key == WXK_CONTROL_C)
+	{
+		copy_selection();
+	}
+	else{
+		/* Not for us. Continue propagation. */
+		event.Skip();
+	}
+}
+
+void REHex::CodeCtrl::OnLeftDown(wxMouseEvent &event)
+{
+	int mouse_x = event.GetX();
+	int mouse_y = event.GetY();
+	
+	mouse_selecting_from = char_near_rel_xy(mouse_x, mouse_y);
+	if(mouse_selecting_from.first >= 0)
+	{
+		mouse_selecting = true;
+		
+		CaptureMouse();
+		mouse_selecting_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
+		
+		OnMotionTick(mouse_x, mouse_y);
+	}
+	
+	Refresh();
+	
+	/* We take focus when clicked. */
+	SetFocus();
+}
+
+void REHex::CodeCtrl::OnLeftUp(wxMouseEvent &event)
+{
+	if(mouse_selecting)
+	{
+		mouse_selecting_timer.Stop();
+		ReleaseMouse();
+		
+		mouse_selecting = false;
+	}
+}
+
+void REHex::CodeCtrl::OnRightDown(wxMouseEvent &event)
+{
+	/* If the user right clicks while selecting, and then releases the left button over the
+	 * menu, we never receive the EVT_LEFT_UP event. Release the mouse and cancel the selection
+	 * now, else we wind up keeping the mouse grabbed and stop it interacting with any other
+	 * windows...
+	*/
+	
+	if(mouse_selecting)
+	{
+		mouse_selecting_timer.Stop();
+		ReleaseMouse();
+		
+		mouse_selecting = false;
+	}
+	
+	wxMenu menu;
+	
+	menu.Append(wxID_COPY,  "&Copy");
+	menu.Enable(wxID_COPY, (selection_begin < selection_end));
+	
+	menu.AppendSeparator();
+	
+	menu.Append(wxID_SELECTALL, "Select &All");
+	
+	PopupMenu(&menu);
+	
+	/* We take focus when clicked. */
+	SetFocus();
+}
+
+void REHex::CodeCtrl::OnCopy(wxCommandEvent &event)
+{
+	copy_selection();
+}
+
+void REHex::CodeCtrl::OnSelectAll(wxCommandEvent &event)
+{
+	select_all();
+}
+
+void REHex::CodeCtrl::OnMotion(wxMouseEvent &event)
+{
+	OnMotionTick(event.GetX(), event.GetY());
+}
+
+void REHex::CodeCtrl::OnSelectTick(wxTimerEvent &event)
+{
+	wxPoint window_pos = GetScreenPosition();
+	wxPoint mouse_pos  = wxGetMousePosition();
+	
+	OnMotionTick((mouse_pos.x - window_pos.x), (mouse_pos.y - window_pos.y));
+}
+
+void REHex::CodeCtrl::OnMotionTick(int mouse_x, int mouse_y)
+{
+	if(mouse_selecting)
+	{
+		mouse_selecting_to = char_near_rel_xy(mouse_x, mouse_y);
+		
+		if(mouse_selecting_to > mouse_selecting_from)
+		{
+			selection_begin = mouse_selecting_from;
+			selection_end   = mouse_selecting_to;
+		}
+		else if(mouse_selecting_to < mouse_selecting_from)
+		{
+			selection_begin = mouse_selecting_to;
+			selection_end   = mouse_selecting_from;
+		}
+		else{
+			selection_begin = CodeCharRef(-1, -1);
+			selection_end   = CodeCharRef(-1, -1);
+		}
+		
 		Refresh();
 	}
 }

@@ -185,6 +185,31 @@ REHex::DecodePanel::~DecodePanel()
 	}
 }
 
+std::string REHex::DecodePanel::name() const
+{
+	return "DecodePanel";
+}
+
+void REHex::DecodePanel::save_state(wxConfig *config) const
+{
+	bool big_endian = (endian->GetSelection() == 0);
+	config->Write("big-endian", big_endian);
+}
+
+void REHex::DecodePanel::load_state(wxConfig *config)
+{
+	bool big_endian = config->Read("big-endian", (endian->GetSelection() == 0));
+	if(big_endian)
+	{
+		endian->SetSelection(0);
+	}
+	else{
+		endian->SetSelection(1);
+	}
+	
+	update();
+}
+
 void REHex::DecodePanel::document_unbind()
 {
 	document->Unbind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);

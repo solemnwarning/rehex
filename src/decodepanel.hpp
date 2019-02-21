@@ -35,9 +35,12 @@ namespace REHex {
 			DecodePanel(wxWindow *parent, REHex::Document *document);
 			virtual ~DecodePanel();
 			
-// 			virtual std::string name() const override;
+			virtual std::string name() const override;
 // 			virtual std::string label() const override;
 // 			virtual Shape shape() const override;
+			
+			virtual void save_state(wxConfig *config) const override;
+			virtual void load_state(wxConfig *config) override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			

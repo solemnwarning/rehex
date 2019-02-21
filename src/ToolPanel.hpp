@@ -20,6 +20,7 @@
 
 #include <map>
 #include <string>
+#include <wx/config.h>
 #include <wx/panel.h>
 
 #include "document.hpp"
@@ -49,9 +50,12 @@ namespace REHex {
 			
 			virtual ~ToolPanel();
 			
-// 			virtual std::string name() const = 0;
+			virtual std::string name() const = 0;
 // 			virtual std::string label() const = 0;
 // 			virtual Shape shape() const = 0;
+			
+			virtual void save_state(wxConfig *config) const = 0;
+			virtual void load_state(wxConfig *config) = 0;
 			
 		protected:
 			ToolPanel(wxWindow *parent);

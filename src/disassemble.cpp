@@ -90,6 +90,35 @@ REHex::Disassemble::~Disassemble()
 	}
 }
 
+std::string REHex::Disassemble::name() const
+{
+	return "Disassemble";
+}
+
+void REHex::Disassemble::save_state(wxConfig *config) const
+{
+	const char *triple = arch_list[ arch->GetSelection() ].triple;
+	config->Write("arch", triple);
+}
+
+void REHex::Disassemble::load_state(wxConfig *config)
+{
+	std::string cur_triple = arch_list[ arch->GetSelection() ].triple;
+	std::string new_triple = config->Read("arch", cur_triple).ToStdString();
+	
+	for(int i = 0; arch_list[i].triple != NULL; ++i)
+	{
+		if(new_triple == arch_list[i].triple)
+		{
+			arch->SetSelection(i);
+			break;
+		}
+	}
+	
+	reinit_disassembler();
+	update();
+}
+
 void REHex::Disassemble::document_unbind()
 {
 	document->Unbind(EV_CURSOR_MOVED, &REHex::Disassemble::OnCursorMove, this);

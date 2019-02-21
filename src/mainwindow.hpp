@@ -63,6 +63,7 @@ namespace REHex {
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
+			void OnSaveView(wxCommandEvent &event);
 			
 			void OnAbout(wxCommandEvent &event);
 			
@@ -87,11 +88,13 @@ namespace REHex {
 					wxNotebook         *v_tools;
 					wxNotebook         *h_tools;
 					
-					std::map<std::string, wxWindow*> tools;
+					std::map<std::string, ToolPanel*> tools;
 					
 					bool tool_active(const std::string &name);
-					void tool_create(const std::string &name, bool switch_to, bool adjust = true);
+					void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
 					void tool_destroy(const std::string &name);
+					
+					void save_view(wxConfig *config);
 					
 					void OnSize(wxSizeEvent &size);
 					void OnHToolChange(wxBookCtrlEvent &event);
@@ -116,6 +119,9 @@ namespace REHex {
 					
 					int hsplit_clamp_sash(int sash_position);
 					int vsplit_clamp_sash(int sash_position);
+					
+					void init_default_doc_view();
+					void init_default_tools();
 					
 					DECLARE_EVENT_TABLE()
 			};

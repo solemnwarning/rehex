@@ -52,6 +52,7 @@ enum {
 	ID_SEARCH_VALUE,
 	ID_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
+	ID_SAVE_VIEW,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -93,6 +94,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_BYTES_GROUP,  REHex::MainWindow::OnSetBytesPerGroup)
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::MainWindow::OnShowOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
+	EVT_MENU(ID_SAVE_VIEW,    REHex::MainWindow::OnSaveView)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -171,6 +173,10 @@ REHex::MainWindow::MainWindow():
 		
 		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
 	}
+	
+	doc_menu->AppendSeparator();
+	
+	doc_menu->Append(ID_SAVE_VIEW, "Save current view as default");
 	
 	wxMenu *help_menu = new wxMenu;
 	
@@ -665,6 +671,19 @@ void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::Tool
 	}
 }
 
+void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
+{
+	wxConfig *config = wxGetApp().config;
+	
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->save_view(config);
+}
+
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)
 {
 	REHex::AboutDialog about(this);
@@ -887,6 +906,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	h_splitter->SetMinimumPaneSize(20);
 	
 	doc = new REHex::Document(h_splitter);
+	init_default_doc_view();
 	
 	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
 	h_tools->SetFitToCurrentPage(true);
@@ -901,8 +921,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	tool_create("DecodePanel", true, false);
-	tool_create("CommentTree", false, false);
+	init_default_tools();
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
@@ -920,6 +939,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	h_splitter->SetMinimumPaneSize(20);
 	
 	doc = new REHex::Document(h_splitter, filename);
+	init_default_doc_view();
 	
 	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
 	h_tools->SetFitToCurrentPage(true);
@@ -934,8 +954,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	tool_create("DecodePanel", true, false);
-	tool_create("CommentTree", false, false);
+	init_default_tools();
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
@@ -946,7 +965,7 @@ bool REHex::MainWindow::Tab::tool_active(const std::string &name)
 	return tools.find(name) != tools.end();
 }
 
-void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to, bool adjust)
+void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *config, bool adjust)
 {
 	if(tool_active(name))
 	{
@@ -958,7 +977,12 @@ void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to
 	
 	if(tpr->shape == ToolPanel::TPS_TALL)
 	{
-		wxWindow *tool_window = tpr->factory(v_tools, doc);
+		ToolPanel *tool_window = tpr->factory(v_tools, doc);
+		if(config)
+		{
+			tool_window->load_state(config);
+		}
+		
 		v_tools->AddPage(tool_window, tpr->label, switch_to);
 		
 		tools.insert(std::make_pair(name, tool_window));
@@ -970,7 +994,12 @@ void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to
 	}
 	else if(tpr->shape == ToolPanel::TPS_WIDE)
 	{
-		wxWindow *tool_window = tpr->factory(h_tools, doc);
+		ToolPanel *tool_window = tpr->factory(h_tools, doc);
+		if(config)
+		{
+			tool_window->load_state(config);
+		}
+		
 		h_tools->AddPage(tool_window, tpr->label, switch_to);
 		
 		tools.insert(std::make_pair(name, tool_window));
@@ -1008,6 +1037,37 @@ void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
 	else if(notebook == h_tools)
 	{
 		htools_adjust();
+	}
+}
+
+void REHex::MainWindow::Tab::save_view(wxConfig *config)
+{
+	config->DeleteGroup("/default-view/");
+	config->SetPath("/default-view/");
+	
+	config->Write("bytes-per-line", doc->get_bytes_per_line());
+	config->Write("bytes-per-group", doc->get_bytes_per_group());
+	config->Write("show-offsets", doc->get_show_offsets());
+	config->Write("show-ascii", doc->get_show_ascii());
+	
+	/* TODO: Save h_tools state */
+	
+	for(size_t i = 0; i < v_tools->GetPageCount(); ++i)
+	{
+		char path[64];
+		snprintf(path, sizeof(path), "/default-view/vtools/panels/0/tab/%u/", (unsigned)(i));
+		
+		config->SetPath(path);
+		
+		wxWindow *page = v_tools->GetPage(i);
+		assert(page != NULL);
+		
+		ToolPanel *tp = dynamic_cast<ToolPanel*>(page);
+		assert(tp != NULL);
+		
+		config->Write("name", wxString(tp->name()));
+		config->Write("selected", (page == v_tools->GetCurrentPage()));
+		tp->save_state(config);
 	}
 }
 
@@ -1244,6 +1304,49 @@ void REHex::MainWindow::Tab::htools_adjust_now_idle(wxIdleEvent &event)
 	event.Skip();
 	
 	htools_adjust();
+}
+
+void REHex::MainWindow::Tab::init_default_doc_view()
+{
+	wxConfig *config = wxGetApp().config;
+	config->SetPath("/default-view/");
+	
+	doc->set_bytes_per_line(   config->Read("bytes-per-line",   doc->get_bytes_per_line()));
+	doc->set_bytes_per_group(  config->Read("bytes-per-group",  doc->get_bytes_per_group()));
+	doc->set_show_offsets(     config->Read("show-offsets",     doc->get_show_offsets()));
+	doc->set_show_ascii(       config->Read("show-ascii",       doc->get_show_ascii()));
+}
+
+void REHex::MainWindow::Tab::init_default_tools()
+{
+	wxConfig *config = wxGetApp().config;
+	
+	/* TODO: Load h_tools state. */
+	
+	for(unsigned int i = 0;; ++i)
+	{
+		char base_p[64];
+		snprintf(base_p, sizeof(base_p), "/default-view/vtools/panels/0/tab/%u/", i);
+		
+		if(config->HasGroup(base_p))
+		{
+			config->SetPath(base_p);
+			
+			std::string name = config->Read("name", "").ToStdString();
+			bool selected    = config->Read("selected", false);
+			
+			if(ToolPanelRegistry::by_name(name) != NULL)
+			{
+				tool_create(name, selected, config, false);
+			}
+			else{
+				/* TODO: Some kind of warning? */
+			}
+		}
+		else{
+			break;
+		}
+	}
 }
 
 REHex::MainWindow::DropTarget::DropTarget(MainWindow *window):

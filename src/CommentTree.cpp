@@ -72,6 +72,21 @@ REHex::CommentTree::~CommentTree()
 	model->DecRef();
 }
 
+std::string REHex::CommentTree::name() const
+{
+	return "CommentTree";
+}
+
+void REHex::CommentTree::save_state(wxConfig *config) const
+{
+	/* No state to save. */
+}
+
+void REHex::CommentTree::load_state(wxConfig *config)
+{
+	/* No state to load. */
+}
+
 wxSize REHex::CommentTree::DoGetBestClientSize() const
 {
 	/* TODO: Calculate a reasonable best size. */

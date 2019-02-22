@@ -582,7 +582,11 @@ void REHex::Document::OnSize(wxSizeEvent &event)
 	
 	client_width  = new_client_width;
 	client_height = new_client_height;
-	visible_lines = client_height / hf_height;
+	
+	/* Clamp to 1 if window is too small to display a single whole line, to avoid edge casey
+	 * crashing in the scrolling code.
+	*/
+	visible_lines = std::max((client_height / hf_height), 1);
 	
 	if(width_changed)
 	{
@@ -1802,6 +1806,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	dirty             = false;
 	client_width      = 0;
 	client_height     = 0;
+	visible_lines     = 1;
 	bytes_per_line    = 0;
 	bytes_per_group   = 4;
 	show_ascii        = true;

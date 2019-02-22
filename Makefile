@@ -221,3 +221,28 @@ res/%.c res/%.h: res/%.png $(EMBED_EXE)
 	$(DEPPOST)
 
 include $(shell find .d/ -name '*.d' -type f)
+
+prefix      ?= /usr/local
+bindir      ?= $(prefix)/bin
+datarootdir ?= $(prefix)/share
+
+.PHONY: install
+install: $(EXE)
+	install -D -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
+	
+	for s in 16 32 48 64 128 256 512; \
+	do \
+		install -D -m 0644 res/icon$${s}.png $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
+	done
+	
+	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(DESTDIR)$(bindir)/$(EXE)
+	rm -f $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+	
+	for s in 16 32 48 64 128 256 512; \
+	do \
+		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
+	done

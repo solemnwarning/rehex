@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Reverse Engineers' Hex Editor
+Icon=rehex.png
+Exec=rehex %F
+Terminal=false
+Categories=Utility

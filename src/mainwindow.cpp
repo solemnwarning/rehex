@@ -108,19 +108,19 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
-	wxFrame(NULL, wxID_ANY, wxT("Reverse Engineers' Hex Editor"), wxDefaultPosition, wxSize(740, 540))
+	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
 {
 	wxMenu *file_menu = new wxMenu;
 	recent_files_menu = new wxMenu;
 	
-	file_menu->Append(wxID_NEW,    wxT("&New"));
-	file_menu->Append(wxID_OPEN,   wxT("&Open"));
-	file_menu->AppendSubMenu(recent_files_menu, wxT("Open &Recent"));
-	file_menu->Append(wxID_SAVE,   wxT("&Save"));
-	file_menu->Append(wxID_SAVEAS, wxT("&Save As"));
-	file_menu->Append(wxID_CLOSE,  wxT("&Close"));
+	file_menu->Append(wxID_NEW,    "&New");
+	file_menu->Append(wxID_OPEN,   "&Open");
+	file_menu->AppendSubMenu(recent_files_menu, "Open &Recent");
+	file_menu->Append(wxID_SAVE,   "&Save");
+	file_menu->Append(wxID_SAVEAS, "&Save As");
+	file_menu->Append(wxID_CLOSE,  "&Close");
 	file_menu->AppendSeparator();
-	file_menu->Append(wxID_EXIT,   wxT("&Exit"));
+	file_menu->Append(wxID_EXIT,   "&Exit");
 	
 	edit_menu = new wxMenu;
 	
@@ -151,15 +151,15 @@ REHex::MainWindow::MainWindow():
 	edit_menu->Append(wxID_COPY,  "&Copy");
 	edit_menu->Append(wxID_PASTE, "&Paste");
 	
-	doc_menu = new wxMenu;
+	view_menu = new wxMenu;
 	
-	doc_menu->Append(ID_BYTES_LINE,  wxT("Set bytes per line"));
-	doc_menu->Append(ID_BYTES_GROUP, wxT("Set bytes per group"));
-	doc_menu->AppendCheckItem(ID_SHOW_OFFSETS, wxT("Show offsets"));
-	doc_menu->AppendCheckItem(ID_SHOW_ASCII, wxT("Show ASCII"));
+	view_menu->Append(ID_BYTES_LINE,  "Set bytes per line");
+	view_menu->Append(ID_BYTES_GROUP, "Set bytes per group");
+	view_menu->AppendCheckItem(ID_SHOW_OFFSETS, "Show offsets");
+	view_menu->AppendCheckItem(ID_SHOW_ASCII, "Show ASCII");
 	
 	tool_panels_menu = new wxMenu;
-	doc_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
+	view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
@@ -174,18 +174,18 @@ REHex::MainWindow::MainWindow():
 		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
 	}
 	
-	doc_menu->AppendSeparator();
+	view_menu->AppendSeparator();
 	
-	doc_menu->Append(ID_SAVE_VIEW, "Save current view as default");
+	view_menu->Append(ID_SAVE_VIEW, "Save current view as default");
 	
 	wxMenu *help_menu = new wxMenu;
 	
 	help_menu->Append(wxID_ABOUT, "&About");
 	
 	wxMenuBar *menu_bar = new wxMenuBar;
-	menu_bar->Append(file_menu, wxT("&File"));
-	menu_bar->Append(edit_menu, wxT("&Edit"));
-	menu_bar->Append(doc_menu,  wxT("&Document"));
+	menu_bar->Append(file_menu, "&File");
+	menu_bar->Append(edit_menu, "&Edit");
+	menu_bar->Append(view_menu,  "&View");
 	menu_bar->Append(help_menu, "&Help");
 	
 	SetMenuBar(menu_bar);
@@ -309,7 +309,7 @@ void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 	
 	if(dirty_files.size() == 1)
 	{
-		wxMessageDialog confirm(this, (wxString("The file ") + dirty_files[0] + " has unsaved changes.\nClose anyway?"), wxT("Unsaved changes"),
+		wxMessageDialog confirm(this, (wxString("The file ") + dirty_files[0] + " has unsaved changes.\nClose anyway?"), "Unsaved changes",
 			(wxYES | wxNO | wxCENTER));
 		
 		int response = confirm.ShowModal();
@@ -331,7 +331,7 @@ void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 			message.Append(*i);
 		}
 		
-		wxMessageDialog confirm(this, message, wxT("Unsaved changes"),
+		wxMessageDialog confirm(this, message, "Unsaved changes",
 			(wxYES | wxNO | wxCENTER));
 		
 		int response = confirm.ShowModal();
@@ -355,7 +355,7 @@ void REHex::MainWindow::OnNew(wxCommandEvent &event)
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 {
-	wxFileDialog openFileDialog(this, wxT("Open File"), "", "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	wxFileDialog openFileDialog(this, "Open File", "", "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
@@ -398,7 +398,7 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 {
-	wxFileDialog saveFileDialog(this, wxT("Save As"), "", "", "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	wxFileDialog saveFileDialog(this, "Save As", "", "", "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 	if(saveFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
@@ -433,7 +433,7 @@ void REHex::MainWindow::OnClose(wxCommandEvent &event)
 	
 	if(tab->doc->is_dirty())
 	{
-		wxMessageDialog confirm(this, (wxString("The file ") + tab->doc->get_title() + " has unsaved changes.\nClose anyway?"), wxT("Unsaved changes"),
+		wxMessageDialog confirm(this, (wxString("The file ") + tab->doc->get_title() + " has unsaved changes.\nClose anyway?"), "Unsaved changes",
 			(wxYES | wxNO | wxCENTER));
 		
 		int response = confirm.ShowModal();
@@ -701,8 +701,8 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	SetTitle(tab->doc->get_title() + " - Reverse Engineers' Hex Editor");
 	
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
-	doc_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
-	doc_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
+	view_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
+	view_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
@@ -729,7 +729,7 @@ void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
 	
 	if(tab->doc->is_dirty())
 	{
-		wxMessageDialog confirm(this, (wxString("The file ") + tab->doc->get_title() + " has unsaved changes.\nClose anyway?"), wxT("Unsaved changes"),
+		wxMessageDialog confirm(this, (wxString("The file ") + tab->doc->get_title() + " has unsaved changes.\nClose anyway?"), "Unsaved changes",
 			(wxYES | wxNO | wxCENTER));
 		
 		int response = confirm.ShowModal();

@@ -140,7 +140,7 @@ namespace REHex {
 			
 			wxMenu *recent_files_menu;
 			wxMenu *edit_menu;
-			wxMenu *doc_menu;
+			wxMenu *view_menu;
 			wxAuiNotebook *notebook;
 			
 			wxMenu *tool_panels_menu;

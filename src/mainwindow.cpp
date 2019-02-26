@@ -42,6 +42,13 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
+#ifdef __APPLE__
+#include "../res/document_new32.h"
+#include "../res/document_open32.h"
+#include "../res/document_save32.h"
+#include "../res/document_save_as32.h"
+#endif
+
 enum {
 	ID_BYTES_LINE = 1,
 	ID_BYTES_GROUP,
@@ -196,10 +203,22 @@ REHex::MainWindow::MainWindow():
 	wxToolBar *toolbar = CreateToolBar();
 	wxArtProvider artp;
 	
+	/* Toolbar icons are expected to be 32x32 on OS X. wxWidgets ships 16x16 and 24x24 Tango
+	 * icons and scales them as needed, which produces blurry 32x32 images. So on OS X, we
+	 * embed 32x32 versions instead.
+	*/
+	
+	#ifdef __APPLE__
+	toolbar->AddTool(wxID_NEW,    "New",     wxBITMAP_PNG_FROM_DATA(document_new32));
+	toolbar->AddTool(wxID_OPEN,   "Open",    wxBITMAP_PNG_FROM_DATA(document_open32));
+	toolbar->AddTool(wxID_SAVE,   "Save",    wxBITMAP_PNG_FROM_DATA(document_save32));
+	toolbar->AddTool(wxID_SAVEAS, "Save As", wxBITMAP_PNG_FROM_DATA(document_save_as32));
+	#else
 	toolbar->AddTool(wxID_NEW,    "New",     artp.GetBitmap(wxART_NEW,          wxART_TOOLBAR));
 	toolbar->AddTool(wxID_OPEN,   "Open",    artp.GetBitmap(wxART_FILE_OPEN,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVE,   "Save",    artp.GetBitmap(wxART_FILE_SAVE,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", artp.GetBitmap(wxART_FILE_SAVE_AS, wxART_TOOLBAR));
+	#endif
 	
 	toolbar->Realize();
 	

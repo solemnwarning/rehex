@@ -14,9 +14,17 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+EXTRA_APP_OBJS := \
+	res/document_new32.o \
+	res/document_open32.o \
+	res/document_save32.o \
+	res/document_save_as32.o
+
 all: REHex.app
 
 include Makefile
+
+src/mainwindow.o: res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h
 
 ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns

@@ -1816,6 +1816,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	scroll_ydiv       = 1;
 	wheel_vert_accum  = 0;
 	wheel_horiz_accum = 0;
+	selection_off     = 0;
 	selection_length  = 0;
 	cursor_visible    = true;
 	cursor_state      = CSTATE_HEX;
@@ -2633,6 +2634,11 @@ int REHex::Document::hf_char_width()
 */
 int REHex::Document::hf_string_width(int length)
 {
+	if(length == 0)
+	{
+		return 0;
+	}
+	
 	if(length <= PRECOMP_HF_STRING_WIDTH_TO)
 	{
 		return hf_string_width_precomp[length - 1];

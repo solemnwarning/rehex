@@ -52,7 +52,6 @@ enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SELECT_TIMER,
 	ID_CLEAR_HIGHLIGHT,
-	ID_PENDING_TIP,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -68,7 +67,6 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::Document::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 	EVT_MENU(ID_CLEAR_HIGHLIGHT, REHex::Document::OnClearHighlight)
-	EVT_TIMER(ID_PENDING_TIP, REHex::Document::OnPendingTipTimer)
 END_EVENT_TABLE()
 
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
@@ -80,8 +78,7 @@ wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
-	mouse_select_timer(this, ID_SELECT_TIMER),
-	pending_tip_timer(this, ID_PENDING_TIP)
+	mouse_select_timer(this, ID_SELECT_TIMER)
 {
 	_ctor_pre(parent);
 	
@@ -97,8 +94,7 @@ REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	wxControl(),
 	filename(filename),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
-	mouse_select_timer(this, ID_SELECT_TIMER),
-	pending_tip_timer(this, ID_PENDING_TIP)
+	mouse_select_timer(this, ID_SELECT_TIMER)
 {
 	_ctor_pre(parent);
 	
@@ -1646,11 +1642,6 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 
 void REHex::Document::OnMotion(wxMouseEvent &event)
 {
-	char t[128];
-	sprintf(t, "OnMotion: %d, %d", event.GetX(), event.GetY());
-	printf("OnMotion: %d, %d\n", event.GetX(), event.GetY());
-	_set_pending_tooltip(t);
-	
 	OnMotionTick(event.GetX(), event.GetY());
 }
 
@@ -1825,11 +1816,9 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	scroll_ydiv       = 1;
 	wheel_vert_accum  = 0;
 	wheel_horiz_accum = 0;
-	selection_off     = 0;
 	selection_length  = 0;
 	cursor_visible    = true;
 	cursor_state      = CSTATE_HEX;
-	active_tip        = NULL;
 }
 
 void REHex::Document::_ctor_post()
@@ -2606,34 +2595,6 @@ std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned
 	return lines;
 }
 
-void REHex::Document::_set_pending_tooltip(const std::string &text)
-{
-	static int TOOLTIP_DELAY = 1000;
-	
-	if(pending_tip_text != text)
-	{
-		pending_tip_text = text;
-		pending_tip_timer.Start(TOOLTIP_DELAY, wxTIMER_ONE_SHOT);
-	}
-}
-
-void REHex::Document::_clear_tooltip()
-{
-	pending_tip_timer.Stop();
-	pending_tip_text.clear();
-	
-	delete active_tip;
-	active_tip = NULL;
-}
-
-void REHex::Document::OnPendingTipTimer(wxTimerEvent &event)
-{
-	delete active_tip;
-	
-	active_tip = new wxTipWindow(this, pending_tip_text, 100, &active_tip);
-	pending_tip_text.clear();
-}
-
 void REHex::Document::_raise_moved()
 {
 	wxCommandEvent event(REHex::EV_CURSOR_MOVED);
@@ -2672,11 +2633,6 @@ int REHex::Document::hf_char_width()
 */
 int REHex::Document::hf_string_width(int length)
 {
-	if(length == 0)
-	{
-		return 0;
-	}
-	
 	if(length <= PRECOMP_HF_STRING_WIDTH_TO)
 	{
 		return hf_string_width_precomp[length - 1];

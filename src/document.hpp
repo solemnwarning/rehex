@@ -24,6 +24,7 @@
 #include <memory>
 #include <stdint.h>
 #include <utility>
+#include <wx/tipwin.h>
 #include <wx/wx.h>
 
 #include "buffer.hpp"
@@ -242,6 +243,10 @@ namespace REHex {
 			std::list<REHex::Document::TrackedChange> undo_stack;
 			std::list<REHex::Document::TrackedChange> redo_stack;
 			
+			wxTipWindow *active_tip;
+			std::string pending_tip_text;
+			wxTimer pending_tip_timer;
+			
 			void _ctor_pre(wxWindow *parent);
 			void _ctor_post();
 			
@@ -283,6 +288,10 @@ namespace REHex {
 			void _update_vscroll_pos();
 			
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			
+			void _set_pending_tooltip(const std::string &text);
+			void _clear_tooltip();
+			void OnPendingTipTimer(wxTimerEvent &event);
 			
 			void _raise_moved();
 			void _raise_comment_modified();

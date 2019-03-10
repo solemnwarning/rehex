@@ -302,8 +302,11 @@ void REHex::DecodePanel::update()
 
 void REHex::DecodePanel::OnDocumentDestroy(wxWindowDestroyEvent &event)
 {
-	document_unbind();
-	document = NULL;
+	if(event.GetWindow() == document)
+	{
+		document_unbind();
+		document = NULL;
+	}
 	
 	/* Continue propogation. */
 	event.Skip();

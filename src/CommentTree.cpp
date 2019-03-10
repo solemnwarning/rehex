@@ -112,8 +112,13 @@ void REHex::CommentTree::refresh_comments()
 
 void REHex::CommentTree::OnDocumentDestroy(wxWindowDestroyEvent &event)
 {
-	unbind_events();
-	document = NULL;
+	if(event.GetWindow() == document)
+	{
+		unbind_events();
+		document = NULL;
+	}
+	
+	/* Continue propogation. */
 	event.Skip();
 }
 

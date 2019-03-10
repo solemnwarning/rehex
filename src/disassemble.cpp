@@ -274,8 +274,11 @@ std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble
 
 void REHex::Disassemble::OnDocumentDestroy(wxWindowDestroyEvent &event)
 {
-	document_unbind();
-	document = NULL;
+	if(event.GetWindow() == document)
+	{
+		document_unbind();
+		document = NULL;
+	}
 	
 	/* Continue propogation. */
 	event.Skip();

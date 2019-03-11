@@ -24,6 +24,7 @@
 #include <memory>
 #include <stdint.h>
 #include <utility>
+#include <wx/tipwin.h>
 #include <wx/wx.h>
 
 #include "buffer.hpp"
@@ -118,6 +119,8 @@ namespace REHex {
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnClearHighlight(wxCommandEvent &event);
+			void OnSetFocus(wxFocusEvent &event);
+			void OnKillFocus(wxFocusEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:
@@ -242,11 +245,17 @@ namespace REHex {
 			std::list<REHex::Document::TrackedChange> undo_stack;
 			std::list<REHex::Document::TrackedChange> redo_stack;
 			
+			wxTipWindow *active_tip;
+			wxString pending_tip_text;
+			wxTimer pending_tip_timer;
+			
 			void _ctor_pre(wxWindow *parent);
 			void _ctor_post();
 			
 			void _reinit_regions();
 			void _recalc_regions(wxDC &dc);
+			std::pair<Region*, int64_t> region_line_at_y(int y_px);
+			off_t offset_at_xy(int x_px, int y_px);
 			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			
@@ -283,6 +292,10 @@ namespace REHex {
 			void _update_vscroll_pos();
 			
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			
+			void _set_pending_tooltip(const wxString &text);
+			void _clear_tooltip();
+			void OnPendingTipTimer(wxTimerEvent &event);
 			
 			void _raise_moved();
 			void _raise_comment_modified();

@@ -52,6 +52,7 @@ enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SELECT_TIMER,
 	ID_CLEAR_HIGHLIGHT,
+	ID_PENDING_TIP,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -67,6 +68,9 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::Document::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::Document::OnRedrawCursor)
 	EVT_MENU(ID_CLEAR_HIGHLIGHT, REHex::Document::OnClearHighlight)
+	EVT_TIMER(ID_PENDING_TIP, REHex::Document::OnPendingTipTimer)
+	EVT_SET_FOCUS(REHex::Document::OnSetFocus)
+	EVT_KILL_FOCUS(REHex::Document::OnKillFocus)
 END_EVENT_TABLE()
 
 wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
@@ -78,7 +82,8 @@ wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
-	mouse_select_timer(this, ID_SELECT_TIMER)
+	mouse_select_timer(this, ID_SELECT_TIMER),
+	pending_tip_timer(this, ID_PENDING_TIP)
 {
 	_ctor_pre(parent);
 	
@@ -94,7 +99,8 @@ REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	wxControl(),
 	filename(filename),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
-	mouse_select_timer(this, ID_SELECT_TIMER)
+	mouse_select_timer(this, ID_SELECT_TIMER),
+	pending_tip_timer(this, ID_PENDING_TIP)
 {
 	_ctor_pre(parent);
 	
@@ -957,6 +963,9 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	off_t cursor_pos = get_cursor_position();
 	
+	/* Any keyboard events get rid of the tooltip (if active) */
+	_clear_tooltip();
+	
 	if(modifiers & wxMOD_CONTROL)
 	{
 		/* Some control sequence, pass it on. */
@@ -1642,7 +1651,32 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 
 void REHex::Document::OnMotion(wxMouseEvent &event)
 {
-	OnMotionTick(event.GetX(), event.GetY());
+	int mouse_x = event.GetX();
+	int mouse_y = event.GetY();
+	
+	if(mouse_x >= 0 && mouse_x < client_width)
+	{
+		off_t mouse_pos = offset_at_xy(mouse_x, mouse_y);
+		if(mouse_pos >= 0)
+		{
+			auto comment_at_cur = NestedOffsetLengthMap_get(comments, mouse_pos);
+			if(comment_at_cur != comments.end())
+			{
+				_set_pending_tooltip(*(comment_at_cur->second.text));
+			}
+			else{
+				_clear_tooltip();
+			}
+		}
+		else{
+			_clear_tooltip();
+		}
+	}
+	else{
+		_clear_tooltip();
+	}
+	
+	OnMotionTick(mouse_x, mouse_y);
 }
 
 void REHex::Document::OnSelectTick(wxTimerEvent &event)
@@ -1796,6 +1830,23 @@ void REHex::Document::OnClearHighlight(wxCommandEvent &event)
 		});
 }
 
+void REHex::Document::OnSetFocus(wxFocusEvent &event)
+{
+	Refresh();
+	
+	/* Continue propagation. */
+	event.Skip();
+}
+
+void REHex::Document::OnKillFocus(wxFocusEvent &event)
+{
+	_clear_tooltip();
+	Refresh();
+	
+	/* Continue propagation. */
+	event.Skip();
+}
+
 void REHex::Document::_ctor_pre(wxWindow *parent)
 {
 	/* The background style MUST be set before the control is created. */
@@ -1820,6 +1871,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	selection_length  = 0;
 	cursor_visible    = true;
 	cursor_state      = CSTATE_HEX;
+	active_tip        = NULL;
 }
 
 void REHex::Document::_ctor_post()
@@ -1914,6 +1966,67 @@ void REHex::Document::_recalc_regions(wxDC &dc)
 		
 		next_yo += (*i)->y_lines;
 	}
+}
+
+std::pair<REHex::Document::Region*, int64_t> REHex::Document::region_line_at_y(int y_px)
+{
+	/* Iterate over the regions to find the last one which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto region = regions.begin();
+	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
+	{
+		region = next;
+	}
+	
+	/* If we are scrolled past the start of the region, will need to skip some of the first one. */
+	int64_t skip_lines_in_region = (scroll_yoff - (*region)->y_offset);
+	
+	int64_t line_off = (y_px / hf_height) + skip_lines_in_region;
+	
+	while(region != regions.end() && line_off >= (*region)->y_lines)
+	{
+		line_off -= (*region)->y_lines;
+		++region;
+	}
+	
+	if(region != regions.end())
+	{
+		return std::make_pair(*region, line_off);
+	}
+	else{
+		return std::make_pair<Region*, int64_t>(NULL, 0);
+	}
+}
+
+off_t REHex::Document::offset_at_xy(int x_px, int y_px)
+{
+	int rel_x = x_px + scroll_xoff;
+	
+	std::pair<Region*, int64_t> region_line = region_line_at_y(y_px);
+	if(region_line.first != NULL)
+	{
+		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(region_line.first);
+		if(dr != NULL)
+		{
+			if(rel_x < offset_column_width)
+			{
+				/* Click was within the offset area */
+			}
+			else if(show_ascii && rel_x >= ascii_text_x)
+			{
+				/* Click was within the ASCII area */
+				return dr->offset_at_xy_ascii(*this, rel_x, region_line.second);
+			}
+			else{
+				/* Click was within the hex area */
+				return dr->offset_at_xy_hex(*this, rel_x, region_line.second);
+			}
+		}
+	}
+	
+	return -1;
 }
 
 void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
@@ -2594,6 +2707,54 @@ std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned
 	lines.erase(std::next(lines.begin(), std::min((size_t)(max_lines), lines.size())), lines.end());
 	
 	return lines;
+}
+
+void REHex::Document::_set_pending_tooltip(const wxString &text)
+{
+	static int TOOLTIP_DELAY = 1000;
+	
+	if(pending_tip_text != text)
+	{
+		pending_tip_text = text;
+		pending_tip_timer.Start(TOOLTIP_DELAY, wxTIMER_ONE_SHOT);
+	}
+}
+
+void REHex::Document::_clear_tooltip()
+{
+	pending_tip_timer.Stop();
+	pending_tip_text.clear();
+	
+	delete active_tip;
+	active_tip = NULL;
+}
+
+void REHex::Document::OnPendingTipTimer(wxTimerEvent &event)
+{
+	delete active_tip;
+	
+	active_tip = new wxTipWindow(this, pending_tip_text);
+	active_tip->SetTipWindowPtr(&active_tip);
+	
+	/* HACK: wxTipWindow isn't closed by keyboard input under wxGTK, so we need to implement
+	 * that behaviour ourselves. And even more annoying, the wxTipWindow itself isn't what has
+	 * focus - a wxTipWindowView (internal wxWidgets class) is what does.
+	 *
+	 * At the time of writing, the wxTipWindowView is given focus by the wxTipWindow c'tor.
+	 * Relying on this is filthy and dangerous, but I haven't thought of a better way yet.
+	*/
+	
+	#ifdef __WXGTK__
+	wxWindow *twv = wxWindow::FindFocus();
+	assert(twv->GetParent() == active_tip);
+	
+	twv->Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent &event)
+	{
+		active_tip->Close();
+	});
+	#endif
+	
+	pending_tip_text.clear();
 }
 
 void REHex::Document::_raise_moved()

@@ -41,17 +41,17 @@
 			diag("Expected: %lld", (long long)(type_value)); \
 		} \
 	} \
-	catch(const REHex::NumericTextCtrl::EmptyError e) \
+	catch(const REHex::NumericTextCtrl::EmptyError &e) \
 	{ \
 		ok(0, "%s", test_name); \
 		diag("Caught EmptyError exception"); \
 	} \
-	catch(const REHex::NumericTextCtrl::RangeError e) \
+	catch(const REHex::NumericTextCtrl::RangeError &e) \
 	{ \
 		ok(0, "%s", test_name); \
 		diag("Caught RangeError exception"); \
 	} \
-	catch(const REHex::NumericTextCtrl::FormatError e) \
+	catch(const REHex::NumericTextCtrl::FormatError &e) \
 	{ \
 		ok(0, "%s", test_name); \
 		diag("Caught FormatError exception"); \
@@ -71,7 +71,7 @@
 		tc->GetValueSigned<value_type>(); \
 		ok(0, "%s", test_name); \
 	} \
-	catch(const exception_class e) \
+	catch(const exception_class &e) \
 	{ \
 		ok(1, "%s", test_name); \
 	} \
@@ -93,17 +93,17 @@
 			diag("Expected: %llu", (unsigned long long)(type_value)); \
 		} \
 	} \
-	catch(const REHex::NumericTextCtrl::EmptyError e) \
+	catch(const REHex::NumericTextCtrl::EmptyError &e) \
 	{ \
 		ok(0, "%s", test_name); \
 		diag("Caught EmptyError exception"); \
 	} \
-	catch(const REHex::NumericTextCtrl::RangeError e) \
+	catch(const REHex::NumericTextCtrl::RangeError &e) \
 	{ \
 		ok(0, "%s", test_name); \
 		diag("Caught RangeError exception"); \
 	} \
-	catch(const REHex::NumericTextCtrl::FormatError e) \
+	catch(const REHex::NumericTextCtrl::FormatError &e) \
 	{ \
 		ok(0, "%s", test_name); \
 		diag("Caught FormatError exception"); \
@@ -123,7 +123,7 @@
 		tc->GetValueUnsigned<value_type>(); \
 		ok(0, "%s", test_name); \
 	} \
-	catch(const exception_class e) \
+	catch(const exception_class &e) \
 	{ \
 		ok(1, "%s", test_name); \
 	} \

@@ -596,9 +596,9 @@ bool REHex::Search::Value::read_window_controls()
 		try {
 			func();
 		}
-		catch(const REHex::NumericTextCtrl::RangeError e) {}
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::RangeError &e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 	};
 	
 	try_type(t_s8_cb, [this]()
@@ -698,37 +698,37 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 {
 	try {
 		try { search_for_tc->GetValueSigned<int8_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_s8_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_s8_cb->Disable();
 	}
 	
 	try {
 		try { search_for_tc->GetValueUnsigned<uint8_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_u8_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_u8_cb->Disable();
 	}
 	
 	try {
 		try { search_for_tc->GetValueSigned<int16_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_s16be_cb->Enable();
 		t_s16le_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_s16be_cb->Disable();
 		t_s16le_cb->Disable();
@@ -736,13 +736,13 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	
 	try {
 		try { search_for_tc->GetValueUnsigned<uint16_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_u16be_cb->Enable();
 		t_u16le_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_u16be_cb->Disable();
 		t_u16le_cb->Disable();
@@ -750,13 +750,13 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	
 	try {
 		try { search_for_tc->GetValueSigned<int32_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_s32be_cb->Enable();
 		t_s32le_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_s32be_cb->Disable();
 		t_s32le_cb->Disable();
@@ -764,13 +764,13 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	
 	try {
 		try { search_for_tc->GetValueUnsigned<uint32_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_u32be_cb->Enable();
 		t_u32le_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_u32be_cb->Disable();
 		t_u32le_cb->Disable();
@@ -778,13 +778,13 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	
 	try {
 		try { search_for_tc->GetValueSigned<int64_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_s64be_cb->Enable();
 		t_s64le_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_s64be_cb->Disable();
 		t_s64le_cb->Disable();
@@ -792,13 +792,13 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	
 	try {
 		try { search_for_tc->GetValueUnsigned<uint64_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError e) {}
-		catch(const REHex::NumericTextCtrl::FormatError e) {}
+		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		
 		t_u64be_cb->Enable();
 		t_u64le_cb->Enable();
 	}
-	catch(const REHex::NumericTextCtrl::RangeError e)
+	catch(const REHex::NumericTextCtrl::RangeError &e)
 	{
 		t_u64be_cb->Disable();
 		t_u64le_cb->Disable();

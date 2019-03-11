@@ -3269,6 +3269,12 @@ REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const 
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
+	if(doc.get_inline_comment_mode() == ICM_SHORT)
+	{
+		y_lines = 2;
+		return;
+	}
+	
 	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
 	if(row_chars == 0)
 	{
@@ -3298,6 +3304,20 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	}
 	
 	auto lines = _format_text(c_text, row_chars);
+	
+	if(doc.get_inline_comment_mode() == ICM_SHORT && lines.size() > 1)
+	{
+		wxString &first_line = lines.front();
+		if(first_line.length() < row_chars)
+		{
+			first_line += L"\u2026";
+		}
+		else{
+			first_line.Last() = L'\u2026';
+		}
+		
+		lines.erase(std::next(lines.begin()), lines.end());
+	}
 	
 	{
 		int box_x = x + (doc.hf_char_width() / 4);

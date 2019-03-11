@@ -62,6 +62,7 @@ enum {
 	ID_SAVE_VIEW,
 	ID_INLINE_COMMENTS_HIDDEN,
 	ID_INLINE_COMMENTS_FULL,
+	ID_INLINE_COMMENTS_SHORT,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -107,6 +108,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(ID_INLINE_COMMENTS_HIDDEN, REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
+	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -174,6 +176,7 @@ REHex::MainWindow::MainWindow():
 	view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
 	
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
+	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_FULL,   "Full");
 	
 	tool_panels_menu = new wxMenu;
@@ -701,6 +704,10 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 		case ID_INLINE_COMMENTS_FULL:
 			tab->doc->set_inline_comment_mode(REHex::Document::ICM_FULL);
 			break;
+			
+		case ID_INLINE_COMMENTS_SHORT:
+			tab->doc->set_inline_comment_mode(REHex::Document::ICM_SHORT);
+			break;
 	};
 }
 
@@ -763,6 +770,10 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			
 		case REHex::Document::ICM_FULL:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_FULL, true);
+			break;
+			
+		case REHex::Document::ICM_SHORT:
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_SHORT, true);
 			break;
 	};
 	

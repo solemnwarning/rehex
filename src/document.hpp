@@ -59,7 +59,8 @@ namespace REHex {
 			enum InlineCommentMode {
 				ICM_HIDDEN = 0,
 				ICM_FULL   = 1,
-				ICM_MAX    = 1,
+				ICM_SHORT  = 2,
+				ICM_MAX    = 2,
 			};
 			
 			Document(wxWindow *parent);

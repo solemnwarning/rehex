@@ -204,6 +204,24 @@ void REHex::Document::set_show_ascii(bool show_ascii)
 	_handle_width_change();
 }
 
+REHex::Document::InlineCommentMode REHex::Document::get_inline_comment_mode()
+{
+	return inline_comment_mode;
+}
+
+void REHex::Document::set_inline_comment_mode(InlineCommentMode mode)
+{
+	inline_comment_mode = mode;
+	
+	_reinit_regions();
+	
+	wxClientDC dc(this);
+	_recalc_regions(dc);
+	
+	_update_vscroll();
+	Refresh();
+}
+
 off_t REHex::Document::get_cursor_position() const
 {
 	return this->cpos_off;
@@ -1810,6 +1828,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	bytes_per_line    = 0;
 	bytes_per_group   = 4;
 	show_ascii        = true;
+	inline_comment_mode = ICM_FULL;
 	scroll_xoff       = 0;
 	scroll_yoff       = 0;
 	scroll_yoff_max   = 0;
@@ -1859,6 +1878,16 @@ void REHex::Document::_ctor_post()
 void REHex::Document::_reinit_regions()
 {
 	regions.clear();
+	
+	if(inline_comment_mode == ICM_HIDDEN)
+	{
+		/* Inline comments are hidden, just have everything in a single Data region. */
+		
+		regions.push_back(new REHex::Document::Region::Data(0, buffer->length()));
+		++data_regions_count;
+		
+		return;
+	}
 	
 	/* Construct a list of interlaced comment/data regions. */
 	

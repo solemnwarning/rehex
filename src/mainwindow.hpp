@@ -62,6 +62,7 @@ namespace REHex {
 			void OnSetBytesPerGroup(wxCommandEvent &event);
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
+			void OnInlineCommentsMode(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
 			void OnSaveView(wxCommandEvent &event);
 			
@@ -145,6 +146,8 @@ namespace REHex {
 			
 			wxMenu *tool_panels_menu;
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
+			
+			wxMenu *inline_comments_menu;
 			
 			void _update_status_offset(REHex::Document *doc);
 			void _update_status_selection(REHex::Document *doc);

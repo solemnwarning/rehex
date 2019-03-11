@@ -2858,7 +2858,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					
 					hex_str.append(1, ' ');
 				}
-				else if(highlight != doc.highlights.end() && hex_active)
+				else if(highlight != doc.highlights.end())
 				{
 					highlighted_text_colour(highlight->second);
 					
@@ -2893,6 +2893,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				inv_low  = false;
 			}
 			
+			/* Need the current hex_x value for drawing any boxes or insert cursors
+			 * below, before it gets updated by draw_nibble().
+			*/
+			const int pd_hx = hex_x;
+			
+			draw_nibble(high_nibble, inv_high);
+			draw_nibble(low_nibble,  inv_low);
+			
 			if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length) && !hex_active)
 			{
 				dc.SetPen(selected_bg_1px);
@@ -2900,79 +2908,36 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				if(cur_off == doc.selection_off || c == 0)
 				{
 					/* Draw vertical line left of selection. */
-					dc.DrawLine(hex_x, y, hex_x, (y + doc.hf_height));
+					dc.DrawLine(pd_hx, y, pd_hx, (y + doc.hf_height));
 				}
 				
 				if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (doc.bytes_per_line_calc - 1))
 				{
 					/* Draw vertical line right of selection. */
-					dc.DrawLine((hex_x + doc.hf_string_width(2) - 1), y, (hex_x + doc.hf_string_width(2) - 1), (y + doc.hf_height));
+					dc.DrawLine((pd_hx + doc.hf_string_width(2) - 1), y, (pd_hx + doc.hf_string_width(2) - 1), (y + doc.hf_height));
 				}
 				
 				if(cur_off < (doc.selection_off + doc.bytes_per_line_calc))
 				{
 					/* Draw horizontal line above selection. */
-					dc.DrawLine(hex_x, y, (hex_x + doc.hf_string_width(2)), y);
+					dc.DrawLine(pd_hx, y, (pd_hx + doc.hf_string_width(2)), y);
 				}
 				
 				if(cur_off > doc.selection_off && cur_off <= (doc.selection_off + doc.bytes_per_line_calc) && c > 0 && (c % doc.bytes_per_group) == 0)
 				{
 					/* Draw horizontal line above gap along top of selection. */
-					dc.DrawLine((hex_x - doc.hf_char_width()), y, hex_x, y);
+					dc.DrawLine((pd_hx - doc.hf_char_width()), y, pd_hx, y);
 				}
 				
 				if(cur_off >= (doc.selection_off + doc.selection_length - doc.bytes_per_line_calc))
 				{
 					/* Draw horizontal line below selection. */
-					dc.DrawLine(hex_x, (y + doc.hf_height - 1), (hex_x + doc.hf_string_width(2)), (y + doc.hf_height - 1));
+					dc.DrawLine(pd_hx, (y + doc.hf_height - 1), (pd_hx + doc.hf_string_width(2)), (y + doc.hf_height - 1));
 					
 					if(c > 0 && (c % doc.bytes_per_group) == 0)
 					{
 						/* Draw horizontal line below gap along bottom of selection. */
-						dc.DrawLine((hex_x - doc.hf_char_width()), (y + doc.hf_height - 1), hex_x, (y + doc.hf_height - 1));
-					}
-				}
-			}
-			else if(highlight != doc.highlights.end() && !hex_active)
-			{
-				dc.SetPen(wxPen(pal.get_highlight_bg(highlight->second), 1));
-				
-				off_t highlight_off    = highlight->first.offset;
-				off_t highlight_length = highlight->first.length;
-				
-				if(cur_off == highlight_off || c == 0)
-				{
-					/* Draw vertical line left of highlight. */
-					dc.DrawLine(hex_x, y, hex_x, (y + doc.hf_height));
-				}
-				
-				if(cur_off == (highlight_off + highlight_length - 1) || c == (doc.bytes_per_line_calc - 1))
-				{
-					/* Draw vertical line right of highlight. */
-					dc.DrawLine((hex_x + doc.hf_string_width(2) - 1), y, (hex_x + doc.hf_string_width(2) - 1), (y + doc.hf_height));
-				}
-				
-				if(cur_off < (highlight_off + doc.bytes_per_line_calc))
-				{
-					/* Draw horizontal line above highlight. */
-					dc.DrawLine(hex_x, y, (hex_x + doc.hf_string_width(2)), y);
-				}
-				
-				if(cur_off > highlight_off && cur_off <= (highlight_off + doc.bytes_per_line_calc) && c > 0 && (c % doc.bytes_per_group) == 0)
-				{
-					/* Draw horizontal line above gap along top of highlight. */
-					dc.DrawLine((hex_x - doc.hf_char_width()), y, hex_x, y);
-				}
-				
-				if(cur_off >= (highlight_off + highlight_length - doc.bytes_per_line_calc))
-				{
-					/* Draw horizontal line below highlight. */
-					dc.DrawLine(hex_x, (y + doc.hf_height - 1), (hex_x + doc.hf_string_width(2)), (y + doc.hf_height - 1));
-					
-					if(c > 0 && (c % doc.bytes_per_group) == 0)
-					{
-						/* Draw horizontal line below gap along bottom of highlight. */
-						dc.DrawLine((hex_x - doc.hf_char_width()), (y + doc.hf_height - 1), hex_x, (y + doc.hf_height - 1));
+						dc.DrawLine((pd_hx - doc.hf_char_width()), (y + doc.hf_height - 1), pd_hx, (y + doc.hf_height - 1));
 					}
 				}
 			}
@@ -2981,7 +2946,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			{
 				/* Draw insert cursor. */
 				dc.SetPen(norm_fg_1px);
-				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
+				dc.DrawLine(pd_hx, y, pd_hx, y + doc.hf_height);
 			}
 			
 			if(cur_off == cursor_pos && !doc.insert_mode && !hex_active)
@@ -2991,21 +2956,28 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				
 				if(doc.cursor_state == CSTATE_HEX_MID)
 				{
-					dc.DrawRectangle(hex_x + doc.hf_char_width(), y, doc.hf_char_width(), doc.hf_height);
+					dc.DrawRectangle(pd_hx + doc.hf_char_width(), y, doc.hf_char_width(), doc.hf_height);
 				}
 				else{
-					dc.DrawRectangle(hex_x, y, doc.hf_string_width(2), doc.hf_height);
+					dc.DrawRectangle(pd_hx, y, doc.hf_string_width(2), doc.hf_height);
 				}
 			}
-			
-			draw_nibble(high_nibble, inv_high);
-			draw_nibble(low_nibble,  inv_low);
 			
 			if(doc.show_ascii)
 			{
 				char ascii_byte = isasciiprint(byte)
 					? byte
 					: '.';
+				
+				if(highlight != doc.highlights.end() && !ascii_active)
+				{
+					highlighted_text_colour(highlight->second);
+					
+					char str[] = { ascii_byte, '\0' };
+					dc.DrawText(str, ascii_x, y);
+					
+					ascii_string.append(" ");
+				}
 				
 				if(ascii_active)
 				{
@@ -3041,7 +3013,10 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					}
 				}
 				else{
-					ascii_string.append(1, ascii_byte);
+					if(highlight == doc.highlights.end())
+					{
+						ascii_string.append(1, ascii_byte);
+					}
 					
 					if(cur_off == cursor_pos && !doc.insert_mode)
 					{
@@ -3073,37 +3048,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 						if(cur_off >= (doc.selection_off + doc.selection_length - doc.bytes_per_line_calc))
 						{
 							/* Draw horizontal line below selection. */
-							dc.DrawLine(ascii_x, (y + doc.hf_height - 1), (ascii_x + doc.hf_char_width()), (y + doc.hf_height - 1));
-						}
-					}
-					else if(highlight != doc.highlights.end())
-					{
-						dc.SetPen(wxPen(pal.get_highlight_bg(highlight->second), 1));
-						
-						off_t highlight_off    = highlight->first.offset;
-						off_t highlight_length = highlight->first.length;
-						
-						if(cur_off == highlight_off || c == 0)
-						{
-							/* Draw vertical line left of highlight. */
-							dc.DrawLine(ascii_x, y, ascii_x, (y + doc.hf_height));
-						}
-						
-						if(cur_off == (highlight_off + highlight_length - 1) || c == (doc.bytes_per_line_calc - 1))
-						{
-							/* Draw vertical line right of highlight. */
-							dc.DrawLine((ascii_x + doc.hf_char_width() - 1), y, (ascii_x + doc.hf_char_width() - 1), (y + doc.hf_height));
-						}
-						
-						if(cur_off < (highlight_off + doc.bytes_per_line_calc))
-						{
-							/* Draw horizontal line above highlight. */
-							dc.DrawLine(ascii_x, y, (ascii_x + doc.hf_char_width()), y);
-						}
-						
-						if(cur_off >= (highlight_off + highlight_length - doc.bytes_per_line_calc))
-						{
-							/* Draw horizontal line below highlight. */
 							dc.DrawLine(ascii_x, (y + doc.hf_height - 1), (ascii_x + doc.hf_char_width()), (y + doc.hf_height - 1));
 						}
 					}

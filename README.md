@@ -9,6 +9,7 @@ It is still in early development and should be considered in alpha state at the 
 * Large* file support
 * Decoding of integer/floating point value types
 * Disassembly of machine code
+* Highlighting and annotation of ranges of bytes
 
 \* I've gone up to 1TiB in cursory testing, but it should be able to go a lot higher... just in case you want to start editing big disk images.
 

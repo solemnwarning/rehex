@@ -22,6 +22,7 @@
 #include <jansson.h>
 #include <limits>
 #include <map>
+#include <stack>
 #include <string>
 #include <wx/dcbuffer.h>
 
@@ -545,13 +546,13 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	{
 		int offset_vl_x = (offset_column_width - scroll_xoff) - (hf_char_width() / 2);
 		
-		dc.DrawLine(offset_vl_x, 0, offset_vl_x, client_height);
+		// dc.DrawLine(offset_vl_x, 0, offset_vl_x, client_height);
 	}
 	
 	if(show_ascii)
 	{
 		int ascii_vl_x = ((int)(ascii_text_x) - (hf_char_width() / 2)) - scroll_xoff;
-		dc.DrawLine(ascii_vl_x, 0, ascii_vl_x, client_height);
+		// dc.DrawLine(ascii_vl_x, 0, ascii_vl_x, client_height);
 	}
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
@@ -1877,13 +1878,15 @@ void REHex::Document::_ctor_post()
 
 void REHex::Document::_reinit_regions()
 {
+	printf("---\n");
+	
 	regions.clear();
 	
 	if(inline_comment_mode == ICM_HIDDEN)
 	{
 		/* Inline comments are hidden, just have everything in a single Data region. */
 		
-		regions.push_back(new REHex::Document::Region::Data(0, buffer->length()));
+		regions.push_back(new REHex::Document::Region::Data(0, buffer->length(), 0));
 		++data_regions_count;
 		
 		return;
@@ -1893,27 +1896,67 @@ void REHex::Document::_reinit_regions()
 	
 	data_regions_count = 0;
 	
-	auto next_comment = comments.begin();
+	auto offset_base = comments.begin();
 	off_t next_data = 0, remain_data = buffer->length();
+	
+	/* Stack of comment ranges around the current position. */
+	std::stack<NestedOffsetLengthMapKey> parents;
 	
 	while(remain_data > 0)
 	{
 		off_t dr_length = remain_data;
 		
-		assert(next_comment == comments.end() || next_comment->first.offset >= next_data);
+		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
-		while(next_comment != comments.end() && next_comment->first.offset == next_data)
+		/* Pop any comments off parents which we have gone past the end of. */
+		while(!parents.empty() && (parents.top().offset + parents.top().length) <= next_data)
 		{
-			regions.push_back(new REHex::Document::Region::Comment(next_comment->first.offset, next_comment->first.length, *(next_comment->second.text)));
-			++next_comment;
+			parents.pop();
 		}
 		
-		if(next_comment != comments.end())
+		/* We process any comments at the same offset from largest to smallest, ensuring
+		 * smaller comments are parented to the next-larger one at the same offset.
+		 *
+		 * This could be optimised by changing the order of keys in the comments map, but
+		 * that'll probably break something...
+		*/
+		
+		if(offset_base != comments.end() && offset_base->first.offset == next_data)
 		{
-			dr_length = next_comment->first.offset - next_data;
+			auto next_offset = offset_base;
+			while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
+			{
+				++next_offset;
+			}
+			
+			auto c = next_offset;
+			do {
+				--c;
+				
+				printf("Pushing a comment region at depth %d (%s)\n", (int)(parents.size()), c->second.text->ToStdString().c_str());
+				regions.push_back(new REHex::Document::Region::Comment(c->first.offset, c->first.length, *(c->second.text), parents.size()));
+				
+				if(c->first.length > 0)
+				{
+					parents.push(c->first);
+				}
+			} while(c != offset_base);
+			
+			offset_base = next_offset;
 		}
 		
-		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length));
+		if(offset_base != comments.end())
+		{
+			dr_length = offset_base->first.offset - next_data;
+		}
+		
+		if(!parents.empty() && (parents.top().offset + parents.top().length) < (next_data + dr_length))
+		{
+			dr_length = (parents.top().offset + parents.top().length) - next_data;
+		}
+		
+		printf("Pushing a data region at depth %d\n", (int)(parents.size()));
+		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length, parents.size()));
 		++data_regions_count;
 		
 		next_data   += dr_length;
@@ -1926,7 +1969,7 @@ void REHex::Document::_reinit_regions()
 		
 		assert(buffer->length() == 0);
 		
-		regions.push_back(new REHex::Document::Region::Data(0, 0));
+		regions.push_back(new REHex::Document::Region::Data(0, 0, 0));
 		++data_regions_count;
 	}
 }
@@ -2739,8 +2782,8 @@ wxString REHex::Document::Comment::menu_preview() const
 
 REHex::Document::Region::~Region() {}
 
-REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length):
-	d_offset(d_offset), d_length(d_length) {}
+REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length, int i_depth):
+	d_offset(d_offset), d_length(d_length) { this->i_depth = i_depth; }
 
 void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 {
@@ -2752,6 +2795,8 @@ void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
+	x += doc.hf_char_width() * i_depth * 4;
+	
 	const REHex::Palette &pal = wxGetApp().palette;
 	
 	dc.SetFont(*(doc.hex_font));
@@ -2807,6 +2852,27 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	*/
 	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
 	int max_bytes = max_lines * doc.bytes_per_line_calc;
+	
+	if((int64_t)(max_lines) > y_lines)
+	{
+		max_lines = y_lines;
+	}
+	
+	if(doc.offset_column)
+	{
+		int offset_vl_x = (x + doc.offset_column_width) - (doc.hf_char_width() / 2);
+		
+		dc.SetPen(norm_fg_1px);
+		dc.DrawLine(offset_vl_x, y, offset_vl_x, y + (max_lines * doc.hf_height));
+	}
+	
+	if(doc.show_ascii)
+	{
+		int ascii_vl_x = (x + (int)(doc.ascii_text_x)) - (doc.hf_char_width() / 2);
+		
+		dc.SetPen(norm_fg_1px);
+		dc.DrawLine(ascii_vl_x, y, ascii_vl_x, y + (max_lines * doc.hf_height));
+	}
 	
 	/* Fetch the data to be drawn. */
 	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((off_t)(max_bytes), (d_length - skip_bytes)));
@@ -3264,8 +3330,8 @@ off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text):
-	c_offset(c_offset), c_length(c_length), c_text(c_text) {}
+REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth):
+	c_offset(c_offset), c_length(c_length), c_text(c_text) { this->i_depth = i_depth; }
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
@@ -3289,10 +3355,7 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 
 void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
-	/* Comments are currently drawn at the width of the client area, always being fully visible
-	 * (along their X axis) and not scrolling with the file data.
-	*/
-	x = 0;
+	x += i_depth * doc.hf_char_width() * 4;
 	
 	dc.SetFont(*(doc.hex_font));
 	
@@ -3323,7 +3386,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		int box_x = x + (doc.hf_char_width() / 4);
 		int box_y = y + (doc.hf_height / 4);
 		
-		unsigned int box_w = doc.client_width - (doc.hf_char_width() / 2);
+		unsigned int box_w = (doc.virtual_width - (i_depth * doc.hf_char_width() * 4)) - (doc.hf_char_width() / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
 		dc.SetPen(wxPen(*wxBLACK, 1));

@@ -147,6 +147,7 @@ namespace REHex {
 			{
 				int64_t y_offset; /* First on-screen line in region */
 				int64_t y_lines;  /* Number of on-screen lines in region */
+				int i_depth;      /* Indentation depth */
 				
 				virtual ~Region();
 				
@@ -316,7 +317,7 @@ namespace REHex {
 		off_t d_offset;
 		off_t d_length;
 		
-		Data(off_t d_offset, off_t d_length);
+		Data(off_t d_offset, off_t d_length, int i_depth);
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
@@ -333,11 +334,11 @@ namespace REHex {
 		off_t c_offset, c_length;
 		const wxString &c_text;
 		
-		Comment(off_t c_offset, off_t c_length, const wxString &c_text);
+		Comment(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth);
 		
 		/* Kludge for unit tests which really need to be redesigned... */
 		Comment(off_t c_offset, const wxString &c_text):
-			Comment(c_offset, 0, c_text) {}
+			Comment(c_offset, 0, c_text, 0) {}
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

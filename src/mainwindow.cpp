@@ -60,6 +60,9 @@ enum {
 	ID_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
 	ID_SAVE_VIEW,
+	ID_INLINE_COMMENTS_HIDDEN,
+	ID_INLINE_COMMENTS_FULL,
+	ID_INLINE_COMMENTS_SHORT,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -102,6 +105,10 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::MainWindow::OnShowOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::MainWindow::OnShowASCII)
 	EVT_MENU(ID_SAVE_VIEW,    REHex::MainWindow::OnSaveView)
+	
+	EVT_MENU(ID_INLINE_COMMENTS_HIDDEN, REHex::MainWindow::OnInlineCommentsMode)
+	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
+	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -164,6 +171,13 @@ REHex::MainWindow::MainWindow():
 	view_menu->Append(ID_BYTES_GROUP, "Set bytes per group");
 	view_menu->AppendCheckItem(ID_SHOW_OFFSETS, "Show offsets");
 	view_menu->AppendCheckItem(ID_SHOW_ASCII, "Show ASCII");
+	
+	inline_comments_menu = new wxMenu;
+	view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
+	
+	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
+	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
+	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_FULL,   "Full");
 	
 	tool_panels_menu = new wxMenu;
 	view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
@@ -673,6 +687,30 @@ void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
 	tab->doc->set_show_ascii(event.IsChecked());
 }
 
+void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	switch(event.GetId())
+	{
+		case ID_INLINE_COMMENTS_HIDDEN:
+			tab->doc->set_inline_comment_mode(REHex::Document::ICM_HIDDEN);
+			break;
+			
+		case ID_INLINE_COMMENTS_FULL:
+			tab->doc->set_inline_comment_mode(REHex::Document::ICM_FULL);
+			break;
+			
+		case ID_INLINE_COMMENTS_SHORT:
+			tab->doc->set_inline_comment_mode(REHex::Document::ICM_SHORT);
+			break;
+	};
+}
+
 void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -722,6 +760,22 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	view_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
 	view_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
+	
+	REHex::Document::InlineCommentMode icm = tab->doc->get_inline_comment_mode();
+	switch(icm)
+	{
+		case REHex::Document::ICM_HIDDEN:
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_HIDDEN, true);
+			break;
+			
+		case REHex::Document::ICM_FULL:
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_FULL, true);
+			break;
+			
+		case REHex::Document::ICM_SHORT:
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_SHORT, true);
+			break;
+	};
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
@@ -1068,6 +1122,7 @@ void REHex::MainWindow::Tab::save_view(wxConfig *config)
 	config->Write("bytes-per-group", doc->get_bytes_per_group());
 	config->Write("show-offsets", doc->get_show_offsets());
 	config->Write("show-ascii", doc->get_show_ascii());
+	config->Write("inline-comments", (int)(doc->get_inline_comment_mode()));
 	
 	/* TODO: Save h_tools state */
 	
@@ -1334,6 +1389,12 @@ void REHex::MainWindow::Tab::init_default_doc_view()
 	doc->set_bytes_per_group(  config->Read("bytes-per-group",  doc->get_bytes_per_group()));
 	doc->set_show_offsets(     config->Read("show-offsets",     doc->get_show_offsets()));
 	doc->set_show_ascii(       config->Read("show-ascii",       doc->get_show_ascii()));
+	
+	int inline_comments = config->Read("inline-comments", (int)(doc->get_inline_comment_mode()));
+	if(inline_comments >= 0 && inline_comments <= REHex::Document::ICM_MAX)
+	{
+		doc->set_inline_comment_mode((REHex::Document::InlineCommentMode)(inline_comments));
+	}
 }
 
 void REHex::MainWindow::Tab::init_default_tools()

@@ -57,6 +57,13 @@ namespace REHex {
 				wxString menu_preview() const;
 			};
 			
+			enum InlineCommentMode {
+				ICM_HIDDEN = 0,
+				ICM_FULL   = 1,
+				ICM_SHORT  = 2,
+				ICM_MAX    = 2,
+			};
+			
 			Document(wxWindow *parent);
 			Document(wxWindow *parent, const std::string &filename);
 			~Document();
@@ -79,6 +86,9 @@ namespace REHex {
 			
 			bool get_show_ascii();
 			void set_show_ascii(bool show_ascii);
+			
+			InlineCommentMode get_inline_comment_mode();
+			void set_inline_comment_mode(InlineCommentMode mode);
 			
 			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off);
@@ -216,6 +226,8 @@ namespace REHex {
 			
 			bool show_ascii;
 			int ascii_text_x;
+			
+			InlineCommentMode inline_comment_mode;
 			
 			int     scroll_xoff;
 			int64_t scroll_yoff;

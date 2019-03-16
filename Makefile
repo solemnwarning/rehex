@@ -46,6 +46,9 @@ else
 	CXXFLAGS += -g
 endif
 
+VERSION    := Snapshot $(shell git log -1 --format="%H")
+BUILD_DATE := $(shell date '+%F')
+
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
@@ -91,6 +94,7 @@ APP_OBJS := \
 	res/icon64.o \
 	res/icon128.o \
 	res/license.o \
+	res/version.o \
 	src/AboutDialog.o \
 	src/app.o \
 	src/buffer.o \
@@ -211,6 +215,10 @@ res/license.c res/license.h: LICENSE.txt $(EMBED_EXE)
 
 res/%.c res/%.h: res/%.png $(EMBED_EXE)
 	$(EMBED_EXE) $< $*_png res/$*.c res/$*.h
+
+.PHONY: res/version.o
+res/version.o:
+	$(CXX) $(CXXFLAGS) -DVERSION='"$(VERSION)"' -DBUILD_DATE='"$(BUILD_DATE)"' -c -o $@ res/version.cpp
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<

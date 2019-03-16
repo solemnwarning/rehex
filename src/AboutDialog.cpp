@@ -24,6 +24,7 @@
 #include "LicenseDialog.hpp"
 #include "ClickText.hpp"
 #include "../res/icon128.h"
+#include "../res/version.h"
 
 enum {
 	ID_LICENSE = 1,
@@ -48,7 +49,8 @@ REHex::AboutDialog::AboutDialog(wxWindow *parent, wxWindowID id):
 		wxBoxSizer *right_sizer = new wxBoxSizer(wxVERTICAL);
 		
 		right_sizer->Add(new wxStaticText(this, wxID_ANY, "Reverse Engineers' Hex Editor"));
-		right_sizer->Add(new wxStaticText(this, wxID_ANY, "Version x.y.z"));
+		right_sizer->Add(new wxStaticText(this, wxID_ANY, REHEX_VERSION));
+		right_sizer->Add(new wxStaticText(this, wxID_ANY, std::string("Built on ") + REHEX_BUILD_DATE));
 		
 		right_sizer->Add(new wxStaticText(this, wxID_ANY, L"Copyright \u00A9 2017-2019 Daniel Collins"),
 			0, wxTOP, 10);

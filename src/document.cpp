@@ -542,19 +542,6 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	dc.SetBackground(*wxWHITE_BRUSH);
 	dc.Clear();
 	
-	if(offset_column)
-	{
-		int offset_vl_x = (offset_column_width - scroll_xoff) - (hf_char_width() / 2);
-		
-		// dc.DrawLine(offset_vl_x, 0, offset_vl_x, client_height);
-	}
-	
-	if(show_ascii)
-	{
-		int ascii_vl_x = ((int)(ascii_text_x) - (hf_char_width() / 2)) - scroll_xoff;
-		// dc.DrawLine(ascii_vl_x, 0, ascii_vl_x, client_height);
-	}
-	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
 	*/
@@ -633,6 +620,9 @@ void REHex::Document::_handle_width_change()
 	auto calc_row_width = [this](unsigned int line_bytes)
 	{
 		return offset_column_width
+			/* indentation */
+			+ (data_region_max_indent * hf_char_width() * 2)
+			
 			/* hex data */
 			+ hf_string_width(line_bytes * 2)
 			+ hf_string_width((line_bytes - 1) / bytes_per_group)
@@ -1878,8 +1868,6 @@ void REHex::Document::_ctor_post()
 
 void REHex::Document::_reinit_regions()
 {
-	printf("---\n");
-	
 	regions.clear();
 	
 	if(inline_comment_mode == ICM_HIDDEN)
@@ -1895,12 +1883,13 @@ void REHex::Document::_reinit_regions()
 	/* Construct a list of interlaced comment/data regions. */
 	
 	data_regions_count = 0;
+	data_region_max_indent = 0;
 	
 	auto offset_base = comments.begin();
 	off_t next_data = 0, remain_data = buffer->length();
 	
 	/* Stack of comment ranges around the current position. */
-	std::stack<NestedOffsetLengthMapKey> parents;
+	std::list<REHex::Document::Region::Comment*> parents;
 	
 	while(remain_data > 0)
 	{
@@ -1909,9 +1898,14 @@ void REHex::Document::_reinit_regions()
 		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
 		/* Pop any comments off parents which we have gone past the end of. */
-		while(!parents.empty() && (parents.top().offset + parents.top().length) <= next_data)
+		while(!parents.empty() && (parents.back()->c_offset + parents.back()->c_length) <= next_data)
 		{
-			parents.pop();
+			if(parents.back()->final_descendant != NULL)
+			{
+				++(parents.back()->final_descendant->indent_final);
+			}
+			
+			parents.pop_back();
 		}
 		
 		/* We process any comments at the same offset from largest to smallest, ensuring
@@ -1933,12 +1927,16 @@ void REHex::Document::_reinit_regions()
 			do {
 				--c;
 				
-				printf("Pushing a comment region at depth %d (%s)\n", (int)(parents.size()), c->second.text->ToStdString().c_str());
 				regions.push_back(new REHex::Document::Region::Comment(c->first.offset, c->first.length, *(c->second.text), parents.size()));
+				
+				for(auto p = parents.begin(); p != parents.end(); ++p)
+				{
+					(*p)->final_descendant = regions.back();
+				}
 				
 				if(c->first.length > 0)
 				{
-					parents.push(c->first);
+					parents.push_back((REHex::Document::Region::Comment*)(regions.back()));
 				}
 			} while(c != offset_base);
 			
@@ -1950,17 +1948,36 @@ void REHex::Document::_reinit_regions()
 			dr_length = offset_base->first.offset - next_data;
 		}
 		
-		if(!parents.empty() && (parents.top().offset + parents.top().length) < (next_data + dr_length))
+		if(!parents.empty() && (parents.back()->c_offset + parents.back()->c_length) < (next_data + dr_length))
 		{
-			dr_length = (parents.top().offset + parents.top().length) - next_data;
+			dr_length = (parents.back()->c_offset + parents.back()->c_length) - next_data;
 		}
 		
-		printf("Pushing a data region at depth %d\n", (int)(parents.size()));
 		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length, parents.size()));
 		++data_regions_count;
 		
+		if(parents.size() > (size_t)(data_region_max_indent))
+		{
+			data_region_max_indent = parents.size();
+		}
+		
+		for(auto p = parents.begin(); p != parents.end(); ++p)
+		{
+			(*p)->final_descendant = regions.back();
+		}
+		
 		next_data   += dr_length;
 		remain_data -= dr_length;
+	}
+	
+	while(!parents.empty())
+	{
+		if(parents.back()->final_descendant != NULL)
+		{
+			++(parents.back()->final_descendant->indent_final);
+		}
+		
+		parents.pop_back();
 	}
 	
 	if(regions.empty())
@@ -2780,22 +2797,71 @@ wxString REHex::Document::Comment::menu_preview() const
 	}
 }
 
+REHex::Document::Region::Region():
+	indent_depth(0), indent_final(0) {}
+
 REHex::Document::Region::~Region() {}
 
-REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length, int i_depth):
-	d_offset(d_offset), d_length(d_length) { this->i_depth = i_depth; }
+void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y)
+{
+	if(indent_depth > 0)
+	{
+		int cw = doc.hf_char_width();
+		int ch = doc.hf_height;
+		
+		int64_t skip_lines = (y < 0 ? (-y / ch) : 0);
+		
+		int box_y = y + (skip_lines * ch);
+		int box_h = std::min(((y_lines - skip_lines) * (int64_t)(ch)), (int64_t)(doc.client_height));
+		
+		int box_x = x + (cw / 4);
+		int box_w = doc.virtual_width - (cw / 2);
+		
+		dc.SetPen(*wxTRANSPARENT_PEN);
+		dc.SetBrush(*wxWHITE_BRUSH);
+		
+		dc.DrawRectangle(0, box_y, doc.client_width, box_h);
+		
+		dc.SetPen(*wxBLACK_PEN);
+		
+		for(int i = 0; i < indent_depth; ++i)
+		{
+			if((i + indent_final) == indent_depth)
+			{
+				box_h -= ch / 2;
+			}
+			
+			dc.DrawLine(box_x, box_y, box_x, (box_y + box_h));
+			dc.DrawLine((box_x + box_w - 1), box_y, (box_x + box_w - 1), (box_y + box_h));
+			
+			if((i + indent_final) >= indent_depth)
+			{
+				dc.DrawLine(box_x, (box_y + box_h), (box_x + box_w - 1), (box_y + box_h));
+				box_h -= ch;
+			}
+			
+			box_x += cw;
+			box_w -= cw * 2;
+		}
+	}
+}
+
+REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length, int indent_depth):
+	d_offset(d_offset), d_length(d_length) { this->indent_depth = indent_depth; }
 
 void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 {
 	/* Height of the region is simply the number of complete lines of data plus an incomplete
 	 * one if the data isn't a round number of lines.
 	*/
-	y_lines = (d_length / doc.bytes_per_line_calc) + !!(d_length % doc.bytes_per_line_calc);
+	y_lines = (d_length / doc.bytes_per_line_calc) + !!(d_length % doc.bytes_per_line_calc) + indent_final;
 }
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
-	x += doc.hf_char_width() * i_depth * 4;
+	draw_container(doc, dc, x, y);
+	
+	x += doc.hf_char_width() * indent_depth;
 	
 	const REHex::Palette &pal = wxGetApp().palette;
 	
@@ -2853,9 +2919,9 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
 	int max_bytes = max_lines * doc.bytes_per_line_calc;
 	
-	if((int64_t)(max_lines) > y_lines)
+	if((int64_t)(max_lines) > (y_lines - indent_final - skip_lines))
 	{
-		max_lines = y_lines;
+		max_lines = (y_lines - indent_final - skip_lines);
 	}
 	
 	if(doc.offset_column)
@@ -2868,7 +2934,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	
 	if(doc.show_ascii)
 	{
-		int ascii_vl_x = (x + (int)(doc.ascii_text_x)) - (doc.hf_char_width() / 2);
+		int ascii_vl_x = ((x + (int)(doc.ascii_text_x)) - (doc.hf_char_width() / 2)) - (doc.hf_char_width() * indent_depth * 2);
 		
 		dc.SetPen(norm_fg_1px);
 		dc.DrawLine(ascii_vl_x, y, ascii_vl_x, y + (max_lines * doc.hf_height));
@@ -2908,7 +2974,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			hex_x      += doc.offset_column_width;
 		}
 		
-		int ascii_base_x = x + doc.ascii_text_x;
+		int ascii_base_x = (x + doc.ascii_text_x) - (doc.hf_char_width() * indent_depth * 2);
 		int ascii_x      = ascii_base_x;
 		int ascii_x_char = 0;
 		
@@ -3330,14 +3396,14 @@ off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth):
-	c_offset(c_offset), c_length(c_length), c_text(c_text) { this->i_depth = i_depth; }
+REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text, int indent_depth):
+	c_offset(c_offset), c_length(c_length), c_text(c_text), final_descendant(NULL) { this->indent_depth = indent_depth; }
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
 	if(doc.get_inline_comment_mode() == ICM_SHORT)
 	{
-		y_lines = 2;
+		y_lines = 2 + indent_final;
 		return;
 	}
 	
@@ -3345,17 +3411,19 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 	if(row_chars == 0)
 	{
 		/* Zero columns of width. Probably still initialising. */
-		this->y_lines = 1;
+		this->y_lines = 1 + indent_final;
 	}
 	else{
 		auto comment_lines = _format_text(c_text, row_chars);
-		this->y_lines  = comment_lines.size() + 1;
+		this->y_lines  = comment_lines.size() + 1 + indent_final;
 	}
 }
 
 void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
-	x += i_depth * doc.hf_char_width() * 4;
+	draw_container(doc, dc, x, y);
+	
+	x += indent_depth * doc.hf_char_width();
 	
 	dc.SetFont(*(doc.hex_font));
 	
@@ -3386,13 +3454,19 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		int box_x = x + (doc.hf_char_width() / 4);
 		int box_y = y + (doc.hf_height / 4);
 		
-		unsigned int box_w = (doc.virtual_width - (i_depth * doc.hf_char_width() * 4)) - (doc.hf_char_width() / 2);
+		unsigned int box_w = (doc.virtual_width - (indent_depth * doc.hf_char_width() * 2)) - (doc.hf_char_width() / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
 		dc.SetPen(wxPen(*wxBLACK, 1));
 		dc.SetBrush(*wxLIGHT_GREY_BRUSH);
 		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
+		
+		if(final_descendant != NULL)
+		{
+			dc.DrawLine(box_x, (box_y + box_h), box_x, (box_y + box_h + doc.hf_height));
+			dc.DrawLine((box_x + box_w - 1), (box_y + box_h), (box_x + box_w - 1), (box_y + box_h + doc.hf_height));
+		}
 	}
 	
 	y += doc.hf_height / 2;

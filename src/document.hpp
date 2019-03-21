@@ -147,7 +147,11 @@ namespace REHex {
 			{
 				int64_t y_offset; /* First on-screen line in region */
 				int64_t y_lines;  /* Number of on-screen lines in region */
-				int i_depth;      /* Indentation depth */
+				
+				int indent_depth;  /* Indentation depth */
+				int indent_final;  /* Number of inner indentation levels we are the final region in */
+				
+				Region();
 				
 				virtual ~Region();
 				
@@ -163,6 +167,8 @@ namespace REHex {
 				 * of the DC to improve performance.
 				*/
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) = 0;
+				
+				void draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 				
 				struct Data;
 				struct Comment;
@@ -195,6 +201,7 @@ namespace REHex {
 			
 			std::list<Region*> regions;
 			size_t data_regions_count;
+			int data_region_max_indent;
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont *hex_font;
@@ -333,6 +340,8 @@ namespace REHex {
 	{
 		off_t c_offset, c_length;
 		const wxString &c_text;
+		
+		REHex::Document::Region *final_descendant;
 		
 		Comment(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth);
 		

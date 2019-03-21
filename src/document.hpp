@@ -201,7 +201,6 @@ namespace REHex {
 			
 			std::list<Region*> regions;
 			size_t data_regions_count;
-			int data_region_max_indent;
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont *hex_font;
@@ -222,9 +221,6 @@ namespace REHex {
 			/* Display options */
 			unsigned int bytes_per_line;
 			unsigned int bytes_per_group;
-			
-			/* bytes_per_line, after adjusting for auto option. */
-			unsigned int bytes_per_line_calc;
 			
 			bool offset_column{true};
 			int offset_column_width;
@@ -327,6 +323,8 @@ namespace REHex {
 		int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 		int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 		int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
+		
+		unsigned int bytes_per_line_actual;  /* Number of bytes being displayed per line. */
 		
 		Data(off_t d_offset, off_t d_length, int i_depth = 0);
 		

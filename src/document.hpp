@@ -328,7 +328,7 @@ namespace REHex {
 		int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 		int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
 		
-		Data(off_t d_offset, off_t d_length, int i_depth);
+		Data(off_t d_offset, off_t d_length, int i_depth = 0);
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

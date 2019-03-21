@@ -230,7 +230,6 @@ namespace REHex {
 			int offset_column_width;
 			
 			bool show_ascii;
-			int ascii_text_x;
 			
 			InlineCommentMode inline_comment_mode;
 			
@@ -303,6 +302,7 @@ namespace REHex {
 			void _update_vscroll_pos();
 			
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			int _indent_width(int depth);
 			
 			void _raise_moved();
 			void _raise_comment_modified();
@@ -323,6 +323,10 @@ namespace REHex {
 	{
 		off_t d_offset;
 		off_t d_length;
+		
+		int offset_text_x;  /* Virtual X coord of left edge of offsets. */
+		int hex_text_x;     /* Virtual X coord of left edge of hex data. */
+		int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
 		
 		Data(off_t d_offset, off_t d_length, int i_depth);
 		

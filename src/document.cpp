@@ -2852,16 +2852,10 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 }
 
 REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length, int indent_depth):
-	d_offset(d_offset), d_length(d_length), bytes_per_line_actual(0) { this->indent_depth = indent_depth; }
+	d_offset(d_offset), d_length(d_length), bytes_per_line_actual(1) { this->indent_depth = indent_depth; }
 
 void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 {
-	if(bytes_per_line_actual == 0)
-	{
-		/* Region is still being initialised. */
-		return;
-	}
-	
 	int indent_width = doc._indent_width(indent_depth);
 	
 	offset_text_x = indent_width;

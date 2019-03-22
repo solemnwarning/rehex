@@ -2915,6 +2915,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
 	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
+	if(skip_bytes >= d_length)
+	{
+		/* All of our data is past the top of the client area, all that needed to be
+		 * rendered is the bottom of the container around it.
+		*/
+		return;
+	}
+	
 	/* Increment y up to our real drawing start point. We can now trust it to be within a
 	 * hf_height of zero, not the stratospheric integer-overflow-causing values it could
 	 * previously have on huge files.

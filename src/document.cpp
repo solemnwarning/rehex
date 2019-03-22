@@ -1836,10 +1836,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	selection_length  = 0;
 	cursor_visible    = true;
 	cursor_state      = CSTATE_HEX;
-}
-
-void REHex::Document::_ctor_post()
-{
+	
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
 	
@@ -1861,7 +1858,10 @@ void REHex::Document::_ctor_post()
 				= dc.GetTextExtent(std::string((i + 1), 'X')).GetWidth();
 		}
 	}
-	
+}
+
+void REHex::Document::_ctor_post()
+{
 	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
 	
 	/* SetDoubleBuffered() isn't implemented on all platforms. */
@@ -1882,6 +1882,9 @@ void REHex::Document::_reinit_regions()
 		
 		regions.push_back(new REHex::Document::Region::Data(0, buffer->length(), 0));
 		++data_regions_count;
+		
+		/* Force initialisation of bytes_per_line_actual and horizontal scrollbar update. */
+		_handle_width_change();
 		
 		return;
 	}
@@ -1939,7 +1942,8 @@ void REHex::Document::_reinit_regions()
 					(*p)->final_descendant = regions.back();
 				}
 				
-				if(c->first.length > 0)
+				if((inline_comment_mode == ICM_SHORT_INDENT || inline_comment_mode == ICM_FULL_INDENT)
+					&& c->first.length > 0)
 				{
 					parents.push_back((REHex::Document::Region::Comment*)(regions.back()));
 				}
@@ -1989,6 +1993,9 @@ void REHex::Document::_reinit_regions()
 		regions.push_back(new REHex::Document::Region::Data(0, 0, 0));
 		++data_regions_count;
 	}
+	
+	/* Force initialisation of bytes_per_line_actual and horizontal scrollbar update. */
+	_handle_width_change();
 }
 
 void REHex::Document::_recalc_regions(wxDC &dc)
@@ -3415,7 +3422,7 @@ REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const 
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
-	if(doc.get_inline_comment_mode() == ICM_SHORT)
+	if(doc.get_inline_comment_mode() == ICM_SHORT || doc.get_inline_comment_mode() == ICM_SHORT_INDENT)
 	{
 		y_lines = 2 + indent_final;
 		return;
@@ -3450,7 +3457,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	
 	auto lines = _format_text(c_text, row_chars);
 	
-	if(doc.get_inline_comment_mode() == ICM_SHORT && lines.size() > 1)
+	if((doc.get_inline_comment_mode() == ICM_SHORT || doc.get_inline_comment_mode() == ICM_SHORT_INDENT) && lines.size() > 1)
 	{
 		wxString &first_line = lines.front();
 		if(first_line.length() < row_chars)

@@ -3428,7 +3428,7 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 		return;
 	}
 	
-	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
+	unsigned int row_chars = doc.hf_char_at_x(doc.virtual_width - (2 * doc._indent_width(indent_depth))) - 1;
 	if(row_chars == 0)
 	{
 		/* Zero columns of width. Probably still initialising. */
@@ -3444,11 +3444,12 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 {
 	draw_container(doc, dc, x, y);
 	
-	x += indent_depth * doc.hf_char_width();
+	int indent_width = doc._indent_width(indent_depth);
+	x += indent_width;
 	
 	dc.SetFont(*(doc.hex_font));
 	
-	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
+	unsigned int row_chars = doc.hf_char_at_x(doc.virtual_width - (2 * indent_width)) - 1;
 	if(row_chars == 0)
 	{
 		/* Zero columns of width. Probably still initialising. */

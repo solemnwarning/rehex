@@ -57,10 +57,12 @@ namespace REHex {
 			};
 			
 			enum InlineCommentMode {
-				ICM_HIDDEN = 0,
-				ICM_FULL   = 1,
-				ICM_SHORT  = 2,
-				ICM_MAX    = 2,
+				ICM_HIDDEN       = 0,
+				ICM_FULL         = 1,
+				ICM_SHORT        = 2,
+				ICM_FULL_INDENT  = 3,
+				ICM_SHORT_INDENT = 4,
+				ICM_MAX          = 4,
 			};
 			
 			Document(wxWindow *parent);
@@ -148,6 +150,11 @@ namespace REHex {
 				int64_t y_offset; /* First on-screen line in region */
 				int64_t y_lines;  /* Number of on-screen lines in region */
 				
+				int indent_depth;  /* Indentation depth */
+				int indent_final;  /* Number of inner indentation levels we are the final region in */
+				
+				Region();
+				
 				virtual ~Region();
 				
 				virtual void update_lines(REHex::Document &doc, wxDC &dc) = 0;
@@ -162,6 +169,8 @@ namespace REHex {
 				 * of the DC to improve performance.
 				*/
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) = 0;
+				
+				void draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 				
 				struct Data;
 				struct Comment;
@@ -215,14 +224,10 @@ namespace REHex {
 			unsigned int bytes_per_line;
 			unsigned int bytes_per_group;
 			
-			/* bytes_per_line, after adjusting for auto option. */
-			unsigned int bytes_per_line_calc;
-			
 			bool offset_column{true};
 			int offset_column_width;
 			
 			bool show_ascii;
-			int ascii_text_x;
 			
 			InlineCommentMode inline_comment_mode;
 			
@@ -295,6 +300,7 @@ namespace REHex {
 			void _update_vscroll_pos();
 			
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			int _indent_width(int depth);
 			
 			void _raise_moved();
 			void _raise_comment_modified();
@@ -316,7 +322,13 @@ namespace REHex {
 		off_t d_offset;
 		off_t d_length;
 		
-		Data(off_t d_offset, off_t d_length);
+		int offset_text_x;  /* Virtual X coord of left edge of offsets. */
+		int hex_text_x;     /* Virtual X coord of left edge of hex data. */
+		int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
+		
+		unsigned int bytes_per_line_actual;  /* Number of bytes being displayed per line. */
+		
+		Data(off_t d_offset, off_t d_length, int i_depth = 0);
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
@@ -333,11 +345,13 @@ namespace REHex {
 		off_t c_offset, c_length;
 		const wxString &c_text;
 		
-		Comment(off_t c_offset, off_t c_length, const wxString &c_text);
+		REHex::Document::Region *final_descendant;
+		
+		Comment(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth);
 		
 		/* Kludge for unit tests which really need to be redesigned... */
 		Comment(off_t c_offset, const wxString &c_text):
-			Comment(c_offset, 0, c_text) {}
+			Comment(c_offset, 0, c_text, 0) {}
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);

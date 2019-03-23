@@ -22,6 +22,7 @@
 #include <jansson.h>
 #include <limits>
 #include <map>
+#include <stack>
 #include <string>
 #include <wx/dcbuffer.h>
 
@@ -541,19 +542,6 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	dc.SetBackground(*wxWHITE_BRUSH);
 	dc.Clear();
 	
-	if(offset_column)
-	{
-		int offset_vl_x = (offset_column_width - scroll_xoff) - (hf_char_width() / 2);
-		
-		dc.DrawLine(offset_vl_x, 0, offset_vl_x, client_height);
-	}
-	
-	if(show_ascii)
-	{
-		int ascii_vl_x = ((int)(ascii_text_x) - (hf_char_width() / 2)) - scroll_xoff;
-		dc.DrawLine(ascii_vl_x, 0, ascii_vl_x, client_height);
-	}
-	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
 	 * scroll_y.
 	*/
@@ -629,9 +617,12 @@ void REHex::Document::_handle_width_change()
 		offset_column_width = 0;
 	}
 	
-	auto calc_row_width = [this](unsigned int line_bytes)
+	auto calc_row_width = [this](unsigned int line_bytes, const REHex::Document::Region::Data *dr)
 	{
 		return offset_column_width
+			/* indentation */
+			+ (_indent_width(dr->indent_depth) * 2)
+			
 			/* hex data */
 			+ hf_string_width(line_bytes * 2)
 			+ hf_string_width((line_bytes - 1) / bytes_per_group)
@@ -641,27 +632,38 @@ void REHex::Document::_handle_width_change()
 			+ (show_ascii * hf_string_width(line_bytes));
 	};
 	
-	/* Decide how many bytes to display per line */
+	virtual_width = 0;
 	
-	if(bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
+	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
-		/* TODO: Can I do this algorithmically? */
-		
-		bytes_per_line_calc = 1;
-		
-		while(calc_row_width(bytes_per_line_calc + 1) <= client_width)
+		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*r);
+		if(dr != NULL)
 		{
-			++bytes_per_line_calc;
+			/* Decide how many bytes to display per line */
+			
+			if(bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
+			{
+				/* TODO: Can I do this algorithmically? */
+				
+				dr->bytes_per_line_actual = 1;
+				
+				while(calc_row_width((dr->bytes_per_line_actual + 1), dr) <= client_width)
+				{
+					++(dr->bytes_per_line_actual);
+				}
+			}
+			else{
+				dr->bytes_per_line_actual = bytes_per_line;
+			}
+			
+			int dr_min_width = calc_row_width(dr->bytes_per_line_actual, dr);
+			if(dr_min_width > virtual_width)
+			{
+				virtual_width = dr_min_width;
+			}
 		}
 	}
-	else{
-		bytes_per_line_calc = bytes_per_line;
-	}
 	
-	/* Calculate the number of pixels necessary to render a full line and decide if we need a
-	 * horizontal scroll bar.
-	*/
-	virtual_width = calc_row_width(bytes_per_line_calc);
 	if(virtual_width < client_width)
 	{
 		/* Raise virtual_width to client_width, so that things drawn relative to the right
@@ -672,11 +674,6 @@ void REHex::Document::_handle_width_change()
 	
 	/* TODO: Preserve/scale the position as the window size changes. */
 	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
-	
-	if(show_ascii)
-	{
-		ascii_text_x = virtual_width - hf_string_width(bytes_per_line_calc);
-	}
 	
 	/* Recalculate the height and y offset of each region. */
 	
@@ -1106,12 +1103,12 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			off_t offset_within_cur = cursor_pos - cur_region->d_offset;
 			
-			if(offset_within_cur >= bytes_per_line_calc)
+			if(offset_within_cur >= cur_region->bytes_per_line_actual)
 			{
 				/* We are at least on the second line of the current
 				 * region, can jump to the previous one.
 				*/
-				new_cursor_pos = cursor_pos - bytes_per_line_calc;
+				new_cursor_pos = cursor_pos - cur_region->bytes_per_line_actual;
 			}
 			else if(cur_region->d_offset > 0)
 			{
@@ -1122,10 +1119,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				assert(prev_region != NULL);
 				
 				/* How many bytes on the last line of prev_region? */
-				off_t pr_last_line_len = (prev_region->d_length % bytes_per_line_calc);
+				off_t pr_last_line_len = (prev_region->d_length % prev_region->bytes_per_line_actual);
 				if(pr_last_line_len == 0)
 				{
-					pr_last_line_len = bytes_per_line_calc;
+					pr_last_line_len = prev_region->bytes_per_line_actual;
 				}
 				
 				if(pr_last_line_len > offset_within_cur)
@@ -1161,16 +1158,16 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			off_t remain_within_cur = cur_region->d_length - offset_within_cur;
 			
 			off_t last_line_within_cur = cur_region->d_length
-				- (((cur_region->d_length % bytes_per_line_calc) == 0)
-					? bytes_per_line_calc
-					: (cur_region->d_length % bytes_per_line_calc));
+				- (((cur_region->d_length % cur_region->bytes_per_line_actual) == 0)
+					? cur_region->bytes_per_line_actual
+					: (cur_region->d_length % cur_region->bytes_per_line_actual));
 			
-			if(remain_within_cur > bytes_per_line_calc)
+			if(remain_within_cur > cur_region->bytes_per_line_actual)
 			{
 				/* There is at least one more line's worth of bytes in the
 				 * current region, can just skip ahead.
 				*/
-				new_cursor_pos = cursor_pos + bytes_per_line_calc;
+				new_cursor_pos = cursor_pos + cur_region->bytes_per_line_actual;
 			}
 			else if(offset_within_cur < last_line_within_cur)
 			{
@@ -1187,7 +1184,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					/* There is another region after this one, jump to the same
 					 * it, offset by our offset in the current line.
 					*/
-					new_cursor_pos = next_region->d_offset + (offset_within_cur % bytes_per_line_calc);
+					new_cursor_pos = next_region->d_offset + (offset_within_cur % cur_region->bytes_per_line_actual);
 					
 					/* Clamp to the end of the next region. */
 					off_t max_pos = (next_region->d_offset + next_region->d_length - 1);
@@ -1339,7 +1336,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			{
 				/* Click was within the offset area */
 			}
-			else if(show_ascii && rel_x >= ascii_text_x)
+			else if(show_ascii && rel_x >= dr->ascii_text_x)
 			{
 				/* Click was within the ASCII area */
 				
@@ -1473,7 +1470,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			{
 				/* Click was within the offset area */
 			}
-			else if(show_ascii && rel_x >= ascii_text_x)
+			else if(show_ascii && rel_x >= dr->ascii_text_x)
 			{
 				/* Click was within the ASCII area */
 				
@@ -1839,10 +1836,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	selection_length  = 0;
 	cursor_visible    = true;
 	cursor_state      = CSTATE_HEX;
-}
-
-void REHex::Document::_ctor_post()
-{
+	
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
 	
@@ -1864,7 +1858,10 @@ void REHex::Document::_ctor_post()
 				= dc.GetTextExtent(std::string((i + 1), 'X')).GetWidth();
 		}
 	}
-	
+}
+
+void REHex::Document::_ctor_post()
+{
 	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
 	
 	/* SetDoubleBuffered() isn't implemented on all platforms. */
@@ -1883,8 +1880,11 @@ void REHex::Document::_reinit_regions()
 	{
 		/* Inline comments are hidden, just have everything in a single Data region. */
 		
-		regions.push_back(new REHex::Document::Region::Data(0, buffer->length()));
+		regions.push_back(new REHex::Document::Region::Data(0, buffer->length(), 0));
 		++data_regions_count;
+		
+		/* Force initialisation of bytes_per_line_actual and horizontal scrollbar update. */
+		_handle_width_change();
 		
 		return;
 	}
@@ -1893,31 +1893,95 @@ void REHex::Document::_reinit_regions()
 	
 	data_regions_count = 0;
 	
-	auto next_comment = comments.begin();
+	auto offset_base = comments.begin();
 	off_t next_data = 0, remain_data = buffer->length();
+	
+	/* Stack of comment ranges around the current position. */
+	std::list<REHex::Document::Region::Comment*> parents;
 	
 	while(remain_data > 0)
 	{
 		off_t dr_length = remain_data;
 		
-		assert(next_comment == comments.end() || next_comment->first.offset >= next_data);
+		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
-		while(next_comment != comments.end() && next_comment->first.offset == next_data)
+		/* Pop any comments off parents which we have gone past the end of. */
+		while(!parents.empty() && (parents.back()->c_offset + parents.back()->c_length) <= next_data)
 		{
-			regions.push_back(new REHex::Document::Region::Comment(next_comment->first.offset, next_comment->first.length, *(next_comment->second.text)));
-			++next_comment;
+			if(parents.back()->final_descendant != NULL)
+			{
+				++(parents.back()->final_descendant->indent_final);
+			}
+			
+			parents.pop_back();
 		}
 		
-		if(next_comment != comments.end())
+		/* We process any comments at the same offset from largest to smallest, ensuring
+		 * smaller comments are parented to the next-larger one at the same offset.
+		 *
+		 * This could be optimised by changing the order of keys in the comments map, but
+		 * that'll probably break something...
+		*/
+		
+		if(offset_base != comments.end() && offset_base->first.offset == next_data)
 		{
-			dr_length = next_comment->first.offset - next_data;
+			auto next_offset = offset_base;
+			while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
+			{
+				++next_offset;
+			}
+			
+			auto c = next_offset;
+			do {
+				--c;
+				
+				regions.push_back(new REHex::Document::Region::Comment(c->first.offset, c->first.length, *(c->second.text), parents.size()));
+				
+				for(auto p = parents.begin(); p != parents.end(); ++p)
+				{
+					(*p)->final_descendant = regions.back();
+				}
+				
+				if((inline_comment_mode == ICM_SHORT_INDENT || inline_comment_mode == ICM_FULL_INDENT)
+					&& c->first.length > 0)
+				{
+					parents.push_back((REHex::Document::Region::Comment*)(regions.back()));
+				}
+			} while(c != offset_base);
+			
+			offset_base = next_offset;
 		}
 		
-		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length));
+		if(offset_base != comments.end())
+		{
+			dr_length = offset_base->first.offset - next_data;
+		}
+		
+		if(!parents.empty() && (parents.back()->c_offset + parents.back()->c_length) < (next_data + dr_length))
+		{
+			dr_length = (parents.back()->c_offset + parents.back()->c_length) - next_data;
+		}
+		
+		regions.push_back(new REHex::Document::Region::Data(next_data, dr_length, parents.size()));
 		++data_regions_count;
+		
+		for(auto p = parents.begin(); p != parents.end(); ++p)
+		{
+			(*p)->final_descendant = regions.back();
+		}
 		
 		next_data   += dr_length;
 		remain_data -= dr_length;
+	}
+	
+	while(!parents.empty())
+	{
+		if(parents.back()->final_descendant != NULL)
+		{
+			++(parents.back()->final_descendant->indent_final);
+		}
+		
+		parents.pop_back();
 	}
 	
 	if(regions.empty())
@@ -1926,9 +1990,12 @@ void REHex::Document::_reinit_regions()
 		
 		assert(buffer->length() == 0);
 		
-		regions.push_back(new REHex::Document::Region::Data(0, 0));
+		regions.push_back(new REHex::Document::Region::Data(0, 0, 0));
 		++data_regions_count;
 	}
+	
+	/* Force initialisation of bytes_per_line_actual and horizontal scrollbar update. */
+	_handle_width_change();
 }
 
 void REHex::Document::_recalc_regions(wxDC &dc)
@@ -2567,10 +2634,10 @@ void REHex::Document::_make_byte_visible(off_t offset)
 	
 	off_t region_offset = offset - dr->d_offset;
 	
-	uint64_t region_line = dr->y_offset + (region_offset / bytes_per_line_calc);
+	uint64_t region_line = dr->y_offset + (region_offset / dr->bytes_per_line_actual);
 	_make_line_visible(region_line);
 	
-	off_t line_off = region_offset % bytes_per_line_calc;
+	off_t line_off = region_offset % dr->bytes_per_line_actual;
 	
 	if(cursor_state == CSTATE_HEX || cursor_state == CSTATE_HEX_MID)
 	{
@@ -2581,7 +2648,7 @@ void REHex::Document::_make_byte_visible(off_t offset)
 	}
 	else if(cursor_state == CSTATE_ASCII)
 	{
-		off_t byte_x = ascii_text_x + hf_string_width(line_off);
+		off_t byte_x = dr->ascii_text_x + hf_string_width(line_off);
 		_make_x_visible(byte_x, hf_char_width());
 	}
 }
@@ -2623,6 +2690,11 @@ std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned
 	lines.erase(std::next(lines.begin(), std::min((size_t)(max_lines), lines.size())), lines.end());
 	
 	return lines;
+}
+
+int REHex::Document::_indent_width(int depth)
+{
+	return hf_char_width() * depth;
 }
 
 void REHex::Document::_raise_moved()
@@ -2737,21 +2809,76 @@ wxString REHex::Document::Comment::menu_preview() const
 	}
 }
 
+REHex::Document::Region::Region():
+	indent_depth(0), indent_final(0) {}
+
 REHex::Document::Region::~Region() {}
 
-REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length):
-	d_offset(d_offset), d_length(d_length) {}
+void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y)
+{
+	if(indent_depth > 0)
+	{
+		int cw = doc.hf_char_width();
+		int ch = doc.hf_height;
+		
+		int64_t skip_lines = (y < 0 ? (-y / ch) : 0);
+		
+		int box_y = y + (skip_lines * ch);
+		int box_h = std::min(((y_lines - skip_lines) * (int64_t)(ch)), (int64_t)(doc.client_height));
+		
+		int box_x = x + (cw / 4);
+		int box_w = doc.virtual_width - (cw / 2);
+		
+		dc.SetPen(*wxTRANSPARENT_PEN);
+		dc.SetBrush(*wxWHITE_BRUSH);
+		
+		dc.DrawRectangle(0, box_y, doc.client_width, box_h);
+		
+		dc.SetPen(*wxBLACK_PEN);
+		
+		for(int i = 0; i < indent_depth; ++i)
+		{
+			if((i + indent_final) == indent_depth)
+			{
+				box_h -= ch / 2;
+			}
+			
+			dc.DrawLine(box_x, box_y, box_x, (box_y + box_h));
+			dc.DrawLine((box_x + box_w - 1), box_y, (box_x + box_w - 1), (box_y + box_h));
+			
+			if((i + indent_final) >= indent_depth)
+			{
+				dc.DrawLine(box_x, (box_y + box_h), (box_x + box_w - 1), (box_y + box_h));
+				box_h -= ch;
+			}
+			
+			box_x += cw;
+			box_w -= cw * 2;
+		}
+	}
+}
+
+REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length, int indent_depth):
+	d_offset(d_offset), d_length(d_length), bytes_per_line_actual(1) { this->indent_depth = indent_depth; }
 
 void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 {
+	int indent_width = doc._indent_width(indent_depth);
+	
+	offset_text_x = indent_width;
+	hex_text_x    = indent_width + doc.offset_column_width;
+	ascii_text_x  = (doc.virtual_width - indent_width) - doc.hf_string_width(bytes_per_line_actual);
+	
 	/* Height of the region is simply the number of complete lines of data plus an incomplete
 	 * one if the data isn't a round number of lines.
 	*/
-	y_lines = (d_length / doc.bytes_per_line_calc) + !!(d_length % doc.bytes_per_line_calc);
+	y_lines = (d_length / bytes_per_line_actual) + !!(d_length % bytes_per_line_actual) + indent_final;
 }
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
+	draw_container(doc, dc, x, y);
+	
 	const REHex::Palette &pal = wxGetApp().palette;
 	
 	dc.SetFont(*(doc.hex_font));
@@ -2793,7 +2920,15 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * as it would get expensive very quickly with large files.
 	*/
 	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
-	off_t skip_bytes  = skip_lines * doc.bytes_per_line_calc;
+	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
+	
+	if(skip_bytes >= d_length)
+	{
+		/* All of our data is past the top of the client area, all that needed to be
+		 * rendered is the bottom of the container around it.
+		*/
+		return;
+	}
 	
 	/* Increment y up to our real drawing start point. We can now trust it to be within a
 	 * hf_height of zero, not the stratospheric integer-overflow-causing values it could
@@ -2806,7 +2941,28 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * case of large files.
 	*/
 	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
-	int max_bytes = max_lines * doc.bytes_per_line_calc;
+	int max_bytes = max_lines * bytes_per_line_actual;
+	
+	if((int64_t)(max_lines) > (y_lines - indent_final - skip_lines))
+	{
+		max_lines = (y_lines - indent_final - skip_lines);
+	}
+	
+	if(doc.offset_column)
+	{
+		int offset_vl_x = (x + offset_text_x + doc.offset_column_width) - (doc.hf_char_width() / 2);
+		
+		dc.SetPen(norm_fg_1px);
+		dc.DrawLine(offset_vl_x, y, offset_vl_x, y + (max_lines * doc.hf_height));
+	}
+	
+	if(doc.show_ascii)
+	{
+		int ascii_vl_x = (x + ascii_text_x) - (doc.hf_char_width() / 2);
+		
+		dc.SetPen(norm_fg_1px);
+		dc.DrawLine(ascii_vl_x, y, ascii_vl_x, y + (max_lines * doc.hf_height));
+	}
 	
 	/* Fetch the data to be drawn. */
 	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((off_t)(max_bytes), (d_length - skip_bytes)));
@@ -2821,10 +2977,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	
 	for(auto di = data.begin();;)
 	{
-		int hex_base_x = x;
-		int hex_x      = hex_base_x;
-		int hex_x_char = 0;
-		
 		alternate_row = !alternate_row;
 		
 		if(doc.offset_column)
@@ -2836,19 +2988,20 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				(unsigned)(cur_off & 0xFFFFFFFF));
 			
 			normal_text_colour();
-			dc.DrawText(offset_str, x, y);
-			
-			hex_base_x += doc.offset_column_width;
-			hex_x      += doc.offset_column_width;
+			dc.DrawText(offset_str, (x + offset_text_x), y);
 		}
 		
-		int ascii_base_x = x + doc.ascii_text_x;
+		int hex_base_x = x + hex_text_x;
+		int hex_x      = hex_base_x;
+		int hex_x_char = 0;
+		
+		int ascii_base_x = x + ascii_text_x;
 		int ascii_x      = ascii_base_x;
 		int ascii_x_char = 0;
 		
 		wxString hex_str, ascii_string;
 		
-		for(unsigned int c = 0; c < doc.bytes_per_line_calc && di != data.end(); ++c)
+		for(unsigned int c = 0; c < bytes_per_line_actual && di != data.end(); ++c)
 		{
 			if(c > 0 && (c % doc.bytes_per_group) == 0)
 			{
@@ -2940,25 +3093,25 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					dc.DrawLine(pd_hx, y, pd_hx, (y + doc.hf_height));
 				}
 				
-				if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (doc.bytes_per_line_calc - 1))
+				if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (bytes_per_line_actual - 1))
 				{
 					/* Draw vertical line right of selection. */
 					dc.DrawLine((pd_hx + doc.hf_string_width(2) - 1), y, (pd_hx + doc.hf_string_width(2) - 1), (y + doc.hf_height));
 				}
 				
-				if(cur_off < (doc.selection_off + doc.bytes_per_line_calc))
+				if(cur_off < (doc.selection_off + bytes_per_line_actual))
 				{
 					/* Draw horizontal line above selection. */
 					dc.DrawLine(pd_hx, y, (pd_hx + doc.hf_string_width(2)), y);
 				}
 				
-				if(cur_off > doc.selection_off && cur_off <= (doc.selection_off + doc.bytes_per_line_calc) && c > 0 && (c % doc.bytes_per_group) == 0)
+				if(cur_off > doc.selection_off && cur_off <= (doc.selection_off + bytes_per_line_actual) && c > 0 && (c % doc.bytes_per_group) == 0)
 				{
 					/* Draw horizontal line above gap along top of selection. */
 					dc.DrawLine((pd_hx - doc.hf_char_width()), y, pd_hx, y);
 				}
 				
-				if(cur_off >= (doc.selection_off + doc.selection_length - doc.bytes_per_line_calc))
+				if(cur_off >= (doc.selection_off + doc.selection_length - bytes_per_line_actual))
 				{
 					/* Draw horizontal line below selection. */
 					dc.DrawLine(pd_hx, (y + doc.hf_height - 1), (pd_hx + doc.hf_string_width(2)), (y + doc.hf_height - 1));
@@ -3062,19 +3215,19 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 							dc.DrawLine(ascii_x, y, ascii_x, (y + doc.hf_height));
 						}
 						
-						if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (doc.bytes_per_line_calc - 1))
+						if(cur_off == (doc.selection_off + doc.selection_length - 1) || c == (bytes_per_line_actual - 1))
 						{
 							/* Draw vertical line right of selection. */
 							dc.DrawLine((ascii_x + doc.hf_char_width() - 1), y, (ascii_x + doc.hf_char_width() - 1), (y + doc.hf_height));
 						}
 						
-						if(cur_off < (doc.selection_off + doc.bytes_per_line_calc))
+						if(cur_off < (doc.selection_off + bytes_per_line_actual))
 						{
 							/* Draw horizontal line above selection. */
 							dc.DrawLine(ascii_x, y, (ascii_x + doc.hf_char_width()), y);
 						}
 						
-						if(cur_off >= (doc.selection_off + doc.selection_length - doc.bytes_per_line_calc))
+						if(cur_off >= (doc.selection_off + doc.selection_length - bytes_per_line_actual))
 						{
 							/* Draw horizontal line below selection. */
 							dc.DrawLine(ascii_x, (y + doc.hf_height - 1), (ascii_x + doc.hf_char_width()), (y + doc.hf_height - 1));
@@ -3136,18 +3289,18 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 
 off_t REHex::Document::Region::Data::offset_at_xy_hex(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
 {
-	if(mouse_x_px < (int)(doc.offset_column_width))
+	if(mouse_x_px < hex_text_x)
 	{
 		return -1;
 	}
 	
-	mouse_x_px -= doc.offset_column_width;
+	mouse_x_px -= hex_text_x;
 	
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
-	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	if(((char_offset + 1) % ((doc.bytes_per_group * 2) + 1)) == 0)
@@ -3174,18 +3327,18 @@ off_t REHex::Document::Region::Data::offset_at_xy_hex(REHex::Document &doc, int 
 
 off_t REHex::Document::Region::Data::offset_at_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
 {
-	if(!doc.show_ascii || mouse_x_px < (int)(doc.ascii_text_x))
+	if(!doc.show_ascii || mouse_x_px < ascii_text_x)
 	{
 		return -1;
 	}
 	
-	mouse_x_px -= doc.ascii_text_x;
+	mouse_x_px -= ascii_text_x;
 	
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
-	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	off_t clicked_offset     = line_data_begin + char_offset;
@@ -3206,16 +3359,16 @@ off_t REHex::Document::Region::Data::offset_near_xy_hex(REHex::Document &doc, in
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
-	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
-	if(mouse_x_px < (int)(doc.offset_column_width))
+	if(mouse_x_px < hex_text_x)
 	{
 		/* Mouse is in offset area, return offset of last byte of previous line. */
 		return line_data_begin - 1;
 	}
 	
-	mouse_x_px -= doc.offset_column_width;
+	mouse_x_px -= hex_text_x;
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	
@@ -3239,16 +3392,16 @@ off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, 
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(doc.bytes_per_line_calc) * mouse_y_lines);
-	off_t line_data_end   = std::min((line_data_begin + doc.bytes_per_line_calc), (d_offset + d_length));
+	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
-	if(!doc.show_ascii || mouse_x_px < (int)(doc.ascii_text_x))
+	if(!doc.show_ascii || mouse_x_px < ascii_text_x)
 	{
 		/* Mouse is left of ASCII area, return last byte of previous line. */
 		return line_data_begin - 1;
 	}
 	
-	mouse_x_px -= doc.ascii_text_x;
+	mouse_x_px -= ascii_text_x;
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	off_t clicked_offset     = line_data_begin + char_offset;
@@ -3264,39 +3417,39 @@ off_t REHex::Document::Region::Data::offset_near_xy_ascii(REHex::Document &doc, 
 	}
 }
 
-REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text):
-	c_offset(c_offset), c_length(c_length), c_text(c_text) {}
+REHex::Document::Region::Comment::Comment(off_t c_offset, off_t c_length, const wxString &c_text, int indent_depth):
+	c_offset(c_offset), c_length(c_length), c_text(c_text), final_descendant(NULL) { this->indent_depth = indent_depth; }
 
 void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &dc)
 {
-	if(doc.get_inline_comment_mode() == ICM_SHORT)
+	if(doc.get_inline_comment_mode() == ICM_SHORT || doc.get_inline_comment_mode() == ICM_SHORT_INDENT)
 	{
-		y_lines = 2;
+		y_lines = 2 + indent_final;
 		return;
 	}
 	
-	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
+	unsigned int row_chars = doc.hf_char_at_x(doc.virtual_width - (2 * doc._indent_width(indent_depth))) - 1;
 	if(row_chars == 0)
 	{
 		/* Zero columns of width. Probably still initialising. */
-		this->y_lines = 1;
+		this->y_lines = 1 + indent_final;
 	}
 	else{
 		auto comment_lines = _format_text(c_text, row_chars);
-		this->y_lines  = comment_lines.size() + 1;
+		this->y_lines  = comment_lines.size() + 1 + indent_final;
 	}
 }
 
 void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
-	/* Comments are currently drawn at the width of the client area, always being fully visible
-	 * (along their X axis) and not scrolling with the file data.
-	*/
-	x = 0;
+	draw_container(doc, dc, x, y);
+	
+	int indent_width = doc._indent_width(indent_depth);
+	x += indent_width;
 	
 	dc.SetFont(*(doc.hex_font));
 	
-	unsigned int row_chars = doc.hf_char_at_x(doc.client_width) - 1;
+	unsigned int row_chars = doc.hf_char_at_x(doc.virtual_width - (2 * indent_width)) - 1;
 	if(row_chars == 0)
 	{
 		/* Zero columns of width. Probably still initialising. */
@@ -3305,7 +3458,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	
 	auto lines = _format_text(c_text, row_chars);
 	
-	if(doc.get_inline_comment_mode() == ICM_SHORT && lines.size() > 1)
+	if((doc.get_inline_comment_mode() == ICM_SHORT || doc.get_inline_comment_mode() == ICM_SHORT_INDENT) && lines.size() > 1)
 	{
 		wxString &first_line = lines.front();
 		if(first_line.length() < row_chars)
@@ -3323,13 +3476,19 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		int box_x = x + (doc.hf_char_width() / 4);
 		int box_y = y + (doc.hf_height / 4);
 		
-		unsigned int box_w = doc.client_width - (doc.hf_char_width() / 2);
+		unsigned int box_w = (doc.virtual_width - (indent_depth * doc.hf_char_width() * 2)) - (doc.hf_char_width() / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
 		dc.SetPen(wxPen(*wxBLACK, 1));
 		dc.SetBrush(*wxLIGHT_GREY_BRUSH);
 		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
+		
+		if(final_descendant != NULL)
+		{
+			dc.DrawLine(box_x, (box_y + box_h), box_x, (box_y + box_h + doc.hf_height));
+			dc.DrawLine((box_x + box_w - 1), (box_y + box_h), (box_x + box_w - 1), (box_y + box_h + doc.hf_height));
+		}
 	}
 	
 	y += doc.hf_height / 2;

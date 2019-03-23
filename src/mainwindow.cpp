@@ -63,6 +63,7 @@ enum {
 	ID_INLINE_COMMENTS_HIDDEN,
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
+	ID_INLINE_COMMENTS_INDENT,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -109,6 +110,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_HIDDEN, REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
+	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -178,6 +180,8 @@ REHex::MainWindow::MainWindow():
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_FULL,   "Full");
+	inline_comments_menu->AppendSeparator();
+	inline_comments_menu->AppendCheckItem(ID_INLINE_COMMENTS_INDENT, "Nest comments");
 	
 	tool_panels_menu = new wxMenu;
 	view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
@@ -695,20 +699,27 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	switch(event.GetId())
+	if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_HIDDEN))
 	{
-		case ID_INLINE_COMMENTS_HIDDEN:
-			tab->doc->set_inline_comment_mode(REHex::Document::ICM_HIDDEN);
-			break;
-			
-		case ID_INLINE_COMMENTS_FULL:
-			tab->doc->set_inline_comment_mode(REHex::Document::ICM_FULL);
-			break;
-			
-		case ID_INLINE_COMMENTS_SHORT:
-			tab->doc->set_inline_comment_mode(REHex::Document::ICM_SHORT);
-			break;
-	};
+		tab->doc->set_inline_comment_mode(REHex::Document::ICM_HIDDEN);
+		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, false);
+	}
+	else if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_FULL))
+	{
+		tab->doc->set_inline_comment_mode(
+			inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT)
+				? REHex::Document::ICM_FULL_INDENT
+				: REHex::Document::ICM_FULL);
+		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
+	}
+	else if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_SHORT))
+	{
+		tab->doc->set_inline_comment_mode(
+			inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT)
+				? REHex::Document::ICM_SHORT_INDENT
+				: REHex::Document::ICM_SHORT);
+		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
+	}
 }
 
 void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
@@ -766,14 +777,21 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	{
 		case REHex::Document::ICM_HIDDEN:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_HIDDEN, true);
+			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, false);
 			break;
 			
 		case REHex::Document::ICM_FULL:
+		case REHex::Document::ICM_FULL_INDENT:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_FULL, true);
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == REHex::Document::ICM_FULL_INDENT));
+			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 			
 		case REHex::Document::ICM_SHORT:
+		case REHex::Document::ICM_SHORT_INDENT:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_SHORT, true);
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == REHex::Document::ICM_SHORT_INDENT));
+			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 	};
 	

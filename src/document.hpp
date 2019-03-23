@@ -250,9 +250,10 @@ namespace REHex {
 			
 			static const int MOUSE_SELECT_INTERVAL = 100;
 			
-			bool mouse_down_in_hex{false}, mouse_down_in_ascii{false};
+			bool mouse_down_in_hex, mouse_down_in_ascii;
 			off_t mouse_down_at_offset;
 			wxTimer mouse_select_timer;
+			off_t mouse_shift_initial;
 			
 			enum CursorState cursor_state;
 			

@@ -309,6 +309,11 @@ void REHex::Document::set_selection(off_t off, off_t length)
 	selection_off    = off;
 	selection_length = length;
 	
+	if(length <= 0 || mouse_shift_initial < off || mouse_shift_initial > (off + length))
+	{
+		mouse_shift_initial = -1;
+	}
+	
 	{
 		wxCommandEvent event(REHex::EV_SELECTION_CHANGED);
 		event.SetEventObject(this);
@@ -1345,12 +1350,31 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				{
 					/* Clicked on a character */
 					
-					_set_cursor_position(clicked_offset, CSTATE_ASCII);
-					
-					clear_selection();
-					
-					mouse_down_at_offset = clicked_offset;
-					mouse_down_in_ascii  = true;
+					if(event.ShiftDown())
+					{
+						off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
+						_set_cursor_position(clicked_offset, CSTATE_ASCII);
+						
+						if(clicked_offset > old_position)
+						{
+							set_selection(old_position, (clicked_offset - old_position));
+						}
+						else{
+							set_selection(clicked_offset, (old_position - clicked_offset));
+						}
+						
+						mouse_shift_initial  = old_position;
+						mouse_down_at_offset = clicked_offset;
+						mouse_down_in_ascii  = true;
+					}
+					else{
+						_set_cursor_position(clicked_offset, CSTATE_ASCII);
+						
+						clear_selection();
+						
+						mouse_down_at_offset = clicked_offset;
+						mouse_down_in_ascii  = true;
+					}
 					
 					CaptureMouse();
 					mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
@@ -1367,12 +1391,31 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 				{
 					/* Clicked on a byte */
 					
-					_set_cursor_position(clicked_offset, CSTATE_HEX);
-					
-					clear_selection();
-					
-					mouse_down_at_offset = clicked_offset;
-					mouse_down_in_hex    = true;
+					if(event.ShiftDown())
+					{
+						off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
+						_set_cursor_position(clicked_offset, CSTATE_HEX);
+						
+						if(clicked_offset > old_position)
+						{
+							set_selection(old_position, (clicked_offset - old_position));
+						}
+						else{
+							set_selection(clicked_offset, (old_position - clicked_offset));
+						}
+						
+						mouse_shift_initial  = old_position;
+						mouse_down_at_offset = old_position;
+						mouse_down_in_hex    = true;
+					}
+					else{
+						_set_cursor_position(clicked_offset, CSTATE_HEX);
+						
+						clear_selection();
+						
+						mouse_down_at_offset = clicked_offset;
+						mouse_down_in_hex    = true;
+					}
 					
 					CaptureMouse();
 					mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
@@ -1835,6 +1878,9 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	selection_off     = 0;
 	selection_length  = 0;
 	cursor_visible    = true;
+	mouse_down_in_hex = false;
+	mouse_down_in_ascii = false;
+	mouse_shift_initial = -1;
 	cursor_state      = CSTATE_HEX;
 	
 	wxFontInfo finfo;

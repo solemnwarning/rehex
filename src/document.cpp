@@ -2377,6 +2377,11 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	
 	do_func();
 	
+	while(undo_stack.size() >= UNDO_MAX)
+	{
+		undo_stack.pop_front();
+	}
+	
 	undo_stack.push_back(change);
 	redo_stack.clear();
 }

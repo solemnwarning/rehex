@@ -257,6 +257,7 @@ namespace REHex {
 			
 			enum CursorState cursor_state;
 			
+			static const int UNDO_MAX = 64;
 			std::list<REHex::Document::TrackedChange> undo_stack;
 			std::list<REHex::Document::TrackedChange> redo_stack;
 			

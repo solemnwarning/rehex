@@ -3204,7 +3204,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					/* Draw horizontal line below selection. */
 					dc.DrawLine(pd_hx, (y + doc.hf_height - 1), (pd_hx + doc.hf_string_width(2)), (y + doc.hf_height - 1));
 					
-					if(c > 0 && (c % doc.bytes_per_group) == 0)
+					if(c > 0 && (c % doc.bytes_per_group) == 0 && cur_off > doc.selection_off)
 					{
 						/* Draw horizontal line below gap along bottom of selection. */
 						dc.DrawLine((pd_hx - doc.hf_char_width()), (y + doc.hf_height - 1), pd_hx, (y + doc.hf_height - 1));

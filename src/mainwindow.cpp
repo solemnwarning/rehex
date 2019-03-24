@@ -121,6 +121,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,      REHex::MainWindow::OnCursorMove)
 	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
 	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED,    REHex::MainWindow::OnInsertToggle)
+	EVT_COMMAND(wxID_ANY, REHex::EV_UNDO_UPDATE,       REHex::MainWindow::OnUndoUpdate)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
@@ -808,6 +809,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	_update_status_offset(tab->doc);
 	_update_status_selection(tab->doc);
 	_update_status_mode(tab->doc);
+	_update_undo(tab->doc);
 }
 
 void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
@@ -902,6 +904,24 @@ void REHex::MainWindow::OnInsertToggle(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnUndoUpdate(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
+	assert(doc != NULL);
+	
+	if(doc == tab->doc)
+	{
+		/* Only update the menu if the event originated from the active document. */
+		_update_undo(tab->doc);
+	}
+}
+
 void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
 {
 	off_t off = doc->get_cursor_position();
@@ -950,6 +970,37 @@ void REHex::MainWindow::_update_status_mode(REHex::Document *doc)
 	}
 	else{
 		SetStatusText("Mode: Overwrite", 2);
+	}
+}
+
+void REHex::MainWindow::_update_undo(REHex::Document *doc)
+{
+	const char *undo_desc = doc->undo_desc();
+	if(undo_desc != NULL)
+	{
+		char label[64];
+		snprintf(label, sizeof(label), "&Undo %s\tCtrl-Z", undo_desc);
+		
+		edit_menu->SetLabel(wxID_UNDO, label);
+		edit_menu->Enable(wxID_UNDO, true);
+	}
+	else{
+		edit_menu->SetLabel(wxID_UNDO, "&Undo\tCtrl-Z");
+		edit_menu->Enable(wxID_UNDO, false);
+	}
+	
+	const char *redo_desc = doc->redo_desc();
+	if(redo_desc != NULL)
+	{
+		char label[64];
+		snprintf(label, sizeof(label), "&Redo %s\tCtrl-Shift-Z", redo_desc);
+		
+		edit_menu->SetLabel(wxID_REDO, label);
+		edit_menu->Enable(wxID_REDO, true);
+	}
+	else{
+		edit_menu->SetLabel(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+		edit_menu->Enable(wxID_REDO, false);
 	}
 }
 

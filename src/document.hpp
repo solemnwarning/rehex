@@ -35,6 +35,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
 	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_DATA_MODIFIED,     wxCommandEvent);
+	wxDECLARE_EVENT(EV_UNDO_UPDATE,       wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
@@ -115,7 +116,9 @@ namespace REHex {
 			std::string handle_copy(bool cut);
 			
 			void undo();
+			const char *undo_desc();
 			void redo();
+			const char *redo_desc();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
@@ -307,6 +310,7 @@ namespace REHex {
 			void _raise_moved();
 			void _raise_comment_modified();
 			void _raise_data_modified();
+			void _raise_undo_update();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];

@@ -75,6 +75,7 @@ namespace REHex {
 			void OnCursorMove(wxCommandEvent &event);
 			void OnSelectionChange(wxCommandEvent &event);
 			void OnInsertToggle(wxCommandEvent &event);
+			void OnUndoUpdate(wxCommandEvent &event);
 			
 		private:
 			class Tab: public wxPanel
@@ -152,6 +153,7 @@ namespace REHex {
 			void _update_status_offset(REHex::Document *doc);
 			void _update_status_selection(REHex::Document *doc);
 			void _update_status_mode(REHex::Document *doc);
+			void _update_undo(REHex::Document *doc);
 			
 			void _clipboard_copy(bool cut);
 			

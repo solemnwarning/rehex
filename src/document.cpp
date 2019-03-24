@@ -75,6 +75,7 @@ wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,    wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,       wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -520,7 +521,20 @@ void REHex::Document::undo()
 		redo_stack.push_back(act);
 		undo_stack.pop_back();
 		
+		_raise_undo_update();
+		
 		Refresh();
+	}
+}
+
+const char *REHex::Document::undo_desc()
+{
+	if(!undo_stack.empty())
+	{
+		return undo_stack.back().desc;
+	}
+	else{
+		return NULL;
 	}
 }
 
@@ -534,7 +548,20 @@ void REHex::Document::redo()
 		undo_stack.push_back(act);
 		redo_stack.pop_back();
 		
+		_raise_undo_update();
+		
 		Refresh();
+	}
+}
+
+const char *REHex::Document::redo_desc()
+{
+	if(!redo_stack.empty())
+	{
+		return redo_stack.back().desc;
+	}
+	else{
+		return NULL;
 	}
 }
 
@@ -2384,6 +2411,8 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	
 	undo_stack.push_back(change);
 	redo_stack.clear();
+	
+	_raise_undo_update();
 }
 
 void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text)
@@ -2767,6 +2796,14 @@ void REHex::Document::_raise_comment_modified()
 void REHex::Document::_raise_data_modified()
 {
 	wxCommandEvent event(REHex::EV_DATA_MODIFIED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
+}
+
+void REHex::Document::_raise_undo_update()
+{
+	wxCommandEvent event(REHex::EV_UNDO_UPDATE);
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);

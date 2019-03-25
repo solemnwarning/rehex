@@ -527,6 +527,7 @@ std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_leng
 	}
 	
 	std::vector<unsigned char> data;
+	data.reserve(max_length);
 	
 	while(block < blocks.data() + blocks.size() && max_length > 0)
 	{

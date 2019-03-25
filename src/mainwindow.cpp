@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <limits>
+#include <new>
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -1012,16 +1013,54 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	/* TODO: Open clipboard in a RAII-y way. */
+	/* Warn the user this might be a bad idea before dumping silly amounts
+	 * of data (>16MiB) into the clipboard.
+	*/
 	
-	if(wxTheClipboard->Open())
+	static size_t COPY_MAX_SOFT = 16777216;
+	size_t upper_limit = tab->doc->copy_upper_limit();
+	
+	if(upper_limit > COPY_MAX_SOFT)
 	{
-		std::string copy_text = tab->doc->handle_copy(cut);
+		char msg[128];
+		snprintf(msg, sizeof(msg),
+			"You are about to copy %uMB into the clipboard.\n"
+			"This may take a long time and/or crash some applications.",
+			(unsigned)(upper_limit / 1000000));
 		
+		int result = wxMessageBox(msg, "Warning", (wxOK | wxCANCEL | wxICON_EXCLAMATION), this);
+		if(result != wxOK)
+		{
+			return;
+		}
+	}
+	
+	wxTextDataObject *copy_data = NULL;
+	try {
+		std::string copy_text = tab->doc->handle_copy(cut);
 		if(!copy_text.empty())
 		{
-			wxTheClipboard->SetData(new wxTextDataObject(copy_text));
+			copy_data = new wxTextDataObject(copy_text);
+		}
+	}
+	catch(const std::bad_alloc &e)
+	{
+		wxMessageBox(
+			"Memory allocation failed while preparing clipboard buffer.",
+			"Error", (wxOK | wxICON_ERROR), this);
+		return;
+	}
+	
+	if(copy_data != NULL)
+	{
+		/* TODO: Open clipboard in a RAII-y way. */
+		if(wxTheClipboard->Open())
+		{
+			wxTheClipboard->SetData(copy_data);
 			wxTheClipboard->Close();
+		}
+		else{
+			delete copy_data;
 		}
 	}
 }

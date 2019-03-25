@@ -114,6 +114,7 @@ namespace REHex {
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
+			size_t copy_upper_limit();
 			
 			void undo();
 			const char *undo_desc();

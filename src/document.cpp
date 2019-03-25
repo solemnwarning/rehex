@@ -501,6 +501,27 @@ std::string REHex::Document::handle_copy(bool cut)
 	}
 }
 
+/* Maximum size of the string that would be returned by handle_copy() with the current selection.
+ * The actual string may be shorter as unprintable characters are skipped in ASCII mode.
+*/
+size_t REHex::Document::copy_upper_limit()
+{
+	if(selection_length > 0)
+	{
+		if(cursor_state == CSTATE_ASCII)
+		{
+			return selection_length;
+		}
+		else{
+			return selection_length * 2;
+		}
+	}
+	else{
+		/* Nothing selected */
+		return 0;
+	}
+}
+
 void REHex::Document::undo()
 {
 	if(!undo_stack.empty())

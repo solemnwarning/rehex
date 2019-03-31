@@ -15,15 +15,16 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifdef _WIN32
-#include <objbase.h>
-#endif
-
 #include <llvm-c/Disassembler.h>
 #include <llvm-c/Target.h>
 
 #include "app.hpp"
 #include "mainwindow.hpp"
+
+/* These MUST come after any wxWidgets headers. */
+#ifdef _WIN32
+#include <objbase.h>
+#endif
 
 IMPLEMENT_APP(REHex::App);
 

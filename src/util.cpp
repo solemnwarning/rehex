@@ -15,10 +15,6 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifdef _WIN32
-#include <shlobj.h>
-#endif
-
 #include <ctype.h>
 #include <string>
 #include <vector>
@@ -26,6 +22,11 @@
 #include <wx/utils.h>
 
 #include "util.hpp"
+
+/* These MUST come after any wxWidgets headers. */
+#ifdef _WIN32
+#include <shlobj.h>
+#endif
 
 REHex::ParseError::ParseError(const char *what):
 	runtime_error(what) {}

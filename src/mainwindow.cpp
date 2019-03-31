@@ -37,6 +37,7 @@
 #include "NumericEntryDialog.hpp"
 #include "search.hpp"
 #include "ToolPanel.hpp"
+#include "util.hpp"
 
 #include "../res/icon16.h"
 #include "../res/icon32.h"
@@ -115,9 +116,10 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
-	EVT_AUINOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::MainWindow::OnDocumentChange)
-	EVT_AUINOTEBOOK_PAGE_CLOSE(  wxID_ANY, REHex::MainWindow::OnDocumentClose)
-	EVT_AUINOTEBOOK_PAGE_CLOSED( wxID_ANY, REHex::MainWindow::OnDocumentClosed)
+	EVT_AUINOTEBOOK_PAGE_CHANGED(  wxID_ANY, REHex::MainWindow::OnDocumentChange)
+	EVT_AUINOTEBOOK_PAGE_CLOSE(    wxID_ANY, REHex::MainWindow::OnDocumentClose)
+	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
+	EVT_AUINOTEBOOK_TAB_RIGHT_DOWN(wxID_ANY, REHex::MainWindow::OnDocumentMenu)
 	
 	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,      REHex::MainWindow::OnCursorMove)
 	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
@@ -842,6 +844,31 @@ void REHex::MainWindow::OnDocumentClosed(wxAuiNotebookEvent &event)
 	{
 		ProcessCommand(wxID_NEW);
 	}
+}
+
+void REHex::MainWindow::OnDocumentMenu(wxAuiNotebookEvent &event)
+{
+	int tab_idx = event.GetSelection();
+	
+	wxWindow *tab_page = notebook->GetPage(tab_idx);
+	assert(tab_page != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(tab_page);
+	assert(tab != NULL);
+	
+	std::string filename = tab->doc->get_filename();
+	
+	wxMenu menu;
+	
+	wxMenuItem *open_dir = menu.Append(wxID_ANY, "Open Folder");
+	open_dir->Enable(filename != "");
+	
+	menu.Bind(wxEVT_MENU, [this, &filename](wxCommandEvent &event)
+	{
+		REHex::file_manager_show_file(filename);
+	}, open_dir->GetId(), open_dir->GetId());
+	
+	PopupMenu(&menu);
 }
 
 void REHex::MainWindow::OnCursorMove(wxCommandEvent &event)

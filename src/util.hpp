@@ -31,6 +31,8 @@ namespace REHex {
 	
 	std::vector<unsigned char> parse_hex_string(const std::string &hex_string);
 	unsigned char parse_ascii_nibble(char c);
+	
+	void file_manager_show_file(const std::string &filename);
 }
 
 #endif /* !REHEX_UTIL_HPP */

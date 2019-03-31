@@ -102,7 +102,7 @@ void REHex::file_manager_show_file(const std::string &filename)
 		wxString abs_filename = wxfn.GetFullPath();
 		
 		PIDLIST_ABSOLUTE pidl;
-		SFGAO flags;
+		SFGAOF flags;
 		
 		if(SHParseDisplayName(abs_filename.wc_str(), NULL, &pidl, 0, &flags) == S_OK)
 		{

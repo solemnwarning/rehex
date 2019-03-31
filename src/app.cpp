@@ -15,6 +15,10 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#ifdef _WIN32
+#include <objbase.h>
+#endif
+
 #include <llvm-c/Disassembler.h>
 #include <llvm-c/Target.h>
 
@@ -25,6 +29,11 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	#ifdef _WIN32
+	/* Needed for shell API calls. */
+	CoInitialize(NULL);
+	#endif
+	
 	wxImage::AddHandler(new wxPNGHandler);
 	
 	config = new wxConfig("REHex");
@@ -77,6 +86,10 @@ int REHex::App::OnExit()
 	
 	delete recent_files;
 	delete config;
+	
+	#ifdef _WIN32
+	CoUninitialize();
+	#endif
 	
 	return 0;
 }

@@ -71,6 +71,7 @@ namespace REHex {
 			void OnDocumentChange(wxAuiNotebookEvent &event);
 			void OnDocumentClose(wxAuiNotebookEvent &event);
 			void OnDocumentClosed(wxAuiNotebookEvent &event);
+			void OnDocumentMenu(wxAuiNotebookEvent &event);
 			
 			void OnCursorMove(wxCommandEvent &event);
 			void OnSelectionChange(wxCommandEvent &event);

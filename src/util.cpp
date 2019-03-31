@@ -15,9 +15,15 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#ifdef _WIN32
+#include <shlobj.h>
+#endif
+
 #include <ctype.h>
 #include <string>
 #include <vector>
+#include <wx/filename.h>
+#include <wx/utils.h>
 
 #include "util.hpp"
 
@@ -84,4 +90,33 @@ unsigned char REHex::parse_ascii_nibble(char c)
 		default:
 			throw ParseError("Invalid hex character");
 	}
+}
+
+void REHex::file_manager_show_file(const std::string &filename)
+{
+	wxFileName wxfn(filename);
+	wxfn.MakeAbsolute();
+	
+	#if defined(_WIN32)
+		wxString abs_filename = wxfn.GetFullPath();
+		
+		PIDLIST_ABSOLUTE pidl;
+		SFGAO flags;
+		
+		if(SHParseDisplayName(abs_filename.wc_str(), NULL, &pidl, 0, &flags) == S_OK)
+		{
+			SHOpenFolderAndSelectItems(pidl, 0, NULL, 0);
+			CoTaskMemFree(pidl);
+		}
+	#elif defined(__APPLE__)
+		wxString abs_filename = wxfn.GetFullPath();
+		
+		const char *argv[] = { "open", abs_filename.c_str(), NULL };
+		wxExecute((char**)(argv));
+	#else
+		wxString dirname = wxfn.GetPath();
+		
+		const char *argv[] = { "xdg-open", dirname.c_str(), NULL };
+		wxExecute((char**)(argv));
+	#endif
 }

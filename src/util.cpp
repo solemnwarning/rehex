@@ -112,7 +112,7 @@ void REHex::file_manager_show_file(const std::string &filename)
 	#elif defined(__APPLE__)
 		wxString abs_filename = wxfn.GetFullPath();
 		
-		const char *argv[] = { "open", abs_filename.c_str(), NULL };
+		const char *argv[] = { "open", "-R", abs_filename.c_str(), NULL };
 		wxExecute((char**)(argv));
 	#else
 		wxString dirname = wxfn.GetPath();

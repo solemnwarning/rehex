@@ -50,7 +50,7 @@ VERSION    := Snapshot $(shell git log -1 --format="%H")
 BUILD_DATE := $(shell date '+%F')
 
 DEPDIR := .d
-$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
+$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/ $(DEPDIR)/googletest/src/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
@@ -59,16 +59,15 @@ ALL_TESTS := \
 	tests/CommentTree.t \
 	tests/document.t \
 	tests/NestedOffsetLengthMap.t \
-	tests/NumericTextCtrl.t \
 	tests/search-bseq.t \
-	tests/search-text.t \
-	tests/util.t
+	tests/search-text.t
 
 .PHONY: all
 all: $(EXE)
 
 .PHONY: check
-check: $(ALL_TESTS)
+check: tests/all-tests $(ALL_TESTS)
+	./tests/all-tests
 	prove tests/
 
 .PHONY: clean
@@ -117,6 +116,16 @@ APP_OBJS := \
 $(EXE): $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
+TEST_OBJS := \
+	googletest/src/gtest-all.o \
+	src/util.o \
+	tests/main.o \
+	tests/NumericTextCtrl.o \
+	tests/util.o
+
+tests/all-tests: $(TEST_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
 TESTS_BUFFER_OBJS := \
 	src/buffer.o \
 	src/win32lib.o \
@@ -161,13 +170,6 @@ TESTS_NESTEDOFFSETLENGTHMAP_OBJS := \
 tests/NestedOffsetLengthMap.t: $(TESTS_NESTEDOFFSETLENGTHMAP_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-TESTS_NUMERICTEXTCTRL_OBJS := \
-	tests/NumericTextCtrl.o \
-	tests/tap/basic.o
-
-tests/NumericTextCtrl.t: $(TESTS_NUMERICTEXTCTRL_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
 TESTS_SEARCH_BSEQ_OBJS := \
 	src/buffer.o \
 	src/document.o \
@@ -196,14 +198,6 @@ TESTS_SEARCH_TEXT_OBJS := \
 tests/search-text.t: $(TESTS_SEARCH_TEXT_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-TESTS_UTIL_OBJS := \
-	src/util.o \
-	tests/util.o \
-	tests/tap/basic.o
-
-tests/util.t: $(TESTS_UTIL_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
 $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
@@ -222,6 +216,14 @@ res/version.o:
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+tests/%.o: tests/%.cpp
+	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+googletest/src/%.o: googletest/src/%.cc
+	$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
 %.o: %.cpp

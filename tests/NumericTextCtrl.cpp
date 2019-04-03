@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,13 +15,12 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <gtest/gtest.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <typeinfo>
 #include <wx/init.h>
 #include <wx/wx.h>
-
-#include "tests/tap/basic.h"
 
 #include "../src/NumericTextCtrl.hpp"
 
@@ -34,47 +33,21 @@
 	\
 	tc->SetValue(string_value); \
 	\
-	try { \
+	EXPECT_NO_THROW({ \
 		value_type v = tc->GetValueSigned<value_type>(); \
-		if(!ok((v == type_value), "%s", test_name)) { \
-			diag("Got:      %lld", (long long)(v)); \
-			diag("Expected: %lld", (long long)(type_value)); \
-		} \
-	} \
-	catch(const REHex::NumericTextCtrl::EmptyError &e) \
-	{ \
-		ok(0, "%s", test_name); \
-		diag("Caught EmptyError exception"); \
-	} \
-	catch(const REHex::NumericTextCtrl::RangeError &e) \
-	{ \
-		ok(0, "%s", test_name); \
-		diag("Caught RangeError exception"); \
-	} \
-	catch(const REHex::NumericTextCtrl::FormatError &e) \
-	{ \
-		ok(0, "%s", test_name); \
-		diag("Caught FormatError exception"); \
-	} \
+		EXPECT_EQ(v, type_value) << test_name; \
+	}) << test_name; \
 }
 
 #define GV_SIGNED_THROWS(value_type, string_value, exception_class) \
 { \
-	const char *test_name = "GetValueSigned<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
-	\
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
 	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
 	\
 	tc->SetValue(string_value); \
 	\
-	try { \
-		tc->GetValueSigned<value_type>(); \
-		ok(0, "%s", test_name); \
-	} \
-	catch(const exception_class &e) \
-	{ \
-		ok(1, "%s", test_name); \
-	} \
+	EXPECT_THROW({ tc->GetValueSigned<value_type>(); }, exception_class) << \
+		"GetValueSigned<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
 }
 
 #define GV_UNSIGNED_RESULT(value_type, string_value, type_value) \
@@ -86,64 +59,25 @@
 	\
 	tc->SetValue(string_value); \
 	\
-	try { \
+	EXPECT_NO_THROW({ \
 		value_type v = tc->GetValueUnsigned<value_type>(); \
-		if(!ok((v == type_value), "%s", test_name)) { \
-			diag("Got:      %llu", (unsigned long long)(v)); \
-			diag("Expected: %llu", (unsigned long long)(type_value)); \
-		} \
-	} \
-	catch(const REHex::NumericTextCtrl::EmptyError &e) \
-	{ \
-		ok(0, "%s", test_name); \
-		diag("Caught EmptyError exception"); \
-	} \
-	catch(const REHex::NumericTextCtrl::RangeError &e) \
-	{ \
-		ok(0, "%s", test_name); \
-		diag("Caught RangeError exception"); \
-	} \
-	catch(const REHex::NumericTextCtrl::FormatError &e) \
-	{ \
-		ok(0, "%s", test_name); \
-		diag("Caught FormatError exception"); \
-	} \
+		EXPECT_EQ(v, type_value) << test_name; \
+	}) << test_name; \
 }
 
 #define GV_UNSIGNED_THROWS(value_type, string_value, exception_class) \
 { \
-	const char *test_name = "GetValueUnsigned<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
-	\
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
 	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
 	\
 	tc->SetValue(string_value); \
 	\
-	try { \
-		tc->GetValueUnsigned<value_type>(); \
-		ok(0, "%s", test_name); \
-	} \
-	catch(const exception_class &e) \
-	{ \
-		ok(1, "%s", test_name); \
-	} \
+	EXPECT_THROW({ tc->GetValueUnsigned<value_type>(); }, exception_class) << \
+		"GetValueUnsigned<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
 }
 
-int main(int argc, char **argv)
+TEST(NumericTextCtrl, GetValueSigned)
 {
-	wxApp::SetInstance(new wxApp());
-	wxEntryStart(argc, argv);
-	wxTheApp->OnInit();
-	
-	plan_lazy();
-	
-	/********************
-	 *                  *
-	 * GetValueSigned() *
-	 *                  *
-	 ********************
-	*/
-	
 	GV_SIGNED_RESULT(int8_t,    "0", 0);
 	GV_SIGNED_RESULT(int8_t, "-128", -128);
 	GV_SIGNED_THROWS(int8_t, "-129", REHex::NumericTextCtrl::RangeError);
@@ -227,14 +161,10 @@ int main(int argc, char **argv)
 	GV_SIGNED_THROWS(int, "\t",  REHex::NumericTextCtrl::EmptyError);
 	GV_SIGNED_THROWS(int, "0.",  REHex::NumericTextCtrl::FormatError);
 	GV_SIGNED_THROWS(int, "0.0", REHex::NumericTextCtrl::FormatError);
-	
-	/**********************
-	 *                    *
-	 * GetValueUnsigned() *
-	 *                    *
-	 **********************
-	*/
-	
+}
+
+TEST(NumericTextCtrl, GetValueUnsigned)
+{
 	GV_UNSIGNED_RESULT(uint8_t,   "0", 0);
 	GV_UNSIGNED_THROWS(uint8_t,  "-1", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint8_t, "255", 0xFF);
@@ -267,32 +197,32 @@ int main(int argc, char **argv)
 	GV_UNSIGNED_RESULT(uint16_t,  "0177777", 0xFFFF);
 	GV_UNSIGNED_THROWS(uint16_t,  "0200000", REHex::NumericTextCtrl::RangeError);
 	
-	GV_UNSIGNED_RESULT(uint32_t,           "0", 0);
+	GV_UNSIGNED_RESULT(uint32_t,           "0", 0U);
 	GV_UNSIGNED_THROWS(uint32_t,          "-1", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint32_t,  "4294967295", 0xFFFFFFFF);
 	GV_UNSIGNED_THROWS(uint32_t,  "4294967296", REHex::NumericTextCtrl::RangeError);
 	
-	GV_UNSIGNED_RESULT(uint32_t,         "0x0", 0);
+	GV_UNSIGNED_RESULT(uint32_t,         "0x0", 0U);
 	GV_UNSIGNED_THROWS(uint32_t,        "-0x1", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint32_t,  "0xFFFFFFFF", 0xFFFFFFFF);
 	GV_UNSIGNED_THROWS(uint32_t, "0x100000000", REHex::NumericTextCtrl::RangeError);
 	
-	GV_UNSIGNED_RESULT(uint32_t,            "00", 0);
+	GV_UNSIGNED_RESULT(uint32_t,            "00", 0U);
 	GV_UNSIGNED_THROWS(uint32_t,           "-01", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint32_t,  "037777777777", 0xFFFFFFFF);
 	GV_UNSIGNED_THROWS(uint32_t,  "040000000000", REHex::NumericTextCtrl::RangeError);
 	
-	GV_UNSIGNED_RESULT(uint64_t,                     "0", 0);
+	GV_UNSIGNED_RESULT(uint64_t,                     "0", 0ULL);
 	GV_UNSIGNED_THROWS(uint64_t,                    "-1", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint64_t,  "18446744073709551615", 0xFFFFFFFFFFFFFFFFULL);
 	GV_UNSIGNED_THROWS(uint64_t,  "18446744073709551616", REHex::NumericTextCtrl::RangeError);
 	
-	GV_UNSIGNED_RESULT(uint64_t,                 "0x0", 0);
+	GV_UNSIGNED_RESULT(uint64_t,                 "0x0", 0ULL);
 	GV_UNSIGNED_THROWS(uint64_t,                "-0x1", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint64_t,  "0xFFFFFFFFFFFFFFFF", 0xFFFFFFFFFFFFFFFFULL);
 	GV_UNSIGNED_THROWS(uint64_t, "0x10000000000000000", REHex::NumericTextCtrl::RangeError);
 	
-	GV_UNSIGNED_RESULT(uint64_t,                      "00", 0);
+	GV_UNSIGNED_RESULT(uint64_t,                      "00", 0ULL);
 	GV_UNSIGNED_THROWS(uint64_t,                     "-01", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint64_t, "01777777777777777777777", 0xFFFFFFFFFFFFFFFFULL);
 	GV_UNSIGNED_THROWS(uint64_t, "02000000000000000000000", REHex::NumericTextCtrl::RangeError);
@@ -302,9 +232,4 @@ int main(int argc, char **argv)
 	GV_UNSIGNED_THROWS(unsigned, "\t",  REHex::NumericTextCtrl::EmptyError);
 	GV_UNSIGNED_THROWS(unsigned, "0.",  REHex::NumericTextCtrl::FormatError);
 	GV_UNSIGNED_THROWS(unsigned, "0.0", REHex::NumericTextCtrl::FormatError);
-	
-	wxTheApp->OnExit();
-	wxEntryCleanup();
-	
-	return 0;
 }

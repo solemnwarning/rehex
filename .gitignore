@@ -14,12 +14,11 @@
 /res/license.c
 /res/license.h
 /tests/.tmpfile*
+/tests/all-tests
 /tests/buffer.t
 /tests/CommentTree.t
 /tests/document.t
 /tests/NestedOffsetLengthMap.t
-/tests/NumericTextCtrl.t
 /tests/search-bseq.t
 /tests/search-text.t
-/tests/util.t
 /tools/embed

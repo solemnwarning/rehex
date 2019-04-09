@@ -19,6 +19,11 @@
 #include <wx/app.h>
 #include <wx/init.h>
 
+wxApp &wxGetApp()
+{
+       return *wxTheApp;
+}
+
 int main(int argc, char **argv)
 {
 	wxApp::SetInstance(new wxApp());

@@ -124,6 +124,7 @@ TEST_OBJS := \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
+	src/win32lib.o \
 	tests/CommentTree.o \
 	tests/main.o \
 	tests/NumericTextCtrl.o \

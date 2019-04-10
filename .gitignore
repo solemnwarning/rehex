@@ -17,7 +17,6 @@
 /tests/all-tests
 /tests/buffer.t
 /tests/document.t
-/tests/NestedOffsetLengthMap.t
 /tests/search-bseq.t
 /tests/search-text.t
 /tools/embed

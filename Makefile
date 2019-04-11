@@ -55,7 +55,6 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
 ALL_TESTS := \
-	tests/buffer.t \
 	tests/document.t \
 	tests/search-bseq.t \
 	tests/search-text.t
@@ -124,6 +123,7 @@ TEST_OBJS := \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
+	tests/buffer.o \
 	tests/CommentTree.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
@@ -131,15 +131,6 @@ TEST_OBJS := \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_BUFFER_OBJS := \
-	src/buffer.o \
-	src/win32lib.o \
-	tests/buffer.o \
-	tests/tap/basic.o
-
-tests/buffer.t: $(TESTS_BUFFER_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 TESTS_DOCUMENT_OBJS := \

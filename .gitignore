@@ -15,7 +15,6 @@
 /res/license.h
 /tests/.tmpfile*
 /tests/all-tests
-/tests/buffer.t
 /tests/document.t
 /tests/search-bseq.t
 /tests/search-text.t

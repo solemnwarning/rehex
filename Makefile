@@ -55,9 +55,7 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
 
 ALL_TESTS := \
-	tests/document.t \
-	tests/search-bseq.t \
-	tests/search-text.t
+	tests/document.t
 
 .PHONY: all
 all: $(EXE)
@@ -119,6 +117,7 @@ TEST_OBJS := \
 	src/CommentTree.o \
 	src/document.o \
 	src/Palette.o \
+	src/search.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
@@ -128,6 +127,8 @@ TEST_OBJS := \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
+	tests/search-bseq.o \
+	tests/search-text.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)
@@ -144,34 +145,6 @@ TESTS_DOCUMENT_OBJS := \
 	tests/tap/basic.o
 
 tests/document.t: $(TESTS_DOCUMENT_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_SEARCH_BSEQ_OBJS := \
-	src/buffer.o \
-	src/document.o \
-	src/Palette.o \
-	src/search.o \
-	src/textentrydialog.o \
-	src/util.o \
-	src/win32lib.o \
-	tests/search-bseq.o \
-	tests/tap/basic.o
-
-tests/search-bseq.t: $(TESTS_SEARCH_BSEQ_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_SEARCH_TEXT_OBJS := \
-	src/buffer.o \
-	src/document.o \
-	src/Palette.o \
-	src/search.o \
-	src/textentrydialog.o \
-	src/util.o \
-	src/win32lib.o \
-	tests/search-text.o \
-	tests/tap/basic.o
-
-tests/search-text.t: $(TESTS_SEARCH_TEXT_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(EMBED_EXE): tools/embed.cpp

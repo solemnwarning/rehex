@@ -16,6 +16,4 @@
 /tests/.tmpfile*
 /tests/all-tests
 /tests/document.t
-/tests/search-bseq.t
-/tests/search-text.t
 /tools/embed

@@ -2982,6 +2982,14 @@ void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 	 * one if the data isn't a round number of lines.
 	*/
 	y_lines = (d_length / bytes_per_line_actual) + !!(d_length % bytes_per_line_actual) + indent_final;
+	
+	if((d_offset + d_length) == doc.buffer_length() && (d_length % bytes_per_line_actual) == 0)
+	{
+		/* This is the last data region in the document. Make it one row taller if the last
+		 * row is full so there is always somewhere to draw the insert cursor.
+		*/
+		++y_lines;
+	}
 }
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
@@ -3031,7 +3039,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
 	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
-	if(skip_bytes >= d_length)
+	if(skip_lines >= (y_lines - indent_final))
 	{
 		/* All of our data is past the top of the client area, all that needed to be
 		 * rendered is the bottom of the container around it.
@@ -3050,7 +3058,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * case of large files.
 	*/
 	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
-	int max_bytes = max_lines * bytes_per_line_actual;
+	off_t max_bytes = (off_t)(max_lines) * (off_t)(bytes_per_line_actual);
 	
 	if((int64_t)(max_lines) > (y_lines - indent_final - skip_lines))
 	{
@@ -3074,7 +3082,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 	
 	/* Fetch the data to be drawn. */
-	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((off_t)(max_bytes), (d_length - skip_bytes)));
+	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min(max_bytes, (d_length - std::min(skip_bytes, d_length))));
 	
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
@@ -3107,6 +3115,51 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		int ascii_base_x = x + ascii_text_x;
 		int ascii_x      = ascii_base_x;
 		int ascii_x_char = 0;
+		
+		auto draw_end_cursor = [&]()
+		{
+			if((doc.cursor_visible && doc.cursor_state == CSTATE_HEX) || !hex_active)
+			{
+				if(doc.insert_mode || !hex_active)
+				{
+					dc.SetPen(norm_fg_1px);
+					dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
+				}
+				else{
+					/* Draw the cursor in red if trying to overwrite at an invalid
+					 * position. Should only happen in empty files.
+					*/
+					dc.SetPen(*wxRED_PEN);
+					dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
+				}
+			}
+			
+			if(doc.show_ascii && ((doc.cursor_visible && doc.cursor_state == CSTATE_ASCII) || !ascii_active))
+			{
+				if(doc.insert_mode || !ascii_active)
+				{
+					dc.SetPen(norm_fg_1px);
+					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+				}
+				else{
+					/* Draw the cursor in red if trying to overwrite at an invalid
+					 * position. Should only happen in empty files.
+					*/
+					dc.SetPen(*wxRED_PEN);
+					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+				}
+			}
+		};
+		
+		if(di == data.end())
+		{
+			if(cur_off == cursor_pos)
+			{
+				draw_end_cursor();
+			}
+			
+			break;
+		}
 		
 		wxString hex_str, ascii_string;
 		
@@ -3356,28 +3409,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			++cur_off;
 		}
 		
-		if(cur_off == cursor_pos && cur_off == doc.buffer->length())
-		{
-			/* Draw the insert cursor past the end of the line if we've just written
-			 * the last byte to the screen.
-			 *
-			 * TODO: Draw on next line if we're at the end of one.
-			*/
-			
-			if(doc.insert_mode)
-			{
-				dc.SetPen(norm_fg_1px);
-				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
-			}
-			else{
-				/* Draw the cursor in red if trying to overwrite at an invalid
-				 * position. Should only happen in empty files.
-				*/
-				dc.SetPen(*wxRED_PEN);
-				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
-			}
-		}
-		
 		normal_text_colour();
 		
 		dc.DrawText(hex_str, hex_base_x, y);
@@ -3387,9 +3418,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			dc.DrawText(ascii_string, ascii_base_x, y);
 		}
 		
+		if(cur_off == cursor_pos && cur_off == doc.buffer_length() && (d_length % bytes_per_line_actual) != 0)
+		{
+			draw_end_cursor();
+		}
+		
 		y += doc.hf_height;
 		
-		if(di == data.end())
+		if(di == data.end() && (cur_off < doc.buffer_length() || (d_length % bytes_per_line_actual) != 0))
 		{
 			break;
 		}

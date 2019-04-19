@@ -518,6 +518,9 @@ off_t REHex::Buffer::_length()
 
 std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_length)
 {
+	assert(offset >= 0);
+	assert(max_length >= 0);
+	
 	std::unique_lock<std::mutex> l(lock);
 	
 	Block *block = _block_by_virt_offset(offset);

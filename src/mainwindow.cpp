@@ -1115,6 +1115,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	
 	doc = new REHex::Document(h_splitter);
 	init_default_doc_view();
+	doc->set_insert_mode(true);
 	
 	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
 	h_tools->SetFitToCurrentPage(true);

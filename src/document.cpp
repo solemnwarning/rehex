@@ -1025,7 +1025,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	off_t cursor_pos = get_cursor_position();
 	
-	if(modifiers & wxMOD_CONTROL)
+	if((modifiers & wxMOD_CONTROL) && (key != WXK_HOME && key != WXK_END))
 	{
 		/* Some control sequence, pass it on. */
 		event.Skip();
@@ -1135,7 +1135,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
 	}
-	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT)
+	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT || ((modifiers & ~wxMOD_SHIFT) == wxMOD_CONTROL && (key == WXK_HOME || key == WXK_END)))
 		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END))
 	{
 		off_t new_cursor_pos = cursor_pos;
@@ -1250,6 +1250,15 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 		}
+		else if(key == WXK_HOME && (modifiers & wxMOD_CONTROL))
+		{
+			new_cursor_pos = 0;
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
 		else if(key == WXK_HOME)
 		{
 			auto cur_region = _data_region_by_offset(cursor_pos);
@@ -1259,6 +1268,15 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
 			
 			new_cursor_pos = cursor_pos - offset_within_line;
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
+		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
+		{
+			new_cursor_pos = buffer->length() - (off_t)(!insert_mode);
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
@@ -1285,7 +1303,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		
 		set_cursor_position(new_cursor_pos);
 		
-		if(modifiers == wxMOD_SHIFT)
+		if(modifiers & wxMOD_SHIFT)
 		{
 			off_t selection_end = selection_off + selection_length;
 			

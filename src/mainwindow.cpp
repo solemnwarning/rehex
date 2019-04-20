@@ -91,6 +91,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_UNDO, REHex::MainWindow::OnUndo)
 	EVT_MENU(wxID_REDO, REHex::MainWindow::OnRedo)
 	
+	EVT_MENU(wxID_SELECTALL, REHex::MainWindow::OnSelectAll)
+	
 	EVT_MENU(ID_OVERWRITE_MODE, REHex::MainWindow::OnOverwriteMode)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
@@ -146,6 +148,10 @@ REHex::MainWindow::MainWindow():
 	
 	edit_menu->Append(wxID_UNDO, "&Undo\tCtrl-Z");
 	edit_menu->Append(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+	
+	edit_menu->AppendSeparator();
+	
+	edit_menu->Append(wxID_SELECTALL, "Select &All\tCtrl-A");
 	
 	edit_menu->AppendSeparator();
 	
@@ -606,6 +612,17 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 	assert(tab != NULL);
 	
 	tab->doc->redo();
+}
+
+void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->doc->set_selection(0, tab->doc->buffer_length());
 }
 
 void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)

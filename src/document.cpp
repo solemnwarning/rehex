@@ -1136,7 +1136,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		this->Refresh();
 	}
 	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT)
-		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN))
+		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END))
 	{
 		off_t new_cursor_pos = cursor_pos;
 		
@@ -1244,6 +1244,38 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 					new_cursor_pos = std::min(max_pos, new_cursor_pos);
 				}
 			}
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
+		else if(key == WXK_HOME)
+		{
+			auto cur_region = _data_region_by_offset(cursor_pos);
+			assert(cur_region != NULL);
+			
+			off_t offset_within_cur  = cursor_pos - cur_region->d_offset;
+			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
+			
+			new_cursor_pos = cursor_pos - offset_within_line;
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
+		else if(key == WXK_END)
+		{
+			auto cur_region = _data_region_by_offset(cursor_pos);
+			assert(cur_region != NULL);
+			
+			off_t offset_within_cur  = cursor_pos - cur_region->d_offset;
+			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
+			
+			new_cursor_pos = std::min(
+				(cursor_pos + ((cur_region->bytes_per_line_actual - offset_within_line) - 1)),
+				((cur_region->d_offset + cur_region->d_length) - 1));
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{

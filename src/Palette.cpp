@@ -60,6 +60,9 @@ REHex::Palette::Palette()
 		/* White on Grey */
 		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
+		
+		wxColour(0xD3, 0xD3, 0xD3),  /* PAL_COMMENT_BG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
 	};
 	
 	static_assert(sizeof(DEFAULT_PALETTE) == sizeof(palette));

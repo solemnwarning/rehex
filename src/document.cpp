@@ -588,11 +588,13 @@ const char *REHex::Document::redo_desc()
 
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
+	const REHex::Palette &pal = wxGetApp().palette;
+	
 	wxBufferedPaintDC dc(this);
 	
 	dc.SetFont(*hex_font);
 	
-	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.SetBackground(wxBrush(pal[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.Clear();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
@@ -2977,6 +2979,8 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 {
 	if(indent_depth > 0)
 	{
+		const REHex::Palette &pal = wxGetApp().palette;
+		
 		int cw = doc.hf_char_width();
 		int ch = doc.hf_height;
 		
@@ -2989,11 +2993,11 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 		int box_w = doc.virtual_width - (cw / 2);
 		
 		dc.SetPen(*wxTRANSPARENT_PEN);
-		dc.SetBrush(*wxWHITE_BRUSH);
+		dc.SetBrush(wxBrush(pal[Palette::PAL_NORMAL_TEXT_BG]));
 		
 		dc.DrawRectangle(0, box_y, doc.client_width, box_h);
 		
-		dc.SetPen(*wxBLACK_PEN);
+		dc.SetPen(wxPen(pal[Palette::PAL_NORMAL_TEXT_FG]));
 		
 		for(int i = 0; i < indent_depth; ++i)
 		{
@@ -3637,6 +3641,8 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 
 void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
+	const REHex::Palette &pal = wxGetApp().palette;
+	
 	draw_container(doc, dc, x, y);
 	
 	int indent_width = doc._indent_width(indent_depth);
@@ -3674,8 +3680,8 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		unsigned int box_w = (doc.virtual_width - (indent_depth * doc.hf_char_width() * 2)) - (doc.hf_char_width() / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
-		dc.SetPen(wxPen(*wxBLACK, 1));
-		dc.SetBrush(*wxLIGHT_GREY_BRUSH);
+		dc.SetPen(wxPen(pal[Palette::PAL_NORMAL_TEXT_FG], 1));
+		dc.SetBrush(wxBrush(pal[Palette::PAL_COMMENT_BG]));
 		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
 		
@@ -3688,7 +3694,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	
 	y += doc.hf_height / 2;
 	
-	dc.SetTextForeground(*wxBLACK);
+	dc.SetTextForeground(pal[Palette::PAL_COMMENT_FG]);
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
 	for(auto li = lines.begin(); li != lines.end(); ++li)

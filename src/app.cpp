@@ -57,6 +57,8 @@ bool REHex::App::OnInit()
 	config->SetPath("/recent-files/");
 	recent_files->Load(*config);
 	
+	palette = Palette::system_palette();
+	
 	LLVMInitializeAllAsmPrinters();
 	LLVMInitializeAllTargets();
 	LLVMInitializeAllTargetInfos();

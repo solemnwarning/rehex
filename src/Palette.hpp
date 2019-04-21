@@ -48,10 +48,16 @@ namespace REHex {
 			};
 			
 			Palette();
+			Palette(const wxColour colours[]);
+			
 			const wxColour &operator[](int index) const;
 			
 			const wxColour &get_highlight_bg(int highlight_idx) const;
 			const wxColour &get_highlight_fg(int highlight_idx) const;
+			
+			static Palette system_palette();
+			static Palette light_palette();
+			static Palette dark_palette();
 			
 		private:
 			wxColour palette[PAL_MAX + 1];

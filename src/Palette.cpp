@@ -17,34 +17,68 @@
 
 #include <assert.h>
 #include <wx/colour.h>
+#include <wx/settings.h>
 
 #include "Palette.hpp"
 
-#define DARK_THEME
+static bool is_light(const wxColour &c) { return ((int)(c.Red()) + (int)(c.Green()) + (int)(c.Blue())) / 3 >= 128; }
 
-REHex::Palette::Palette()
+REHex::Palette::Palette() {}
+
+REHex::Palette::Palette(const wxColour colours[])
 {
-	/* TODO: Default colours should be based on system colours, with gaps (e.g. highlights)
-	 * filled with ones which complement them.
-	*/
+	for(int i = 0; i <= PAL_MAX; ++i)
+	{
+		palette[i] = colours[i];
+	}
+}
+
+const wxColour &REHex::Palette::operator[](int index) const
+{
+	assert(index >= 0);
+	assert(index <= PAL_MAX);
 	
-	const wxColour DEFAULT_PALETTE[] = {
-		#ifdef DARK_THEME
+	return palette[index];
+}
+
+const wxColour &REHex::Palette::get_highlight_bg(int index) const
+{
+	assert(index >= 0);
+	assert(index < NUM_HIGHLIGHT_COLOURS);
+	
+	return palette[PAL_HIGHLIGHT_TEXT_MIN_BG + (index * 2)];
+}
+
+const wxColour &REHex::Palette::get_highlight_fg(int index) const
+{
+	assert(index >= 0);
+	assert(index < NUM_HIGHLIGHT_COLOURS);
+	
+	return palette[PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2)];
+}
+
+REHex::Palette REHex::Palette::system_palette()
+{
+	const wxColour WINDOW        = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+	const wxColour WINDOWTEXT    = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+	const wxColour HIGHLIGHT     = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+	const wxColour HIGHLIGHTTEXT = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
+	
+	const wxColour colours[] = {
+		WINDOW,      /* PAL_NORMAL_TEXT_BG */
+		WINDOWTEXT,  /* PAL_NORMAL_TEXT_FG */
 		
-		/* +------------+
-		 * | DARK THEME |
-		 * +------------+
-		*/
+		(is_light(WINDOWTEXT)
+			? WINDOWTEXT.ChangeLightness(70)
+			: WINDOWTEXT.ChangeLightness(130)),  /* PAL_ALTERNATE_TEXT_FG */
 		
-		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_FG */
-		wxColour(0xC3, 0xC3, 0xC3),  /* PAL_ALTERNATE_TEXT_FG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_BG */
-		wxColour(0x00, 0x00, 0x00),  /* PAL_INVERT_TEXT_FG */
-		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
+		WINDOWTEXT,  /* PAL_INVERT_TEXT_BG */
+		WINDOW,      /* PAL_INVERT_TEXT_FG */
 		
-		/* TODO: Pick less eye-searing highlight colours. */
+		HIGHLIGHT,      /* PAL_SELECTED_TEXT_BG */
+		HIGHLIGHTTEXT,  /* PAL_SELECTED_TEXT_FG */
+		
+		/* TODO: Algorithmically choose highlight colours that complement system colour scheme. */
 		
 		/* White on Red */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
@@ -70,16 +104,21 @@ REHex::Palette::Palette()
 		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
 		
-		wxColour(0x58, 0x58, 0x58),  /* PAL_COMMENT_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
+		(is_light(WINDOW)
+			? WINDOW.ChangeLightness(80)
+			: WINDOW.ChangeLightness(130)),  /* PAL_COMMENT_BG */
 		
-		#else
-		
-		/* +-------------+
-		 * | LIGHT THEME |
-		 * +-------------+
-		*/
-		
+		WINDOWTEXT,  /* PAL_COMMENT_FG */
+	};
+	
+	static_assert(sizeof(colours) == sizeof(palette));
+	
+	return Palette(colours);
+}
+
+REHex::Palette REHex::Palette::light_palette()
+{
+	const wxColour colours[] = {
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_BG */
 		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_FG */
 		wxColour(0x69, 0x69, 0x69),  /* PAL_ALTERNATE_TEXT_FG */
@@ -87,8 +126,6 @@ REHex::Palette::Palette()
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_FG */
 		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
-		
-		/* TODO: Pick less eye-searing highlight colours. */
 		
 		/* White on Red */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
@@ -116,38 +153,53 @@ REHex::Palette::Palette()
 		
 		wxColour(0xD3, 0xD3, 0xD3),  /* PAL_COMMENT_BG */
 		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
-		
-		#endif
 	};
 	
-	static_assert(sizeof(DEFAULT_PALETTE) == sizeof(palette));
+	static_assert(sizeof(colours) == sizeof(palette));
 	
-	for(int i = 0; i <= PAL_MAX; ++i)
-	{
-		palette[i] = DEFAULT_PALETTE[i];
-	}
+	return Palette(colours);
 }
 
-const wxColour &REHex::Palette::operator[](int index) const
+REHex::Palette REHex::Palette::dark_palette()
 {
-	assert(index >= 0);
-	assert(index <= PAL_MAX);
+	const wxColour colours[] = {
+		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_FG */
+		wxColour(0xC3, 0xC3, 0xC3),  /* PAL_ALTERNATE_TEXT_FG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_BG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_INVERT_TEXT_FG */
+		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
+		
+		/* White on Red */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MIN_FG */
+		
+		/* Black on Orange */
+		wxColour(0xFE, 0x63, 0x00),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* Black on Yellow */
+		wxColour(0xFC, 0xFF, 0x00),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* Black on Green */
+		wxColour(0x02, 0xFE, 0x07),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* White on Violet */
+		wxColour(0xFD, 0x00, 0xFF),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* White on Grey */
+		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
+		
+		wxColour(0x58, 0x58, 0x58),  /* PAL_COMMENT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
+	};
 	
-	return palette[index];
-}
-
-const wxColour &REHex::Palette::get_highlight_bg(int index) const
-{
-	assert(index >= 0);
-	assert(index < NUM_HIGHLIGHT_COLOURS);
+	static_assert(sizeof(colours) == sizeof(palette));
 	
-	return palette[PAL_HIGHLIGHT_TEXT_MIN_BG + (index * 2)];
-}
-
-const wxColour &REHex::Palette::get_highlight_fg(int index) const
-{
-	assert(index >= 0);
-	assert(index < NUM_HIGHLIGHT_COLOURS);
-	
-	return palette[PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2)];
+	return Palette(colours);
 }

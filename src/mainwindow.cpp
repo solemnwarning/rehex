@@ -36,6 +36,7 @@
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "search.hpp"
+#include "SelectRangeDialog.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
 
@@ -66,6 +67,7 @@ enum {
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
+	ID_SELECT_RANGE,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -92,6 +94,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_REDO, REHex::MainWindow::OnRedo)
 	
 	EVT_MENU(wxID_SELECTALL, REHex::MainWindow::OnSelectAll)
+	EVT_MENU(ID_SELECT_RANGE, REHex::MainWindow::OnSelectRange)
 	
 	EVT_MENU(ID_OVERWRITE_MODE, REHex::MainWindow::OnOverwriteMode)
 	
@@ -152,6 +155,7 @@ REHex::MainWindow::MainWindow():
 	edit_menu->AppendSeparator();
 	
 	edit_menu->Append(wxID_SELECTALL, "Select &All\tCtrl-A");
+	edit_menu->Append(ID_SELECT_RANGE, "Select range...");
 	
 	edit_menu->AppendSeparator();
 	
@@ -623,6 +627,18 @@ void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 	assert(tab != NULL);
 	
 	tab->doc->set_selection(0, tab->doc->buffer_length());
+}
+
+void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	REHex::SelectRangeDialog srd(this, *(tab->doc));
+	srd.ShowModal();
 }
 
 void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)

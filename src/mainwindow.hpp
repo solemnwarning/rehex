@@ -57,6 +57,7 @@ namespace REHex {
 			void OnUndo(wxCommandEvent &event);
 			void OnRedo(wxCommandEvent &event);
 			void OnSelectAll(wxCommandEvent &event);
+			void OnSelectRange(wxCommandEvent &event);
 			void OnOverwriteMode(wxCommandEvent &event);
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);

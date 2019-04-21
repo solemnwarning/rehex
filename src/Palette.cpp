@@ -20,6 +20,8 @@
 
 #include "Palette.hpp"
 
+#define DARK_THEME
+
 REHex::Palette::Palette()
 {
 	/* TODO: Default colours should be based on system colours, with gaps (e.g. highlights)
@@ -27,6 +29,57 @@ REHex::Palette::Palette()
 	*/
 	
 	const wxColour DEFAULT_PALETTE[] = {
+		#ifdef DARK_THEME
+		
+		/* +------------+
+		 * | DARK THEME |
+		 * +------------+
+		*/
+		
+		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_FG */
+		wxColour(0xC3, 0xC3, 0xC3),  /* PAL_ALTERNATE_TEXT_FG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_BG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_INVERT_TEXT_FG */
+		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
+		
+		/* TODO: Pick less eye-searing highlight colours. */
+		
+		/* White on Red */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MIN_FG */
+		
+		/* Black on Orange */
+		wxColour(0xFE, 0x63, 0x00),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* Black on Yellow */
+		wxColour(0xFC, 0xFF, 0x00),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* Black on Green */
+		wxColour(0x02, 0xFE, 0x07),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* White on Violet */
+		wxColour(0xFD, 0x00, 0xFF),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* White on Grey */
+		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
+		
+		wxColour(0x58, 0x58, 0x58),  /* PAL_COMMENT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
+		
+		#else
+		
+		/* +-------------+
+		 * | LIGHT THEME |
+		 * +-------------+
+		*/
+		
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_BG */
 		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_FG */
 		wxColour(0x69, 0x69, 0x69),  /* PAL_ALTERNATE_TEXT_FG */
@@ -63,6 +116,8 @@ REHex::Palette::Palette()
 		
 		wxColour(0xD3, 0xD3, 0xD3),  /* PAL_COMMENT_BG */
 		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
+		
+		#endif
 	};
 	
 	static_assert(sizeof(DEFAULT_PALETTE) == sizeof(palette));

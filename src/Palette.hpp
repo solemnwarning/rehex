@@ -18,6 +18,7 @@
 #ifndef REHEX_PALETTE_HPP
 #define REHEX_PALETTE_HPP
 
+#include <string>
 #include <wx/colour.h>
 
 namespace REHex {
@@ -47,21 +48,28 @@ namespace REHex {
 				PAL_MAX = PAL_COMMENT_FG,
 			};
 			
-			Palette();
-			Palette(const wxColour colours[]);
+			Palette(const std::string &name, const std::string &label, const wxColour colours[]);
+			
+			const std::string &get_name() const;
+			const std::string &get_label() const;
 			
 			const wxColour &operator[](int index) const;
 			
 			const wxColour &get_highlight_bg(int highlight_idx) const;
 			const wxColour &get_highlight_fg(int highlight_idx) const;
 			
-			static Palette system_palette();
-			static Palette light_palette();
-			static Palette dark_palette();
+			static Palette *create_system_palette();
+			static Palette *create_light_palette();
+			static Palette *create_dark_palette();
 			
 		private:
+			std::string name;
+			std::string label;
+			
 			wxColour palette[PAL_MAX + 1];
 	};
+	
+	extern Palette *active_palette;
 }
 
 #endif /* !REHEX_PALETTE_HPP */

@@ -20,6 +20,7 @@
 
 #include "app.hpp"
 #include "mainwindow.hpp"
+#include "Palette.hpp"
 
 /* These MUST come after any wxWidgets headers. */
 #ifdef _WIN32
@@ -57,7 +58,21 @@ bool REHex::App::OnInit()
 	config->SetPath("/recent-files/");
 	recent_files->Load(*config);
 	
-	palette = Palette::system_palette();
+	config->SetPath("/");
+	
+	std::string theme = config->Read("theme", "system").ToStdString();
+	if(theme == "light")
+	{
+		active_palette = Palette::create_light_palette();
+	}
+	else if(theme == "dark")
+	{
+		active_palette = Palette::create_dark_palette();
+	}
+	else /* if(theme == "system") */
+	{
+		active_palette = Palette::create_system_palette();
+	}
 	
 	LLVMInitializeAllAsmPrinters();
 	LLVMInitializeAllTargets();
@@ -87,6 +102,7 @@ int REHex::App::OnExit()
 	config->SetPath("/recent-files/");
 	recent_files->Save(*config);
 	
+	delete active_palette;
 	delete recent_files;
 	delete config;
 	

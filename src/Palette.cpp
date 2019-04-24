@@ -23,14 +23,25 @@
 
 static bool is_light(const wxColour &c) { return ((int)(c.Red()) + (int)(c.Green()) + (int)(c.Blue())) / 3 >= 128; }
 
-REHex::Palette::Palette() {}
+REHex::Palette *REHex::active_palette = NULL;
 
-REHex::Palette::Palette(const wxColour colours[])
+REHex::Palette::Palette(const std::string &name, const std::string &label, const wxColour colours[]):
+	name(name), label(label)
 {
 	for(int i = 0; i <= PAL_MAX; ++i)
 	{
 		palette[i] = colours[i];
 	}
+}
+
+const std::string &REHex::Palette::get_name() const
+{
+	return name;
+}
+
+const std::string &REHex::Palette::get_label() const
+{
+	return label;
 }
 
 const wxColour &REHex::Palette::operator[](int index) const
@@ -57,7 +68,7 @@ const wxColour &REHex::Palette::get_highlight_fg(int index) const
 	return palette[PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2)];
 }
 
-REHex::Palette REHex::Palette::system_palette()
+REHex::Palette *REHex::Palette::create_system_palette()
 {
 	const wxColour WINDOW        = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
 	const wxColour WINDOWTEXT    = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
@@ -113,10 +124,10 @@ REHex::Palette REHex::Palette::system_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette));
 	
-	return Palette(colours);
+	return new Palette("system", "System colours", colours);
 }
 
-REHex::Palette REHex::Palette::light_palette()
+REHex::Palette *REHex::Palette::create_light_palette()
 {
 	const wxColour colours[] = {
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_BG */
@@ -157,10 +168,10 @@ REHex::Palette REHex::Palette::light_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette));
 	
-	return Palette(colours);
+	return new Palette("light", "Light", colours);
 }
 
-REHex::Palette REHex::Palette::dark_palette()
+REHex::Palette *REHex::Palette::create_dark_palette()
 {
 	const wxColour colours[] = {
 		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_BG */
@@ -201,5 +212,5 @@ REHex::Palette REHex::Palette::dark_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette));
 	
-	return Palette(colours);
+	return new Palette("dark", "Dark", colours);
 }

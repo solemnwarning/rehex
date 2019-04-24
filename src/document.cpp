@@ -588,13 +588,11 @@ const char *REHex::Document::redo_desc()
 
 void REHex::Document::OnPaint(wxPaintEvent &event)
 {
-	const REHex::Palette &pal = wxGetApp().palette;
-	
 	wxBufferedPaintDC dc(this);
 	
 	dc.SetFont(*hex_font);
 	
-	dc.SetBackground(wxBrush(pal[Palette::PAL_NORMAL_TEXT_BG]));
+	dc.SetBackground(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.Clear();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
@@ -1735,13 +1733,11 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			{
 				wxMenu *hlmenu = new wxMenu();
 				
-				const REHex::Palette &pal = wxGetApp().palette;
-				
 				for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
 				{
 					wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
 					
-					wxColour bg_colour = pal.get_highlight_bg(i);
+					wxColour bg_colour = active_palette->get_highlight_bg(i);
 					
 					/* TODO: Get appropriate size for menu bitmap.
 					 * TODO: Draw a character in image using foreground colour.
@@ -2979,8 +2975,6 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 {
 	if(indent_depth > 0)
 	{
-		const REHex::Palette &pal = wxGetApp().palette;
-		
 		int cw = doc.hf_char_width();
 		int ch = doc.hf_height;
 		
@@ -2993,11 +2987,11 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 		int box_w = doc.virtual_width - (cw / 2);
 		
 		dc.SetPen(*wxTRANSPARENT_PEN);
-		dc.SetBrush(wxBrush(pal[Palette::PAL_NORMAL_TEXT_BG]));
+		dc.SetBrush(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 		
 		dc.DrawRectangle(0, box_y, doc.client_width, box_h);
 		
-		dc.SetPen(wxPen(pal[Palette::PAL_NORMAL_TEXT_FG]));
+		dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
 		
 		for(int i = 0; i < indent_depth; ++i)
 		{
@@ -3050,40 +3044,38 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 {
 	draw_container(doc, dc, x, y);
 	
-	const REHex::Palette &pal = wxGetApp().palette;
-	
 	dc.SetFont(*(doc.hex_font));
 	
-	wxPen norm_fg_1px(pal[Palette::PAL_NORMAL_TEXT_FG], 1);
-	wxPen selected_bg_1px(pal[Palette::PAL_SELECTED_TEXT_BG], 1);
+	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
 	bool alternate_row = true;
 	
-	auto normal_text_colour = [&dc,&pal,&alternate_row]()
+	auto normal_text_colour = [&dc,&alternate_row]()
 	{
-		dc.SetTextForeground(pal[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
+		dc.SetTextForeground((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto inverted_text_colour = [&dc,&pal]()
+	auto inverted_text_colour = [&dc]()
 	{
-		dc.SetTextForeground(pal[Palette::PAL_INVERT_TEXT_FG]);
-		dc.SetTextBackground(pal[Palette::PAL_INVERT_TEXT_BG]);
+		dc.SetTextForeground((*active_palette)[Palette::PAL_INVERT_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
-	auto selected_text_colour = [&dc,&pal]()
+	auto selected_text_colour = [&dc]()
 	{
-		dc.SetTextForeground(pal[Palette::PAL_SELECTED_TEXT_FG]);
-		dc.SetTextBackground(pal[Palette::PAL_SELECTED_TEXT_BG]);
+		dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_SELECTED_TEXT_BG]);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
-	auto highlighted_text_colour = [&dc,&pal](int highlight_idx)
+	auto highlighted_text_colour = [&dc](int highlight_idx)
 	{
-		dc.SetTextForeground(pal.get_highlight_fg(highlight_idx));
-		dc.SetTextBackground(pal.get_highlight_bg(highlight_idx));
+		dc.SetTextForeground(active_palette->get_highlight_fg(highlight_idx));
+		dc.SetTextBackground(active_palette->get_highlight_bg(highlight_idx));
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
@@ -3641,8 +3633,6 @@ void REHex::Document::Region::Comment::update_lines(REHex::Document &doc, wxDC &
 
 void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
-	const REHex::Palette &pal = wxGetApp().palette;
-	
 	draw_container(doc, dc, x, y);
 	
 	int indent_width = doc._indent_width(indent_depth);
@@ -3680,8 +3670,8 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		unsigned int box_w = (doc.virtual_width - (indent_depth * doc.hf_char_width() * 2)) - (doc.hf_char_width() / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
-		dc.SetPen(wxPen(pal[Palette::PAL_NORMAL_TEXT_FG], 1));
-		dc.SetBrush(wxBrush(pal[Palette::PAL_COMMENT_BG]));
+		dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1));
+		dc.SetBrush(wxBrush((*active_palette)[Palette::PAL_COMMENT_BG]));
 		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
 		
@@ -3694,7 +3684,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	
 	y += doc.hf_height / 2;
 	
-	dc.SetTextForeground(pal[Palette::PAL_COMMENT_FG]);
+	dc.SetTextForeground((*active_palette)[Palette::PAL_COMMENT_FG]);
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
 	for(auto li = lines.begin(); li != lines.end(); ++li)

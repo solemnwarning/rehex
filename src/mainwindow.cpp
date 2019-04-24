@@ -35,6 +35,7 @@
 #include "disassemble.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
+#include "Palette.hpp"
 #include "search.hpp"
 #include "SelectRangeDialog.hpp"
 #include "ToolPanel.hpp"
@@ -68,6 +69,9 @@ enum {
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
 	ID_SELECT_RANGE,
+	ID_SYSTEM_PALETTE,
+	ID_LIGHT_PALETTE,
+	ID_DARK_PALETTE,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -118,6 +122,10 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
+	
+	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
+	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
+	EVT_MENU(ID_DARK_PALETTE,   REHex::MainWindow::OnPalette)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -211,6 +219,29 @@ REHex::MainWindow::MainWindow():
 		}, itm->GetId(), itm->GetId());
 		
 		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+	}
+	
+	view_menu->AppendSeparator();
+	
+	wxMenu *palette_menu = new wxMenu;
+	view_menu->AppendSubMenu(palette_menu, "Colour scheme");
+	
+	palette_menu->AppendRadioItem(ID_SYSTEM_PALETTE, "System");
+	palette_menu->AppendRadioItem(ID_LIGHT_PALETTE,  "Light");
+	palette_menu->AppendRadioItem(ID_DARK_PALETTE,   "Dark");
+	
+	std::string palette_name = active_palette->get_name();
+	if(palette_name == "light")
+	{
+		palette_menu->Check(ID_LIGHT_PALETTE, true);
+	}
+	else if(palette_name == "dark")
+	{
+		palette_menu->Check(ID_DARK_PALETTE, true);
+	}
+	else /* if(palette_name == "system") */
+	{
+		palette_menu->Check(ID_SYSTEM_PALETTE, true);
 	}
 	
 	view_menu->AppendSeparator();
@@ -776,6 +807,31 @@ void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::Tool
 	}
 }
 
+void REHex::MainWindow::OnPalette(wxCommandEvent &event)
+{
+	delete active_palette;
+	
+	switch(event.GetId())
+	{
+		case ID_SYSTEM_PALETTE:
+			active_palette = Palette::create_system_palette();
+			break;
+			
+		case ID_LIGHT_PALETTE:
+			active_palette = Palette::create_light_palette();
+			break;
+			
+		case ID_DARK_PALETTE:
+			active_palette = Palette::create_dark_palette();
+			break;
+			
+		default:
+			abort();
+	}
+	
+	Refresh();
+}
+
 void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 {
 	wxConfig *config = wxGetApp().config;
@@ -1284,6 +1340,9 @@ void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
 
 void REHex::MainWindow::Tab::save_view(wxConfig *config)
 {
+	config->SetPath("/");
+	config->Write("theme", wxString(active_palette->get_name()));
+	
 	config->DeleteGroup("/default-view/");
 	config->SetPath("/default-view/");
 	

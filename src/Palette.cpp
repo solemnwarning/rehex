@@ -17,57 +17,31 @@
 
 #include <assert.h>
 #include <wx/colour.h>
+#include <wx/settings.h>
 
 #include "Palette.hpp"
 
-REHex::Palette::Palette()
+static bool is_light(const wxColour &c) { return ((int)(c.Red()) + (int)(c.Green()) + (int)(c.Blue())) / 3 >= 128; }
+
+REHex::Palette *REHex::active_palette = NULL;
+
+REHex::Palette::Palette(const std::string &name, const std::string &label, const wxColour colours[]):
+	name(name), label(label)
 {
-	/* TODO: Default colours should be based on system colours, with gaps (e.g. highlights)
-	 * filled with ones which complement them.
-	*/
-	
-	const wxColour DEFAULT_PALETTE[] = {
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_BG */
-		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_FG */
-		wxColour(0x69, 0x69, 0x69),  /* PAL_ALTERNATE_TEXT_FG */
-		wxColour(0x00, 0x00, 0x00),  /* PAL_INVERT_TEXT_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_FG */
-		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
-		
-		/* TODO: Pick less eye-searing highlight colours. */
-		
-		/* White on Red */
-		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MIN_FG */
-		
-		/* Black on Orange */
-		wxColour(0xFE, 0x63, 0x00),
-		wxColour(0xFF, 0xFF, 0xFF),
-		
-		/* Black on Yellow */
-		wxColour(0xFC, 0xFF, 0x00),
-		wxColour(0x00, 0x00, 0x00),
-		
-		/* Black on Green */
-		wxColour(0x02, 0xFE, 0x07),
-		wxColour(0x00, 0x00, 0x00),
-		
-		/* White on Violet */
-		wxColour(0xFD, 0x00, 0xFF),
-		wxColour(0xFF, 0xFF, 0xFF),
-		
-		/* White on Grey */
-		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
-		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
-	};
-	
-	static_assert(sizeof(DEFAULT_PALETTE) == sizeof(palette));
-	
 	for(int i = 0; i <= PAL_MAX; ++i)
 	{
-		palette[i] = DEFAULT_PALETTE[i];
+		palette[i] = colours[i];
 	}
+}
+
+const std::string &REHex::Palette::get_name() const
+{
+	return name;
+}
+
+const std::string &REHex::Palette::get_label() const
+{
+	return label;
 }
 
 const wxColour &REHex::Palette::operator[](int index) const
@@ -92,4 +66,151 @@ const wxColour &REHex::Palette::get_highlight_fg(int index) const
 	assert(index < NUM_HIGHLIGHT_COLOURS);
 	
 	return palette[PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2)];
+}
+
+REHex::Palette *REHex::Palette::create_system_palette()
+{
+	const wxColour WINDOW        = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+	const wxColour WINDOWTEXT    = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+	const wxColour HIGHLIGHT     = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
+	const wxColour HIGHLIGHTTEXT = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
+	
+	const wxColour colours[] = {
+		WINDOW,      /* PAL_NORMAL_TEXT_BG */
+		WINDOWTEXT,  /* PAL_NORMAL_TEXT_FG */
+		
+		(is_light(WINDOWTEXT)
+			? WINDOWTEXT.ChangeLightness(70)
+			: WINDOWTEXT.ChangeLightness(130)),  /* PAL_ALTERNATE_TEXT_FG */
+		
+		WINDOWTEXT,  /* PAL_INVERT_TEXT_BG */
+		WINDOW,      /* PAL_INVERT_TEXT_FG */
+		
+		HIGHLIGHT,      /* PAL_SELECTED_TEXT_BG */
+		HIGHLIGHTTEXT,  /* PAL_SELECTED_TEXT_FG */
+		
+		/* TODO: Algorithmically choose highlight colours that complement system colour scheme. */
+		
+		/* White on Red */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MIN_FG */
+		
+		/* Black on Orange */
+		wxColour(0xFE, 0x63, 0x00),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* Black on Yellow */
+		wxColour(0xFC, 0xFF, 0x00),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* Black on Green */
+		wxColour(0x02, 0xFE, 0x07),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* White on Violet */
+		wxColour(0xFD, 0x00, 0xFF),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* White on Grey */
+		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
+		
+		(is_light(WINDOW)
+			? WINDOW.ChangeLightness(80)
+			: WINDOW.ChangeLightness(130)),  /* PAL_COMMENT_BG */
+		
+		WINDOWTEXT,  /* PAL_COMMENT_FG */
+	};
+	
+	static_assert(sizeof(colours) == sizeof(palette));
+	
+	return new Palette("system", "System colours", colours);
+}
+
+REHex::Palette *REHex::Palette::create_light_palette()
+{
+	const wxColour colours[] = {
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_BG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_FG */
+		wxColour(0x69, 0x69, 0x69),  /* PAL_ALTERNATE_TEXT_FG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_INVERT_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_FG */
+		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
+		
+		/* White on Red */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MIN_FG */
+		
+		/* Black on Orange */
+		wxColour(0xFE, 0x63, 0x00),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* Black on Yellow */
+		wxColour(0xFC, 0xFF, 0x00),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* Black on Green */
+		wxColour(0x02, 0xFE, 0x07),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* White on Violet */
+		wxColour(0xFD, 0x00, 0xFF),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* White on Grey */
+		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
+		
+		wxColour(0xD3, 0xD3, 0xD3),  /* PAL_COMMENT_BG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
+	};
+	
+	static_assert(sizeof(colours) == sizeof(palette));
+	
+	return new Palette("light", "Light", colours);
+}
+
+REHex::Palette *REHex::Palette::create_dark_palette()
+{
+	const wxColour colours[] = {
+		wxColour(0x00, 0x00, 0x00),  /* PAL_NORMAL_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_NORMAL_TEXT_FG */
+		wxColour(0xC3, 0xC3, 0xC3),  /* PAL_ALTERNATE_TEXT_FG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_INVERT_TEXT_BG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_INVERT_TEXT_FG */
+		wxColour(0x00, 0x00, 0xFF),  /* PAL_SELECTED_TEXT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
+		
+		/* White on Red */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MIN_FG */
+		
+		/* Black on Orange */
+		wxColour(0xFE, 0x63, 0x00),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* Black on Yellow */
+		wxColour(0xFC, 0xFF, 0x00),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* Black on Green */
+		wxColour(0x02, 0xFE, 0x07),
+		wxColour(0x00, 0x00, 0x00),
+		
+		/* White on Violet */
+		wxColour(0xFD, 0x00, 0xFF),
+		wxColour(0xFF, 0xFF, 0xFF),
+		
+		/* White on Grey */
+		wxColour(0x6A, 0x63, 0x6F),  /* PAL_HIGHLIGHT_TEXT_MAX_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_HIGHLIGHT_TEXT_MAX_FG */
+		
+		wxColour(0x58, 0x58, 0x58),  /* PAL_COMMENT_BG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
+	};
+	
+	static_assert(sizeof(colours) == sizeof(palette));
+	
+	return new Palette("dark", "Dark", colours);
 }

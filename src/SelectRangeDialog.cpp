@@ -72,6 +72,9 @@ REHex::SelectRangeDialog::SelectRangeDialog(wxWindow *parent, REHex::Document &d
 		to_sizer->Add(range_to, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
 		
 		topsizer->Add(to_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
+		
+		/* Default to "To offset" */
+		range_to_enable->SetValue(true);
 	}
 	
 	{

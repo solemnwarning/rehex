@@ -1394,7 +1394,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == '/')
 		{
-			edit_comment_popup(cursor_pos, 0);
+			if(cursor_pos < buffer->length())
+			{
+				edit_comment_popup(cursor_pos, 0);
+			}
 		}
 	}
 }
@@ -1653,7 +1656,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			
 			wxMenu menu;
 			
-			menu.Append(wxID_CUT, "&Cut");
+			menu.Append(wxID_CUT, "Cu&t");
 			menu.Enable(wxID_CUT,  (selection_length > 0));
 			
 			menu.Append(wxID_COPY,  "&Copy");
@@ -1679,7 +1682,8 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				}, itm->GetId(), itm->GetId());
 			}
 			
-			if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end())
+			if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end()
+				&& cursor_pos < buffer->length())
 			{
 				wxMenuItem *itm = menu.Append(wxID_ANY, "Insert comment here...");
 				

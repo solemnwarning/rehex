@@ -593,12 +593,15 @@ bool REHex::Search::Value::read_window_controls()
 	
 	auto try_type = [this](wxCheckBox *cb, std::function<void()> func)
 	{
-		try {
-			func();
+		if(cb->GetValue())
+		{
+			try {
+				func();
+			}
+			catch(const REHex::NumericTextCtrl::RangeError &e) {}
+			catch(const REHex::NumericTextCtrl::EmptyError &e) {}
+			catch(const REHex::NumericTextCtrl::FormatError &e) {}
 		}
-		catch(const REHex::NumericTextCtrl::RangeError &e) {}
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
 	};
 	
 	try_type(t_s8_cb, [this]()

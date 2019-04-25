@@ -185,7 +185,7 @@ REHex::MainWindow::MainWindow():
 	
 	edit_menu->AppendSeparator();
 	
-	edit_menu->Append(wxID_CUT,   "&Cut");
+	edit_menu->Append(wxID_CUT,   "Cu&t");
 	edit_menu->Append(wxID_COPY,  "&Copy");
 	edit_menu->Append(wxID_PASTE, "&Paste");
 	

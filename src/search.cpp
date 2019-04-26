@@ -64,7 +64,7 @@ END_EVENT_TABLE()
 
 REHex::Search::Search(wxWindow *parent, REHex::Document &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
-	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), running(false),
+	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), match_found_at(-1), running(false),
 	timer(this, ID_TIMER)
 {}
 
@@ -155,7 +155,7 @@ void REHex::Search::require_alignment(off_t alignment, off_t relative_to_offset)
 /* This method is only used by the unit tests. */
 off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 {
-	begin_search(from_offset, window_size);
+	begin_search(from_offset, range_end, window_size);
 	
 	/* Wait for the workers to finish searching. */
 	while(!threads.empty())
@@ -169,7 +169,7 @@ off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 	return match_found_at;
 }
 
-void REHex::Search::begin_search(off_t from_offset, size_t window_size)
+void REHex::Search::begin_search(off_t from_offset, off_t range_end, size_t window_size)
 {
 	assert(!running);
 	
@@ -219,7 +219,7 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		begin_search(doc.get_cursor_position() + 1);
+		begin_search((doc.get_cursor_position() + 1), range_end);
 	}
 }
 
@@ -240,7 +240,22 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 			doc.set_cursor_position(match_found_at);
 		}
 		else{
-			wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
+			if(search_base > range_begin)
+			{
+				/* Search was not from beginning of file/range, ask if we should go back to the start. */
+				
+				const char *message = range_begin > 0
+					? "Not found. Continue search from start of range?"
+					: "Not found. Continue search from start of file?";
+				
+				if(wxMessageBox(message, wxMessageBoxCaptionStr, (wxYES_NO | wxCENTRE), this) == wxYES)
+				{
+					begin_search(range_begin, search_base);
+				}
+			}
+			else{
+				wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
+			}
 		}
 	}
 	else{

@@ -84,7 +84,7 @@ namespace REHex {
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
 			
 			off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
-			void begin_search(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
+			void begin_search(off_t from_offset, off_t range_end, size_t window_size = DEFAULT_WINDOW_SIZE);
 			void end_search();
 			
 			void OnCheckBox(wxCommandEvent &event);

@@ -50,20 +50,16 @@ VERSION    := Snapshot $(shell git log -1 --format="%H")
 BUILD_DATE := $(shell date '+%F')
 
 DEPDIR := .d
-$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/ $(DEPDIR)/googletest/src/)
+$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/ $(DEPDIR)/googletest/src/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
-
-ALL_TESTS := \
-	tests/document.t
 
 .PHONY: all
 all: $(EXE)
 
 .PHONY: check
-check: tests/all-tests $(ALL_TESTS)
+check: tests/all-tests
 	./tests/all-tests
-	prove tests/
 
 .PHONY: clean
 clean:
@@ -124,6 +120,7 @@ TEST_OBJS := \
 	src/win32lib.o \
 	tests/buffer.o \
 	tests/CommentTree.o \
+	tests/document.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
@@ -132,19 +129,6 @@ TEST_OBJS := \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_DOCUMENT_OBJS := \
-	src/buffer.o \
-	src/document.o \
-	src/Palette.o \
-	src/textentrydialog.o \
-	src/util.o \
-	src/win32lib.o \
-	tests/document.o \
-	tests/tap/basic.o
-
-tests/document.t: $(TESTS_DOCUMENT_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(EMBED_EXE): tools/embed.cpp

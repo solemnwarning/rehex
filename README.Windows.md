@@ -41,7 +41,6 @@ Download and install MSYS2 from http://www.msys2.org/
 Open the MSYS2 command line and install additional packages.
 
     $ pacman -S make
-    $ pacman -S perl
 
 ### wxWidgets
 
@@ -140,7 +139,7 @@ Create run-agent-i686.bat:
     C:
     cd "\Program Files\Buildkite"
     
-    set PATH=%PATH%;C:\i686-w64-mingw32\mingw64\bin;C:\msys64\usr\bin;C:\msys64\usr\bin\core_perl
+    set PATH=%PATH%;C:\i686-w64-mingw32\mingw64\bin;C:\msys64\usr\bin
     set CC=x86_64-w64-mingw32-gcc
     set CXX=x86_64-w64-mingw32-g++
     

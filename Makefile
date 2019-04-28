@@ -50,26 +50,16 @@ VERSION    := Snapshot $(shell git log -1 --format="%H")
 BUILD_DATE := $(shell date '+%F')
 
 DEPDIR := .d
-$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/tap/)
+$(shell mkdir -p $(DEPDIR)/res/ $(DEPDIR)/src/ $(DEPDIR)/tools/ $(DEPDIR)/tests/ $(DEPDIR)/googletest/src/)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$@.Td
 DEPPOST = @mv -f $(DEPDIR)/$@.Td $(DEPDIR)/$@.d && touch $@
-
-ALL_TESTS := \
-	tests/buffer.t \
-	tests/CommentTree.t \
-	tests/document.t \
-	tests/NestedOffsetLengthMap.t \
-	tests/NumericTextCtrl.t \
-	tests/search-bseq.t \
-	tests/search-text.t \
-	tests/util.t
 
 .PHONY: all
 all: $(EXE)
 
 .PHONY: check
-check: $(ALL_TESTS)
-	prove tests/
+check: tests/all-tests
+	./tests/all-tests
 
 .PHONY: clean
 clean:
@@ -118,91 +108,28 @@ APP_OBJS := \
 $(EXE): $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-TESTS_BUFFER_OBJS := \
-	src/buffer.o \
-	src/win32lib.o \
-	tests/buffer.o \
-	tests/tap/basic.o
-
-tests/buffer.t: $(TESTS_BUFFER_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_COMMENTTREE_OBJS := \
+TEST_OBJS := \
+	googletest/src/gtest-all.o \
 	src/buffer.o \
 	src/CommentTree.o \
 	src/document.o \
 	src/Palette.o \
+	src/search.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
+	tests/buffer.o \
 	tests/CommentTree.o \
-	tests/tap/basic.o
-
-tests/CommentTree.t: $(TESTS_COMMENTTREE_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_DOCUMENT_OBJS := \
-	src/buffer.o \
-	src/document.o \
-	src/Palette.o \
-	src/textentrydialog.o \
-	src/util.o \
-	src/win32lib.o \
 	tests/document.o \
-	tests/tap/basic.o
-
-tests/document.t: $(TESTS_DOCUMENT_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_NESTEDOFFSETLENGTHMAP_OBJS := \
+	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
-	tests/tap/basic.o
-
-tests/NestedOffsetLengthMap.t: $(TESTS_NESTEDOFFSETLENGTHMAP_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_NUMERICTEXTCTRL_OBJS := \
 	tests/NumericTextCtrl.o \
-	tests/tap/basic.o
-
-tests/NumericTextCtrl.t: $(TESTS_NUMERICTEXTCTRL_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_SEARCH_BSEQ_OBJS := \
-	src/buffer.o \
-	src/document.o \
-	src/Palette.o \
-	src/search.o \
-	src/textentrydialog.o \
-	src/util.o \
-	src/win32lib.o \
 	tests/search-bseq.o \
-	tests/tap/basic.o
-
-tests/search-bseq.t: $(TESTS_SEARCH_BSEQ_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_SEARCH_TEXT_OBJS := \
-	src/buffer.o \
-	src/document.o \
-	src/Palette.o \
-	src/search.o \
-	src/textentrydialog.o \
-	src/util.o \
-	src/win32lib.o \
 	tests/search-text.o \
-	tests/tap/basic.o
+	tests/util.o
 
-tests/search-text.t: $(TESTS_SEARCH_TEXT_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
-
-TESTS_UTIL_OBJS := \
-	src/util.o \
-	tests/util.o \
-	tests/tap/basic.o
-
-tests/util.t: $(TESTS_UTIL_OBJS)
+tests/all-tests: $(TEST_OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(EMBED_EXE): tools/embed.cpp
@@ -223,6 +150,14 @@ res/version.o:
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+tests/%.o: tests/%.cpp
+	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+googletest/src/%.o: googletest/src/%.cc
+	$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
 %.o: %.cpp

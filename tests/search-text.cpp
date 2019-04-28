@@ -18,42 +18,18 @@
 #undef NDEBUG
 #include <assert.h>
 
+#include <gtest/gtest.h>
 #include <stdio.h>
 #include <wx/init.h>
 #include <wx/wx.h>
 
-#include "tests/tap/basic.h"
-
-#include "../src/app.hpp"
 #include "../src/document.hpp"
 #include "../src/search.hpp"
 
-bool REHex::App::OnInit()
-{
-	return true;
-}
-
-int REHex::App::OnExit()
-{
-	return 0;
-}
-
-REHex::App &wxGetApp()
-{
-	static REHex::App instance;
-	return instance;
-}
-
 #define TMPFILE  "tests/.tmpfile"
 
-int main(int argc, char **argv)
+TEST(Search, Text)
 {
-	wxApp::SetInstance(new wxApp());
-	wxEntryStart(argc, argv);
-	wxTheApp->OnInit();
-	
-	plan_lazy();
-	
 	FILE *tmp = fopen(TMPFILE, "wb");
 	assert(tmp != NULL);
 	assert(fwrite("abcdefghijklmnop", 16, 1, tmp) == 1);
@@ -67,7 +43,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "abc");
 		
-		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() finds string at start of file");
+		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::Text::find_next() finds string at start of file";
 	}
 	
 	{
@@ -76,7 +52,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "def");
 		
-		is_int(3, s.find_next(0), "REHEX::Search::Text::find_next() finds string in middle of file");
+		EXPECT_EQ(s.find_next(0), 3) << "REHEX::Search::Text::find_next() finds string in middle of file";
 	}
 	
 	{
@@ -85,7 +61,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "nop");
 		
-		is_int(13, s.find_next(0), "REHEX::Search::Text::find_next() finds string at end of file");
+		EXPECT_EQ(s.find_next(0), 13) << "REHEX::Search::Text::find_next() finds string at end of file";
 	}
 	
 	{
@@ -94,7 +70,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "abcdefghijklmnop");
 		
-		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() finds string which is whole file");
+		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::Text::find_next() finds string which is whole file";
 	}
 	
 	{
@@ -103,7 +79,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "def");
 		
-		is_int(3, s.find_next(2), "REHEX::Search::Text::find_next() finds string starting after from_offset");
+		EXPECT_EQ(s.find_next(2), 3) << "REHEX::Search::Text::find_next() finds string starting after from_offset";
 	}
 	
 	{
@@ -112,7 +88,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "def");
 		
-		is_int(3, s.find_next(3), "REHEX::Search::Text::find_next() finds string starting at from_offset");
+		EXPECT_EQ(s.find_next(3), 3) << "REHEX::Search::Text::find_next() finds string starting at from_offset";
 	}
 	
 	{
@@ -121,7 +97,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "def");
 		
-		is_int(-1, s.find_next(4), "REHEX::Search::Text::find_next() doesn't find string starting before from_offset");
+		EXPECT_EQ(s.find_next(4), -1) << "REHEX::Search::Text::find_next() doesn't find string starting before from_offset";
 	}
 	
 	/* Range limiting */
@@ -134,7 +110,7 @@ int main(int argc, char **argv)
 		
 		s.limit_range(1, 15);
 		
-		is_int(1, s.find_next(0), "REHEX::Search::Text::find_next() finds string at start of range");
+		EXPECT_EQ(s.find_next(0), 1) << "REHEX::Search::Text::find_next() finds string at start of range";
 	}
 	
 	{
@@ -145,7 +121,7 @@ int main(int argc, char **argv)
 		
 		s.limit_range(1, 15);
 		
-		is_int(3, s.find_next(0), "REHEX::Search::Text::find_next() finds string in middle of range");
+		EXPECT_EQ(s.find_next(0), 3) << "REHEX::Search::Text::find_next() finds string in middle of range";
 	}
 	
 	{
@@ -156,7 +132,7 @@ int main(int argc, char **argv)
 		
 		s.limit_range(1, 15);
 		
-		is_int(12, s.find_next(0), "REHEX::Search::Text::find_next() finds string at end of range");
+		EXPECT_EQ(s.find_next(0), 12) << "REHEX::Search::Text::find_next() finds string at end of range";
 	}
 	
 	{
@@ -167,7 +143,7 @@ int main(int argc, char **argv)
 		
 		s.limit_range(1, 15);
 		
-		is_int(1, s.find_next(0), "REHEX::Search::Text::find_next() finds string which is whole range");
+		EXPECT_EQ(s.find_next(0), 1) << "REHEX::Search::Text::find_next() finds string which is whole range";
 	}
 	
 	{
@@ -178,7 +154,7 @@ int main(int argc, char **argv)
 		
 		s.limit_range(1, 15);
 		
-		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() doesn't find string starting before range");
+		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() doesn't find string starting before range";
 	}
 	
 	{
@@ -189,7 +165,7 @@ int main(int argc, char **argv)
 		
 		s.limit_range(1, 15);
 		
-		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() doesn't find string ending beyond range");
+		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() doesn't find string ending beyond range";
 	}
 	
 	/* Alignment */
@@ -202,7 +178,7 @@ int main(int argc, char **argv)
 		
 		s.require_alignment(3);
 		
-		is_int(3, s.find_next(0), "REHEX::Search::Text::find_next() finds strings which are aligned");
+		EXPECT_EQ(s.find_next(0), 3) << "REHEX::Search::Text::find_next() finds strings which are aligned";
 	}
 	
 	{
@@ -213,7 +189,7 @@ int main(int argc, char **argv)
 		
 		s.require_alignment(2);
 		
-		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() doesn't find strings which aren't aligned");
+		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() doesn't find strings which aren't aligned";
 	}
 	
 	{
@@ -224,7 +200,7 @@ int main(int argc, char **argv)
 		
 		s.require_alignment(3, 1);
 		
-		is_int(4, s.find_next(0), "REHEX::Search::Text::find_next() finds strings which are relatively aligned");
+		EXPECT_EQ(s.find_next(0), 4) << "REHEX::Search::Text::find_next() finds strings which are relatively aligned";
 	}
 	
 	{
@@ -235,7 +211,7 @@ int main(int argc, char **argv)
 		
 		s.require_alignment(2, 1);
 		
-		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() doesn't find strings which aren't relatively aligned");
+		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() doesn't find strings which aren't relatively aligned";
 	}
 	
 	{
@@ -246,7 +222,7 @@ int main(int argc, char **argv)
 		
 		s.require_alignment(3, 10);
 		
-		is_int(4, s.find_next(0), "REHEX::Search::Text::find_next() finds strings which are relatively aligned to a later offset");
+		EXPECT_EQ(s.find_next(0), 4) << "REHEX::Search::Text::find_next() finds strings which are relatively aligned to a later offset";
 	}
 	
 	{
@@ -257,7 +233,7 @@ int main(int argc, char **argv)
 		
 		s.require_alignment(2, 3);
 		
-		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() doesn't find strings which aren't relatively aligned to a later offset");
+		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() doesn't find strings which aren't relatively aligned to a later offset";
 	}
 	
 	/* Case sensitivity */
@@ -268,7 +244,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "ABC", true);
 		
-		is_int(-1, s.find_next(0), "REHEX::Search::Text::find_next() is case-sensitive when case sensitivity is enabled");
+		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() is case-sensitive when case sensitivity is enabled";
 	}
 	
 	{
@@ -277,7 +253,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "ABC", false);
 		
-		is_int(0, s.find_next(0), "REHEX::Search::Text::find_next() is case-insensitive when case sensitivity is disabled");
+		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::Text::find_next() is case-insensitive when case sensitivity is disabled";
 	}
 	
 	/* Window sizing */
@@ -288,7 +264,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "de");
 		
-		is_int(3, s.find_next(0, 4), "REHEX::Search::Text::find_next() finds strings which span multiple search windows");
+		EXPECT_EQ(s.find_next(0, 4), 3) << "REHEX::Search::Text::find_next() finds strings which span multiple search windows";
 	}
 	
 	{
@@ -297,7 +273,7 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "efg");
 		
-		is_int(4, s.find_next(0, 4), "REHEX::Search::Text::find_next() finds strings beyond the first search window");
+		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::Text::find_next() finds strings beyond the first search window";
 	}
 	
 	{
@@ -306,11 +282,6 @@ int main(int argc, char **argv)
 		
 		REHex::Search::Text s(&frame, *doc, "efgh");
 		
-		is_int(4, s.find_next(0, 4), "REHEX::Search::Text::find_next() finds strings which span an entire search window");
+		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::Text::find_next() finds strings which span an entire search window";
 	}
-	
-	wxTheApp->OnExit();
-	wxEntryCleanup();
-	
-	return 0;
 }

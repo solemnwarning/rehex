@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,58 +15,37 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "tests/tap/basic.h"
+#include <gtest/gtest.h>
 
 #include "../src/util.hpp"
 
 #define PARSE_ASCII_NIBBLE_OK(c, expect) \
-	try { \
+{ \
+	EXPECT_NO_THROW({ \
 		unsigned char r = REHex::parse_ascii_nibble(c); \
-		is_int(expect, r, "REHex::parse_ascii_nibble(" #c ") returns correct value"); \
-	} \
-	catch(const REHex::ParseError &e) \
-	{ \
-		ok(0, "REHex::parse_ascii_nibble(" #c ") returns correct value"); \
-		diag("(Threw ParseError)"); \
-	}
+		EXPECT_EQ(r, expect) << "REHex::parse_ascii_nibble("  << c << ") returns correct value"; \
+	}) << "REHex::parse_ascii_nibble(" << c << ") doesn't throw"; \
+}
 
 #define PARSE_ASCII_NIBBLE_BAD(c) \
-	try { \
-		REHex::parse_ascii_nibble(c); \
-		ok(0, "REHex::parse_ascii_nibble(" #c ") throws ParseError"); \
-	} \
-	catch(const REHex::ParseError &e) \
-	{ \
-		ok(1, "REHex::parse_ascii_nibble(" #c ") throws ParseError"); \
-	}
+	EXPECT_THROW(REHex::parse_ascii_nibble(c), REHex::ParseError) << "REHex::parse_ascii_nibble(" << c << ") throws ParseError";
 
 #define PARSE_HEX_STRING_OK(hex, ...) \
-	try { \
-		unsigned const char expect_data[] = { __VA_ARGS__ }; \
+{ \
+	unsigned const char expect_tmp[] = { __VA_ARGS__ }; \
+	std::vector<unsigned char> expect_data(expect_tmp, expect_tmp + sizeof(expect_tmp)); \
+	\
+	EXPECT_NO_THROW({ \
 		std::vector<unsigned char> got_data = REHex::parse_hex_string(hex); \
-		is_int(sizeof(expect_data), got_data.size(), "REHex::parse_hex_string(" #hex ") returns correct length") \
-			&& is_blob(expect_data, got_data.data(), got_data.size(), "REHex::parse_hex_string(" #hex ") returns correct data"); \
-	} \
-	catch(const REHex::ParseError &e) \
-	{ \
-		ok(0, "REHex::parse_hex_string(" #hex ") returns correct data"); \
-		diag("(Threw ParseError)"); \
-	}
+		EXPECT_EQ(got_data, expect_data) << "REHex::parse_hex_string(" #hex ") returns correct data"; \
+	}) << "REHex::parse_hex_string(" << #hex << ") doesn't throw"; \
+}
 
 #define PARSE_HEX_STRING_BAD(hex) \
-	try { \
-		REHex::parse_hex_string(hex); \
-		ok(0, "REHex::parse_hex_string(" #hex ") throws ParseError"); \
-	} \
-	catch(const REHex::ParseError &e) \
-	{ \
-		ok(1, "REHex::parse_hex_string(" #hex ") throws ParseError"); \
-	}
+	EXPECT_THROW(REHex::parse_hex_string(hex), REHex::ParseError) << "REHex::parse_hex_string(" #hex ") throws ParseError";
 
-int main(int argc, char **argv)
+TEST(Util, parse_ascii_nibble)
 {
-	plan_lazy();
-	
 	PARSE_ASCII_NIBBLE_BAD('\0');
 	
 	PARSE_ASCII_NIBBLE_BAD('/');
@@ -101,7 +80,10 @@ int main(int argc, char **argv)
 	PARSE_ASCII_NIBBLE_BAD('g');
 	
 	PARSE_ASCII_NIBBLE_BAD(0xFF);
-	
+}
+
+TEST(Util, parse_hex_string)
+{
 	PARSE_HEX_STRING_OK("");
 	PARSE_HEX_STRING_OK(" ");
 	PARSE_HEX_STRING_OK("\t");
@@ -131,6 +113,4 @@ int main(int argc, char **argv)
 	PARSE_HEX_STRING_BAD("G");
 	PARSE_HEX_STRING_BAD("`");
 	PARSE_HEX_STRING_BAD("g");
-	
-	return 0;
 }

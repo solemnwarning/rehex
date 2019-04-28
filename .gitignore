@@ -14,12 +14,6 @@
 /res/license.c
 /res/license.h
 /tests/.tmpfile*
-/tests/buffer.t
-/tests/CommentTree.t
+/tests/all-tests
 /tests/document.t
-/tests/NestedOffsetLengthMap.t
-/tests/NumericTextCtrl.t
-/tests/search-bseq.t
-/tests/search-text.t
-/tests/util.t
 /tools/embed

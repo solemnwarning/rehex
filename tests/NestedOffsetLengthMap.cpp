@@ -15,73 +15,58 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <gtest/gtest.h>
 #include <iterator>
-
-#include "tests/tap/basic.h"
 
 #include "../src/NestedOffsetLengthMap.hpp"
 
 #define OK_SET(offset, length, value) \
 { \
-	ok(NestedOffsetLengthMap_set(map, offset, length, value), \
-		"Setting %d,%d = %d succeeded (%s:%d)", offset, length, value, __FILE__, __LINE__); \
+	EXPECT_TRUE(NestedOffsetLengthMap_set(map, offset, length, value)) \
+		<< "Setting " << offset << "," << length << " = " << value << " succeeded"; \
 	\
 	NestedOffsetLengthMapKey k(offset, length); \
-	ok((map.find(k) != map.end()) && map.find(k)->second == value, \
-		"Setting %d,%d = %d really succeeded (%s:%d)", offset, length, value, __FILE__, __LINE__); \
+	EXPECT_TRUE((map.find(k) != map.end()) && map.find(k)->second == value) \
+		<< "Setting " << offset << "," << length << " = " << value << " really succeeded"; \
 }
 
-#define BAD_SET(offset, length, fmt, ...) \
+#define BAD_SET(offset, length, why) \
 { \
-	ok(!NestedOffsetLengthMap_set(map, offset, length, 0), fmt " (%s:%d)", __FILE__, __LINE__, ## __VA_ARGS__); \
+	EXPECT_FALSE(NestedOffsetLengthMap_set(map, offset, length, 0)) << why; \
 }
 
 #define OK_GET(offset, value) \
 { \
 	auto i = NestedOffsetLengthMap_get(map, offset); \
-	ok((i != map.end() && i->second == value), \
-		"NestedOffsetLengthMap_get(map, %d) finds %d (%s:%d)", offset, value, __FILE__, __LINE__); \
+	EXPECT_TRUE(i != map.end()) << "NestedOffsetLengthMap_get(map, " << offset << ") returns an element"; \
+	if(i != map.end()) \
+	{ \
+		EXPECT_EQ(i->second, value) << "NestedOffsetLengthMap_get(map, " << offset << ") finds " << value; \
+	} \
 }
 
 #define BAD_GET(offset) \
 { \
 	auto i = NestedOffsetLengthMap_get(map, offset); \
-	ok((i == map.end()), \
-		"NestedOffsetLengthMap_get(map, %d) finds no match (%s:%d)", offset, __FILE__, __LINE__) \
-		|| diag("Found value: %d", i->second); \
+	EXPECT_TRUE(i == map.end()) << "NestedOffsetLengthMap_get(map, " << offset << ") returns no element"; \
 }
 
-#define GET_ALL_SIZE(get_all_result, expect_size) \
+#define GET_ALL_CHECK(map, offset, ...) \
 { \
-	is_int(expect_size, get_all_result.size(), # get_all_result ".size() (%s:%d)", __FILE__, __LINE__); \
-}
-
-#define GET_ALL_ELEM(get_all_result, get_all_index, map_index) \
-{ \
-	if(get_all_result.size() > get_all_index) \
+	auto got_iterators = NestedOffsetLengthMap_get_all(map, offset); \
+	const int expect_indexes[] = { __VA_ARGS__ }; \
+	std::list<NestedOffsetLengthMap<int>::const_iterator> expect_iterators; \
+	for(const int *i = expect_indexes; i < expect_indexes + sizeof(expect_indexes) / sizeof(*expect_indexes); ++i) \
 	{ \
-		auto gar_map_iter = *(std::next(get_all_result.begin(), get_all_index)); \
-		auto map_iter = std::next(map.begin(), map_index); \
-		if(!ok((gar_map_iter == map_iter), # get_all_result "[%d] (%s:%d)", get_all_index, __FILE__, __LINE__)) \
-		{ \
-			diag("got    key.offset = %d, key.length = %d", (int)(gar_map_iter->first.offset), (int)(gar_map_iter->first.length)); \
-			diag("expect key.offset = %d, key.length = %d", (int)(map_iter->first.offset), (int)(map_iter->first.length)); \
-		} \
+		expect_iterators.push_back(std::next(map.begin(), *i)); \
 	} \
+	EXPECT_EQ(got_iterators, expect_iterators); \
 }
 
 using namespace REHex;
 
-int main(int argc, char **argv)
+TEST(NestedOffsetLengthMap, Basic)
 {
-	plan_lazy();
-	
-	/* Testing:
-	 *
-	 * NestedOffsetLengthMap_set()
-	 * NestedOffsetLengthMap_get()
-	*/
-	
 	{
 		NestedOffsetLengthMap<int> map;
 		
@@ -125,79 +110,61 @@ int main(int argc, char **argv)
 		BAD_SET(39, 2, "Overlapping end of existing range in middle of map");
 		BAD_SET(59, 2, "Overlapping end of existing range at end of map");
 	}
+}
+
+TEST(NestedOffsetLengthMap, GetAll)
+{
+	NestedOffsetLengthMap<int> map;
+	NestedOffsetLengthMap_set(map, 5,  4,  0);  /* 0 */
+	NestedOffsetLengthMap_set(map, 5,  5,  0);  /* 1 */
+	NestedOffsetLengthMap_set(map, 5,  20, 0);  /* 2 */
+	NestedOffsetLengthMap_set(map, 10, 0,  0);  /* 3 */
+	NestedOffsetLengthMap_set(map, 10, 5,  0);  /* 4 */
+	NestedOffsetLengthMap_set(map, 10, 10, 0);  /* 5 */
 	
-	/* Testing:
-	 *
-	 * NestedOffsetLengthMap_get_all()
-	*/
+	GET_ALL_CHECK(
+		map, 4,
+		/* No matches */);
 	
-	{
-		NestedOffsetLengthMap<int> map;
-		
-		OK_SET(5,  4,  0);  /* 0 */
-		OK_SET(5,  5,  0);  /* 1 */
-		OK_SET(5,  20, 0);  /* 2 */
-		OK_SET(10, 0,  0);  /* 3 */
-		OK_SET(10, 5,  0);  /* 4 */
-		OK_SET(10, 10, 0);  /* 5 */
-		
-		auto r4 = NestedOffsetLengthMap_get_all(map, 4);
-		GET_ALL_SIZE(r4, 0);
-		
-		auto r5 = NestedOffsetLengthMap_get_all(map, 5);
-		GET_ALL_SIZE(r5, 3);
-		GET_ALL_ELEM(r5, 0, 0);
-		GET_ALL_ELEM(r5, 1, 1);
-		GET_ALL_ELEM(r5, 2, 2);
-		
-		auto r8 = NestedOffsetLengthMap_get_all(map, 8);
-		GET_ALL_SIZE(r8, 3);
-		GET_ALL_ELEM(r8, 0, 0);
-		GET_ALL_ELEM(r8, 1, 1);
-		GET_ALL_ELEM(r8, 2, 2);
-		
-		auto r9 = NestedOffsetLengthMap_get_all(map, 9);
-		GET_ALL_SIZE(r9, 2);
-		GET_ALL_ELEM(r9, 0, 1);
-		GET_ALL_ELEM(r9, 1, 2);
-		
-		auto r10 = NestedOffsetLengthMap_get_all(map, 10);
-		GET_ALL_SIZE(r10, 4);
-		GET_ALL_ELEM(r10, 0, 3);
-		GET_ALL_ELEM(r10, 1, 4);
-		GET_ALL_ELEM(r10, 2, 5);
-		GET_ALL_ELEM(r10, 3, 2);
-		
-		auto r11 = NestedOffsetLengthMap_get_all(map, 11);
-		GET_ALL_SIZE(r11, 3);
-		GET_ALL_ELEM(r11, 0, 4);
-		GET_ALL_ELEM(r11, 1, 5);
-		GET_ALL_ELEM(r11, 2, 2);
-		
-		auto r19 = NestedOffsetLengthMap_get_all(map, 19);
-		GET_ALL_SIZE(r19, 2);
-		GET_ALL_ELEM(r19, 0, 5);
-		GET_ALL_ELEM(r19, 1, 2);
-		
-		auto r20 = NestedOffsetLengthMap_get_all(map, 20);
-		GET_ALL_SIZE(r20, 1);
-		GET_ALL_ELEM(r20, 0, 2);
-		
-	}
+	GET_ALL_CHECK(
+		map, 5,
+		0, 1, 2);
 	
-	/* Testing:
-	 *
-	 * NestedOffsetLengthMap_data_inserted()
-	*/
+	GET_ALL_CHECK(
+		map, 8,
+		0, 1, 2);
 	
+	GET_ALL_CHECK(
+		map, 9,
+		1, 2);
+	
+	GET_ALL_CHECK(
+		map, 10,
+		3, 4, 5, 2);
+	
+	GET_ALL_CHECK(
+		map, 11,
+		4, 5, 2);
+	
+	GET_ALL_CHECK(
+		map, 19,
+		5, 2);
+	
+	GET_ALL_CHECK(
+		map, 20,
+		2);
+}
+
+TEST(NestedOffsetLengthMap, DataInserted)
+{
 	{
 		NestedOffsetLengthMap<int> map;
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 0, 4);
 		
-		is_int(14, map.begin()->first.offset, "Inserting data before zero-length key shifts offset");
-		is_int(0,  map.begin()->first.length, "Inserting data before zero-length key doesn't touch length");
-		is_int(keys_modified, 1,              "Inserting data before zero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 14) << "Inserting data before zero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Inserting data before zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data before zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -205,9 +172,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 6, 4);
 		
-		is_int(14, map.begin()->first.offset, "Inserting data immediately before zero-length key shifts offset");
-		is_int(0,  map.begin()->first.length, "Inserting data immediately before zero-length key doesn't touch length");
-		is_int(keys_modified, 1,              "Inserting data immediately before zero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 14) << "Inserting data immediately before zero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Inserting data immediately before zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data immediately before zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -215,9 +182,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 10, 1);
 		
-		is_int(11, map.begin()->first.offset, "Inserting data at zero-length key shifts offset");
-		is_int(0,  map.begin()->first.length, "Inserting data at zero-length key doesn't touch length");
-		is_int(keys_modified, 1,              "Inserting data at zero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 11) << "Inserting data at zero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Inserting data at zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data at zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -225,9 +192,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 11, 1);
 		
-		is_int(10, map.begin()->first.offset, "Inserting data after zero-length key doesn't touch offset");
-		is_int(0,  map.begin()->first.length, "Inserting data after zero-length key doesn't touch length");
-		is_int(keys_modified, 0,              "Inserting data after zero-length key returns 0 keys modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Inserting data after zero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Inserting data after zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             0U) << "Inserting data after zero-length key returns 0 keys modified";
 	}
 	
 	{
@@ -235,9 +202,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 0, 4);
 		
-		is_int(14, map.begin()->first.offset, "Inserting data before nonzero-length key shifts offset");
-		is_int(8,  map.begin()->first.length, "Inserting data before nonzero-length key doesn't touch length");
-		is_int(keys_modified, 1,              "Inserting data before nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 14) << "Inserting data before nonzero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Inserting data before nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data before nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -245,9 +212,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 6, 4);
 		
-		is_int(14, map.begin()->first.offset, "Inserting data immediately before nonzero-length key shifts offset");
-		is_int(8,  map.begin()->first.length, "Inserting data immediately before nonzero-length key doesn't touch length");
-		is_int(keys_modified, 1,              "Inserting data immediately before nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 14) << "Inserting data immediately before nonzero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Inserting data immediately before nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data immediately before nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -255,9 +222,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 10, 1);
 		
-		is_int(11, map.begin()->first.offset, "Inserting data at nonzero-length key shifts offset");
-		is_int(8,  map.begin()->first.length, "Inserting data at nonzero-length key doesn't touch length");
-		is_int(keys_modified, 1,              "Inserting data at nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 11) << "Inserting data at nonzero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Inserting data at nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data at nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -265,9 +232,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 11, 4);
 		
-		is_int(10, map.begin()->first.offset, "Inserting data after start of nonzero-length key doesn't shift offset");
-		is_int(12, map.begin()->first.length, "Inserting data after start of nonzero-length key increases length");
-		is_int(keys_modified, 1,              "Inserting data after start of nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Inserting data after start of nonzero-length key doesn't shift offset";
+		EXPECT_EQ(map.begin()->first.length, 12) << "Inserting data after start of nonzero-length key increases length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data after start of nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -275,9 +242,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 17, 4);
 		
-		is_int(10, map.begin()->first.offset, "Inserting data before end of nonzero-length key doesn't shift offset");
-		is_int(12, map.begin()->first.length, "Inserting data before end of nonzero-length key increases length");
-		is_int(keys_modified, 1,              "Inserting data before end of nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Inserting data before end of nonzero-length key doesn't shift offset";
+		EXPECT_EQ(map.begin()->first.length, 12) << "Inserting data before end of nonzero-length key increases length";
+		EXPECT_EQ(keys_modified,             1U) << "Inserting data before end of nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -285,24 +252,22 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_inserted(map, 18, 1);
 		
-		is_int(10, map.begin()->first.offset, "Inserting data after nonzero-length key doesn't touch offset");
-		is_int(8,  map.begin()->first.length, "Inserting data after nonzero-length key doesn't touch length");
-		is_int(keys_modified, 0,              "Inserting data after nonzero-length key returns 0 keys modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Inserting data after nonzero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Inserting data after nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             0U) << "Inserting data after nonzero-length key returns 0 keys modified";
 	}
+}
 	
-	/* Testing:
-	 *
-	 * NestedOffsetLengthMap_data_erased()
-	*/
-	
+TEST(NestedOffsetLengthMap, DataErased)
+{
 	{
 		NestedOffsetLengthMap<int> map;
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 0, 4);
 		
-		is_int(6, map.begin()->first.offset, "Erasing data before zero-length key shifts offset");
-		is_int(0, map.begin()->first.length, "Erasing data before zero-length key doesn't touch length");
-		is_int(keys_modified, 1,             "Erasing data before zero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 6)  << "Erasing data before zero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Erasing data before zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data before zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -310,9 +275,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 6, 4);
 		
-		is_int(6, map.begin()->first.offset, "Erasing data immediately before zero-length key shifts offset");
-		is_int(0, map.begin()->first.length, "Erasing data immediately before zero-length key doesn't touch length");
-		is_int(keys_modified, 1,             "Erasing data immediately before zero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 6)  << "Erasing data immediately before zero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Erasing data immediately before zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data immediately before zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -320,8 +285,8 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 10, 1);
 		
-		ok(map.empty(),          "Erasing data at zero-length key deletes key");
-		is_int(keys_modified, 1, "Erasing data at zero-length key returns 1 key modified");
+		EXPECT_TRUE(map.empty())     << "Erasing data at zero-length key deletes key";
+		EXPECT_EQ(keys_modified, 1U) << "Erasing data at zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -329,8 +294,8 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 4, 20);
 		
-		ok(map.empty(),          "Erasing data encompassing zero-length key deletes key");
-		is_int(keys_modified, 1, "Erasing data encompassing zero-length key returns 1 key modified");
+		EXPECT_TRUE(map.empty())     << "Erasing data encompassing zero-length key deletes key";
+		EXPECT_EQ(keys_modified, 1U) << "Erasing data encompassing zero-length key returns 1 key modified";
 	}
 	
 	{
@@ -338,9 +303,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 11, 4);
 		
-		is_int(10, map.begin()->first.offset, "Erasing data immediately after zero-length key doesn't touch offset");
-		is_int(0,  map.begin()->first.length, "Erasing data immediately after zero-length key doesn't touch length");
-		is_int(keys_modified, 0,              "Erasing data immediately after zero-length key returns 0 keys modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Erasing data immediately after zero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 0)  << "Erasing data immediately after zero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             0U) << "Erasing data immediately after zero-length key returns 0 keys modified";
 	}
 	
 	{
@@ -348,9 +313,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 0, 4);
 		
-		is_int(6, map.begin()->first.offset, "Erasing data before nonzero-length key shifts offset");
-		is_int(8, map.begin()->first.length, "Erasing data before nonzero-length key doesn't touch length");
-		is_int(keys_modified, 1,             "Erasing data before nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 6)  << "Erasing data before nonzero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Erasing data before nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data before nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -358,9 +323,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 6, 4);
 		
-		is_int(6, map.begin()->first.offset, "Erasing data immediately before nonzero-length key shifts offset");
-		is_int(8, map.begin()->first.length, "Erasing data immediately before nonzero-length key doesn't touch length");
-		is_int(keys_modified, 1,             "Erasing data immediately before nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 6)  << "Erasing data immediately before nonzero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Erasing data immediately before nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data immediately before nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -368,9 +333,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 10, 2);
 		
-		is_int(10, map.begin()->first.offset, "Erasing data at start of nonzero-length key doesn't touch offset");
-		is_int(6,  map.begin()->first.length, "Erasing data at start of nonzero-length key reduces length");
-		is_int(keys_modified, 1,              "Erasing data at start of nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Erasing data at start of nonzero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 6)  << "Erasing data at start of nonzero-length key reduces length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data at start of nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -378,9 +343,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 16, 2);
 		
-		is_int(10, map.begin()->first.offset, "Erasing data at end of nonzero-length key doesn't touch offset");
-		is_int(6,  map.begin()->first.length, "Erasing data at end of nonzero-length key reduces length");
-		is_int(keys_modified, 1,              "Erasing data at end of nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Erasing data at end of nonzero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 6)  << "Erasing data at end of nonzero-length key reduces length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data at end of nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -388,9 +353,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 13, 2);
 		
-		is_int(10, map.begin()->first.offset, "Erasing data in nonzero-length key doesn't touch offset");
-		is_int(6,  map.begin()->first.length, "Erasing data in nonzero-length key reduces length");
-		is_int(keys_modified, 1,              "Erasing data in nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Erasing data in nonzero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 6)  << "Erasing data in nonzero-length key reduces length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data in nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -398,8 +363,8 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 10, 8);
 		
-		ok(map.empty(),          "Erasing data matching nonzero-length key deletes key");
-		is_int(keys_modified, 1, "Erasing data matching nonzero-length key returns 1 key modified");
+		EXPECT_TRUE(map.empty())     << "Erasing data matching nonzero-length key deletes key";
+		EXPECT_EQ(keys_modified, 1U) << "Erasing data matching nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -407,9 +372,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 8, 6);
 		
-		is_int(8, map.begin()->first.offset, "Erasing data spanning start of nonzero-length key shifts offset");
-		is_int(4, map.begin()->first.length, "Erasing data spanning start of nonzero-length key reduces length");
-		is_int(keys_modified, 1,             "Erasing data spanning start of nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 8)  << "Erasing data spanning start of nonzero-length key shifts offset";
+		EXPECT_EQ(map.begin()->first.length, 4)  << "Erasing data spanning start of nonzero-length key reduces length";
+		EXPECT_EQ(keys_modified,             1U) << "Erasing data spanning start of nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -417,9 +382,9 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 16, 6);
 		
-		is_int(10, map.begin()->first.offset, "Erasing data spanning end of nonzero-length key doesn't touch offset");
-		is_int(6,  map.begin()->first.length, "Erasing data spanning end of nonzero-length key reduces length");
-		is_int(keys_modified, 1,              "Erasing data spanning end of nonzero-length key returns 1 key modified");
+		EXPECT_EQ(map.begin()->first.offset, 10)  << "Erasing data spanning end of nonzero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 6)   << "Erasing data spanning end of nonzero-length key reduces length";
+		EXPECT_EQ(keys_modified,             1U)  << "Erasing data spanning end of nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -427,8 +392,8 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 4, 20);
 		
-		ok(map.empty(),          "Erasing data encompassing nonzero-length key deletes key");
-		is_int(keys_modified, 1, "Erasing data encompassing nonzero-length key returns 1 key modified");
+		EXPECT_TRUE(map.empty())     << "Erasing data encompassing nonzero-length key deletes key";
+		EXPECT_EQ(keys_modified, 1U) << "Erasing data encompassing nonzero-length key returns 1 key modified";
 	}
 	
 	{
@@ -436,10 +401,8 @@ int main(int argc, char **argv)
 		NestedOffsetLengthMap_set(map, 10, 8, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 18, 4);
 		
-		is_int(10, map.begin()->first.offset, "Erasing data immediately after nonzero-length key doesn't touch offset");
-		is_int(8,  map.begin()->first.length, "Erasing data immediately after nonzero-length key doesn't touch length");
-		is_int(keys_modified, 0,              "Erasing data immediately after nonzero-length key returns 0 keys modified");
+		EXPECT_EQ(map.begin()->first.offset, 10) << "Erasing data immediately after nonzero-length key doesn't touch offset";
+		EXPECT_EQ(map.begin()->first.length, 8)  << "Erasing data immediately after nonzero-length key doesn't touch length";
+		EXPECT_EQ(keys_modified,             0U) << "Erasing data immediately after nonzero-length key returns 0 keys modified";
 	}
-	
-	return 0;
 }

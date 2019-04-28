@@ -592,7 +592,7 @@ void REHex::Document::OnPaint(wxPaintEvent &event)
 	
 	dc.SetFont(*hex_font);
 	
-	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.SetBackground(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.Clear();
 	
 	/* Iterate over the regions to find the last one which does NOT start beyond the current
@@ -1025,7 +1025,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 	
 	off_t cursor_pos = get_cursor_position();
 	
-	if(modifiers & wxMOD_CONTROL)
+	if((modifiers & wxMOD_CONTROL) && (key != WXK_HOME && key != WXK_END))
 	{
 		/* Some control sequence, pass it on. */
 		event.Skip();
@@ -1135,8 +1135,8 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		/* TODO: Limit paint to affected area */
 		this->Refresh();
 	}
-	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT)
-		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN))
+	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT || ((modifiers & ~wxMOD_SHIFT) == wxMOD_CONTROL && (key == WXK_HOME || key == WXK_END)))
+		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END))
 	{
 		off_t new_cursor_pos = cursor_pos;
 		
@@ -1250,10 +1250,60 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 				cursor_state = CSTATE_HEX;
 			}
 		}
+		else if(key == WXK_HOME && (modifiers & wxMOD_CONTROL))
+		{
+			new_cursor_pos = 0;
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
+		else if(key == WXK_HOME)
+		{
+			auto cur_region = _data_region_by_offset(cursor_pos);
+			assert(cur_region != NULL);
+			
+			off_t offset_within_cur  = cursor_pos - cur_region->d_offset;
+			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
+			
+			new_cursor_pos = cursor_pos - offset_within_line;
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
+		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
+		{
+			new_cursor_pos = buffer->length() - (off_t)(!insert_mode);
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
+		else if(key == WXK_END)
+		{
+			auto cur_region = _data_region_by_offset(cursor_pos);
+			assert(cur_region != NULL);
+			
+			off_t offset_within_cur  = cursor_pos - cur_region->d_offset;
+			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
+			
+			new_cursor_pos = std::min(
+				(cursor_pos + ((cur_region->bytes_per_line_actual - offset_within_line) - 1)),
+				((cur_region->d_offset + cur_region->d_length) - 1));
+			
+			if(cursor_state == CSTATE_HEX_MID)
+			{
+				cursor_state = CSTATE_HEX;
+			}
+		}
 		
 		set_cursor_position(new_cursor_pos);
 		
-		if(modifiers == wxMOD_SHIFT)
+		if(modifiers & wxMOD_SHIFT)
 		{
 			off_t selection_end = selection_off + selection_length;
 			
@@ -1344,7 +1394,10 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		}
 		else if(key == '/')
 		{
-			edit_comment_popup(cursor_pos, 0);
+			if(cursor_pos < buffer->length())
+			{
+				edit_comment_popup(cursor_pos, 0);
+			}
 		}
 	}
 }
@@ -1603,7 +1656,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			
 			wxMenu menu;
 			
-			menu.Append(wxID_CUT, "&Cut");
+			menu.Append(wxID_CUT, "Cu&t");
 			menu.Enable(wxID_CUT,  (selection_length > 0));
 			
 			menu.Append(wxID_COPY,  "&Copy");
@@ -1629,7 +1682,8 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				}, itm->GetId(), itm->GetId());
 			}
 			
-			if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end())
+			if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end()
+				&& cursor_pos < buffer->length())
 			{
 				wxMenuItem *itm = menu.Append(wxID_ANY, "Insert comment here...");
 				
@@ -1683,13 +1737,11 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			{
 				wxMenu *hlmenu = new wxMenu();
 				
-				const REHex::Palette &pal = wxGetApp().palette;
-				
 				for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
 				{
 					wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
 					
-					wxColour bg_colour = pal.get_highlight_bg(i);
+					wxColour bg_colour = active_palette->get_highlight_bg(i);
 					
 					/* TODO: Get appropriate size for menu bitmap.
 					 * TODO: Draw a character in image using foreground colour.
@@ -2939,11 +2991,11 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 		int box_w = doc.virtual_width - (cw / 2);
 		
 		dc.SetPen(*wxTRANSPARENT_PEN);
-		dc.SetBrush(*wxWHITE_BRUSH);
+		dc.SetBrush(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 		
 		dc.DrawRectangle(0, box_y, doc.client_width, box_h);
 		
-		dc.SetPen(*wxBLACK_PEN);
+		dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
 		
 		for(int i = 0; i < indent_depth; ++i)
 		{
@@ -2982,46 +3034,52 @@ void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 	 * one if the data isn't a round number of lines.
 	*/
 	y_lines = (d_length / bytes_per_line_actual) + !!(d_length % bytes_per_line_actual) + indent_final;
+	
+	if((d_offset + d_length) == doc.buffer_length() && (d_length % bytes_per_line_actual) == 0)
+	{
+		/* This is the last data region in the document. Make it one row taller if the last
+		 * row is full so there is always somewhere to draw the insert cursor.
+		*/
+		++y_lines;
+	}
 }
 
 void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
 	draw_container(doc, dc, x, y);
 	
-	const REHex::Palette &pal = wxGetApp().palette;
-	
 	dc.SetFont(*(doc.hex_font));
 	
-	wxPen norm_fg_1px(pal[Palette::PAL_NORMAL_TEXT_FG], 1);
-	wxPen selected_bg_1px(pal[Palette::PAL_SELECTED_TEXT_BG], 1);
+	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
 	bool alternate_row = true;
 	
-	auto normal_text_colour = [&dc,&pal,&alternate_row]()
+	auto normal_text_colour = [&dc,&alternate_row]()
 	{
-		dc.SetTextForeground(pal[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
+		dc.SetTextForeground((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto inverted_text_colour = [&dc,&pal]()
+	auto inverted_text_colour = [&dc]()
 	{
-		dc.SetTextForeground(pal[Palette::PAL_INVERT_TEXT_FG]);
-		dc.SetTextBackground(pal[Palette::PAL_INVERT_TEXT_BG]);
+		dc.SetTextForeground((*active_palette)[Palette::PAL_INVERT_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
-	auto selected_text_colour = [&dc,&pal]()
+	auto selected_text_colour = [&dc]()
 	{
-		dc.SetTextForeground(pal[Palette::PAL_SELECTED_TEXT_FG]);
-		dc.SetTextBackground(pal[Palette::PAL_SELECTED_TEXT_BG]);
+		dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_SELECTED_TEXT_BG]);
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
-	auto highlighted_text_colour = [&dc,&pal](int highlight_idx)
+	auto highlighted_text_colour = [&dc](int highlight_idx)
 	{
-		dc.SetTextForeground(pal.get_highlight_fg(highlight_idx));
-		dc.SetTextBackground(pal.get_highlight_bg(highlight_idx));
+		dc.SetTextForeground(active_palette->get_highlight_fg(highlight_idx));
+		dc.SetTextBackground(active_palette->get_highlight_bg(highlight_idx));
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
@@ -3031,7 +3089,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
 	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
-	if(skip_bytes >= d_length)
+	if(skip_lines >= (y_lines - indent_final))
 	{
 		/* All of our data is past the top of the client area, all that needed to be
 		 * rendered is the bottom of the container around it.
@@ -3050,7 +3108,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	 * case of large files.
 	*/
 	int max_lines = ((doc.client_height - y) / doc.hf_height) + 1;
-	int max_bytes = max_lines * bytes_per_line_actual;
+	off_t max_bytes = (off_t)(max_lines) * (off_t)(bytes_per_line_actual);
 	
 	if((int64_t)(max_lines) > (y_lines - indent_final - skip_lines))
 	{
@@ -3074,7 +3132,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 	
 	/* Fetch the data to be drawn. */
-	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min((off_t)(max_bytes), (d_length - skip_bytes)));
+	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min(max_bytes, (d_length - std::min(skip_bytes, d_length))));
 	
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
@@ -3107,6 +3165,51 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		int ascii_base_x = x + ascii_text_x;
 		int ascii_x      = ascii_base_x;
 		int ascii_x_char = 0;
+		
+		auto draw_end_cursor = [&]()
+		{
+			if((doc.cursor_visible && doc.cursor_state == CSTATE_HEX) || !hex_active)
+			{
+				if(doc.insert_mode || !hex_active)
+				{
+					dc.SetPen(norm_fg_1px);
+					dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
+				}
+				else{
+					/* Draw the cursor in red if trying to overwrite at an invalid
+					 * position. Should only happen in empty files.
+					*/
+					dc.SetPen(*wxRED_PEN);
+					dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
+				}
+			}
+			
+			if(doc.show_ascii && ((doc.cursor_visible && doc.cursor_state == CSTATE_ASCII) || !ascii_active))
+			{
+				if(doc.insert_mode || !ascii_active)
+				{
+					dc.SetPen(norm_fg_1px);
+					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+				}
+				else{
+					/* Draw the cursor in red if trying to overwrite at an invalid
+					 * position. Should only happen in empty files.
+					*/
+					dc.SetPen(*wxRED_PEN);
+					dc.DrawLine(ascii_x, y, ascii_x, y + doc.hf_height);
+				}
+			}
+		};
+		
+		if(di == data.end())
+		{
+			if(cur_off == cursor_pos)
+			{
+				draw_end_cursor();
+			}
+			
+			break;
+		}
 		
 		wxString hex_str, ascii_string;
 		
@@ -3356,28 +3459,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			++cur_off;
 		}
 		
-		if(cur_off == cursor_pos && cur_off == doc.buffer->length())
-		{
-			/* Draw the insert cursor past the end of the line if we've just written
-			 * the last byte to the screen.
-			 *
-			 * TODO: Draw on next line if we're at the end of one.
-			*/
-			
-			if(doc.insert_mode)
-			{
-				dc.SetPen(norm_fg_1px);
-				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
-			}
-			else{
-				/* Draw the cursor in red if trying to overwrite at an invalid
-				 * position. Should only happen in empty files.
-				*/
-				dc.SetPen(*wxRED_PEN);
-				dc.DrawLine(hex_x, y, hex_x, y + doc.hf_height);
-			}
-		}
-		
 		normal_text_colour();
 		
 		dc.DrawText(hex_str, hex_base_x, y);
@@ -3387,9 +3468,14 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			dc.DrawText(ascii_string, ascii_base_x, y);
 		}
 		
+		if(cur_off == cursor_pos && cur_off == doc.buffer_length() && (d_length % bytes_per_line_actual) != 0)
+		{
+			draw_end_cursor();
+		}
+		
 		y += doc.hf_height;
 		
-		if(di == data.end())
+		if(di == data.end() && (cur_off < doc.buffer_length() || (d_length % bytes_per_line_actual) != 0))
 		{
 			break;
 		}
@@ -3588,8 +3674,8 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 		unsigned int box_w = (doc.virtual_width - (indent_depth * doc.hf_char_width() * 2)) - (doc.hf_char_width() / 2);
 		unsigned int box_h = (lines.size() * doc.hf_height) + (doc.hf_height / 2);
 		
-		dc.SetPen(wxPen(*wxBLACK, 1));
-		dc.SetBrush(*wxLIGHT_GREY_BRUSH);
+		dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1));
+		dc.SetBrush(wxBrush((*active_palette)[Palette::PAL_COMMENT_BG]));
 		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
 		
@@ -3602,7 +3688,7 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	
 	y += doc.hf_height / 2;
 	
-	dc.SetTextForeground(*wxBLACK);
+	dc.SetTextForeground((*active_palette)[Palette::PAL_COMMENT_FG]);
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
 	for(auto li = lines.begin(); li != lines.end(); ++li)

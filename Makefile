@@ -98,6 +98,7 @@ APP_OBJS := \
 	src/mainwindow.o \
 	src/Palette.o \
 	src/search.o \
+	src/SelectRangeDialog.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \

@@ -56,6 +56,8 @@ namespace REHex {
 			void OnPaste(wxCommandEvent &event);
 			void OnUndo(wxCommandEvent &event);
 			void OnRedo(wxCommandEvent &event);
+			void OnSelectAll(wxCommandEvent &event);
+			void OnSelectRange(wxCommandEvent &event);
 			void OnOverwriteMode(wxCommandEvent &event);
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);
@@ -64,6 +66,7 @@ namespace REHex {
 			void OnShowASCII(wxCommandEvent &event);
 			void OnInlineCommentsMode(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
+			void OnPalette(wxCommandEvent &event);
 			void OnSaveView(wxCommandEvent &event);
 			
 			void OnAbout(wxCommandEvent &event);

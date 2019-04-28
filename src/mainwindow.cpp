@@ -35,7 +35,9 @@
 #include "disassemble.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
+#include "Palette.hpp"
 #include "search.hpp"
+#include "SelectRangeDialog.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
 
@@ -66,6 +68,10 @@ enum {
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
+	ID_SELECT_RANGE,
+	ID_SYSTEM_PALETTE,
+	ID_LIGHT_PALETTE,
+	ID_DARK_PALETTE,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -91,6 +97,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_UNDO, REHex::MainWindow::OnUndo)
 	EVT_MENU(wxID_REDO, REHex::MainWindow::OnRedo)
 	
+	EVT_MENU(wxID_SELECTALL, REHex::MainWindow::OnSelectAll)
+	EVT_MENU(ID_SELECT_RANGE, REHex::MainWindow::OnSelectRange)
+	
 	EVT_MENU(ID_OVERWRITE_MODE, REHex::MainWindow::OnOverwriteMode)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
@@ -113,6 +122,10 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
+	
+	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
+	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
+	EVT_MENU(ID_DARK_PALETTE,   REHex::MainWindow::OnPalette)
 	
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
@@ -149,6 +162,11 @@ REHex::MainWindow::MainWindow():
 	
 	edit_menu->AppendSeparator();
 	
+	edit_menu->Append(wxID_SELECTALL, "Select &All\tCtrl-A");
+	edit_menu->Append(ID_SELECT_RANGE, "Select range...");
+	
+	edit_menu->AppendSeparator();
+	
 	#ifdef __APPLE__
 	edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode");
 	#else
@@ -167,7 +185,7 @@ REHex::MainWindow::MainWindow():
 	
 	edit_menu->AppendSeparator();
 	
-	edit_menu->Append(wxID_CUT,   "&Cut");
+	edit_menu->Append(wxID_CUT,   "Cu&t");
 	edit_menu->Append(wxID_COPY,  "&Copy");
 	edit_menu->Append(wxID_PASTE, "&Paste");
 	
@@ -201,6 +219,29 @@ REHex::MainWindow::MainWindow():
 		}, itm->GetId(), itm->GetId());
 		
 		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+	}
+	
+	view_menu->AppendSeparator();
+	
+	wxMenu *palette_menu = new wxMenu;
+	view_menu->AppendSubMenu(palette_menu, "Colour scheme");
+	
+	palette_menu->AppendRadioItem(ID_SYSTEM_PALETTE, "System");
+	palette_menu->AppendRadioItem(ID_LIGHT_PALETTE,  "Light");
+	palette_menu->AppendRadioItem(ID_DARK_PALETTE,   "Dark");
+	
+	std::string palette_name = active_palette->get_name();
+	if(palette_name == "light")
+	{
+		palette_menu->Check(ID_LIGHT_PALETTE, true);
+	}
+	else if(palette_name == "dark")
+	{
+		palette_menu->Check(ID_DARK_PALETTE, true);
+	}
+	else /* if(palette_name == "system") */
+	{
+		palette_menu->Check(ID_SYSTEM_PALETTE, true);
 	}
 	
 	view_menu->AppendSeparator();
@@ -608,6 +649,29 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 	tab->doc->redo();
 }
 
+void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	tab->doc->set_selection(0, tab->doc->buffer_length());
+}
+
+void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	REHex::SelectRangeDialog srd(this, *(tab->doc));
+	srd.ShowModal();
+}
+
 void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -741,6 +805,31 @@ void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::Tool
 	else{
 		tab->tool_destroy(tpr->name);
 	}
+}
+
+void REHex::MainWindow::OnPalette(wxCommandEvent &event)
+{
+	delete active_palette;
+	
+	switch(event.GetId())
+	{
+		case ID_SYSTEM_PALETTE:
+			active_palette = Palette::create_system_palette();
+			break;
+			
+		case ID_LIGHT_PALETTE:
+			active_palette = Palette::create_light_palette();
+			break;
+			
+		case ID_DARK_PALETTE:
+			active_palette = Palette::create_dark_palette();
+			break;
+			
+		default:
+			abort();
+	}
+	
+	Refresh();
 }
 
 void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
@@ -1115,6 +1204,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	
 	doc = new REHex::Document(h_splitter);
 	init_default_doc_view();
+	doc->set_insert_mode(true);
 	
 	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
 	h_tools->SetFitToCurrentPage(true);
@@ -1250,6 +1340,9 @@ void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
 
 void REHex::MainWindow::Tab::save_view(wxConfig *config)
 {
+	config->SetPath("/");
+	config->Write("theme", wxString(active_palette->get_name()));
+	
 	config->DeleteGroup("/default-view/");
 	config->SetPath("/default-view/");
 	

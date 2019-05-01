@@ -2634,10 +2634,16 @@ json_t *REHex::Document::_dump_metadata()
 
 void REHex::Document::_save_metadata(const std::string &filename)
 {
-	/* TODO: Report errors, atomically replace file? */
+	/* TODO: Atomically replace file. */
+	
 	json_t *meta = _dump_metadata();
-	json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
+	int res = json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
 	json_decref(meta);
+	
+	if(res != 0)
+	{
+		throw std::runtime_error("Unable to write " + filename);
+	}
 }
 
 REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)

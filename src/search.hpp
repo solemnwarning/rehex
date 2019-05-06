@@ -25,6 +25,7 @@
 #include <thread>
 #include <wx/checkbox.h>
 #include <wx/progdlg.h>
+#include <wx/radiobut.h>
 #include <wx/textctrl.h>
 #include <wx/timer.h>
 
@@ -144,10 +145,8 @@ namespace REHex {
 			std::list< std::vector<unsigned char> > search_for;
 			
 			NumericTextCtrl *search_for_tc;
-			wxCheckBox *t_u8_cb, *t_s8_cb;
-			wxCheckBox *t_u16be_cb, *t_u16le_cb, *t_s16be_cb, *t_s16le_cb;
-			wxCheckBox *t_u32be_cb, *t_u32le_cb, *t_s32be_cb, *t_s32le_cb;
-			wxCheckBox *t_u64be_cb, *t_u64le_cb, *t_s64be_cb, *t_s64le_cb;
+			wxCheckBox *i8_cb, *i16_cb,*i32_cb, *i64_cb;
+			wxRadioButton *e_little, *e_big, *e_either;
 		
 		public:
 			Value(wxWindow *parent, REHex::Document &doc);

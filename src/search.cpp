@@ -22,6 +22,9 @@
 #include <sys/types.h>
 #include <utility>
 #include <wx/msgdlg.h>
+#include <wx/sizer.h>
+#include <wx/statbox.h>
+#include <wx/statline.h>
 
 #include "NumericTextCtrl.hpp"
 #include "search.hpp"
@@ -75,59 +78,60 @@ void REHex::Search::setup_window()
 	setup_window_controls(this, main_sizer);
 	
 	{
-		wxBoxSizer *range_sizer = new wxBoxSizer(wxHORIZONTAL);
+		wxStaticBoxSizer *sz = new wxStaticBoxSizer(wxVERTICAL, this, "Search range");
+		main_sizer->Add(sz, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
 		
-		range_cb = new wxCheckBox(this, ID_RANGE_CB, "Only search from offset ");
-		range_sizer->Add(range_cb);
+		{
+			wxBoxSizer *range_sz = new wxBoxSizer(wxHORIZONTAL);
+			sz->Add(range_sz, 0, wxTOP | wxLEFT | wxRIGHT, 5);
+			
+			range_cb = new wxCheckBox(sz->GetStaticBox(), ID_RANGE_CB, "Only search from offset ");
+			range_sz->Add(range_cb, 0);
+			
+			range_begin_tc = new wxTextCtrl(sz->GetStaticBox(), wxID_ANY);
+			set_width_chars(range_begin_tc, 12);
+			range_sz->Add(range_begin_tc);
+			
+			range_sz->Add(new wxStaticText(sz->GetStaticBox(), wxID_ANY, " to "));
+			
+			range_end_tc = new wxTextCtrl(sz->GetStaticBox(), wxID_ANY);
+			set_width_chars(range_end_tc, 12);
+			range_sz->Add(range_end_tc);
+		}
 		
-		range_begin_tc = new wxTextCtrl(this, wxID_ANY);
-		set_width_chars(range_begin_tc, 12);
-		range_sizer->Add(range_begin_tc);
+		{
+			wxBoxSizer *align_sizer = new wxBoxSizer(wxHORIZONTAL);
+			sz->Add(align_sizer, 0, wxTOP | wxLEFT | wxRIGHT, 5);
+			
+			align_cb = new wxCheckBox(sz->GetStaticBox(), ID_ALIGN_CB, "Results must be aligned to ");
+			align_sizer->Add(align_cb);
+			
+			align_tc = new wxTextCtrl(sz->GetStaticBox(), wxID_ANY);
+			set_width_chars(align_tc, 4);
+			align_sizer->Add(align_tc);
+			
+			align_sizer->Add(new wxStaticText(sz->GetStaticBox(), wxID_ANY, " bytes"));
+		}
 		
-		range_sizer->Add(new wxStaticText(this, wxID_ANY, " to "));
-		
-		range_end_tc = new wxTextCtrl(this, wxID_ANY);
-		set_width_chars(range_end_tc, 12);
-		range_sizer->Add(range_end_tc);
-		
-		main_sizer->Add(range_sizer);
+		{
+			wxBoxSizer *ralign_sz = new wxBoxSizer(wxHORIZONTAL);
+			sz->Add(ralign_sz, 0, wxALL, 5);
+			
+			ralign_cb = new wxCheckBox(sz->GetStaticBox(), ID_RALIGN_CB, "...relative to offset ");
+			ralign_sz->Add(ralign_cb);
+			
+			ralign_tc = new wxTextCtrl(sz->GetStaticBox(), wxID_ANY);
+			set_width_chars(ralign_tc, 12);
+			ralign_sz->Add(ralign_tc);
+		}
 	}
 	
 	{
-		wxBoxSizer *align_sizer = new wxBoxSizer(wxHORIZONTAL);
+		wxBoxSizer *button_sz = new wxBoxSizer(wxHORIZONTAL);
+		main_sizer->Add(button_sz, 0, wxALIGN_RIGHT | wxALL, 10);
 		
-		align_cb = new wxCheckBox(this, ID_ALIGN_CB, "Results must be aligned to ");
-		align_sizer->Add(align_cb);
-		
-		align_tc = new wxTextCtrl(this, wxID_ANY);
-		set_width_chars(align_tc, 4);
-		align_sizer->Add(align_tc);
-		
-		align_sizer->Add(new wxStaticText(this, wxID_ANY, " bytes"));
-		
-		main_sizer->Add(align_sizer);
-	}
-	
-	{
-		wxBoxSizer *ralign_sizer = new wxBoxSizer(wxHORIZONTAL);
-		
-		ralign_cb = new wxCheckBox(this, ID_RALIGN_CB, "...relative to offset ");
-		ralign_sizer->Add(ralign_cb);
-		
-		ralign_tc = new wxTextCtrl(this, wxID_ANY);
-		set_width_chars(ralign_tc, 12);
-		ralign_sizer->Add(ralign_tc);
-		
-		main_sizer->Add(ralign_sizer);
-	}
-	
-	{
-		wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
-		
-		button_sizer->Add(new wxButton(this, ID_FIND_NEXT, "Find next"), 0, wxALL, 10);
-		button_sizer->Add(new wxButton(this, wxID_CANCEL,  "Cancel"),    0, wxALL, 10);
-		
-		main_sizer->Add(button_sizer, 0, wxALIGN_RIGHT);
+		button_sz->Add(new wxButton(this, ID_FIND_NEXT, "Find next"));
+		button_sz->Add(new wxButton(this, wxID_CANCEL,  "Cancel"), 0, wxLEFT, 10);
 	}
 	
 	enable_controls();
@@ -415,12 +419,12 @@ void REHex::Search::Text::setup_window_controls(wxWindow *parent, wxSizer *sizer
 		search_for_tc = new wxTextCtrl(parent, wxID_ANY, "");
 		text_sizer->Add(search_for_tc, 1);
 		
-		sizer->Add(text_sizer, 0, wxEXPAND | wxALL, 2);
+		sizer->Add(text_sizer, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
 	}
 	
 	{
 		case_sensitive_cb = new wxCheckBox(parent, wxID_ANY, "Case sensitive");
-		sizer->Add(case_sensitive_cb);
+		sizer->Add(case_sensitive_cb, 0, wxTOP | wxLEFT | wxRIGHT, 10);
 	}
 }
 
@@ -466,7 +470,7 @@ void REHex::Search::ByteSequence::setup_window_controls(wxWindow *parent, wxSize
 		search_for_tc = new wxTextCtrl(parent, wxID_ANY, "");
 		text_sizer->Add(search_for_tc, 1);
 		
-		sizer->Add(text_sizer, 0, wxEXPAND | wxALL, 2);
+		sizer->Add(text_sizer, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
 	}
 }
 
@@ -530,178 +534,121 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Value: "), 0, wxALIGN_CENTER_VERTICAL);
 		
 		search_for_tc = new NumericTextCtrl(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
-		set_width_chars(search_for_tc, 12);
 		text_sizer->Add(search_for_tc, 1);
 		
 		search_for_tc->Bind(wxEVT_TEXT, &REHex::Search::Value::OnText, this);
 		
-		sizer->Add(text_sizer, 0);
+		sizer->Add(text_sizer, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
 	}
 	
 	{
-		wxBoxSizer *t_outer_sizer = new wxBoxSizer(wxHORIZONTAL);
+		wxStaticBoxSizer *sz = new wxStaticBoxSizer(wxVERTICAL, parent, "Value formats");
 		
-		t_outer_sizer->Add(new wxStaticText(parent, wxID_ANY, "Encoded as: "));
+		wxBoxSizer *sz1 = new wxBoxSizer(wxHORIZONTAL);
+		sz->Add(sz1, 0, wxTOP | wxBOTTOM, 5);
 		
-		wxBoxSizer *t_inner_sizer = new wxBoxSizer(wxVERTICAL);
-		wxBoxSizer *t_final_sizer;
+		i8_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "8-bit integer");
+		i8_cb->SetValue(true);
+		sz1->Add(i8_cb, 0, wxLEFT, 5);
 		
-		auto new_type_cb = [&t_final_sizer,&parent](const char *label)
-		{
-			wxCheckBox *cb = new wxCheckBox(parent, wxID_ANY, label);
-			cb->SetValue(true);
-			t_final_sizer->Add(cb, 0);
-			
-			return cb;
-		};
+		i16_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "16-bit integer");
+		i16_cb->SetValue(true);
+		sz1->Add(i16_cb, 0, wxLEFT, 5);
 		
-		{
-			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
-			
-			t_u8_cb = new_type_cb("8-bit unsigned");
-			t_s8_cb = new_type_cb("8-bit unsigned");
-			
-			t_inner_sizer->Add(t_final_sizer);
-		}
+		i32_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "32-bit integer");
+		i32_cb->SetValue(true);
+		sz1->Add(i32_cb, 0, wxLEFT, 5);
 		
-		{
-			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
-			
-			t_u16be_cb = new_type_cb("16-bit unsigned (big endian)");
-			t_s16be_cb = new_type_cb("16-bit signed (big endian)");
-			t_u16le_cb = new_type_cb("16-bit unsigned (little endian)");
-			t_s16le_cb = new_type_cb("16-bit signed (little endian)");
-			
-			t_inner_sizer->Add(t_final_sizer);
-		}
+		i64_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "64-bit integer");
+		i64_cb->SetValue(true);
+		sz1->Add(i64_cb, 0, wxLEFT | wxRIGHT, 5);
 		
-		{
-			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
-			
-			t_u32be_cb = new_type_cb("32-bit unsigned (big endian)");
-			t_s32be_cb = new_type_cb("32-bit signed (big endian)");
-			t_u32le_cb = new_type_cb("32-bit unsigned (little endian)");
-			t_s32le_cb = new_type_cb("32-bit signed (little endian)");
-			
-			t_inner_sizer->Add(t_final_sizer);
-		}
+		wxStaticLine *sl1 = new wxStaticLine(sz->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+		sz->Add(sl1, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
 		
-		{
-			t_final_sizer = new wxBoxSizer(wxHORIZONTAL);
-			
-			t_u64be_cb = new_type_cb("64-bit unsigned (big endian)");
-			t_s64be_cb = new_type_cb("64-bit signed (big endian)");
-			t_u64le_cb = new_type_cb("64-bit unsigned (little endian)");
-			t_s64le_cb = new_type_cb("64-bit signed (little endian)");
-			
-			t_inner_sizer->Add(t_final_sizer);
-		}
+		wxBoxSizer *sz2 = new wxBoxSizer(wxHORIZONTAL);
+		sz->Add(sz2, 0, wxTOP | wxBOTTOM, 5);
 		
-		t_outer_sizer->Add(t_inner_sizer);
-		sizer->Add(t_outer_sizer);
+		e_little = new wxRadioButton(sz->GetStaticBox(), wxID_ANY, "Little endian", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+		sz2->Add(e_little, 0, wxLEFT, 5);
+		
+		e_big = new wxRadioButton(sz->GetStaticBox(), wxID_ANY, "Big endian");
+		sz2->Add(e_big, 0, wxLEFT, 5);
+		
+		e_either = new wxRadioButton(sz->GetStaticBox(), wxID_ANY, "Either");
+		e_either->SetValue(true);
+		sz2->Add(e_either, 0, wxLEFT | wxRIGHT, 5);
+		
+		sizer->Add(sz, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
 	}
+}
+
+#define INTEGER_TYPE_SIZE(x) \
+{ \
+	if(i ## x ## _cb->GetValue()) \
+	{ \
+		try { \
+			uint ## x ## _t v = search_for_tc->GetValueUnsigned<uint ## x ## _t>(); \
+			\
+			if(e_little->GetValue() || e_either->GetValue()) \
+			{ \
+				uint ## x ## _t lv = htole ## x(v); \
+				search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(lv)), (unsigned char*)(&(lv) + 1))); \
+			} \
+			\
+			if(e_big->GetValue() || e_either->GetValue()) \
+			{ \
+				uint ## x ## _t bv = htobe ## x(v); \
+				search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(bv)), (unsigned char*)(&(bv) + 1))); \
+			} \
+		} \
+		catch(const REHex::NumericTextCtrl::RangeError &e) \
+		{ \
+			try { \
+				int ## x ## _t v = search_for_tc->GetValueSigned<int ## x ## _t>(); \
+				\
+				if(e_little->GetValue() || e_either->GetValue()) \
+				{ \
+					int ## x ## _t lv = htole ## x(v); \
+					search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(lv)), (unsigned char*)(&(lv) + 1))); \
+				} \
+				\
+				if(e_big->GetValue() || e_either->GetValue()) \
+				{ \
+					int ## x ## _t bv = htobe ## x(v); \
+					search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(bv)), (unsigned char*)(&(bv) + 1))); \
+				} \
+			} \
+			catch(REHex::NumericTextCtrl::InputError &e) {} \
+		} \
+		catch(REHex::NumericTextCtrl::InputError &e) {} \
+	} \
 }
 
 bool REHex::Search::Value::read_window_controls()
 {
 	search_for.clear();
 	
-	auto try_type = [this](wxCheckBox *cb, std::function<void()> func)
+	if(i8_cb->GetValue())
 	{
-		if(cb->GetValue())
+		try {
+			uint8_t v = search_for_tc->GetValueUnsigned<uint8_t>();
+			search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
+		}
+		catch(const REHex::NumericTextCtrl::RangeError &e)
 		{
 			try {
-				func();
+				int8_t v = search_for_tc->GetValueSigned<int8_t>();
+				search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
 			}
-			catch(const REHex::NumericTextCtrl::RangeError &e) {}
-			catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-			catch(const REHex::NumericTextCtrl::FormatError &e) {}
+			catch(REHex::NumericTextCtrl::InputError &e) {}
 		}
-	};
+		catch(REHex::NumericTextCtrl::InputError &e) {}
+	}
 	
-	try_type(t_s8_cb, [this]()
-	{
-		int8_t v = search_for_tc->GetValueSigned<int8_t>();
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u8_cb, [this]()
-	{
-		uint8_t v = search_for_tc->GetValueUnsigned<uint8_t>();
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_s16be_cb, [this]()
-	{
-		int16_t v = be16toh(search_for_tc->GetValueSigned<int16_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u16be_cb, [this]()
-	{
-		uint16_t v = be16toh(search_for_tc->GetValueUnsigned<uint16_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_s16le_cb, [this]()
-	{
-		int16_t v = le16toh(search_for_tc->GetValueSigned<int16_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u16le_cb, [this]()
-	{
-		uint16_t v = le16toh(search_for_tc->GetValueUnsigned<uint16_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_s32be_cb, [this]()
-	{
-		int32_t v = be32toh(search_for_tc->GetValueSigned<int32_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u32be_cb, [this]()
-	{
-		uint32_t v = be32toh(search_for_tc->GetValueUnsigned<uint32_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_s32le_cb, [this]()
-	{
-		int32_t v = le32toh(search_for_tc->GetValueSigned<int32_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u32le_cb, [this]()
-	{
-		uint32_t v = le32toh(search_for_tc->GetValueUnsigned<uint32_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_s16be_cb, [this]()
-	{
-		int16_t v = be16toh(search_for_tc->GetValueSigned<int16_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u64be_cb, [this]()
-	{
-		uint64_t v = be64toh(search_for_tc->GetValueUnsigned<uint64_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_s64le_cb, [this]()
-	{
-		int64_t v = le64toh(search_for_tc->GetValueSigned<int64_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
-	
-	try_type(t_u64le_cb, [this]()
-	{
-		uint64_t v = le64toh(search_for_tc->GetValueUnsigned<uint64_t>());
-		search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
-	});
+	INTEGER_TYPE_SIZE(16);
+	INTEGER_TYPE_SIZE(32);
+	INTEGER_TYPE_SIZE(64);
 	
 	if(search_for.empty())
 	{
@@ -714,111 +661,35 @@ bool REHex::Search::Value::read_window_controls()
 
 void REHex::Search::Value::OnText(wxCommandEvent &event)
 {
-	try {
-		try { search_for_tc->GetValueSigned<int8_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_s8_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_s8_cb->Disable();
-	}
+	i8_cb->Disable();
 	
-	try {
-		try { search_for_tc->GetValueUnsigned<uint8_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_u8_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_u8_cb->Disable();
-	}
+	try { search_for_tc->GetValueSigned<int8_t>(); i8_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try {
-		try { search_for_tc->GetValueSigned<int16_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_s16be_cb->Enable();
-		t_s16le_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_s16be_cb->Disable();
-		t_s16le_cb->Disable();
-	}
+	try { search_for_tc->GetValueUnsigned<uint8_t>(); i8_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try {
-		try { search_for_tc->GetValueUnsigned<uint16_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_u16be_cb->Enable();
-		t_u16le_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_u16be_cb->Disable();
-		t_u16le_cb->Disable();
-	}
+	i16_cb->Disable();
 	
-	try {
-		try { search_for_tc->GetValueSigned<int32_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_s32be_cb->Enable();
-		t_s32le_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_s32be_cb->Disable();
-		t_s32le_cb->Disable();
-	}
+	try { search_for_tc->GetValueSigned<int16_t>(); i16_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try {
-		try { search_for_tc->GetValueUnsigned<uint32_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_u32be_cb->Enable();
-		t_u32le_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_u32be_cb->Disable();
-		t_u32le_cb->Disable();
-	}
+	try { search_for_tc->GetValueUnsigned<uint16_t>(); i16_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try {
-		try { search_for_tc->GetValueSigned<int64_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_s64be_cb->Enable();
-		t_s64le_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_s64be_cb->Disable();
-		t_s64le_cb->Disable();
-	}
+	i32_cb->Disable();
 	
-	try {
-		try { search_for_tc->GetValueUnsigned<uint64_t>(); }
-		catch(const REHex::NumericTextCtrl::EmptyError &e) {}
-		catch(const REHex::NumericTextCtrl::FormatError &e) {}
-		
-		t_u64be_cb->Enable();
-		t_u64le_cb->Enable();
-	}
-	catch(const REHex::NumericTextCtrl::RangeError &e)
-	{
-		t_u64be_cb->Disable();
-		t_u64le_cb->Disable();
-	}
+	try { search_for_tc->GetValueSigned<int32_t>(); i32_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	
+	try { search_for_tc->GetValueUnsigned<uint32_t>(); i32_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	
+	i64_cb->Disable();
+	
+	try { search_for_tc->GetValueSigned<int64_t>(); i64_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	
+	try { search_for_tc->GetValueUnsigned<uint64_t>(); i64_cb->Enable(); }
+	catch(const REHex::NumericTextCtrl::InputError &e) {}
 }

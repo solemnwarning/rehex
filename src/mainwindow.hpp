@@ -154,6 +154,9 @@ namespace REHex {
 			
 			wxMenu *inline_comments_menu;
 			
+			Tab *active_tab();
+			Document *active_document();
+			
 			void _update_status_offset(REHex::Document *doc);
 			void _update_status_selection(REHex::Document *doc);
 			void _update_status_mode(REHex::Document *doc);

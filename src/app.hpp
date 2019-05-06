@@ -18,6 +18,7 @@
 #ifndef REHEX_APP_HPP
 #define REHEX_APP_HPP
 
+#include <string>
 #include <wx/config.h>
 #include <wx/filehistory.h>
 #include <wx/wx.h>
@@ -29,8 +30,14 @@ namespace REHex {
 			wxConfig *config;
 			wxFileHistory *recent_files;
 			
+			const std::string &get_last_directory();
+			void set_last_directory(const std::string &last_directory);
+			
 			virtual bool OnInit();
 			virtual int OnExit();
+			
+		private:
+			std::string last_directory;
 	};
 }
 

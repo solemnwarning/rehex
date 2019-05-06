@@ -40,6 +40,9 @@ bool REHex::App::OnInit()
 	
 	config = new wxConfig("REHex");
 	
+	config->SetPath("/");
+	last_directory = config->Read("last-directory", "");
+	
 	/* Display default tool panels if a default view hasn't been configured. */
 	if(!config->HasGroup("/default-view/"))
 	{
@@ -102,6 +105,9 @@ int REHex::App::OnExit()
 	config->SetPath("/recent-files/");
 	recent_files->Save(*config);
 	
+	config->SetPath("/");
+	config->Write("last-directory", wxString(last_directory));
+	
 	delete active_palette;
 	delete recent_files;
 	delete config;
@@ -111,4 +117,14 @@ int REHex::App::OnExit()
 	#endif
 	
 	return 0;
+}
+
+const std::string &REHex::App::get_last_directory()
+{
+	return last_directory;
+}
+
+void REHex::App::set_last_directory(const std::string &last_directory)
+{
+	this->last_directory = last_directory;
 }

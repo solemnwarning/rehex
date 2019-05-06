@@ -437,11 +437,34 @@ void REHex::MainWindow::OnNew(wxCommandEvent &event)
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 {
-	wxFileDialog openFileDialog(this, "Open File", "", "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	std::string dir;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir = wxfn.GetPath();
+	}
+	else{
+		dir = wxGetApp().get_last_directory();
+	}
+	
+	wxFileDialog openFileDialog(this, "Open File", dir, "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	if(openFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
-	open_file(openFileDialog.GetPath().ToStdString());
+	std::string filename = openFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	open_file(filename);
 }
 
 void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
@@ -480,18 +503,39 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 {
-	wxFileDialog saveFileDialog(this, "Save As", "", "", "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	std::string dir, name;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+		name = wxfn.GetFullName();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+		name = "";
+	}
+	
+	wxFileDialog saveFileDialog(this, "Save As", dir, name, "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 	if(saveFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 	
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	std::string filename = saveFileDialog.GetPath().ToStdString();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	Tab *tab = active_tab();
 	
 	try {
-		tab->doc->save(saveFileDialog.GetPath().ToStdString());
+		tab->doc->save(filename);
 	}
 	catch(const std::exception &e)
 	{
@@ -1037,6 +1081,22 @@ void REHex::MainWindow::OnUndoUpdate(wxCommandEvent &event)
 		/* Only update the menu if the event originated from the active document. */
 		_update_undo(tab->doc);
 	}
+}
+
+REHex::MainWindow::Tab *REHex::MainWindow::active_tab()
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	return tab;
+}
+
+REHex::Document *REHex::MainWindow::active_document()
+{
+	return active_tab()->doc;
 }
 
 void REHex::MainWindow::_update_status_offset(REHex::Document *doc)

@@ -19,6 +19,7 @@
 #define REHEX_MAINWINDOW_HPP
 
 #include <map>
+#include <set>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
 #include <wx/splitter.h>
@@ -88,6 +89,8 @@ namespace REHex {
 					Tab(wxWindow *parent);
 					Tab(wxWindow *parent, const std::string &filename);
 					
+					virtual ~Tab();
+					
 					REHex::Document    *doc;
 					wxSplitterWindow   *v_splitter;
 					wxSplitterWindow   *h_splitter;
@@ -95,10 +98,13 @@ namespace REHex {
 					wxNotebook         *h_tools;
 					
 					std::map<std::string, ToolPanel*> tools;
+					std::set<wxWindow*> search_dialogs;
 					
 					bool tool_active(const std::string &name);
 					void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
 					void tool_destroy(const std::string &name);
+					
+					void search_dialog_register(wxWindow *search_dialog);
 					
 					void save_view(wxConfig *config);
 					
@@ -107,6 +113,7 @@ namespace REHex {
 					void OnVToolChange(wxBookCtrlEvent &event);
 					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
 					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
+					void OnSearchDialogDestroy(wxWindowDestroyEvent &event);
 					
 					void vtools_adjust();
 					void htools_adjust();

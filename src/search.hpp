@@ -90,7 +90,9 @@ namespace REHex {
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
+			void OnCancel(wxCommandEvent &event);
 			void OnTimer(wxTimerEvent &event);
+			void OnClose(wxCloseEvent &event);
 			
 		private:
 			void enable_controls();

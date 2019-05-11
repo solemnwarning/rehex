@@ -57,11 +57,14 @@ static void set_width_chars(wxWindow *window, unsigned int chars)
 }
 
 BEGIN_EVENT_TABLE(REHex::Search, wxDialog)
+	EVT_CLOSE(REHex::Search::OnClose)
+	
 	EVT_CHECKBOX(ID_RANGE_CB,  REHex::Search::OnCheckBox)
 	EVT_CHECKBOX(ID_ALIGN_CB,  REHex::Search::OnCheckBox)
 	EVT_CHECKBOX(ID_RALIGN_CB, REHex::Search::OnCheckBox)
 	
 	EVT_BUTTON(ID_FIND_NEXT, REHex::Search::OnFindNext)
+	EVT_BUTTON(wxID_CANCEL, REHex::Search::OnCancel)
 	EVT_TIMER(ID_TIMER, REHex::Search::OnTimer)
 END_EVENT_TABLE()
 
@@ -227,6 +230,11 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 	}
 }
 
+void REHex::Search::OnCancel(wxCommandEvent &event)
+{
+	Close();
+}
+
 void REHex::Search::OnTimer(wxTimerEvent &event)
 {
 	if(progress->WasCancelled())
@@ -265,6 +273,11 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 	else{
 		progress->Update(((double)(100) / ((search_end - search_base) + 1)) * (next_window_start - search_base));
 	}
+}
+
+void REHex::Search::OnClose(wxCloseEvent &event)
+{
+	Destroy();
 }
 
 void REHex::Search::enable_controls()

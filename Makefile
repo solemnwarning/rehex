@@ -127,6 +127,7 @@ TEST_OBJS := \
 	tests/NumericTextCtrl.o \
 	tests/search-bseq.o \
 	tests/search-text.o \
+	tests/SearchValue.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)

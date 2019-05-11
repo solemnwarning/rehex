@@ -391,7 +391,7 @@ REHex::Search::Text::Text(wxWindow *parent, REHex::Document &doc, const std::str
 	setup_window();
 }
 
-bool REHex::Search::Text::test(const unsigned char *data, size_t data_size)
+bool REHex::Search::Text::test(const void *data, size_t data_size)
 {
 	if(case_sensitive)
 	{
@@ -449,7 +449,7 @@ REHex::Search::ByteSequence::ByteSequence(wxWindow *parent, REHex::Document &doc
 	setup_window();
 }
 
-bool REHex::Search::ByteSequence::test(const unsigned char *data, size_t data_size)
+bool REHex::Search::ByteSequence::test(const void *data, size_t data_size)
 {
 	return (data_size >= search_for.size()
 		&& memcmp(data, search_for.data(), search_for.size()) == 0);
@@ -501,7 +501,32 @@ REHex::Search::Value::Value(wxWindow *parent, REHex::Document &doc):
 	setup_window();
 }
 
-bool REHex::Search::Value::test(const unsigned char *data, size_t data_size)
+void REHex::Search::Value::configure(const std::string &value, unsigned formats)
+{
+	search_for_tc->SetValue(value);
+	
+	if((formats & FMT_LE) && (formats & FMT_BE))
+	{
+		e_either->SetValue(true);
+	}
+	else if((formats & FMT_LE))
+	{
+		e_little->SetValue(true);
+	}
+	else if((formats & FMT_BE))
+	{
+		e_big->SetValue(true);
+	}
+	
+	i8_cb->SetValue(!!(formats & FMT_I8));
+	i16_cb->SetValue(!!(formats & FMT_I16));
+	i32_cb->SetValue(!!(formats & FMT_I32));
+	i64_cb->SetValue(!!(formats & FMT_I64));
+	
+	read_window_controls();
+}
+
+bool REHex::Search::Value::test(const void *data, size_t data_size)
 {
 	for(auto i = search_for.begin(); i != search_for.end(); ++i)
 	{

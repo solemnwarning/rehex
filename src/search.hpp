@@ -73,9 +73,6 @@ namespace REHex {
 		protected:
 			Search(wxWindow *parent, REHex::Document &doc, const char *title);
 			
-			virtual bool test(const unsigned char *data, size_t data_size) = 0;
-			virtual size_t test_max_window() = 0;
-			
 			void setup_window();
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) = 0;
 			virtual bool read_window_controls() = 0;
@@ -87,6 +84,9 @@ namespace REHex {
 			off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
 			void begin_search(off_t from_offset, off_t range_end, size_t window_size = DEFAULT_WINDOW_SIZE);
 			void end_search();
+			
+			virtual bool test(const void *data, size_t data_size) = 0;
+			virtual size_t test_max_window() = 0;
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
@@ -113,10 +113,10 @@ namespace REHex {
 		public:
 			Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for = "", bool case_sensitive = true);
 			
-		protected:
-			virtual bool test(const unsigned char *data, size_t data_size);
+			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
 			
+		protected:
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);
 			virtual bool read_window_controls();
 	};
@@ -131,10 +131,10 @@ namespace REHex {
 		public:
 			ByteSequence(wxWindow *parent, REHex::Document &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
 			
-		protected:
-			virtual bool test(const unsigned char *data, size_t data_size);
+			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
 			
+		protected:
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);
 			virtual bool read_window_controls();
 	};
@@ -151,10 +151,19 @@ namespace REHex {
 		public:
 			Value(wxWindow *parent, REHex::Document &doc);
 			
-		protected:
-			virtual bool test(const unsigned char *data, size_t data_size);
+			static const unsigned FMT_LE  = (1 << 0);
+			static const unsigned FMT_BE  = (1 << 1);
+			static const unsigned FMT_I8  = (1 << 2);
+			static const unsigned FMT_I16 = (1 << 3);
+			static const unsigned FMT_I32 = (1 << 4);
+			static const unsigned FMT_I64 = (1 << 5);
+			
+			void configure(const std::string &value, unsigned formats);
+			
+			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
 			
+		protected:
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);
 			virtual bool read_window_controls();
 			

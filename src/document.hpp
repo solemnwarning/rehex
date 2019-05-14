@@ -256,6 +256,7 @@ namespace REHex {
 			
 			bool mouse_down_in_hex, mouse_down_in_ascii;
 			off_t mouse_down_at_offset;
+			int mouse_down_at_x;
 			wxTimer mouse_select_timer;
 			off_t mouse_shift_initial;
 			

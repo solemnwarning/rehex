@@ -1466,6 +1466,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						
 						mouse_shift_initial  = old_position;
 						mouse_down_at_offset = clicked_offset;
+						mouse_down_at_x      = rel_x;
 						mouse_down_in_ascii  = true;
 					}
 					else{
@@ -1474,6 +1475,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						clear_selection();
 						
 						mouse_down_at_offset = clicked_offset;
+						mouse_down_at_x      = rel_x;
 						mouse_down_in_ascii  = true;
 					}
 					
@@ -1507,6 +1509,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						
 						mouse_shift_initial  = old_position;
 						mouse_down_at_offset = old_position;
+						mouse_down_at_x      = rel_x;
 						mouse_down_in_hex    = true;
 					}
 					else{
@@ -1515,6 +1518,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 						clear_selection();
 						
 						mouse_down_at_offset = clicked_offset;
+						mouse_down_at_x      = rel_x;
 						mouse_down_in_hex    = true;
 					}
 					
@@ -1887,14 +1891,24 @@ void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
 				off_t select_to_offset = dr->offset_near_xy_hex(*this, rel_x, line_off);
 				if(select_to_offset >= 0)
 				{
+					off_t new_sel_off, new_sel_len;
+					
 					if(select_to_offset >= mouse_down_at_offset)
 					{
-						set_selection(mouse_down_at_offset,
-							((select_to_offset - mouse_down_at_offset) + 1));
+						new_sel_off = mouse_down_at_offset;
+						new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
 					}
 					else{
-						set_selection(select_to_offset,
-							((mouse_down_at_offset - select_to_offset) + 1));
+						new_sel_off = select_to_offset;
+						new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+					}
+					
+					if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < hf_char_width())
+					{
+						clear_selection();
+					}
+					else{
+						set_selection(new_sel_off, new_sel_len);
 					}
 					
 					/* TODO: Limit paint to affected area */
@@ -1908,14 +1922,24 @@ void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
 				off_t select_to_offset = dr->offset_near_xy_ascii(*this, rel_x, line_off);
 				if(select_to_offset >= 0)
 				{
+					off_t new_sel_off, new_sel_len;
+					
 					if(select_to_offset >= mouse_down_at_offset)
 					{
-						set_selection(mouse_down_at_offset,
-							((select_to_offset - mouse_down_at_offset) + 1));
+						new_sel_off = mouse_down_at_offset;
+						new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
 					}
 					else{
-						set_selection(select_to_offset,
-							((mouse_down_at_offset - select_to_offset) + 1));
+						new_sel_off = select_to_offset;
+						new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+					}
+					
+					if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
+					{
+						clear_selection();
+					}
+					else{
+						set_selection(new_sel_off, new_sel_len);
 					}
 					
 					/* TODO: Limit paint to affected area */

@@ -904,7 +904,7 @@ void REHex::MainWindow::OnAbout(wxCommandEvent &event)
 void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 {
 	int old_page_id = event.GetOldSelection();
-	if(old_page_id != wxNOT_FOUND)
+	if(old_page_id != wxNOT_FOUND && old_page_id < notebook->GetPageCount())
 	{
 		/* Hide any search dialogs attached to previous tab. */
 		

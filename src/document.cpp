@@ -1804,6 +1804,41 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 
 void REHex::Document::OnMotion(wxMouseEvent &event)
 {
+	int mouse_x = event.GetX();
+	int mouse_y = event.GetY();
+	
+	int rel_x = mouse_x + scroll_xoff;
+	
+	/* Iterate over the regions to find the last one which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto region = regions.begin();
+	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
+	{
+		region = next;
+	}
+	
+	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	
+	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
+	
+	while(region != regions.end() && line_off >= (*region)->y_lines)
+	{
+		line_off -= (*region)->y_lines;
+		++region;
+	}
+	
+	wxCursor cursor = wxNullCursor;
+	
+	if(region != regions.end())
+	{
+		cursor = (*region)->cursor_for_point(*this, rel_x, line_off, (mouse_y % hf_height));
+	}
+	
+	SetCursor(cursor);
+	
 	OnMotionTick(event.GetX(), event.GetY());
 }
 
@@ -3035,6 +3070,11 @@ REHex::Document::Region::Region():
 
 REHex::Document::Region::~Region() {}
 
+wxCursor REHex::Document::Region::cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px)
+{
+	return wxNullCursor;
+}
+
 void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y)
 {
 	if(indent_depth > 0)
@@ -3542,6 +3582,17 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 }
 
+wxCursor REHex::Document::Region::Data::cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px)
+{
+	if(x >= hex_text_x)
+	{
+		return wxCursor(wxCURSOR_IBEAM);
+	}
+	else{
+		return wxNullCursor;
+	}
+}
+
 off_t REHex::Document::Region::Data::offset_at_xy_hex(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines)
 {
 	if(mouse_x_px < hex_text_x)
@@ -3755,5 +3806,22 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 	{
 		dc.DrawText(*li, (x + (doc.hf_char_width() / 2)), y);
 		y += doc.hf_height;
+	}
+}
+
+wxCursor REHex::Document::Region::Comment::cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px)
+{
+	int hf_width = doc.hf_char_width();
+	
+	if(
+		(y_lines > 0 || y_px >= (doc.hf_height / 4)) /* Not above top edge. */
+		&& (y_lines < (this->y_lines - 1) || y_px <= ((doc.hf_height / 4) * 3)) /* Not below bottom edge. */
+		&& x >= (hf_width / 4) /* Not left of left edge. */
+		&& x < (doc.virtual_width - (hf_width / 4))) /* Not right of right edge. */
+	{
+		return wxCursor(wxCURSOR_HAND);
+	}
+	else{
+		return wxNullCursor;
 	}
 }

@@ -174,6 +174,8 @@ namespace REHex {
 				*/
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) = 0;
 				
+				virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px);
+				
 				void draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 				
 				struct Data;
@@ -340,6 +342,7 @@ namespace REHex {
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
 		
 		off_t offset_at_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
 		off_t offset_at_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
@@ -363,6 +366,7 @@ namespace REHex {
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
 	};
 }
 

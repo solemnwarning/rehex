@@ -1446,7 +1446,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			{
 				/* Click was within the ASCII area */
 				
-				off_t clicked_offset = dr->offset_at_xy_ascii(*this, rel_x, line_off);
+				off_t clicked_offset = dr->offset_near_xy_ascii(*this, rel_x, line_off);
 				if(clicked_offset >= 0)
 				{
 					/* Clicked on a character */
@@ -1489,7 +1489,7 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			else{
 				/* Click was within the hex area */
 				
-				off_t clicked_offset = dr->offset_at_xy_hex(*this, rel_x, line_off);
+				off_t clicked_offset = dr->offset_near_xy_hex(*this, rel_x, line_off);
 				if(clicked_offset >= 0)
 				{
 					/* Clicked on a byte */

@@ -1882,6 +1882,7 @@ void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
 	if(region != regions.end())
 	{
 		REHex::Document::Region::Data *dr = dynamic_cast<REHex::Document::Region::Data*>(*region);
+		REHex::Document::Region::Comment *cr;
 		if(dr != NULL)
 		{
 			if(mouse_down_in_hex)
@@ -1945,6 +1946,35 @@ void REHex::Document::OnMotionTick(int mouse_x, int mouse_y)
 					/* TODO: Limit paint to affected area */
 					Refresh();
 				}
+			}
+		}
+		else if((cr = dynamic_cast<REHex::Document::Region::Comment*>(*region)) != NULL)
+		{
+			if(mouse_down_in_hex || mouse_down_in_ascii)
+			{
+				off_t select_to_offset = cr->c_offset;
+				off_t new_sel_off, new_sel_len;
+				
+				if(select_to_offset >= mouse_down_at_offset)
+				{
+					new_sel_off = mouse_down_at_offset;
+					new_sel_len = select_to_offset - mouse_down_at_offset;
+				}
+				else{
+					new_sel_off = select_to_offset;
+					new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+				}
+				
+				if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
+				{
+					clear_selection();
+				}
+				else{
+					set_selection(new_sel_off, new_sel_len);
+				}
+				
+				/* TODO: Limit paint to affected area */
+				Refresh();
 			}
 		}
 	}

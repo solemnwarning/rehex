@@ -3627,7 +3627,7 @@ off_t REHex::Document::Region::Data::offset_near_xy_hex(REHex::Document &doc, in
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	
-	unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((doc.bytes_per_group * 2)));
+	unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((doc.bytes_per_group * 2) + 1));
 	unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
 	off_t clicked_offset                = line_data_begin + line_offset_bytes;
 	

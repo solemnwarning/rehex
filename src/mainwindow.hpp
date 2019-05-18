@@ -98,13 +98,13 @@ namespace REHex {
 					wxNotebook         *h_tools;
 					
 					std::map<std::string, ToolPanel*> tools;
-					std::set<wxWindow*> search_dialogs;
+					std::set<wxDialog*> search_dialogs;
 					
 					bool tool_active(const std::string &name);
 					void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
 					void tool_destroy(const std::string &name);
 					
-					void search_dialog_register(wxWindow *search_dialog);
+					void search_dialog_register(wxDialog *search_dialog);
 					
 					void save_view(wxConfig *config);
 					

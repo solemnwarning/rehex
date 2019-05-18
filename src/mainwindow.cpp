@@ -973,7 +973,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	/* Show any search dialogs attached to this tab. */
 	for(auto sdi = tab->search_dialogs.begin(); sdi != tab->search_dialogs.end(); ++sdi)
 	{
-		(*sdi)->Show();
+		(*sdi)->ShowWithoutActivating();
 	}
 }
 
@@ -1435,7 +1435,7 @@ void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
 	}
 }
 
-void REHex::MainWindow::Tab::search_dialog_register(wxWindow *search_dialog)
+void REHex::MainWindow::Tab::search_dialog_register(wxDialog *search_dialog)
 {
 	search_dialogs.insert(search_dialog);
 	search_dialog->Bind(wxEVT_DESTROY, &REHex::MainWindow::Tab::OnSearchDialogDestroy, this);
@@ -1538,7 +1538,7 @@ void REHex::MainWindow::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
 
 void REHex::MainWindow::Tab::OnSearchDialogDestroy(wxWindowDestroyEvent &event)
 {
-	search_dialogs.erase(event.GetWindow());
+	search_dialogs.erase((wxDialog*)(event.GetWindow()));
 	
 	/* Continue propogation. */
 	event.Skip();

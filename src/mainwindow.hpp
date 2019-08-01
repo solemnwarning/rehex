@@ -19,6 +19,7 @@
 #define REHEX_MAINWINDOW_HPP
 
 #include <map>
+#include <vector>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
 #include <wx/splitter.h>
@@ -45,6 +46,8 @@ namespace REHex {
 			void OnSave(wxCommandEvent &event);
 			void OnSaveAs(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);
+			void OnCloseAll(wxCommandEvent &event);
+			void OnCloseOthers(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
 			void OnSearchText(wxCommandEvent &event);
@@ -163,6 +166,9 @@ namespace REHex {
 			void _update_undo(REHex::Document *doc);
 			
 			void _clipboard_copy(bool cut);
+			
+			bool unsaved_confirm();
+			bool unsaved_confirm(const std::vector<wxString> &files);
 			
 			DECLARE_EVENT_TABLE()
 	};

@@ -72,17 +72,21 @@ enum {
 	ID_SYSTEM_PALETTE,
 	ID_LIGHT_PALETTE,
 	ID_DARK_PALETTE,
+	ID_CLOSE_ALL,
+	ID_CLOSE_OTHERS,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_CLOSE(REHex::MainWindow::OnWindowClose)
 	
-	EVT_MENU(wxID_NEW,    REHex::MainWindow::OnNew)
-	EVT_MENU(wxID_OPEN,   REHex::MainWindow::OnOpen)
-	EVT_MENU(wxID_SAVE,   REHex::MainWindow::OnSave)
-	EVT_MENU(wxID_SAVEAS, REHex::MainWindow::OnSaveAs)
-	EVT_MENU(wxID_CLOSE,  REHex::MainWindow::OnClose)
-	EVT_MENU(wxID_EXIT,   REHex::MainWindow::OnExit)
+	EVT_MENU(wxID_NEW,        REHex::MainWindow::OnNew)
+	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
+	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
+	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
+	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
+	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
+	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
+	EVT_MENU(wxID_EXIT,       REHex::MainWindow::OnExit)
 	
 	EVT_MENU(wxID_FILE1, REHex::MainWindow::OnRecentOpen)
 	EVT_MENU(wxID_FILE2, REHex::MainWindow::OnRecentOpen)
@@ -151,7 +155,10 @@ REHex::MainWindow::MainWindow():
 	file_menu->AppendSubMenu(recent_files_menu, "Open &Recent");
 	file_menu->Append(wxID_SAVE,   "&Save");
 	file_menu->Append(wxID_SAVEAS, "&Save As");
-	file_menu->Append(wxID_CLOSE,  "&Close");
+	file_menu->AppendSeparator();
+	file_menu->Append(wxID_CLOSE,  "&Close Tab");
+	file_menu->Append(ID_CLOSE_ALL, "Close All Tabs");
+	file_menu->Append(ID_CLOSE_OTHERS, "Close Other Tabs");
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   "&Exit");
 	
@@ -372,58 +379,11 @@ void REHex::MainWindow::open_file(const std::string &filename)
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 {
-	std::vector<wxString> dirty_files;
-	
-	size_t num_tabs = notebook->GetPageCount();
-	for(size_t i = 0; i < num_tabs; ++i)
+	if(!unsaved_confirm())
 	{
-		wxWindow *page = notebook->GetPage(i);
-		assert(page != NULL);
-		
-		auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
-		assert(tab != NULL);
-		
-		if(tab->doc->is_dirty())
-		{
-			dirty_files.push_back(tab->doc->get_title());
-		}
-	}
-	
-	if(dirty_files.size() == 1)
-	{
-		wxMessageDialog confirm(this, (wxString("The file ") + dirty_files[0] + " has unsaved changes.\nClose anyway?"), "Unsaved changes",
-			(wxYES | wxNO | wxCENTER));
-		
-		int response = confirm.ShowModal();
-		
-		if(response == wxID_NO)
-		{
-			/* Stop the window from being closed. */
-			event.Veto();
-			return;
-		}
-	}
-	else if(dirty_files.size() > 1)
-	{
-		wxString message = "The following files have unsaved changes, close anyway?\n";
-		
-		for(auto i = dirty_files.begin(); i != dirty_files.end(); ++i)
-		{
-			message.Append('\n');
-			message.Append(*i);
-		}
-		
-		wxMessageDialog confirm(this, message, "Unsaved changes",
-			(wxYES | wxNO | wxCENTER));
-		
-		int response = confirm.ShowModal();
-		
-		if(response == wxID_NO)
-		{
-			/* Stop the window from being closed. */
-			event.Veto();
-			return;
-		}
+		/* Stop the window from being closed. */
+		event.Veto();
+		return;
 	}
 	
 	/* Base implementation will deal with cleaning up the window. */
@@ -575,6 +535,66 @@ void REHex::MainWindow::OnClose(wxCommandEvent &event)
 	if(notebook->GetPageCount() == 0)
 	{
 		ProcessCommand(wxID_NEW);
+	}
+}
+
+void REHex::MainWindow::OnCloseAll(wxCommandEvent &event)
+{
+	if(!unsaved_confirm())
+	{
+		/* User didn't really want to close unsaved tabs. */
+		return;
+	}
+	
+	notebook->DeleteAllPages();
+	ProcessCommand(wxID_NEW);
+}
+
+void REHex::MainWindow::OnCloseOthers(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	std::vector<wxString> dirty_others;
+	
+	size_t num_tabs = notebook->GetPageCount();
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		assert(page != NULL);
+		
+		if(page == cpage)
+		{
+			continue;
+		}
+		
+		auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		assert(tab != NULL);
+		
+		if(tab->doc->is_dirty())
+		{
+			dirty_others.push_back(tab->doc->get_title());
+		}
+	}
+	
+	if(!unsaved_confirm(dirty_others))
+	{
+		/* User didn't really want to close unsaved tabs. */
+		return;
+	}
+	
+	for(size_t i = 0; i < notebook->GetPageCount();)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		assert(page != NULL);
+		
+		if(page == cpage)
+		{
+			++i;
+		}
+		else{
+			notebook->DeletePage(i);
+		}
 	}
 }
 
@@ -1239,6 +1259,60 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 			delete copy_data;
 		}
 	}
+}
+
+bool REHex::MainWindow::unsaved_confirm()
+{
+	std::vector<wxString> dirty_files;
+	
+	size_t num_tabs = notebook->GetPageCount();
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		assert(page != NULL);
+		
+		auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		assert(tab != NULL);
+		
+		if(tab->doc->is_dirty())
+		{
+			dirty_files.push_back(tab->doc->get_title());
+		}
+	}
+	
+	return unsaved_confirm(dirty_files);
+}
+
+bool REHex::MainWindow::unsaved_confirm(const std::vector<wxString> &files)
+{
+	if(files.size() == 1)
+	{
+		wxMessageDialog confirm(this, (wxString("The file ") + files[0] + " has unsaved changes.\nClose anyway?"), "Unsaved changes",
+			(wxYES | wxNO | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		
+		return response == wxID_YES;
+	}
+	else if(files.size() > 1)
+	{
+		wxString message = "The following files have unsaved changes, close anyway?\n";
+		
+		for(auto i = files.begin(); i != files.end(); ++i)
+		{
+			message.Append('\n');
+			message.Append(*i);
+		}
+		
+		wxMessageDialog confirm(this, message, "Unsaved changes",
+			(wxYES | wxNO | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		
+		return response == wxID_YES;
+	}
+
+	return true;
 }
 
 BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)

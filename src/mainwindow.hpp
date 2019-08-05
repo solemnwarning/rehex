@@ -170,6 +170,10 @@ namespace REHex {
 			bool unsaved_confirm();
 			bool unsaved_confirm(const std::vector<wxString> &files);
 			
+			void close_tab(Tab *tab);
+			void close_all_tabs();
+			void close_other_tabs(Tab *tab);
+			
 			DECLARE_EVENT_TABLE()
 	};
 }

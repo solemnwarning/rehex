@@ -156,9 +156,9 @@ REHex::MainWindow::MainWindow():
 	file_menu->Append(wxID_SAVE,   "&Save");
 	file_menu->Append(wxID_SAVEAS, "&Save As");
 	file_menu->AppendSeparator();
-	file_menu->Append(wxID_CLOSE,  "&Close Tab");
-	file_menu->Append(ID_CLOSE_ALL, "Close All Tabs");
-	file_menu->Append(ID_CLOSE_OTHERS, "Close Other Tabs");
+	file_menu->Append(wxID_CLOSE,  "&Close");
+	file_menu->Append(ID_CLOSE_ALL, "Close All");
+	file_menu->Append(ID_CLOSE_OTHERS, "Close Others");
 	file_menu->AppendSeparator();
 	file_menu->Append(wxID_EXIT,   "&Exit");
 	

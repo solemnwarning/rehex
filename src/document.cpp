@@ -2336,6 +2336,8 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			++region;
 		}
 		
+		_update_vscroll();
+		
 		_raise_data_modified();
 		
 		if(NestedOffsetLengthMap_data_inserted(comments, offset, length) > 0)

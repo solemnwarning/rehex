@@ -70,7 +70,7 @@ static std::vector<unsigned char> read_file(const char *filename)
 	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
-	std::vector<unsigned char> got_data = b.read_data(0, 40); \
+	std::vector<unsigned char> got_data = b.read_data(0, 1024); \
 	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns correct data"; \
 } \
@@ -2377,4 +2377,21 @@ TEST(Buffer, InsertMultiBlockFileBeyondEnd)
 			TEST_LENGTH(29);
 		}
 	);
+}
+
+/* Verifies we can read/write files containing any bytes without any funky
+ * behaviour occuring (see 52de6b2a41d7ad82761764e250f92b359cafd072).
+*/
+TEST(Buffer, ReadWriteAnyBytes)
+{
+	unsigned char BEGIN_DATA[512];
+	unsigned char END_DATA[512];
+	
+	for(int i = 0; i < 512; ++i)
+	{
+		BEGIN_DATA[i] = (i % 255);
+		END_DATA[i]   = (i % 255);
+	}
+	
+	TEST_BUFFER_MANIP({});
 }

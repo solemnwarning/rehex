@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -52,12 +52,13 @@ namespace REHex {
 					EmptyError(): InputError("No number provided") {}
 			};
 			
-			template<typename T> T GetValueSigned(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
+			template<typename T>
+				typename std::enable_if<std::numeric_limits<T>::is_signed, T>::type
+				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
 			{
-				static_assert(std::numeric_limits<T>::is_integer, "GetValueSigned() instantiated with non-integer type");
-				static_assert(std::numeric_limits<T>::is_signed,  "GetValueSigned() instantiated with unsigned type");
+				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
-				std::string sval = GetValue().ToStdString();
+				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				if(sval.length() == 0)
 				{
 					/* String is empty */
@@ -94,12 +95,13 @@ namespace REHex {
 				return ival;
 			}
 			
-			template<typename T> T GetValueUnsigned(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
+			template<typename T>
+				typename std::enable_if<!std::numeric_limits<T>::is_signed, T>::type
+				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
 			{
-				static_assert(std::numeric_limits<T>::is_integer, "GetValueUnsigned() instantiated with non-integer type");
-				static_assert(!std::numeric_limits<T>::is_signed, "GetValueUnsigned() instantiated with signed type");
+				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
-				std::string sval = GetValue().ToStdString();
+				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				if(sval.length() == 0)
 				{
 					/* String is empty */

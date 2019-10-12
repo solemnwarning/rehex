@@ -26,7 +26,7 @@
 
 #define GV_SIGNED_RESULT(value_type, string_value, type_value) \
 { \
-	const char *test_name = "GetValueSigned<" #value_type "> on a value of " #string_value " returns " #type_value; \
+	const char *test_name = "GetValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
 	\
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
 	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
@@ -34,7 +34,7 @@
 	tc->SetValue(string_value); \
 	\
 	EXPECT_NO_THROW({ \
-		value_type v = tc->GetValueSigned<value_type>(); \
+		value_type v = tc->GetValue<value_type>(); \
 		EXPECT_EQ(v, type_value) << test_name; \
 	}) << test_name; \
 }
@@ -46,13 +46,13 @@
 	\
 	tc->SetValue(string_value); \
 	\
-	EXPECT_THROW({ tc->GetValueSigned<value_type>(); }, exception_class) << \
-		"GetValueSigned<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
+	EXPECT_THROW({ tc->GetValue<value_type>(); }, exception_class) << \
+		"GetValue<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
 }
 
 #define GV_UNSIGNED_RESULT(value_type, string_value, type_value) \
 { \
-	const char *test_name = "GetValueUnsigned<" #value_type "> on a value of " #string_value " returns " #type_value; \
+	const char *test_name = "GetValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
 	\
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
 	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
@@ -60,7 +60,7 @@
 	tc->SetValue(string_value); \
 	\
 	EXPECT_NO_THROW({ \
-		value_type v = tc->GetValueUnsigned<value_type>(); \
+		value_type v = tc->GetValue<value_type>(); \
 		EXPECT_EQ(v, type_value) << test_name; \
 	}) << test_name; \
 }
@@ -72,11 +72,11 @@
 	\
 	tc->SetValue(string_value); \
 	\
-	EXPECT_THROW({ tc->GetValueUnsigned<value_type>(); }, exception_class) << \
-		"GetValueUnsigned<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
+	EXPECT_THROW({ tc->GetValue<value_type>(); }, exception_class) << \
+		"GetValue<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
 }
 
-TEST(NumericTextCtrl, GetValueSigned)
+TEST(NumericTextCtrl, GetValue)
 {
 	GV_SIGNED_RESULT(int8_t,    "0", 0);
 	GV_SIGNED_RESULT(int8_t, "-128", -128);
@@ -161,10 +161,7 @@ TEST(NumericTextCtrl, GetValueSigned)
 	GV_SIGNED_THROWS(int, "\t",  REHex::NumericTextCtrl::EmptyError);
 	GV_SIGNED_THROWS(int, "0.",  REHex::NumericTextCtrl::FormatError);
 	GV_SIGNED_THROWS(int, "0.0", REHex::NumericTextCtrl::FormatError);
-}
-
-TEST(NumericTextCtrl, GetValueUnsigned)
-{
+	
 	GV_UNSIGNED_RESULT(uint8_t,   "0", 0);
 	GV_UNSIGNED_THROWS(uint8_t,  "-1", REHex::NumericTextCtrl::RangeError);
 	GV_UNSIGNED_RESULT(uint8_t, "255", 0xFF);

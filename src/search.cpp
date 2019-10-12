@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -613,7 +613,7 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 	if(i ## x ## _cb->GetValue()) \
 	{ \
 		try { \
-			uint ## x ## _t v = search_for_tc->GetValueUnsigned<uint ## x ## _t>(); \
+			uint ## x ## _t v = search_for_tc->GetValue<uint ## x ## _t>(); \
 			\
 			if(e_little->GetValue() || e_either->GetValue()) \
 			{ \
@@ -630,7 +630,7 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 		catch(const REHex::NumericTextCtrl::RangeError &e) \
 		{ \
 			try { \
-				int ## x ## _t v = search_for_tc->GetValueSigned<int ## x ## _t>(); \
+				int ## x ## _t v = search_for_tc->GetValue<int ## x ## _t>(); \
 				\
 				if(e_little->GetValue() || e_either->GetValue()) \
 				{ \
@@ -657,13 +657,13 @@ bool REHex::Search::Value::read_window_controls()
 	if(i8_cb->GetValue())
 	{
 		try {
-			uint8_t v = search_for_tc->GetValueUnsigned<uint8_t>();
+			uint8_t v = search_for_tc->GetValue<uint8_t>();
 			search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
 		}
 		catch(const REHex::NumericTextCtrl::RangeError &e)
 		{
 			try {
-				int8_t v = search_for_tc->GetValueSigned<int8_t>();
+				int8_t v = search_for_tc->GetValue<int8_t>();
 				search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
 			}
 			catch(REHex::NumericTextCtrl::InputError &e) {}
@@ -688,33 +688,33 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 {
 	i8_cb->Disable();
 	
-	try { search_for_tc->GetValueSigned<int8_t>(); i8_cb->Enable(); }
+	try { search_for_tc->GetValue<int8_t>(); i8_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try { search_for_tc->GetValueUnsigned<uint8_t>(); i8_cb->Enable(); }
+	try { search_for_tc->GetValue<uint8_t>(); i8_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
 	i16_cb->Disable();
 	
-	try { search_for_tc->GetValueSigned<int16_t>(); i16_cb->Enable(); }
+	try { search_for_tc->GetValue<int16_t>(); i16_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try { search_for_tc->GetValueUnsigned<uint16_t>(); i16_cb->Enable(); }
+	try { search_for_tc->GetValue<uint16_t>(); i16_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
 	i32_cb->Disable();
 	
-	try { search_for_tc->GetValueSigned<int32_t>(); i32_cb->Enable(); }
+	try { search_for_tc->GetValue<int32_t>(); i32_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try { search_for_tc->GetValueUnsigned<uint32_t>(); i32_cb->Enable(); }
+	try { search_for_tc->GetValue<uint32_t>(); i32_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
 	i64_cb->Disable();
 	
-	try { search_for_tc->GetValueSigned<int64_t>(); i64_cb->Enable(); }
+	try { search_for_tc->GetValue<int64_t>(); i64_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 	
-	try { search_for_tc->GetValueUnsigned<uint64_t>(); i64_cb->Enable(); }
+	try { search_for_tc->GetValue<uint64_t>(); i64_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &e) {}
 }

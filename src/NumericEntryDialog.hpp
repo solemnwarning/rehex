@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -80,18 +80,9 @@ namespace REHex {
 				});
 			}
 			
-			template<typename U = T>
-				typename std::enable_if<std::numeric_limits<U>::is_signed, U>::type
-				GetValue()
+			T GetValue()
 			{
-				return textbox->GetValueSigned(min_value, max_value);
-			}
-			
-			template<typename U = T>
-				typename std::enable_if<!std::numeric_limits<U>::is_signed, U>::type
-				GetValue()
-			{
-				return textbox->GetValueUnsigned(min_value, max_value);
+				return textbox->GetValue(min_value, max_value);
 			}
 	};
 }

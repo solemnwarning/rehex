@@ -588,7 +588,10 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 	off_t current_pos = tab->doc->get_cursor_position();
 	off_t max_pos     = tab->doc->buffer_length() - !tab->doc->get_insert_mode();
 	
-	REHex::NumericEntryDialog<off_t> ni(this, "Jump to offset", current_pos, 0, max_pos);
+	REHex::NumericEntryDialog<off_t> ni(this,
+		"Jump to offset",
+		"Prefix offset with -/+ to jump relative to current cursor position",
+		current_pos, 0, max_pos, current_pos);
 	
 	int rc = ni.ShowModal();
 	if(rc == wxID_OK)

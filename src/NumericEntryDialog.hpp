@@ -22,6 +22,7 @@
 #include <string>
 #include <type_traits>
 #include <wx/dialog.h>
+#include <wx/stattext.h>
 
 #include "NumericTextCtrl.hpp"
 
@@ -31,23 +32,28 @@ namespace REHex {
 		private:
 			const T min_value;
 			const T max_value;
+			const T rel_base;
 			
 			NumericTextCtrl *textbox;
 			
 		public:
-			NumericEntryDialog(wxWindow *parent, const std::string &title, T initial_value, T min_value = std::numeric_limits<T>::min(), T max_value = std::numeric_limits<T>::max()):
+			NumericEntryDialog(wxWindow *parent, const std::string &title, const std::string &text, T initial_value, T min_value = std::numeric_limits<T>::min(), T max_value = std::numeric_limits<T>::max(), T rel_base = 0):
 				wxDialog(parent, wxID_ANY, title),
 				min_value(min_value),
-				max_value(max_value)
+				max_value(max_value),
+				rel_base(rel_base)
 			{
 				wxBoxSizer *topsizer = new wxBoxSizer(wxVERTICAL);
+				
+				wxStaticText *st = new wxStaticText(this, wxID_ANY, text);
+				topsizer->Add(st, 1, wxEXPAND | wxTOP | wxLEFT | wxRIGHT, 10);
 				
 				std::ostringstream ss;
 				ss << initial_value;
 				std::string initial_text = ss.str();
 				
 				textbox = new NumericTextCtrl(this, wxID_ANY, initial_text);
-				topsizer->Add(textbox, 1, wxEXPAND | wxALL, 10);
+				topsizer->Add(textbox, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
 				
 				wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
 				
@@ -82,7 +88,7 @@ namespace REHex {
 			
 			T GetValue()
 			{
-				return textbox->GetValue(min_value, max_value);
+				return textbox->GetValue(min_value, max_value, rel_base);
 			}
 	};
 }

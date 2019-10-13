@@ -54,7 +54,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::numeric_limits<T>::is_signed, T>::type
-				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
+				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
@@ -86,6 +86,28 @@ namespace REHex {
 					throw RangeError();
 				}
 				
+				if(sval.find_first_of("+-") != std::string::npos)
+				{
+					if(ival > 0 && rel_base > 0)
+					{
+						if((LLONG_MAX - rel_base) < ival)
+						{
+							/* rel_base + ival > LLONG_MAX */
+							throw RangeError();
+						}
+					}
+					else if(ival < 0 && rel_base < 0)
+					{
+						if((LLONG_MIN - rel_base) > ival)
+						{
+							/* rel_base + ival < LLONG_MIN */
+							throw RangeError();
+						}
+					}
+					
+					ival += rel_base;
+				}
+				
 				if(ival < min || ival > max)
 				{
 					/* Out of range of T or constraint */
@@ -97,7 +119,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<!std::numeric_limits<T>::is_signed, T>::type
-				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max())
+				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
@@ -108,18 +130,32 @@ namespace REHex {
 					throw EmptyError();
 				}
 				
-				size_t first_non_space = sval.find_first_not_of("\t ");
+				/* Remove leading whitespace */
+				sval.erase(0, strspn(sval.c_str(), "\t "));
 				
-				if(first_non_space == std::string::npos)
+				if(sval.empty())
 				{
-					/* String contains only whitespace */
+					/* String is empty */
 					throw EmptyError();
 				}
 				
-				if(sval.at(first_non_space) == '-')
+				bool rel_neg = (sval.at(0) == '-');
+				bool rel_pos = (sval.at(0) == '+');
+				
+				if(rel_neg || rel_pos)
 				{
-					/* Negative numbers not welcome here, NEXT! */
-					throw RangeError();
+					sval.erase(0, 1);
+					
+					if(sval.empty())
+					{
+						/* That was the only non-whitespace character. */
+						throw FormatError();
+					}
+				}
+				
+				if(sval.find_first_of("+-\t ") != std::string::npos)
+				{
+					throw FormatError();
 				}
 				
 				errno = 0;
@@ -135,6 +171,29 @@ namespace REHex {
 				{
 					/* Out of range of long long */
 					throw RangeError();
+				}
+				
+				if(rel_neg)
+				{
+					if(ival > rel_base)
+					{
+						/* rel_base - ival < 0 */
+						throw RangeError();
+					}
+					else{
+						ival = rel_base - ival;
+					}
+				}
+				else if(rel_pos)
+				{
+					if((ULLONG_MAX - rel_base) < ival)
+					{
+						/* rel_base + ival > ULLONG_MAX */
+						throw RangeError();
+					}
+					else{
+						ival += rel_base;
+					}
 				}
 				
 				if(ival < min || ival > max)

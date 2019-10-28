@@ -36,6 +36,8 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_DATA_MODIFIED,     wxCommandEvent);
 	wxDECLARE_EVENT(EV_UNDO_UPDATE,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_CLEAN,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_DIRTY,      wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
@@ -200,7 +202,9 @@ namespace REHex {
 			
 			Buffer *buffer;
 			std::string filename;
+			
 			bool dirty;
+			void set_dirty(bool dirty);
 			
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
@@ -315,6 +319,8 @@ namespace REHex {
 			void _raise_comment_modified();
 			void _raise_data_modified();
 			void _raise_undo_update();
+			void _raise_dirty();
+			void _raise_clean();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];

@@ -76,12 +76,16 @@ wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,       wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,      wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
+	dirty = true;
+	
 	_ctor_pre(parent);
 	
 	buffer = new REHex::Buffer();
@@ -98,6 +102,8 @@ REHex::Document::Document(wxWindow *parent, const std::string &filename):
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
+	dirty = false;
+	
 	_ctor_pre(parent);
 	
 	buffer = new REHex::Buffer(filename);
@@ -131,7 +137,7 @@ void REHex::Document::save()
 	buffer->write_inplace();
 	_save_metadata(filename + ".rehex-meta");
 	
-	dirty = false;
+	set_dirty(false);
 }
 
 void REHex::Document::save(const std::string &filename)
@@ -144,7 +150,7 @@ void REHex::Document::save(const std::string &filename)
 	
 	_save_metadata(filename + ".rehex-meta");
 	
-	dirty = false;
+	set_dirty(false);
 }
 
 std::string REHex::Document::get_title()
@@ -2050,7 +2056,6 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
 	
-	dirty             = false;
 	client_width      = 0;
 	client_height     = 0;
 	visible_lines     = 1;
@@ -2254,7 +2259,7 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 	
 	if(ok)
 	{
-		dirty = true;
+		set_dirty(true);
 		_raise_data_modified();
 	}
 }
@@ -2267,7 +2272,7 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 	
 	if(ok)
 	{
-		dirty = true;
+		set_dirty(true);
 		
 		auto region = regions.begin();
 		
@@ -2358,7 +2363,7 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 	
 	if(ok)
 	{
-		dirty = true;
+		set_dirty(true);
 		
 		auto region = regions.begin();
 		
@@ -2583,7 +2588,7 @@ void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, off_t length, co
 {
 	if(NestedOffsetLengthMap_set(comments, offset, length, Comment(text)))
 	{
-		dirty = true;
+		set_dirty(true);
 		
 		_reinit_regions();
 		_recalc_regions(dc);
@@ -2594,7 +2599,7 @@ void REHex::Document::_delete_comment(wxDC &dc, off_t offset, off_t length)
 {
 	if(comments.erase(NestedOffsetLengthMapKey(offset, length)) > 0)
 	{
-		dirty = true;
+		set_dirty(true);
 		
 		_reinit_regions();
 		_recalc_regions(dc);
@@ -2977,6 +2982,40 @@ void REHex::Document::_raise_undo_update()
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+void REHex::Document::_raise_dirty()
+{
+	wxCommandEvent event(REHex::EV_BECAME_DIRTY);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
+}
+
+void REHex::Document::_raise_clean()
+{
+	wxCommandEvent event(REHex::EV_BECAME_CLEAN);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
+}
+
+void REHex::Document::set_dirty(bool dirty)
+{
+	if(this->dirty == dirty)
+	{
+		return;
+	}
+	
+	this->dirty = dirty;
+	
+	if(dirty)
+	{
+		_raise_dirty();
+	}
+	else{
+		_raise_clean();
+	}
 }
 
 /* Calculate the width of a character in hex_font. */

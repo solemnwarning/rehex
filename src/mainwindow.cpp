@@ -142,12 +142,14 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
 	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED,    REHex::MainWindow::OnInsertToggle)
 	EVT_COMMAND(wxID_ANY, REHex::EV_UNDO_UPDATE,       REHex::MainWindow::OnUndoUpdate)
+	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_DIRTY,      REHex::MainWindow::OnBecameDirty)
+	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_CLEAN,      REHex::MainWindow::OnBecameClean)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
 	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
 {
-	wxMenu *file_menu = new wxMenu;
+	file_menu = new wxMenu;
 	recent_files_menu = new wxMenu;
 	
 	file_menu->Append(wxID_NEW,    "&New");
@@ -294,6 +296,11 @@ REHex::MainWindow::MainWindow():
 	
 	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxAUI_NB_TOP | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ALL_TABS));
+	
+	wxImageList *notebook_il = new wxImageList();
+	notebook_il->Add(artp.GetBitmap(wxART_FILE_SAVE, wxART_MENU));
+	
+	notebook->AssignImageList(notebook_il); /* notebook takes ownership of notebook_il */
 	
 	CreateStatusBar(3);
 	
@@ -506,7 +513,6 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
-	SetTitle(tab->doc->get_title() + " - Reverse Engineers' Hex Editor");
 }
 
 void REHex::MainWindow::OnClose(wxCommandEvent &event)
@@ -864,8 +870,6 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	SetTitle(tab->doc->get_title() + " - Reverse Engineers' Hex Editor");
-	
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	view_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
 	view_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
@@ -907,6 +911,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	_update_status_selection(tab->doc);
 	_update_status_mode(tab->doc);
 	_update_undo(tab->doc);
+	_update_dirty(tab->doc);
 }
 
 void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
@@ -1064,6 +1069,42 @@ void REHex::MainWindow::OnUndoUpdate(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnBecameDirty(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
+	assert(doc != NULL);
+	
+	if(doc == tab->doc)
+	{
+		/* Only update the window if the event originated from the active document. */
+		_update_dirty(tab->doc);
+	}
+}
+
+void REHex::MainWindow::OnBecameClean(wxCommandEvent &event)
+{
+	wxWindow *cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+	
+	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(tab != NULL);
+	
+	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
+	assert(doc != NULL);
+	
+	if(doc == tab->doc)
+	{
+		/* Only update the window if the event originated from the active document. */
+		_update_dirty(tab->doc);
+	}
+}
+
 REHex::MainWindow::Tab *REHex::MainWindow::active_tab()
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -1160,6 +1201,22 @@ void REHex::MainWindow::_update_undo(REHex::Document *doc)
 		edit_menu->SetLabel(wxID_REDO, "&Redo\tCtrl-Shift-Z");
 		edit_menu->Enable(wxID_REDO, false);
 	}
+}
+
+void REHex::MainWindow::_update_dirty(REHex::Document *doc)
+{
+	bool dirty = doc->is_dirty();
+	
+	SetTitle((dirty ? "[UNSAVED] " : "") + doc->get_title() + " - Reverse Engineers' Hex Editor");
+	
+	file_menu->Enable(wxID_SAVE,   dirty);
+	file_menu->Enable(wxID_SAVEAS, dirty);
+	
+	wxToolBar *toolbar = GetToolBar();
+	toolbar->EnableTool(wxID_SAVE,   dirty);
+	toolbar->EnableTool(wxID_SAVEAS, dirty);
+	
+	notebook->SetPageImage(notebook->GetSelection(), (dirty ? 0 : -1));
 }
 
 void REHex::MainWindow::_clipboard_copy(bool cut)

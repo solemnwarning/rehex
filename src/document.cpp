@@ -3125,8 +3125,9 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 		
 		int64_t skip_lines = (y < 0 ? (-y / ch) : 0);
 		
-		int box_y = y + (skip_lines * ch);
-		int box_h = std::min(((y_lines - skip_lines) * (int64_t)(ch)), (int64_t)(doc.client_height));
+		int     box_y  = y + (skip_lines * (int64_t)(ch));
+		int64_t box_h  = (y_lines - skip_lines) * (int64_t)(ch);
+		int     box_hc = std::min(box_h, (int64_t)(doc.client_height));
 		
 		int box_x = x + (cw / 4);
 		int box_w = doc.virtual_width - (cw / 2);
@@ -3134,24 +3135,27 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 		dc.SetPen(*wxTRANSPARENT_PEN);
 		dc.SetBrush(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 		
-		dc.DrawRectangle(0, box_y, doc.client_width, box_h);
+		dc.DrawRectangle(0, box_y, doc.client_width, box_hc);
 		
 		dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
 		
 		for(int i = 0; i < indent_depth; ++i)
 		{
-			if((i + indent_final) == indent_depth)
+			if(box_h < (int64_t)(doc.client_height) && (i + indent_final) == indent_depth)
 			{
-				box_h -= ch / 2;
+				box_h  -= ch / 2;
+				box_hc -= ch / 2;
 			}
 			
-			dc.DrawLine(box_x, box_y, box_x, (box_y + box_h));
-			dc.DrawLine((box_x + box_w - 1), box_y, (box_x + box_w - 1), (box_y + box_h));
+			dc.DrawLine(box_x, box_y, box_x, (box_y + box_hc));
+			dc.DrawLine((box_x + box_w - 1), box_y, (box_x + box_w - 1), (box_y + box_hc));
 			
-			if((i + indent_final) >= indent_depth)
+			if(box_h < (int64_t)(doc.client_height) && (i + indent_final) >= indent_depth)
 			{
 				dc.DrawLine(box_x, (box_y + box_h), (box_x + box_w - 1), (box_y + box_h));
-				box_h -= ch;
+				
+				box_h  -= ch;
+				box_hc -= ch;
 			}
 			
 			box_x += cw;

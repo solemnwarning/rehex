@@ -356,29 +356,35 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 			break;
 		}
 		
-		std::vector<unsigned char> window = doc.read_data(window_base, window_size + compare_size);
-		
-		off_t search_base = window_base;
-		if(((search_base - align_from) % align_to) != 0)
-		{
-			search_base += (align_to - ((search_base - align_from) % align_to));
-		}
-		
-		for(off_t at = search_base; at < next_window; at += align_to)
-		{
-			off_t  window_off   = at - window_base;
-			size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(search_end - at));
+		try {
+			std::vector<unsigned char> window = doc.read_data(window_base, window_size + compare_size);
 			
-			if(test((window.data() + window_off), window_avail))
+			off_t search_base = window_base;
+			if(((search_base - align_from) % align_to) != 0)
 			{
-				std::unique_lock<std::mutex> l(lock);
+				search_base += (align_to - ((search_base - align_from) % align_to));
+			}
+			
+			for(off_t at = search_base; at < next_window; at += align_to)
+			{
+				off_t  window_off   = at - window_base;
+				size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(search_end - at));
 				
-				if(match_found_at < 0 || match_found_at > at)
+				if(test((window.data() + window_off), window_avail))
 				{
-					match_found_at = at;
-					return;
+					std::unique_lock<std::mutex> l(lock);
+					
+					if(match_found_at < 0 || match_found_at > at)
+					{
+						match_found_at = at;
+						return;
+					}
 				}
 			}
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::Search::thread_main: %s\n", e.what());
 		}
 	}
 }

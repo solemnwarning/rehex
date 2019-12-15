@@ -3277,7 +3277,19 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	}
 	
 	/* Fetch the data to be drawn. */
-	std::vector<unsigned char> data = doc.buffer->read_data(d_offset + skip_bytes, std::min(max_bytes, (d_length - std::min(skip_bytes, d_length))));
+	std::vector<unsigned char> data;
+	bool data_err = false;
+	
+	try {
+		data = doc.buffer->read_data(d_offset + skip_bytes, std::min(max_bytes, (d_length - std::min(skip_bytes, d_length))));
+	}
+	catch(const std::exception &e)
+	{
+		fprintf(stderr, "Exception in REHex::Document::Region::Data::draw: %s\n", e.what());
+		
+		data.insert(data.end(), std::min(max_bytes, (d_length - std::min(skip_bytes, d_length))), '?');
+		data_err = true;
+	}
 	
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
@@ -3373,9 +3385,11 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			
 			auto highlight = NestedOffsetLengthMap_get(doc.highlights, cur_off);
 			
-			auto draw_nibble = [&hex_x,y,&dc,&doc,&hex_str,&inverted_text_colour,&selected_text_colour,&highlighted_text_colour,&cur_off,&hex_active,&hex_base_x,&hex_x_char,&highlight](unsigned char nibble, bool invert)
+			auto draw_nibble = [&](unsigned char nibble, bool invert)
 			{
-				const char *nibble_to_hex = "0123456789ABCDEF";
+				const char *nibble_to_hex = data_err
+					? "????????????????"
+					: "0123456789ABCDEF";
 				
 				if(invert && doc.cursor_visible)
 				{

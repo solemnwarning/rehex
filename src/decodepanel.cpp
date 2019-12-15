@@ -238,11 +238,38 @@ wxSize REHex::DecodePanel::DoGetBestClientSize() const
 	} \
 }
 
+#define TC_ERR(field) \
+{ \
+	field->SetValueFromString(e.what()); \
+	pgrid->DisableProperty(field); \
+}
+
+#define TC_ERR4(f1, f2, f3, f4) \
+	TC_ERR(f1); \
+	TC_ERR(f2); \
+	TC_ERR(f3); \
+	TC_ERR(f4);
+
 void REHex::DecodePanel::update()
 {
 	assert(document != NULL);
 	
-	std::vector<unsigned char> data_at_cur = document->read_data(document->get_cursor_position(), 8);
+	std::vector<unsigned char> data_at_cur;
+	try {
+		data_at_cur = document->read_data(document->get_cursor_position(), 8);
+	}
+	catch(const std::exception &e)
+	{
+		TC_ERR4(s8,  u8,  h8,  o8);
+		TC_ERR4(s16, u16, h16, o16);
+		TC_ERR4(s32, u32, h32, o32);
+		TC_ERR4(s64, u64, h64, o64);
+		
+		TC_ERR(f32);
+		TC_ERR(f64);
+		
+		return;
+	}
 	
 	const unsigned char *data = data_at_cur.data();
 	size_t               size = data_at_cur.size();
@@ -466,7 +493,15 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedVa
 	if(document != NULL)
 	{
 		T tval = htoX(ival);
-		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		
+		try {
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::DecodePanel::OnSignedValue: %s\n", e.what());
+			update();
+		}
 	}
 }
 
@@ -505,7 +540,15 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsigned
 	if(document != NULL)
 	{
 		T tval = htoX(uval);
-		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		
+		try {
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::DecodePanel::OnUnsignedValue: %s\n", e.what());
+			update();
+		}
 	}
 }
 
@@ -535,7 +578,15 @@ template<float (*htoX)(float)> void REHex::DecodePanel::OnFloatValue(wxStringPro
 	if(document != NULL)
 	{
 		float tval = htoX(uval);
-		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		
+		try {
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::DecodePanel::OnFloatValue: %s\n", e.what());
+			update();
+		}
 	}
 }
 
@@ -565,6 +616,14 @@ template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxString
 	if(document != NULL)
 	{
 		double tval = htoX(uval);
-		document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		
+		try {
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::DecodePanel::OnDoubleValue: %s\n", e.what());
+			update();
+		}
 	}
 }

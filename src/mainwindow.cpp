@@ -631,7 +631,13 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 			assert(tab != NULL);
 			
-			tab->doc->handle_paste(data.GetText().ToStdString());
+			try {
+				tab->doc->handle_paste(data.GetText().ToStdString());
+			}
+			catch(const std::exception &e)
+			{
+				wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
+			}
 		}
 		
 		wxTheClipboard->Close();
@@ -1262,6 +1268,11 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 		wxMessageBox(
 			"Memory allocation failed while preparing clipboard buffer.",
 			"Error", (wxOK | wxICON_ERROR), this);
+		return;
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
 		return;
 	}
 	

@@ -20,14 +20,22 @@ LLVM_CONFIG ?= llvm-config
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
 
-WX_CXXFLAGS := $(shell $(WX_CONFIG) --cxxflags base core aui propgrid adv)
-WX_LIBS     := $(shell $(WX_CONFIG) --libs     base core aui propgrid adv)
+# Wrapper around the $(shell) function that aborts the build if the command
+# exits with a nonzero status.
+shell-or-die = \
+	$(eval sod_out := $(shell $(1); echo $$?)) \
+	$(if $(filter 0,$(lastword $(sod_out))), \
+		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)), \
+		$(error $(1) exited with status $(lastword $(sod_out))))
+
+WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
+WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
 
 # I would use llvm-config --cxxflags, but that specifies more crap it has no
 # business interfering with (e.g. warnings) than things it actually needs.
 # Hopefully this is enough to get by everywhere.
-LLVM_CXXFLAGS := -I$(shell $(LLVM_CONFIG) --includedir)
-LLVM_LIBS     := $(shell $(LLVM_CONFIG) --ldflags --libs --system-libs)
+LLVM_CXXFLAGS := -I$(call shell-or-die,$(LLVM_CONFIG) --includedir)
+LLVM_LIBS     := $(call shell-or-die,$(LLVM_CONFIG) --ldflags --libs --system-libs)
 
 CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CFLAGS)
 CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(LLVM_CXXFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
@@ -63,19 +71,12 @@ check: tests/all-tests
 
 .PHONY: clean
 clean:
+	rm -f res/license.c res/license.h res/icon16.c res/icon16.h res/icon32.c res/icon32.h res/icon48.c res/icon48.h res/icon64.c res/icon64.h res/icon128.c res/icon128.h
 	rm -f $(APP_OBJS)
 	rm -f $(EXE)
-	rm -f $(TESTS_BUFFER_OBJS)
-	rm -f $(TESTS_DOCUMENT_OBJS)
-	rm -f $(TESTS_NUMERICTEXTCTRL_OBJS)
-	rm -f $(TESTS_SEARCH_BSEQ_OBJS)
-	rm -f $(TESTS_SEARCH_TEXT_OBJS)
-	rm -f $(TESTS_UTIL_OBJS)
-	rm -f $(ALL_TESTS)
+	rm -f $(TEST_OBJS)
+	rm -f ./tests/all-tests
 	rm -f $(EMBED_EXE)
-	rm -f res/icon16.c res/icon16.h res/icon16.o
-	rm -f res/icon32.c res/icon32.h res/icon32.o
-	rm -f res/icon48.c res/icon48.h res/icon48.o
 
 APP_OBJS := \
 	res/icon16.o \

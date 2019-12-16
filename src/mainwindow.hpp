@@ -20,6 +20,7 @@
 
 #include <map>
 #include <set>
+#include <vector>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
 #include <wx/splitter.h>
@@ -46,6 +47,8 @@ namespace REHex {
 			void OnSave(wxCommandEvent &event);
 			void OnSaveAs(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);
+			void OnCloseAll(wxCommandEvent &event);
+			void OnCloseOthers(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
 			void OnSearchText(wxCommandEvent &event);
@@ -81,6 +84,8 @@ namespace REHex {
 			void OnSelectionChange(wxCommandEvent &event);
 			void OnInsertToggle(wxCommandEvent &event);
 			void OnUndoUpdate(wxCommandEvent &event);
+			void OnBecameDirty(wxCommandEvent &event);
+			void OnBecameClean(wxCommandEvent &event);
 			
 		private:
 			class Tab: public wxPanel
@@ -151,6 +156,7 @@ namespace REHex {
 					virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString &filenames) override;
 			};
 			
+			wxMenu *file_menu;
 			wxMenu *recent_files_menu;
 			wxMenu *edit_menu;
 			wxMenu *view_menu;
@@ -168,8 +174,16 @@ namespace REHex {
 			void _update_status_selection(REHex::Document *doc);
 			void _update_status_mode(REHex::Document *doc);
 			void _update_undo(REHex::Document *doc);
+			void _update_dirty(REHex::Document *doc);
 			
 			void _clipboard_copy(bool cut);
+			
+			bool unsaved_confirm();
+			bool unsaved_confirm(const std::vector<wxString> &files);
+			
+			void close_tab(Tab *tab);
+			void close_all_tabs();
+			void close_other_tabs(Tab *tab);
 			
 			DECLARE_EVENT_TABLE()
 	};

@@ -147,7 +147,17 @@ void REHex::Disassemble::update()
 	
 	off_t window_base = std::max((position - (WINDOW_SIZE / 2)), (off_t)(0));
 	
-	std::vector<unsigned char> data = document->read_data(window_base, WINDOW_SIZE);
+	std::vector<unsigned char> data;
+	try {
+		data = document->read_data(window_base, WINDOW_SIZE);
+	}
+	catch(const std::exception &e)
+	{
+		assembly->clear();
+		assembly->append_line(window_base, e.what());
+		
+		return;
+	}
 	
 	std::map<off_t, Instruction> instructions;
 	

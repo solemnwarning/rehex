@@ -36,6 +36,8 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_DATA_MODIFIED,     wxCommandEvent);
 	wxDECLARE_EVENT(EV_UNDO_UPDATE,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_CLEAN,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_DIRTY,      wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
@@ -174,6 +176,8 @@ namespace REHex {
 				*/
 				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) = 0;
 				
+				virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px);
+				
 				void draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y);
 				
 				struct Data;
@@ -198,7 +202,9 @@ namespace REHex {
 			
 			Buffer *buffer;
 			std::string filename;
+			
 			bool dirty;
+			void set_dirty(bool dirty);
 			
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
@@ -256,6 +262,7 @@ namespace REHex {
 			
 			bool mouse_down_in_hex, mouse_down_in_ascii;
 			off_t mouse_down_at_offset;
+			int mouse_down_at_x;
 			wxTimer mouse_select_timer;
 			off_t mouse_shift_initial;
 			
@@ -312,6 +319,8 @@ namespace REHex {
 			void _raise_comment_modified();
 			void _raise_data_modified();
 			void _raise_undo_update();
+			void _raise_dirty();
+			void _raise_clean();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
@@ -339,6 +348,7 @@ namespace REHex {
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
 		
 		off_t offset_at_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
 		off_t offset_at_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
@@ -362,6 +372,7 @@ namespace REHex {
 		
 		virtual void update_lines(REHex::Document &doc, wxDC &dc);
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
 	};
 }
 

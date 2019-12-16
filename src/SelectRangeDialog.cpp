@@ -121,7 +121,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 	off_t selection_off, selection_length;
 	
 	try {
-		selection_off = range_from->GetValueSigned<off_t>(0, (doc_length - 1));
+		selection_off = range_from->GetValue<off_t>(0, (doc_length - 1));
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -132,7 +132,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 	if(range_to_enable->GetValue())
 	{
 		try {
-			off_t selection_to = range_to->GetValueSigned<off_t>(selection_off, (doc_length - 1));
+			off_t selection_to = range_to->GetValue<off_t>(selection_off, (doc_length - 1));
 			selection_length = (selection_to - selection_off) + 1;
 		}
 		catch(const NumericTextCtrl::InputError &e)
@@ -144,7 +144,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 	else if(range_len_enable->GetValue())
 	{
 		try {
-			selection_length = range_len->GetValueSigned<off_t>(0, (doc_length - selection_off));
+			selection_length = range_len->GetValue<off_t>(0, (doc_length - selection_off));
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{

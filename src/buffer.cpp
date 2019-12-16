@@ -285,7 +285,11 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	 * the file, creating it if it doesn't exist, WITHOUT truncating and letting
 	 * us write at arbitrary positions.
 	*/
+	#ifdef _WIN32
+	int fd = open(filename.c_str(), (O_RDWR | O_CREAT | O_NOCTTY | _O_BINARY), 0777);
+	#else
 	int fd = open(filename.c_str(), (O_RDWR | O_CREAT | O_NOCTTY), 0777);
+	#endif
 	if(fd == -1)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));

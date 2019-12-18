@@ -555,8 +555,10 @@ void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::Text *t = new REHex::Search::Text(tab, *(tab->doc));
-	t->Show(true);
+	REHex::Search::Text *sd = new REHex::Search::Text(tab, *(tab->doc));
+	sd->Show(true);
+	
+	tab->search_dialog_register(sd);
 }
 
 void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
@@ -567,8 +569,10 @@ void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::ByteSequence *t = new REHex::Search::ByteSequence(tab, *(tab->doc));
-	t->Show(true);
+	REHex::Search::ByteSequence *sd = new REHex::Search::ByteSequence(tab, *(tab->doc));
+	sd->Show(true);
+	
+	tab->search_dialog_register(sd);
 }
 
 void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
@@ -579,8 +583,10 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::Value *t = new REHex::Search::Value(tab, *(tab->doc));
-	t->Show(true);
+	REHex::Search::Value *sd = new REHex::Search::Value(tab, *(tab->doc));
+	sd->Show(true);
+	
+	tab->search_dialog_register(sd);
 }
 
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
@@ -870,6 +876,23 @@ void REHex::MainWindow::OnAbout(wxCommandEvent &event)
 
 void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 {
+	int old_page_id = event.GetOldSelection();
+	if(old_page_id != wxNOT_FOUND && old_page_id < notebook->GetPageCount())
+	{
+		/* Hide any search dialogs attached to previous tab. */
+		
+		wxWindow *old_page = notebook->GetPage(old_page_id);
+		assert(old_page != NULL);
+		
+		auto old_tab = dynamic_cast<REHex::MainWindow::Tab*>(old_page);
+		assert(old_tab != NULL);
+		
+		for(auto sdi = old_tab->search_dialogs.begin(); sdi != old_tab->search_dialogs.end(); ++sdi)
+		{
+			(*sdi)->Hide();
+		}
+	}
+	
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
@@ -918,6 +941,12 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	_update_status_mode(tab->doc);
 	_update_undo(tab->doc);
 	_update_dirty(tab->doc);
+	
+	/* Show any search dialogs attached to this tab. */
+	for(auto sdi = tab->search_dialogs.begin(); sdi != tab->search_dialogs.end(); ++sdi)
+	{
+		(*sdi)->ShowWithoutActivating();
+	}
 }
 
 void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
@@ -1500,6 +1529,14 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	vtools_adjust_on_idle();
 }
 
+REHex::MainWindow::Tab::~Tab()
+{
+	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
+	{
+		(*sdi)->Unbind(wxEVT_DESTROY, &REHex::MainWindow::Tab::OnSearchDialogDestroy, this);
+	}
+}
+
 bool REHex::MainWindow::Tab::tool_active(const std::string &name)
 {
 	return tools.find(name) != tools.end();
@@ -1578,6 +1615,12 @@ void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
 	{
 		htools_adjust();
 	}
+}
+
+void REHex::MainWindow::Tab::search_dialog_register(wxDialog *search_dialog)
+{
+	search_dialogs.insert(search_dialog);
+	search_dialog->Bind(wxEVT_DESTROY, &REHex::MainWindow::Tab::OnSearchDialogDestroy, this);
 }
 
 void REHex::MainWindow::Tab::save_view(wxConfig *config)
@@ -1673,6 +1716,14 @@ void REHex::MainWindow::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
 	{
 		event.SetSashPosition(clamp);
 	}
+}
+
+void REHex::MainWindow::Tab::OnSearchDialogDestroy(wxWindowDestroyEvent &event)
+{
+	search_dialogs.erase((wxDialog*)(event.GetWindow()));
+	
+	/* Continue propogation. */
+	event.Skip();
 }
 
 int REHex::MainWindow::Tab::hsplit_clamp_sash(int sash_position)

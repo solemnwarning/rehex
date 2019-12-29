@@ -2062,7 +2062,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	bytes_per_line    = 0;
 	bytes_per_group   = 4;
 	show_ascii        = true;
-	inline_comment_mode = ICM_FULL;
+	inline_comment_mode = ICM_FULL_INDENT;
 	scroll_xoff       = 0;
 	scroll_yoff       = 0;
 	scroll_yoff_max   = 0;

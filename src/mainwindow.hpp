@@ -160,7 +160,9 @@ namespace REHex {
 			wxMenu *recent_files_menu;
 			wxMenu *edit_menu;
 			wxMenu *view_menu;
+			
 			wxAuiNotebook *notebook;
+			wxBitmap notebook_dirty_bitmap;
 			
 			wxMenu *tool_panels_menu;
 			std::map<std::string, int> tool_panel_name_to_tpm_id;

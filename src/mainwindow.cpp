@@ -297,13 +297,8 @@ REHex::MainWindow::MainWindow():
 	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxAUI_NB_TOP | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ALL_TABS));
 	
-	wxBitmap dirty_bitmap = artp.GetBitmap(wxART_FILE_SAVE, wxART_MENU);
-	assert(dirty_bitmap != wxNullBitmap);
-	
-	wxImageList *notebook_il = new wxImageList(dirty_bitmap.GetWidth(), dirty_bitmap.GetHeight());
-	notebook_il->Add(dirty_bitmap);
-	
-	notebook->AssignImageList(notebook_il); /* notebook takes ownership of notebook_il */
+	notebook_dirty_bitmap = artp.GetBitmap(wxART_FILE_SAVE, wxART_MENU);
+	assert(!notebook_dirty_bitmap.IsSameAs(wxNullBitmap));
 	
 	CreateStatusBar(3);
 	
@@ -1254,7 +1249,7 @@ void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 	toolbar->EnableTool(wxID_SAVE,   dirty);
 	toolbar->EnableTool(wxID_SAVEAS, dirty);
 	
-	notebook->SetPageImage(notebook->GetSelection(), (dirty ? 0 : wxBookCtrl::NO_IMAGE));
+	notebook->SetPageBitmap(notebook->GetSelection(), (dirty ? notebook_dirty_bitmap : wxNullBitmap));
 }
 
 void REHex::MainWindow::_clipboard_copy(bool cut)

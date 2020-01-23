@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -2467,7 +2467,7 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
 	std::vector<unsigned char> old_data = read_data(offset, length);
-	assert(old_data.size() == length);
+	assert(old_data.size() == (size_t)(length));
 	
 	std::vector<unsigned char> new_data(data, data + length);
 	
@@ -2508,7 +2508,7 @@ void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset
 void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length)
 {
 	std::vector<unsigned char> erase_data = read_data(offset, length);
-	assert(erase_data.size() == length);
+	assert(erase_data.size() == (size_t)(length));
 	
 	_tracked_change(change_desc,
 		[this, offset, erase_data]()

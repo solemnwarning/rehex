@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -312,12 +312,12 @@ int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataVi
 		{
 			result = 0;
 		}
-		else if(key1->length > key2->length)
+		else /* if(key1->length > key2->length) */
 		{
 			result = 1;
 		}
 	}
-	else if(key1->offset > key2->offset)
+	else /* if(key1->offset > key2->offset) */
 	{
 		result = 1;
 	}

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -346,8 +346,8 @@ namespace REHex {
 		
 		Data(off_t d_offset, off_t d_length, int i_depth = 0);
 		
-		virtual void update_lines(REHex::Document &doc, wxDC &dc);
-		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		virtual void update_lines(REHex::Document &doc, wxDC &dc) override;
+		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) override;
 		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
 		
 		off_t offset_at_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
@@ -370,8 +370,8 @@ namespace REHex {
 		Comment(off_t c_offset, const wxString &c_text):
 			Comment(c_offset, 0, c_text, 0) {}
 		
-		virtual void update_lines(REHex::Document &doc, wxDC &dc);
-		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y);
+		virtual void update_lines(REHex::Document &doc, wxDC &dc) override;
+		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) override;
 		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
 	};
 }

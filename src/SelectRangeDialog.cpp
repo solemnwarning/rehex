@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -129,6 +129,8 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 		return;
 	}
 	
+	assert(range_to_enable->GetValue() || range_len_enable->GetValue());
+	
 	if(range_to_enable->GetValue())
 	{
 		try {
@@ -151,6 +153,10 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 			wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
 			return;
 		}
+	}
+	else{
+		/* Shouldn't be reachable. */
+		return;
 	}
 	
 	document.set_selection(selection_off, selection_length);

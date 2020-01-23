@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -875,7 +875,7 @@ void REHex::MainWindow::OnAbout(wxCommandEvent &event)
 void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 {
 	int old_page_id = event.GetOldSelection();
-	if(old_page_id != wxNOT_FOUND && old_page_id < notebook->GetPageCount())
+	if(old_page_id != wxNOT_FOUND && old_page_id < (int)(notebook->GetPageCount()))
 	{
 		/* Hide any search dialogs attached to previous tab. */
 		
@@ -995,7 +995,7 @@ void REHex::MainWindow::OnDocumentMenu(wxAuiNotebookEvent &event)
 	wxMenuItem *open_dir = menu.Append(wxID_ANY, "Open Folder");
 	open_dir->Enable(filename != "");
 	
-	menu.Bind(wxEVT_MENU, [this, &filename](wxCommandEvent &event)
+	menu.Bind(wxEVT_MENU, [&filename](wxCommandEvent &event)
 	{
 		REHex::file_manager_show_file(filename);
 	}, open_dir->GetId(), open_dir->GetId());

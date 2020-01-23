@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -122,7 +122,7 @@ REHex::Palette *REHex::Palette::create_system_palette()
 		WINDOWTEXT,  /* PAL_COMMENT_FG */
 	};
 	
-	static_assert(sizeof(colours) == sizeof(palette));
+	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
 	return new Palette("system", "System colours", colours);
 }
@@ -166,7 +166,7 @@ REHex::Palette *REHex::Palette::create_light_palette()
 		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
 	};
 	
-	static_assert(sizeof(colours) == sizeof(palette));
+	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
 	return new Palette("light", "Light", colours);
 }
@@ -210,7 +210,7 @@ REHex::Palette *REHex::Palette::create_dark_palette()
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
 	};
 	
-	static_assert(sizeof(colours) == sizeof(palette));
+	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
 	return new Palette("dark", "Dark", colours);
 }

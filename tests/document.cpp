@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -111,11 +111,6 @@ TEST(Document, Tests)
 		
 		unsigned char z4[] = {0x00,0x00,0x00,0x00};
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,0));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
-		
 		doc->insert_data(0, z4, 4);
 		
 		is_int(4, doc->buffer->length(), "Document::insert_data() expands Buffer")
@@ -143,12 +138,9 @@ TEST(Document, Tests)
 		unsigned char f2[]   = {0xFF,0xFF};
 		unsigned char f2z4[] = {0xFF,0xFF,0x00,0x00,0x00,0x00};
 		
-		doc->buffer->insert_data(0, z4, 4);
+		doc->insert_data(0, z4, 4);
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		assert(doc->regions.size() == 1);
 		
 		doc->insert_data(0, f2, 2);
 		
@@ -177,12 +169,9 @@ TEST(Document, Tests)
 		unsigned char f2[]     = {0xFF,0xFF};
 		unsigned char z2f2z2[] = {0x00,0x00,0xFF,0xFF,0x00,0x00};
 		
-		doc->buffer->insert_data(0, z4, 4);
+		doc->insert_data(0, z4, 4);
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		assert(doc->regions.size() == 1);
 		
 		doc->insert_data(2, f2, 2);
 		
@@ -211,12 +200,9 @@ TEST(Document, Tests)
 		unsigned char f2[]   = {0xFF,0xFF};
 		unsigned char z4f2[] = {0x00,0x00,0x00,0x00,0xFF,0xFF};
 		
-		doc->buffer->insert_data(0, z4, 4);
+		doc->insert_data(0, z4, 4);
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,4));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		assert(doc->regions.size() == 1);
 		
 		doc->insert_data(4, f2, 2);
 		
@@ -245,17 +231,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0xFF,0xFF,0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(0, to_insert, sizeof(to_insert));
 		
@@ -291,17 +271,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0x00,0x00,0xFF,0xFF,0x00,0x01,0x01,0x01,0x01,0x02,0x02};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(2, to_insert, sizeof(to_insert));
 		
@@ -337,17 +311,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0x00,0x00,0x00,0xFF,0xFF,0x01,0x01,0x01,0x01,0x02,0x02};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(3, to_insert, sizeof(to_insert));
 		
@@ -383,17 +351,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0x00,0x00,0x00,0x01,0x01,0x01,0xFF,0xFF,0x01,0x02,0x02};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(6, to_insert, sizeof(to_insert));
 		
@@ -429,17 +391,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0xFF,0xFF,0x02,0x02};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(7, to_insert, sizeof(to_insert));
 		
@@ -475,17 +431,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0xFF,0xFF,0x02,0x02,0x02};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(8, to_insert, sizeof(to_insert));
 		
@@ -521,17 +471,11 @@ TEST(Document, Tests)
 		unsigned char to_insert[]      = {0xFF,0xFF};
 		unsigned char buffer_final[]   = {0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x02,0x02,0xFF,0xFF};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,3));
-		doc->regions.push_back(new REHex::Document::Region::Comment(3,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(3,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(7,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(7,2));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(3, 0, REHex::Document::Comment("b"));
+		doc->set_comment(7, 0, REHex::Document::Comment("c"));
 		
 		doc->insert_data(9, to_insert, sizeof(to_insert));
 		
@@ -568,12 +512,7 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
 		unsigned char buffer_final[]   = {0x03,0x04,0x05,0x06,0x07};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
-		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
 		doc->erase_data(0, 3);
 		
@@ -597,12 +536,7 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
 		unsigned char buffer_final[]   = {0x00,0x01,0x03,0x04,0x05,0x06,0x07};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
-		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
 		doc->erase_data(2, 1);
 		
@@ -626,12 +560,7 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
-		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
 		doc->erase_data(6, 2);
 		
@@ -655,12 +584,7 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
 		unsigned char buffer_final[]   = {};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
-		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Data(0,8));
-		doc->data_regions_count = 1;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
 		doc->erase_data(0, 8);
 		
@@ -684,17 +608,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(0, 2);
 		
@@ -730,17 +648,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(1, 3);
 		
@@ -776,17 +688,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(1, 4);
 		
@@ -822,17 +728,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(0, 5);
 		
@@ -863,17 +763,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(5, 1);
 		
@@ -909,17 +803,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(6, 1);
 		
@@ -955,17 +843,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(8, 1);
 		
@@ -1001,17 +883,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(5, 4);
 		
@@ -1042,17 +918,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(9, 3);
 		
@@ -1088,17 +958,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(11, 1);
 		
@@ -1134,17 +998,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(10, 3);
 		
@@ -1180,17 +1038,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(9, 4);
 		
@@ -1221,17 +1073,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(3, 4);
 		
@@ -1267,17 +1113,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(3, 6);
 		
@@ -1308,17 +1148,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(0, 6);
 		
@@ -1349,17 +1183,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(4, 7);
 		
@@ -1390,17 +1218,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x0A,0x0B,0x0C};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(8, 2);
 		
@@ -1436,17 +1258,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(8, 5);
 		
@@ -1477,17 +1293,11 @@ TEST(Document, Tests)
 		unsigned char buffer_initial[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C};
 		unsigned char buffer_final[]   = {};
 		
-		doc->buffer->insert_data(0, buffer_initial, sizeof(buffer_initial));
+		doc->insert_data(0, buffer_initial, sizeof(buffer_initial));
 		
-		doc->regions.clear();
-		doc->regions.push_back(new REHex::Document::Region::Comment(0,"a"));
-		doc->regions.push_back(new REHex::Document::Region::Data(0,5));
-		doc->regions.push_back(new REHex::Document::Region::Comment(5,"b"));
-		doc->regions.push_back(new REHex::Document::Region::Data(5,4));
-		doc->regions.push_back(new REHex::Document::Region::Comment(9,"c"));
-		doc->regions.push_back(new REHex::Document::Region::Data(9,4));
-		doc->data_regions_count = 3;
-		{ wxClientDC dc(doc); doc->_recalc_regions(dc); }
+		doc->set_comment(0, 0, REHex::Document::Comment("a"));
+		doc->set_comment(5, 0, REHex::Document::Comment("b"));
+		doc->set_comment(9, 0, REHex::Document::Comment("c"));
 		
 		doc->erase_data(0, 13);
 		

@@ -1600,7 +1600,7 @@ void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
 	wxNotebook *notebook = dynamic_cast<wxNotebook*>(tool_window->GetParent());
 	assert(notebook != NULL);
 	
-	size_t page_idx = notebook->FindPage(tool_window);
+	int page_idx = notebook->FindPage(tool_window);
 	assert(page_idx != wxNOT_FOUND);
 	
 	notebook->DeletePage(page_idx);

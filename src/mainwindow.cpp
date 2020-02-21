@@ -152,13 +152,13 @@ REHex::MainWindow::MainWindow():
 	file_menu = new wxMenu;
 	recent_files_menu = new wxMenu;
 	
-	file_menu->Append(wxID_NEW,    "&New");
-	file_menu->Append(wxID_OPEN,   "&Open");
+	file_menu->Append(wxID_NEW,    "&New\tCtrl-N");
+	file_menu->Append(wxID_OPEN,   "&Open\tCtrl-O");
 	file_menu->AppendSubMenu(recent_files_menu, "Open &Recent");
-	file_menu->Append(wxID_SAVE,   "&Save");
+	file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
 	file_menu->Append(wxID_SAVEAS, "&Save As");
 	file_menu->AppendSeparator();
-	file_menu->Append(wxID_CLOSE,  "&Close");
+	file_menu->Append(wxID_CLOSE,  "&Close\tCtrl-W");
 	file_menu->Append(ID_CLOSE_ALL, "Close All");
 	file_menu->Append(ID_CLOSE_OTHERS, "Close Others");
 	file_menu->AppendSeparator();
@@ -194,9 +194,9 @@ REHex::MainWindow::MainWindow():
 	
 	edit_menu->AppendSeparator();
 	
-	edit_menu->Append(wxID_CUT,   "Cu&t");
-	edit_menu->Append(wxID_COPY,  "&Copy");
-	edit_menu->Append(wxID_PASTE, "&Paste");
+	edit_menu->Append(wxID_CUT,   "Cu&t\tCtrl-X");
+	edit_menu->Append(wxID_COPY,  "&Copy\tCtrl-C");
+	edit_menu->Append(wxID_PASTE, "&Paste\tCtrl-V");
 	
 	view_menu = new wxMenu;
 	

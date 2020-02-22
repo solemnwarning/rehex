@@ -84,7 +84,7 @@ REHex::Document::Document(wxWindow *parent):
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
-	dirty = true;
+	dirty = false;
 	
 	_ctor_pre(parent);
 	

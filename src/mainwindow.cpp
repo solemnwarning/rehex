@@ -456,6 +456,7 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	
 	try {
 		tab->doc->save();
+		_update_dirty(tab->doc);
 	}
 	catch(const std::exception &e)
 	{
@@ -501,6 +502,7 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	
 	try {
 		tab->doc->save(filename);
+		_update_dirty(tab->doc);
 	}
 	catch(const std::exception &e)
 	{
@@ -1239,15 +1241,18 @@ void REHex::MainWindow::_update_undo(REHex::Document *doc)
 void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 {
 	bool dirty = doc->is_dirty();
+	bool has_file = (doc->get_filename() != "");
+	
+	bool enable_save = dirty || !has_file;
 	
 	SetTitle((dirty ? "[UNSAVED] " : "") + doc->get_title() + " - Reverse Engineers' Hex Editor");
 	
-	file_menu->Enable(wxID_SAVE,   dirty);
-	file_menu->Enable(wxID_SAVEAS, dirty);
+	file_menu->Enable(wxID_SAVE,   enable_save);
+	file_menu->Enable(wxID_SAVEAS, enable_save);
 	
 	wxToolBar *toolbar = GetToolBar();
-	toolbar->EnableTool(wxID_SAVE,   dirty);
-	toolbar->EnableTool(wxID_SAVEAS, dirty);
+	toolbar->EnableTool(wxID_SAVE,   enable_save);
+	toolbar->EnableTool(wxID_SAVEAS, enable_save);
 	
 	notebook->SetPageBitmap(notebook->GetSelection(), (dirty ? notebook_dirty_bitmap : wxNullBitmap));
 }

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -77,11 +77,53 @@ bool REHex::App::OnInit()
 		active_palette = Palette::create_system_palette();
 	}
 	
-	LLVMInitializeAllAsmPrinters();
-	LLVMInitializeAllTargets();
-	LLVMInitializeAllTargetInfos();
-	LLVMInitializeAllTargetMCs();
-	LLVMInitializeAllDisassemblers();
+	#ifdef LLVM_ENABLE_AARCH64
+	LLVMInitializeAArch64AsmPrinter();
+	LLVMInitializeAArch64Disassembler();
+	LLVMInitializeAArch64Target();
+	LLVMInitializeAArch64TargetInfo();
+	LLVMInitializeAArch64TargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_ARM
+	LLVMInitializeARMAsmPrinter();
+	LLVMInitializeARMDisassembler();
+	LLVMInitializeARMTarget();
+	LLVMInitializeARMTargetInfo();
+	LLVMInitializeARMTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_MIPS
+	LLVMInitializeMipsAsmPrinter();
+	LLVMInitializeMipsDisassembler();
+	LLVMInitializeMipsTarget();
+	LLVMInitializeMipsTargetInfo();
+	LLVMInitializeMipsTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_POWERPC
+	LLVMInitializePowerPCAsmPrinter();
+	LLVMInitializePowerPCDisassembler();
+	LLVMInitializePowerPCTarget();
+	LLVMInitializePowerPCTargetInfo();
+	LLVMInitializePowerPCTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_SPARC
+	LLVMInitializeSparcAsmPrinter();
+	LLVMInitializeSparcDisassembler();
+	LLVMInitializeSparcTarget();
+	LLVMInitializeSparcTargetInfo();
+	LLVMInitializeSparcTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_X86
+	LLVMInitializeX86AsmPrinter();
+	LLVMInitializeX86Disassembler();
+	LLVMInitializeX86Target();
+	LLVMInitializeX86TargetInfo();
+	LLVMInitializeX86TargetMC();
+	#endif
 	
 	REHex::MainWindow *window = new REHex::MainWindow();
 	window->Show(true);

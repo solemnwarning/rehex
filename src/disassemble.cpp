@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -37,8 +37,40 @@ struct LLVMArchitecture {
 };
 
 static LLVMArchitecture arch_list[] = {
+	#ifdef LLVM_ENABLE_ARM
+	{ "arm",   "ARM" },
+	{ "armeb", "ARM (big endian)" },
+	#endif
+	
+	#ifdef LLVM_ENABLE_AARCH64
+	{ "aarch64",    "AArch64 (ARM64)" },
+	{ "aarch64_be", "AArch64 (ARM64, big endian)" },
+	#endif
+	
+	#ifdef LLVM_ENABLE_MIPS
+	{ "mips",     "MIPS" },
+	{ "mipsel",   "MIPS (little endian)" },
+	{ "mips64",   "MIPS (64-bit)" },
+	{ "mips64el", "MIPS (64-bit, little endian)" },
+	#endif
+	
+	#ifdef LLVM_ENABLE_POWERPC
+	{ "powerpc",     "PowerPC" },
+	{ "powerpc64",   "PowerPC (64-bit)" },
+	{ "powerpc64le", "PowerPC (64-bit) (little endian)" },
+	#endif
+	
+	#ifdef LLVM_ENABLE_SPARC
+	{ "sparc",   "SPARC" },
+	{ "sparcel", "SPARC (little endian)" },
+	{ "sparcv9", "SPARC V9 (SPARC64)" },
+	#endif
+	
+	#ifdef LLVM_ENABLE_X86
 	{ "i386",   "X86" },
 	{ "x86_64", "X86-64 (AMD64)" },
+	#endif
+	
 	{ NULL, NULL },
 };
 

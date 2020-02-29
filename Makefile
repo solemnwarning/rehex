@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -31,14 +31,66 @@ shell-or-die = \
 WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
 WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
 
+LLVM_COMPONENTS = $(call shell-or-die,$(LLVM_CONFIG) --components)
+
+# The AArch64 disassembler prior to LLVM 8.0 crashes when used without a symbol
+# lookup callback and doesn't properly handle a stub one which doesn't return a
+# symbol name, so don't use it.
+
+LLVM_VERSION_MAJOR = $(call shell-or-die,$(LLVM_CONFIG) --version | cut -d. -f1)
+LLVM_AT_LEAST_V8 = $(shell [ $(LLVM_VERSION_MAJOR) -ge 8 ] && echo true)
+
+ifeq "$(LLVM_AT_LEAST_V8)" "true"
+	LLVM_ENABLE_AARCH64 ?= $(filter aarch64,$(LLVM_COMPONENTS))
+endif
+
+LLVM_ENABLE_ARM     ?= $(filter arm,$(LLVM_COMPONENTS))
+LLVM_ENABLE_MIPS    ?= $(filter mips,$(LLVM_COMPONENTS))
+LLVM_ENABLE_POWERPC ?= $(filter powerpc,$(LLVM_COMPONENTS))
+LLVM_ENABLE_SPARC   ?= $(filter sparc,$(LLVM_COMPONENTS))
+LLVM_ENABLE_X86     ?= $(filter x86,$(LLVM_COMPONENTS))
+
+LLVM_USE_COMPONENTS := asmprinter
+LLVM_DEFINES :=
+
+ifneq "$(LLVM_ENABLE_AARCH64)" ""
+	LLVM_USE_COMPONENTS += aarch64
+	LLVM_DEFINES += -DLLVM_ENABLE_AARCH64
+endif
+
+ifneq "$(LLVM_ENABLE_ARM)" ""
+	LLVM_USE_COMPONENTS += arm
+	LLVM_DEFINES += -DLLVM_ENABLE_ARM
+endif
+
+ifneq "$(LLVM_ENABLE_MIPS)" ""
+	LLVM_USE_COMPONENTS += mips
+	LLVM_DEFINES += -DLLVM_ENABLE_MIPS
+endif
+
+ifneq "$(LLVM_ENABLE_POWERPC)" ""
+	LLVM_USE_COMPONENTS += powerpc
+	LLVM_DEFINES += -DLLVM_ENABLE_POWERPC
+endif
+
+ifneq "$(LLVM_ENABLE_SPARC)" ""
+	LLVM_USE_COMPONENTS += sparc
+	LLVM_DEFINES += -DLLVM_ENABLE_SPARC
+endif
+
+ifneq "$(LLVM_ENABLE_X86)" ""
+	LLVM_USE_COMPONENTS += x86
+	LLVM_DEFINES += -DLLVM_ENABLE_X86
+endif
+
 # I would use llvm-config --cxxflags, but that specifies more crap it has no
 # business interfering with (e.g. warnings) than things it actually needs.
 # Hopefully this is enough to get by everywhere.
 LLVM_CXXFLAGS := -I$(call shell-or-die,$(LLVM_CONFIG) --includedir)
-LLVM_LIBS     := $(call shell-or-die,$(LLVM_CONFIG) --ldflags --libs --system-libs)
+LLVM_LIBS     := $(call shell-or-die,$(LLVM_CONFIG) --ldflags --libs --system-libs $(LLVM_USE_COMPONENTS))
 
 CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CFLAGS)
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(LLVM_CXXFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(LLVM_CXXFLAGS) $(WX_CXXFLAGS) $(LLVM_DEFINES) $(CXXFLAGS)
 
 LIBS := $(LLVM_LIBS) $(WX_LIBS) -ljansson $(LIBS)
 

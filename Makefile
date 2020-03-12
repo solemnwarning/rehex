@@ -106,7 +106,7 @@ else
 	CXXFLAGS += -g
 endif
 
-VERSION    := Snapshot $(shell git log -1 --format="%H")
+VERSION    := 0.1.0
 BUILD_DATE := $(shell date '+%F')
 
 DEPDIR := .d

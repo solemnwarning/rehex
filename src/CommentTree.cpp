@@ -17,8 +17,10 @@
 
 #include <stack>
 #include <utility>
+#include <wx/clipbrd.h>
 
 #include "CommentTree.hpp"
+#include "util.hpp"
 
 static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::Document *document)
 {
@@ -29,6 +31,7 @@ static REHex::ToolPanelRegistration tpr("CommentTree", "Comments", REHex::ToolPa
 
 enum {
 	ID_EDIT_COMMENT = 1,
+	ID_COPY_COMMENT,
 	ID_GOTO,
 	ID_SELECT,
 };
@@ -149,6 +152,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 	menu.AppendSeparator();
 	
 	menu.Append(ID_EDIT_COMMENT,  "&Edit comment");
+	menu.Append(ID_COPY_COMMENT,  "&Copy comment(s)");
 	
 	menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
 	{
@@ -167,6 +171,22 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				document->edit_comment_popup(key->offset, key->length);
 				break;
 				
+			case ID_COPY_COMMENT:
+			{
+				ClipboardGuard cg;
+				if(cg)
+				{
+					auto all_comments      = document->get_comments();
+					auto selected_comments = NestedOffsetLengthMap_get_recursive(all_comments, *key);
+					
+					CommentsDataObject *d = new CommentsDataObject(selected_comments, key->offset);
+					
+					wxTheClipboard->SetData(d);
+				}
+				
+				break;
+			}
+			
 			default:
 				break;
 		}

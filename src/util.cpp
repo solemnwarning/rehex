@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <string>
 #include <vector>
+#include <wx/clipbrd.h>
 #include <wx/filename.h>
 #include <wx/utils.h>
 
@@ -120,4 +121,26 @@ void REHex::file_manager_show_file(const std::string &filename)
 		const char *argv[] = { "xdg-open", dirname.c_str(), NULL };
 		wxExecute((char**)(argv));
 	#endif
+}
+
+REHex::ClipboardGuard::ClipboardGuard()
+{
+	open = wxTheClipboard->Open();
+}
+
+REHex::ClipboardGuard::~ClipboardGuard()
+{
+	if(open)
+	{
+		wxTheClipboard->Close();
+	}
+}
+
+void REHex::ClipboardGuard::close()
+{
+	if(open)
+	{
+		wxTheClipboard->Close();
+		open = false;
+	}
 }

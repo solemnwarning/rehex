@@ -173,6 +173,7 @@ TEST_OBJS := \
 	src/util.o \
 	src/win32lib.o \
 	tests/buffer.o \
+	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/document.o \
 	tests/main.o \

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -50,6 +50,11 @@ namespace REHex {
 			else{
 				return offset < rhs.offset;
 			}
+		}
+		
+		bool operator==(const NestedOffsetLengthMapKey &rhs) const
+		{
+			return offset == rhs.offset && length == rhs.length;
 		}
 	};
 	
@@ -227,6 +232,50 @@ namespace REHex {
 			}
 			
 			r.insert(r.end(), this_r.begin(), this_r.end());
+		}
+		
+		return r;
+	}
+	
+	/* Search for an exact key and any keys within that key's scope.
+	 * Returns a list of iterators in the same order as the map.
+	*/
+	template<typename T> std::list<typename NestedOffsetLengthMap<T>::const_iterator> NestedOffsetLengthMap_get_recursive(const NestedOffsetLengthMap<T> &map, const NestedOffsetLengthMapKey &key)
+	{
+		std::list<typename NestedOffsetLengthMap<T>::const_iterator> r;
+		
+		auto i = map.find(key);
+		if(i == map.end())
+		{
+			/* Key not found. */
+			return r;
+		}
+		
+		/* Add any keys at the same offset with shorter lengths. */
+		for(auto j = i; j != map.begin();)
+		{
+			--j;
+			
+			if(j->first.offset == key.offset)
+			{
+				r.push_front(j);
+			}
+		}
+		
+		/* Add the exact key. */
+		r.push_back(i);
+		
+		/* Skip over any keys at the same offset with larger lengths. */
+		while(i != map.end() && i->first.offset == key.offset)
+		{
+			++i;
+		}
+		
+		/* Add any keys with greater offsets within the key's length. */
+		while(i != map.end() && i->first.offset < (key.offset + key.length))
+		{
+			r.push_back(i);
+			++i;
 		}
 		
 		return r;

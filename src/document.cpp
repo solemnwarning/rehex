@@ -1573,12 +1573,13 @@ void REHex::Document::OnLeftDown(wxMouseEvent &event)
 			*/
 			
 			int hf_width = hf_char_width();
+			int indent_width = _indent_width(cr->indent_depth);
 			
 			if(
 				(line_off > 0 || (mouse_y % hf_height) >= (hf_height / 4)) /* Not above top edge. */
 				&& (line_off < (cr->y_lines - 1) || (mouse_y % hf_height) <= ((hf_height / 4) * 3)) /* Not below bottom edge. */
-				&& rel_x >= (hf_width / 4) /* Not left of left edge. */
-				&& rel_x < (virtual_width - (hf_width / 4))) /* Not right of right edge. */
+				&& rel_x >= (indent_width + (hf_width / 4)) /* Not left of left edge. */
+				&& rel_x < ((virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
 			{
 				edit_comment_popup(cr->c_offset, cr->c_length);
 			}
@@ -3910,12 +3911,13 @@ void REHex::Document::Region::Comment::draw(REHex::Document &doc, wxDC &dc, int 
 wxCursor REHex::Document::Region::Comment::cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px)
 {
 	int hf_width = doc.hf_char_width();
+	int indent_width = doc._indent_width(indent_depth);
 	
 	if(
 		(y_lines > 0 || y_px >= (doc.hf_height / 4)) /* Not above top edge. */
 		&& (y_lines < (this->y_lines - 1) || y_px <= ((doc.hf_height / 4) * 3)) /* Not below bottom edge. */
-		&& x >= (hf_width / 4) /* Not left of left edge. */
-		&& x < (doc.virtual_width - (hf_width / 4))) /* Not right of right edge. */
+		&& x >= (indent_width + (hf_width / 4)) /* Not left of left edge. */
+		&& x < ((doc.virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
 	{
 		return wxCursor(wxCURSOR_HAND);
 	}

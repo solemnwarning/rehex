@@ -538,9 +538,16 @@ size_t REHex::Document::copy_upper_limit()
 void REHex::Document::handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
+	off_t buffer_length = this->buffer_length();
 	
 	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
 	{
+		if((cursor_pos + cc->first.offset + cc->first.length) >= buffer_length)
+		{
+			wxMessageBox("Cannot paste comment(s) - would extend beyond end of file", "Error", (wxOK | wxICON_ERROR), this);
+			return;
+		}
+		
 		if(comments.find(NestedOffsetLengthMapKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
 			|| !NestedOffsetLengthMap_can_set(comments, cursor_pos + cc->first.offset, cc->first.length))
 		{

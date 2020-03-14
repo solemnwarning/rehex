@@ -179,7 +179,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 					auto all_comments      = document->get_comments();
 					auto selected_comments = NestedOffsetLengthMap_get_recursive(all_comments, *key);
 					
-					CommentsDataObject *d = new CommentsDataObject(selected_comments);
+					CommentsDataObject *d = new CommentsDataObject(selected_comments, key->offset);
 					
 					wxTheClipboard->SetData(d);
 				}

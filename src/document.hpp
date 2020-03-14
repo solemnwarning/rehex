@@ -393,10 +393,10 @@ namespace REHex {
 			static const wxDataFormat format;
 			
 			CommentsDataObject();
-			CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments);
+			CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
 			
 			NestedOffsetLengthMap<Document::Comment> get_comments() const;
-			void set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments);
+			void set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
 	};
 }
 

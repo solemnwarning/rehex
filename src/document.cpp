@@ -3929,10 +3929,10 @@ const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");
 REHex::CommentsDataObject::CommentsDataObject():
 	wxCustomDataObject(format) {}
 
-REHex::CommentsDataObject::CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments):
+REHex::CommentsDataObject::CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base):
 	wxCustomDataObject(format)
 {
-	set_comments(comments);
+	set_comments(comments, base);
 }
 
 REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
@@ -3956,7 +3956,7 @@ REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject
 	return comments;
 }
 
-void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments)
+void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base)
 {
 	size_t size = 0;
 	
@@ -3976,7 +3976,7 @@ void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthM
 		
 		const wxScopedCharBuffer utf8_text = (*i)->second.text->utf8_str();
 		
-		header->file_offset = (*i)->first.offset;
+		header->file_offset = (*i)->first.offset - base;
 		header->file_length = (*i)->first.length;
 		header->text_length = utf8_text.length();
 		

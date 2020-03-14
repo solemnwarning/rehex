@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <algorithm>
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -231,6 +232,17 @@ void REHex::Document::set_inline_comment_mode(InlineCommentMode mode)
 	_recalc_regions(dc);
 	
 	_update_vscroll();
+	Refresh();
+}
+
+bool REHex::Document::get_highlight_selection_match()
+{
+	return highlight_selection_match;
+}
+
+void REHex::Document::set_highlight_selection_match(bool highlight_selection_match)
+{
+	this->highlight_selection_match = highlight_selection_match;
 	Refresh();
 }
 
@@ -2176,6 +2188,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	bytes_per_group   = 4;
 	show_ascii        = true;
 	inline_comment_mode = ICM_FULL_INDENT;
+	highlight_selection_match = false;
 	scroll_xoff       = 0;
 	scroll_yoff       = 0;
 	scroll_yoff_max   = 0;
@@ -3343,6 +3356,13 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		dc.SetBackgroundMode(wxSOLID);
 	};
 	
+	auto secondary_selected_text_colour = [&dc]()
+	{
+		dc.SetTextForeground((*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
+		dc.SetBackgroundMode(wxSOLID);
+	};
+	
 	auto highlighted_text_colour = [&dc](int highlight_idx)
 	{
 		dc.SetTextForeground(active_palette->get_highlight_fg(highlight_idx));
@@ -3413,6 +3433,18 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		data_err = true;
 	}
 	
+	std::vector<unsigned char> selection_data;
+	if(doc.highlight_selection_match && doc.selection_length > 0)
+	{
+		try {
+			selection_data = doc.buffer->read_data(doc.selection_off, doc.selection_length);
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::Document::Region::Data::draw: %s\n", e.what());
+		}
+	}
+	
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
 	
@@ -3420,6 +3452,8 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 	bool ascii_active = doc.HasFocus() && doc.cursor_state == CSTATE_ASCII;
 	
 	off_t cursor_pos = doc.get_cursor_position();
+	
+	size_t secondary_selection_remain = 0;
 	
 	for(auto di = data.begin();;)
 	{
@@ -3501,6 +3535,13 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
 			}
 			
+			if(secondary_selection_remain == 0
+				&& (size_t)(data.end() - di) >= selection_data.size()
+				&& std::equal(selection_data.begin(), selection_data.end(), di))
+			{
+				secondary_selection_remain = selection_data.size();
+			}
+			
 			unsigned char byte        = *(di++);
 			unsigned char high_nibble = (byte & 0xF0) >> 4;
 			unsigned char low_nibble  = (byte & 0x0F);
@@ -3527,6 +3568,15 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					&& hex_active)
 				{
 					selected_text_colour();
+					
+					char str[] = { nibble_to_hex[nibble], '\0' };
+					dc.DrawText(str, hex_x, y);
+					
+					hex_str.append(1, ' ');
+				}
+				else if(secondary_selection_remain > 0 && !(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length)))
+				{
+					secondary_selected_text_colour();
 					
 					char str[] = { nibble_to_hex[nibble], '\0' };
 					dc.DrawText(str, hex_x, y);
@@ -3644,16 +3694,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					? byte
 					: '.';
 				
-				if(highlight != doc.highlights.end() && !ascii_active)
-				{
-					highlighted_text_colour(highlight->second);
-					
-					char str[] = { ascii_byte, '\0' };
-					dc.DrawText(str, ascii_x, y);
-					
-					ascii_string.append(" ");
-				}
-				
 				if(ascii_active)
 				{
 					if(cur_off == cursor_pos && !doc.insert_mode && doc.cursor_visible)
@@ -3674,6 +3714,15 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 						
 						ascii_string.append(" ");
 					}
+					else if(secondary_selection_remain > 0)
+					{
+						secondary_selected_text_colour();
+						
+						char str[] = { ascii_byte, '\0' };
+						dc.DrawText(str, ascii_x, y);
+						
+						ascii_string.append(" ");
+					}
 					else if(highlight != doc.highlights.end())
 					{
 						highlighted_text_colour(highlight->second);
@@ -3688,8 +3737,25 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 					}
 				}
 				else{
-					if(highlight == doc.highlights.end())
+					if(secondary_selection_remain > 0 && !(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length)) && !ascii_active)
 					{
+						secondary_selected_text_colour();
+						
+						char str[] = { ascii_byte, '\0' };
+						dc.DrawText(str, ascii_x, y);
+						
+						ascii_string.append(" ");
+					}
+					else if(highlight != doc.highlights.end() && !ascii_active)
+					{
+						highlighted_text_colour(highlight->second);
+						
+						char str[] = { ascii_byte, '\0' };
+						dc.DrawText(str, ascii_x, y);
+						
+						ascii_string.append(" ");
+					}
+					else{
 						ascii_string.append(1, ascii_byte);
 					}
 					
@@ -3738,6 +3804,11 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			}
 			
 			++cur_off;
+			
+			if(secondary_selection_remain > 0)
+			{
+				--secondary_selection_remain;
+			}
 		}
 		
 		normal_text_colour();

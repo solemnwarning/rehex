@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -36,6 +36,8 @@ namespace REHex {
 				PAL_INVERT_TEXT_FG,
 				PAL_SELECTED_TEXT_BG,
 				PAL_SELECTED_TEXT_FG,
+				PAL_SECONDARY_SELECTED_TEXT_BG,
+				PAL_SECONDARY_SELECTED_TEXT_FG,
 				
 				PAL_HIGHLIGHT_TEXT_MIN_BG,
 				PAL_HIGHLIGHT_TEXT_MIN_FG,

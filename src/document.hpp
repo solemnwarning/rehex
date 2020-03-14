@@ -100,6 +100,9 @@ namespace REHex {
 			InlineCommentMode get_inline_comment_mode();
 			void set_inline_comment_mode(InlineCommentMode mode);
 			
+			bool get_highlight_selection_match();
+			void set_highlight_selection_match(bool highlight_selection_match);
+			
 			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off);
 			bool get_insert_mode();
@@ -248,6 +251,8 @@ namespace REHex {
 			bool show_ascii;
 			
 			InlineCommentMode inline_comment_mode;
+			
+			bool highlight_selection_match;
 			
 			int     scroll_xoff;
 			int64_t scroll_yoff;

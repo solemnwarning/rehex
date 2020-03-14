@@ -68,6 +68,7 @@ enum {
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
+	ID_HIGHLIGHT_SELECTION_MATCH,
 	ID_SELECT_RANGE,
 	ID_SYSTEM_PALETTE,
 	ID_LIGHT_PALETTE,
@@ -127,6 +128,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
+	
+	EVT_MENU(ID_HIGHLIGHT_SELECTION_MATCH, REHex::MainWindow::OnHighlightSelectionMatch)
 	
 	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
@@ -209,6 +212,8 @@ REHex::MainWindow::MainWindow():
 	
 	inline_comments_menu = new wxMenu;
 	view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
+	
+	view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
 	
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
 	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
@@ -820,6 +825,12 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
+{
+	Document *doc = active_document();
+	doc->set_highlight_selection_match(event.IsChecked());
+}
+
 void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -937,6 +948,8 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 	};
+	
+	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc->get_highlight_selection_match());
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
@@ -1650,6 +1663,7 @@ void REHex::MainWindow::Tab::save_view(wxConfig *config)
 	config->Write("show-offsets", doc->get_show_offsets());
 	config->Write("show-ascii", doc->get_show_ascii());
 	config->Write("inline-comments", (int)(doc->get_inline_comment_mode()));
+	config->Write("highlight-selection-match", doc->get_highlight_selection_match());
 	
 	/* TODO: Save h_tools state */
 	
@@ -1920,10 +1934,11 @@ void REHex::MainWindow::Tab::init_default_doc_view()
 	wxConfig *config = wxGetApp().config;
 	config->SetPath("/default-view/");
 	
-	doc->set_bytes_per_line(   config->Read("bytes-per-line",   doc->get_bytes_per_line()));
-	doc->set_bytes_per_group(  config->Read("bytes-per-group",  doc->get_bytes_per_group()));
-	doc->set_show_offsets(     config->Read("show-offsets",     doc->get_show_offsets()));
-	doc->set_show_ascii(       config->Read("show-ascii",       doc->get_show_ascii()));
+	doc->set_bytes_per_line(             config->Read("bytes-per-line",             doc->get_bytes_per_line()));
+	doc->set_bytes_per_group(            config->Read("bytes-per-group",            doc->get_bytes_per_group()));
+	doc->set_show_offsets(               config->Read("show-offsets",               doc->get_show_offsets()));
+	doc->set_show_ascii(                 config->Read("show-ascii",                 doc->get_show_ascii()));
+	doc->set_highlight_selection_match(  config->Read("highlight-selection-match",  doc->get_highlight_selection_match()));
 	
 	int inline_comments = config->Read("inline-comments", (int)(doc->get_inline_comment_mode()));
 	if(inline_comments >= 0 && inline_comments <= REHex::Document::ICM_MAX)

@@ -24,6 +24,7 @@
 #include <map>
 #include <stack>
 #include <string>
+#include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
 #include "app.hpp"
@@ -53,6 +54,9 @@ enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SELECT_TIMER,
 	ID_CLEAR_HIGHLIGHT,
+	ID_EDIT_COMMENT,
+	ID_DELETE_COMMENT,
+	ID_COPY_COMMENT,
 };
 
 BEGIN_EVENT_TABLE(REHex::Document, wxControl)
@@ -1832,6 +1836,66 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			}
 			
 			PopupMenu(&menu);
+		}
+		
+		REHex::Document::Region::Comment *cr = dynamic_cast<REHex::Document::Region::Comment*>(*region);
+		if(cr != NULL)
+		{
+			/* Mouse was clicked within a Comment region, ensure we are within the border drawn around the
+			 * comment text.
+			*/
+			
+			int hf_width = hf_char_width();
+			int indent_width = _indent_width(cr->indent_depth);
+			
+			if(
+				(line_off > 0 || (mouse_y % hf_height) >= (hf_height / 4)) /* Not above top edge. */
+				&& (line_off < (cr->y_lines - 1) || (mouse_y % hf_height) <= ((hf_height / 4) * 3)) /* Not below bottom edge. */
+				&& rel_x >= (indent_width + (hf_width / 4)) /* Not left of left edge. */
+				&& rel_x < ((virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
+			{
+				wxMenu menu;
+				
+				menu.Append(ID_EDIT_COMMENT, "&Edit comment");
+				menu.Bind(wxEVT_MENU, [this, cr](wxCommandEvent &event)
+				{
+					edit_comment_popup(cr->c_offset, cr->c_length);
+				}, ID_EDIT_COMMENT, ID_EDIT_COMMENT);
+				
+				menu.Append(ID_DELETE_COMMENT, "&Delete comment");
+				menu.Bind(wxEVT_MENU, [this, cr](wxCommandEvent &event)
+				{
+					_tracked_change("delete comment",
+						[this, cr]()
+						{
+							wxClientDC dc(this);
+							_delete_comment(dc, cr->c_offset, cr->c_length);
+							_raise_comment_modified();
+						},
+						[this]()
+						{
+							/* Comments are restored implicitly. */
+							_raise_comment_modified();
+						});
+				}, ID_DELETE_COMMENT, ID_DELETE_COMMENT);
+				
+				menu.AppendSeparator();
+				
+				menu.Append(ID_COPY_COMMENT,  "&Copy comment(s)");
+				menu.Bind(wxEVT_MENU, [this, cr](wxCommandEvent &event)
+				{
+					ClipboardGuard cg;
+					if(cg)
+					{
+						auto selected_comments = NestedOffsetLengthMap_get_recursive(comments, NestedOffsetLengthMapKey(cr->c_offset, cr->c_length));
+						assert(selected_comments.size() > 0);
+						
+						wxTheClipboard->SetData(new CommentsDataObject(selected_comments, cr->c_offset));
+					}
+				}, ID_COPY_COMMENT, ID_COPY_COMMENT);
+				
+				PopupMenu(&menu);
+			}
 		}
 	}
 	

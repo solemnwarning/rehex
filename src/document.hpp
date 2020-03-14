@@ -24,6 +24,7 @@
 #include <memory>
 #include <stdint.h>
 #include <utility>
+#include <wx/dataobj.h>
 #include <wx/wx.h>
 
 #include "buffer.hpp"
@@ -117,6 +118,8 @@ namespace REHex {
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
 			size_t copy_upper_limit();
+			
+			void handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
 			void undo();
 			const char *undo_desc();
@@ -373,6 +376,27 @@ namespace REHex {
 		virtual void update_lines(REHex::Document &doc, wxDC &dc) override;
 		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) override;
 		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
+	};
+	
+	class CommentsDataObject: public wxCustomDataObject
+	{
+		private:
+			struct Header
+			{
+				off_t file_offset;
+				off_t file_length;
+				
+				size_t text_length;
+			};
+			
+		public:
+			static const wxDataFormat format;
+			
+			CommentsDataObject();
+			CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments);
+			
+			NestedOffsetLengthMap<Document::Comment> get_comments() const;
+			void set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments);
 	};
 }
 

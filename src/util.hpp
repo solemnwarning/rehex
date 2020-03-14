@@ -29,6 +29,23 @@ namespace REHex {
 			ParseError(const char *what);
 	};
 	
+	class ClipboardGuard
+	{
+		private:
+			bool open;
+			
+		public:
+			ClipboardGuard();
+			~ClipboardGuard();
+			
+			void close();
+			
+			operator bool() const
+			{
+				return open;
+			}
+	};
+	
 	std::vector<unsigned char> parse_hex_string(const std::string &hex_string);
 	unsigned char parse_ascii_nibble(char c);
 	

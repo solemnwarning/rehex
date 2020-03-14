@@ -374,6 +374,9 @@ const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &REHex::Document::g
 
 bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &comment)
 {
+	assert(offset >= 0);
+	assert(length >= 0);
+	
 	if(NestedOffsetLengthMap_set(comments, offset, length, comment))
 	{
 		_reinit_regions();
@@ -526,6 +529,33 @@ size_t REHex::Document::copy_upper_limit()
 		/* Nothing selected */
 		return 0;
 	}
+}
+
+void REHex::Document::handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
+{
+	off_t cursor_pos = get_cursor_position();
+	
+	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
+	{
+		if(comments.find(NestedOffsetLengthMapKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
+			|| !NestedOffsetLengthMap_can_set(comments, cursor_pos + cc->first.offset, cc->first.length))
+		{
+			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), this);
+			return;
+		}
+	}
+	
+	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
+	{
+		NestedOffsetLengthMap_set(comments, cursor_pos + cc->first.offset, cc->first.length, cc->second);
+	}
+	
+	_reinit_regions();
+	
+	wxClientDC dc(this);
+	_recalc_regions(dc);
+	
+	_raise_comment_modified();
 }
 
 void REHex::Document::undo()
@@ -2586,6 +2616,9 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 
 void REHex::Document::_set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text)
 {
+	assert(offset >= 0);
+	assert(length >= 0);
+	
 	if(NestedOffsetLengthMap_set(comments, offset, length, Comment(text)))
 	{
 		set_dirty(true);
@@ -3165,7 +3198,13 @@ void REHex::Document::Region::draw_container(REHex::Document &doc, wxDC &dc, int
 }
 
 REHex::Document::Region::Data::Data(off_t d_offset, off_t d_length, int indent_depth):
-	d_offset(d_offset), d_length(d_length), bytes_per_line_actual(1) { this->indent_depth = indent_depth; }
+	d_offset(d_offset), d_length(d_length), bytes_per_line_actual(1)
+{
+	assert(d_offset >= 0);
+	assert(d_length >= 0);
+	
+	this->indent_depth = indent_depth;
+}
 
 void REHex::Document::Region::Data::update_lines(REHex::Document &doc, wxDC &dc)
 {
@@ -3883,4 +3922,69 @@ wxCursor REHex::Document::Region::Comment::cursor_for_point(REHex::Document &doc
 	else{
 		return wxNullCursor;
 	}
+}
+
+const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");
+
+REHex::CommentsDataObject::CommentsDataObject():
+	wxCustomDataObject(format) {}
+
+REHex::CommentsDataObject::CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments):
+	wxCustomDataObject(format)
+{
+	set_comments(comments);
+}
+
+REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
+{
+	REHex::NestedOffsetLengthMap<REHex::Document::Comment> comments;
+	
+	const unsigned char *data = (const unsigned char*)(GetData());
+	const unsigned char *end = data + GetSize();
+	const Header *header;
+	
+	while(data + sizeof(Header) < end && (header = (const Header*)(data)), (data + sizeof(Header) + header->text_length <= end))
+	{
+		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
+		
+		bool x = NestedOffsetLengthMap_set(comments, header->file_offset, header->file_length, REHex::Document::Comment(text));
+		assert(x); /* TODO: Raise some kind of error. Beep? */
+		
+		data += sizeof(Header) + header->text_length;
+	}
+	
+	return comments;
+}
+
+void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments)
+{
+	size_t size = 0;
+	
+	for(auto i = comments.begin(); i != comments.end(); ++i)
+	{
+		size += sizeof(Header) + (*i)->second.text->utf8_str().length();
+	}
+	
+	void *data = Alloc(size); /* Wrapper around new[] - throws on failure */
+	
+	char *outp = (char*)(data);
+	
+	for(auto i = comments.begin(); i != comments.end(); ++i)
+	{
+		Header *header = (Header*)(outp);
+		outp += sizeof(Header);
+		
+		const wxScopedCharBuffer utf8_text = (*i)->second.text->utf8_str();
+		
+		header->file_offset = (*i)->first.offset;
+		header->file_length = (*i)->first.length;
+		header->text_length = utf8_text.length();
+		
+		memcpy(outp, utf8_text.data(), utf8_text.length());
+		outp += utf8_text.length();
+	}
+	
+	assert(((char*)(data) + size) == outp);
+	
+	TakeData(size, data);
 }

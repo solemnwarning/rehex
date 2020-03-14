@@ -627,29 +627,33 @@ void REHex::MainWindow::OnCopy(wxCommandEvent &event)
 
 void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 {
-	if(wxTheClipboard->Open())
+	REHex::Document *doc = active_document();
+	
+	ClipboardGuard cg;
+	if(cg)
 	{
-		if(wxTheClipboard->IsSupported(wxDF_TEXT))
+		if(wxTheClipboard->IsSupported(CommentsDataObject::format))
+		{
+			CommentsDataObject data;
+			wxTheClipboard->GetData(data);
+			
+			auto clipboard_comments = data.get_comments();
+			
+			doc->handle_paste(clipboard_comments);
+		}
+		else if(wxTheClipboard->IsSupported(wxDF_TEXT))
 		{
 			wxTextDataObject data;
 			wxTheClipboard->GetData(data);
 			
-			wxWindow *cpage = notebook->GetCurrentPage();
-			assert(cpage != NULL);
-			
-			auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-			assert(tab != NULL);
-			
 			try {
-				tab->doc->handle_paste(data.GetText().ToStdString());
+				doc->handle_paste(data.GetText().ToStdString());
 			}
 			catch(const std::exception &e)
 			{
 				wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
 			}
 		}
-		
-		wxTheClipboard->Close();
 	}
 }
 
@@ -1318,11 +1322,10 @@ void REHex::MainWindow::_clipboard_copy(bool cut)
 	
 	if(copy_data != NULL)
 	{
-		/* TODO: Open clipboard in a RAII-y way. */
-		if(wxTheClipboard->Open())
+		ClipboardGuard cg;
+		if(cg)
 		{
 			wxTheClipboard->SetData(copy_data);
-			wxTheClipboard->Close();
 		}
 		else{
 			delete copy_data;

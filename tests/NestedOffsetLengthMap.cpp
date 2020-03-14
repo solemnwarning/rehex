@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -54,6 +54,18 @@
 #define GET_ALL_CHECK(map, offset, ...) \
 { \
 	auto got_iterators = NestedOffsetLengthMap_get_all(map, offset); \
+	const int expect_indexes[] = { __VA_ARGS__ }; \
+	std::list<NestedOffsetLengthMap<int>::const_iterator> expect_iterators; \
+	for(const int *i = expect_indexes; i < expect_indexes + sizeof(expect_indexes) / sizeof(*expect_indexes); ++i) \
+	{ \
+		expect_iterators.push_back(std::next(map.begin(), *i)); \
+	} \
+	EXPECT_EQ(got_iterators, expect_iterators); \
+}
+
+#define GET_RECURSIVE_CHECK(map, offset, length, ...) \
+{ \
+	auto got_iterators = NestedOffsetLengthMap_get_recursive(map, NestedOffsetLengthMapKey(offset, length)); \
 	const int expect_indexes[] = { __VA_ARGS__ }; \
 	std::list<NestedOffsetLengthMap<int>::const_iterator> expect_iterators; \
 	for(const int *i = expect_indexes; i < expect_indexes + sizeof(expect_indexes) / sizeof(*expect_indexes); ++i) \
@@ -153,6 +165,60 @@ TEST(NestedOffsetLengthMap, GetAll)
 	GET_ALL_CHECK(
 		map, 20,
 		2);
+}
+
+TEST(NestedOffsetLengthMap, GetRecursive)
+{
+	NestedOffsetLengthMap<int> map;
+	NestedOffsetLengthMap_set(map, 5,  4,  0);  /* 0 */
+	NestedOffsetLengthMap_set(map, 5,  5,  0);  /* 1 */
+	NestedOffsetLengthMap_set(map, 5,  20, 0);  /* 2 */
+	NestedOffsetLengthMap_set(map, 10, 0,  0);  /* 3 */
+	NestedOffsetLengthMap_set(map, 10, 5,  0);  /* 4 */
+	NestedOffsetLengthMap_set(map, 10, 10, 0);  /* 5 */
+	NestedOffsetLengthMap_set(map, 40, 0,  0);  /* 6 */
+	NestedOffsetLengthMap_set(map, 40, 5,  0);  /* 7 */
+	NestedOffsetLengthMap_set(map, 40, 10, 0);  /* 8 */
+	
+	GET_RECURSIVE_CHECK(
+		map, 5, 0,
+		/* No matches */);
+	
+	GET_RECURSIVE_CHECK(
+		map, 5, 4,
+		0);
+	
+	GET_RECURSIVE_CHECK(
+		map, 5, 5,
+		0, 1);
+	
+	GET_RECURSIVE_CHECK(
+		map, 5, 20,
+		0, 1, 2, 3, 4, 5);
+	
+	GET_RECURSIVE_CHECK(
+		map, 10, 0,
+		3);
+	
+	GET_RECURSIVE_CHECK(
+		map, 10, 5,
+		3, 4);
+	
+	GET_RECURSIVE_CHECK(
+		map, 10, 10,
+		3, 4, 5);
+	
+	GET_RECURSIVE_CHECK(
+		map, 40, 0,
+		6);
+	
+	GET_RECURSIVE_CHECK(
+		map, 40, 5,
+		6, 7);
+	
+	GET_RECURSIVE_CHECK(
+		map, 40, 10,
+		6, 7, 8);
 }
 
 TEST(NestedOffsetLengthMap, DataInserted)

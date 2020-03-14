@@ -57,6 +57,11 @@ namespace REHex {
 				
 				Comment(const wxString &text);
 				
+				bool operator==(const Comment &rhs) const
+				{
+					return *text == *(rhs.text);
+				}
+				
 				wxString menu_preview() const;
 			};
 			

@@ -556,17 +556,28 @@ void REHex::Document::handle_paste(const NestedOffsetLengthMap<Document::Comment
 		}
 	}
 	
-	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
-	{
-		NestedOffsetLengthMap_set(comments, cursor_pos + cc->first.offset, cc->first.length, cc->second);
-	}
-	
-	_reinit_regions();
-	
-	wxClientDC dc(this);
-	_recalc_regions(dc);
-	
-	_raise_comment_modified();
+	_tracked_change("paste comment(s)",
+		[this, cursor_pos, clipboard_comments]()
+		{
+			for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
+			{
+				NestedOffsetLengthMap_set(comments, cursor_pos + cc->first.offset, cc->first.length, cc->second);
+			}
+			
+			set_dirty(true);
+			
+			_reinit_regions();
+			
+			wxClientDC dc(this);
+			_recalc_regions(dc);
+			
+			_raise_comment_modified();
+		},
+		[this]()
+		{
+			/* Comments are restored implicitly. */
+			_raise_comment_modified();
+		});
 }
 
 void REHex::Document::undo()

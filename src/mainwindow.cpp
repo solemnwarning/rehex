@@ -76,6 +76,7 @@ enum {
 	ID_CLOSE_ALL,
 	ID_CLOSE_OTHERS,
 	ID_GITHUB,
+	ID_DONATE,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -136,6 +137,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_DARK_PALETTE,   REHex::MainWindow::OnPalette)
 	
 	EVT_MENU(ID_GITHUB,  REHex::MainWindow::OnGithub)
+	EVT_MENU(ID_DONATE,  REHex::MainWindow::OnDonate)
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(  wxID_ANY, REHex::MainWindow::OnDocumentChange)
@@ -267,6 +269,7 @@ REHex::MainWindow::MainWindow():
 	wxMenu *help_menu = new wxMenu;
 	
 	help_menu->Append(ID_GITHUB, "Visit &Github page");
+	help_menu->Append(ID_DONATE, "Donate with &Paypal");
 	help_menu->Append(wxID_ABOUT, "&About");
 	
 	wxMenuBar *menu_bar = new wxMenuBar;
@@ -889,6 +892,11 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 void REHex::MainWindow::OnGithub(wxCommandEvent &event)
 {
 	wxLaunchDefaultBrowser("https://github.com/solemnwarning/rehex/");
+}
+
+void REHex::MainWindow::OnDonate(wxCommandEvent &event)
+{
+	wxLaunchDefaultBrowser("https://www.solemnwarning.net/rehex/donate");
 }
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)

@@ -75,6 +75,7 @@ namespace REHex {
 			void OnSaveView(wxCommandEvent &event);
 			
 			void OnGithub(wxCommandEvent &event);
+			void OnDonate(wxCommandEvent &event);
 			void OnAbout(wxCommandEvent &event);
 			
 			void OnDocumentChange(wxAuiNotebookEvent &event);

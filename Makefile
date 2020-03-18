@@ -140,6 +140,7 @@ APP_OBJS := \
 	res/version.o \
 	src/AboutDialog.o \
 	src/app.o \
+	src/BitmapTool.o \
 	src/buffer.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \

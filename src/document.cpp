@@ -1743,6 +1743,34 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			
 			off_t cursor_pos = get_cursor_position();
 			
+			wxMenuItem *offset_copy_hex = menu.Append(wxID_ANY, "Copy offset (in hexadecimal)");
+			menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+			{
+				ClipboardGuard cg;
+				if(cg)
+				{
+					char offset_str[24];
+					snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos));
+					
+					wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+				}
+			}, offset_copy_hex->GetId(), offset_copy_hex->GetId());
+			
+			wxMenuItem *offset_copy_dec = menu.Append(wxID_ANY, "Copy offset (in decimal)");
+			menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+			{
+				ClipboardGuard cg;
+				if(cg)
+				{
+					char offset_str[24];
+					snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos));
+					
+					wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+				}
+			}, offset_copy_dec->GetId(), offset_copy_dec->GetId());
+			
+			menu.AppendSeparator();
+			
 			auto comments_at_cur = NestedOffsetLengthMap_get_all(comments, cursor_pos);
 			for(auto i = comments_at_cur.begin(); i != comments_at_cur.end(); ++i)
 			{

@@ -10,6 +10,8 @@ Version TBA
  * Optionally highlight byte sequences which match the current selection.
    ("Highlight data matching selection" or "PatternMatchHighlight").
 
+ * Allow copying cursor offset from document context menu.
+
 Version 0.1.0 (2020-03-12)
 
  * Initial release.

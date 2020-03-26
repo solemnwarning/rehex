@@ -16,6 +16,7 @@
 */
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <string>
 #include <vector>
 #include <wx/clipbrd.h>
@@ -143,4 +144,37 @@ void REHex::ClipboardGuard::close()
 		wxTheClipboard->Close();
 		open = false;
 	}
+}
+
+std::string REHex::format_offset(off_t offset, OffsetBase base, off_t upper_bound)
+{
+	char fmt_out[24];
+	
+	if(upper_bound > 0xFFFFFFFF || offset > 0xFFFFFFFF)
+	{
+		if(base == OFFSET_BASE_HEX)
+		{
+			snprintf(fmt_out, sizeof(fmt_out), "%08X:%08X",
+				(unsigned int)((offset & 0xFFFFFFFF00000000) >> 32),
+				(unsigned int)((offset & 0x00000000FFFFFFFF)));
+		}
+		else if(base == OFFSET_BASE_DEC)
+		{
+			snprintf(fmt_out, sizeof(fmt_out), "%019" PRId64, (int64_t)(offset));
+		}
+	}
+	else{
+		if(base == OFFSET_BASE_HEX)
+		{
+			snprintf(fmt_out, sizeof(fmt_out), "%04X:%04X",
+				(unsigned int)((offset & 0xFFFF0000) >> 16),
+				(unsigned int)((offset & 0x0000FFFF)));
+		}
+		else if(base == OFFSET_BASE_DEC)
+		{
+			snprintf(fmt_out, sizeof(fmt_out), "%010" PRId64, (int64_t)(offset));
+		}
+	}
+	
+	return fmt_out;
 }

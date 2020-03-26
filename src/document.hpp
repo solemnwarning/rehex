@@ -29,6 +29,7 @@
 
 #include "buffer.hpp"
 #include "NestedOffsetLengthMap.hpp"
+#include "util.hpp"
 
 namespace REHex {
 	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
@@ -93,6 +94,9 @@ namespace REHex {
 			
 			bool get_show_offsets();
 			void set_show_offsets(bool show_offsets);
+			
+			OffsetBase get_offset_display_base() const;
+			void set_offset_display_base(OffsetBase offset_display_base);
 			
 			bool get_show_ascii();
 			void set_show_ascii(bool show_ascii);
@@ -247,6 +251,7 @@ namespace REHex {
 			
 			bool offset_column{true};
 			int offset_column_width;
+			OffsetBase offset_display_base;
 			
 			bool show_ascii;
 			

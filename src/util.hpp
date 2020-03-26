@@ -50,6 +50,16 @@ namespace REHex {
 	unsigned char parse_ascii_nibble(char c);
 	
 	void file_manager_show_file(const std::string &filename);
+	
+	enum OffsetBase {
+		OFFSET_BASE_HEX = 1,
+		OFFSET_BASE_DEC = 2,
+		
+		OFFSET_BASE_MIN = 1,
+		OFFSET_BASE_MAX = 2,
+	};
+	
+	std::string format_offset(off_t offset, OffsetBase base, off_t upper_bound = -1);
 }
 
 #endif /* !REHEX_UTIL_HPP */

@@ -10,6 +10,13 @@ Version TBA
  * Optionally highlight byte sequences which match the current selection.
    ("Highlight data matching selection" or "PatternMatchHighlight").
 
+ * Correctly display offsets over 4GiB in the status bar.
+
+ * Display offsets as XXXX:XXXX rather than XXXXXXXX:XXXXXXXX when the file
+   size is under 4GiB.
+
+ * Add per-document option for dec/hex offset display.
+
 Version 0.1.0 (2020-03-12)
 
  * Initial release.

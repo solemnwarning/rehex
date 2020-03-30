@@ -10,6 +10,8 @@ Version TBA
  * Optionally highlight byte sequences which match the current selection.
    ("Highlight data matching selection" or "PatternMatchHighlight").
 
+ * Allow copying cursor offset from document context menu.
+
  * Correctly display offsets over 4GiB in the status bar.
 
  * Display offsets as XXXX:XXXX rather than XXXXXXXX:XXXXXXXX when the file

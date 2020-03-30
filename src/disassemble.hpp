@@ -67,6 +67,8 @@ namespace REHex {
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCursorMove(wxCommandEvent &event);
 			void OnArch(wxCommandEvent &event);
+			void OnDataModified(wxCommandEvent &event);
+			void OnBaseChanged(wxCommandEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

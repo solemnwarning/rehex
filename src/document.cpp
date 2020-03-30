@@ -83,6 +83,7 @@ wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,      wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,      wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -215,6 +216,11 @@ void REHex::Document::set_offset_display_base(REHex::OffsetBase offset_display_b
 {
 	this->offset_display_base = offset_display_base;
 	_handle_width_change();
+	
+	wxCommandEvent event(REHex::EV_BASE_CHANGED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
 }
 
 bool REHex::Document::get_show_ascii()

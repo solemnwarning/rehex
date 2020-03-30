@@ -72,6 +72,8 @@ namespace REHex {
 			void OnHighlightSelectionMatch(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
 			void OnPalette(wxCommandEvent &event);
+			void OnHexOffsets(wxCommandEvent &event);
+			void OnDecOffsets(wxCommandEvent &event);
 			void OnSaveView(wxCommandEvent &event);
 			
 			void OnGithub(wxCommandEvent &event);

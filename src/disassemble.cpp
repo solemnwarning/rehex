@@ -102,6 +102,8 @@ REHex::Disassemble::Disassemble(wxWindow *parent, REHex::Document *document):
 	
 	document->Bind(wxEVT_DESTROY, &REHex::Disassemble::OnDocumentDestroy, this);
 	document->Bind(EV_CURSOR_MOVED, &REHex::Disassemble::OnCursorMove, this);
+	document->Bind(EV_DATA_MODIFIED, &REHex::Disassemble::OnDataModified, this);
+	document->Bind(EV_BASE_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
 	
 	reinit_disassembler();
 	update();
@@ -153,6 +155,8 @@ void REHex::Disassemble::load_state(wxConfig *config)
 
 void REHex::Disassemble::document_unbind()
 {
+	document->Unbind(EV_BASE_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
+	document->Unbind(EV_DATA_MODIFIED, &REHex::Disassemble::OnDataModified, this);
 	document->Unbind(EV_CURSOR_MOVED, &REHex::Disassemble::OnCursorMove, this);
 	document->Unbind(wxEVT_DESTROY, &REHex::Disassemble::OnDocumentDestroy, this);
 }
@@ -232,6 +236,8 @@ void REHex::Disassemble::update()
 			}
 		}
 	}
+	
+	assembly->set_offset_display(document->get_offset_display_base(), document->buffer_length());
 	
 	if(!instructions.empty())
 	{
@@ -338,4 +344,20 @@ void REHex::Disassemble::OnArch(wxCommandEvent &event)
 {
 	reinit_disassembler();
 	update();
+}
+
+void REHex::Disassemble::OnDataModified(wxCommandEvent &event)
+{
+	update();
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::Disassemble::OnBaseChanged(wxCommandEvent &event)
+{
+	update();
+	
+	/* Continue propogation. */
+	event.Skip();
 }

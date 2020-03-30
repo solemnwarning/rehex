@@ -83,6 +83,7 @@ wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,      wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,      wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -204,6 +205,22 @@ void REHex::Document::set_show_offsets(bool show_offsets)
 {
 	offset_column = show_offsets;
 	_handle_width_change();
+}
+
+REHex::OffsetBase REHex::Document::get_offset_display_base() const
+{
+	return offset_display_base;
+}
+
+void REHex::Document::set_offset_display_base(REHex::OffsetBase offset_display_base)
+{
+	this->offset_display_base = offset_display_base;
+	_handle_width_change();
+	
+	wxCommandEvent event(REHex::EV_BASE_CHANGED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
 }
 
 bool REHex::Document::get_show_ascii()
@@ -734,7 +751,29 @@ void REHex::Document::_handle_width_change()
 	
 	if(offset_column)
 	{
-		offset_column_width = hf_string_width(18);
+		/* Offset column width includes the vertical line between it and the hex area, so
+		 * size is calculated for n+1 characters.
+		*/
+		
+		if(buffer_length() > 0xFFFFFFFF)
+		{
+			if(offset_display_base == OFFSET_BASE_HEX)
+			{
+				offset_column_width = hf_string_width(18);
+			}
+			else{
+				offset_column_width = hf_string_width(20);
+			}
+		}
+		else{
+			if(offset_display_base == OFFSET_BASE_HEX)
+			{
+				offset_column_width = hf_string_width(10);
+			}
+			else{
+				offset_column_width = hf_string_width(11);
+			}
+		}
 	}
 	else{
 		offset_column_width = 0;
@@ -1801,7 +1840,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				&& NestedOffsetLengthMap_can_set(comments, selection_off, selection_length))
 			{
 				char menu_label[64];
-				snprintf(menu_label, sizeof(menu_label), "Set comment on %lld bytes...", (long long)(selection_length));
+				snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));
 				wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
 				
 				menu.Bind(wxEVT_MENU, [this](wxCommandEvent &event)
@@ -2214,6 +2253,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	visible_lines     = 1;
 	bytes_per_line    = 0;
 	bytes_per_group   = 4;
+	offset_display_base = OFFSET_BASE_HEX;
 	show_ascii        = true;
 	inline_comment_mode = ICM_FULL_INDENT;
 	highlight_selection_match = false;
@@ -2421,11 +2461,15 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 /* Insert some data into the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
+	bool was64 = buffer_length() > 0xFFFFFFFF;
+	
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
 	
 	if(ok)
 	{
+		bool now64 = buffer_length() > 0xFFFFFFFF;
+		
 		set_dirty(true);
 		
 		auto region = regions.begin();
@@ -2495,7 +2539,17 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			++region;
 		}
 		
-		_update_vscroll();
+		if(now64 != was64 && offset_column)
+		{
+			/* File has grown past 0xFFFFFFFF bytes in length, offset column will now
+			 * be widened to accomodate.
+			*/
+			
+			_handle_width_change();
+		}
+		else{
+			_update_vscroll();
+		}
 		
 		_raise_data_modified();
 		
@@ -2512,11 +2566,15 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 /* Erase a range of data from the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length)
 {
+	bool was64 = buffer_length() > 0xFFFFFFFF;
+	
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
 	
 	if(ok)
 	{
+		bool now64 = buffer_length() > 0xFFFFFFFF;
+		
 		set_dirty(true);
 		
 		auto region = regions.begin();
@@ -2602,6 +2660,15 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 			next_yo += (*region)->y_lines;
 			
 			++region;
+		}
+		
+		if(now64 != was64 && offset_column)
+		{
+			/* File has shrank below 0xFFFFFFFF bytes in length, offset column will now
+			 * be narrowed.
+			*/
+			
+			_handle_width_change();
 		}
 		
 		_raise_data_modified();
@@ -3490,13 +3557,11 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		if(doc.offset_column)
 		{
 			/* Draw the offsets to the left */
-			char offset_str[64];
-			snprintf(offset_str, sizeof(offset_str), "%08X:%08X",
-				(unsigned)((cur_off & 0xFFFFFFFF00000000) >> 32),
-				(unsigned)(cur_off & 0xFFFFFFFF));
+			
+			std::string offset_str = format_offset(cur_off, doc.offset_display_base, doc.buffer_length());
 			
 			normal_text_colour();
-			dc.DrawText(offset_str, (x + offset_text_x), y);
+			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);
 		}
 		
 		int hex_base_x = x + hex_text_x;

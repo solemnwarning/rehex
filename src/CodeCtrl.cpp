@@ -43,6 +43,8 @@ END_EVENT_TABLE()
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
 	max_line_width(0),
+	offset_display_base(OFFSET_BASE_HEX),
+	offset_display_upper_bound(0xFFFFFFFF),
 	scroll_xoff(0), scroll_xoff_max(0),
 	scroll_yoff(0), scroll_yoff_max(0),
 	wheel_vert_accum(0),
@@ -65,7 +67,8 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	font_width  = char_extent.GetWidth();
 	font_height = char_extent.GetHeight();
 	
-	code_xoff = dc.GetTextExtent("00000000  ").GetWidth();
+	std::string offset_str = format_offset(0, offset_display_base, offset_display_upper_bound);
+	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
 }
 
 void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool active)
@@ -244,6 +247,32 @@ void REHex::CodeCtrl::select_all()
 	}
 }
 
+void REHex::CodeCtrl::set_offset_display(REHex::OffsetBase offset_display_base, off_t offset_display_upper_bound)
+{
+	this->offset_display_base        = offset_display_base;
+	this->offset_display_upper_bound = offset_display_upper_bound;
+	
+	wxClientDC dc(this);
+	dc.SetFont(*font);
+	
+	std::string offset_str = format_offset(0, offset_display_base, offset_display_upper_bound);
+	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
+	
+	max_line_width = 0;
+	
+	for(auto l = lines.begin(); l != lines.end(); ++l)
+	{
+		int line_width = code_xoff + dc.GetTextExtent(l->text).GetWidth();
+		if(max_line_width < line_width)
+		{
+			max_line_width = line_width;
+		}
+	}
+	
+	update_scrollbars();
+	Refresh();
+}
+
 void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 {
 	wxSize client_size = GetClientSize();
@@ -305,9 +334,8 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 			set(*wxBLACK, *wxWHITE, true);
 		}
 		
-		char offset_str[16];
-		snprintf(offset_str, sizeof(offset_str), "%08X", (unsigned)(line->offset & 0xFFFFFFFF));
-		dc.DrawText(offset_str, x, y);
+		std::string offset_str = format_offset(line->offset, offset_display_base, offset_display_upper_bound);
+		dc.DrawText(offset_str.c_str(), x, y);
 		
 		for(size_t c = 0; c < line->text.length(); ++c)
 		{

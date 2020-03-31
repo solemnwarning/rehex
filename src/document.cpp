@@ -2687,35 +2687,43 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 
 void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
-	std::vector<unsigned char> old_data = read_data(offset, length);
-	assert(old_data.size() == (size_t)(length));
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
 	
-	std::vector<unsigned char> new_data(data, data + length);
+	std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+	assert(old_data->size() == (size_t)(length));
+	
+	std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(data, data + length));
 	
 	_tracked_change(change_desc,
 		[this, offset, new_data, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_overwrite_data(dc, offset, new_data.data(), new_data.size());
+			_UNTRACKED_overwrite_data(dc, offset, new_data->data(), new_data->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
 		[this, offset, old_data]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_overwrite_data(dc, offset, old_data.data(), old_data.size());
+			_UNTRACKED_overwrite_data(dc, offset, old_data->data(), old_data->size());
 		});
 }
 
 void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
-	std::vector<unsigned char> data_copy(data, data + length);
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
+	
+	std::shared_ptr< std::vector<unsigned char> > data_copy(new std::vector<unsigned char>(data, data + length));
 	
 	_tracked_change(change_desc,
 		[this, offset, data_copy, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_insert_data(dc, offset, data_copy.data(), data_copy.size());
+			_UNTRACKED_insert_data(dc, offset, data_copy->data(), data_copy->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
@@ -2728,14 +2736,18 @@ void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset
 
 void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length)
 {
-	std::vector<unsigned char> erase_data = read_data(offset, length);
-	assert(erase_data.size() == (size_t)(length));
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
+	
+	std::shared_ptr< std::vector<unsigned char> > erase_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+	assert(erase_data->size() == (size_t)(length));
 	
 	_tracked_change(change_desc,
-		[this, offset, erase_data]()
+		[this, offset, length]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_erase_data(dc, offset, erase_data.size());
+			_UNTRACKED_erase_data(dc, offset, length);
 			
 			set_cursor_position(offset);
 			clear_selection();
@@ -2747,7 +2759,7 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 		[this, offset, erase_data]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_insert_data(dc, offset, erase_data.data(), erase_data.size());
+			_UNTRACKED_insert_data(dc, offset, erase_data->data(), erase_data->size());
 		});
 }
 
@@ -2759,15 +2771,21 @@ void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offse
 		/* TODO */
 	}
 	
-	std::vector<unsigned char> old_data_copy = buffer->read_data(offset, old_data_length);
-	std::vector<unsigned char> new_data_copy(new_data, new_data + new_data_length);
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
+	
+	std::shared_ptr< std::vector<unsigned char> > old_data_copy(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
+	assert(old_data_copy->size() == old_data_length);
+	
+	std::shared_ptr< std::vector<unsigned char> > new_data_copy(new std::vector<unsigned char>(new_data, new_data + new_data_length));
 	
 	_tracked_change(change_desc,
 		[this, offset, old_data_length, new_data_copy, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_erase_data(dc, offset, old_data_length);
-			_UNTRACKED_insert_data(dc, offset, new_data_copy.data(), new_data_copy.size());
+			_UNTRACKED_insert_data(dc, offset, new_data_copy->data(), new_data_copy->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		
@@ -2775,7 +2793,7 @@ void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offse
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_erase_data(dc, offset, new_data_length);
-			_UNTRACKED_insert_data(dc, offset, old_data_copy.data(), old_data_copy.size());
+			_UNTRACKED_insert_data(dc, offset, old_data_copy->data(), old_data_copy->size());
 		});
 }
 

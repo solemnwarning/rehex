@@ -3455,34 +3455,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto inverted_text_colour = [&dc]()
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_INVERT_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
-	auto selected_text_colour = [&dc]()
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_SELECTED_TEXT_BG]);
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
-	auto secondary_selected_text_colour = [&dc]()
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
-	auto highlighted_text_colour = [&dc](int highlight_idx)
-	{
-		dc.SetTextForeground(active_palette->get_highlight_fg(highlight_idx));
-		dc.SetTextBackground(active_palette->get_highlight_bg(highlight_idx));
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
 	/* If we are scrolled part-way into a data region, don't render data above the client area
 	 * as it would get expensive very quickly with large files.
 	*/
@@ -3582,13 +3554,13 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);
 		}
 		
-		int hex_base_x = x + hex_text_x;
-		int hex_x      = hex_base_x;
-		int hex_x_char = 0;
+		int hex_base_x = x + hex_text_x;  /* Base X co-ordinate to draw hex characters from */
+		int hex_x      = hex_base_x;      /* X co-ordinate of current hex character */
+		int hex_x_char = 0;               /* Column of current hex character */
 		
-		int ascii_base_x = x + ascii_text_x;
-		int ascii_x      = ascii_base_x;
-		int ascii_x_char = 0;
+		int ascii_base_x = x + ascii_text_x;  /* Base X co-ordinate to draw ASCII characters from */
+		int ascii_x      = ascii_base_x;      /* X co-ordinate of current ASCII character */
+		int ascii_x_char = 0;                 /* Column of current ASCII character */
 		
 		auto draw_end_cursor = [&]()
 		{
@@ -3635,14 +3607,51 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			break;
 		}
 		
-		wxString hex_str, ascii_string;
+		/* Calling wxDC::DrawText() for each individual character on the screen is
+		 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
+		 * area on a per-line basis.
+		 *
+		 * The key of the deferred_drawtext map is the X co-ordinate to render the string
+		 * at (hex_base_x or ascii_base_x) and the foreground colour to use.
+		 *
+		 * The draw_char_deferred() function adds a character to be drawn to the map, while
+		 * prefixing it with any spaces necessary to pad it to the correct column from the
+		 * base X co-ordinate.
+		*/
+		
+		std::map<std::pair<int, Palette::ColourIndex>, std::string> deferred_drawtext;
+		
+		auto draw_char_deferred = [&](int base_x, Palette::ColourIndex colour_idx, int col, char ch)
+		{
+			std::pair<int, Palette::ColourIndex> k(base_x, colour_idx);
+			std::string &str = deferred_drawtext[k];
+			
+			assert(str.length() <= col);
+			
+			str.append((col - str.length()), ' ');
+			str.append(1, ch);
+		};
+		
+		/* Because we need to minimise wxDC::DrawText() calls (see above), we draw any
+		 * background colours ourselves and set the background mode to transparent when
+		 * drawing text, which enables us to skip over characters that shouldn't be
+		 * touched by that particular wxDC::DrawText() call by inserting spaces.
+		*/
+		
+		auto fill_char_bg = [&](int char_x, Palette::ColourIndex colour_idx)
+		{
+			wxBrush bg_brush((*active_palette)[colour_idx]);
+			
+			dc.SetBrush(bg_brush);
+			dc.SetPen(*wxTRANSPARENT_PEN);
+			
+			dc.DrawRectangle(char_x, y, doc.hf_char_width(), doc.hf_height);
+		};
 		
 		for(unsigned int c = 0; c < bytes_per_line_actual && di != data.end(); ++c)
 		{
 			if(c > 0 && (c % doc.bytes_per_group) == 0)
 			{
-				hex_str.append(1, ' ');
-				
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
 			}
 			
@@ -3667,44 +3676,28 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				
 				if(invert && doc.cursor_visible)
 				{
-					inverted_text_colour();
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, Palette::PAL_INVERT_TEXT_BG);
+					draw_char_deferred(hex_base_x, Palette::PAL_INVERT_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				else if(cur_off >= doc.selection_off
 					&& cur_off < (doc.selection_off + doc.selection_length)
 					&& hex_active)
 				{
-					selected_text_colour();
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, Palette::PAL_SELECTED_TEXT_BG);
+					draw_char_deferred(hex_base_x, Palette::PAL_SELECTED_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				else if(secondary_selection_remain > 0 && !(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length)))
 				{
-					secondary_selected_text_colour();
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, Palette::PAL_SECONDARY_SELECTED_TEXT_BG);
+					draw_char_deferred(hex_base_x, Palette::PAL_SECONDARY_SELECTED_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				else if(highlight != doc.highlights.end())
 				{
-					highlighted_text_colour(highlight->second);
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, active_palette->get_highlight_bg_idx(highlight->second));
+					draw_char_deferred(hex_base_x, active_palette->get_highlight_fg_idx(highlight->second), hex_x_char, nibble_to_hex[nibble]);
 				}
 				else{
-					hex_str.append(1, nibble_to_hex[nibble]);
+					draw_char_deferred(hex_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
@@ -3788,6 +3781,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			if(cur_off == cursor_pos && !doc.insert_mode && !hex_active)
 			{
 				/* Draw inactive overwrite cursor. */
+				dc.SetBrush(*wxTRANSPARENT_BRUSH);
 				dc.SetPen(norm_fg_1px);
 				
 				if(doc.cursor_state == CSTATE_HEX_MID)
@@ -3809,70 +3803,48 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				{
 					if(cur_off == cursor_pos && !doc.insert_mode && doc.cursor_visible)
 					{
-						inverted_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_INVERT_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_INVERT_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
 					{
-						selected_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_SELECTED_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_SELECTED_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(secondary_selection_remain > 0)
 					{
-						secondary_selected_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_SECONDARY_SELECTED_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_SECONDARY_SELECTED_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(highlight != doc.highlights.end())
 					{
-						highlighted_text_colour(highlight->second);
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, active_palette->get_highlight_bg_idx(highlight->second));
+						draw_char_deferred(ascii_base_x, active_palette->get_highlight_fg_idx(highlight->second), ascii_x_char, ascii_byte);
 					}
 					else{
-						ascii_string.append(1, ascii_byte);
+						draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 				}
 				else{
 					if(secondary_selection_remain > 0 && !(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length)) && !ascii_active)
 					{
-						secondary_selected_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_SECONDARY_SELECTED_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_SECONDARY_SELECTED_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(highlight != doc.highlights.end() && !ascii_active)
 					{
-						highlighted_text_colour(highlight->second);
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, active_palette->get_highlight_bg_idx(highlight->second));
+						draw_char_deferred(ascii_base_x, active_palette->get_highlight_fg_idx(highlight->second), ascii_x_char, ascii_byte);
 					}
 					else{
-						ascii_string.append(1, ascii_byte);
+						draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					
 					if(cur_off == cursor_pos && !doc.insert_mode)
 					{
+						dc.SetBrush(*wxTRANSPARENT_BRUSH);
 						dc.SetPen(norm_fg_1px);
+						
 						dc.DrawRectangle(ascii_x, y, doc.hf_char_width(), doc.hf_height);
 					}
 					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
@@ -3924,11 +3896,12 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		
 		normal_text_colour();
 		
-		dc.DrawText(hex_str, hex_base_x, y);
-		
-		if(doc.show_ascii)
+		for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
 		{
-			dc.DrawText(ascii_string, ascii_base_x, y);
+			dc.SetTextForeground((*active_palette)[dd->first.second]);
+			dc.SetBackgroundMode(wxTRANSPARENT);
+			
+			dc.DrawText(dd->second, dd->first.first, y);
 		}
 		
 		if(cur_off == cursor_pos && cur_off == doc.buffer_length() && (d_length % bytes_per_line_actual) != 0)

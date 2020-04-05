@@ -68,6 +68,22 @@ const wxColour &REHex::Palette::get_highlight_fg(int index) const
 	return palette[PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2)];
 }
 
+REHex::Palette::ColourIndex REHex::Palette::get_highlight_bg_idx(int index)
+{
+	assert(index >= 0);
+	assert(index < NUM_HIGHLIGHT_COLOURS);
+	
+	return (ColourIndex)(PAL_HIGHLIGHT_TEXT_MIN_BG + (index * 2));
+}
+
+REHex::Palette::ColourIndex REHex::Palette::get_highlight_fg_idx(int index)
+{
+	assert(index >= 0);
+	assert(index < NUM_HIGHLIGHT_COLOURS);
+	
+	return (ColourIndex)(PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2));
+}
+
 REHex::Palette *REHex::Palette::create_system_palette()
 {
 	const wxColour WINDOW        = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);

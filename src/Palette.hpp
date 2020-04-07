@@ -60,6 +60,9 @@ namespace REHex {
 			const wxColour &get_highlight_bg(int highlight_idx) const;
 			const wxColour &get_highlight_fg(int highlight_idx) const;
 			
+			static ColourIndex get_highlight_bg_idx(int index);
+			static ColourIndex get_highlight_fg_idx(int index);
+			
 			static Palette *create_system_palette();
 			static Palette *create_light_palette();
 			static Palette *create_dark_palette();

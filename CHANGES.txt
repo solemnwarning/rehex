@@ -1,0 +1,24 @@
+Version TBA
+
+ * Allow copying comments from a document and pasting them elsewhere in the
+   same document or into another one.
+
+ * Fixed bounds check when clicking on nested comments in a document.
+
+ * Added context menu when right clicking on a comment in a document.
+
+ * Optionally highlight byte sequences which match the current selection.
+   ("Highlight data matching selection" or "PatternMatchHighlight").
+
+ * Allow copying cursor offset from document context menu.
+
+ * Correctly display offsets over 4GiB in the status bar.
+
+ * Display offsets as XXXX:XXXX rather than XXXXXXXX:XXXXXXXX when the file
+   size is under 4GiB.
+
+ * Add per-document option for dec/hex offset display.
+
+Version 0.1.0 (2020-03-12)
+
+ * Initial release.

@@ -69,6 +69,8 @@ enum {
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
 	ID_HIGHLIGHT_SELECTION_MATCH,
+	ID_HEX_OFFSETS,
+	ID_DEC_OFFSETS,
 	ID_SELECT_RANGE,
 	ID_SYSTEM_PALETTE,
 	ID_LIGHT_PALETTE,
@@ -135,6 +137,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_DARK_PALETTE,   REHex::MainWindow::OnPalette)
+	
+	EVT_MENU(ID_HEX_OFFSETS,   REHex::MainWindow::OnHexOffsets)
+	EVT_MENU(ID_DEC_OFFSETS,   REHex::MainWindow::OnDecOffsets)
 	
 	EVT_MENU(ID_GITHUB,  REHex::MainWindow::OnGithub)
 	EVT_MENU(ID_DONATE,  REHex::MainWindow::OnDonate)
@@ -238,6 +243,11 @@ REHex::MainWindow::MainWindow():
 		
 		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
 	}
+	
+	view_menu->AppendSeparator();
+	
+	view_menu->AppendRadioItem(ID_HEX_OFFSETS, "Display offsets in hexadecimal");
+	view_menu->AppendRadioItem(ID_DEC_OFFSETS, "Display offsets in decimal");
 	
 	view_menu->AppendSeparator();
 	
@@ -876,6 +886,24 @@ void REHex::MainWindow::OnPalette(wxCommandEvent &event)
 	Refresh();
 }
 
+void REHex::MainWindow::OnHexOffsets(wxCommandEvent &event)
+{
+	REHex::Document *doc = active_document();
+	doc->set_offset_display_base(OFFSET_BASE_HEX);
+	
+	_update_status_offset(doc);
+	_update_status_selection(doc);
+}
+
+void REHex::MainWindow::OnDecOffsets(wxCommandEvent &event)
+{
+	REHex::Document *doc = active_document();
+	doc->set_offset_display_base(OFFSET_BASE_DEC);
+	
+	_update_status_offset(doc);
+	_update_status_selection(doc);
+}
+
 void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 {
 	wxConfig *config = wxGetApp().config;
@@ -933,6 +961,18 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
 	view_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
 	view_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
+	
+	OffsetBase offset_display_base = tab->doc->get_offset_display_base();
+	switch(offset_display_base)
+	{
+		case OFFSET_BASE_HEX:
+			view_menu->Check(ID_HEX_OFFSETS, true);
+			break;
+			
+		case OFFSET_BASE_DEC:
+			view_menu->Check(ID_DEC_OFFSETS, true);
+			break;
+	}
 	
 	REHex::Document::InlineCommentMode icm = tab->doc->get_inline_comment_mode();
 	switch(icm)
@@ -1193,12 +1233,9 @@ void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
 {
 	off_t off = doc->get_cursor_position();
 	
-	char buf[64];
-	snprintf(buf, sizeof(buf), "Offset: %08x:%08x",
-		(unsigned int)((off & 0x00000000FFFFFFFF) << 32),
-		(unsigned int)(off & 0xFFFFFFFF));
+	std::string off_text = format_offset(off, doc->get_offset_display_base());
 	
-	SetStatusText(buf, 0);
+	SetStatusText(off_text, 0);
 }
 
 void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
@@ -1212,13 +1249,13 @@ void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
 	{
 		off_t selection_end = (selection_off + selection_length) - 1;
 		
+		std::string from_text = format_offset(selection_off, doc->get_offset_display_base(), selection_end);
+		std::string to_text   = format_offset(selection_end, doc->get_offset_display_base(), selection_end);
+		
 		char buf[64];
-		snprintf(buf, sizeof(buf), "Selection: %08x:%08x - %08x:%08x (%u bytes)",
-			(unsigned int)((selection_off & 0x00000000FFFFFFFF) << 32),
-			(unsigned int)(selection_off & 0xFFFFFFFF),
-			
-			(unsigned int)((selection_end & 0x00000000FFFFFFFF) << 32),
-			(unsigned int)(selection_end & 0xFFFFFFFF),
+		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u bytes)",
+			from_text.c_str(),
+			to_text.c_str(),
 			
 			(unsigned int)(selection_length));
 		
@@ -1672,6 +1709,7 @@ void REHex::MainWindow::Tab::save_view(wxConfig *config)
 	config->Write("show-ascii", doc->get_show_ascii());
 	config->Write("inline-comments", (int)(doc->get_inline_comment_mode()));
 	config->Write("highlight-selection-match", doc->get_highlight_selection_match());
+	config->Write("offset-display-base", (int)(doc->get_offset_display_base()));
 	
 	/* TODO: Save h_tools state */
 	
@@ -1952,6 +1990,12 @@ void REHex::MainWindow::Tab::init_default_doc_view()
 	if(inline_comments >= 0 && inline_comments <= REHex::Document::ICM_MAX)
 	{
 		doc->set_inline_comment_mode((REHex::Document::InlineCommentMode)(inline_comments));
+	}
+	
+	int offset_display_base = config->Read("offset-display-base", (int)(doc->get_offset_display_base()));
+	if(offset_display_base >= OFFSET_BASE_MIN && offset_display_base <= OFFSET_BASE_MAX)
+	{
+		doc->set_offset_display_base((OffsetBase)(offset_display_base));
 	}
 }
 

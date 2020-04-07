@@ -24,6 +24,8 @@
 #include <wx/control.h>
 #include <wx/wx.h>
 
+#include "util.hpp"
+
 namespace REHex {
 	class CodeCtrl: public wxControl {
 		public:
@@ -33,6 +35,8 @@ namespace REHex {
 			void clear();
 			
 			void center_line(int line);
+			
+			void set_offset_display(OffsetBase offset_display_base, off_t offset_display_upper_bound);
 			
 		private:
 			static const int MOUSE_SELECT_INTERVAL = 100;
@@ -55,6 +59,9 @@ namespace REHex {
 			
 			std::vector<Line> lines;
 			int max_line_width;
+			
+			OffsetBase offset_display_base;
+			off_t offset_display_upper_bound;
 			
 			int scroll_xoff, scroll_xoff_max;
 			int scroll_yoff, scroll_yoff_max;

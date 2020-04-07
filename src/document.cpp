@@ -83,6 +83,7 @@ wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,      wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,      wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -204,6 +205,22 @@ void REHex::Document::set_show_offsets(bool show_offsets)
 {
 	offset_column = show_offsets;
 	_handle_width_change();
+}
+
+REHex::OffsetBase REHex::Document::get_offset_display_base() const
+{
+	return offset_display_base;
+}
+
+void REHex::Document::set_offset_display_base(REHex::OffsetBase offset_display_base)
+{
+	this->offset_display_base = offset_display_base;
+	_handle_width_change();
+	
+	wxCommandEvent event(REHex::EV_BASE_CHANGED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
 }
 
 bool REHex::Document::get_show_ascii()
@@ -734,7 +751,29 @@ void REHex::Document::_handle_width_change()
 	
 	if(offset_column)
 	{
-		offset_column_width = hf_string_width(18);
+		/* Offset column width includes the vertical line between it and the hex area, so
+		 * size is calculated for n+1 characters.
+		*/
+		
+		if(buffer_length() > 0xFFFFFFFF)
+		{
+			if(offset_display_base == OFFSET_BASE_HEX)
+			{
+				offset_column_width = hf_string_width(18);
+			}
+			else{
+				offset_column_width = hf_string_width(20);
+			}
+		}
+		else{
+			if(offset_display_base == OFFSET_BASE_HEX)
+			{
+				offset_column_width = hf_string_width(10);
+			}
+			else{
+				offset_column_width = hf_string_width(11);
+			}
+		}
 	}
 	else{
 		offset_column_width = 0;
@@ -1743,6 +1782,34 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 			
 			off_t cursor_pos = get_cursor_position();
 			
+			wxMenuItem *offset_copy_hex = menu.Append(wxID_ANY, "Copy offset (in hexadecimal)");
+			menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+			{
+				ClipboardGuard cg;
+				if(cg)
+				{
+					char offset_str[24];
+					snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos));
+					
+					wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+				}
+			}, offset_copy_hex->GetId(), offset_copy_hex->GetId());
+			
+			wxMenuItem *offset_copy_dec = menu.Append(wxID_ANY, "Copy offset (in decimal)");
+			menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+			{
+				ClipboardGuard cg;
+				if(cg)
+				{
+					char offset_str[24];
+					snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos));
+					
+					wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+				}
+			}, offset_copy_dec->GetId(), offset_copy_dec->GetId());
+			
+			menu.AppendSeparator();
+			
 			auto comments_at_cur = NestedOffsetLengthMap_get_all(comments, cursor_pos);
 			for(auto i = comments_at_cur.begin(); i != comments_at_cur.end(); ++i)
 			{
@@ -1773,7 +1840,7 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 				&& NestedOffsetLengthMap_can_set(comments, selection_off, selection_length))
 			{
 				char menu_label[64];
-				snprintf(menu_label, sizeof(menu_label), "Set comment on %lld bytes...", (long long)(selection_length));
+				snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));
 				wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
 				
 				menu.Bind(wxEVT_MENU, [this](wxCommandEvent &event)
@@ -2186,6 +2253,7 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	visible_lines     = 1;
 	bytes_per_line    = 0;
 	bytes_per_group   = 4;
+	offset_display_base = OFFSET_BASE_HEX;
 	show_ascii        = true;
 	inline_comment_mode = ICM_FULL_INDENT;
 	highlight_selection_match = false;
@@ -2393,11 +2461,15 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 /* Insert some data into the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
+	bool was64 = buffer_length() > 0xFFFFFFFF;
+	
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
 	
 	if(ok)
 	{
+		bool now64 = buffer_length() > 0xFFFFFFFF;
+		
 		set_dirty(true);
 		
 		auto region = regions.begin();
@@ -2467,7 +2539,17 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 			++region;
 		}
 		
-		_update_vscroll();
+		if(now64 != was64 && offset_column)
+		{
+			/* File has grown past 0xFFFFFFFF bytes in length, offset column will now
+			 * be widened to accomodate.
+			*/
+			
+			_handle_width_change();
+		}
+		else{
+			_update_vscroll();
+		}
 		
 		_raise_data_modified();
 		
@@ -2484,11 +2566,15 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 /* Erase a range of data from the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length)
 {
+	bool was64 = buffer_length() > 0xFFFFFFFF;
+	
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
 	
 	if(ok)
 	{
+		bool now64 = buffer_length() > 0xFFFFFFFF;
+		
 		set_dirty(true);
 		
 		auto region = regions.begin();
@@ -2576,6 +2662,15 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 			++region;
 		}
 		
+		if(now64 != was64 && offset_column)
+		{
+			/* File has shrank below 0xFFFFFFFF bytes in length, offset column will now
+			 * be narrowed.
+			*/
+			
+			_handle_width_change();
+		}
+		
 		_raise_data_modified();
 		
 		assert(to_shift == length);
@@ -2592,35 +2687,43 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 
 void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
-	std::vector<unsigned char> old_data = read_data(offset, length);
-	assert(old_data.size() == (size_t)(length));
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
 	
-	std::vector<unsigned char> new_data(data, data + length);
+	std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+	assert(old_data->size() == (size_t)(length));
+	
+	std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(data, data + length));
 	
 	_tracked_change(change_desc,
 		[this, offset, new_data, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_overwrite_data(dc, offset, new_data.data(), new_data.size());
+			_UNTRACKED_overwrite_data(dc, offset, new_data->data(), new_data->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
 		[this, offset, old_data]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_overwrite_data(dc, offset, old_data.data(), old_data.size());
+			_UNTRACKED_overwrite_data(dc, offset, old_data->data(), old_data->size());
 		});
 }
 
 void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
-	std::vector<unsigned char> data_copy(data, data + length);
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
+	
+	std::shared_ptr< std::vector<unsigned char> > data_copy(new std::vector<unsigned char>(data, data + length));
 	
 	_tracked_change(change_desc,
 		[this, offset, data_copy, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_insert_data(dc, offset, data_copy.data(), data_copy.size());
+			_UNTRACKED_insert_data(dc, offset, data_copy->data(), data_copy->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
@@ -2633,14 +2736,18 @@ void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset
 
 void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length)
 {
-	std::vector<unsigned char> erase_data = read_data(offset, length);
-	assert(erase_data.size() == (size_t)(length));
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
+	
+	std::shared_ptr< std::vector<unsigned char> > erase_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+	assert(erase_data->size() == (size_t)(length));
 	
 	_tracked_change(change_desc,
-		[this, offset, erase_data]()
+		[this, offset, length]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_erase_data(dc, offset, erase_data.size());
+			_UNTRACKED_erase_data(dc, offset, length);
 			
 			set_cursor_position(offset);
 			clear_selection();
@@ -2652,7 +2759,7 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 		[this, offset, erase_data]()
 		{
 			wxClientDC dc(this);
-			_UNTRACKED_insert_data(dc, offset, erase_data.data(), erase_data.size());
+			_UNTRACKED_insert_data(dc, offset, erase_data->data(), erase_data->size());
 		});
 }
 
@@ -2664,15 +2771,21 @@ void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offse
 		/* TODO */
 	}
 	
-	std::vector<unsigned char> old_data_copy = buffer->read_data(offset, old_data_length);
-	std::vector<unsigned char> new_data_copy(new_data, new_data + new_data_length);
+	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
+	 * lambdas without actually making a copy.
+	*/
+	
+	std::shared_ptr< std::vector<unsigned char> > old_data_copy(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
+	assert(old_data_copy->size() == old_data_length);
+	
+	std::shared_ptr< std::vector<unsigned char> > new_data_copy(new std::vector<unsigned char>(new_data, new_data + new_data_length));
 	
 	_tracked_change(change_desc,
 		[this, offset, old_data_length, new_data_copy, new_cursor_pos, new_cursor_state]()
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_erase_data(dc, offset, old_data_length);
-			_UNTRACKED_insert_data(dc, offset, new_data_copy.data(), new_data_copy.size());
+			_UNTRACKED_insert_data(dc, offset, new_data_copy->data(), new_data_copy->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		
@@ -2680,7 +2793,7 @@ void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offse
 		{
 			wxClientDC dc(this);
 			_UNTRACKED_erase_data(dc, offset, new_data_length);
-			_UNTRACKED_insert_data(dc, offset, old_data_copy.data(), old_data_copy.size());
+			_UNTRACKED_insert_data(dc, offset, old_data_copy->data(), old_data_copy->size());
 		});
 }
 
@@ -3342,34 +3455,6 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto inverted_text_colour = [&dc]()
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_INVERT_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
-	auto selected_text_colour = [&dc]()
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_SELECTED_TEXT_BG]);
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
-	auto secondary_selected_text_colour = [&dc]()
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
-	auto highlighted_text_colour = [&dc](int highlight_idx)
-	{
-		dc.SetTextForeground(active_palette->get_highlight_fg(highlight_idx));
-		dc.SetTextBackground(active_palette->get_highlight_bg(highlight_idx));
-		dc.SetBackgroundMode(wxSOLID);
-	};
-	
 	/* If we are scrolled part-way into a data region, don't render data above the client area
 	 * as it would get expensive very quickly with large files.
 	*/
@@ -3462,22 +3547,20 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		if(doc.offset_column)
 		{
 			/* Draw the offsets to the left */
-			char offset_str[64];
-			snprintf(offset_str, sizeof(offset_str), "%08X:%08X",
-				(unsigned)((cur_off & 0xFFFFFFFF00000000) >> 32),
-				(unsigned)(cur_off & 0xFFFFFFFF));
+			
+			std::string offset_str = format_offset(cur_off, doc.offset_display_base, doc.buffer_length());
 			
 			normal_text_colour();
-			dc.DrawText(offset_str, (x + offset_text_x), y);
+			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);
 		}
 		
-		int hex_base_x = x + hex_text_x;
-		int hex_x      = hex_base_x;
-		int hex_x_char = 0;
+		int hex_base_x = x + hex_text_x;  /* Base X co-ordinate to draw hex characters from */
+		int hex_x      = hex_base_x;      /* X co-ordinate of current hex character */
+		int hex_x_char = 0;               /* Column of current hex character */
 		
-		int ascii_base_x = x + ascii_text_x;
-		int ascii_x      = ascii_base_x;
-		int ascii_x_char = 0;
+		int ascii_base_x = x + ascii_text_x;  /* Base X co-ordinate to draw ASCII characters from */
+		int ascii_x      = ascii_base_x;      /* X co-ordinate of current ASCII character */
+		int ascii_x_char = 0;                 /* Column of current ASCII character */
 		
 		auto draw_end_cursor = [&]()
 		{
@@ -3524,14 +3607,51 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			break;
 		}
 		
-		wxString hex_str, ascii_string;
+		/* Calling wxDC::DrawText() for each individual character on the screen is
+		 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
+		 * area on a per-line basis.
+		 *
+		 * The key of the deferred_drawtext map is the X co-ordinate to render the string
+		 * at (hex_base_x or ascii_base_x) and the foreground colour to use.
+		 *
+		 * The draw_char_deferred() function adds a character to be drawn to the map, while
+		 * prefixing it with any spaces necessary to pad it to the correct column from the
+		 * base X co-ordinate.
+		*/
+		
+		std::map<std::pair<int, Palette::ColourIndex>, std::string> deferred_drawtext;
+		
+		auto draw_char_deferred = [&](int base_x, Palette::ColourIndex colour_idx, int col, char ch)
+		{
+			std::pair<int, Palette::ColourIndex> k(base_x, colour_idx);
+			std::string &str = deferred_drawtext[k];
+			
+			assert(str.length() <= col);
+			
+			str.append((col - str.length()), ' ');
+			str.append(1, ch);
+		};
+		
+		/* Because we need to minimise wxDC::DrawText() calls (see above), we draw any
+		 * background colours ourselves and set the background mode to transparent when
+		 * drawing text, which enables us to skip over characters that shouldn't be
+		 * touched by that particular wxDC::DrawText() call by inserting spaces.
+		*/
+		
+		auto fill_char_bg = [&](int char_x, Palette::ColourIndex colour_idx)
+		{
+			wxBrush bg_brush((*active_palette)[colour_idx]);
+			
+			dc.SetBrush(bg_brush);
+			dc.SetPen(*wxTRANSPARENT_PEN);
+			
+			dc.DrawRectangle(char_x, y, doc.hf_char_width(), doc.hf_height);
+		};
 		
 		for(unsigned int c = 0; c < bytes_per_line_actual && di != data.end(); ++c)
 		{
 			if(c > 0 && (c % doc.bytes_per_group) == 0)
 			{
-				hex_str.append(1, ' ');
-				
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
 			}
 			
@@ -3556,44 +3676,28 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				
 				if(invert && doc.cursor_visible)
 				{
-					inverted_text_colour();
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, Palette::PAL_INVERT_TEXT_BG);
+					draw_char_deferred(hex_base_x, Palette::PAL_INVERT_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				else if(cur_off >= doc.selection_off
 					&& cur_off < (doc.selection_off + doc.selection_length)
 					&& hex_active)
 				{
-					selected_text_colour();
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, Palette::PAL_SELECTED_TEXT_BG);
+					draw_char_deferred(hex_base_x, Palette::PAL_SELECTED_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				else if(secondary_selection_remain > 0 && !(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length)))
 				{
-					secondary_selected_text_colour();
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, Palette::PAL_SECONDARY_SELECTED_TEXT_BG);
+					draw_char_deferred(hex_base_x, Palette::PAL_SECONDARY_SELECTED_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				else if(highlight != doc.highlights.end())
 				{
-					highlighted_text_colour(highlight->second);
-					
-					char str[] = { nibble_to_hex[nibble], '\0' };
-					dc.DrawText(str, hex_x, y);
-					
-					hex_str.append(1, ' ');
+					fill_char_bg(hex_x, active_palette->get_highlight_bg_idx(highlight->second));
+					draw_char_deferred(hex_base_x, active_palette->get_highlight_fg_idx(highlight->second), hex_x_char, nibble_to_hex[nibble]);
 				}
 				else{
-					hex_str.append(1, nibble_to_hex[nibble]);
+					draw_char_deferred(hex_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 				}
 				
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
@@ -3677,6 +3781,7 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 			if(cur_off == cursor_pos && !doc.insert_mode && !hex_active)
 			{
 				/* Draw inactive overwrite cursor. */
+				dc.SetBrush(*wxTRANSPARENT_BRUSH);
 				dc.SetPen(norm_fg_1px);
 				
 				if(doc.cursor_state == CSTATE_HEX_MID)
@@ -3698,70 +3803,48 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 				{
 					if(cur_off == cursor_pos && !doc.insert_mode && doc.cursor_visible)
 					{
-						inverted_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_INVERT_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_INVERT_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
 					{
-						selected_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_SELECTED_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_SELECTED_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(secondary_selection_remain > 0)
 					{
-						secondary_selected_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_SECONDARY_SELECTED_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_SECONDARY_SELECTED_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(highlight != doc.highlights.end())
 					{
-						highlighted_text_colour(highlight->second);
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, active_palette->get_highlight_bg_idx(highlight->second));
+						draw_char_deferred(ascii_base_x, active_palette->get_highlight_fg_idx(highlight->second), ascii_x_char, ascii_byte);
 					}
 					else{
-						ascii_string.append(1, ascii_byte);
+						draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 				}
 				else{
 					if(secondary_selection_remain > 0 && !(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length)) && !ascii_active)
 					{
-						secondary_selected_text_colour();
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, Palette::PAL_SECONDARY_SELECTED_TEXT_BG);
+						draw_char_deferred(ascii_base_x, Palette::PAL_SECONDARY_SELECTED_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					else if(highlight != doc.highlights.end() && !ascii_active)
 					{
-						highlighted_text_colour(highlight->second);
-						
-						char str[] = { ascii_byte, '\0' };
-						dc.DrawText(str, ascii_x, y);
-						
-						ascii_string.append(" ");
+						fill_char_bg(ascii_x, active_palette->get_highlight_bg_idx(highlight->second));
+						draw_char_deferred(ascii_base_x, active_palette->get_highlight_fg_idx(highlight->second), ascii_x_char, ascii_byte);
 					}
 					else{
-						ascii_string.append(1, ascii_byte);
+						draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, ascii_byte);
 					}
 					
 					if(cur_off == cursor_pos && !doc.insert_mode)
 					{
+						dc.SetBrush(*wxTRANSPARENT_BRUSH);
 						dc.SetPen(norm_fg_1px);
+						
 						dc.DrawRectangle(ascii_x, y, doc.hf_char_width(), doc.hf_height);
 					}
 					else if(cur_off >= doc.selection_off && cur_off < (doc.selection_off + doc.selection_length))
@@ -3813,11 +3896,12 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		
 		normal_text_colour();
 		
-		dc.DrawText(hex_str, hex_base_x, y);
-		
-		if(doc.show_ascii)
+		for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
 		{
-			dc.DrawText(ascii_string, ascii_base_x, y);
+			dc.SetTextForeground((*active_palette)[dd->first.second]);
+			dc.SetBackgroundMode(wxTRANSPARENT);
+			
+			dc.DrawText(dd->second, dd->first.first, y);
 		}
 		
 		if(cur_off == cursor_pos && cur_off == doc.buffer_length() && (d_length % bytes_per_line_actual) != 0)

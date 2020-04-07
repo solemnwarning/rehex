@@ -49,6 +49,7 @@ namespace REHex {
 			NumericTextCtrl *width_textctrl;
 			NumericTextCtrl *height_textctrl;
 			wxChoice *pixel_fmt_choice;
+			wxChoice *colour_fmt_choice;
 			wxCheckBox *flip_x_cb;
 			wxCheckBox *flip_y_cb;
 			wxCheckBox *scale_cb;
@@ -58,11 +59,16 @@ namespace REHex {
 			wxStaticBitmap *s_bitmap;
 			
 			void document_unbind();
+			
+			void update_colour_format_choices();
+			
 			void update();
 			wxImage render_image();
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCursorMove(wxCommandEvent &event);
+			void OnDepth(wxCommandEvent &event);
+			void OnFormat(wxCommandEvent &event);
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			

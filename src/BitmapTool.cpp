@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <functional>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/scrolwin.h>
@@ -32,9 +33,16 @@ static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::Document *d
 
 static REHex::ToolPanelRegistration tpr("BitmapTool", "Bitmap visualisation", REHex::ToolPanel::TPS_TALL, &BitmapTool_factory);
 
+enum {
+	ID_COLOUR_DEPTH = 1,
+	ID_COLOUR_FORMAT,
+};
+
 BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
+	EVT_CHOICE(ID_COLOUR_DEPTH,  REHex::BitmapTool::OnDepth)
+	EVT_CHOICE(ID_COLOUR_FORMAT, REHex::BitmapTool::OnFormat)
+	
 	EVT_TEXT(    wxID_ANY, REHex::BitmapTool::OnXXX)
-	EVT_CHOICE(  wxID_ANY, REHex::BitmapTool::OnXXX)
 	EVT_CHECKBOX(wxID_ANY, REHex::BitmapTool::OnXXX)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
@@ -48,6 +56,21 @@ enum {
 	COLOUR_DEPTH_16BPP,
 	COLOUR_DEPTH_24BPP,
 	COLOUR_DEPTH_32BPP,
+	
+	COLOUR_DEPTH_8BPP_GREYSCALE = 0,
+	COLOUR_DEPTH_8BPP_RGB332,
+	
+	COLOUR_DEPTH_16BPP_RGB565 = 0,
+	COLOUR_DEPTH_16BPP_RGB555,
+	COLOUR_DEPTH_16BPP_RGB444,
+	COLOUR_DEPTH_16BPP_ARGB1555,
+	COLOUR_DEPTH_16BPP_BGR565,
+	COLOUR_DEPTH_16BPP_BGR555,
+	COLOUR_DEPTH_16BPP_BGR444,
+	
+	COLOUR_DEPTH_24BPP_RGB888 = 0,
+	
+	COLOUR_DEPTH_32BPP_RGBA8888 = 0,
 };
 
 REHex::BitmapTool::BitmapTool(wxWindow *parent, REHex::Document *document):
@@ -68,7 +91,7 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, REHex::Document *document):
 	sizer_add_pair("Image width:",  (width_textctrl  = new NumericTextCtrl(this, wxID_ANY)));
 	sizer_add_pair("Image height:", (height_textctrl = new NumericTextCtrl(this, wxID_ANY)));
 	
-	sizer_add_pair("Colour depth:", (pixel_fmt_choice = new wxChoice(this, wxID_ANY)));
+	sizer_add_pair("Colour depth:", (pixel_fmt_choice = new wxChoice(this, ID_COLOUR_DEPTH)));
 	
 	pixel_fmt_choice->Append("1 bit/pixel");
 	pixel_fmt_choice->Append("2 bits/pixel");
@@ -77,6 +100,12 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, REHex::Document *document):
 	pixel_fmt_choice->Append("16 bits/pixel");
 	pixel_fmt_choice->Append("24 bits/pixel");
 	pixel_fmt_choice->Append("32 bits/pixel");
+	
+	pixel_fmt_choice->SetSelection(COLOUR_DEPTH_24BPP);
+	
+	sizer_add_pair("Colour format:", (colour_fmt_choice = new wxChoice(this, ID_COLOUR_FORMAT)));
+	
+	update_colour_format_choices();
 	
 	grid_sizer->Add((flip_x_cb = new wxCheckBox(this, wxID_ANY, "Flip X")));
 	grid_sizer->Add((flip_y_cb = new wxCheckBox(this, wxID_ANY, "Flip Y")));
@@ -136,6 +165,49 @@ wxSize REHex::BitmapTool::DoGetBestClientSize() const
 	return wxPanel::DoGetBestClientSize();
 }
 
+void REHex::BitmapTool::update_colour_format_choices()
+{
+	int pixel_fmt_idx = pixel_fmt_choice->GetCurrentSelection();
+	
+	colour_fmt_choice->Clear();
+	
+	switch(pixel_fmt_idx)
+	{
+		case COLOUR_DEPTH_1BPP:
+		case COLOUR_DEPTH_2BPP:
+		case COLOUR_DEPTH_4BPP:
+			colour_fmt_choice->Append("Greyscale");
+			break;
+			
+		case COLOUR_DEPTH_8BPP:
+			colour_fmt_choice->Append("Greyscale");
+			colour_fmt_choice->Append("RGB 332");
+			break;
+			
+		case COLOUR_DEPTH_16BPP:
+			colour_fmt_choice->Append("RGB 565");
+			colour_fmt_choice->Append("RGB 555");
+			colour_fmt_choice->Append("RGB 444");
+			colour_fmt_choice->Append("ARGB 1555");
+			
+			colour_fmt_choice->Append("BGR 565");
+			colour_fmt_choice->Append("BGR 555");
+			colour_fmt_choice->Append("BGR 444");
+			
+			break;
+			
+		case COLOUR_DEPTH_24BPP:
+			colour_fmt_choice->Append("RGB 888");
+			break;
+			
+		case COLOUR_DEPTH_32BPP:
+			colour_fmt_choice->Append("RGBA 8888");
+			break;
+	}
+	
+	colour_fmt_choice->SetSelection(0);
+}
+
 void REHex::BitmapTool::update()
 {
 	wxImage image = render_image();
@@ -185,6 +257,87 @@ void REHex::BitmapTool::update()
 	bitmap_scrollwin->SetVirtualSize(s_bitmap->GetSize());
 }
 
+/* The following functions take a uint32_t value and extract an X bit wide value whose least
+ * significant bit is 'shift' bits away from the least significant bit of the uint32_t and then
+ * scales it up to a uint8_t, which is returned.
+*/
+
+static inline uint8_t extract_1to8(uint32_t in, int shift)
+{
+	uint8_t out = shift > 7
+		? ((in & (0x01 << shift)) >> (shift - 7))
+		: ((in & (0x01 << shift)) << (7 - shift));
+	
+	out |= (out >> 1);
+	out |= (out >> 2);
+	out |= (out >> 4);
+	
+	return out;
+}
+
+static inline uint8_t extract_2to8(uint32_t in, int shift)
+{
+	uint8_t out = shift > 6
+		? ((in & (0x03 << shift)) >> (shift - 6))
+		: ((in & (0x03 << shift)) << (6 - shift));
+	
+	out |= (out >> 2);
+	out |= (out >> 4);
+	
+	return out;
+}
+
+static inline uint8_t extract_3to8(uint32_t in, int shift)
+{
+	uint8_t out = shift > 5
+		? ((in & (0x07 << shift)) >> (shift - 5))
+		: ((in & (0x07 << shift)) << (5 - shift));
+	
+	out |= (out >> 3);
+	out |= (out >> 6);
+	
+	return out;
+}
+
+static inline uint8_t extract_4to8(uint32_t in, int shift)
+{
+	uint8_t out = shift > 4
+		? ((in & (0x0F << shift)) >> (shift - 4))
+		: ((in & (0x0F << shift)) << (4 - shift));
+	
+	out |= (out >> 4);
+	
+	return out;
+}
+
+static inline uint8_t extract_5to8(uint32_t in, int shift)
+{
+	uint8_t out = shift > 3
+		? ((in & (0x1F << shift)) >> (shift - 3))
+		: ((in & (0x1F << shift)) << (3 - shift));
+	
+	out |= (out >> 5);
+	
+	return out;
+}
+
+static inline uint8_t extract_6to8(uint32_t in, int shift)
+{
+	uint8_t out = shift > 2
+		? ((in & (0x3F << shift)) >> (shift - 2))
+		: ((in & (0x3F << shift)) << (2 - shift));
+	
+	out |= (out >> 6);
+	
+	return out;
+}
+
+static inline uint8_t extract_8(uint32_t in, int shift)
+{
+	uint8_t out = (in & (0xFF << shift)) >> shift;
+	return out;
+}
+
 wxImage REHex::BitmapTool::render_image()
 {
 	off_t offset;
@@ -206,10 +359,17 @@ wxImage REHex::BitmapTool::render_image()
 	assert(height > 0);
 	
 	int pixel_fmt_idx = pixel_fmt_choice->GetCurrentSelection();
+	int colour_fmt_idx = colour_fmt_choice->GetCurrentSelection();
 	
 	int pixel_fmt_div   = 1;    /* Number of (possibly partial) pixels per byte */
 	int pixel_fmt_multi = 1;    /* Number of bytes to consume per pixel */
 	int pixel_fmt_bits  = 255;  /* Mask of bits to consume for first pixel in byte */
+	
+	std::function<wxColour(uint32_t)> colour_fmt_conv = [](uint32_t in)
+	{
+		in %= 256;
+		return wxColour(in, in, in);
+	};
 	
 	switch(pixel_fmt_idx)
 	{
@@ -229,18 +389,154 @@ wxImage REHex::BitmapTool::render_image()
 			break;
 			
 		case COLOUR_DEPTH_8BPP:
-			break;
+		{
+			switch(colour_fmt_idx)
+			{
+				case COLOUR_DEPTH_8BPP_GREYSCALE:
+					break;
+					
+				case COLOUR_DEPTH_8BPP_RGB332:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_3to8(in, 5),
+							extract_3to8(in, 2),
+							extract_2to8(in, 0));
+					};
+					
+					break;
+			}
 			
+			break;
+		}
+		
 		case COLOUR_DEPTH_16BPP:
+		{
 			pixel_fmt_multi = 2;
-			break;
 			
+			switch(colour_fmt_idx)
+			{
+				case COLOUR_DEPTH_16BPP_RGB565:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_5to8(in, 11),
+							extract_6to8(in, 5),
+							extract_5to8(in, 0));
+					};
+					
+					break;
+					
+				case COLOUR_DEPTH_16BPP_RGB555:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_5to8(in, 10),
+							extract_5to8(in, 5),
+							extract_5to8(in, 0));
+					};
+					
+					break;
+					
+				case COLOUR_DEPTH_16BPP_RGB444:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_4to8(in, 8),
+							extract_4to8(in, 4),
+							extract_4to8(in, 0));
+					};
+					
+					break;
+					
+				case COLOUR_DEPTH_16BPP_ARGB1555:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_5to8(in, 10),
+							extract_5to8(in, 5),
+							extract_5to8(in, 0),
+							extract_1to8(in, 15));
+					};
+					
+					break;
+					
+				case COLOUR_DEPTH_16BPP_BGR565:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_5to8(in, 0),
+							extract_6to8(in, 5),
+							extract_5to8(in, 11));
+					};
+					
+					break;
+					
+				case COLOUR_DEPTH_16BPP_BGR555:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_5to8(in, 0),
+							extract_5to8(in, 5),
+							extract_5to8(in, 10));
+					};
+					
+					break;
+					
+				case COLOUR_DEPTH_16BPP_BGR444:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_4to8(in, 0),
+							extract_4to8(in, 4),
+							extract_4to8(in, 8));
+					};
+					
+					break;
+			}
+			
+			break;
+		}
+		
 		case COLOUR_DEPTH_24BPP:
+		{
 			pixel_fmt_multi = 3;
-			break;
 			
+			switch(colour_fmt_idx)
+			{
+				case COLOUR_DEPTH_24BPP_RGB888:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_8(in, 16),
+							extract_8(in, 8),
+							extract_8(in, 0));
+					};
+					
+					break;
+			}
+			
+			break;
+		}
+		
 		case COLOUR_DEPTH_32BPP:
 			pixel_fmt_multi = 4;
+			
+			switch(colour_fmt_idx)
+			{
+				case COLOUR_DEPTH_32BPP_RGBA8888:
+					colour_fmt_conv = [](uint32_t in)
+					{
+						return wxColour(
+							extract_8(in, 24),
+							extract_8(in, 16),
+							extract_8(in, 8),
+							extract_8(in, 0));
+					};
+					
+					break;
+			}
+			
 			break;
 	}
 	
@@ -309,7 +605,23 @@ wxImage REHex::BitmapTool::render_image()
 		int adjusted_x = flip_x ? ((width  - 1) - x) : x;
 		int adjusted_y = flip_y ? ((height - 1) - y) : y;
 		
-		image.SetRGB(adjusted_x, adjusted_y, rgb, rgb, rgb);
+		wxColour colour = colour_fmt_conv(rgb);
+		
+		if(colour.Alpha() != wxALPHA_OPAQUE)
+		{
+			/* Blend colours with an alpha channel into the chequerboard. */
+			
+			double alpha = (double)(colour.Alpha()) / 255.0;
+			
+			int red   = ((double)(colour.Red())   * alpha) + ((double)(image.GetRed(  adjusted_x, adjusted_y)) * (1.0 - alpha));
+			int green = ((double)(colour.Green()) * alpha) + ((double)(image.GetGreen(adjusted_x, adjusted_y)) * (1.0 - alpha));
+			int blue  = ((double)(colour.Blue())  * alpha) + ((double)(image.GetBlue( adjusted_x, adjusted_y)) * (1.0 - alpha));
+			
+			colour.Set(red, green, blue);
+			
+		}
+		
+		image.SetRGB(adjusted_x, adjusted_y, colour.Red(), colour.Green(), colour.Blue());
 		
 		if(++x == width)
 		{
@@ -341,12 +653,20 @@ void REHex::BitmapTool::OnCursorMove(wxCommandEvent &event)
 	event.Skip();
 }
 
+void REHex::BitmapTool::OnDepth(wxCommandEvent &event)
+{
+	update_colour_format_choices();
+	update();
+}
+
+void REHex::BitmapTool::OnFormat(wxCommandEvent &event)
+{
+	update();
+}
+
 void REHex::BitmapTool::OnXXX(wxCommandEvent &event)
 {
 	update();
-	
-	/* Continue propogation. */
-	event.Skip();
 }
 
 void REHex::BitmapTool::OnSize(wxSizeEvent &event)

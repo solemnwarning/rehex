@@ -279,7 +279,7 @@ else
 	sed -i -e "s|\$$(GIT_COMMIT_TIME)|$(GIT_COMMIT_TIME)|g" rehex-$(VERSION)/Makefile
 endif
 	
-	# General reproducible tarball. All files use git commit timestamp.
+	# Generate reproducible tarball. All files use git commit timestamp.
 	find rehex-$(VERSION) -print0 | \
 		LC_ALL=C sort -z | \
 		tar \

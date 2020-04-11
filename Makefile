@@ -110,8 +110,8 @@ endif
 # VERSION := x
 
 # NOTE: Not evaluated when building from dist
-GIT_COMMIT_SHA  = $(call shell-or-die,git log -1 --format="%H")
-GIT_COMMIT_TIME = $(call shell-or-die,git log -1 --format="%ct")
+GIT_COMMIT_SHA  ?= $(call shell-or-die,git log -1 --format="%H")
+GIT_COMMIT_TIME  = $(call shell-or-die,git log -1 --format="%ct")
 
 ifdef VERSION
 	LONG_VERSION := Version $(VERSION)

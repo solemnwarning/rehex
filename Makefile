@@ -22,10 +22,10 @@ EMBED_EXE ?= ./tools/embed
 
 # Wrapper around the $(shell) function that aborts the build if the command
 # exits with a nonzero status.
-shell-or-die = \
-	$(eval sod_out := $(shell $(1); echo $$?)) \
-	$(if $(filter 0,$(lastword $(sod_out))), \
-		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)), \
+shell-or-die = $\
+	$(eval sod_out := $(shell $(1); echo $$?))$\
+	$(if $(filter 0,$(lastword $(sod_out))),$\
+		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)),$\
 		$(error $(1) exited with status $(lastword $(sod_out))))
 
 WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)

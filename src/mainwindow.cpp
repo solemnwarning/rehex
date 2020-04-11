@@ -1980,11 +1980,11 @@ void REHex::MainWindow::Tab::init_default_doc_view()
 	wxConfig *config = wxGetApp().config;
 	config->SetPath("/default-view/");
 	
-	doc->set_bytes_per_line(             config->Read("bytes-per-line",             doc->get_bytes_per_line()));
-	doc->set_bytes_per_group(            config->Read("bytes-per-group",            doc->get_bytes_per_group()));
-	doc->set_show_offsets(               config->Read("show-offsets",               doc->get_show_offsets()));
-	doc->set_show_ascii(                 config->Read("show-ascii",                 doc->get_show_ascii()));
-	doc->set_highlight_selection_match(  config->Read("highlight-selection-match",  doc->get_highlight_selection_match()));
+	doc->set_bytes_per_line(             config->Read    ("bytes-per-line",             doc->get_bytes_per_line()));
+	doc->set_bytes_per_group(            config->Read    ("bytes-per-group",            doc->get_bytes_per_group()));
+	doc->set_show_offsets(               config->ReadBool("show-offsets",               doc->get_show_offsets()));
+	doc->set_show_ascii(                 config->ReadBool("show-ascii",                 doc->get_show_ascii()));
+	doc->set_highlight_selection_match(  config->ReadBool("highlight-selection-match",  doc->get_highlight_selection_match()));
 	
 	int inline_comments = config->Read("inline-comments", (int)(doc->get_inline_comment_mode()));
 	if(inline_comments >= 0 && inline_comments <= REHex::Document::ICM_MAX)
@@ -2014,8 +2014,8 @@ void REHex::MainWindow::Tab::init_default_tools()
 		{
 			config->SetPath(base_p);
 			
-			std::string name = config->Read("name", "").ToStdString();
-			bool selected    = config->Read("selected", false);
+			std::string name = config->Read    ("name", "").ToStdString();
+			bool selected    = config->ReadBool("selected", false);
 			
 			if(ToolPanelRegistry::by_name(name) != NULL)
 			{

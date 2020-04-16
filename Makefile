@@ -237,7 +237,8 @@ googletest/src/%.o: googletest/src/%.cc
 include $(shell find .d/ -name '*.d' -type f)
 
 prefix      ?= /usr/local
-bindir      ?= $(prefix)/bin
+exec_prefix ?= $(prefix)
+bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
 
 .PHONY: install

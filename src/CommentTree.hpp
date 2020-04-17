@@ -83,6 +83,7 @@ namespace REHex {
 			REHex::Document *document;
 			
 			wxDataViewCtrl *dvc;
+			wxDataViewColumn *dvc_col;
 			CommentTreeModel *model;
 			
 			bool events_bound;

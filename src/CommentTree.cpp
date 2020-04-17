@@ -49,13 +49,13 @@ REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
 	
 	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_NO_HEADER);
 	
-	wxDataViewColumn *col = dvc->AppendTextColumn("Comment", 0);
-	col->SetSortable(true);
+	dvc_col = dvc->AppendTextColumn("Comment", 0);
+	dvc_col->SetSortable(true);
 	
 	dvc->AssociateModel(model);
 	
 	/* NOTE: This has to come after AssociateModel, or it will segfault. */
-	col->SetSortOrder(true);
+	dvc_col->SetSortOrder(true);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
@@ -110,6 +110,7 @@ void REHex::CommentTree::unbind_events()
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
+	dvc_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	dvc->Refresh();
 }
 

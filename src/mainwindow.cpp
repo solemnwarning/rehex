@@ -1318,11 +1318,9 @@ void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 	SetTitle((dirty ? "[UNSAVED] " : "") + doc->get_title() + " - Reverse Engineers' Hex Editor");
 	
 	file_menu->Enable(wxID_SAVE,   enable_save);
-	file_menu->Enable(wxID_SAVEAS, enable_save);
 	
 	wxToolBar *toolbar = GetToolBar();
 	toolbar->EnableTool(wxID_SAVE,   enable_save);
-	toolbar->EnableTool(wxID_SAVEAS, enable_save);
 	
 	notebook->SetPageBitmap(notebook->GetSelection(), (dirty ? notebook_dirty_bitmap : wxNullBitmap));
 }

@@ -3518,8 +3518,10 @@ void REHex::Document::Region::Data::draw(REHex::Document &doc, wxDC &dc, int x, 
 		data_err = true;
 	}
 	
+	static const size_t SECONDARY_SELECTION_MAX = 4096;
+	
 	std::vector<unsigned char> selection_data;
-	if(doc.highlight_selection_match && doc.selection_length > 0)
+	if(doc.highlight_selection_match && doc.selection_length > 0 && doc.selection_length <= SECONDARY_SELECTION_MAX)
 	{
 		try {
 			selection_data = doc.buffer->read_data(doc.selection_off, doc.selection_length);

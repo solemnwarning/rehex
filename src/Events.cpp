@@ -17,8 +17,6 @@
 
 #include "Events.hpp"
 
-// IMPLEMENT_DYNAMIC_CLASS(REHex::OffsetLengthEvent, wxEvent)
-
 wxDEFINE_EVENT(REHex::COMMENT_LEFT_CLICK,     REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::COMMENT_RIGHT_CLICK,    REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);

@@ -22,6 +22,7 @@
 
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
+#include "Events.hpp"
 
 namespace REHex {
 	class DocumentCtrlTestWindow: public wxFrame
@@ -33,6 +34,13 @@ namespace REHex {
 		private:
 			Document *doc;
 			DocumentCtrl *doc_ctrl;
+			
+			void reinit_regions();
+			
+			void OnCommentLeftClick(OffsetLengthEvent &event);
+			void OnCommentRightClick(OffsetLengthEvent &event);
+			
+		DECLARE_EVENT_TABLE()
 	};
 }
 

@@ -410,36 +410,48 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 	assert(offset >= 0);
 	assert(length >= 0);
 	
-	if(NestedOffsetLengthMap_set(comments, offset, length, comment))
+	if(!NestedOffsetLengthMap_can_set(comments, offset, length))
 	{
-		_reinit_regions();
-		
-		wxClientDC dc(this);
-		_recalc_regions(dc);
-		
-		_raise_comment_modified();
-		
-		return true;
+		return false;
 	}
 	
-	return false;
+	_tracked_change("set comment",
+		[this, offset, length, comment]()
+		{
+			wxClientDC dc(this);
+			_set_comment_text(dc, offset, length, *(comment.text));
+			_raise_comment_modified();
+		},
+		[this]()
+		{
+			/* Comments are restored implicitly. */
+			_raise_comment_modified();
+		});
+	
+	return true;
 }
 
 bool REHex::Document::erase_comment(off_t offset, off_t length)
 {
-	if(comments.erase(NestedOffsetLengthMapKey(offset, length)) > 0)
+	if(comments.find(NestedOffsetLengthMapKey(offset, length)) == comments.end())
 	{
-		_reinit_regions();
-		
-		wxClientDC dc(this);
-		_recalc_regions(dc);
-		
-		_raise_comment_modified();
-		
-		return true;
+		return false;
 	}
 	
-	return false;
+	_tracked_change("delete comment",
+		[this, offset, length]()
+		{
+			wxClientDC dc(this);
+			_delete_comment(dc, offset, length);
+			_raise_comment_modified();
+		},
+		[this]()
+		{
+			/* Comments are restored implicitly. */
+			_raise_comment_modified();
+		});
+	
+	return true;
 }
 
 void REHex::Document::handle_paste(const std::string &clipboard_text)

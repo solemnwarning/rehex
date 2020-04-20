@@ -1,13 +1,27 @@
 #include <list>
 #include <string>
+#include <wx/clipbrd.h>
 #include <wx/frame.h>
 
 #include "DocumentCtrlTestWindow.hpp"
+#include "NestedOffsetLengthMap.hpp"
+#include "util.hpp"
 
 using namespace REHex;
 
-static void reinit_regions(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl)
+BEGIN_EVENT_TABLE(REHex::DocumentCtrlTestWindow, wxFrame)
+	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::DocumentCtrlTestWindow::OnCommentLeftClick)
+	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::DocumentCtrlTestWindow::OnCommentRightClick)
+END_EVENT_TABLE()
+
+void REHex::DocumentCtrlTestWindow::reinit_regions()
 {
+	const std::list<DocumentCtrl::Region*> &old_regions = doc_ctrl->get_regions();
+	while(!old_regions.empty())
+	{
+		doc_ctrl->erase_region(old_regions.begin());
+	}
+	
 	auto comments = doc->get_comments();
 	
 	/* Construct a list of interlaced comment/data regions. */
@@ -119,9 +133,54 @@ REHex::DocumentCtrlTestWindow::DocumentCtrlTestWindow(Document *doc):
 {
 	doc_ctrl = new DocumentCtrl(this, doc);
 	
-	// doc_ctrl->append_region(new DocumentCtrl::DataRegion(0, doc->buffer_length()));
+	doc->Bind(EV_COMMENT_MODIFIED, [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
+	doc->Bind(EV_DATA_MODIFIED,    [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
 	
-	reinit_regions(doc, doc_ctrl);
+	reinit_regions();
 }
 
 REHex::DocumentCtrlTestWindow::~DocumentCtrlTestWindow() {}
+
+void REHex::DocumentCtrlTestWindow::OnCommentLeftClick(OffsetLengthEvent &event)
+{
+	doc->edit_comment_popup(event.offset, event.length);
+}
+
+void REHex::DocumentCtrlTestWindow::OnCommentRightClick(OffsetLengthEvent &event)
+{
+	off_t c_offset = event.offset;
+	off_t c_length = event.length;
+	
+	wxMenu menu;
+	
+	wxMenuItem *edit_comment = menu.Append(wxID_ANY, "&Edit comment");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		doc->edit_comment_popup(c_offset, c_length);
+	}, edit_comment->GetId(), edit_comment->GetId());
+	
+	wxMenuItem *delete_comment = menu.Append(wxID_ANY, "&Delete comment");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		doc->erase_comment(c_offset, c_length);
+	}, delete_comment->GetId(), delete_comment->GetId());
+	
+	menu.AppendSeparator();
+	
+	wxMenuItem *copy_comments = menu.Append(wxID_ANY,  "&Copy comment(s)");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			const NestedOffsetLengthMap<Document::Comment> &comments = doc->get_comments();
+			
+			auto selected_comments = NestedOffsetLengthMap_get_recursive(comments, NestedOffsetLengthMapKey(c_offset, c_length));
+			assert(selected_comments.size() > 0);
+			
+			wxTheClipboard->SetData(new CommentsDataObject(selected_comments, c_offset));
+		}
+	}, copy_comments->GetId(), copy_comments->GetId());
+	
+	PopupMenu(&menu);
+}

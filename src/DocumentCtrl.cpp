@@ -1187,7 +1187,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 				&& rel_x < ((virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
 			{
 				OffsetLengthEvent event(this, COMMENT_LEFT_CLICK, cr->c_offset, cr->c_length);
-				ProcessEvent(event);
+				ProcessWindowEvent(event);
 			}
 		}
 	}
@@ -1304,7 +1304,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 			wxCommandEvent event(DATA_RIGHT_CLICK, GetId());
 			event.SetEventObject(this);
 			
-			ProcessEvent(event);
+			ProcessWindowEvent(event);
 		}
 		
 		REHex::DocumentCtrl::CommentRegion *cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region);
@@ -1324,7 +1324,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 				&& rel_x < ((virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
 			{
 				OffsetLengthEvent event(this, COMMENT_RIGHT_CLICK, cr->c_offset, cr->c_length);
-				ProcessEvent(event);
+				ProcessWindowEvent(event);
 			}
 		}
 	}

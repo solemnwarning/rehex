@@ -26,14 +26,14 @@ namespace REHex
 {
 	class OffsetLengthEvent: public wxEvent
 	{
-		private:
-			off_t c_offset;
-			off_t c_length;
-			
 		public:
-			OffsetLengthEvent(wxWindow *source, wxEventType event, off_t c_offset, off_t c_length):
-				wxEvent(source->GetId(), event), c_offset(c_offset), c_length(c_length)
+			const off_t offset;
+			const off_t length;
+			
+			OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length):
+				wxEvent(source->GetId(), event), offset(offset), length(length)
 			{
+				m_propagationLevel = wxEVENT_PROPAGATE_MAX;
 				SetEventObject(source);
 			}
 			
@@ -41,12 +41,12 @@ namespace REHex
 			{
 				return new OffsetLengthEvent(*this);
 			}
-			
-			off_t comment_offset() const;
-			off_t comment_length() const;
-			
-		// DECLARE_DYNAMIC_CLASS(OffsetLengthEvent)
 	};
+	
+	typedef void (wxEvtHandler::*OffsetLengthEventFunction)(OffsetLengthEvent&);
+	
+	#define EVT_OFFSETLENGTH(id, type, func) \
+		wx__DECLARE_EVT1(type, id, wxEVENT_HANDLER_CAST(OffsetLengthEventFunction, func))
 	
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     OffsetLengthEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);

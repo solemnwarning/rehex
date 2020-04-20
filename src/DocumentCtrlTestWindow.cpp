@@ -109,9 +109,6 @@ static void reinit_regions(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl)
 	if(doc->buffer_length() == 0)
 	{
 		/* Empty buffers need a data region too! */
-		
-		assert(buffer->length() == 0);
-		
 		doc_ctrl->append_region(new DocumentCtrl::DataRegion(0, 0, 0));
 	}
 }

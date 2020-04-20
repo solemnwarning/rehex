@@ -161,6 +161,9 @@ APP_OBJS := \
 	src/decodepanel.o \
 	src/disassemble.o \
 	src/document.o \
+	src/DocumentCtrl.o \
+	src/DocumentCtrlTestWindow.o \
+	src/Events.o \
 	src/LicenseDialog.o \
 	src/mainwindow.o \
 	src/Palette.o \

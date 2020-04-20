@@ -33,6 +33,7 @@
 #include "CommentTree.hpp"
 #include "decodepanel.hpp"
 #include "disassemble.hpp"
+#include "DocumentCtrlTestWindow.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "Palette.hpp"
@@ -1564,6 +1565,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
+	
+	DocumentCtrlTestWindow *tw = new DocumentCtrlTestWindow(doc);
+	tw->Show(true);
 }
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -1597,6 +1601,9 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
+	
+	DocumentCtrlTestWindow *tw = new DocumentCtrlTestWindow(doc);
+	tw->Show(true);
 }
 
 REHex::MainWindow::Tab::~Tab()

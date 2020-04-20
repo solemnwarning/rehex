@@ -218,7 +218,7 @@ void REHex::DocumentCtrl::set_cursor_position(off_t off)
 
 void REHex::DocumentCtrl::_set_cursor_position(off_t position, enum CursorState cursor_state)
 {
-	assert(position >= 0 && position <= buffer->length());
+	assert(position >= 0 && position <= doc->buffer_length());
 	
 	if(!insert_mode && position > 0 && position == doc->buffer_length())
 	{

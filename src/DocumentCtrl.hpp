@@ -176,7 +176,7 @@ namespace REHex {
 			
 			void append_region(Region *region);
 			void insert_region(Region *region, std::list<Region*>::const_iterator before_this);
-			void erase_region(std::list<Region*>::const_iterator i);
+			void erase_region(std::list<Region*>::const_iterator erase_this);
 			void replace_region(Region *region, std::list<Region*>::const_iterator replace_this);
 			
 			void OnPaint(wxPaintEvent &event);

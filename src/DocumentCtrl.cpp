@@ -1778,6 +1778,8 @@ void REHex::DocumentCtrl::append_region(Region *region)
 
 void REHex::DocumentCtrl::insert_region(Region *region, std::list<Region*>::const_iterator before_this)
 {
+	auto next_region = const_iterator_to_iterator(before_this, regions);
+	
 	if(before_this == regions.end())
 	{
 		append_region(region);
@@ -1789,15 +1791,9 @@ void REHex::DocumentCtrl::insert_region(Region *region, std::list<Region*>::cons
 	wxClientDC dc(this);
 	region->update_lines(*this, dc);
 	
-	regions.insert(before_this, region);
+	regions.insert(next_region, region);
 	
-	/* std::list::erase() with zero-length range converts const_iterator to iterator via our
-	 * non-const reference to the list. Allows us to update elements following the new one
-	 * without having to walk the list before it.
-	*/
-	auto next = regions.erase(before_this, before_this);
-	
-	for(auto i = next; i != regions.end(); ++i)
+	for(auto i = next_region; i != regions.end(); ++i)
 	{
 		(*i)->y_offset += region->y_lines;
 	}
@@ -1805,8 +1801,10 @@ void REHex::DocumentCtrl::insert_region(Region *region, std::list<Region*>::cons
 	Refresh();
 }
 
-void REHex::DocumentCtrl::erase_region(std::list<Region*>::const_iterator i)
+void REHex::DocumentCtrl::erase_region(std::list<Region*>::const_iterator erase_this)
 {
+	auto i = const_iterator_to_iterator(erase_this, regions);
+	
 	int64_t erased_y_lines = (*i)->y_lines;
 	
 	delete *i;

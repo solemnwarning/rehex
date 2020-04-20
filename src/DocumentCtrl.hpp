@@ -59,6 +59,7 @@ namespace REHex {
 				
 				virtual ~Region();
 				
+				virtual int calc_width(REHex::DocumentCtrl &doc);
 				virtual void update_lines(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
 				
 				/* Draw this region on the screen.
@@ -94,6 +95,7 @@ namespace REHex {
 				
 				NestedOffsetLengthMap<Highlight> highlights;
 				
+				virtual int calc_width(REHex::DocumentCtrl &doc) override;
 				virtual void update_lines(REHex::DocumentCtrl &doc, wxDC &dc) override;
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;

@@ -425,50 +425,14 @@ void REHex::DocumentCtrl::_handle_width_change()
 		offset_column_width = 0;
 	}
 	
-	auto calc_row_width = [this](unsigned int line_bytes, const REHex::DocumentCtrl::DataRegion *dr)
-	{
-		return offset_column_width
-			/* indentation */
-			+ (_indent_width(dr->indent_depth) * 2)
-			
-			/* hex data */
-			+ hf_string_width(line_bytes * 2)
-			+ hf_string_width((line_bytes - 1) / bytes_per_group)
-			
-			/* ASCII data */
-			+ (show_ascii * hf_char_width())
-			+ (show_ascii * hf_string_width(line_bytes));
-	};
-	
 	virtual_width = 0;
 	
 	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
-		REHex::DocumentCtrl::DataRegion *dr = dynamic_cast<REHex::DocumentCtrl::DataRegion*>(*r);
-		if(dr != NULL)
+		int r_min_width = (*r)->calc_width(*this);
+		if(r_min_width > virtual_width)
 		{
-			/* Decide how many bytes to display per line */
-			
-			if(bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
-			{
-				/* TODO: Can I do this algorithmically? */
-				
-				dr->bytes_per_line_actual = 1;
-				
-				while(calc_row_width((dr->bytes_per_line_actual + 1), dr) <= client_width)
-				{
-					++(dr->bytes_per_line_actual);
-				}
-			}
-			else{
-				dr->bytes_per_line_actual = bytes_per_line;
-			}
-			
-			int dr_min_width = calc_row_width(dr->bytes_per_line_actual, dr);
-			if(dr_min_width > virtual_width)
-			{
-				virtual_width = dr_min_width;
-			}
+			virtual_width = r_min_width;
 		}
 	}
 	
@@ -1764,41 +1728,47 @@ const std::list<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions(
 
 void REHex::DocumentCtrl::append_region(Region *region)
 {
-	region->y_offset = regions.empty()
-		? 0
-		: regions.back()->y_offset + regions.back()->y_lines;
-	
-	wxClientDC dc(this);
-	region->update_lines(*this, dc);
-	
-	regions.push_back(region);
-	
-	Refresh();
+	insert_region(region, regions.end());
 }
 
 void REHex::DocumentCtrl::insert_region(Region *region, std::list<Region*>::const_iterator before_this)
 {
 	auto next_region = const_iterator_to_iterator(before_this, regions);
 	
-	if(before_this == regions.end())
+	auto this_region = regions.insert(next_region, region);
+	
+	// TODO: Remove, reinstate below code
+	_handle_width_change();
+	
+#if 0
+	int r_min_width = region->calc_width(*this);
+	if(r_min_width > virtual_width)
 	{
-		append_region(region);
-		return;
+		_handle_width_change();
 	}
-	
-	region->y_offset = (*before_this)->y_offset;
-	
-	wxClientDC dc(this);
-	region->update_lines(*this, dc);
-	
-	regions.insert(next_region, region);
-	
-	for(auto i = next_region; i != regions.end(); ++i)
-	{
-		(*i)->y_offset += region->y_lines;
+	else{
+		if(this_region == regions.begin())
+		{
+			region->y_offset = 0;
+		}
+		else{
+			auto prev_region = std::prev(this_region);
+			region->y_offset = (*prev_region)->y_offset + (*prev_region)->y_lines;
+		}
+		
+		wxClientDC dc(this);
+		region->update_lines(*this, dc);
+		
+		for(auto i = next_region; i != regions.end(); ++i)
+		{
+			(*i)->y_offset += region->y_lines;
+		}
+		
+		_update_vscroll();
+		
+		Refresh();
 	}
-	
-	Refresh();
+#endif
 }
 
 void REHex::DocumentCtrl::erase_region(std::list<Region*>::const_iterator erase_this)
@@ -1828,6 +1798,11 @@ REHex::DocumentCtrl::Region::Region():
 	indent_depth(0), indent_final(0) {}
 
 REHex::DocumentCtrl::Region::~Region() {}
+
+int REHex::DocumentCtrl::Region::calc_width(REHex::DocumentCtrl &doc)
+{
+	return 0;
+}
 
 wxCursor REHex::DocumentCtrl::Region::cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px)
 {
@@ -1889,6 +1864,43 @@ REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length, int 
 	assert(d_length >= 0);
 	
 	this->indent_depth = indent_depth;
+}
+
+int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
+{
+	/* Decide how many bytes to display per line */
+	
+	auto calc_row_width = [&](unsigned int line_bytes)
+	{
+		return doc.offset_column_width
+			/* indentation */
+			+ (doc._indent_width(indent_depth) * 2)
+			
+			/* hex data */
+			+ doc.hf_string_width(line_bytes * 2)
+			+ doc.hf_string_width((line_bytes - 1) / doc.bytes_per_group)
+			
+			/* ASCII data */
+			+ (doc.show_ascii * doc.hf_char_width())
+			+ (doc.show_ascii * doc.hf_string_width(line_bytes));
+	};
+	
+	if(doc.bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
+	{
+		/* TODO: Can I do this algorithmically? */
+		
+		bytes_per_line_actual = 1;
+		
+		while(calc_row_width(bytes_per_line_actual + 1) <= doc.client_width)
+		{
+			++bytes_per_line_actual;
+		}
+	}
+	else{
+		bytes_per_line_actual = doc.bytes_per_line;
+	}
+	
+	return calc_row_width(bytes_per_line_actual);
 }
 
 void REHex::DocumentCtrl::DataRegion::update_lines(REHex::DocumentCtrl &doc, wxDC &dc)

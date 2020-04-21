@@ -90,7 +90,6 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, REHex::Document *doc):
 	bytes_per_group   = 4;
 	offset_display_base = OFFSET_BASE_HEX;
 	show_ascii        = true;
-	inline_comment_mode = ICM_FULL_INDENT;
 	highlight_selection_match = false;
 	scroll_xoff       = 0;
 	scroll_yoff       = 0;
@@ -1756,7 +1755,7 @@ void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
 		{
 			if(!indent_to.empty())
 			{
-				assert(((*r)->indent_offset + (*r)->indent_length) >= indent_to.back());
+				assert(((*r)->indent_offset + (*r)->indent_length) <= indent_to.back());
 			}
 			
 			indent_to.push_back((*r)->indent_offset + (*r)->indent_length);
@@ -2509,12 +2508,12 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 	}
 }
 
-REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool wrap_children):
-	c_offset(c_offset), c_length(c_length), c_text(c_text)
+REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool nest_children, bool truncate):
+	c_offset(c_offset), c_length(c_length), c_text(c_text), truncate(truncate)
 {
 	indent_offset = c_offset;
 	
-	if(wrap_children)
+	if(nest_children)
 	{
 		indent_length = c_length;
 	}
@@ -2522,7 +2521,7 @@ REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length
 
 void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
 {
-	if(doc.doc->get_inline_comment_mode() == ICM_SHORT || doc.doc->get_inline_comment_mode() == ICM_SHORT_INDENT)
+	if(truncate)
 	{
 		y_lines = 2 + indent_final;
 		return;
@@ -2558,7 +2557,7 @@ void REHex::DocumentCtrl::CommentRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc
 	
 	auto lines = _format_text(c_text, row_chars);
 	
-	if((doc.doc->get_inline_comment_mode() == ICM_SHORT || doc.doc->get_inline_comment_mode() == ICM_SHORT_INDENT) && lines.size() > 1)
+	if(truncate && lines.size() > 1)
 	{
 		wxString &first_line = lines.front();
 		if(first_line.length() < row_chars)

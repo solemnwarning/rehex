@@ -20,6 +20,7 @@ void REHex::DocumentCtrlTestWindow::reinit_regions()
 	
 	Document::InlineCommentMode icm = doc->get_inline_comment_mode();
 	bool nest = (icm == Document::ICM_SHORT_INDENT || icm == Document::ICM_FULL_INDENT);
+	bool truncate = (icm == Document::ICM_SHORT || icm == Document::ICM_SHORT_INDENT);
 	
 	/* Construct a list of interlaced comment/data regions. */
 	
@@ -53,7 +54,7 @@ void REHex::DocumentCtrlTestWindow::reinit_regions()
 			do {
 				--c;
 				
-				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), nest));
+				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), nest, truncate));
 				
 				if(nest && c->first.length > 0)
 				{

@@ -1525,7 +1525,7 @@ void REHex::DocumentCtrl::_recalc_regions(wxDC &dc)
 	for(auto i = regions.begin(); i != regions.end(); ++i)
 	{
 		(*i)->y_offset = next_yo;
-		(*i)->update_lines(*this, dc);
+		(*i)->calc_height(*this, dc);
 		
 		next_yo += (*i)->y_lines;
 	}
@@ -1721,81 +1721,62 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 	}
 }
 
-const std::list<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
+void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
 {
-	return regions;
-}
-
-void REHex::DocumentCtrl::append_region(Region *region)
-{
-	insert_region(region, regions.end());
-}
-
-void REHex::DocumentCtrl::insert_region(Region *region, std::list<Region*>::const_iterator before_this)
-{
-	auto next_region = const_iterator_to_iterator(before_this, regions);
+	assert(!new_regions.empty());
 	
-	auto this_region = regions.insert(next_region, region);
+	/* Erase the old regions and swap the contents of the new list in. */
 	
-	// TODO: Remove, reinstate below code
+	for(auto r = regions.begin(); r != regions.end();)
+	{
+		delete *r;
+		r = regions.erase(r);
+	}
+	
+	regions.swap(new_regions);
+	
+	/* Initialise the indent_depth and indent_final counters. */
+	
+	std::list<off_t> indent_to;
+	
+	for(auto r = regions.begin(), p = r; r != regions.end(); ++r)
+	{
+		assert((*r)->indent_offset >= (*p)->indent_offset);
+		
+		while(!indent_to.empty() && indent_to.back() <= (*r)->indent_offset)
+		{
+			++((*p)->indent_final);
+			indent_to.pop_back();
+		}
+		
+		(*r)->indent_depth = indent_to.size();
+		(*r)->indent_final = 0;
+		
+		if((*r)->indent_length > 0)
+		{
+			if(!indent_to.empty())
+			{
+				assert(((*r)->indent_offset + (*r)->indent_length) >= indent_to.back());
+			}
+			
+			indent_to.push_back((*r)->indent_offset + (*r)->indent_length);
+		}
+		
+		/* Advance p from second iteration. */
+		if(p != r)
+		{
+			++p;
+		}
+	}
+	
+	regions.back()->indent_final = indent_to.size();
+	
+	/* Recalculates region widths/heights and updates scroll bars */
 	_handle_width_change();
-	
-#if 0
-	int r_min_width = region->calc_width(*this);
-	if(r_min_width > virtual_width)
-	{
-		_handle_width_change();
-	}
-	else{
-		if(this_region == regions.begin())
-		{
-			region->y_offset = 0;
-		}
-		else{
-			auto prev_region = std::prev(this_region);
-			region->y_offset = (*prev_region)->y_offset + (*prev_region)->y_lines;
-		}
-		
-		wxClientDC dc(this);
-		region->update_lines(*this, dc);
-		
-		for(auto i = next_region; i != regions.end(); ++i)
-		{
-			(*i)->y_offset += region->y_lines;
-		}
-		
-		_update_vscroll();
-		
-		Refresh();
-	}
-#endif
-}
-
-void REHex::DocumentCtrl::erase_region(std::list<Region*>::const_iterator erase_this)
-{
-	auto i = const_iterator_to_iterator(erase_this, regions);
-	
-	int64_t erased_y_lines = (*i)->y_lines;
-	
-	delete *i;
-	auto next = regions.erase(i);
-	
-	for(auto j = next; j != regions.end(); ++j)
-	{
-		(*j)->y_offset -= erased_y_lines;
-	}
-	
-	Refresh();
-}
-
-void REHex::DocumentCtrl::replace_region(Region *region, std::list<Region*>::const_iterator replace_this)
-{
-	insert_region(region, replace_this);
-	erase_region(replace_this);
 }
 
 REHex::DocumentCtrl::Region::Region():
-	indent_depth(0), indent_final(0) {}
+	indent_offset(0), indent_length(0), indent_depth(0), indent_final(0) {}
 
 REHex::DocumentCtrl::Region::~Region() {}
 
@@ -1857,13 +1838,13 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 	}
 }
 
-REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length, int indent_depth):
+REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):
 	d_offset(d_offset), d_length(d_length), bytes_per_line_actual(1)
 {
 	assert(d_offset >= 0);
 	assert(d_length >= 0);
 	
-	this->indent_depth = indent_depth;
+	this->indent_offset = d_offset;
 }
 
 int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
@@ -1903,7 +1884,7 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 	return calc_row_width(bytes_per_line_actual);
 }
 
-void REHex::DocumentCtrl::DataRegion::update_lines(REHex::DocumentCtrl &doc, wxDC &dc)
+void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
 {
 	int indent_width = doc._indent_width(indent_depth);
 	
@@ -2528,10 +2509,18 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 	}
 }
 
-REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, int indent_depth):
-	c_offset(c_offset), c_length(c_length), c_text(c_text), final_descendant(NULL) { this->indent_depth = indent_depth; }
+REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool wrap_children):
+	c_offset(c_offset), c_length(c_length), c_text(c_text)
+{
+	indent_offset = c_offset;
+	
+	if(wrap_children)
+	{
+		indent_length = c_length;
+	}
+}
 
-void REHex::DocumentCtrl::CommentRegion::update_lines(REHex::DocumentCtrl &doc, wxDC &dc)
+void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
 {
 	if(doc.doc->get_inline_comment_mode() == ICM_SHORT || doc.doc->get_inline_comment_mode() == ICM_SHORT_INDENT)
 	{
@@ -2595,7 +2584,7 @@ void REHex::DocumentCtrl::CommentRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc
 		
 		dc.DrawRectangle(box_x, box_y, box_w, box_h);
 		
-		if(final_descendant != NULL)
+		if(indent_length > 0)
 		{
 			dc.DrawLine(box_x, (box_y + box_h), box_x, (box_y + box_h + doc.hf_height));
 			dc.DrawLine((box_x + box_w - 1), (box_y + box_h), (box_x + box_w - 1), (box_y + box_h + doc.hf_height));

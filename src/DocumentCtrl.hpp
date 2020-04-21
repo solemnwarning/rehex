@@ -52,6 +52,9 @@ namespace REHex {
 				int64_t y_offset; /* First on-screen line in region */
 				int64_t y_lines;  /* Number of on-screen lines in region */
 				
+				off_t indent_offset;
+				off_t indent_length;
+				
 				int indent_depth;  /* Indentation depth */
 				int indent_final;  /* Number of inner indentation levels we are the final region in */
 				
@@ -60,7 +63,7 @@ namespace REHex {
 				virtual ~Region();
 				
 				virtual int calc_width(REHex::DocumentCtrl &doc);
-				virtual void update_lines(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
+				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
 				
 				/* Draw this region on the screen.
 				 * 
@@ -96,7 +99,7 @@ namespace REHex {
 				NestedOffsetLengthMap<Highlight> highlights;
 				
 				virtual int calc_width(REHex::DocumentCtrl &doc) override;
-				virtual void update_lines(REHex::DocumentCtrl &doc, wxDC &dc) override;
+				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
@@ -115,7 +118,7 @@ namespace REHex {
 					return h;
 				}
 				
-				DataRegion(off_t d_offset, off_t d_length, int i_depth = 0);
+				DataRegion(off_t d_offset, off_t d_length);
 				
 				friend DocumentCtrl;
 			};
@@ -127,13 +130,11 @@ namespace REHex {
 				off_t c_offset, c_length;
 				const wxString &c_text;
 				
-				Region *final_descendant;
-				
-				virtual void update_lines(REHex::DocumentCtrl &doc, wxDC &dc) override;
+				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
-				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth);
+				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool wrap_children);
 				
 				friend DocumentCtrl;
 			};
@@ -174,12 +175,7 @@ namespace REHex {
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
 			
-			const std::list<Region*> &get_regions() const;
-			
-			void append_region(Region *region);
-			void insert_region(Region *region, std::list<Region*>::const_iterator before_this);
-			void erase_region(std::list<Region*>::const_iterator erase_this);
-			void replace_region(Region *region, std::list<Region*>::const_iterator replace_this);
+			void replace_all_regions(std::list<Region*> &new_regions);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);

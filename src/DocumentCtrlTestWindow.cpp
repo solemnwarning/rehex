@@ -16,38 +16,23 @@ END_EVENT_TABLE()
 
 void REHex::DocumentCtrlTestWindow::reinit_regions()
 {
-	const std::list<DocumentCtrl::Region*> &old_regions = doc_ctrl->get_regions();
-	while(!old_regions.empty())
-	{
-		doc_ctrl->erase_region(old_regions.begin());
-	}
-	
 	auto comments = doc->get_comments();
+	
+	Document::InlineCommentMode icm = doc->get_inline_comment_mode();
+	bool nest = (icm == Document::ICM_SHORT_INDENT || icm == Document::ICM_FULL_INDENT);
 	
 	/* Construct a list of interlaced comment/data regions. */
 	
 	auto offset_base = comments.begin();
 	off_t next_data = 0, remain_data = doc->buffer_length();
 	
-	/* Stack of comment ranges around the current position. */
-	std::list<DocumentCtrl::CommentRegion*> parents;
+	std::list<DocumentCtrl::Region*> regions;
 	
 	while(remain_data > 0)
 	{
 		off_t dr_length = remain_data;
 		
 		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
-		
-		/* Pop any comments off parents which we have gone past the end of. */
-		while(!parents.empty() && (parents.back()->c_offset + parents.back()->c_length) <= next_data)
-		{
-			if(parents.back()->final_descendant != NULL)
-			{
-				++(parents.back()->final_descendant->indent_final);
-			}
-			
-			parents.pop_back();
-		}
 		
 		/* We process any comments at the same offset from largest to smallest, ensuring
 		 * smaller comments are parented to the next-larger one at the same offset.
@@ -68,63 +53,38 @@ void REHex::DocumentCtrlTestWindow::reinit_regions()
 			do {
 				--c;
 				
-				DocumentCtrl::CommentRegion *cr = new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), parents.size());
+				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), nest));
 				
-				doc_ctrl->append_region(cr);
-				
-				for(auto p = parents.begin(); p != parents.end(); ++p)
+				if(nest && c->first.length > 0)
 				{
-					(*p)->final_descendant = cr;
-				}
-				
-				if((doc->get_inline_comment_mode() == Document::ICM_SHORT_INDENT || doc->get_inline_comment_mode() == Document::ICM_FULL_INDENT)
-					&& c->first.length > 0)
-				{
-					parents.push_back(cr);
+					assert(c->first.length <= dr_length);
+					dr_length = c->first.length;
 				}
 			} while(c != offset_base);
 			
 			offset_base = next_offset;
 		}
 		
-		if(offset_base != comments.end())
+		if(offset_base != comments.end() && dr_length > (offset_base->first.offset - next_data))
 		{
 			dr_length = offset_base->first.offset - next_data;
 		}
 		
-		if(!parents.empty() && (parents.back()->c_offset + parents.back()->c_length) < (next_data + dr_length))
-		{
-			dr_length = (parents.back()->c_offset + parents.back()->c_length) - next_data;
-		}
-		
-		DocumentCtrl::DataRegion *dr = new DocumentCtrl::DataRegion(next_data, dr_length, parents.size());
-		
-		doc_ctrl->append_region(dr);
-		
-		for(auto p = parents.begin(); p != parents.end(); ++p)
-		{
-			(*p)->final_descendant = dr;
-		}
+		regions.push_back(new DocumentCtrl::DataRegion(next_data, dr_length));
 		
 		next_data   += dr_length;
 		remain_data -= dr_length;
 	}
 	
-	while(!parents.empty())
+	if(regions.empty())
 	{
-		if(parents.back()->final_descendant != NULL)
-		{
-			++(parents.back()->final_descendant->indent_final);
-		}
+		assert(doc->buffer_length() == 0);
 		
-		parents.pop_back();
+		/* Empty buffers need a data region too! */
+		regions.push_back(new DocumentCtrl::DataRegion(0, 0));
 	}
 	
-	if(doc->buffer_length() == 0)
-	{
-		/* Empty buffers need a data region too! */
-		doc_ctrl->append_region(new DocumentCtrl::DataRegion(0, 0, 0));
-	}
+	doc_ctrl->replace_all_regions(regions);
 }
 
 REHex::DocumentCtrlTestWindow::DocumentCtrlTestWindow(Document *doc):

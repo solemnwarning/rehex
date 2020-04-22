@@ -183,6 +183,7 @@ TEST_OBJS := \
 	src/buffer.o \
 	src/CommentTree.o \
 	src/document.o \
+	src/Events.o \
 	src/Palette.o \
 	src/search.o \
 	src/textentrydialog.o \

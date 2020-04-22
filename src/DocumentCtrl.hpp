@@ -38,99 +38,98 @@ namespace REHex {
 		public:
 			class Region
 			{
+				protected:
+					int64_t y_offset; /* First on-screen line in region */
+					int64_t y_lines;  /* Number of on-screen lines in region */
+					
+					off_t indent_offset;
+					off_t indent_length;
+					
+					int indent_depth;  /* Indentation depth */
+					int indent_final;  /* Number of inner indentation levels we are the final region in */
+					
 				public:
-				
-				int64_t y_offset; /* First on-screen line in region */
-				int64_t y_lines;  /* Number of on-screen lines in region */
-				
-				off_t indent_offset;
-				off_t indent_length;
-				
-				int indent_depth;  /* Indentation depth */
-				int indent_final;  /* Number of inner indentation levels we are the final region in */
-				
-				Region();
-				
-				virtual ~Region();
-				
-				virtual int calc_width(REHex::DocumentCtrl &doc);
-				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
-				
-				/* Draw this region on the screen.
-				 * 
-				 * doc - The parent Document object
-				 * dc  - The wxDC to draw in
-				 * x,y - The top-left co-ordinates of this Region in the DC (MAY BE NEGATIVE)
-				 *
-				 * The implementation MAY skip rendering outside of the client area
-				 * of the DC to improve performance.
-				*/
-				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) = 0;
-				
-				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px);
-				
-				void draw_container(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y);
-				
+					Region();
+					virtual ~Region();
+					
+				protected:
+					virtual int calc_width(REHex::DocumentCtrl &doc);
+					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
+					
+					/* Draw this region on the screen.
+					 *
+					 * doc - The parent Document object
+					 * dc  - The wxDC to draw in
+					 * x,y - The top-left co-ordinates of this Region in the DC (MAY BE NEGATIVE)
+					 *
+					 * The implementation MAY skip rendering outside of the client area
+					 * of the DC to improve performance.
+					*/
+					virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) = 0;
+					
+					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px);
+					
+					void draw_container(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y);
+					
 				friend DocumentCtrl;
 			};
 			
 			class DataRegion: public Region
 			{
 				public:
-				
-				struct Highlight
-				{
-					public:
-						const bool enable;
+					struct Highlight
+					{
+						public:
+							const bool enable;
+							
+							const Palette::ColourIndex fg_colour_idx;
+							const Palette::ColourIndex bg_colour_idx;
+							const bool strong;
+							
+							Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
+								enable(true),
+								fg_colour_idx(fg_colour_idx),
+								bg_colour_idx(bg_colour_idx),
+								strong(strong) {}
 						
-						const Palette::ColourIndex fg_colour_idx;
-						const Palette::ColourIndex bg_colour_idx;
-						const bool strong;
-						
-						Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
-							enable(true),
-							fg_colour_idx(fg_colour_idx),
-							bg_colour_idx(bg_colour_idx),
-							strong(strong) {}
+						protected:
+							Highlight():
+								enable(false),
+								fg_colour_idx(Palette::PAL_INVALID),
+								bg_colour_idx(Palette::PAL_INVALID),
+								strong(false) {}
+					};
 					
-					protected:
-						Highlight():
-							enable(false),
-							fg_colour_idx(Palette::PAL_INVALID),
-							bg_colour_idx(Palette::PAL_INVALID),
-							strong(false) {}
-				};
-				
-				struct NoHighlight: Highlight
-				{
-					NoHighlight(): Highlight() {}
-				};
-				
-				off_t d_offset;
-				off_t d_length;
-				
-				int offset_text_x;  /* Virtual X coord of left edge of offsets. */
-				int hex_text_x;     /* Virtual X coord of left edge of hex data. */
-				int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
-				
-				unsigned int bytes_per_line_actual;  /* Number of bytes being displayed per line. */
-				
-				NestedOffsetLengthMap<Highlight> highlights;
-				
-				virtual int calc_width(REHex::DocumentCtrl &doc) override;
-				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
-				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
-				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
-				
-				off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-				off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-				
-				off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-				off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-				
-				DataRegion(off_t d_offset, off_t d_length);
-				
+					struct NoHighlight: Highlight
+					{
+						NoHighlight(): Highlight() {}
+					};
+					
 				protected:
+					off_t d_offset;
+					off_t d_length;
+					
+					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
+					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
+					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
+					
+					unsigned int bytes_per_line_actual;  /* Number of bytes being displayed per line. */
+					
+				public:
+					DataRegion(off_t d_offset, off_t d_length);
+					
+				protected:
+					virtual int calc_width(REHex::DocumentCtrl &doc) override;
+					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
+					virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
+					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
+					
+					off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					
+					off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					
 					virtual Highlight highlight_at_off(off_t off) const;
 					
 				friend DocumentCtrl;
@@ -284,9 +283,6 @@ namespace REHex {
 			off_t mouse_shift_initial;
 			
 			enum CursorState cursor_state;
-			
-			void _reinit_regions();
-			void _recalc_regions(wxDC &dc);
 			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			

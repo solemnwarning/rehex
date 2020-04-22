@@ -450,7 +450,16 @@ void REHex::DocumentCtrl::_handle_width_change()
 	
 	{
 		wxClientDC dc(this);
-		_recalc_regions(dc);
+		
+		int64_t next_yo = 0;
+		
+		for(auto i = regions.begin(); i != regions.end(); ++i)
+		{
+			(*i)->y_offset = next_yo;
+			(*i)->calc_height(*this, dc);
+			
+			next_yo += (*i)->y_lines;
+		}
 	}
 	
 	/* Update vertical scrollbar, since we just recalculated the height of the document. */
@@ -1515,19 +1524,6 @@ void REHex::DocumentCtrl::OnRedrawCursor(wxTimerEvent &event)
 	
 	/* TODO: Limit paint to cursor area */
 	Refresh();
-}
-
-void REHex::DocumentCtrl::_recalc_regions(wxDC &dc)
-{
-	uint64_t next_yo = 0;
-	
-	for(auto i = regions.begin(); i != regions.end(); ++i)
-	{
-		(*i)->y_offset = next_yo;
-		(*i)->calc_height(*this, dc);
-		
-		next_yo += (*i)->y_lines;
-	}
 }
 
 REHex::DocumentCtrl::DataRegion *REHex::DocumentCtrl::_data_region_by_offset(off_t offset)

@@ -51,6 +51,10 @@ namespace REHex
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     OffsetLengthEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
+	
+	wxDECLARE_EVENT(DATA_ERASE,        OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_INSERT,       OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_OVERWRITE,    OffsetLengthEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

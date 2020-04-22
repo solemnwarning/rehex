@@ -95,8 +95,11 @@ REHex::DocumentCtrlTestWindow::DocumentCtrlTestWindow(Document *doc):
 	doc_ctrl = new DocumentCtrl(this, doc);
 	
 	doc->Bind(EV_COMMENT_MODIFIED,   [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
-	doc->Bind(EV_DATA_MODIFIED,      [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
 	doc->Bind(EV_HIGHLIGHTS_CHANGED, [this](wxCommandEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
+	
+	doc->Bind(DATA_ERASE,     [this](OffsetLengthEvent &event) { reinit_regions(); event.Skip(); });
+	doc->Bind(DATA_INSERT,    [this](OffsetLengthEvent &event) { reinit_regions(); event.Skip(); });
+	doc->Bind(DATA_OVERWRITE, [this](OffsetLengthEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
 	
 	reinit_regions();
 }

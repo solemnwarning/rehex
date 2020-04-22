@@ -20,3 +20,7 @@
 wxDEFINE_EVENT(REHex::COMMENT_LEFT_CLICK,     REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::COMMENT_RIGHT_CLICK,    REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);
+
+wxDEFINE_EVENT(REHex::DATA_ERASE,        REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::DATA_INSERT,       REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::DATA_OVERWRITE,    REHex::OffsetLengthEvent);

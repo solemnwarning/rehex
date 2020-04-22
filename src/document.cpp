@@ -30,6 +30,7 @@
 
 #include "app.hpp"
 #include "document.hpp"
+#include "Events.hpp"
 #include "Palette.hpp"
 #include "textentrydialog.hpp"
 #include "util.hpp"
@@ -2479,6 +2480,9 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 	{
 		set_dirty(true);
 		_raise_data_modified();
+		
+		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, offset, length);
+		ProcessWindowEvent(data_overwrite_event);
 	}
 }
 
@@ -2576,6 +2580,9 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 		}
 		
 		_raise_data_modified();
+		
+		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
+		ProcessWindowEvent(data_insert_event);
 		
 		if(NestedOffsetLengthMap_data_inserted(comments, offset, length) > 0)
 		{
@@ -2696,6 +2703,9 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 		}
 		
 		_raise_data_modified();
+		
+		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
+		ProcessWindowEvent(data_erase_event);
 		
 		assert(to_shift == length);
 		assert(to_shrink == 0);

@@ -36,15 +36,6 @@
 namespace REHex {
 	class DocumentCtrl: public wxControl {
 		public:
-			struct Highlight
-			{
-				bool enable;
-				
-				Palette::ColourIndex fg_colour_idx;
-				Palette::ColourIndex bg_colour_idx;
-				bool strong;
-			};
-			
 			class Region
 			{
 				public:
@@ -87,6 +78,34 @@ namespace REHex {
 			{
 				public:
 				
+				struct Highlight
+				{
+					public:
+						const bool enable;
+						
+						const Palette::ColourIndex fg_colour_idx;
+						const Palette::ColourIndex bg_colour_idx;
+						const bool strong;
+						
+						Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
+							enable(true),
+							fg_colour_idx(fg_colour_idx),
+							bg_colour_idx(bg_colour_idx),
+							strong(strong) {}
+					
+					protected:
+						Highlight():
+							enable(false),
+							fg_colour_idx(Palette::PAL_INVALID),
+							bg_colour_idx(Palette::PAL_INVALID),
+							strong(false) {}
+				};
+				
+				struct NoHighlight: Highlight
+				{
+					NoHighlight(): Highlight() {}
+				};
+				
 				off_t d_offset;
 				off_t d_length;
 				
@@ -109,18 +128,24 @@ namespace REHex {
 				off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 				off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 				
-				virtual Highlight highlight_at_off(off_t off) const
-				{
-					// TODO
-					Highlight h;
-					h.enable = false;
-					
-					return h;
-				}
-				
 				DataRegion(off_t d_offset, off_t d_length);
 				
+				protected:
+					virtual Highlight highlight_at_off(off_t off) const;
+					
 				friend DocumentCtrl;
+			};
+			
+			class DataRegionDocHighlight: public DataRegion
+			{
+				private:
+					Document &doc;
+					
+				public:
+					DataRegionDocHighlight(off_t d_offset, off_t d_length, Document &doc);
+					
+				protected:
+					virtual Highlight highlight_at_off(off_t off) const override;
 			};
 			
 			class CommentRegion: public Region

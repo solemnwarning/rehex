@@ -48,6 +48,8 @@ namespace REHex {
 				PAL_COMMENT_FG,
 				
 				PAL_MAX = PAL_COMMENT_FG,
+				
+				PAL_INVALID = 9999,
 			};
 			
 			Palette(const std::string &name, const std::string &label, const wxColour colours[]);

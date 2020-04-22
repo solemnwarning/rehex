@@ -75,15 +75,16 @@ BEGIN_EVENT_TABLE(REHex::Document, wxControl)
 	EVT_MENU(ID_CLEAR_HIGHLIGHT, REHex::Document::OnClearHighlight)
 END_EVENT_TABLE()
 
-wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,      wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,    wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED, wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,  wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,     wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,       wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,      wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,      wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_CURSOR_MOVED,        wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_INSERT_TOGGLED,      wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_SELECTION_CHANGED,   wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,    wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_DATA_MODIFIED,       wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,         wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,        wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,        wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 
 REHex::Document::Document(wxWindow *parent):
 	wxControl(),
@@ -454,6 +455,11 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	return true;
 }
 
+const REHex::NestedOffsetLengthMap<int> &REHex::Document::get_highlights() const
+{
+	return highlights;
+}
+
 void REHex::Document::handle_paste(const std::string &clipboard_text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)
@@ -632,6 +638,8 @@ void REHex::Document::undo()
 		cursor_state = act.old_cursor_state;
 		comments     = act.old_comments;
 		highlights   = act.old_highlights;
+		
+		_raise_highlights_changed();
 		
 		_reinit_regions();
 		
@@ -1925,6 +1933,8 @@ void REHex::Document::OnRightDown(wxMouseEvent &event)
 							{
 								NestedOffsetLengthMap_set(highlights, highlight_off, highlight_length, colour);
 								
+								_raise_highlights_changed();
+								
 								/* TODO: Limit paint to affected area. */
 								Refresh();
 							},
@@ -2242,6 +2252,8 @@ void REHex::Document::OnClearHighlight(wxCommandEvent &event)
 		{
 			auto highlight = NestedOffsetLengthMap_get(highlights, cursor_pos);
 			highlights.erase(highlight);
+			
+			_raise_highlights_changed();
 			
 			/* TODO: Limit paint to affected area. */
 			Refresh();
@@ -3252,6 +3264,14 @@ void REHex::Document::_raise_clean()
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+void REHex::Document::_raise_highlights_changed()
+{
+	wxCommandEvent event(REHex::EV_HIGHLIGHTS_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessWindowEvent(event);
 }
 
 void REHex::Document::set_dirty(bool dirty)

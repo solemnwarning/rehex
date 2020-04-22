@@ -2508,6 +2508,31 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 	}
 }
 
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(off_t off) const
+{
+	return NoHighlight();
+}
+
+REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(off_t d_offset, off_t d_length, Document &doc):
+	DataRegion(d_offset, d_length), doc(doc) {}
+
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(off_t off) const
+{
+	const NestedOffsetLengthMap<int> &highlights = doc.get_highlights();
+	
+	auto highlight = NestedOffsetLengthMap_get(highlights, off);
+	if(highlight != highlights.end())
+	{
+		return Highlight(
+			active_palette->get_highlight_fg_idx(highlight->second),
+			active_palette->get_highlight_bg_idx(highlight->second),
+			true);
+	}
+	else{
+		return NoHighlight();
+	}
+}
+
 REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool nest_children, bool truncate):
 	c_offset(c_offset), c_length(c_length), c_text(c_text), truncate(truncate)
 {

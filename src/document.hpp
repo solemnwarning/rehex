@@ -32,15 +32,16 @@
 #include "util.hpp"
 
 namespace REHex {
-	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
-	wxDECLARE_EVENT(EV_INSERT_TOGGLED,    wxCommandEvent);
-	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
-	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
-	wxDECLARE_EVENT(EV_DATA_MODIFIED,     wxCommandEvent);
-	wxDECLARE_EVENT(EV_UNDO_UPDATE,       wxCommandEvent);
-	wxDECLARE_EVENT(EV_BECAME_CLEAN,      wxCommandEvent);
-	wxDECLARE_EVENT(EV_BECAME_DIRTY,      wxCommandEvent);
-	wxDECLARE_EVENT(EV_BASE_CHANGED,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_CURSOR_MOVED,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_INSERT_TOGGLED,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_SELECTION_CHANGED,   wxCommandEvent);
+	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,    wxCommandEvent);
+	wxDECLARE_EVENT(EV_DATA_MODIFIED,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_UNDO_UPDATE,         wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_CLEAN,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_DIRTY,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_BASE_CHANGED,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	
 	class Document: public wxControl {
 		public:
@@ -127,6 +128,8 @@ namespace REHex {
 			bool set_comment(off_t offset, off_t length, const Comment &comment);
 			bool erase_comment(off_t offset, off_t length);
 			void edit_comment_popup(off_t offset, off_t length);
+			
+			const NestedOffsetLengthMap<int> &get_highlights() const;
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);
@@ -340,6 +343,7 @@ namespace REHex {
 			void _raise_undo_update();
 			void _raise_dirty();
 			void _raise_clean();
+			void _raise_highlights_changed();
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];

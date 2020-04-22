@@ -71,7 +71,7 @@ void REHex::DocumentCtrlTestWindow::reinit_regions()
 			dr_length = offset_base->first.offset - next_data;
 		}
 		
-		regions.push_back(new DocumentCtrl::DataRegion(next_data, dr_length));
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));
 		
 		next_data   += dr_length;
 		remain_data -= dr_length;
@@ -82,7 +82,7 @@ void REHex::DocumentCtrlTestWindow::reinit_regions()
 		assert(doc->buffer_length() == 0);
 		
 		/* Empty buffers need a data region too! */
-		regions.push_back(new DocumentCtrl::DataRegion(0, 0));
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, *doc));
 	}
 	
 	doc_ctrl->replace_all_regions(regions);
@@ -94,8 +94,9 @@ REHex::DocumentCtrlTestWindow::DocumentCtrlTestWindow(Document *doc):
 {
 	doc_ctrl = new DocumentCtrl(this, doc);
 	
-	doc->Bind(EV_COMMENT_MODIFIED, [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
-	doc->Bind(EV_DATA_MODIFIED,    [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
+	doc->Bind(EV_COMMENT_MODIFIED,   [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
+	doc->Bind(EV_DATA_MODIFIED,      [this](wxCommandEvent &event) { reinit_regions(); event.Skip(); });
+	doc->Bind(EV_HIGHLIGHTS_CHANGED, [this](wxCommandEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
 	
 	reinit_regions();
 }

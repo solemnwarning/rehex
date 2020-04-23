@@ -1,4 +1,6 @@
+#include <inttypes.h>
 #include <list>
+#include <stdio.h>
 #include <string>
 #include <wx/clipbrd.h>
 #include <wx/frame.h>
@@ -14,6 +16,8 @@ BEGIN_EVENT_TABLE(REHex::DocumentCtrlTestWindow, wxFrame)
 	
 	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::DocumentCtrlTestWindow::OnCommentLeftClick)
 	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::DocumentCtrlTestWindow::OnCommentRightClick)
+	
+	EVT_COMMAND(wxID_ANY, REHex::DATA_RIGHT_CLICK, REHex::DocumentCtrlTestWindow::OnDataRightClick)
 END_EVENT_TABLE()
 
 /* Is the given byte a printable 7-bit ASCII character? */
@@ -295,6 +299,177 @@ void REHex::DocumentCtrlTestWindow::OnCommentRightClick(OffsetLengthEvent &event
 			wxTheClipboard->SetData(new CommentsDataObject(selected_comments, c_offset));
 		}
 	}, copy_comments->GetId(), copy_comments->GetId());
+	
+	PopupMenu(&menu);
+}
+
+void REHex::DocumentCtrlTestWindow::OnDataRightClick(wxCommandEvent &event)
+{
+	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	
+	auto selection = doc_ctrl->get_selection();
+	off_t selection_off = selection.first;
+	off_t selection_length = selection.second;
+	
+	const NestedOffsetLengthMap<Document::Comment> &comments   = doc->get_comments();
+	const NestedOffsetLengthMap<int>               &highlights = doc->get_highlights();
+	
+	wxMenu menu;
+	
+	menu.Append(wxID_CUT, "Cu&t");
+	menu.Enable(wxID_CUT,  (selection_length > 0));
+	
+	menu.Append(wxID_COPY,  "&Copy");
+	menu.Enable(wxID_COPY, (selection_length > 0));
+	
+	menu.Append(wxID_PASTE, "&Paste");
+	
+	menu.AppendSeparator();
+	
+	wxMenuItem *offset_copy_hex = menu.Append(wxID_ANY, "Copy offset (in hexadecimal)");
+	menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			char offset_str[24];
+			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos));
+			
+			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+		}
+	}, offset_copy_hex->GetId(), offset_copy_hex->GetId());
+	
+	wxMenuItem *offset_copy_dec = menu.Append(wxID_ANY, "Copy offset (in decimal)");
+	menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			char offset_str[24];
+			snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos));
+			
+			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+		}
+	}, offset_copy_dec->GetId(), offset_copy_dec->GetId());
+	
+	menu.AppendSeparator();
+	
+	auto comments_at_cur = NestedOffsetLengthMap_get_all(comments, cursor_pos);
+	for(auto i = comments_at_cur.begin(); i != comments_at_cur.end(); ++i)
+	{
+		auto ci = *i;
+		
+		wxString text = ci->second.menu_preview();
+		wxMenuItem *itm = menu.Append(wxID_ANY, wxString("Edit \"") + text + "\"...");
+		
+		menu.Bind(wxEVT_MENU, [this, ci](wxCommandEvent &event)
+		{
+			doc->edit_comment_popup(ci->first.offset, ci->first.length);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end()
+		&& cursor_pos < doc->buffer_length())
+	{
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Insert comment here...");
+		
+		menu.Bind(wxEVT_MENU, [this, cursor_pos](wxCommandEvent &event)
+		{
+			doc->edit_comment_popup(cursor_pos, 0);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	if(selection_length > 0
+		&& comments.find(NestedOffsetLengthMapKey(selection_off, selection_length)) == comments.end()
+		&& NestedOffsetLengthMap_can_set(comments, selection_off, selection_length))
+	{
+		char menu_label[64];
+		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));
+		wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
+		
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		{
+			doc->edit_comment_popup(selection_off, selection_length);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	menu.AppendSeparator();
+	
+	/* We need to maintain bitmap instances for lifespan of menu. */
+	std::list<wxBitmap> bitmaps;
+	
+	off_t highlight_off;
+	off_t highlight_length = 0;
+	
+	auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
+	
+	if(selection_length > 0)
+	{
+		highlight_off    = selection_off;
+		highlight_length = selection_length;
+	}
+	else if(highlight_at_cur != highlights.end())
+	{
+		highlight_off    = highlight_at_cur->first.offset;
+		highlight_length = highlight_at_cur->first.length;
+	}
+	else if(cursor_pos < doc->buffer_length())
+	{
+		highlight_off    = cursor_pos;
+		highlight_length = 1;
+	}
+	
+	if(highlight_length > 0 && NestedOffsetLengthMap_can_set(highlights, highlight_off, highlight_length))
+	{
+		wxMenu *hlmenu = new wxMenu();
+		
+		for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
+		{
+			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
+			
+			wxColour bg_colour = active_palette->get_highlight_bg(i);
+			
+			/* TODO: Get appropriate size for menu bitmap.
+			 * TODO: Draw a character in image using foreground colour.
+			*/
+			wxImage img(16, 16);
+			img.SetRGB(wxRect(0, 0, img.GetWidth(), img.GetHeight()),
+				bg_colour.Red(), bg_colour.Green(), bg_colour.Blue());
+			
+			bitmaps.emplace_back(img);
+			itm->SetBitmap(bitmaps.back());
+			
+			hlmenu->Append(itm);
+			
+			/* On Windows, event bindings on a submenu don't work.
+			 * On OS X, event bindings on a parent menu don't work.
+			 * On GTK, both work.
+			*/
+			#ifdef _WIN32
+			menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			#else
+			hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			#endif
+			{
+				int colour = i;
+				doc->set_highlight(highlight_off, highlight_length, colour);
+			}, itm->GetId(), itm->GetId());
+		}
+		
+		menu.AppendSubMenu(hlmenu, "Set Highlight");
+	}
+	
+	if(highlight_at_cur != highlights.end())
+	{
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Remove Highlight");
+		
+		NestedOffsetLengthMapKey key = highlight_at_cur->first;
+		
+		menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
+		{
+			doc->erase_highlight(key.offset, key.length);
+		}, itm->GetId(), itm->GetId());
+	}
 	
 	PopupMenu(&menu);
 }

@@ -42,6 +42,8 @@ namespace REHex {
 			void OnCommentLeftClick(OffsetLengthEvent &event);
 			void OnCommentRightClick(OffsetLengthEvent &event);
 			
+			void OnDataRightClick(wxCommandEvent &event);
+			
 		DECLARE_EVENT_TABLE()
 	};
 }

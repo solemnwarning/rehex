@@ -481,6 +481,59 @@ const REHex::NestedOffsetLengthMap<int> &REHex::Document::get_highlights() const
 	return highlights;
 }
 
+bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colour_idx)
+{
+	assert(highlight_colour_idx >= 0);
+	assert(highlight_colour_idx < Palette::NUM_HIGHLIGHT_COLOURS);
+	
+	if(!NestedOffsetLengthMap_can_set(highlights, off, length))
+	{
+		return false;
+	}
+	
+	_tracked_change("set highlight",
+		[this, off, length, highlight_colour_idx]()
+		{
+			NestedOffsetLengthMap_set(highlights, off, length, highlight_colour_idx);
+			_raise_highlights_changed();
+			
+			/* TODO: Limit paint to affected area. */
+			Refresh();
+		},
+		
+		[]()
+		{
+			/* Highlight changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
+bool REHex::Document::erase_highlight(off_t off, off_t length)
+{
+	if(highlights.find(NestedOffsetLengthMapKey(off, length)) == highlights.end())
+	{
+		return false;
+	}
+	
+	_tracked_change("remove highlight",
+		[this, off, length]()
+		{
+			highlights.erase(NestedOffsetLengthMapKey(off, length));
+			_raise_highlights_changed();
+			
+			/* TODO: Limit paint to affected area. */
+			Refresh();
+		},
+		
+		[]()
+		{
+			/* Highlight changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
 void REHex::Document::handle_paste(const std::string &clipboard_text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)

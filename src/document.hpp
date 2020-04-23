@@ -140,6 +140,8 @@ namespace REHex {
 			void edit_comment_popup(off_t offset, off_t length);
 			
 			const NestedOffsetLengthMap<int> &get_highlights() const;
+			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
+			bool erase_highlight(off_t off, off_t length);
 			
 			void handle_paste(const std::string &clipboard_text);
 			std::string handle_copy(bool cut);

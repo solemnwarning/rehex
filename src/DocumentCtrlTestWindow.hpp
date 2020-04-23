@@ -37,6 +37,8 @@ namespace REHex {
 			
 			void reinit_regions();
 			
+			void OnChar(wxKeyEvent &event);
+			
 			void OnCommentLeftClick(OffsetLengthEvent &event);
 			void OnCommentRightClick(OffsetLengthEvent &event);
 			

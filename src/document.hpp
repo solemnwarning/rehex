@@ -134,12 +134,6 @@ namespace REHex {
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
 			
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
-			void overwrite_data(off_t offset, const void *data, off_t length);
-			void insert_data(off_t offset, const unsigned char *data, off_t length);
-			void erase_data(off_t offset, off_t length);
-			off_t buffer_length();
-			
 			const NestedOffsetLengthMap<Comment> &get_comments() const;
 			bool set_comment(off_t offset, off_t length, const Comment &comment);
 			bool erase_comment(off_t offset, off_t length);
@@ -357,8 +351,15 @@ namespace REHex {
 			int hf_string_width(int length);
 			int hf_char_at_x(int x_px);
 			
-			/* Stays at the bottom because it changes the protection... */
-			DECLARE_EVENT_TABLE()
+		public:
+			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
+			off_t buffer_length();
+			
+			void overwrite_data(off_t offset, const void *data, off_t length,       off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void insert_data(off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void erase_data(off_t offset, off_t length,                             off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+		DECLARE_EVENT_TABLE()
 	};
 	
 	struct Document::Region::Data: public REHex::Document::Region

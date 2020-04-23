@@ -389,19 +389,32 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 	return buffer->read_data(offset, max_length);
 }
 
-void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length)
+void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
-	_tracked_overwrite_data("change data", offset, (const unsigned char*)(data), length, get_cursor_position(), cursor_state);
+	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	
+	_tracked_overwrite_data(change_desc, offset, (const unsigned char*)(data), length, new_cursor_pos, new_cursor_state);
 }
 
-void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
-	_tracked_insert_data("change data", offset, data, length, get_cursor_position(), cursor_state);
+	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	
+	_tracked_insert_data(change_desc, offset, data, length, new_cursor_pos, new_cursor_state);
 }
 
-void REHex::Document::erase_data(off_t offset, off_t length)
+void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
-	_tracked_erase_data("change data", offset, length);
+	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	
+	/* TODO */
+	assert(new_cursor_pos == cpos_off);
+	assert(new_cursor_state == cursor_state);
+	
+	_tracked_erase_data(change_desc, offset, length);
 }
 
 off_t REHex::Document::buffer_length()

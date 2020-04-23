@@ -10,9 +10,25 @@
 using namespace REHex;
 
 BEGIN_EVENT_TABLE(REHex::DocumentCtrlTestWindow, wxFrame)
+	EVT_CHAR(REHex::DocumentCtrlTestWindow::OnChar)
+	
 	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::DocumentCtrlTestWindow::OnCommentLeftClick)
 	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::DocumentCtrlTestWindow::OnCommentRightClick)
 END_EVENT_TABLE()
+
+/* Is the given byte a printable 7-bit ASCII character? */
+static bool isasciiprint(int c)
+{
+	return (c >= ' ' && c <= '~');
+}
+
+/* Is the given value a 7-bit ASCII character representing a hex digit? */
+static bool isasciihex(int c)
+{
+	return (c >= '0' && c <= '9')
+		|| (c >= 'A' && c <= 'F')
+		|| (c >= 'a' && c <= 'f');
+}
 
 void REHex::DocumentCtrlTestWindow::reinit_regions()
 {
@@ -109,6 +125,135 @@ REHex::DocumentCtrlTestWindow::DocumentCtrlTestWindow(Document *doc):
 }
 
 REHex::DocumentCtrlTestWindow::~DocumentCtrlTestWindow() {}
+
+void REHex::DocumentCtrlTestWindow::OnChar(wxKeyEvent &event)
+{
+	int key       = event.GetKeyCode();
+	int modifiers = event.GetModifiers();
+	
+	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	
+	auto selection = doc_ctrl->get_selection();
+	off_t selection_off = selection.first;
+	off_t selection_length = selection.second;
+	
+	bool insert_mode = doc_ctrl->get_insert_mode();
+	
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	if(cursor_state != Document::CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
+	{
+		unsigned char nibble = REHex::parse_ascii_nibble(key);
+		
+		if(cursor_state == Document::CSTATE_HEX_MID)
+		{
+			/* Overwrite least significant nibble of current byte, then move onto
+			 * inserting or overwriting at the next byte.
+			*/
+			
+			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			assert(cur_data.size() == 1);
+			
+			unsigned char old_byte = cur_data[0];
+			unsigned char new_byte = (old_byte & 0xF0) | nibble;
+			
+			doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos + 1, Document::CSTATE_HEX, "change data");
+		}
+		else if(insert_mode)
+		{
+			/* Inserting a new byte. Initialise the most significant nibble then move
+			 * onto overwriting the least significant.
+			*/
+			
+			unsigned char byte = (nibble << 4);
+			doc->insert_data(cursor_pos, &byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+		}
+		else{
+			/* Overwrite most significant nibble of current byte, then move onto
+			 * overwriting the least significant.
+			*/
+			
+			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			
+			if(!cur_data.empty())
+			{
+				unsigned char old_byte = cur_data[0];
+				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
+				
+				doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+			}
+		}
+		
+		doc_ctrl->clear_selection();
+		
+		/* TODO: Limit paint to affected area */
+		this->Refresh();
+	}
+	else if(cursor_state == Document::CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
+	{
+		unsigned char byte = key;
+		
+		if(insert_mode)
+		{
+			doc->insert_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
+		}
+		else if(cursor_pos < doc->buffer_length())
+		{
+			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			assert(cur_data.size() == 1);
+			
+			doc->overwrite_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
+		}
+		
+		doc_ctrl->clear_selection();
+		
+		/* TODO: Limit paint to affected area */
+		this->Refresh();
+	}
+	else if(modifiers == wxMOD_NONE)
+	{
+		if(key == WXK_INSERT)
+		{
+			doc_ctrl->set_insert_mode(!insert_mode);
+		}
+		else if(key == WXK_DELETE)
+		{
+			if(selection_length > 0)
+			{
+				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "delete selection");
+			}
+			else if(cursor_pos < doc->buffer_length())
+			{
+				doc->erase_data(cursor_pos, 1, -1, Document::CSTATE_CURRENT, "delete");
+			}
+		}
+		else if(key == WXK_BACK)
+		{
+			if(selection_length > 0)
+			{
+				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "delete selection");
+			}
+			else if(cursor_state == Document::CSTATE_HEX_MID)
+			{
+				/* Backspace while waiting for the second nibble in a byte should erase the current byte
+				 * rather than the previous one.
+				*/
+				doc->erase_data(cursor_pos, 1, -1, Document::CSTATE_CURRENT, "delete");
+			}
+			else if(cursor_pos > 0)
+			{
+				doc->erase_data(cursor_pos - 1, 1, -1, Document::CSTATE_CURRENT, "delete");
+			}
+		}
+		else if(key == '/')
+		{
+			if(cursor_pos < doc->buffer_length())
+			{
+				doc->edit_comment_popup(cursor_pos, 0);
+			}
+		}
+	}
+}
 
 void REHex::DocumentCtrlTestWindow::OnCommentLeftClick(OffsetLengthEvent &event)
 {

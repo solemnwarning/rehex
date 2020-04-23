@@ -45,14 +45,6 @@ static bool isasciiprint(int c)
 	return (c >= ' ' && c <= '~');
 }
 
-/* Is the given value a 7-bit ASCII character representing a hex digit? */
-static bool isasciihex(int c)
-{
-	return (c >= '0' && c <= '9')
-		|| (c >= 'A' && c <= 'F')
-		|| (c >= 'a' && c <= 'f');
-}
-
 enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SELECT_TIMER,
@@ -789,6 +781,8 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			
 			HandleAsNavigationKey(event);
 		}
+		
+		return;
 	}
 	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT || ((modifiers & ~wxMOD_SHIFT) == wxMOD_CONTROL && (key == WXK_HOME || key == WXK_END)))
 		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END))
@@ -981,9 +975,12 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		else{
 			clear_selection();
 		}
+		
+		return;
 	}
 	
 	/* Unhandled key press - propagate to parent. */
+	event.ResumePropagation(1);
 	event.Skip();
 }
 

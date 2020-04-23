@@ -68,6 +68,22 @@ namespace REHex {
 				wxString menu_preview() const;
 			};
 			
+			enum CursorState {
+				CSTATE_HEX,
+				CSTATE_HEX_MID,
+				CSTATE_ASCII,
+				
+				/* Only valid as parameter to _set_cursor_position(), will go
+				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.
+				*/
+				CSTATE_GOTO,
+				
+				/* Only valid as parameter to data manipulation methods to use
+				 * current value of cursor_state.
+				*/
+				CSTATE_CURRENT,
+			};
+			
 			enum InlineCommentMode {
 				ICM_HIDDEN       = 0,
 				ICM_FULL         = 1,
@@ -110,7 +126,7 @@ namespace REHex {
 			void set_highlight_selection_match(bool highlight_selection_match);
 			
 			off_t get_cursor_position() const;
-			void set_cursor_position(off_t off);
+			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
 			bool get_insert_mode();
 			void set_insert_mode(bool enabled);
 			
@@ -159,17 +175,6 @@ namespace REHex {
 		#ifndef UNIT_TEST
 		private:
 		#endif
-			enum CursorState {
-				CSTATE_HEX,
-				CSTATE_HEX_MID,
-				CSTATE_ASCII,
-				
-				/* Only valid as parameter to _set_cursor_position(), will go
-				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.
-				*/
-				CSTATE_GOTO,
-			};
-			
 			struct Region
 			{
 				int64_t y_offset; /* First on-screen line in region */

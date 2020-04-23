@@ -103,7 +103,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, REHex::Document *doc):
 	mouse_down_in_hex = false;
 	mouse_down_in_ascii = false;
 	mouse_shift_initial = -1;
-	cursor_state      = CSTATE_HEX;
+	cursor_state      = Document::CSTATE_HEX;
 	
 	wxFontInfo finfo;
 	finfo.Family(wxFONTFAMILY_MODERN);
@@ -210,12 +210,12 @@ off_t REHex::DocumentCtrl::get_cursor_position() const
 	return this->cpos_off;
 }
 
-void REHex::DocumentCtrl::set_cursor_position(off_t off)
+REHex::Document::CursorState REHex::DocumentCtrl::get_cursor_state() const
 {
-	_set_cursor_position(off, CSTATE_GOTO);
+	return cursor_state;
 }
 
-void REHex::DocumentCtrl::_set_cursor_position(off_t position, enum CursorState cursor_state)
+void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorState cursor_state)
 {
 	assert(position >= 0 && position <= doc->buffer_length());
 	
@@ -224,11 +224,11 @@ void REHex::DocumentCtrl::_set_cursor_position(off_t position, enum CursorState 
 		--position;
 	}
 	
-	if(cursor_state == CSTATE_GOTO)
+	if(cursor_state == Document::CSTATE_GOTO)
 	{
-		if(this->cursor_state == CSTATE_HEX_MID)
+		if(this->cursor_state == Document::CSTATE_HEX_MID)
 		{
-			cursor_state = CSTATE_HEX;
+			cursor_state = Document::CSTATE_HEX;
 		}
 		else{
 			cursor_state = this->cursor_state;
@@ -239,21 +239,27 @@ void REHex::DocumentCtrl::_set_cursor_position(off_t position, enum CursorState 
 	cursor_visible = true;
 	redraw_cursor_timer.Start();
 	
-	bool cursor_moved = (cpos_off != position);
-	
 	cpos_off = position;
 	this->cursor_state = cursor_state;
 	
 	_make_byte_visible(cpos_off);
 	
-	if(cursor_moved)
-	{
-		// TODO
-		// _raise_moved();
-	}
-	
 	/* TODO: Limit paint to affected area */
 	Refresh();
+}
+
+void REHex::DocumentCtrl::_set_cursor_position(off_t position, REHex::Document::CursorState cursor_state)
+{
+	off_t old_cursor_pos                   = get_cursor_position();
+	Document::CursorState old_cursor_state = get_cursor_state();
+	
+	set_cursor_position(position, cursor_state);
+	
+	if(old_cursor_pos != cpos_off || old_cursor_state != cursor_state)
+	{
+		CursorUpdateEvent cursor_update_event(this, cpos_off, cursor_state);
+		ProcessWindowEvent(cursor_update_event);
+	}
 }
 
 bool REHex::DocumentCtrl::get_insert_mode()
@@ -276,7 +282,7 @@ void REHex::DocumentCtrl::set_insert_mode(bool enabled)
 		/* Move cursor back if going from insert to overwrite mode and it
 		 * was at the end of the file.
 		*/
-		set_cursor_position(cursor_pos - 1);
+		_set_cursor_position((cursor_pos - 1), Document::CSTATE_GOTO);
 	}
 	
 	wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
@@ -754,12 +760,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 	
 	if(key == WXK_TAB && modifiers == wxMOD_NONE)
 	{
-		if(cursor_state != CSTATE_ASCII)
+		if(cursor_state != Document::CSTATE_ASCII)
 		{
 			/* Hex view is focused, focus the ASCII view. */
-			
-			cursor_state = CSTATE_ASCII;
-			Refresh();
+			_set_cursor_position(cursor_pos, Document::CSTATE_ASCII);
 		}
 		else{
 			/* ASCII view is focused, get wxWidgets to process this and focus the next
@@ -773,12 +777,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 	}
 	else if(key == WXK_TAB && modifiers == wxMOD_SHIFT)
 	{
-		if(cursor_state == CSTATE_ASCII)
+		if(cursor_state == Document::CSTATE_ASCII)
 		{
 			/* ASCII view is focused, focus the hex view. */
-			
-			cursor_state = CSTATE_HEX;
-			Refresh();
+			_set_cursor_position(cursor_pos, Document::CSTATE_HEX);
 		}
 		else{
 			/* Hex view is focused, get wxWidgets to process this and focus the previous
@@ -849,11 +851,6 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					new_cursor_pos = cur_region->d_offset - 1;
 				}
 			}
-			
-			if(cursor_state == CSTATE_HEX_MID)
-			{
-				cursor_state = CSTATE_HEX;
-			}
 		}
 		else if(key == WXK_DOWN)
 		{
@@ -897,20 +894,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					new_cursor_pos = std::min(max_pos, new_cursor_pos);
 				}
 			}
-			
-			if(cursor_state == CSTATE_HEX_MID)
-			{
-				cursor_state = CSTATE_HEX;
-			}
 		}
 		else if(key == WXK_HOME && (modifiers & wxMOD_CONTROL))
 		{
 			new_cursor_pos = 0;
-			
-			if(cursor_state == CSTATE_HEX_MID)
-			{
-				cursor_state = CSTATE_HEX;
-			}
 		}
 		else if(key == WXK_HOME)
 		{
@@ -921,20 +908,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
 			
 			new_cursor_pos = cursor_pos - offset_within_line;
-			
-			if(cursor_state == CSTATE_HEX_MID)
-			{
-				cursor_state = CSTATE_HEX;
-			}
 		}
 		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
 		{
 			new_cursor_pos = doc->buffer_length() - (off_t)(!insert_mode);
-			
-			if(cursor_state == CSTATE_HEX_MID)
-			{
-				cursor_state = CSTATE_HEX;
-			}
 		}
 		else if(key == WXK_END)
 		{
@@ -947,14 +924,9 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			new_cursor_pos = std::min(
 				(cursor_pos + ((cur_region->bytes_per_line_actual - offset_within_line) - 1)),
 				((cur_region->d_offset + cur_region->d_length) - 1));
-			
-			if(cursor_state == CSTATE_HEX_MID)
-			{
-				cursor_state = CSTATE_HEX;
-			}
 		}
 		
-		set_cursor_position(new_cursor_pos);
+		_set_cursor_position(new_cursor_pos, Document::CSTATE_GOTO);
 		
 		if(modifiers & wxMOD_SHIFT)
 		{
@@ -1067,7 +1039,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 					if(event.ShiftDown())
 					{
 						off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
-						_set_cursor_position(clicked_offset, CSTATE_ASCII);
+						_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
 						
 						if(clicked_offset > old_position)
 						{
@@ -1083,7 +1055,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 						mouse_down_in_ascii  = true;
 					}
 					else{
-						_set_cursor_position(clicked_offset, CSTATE_ASCII);
+						_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
 						
 						clear_selection();
 						
@@ -1110,7 +1082,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 					if(event.ShiftDown())
 					{
 						off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
-						_set_cursor_position(clicked_offset, CSTATE_HEX);
+						_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
 						
 						if(clicked_offset > old_position)
 						{
@@ -1126,7 +1098,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 						mouse_down_in_hex    = true;
 					}
 					else{
-						_set_cursor_position(clicked_offset, CSTATE_HEX);
+						_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
 						
 						clear_selection();
 						
@@ -1242,7 +1214,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 				{
 					/* Clicked on a character */
 					
-					_set_cursor_position(clicked_offset, CSTATE_ASCII);
+					_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
 					
 					if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
 					{
@@ -1261,7 +1233,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 				{
 					/* Clicked on a byte */
 					
-					_set_cursor_position(clicked_offset, CSTATE_HEX);
+					_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
 					
 					if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
 					{
@@ -1614,14 +1586,14 @@ void REHex::DocumentCtrl::_make_byte_visible(off_t offset)
 	
 	off_t line_off = region_offset % dr->bytes_per_line_actual;
 	
-	if(cursor_state == CSTATE_HEX || cursor_state == CSTATE_HEX_MID)
+	if(cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID)
 	{
 		unsigned int line_x = offset_column_width
 			+ hf_string_width(line_off * 2)
 			+ hf_string_width(line_off / bytes_per_group);
 		_make_x_visible(line_x, hf_string_width(2));
 	}
-	else if(cursor_state == CSTATE_ASCII)
+	else if(cursor_state == Document::CSTATE_ASCII)
 	{
 		off_t byte_x = dr->ascii_text_x + hf_string_width(line_off);
 		_make_x_visible(byte_x, hf_char_width());
@@ -1985,8 +1957,8 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
 	
-	bool hex_active   = doc.HasFocus() && doc.cursor_state != CSTATE_ASCII;
-	bool ascii_active = doc.HasFocus() && doc.cursor_state == CSTATE_ASCII;
+	bool hex_active   = doc.HasFocus() && doc.cursor_state != Document::CSTATE_ASCII;
+	bool ascii_active = doc.HasFocus() && doc.cursor_state == Document::CSTATE_ASCII;
 	
 	off_t cursor_pos = doc.get_cursor_position();
 	
@@ -2016,7 +1988,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		
 		auto draw_end_cursor = [&]()
 		{
-			if((doc.cursor_visible && doc.cursor_state == CSTATE_HEX) || !hex_active)
+			if((doc.cursor_visible && doc.cursor_state == Document::CSTATE_HEX) || !hex_active)
 			{
 				if(doc.insert_mode || !hex_active)
 				{
@@ -2032,7 +2004,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				}
 			}
 			
-			if(doc.show_ascii && ((doc.cursor_visible && doc.cursor_state == CSTATE_ASCII) || !ascii_active))
+			if(doc.show_ascii && ((doc.cursor_visible && doc.cursor_state == Document::CSTATE_ASCII) || !ascii_active))
 			{
 				if(doc.insert_mode || !ascii_active)
 				{
@@ -2151,12 +2123,12 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			bool inv_high, inv_low;
 			if(cur_off == cursor_pos && hex_active)
 			{
-				if(doc.cursor_state == CSTATE_HEX)
+				if(doc.cursor_state == Document::CSTATE_HEX)
 				{
 					inv_high = !doc.insert_mode;
 					inv_low  = !doc.insert_mode;
 				}
-				else /* if(doc.cursor_state == CSTATE_HEX_MID) */
+				else /* if(doc.cursor_state == Document::CSTATE_HEX_MID) */
 				{
 					inv_high = false;
 					inv_low  = true;
@@ -2216,7 +2188,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				}
 			}
 			
-			if(cur_off == cursor_pos && doc.insert_mode && ((doc.cursor_visible && doc.cursor_state == CSTATE_HEX) || !hex_active))
+			if(cur_off == cursor_pos && doc.insert_mode && ((doc.cursor_visible && doc.cursor_state == Document::CSTATE_HEX) || !hex_active))
 			{
 				/* Draw insert cursor. */
 				dc.SetPen(norm_fg_1px);
@@ -2229,7 +2201,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				dc.SetBrush(*wxTRANSPARENT_BRUSH);
 				dc.SetPen(norm_fg_1px);
 				
-				if(doc.cursor_state == CSTATE_HEX_MID)
+				if(doc.cursor_state == Document::CSTATE_HEX_MID)
 				{
 					dc.DrawRectangle(pd_hx + doc.hf_char_width(), y, doc.hf_char_width(), doc.hf_height);
 				}

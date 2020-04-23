@@ -101,6 +101,10 @@ REHex::DocumentCtrlTestWindow::DocumentCtrlTestWindow(Document *doc):
 	doc->Bind(DATA_INSERT,    [this](OffsetLengthEvent &event) { reinit_regions(); event.Skip(); });
 	doc->Bind(DATA_OVERWRITE, [this](OffsetLengthEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
 	
+	doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event) { doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state); event.Skip(); });
+	
+	doc_ctrl->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event) { this->doc->set_cursor_position(event.cursor_pos, event.cursor_state); event.Skip(); });
+	
 	reinit_regions();
 }
 

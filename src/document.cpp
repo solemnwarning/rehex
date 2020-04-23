@@ -270,9 +270,9 @@ off_t REHex::Document::get_cursor_position() const
 	return this->cpos_off;
 }
 
-void REHex::Document::set_cursor_position(off_t off)
+void REHex::Document::set_cursor_position(off_t off, CursorState cursor_state)
 {
-	_set_cursor_position(off, CSTATE_GOTO);
+	_set_cursor_position(off, cursor_state);
 }
 
 void REHex::Document::_set_cursor_position(off_t position, enum CursorState cursor_state)
@@ -300,6 +300,7 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	redraw_cursor_timer.Start();
 	
 	bool cursor_moved = (cpos_off != position);
+	bool cursor_updated = (cpos_off != position || this->cursor_state != cursor_state);
 	
 	cpos_off = position;
 	this->cursor_state = cursor_state;
@@ -309,6 +310,12 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	if(cursor_moved)
 	{
 		_raise_moved();
+	}
+	
+	if(cursor_updated)
+	{
+		CursorUpdateEvent cursor_update_event(this, cpos_off, cursor_state);
+		ProcessWindowEvent(cursor_update_event);
 	}
 	
 	/* TODO: Limit paint to affected area */
@@ -635,12 +642,20 @@ void REHex::Document::undo()
 		auto &act = undo_stack.back();
 		act.undo();
 		
+		bool cursor_updated = (cpos_off != act.old_cpos_off || cursor_state != act.old_cursor_state);
+		
 		cpos_off     = act.old_cpos_off;
 		cursor_state = act.old_cursor_state;
 		comments     = act.old_comments;
 		highlights   = act.old_highlights;
 		
 		_raise_highlights_changed();
+		
+		if(cursor_updated)
+		{
+			CursorUpdateEvent cursor_update_event(this, cpos_off, cursor_state);
+			ProcessWindowEvent(cursor_update_event);
+		}
 		
 		_reinit_regions();
 		
@@ -1166,7 +1181,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			/* Hex view is focused, focus the ASCII view. */
 			
-			cursor_state = CSTATE_ASCII;
+			_set_cursor_position(cursor_pos, CSTATE_ASCII);
 			Refresh();
 		}
 		else{
@@ -1185,7 +1200,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		{
 			/* ASCII view is focused, focus the hex view. */
 			
-			cursor_state = CSTATE_HEX;
+			_set_cursor_position(cursor_pos, CSTATE_HEX);
 			Refresh();
 		}
 		else{
@@ -1269,6 +1284,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END))
 	{
 		off_t new_cursor_pos = cursor_pos;
+		CursorState new_cursor_state = cursor_state;
 		
 		if(key == WXK_LEFT)
 		{
@@ -1329,7 +1345,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
-				cursor_state = CSTATE_HEX;
+				new_cursor_state = CSTATE_HEX;
 			}
 		}
 		else if(key == WXK_DOWN)
@@ -1377,7 +1393,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
-				cursor_state = CSTATE_HEX;
+				new_cursor_state = CSTATE_HEX;
 			}
 		}
 		else if(key == WXK_HOME && (modifiers & wxMOD_CONTROL))
@@ -1386,7 +1402,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
-				cursor_state = CSTATE_HEX;
+				new_cursor_state = CSTATE_HEX;
 			}
 		}
 		else if(key == WXK_HOME)
@@ -1401,7 +1417,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
-				cursor_state = CSTATE_HEX;
+				new_cursor_state = CSTATE_HEX;
 			}
 		}
 		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
@@ -1410,7 +1426,7 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
-				cursor_state = CSTATE_HEX;
+				new_cursor_state = CSTATE_HEX;
 			}
 		}
 		else if(key == WXK_END)
@@ -1427,11 +1443,11 @@ void REHex::Document::OnChar(wxKeyEvent &event)
 			
 			if(cursor_state == CSTATE_HEX_MID)
 			{
-				cursor_state = CSTATE_HEX;
+				new_cursor_state = CSTATE_HEX;
 			}
 		}
 		
-		set_cursor_position(new_cursor_pos);
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		if(modifiers & wxMOD_SHIFT)
 		{

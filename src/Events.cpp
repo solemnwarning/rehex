@@ -24,3 +24,19 @@ wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::DATA_ERASE,        REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERT,       REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITE,    REHex::OffsetLengthEvent);
+
+wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
+
+REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state):
+	wxEvent(source->GetId(), CURSOR_UPDATE),
+	cursor_pos(cursor_pos),
+	cursor_state(cursor_state)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::CursorUpdateEvent::Clone() const
+{
+	return new CursorUpdateEvent(*this);
+}

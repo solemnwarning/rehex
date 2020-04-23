@@ -184,7 +184,10 @@ namespace REHex {
 			void set_show_ascii(bool show_ascii);
 			
 			off_t get_cursor_position() const;
-			void set_cursor_position(off_t off);
+			Document::CursorState get_cursor_state() const;
+			
+			void set_cursor_position(off_t position, Document::CursorState cursor_state = Document::CSTATE_GOTO);
+			
 			bool get_insert_mode();
 			void set_insert_mode(bool enabled);
 			
@@ -211,17 +214,6 @@ namespace REHex {
 		#ifndef UNIT_TEST
 		private:
 		#endif
-			enum CursorState {
-				CSTATE_HEX,
-				CSTATE_HEX_MID,
-				CSTATE_ASCII,
-				
-				/* Only valid as parameter to _set_cursor_position(), will go
-				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.
-				*/
-				CSTATE_GOTO,
-			};
-			
 			friend DataRegion;
 			friend CommentRegion;
 			
@@ -282,9 +274,9 @@ namespace REHex {
 			wxTimer mouse_select_timer;
 			off_t mouse_shift_initial;
 			
-			enum CursorState cursor_state;
+			Document::CursorState cursor_state;
 			
-			void _set_cursor_position(off_t position, enum CursorState cursor_state);
+			void _set_cursor_position(off_t position, Document::CursorState cursor_state);
 			
 			REHex::DocumentCtrl::DataRegion *_data_region_by_offset(off_t offset);
 			

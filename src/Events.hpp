@@ -22,6 +22,8 @@
 #include <wx/event.h>
 #include <wx/window.h>
 
+#include "document.hpp"
+
 namespace REHex
 {
 	class OffsetLengthEvent: public wxEvent
@@ -48,6 +50,22 @@ namespace REHex
 	#define EVT_OFFSETLENGTH(id, type, func) \
 		wx__DECLARE_EVT1(type, id, wxEVENT_HANDLER_CAST(OffsetLengthEventFunction, func))
 	
+	class CursorUpdateEvent: public wxEvent
+	{
+		public:
+			const off_t cursor_pos;
+			const Document::CursorState cursor_state;
+			
+			CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
+	typedef void (wxEvtHandler::*CursorUpdateEventFunction)(CursorUpdateEvent&);
+	
+	#define EVT_CURSORUPDATE(id, func) \
+		wx__DECLARE_EVT1(CURSOR_UPDATE, id, wxEVENT_HANDLER_CAST(CursorUpdateEventFunction, func))
+	
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     OffsetLengthEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
@@ -55,6 +73,8 @@ namespace REHex
 	wxDECLARE_EVENT(DATA_ERASE,        OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERT,       OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_OVERWRITE,    OffsetLengthEvent);
+	
+	wxDECLARE_EVENT(CURSOR_UPDATE,    CursorUpdateEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

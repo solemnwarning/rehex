@@ -159,6 +159,7 @@ APP_OBJS := \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
 	src/decodepanel.o \
+	src/DiffWindow.o \
 	src/disassemble.o \
 	src/document.o \
 	src/DocumentCtrl.o \

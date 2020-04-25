@@ -126,7 +126,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, REHex::Document *doc):
 	SetDoubleBuffered(true);
 	#endif
 	
-	SetMinClientSize(wxSize(hf_string_width(60), (hf_height * 20)));
+	SetMinClientSize(wxSize(hf_string_width(10), (hf_height * 20)));
 }
 
 REHex::DocumentCtrl::~DocumentCtrl()

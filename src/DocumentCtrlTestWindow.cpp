@@ -5,6 +5,7 @@
 #include <wx/clipbrd.h>
 #include <wx/frame.h>
 
+#include "DiffWindow.hpp"
 #include "DocumentCtrlTestWindow.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
@@ -468,6 +469,24 @@ void REHex::DocumentCtrlTestWindow::OnDataRightClick(wxCommandEvent &event)
 		menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
 		{
 			doc->erase_highlight(key.offset, key.length);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	if(selection_length > 0)
+	{
+		menu.AppendSeparator();
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare...");
+		
+		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
+		{
+			static DiffWindow *diff = NULL;
+			if(diff == NULL)
+			{
+				diff = new DiffWindow();
+				diff->Show(true);
+			}
+			
+			diff->add_range(DiffWindow::Range(doc, selection_off, selection_length));
 		}, itm->GetId(), itm->GetId());
 	}
 	

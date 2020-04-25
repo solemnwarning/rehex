@@ -19,6 +19,7 @@
 #define REHEX_DIFFWINDOW_HPP
 
 #include <list>
+#include <wx/aui/auibook.h>
 #include <wx/frame.h>
 #include <wx/splitter.h>
 #include <wx/stattext.h>
@@ -40,6 +41,7 @@ namespace REHex {
 					off_t length;
 					
 					wxSplitterWindow *splitter;
+					wxAuiNotebook *notebook;
 					DocumentCtrl *doc_ctrl;
 					wxStaticText *foo;
 					
@@ -78,6 +80,7 @@ namespace REHex {
 			void doc_update(Range *range);
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
+			void OnNotebookClosed(wxAuiNotebookEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

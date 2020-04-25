@@ -16,11 +16,13 @@
 */
 
 #include <algorithm>
+#include <set>
 
 #include "DiffWindow.hpp"
 #include "Palette.hpp"
 
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
+	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow():
@@ -28,7 +30,21 @@ REHex::DiffWindow::DiffWindow():
 {}
 
 REHex::DiffWindow::~DiffWindow()
-{}
+{
+	/* Disconnect any remaining external Document event bindings. */
+	
+	std::set<Document*> unique_docs;
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		unique_docs.insert(r->doc);
+	}
+	
+	for(auto d = unique_docs.begin(); d != unique_docs.end(); ++d)
+	{
+		(*d)->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
+	}
+}
 
 const std::list<REHex::DiffWindow::Range> &REHex::DiffWindow::get_ranges() const
 {
@@ -44,6 +60,10 @@ void REHex::DiffWindow::add_range(const Range &range)
 		new_range->splitter = new wxSplitterWindow(
 			this, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 		
+		/* Force the splitter to occupy the whole window. */
+		new_range->splitter->SetPosition(wxPoint(0, 0));
+		new_range->splitter->SetSize(GetClientSize());
+		
 		new_range->splitter->SetMinimumPaneSize(20);
 	}
 	else{
@@ -53,17 +73,21 @@ void REHex::DiffWindow::add_range(const Range &range)
 			prev_range->splitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 		
 		prev_range->splitter->Unsplit();
-		prev_range->splitter->SplitVertically(prev_range->doc_ctrl, new_range->splitter);
+		prev_range->splitter->SplitVertically(prev_range->notebook, new_range->splitter);
 		
 		prev_range->splitter->SetMinimumPaneSize(20);
 	}
 	
-	new_range->doc_ctrl = new DocumentCtrl(new_range->splitter, new_range->doc);
+	new_range->notebook = new wxAuiNotebook(new_range->splitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxAUI_NB_CLOSE_ON_ACTIVE_TAB | wxAUI_NB_TOP));
+	
+	new_range->doc_ctrl = new DocumentCtrl(new_range->notebook, new_range->doc);
 	new_range->foo = new wxStaticText(new_range->splitter, wxID_ANY, "foo");
+	
+	new_range->notebook->AddPage(new_range->doc_ctrl, new_range->doc->get_title());
 	
 	doc_update(&*new_range);
 	
-	new_range->splitter->SplitVertically(new_range->doc_ctrl, new_range->foo);
+	new_range->splitter->SplitVertically(new_range->notebook, new_range->foo);
 	
 	if(ranges.size() > 1)
 	{
@@ -73,7 +97,7 @@ void REHex::DiffWindow::add_range(const Range &range)
 	
 	/* If this is the first Range using this Document, set up event bindings. */
 	
-	bool first_of_doc = (std::find_if(ranges.begin(), new_range, [&new_range](const Range &range) { return range.doc == new_range->doc; }) == ranges.end());
+	bool first_of_doc = (std::find_if(ranges.begin(), new_range, [&](const Range &range) { return range.doc == new_range->doc; }) == new_range);
 	if(first_of_doc)
 	{
 		new_range->doc->Bind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
@@ -82,7 +106,65 @@ void REHex::DiffWindow::add_range(const Range &range)
 
 std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(std::list<Range>::iterator range)
 {
-	abort();
+	auto next = std::next(range);
+	
+	if(range != ranges.begin())
+	{
+		/* We are the child of another splitter... */
+		
+		auto prev = std::prev(range);
+		
+		prev->splitter->Unsplit();
+		
+		if(next != ranges.end())
+		{
+			/* ...and we have a child, so reparent it to our parent. */
+			
+			next->splitter->Reparent(prev->splitter);
+			prev->splitter->SplitVertically(prev->notebook, next->splitter);
+		}
+	}
+	else if(next != ranges.end())
+	{
+		/* We are the top-level splitter, and we have a child. It must be reparented. */
+		
+		wxWindow *parent_window = range->splitter->GetParent();
+		
+		range->splitter->Unsplit();
+		
+		next->splitter->Reparent(parent_window);
+		
+		/* Force the next splitter to occupy the whole window. */
+		next->splitter->SetPosition(wxPoint(0, 0));
+		next->splitter->SetSize(parent_window->GetClientSize());
+		
+		/* Unsplitting our splitter hid the next one, so unhide it. */
+		next->splitter->Show();
+	}
+	
+	/* We can't actually destroy our windows yet, since we might be called from one of their
+	 * event handlers (i.e. EVT_AUINOTEBOOK_PAGE_CLOSED), so hide them and queue them to be
+	 * destroyed soon.
+	*/
+	
+	range->splitter->Hide();
+	
+	wxWindow *destroy_me = range->splitter;
+	CallAfter([destroy_me]() { destroy_me->Destroy(); });
+	
+	Document *range_doc  = range->doc;
+	
+	ranges.erase(range);
+	
+	/* If this was the last Range using this Document, remove event bindings. */
+	
+	bool last_of_doc = (std::find_if(ranges.begin(), ranges.end(), [&](const Range &range) { return range.doc == range_doc; }) == ranges.end());
+	if(last_of_doc)
+	{
+		range->doc->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
+	}
+	
+	return next;
 }
 
 void REHex::DiffWindow::doc_update(Range *range)
@@ -95,7 +177,30 @@ void REHex::DiffWindow::doc_update(Range *range)
 
 void REHex::DiffWindow::OnDocumentDestroy(wxWindowDestroyEvent &event)
 {
-	abort();
+	Document *destroyed = dynamic_cast<Document*>(event.GetWindow());
+	assert(destroyed != NULL);
+	
+	for(auto i = ranges.begin(); i != ranges.end();)
+	{
+		if(i->doc == destroyed)
+		{
+			i = remove_range(i);
+		}
+		else{
+			++i;
+		}
+	}
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnNotebookClosed(wxAuiNotebookEvent &event)
+{
+	auto nb_range = std::find_if(ranges.begin(), ranges.end(), [event](const Range &range) { return range.notebook == event.GetEventObject(); });
+	assert(nb_range != ranges.end());
+	
+	remove_range(nb_range);
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):

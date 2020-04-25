@@ -183,6 +183,9 @@ namespace REHex {
 			bool get_show_ascii();
 			void set_show_ascii(bool show_ascii);
 			
+			bool get_highlight_selection_match();
+			void set_highlight_selection_match(bool highlight_selection_match);
+			
 			off_t get_cursor_position() const;
 			Document::CursorState get_cursor_state() const;
 			

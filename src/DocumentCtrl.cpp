@@ -197,6 +197,17 @@ void REHex::DocumentCtrl::set_show_ascii(bool show_ascii)
 	_handle_width_change();
 }
 
+bool REHex::DocumentCtrl::get_highlight_selection_match()
+{
+	return highlight_selection_match;
+}
+
+void REHex::DocumentCtrl::set_highlight_selection_match(bool highlight_selection_match)
+{
+	this->highlight_selection_match = highlight_selection_match;
+	Refresh();
+}
+
 off_t REHex::DocumentCtrl::get_cursor_position() const
 {
 	return this->cpos_off;
@@ -1951,6 +1962,20 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		data_err = true;
 	}
 	
+	static const int SECONDARY_SELECTION_MAX = 4096;
+	
+	std::vector<unsigned char> selection_data;
+	if(doc.doc->get_highlight_selection_match() && doc.selection_length > 0 && doc.selection_length <= SECONDARY_SELECTION_MAX)
+	{
+		try {
+			selection_data = doc.doc->read_data(doc.selection_off, doc.selection_length);
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::Document::Region::Data::draw: %s\n", e.what());
+		}
+	}
+	
 	/* The offset of the character in the Buffer currently being drawn. */
 	off_t cur_off = d_offset + skip_bytes;
 	
@@ -2074,6 +2099,13 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			if(c > 0 && (c % doc.bytes_per_group) == 0)
 			{
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
+			}
+			
+			if(secondary_selection_remain == 0
+				&& (size_t)(data.end() - di) >= selection_data.size()
+				&& std::equal(selection_data.begin(), selection_data.end(), di))
+			{
+				secondary_selection_remain = selection_data.size();
 			}
 			
 			unsigned char byte        = *(di++);

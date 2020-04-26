@@ -2194,14 +2194,24 @@ void REHex::MainWindow::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
 		{
-			static DiffWindow *diff = NULL;
-			if(diff == NULL)
+			static DiffWindow *diff_window = NULL;
+			if(diff_window == NULL)
 			{
-				diff = new DiffWindow();
-				diff->Show(true);
+				/* Parent DiffWindow to our parent so it can outlive us but not the MainWindow. */
+				diff_window = new DiffWindow(GetParent());
+				
+				diff_window->Bind(wxEVT_DESTROY, [](wxWindowDestroyEvent &event)
+				{
+					if(event.GetWindow() == diff_window)
+					{
+						diff_window = NULL;
+					}
+				});
+				
+				diff_window->Show(true);
 			}
 			
-			diff->add_range(DiffWindow::Range(doc, selection_off, selection_length));
+			diff_window->add_range(DiffWindow::Range(doc, selection_off, selection_length));
 		}, itm->GetId(), itm->GetId());
 	}
 	

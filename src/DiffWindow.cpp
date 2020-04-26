@@ -21,13 +21,46 @@
 #include "DiffWindow.hpp"
 #include "Palette.hpp"
 
+#include "../res/icon16.h"
+#include "../res/icon32.h"
+#include "../res/icon48.h"
+#include "../res/icon64.h"
+
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
 END_EVENT_TABLE()
 
-REHex::DiffWindow::DiffWindow():
-	wxFrame(NULL, wxID_ANY, "DiffWindow", wxDefaultPosition, wxSize(740, 540))
-{}
+REHex::DiffWindow::DiffWindow(wxWindow *parent):
+	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
+{
+	/* TODO: Construct a single wxIconBundle instance somewhere. */
+	
+	wxIconBundle icons;
+	
+	{
+		wxBitmap b16 = wxBITMAP_PNG_FROM_DATA(icon16);
+		wxIcon i16;
+		i16.CopyFromBitmap(b16);
+		icons.AddIcon(i16);
+		
+		wxBitmap b32 = wxBITMAP_PNG_FROM_DATA(icon32);
+		wxIcon i32;
+		i32.CopyFromBitmap(b32);
+		icons.AddIcon(i32);
+		
+		wxBitmap b48 = wxBITMAP_PNG_FROM_DATA(icon48);
+		wxIcon i48;
+		i48.CopyFromBitmap(b48);
+		icons.AddIcon(i48);
+		
+		wxBitmap b64 = wxBITMAP_PNG_FROM_DATA(icon64);
+		wxIcon i64;
+		i64.CopyFromBitmap(b64);
+		icons.AddIcon(i64);
+	}
+	
+	SetIcons(icons);
+}
 
 REHex::DiffWindow::~DiffWindow()
 {

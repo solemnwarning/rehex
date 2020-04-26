@@ -67,7 +67,7 @@ namespace REHex {
 	class CommentTree: public ToolPanel
 	{
 		public:
-			CommentTree(wxWindow *parent, REHex::Document *document);
+			CommentTree(wxWindow *parent, Document *document, DocumentCtrl *document_ctrl);
 			virtual ~CommentTree();
 			
 			virtual std::string name() const override;
@@ -81,6 +81,7 @@ namespace REHex {
 			
 		private:
 			REHex::Document *document;
+			REHex::DocumentCtrl *document_ctrl;
 			
 			wxDataViewCtrl *dvc;
 			wxDataViewColumn *dvc_col;

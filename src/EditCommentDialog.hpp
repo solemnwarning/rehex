@@ -15,37 +15,19 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef REHEX_DOCUMENTCTRLTESTWINDOW_HPP
-#define REHEX_DOCUMENTCTRLTESTWINDOW_HPP
+#ifndef REHEX_EDITCOMMENTDIALOG_HPP
+#define REHEX_EDITCOMMENTDIALOG_HPP
 
-#include <wx/frame.h>
+#include <sys/types.h>
+#include <wx/window.h>
 
-#include "document.hpp"
-#include "DocumentCtrl.hpp"
-#include "Events.hpp"
-
-namespace REHex {
-	class DocumentCtrlTestWindow: public wxFrame
+namespace REHex
+{
+	class EditCommentDialog
 	{
 		public:
-			DocumentCtrlTestWindow(Document *doc);
-			virtual ~DocumentCtrlTestWindow();
-			
-		private:
-			Document *doc;
-			DocumentCtrl *doc_ctrl;
-			
-			void reinit_regions();
-			
-			void OnChar(wxKeyEvent &event);
-			
-			void OnCommentLeftClick(OffsetLengthEvent &event);
-			void OnCommentRightClick(OffsetLengthEvent &event);
-			
-			void OnDataRightClick(wxCommandEvent &event);
-			
-		DECLARE_EVENT_TABLE()
+			static void run_modal(wxWindow *parent, Document *doc, off_t offset, off_t length);
 	};
 }
 
-#endif /* !REHEX_DOCUMENTCTRLTESTWINDOW_HPP */
+#endif /* !REHEX_EDITCOMMENTDIALOG_HPP */

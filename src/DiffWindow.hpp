@@ -75,9 +75,12 @@ namespace REHex {
 			
 			std::list<Range> ranges;
 			
+			static DiffWindow *instance;
+			
 			std::list<Range>::iterator remove_range(std::list<Range>::iterator range);
 			
 			void doc_update(Range *range);
+			void resize_splitters();
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);

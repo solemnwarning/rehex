@@ -163,7 +163,7 @@ APP_OBJS := \
 	src/disassemble.o \
 	src/document.o \
 	src/DocumentCtrl.o \
-	src/DocumentCtrlTestWindow.o \
+	src/EditCommentDialog.o \
 	src/Events.o \
 	src/LicenseDialog.o \
 	src/mainwindow.o \
@@ -184,6 +184,8 @@ TEST_OBJS := \
 	src/buffer.o \
 	src/CommentTree.o \
 	src/document.o \
+	src/DocumentCtrl.o \
+	src/EditCommentDialog.o \
 	src/Events.o \
 	src/Palette.o \
 	src/search.o \
@@ -194,7 +196,6 @@ TEST_OBJS := \
 	tests/buffer.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
-	tests/document.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \

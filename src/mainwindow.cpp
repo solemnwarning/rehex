@@ -16,6 +16,7 @@
 */
 
 #include <exception>
+#include <inttypes.h>
 #include <limits>
 #include <new>
 #include <wx/artprov.h>
@@ -30,10 +31,9 @@
 
 #include "AboutDialog.hpp"
 #include "app.hpp"
-#include "CommentTree.hpp"
-#include "decodepanel.hpp"
-#include "disassemble.hpp"
-#include "DocumentCtrlTestWindow.hpp"
+#include "DiffWindow.hpp"
+#include "EditCommentDialog.hpp"
+#include "Events.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "Palette.hpp"
@@ -151,13 +151,28 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
 	EVT_AUINOTEBOOK_TAB_RIGHT_DOWN(wxID_ANY, REHex::MainWindow::OnDocumentMenu)
 	
-	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,      REHex::MainWindow::OnCursorMove)
+	EVT_CURSORUPDATE(wxID_ANY, REHex::MainWindow::OnCursorUpdate)
+	
 	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
 	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED,    REHex::MainWindow::OnInsertToggle)
 	EVT_COMMAND(wxID_ANY, REHex::EV_UNDO_UPDATE,       REHex::MainWindow::OnUndoUpdate)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_DIRTY,      REHex::MainWindow::OnBecameDirty)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_CLEAN,      REHex::MainWindow::OnBecameClean)
 END_EVENT_TABLE()
+
+/* Is the given byte a printable 7-bit ASCII character? */
+static bool isasciiprint(int c)
+{
+	return (c >= ' ' && c <= '~');
+}
+
+/* Is the given value a 7-bit ASCII character representing a hex digit? */
+static bool isasciihex(int c)
+{
+	return (c >= '0' && c <= '9')
+		|| (c >= 'A' && c <= 'F')
+		|| (c >= 'a' && c <= 'f');
+}
 
 REHex::MainWindow::MainWindow():
 	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
@@ -364,7 +379,7 @@ void REHex::MainWindow::new_file()
 {
 	Tab *tab = new Tab(notebook);
 	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	tab->doc_ctrl->SetFocus();
 }
 
 void REHex::MainWindow::open_file(const std::string &filename)
@@ -401,7 +416,7 @@ void REHex::MainWindow::open_file(const std::string &filename)
 	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	tab->doc_ctrl->SetFocus();
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
@@ -613,14 +628,10 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	Tab *tab = active_tab();
 	
 	off_t current_pos = tab->doc->get_cursor_position();
-	off_t max_pos     = tab->doc->buffer_length() - !tab->doc->get_insert_mode();
+	off_t max_pos     = tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode();
 	
 	REHex::NumericEntryDialog<off_t> ni(this,
 		"Jump to offset",
@@ -711,25 +722,16 @@ void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *tab = active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	REHex::SelectRangeDialog srd(this, *(tab->doc));
+	REHex::SelectRangeDialog srd(this, *(tab->doc), *(tab->doc_ctrl));
 	srd.ShowModal();
 }
 
 void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_insert_mode(!event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_insert_mode(!event.IsChecked());
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
@@ -750,7 +752,7 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 		"Number of bytes to show on each line\n(0 fits to the window width)",
 		"Bytes",
 		"Set bytes per line",
-		tab->doc->get_bytes_per_line(),
+		tab->doc_ctrl->get_bytes_per_line(),
 		0,
 		MAX_BYTES_PER_LINE,
 		this);
@@ -758,7 +760,7 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 	/* We get a negative value if the user cancels. */
 	if(new_value >= 0)
 	{
-		tab->doc->set_bytes_per_line(new_value);
+		tab->doc_ctrl->set_bytes_per_line(new_value);
 	}
 }
 
@@ -774,7 +776,7 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 		"Number of bytes to group",
 		"Bytes",
 		"Set bytes per group",
-		tab->doc->get_bytes_per_group(),
+		tab->doc_ctrl->get_bytes_per_group(),
 		1,
 		std::numeric_limits<int>::max(),
 		this);
@@ -782,30 +784,20 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 	/* We get a negative value if the user cancels. */
 	if(new_value >= 0)
 	{
-		tab->doc->set_bytes_per_group(new_value);
+		tab->doc_ctrl->set_bytes_per_group(new_value);
 	}
 }
 
 void REHex::MainWindow::OnShowOffsets(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_show_offsets(event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_show_offsets(event.IsChecked());
 }
 
 void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_show_ascii(event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_show_ascii(event.IsChecked());
 }
 
 void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
@@ -818,23 +810,23 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 	
 	if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_HIDDEN))
 	{
-		tab->doc->set_inline_comment_mode(REHex::Document::ICM_HIDDEN);
+		tab->inline_comment_mode = ICM_HIDDEN;
+		tab->repopulate_regions();
+		
 		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, false);
 	}
 	else if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_FULL))
 	{
-		tab->doc->set_inline_comment_mode(
-			inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT)
-				? REHex::Document::ICM_FULL_INDENT
-				: REHex::Document::ICM_FULL);
+		tab->inline_comment_mode = inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT) ? ICM_FULL_INDENT : ICM_FULL;
+		tab->repopulate_regions();
+		
 		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 	}
 	else if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_SHORT))
 	{
-		tab->doc->set_inline_comment_mode(
-			inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT)
-				? REHex::Document::ICM_SHORT_INDENT
-				: REHex::Document::ICM_SHORT);
+		tab->inline_comment_mode = inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT) ? ICM_SHORT_INDENT : ICM_SHORT;
+		tab->repopulate_regions();
+		
 		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 	}
 }
@@ -889,20 +881,22 @@ void REHex::MainWindow::OnPalette(wxCommandEvent &event)
 
 void REHex::MainWindow::OnHexOffsets(wxCommandEvent &event)
 {
-	REHex::Document *doc = active_document();
-	doc->set_offset_display_base(OFFSET_BASE_HEX);
+	Tab *tab = active_tab();
 	
-	_update_status_offset(doc);
-	_update_status_selection(doc);
+	tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_HEX);
+	
+	_update_status_offset(tab->doc_ctrl);
+	_update_status_selection(tab->doc_ctrl);
 }
 
 void REHex::MainWindow::OnDecOffsets(wxCommandEvent &event)
 {
-	REHex::Document *doc = active_document();
-	doc->set_offset_display_base(OFFSET_BASE_DEC);
+	Tab *tab = active_tab();
 	
-	_update_status_offset(doc);
-	_update_status_selection(doc);
+	tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_DEC);
+	
+	_update_status_offset(tab->doc_ctrl);
+	_update_status_selection(tab->doc_ctrl);
 }
 
 void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
@@ -953,17 +947,13 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		}
 	}
 	
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *tab = active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc_ctrl->get_insert_mode());
+	view_menu->Check(ID_SHOW_OFFSETS, tab->doc_ctrl->get_show_offsets());
+	view_menu->Check(ID_SHOW_ASCII,   tab->doc_ctrl->get_show_ascii());
 	
-	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
-	view_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
-	view_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
-	
-	OffsetBase offset_display_base = tab->doc->get_offset_display_base();
+	OffsetBase offset_display_base = tab->doc_ctrl->get_offset_display_base();
 	switch(offset_display_base)
 	{
 		case OFFSET_BASE_HEX:
@@ -975,25 +965,24 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			break;
 	}
 	
-	REHex::Document::InlineCommentMode icm = tab->doc->get_inline_comment_mode();
-	switch(icm)
+	switch(tab->inline_comment_mode)
 	{
-		case REHex::Document::ICM_HIDDEN:
+		case ICM_HIDDEN:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_HIDDEN, true);
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, false);
 			break;
 			
-		case REHex::Document::ICM_FULL:
-		case REHex::Document::ICM_FULL_INDENT:
+		case ICM_FULL:
+		case ICM_FULL_INDENT:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_FULL, true);
-			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == REHex::Document::ICM_FULL_INDENT));
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (tab->inline_comment_mode == ICM_FULL_INDENT));
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 			
-		case REHex::Document::ICM_SHORT:
-		case REHex::Document::ICM_SHORT_INDENT:
+		case ICM_SHORT:
+		case ICM_SHORT_INDENT:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_SHORT, true);
-			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == REHex::Document::ICM_SHORT_INDENT));
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (tab->inline_comment_mode == ICM_SHORT_INDENT));
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 	};
@@ -1010,9 +999,9 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		tool_panels_menu->Check(menu_id, active);
 	}
 	
-	_update_status_offset(tab->doc);
-	_update_status_selection(tab->doc);
-	_update_status_mode(tab->doc);
+	_update_status_offset(tab->doc_ctrl);
+	_update_status_selection(tab->doc_ctrl);
+	_update_status_mode(tab->doc_ctrl);
 	_update_undo(tab->doc);
 	_update_dirty(tab->doc);
 	
@@ -1099,24 +1088,21 @@ void REHex::MainWindow::OnDocumentMenu(wxAuiNotebookEvent &event)
 	PopupMenu(&menu);
 }
 
-void REHex::MainWindow::OnCursorMove(wxCommandEvent &event)
+void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *active_tab = this->active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	wxObject *event_src = event.GetEventObject();
 	
-	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
-	assert(doc != NULL);
-	
-	if(doc == tab->doc)
+	if(event_src == active_tab->doc)
 	{
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_offset(doc);
+		_update_status_offset(active_tab->doc_ctrl);
 	}
+	
+	event.Skip();
 }
 
 void REHex::MainWindow::OnSelectionChange(wxCommandEvent &event)
@@ -1124,39 +1110,36 @@ void REHex::MainWindow::OnSelectionChange(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	auto active_tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	assert(active_tab != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
-	assert(doc != NULL);
+	DocumentCtrl *doc_ctrl = dynamic_cast<REHex::DocumentCtrl*>(event.GetEventObject());
+	assert(doc_ctrl != NULL);
 	
-	if(doc == tab->doc)
+	if(doc_ctrl == active_tab->doc_ctrl)
 	{
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_selection(doc);
+		_update_status_selection(doc_ctrl);
 	}
 }
 
 void REHex::MainWindow::OnInsertToggle(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *active_tab = this->active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	DocumentCtrl *event_src = dynamic_cast<DocumentCtrl*>(event.GetEventObject());
+	assert(event_src != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
-	assert(doc != NULL);
-	
-	if(doc == tab->doc)
+	if(event_src == active_tab->doc_ctrl)
 	{
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_mode(doc);
-		edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
+		
+		_update_status_mode(active_tab->doc_ctrl);
+		edit_menu->Check(ID_OVERWRITE_MODE, !active_tab->doc_ctrl->get_insert_mode());
 	}
 }
 
@@ -1230,18 +1213,18 @@ REHex::Document *REHex::MainWindow::active_document()
 	return active_tab()->doc;
 }
 
-void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
+void REHex::MainWindow::_update_status_offset(REHex::DocumentCtrl *doc_ctrl)
 {
-	off_t off = doc->get_cursor_position();
+	off_t off = doc_ctrl->get_cursor_position();
 	
-	std::string off_text = format_offset(off, doc->get_offset_display_base());
+	std::string off_text = format_offset(off, doc_ctrl->get_offset_display_base());
 	
 	SetStatusText(off_text, 0);
 }
 
-void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
+void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 {
-	std::pair<off_t,off_t> selection = doc->get_selection();
+	std::pair<off_t,off_t> selection = doc_ctrl->get_selection();
 	
 	off_t selection_off    = selection.first;
 	off_t selection_length = selection.second;
@@ -1250,8 +1233,8 @@ void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
 	{
 		off_t selection_end = (selection_off + selection_length) - 1;
 		
-		std::string from_text = format_offset(selection_off, doc->get_offset_display_base(), selection_end);
-		std::string to_text   = format_offset(selection_end, doc->get_offset_display_base(), selection_end);
+		std::string from_text = format_offset(selection_off, doc_ctrl->get_offset_display_base(), selection_end);
+		std::string to_text   = format_offset(selection_end, doc_ctrl->get_offset_display_base(), selection_end);
 		
 		char buf[64];
 		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u bytes)",
@@ -1267,9 +1250,9 @@ void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
 	}
 }
 
-void REHex::MainWindow::_update_status_mode(REHex::Document *doc)
+void REHex::MainWindow::_update_status_mode(REHex::DocumentCtrl *doc_ctrl)
 {
-	if(doc->get_insert_mode())
+	if(doc_ctrl->get_insert_mode())
 	{
 		SetStatusText("Mode: Insert", 2);
 	}
@@ -1531,6 +1514,11 @@ BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
 	
 	EVT_SPLITTER_SASH_POS_CHANGING(ID_HSPLITTER, REHex::MainWindow::Tab::OnHSplitterSashPosChanging)
 	EVT_SPLITTER_SASH_POS_CHANGING(ID_VSPLITTER, REHex::MainWindow::Tab::OnVSplitterSashPosChanging)
+	
+	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::MainWindow::Tab::OnCommentLeftClick)
+	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::MainWindow::Tab::OnCommentRightClick)
+	
+	EVT_COMMAND(wxID_ANY, REHex::DATA_RIGHT_CLICK, REHex::MainWindow::Tab::OnDataRightClick)
 END_EVENT_TABLE()
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent):
@@ -1545,8 +1533,34 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	h_splitter->SetMinimumPaneSize(20);
 	
 	doc = new REHex::Document(h_splitter);
+	
+	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
+	
+	doc->Bind(EV_COMMENT_MODIFIED,   [this](wxCommandEvent &event) { repopulate_regions(); event.Skip(); });
+	doc->Bind(EV_HIGHLIGHTS_CHANGED, [this](wxCommandEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
+	
+	doc->Bind(DATA_ERASE,     &REHex::MainWindow::Tab::OnDocumentDataErase,     this);
+	doc->Bind(DATA_INSERT,    &REHex::MainWindow::Tab::OnDocumentDataInsert,    this);
+	doc->Bind(DATA_OVERWRITE, &REHex::MainWindow::Tab::OnDocumentDataOverwrite, this);
+	
+	doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
+	{
+		doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
+		event.Skip();
+	});
+	
+	doc_ctrl->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
+	{
+		doc->set_cursor_position(event.cursor_pos, event.cursor_state);
+		event.Skip();
+	});
+	
+	doc_ctrl->Bind(wxEVT_CHAR, &REHex::MainWindow::Tab::OnDocumentCtrlChar, this);
+	
+	repopulate_regions();
+	
 	init_default_doc_view();
-	doc->set_insert_mode(true);
+	doc_ctrl->set_insert_mode(true);
 	
 	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
 	h_tools->SetFitToCurrentPage(true);
@@ -1554,7 +1568,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
 	v_tools->SetFitToCurrentPage(true);
 	
-	h_splitter->SplitHorizontally(doc, h_tools);
+	h_splitter->SplitHorizontally(doc_ctrl, h_tools);
 	v_splitter->SplitVertically(h_splitter, v_tools);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1565,9 +1579,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent):
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
-	
-	DocumentCtrlTestWindow *tw = new DocumentCtrlTestWindow(doc);
-	tw->Show(true);
 }
 
 REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -1582,6 +1593,32 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	h_splitter->SetMinimumPaneSize(20);
 	
 	doc = new REHex::Document(h_splitter, filename);
+	
+	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
+	
+	doc->Bind(EV_COMMENT_MODIFIED,   [this](wxCommandEvent &event) { repopulate_regions(); event.Skip(); });
+	doc->Bind(EV_HIGHLIGHTS_CHANGED, [this](wxCommandEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
+	
+	doc->Bind(DATA_ERASE,     &REHex::MainWindow::Tab::OnDocumentDataErase,     this);
+	doc->Bind(DATA_INSERT,    &REHex::MainWindow::Tab::OnDocumentDataInsert,    this);
+	doc->Bind(DATA_OVERWRITE, &REHex::MainWindow::Tab::OnDocumentDataOverwrite, this);
+	
+	doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
+	{
+		doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
+		event.Skip();
+	});
+	
+	doc_ctrl->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
+	{
+		doc->set_cursor_position(event.cursor_pos, event.cursor_state);
+		event.Skip();
+	});
+	
+	doc_ctrl->Bind(wxEVT_CHAR, &REHex::MainWindow::Tab::OnDocumentCtrlChar, this);
+	
+	repopulate_regions();
+	
 	init_default_doc_view();
 	
 	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
@@ -1590,7 +1627,7 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
 	v_tools->SetFitToCurrentPage(true);
 	
-	h_splitter->SplitHorizontally(doc, h_tools);
+	h_splitter->SplitHorizontally(doc_ctrl, h_tools);
 	v_splitter->SplitVertically(h_splitter, v_tools);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1601,9 +1638,6 @@ REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
-	
-	DocumentCtrlTestWindow *tw = new DocumentCtrlTestWindow(doc);
-	tw->Show(true);
 }
 
 REHex::MainWindow::Tab::~Tab()
@@ -1631,7 +1665,7 @@ void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to
 	
 	if(tpr->shape == ToolPanel::TPS_TALL)
 	{
-		ToolPanel *tool_window = tpr->factory(v_tools, doc);
+		ToolPanel *tool_window = tpr->factory(v_tools, doc, doc_ctrl);
 		if(config)
 		{
 			tool_window->load_state(config);
@@ -1648,7 +1682,7 @@ void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to
 	}
 	else if(tpr->shape == ToolPanel::TPS_WIDE)
 	{
-		ToolPanel *tool_window = tpr->factory(h_tools, doc);
+		ToolPanel *tool_window = tpr->factory(h_tools, doc, doc_ctrl);
 		if(config)
 		{
 			tool_window->load_state(config);
@@ -1708,13 +1742,13 @@ void REHex::MainWindow::Tab::save_view(wxConfig *config)
 	config->DeleteGroup("/default-view/");
 	config->SetPath("/default-view/");
 	
-	config->Write("bytes-per-line", doc->get_bytes_per_line());
-	config->Write("bytes-per-group", doc->get_bytes_per_group());
-	config->Write("show-offsets", doc->get_show_offsets());
-	config->Write("show-ascii", doc->get_show_ascii());
-	config->Write("inline-comments", (int)(doc->get_inline_comment_mode()));
+	config->Write("bytes-per-line", doc_ctrl->get_bytes_per_line());
+	config->Write("bytes-per-group", doc_ctrl->get_bytes_per_group());
+	config->Write("show-offsets", doc_ctrl->get_show_offsets());
+	config->Write("show-ascii", doc_ctrl->get_show_ascii());
+	config->Write("inline-comments", (int)(inline_comment_mode));
 	config->Write("highlight-selection-match", doc->get_highlight_selection_match());
-	config->Write("offset-display-base", (int)(doc->get_offset_display_base()));
+	config->Write("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	
 	/* TODO: Save h_tools state */
 	
@@ -1802,6 +1836,393 @@ void REHex::MainWindow::Tab::OnSearchDialogDestroy(wxWindowDestroyEvent &event)
 	search_dialogs.erase((wxDialog*)(event.GetWindow()));
 	
 	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::MainWindow::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
+{
+	int key       = event.GetKeyCode();
+	int modifiers = event.GetModifiers();
+	
+	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	
+	auto selection = doc_ctrl->get_selection();
+	off_t selection_off = selection.first;
+	off_t selection_length = selection.second;
+	
+	bool insert_mode = doc_ctrl->get_insert_mode();
+	
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	if(cursor_state != Document::CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
+	{
+		unsigned char nibble = REHex::parse_ascii_nibble(key);
+		
+		if(cursor_state == Document::CSTATE_HEX_MID)
+		{
+			/* Overwrite least significant nibble of current byte, then move onto
+			 * inserting or overwriting at the next byte.
+			*/
+			
+			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			assert(cur_data.size() == 1);
+			
+			unsigned char old_byte = cur_data[0];
+			unsigned char new_byte = (old_byte & 0xF0) | nibble;
+			
+			doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos + 1, Document::CSTATE_HEX, "change data");
+		}
+		else if(insert_mode)
+		{
+			/* Inserting a new byte. Initialise the most significant nibble then move
+			 * onto overwriting the least significant.
+			*/
+			
+			unsigned char byte = (nibble << 4);
+			doc->insert_data(cursor_pos, &byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+		}
+		else{
+			/* Overwrite most significant nibble of current byte, then move onto
+			 * overwriting the least significant.
+			*/
+			
+			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			
+			if(!cur_data.empty())
+			{
+				unsigned char old_byte = cur_data[0];
+				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
+				
+				doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+			}
+		}
+		
+		doc_ctrl->clear_selection();
+		
+		return;
+	}
+	else if(cursor_state == Document::CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
+	{
+		unsigned char byte = key;
+		
+		if(insert_mode)
+		{
+			doc->insert_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
+		}
+		else if(cursor_pos < doc->buffer_length())
+		{
+			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			assert(cur_data.size() == 1);
+			
+			doc->overwrite_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
+		}
+		
+		doc_ctrl->clear_selection();
+		
+		return;
+	}
+	else if(modifiers == wxMOD_NONE)
+	{
+		if(key == WXK_INSERT)
+		{
+			doc_ctrl->set_insert_mode(!insert_mode);
+			return;
+		}
+		else if(key == WXK_DELETE)
+		{
+			if(selection_length > 0)
+			{
+				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "delete selection");
+			}
+			else if(cursor_pos < doc->buffer_length())
+			{
+				doc->erase_data(cursor_pos, 1, -1, Document::CSTATE_CURRENT, "delete");
+			}
+			
+			return;
+		}
+		else if(key == WXK_BACK)
+		{
+			if(selection_length > 0)
+			{
+				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "delete selection");
+			}
+			else if(cursor_state == Document::CSTATE_HEX_MID)
+			{
+				/* Backspace while waiting for the second nibble in a byte should erase the current byte
+				 * rather than the previous one.
+				*/
+				doc->erase_data(cursor_pos, 1, -1, Document::CSTATE_CURRENT, "delete");
+			}
+			else if(cursor_pos > 0)
+			{
+				doc->erase_data(cursor_pos - 1, 1, -1, Document::CSTATE_CURRENT, "delete");
+			}
+			
+			return;
+		}
+		else if(key == '/')
+		{
+			if(cursor_pos < doc->buffer_length())
+			{
+				EditCommentDialog::run_modal(this, doc, cursor_pos, 0);
+			}
+			
+			return;
+		}
+	}
+	
+	event.Skip();
+}
+
+void REHex::MainWindow::Tab::OnCommentLeftClick(OffsetLengthEvent &event)
+{
+	EditCommentDialog::run_modal(this, doc, event.offset, event.length);
+}
+
+void REHex::MainWindow::Tab::OnCommentRightClick(OffsetLengthEvent &event)
+{
+	off_t c_offset = event.offset;
+	off_t c_length = event.length;
+	
+	wxMenu menu;
+	
+	wxMenuItem *edit_comment = menu.Append(wxID_ANY, "&Edit comment");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		EditCommentDialog::run_modal(this, doc, c_offset, c_length);
+	}, edit_comment->GetId(), edit_comment->GetId());
+	
+	wxMenuItem *delete_comment = menu.Append(wxID_ANY, "&Delete comment");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		doc->erase_comment(c_offset, c_length);
+	}, delete_comment->GetId(), delete_comment->GetId());
+	
+	menu.AppendSeparator();
+	
+	wxMenuItem *copy_comments = menu.Append(wxID_ANY,  "&Copy comment(s)");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			const NestedOffsetLengthMap<Document::Comment> &comments = doc->get_comments();
+			
+			auto selected_comments = NestedOffsetLengthMap_get_recursive(comments, NestedOffsetLengthMapKey(c_offset, c_length));
+			assert(selected_comments.size() > 0);
+			
+			wxTheClipboard->SetData(new CommentsDataObject(selected_comments, c_offset));
+		}
+	}, copy_comments->GetId(), copy_comments->GetId());
+	
+	PopupMenu(&menu);
+}
+
+void REHex::MainWindow::Tab::OnDataRightClick(wxCommandEvent &event)
+{
+	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	
+	auto selection = doc_ctrl->get_selection();
+	off_t selection_off = selection.first;
+	off_t selection_length = selection.second;
+	
+	const NestedOffsetLengthMap<Document::Comment> &comments   = doc->get_comments();
+	const NestedOffsetLengthMap<int>               &highlights = doc->get_highlights();
+	
+	wxMenu menu;
+	
+	menu.Append(wxID_CUT, "Cu&t");
+	menu.Enable(wxID_CUT,  (selection_length > 0));
+	
+	menu.Append(wxID_COPY,  "&Copy");
+	menu.Enable(wxID_COPY, (selection_length > 0));
+	
+	menu.Append(wxID_PASTE, "&Paste");
+	
+	menu.AppendSeparator();
+	
+	wxMenuItem *offset_copy_hex = menu.Append(wxID_ANY, "Copy offset (in hexadecimal)");
+	menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			char offset_str[24];
+			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos));
+			
+			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+		}
+	}, offset_copy_hex->GetId(), offset_copy_hex->GetId());
+	
+	wxMenuItem *offset_copy_dec = menu.Append(wxID_ANY, "Copy offset (in decimal)");
+	menu.Bind(wxEVT_MENU, [cursor_pos](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			char offset_str[24];
+			snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos));
+			
+			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
+		}
+	}, offset_copy_dec->GetId(), offset_copy_dec->GetId());
+	
+	menu.AppendSeparator();
+	
+	auto comments_at_cur = NestedOffsetLengthMap_get_all(comments, cursor_pos);
+	for(auto i = comments_at_cur.begin(); i != comments_at_cur.end(); ++i)
+	{
+		auto ci = *i;
+		
+		wxString text = ci->second.menu_preview();
+		wxMenuItem *itm = menu.Append(wxID_ANY, wxString("Edit \"") + text + "\"...");
+		
+		menu.Bind(wxEVT_MENU, [this, ci](wxCommandEvent &event)
+		{
+			EditCommentDialog::run_modal(this, doc, ci->first.offset, ci->first.length);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end()
+		&& cursor_pos < doc->buffer_length())
+	{
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Insert comment here...");
+		
+		menu.Bind(wxEVT_MENU, [this, cursor_pos](wxCommandEvent &event)
+		{
+			EditCommentDialog::run_modal(this, doc, cursor_pos, 0);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	if(selection_length > 0
+		&& comments.find(NestedOffsetLengthMapKey(selection_off, selection_length)) == comments.end()
+		&& NestedOffsetLengthMap_can_set(comments, selection_off, selection_length))
+	{
+		char menu_label[64];
+		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));
+		wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
+		
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		{
+			EditCommentDialog::run_modal(this, doc, selection_off, selection_length);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	menu.AppendSeparator();
+	
+	/* We need to maintain bitmap instances for lifespan of menu. */
+	std::list<wxBitmap> bitmaps;
+	
+	off_t highlight_off;
+	off_t highlight_length = 0;
+	
+	auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
+	
+	if(selection_length > 0)
+	{
+		highlight_off    = selection_off;
+		highlight_length = selection_length;
+	}
+	else if(highlight_at_cur != highlights.end())
+	{
+		highlight_off    = highlight_at_cur->first.offset;
+		highlight_length = highlight_at_cur->first.length;
+	}
+	else if(cursor_pos < doc->buffer_length())
+	{
+		highlight_off    = cursor_pos;
+		highlight_length = 1;
+	}
+	
+	if(highlight_length > 0 && NestedOffsetLengthMap_can_set(highlights, highlight_off, highlight_length))
+	{
+		wxMenu *hlmenu = new wxMenu();
+		
+		for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
+		{
+			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
+			
+			wxColour bg_colour = active_palette->get_highlight_bg(i);
+			
+			/* TODO: Get appropriate size for menu bitmap.
+			 * TODO: Draw a character in image using foreground colour.
+			*/
+			wxImage img(16, 16);
+			img.SetRGB(wxRect(0, 0, img.GetWidth(), img.GetHeight()),
+				bg_colour.Red(), bg_colour.Green(), bg_colour.Blue());
+			
+			bitmaps.emplace_back(img);
+			itm->SetBitmap(bitmaps.back());
+			
+			hlmenu->Append(itm);
+			
+			/* On Windows, event bindings on a submenu don't work.
+			 * On OS X, event bindings on a parent menu don't work.
+			 * On GTK, both work.
+			*/
+			#ifdef _WIN32
+			menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			#else
+			hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			#endif
+			{
+				int colour = i;
+				doc->set_highlight(highlight_off, highlight_length, colour);
+			}, itm->GetId(), itm->GetId());
+		}
+		
+		menu.AppendSubMenu(hlmenu, "Set Highlight");
+	}
+	
+	if(highlight_at_cur != highlights.end())
+	{
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Remove Highlight");
+		
+		NestedOffsetLengthMapKey key = highlight_at_cur->first;
+		
+		menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
+		{
+			doc->erase_highlight(key.offset, key.length);
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	if(selection_length > 0)
+	{
+		menu.AppendSeparator();
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare...");
+		
+		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
+		{
+			static DiffWindow *diff = NULL;
+			if(diff == NULL)
+			{
+				diff = new DiffWindow();
+				diff->Show(true);
+			}
+			
+			diff->add_range(DiffWindow::Range(doc, selection_off, selection_length));
+		}, itm->GetId(), itm->GetId());
+	}
+	
+	PopupMenu(&menu);
+}
+
+void REHex::MainWindow::Tab::OnDocumentDataErase(OffsetLengthEvent &event)
+{
+	repopulate_regions();
+	event.Skip();
+}
+
+void REHex::MainWindow::Tab::OnDocumentDataInsert(OffsetLengthEvent &event)
+{
+	repopulate_regions();
+	event.Skip();
+}
+
+void REHex::MainWindow::Tab::OnDocumentDataOverwrite(OffsetLengthEvent &event)
+{
+	doc_ctrl->Refresh();
 	event.Skip();
 }
 
@@ -1933,7 +2354,7 @@ void REHex::MainWindow::Tab::htools_adjust()
 	else{
 		if(!h_splitter->IsSplit())
 		{
-			h_splitter->SplitHorizontally(doc, h_tools);
+			h_splitter->SplitHorizontally(doc_ctrl, h_tools);
 		}
 		
 		int htp_bh = std::max(ht_current_page->GetBestSize().GetHeight(), 0);
@@ -1985,22 +2406,23 @@ void REHex::MainWindow::Tab::init_default_doc_view()
 	wxConfig *config = wxGetApp().config;
 	config->SetPath("/default-view/");
 	
-	doc->set_bytes_per_line(             config->Read    ("bytes-per-line",             doc->get_bytes_per_line()));
-	doc->set_bytes_per_group(            config->Read    ("bytes-per-group",            doc->get_bytes_per_group()));
-	doc->set_show_offsets(               config->ReadBool("show-offsets",               doc->get_show_offsets()));
-	doc->set_show_ascii(                 config->ReadBool("show-ascii",                 doc->get_show_ascii()));
+	doc_ctrl->set_bytes_per_line(        config->Read    ("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
+	doc_ctrl->set_bytes_per_group(       config->Read    ("bytes-per-group",            doc_ctrl->get_bytes_per_group()));
+	doc_ctrl->set_show_offsets(          config->ReadBool("show-offsets",               doc_ctrl->get_show_offsets()));
+	doc_ctrl->set_show_ascii(            config->ReadBool("show-ascii",                 doc_ctrl->get_show_ascii()));
 	doc->set_highlight_selection_match(  config->ReadBool("highlight-selection-match",  doc->get_highlight_selection_match()));
 	
-	int inline_comments = config->Read("inline-comments", (int)(doc->get_inline_comment_mode()));
-	if(inline_comments >= 0 && inline_comments <= REHex::Document::ICM_MAX)
+	int inline_comments = config->Read("inline-comments", (int)(inline_comment_mode));
+	if(inline_comments >= 0 && inline_comments <= ICM_MAX)
 	{
-		doc->set_inline_comment_mode((REHex::Document::InlineCommentMode)(inline_comments));
+		inline_comment_mode = (InlineCommentMode)(inline_comments);
+		repopulate_regions();
 	}
 	
-	int offset_display_base = config->Read("offset-display-base", (int)(doc->get_offset_display_base()));
+	int offset_display_base = config->Read("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	if(offset_display_base >= OFFSET_BASE_MIN && offset_display_base <= OFFSET_BASE_MAX)
 	{
-		doc->set_offset_display_base((OffsetBase)(offset_display_base));
+		doc_ctrl->set_offset_display_base((OffsetBase)(offset_display_base));
 	}
 }
 
@@ -2034,6 +2456,79 @@ void REHex::MainWindow::Tab::init_default_tools()
 			break;
 		}
 	}
+}
+
+void REHex::MainWindow::Tab::repopulate_regions()
+{
+	auto comments = doc->get_comments();
+	
+	bool nest = (inline_comment_mode == ICM_SHORT_INDENT || inline_comment_mode == ICM_FULL_INDENT);
+	bool truncate = (inline_comment_mode == ICM_SHORT || inline_comment_mode == ICM_SHORT_INDENT);
+	
+	/* Construct a list of interlaced comment/data regions. */
+	
+	auto offset_base = comments.begin();
+	off_t next_data = 0, remain_data = doc->buffer_length();
+	
+	std::list<DocumentCtrl::Region*> regions;
+	
+	while(remain_data > 0)
+	{
+		off_t dr_length = remain_data;
+		
+		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
+		
+		/* We process any comments at the same offset from largest to smallest, ensuring
+		 * smaller comments are parented to the next-larger one at the same offset.
+		 *
+		 * This could be optimised by changing the order of keys in the comments map, but
+		 * that'll probably break something...
+		*/
+		
+		if(offset_base != comments.end() && offset_base->first.offset == next_data)
+		{
+			auto next_offset = offset_base;
+			while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
+			{
+				++next_offset;
+			}
+			
+			auto c = next_offset;
+			do {
+				--c;
+				
+				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), nest, truncate));
+				
+				if(nest && c->first.length > 0)
+				{
+					assert(c->first.length <= dr_length);
+					dr_length = c->first.length;
+				}
+			} while(c != offset_base);
+			
+			offset_base = next_offset;
+		}
+		
+		if(offset_base != comments.end() && dr_length > (offset_base->first.offset - next_data))
+		{
+			dr_length = offset_base->first.offset - next_data;
+		}
+		
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));
+		
+		next_data   += dr_length;
+		remain_data -= dr_length;
+	}
+	
+	if(regions.empty())
+	{
+		assert(doc->buffer_length() == 0);
+		
+		/* Empty buffers need a data region too! */
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, *doc));
+	}
+	
+	doc_ctrl->replace_all_regions(regions);
 }
 
 REHex::MainWindow::DropTarget::DropTarget(MainWindow *window):

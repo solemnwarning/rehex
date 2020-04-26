@@ -28,13 +28,14 @@
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
+#include "Events.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
 	class Disassemble: public ToolPanel
 	{
 		public:
-			Disassemble(wxWindow *parent, REHex::Document *document);
+			Disassemble(wxWindow *parent, Document *document, DocumentCtrl *document_ctrl);
 			virtual ~Disassemble();
 			
 			virtual std::string name() const override;
@@ -52,7 +53,8 @@ namespace REHex {
 				std::string disasm;
 			};
 			
-			REHex::Document *document;
+			Document *document;
+			DocumentCtrl *document_ctrl;
 			
 			LLVMDisasmContextRef disassembler;
 			
@@ -65,9 +67,9 @@ namespace REHex {
 			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
-			void OnCursorMove(wxCommandEvent &event);
+			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnArch(wxCommandEvent &event);
-			void OnDataModified(wxCommandEvent &event);
+			void OnDataModified(OffsetLengthEvent &event);
 			void OnBaseChanged(wxCommandEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */

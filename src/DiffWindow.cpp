@@ -102,6 +102,8 @@ void REHex::DiffWindow::add_range(const Range &range)
 	{
 		new_range->doc->Bind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
+	
+	resize_splitters();
 }
 
 std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(std::list<Range>::iterator range)
@@ -164,6 +166,8 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		range->doc->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
 	
+	resize_splitters();
+	
 	return next;
 }
 
@@ -173,6 +177,16 @@ void REHex::DiffWindow::doc_update(Range *range)
 	regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
 	
 	range->doc_ctrl->replace_all_regions(regions);
+}
+
+void REHex::DiffWindow::resize_splitters()
+{
+	wxSize window_size = GetClientSize();
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->splitter->SetSashPosition(window_size.GetWidth() / ranges.size());
+	}
 }
 
 void REHex::DiffWindow::OnDocumentDestroy(wxWindowDestroyEvent &event)

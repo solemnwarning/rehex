@@ -990,8 +990,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		return;
 	}
 	
+	fprintf(stderr, "Skipping key\n");
+	
 	/* Unhandled key press - propagate to parent. */
-	event.ResumePropagation(1);
+	// event.ResumePropagation(1);
 	event.Skip();
 }
 

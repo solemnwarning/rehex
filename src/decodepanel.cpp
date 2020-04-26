@@ -21,15 +21,16 @@
 #include <inttypes.h>
 
 #include "decodepanel.hpp"
+#include "Events.hpp"
 
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
 */
 #include <portable_endian.h>
 
-static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::Document *document)
+static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::Document *document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new REHex::DecodePanel(parent, document);
+	return new REHex::DecodePanel(parent, document, document_ctrl);
 }
 
 static REHex::ToolPanelRegistration tpr("DecodePanel", "Decode values", REHex::ToolPanel::TPS_TALL, &DecodePanel_factory);
@@ -94,9 +95,10 @@ BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
 	EVT_SIZE(REHex::DecodePanel::OnSize)
 END_EVENT_TABLE()
 
-REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
+REHex::DecodePanel::DecodePanel(wxWindow *parent, Document *document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
-	document(document)
+	document(document),
+	document_ctrl(document_ctrl)
 {
 	endian = new wxChoice(this, wxID_ANY);
 	
@@ -171,8 +173,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
 	pgrid->SetSplitterLeft();
 	
 	document->Bind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
-	document->Bind(EV_CURSOR_MOVED, &REHex::DecodePanel::OnCursorMove, this);
-	document->Bind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);
+	document->Bind(CURSOR_UPDATE, &REHex::DecodePanel::OnCursorUpdate,    this);
+	
+	document->Bind(DATA_ERASE,     &REHex::DecodePanel::OnDataModified, this);
+	document->Bind(DATA_INSERT,    &REHex::DecodePanel::OnDataModified, this);
+	document->Bind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
 	
 	update();
 }
@@ -212,8 +217,11 @@ void REHex::DecodePanel::load_state(wxConfig *config)
 
 void REHex::DecodePanel::document_unbind()
 {
-	document->Unbind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);
-	document->Unbind(EV_CURSOR_MOVED, &REHex::DecodePanel::OnCursorMove, this);
+	document->Unbind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
+	document->Unbind(DATA_INSERT,    &REHex::DecodePanel::OnDataModified, this);
+	document->Unbind(DATA_ERASE,     &REHex::DecodePanel::OnDataModified, this);
+	
+	document->Unbind(CURSOR_UPDATE, &REHex::DecodePanel::OnCursorUpdate,    this);
 	document->Unbind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
 }
 
@@ -339,7 +347,7 @@ void REHex::DecodePanel::OnDocumentDestroy(wxWindowDestroyEvent &event)
 	event.Skip();
 }
 
-void REHex::DecodePanel::OnCursorMove(wxCommandEvent &event)
+void REHex::DecodePanel::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	update();
 	
@@ -347,7 +355,7 @@ void REHex::DecodePanel::OnCursorMove(wxCommandEvent &event)
 	event.Skip();
 }
 
-void REHex::DecodePanel::OnDataModified(wxCommandEvent &event)
+void REHex::DecodePanel::OnDataModified(OffsetLengthEvent &event)
 {
 	update();
 	
@@ -441,7 +449,7 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 	
 	if(size > 0 && document != NULL)
 	{
-		document->set_selection(document->get_cursor_position(), size);
+		document_ctrl->set_selection(document->get_cursor_position(), size);
 	}
 }
 

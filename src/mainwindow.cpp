@@ -833,8 +833,8 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 
 void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
 {
-	Document *doc = active_document();
-	doc->set_highlight_selection_match(event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_highlight_selection_match(event.IsChecked());
 }
 
 void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
@@ -987,7 +987,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			break;
 	};
 	
-	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc->get_highlight_selection_match());
+	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc_ctrl->get_highlight_selection_match());
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
@@ -1747,7 +1747,7 @@ void REHex::MainWindow::Tab::save_view(wxConfig *config)
 	config->Write("show-offsets", doc_ctrl->get_show_offsets());
 	config->Write("show-ascii", doc_ctrl->get_show_ascii());
 	config->Write("inline-comments", (int)(inline_comment_mode));
-	config->Write("highlight-selection-match", doc->get_highlight_selection_match());
+	config->Write("highlight-selection-match", doc_ctrl->get_highlight_selection_match());
 	config->Write("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	
 	/* TODO: Save h_tools state */
@@ -2406,11 +2406,11 @@ void REHex::MainWindow::Tab::init_default_doc_view()
 	wxConfig *config = wxGetApp().config;
 	config->SetPath("/default-view/");
 	
-	doc_ctrl->set_bytes_per_line(        config->Read    ("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
-	doc_ctrl->set_bytes_per_group(       config->Read    ("bytes-per-group",            doc_ctrl->get_bytes_per_group()));
-	doc_ctrl->set_show_offsets(          config->ReadBool("show-offsets",               doc_ctrl->get_show_offsets()));
-	doc_ctrl->set_show_ascii(            config->ReadBool("show-ascii",                 doc_ctrl->get_show_ascii()));
-	doc->set_highlight_selection_match(  config->ReadBool("highlight-selection-match",  doc->get_highlight_selection_match()));
+	doc_ctrl->set_bytes_per_line(             config->Read    ("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
+	doc_ctrl->set_bytes_per_group(            config->Read    ("bytes-per-group",            doc_ctrl->get_bytes_per_group()));
+	doc_ctrl->set_show_offsets(               config->ReadBool("show-offsets",               doc_ctrl->get_show_offsets()));
+	doc_ctrl->set_show_ascii(                 config->ReadBool("show-ascii",                 doc_ctrl->get_show_ascii()));
+	doc_ctrl->set_highlight_selection_match(  config->ReadBool("highlight-selection-match",  doc_ctrl->get_highlight_selection_match()));
 	
 	int inline_comments = config->Read("inline-comments", (int)(inline_comment_mode));
 	if(inline_comments >= 0 && inline_comments <= ICM_MAX)

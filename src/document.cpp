@@ -119,16 +119,6 @@ bool REHex::Document::is_dirty()
 	return dirty;
 }
 
-bool REHex::Document::get_highlight_selection_match()
-{
-	return highlight_selection_match;
-}
-
-void REHex::Document::set_highlight_selection_match(bool highlight_selection_match)
-{
-	this->highlight_selection_match = highlight_selection_match;
-}
-
 off_t REHex::Document::get_cursor_position() const
 {
 	return this->cpos_off;
@@ -569,7 +559,6 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
 	
-	highlight_selection_match = false;
 	selection_off     = 0;
 	selection_length  = 0;
 	cursor_state      = CSTATE_HEX;

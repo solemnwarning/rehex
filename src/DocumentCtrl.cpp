@@ -1967,7 +1967,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	static const int SECONDARY_SELECTION_MAX = 4096;
 	
 	std::vector<unsigned char> selection_data;
-	if(doc.doc->get_highlight_selection_match() && doc.selection_length > 0 && doc.selection_length <= SECONDARY_SELECTION_MAX)
+	if(doc.get_highlight_selection_match() && doc.selection_length > 0 && doc.selection_length <= SECONDARY_SELECTION_MAX)
 	{
 		try {
 			selection_data = doc.doc->read_data(doc.selection_off, doc.selection_length);

@@ -93,9 +93,6 @@ namespace REHex {
 			std::string get_filename();
 			bool is_dirty();
 			
-			bool get_highlight_selection_match();
-			void set_highlight_selection_match(bool highlight_selection_match);
-			
 			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
 			
@@ -148,9 +145,6 @@ namespace REHex {
 			NestedOffsetLengthMap<int> highlights;
 			
 			std::string title;
-			
-			/* Display options */
-			bool highlight_selection_match;
 			
 			off_t cpos_off{0};
 			bool insert_mode{false};

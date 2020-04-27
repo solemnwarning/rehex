@@ -442,15 +442,11 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 /* Insert some data into the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
 {
-	bool was64 = buffer_length() > 0xFFFFFFFF;
-	
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
 	
 	if(ok)
 	{
-		bool now64 = buffer_length() > 0xFFFFFFFF;
-		
 		set_dirty(true);
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
@@ -469,15 +465,11 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 /* Erase a range of data from the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length)
 {
-	bool was64 = buffer_length() > 0xFFFFFFFF;
-	
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
 	
 	if(ok)
 	{
-		bool now64 = buffer_length() > 0xFFFFFFFF;
-		
 		set_dirty(true);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
@@ -755,47 +747,6 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	highlights = _load_highlights(meta, buffer_length());
 	
 	json_decref(meta);
-}
-
-std::list<wxString> REHex::Document::_format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
-{
-#if 0
-	assert(cols > 0);
-	
-	/* TODO: Throw myself into the abyss and support Unicode properly...
-	 * (This function assumes one byte is one full-width character on the screen.
-	*/
-	
-	std::list<wxString> lines;
-	
-	for(size_t at = 0; at < text.size();)
-	{
-		size_t newline_at = text.find_first_of('\n', at);
-		
-		if(newline_at != std::string::npos && newline_at <= (at + cols))
-		{
-			/* There is a newline within one row's worth of text of our current position.
-			 * Add all the text up to it and continue from after it.
-			*/
-			lines.push_back(text.substr(at, newline_at - at));
-			at = newline_at + 1;
-		}
-		else{
-			/* The line is too long, just wrap it at whatever character is on the boundary.
-			 *
-			 * std::string::substr() will clamp the length if it goes beyond the end of
-			 * the string.
-			*/
-			lines.push_back(text.substr(at, cols));
-			at += cols;
-		}
-	}
-	
-	lines.erase(lines.begin(), std::next(lines.begin(), std::min((size_t)(from_line), lines.size())));
-	lines.erase(std::next(lines.begin(), std::min((size_t)(max_lines), lines.size())), lines.end());
-	
-	return lines;
-#endif
 }
 
 void REHex::Document::_raise_comment_modified()

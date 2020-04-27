@@ -168,8 +168,6 @@ namespace REHex {
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
-			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
-			
 			void _raise_comment_modified();
 			void _raise_undo_update();
 			void _raise_dirty();

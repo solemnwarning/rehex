@@ -96,10 +96,6 @@ namespace REHex {
 			off_t get_cursor_position() const;
 			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
 			
-			void set_selection(off_t off, off_t length);
-			void clear_selection();
-			std::pair<off_t, off_t> get_selection();
-			
 			const NestedOffsetLengthMap<Comment> &get_comments() const;
 			bool set_comment(off_t offset, off_t length, const Comment &comment);
 			bool erase_comment(off_t offset, off_t length);
@@ -107,10 +103,6 @@ namespace REHex {
 			const NestedOffsetLengthMap<int> &get_highlights() const;
 			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
 			bool erase_highlight(off_t off, off_t length);
-			
-			void handle_paste(const std::string &clipboard_text);
-			std::string handle_copy(bool cut);
-			size_t copy_upper_limit();
 			
 			void handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
@@ -148,9 +140,6 @@ namespace REHex {
 			
 			off_t cpos_off{0};
 			bool insert_mode{false};
-			
-			off_t selection_off;
-			off_t selection_length;
 			
 			enum CursorState cursor_state;
 			
@@ -191,9 +180,10 @@ namespace REHex {
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
 			off_t buffer_length();
 			
-			void overwrite_data(off_t offset, const void *data, off_t length,       off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
-			void insert_data(off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
-			void erase_data(off_t offset, off_t length,                             off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void overwrite_data(off_t offset, const void *data, off_t length,                                            off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void insert_data(off_t offset, const unsigned char *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void erase_data(off_t offset, off_t length,                                                                  off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void replace_data(off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 	};
 	
 	class CommentsDataObject: public wxCustomDataObject

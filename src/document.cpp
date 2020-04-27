@@ -156,31 +156,6 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	}
 }
 
-void REHex::Document::set_selection(off_t off, off_t length)
-{
-	selection_off    = off;
-	selection_length = length;
-	
-	#if 0
-	{
-		wxCommandEvent event(REHex::EV_SELECTION_CHANGED);
-		event.SetEventObject(this);
-		
-		wxPostEvent(this, event);
-	}
-	#endif
-}
-
-void REHex::Document::clear_selection()
-{
-	set_selection(0, 0);
-}
-
-std::pair<off_t, off_t> REHex::Document::get_selection()
-{
-	return std::make_pair(selection_off, selection_length);
-}
-
 std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length) const
 {
 	return buffer->read_data(offset, max_length);
@@ -212,6 +187,14 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 	assert(new_cursor_state == cursor_state);
 	
 	_tracked_erase_data(change_desc, offset, length);
+}
+
+void REHex::Document::replace_data(off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+{
+	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	
+	_tracked_replace_data(change_desc, offset, old_data_length, new_data, new_data_length, new_cursor_pos, new_cursor_state);
 }
 
 off_t REHex::Document::buffer_length()
@@ -327,126 +310,6 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	return true;
 }
 
-void REHex::Document::handle_paste(const std::string &clipboard_text)
-{
-	auto paste_data = [this](const unsigned char* data, size_t size)
-	{
-		off_t cursor_pos = get_cursor_position();
-		
-		if(selection_length > 0)
-		{
-			/* Some data is selected, replace it. */
-			
-			_tracked_replace_data("paste", selection_off, selection_length, data, size, selection_off + size, CSTATE_GOTO);
-			clear_selection();
-		}
-		else if(insert_mode)
-		{
-			/* We are in insert mode, insert at the cursor. */
-			_tracked_insert_data("paste", cursor_pos, data, size, cursor_pos + size, CSTATE_GOTO);
-		}
-		else{
-			/* We are in overwrite mode, overwrite up to the end of the file. */
-			
-			off_t to_end = buffer->length() - cursor_pos;
-			off_t to_write = std::min(to_end, (off_t)(size));
-			
-			_tracked_overwrite_data("paste", cursor_pos, data, to_write, cursor_pos + to_write, CSTATE_GOTO);
-		}
-	};
-	
-	if(cursor_state == CSTATE_ASCII)
-	{
-		/* Paste into ASCII view, handle as string of characters. */
-		
-		paste_data((const unsigned char*)(clipboard_text.data()), clipboard_text.size());
-	}
-	else{
-		/* Paste into hex view, handle as hex string of bytes. */
-		
-		try {
-			std::vector<unsigned char> clipboard_data = REHex::parse_hex_string(clipboard_text);
-			paste_data(clipboard_data.data(), clipboard_data.size());
-		}
-		catch(const REHex::ParseError &e)
-		{
-			/* Ignore paste if clipboard didn't contain a valid hex string. */
-		}
-	}
-}
-
-std::string REHex::Document::handle_copy(bool cut)
-{
-	if(selection_length > 0)
-	{
-		std::vector<unsigned char> selection_data = read_data(selection_off, selection_length);
-		assert((off_t)(selection_data.size()) == selection_length);
-		
-		if(cut)
-		{
-			_tracked_erase_data("cut selection", selection_off, selection_data.size());
-		}
-		
-		if(cursor_state == CSTATE_ASCII)
-		{
-			std::string ascii_string;
-			ascii_string.reserve(selection_data.size());
-			
-			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
-			{
-				if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
-				{
-					ascii_string.push_back(*c);
-				}
-			}
-			
-			return ascii_string;
-		}
-		else{
-			std::string hex_string;
-			hex_string.reserve(selection_data.size() * 2);
-			
-			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
-			{
-				const char *nibble_to_hex = "0123456789ABCDEF";
-				
-				unsigned char high_nibble = (*c & 0xF0) >> 4;
-				unsigned char low_nibble  = (*c & 0x0F);
-				
-				hex_string.push_back(nibble_to_hex[high_nibble]);
-				hex_string.push_back(nibble_to_hex[low_nibble]);
-			}
-			
-			return hex_string;
-		}
-	}
-	else{
-		/* Nothing selected */
-		return "";
-	}
-}
-
-/* Maximum size of the string that would be returned by handle_copy() with the current selection.
- * The actual string may be shorter as unprintable characters are skipped in ASCII mode.
-*/
-size_t REHex::Document::copy_upper_limit()
-{
-	if(selection_length > 0)
-	{
-		if(cursor_state == CSTATE_ASCII)
-		{
-			return selection_length;
-		}
-		else{
-			return selection_length * 2;
-		}
-	}
-	else{
-		/* Nothing selected */
-		return 0;
-	}
-}
-
 void REHex::Document::handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
@@ -559,8 +422,6 @@ void REHex::Document::_ctor_pre(wxWindow *parent)
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
 	
-	selection_off     = 0;
-	selection_length  = 0;
 	cursor_state      = CSTATE_HEX;
 }
 
@@ -696,7 +557,6 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 			_UNTRACKED_erase_data(dc, offset, length);
 			
 			set_cursor_position(offset);
-			clear_selection();
 		},
 		
 		[this, offset, erase_data]()

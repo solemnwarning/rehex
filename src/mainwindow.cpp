@@ -19,6 +19,7 @@
 #include <inttypes.h>
 #include <limits>
 #include <new>
+#include <tuple>
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -647,17 +648,129 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 
 void REHex::MainWindow::OnCut(wxCommandEvent &event)
 {
-	_clipboard_copy(true);
+	Tab *tab = active_tab();
+	tab->handle_copy(true);
 }
 
 void REHex::MainWindow::OnCopy(wxCommandEvent &event)
 {
-	_clipboard_copy(false);
+	Tab *tab = active_tab();
+	tab->handle_copy(false);
+}
+
+void REHex::MainWindow::Tab::handle_copy(bool cut)
+{
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	off_t selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	
+	if(selection_length <= 0)
+	{
+		/* Nothing selected - nothing to copy. */
+		return;
+	}
+	
+	/* Warn the user this might be a bad idea before dumping silly amounts
+	 * of data (>16MiB) into the clipboard.
+	*/
+	
+	static size_t COPY_MAX_SOFT = 16777216;
+	
+	size_t upper_limit = cursor_state == Document::CSTATE_ASCII
+		? selection_length
+		: (selection_length * 2);
+	
+	if(upper_limit > COPY_MAX_SOFT)
+	{
+		char msg[128];
+		snprintf(msg, sizeof(msg),
+			"You are about to copy %uMB into the clipboard.\n"
+			"This may take a long time and/or crash some applications.",
+			(unsigned)(upper_limit / 1000000));
+		
+		int result = wxMessageBox(msg, "Warning", (wxOK | wxCANCEL | wxICON_EXCLAMATION), this);
+		if(result != wxOK)
+		{
+			return;
+		}
+	}
+	
+	wxTextDataObject *copy_data = NULL;
+	try {
+		std::vector<unsigned char> selection_data = doc->read_data(selection_off, selection_length);
+		assert((off_t)(selection_data.size()) == selection_length);
+		
+		if(cursor_state == Document::CSTATE_ASCII)
+		{
+			std::string ascii_string;
+			ascii_string.reserve(selection_data.size());
+			
+			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			{
+				if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+				{
+					ascii_string.push_back(*c);
+				}
+			}
+			
+			if(!ascii_string.empty())
+			{
+				copy_data = new wxTextDataObject(ascii_string);
+			}
+		}
+		else{
+			std::string hex_string;
+			hex_string.reserve(selection_data.size() * 2);
+			
+			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			{
+				const char *nibble_to_hex = "0123456789ABCDEF";
+				
+				unsigned char high_nibble = (*c & 0xF0) >> 4;
+				unsigned char low_nibble  = (*c & 0x0F);
+				
+				hex_string.push_back(nibble_to_hex[high_nibble]);
+				hex_string.push_back(nibble_to_hex[low_nibble]);
+			}
+			
+			copy_data = new wxTextDataObject(hex_string);
+		}
+	}
+	catch(const std::bad_alloc &e)
+	{
+		wxMessageBox(
+			"Memory allocation failed while preparing clipboard buffer.",
+			"Error", (wxOK | wxICON_ERROR), this);
+		return;
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
+		return;
+	}
+	
+	if(copy_data != NULL)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			wxTheClipboard->SetData(copy_data);
+			
+			if(cut)
+			{
+				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "cut selection");
+			}
+		}
+		else{
+			delete copy_data;
+		}
+	}
 }
 
 void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 {
-	REHex::Document *doc = active_document();
+	Tab *tab = active_tab();
 	
 	ClipboardGuard cg;
 	if(cg)
@@ -669,7 +782,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			
 			auto clipboard_comments = data.get_comments();
 			
-			doc->handle_paste(clipboard_comments);
+			tab->doc->handle_paste(clipboard_comments);
 		}
 		else if(wxTheClipboard->IsSupported(wxDF_TEXT))
 		{
@@ -677,12 +790,66 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			wxTheClipboard->GetData(data);
 			
 			try {
-				doc->handle_paste(data.GetText().ToStdString());
+				tab->paste_text(data.GetText().ToStdString());
 			}
 			catch(const std::exception &e)
 			{
 				wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
 			}
+		}
+	}
+}
+
+void REHex::MainWindow::Tab::paste_text(const std::string &text)
+{
+	auto paste_data = [this](const unsigned char* data, size_t size)
+	{
+		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		bool insert_mode = doc_ctrl->get_insert_mode();
+		
+		off_t selection_off, selection_length;
+		std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+		
+		if(selection_length > 0)
+		{
+			/* Some data is selected, replace it. */
+			
+			doc->replace_data(selection_off, selection_length, data, size, selection_off + size, Document::CSTATE_GOTO, "paste");
+			doc_ctrl->clear_selection();
+		}
+		else if(insert_mode)
+		{
+			/* We are in insert mode, insert at the cursor. */
+			doc->insert_data(cursor_pos, data, size, cursor_pos + size, Document::CSTATE_GOTO, "paste");
+		}
+		else{
+			/* We are in overwrite mode, overwrite up to the end of the file. */
+			
+			off_t to_end = doc->buffer_length() - cursor_pos;
+			off_t to_write = std::min(to_end, (off_t)(size));
+			
+			doc->overwrite_data(cursor_pos, data, to_write, cursor_pos + to_write, Document::CSTATE_GOTO, "paste");
+		}
+	};
+	
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	if(cursor_state == Document::CSTATE_ASCII)
+	{
+		/* Paste into ASCII view, handle as string of characters. */
+		
+		paste_data((const unsigned char*)(text.data()), text.size());
+	}
+	else{
+		/* Paste into hex view, handle as hex string of bytes. */
+		
+		try {
+			std::vector<unsigned char> clipboard_data = REHex::parse_hex_string(text);
+			paste_data(clipboard_data.data(), clipboard_data.size());
+		}
+		catch(const REHex::ParseError &e)
+		{
+			/* Ignore paste if clipboard didn't contain a valid hex string. */
 		}
 	}
 }
@@ -711,13 +878,8 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_selection(0, tab->doc->buffer_length());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_selection(0, tab->doc->buffer_length());
 }
 
 void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
@@ -1307,70 +1469,6 @@ void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 	toolbar->EnableTool(wxID_SAVE,   enable_save);
 	
 	notebook->SetPageBitmap(notebook->GetSelection(), (dirty ? notebook_dirty_bitmap : wxNullBitmap));
-}
-
-void REHex::MainWindow::_clipboard_copy(bool cut)
-{
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	/* Warn the user this might be a bad idea before dumping silly amounts
-	 * of data (>16MiB) into the clipboard.
-	*/
-	
-	static size_t COPY_MAX_SOFT = 16777216;
-	size_t upper_limit = tab->doc->copy_upper_limit();
-	
-	if(upper_limit > COPY_MAX_SOFT)
-	{
-		char msg[128];
-		snprintf(msg, sizeof(msg),
-			"You are about to copy %uMB into the clipboard.\n"
-			"This may take a long time and/or crash some applications.",
-			(unsigned)(upper_limit / 1000000));
-		
-		int result = wxMessageBox(msg, "Warning", (wxOK | wxCANCEL | wxICON_EXCLAMATION), this);
-		if(result != wxOK)
-		{
-			return;
-		}
-	}
-	
-	wxTextDataObject *copy_data = NULL;
-	try {
-		std::string copy_text = tab->doc->handle_copy(cut);
-		if(!copy_text.empty())
-		{
-			copy_data = new wxTextDataObject(copy_text);
-		}
-	}
-	catch(const std::bad_alloc &e)
-	{
-		wxMessageBox(
-			"Memory allocation failed while preparing clipboard buffer.",
-			"Error", (wxOK | wxICON_ERROR), this);
-		return;
-	}
-	catch(const std::exception &e)
-	{
-		wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
-		return;
-	}
-	
-	if(copy_data != NULL)
-	{
-		ClipboardGuard cg;
-		if(cg)
-		{
-			wxTheClipboard->SetData(copy_data);
-		}
-		else{
-			delete copy_data;
-		}
-	}
 }
 
 bool REHex::MainWindow::unsaved_confirm()

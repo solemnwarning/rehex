@@ -135,6 +135,9 @@ namespace REHex {
 					
 					void save_view(wxConfig *config);
 					
+					void handle_copy(bool cut);
+					void paste_text(const std::string &text);
+					
 					void OnSize(wxSizeEvent &size);
 					
 					void OnHToolChange(wxBookCtrlEvent &event);
@@ -212,8 +215,6 @@ namespace REHex {
 			void _update_status_mode(REHex::DocumentCtrl *doc_ctrl);
 			void _update_undo(REHex::Document *doc);
 			void _update_dirty(REHex::Document *doc);
-			
-			void _clipboard_copy(bool cut);
 			
 			bool unsaved_confirm();
 			bool unsaved_confirm(const std::vector<wxString> &files);

@@ -19,6 +19,7 @@
 #include <inttypes.h>
 #include <limits>
 #include <new>
+#include <stack>
 #include <tuple>
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
@@ -2579,11 +2580,10 @@ void REHex::MainWindow::Tab::repopulate_regions()
 	off_t next_data = 0, remain_data = doc->buffer_length();
 	
 	std::list<DocumentCtrl::Region*> regions;
+	std::stack<off_t> dr_limit;
 	
 	while(remain_data > 0)
 	{
-		off_t dr_length = remain_data;
-		
 		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
 		/* We process any comments at the same offset from largest to smallest, ensuring
@@ -2609,17 +2609,27 @@ void REHex::MainWindow::Tab::repopulate_regions()
 				
 				if(nest && c->first.length > 0)
 				{
-					assert(c->first.length <= dr_length);
-					dr_length = c->first.length;
+					assert(dr_limit.empty() || dr_limit.top() >= c->first.offset + c->first.length);
+					dr_limit.push(c->first.offset + c->first.length);
 				}
 			} while(c != offset_base);
 			
 			offset_base = next_offset;
 		}
 		
+		off_t dr_length = remain_data;
+		
 		if(offset_base != comments.end() && dr_length > (offset_base->first.offset - next_data))
 		{
 			dr_length = offset_base->first.offset - next_data;
+		}
+		
+		while(!dr_limit.empty() && (next_data + dr_length) >= dr_limit.top())
+		{
+			assert(dr_limit.top() > next_data);
+			
+			dr_length = dr_limit.top() - next_data;
+			dr_limit.pop();
 		}
 		
 		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));

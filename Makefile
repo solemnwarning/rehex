@@ -211,6 +211,7 @@ $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 src/AboutDialog.o: res/icon128.h
+src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 

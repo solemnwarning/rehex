@@ -196,6 +196,7 @@ TEST_OBJS := \
 	tests/buffer.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
+	tests/Document.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \

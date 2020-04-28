@@ -94,6 +94,7 @@ namespace REHex {
 			bool is_dirty();
 			
 			off_t get_cursor_position() const;
+			CursorState get_cursor_state() const;
 			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
 			
 			const NestedOffsetLengthMap<Comment> &get_comments() const;

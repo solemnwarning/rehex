@@ -124,6 +124,11 @@ off_t REHex::Document::get_cursor_position() const
 	return this->cpos_off;
 }
 
+REHex::Document::CursorState REHex::Document::get_cursor_state() const
+{
+	return cursor_state;
+}
+
 void REHex::Document::set_cursor_position(off_t off, CursorState cursor_state)
 {
 	_set_cursor_position(off, cursor_state);

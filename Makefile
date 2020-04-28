@@ -171,6 +171,7 @@ APP_OBJS := \
 	src/search.o \
 	src/SelectRangeDialog.o \
 	src/textentrydialog.o \
+	src/Tab.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \

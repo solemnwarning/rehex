@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,32 +19,18 @@
 #define REHEX_MAINWINDOW_HPP
 
 #include <map>
-#include <set>
 #include <vector>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
-#include <wx/splitter.h>
 #include <wx/wx.h>
 
-#include "DiffWindow.hpp"
-#include "document.hpp"
-#include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "Tab.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
 	class MainWindow: public wxFrame
 	{
-		private:
-			enum InlineCommentMode {
-				ICM_HIDDEN       = 0,
-				ICM_FULL         = 1,
-				ICM_SHORT        = 2,
-				ICM_FULL_INDENT  = 3,
-				ICM_SHORT_INDENT = 4,
-				ICM_MAX          = 4,
-			};
-			
 		public:
 			MainWindow();
 			virtual ~MainWindow();
@@ -106,82 +92,6 @@ namespace REHex {
 			void OnBecameClean(wxCommandEvent &event);
 			
 		private:
-			class Tab: public wxPanel
-			{
-				public:
-					Tab(wxWindow *parent);
-					Tab(wxWindow *parent, const std::string &filename);
-					
-					virtual ~Tab();
-					
-					Document     *doc;
-					DocumentCtrl *doc_ctrl;
-					
-					wxSplitterWindow   *v_splitter;
-					wxSplitterWindow   *h_splitter;
-					wxNotebook         *v_tools;
-					wxNotebook         *h_tools;
-					
-					std::map<std::string, ToolPanel*> tools;
-					std::set<wxDialog*> search_dialogs;
-					
-					InlineCommentMode inline_comment_mode;
-					
-					bool tool_active(const std::string &name);
-					void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
-					void tool_destroy(const std::string &name);
-					
-					void search_dialog_register(wxDialog *search_dialog);
-					
-					void save_view(wxConfig *config);
-					
-					void handle_copy(bool cut);
-					void paste_text(const std::string &text);
-					
-					void OnSize(wxSizeEvent &size);
-					
-					void OnHToolChange(wxBookCtrlEvent &event);
-					void OnVToolChange(wxBookCtrlEvent &event);
-					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
-					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
-					void OnSearchDialogDestroy(wxWindowDestroyEvent &event);
-					
-					void OnDocumentCtrlChar(wxKeyEvent &key);
-					
-					void OnCommentLeftClick(OffsetLengthEvent &event);
-					void OnCommentRightClick(OffsetLengthEvent &event);
-					void OnDataRightClick(wxCommandEvent &event);
-					
-					void OnDocumentDataErase(OffsetLengthEvent &event);
-					void OnDocumentDataInsert(OffsetLengthEvent &event);
-					void OnDocumentDataOverwrite(OffsetLengthEvent &event);
-					
-					void vtools_adjust();
-					void htools_adjust();
-					void vtools_adjust_on_idle();
-					void vtools_adjust_now_idle(wxIdleEvent &event);
-					void htools_adjust_on_idle();
-					void htools_adjust_now_idle(wxIdleEvent &event);
-					
-					void repopulate_regions();
-					
-				private:
-					enum {
-						ID_HTOOLS = 1,
-						ID_VTOOLS,
-						ID_HSPLITTER,
-						ID_VSPLITTER,
-					};
-					
-					int hsplit_clamp_sash(int sash_position);
-					int vsplit_clamp_sash(int sash_position);
-					
-					void init_default_doc_view();
-					void init_default_tools();
-					
-					DECLARE_EVENT_TABLE()
-			};
-			
 			class DropTarget: public wxFileDropTarget
 			{
 				private:

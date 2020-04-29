@@ -113,6 +113,9 @@ REHex::Palette *REHex::Palette::create_system_palette()
 			? HIGHLIGHTTEXT.ChangeLightness(70)
 			: HIGHLIGHTTEXT.ChangeLightness(130)),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
 		
+		WINDOW,                      /* PAL_DIRTY_TEXT_BG */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
+		
 		/* TODO: Algorithmically choose highlight colours that complement system colour scheme. */
 		
 		/* White on Red */
@@ -163,6 +166,8 @@ REHex::Palette *REHex::Palette::create_light_palette()
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
 		wxColour(0x00, 0x00, 0x7F),  /* PAL_SECONDARY_SELECTED_TEXT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_DIRTY_TEXT_BG */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		
 		/* White on Red */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
@@ -209,6 +214,8 @@ REHex::Palette *REHex::Palette::create_dark_palette()
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
 		wxColour(0x00, 0x00, 0x7F),  /* PAL_SECONDARY_SELECTED_TEXT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_DIRTY_TEXT_BG */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		
 		/* White on Red */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */

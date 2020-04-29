@@ -275,8 +275,8 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::hi
 		if(off_from_range_begin >= r->length || their_data != my_data)
 		{
 			return Highlight(
-				Palette::PAL_SECONDARY_SELECTED_TEXT_FG,
-				Palette::PAL_SECONDARY_SELECTED_TEXT_BG,
+				Palette::PAL_DIRTY_TEXT_FG,
+				Palette::PAL_DIRTY_TEXT_BG,
 				true);
 		}
 	}

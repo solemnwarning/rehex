@@ -82,6 +82,7 @@ namespace REHex {
 			void doc_update(Range *range);
 			void resize_splitters();
 			
+			void OnSize(wxSizeEvent &event);
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);
 			

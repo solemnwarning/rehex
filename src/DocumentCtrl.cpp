@@ -1695,6 +1695,11 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 	}
 }
 
+const std::list<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
+{
+	return regions;
+}
+
 void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
 {
 	assert(!new_regions.empty());
@@ -1825,28 +1830,13 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 {
 	/* Decide how many bytes to display per line */
 	
-	auto calc_row_width = [&](unsigned int line_bytes)
-	{
-		return doc.offset_column_width
-			/* indentation */
-			+ (doc._indent_width(indent_depth) * 2)
-			
-			/* hex data */
-			+ doc.hf_string_width(line_bytes * 2)
-			+ doc.hf_string_width((line_bytes - 1) / doc.bytes_per_group)
-			
-			/* ASCII data */
-			+ (doc.show_ascii * doc.hf_char_width())
-			+ (doc.show_ascii * doc.hf_string_width(line_bytes));
-	};
-	
 	if(doc.bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
 	{
 		/* TODO: Can I do this algorithmically? */
 		
 		bytes_per_line_actual = 1;
 		
-		while(calc_row_width(bytes_per_line_actual + 1) <= doc.client_width)
+		while(calc_width_for_bytes(doc, bytes_per_line_actual + 1) <= doc.client_width)
 		{
 			++bytes_per_line_actual;
 		}
@@ -1855,7 +1845,22 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 		bytes_per_line_actual = doc.bytes_per_line;
 	}
 	
-	return calc_row_width(bytes_per_line_actual);
+	return calc_width_for_bytes(doc, bytes_per_line_actual);
+}
+
+int REHex::DocumentCtrl::DataRegion::calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const
+{
+	return doc_ctrl.offset_column_width
+		/* indentation */
+		+ (doc_ctrl._indent_width(indent_depth) * 2)
+		
+		/* hex data */
+		+ doc_ctrl.hf_string_width(line_bytes * 2)
+		+ doc_ctrl.hf_string_width((line_bytes - 1) / doc_ctrl.bytes_per_group)
+		
+		/* ASCII data */
+		+ (doc_ctrl.show_ascii * doc_ctrl.hf_char_width())
+		+ (doc_ctrl.show_ascii * doc_ctrl.hf_string_width(line_bytes));
 }
 
 void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)

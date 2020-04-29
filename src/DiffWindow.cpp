@@ -29,6 +29,7 @@
 #include "../res/icon64.h"
 
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
+	EVT_SIZE(REHex::DiffWindow::OnSize)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
 END_EVENT_TABLE()
 
@@ -248,6 +249,48 @@ void REHex::DiffWindow::resize_splitters()
 	{
 		r->splitter->SetSashPosition(pane_size);
 	}
+	
+	/* Calculate the number of bytes that can be displayed on a line in each DocumentCtrl and
+	 * limit all DocumentCtrls to that value to ensure bytes line up. Each one should have the
+	 * same width at this point, but check all to allow for rounding errors or weird UI crap.
+	*/
+	
+	int bytes_per_line = -1;
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		auto &dc_regions = r->doc_ctrl->get_regions();
+		wxSize dc_client_size = r->doc_ctrl->GetClientSize();
+		
+		for(auto rr = dc_regions.begin(); rr != dc_regions.end(); ++rr)
+		{
+			const DiffDataRegion *ddr = dynamic_cast<const DiffDataRegion*>(*rr);
+			assert(ddr != NULL);
+			
+			int ddr_max_bytes_per_line = 1;
+			while(ddr->calc_width_for_bytes(*(r->doc_ctrl), (ddr_max_bytes_per_line + 1)) <= dc_client_size.GetWidth())
+			{
+				++ddr_max_bytes_per_line;
+			}
+			
+			if(bytes_per_line < 0 || bytes_per_line > ddr_max_bytes_per_line)
+			{
+				bytes_per_line = ddr_max_bytes_per_line;
+			}
+		}
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		assert(bytes_per_line > 0);
+		r->doc_ctrl->set_bytes_per_line(bytes_per_line);
+	}
+}
+
+void REHex::DiffWindow::OnSize(wxSizeEvent &event)
+{
+	resize_splitters();
+	event.Skip();
 }
 
 void REHex::DiffWindow::OnDocumentDestroy(wxWindowDestroyEvent &event)

@@ -118,6 +118,8 @@ namespace REHex {
 				public:
 					DataRegion(off_t d_offset, off_t d_length);
 					
+					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
+					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc) override;
 					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
@@ -198,6 +200,7 @@ namespace REHex {
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
 			
+			const std::list<Region*> &get_regions() const;
 			void replace_all_regions(std::list<Region*> &new_regions);
 			
 			void OnPaint(wxPaintEvent &event);

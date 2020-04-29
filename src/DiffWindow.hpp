@@ -21,8 +21,8 @@
 #include <list>
 #include <wx/aui/auibook.h>
 #include <wx/frame.h>
+#include <wx/panel.h>
 #include <wx/splitter.h>
-#include <wx/stattext.h>
 
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
@@ -43,7 +43,7 @@ namespace REHex {
 					wxSplitterWindow *splitter;
 					wxAuiNotebook *notebook;
 					DocumentCtrl *doc_ctrl;
-					wxStaticText *foo;
+					wxPanel      *help_panel;
 					
 				public:
 					Range(Document *doc, off_t offset, off_t length):

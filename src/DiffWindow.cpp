@@ -17,6 +17,8 @@
 
 #include <algorithm>
 #include <set>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
 
 #include "DiffWindow.hpp"
 #include "Palette.hpp"
@@ -114,13 +116,29 @@ void REHex::DiffWindow::add_range(const Range &range)
 	new_range->notebook = new wxAuiNotebook(new_range->splitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxAUI_NB_CLOSE_ON_ACTIVE_TAB | wxAUI_NB_TOP));
 	
 	new_range->doc_ctrl = new DocumentCtrl(new_range->notebook, new_range->doc);
-	new_range->foo = new wxStaticText(new_range->splitter, wxID_ANY, "foo");
+	
+	{
+		new_range->help_panel = new wxPanel(new_range->splitter);
+		wxBoxSizer *v_sizer = new wxBoxSizer(wxVERTICAL);
+		
+		wxBoxSizer *h_sizer = new wxBoxSizer(wxHORIZONTAL);
+		v_sizer->Add(h_sizer, 1, wxALIGN_CENTER_HORIZONTAL);
+		
+		static const char *HELP_TEXT =
+			"Make another selection and choose \"Compare...\"\n"
+			"to compare this against another sequence of bytes";
+		
+		wxStaticText *help_text = new wxStaticText(new_range->help_panel, wxID_ANY, HELP_TEXT);
+		h_sizer->Add(help_text, 1, wxALIGN_CENTER_VERTICAL);
+		
+		new_range->help_panel->SetSizerAndFit(v_sizer);
+	}
 	
 	new_range->notebook->AddPage(new_range->doc_ctrl, new_range->doc->get_title());
 	
 	doc_update(&*new_range);
 	
-	new_range->splitter->SplitVertically(new_range->notebook, new_range->foo);
+	new_range->splitter->SplitVertically(new_range->notebook, new_range->help_panel);
 	
 	if(ranges.size() > 1)
 	{
@@ -199,6 +217,12 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		range->doc->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
 	
+	if(ranges.size() == 1)
+	{
+		/* All but one tab has been closed, re-instate help text. */
+		ranges.front().splitter->SplitVertically(ranges.front().notebook, ranges.front().help_panel);
+	}
+	
 	resize_splitters();
 	
 	return next;
@@ -216,9 +240,13 @@ void REHex::DiffWindow::resize_splitters()
 {
 	wxSize window_size = GetClientSize();
 	
+	int pane_size = ranges.size() > 1
+		? window_size.GetWidth() / ranges.size()
+		: window_size.GetWidth() / 2;
+	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		r->splitter->SetSashPosition(window_size.GetWidth() / ranges.size());
+		r->splitter->SetSashPosition(pane_size);
 	}
 }
 

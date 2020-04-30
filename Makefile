@@ -151,7 +151,6 @@ APP_OBJS := \
 	res/icon64.o \
 	res/icon128.o \
 	res/license.o \
-	res/version.o \
 	src/AboutDialog.o \
 	src/app.o \
 	src/buffer.o \
@@ -173,7 +172,8 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^ res/version.o $(LIBS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
@@ -213,10 +213,6 @@ res/license.c res/license.h: LICENSE.txt $(EMBED_EXE)
 
 res/%.c res/%.h: res/%.png $(EMBED_EXE)
 	$(EMBED_EXE) $< $*_png res/$*.c res/$*.h
-
-.PHONY: res/version.o
-res/version.o:
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -c -o $@ res/version.cpp
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<

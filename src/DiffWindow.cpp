@@ -31,6 +31,8 @@
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_SIZE(REHex::DiffWindow::OnSize)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
+	
+	EVT_CURSORUPDATE(wxID_ANY, REHex::DiffWindow::OnCursorUpdate)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
@@ -143,6 +145,10 @@ void REHex::DiffWindow::add_range(const Range &range)
 	
 	if(ranges.size() > 1)
 	{
+		auto prev_range = std::prev(new_range);
+		
+		new_range->doc_ctrl->linked_scroll_insert_self_after(prev_range->doc_ctrl);
+		
 		// new_range->doc_ctrl->set_show_offsets(false);
 		new_range->splitter->Unsplit();
 	}
@@ -319,6 +325,27 @@ void REHex::DiffWindow::OnNotebookClosed(wxAuiNotebookEvent &event)
 	assert(nb_range != ranges.end());
 	
 	remove_range(nb_range);
+}
+
+void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
+{
+	/* Find the Range whose DocumentCtrl raised this event. */
+	
+	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
+	assert(source_range != ranges.end());
+	
+	off_t pos_from_source_range = event.cursor_pos - source_range->offset;
+	
+	/* Update the cursors in every other tab to match. */
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r != source_range)
+		{
+			off_t pos_from_r = r->offset + std::min(pos_from_source_range, (r->length - 1));
+			r->doc_ctrl->set_cursor_position(pos_from_r, event.cursor_state);
+		}
+	}
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):

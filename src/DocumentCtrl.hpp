@@ -196,6 +196,9 @@ namespace REHex {
 			bool get_insert_mode();
 			void set_insert_mode(bool enabled);
 			
+			void linked_scroll_insert_self_after(DocumentCtrl *p);
+			void linked_scroll_remove_self();
+			
 			void set_selection(off_t off, off_t length);
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
@@ -260,6 +263,9 @@ namespace REHex {
 			int64_t scroll_yoff_max;
 			int64_t scroll_ydiv;
 			
+			DocumentCtrl *linked_scroll_prev;
+			DocumentCtrl *linked_scroll_next;
+			
 			int wheel_vert_accum;
 			int wheel_horiz_accum;
 			
@@ -294,7 +300,9 @@ namespace REHex {
 			void _handle_width_change();
 			void _handle_height_change();
 			void _update_vscroll();
-			void _update_vscroll_pos();
+			void _update_vscroll_pos(bool update_linked_scroll_others = true);
+			
+			void linked_scroll_visit_others(const std::function<void(DocumentCtrl*)> &func);
 			
 			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			int _indent_width(int depth);

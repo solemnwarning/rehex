@@ -67,6 +67,8 @@ END_EVENT_TABLE()
 REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, REHex::Document *doc):
 	wxControl(),
 	doc(doc),
+	linked_scroll_prev(NULL),
+	linked_scroll_next(NULL),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
@@ -131,6 +133,11 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, REHex::Document *doc):
 
 REHex::DocumentCtrl::~DocumentCtrl()
 {
+	if(linked_scroll_prev != NULL || linked_scroll_next != NULL)
+	{
+		linked_scroll_remove_self();
+	}
+	
 	for(auto region = regions.begin(); region != regions.end(); ++region)
 	{
 		delete *region;
@@ -294,6 +301,55 @@ void REHex::DocumentCtrl::set_insert_mode(bool enabled)
 	
 	/* TODO: Limit paint to affected area */
 	this->Refresh();
+}
+
+void REHex::DocumentCtrl::linked_scroll_insert_self_after(DocumentCtrl *p)
+{
+	assert(linked_scroll_prev == NULL);
+	assert(linked_scroll_next == NULL);
+	
+	/* Insert ourself into the linked scroll list after p. */
+	
+	linked_scroll_prev = p;
+	
+	if(p->linked_scroll_next != NULL)
+	{
+		p->linked_scroll_next->linked_scroll_prev = this;
+		linked_scroll_next = p->linked_scroll_next;
+	}
+	
+	p->linked_scroll_next = this;
+}
+
+void REHex::DocumentCtrl::linked_scroll_remove_self()
+{
+	assert(linked_scroll_prev != NULL || linked_scroll_next != NULL);
+	
+	if(linked_scroll_prev != NULL)
+	{
+		linked_scroll_prev->linked_scroll_next = linked_scroll_next;
+	}
+	
+	if(linked_scroll_next != NULL)
+	{
+		linked_scroll_next->linked_scroll_prev = linked_scroll_prev;
+	}
+	
+	linked_scroll_prev = NULL;
+	linked_scroll_next = NULL;
+}
+
+void REHex::DocumentCtrl::linked_scroll_visit_others(const std::function<void(DocumentCtrl*)> &func)
+{
+	for(DocumentCtrl *p = linked_scroll_prev; p != NULL; p = p->linked_scroll_prev)
+	{
+		func(p);
+	}
+	
+	for(DocumentCtrl *p = linked_scroll_next; p != NULL; p = p->linked_scroll_next)
+	{
+		func(p);
+	}
 }
 
 void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
@@ -573,7 +629,7 @@ void REHex::DocumentCtrl::_update_vscroll()
 	}
 }
 
-void REHex::DocumentCtrl::_update_vscroll_pos()
+void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
 {
 	int range = GetScrollRange(wxVERTICAL);
 	int thumb = GetScrollThumb(wxVERTICAL);
@@ -603,6 +659,21 @@ void REHex::DocumentCtrl::_update_vscroll_pos()
 		assert(position <= (range - thumb));
 		
 		SetScrollPos(wxVERTICAL, position);
+	}
+	
+	if(update_linked_scroll_others)
+	{
+		linked_scroll_visit_others([this](DocumentCtrl *other)
+		{
+			other->scroll_yoff = scroll_yoff;
+			if(other->scroll_yoff > other->scroll_yoff_max)
+			{
+				other->scroll_yoff = other->scroll_yoff_max;
+			}
+			
+			other->_update_vscroll_pos(false);
+			other->Refresh();
+		});
 	}
 }
 

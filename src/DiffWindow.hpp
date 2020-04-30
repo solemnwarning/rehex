@@ -85,6 +85,7 @@ namespace REHex {
 			void OnSize(wxSizeEvent &event);
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);
+			void OnCursorUpdate(CursorUpdateEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

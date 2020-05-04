@@ -27,6 +27,8 @@ wxDEFINE_EVENT(REHex::DATA_OVERWRITE,    REHex::OffsetLengthEvent);
 
 wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
 
+wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
+
 REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state):
 	wxEvent(source->GetId(), CURSOR_UPDATE),
 	cursor_pos(cursor_pos),
@@ -39,4 +41,17 @@ REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, 
 wxEvent *REHex::CursorUpdateEvent::Clone() const
 {
 	return new CursorUpdateEvent(*this);
+}
+
+REHex::DocumentTitleEvent::DocumentTitleEvent(wxWindow *source, const std::string &title):
+	wxEvent(source->GetId(), DOCUMENT_TITLE_CHANGED),
+	title(title)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::DocumentTitleEvent::Clone() const
+{
+	return new DocumentTitleEvent(*this);
 }

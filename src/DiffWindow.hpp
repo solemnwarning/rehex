@@ -19,6 +19,7 @@
 #define REHEX_DIFFWINDOW_HPP
 
 #include <list>
+#include <string>
 #include <wx/aui/auibook.h>
 #include <wx/frame.h>
 #include <wx/panel.h>
@@ -36,6 +37,7 @@ namespace REHex {
 			{
 				private:
 					Document *doc;
+					DocumentCtrl *main_doc_ctrl;
 					
 					off_t offset;
 					off_t length;
@@ -46,9 +48,17 @@ namespace REHex {
 					wxPanel      *help_panel;
 					
 				public:
-					Range(Document *doc, off_t offset, off_t length):
-						doc(doc), offset(offset), length(length),
-						splitter(NULL), doc_ctrl(NULL) {}
+					Range(Document *doc, DocumentCtrl *main_doc_ctrl, off_t offset, off_t length):
+						doc(doc),
+						main_doc_ctrl(main_doc_ctrl),
+						
+						offset(offset),
+						length(length),
+						
+						splitter(NULL),
+						notebook(NULL),
+						doc_ctrl(NULL),
+						help_panel(NULL) {}
 					
 				friend DiffWindow;
 			};
@@ -80,10 +90,13 @@ namespace REHex {
 			std::list<Range>::iterator remove_range(std::list<Range>::iterator range);
 			
 			void doc_update(Range *range);
+			std::string range_title(Range *range);
 			void resize_splitters();
 			
 			void OnSize(wxSizeEvent &event);
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
+			void OnDocumentTitleChange(DocumentTitleEvent &event);
+			void OnDocumentBaseChange(wxCommandEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			

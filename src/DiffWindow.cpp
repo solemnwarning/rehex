@@ -71,16 +71,18 @@ REHex::DiffWindow::~DiffWindow()
 {
 	/* Disconnect any remaining external Document event bindings. */
 	
-	std::set<Document*> unique_docs;
+	std::set< std::pair<Document*, DocumentCtrl*> > unique_docs;
 	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		unique_docs.insert(r->doc);
+		unique_docs.insert(std::make_pair(r->doc, r->main_doc_ctrl));
 	}
 	
 	for(auto d = unique_docs.begin(); d != unique_docs.end(); ++d)
 	{
-		(*d)->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
+		d->second->Unbind(EV_BASE_CHANGED, &REHex::DiffWindow::OnDocumentBaseChange, this);
+		d->first->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
+		d->first->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
 }
 
@@ -137,9 +139,11 @@ void REHex::DiffWindow::add_range(const Range &range)
 		new_range->help_panel->SetSizerAndFit(v_sizer);
 	}
 	
-	new_range->notebook->AddPage(new_range->doc_ctrl, new_range->doc->get_title());
+	new_range->notebook->AddPage(new_range->doc_ctrl, range_title(&*new_range));
 	
 	doc_update(&*new_range);
+	
+	new_range->doc_ctrl->set_offset_display_base(new_range->main_doc_ctrl->get_offset_display_base());
 	
 	new_range->splitter->SplitVertically(new_range->notebook, new_range->help_panel);
 	
@@ -159,6 +163,8 @@ void REHex::DiffWindow::add_range(const Range &range)
 	if(first_of_doc)
 	{
 		new_range->doc->Bind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
+		new_range->doc->Bind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
+		new_range->main_doc_ctrl->Bind(EV_BASE_CHANGED, &REHex::DiffWindow::OnDocumentBaseChange, this);
 	}
 	
 	resize_splitters();
@@ -221,6 +227,8 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	bool last_of_doc = (std::find_if(ranges.begin(), ranges.end(), [&](const Range &range) { return range.doc == range_doc; }) == ranges.end());
 	if(last_of_doc)
 	{
+		range->main_doc_ctrl->Unbind(EV_BASE_CHANGED, &REHex::DiffWindow::OnDocumentBaseChange, this);
+		range->doc->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
 		range->doc->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
 	
@@ -241,6 +249,18 @@ void REHex::DiffWindow::doc_update(Range *range)
 	regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
 	
 	range->doc_ctrl->replace_all_regions(regions);
+}
+
+std::string REHex::DiffWindow::range_title(Range *range)
+{
+	if(range->offset == 0)
+	{
+		return range->doc->get_title();
+	}
+	else{
+		std::string offset_str = format_offset(range->offset, range->doc_ctrl->get_offset_display_base(), range->doc->buffer_length());
+		return range->doc->get_title() + " @ " + offset_str;
+	}
 }
 
 void REHex::DiffWindow::resize_splitters()
@@ -316,6 +336,37 @@ void REHex::DiffWindow::OnDocumentDestroy(wxWindowDestroyEvent &event)
 	}
 	
 	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnDocumentTitleChange(DocumentTitleEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r->doc == src)
+		{
+			r->notebook->SetPageText(0, range_title(&*r));
+		}
+	}
+	
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnDocumentBaseChange(wxCommandEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r->main_doc_ctrl == src)
+		{
+			r->doc_ctrl->set_offset_display_base(r->main_doc_ctrl->get_offset_display_base());
+			r->notebook->SetPageText(0, range_title(&*r));
+		}
+	}
+	
 	event.Skip();
 }
 

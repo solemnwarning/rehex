@@ -945,7 +945,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				diff_window->Show(true);
 			}
 			
-			diff_window->add_range(DiffWindow::Range(doc, selection_off, selection_length));
+			diff_window->add_range(DiffWindow::Range(doc, doc_ctrl, selection_off, selection_length));
 		}, itm->GetId(), itm->GetId());
 	}
 	

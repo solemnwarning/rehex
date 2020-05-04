@@ -66,6 +66,20 @@ namespace REHex
 	#define EVT_CURSORUPDATE(id, func) \
 		wx__DECLARE_EVT1(CURSOR_UPDATE, id, wxEVENT_HANDLER_CAST(CursorUpdateEventFunction, func))
 	
+	class DocumentTitleEvent: public wxEvent
+	{
+		public:
+			const std::string title;
+			
+			DocumentTitleEvent(wxWindow *source, const std::string &title);
+			virtual wxEvent *Clone() const override;
+	};
+	
+	typedef void (wxEvtHandler::*DocumentTitleEventFunction)(DocumentTitleEvent&);
+	
+	#define EVT_DOCUMENTTITLE(id, func) \
+		wx__DECLARE_EVT1(DOCUMENT_TITLE_CHANGED, id, wxEVENT_HANDLER_CAST(DocumentTitleEventFunction, func))
+	
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     OffsetLengthEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
@@ -75,6 +89,8 @@ namespace REHex
 	wxDECLARE_EVENT(DATA_OVERWRITE,    OffsetLengthEvent);
 	
 	wxDECLARE_EVENT(CURSOR_UPDATE,    CursorUpdateEvent);
+	
+	wxDECLARE_EVENT(DOCUMENT_TITLE_CHANGED,  DocumentTitleEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

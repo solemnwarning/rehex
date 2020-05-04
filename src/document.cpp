@@ -102,6 +102,9 @@ void REHex::Document::save(const std::string &filename)
 	_save_metadata(filename + ".rehex-meta");
 	
 	set_dirty(false);
+	
+	DocumentTitleEvent document_title_event(this, title);
+	ProcessWindowEvent(document_title_event);
 }
 
 std::string REHex::Document::get_title()

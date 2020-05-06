@@ -28,7 +28,7 @@
 */
 #include <portable_endian.h>
 
-static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::Document *document, REHex::DocumentCtrl *document_ctrl)
+static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::DecodePanel(parent, document, document_ctrl);
 }
@@ -95,7 +95,7 @@ BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
 	EVT_SIZE(REHex::DecodePanel::OnSize)
 END_EVENT_TABLE()
 
-REHex::DecodePanel::DecodePanel(wxWindow *parent, Document *document, DocumentCtrl *document_ctrl):
+REHex::DecodePanel::DecodePanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
 	document_ctrl(document_ctrl)
@@ -172,22 +172,13 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, Document *document, DocumentCt
 	
 	pgrid->SetSplitterLeft();
 	
-	document->Bind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
-	document->Bind(CURSOR_UPDATE, &REHex::DecodePanel::OnCursorUpdate,    this);
+	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::DecodePanel::OnCursorUpdate,    this);
 	
-	document->Bind(DATA_ERASE,     &REHex::DecodePanel::OnDataModified, this);
-	document->Bind(DATA_INSERT,    &REHex::DecodePanel::OnDataModified, this);
-	document->Bind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::DecodePanel::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::DecodePanel::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
 	
 	update();
-}
-
-REHex::DecodePanel::~DecodePanel()
-{
-	if(document != NULL)
-	{
-		document_unbind();
-	}
 }
 
 std::string REHex::DecodePanel::name() const
@@ -213,16 +204,6 @@ void REHex::DecodePanel::load_state(wxConfig *config)
 	}
 	
 	update();
-}
-
-void REHex::DecodePanel::document_unbind()
-{
-	document->Unbind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
-	document->Unbind(DATA_INSERT,    &REHex::DecodePanel::OnDataModified, this);
-	document->Unbind(DATA_ERASE,     &REHex::DecodePanel::OnDataModified, this);
-	
-	document->Unbind(CURSOR_UPDATE, &REHex::DecodePanel::OnCursorUpdate,    this);
-	document->Unbind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
 }
 
 wxSize REHex::DecodePanel::DoGetBestClientSize() const
@@ -335,18 +316,6 @@ void REHex::DecodePanel::update()
 	memmove(last_data.data(), data, size);
 }
 
-void REHex::DecodePanel::OnDocumentDestroy(wxWindowDestroyEvent &event)
-{
-	if(event.GetWindow() == document)
-	{
-		document_unbind();
-		document = NULL;
-	}
-	
-	/* Continue propogation. */
-	event.Skip();
-}
-
 void REHex::DecodePanel::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	update();
@@ -447,7 +416,7 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 		size = sizeof(double);
 	}
 	
-	if(size > 0 && document != NULL)
+	if(size > 0 && document_ctrl != NULL)
 	{
 		document_ctrl->set_selection(document->get_cursor_position(), size);
 	}

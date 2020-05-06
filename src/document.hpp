@@ -41,7 +41,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_BASE_CHANGED,        wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	
-	class Document: public wxControl {
+	class Document: public wxEvtHandler {
 		public:
 			struct Comment
 			{
@@ -82,8 +82,8 @@ namespace REHex {
 				CSTATE_CURRENT,
 			};
 			
-			Document(wxWindow *parent);
-			Document(wxWindow *parent, const std::string &filename);
+			Document();
+			Document(const std::string &filename);
 			~Document();
 			
 			void save();
@@ -105,7 +105,7 @@ namespace REHex {
 			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
 			bool erase_highlight(off_t off, off_t length);
 			
-			void handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
+			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
 			void undo();
 			const char *undo_desc();
@@ -148,13 +148,11 @@ namespace REHex {
 			std::list<REHex::Document::TrackedChange> undo_stack;
 			std::list<REHex::Document::TrackedChange> redo_stack;
 			
-			void _ctor_pre(wxWindow *parent);
-			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			
-			void _UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
-			void _UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
-			void _UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length);
+			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length);
+			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length);
+			void _UNTRACKED_erase_data(off_t offset, off_t length);
 			
 			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);

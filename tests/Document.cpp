@@ -29,17 +29,13 @@ using namespace REHex;
 
 class DocumentTest: public ::testing::Test
 {
-	private:
-		wxFrame frame;
-		
 	protected:
 		Document *doc;
 		std::vector<std::string> events;
 		
-		DocumentTest():
-			frame(NULL, wxID_ANY, "Unit tests")
+		DocumentTest()
 		{
-			doc = new Document(&frame);
+			doc = new Document();
 			
 			doc->Bind(DATA_ERASE, [this](OffsetLengthEvent &event)
 			{
@@ -78,6 +74,11 @@ class DocumentTest: public ::testing::Test
 			{
 				events.push_back("EV_HIGHLIGHTS_CHANGED");
 			});
+		}
+		
+		~DocumentTest()
+		{
+			delete doc;
 		}
 };
 

@@ -25,6 +25,7 @@
 
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
+#include "SharedDocumentPointer.hpp"
 
 /* Background on the classes here:
  *
@@ -89,7 +90,7 @@ namespace REHex {
 	class ToolPanelRegistration
 	{
 		public:
-			typedef ToolPanel* (*FactoryFunction)(wxWindow *parent, Document *document, DocumentCtrl *document_ctrl);
+			typedef ToolPanel* (*FactoryFunction)(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			std::string name;
 			std::string label;

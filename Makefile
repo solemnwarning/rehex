@@ -204,6 +204,7 @@ TEST_OBJS := \
 	tests/search-bseq.o \
 	tests/search-text.o \
 	tests/SearchValue.o \
+	tests/SafeWindowPointer.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)

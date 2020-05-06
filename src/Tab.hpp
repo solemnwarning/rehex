@@ -31,6 +31,7 @@
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex
@@ -52,7 +53,7 @@ namespace REHex
 			
 			virtual ~Tab();
 			
-			Document     *doc;
+			SharedDocumentPointer doc;
 			DocumentCtrl *doc_ctrl;
 			
 			bool tool_active(const std::string &name);
@@ -100,6 +101,19 @@ namespace REHex
 			void OnDocumentDataErase(OffsetLengthEvent &event);
 			void OnDocumentDataInsert(OffsetLengthEvent &event);
 			void OnDocumentDataOverwrite(OffsetLengthEvent &event);
+			
+			void OnDocumentCursorUpdate(CursorUpdateEvent &event);
+			void OnDocumentCtrlCursorUpdate(CursorUpdateEvent &event);
+			void OnDocumentCommentModified(wxCommandEvent &event);
+			void OnDocumenHighlightsChanged(wxCommandEvent &event);
+			
+			template<typename T> void OnEventToForward(T &event)
+			{
+				event.Skip();
+				
+				T event_copy(event);
+				ProcessWindowEvent(event_copy);
+			}
 			
 			void vtools_adjust();
 			void htools_adjust();

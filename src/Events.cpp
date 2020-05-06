@@ -29,8 +29,36 @@ wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
 
 wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
 
+REHex::OffsetLengthEvent::OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length):
+	wxEvent(source->GetId(), event), offset(offset), length(length)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+REHex::OffsetLengthEvent::OffsetLengthEvent(wxObject *source, wxEventType event, off_t offset, off_t length):
+	wxEvent(wxID_NONE, event), offset(offset), length(length)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::OffsetLengthEvent::Clone() const
+{
+	return new OffsetLengthEvent(*this);
+}
+
 REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state):
 	wxEvent(source->GetId(), CURSOR_UPDATE),
+	cursor_pos(cursor_pos),
+	cursor_state(cursor_state)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+REHex::CursorUpdateEvent::CursorUpdateEvent(wxObject *source, off_t cursor_pos, Document::CursorState cursor_state):
+	wxEvent(wxID_NONE, CURSOR_UPDATE),
 	cursor_pos(cursor_pos),
 	cursor_state(cursor_state)
 {
@@ -45,6 +73,14 @@ wxEvent *REHex::CursorUpdateEvent::Clone() const
 
 REHex::DocumentTitleEvent::DocumentTitleEvent(wxWindow *source, const std::string &title):
 	wxEvent(source->GetId(), DOCUMENT_TITLE_CHANGED),
+	title(title)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+REHex::DocumentTitleEvent::DocumentTitleEvent(wxObject *source, const std::string &title):
+	wxEvent(wxID_NONE, DOCUMENT_TITLE_CHANGED),
 	title(title)
 {
 	m_propagationLevel = wxEVENT_PROPAGATE_MAX;

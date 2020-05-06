@@ -21,7 +21,7 @@
 #include "disassemble.hpp"
 #include "Events.hpp"
 
-static REHex::ToolPanel *Disassemble_factory(wxWindow *parent, REHex::Document *document, REHex::DocumentCtrl *document_ctrl)
+static REHex::ToolPanel *Disassemble_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::Disassemble(parent, document, document_ctrl);
 }
@@ -77,7 +77,7 @@ static LLVMArchitecture arch_list[] = {
 
 static const char *DEFAULT_ARCH = "x86_64";
 
-REHex::Disassemble::Disassemble(wxWindow *parent, Document *document, DocumentCtrl *document_ctrl):
+REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent), document(document), document_ctrl(document_ctrl), disassembler(NULL)
 {
 	arch = new wxChoice(this, wxID_ANY);
@@ -101,14 +101,13 @@ REHex::Disassemble::Disassemble(wxWindow *parent, Document *document, DocumentCt
 	
 	SetSizerAndFit(sizer);
 	
-	document->Bind(wxEVT_DESTROY, &REHex::Disassemble::OnDocumentDestroy, this);
-	document->Bind(CURSOR_UPDATE, &REHex::Disassemble::OnCursorUpdate,    this);
+	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::Disassemble::OnCursorUpdate,    this);
 	
-	document->Bind(DATA_ERASE,     &REHex::Disassemble::OnDataModified, this);
-	document->Bind(DATA_INSERT,    &REHex::Disassemble::OnDataModified, this);
-	document->Bind(DATA_OVERWRITE, &REHex::Disassemble::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::Disassemble::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::Disassemble::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::Disassemble::OnDataModified, this);
 	
-	document->Bind(EV_BASE_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
+	this->document_ctrl.auto_cleanup_bind(EV_BASE_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
 	
 	reinit_disassembler();
 	update();
@@ -120,12 +119,6 @@ REHex::Disassemble::~Disassemble()
 	{
 		LLVMDisasmDispose(disassembler);
 		disassembler = NULL;
-	}
-	
-	if(document != NULL)
-	{
-		document_unbind();
-		document = NULL;
 	}
 }
 
@@ -156,18 +149,6 @@ void REHex::Disassemble::load_state(wxConfig *config)
 	
 	reinit_disassembler();
 	update();
-}
-
-void REHex::Disassemble::document_unbind()
-{
-	document->Unbind(EV_BASE_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
-	
-	document->Unbind(DATA_OVERWRITE, &REHex::Disassemble::OnDataModified, this);
-	document->Unbind(DATA_INSERT,    &REHex::Disassemble::OnDataModified, this);
-	document->Unbind(DATA_ERASE,     &REHex::Disassemble::OnDataModified, this);
-	
-	document->Unbind(CURSOR_UPDATE, &REHex::Disassemble::OnCursorUpdate,    this);
-	document->Unbind(wxEVT_DESTROY, &REHex::Disassemble::OnDocumentDestroy, this);
 }
 
 wxSize REHex::Disassemble::DoGetBestClientSize() const
@@ -327,18 +308,6 @@ std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble
 	}
 	
 	return instructions;
-}
-
-void REHex::Disassemble::OnDocumentDestroy(wxWindowDestroyEvent &event)
-{
-	if(event.GetWindow() == document)
-	{
-		document_unbind();
-		document = NULL;
-	}
-	
-	/* Continue propogation. */
-	event.Skip();
 }
 
 void REHex::Disassemble::OnCursorUpdate(CursorUpdateEvent &event)

@@ -652,7 +652,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			
 			auto clipboard_comments = data.get_comments();
 			
-			tab->doc->handle_paste(clipboard_comments);
+			tab->doc->handle_paste(tab, clipboard_comments);
 		}
 		else if(wxTheClipboard->IsSupported(wxDF_TEXT))
 		{

@@ -65,7 +65,8 @@ BEGIN_EVENT_TABLE(REHex::Tab, wxPanel)
 END_EVENT_TABLE()
 
 REHex::Tab::Tab(wxWindow *parent):
-	wxPanel(parent)
+	wxPanel(parent),
+	doc(SharedDocumentPointer::make())
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -75,30 +76,25 @@ REHex::Tab::Tab(wxWindow *parent):
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
-	doc = new REHex::Document(h_splitter);
-	
 	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
 	
-	doc->Bind(EV_COMMENT_MODIFIED,   [this](wxCommandEvent &event) { repopulate_regions(); event.Skip(); });
-	doc->Bind(EV_HIGHLIGHTS_CHANGED, [this](wxCommandEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
+	doc.auto_cleanup_bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
+	doc.auto_cleanup_bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
+	doc.auto_cleanup_bind(DATA_OVERWRITE, &REHex::Tab::OnDocumentDataOverwrite, this);
 	
-	doc->Bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
-	doc->Bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
-	doc->Bind(DATA_OVERWRITE, &REHex::Tab::OnDocumentDataOverwrite, this);
-	
-	doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
-	{
-		doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
-		event.Skip();
-	});
-	
-	doc_ctrl->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
-	{
-		doc->set_cursor_position(event.cursor_pos, event.cursor_state);
-		event.Skip();
-	});
+	doc.auto_cleanup_bind(CURSOR_UPDATE,          &REHex::Tab::OnDocumentCursorUpdate,      this);
+	doc_ctrl->Bind(       CURSOR_UPDATE,          &REHex::Tab::OnDocumentCtrlCursorUpdate,  this);
+	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
+	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
+	
+	doc.auto_cleanup_bind(CURSOR_UPDATE,         &REHex::Tab::OnEventToForward<CursorUpdateEvent>, this);
+	doc.auto_cleanup_bind(EV_SELECTION_CHANGED,  &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_INSERT_TOGGLED,     &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_UNDO_UPDATE,        &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_BECAME_DIRTY,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_BECAME_CLEAN,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	
 	repopulate_regions();
 	
@@ -125,7 +121,8 @@ REHex::Tab::Tab(wxWindow *parent):
 }
 
 REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
-	wxPanel(parent)
+	wxPanel(parent),
+	doc(SharedDocumentPointer::make(filename))
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -135,30 +132,25 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
-	doc = new REHex::Document(h_splitter, filename);
-	
 	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
 	
-	doc->Bind(EV_COMMENT_MODIFIED,   [this](wxCommandEvent &event) { repopulate_regions(); event.Skip(); });
-	doc->Bind(EV_HIGHLIGHTS_CHANGED, [this](wxCommandEvent &event) { doc_ctrl->Refresh(); event.Skip(); });
+	doc.auto_cleanup_bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
+	doc.auto_cleanup_bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
+	doc.auto_cleanup_bind(DATA_OVERWRITE, &REHex::Tab::OnDocumentDataOverwrite, this);
 	
-	doc->Bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
-	doc->Bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
-	doc->Bind(DATA_OVERWRITE, &REHex::Tab::OnDocumentDataOverwrite, this);
-	
-	doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
-	{
-		doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
-		event.Skip();
-	});
-	
-	doc_ctrl->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
-	{
-		doc->set_cursor_position(event.cursor_pos, event.cursor_state);
-		event.Skip();
-	});
+	doc.auto_cleanup_bind(CURSOR_UPDATE,          &REHex::Tab::OnDocumentCursorUpdate,      this);
+	doc_ctrl->Bind(       CURSOR_UPDATE,          &REHex::Tab::OnDocumentCtrlCursorUpdate,  this);
+	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
+	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
+	
+	doc.auto_cleanup_bind(CURSOR_UPDATE,         &REHex::Tab::OnEventToForward<CursorUpdateEvent>, this);
+	doc.auto_cleanup_bind(EV_SELECTION_CHANGED,  &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_INSERT_TOGGLED,     &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_UNDO_UPDATE,        &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_BECAME_DIRTY,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(EV_BECAME_CLEAN,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	
 	repopulate_regions();
 	
@@ -965,6 +957,30 @@ void REHex::Tab::OnDocumentDataInsert(OffsetLengthEvent &event)
 }
 
 void REHex::Tab::OnDocumentDataOverwrite(OffsetLengthEvent &event)
+{
+	doc_ctrl->Refresh();
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumentCursorUpdate(CursorUpdateEvent &event)
+{
+	doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumentCtrlCursorUpdate(CursorUpdateEvent &event)
+{
+	doc->set_cursor_position(event.cursor_pos, event.cursor_state);
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumentCommentModified(wxCommandEvent &event)
+{
+	repopulate_regions();
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumenHighlightsChanged(wxCommandEvent &event)
 {
 	doc_ctrl->Refresh();
 	event.Skip();

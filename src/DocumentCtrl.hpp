@@ -31,6 +31,7 @@
 #include "document.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "Palette.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "util.hpp"
 
 namespace REHex {
@@ -167,7 +168,7 @@ namespace REHex {
 				friend DocumentCtrl;
 			};
 			
-			DocumentCtrl(wxWindow *parent, REHex::Document *doc);
+			DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc);
 			~DocumentCtrl();
 			
 			unsigned int get_bytes_per_line();
@@ -226,7 +227,7 @@ namespace REHex {
 			friend DataRegion;
 			friend CommentRegion;
 			
-			REHex::Document *doc;
+			SharedDocumentPointer doc;
 			
 			std::list<Region*> regions;
 			

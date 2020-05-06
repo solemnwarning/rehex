@@ -64,7 +64,7 @@ BEGIN_EVENT_TABLE(REHex::DocumentCtrl, wxControl)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::DocumentCtrl::OnRedrawCursor)
 END_EVENT_TABLE()
 
-REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, REHex::Document *doc):
+REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	wxControl(),
 	doc(doc),
 	linked_scroll_prev(NULL),

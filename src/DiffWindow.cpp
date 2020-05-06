@@ -30,6 +30,7 @@
 
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_SIZE(REHex::DiffWindow::OnSize)
+	EVT_IDLE(REHex::DiffWindow::OnIdle)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
 	
 	EVT_CURSORUPDATE(wxID_ANY, REHex::DiffWindow::OnCursorUpdate)
@@ -75,14 +76,17 @@ REHex::DiffWindow::~DiffWindow()
 	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		unique_docs.insert(std::make_pair(r->doc, r->main_doc_ctrl));
+		unique_docs.insert(std::make_pair((Document*)(r->doc), (DocumentCtrl*)(r->main_doc_ctrl)));
 	}
 	
 	for(auto d = unique_docs.begin(); d != unique_docs.end(); ++d)
 	{
-		d->second->Unbind(EV_BASE_CHANGED, &REHex::DiffWindow::OnDocumentBaseChange, this);
+		if(d->second != NULL)
+		{
+			d->second->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
+		}
+		
 		d->first->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
-		d->first->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
 }
 
@@ -162,9 +166,9 @@ void REHex::DiffWindow::add_range(const Range &range)
 	bool first_of_doc = (std::find_if(ranges.begin(), new_range, [&](const Range &range) { return range.doc == new_range->doc; }) == new_range);
 	if(first_of_doc)
 	{
-		new_range->doc->Bind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 		new_range->doc->Bind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
-		new_range->main_doc_ctrl->Bind(EV_BASE_CHANGED, &REHex::DiffWindow::OnDocumentBaseChange, this);
+		
+		new_range->main_doc_ctrl->Bind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
 	}
 	
 	resize_splitters();
@@ -218,7 +222,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	wxWindow *destroy_me = range->splitter;
 	CallAfter([destroy_me]() { destroy_me->Destroy(); });
 	
-	Document *range_doc  = range->doc;
+	SharedDocumentPointer range_doc(range->doc);
 	
 	ranges.erase(range);
 	
@@ -227,9 +231,12 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	bool last_of_doc = (std::find_if(ranges.begin(), ranges.end(), [&](const Range &range) { return range.doc == range_doc; }) == ranges.end());
 	if(last_of_doc)
 	{
-		range->main_doc_ctrl->Unbind(EV_BASE_CHANGED, &REHex::DiffWindow::OnDocumentBaseChange, this);
+		if(range->main_doc_ctrl != NULL)
+		{
+			range->main_doc_ctrl->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
+		}
+		
 		range->doc->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
-		range->doc->Unbind(wxEVT_DESTROY, &REHex::DiffWindow::OnDocumentDestroy, this);
 	}
 	
 	if(ranges.size() == 1)
@@ -319,14 +326,13 @@ void REHex::DiffWindow::OnSize(wxSizeEvent &event)
 	event.Skip();
 }
 
-void REHex::DiffWindow::OnDocumentDestroy(wxWindowDestroyEvent &event)
+void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 {
-	Document *destroyed = dynamic_cast<Document*>(event.GetWindow());
-	assert(destroyed != NULL);
+	/* Close any tabs whose backing tab in MainWindow has been closed. */
 	
 	for(auto i = ranges.begin(); i != ranges.end();)
 	{
-		if(i->doc == destroyed)
+		if((DocumentCtrl*)(i->main_doc_ctrl) == NULL)
 		{
 			i = remove_range(i);
 		}
@@ -334,9 +340,6 @@ void REHex::DiffWindow::OnDocumentDestroy(wxWindowDestroyEvent &event)
 			++i;
 		}
 	}
-	
-	/* Continue propogation. */
-	event.Skip();
 }
 
 void REHex::DiffWindow::OnDocumentTitleChange(DocumentTitleEvent &event)

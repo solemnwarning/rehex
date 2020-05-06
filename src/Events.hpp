@@ -32,17 +32,10 @@ namespace REHex
 			const off_t offset;
 			const off_t length;
 			
-			OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length):
-				wxEvent(source->GetId(), event), offset(offset), length(length)
-			{
-				m_propagationLevel = wxEVENT_PROPAGATE_MAX;
-				SetEventObject(source);
-			}
+			OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length);
+			OffsetLengthEvent(wxObject *source, wxEventType event, off_t offset, off_t length);
 			
-			virtual wxEvent *Clone() const override
-			{
-				return new OffsetLengthEvent(*this);
-			}
+			virtual wxEvent *Clone() const override;
 	};
 	
 	typedef void (wxEvtHandler::*OffsetLengthEventFunction)(OffsetLengthEvent&);
@@ -57,6 +50,7 @@ namespace REHex
 			const Document::CursorState cursor_state;
 			
 			CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state);
+			CursorUpdateEvent(wxObject *source, off_t cursor_pos, Document::CursorState cursor_state);
 			
 			virtual wxEvent *Clone() const override;
 	};
@@ -72,6 +66,8 @@ namespace REHex
 			const std::string title;
 			
 			DocumentTitleEvent(wxWindow *source, const std::string &title);
+			DocumentTitleEvent(wxObject *source, const std::string &title);
+			
 			virtual wxEvent *Clone() const override;
 	};
 	

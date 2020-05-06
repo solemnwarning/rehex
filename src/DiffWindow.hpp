@@ -28,6 +28,8 @@
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "SafeWindowPointer.hpp"
+#include "SharedDocumentPointer.hpp"
 
 namespace REHex {
 	class DiffWindow: public wxFrame
@@ -36,8 +38,8 @@ namespace REHex {
 			class Range
 			{
 				private:
-					Document *doc;
-					DocumentCtrl *main_doc_ctrl;
+					SharedDocumentPointer doc;
+					SafeWindowPointer<DocumentCtrl> main_doc_ctrl;
 					
 					off_t offset;
 					off_t length;
@@ -48,7 +50,7 @@ namespace REHex {
 					wxPanel      *help_panel;
 					
 				public:
-					Range(Document *doc, DocumentCtrl *main_doc_ctrl, off_t offset, off_t length):
+					Range(SharedDocumentPointer &doc, DocumentCtrl *main_doc_ctrl, off_t offset, off_t length):
 						doc(doc),
 						main_doc_ctrl(main_doc_ctrl),
 						
@@ -94,7 +96,7 @@ namespace REHex {
 			void resize_splitters();
 			
 			void OnSize(wxSizeEvent &event);
-			void OnDocumentDestroy(wxWindowDestroyEvent &event);
+			void OnIdle(wxIdleEvent &event);
 			void OnDocumentTitleChange(DocumentTitleEvent &event);
 			void OnDocumentBaseChange(wxCommandEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);

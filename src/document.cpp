@@ -47,25 +47,19 @@ wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 
-REHex::Document::Document(wxWindow *parent):
-	wxControl()
+REHex::Document::Document():
+	dirty(false),
+	cursor_state(CSTATE_HEX)
 {
-	dirty = false;
-	
-	_ctor_pre(parent);
-	
 	buffer = new REHex::Buffer();
 	title  = "Untitled";
 }
 
-REHex::Document::Document(wxWindow *parent, const std::string &filename):
-	wxControl(),
-	filename(filename)
+REHex::Document::Document(const std::string &filename):
+	filename(filename),
+	dirty(false),
+	cursor_state(CSTATE_HEX)
 {
-	dirty = false;
-	
-	_ctor_pre(parent);
-	
 	buffer = new REHex::Buffer(filename);
 	
 	size_t last_slash = filename.find_last_of("/\\");
@@ -104,7 +98,7 @@ void REHex::Document::save(const std::string &filename)
 	set_dirty(false);
 	
 	DocumentTitleEvent document_title_event(this, title);
-	ProcessWindowEvent(document_title_event);
+	ProcessEvent(document_title_event);
 }
 
 std::string REHex::Document::get_title()
@@ -160,7 +154,7 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	if(cursor_updated)
 	{
 		CursorUpdateEvent cursor_update_event(this, cpos_off, cursor_state);
-		ProcessWindowEvent(cursor_update_event);
+		ProcessEvent(cursor_update_event);
 	}
 }
 
@@ -318,7 +312,7 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	return true;
 }
 
-void REHex::Document::handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
+void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
 	off_t buffer_length = this->buffer_length();
@@ -327,14 +321,14 @@ void REHex::Document::handle_paste(const NestedOffsetLengthMap<Document::Comment
 	{
 		if((cursor_pos + cc->first.offset + cc->first.length) >= buffer_length)
 		{
-			wxMessageBox("Cannot paste comment(s) - would extend beyond end of file", "Error", (wxOK | wxICON_ERROR), this);
+			wxMessageBox("Cannot paste comment(s) - would extend beyond end of file", "Error", (wxOK | wxICON_ERROR), modal_dialog_parent);
 			return;
 		}
 		
 		if(comments.find(NestedOffsetLengthMapKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
 			|| !NestedOffsetLengthMap_can_set(comments, cursor_pos + cc->first.offset, cc->first.length))
 		{
-			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), this);
+			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), modal_dialog_parent);
 			return;
 		}
 	}
@@ -377,7 +371,7 @@ void REHex::Document::undo()
 		if(cursor_updated)
 		{
 			CursorUpdateEvent cursor_update_event(this, cpos_off, cursor_state);
-			ProcessWindowEvent(cursor_update_event);
+			ProcessEvent(cursor_update_event);
 		}
 		
 		redo_stack.push_back(act);
@@ -423,17 +417,7 @@ const char *REHex::Document::redo_desc()
 	}
 }
 
-void REHex::Document::_ctor_pre(wxWindow *parent)
-{
-	/* The background style MUST be set before the control is created. */
-	SetBackgroundStyle(wxBG_STYLE_PAINT);
-	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
-	
-	cursor_state      = CSTATE_HEX;
-}
-
-void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length)
 {
 	bool ok = buffer->overwrite_data(offset, data, length);
 	assert(ok);
@@ -443,12 +427,12 @@ void REHex::Document::_UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const un
 		set_dirty(true);
 		
 		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, offset, length);
-		ProcessWindowEvent(data_overwrite_event);
+		ProcessEvent(data_overwrite_event);
 	}
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
-void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length)
 {
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
@@ -458,7 +442,7 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 		set_dirty(true);
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
-		ProcessWindowEvent(data_insert_event);
+		ProcessEvent(data_insert_event);
 		
 		if(NestedOffsetLengthMap_data_inserted(comments, offset, length) > 0)
 		{
@@ -471,7 +455,7 @@ void REHex::Document::_UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsig
 }
 
 /* Erase a range of data from the Buffer and update our own data structures. */
-void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length)
+void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 {
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
@@ -481,7 +465,7 @@ void REHex::Document::_UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length
 		set_dirty(true);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
-		ProcessWindowEvent(data_erase_event);
+		ProcessEvent(data_erase_event);
 		
 		if(NestedOffsetLengthMap_data_erased(comments, offset, length) > 0)
 		{
@@ -506,15 +490,13 @@ void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t off
 	_tracked_change(change_desc,
 		[this, offset, new_data, new_cursor_pos, new_cursor_state]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_overwrite_data(dc, offset, new_data->data(), new_data->size());
+			_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
 		[this, offset, old_data]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_overwrite_data(dc, offset, old_data->data(), old_data->size());
+			_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size());
 		});
 }
 
@@ -529,15 +511,13 @@ void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset
 	_tracked_change(change_desc,
 		[this, offset, data_copy, new_cursor_pos, new_cursor_state]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_insert_data(dc, offset, data_copy->data(), data_copy->size());
+			_UNTRACKED_insert_data(offset, data_copy->data(), data_copy->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		 
 		[this, offset, length]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_erase_data(dc, offset, length);
+			_UNTRACKED_erase_data(offset, length);
 		});
 }
 
@@ -553,16 +533,13 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 	_tracked_change(change_desc,
 		[this, offset, length]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_erase_data(dc, offset, length);
-			
+			_UNTRACKED_erase_data(offset, length);
 			set_cursor_position(offset);
 		},
 		
 		[this, offset, erase_data]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_insert_data(dc, offset, erase_data->data(), erase_data->size());
+			_UNTRACKED_insert_data(offset, erase_data->data(), erase_data->size());
 		});
 }
 
@@ -586,17 +563,15 @@ void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offse
 	_tracked_change(change_desc,
 		[this, offset, old_data_length, new_data_copy, new_cursor_pos, new_cursor_state]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_erase_data(dc, offset, old_data_length);
-			_UNTRACKED_insert_data(dc, offset, new_data_copy->data(), new_data_copy->size());
+			_UNTRACKED_erase_data(offset, old_data_length);
+			_UNTRACKED_insert_data(offset, new_data_copy->data(), new_data_copy->size());
 			_set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		
 		[this, offset, old_data_copy, new_data_length]()
 		{
-			wxClientDC dc(this);
-			_UNTRACKED_erase_data(dc, offset, new_data_length);
-			_UNTRACKED_insert_data(dc, offset, old_data_copy->data(), old_data_copy->size());
+			_UNTRACKED_erase_data(offset, new_data_length);
+			_UNTRACKED_insert_data(offset, old_data_copy->data(), old_data_copy->size());
 		});
 }
 
@@ -794,7 +769,7 @@ void REHex::Document::_raise_highlights_changed()
 	wxCommandEvent event(REHex::EV_HIGHLIGHTS_CHANGED);
 	event.SetEventObject(this);
 	
-	ProcessWindowEvent(event);
+	ProcessEvent(event);
 }
 
 void REHex::Document::set_dirty(bool dirty)

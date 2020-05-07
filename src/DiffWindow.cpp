@@ -86,6 +86,10 @@ REHex::DiffWindow::~DiffWindow()
 			d->second->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
 		}
 		
+		d->first->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
+		d->first->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
+		d->first->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
+		
 		d->first->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
 	}
 }
@@ -169,6 +173,10 @@ void REHex::DiffWindow::add_range(const Range &range)
 	{
 		new_range->doc->Bind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
 		
+		new_range->doc->Bind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
+		new_range->doc->Bind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
+		new_range->doc->Bind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
+		
 		new_range->main_doc_ctrl->Bind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
 	}
 	
@@ -236,6 +244,10 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		{
 			range->main_doc_ctrl->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
 		}
+		
+		range->doc->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
+		range->doc->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
+		range->doc->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
 		
 		range->doc->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
 	}
@@ -352,6 +364,100 @@ void REHex::DiffWindow::OnDocumentTitleChange(DocumentTitleEvent &event)
 		if(r->doc == src)
 		{
 			r->notebook->SetPageText(0, range_title(&*r));
+		}
+	}
+	
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	assert(dynamic_cast<Document*>(src) != NULL);
+	
+	for(auto r = ranges.begin(); r != ranges.end();)
+	{
+		if(r->doc == src)
+		{
+			if(event.offset < r->offset)
+			{
+				off_t shift  = std::min(event.length, (r->offset - event.offset));
+				off_t shrink = std::min((event.length - shift), r->length);
+				
+				r->offset -= shift;
+				assert(r->offset >= 0);
+				
+				r->length -= shrink;
+				assert(r->length >= 0);
+				
+				if(r->length == 0)
+				{
+					r = remove_range(r);
+					continue;
+				}
+				else{
+					doc_update(&*r);
+				}
+			}
+			else if(event.offset < (r->offset + r->length))
+			{
+				off_t shrink = std::min(event.length, (r->length - (event.offset - r->offset)));
+				
+				r->length -= shrink;
+				assert(r->length >= 0);
+				
+				if(r->length == 0)
+				{
+					r = remove_range(r);
+					continue;
+				}
+				else{
+					doc_update(&*r);
+				}
+			}
+		}
+		
+		++r;
+	}
+	
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	assert(dynamic_cast<Document*>(src) != NULL);
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r->doc == src)
+		{
+			if(event.offset < r->offset)
+			{
+				r->offset += event.length;
+				doc_update(&*r);
+			}
+			else if(event.offset < (r->offset + r->length))
+			{
+				r->length += event.length;
+				doc_update(&*r);
+			}
+		}
+	}
+	
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	assert(dynamic_cast<Document*>(src) != NULL);
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r->doc == src)
+		{
+			r->doc_ctrl->Refresh();
 		}
 	}
 	

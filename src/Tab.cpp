@@ -661,6 +661,10 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 				doc->erase_data(selection_off, selection_length, (selection_off - 1), Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
+			else if((cursor_pos + 1) < doc->buffer_length())
+			{
+				doc->erase_data(cursor_pos, 1, cursor_pos, Document::CSTATE_GOTO, "delete");
+			}
 			else if(cursor_pos < doc->buffer_length())
 			{
 				doc->erase_data(cursor_pos, 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");

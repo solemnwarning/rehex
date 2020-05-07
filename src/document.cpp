@@ -184,11 +184,7 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
-	/* TODO */
-	assert(new_cursor_pos == cpos_off);
-	assert(new_cursor_state == cursor_state);
-	
-	_tracked_erase_data(change_desc, offset, length);
+	_tracked_erase_data(change_desc, offset, length, new_cursor_pos, new_cursor_state);
 }
 
 void REHex::Document::replace_data(off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
@@ -521,7 +517,7 @@ void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset
 		});
 }
 
-void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length)
+void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
 {
 	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
 	 * lambdas without actually making a copy.
@@ -531,10 +527,10 @@ void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset,
 	assert(erase_data->size() == (size_t)(length));
 	
 	_tracked_change(change_desc,
-		[this, offset, length]()
+		[this, offset, length, new_cursor_pos, new_cursor_state]()
 		{
 			_UNTRACKED_erase_data(offset, length);
-			set_cursor_position(offset);
+			set_cursor_position(new_cursor_pos, new_cursor_state);
 		},
 		
 		[this, offset, erase_data]()

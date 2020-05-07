@@ -156,7 +156,7 @@ namespace REHex {
 			
 			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
-			void _tracked_erase_data(const char *change_desc, off_t offset, off_t length);
+			void _tracked_erase_data(const char *change_desc, off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
 			

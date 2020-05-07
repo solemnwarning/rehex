@@ -658,11 +658,12 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "delete selection");
+				doc->erase_data(selection_off, selection_length, (selection_off - 1), Document::CSTATE_GOTO, "delete selection");
+				doc_ctrl->clear_selection();
 			}
 			else if(cursor_pos < doc->buffer_length())
 			{
-				doc->erase_data(cursor_pos, 1, -1, Document::CSTATE_CURRENT, "delete");
+				doc->erase_data(cursor_pos, 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
 			}
 			
 			return;
@@ -671,18 +672,19 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "delete selection");
+				doc->erase_data(selection_off, selection_length, (selection_off - 1), Document::CSTATE_GOTO, "delete selection");
+				doc_ctrl->clear_selection();
 			}
 			else if(cursor_state == Document::CSTATE_HEX_MID)
 			{
 				/* Backspace while waiting for the second nibble in a byte should erase the current byte
 				 * rather than the previous one.
 				*/
-				doc->erase_data(cursor_pos, 1, -1, Document::CSTATE_CURRENT, "delete");
+				doc->erase_data(cursor_pos, 1, (cursor_pos - 1), Document::CSTATE_HEX, "delete");
 			}
 			else if(cursor_pos > 0)
 			{
-				doc->erase_data(cursor_pos - 1, 1, -1, Document::CSTATE_CURRENT, "delete");
+				doc->erase_data((cursor_pos - 1), 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
 			}
 			
 			return;

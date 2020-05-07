@@ -147,6 +147,7 @@ void REHex::DiffWindow::add_range(const Range &range)
 	
 	doc_update(&*new_range);
 	
+	new_range->doc_ctrl->set_cursor_position(new_range->offset);
 	new_range->doc_ctrl->set_offset_display_base(new_range->main_doc_ctrl->get_offset_display_base());
 	
 	new_range->splitter->SplitVertically(new_range->notebook, new_range->help_panel);

@@ -192,10 +192,9 @@ void REHex::Disassemble::update()
 	 * one starts at position is where we display disassembly from.
 	*/
 	
-	for(off_t i = window_base; i <= position; ++i)
+	for(off_t doc_off = window_base, data_off = 0; doc_off <= position && (size_t)(data_off) < data.size(); ++doc_off, ++data_off)
 	{
-		off_t rel_off = i - window_base;
-		std::map<off_t, Instruction> i_instructions = disassemble(i, data.data() + rel_off, data.size() - rel_off);
+		std::map<off_t, Instruction> i_instructions = disassemble(doc_off, data.data() + data_off, data.size() - data_off);
 		
 		if(i_instructions.find(position) != i_instructions.end())
 		{
@@ -211,10 +210,9 @@ void REHex::Disassemble::update()
 	
 	if(instructions.empty())
 	{
-		for(off_t i = window_base; i <= position; ++i)
+		for(off_t doc_off = window_base, data_off = 0; doc_off <= position && (size_t)(data_off) < data.size(); ++doc_off, ++data_off)
 		{
-			off_t rel_off = i - window_base;
-			std::map<off_t, Instruction> i_instructions = disassemble(i, data.data() + rel_off, data.size() - rel_off);
+			std::map<off_t, Instruction> i_instructions = disassemble(doc_off, data.data() + data_off, data.size() - data_off);
 			
 			auto ii = i_instructions.lower_bound(position);
 			if(ii != i_instructions.begin()

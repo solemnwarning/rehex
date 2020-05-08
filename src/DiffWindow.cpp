@@ -241,6 +241,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	CallAfter([destroy_me]() { destroy_me->Destroy(); });
 	
 	SharedDocumentPointer range_doc(range->doc);
+	DocumentCtrl *range_mdc = range->main_doc_ctrl;
 	
 	ranges.erase(range);
 	
@@ -249,16 +250,16 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	bool last_of_doc = (std::find_if(ranges.begin(), ranges.end(), [&](const Range &range) { return range.doc == range_doc; }) == ranges.end());
 	if(last_of_doc)
 	{
-		if(range->main_doc_ctrl != NULL)
+		if(range_mdc != NULL)
 		{
-			range->main_doc_ctrl->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
+			range_mdc->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
 		}
 		
-		range->doc->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
-		range->doc->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
-		range->doc->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
+		range_doc->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
+		range_doc->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
+		range_doc->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
 		
-		range->doc->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
+		range_doc->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
 	}
 	
 	if(ranges.size() == 1)

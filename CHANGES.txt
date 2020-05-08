@@ -19,6 +19,15 @@ Version TBA
 
  * Add per-document option for dec/hex offset display.
 
+ * When first byte after a comment is deleted, show that the comment was
+   deleted rather than leaving phantom comment on screen until regions are
+   repopulated.
+
+ * Add side-by-side comparison of chunks of data from files. Select data and
+   choose "Compare..." from context menu to open diff window.
+
+ * Clean up search threads when a tab is closed while a search is running.
+
 Version 0.1.0 (2020-03-12)
 
  * Initial release.

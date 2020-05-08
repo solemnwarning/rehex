@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,6 +25,7 @@
 
 #include "../src/document.hpp"
 #include "../src/search.hpp"
+#include "../src/SharedDocumentPointer.hpp"
 
 #define TMPFILE  "tests/.tmpfile"
 
@@ -39,7 +40,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "abc");
 		
@@ -48,7 +49,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -57,7 +58,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "nop");
 		
@@ -66,7 +67,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "abcdefghijklmnop");
 		
@@ -75,7 +76,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -84,7 +85,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -93,7 +94,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -104,7 +105,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "bcd");
 		
@@ -115,7 +116,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -126,7 +127,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "mno");
 		
@@ -137,7 +138,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "bcdefghijklmno");
 		
@@ -148,7 +149,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "abc");
 		
@@ -159,7 +160,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "nop");
 		
@@ -172,7 +173,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -183,7 +184,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "def");
 		
@@ -194,7 +195,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "efg");
 		
@@ -205,7 +206,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "efg");
 		
@@ -216,7 +217,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "efg");
 		
@@ -227,7 +228,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "efg");
 		
@@ -240,7 +241,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "ABC", true);
 		
@@ -249,7 +250,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "ABC", false);
 		
@@ -260,7 +261,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "de");
 		
@@ -269,7 +270,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "efg");
 		
@@ -278,7 +279,7 @@ TEST(Search, Text)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::Document doc(TMPFILE);
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
 		
 		REHex::Search::Text s(&frame, doc, "efgh");
 		

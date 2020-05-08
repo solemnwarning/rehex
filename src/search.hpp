@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,6 +31,7 @@
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
+#include "SharedDocumentPointer.hpp"
 
 namespace REHex {
 	class Search: public wxDialog {
@@ -42,7 +43,7 @@ namespace REHex {
 			static const size_t DEFAULT_WINDOW_SIZE = 2134016; /* 2MiB */
 			
 		protected:
-			REHex::Document &doc;
+			SharedDocumentPointer doc;
 			
 			off_t range_begin, range_end;
 			off_t align_to, align_from;
@@ -71,7 +72,7 @@ namespace REHex {
 			wxTimer timer;
 			
 		protected:
-			Search(wxWindow *parent, REHex::Document &doc, const char *title);
+			Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title);
 			
 			void setup_window();
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) = 0;
@@ -113,7 +114,8 @@ namespace REHex {
 			wxCheckBox *case_sensitive_cb;
 			
 		public:
-			Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for = "", bool case_sensitive = true);
+			Text(wxWindow *parent, SharedDocumentPointer &doc, const std::string &search_for = "", bool case_sensitive = true);
+			virtual ~Text();
 			
 			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
@@ -131,7 +133,8 @@ namespace REHex {
 			wxTextCtrl *search_for_tc;
 			
 		public:
-			ByteSequence(wxWindow *parent, REHex::Document &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
+			ByteSequence(wxWindow *parent, SharedDocumentPointer &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
+			virtual ~ByteSequence();
 			
 			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
@@ -151,7 +154,8 @@ namespace REHex {
 			wxRadioButton *e_little, *e_big, *e_either;
 		
 		public:
-			Value(wxWindow *parent, REHex::Document &doc);
+			Value(wxWindow *parent, SharedDocumentPointer &doc);
+			virtual ~Value();
 			
 			static const unsigned FMT_LE  = (1 << 0);
 			static const unsigned FMT_BE  = (1 << 1);

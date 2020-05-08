@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -68,7 +68,7 @@ BEGIN_EVENT_TABLE(REHex::Search, wxDialog)
 	EVT_TIMER(ID_TIMER, REHex::Search::OnTimer)
 END_EVENT_TABLE()
 
-REHex::Search::Search(wxWindow *parent, REHex::Document &doc, const char *title):
+REHex::Search::Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
 	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), match_found_at(-1), running(false),
 	timer(this, ID_TIMER)
@@ -187,7 +187,7 @@ void REHex::Search::begin_search(off_t from_offset, off_t range_end, size_t wind
 	running           = true;
 	
 	search_base = next_window_start;
-	search_end  = (range_end >= 0 ? range_end : doc.buffer_length());
+	search_end  = (range_end >= 0 ? range_end : doc->buffer_length());
 	
 	/* Number of threads to spawn */
 	unsigned int thread_count = std::thread::hardware_concurrency();
@@ -226,7 +226,7 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		begin_search((doc.get_cursor_position() + 1), range_end);
+		begin_search((doc->get_cursor_position() + 1), range_end);
 	}
 }
 
@@ -249,7 +249,7 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 		
 		if(match_found_at >= 0)
 		{
-			doc.set_cursor_position(match_found_at);
+			doc->set_cursor_position(match_found_at);
 		}
 		else{
 			if(search_base > range_begin)
@@ -370,7 +370,7 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 		}
 		
 		try {
-			std::vector<unsigned char> window = doc.read_data(window_base, window_size + compare_size);
+			std::vector<unsigned char> window = doc->read_data(window_base, window_size + compare_size);
 			
 			off_t search_base = window_base;
 			if(((search_base - align_from) % align_to) != 0)
@@ -402,12 +402,20 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 	}
 }
 
-REHex::Search::Text::Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for, bool case_sensitive):
+REHex::Search::Text::Text(wxWindow *parent, SharedDocumentPointer &doc, const std::string &search_for, bool case_sensitive):
 	Search(parent, doc, "Search for text"),
 	search_for(search_for),
 	case_sensitive(case_sensitive)
 {
 	setup_window();
+}
+
+REHex::Search::Text::~Text()
+{
+	if(running)
+	{
+		end_search();
+	}
 }
 
 bool REHex::Search::Text::test(const void *data, size_t data_size)
@@ -461,11 +469,19 @@ bool REHex::Search::Text::read_window_controls()
 	return true;
 }
 
-REHex::Search::ByteSequence::ByteSequence(wxWindow *parent, REHex::Document &doc, const std::vector<unsigned char> &search_for):
+REHex::Search::ByteSequence::ByteSequence(wxWindow *parent, SharedDocumentPointer &doc, const std::vector<unsigned char> &search_for):
 	Search(parent, doc, "Search for byte sequence"),
 	search_for(search_for)
 {
 	setup_window();
+}
+
+REHex::Search::ByteSequence::~ByteSequence()
+{
+	if(running)
+	{
+		end_search();
+	}
 }
 
 bool REHex::Search::ByteSequence::test(const void *data, size_t data_size)
@@ -514,10 +530,18 @@ bool REHex::Search::ByteSequence::read_window_controls()
 	return true;
 }
 
-REHex::Search::Value::Value(wxWindow *parent, REHex::Document &doc):
+REHex::Search::Value::Value(wxWindow *parent, SharedDocumentPointer &doc):
 	Search(parent, doc, "Search for value")
 {
 	setup_window();
+}
+
+REHex::Search::Value::~Value()
+{
+	if(running)
+	{
+		end_search();
+	}
 }
 
 void REHex::Search::Value::configure(const std::string &value, unsigned formats)

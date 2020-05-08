@@ -20,11 +20,12 @@
 #include <wx/clipbrd.h>
 
 #include "CommentTree.hpp"
+#include "EditCommentDialog.hpp"
 #include "util.hpp"
 
-static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::Document *document)
+static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new REHex::CommentTree(parent, document);
+	return new REHex::CommentTree(parent, document, document_ctrl);
 }
 
 static REHex::ToolPanelRegistration tpr("CommentTree", "Comments", REHex::ToolPanel::TPS_TALL, &CommentTree_factory);
@@ -40,10 +41,10 @@ BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
 END_EVENT_TABLE()
 
-REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
+REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
-	events_bound(false)
+	document_ctrl(document_ctrl)
 {
 	model = new CommentTreeModel(this->document); /* Reference /class/ document pointer! */
 	
@@ -61,17 +62,13 @@ REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
 	sizer->Add(dvc, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	document->Bind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
-	document->Bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
-	
-	events_bound = true;
+	this->document.auto_cleanup_bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
 	
 	refresh_comments();
 }
 
 REHex::CommentTree::~CommentTree()
 {
-	unbind_events();
 	model->DecRef();
 }
 
@@ -96,34 +93,11 @@ wxSize REHex::CommentTree::DoGetBestClientSize() const
 	return wxSize(200, -1);
 }
 
-void REHex::CommentTree::unbind_events()
-{
-	if(events_bound)
-	{
-		document->Unbind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
-		document->Unbind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
-		
-		events_bound = false;
-	}
-}
-
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
 	dvc_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	dvc->Refresh();
-}
-
-void REHex::CommentTree::OnDocumentDestroy(wxWindowDestroyEvent &event)
-{
-	if(event.GetWindow() == document)
-	{
-		unbind_events();
-		document = NULL;
-	}
-	
-	/* Continue propogation. */
-	event.Skip();
 }
 
 void REHex::CommentTree::OnCommentModified(wxCommandEvent &event)
@@ -165,11 +139,11 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				
 			case ID_SELECT:
 				document->set_cursor_position(key->offset);
-				document->set_selection(key->offset, key->length);
+				document_ctrl->set_selection(key->offset, key->length);
 				break;
 				
 			case ID_EDIT_COMMENT:
-				document->edit_comment_popup(key->offset, key->length);
+				EditCommentDialog::run_modal(this, document, key->offset, key->length);
 				break;
 				
 			case ID_COPY_COMMENT:
@@ -196,7 +170,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 	PopupMenu(&menu);
 }
 
-REHex::CommentTreeModel::CommentTreeModel(REHex::Document * const &document):
+REHex::CommentTreeModel::CommentTreeModel(REHex::Document *document):
 	document(document) {}
 
 void REHex::CommentTreeModel::refresh_comments()

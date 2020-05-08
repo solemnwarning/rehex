@@ -188,16 +188,14 @@ static void refresh_check_notifications(REHex::CommentTreeModel *model, ...)
 
 TEST(CommentTree, NoComments)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
+	doc.insert_data(0, z1k, 1024);
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
 	refresh_check_notifications(model, NULL);
 	
@@ -208,17 +206,15 @@ TEST(CommentTree, NoComments)
 
 TEST(CommentTree, SingleComment)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(0, 0, REHex::Document::Comment("test"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(0, 0, REHex::Document::Comment("test"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
 	refresh_check_notifications(model,
 		"ItemAdded(\"(null)\", \"test\")",
@@ -235,19 +231,17 @@ TEST(CommentTree, SingleComment)
 
 TEST(CommentTree, MultipleComments)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(0, 0,   REHex::Document::Comment("foo"));
-	doc->set_comment(10, 10, REHex::Document::Comment("bar"));
-	doc->set_comment(20, 0,  REHex::Document::Comment("baz"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(0, 0,   REHex::Document::Comment("foo"));
+	doc.set_comment(10, 10, REHex::Document::Comment("bar"));
+	doc.set_comment(20, 0,  REHex::Document::Comment("baz"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
 	refresh_check_notifications(model,
 		"ItemAdded(\"(null)\", \"foo\")",
@@ -268,22 +262,20 @@ TEST(CommentTree, MultipleComments)
 
 TEST(CommentTree, Heirarchy)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(10, 4,  REHex::Document::Comment("10,4"));
-	doc->set_comment(10, 0,  REHex::Document::Comment("10,0"));
-	doc->set_comment(13, 0,  REHex::Document::Comment("13,0"));
-	doc->set_comment(16, 4,  REHex::Document::Comment("16,4"));
-	doc->set_comment(19, 0,  REHex::Document::Comment("19,0"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(10, 4,  REHex::Document::Comment("10,4"));
+	doc.set_comment(10, 0,  REHex::Document::Comment("10,0"));
+	doc.set_comment(13, 0,  REHex::Document::Comment("13,0"));
+	doc.set_comment(16, 4,  REHex::Document::Comment("16,4"));
+	doc.set_comment(19, 0,  REHex::Document::Comment("19,0"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
 	refresh_check_notifications(model,
 		"ItemAdded(\"(null)\", \"10,10\")",
@@ -310,21 +302,19 @@ TEST(CommentTree, Heirarchy)
 
 TEST(CommentTree, EraseRootCommentNoChildren)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(20, 10, REHex::Document::Comment("20,10"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc->erase_comment(10, 10);
+	doc.erase_comment(10, 10);
 	
 	refresh_check_notifications(model,
 		"ItemDeleted(...)",
@@ -341,23 +331,21 @@ TEST(CommentTree, EraseRootCommentNoChildren)
 
 TEST(CommentTree, EraseRootCommentWithChildren)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(12, 6,  REHex::Document::Comment("12,6"));
-	doc->set_comment(14, 0,  REHex::Document::Comment("14,0"));
-	doc->set_comment(20, 10, REHex::Document::Comment("20,10"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(12, 6,  REHex::Document::Comment("12,6"));
+	doc.set_comment(14, 0,  REHex::Document::Comment("14,0"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc->erase_comment(10, 10);
+	doc.erase_comment(10, 10);
 	
 	refresh_check_notifications(model,
 		"ItemDeleted(...)",
@@ -380,22 +368,20 @@ TEST(CommentTree, EraseRootCommentWithChildren)
 
 TEST(CommentTree, EraseNestedCommentNoChildren)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(12, 0,  REHex::Document::Comment("12,0"));
-	doc->set_comment(20, 10, REHex::Document::Comment("20,10"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(12, 0,  REHex::Document::Comment("12,0"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc->erase_comment(12, 0);
+	doc.erase_comment(12, 0);
 	
 	model->refresh_comments();
 	
@@ -410,24 +396,22 @@ TEST(CommentTree, EraseNestedCommentNoChildren)
 
 TEST(CommentTree, EraseNestedCommentWithChildren)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(12, 8,  REHex::Document::Comment("12,8"));
-	doc->set_comment(14, 6,  REHex::Document::Comment("14,6"));
-	doc->set_comment(16, 0,  REHex::Document::Comment("16,0"));
-	doc->set_comment(20, 10, REHex::Document::Comment("20,10"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(12, 8,  REHex::Document::Comment("12,8"));
+	doc.set_comment(14, 6,  REHex::Document::Comment("14,6"));
+	doc.set_comment(16, 0,  REHex::Document::Comment("16,0"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc->erase_comment(12, 8);
+	doc.erase_comment(12, 8);
 	
 	model->refresh_comments();
 	
@@ -444,21 +428,19 @@ TEST(CommentTree, EraseNestedCommentWithChildren)
 
 TEST(CommentTree, AddCommentRoot)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(20, 10, REHex::Document::Comment("20,10"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc->set_comment(30, 10, REHex::Document::Comment("30,10"));
+	doc.set_comment(30, 10, REHex::Document::Comment("30,10"));
 	
 	refresh_check_notifications(model,
 		"ItemAdded(\"(null)\", \"30,10\")",
@@ -477,21 +459,19 @@ TEST(CommentTree, AddCommentRoot)
 
 TEST(CommentTree, AddNestedComment)
 {
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
-	doc->SetSize(0,0, 640,480);
+	REHex::Document doc;
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
 	
-	doc->insert_data(0, z1k, 1024);
-	doc->set_comment(10, 10, REHex::Document::Comment("10,10"));
-	doc->set_comment(20, 10, REHex::Document::Comment("20,10"));
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
 	
-	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(doc);
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc->set_comment(22, 6, REHex::Document::Comment("22,6"));
+	doc.set_comment(22, 6, REHex::Document::Comment("22,6"));
 	
 	refresh_check_notifications(model,
 		"ItemAdded(\"20,10\", \"22,6\")",

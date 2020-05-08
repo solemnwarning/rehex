@@ -38,6 +38,8 @@ namespace REHex {
 				PAL_SELECTED_TEXT_FG,
 				PAL_SECONDARY_SELECTED_TEXT_BG,
 				PAL_SECONDARY_SELECTED_TEXT_FG,
+				PAL_DIRTY_TEXT_BG,
+				PAL_DIRTY_TEXT_FG,
 				
 				PAL_HIGHLIGHT_TEXT_MIN_BG,
 				PAL_HIGHLIGHT_TEXT_MIN_FG,
@@ -48,6 +50,8 @@ namespace REHex {
 				PAL_COMMENT_FG,
 				
 				PAL_MAX = PAL_COMMENT_FG,
+				
+				PAL_INVALID = 9999,
 			};
 			
 			Palette(const std::string &name, const std::string &label, const wxColour colours[]);

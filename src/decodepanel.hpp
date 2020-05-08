@@ -26,14 +26,16 @@
 #include <wx/wx.h>
 
 #include "document.hpp"
+#include "Events.hpp"
+#include "SafeWindowPointer.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
 	class DecodePanel: public ToolPanel
 	{
 		public:
-			DecodePanel(wxWindow *parent, REHex::Document *document);
-			virtual ~DecodePanel();
+			DecodePanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			virtual std::string name() const override;
 // 			virtual std::string label() const override;
@@ -45,7 +47,8 @@ namespace REHex {
 			virtual wxSize DoGetBestClientSize() const override;
 			
 		private:
-			REHex::Document *document;
+			SharedDocumentPointer document;
+			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			wxChoice *endian;
 			wxPropertyGrid *pgrid;
@@ -71,12 +74,10 @@ namespace REHex {
 			
 			std::vector<unsigned char> last_data;
 			
-			void document_unbind();
 			void update();
 			
-			void OnDocumentDestroy(wxWindowDestroyEvent &event);
-			void OnCursorMove(wxCommandEvent &event);
-			void OnDataModified(wxCommandEvent &event);
+			void OnCursorUpdate(CursorUpdateEvent &event);
+			void OnDataModified(OffsetLengthEvent &event);
 			void OnPropertyGridChanged(wxPropertyGridEvent& event);
 			void OnPropertyGridSelected(wxPropertyGridEvent &event);
 			void OnEndian(wxCommandEvent &event);

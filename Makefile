@@ -158,14 +158,19 @@ APP_OBJS := \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
 	src/decodepanel.o \
+	src/DiffWindow.o \
 	src/disassemble.o \
 	src/document.o \
+	src/DocumentCtrl.o \
+	src/EditCommentDialog.o \
+	src/Events.o \
 	src/LicenseDialog.o \
 	src/mainwindow.o \
 	src/Palette.o \
 	src/search.o \
 	src/SelectRangeDialog.o \
 	src/textentrydialog.o \
+	src/Tab.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
@@ -177,9 +182,17 @@ $(EXE): $(APP_OBJS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
+	res/icon16.o \
+	res/icon32.o \
+	res/icon48.o \
+	res/icon64.o \
 	src/buffer.o \
 	src/CommentTree.o \
+	src/DiffWindow.o \
 	src/document.o \
+	src/DocumentCtrl.o \
+	src/EditCommentDialog.o \
+	src/Events.o \
 	src/Palette.o \
 	src/search.o \
 	src/textentrydialog.o \
@@ -189,13 +202,15 @@ TEST_OBJS := \
 	tests/buffer.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
-	tests/document.o \
+	tests/DiffWindow.o \
+	tests/Document.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
 	tests/search-bseq.o \
 	tests/search-text.o \
 	tests/SearchValue.o \
+	tests/SafeWindowPointer.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)
@@ -205,6 +220,7 @@ $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 src/AboutDialog.o: res/icon128.h
+src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 

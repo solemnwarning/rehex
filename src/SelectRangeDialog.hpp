@@ -21,18 +21,19 @@
 #include <wx/dialog.h>
 #include <wx/radiobut.h>
 
-#include "document.hpp"
+#include "DocumentCtrl.hpp"
 #include "NumericTextCtrl.hpp"
 
 namespace REHex {
 	class SelectRangeDialog: public wxDialog
 	{
 		public:
-			SelectRangeDialog(wxWindow *parent, REHex::Document &document);
+			SelectRangeDialog(wxWindow *parent, Document &document, DocumentCtrl &document_ctrl);
 			virtual ~SelectRangeDialog();
 			
 		private:
-			REHex::Document &document;
+			Document     &document;
+			DocumentCtrl &document_ctrl;
 			
 			NumericTextCtrl *range_from;
 			

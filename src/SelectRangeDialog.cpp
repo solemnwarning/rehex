@@ -25,9 +25,10 @@ BEGIN_EVENT_TABLE(REHex::SelectRangeDialog, wxDialog)
 	EVT_RADIOBUTTON(wxID_ANY, REHex::SelectRangeDialog::OnRadio)
 END_EVENT_TABLE()
 
-REHex::SelectRangeDialog::SelectRangeDialog(wxWindow *parent, REHex::Document &document):
+REHex::SelectRangeDialog::SelectRangeDialog(wxWindow *parent, Document &document, DocumentCtrl &document_ctrl):
 	wxDialog(parent, wxID_ANY, "Select range"),
-	document(document)
+	document(document),
+	document_ctrl(document_ctrl)
 {
 	wxBoxSizer *topsizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -35,7 +36,7 @@ REHex::SelectRangeDialog::SelectRangeDialog(wxWindow *parent, REHex::Document &d
 	char initial_to[64]   = "";
 	char initial_len[64]  = "";
 	
-	std::pair<off_t, off_t> selection = document.get_selection();
+	std::pair<off_t, off_t> selection = document_ctrl.get_selection();
 	off_t selection_off    = selection.first;
 	off_t selection_length = selection.second;
 	
@@ -46,7 +47,7 @@ REHex::SelectRangeDialog::SelectRangeDialog(wxWindow *parent, REHex::Document &d
 		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length));
 	}
 	else{
-		off_t cursor_pos = document.get_cursor_position();
+		off_t cursor_pos = document_ctrl.get_cursor_position();
 		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(cursor_pos));
 	}
 	
@@ -159,7 +160,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 		return;
 	}
 	
-	document.set_selection(selection_off, selection_length);
+	document_ctrl.set_selection(selection_off, selection_length);
 	Close();
 }
 

@@ -28,13 +28,16 @@
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
+#include "Events.hpp"
+#include "SafeWindowPointer.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
 	class Disassemble: public ToolPanel
 	{
 		public:
-			Disassemble(wxWindow *parent, REHex::Document *document);
+			Disassemble(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			virtual ~Disassemble();
 			
 			virtual std::string name() const override;
@@ -52,22 +55,21 @@ namespace REHex {
 				std::string disasm;
 			};
 			
-			REHex::Document *document;
+			SharedDocumentPointer document;
+			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			LLVMDisasmContextRef disassembler;
 			
 			wxChoice *arch;
 			CodeCtrl *assembly;
 			
-			void document_unbind();
 			void reinit_disassembler();
 			void update();
 			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
 			
-			void OnDocumentDestroy(wxWindowDestroyEvent &event);
-			void OnCursorMove(wxCommandEvent &event);
+			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnArch(wxCommandEvent &event);
-			void OnDataModified(wxCommandEvent &event);
+			void OnDataModified(OffsetLengthEvent &event);
 			void OnBaseChanged(wxCommandEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */

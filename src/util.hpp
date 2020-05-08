@@ -18,6 +18,7 @@
 #ifndef REHEX_UTIL_HPP
 #define REHEX_UTIL_HPP
 
+#include <iterator>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -60,6 +61,21 @@ namespace REHex {
 	};
 	
 	std::string format_offset(off_t offset, OffsetBase base, off_t upper_bound = -1);
+	
+	template<typename T> typename T::iterator const_iterator_to_iterator(typename T::const_iterator &const_iter, T &container)
+	{
+		/* Workaround for older GCC/libstd++ which don't support passing a const_iterator
+		 * to certain STL container erase methods.
+		 *
+		 * Not 100% sure which version actually fixed it.
+		*/
+		
+		#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+		return std::next(container.begin(), std::distance(container.cbegin(), const_iter));
+		#else
+		return container.erase(const_iter, const_iter);
+		#endif
+	}
 }
 
 #endif /* !REHEX_UTIL_HPP */

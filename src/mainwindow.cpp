@@ -26,13 +26,9 @@
 #include <wx/msgdlg.h>
 #include <wx/aui/auibook.h>
 #include <wx/numdlg.h>
-#include <wx/sizer.h>
 
 #include "AboutDialog.hpp"
 #include "app.hpp"
-#include "CommentTree.hpp"
-#include "decodepanel.hpp"
-#include "disassemble.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "Palette.hpp"
@@ -150,7 +146,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
 	EVT_AUINOTEBOOK_TAB_RIGHT_DOWN(wxID_ANY, REHex::MainWindow::OnDocumentMenu)
 	
-	EVT_COMMAND(wxID_ANY, REHex::EV_CURSOR_MOVED,      REHex::MainWindow::OnCursorMove)
+	EVT_CURSORUPDATE(wxID_ANY, REHex::MainWindow::OnCursorUpdate)
+	
 	EVT_COMMAND(wxID_ANY, REHex::EV_SELECTION_CHANGED, REHex::MainWindow::OnSelectionChange)
 	EVT_COMMAND(wxID_ANY, REHex::EV_INSERT_TOGGLED,    REHex::MainWindow::OnInsertToggle)
 	EVT_COMMAND(wxID_ANY, REHex::EV_UNDO_UPDATE,       REHex::MainWindow::OnUndoUpdate)
@@ -363,7 +360,7 @@ void REHex::MainWindow::new_file()
 {
 	Tab *tab = new Tab(notebook);
 	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	tab->doc_ctrl->SetFocus();
 }
 
 void REHex::MainWindow::open_file(const std::string &filename)
@@ -386,7 +383,7 @@ void REHex::MainWindow::open_file(const std::string &filename)
 		wxWindow *page = notebook->GetPage(0);
 		assert(page != NULL);
 		
-		auto page_tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		auto page_tab = dynamic_cast<Tab*>(page);
 		assert(page_tab != NULL);
 		
 		if(page_tab->doc->get_filename() == "" && !page_tab->doc->is_dirty())
@@ -400,7 +397,7 @@ void REHex::MainWindow::open_file(const std::string &filename)
 	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc->SetFocus();
+	tab->doc_ctrl->SetFocus();
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
@@ -466,7 +463,7 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	if(tab->doc->get_filename() == "")
@@ -541,7 +538,7 @@ void REHex::MainWindow::OnClose(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	close_tab(tab);
@@ -557,7 +554,7 @@ void REHex::MainWindow::OnCloseOthers(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	close_other_tabs(tab);
@@ -573,7 +570,7 @@ void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	REHex::Search::Text *sd = new REHex::Search::Text(tab, *(tab->doc));
@@ -587,7 +584,7 @@ void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	REHex::Search::ByteSequence *sd = new REHex::Search::ByteSequence(tab, *(tab->doc));
@@ -601,7 +598,7 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	REHex::Search::Value *sd = new REHex::Search::Value(tab, *(tab->doc));
@@ -612,14 +609,10 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	Tab *tab = active_tab();
 	
 	off_t current_pos = tab->doc->get_cursor_position();
-	off_t max_pos     = tab->doc->buffer_length() - !tab->doc->get_insert_mode();
+	off_t max_pos     = tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode();
 	
 	REHex::NumericEntryDialog<off_t> ni(this,
 		"Jump to offset",
@@ -635,17 +628,19 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 
 void REHex::MainWindow::OnCut(wxCommandEvent &event)
 {
-	_clipboard_copy(true);
+	Tab *tab = active_tab();
+	tab->handle_copy(true);
 }
 
 void REHex::MainWindow::OnCopy(wxCommandEvent &event)
 {
-	_clipboard_copy(false);
+	Tab *tab = active_tab();
+	tab->handle_copy(false);
 }
 
 void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 {
-	REHex::Document *doc = active_document();
+	Tab *tab = active_tab();
 	
 	ClipboardGuard cg;
 	if(cg)
@@ -657,7 +652,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			
 			auto clipboard_comments = data.get_comments();
 			
-			doc->handle_paste(clipboard_comments);
+			tab->doc->handle_paste(tab, clipboard_comments);
 		}
 		else if(wxTheClipboard->IsSupported(wxDF_TEXT))
 		{
@@ -665,7 +660,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			wxTheClipboard->GetData(data);
 			
 			try {
-				doc->handle_paste(data.GetText().ToStdString());
+				tab->paste_text(data.GetText().ToStdString());
 			}
 			catch(const std::exception &e)
 			{
@@ -680,7 +675,7 @@ void REHex::MainWindow::OnUndo(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	tab->doc->undo();
@@ -691,7 +686,7 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	tab->doc->redo();
@@ -699,36 +694,22 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_selection(0, tab->doc->buffer_length());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_selection(0, tab->doc->buffer_length());
 }
 
 void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *tab = active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	REHex::SelectRangeDialog srd(this, *(tab->doc));
+	REHex::SelectRangeDialog srd(this, *(tab->doc), *(tab->doc_ctrl));
 	srd.ShowModal();
 }
 
 void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_insert_mode(!event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_insert_mode(!event.IsChecked());
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
@@ -741,7 +722,7 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	/* TODO: Make a dialog with an explicit "auto" radio choice? */
@@ -749,7 +730,7 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 		"Number of bytes to show on each line\n(0 fits to the window width)",
 		"Bytes",
 		"Set bytes per line",
-		tab->doc->get_bytes_per_line(),
+		tab->doc_ctrl->get_bytes_per_line(),
 		0,
 		MAX_BYTES_PER_LINE,
 		this);
@@ -757,7 +738,7 @@ void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 	/* We get a negative value if the user cancels. */
 	if(new_value >= 0)
 	{
-		tab->doc->set_bytes_per_line(new_value);
+		tab->doc_ctrl->set_bytes_per_line(new_value);
 	}
 }
 
@@ -766,14 +747,14 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	int new_value = wxGetNumberFromUser(
 		"Number of bytes to group",
 		"Bytes",
 		"Set bytes per group",
-		tab->doc->get_bytes_per_group(),
+		tab->doc_ctrl->get_bytes_per_group(),
 		1,
 		std::numeric_limits<int>::max(),
 		this);
@@ -781,30 +762,20 @@ void REHex::MainWindow::OnSetBytesPerGroup(wxCommandEvent &event)
 	/* We get a negative value if the user cancels. */
 	if(new_value >= 0)
 	{
-		tab->doc->set_bytes_per_group(new_value);
+		tab->doc_ctrl->set_bytes_per_group(new_value);
 	}
 }
 
 void REHex::MainWindow::OnShowOffsets(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_show_offsets(event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_show_offsets(event.IsChecked());
 }
 
 void REHex::MainWindow::OnShowASCII(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	tab->doc->set_show_ascii(event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_show_ascii(event.IsChecked());
 }
 
 void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
@@ -812,36 +783,38 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_HIDDEN))
 	{
-		tab->doc->set_inline_comment_mode(REHex::Document::ICM_HIDDEN);
+		tab->set_inline_comment_mode(ICM_HIDDEN);
 		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, false);
 	}
 	else if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_FULL))
 	{
-		tab->doc->set_inline_comment_mode(
+		tab->set_inline_comment_mode(
 			inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT)
-				? REHex::Document::ICM_FULL_INDENT
-				: REHex::Document::ICM_FULL);
+				? ICM_FULL_INDENT
+				: ICM_FULL);
+		
 		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 	}
 	else if(inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_SHORT))
 	{
-		tab->doc->set_inline_comment_mode(
+		tab->set_inline_comment_mode(
 			inline_comments_menu->IsChecked(ID_INLINE_COMMENTS_INDENT)
-				? REHex::Document::ICM_SHORT_INDENT
-				: REHex::Document::ICM_SHORT);
+				? ICM_SHORT_INDENT
+				: ICM_SHORT);
+		
 		inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 	}
 }
 
 void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
 {
-	Document *doc = active_document();
-	doc->set_highlight_selection_match(event.IsChecked());
+	Tab *tab = active_tab();
+	tab->doc_ctrl->set_highlight_selection_match(event.IsChecked());
 }
 
 void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
@@ -849,7 +822,7 @@ void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::Tool
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	if(event.IsChecked())
@@ -888,20 +861,22 @@ void REHex::MainWindow::OnPalette(wxCommandEvent &event)
 
 void REHex::MainWindow::OnHexOffsets(wxCommandEvent &event)
 {
-	REHex::Document *doc = active_document();
-	doc->set_offset_display_base(OFFSET_BASE_HEX);
+	Tab *tab = active_tab();
 	
-	_update_status_offset(doc);
-	_update_status_selection(doc);
+	tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_HEX);
+	
+	_update_status_offset(tab->doc_ctrl);
+	_update_status_selection(tab->doc_ctrl);
 }
 
 void REHex::MainWindow::OnDecOffsets(wxCommandEvent &event)
 {
-	REHex::Document *doc = active_document();
-	doc->set_offset_display_base(OFFSET_BASE_DEC);
+	Tab *tab = active_tab();
 	
-	_update_status_offset(doc);
-	_update_status_selection(doc);
+	tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_DEC);
+	
+	_update_status_offset(tab->doc_ctrl);
+	_update_status_selection(tab->doc_ctrl);
 }
 
 void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
@@ -911,7 +886,7 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	tab->save_view(config);
@@ -943,26 +918,19 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		wxWindow *old_page = notebook->GetPage(old_page_id);
 		assert(old_page != NULL);
 		
-		auto old_tab = dynamic_cast<REHex::MainWindow::Tab*>(old_page);
+		auto old_tab = dynamic_cast<Tab*>(old_page);
 		assert(old_tab != NULL);
 		
-		for(auto sdi = old_tab->search_dialogs.begin(); sdi != old_tab->search_dialogs.end(); ++sdi)
-		{
-			(*sdi)->Hide();
-		}
+		old_tab->hide_child_windows();
 	}
 	
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *tab = active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc_ctrl->get_insert_mode());
+	view_menu->Check(ID_SHOW_OFFSETS, tab->doc_ctrl->get_show_offsets());
+	view_menu->Check(ID_SHOW_ASCII,   tab->doc_ctrl->get_show_ascii());
 	
-	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
-	view_menu->Check(ID_SHOW_OFFSETS, tab->doc->get_show_offsets());
-	view_menu->Check(ID_SHOW_ASCII,   tab->doc->get_show_ascii());
-	
-	OffsetBase offset_display_base = tab->doc->get_offset_display_base();
+	OffsetBase offset_display_base = tab->doc_ctrl->get_offset_display_base();
 	switch(offset_display_base)
 	{
 		case OFFSET_BASE_HEX:
@@ -974,30 +942,30 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			break;
 	}
 	
-	REHex::Document::InlineCommentMode icm = tab->doc->get_inline_comment_mode();
+	InlineCommentMode icm = tab->get_inline_comment_mode();
 	switch(icm)
 	{
-		case REHex::Document::ICM_HIDDEN:
+		case ICM_HIDDEN:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_HIDDEN, true);
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, false);
 			break;
 			
-		case REHex::Document::ICM_FULL:
-		case REHex::Document::ICM_FULL_INDENT:
+		case ICM_FULL:
+		case ICM_FULL_INDENT:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_FULL, true);
-			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == REHex::Document::ICM_FULL_INDENT));
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == ICM_FULL_INDENT));
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 			
-		case REHex::Document::ICM_SHORT:
-		case REHex::Document::ICM_SHORT_INDENT:
+		case ICM_SHORT:
+		case ICM_SHORT_INDENT:
 			inline_comments_menu->Check(ID_INLINE_COMMENTS_SHORT, true);
-			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == REHex::Document::ICM_SHORT_INDENT));
+			inline_comments_menu->Check(ID_INLINE_COMMENTS_INDENT, (icm == ICM_SHORT_INDENT));
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 	};
 	
-	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc->get_highlight_selection_match());
+	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc_ctrl->get_highlight_selection_match());
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
@@ -1009,17 +977,14 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		tool_panels_menu->Check(menu_id, active);
 	}
 	
-	_update_status_offset(tab->doc);
-	_update_status_selection(tab->doc);
-	_update_status_mode(tab->doc);
+	_update_status_offset(tab->doc_ctrl);
+	_update_status_selection(tab->doc_ctrl);
+	_update_status_mode(tab->doc_ctrl);
 	_update_undo(tab->doc);
 	_update_dirty(tab->doc);
 	
 	/* Show any search dialogs attached to this tab. */
-	for(auto sdi = tab->search_dialogs.begin(); sdi != tab->search_dialogs.end(); ++sdi)
-	{
-		(*sdi)->ShowWithoutActivating();
-	}
+	tab->unhide_child_windows();
 }
 
 void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
@@ -1027,7 +992,7 @@ void REHex::MainWindow::OnDocumentClose(wxAuiNotebookEvent& event)
 	wxWindow *page = notebook->GetPage(event.GetSelection());
 	assert(page != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+	auto tab = dynamic_cast<Tab*>(page);
 	assert(tab != NULL);
 	
 	if(tab->doc->is_dirty())
@@ -1060,7 +1025,7 @@ void REHex::MainWindow::OnDocumentMenu(wxAuiNotebookEvent &event)
 	wxWindow *tab_page = notebook->GetPage(tab_idx);
 	assert(tab_page != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(tab_page);
+	auto tab = dynamic_cast<Tab*>(tab_page);
 	assert(tab != NULL);
 	
 	std::string filename = tab->doc->get_filename();
@@ -1098,24 +1063,21 @@ void REHex::MainWindow::OnDocumentMenu(wxAuiNotebookEvent &event)
 	PopupMenu(&menu);
 }
 
-void REHex::MainWindow::OnCursorMove(wxCommandEvent &event)
+void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *active_tab = this->active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	wxObject *event_src = event.GetEventObject();
 	
-	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
-	assert(doc != NULL);
-	
-	if(doc == tab->doc)
+	if(event_src == active_tab->doc)
 	{
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_offset(doc);
+		_update_status_offset(active_tab->doc_ctrl);
 	}
+	
+	event.Skip();
 }
 
 void REHex::MainWindow::OnSelectionChange(wxCommandEvent &event)
@@ -1123,39 +1085,36 @@ void REHex::MainWindow::OnSelectionChange(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	auto active_tab = dynamic_cast<Tab*>(cpage);
+	assert(active_tab != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
-	assert(doc != NULL);
+	DocumentCtrl *doc_ctrl = dynamic_cast<REHex::DocumentCtrl*>(event.GetEventObject());
+	assert(doc_ctrl != NULL);
 	
-	if(doc == tab->doc)
+	if(doc_ctrl == active_tab->doc_ctrl)
 	{
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_selection(doc);
+		_update_status_selection(doc_ctrl);
 	}
 }
 
 void REHex::MainWindow::OnInsertToggle(wxCommandEvent &event)
 {
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
+	Tab *active_tab = this->active_tab();
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
+	DocumentCtrl *event_src = dynamic_cast<DocumentCtrl*>(event.GetEventObject());
+	assert(event_src != NULL);
 	
-	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
-	assert(doc != NULL);
-	
-	if(doc == tab->doc)
+	if(event_src == active_tab->doc_ctrl)
 	{
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_mode(doc);
-		edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc->get_insert_mode());
+		
+		_update_status_mode(active_tab->doc_ctrl);
+		edit_menu->Check(ID_OVERWRITE_MODE, !active_tab->doc_ctrl->get_insert_mode());
 	}
 }
 
@@ -1164,7 +1123,7 @@ void REHex::MainWindow::OnUndoUpdate(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
@@ -1182,7 +1141,7 @@ void REHex::MainWindow::OnBecameDirty(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
@@ -1200,7 +1159,7 @@ void REHex::MainWindow::OnBecameClean(wxCommandEvent &event)
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	auto doc = dynamic_cast<REHex::Document*>(event.GetEventObject());
@@ -1213,12 +1172,12 @@ void REHex::MainWindow::OnBecameClean(wxCommandEvent &event)
 	}
 }
 
-REHex::MainWindow::Tab *REHex::MainWindow::active_tab()
+REHex::Tab *REHex::MainWindow::active_tab()
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
 	assert(cpage != NULL);
 	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
+	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
 	return tab;
@@ -1229,18 +1188,18 @@ REHex::Document *REHex::MainWindow::active_document()
 	return active_tab()->doc;
 }
 
-void REHex::MainWindow::_update_status_offset(REHex::Document *doc)
+void REHex::MainWindow::_update_status_offset(REHex::DocumentCtrl *doc_ctrl)
 {
-	off_t off = doc->get_cursor_position();
+	off_t off = doc_ctrl->get_cursor_position();
 	
-	std::string off_text = format_offset(off, doc->get_offset_display_base());
+	std::string off_text = format_offset(off, doc_ctrl->get_offset_display_base());
 	
 	SetStatusText(off_text, 0);
 }
 
-void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
+void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 {
-	std::pair<off_t,off_t> selection = doc->get_selection();
+	std::pair<off_t,off_t> selection = doc_ctrl->get_selection();
 	
 	off_t selection_off    = selection.first;
 	off_t selection_length = selection.second;
@@ -1249,8 +1208,8 @@ void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
 	{
 		off_t selection_end = (selection_off + selection_length) - 1;
 		
-		std::string from_text = format_offset(selection_off, doc->get_offset_display_base(), selection_end);
-		std::string to_text   = format_offset(selection_end, doc->get_offset_display_base(), selection_end);
+		std::string from_text = format_offset(selection_off, doc_ctrl->get_offset_display_base(), selection_end);
+		std::string to_text   = format_offset(selection_end, doc_ctrl->get_offset_display_base(), selection_end);
 		
 		char buf[64];
 		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u bytes)",
@@ -1266,9 +1225,9 @@ void REHex::MainWindow::_update_status_selection(REHex::Document *doc)
 	}
 }
 
-void REHex::MainWindow::_update_status_mode(REHex::Document *doc)
+void REHex::MainWindow::_update_status_mode(REHex::DocumentCtrl *doc_ctrl)
 {
-	if(doc->get_insert_mode())
+	if(doc_ctrl->get_insert_mode())
 	{
 		SetStatusText("Mode: Insert", 2);
 	}
@@ -1325,70 +1284,6 @@ void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 	notebook->SetPageBitmap(notebook->GetSelection(), (dirty ? notebook_dirty_bitmap : wxNullBitmap));
 }
 
-void REHex::MainWindow::_clipboard_copy(bool cut)
-{
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<REHex::MainWindow::Tab*>(cpage);
-	assert(tab != NULL);
-	
-	/* Warn the user this might be a bad idea before dumping silly amounts
-	 * of data (>16MiB) into the clipboard.
-	*/
-	
-	static size_t COPY_MAX_SOFT = 16777216;
-	size_t upper_limit = tab->doc->copy_upper_limit();
-	
-	if(upper_limit > COPY_MAX_SOFT)
-	{
-		char msg[128];
-		snprintf(msg, sizeof(msg),
-			"You are about to copy %uMB into the clipboard.\n"
-			"This may take a long time and/or crash some applications.",
-			(unsigned)(upper_limit / 1000000));
-		
-		int result = wxMessageBox(msg, "Warning", (wxOK | wxCANCEL | wxICON_EXCLAMATION), this);
-		if(result != wxOK)
-		{
-			return;
-		}
-	}
-	
-	wxTextDataObject *copy_data = NULL;
-	try {
-		std::string copy_text = tab->doc->handle_copy(cut);
-		if(!copy_text.empty())
-		{
-			copy_data = new wxTextDataObject(copy_text);
-		}
-	}
-	catch(const std::bad_alloc &e)
-	{
-		wxMessageBox(
-			"Memory allocation failed while preparing clipboard buffer.",
-			"Error", (wxOK | wxICON_ERROR), this);
-		return;
-	}
-	catch(const std::exception &e)
-	{
-		wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
-		return;
-	}
-	
-	if(copy_data != NULL)
-	{
-		ClipboardGuard cg;
-		if(cg)
-		{
-			wxTheClipboard->SetData(copy_data);
-		}
-		else{
-			delete copy_data;
-		}
-	}
-}
-
 bool REHex::MainWindow::unsaved_confirm()
 {
 	std::vector<wxString> dirty_files;
@@ -1399,7 +1294,7 @@ bool REHex::MainWindow::unsaved_confirm()
 		wxWindow *page = notebook->GetPage(i);
 		assert(page != NULL);
 		
-		auto tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		auto tab = dynamic_cast<Tab*>(page);
 		assert(tab != NULL);
 		
 		if(tab->doc->is_dirty())
@@ -1443,7 +1338,7 @@ bool REHex::MainWindow::unsaved_confirm(const std::vector<wxString> &files)
 	return true;
 }
 
-void REHex::MainWindow::close_tab(REHex::MainWindow::Tab *tab)
+void REHex::MainWindow::close_tab(Tab *tab)
 {
 	if(tab->doc->is_dirty())
 	{
@@ -1477,7 +1372,7 @@ void REHex::MainWindow::close_all_tabs()
 	ProcessCommand(wxID_NEW);
 }
 
-void REHex::MainWindow::close_other_tabs(REHex::MainWindow::Tab *tab)
+void REHex::MainWindow::close_other_tabs(Tab *tab)
 {
 	std::vector<wxString> dirty_others;
 	
@@ -1492,7 +1387,7 @@ void REHex::MainWindow::close_other_tabs(REHex::MainWindow::Tab *tab)
 			continue;
 		}
 		
-		auto p_tab = dynamic_cast<REHex::MainWindow::Tab*>(page);
+		auto p_tab = dynamic_cast<Tab*>(page);
 		assert(p_tab != NULL);
 		
 		if(p_tab->doc->is_dirty())
@@ -1518,513 +1413,6 @@ void REHex::MainWindow::close_other_tabs(REHex::MainWindow::Tab *tab)
 		}
 		else{
 			notebook->DeletePage(i);
-		}
-	}
-}
-
-BEGIN_EVENT_TABLE(REHex::MainWindow::Tab, wxPanel)
-	EVT_SIZE(REHex::MainWindow::Tab::OnSize)
-	
-	EVT_NOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::MainWindow::Tab::OnHToolChange)
-	EVT_NOTEBOOK_PAGE_CHANGED(ID_VTOOLS, REHex::MainWindow::Tab::OnVToolChange)
-	
-	EVT_SPLITTER_SASH_POS_CHANGING(ID_HSPLITTER, REHex::MainWindow::Tab::OnHSplitterSashPosChanging)
-	EVT_SPLITTER_SASH_POS_CHANGING(ID_VSPLITTER, REHex::MainWindow::Tab::OnVSplitterSashPosChanging)
-END_EVENT_TABLE()
-
-REHex::MainWindow::Tab::Tab(wxWindow *parent):
-	wxPanel(parent)
-{
-	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	v_splitter->SetSashGravity(1.0);
-	v_splitter->SetMinimumPaneSize(20);
-	
-	h_splitter = new wxSplitterWindow(v_splitter, ID_HSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	h_splitter->SetSashGravity(1.0);
-	h_splitter->SetMinimumPaneSize(20);
-	
-	doc = new REHex::Document(h_splitter);
-	init_default_doc_view();
-	doc->set_insert_mode(true);
-	
-	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
-	h_tools->SetFitToCurrentPage(true);
-	
-	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
-	v_tools->SetFitToCurrentPage(true);
-	
-	h_splitter->SplitHorizontally(doc, h_tools);
-	v_splitter->SplitVertically(h_splitter, v_tools);
-	
-	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(v_splitter, 1, wxEXPAND);
-	SetSizerAndFit(sizer);
-	
-	init_default_tools();
-	
-	htools_adjust_on_idle();
-	vtools_adjust_on_idle();
-}
-
-REHex::MainWindow::Tab::Tab(wxWindow *parent, const std::string &filename):
-	wxPanel(parent)
-{
-	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	v_splitter->SetSashGravity(1.0);
-	v_splitter->SetMinimumPaneSize(20);
-	
-	h_splitter = new wxSplitterWindow(v_splitter, ID_HSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	h_splitter->SetSashGravity(1.0);
-	h_splitter->SetMinimumPaneSize(20);
-	
-	doc = new REHex::Document(h_splitter, filename);
-	init_default_doc_view();
-	
-	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
-	h_tools->SetFitToCurrentPage(true);
-	
-	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
-	v_tools->SetFitToCurrentPage(true);
-	
-	h_splitter->SplitHorizontally(doc, h_tools);
-	v_splitter->SplitVertically(h_splitter, v_tools);
-	
-	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(v_splitter, 1, wxEXPAND);
-	SetSizerAndFit(sizer);
-	
-	init_default_tools();
-	
-	htools_adjust_on_idle();
-	vtools_adjust_on_idle();
-}
-
-REHex::MainWindow::Tab::~Tab()
-{
-	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
-	{
-		(*sdi)->Unbind(wxEVT_DESTROY, &REHex::MainWindow::Tab::OnSearchDialogDestroy, this);
-	}
-}
-
-bool REHex::MainWindow::Tab::tool_active(const std::string &name)
-{
-	return tools.find(name) != tools.end();
-}
-
-void REHex::MainWindow::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *config, bool adjust)
-{
-	if(tool_active(name))
-	{
-		return;
-	}
-	
-	const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
-	assert(tpr != NULL);
-	
-	if(tpr->shape == ToolPanel::TPS_TALL)
-	{
-		ToolPanel *tool_window = tpr->factory(v_tools, doc);
-		if(config)
-		{
-			tool_window->load_state(config);
-		}
-		
-		v_tools->AddPage(tool_window, tpr->label, switch_to);
-		
-		tools.insert(std::make_pair(name, tool_window));
-		
-		if(adjust)
-		{
-			vtools_adjust_on_idle();
-		}
-	}
-	else if(tpr->shape == ToolPanel::TPS_WIDE)
-	{
-		ToolPanel *tool_window = tpr->factory(h_tools, doc);
-		if(config)
-		{
-			tool_window->load_state(config);
-		}
-		
-		h_tools->AddPage(tool_window, tpr->label, switch_to);
-		
-		tools.insert(std::make_pair(name, tool_window));
-		
-		if(adjust)
-		{
-			htools_adjust_on_idle();
-		}
-	}
-}
-
-void REHex::MainWindow::Tab::tool_destroy(const std::string &name)
-{
-	auto ti = tools.find(name);
-	if(ti == tools.end())
-	{
-		return;
-	}
-	
-	wxWindow *tool_window = ti->second;
-	tools.erase(ti);
-	
-	wxNotebook *notebook = dynamic_cast<wxNotebook*>(tool_window->GetParent());
-	assert(notebook != NULL);
-	
-	int page_idx = notebook->FindPage(tool_window);
-	assert(page_idx != wxNOT_FOUND);
-	
-	notebook->DeletePage(page_idx);
-	
-	if(notebook == v_tools)
-	{
-		vtools_adjust();
-	}
-	else if(notebook == h_tools)
-	{
-		htools_adjust();
-	}
-}
-
-void REHex::MainWindow::Tab::search_dialog_register(wxDialog *search_dialog)
-{
-	search_dialogs.insert(search_dialog);
-	search_dialog->Bind(wxEVT_DESTROY, &REHex::MainWindow::Tab::OnSearchDialogDestroy, this);
-}
-
-void REHex::MainWindow::Tab::save_view(wxConfig *config)
-{
-	config->SetPath("/");
-	config->Write("theme", wxString(active_palette->get_name()));
-	
-	config->DeleteGroup("/default-view/");
-	config->SetPath("/default-view/");
-	
-	config->Write("bytes-per-line", doc->get_bytes_per_line());
-	config->Write("bytes-per-group", doc->get_bytes_per_group());
-	config->Write("show-offsets", doc->get_show_offsets());
-	config->Write("show-ascii", doc->get_show_ascii());
-	config->Write("inline-comments", (int)(doc->get_inline_comment_mode()));
-	config->Write("highlight-selection-match", doc->get_highlight_selection_match());
-	config->Write("offset-display-base", (int)(doc->get_offset_display_base()));
-	
-	/* TODO: Save h_tools state */
-	
-	for(size_t i = 0; i < v_tools->GetPageCount(); ++i)
-	{
-		char path[64];
-		snprintf(path, sizeof(path), "/default-view/vtools/panels/0/tab/%u/", (unsigned)(i));
-		
-		config->SetPath(path);
-		
-		wxWindow *page = v_tools->GetPage(i);
-		assert(page != NULL);
-		
-		ToolPanel *tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		
-		config->Write("name", wxString(tp->name()));
-		config->Write("selected", (page == v_tools->GetCurrentPage()));
-		tp->save_state(config);
-	}
-}
-
-void REHex::MainWindow::Tab::OnSize(wxSizeEvent &event)
-{
-	if(h_splitter->IsSplit())
-	{
-		int hs_sp = h_splitter->GetSashPosition();
-		int hs_cp = hsplit_clamp_sash(hs_sp);
-		
-		if(hs_sp != hs_cp)
-		{
-			h_splitter->SetSashPosition(hs_cp);
-		}
-	}
-	
-	if(v_splitter->IsSplit())
-	{
-		int vs_sp = v_splitter->GetSashPosition();
-		int vs_cp = vsplit_clamp_sash(vs_sp);
-		
-		if(vs_sp != vs_cp)
-		{
-			v_splitter->SetSashPosition(vs_cp);
-		}
-	}
-	
-	/* Continue propogation of EVT_SIZE event. */
-	event.Skip();
-}
-
-void REHex::MainWindow::Tab::OnHToolChange(wxNotebookEvent& event)
-{
-	htools_adjust();
-}
-
-void REHex::MainWindow::Tab::OnVToolChange(wxBookCtrlEvent &event)
-{
-	vtools_adjust();
-}
-
-void REHex::MainWindow::Tab::OnHSplitterSashPosChanging(wxSplitterEvent &event)
-{
-	int pos = event.GetSashPosition();
-	int clamp = hsplit_clamp_sash(pos);
-	
-	if(pos != clamp)
-	{
-		event.SetSashPosition(clamp);
-	}
-}
-
-void REHex::MainWindow::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
-{
-	int pos = event.GetSashPosition();
-	int clamp = vsplit_clamp_sash(pos);
-	
-	if(pos != clamp)
-	{
-		event.SetSashPosition(clamp);
-	}
-}
-
-void REHex::MainWindow::Tab::OnSearchDialogDestroy(wxWindowDestroyEvent &event)
-{
-	search_dialogs.erase((wxDialog*)(event.GetWindow()));
-	
-	/* Continue propogation. */
-	event.Skip();
-}
-
-int REHex::MainWindow::Tab::hsplit_clamp_sash(int sash_position)
-{
-	/* Prevent the user resizing a tool panel beyond its min/max size.
-	 * NOTE: Minimuim size is clamped >= 0 to prevent the size shrinking past the wxNotebook
-	 * control itself, else weird rendering/input glitches happen.
-	*/
-	
-	wxWindow *ht_current_page = h_tools->GetCurrentPage();
-	if(ht_current_page == NULL)
-	{
-		/* No active page to reference. */
-		return sash_position;
-	}
-	
-	int htp_mh = std::max(ht_current_page->GetMinSize().GetHeight(), 0);
-	int htp_Mh = ht_current_page->GetMaxSize().GetHeight();
-	
-	int hs_ch = h_splitter->GetClientSize().GetHeight();
-	int hs_ss = h_splitter->GetSashSize();
-	
-	/* Size oherhead added by h_tools wxNotebook. */
-	int extra_h = h_tools->GetSize().GetHeight() - ht_current_page->GetSize().GetHeight();
-	
-	int sash_max = hs_ch - (htp_mh + extra_h + hs_ss);
-	if(sash_position > sash_max)
-	{
-		return sash_max;
-	}
-	
-	if(htp_Mh > 0)
-	{
-		int sash_min = hs_ch - (htp_Mh + extra_h + hs_ss);
-		if(sash_position < sash_min)
-		{
-			return sash_min;
-		}
-	}
-	
-	return sash_position;
-}
-
-int REHex::MainWindow::Tab::vsplit_clamp_sash(int sash_position)
-{
-	/* Prevent the user resizing a tool panel beyond its min/max size.
-	 * NOTE: Minimuim size is clamped >= 0 to prevent the size shrinking past the wxNotebook
-	 * control itself, else weird rendering/input glitches happen.
-	*/
-	
-	wxWindow *vt_current_page = v_tools->GetCurrentPage();
-	if(vt_current_page == NULL)
-	{
-		/* No active page to reference. */
-		return sash_position;
-	}
-	
-	int vtp_mw = std::max(vt_current_page->GetMinSize().GetWidth(), 0);
-	int vtp_Mw = vt_current_page->GetMaxSize().GetWidth();
-	
-	int vs_cw = v_splitter->GetClientSize().GetWidth();
-	int vs_ss = v_splitter->GetSashSize();
-	
-	/* Size overhead added by v_tools wxNotebook. */
-	int extra_w = v_tools->GetSize().GetWidth() - vt_current_page->GetSize().GetWidth();
-	
-	int sash_max = vs_cw - (vtp_mw + extra_w + vs_ss);
-	if(sash_position > sash_max)
-	{
-		return sash_max;
-	}
-	
-	if(vtp_Mw > 0)
-	{
-		int sash_min = vs_cw - (vtp_Mw + extra_w + vs_ss);
-		if(sash_position < sash_min)
-		{
-			return sash_min;
-		}
-	}
-	
-	return sash_position;
-}
-
-void REHex::MainWindow::Tab::vtools_adjust()
-{
-	wxWindow *vt_current_page = v_tools->GetCurrentPage();
-	
-	if(vt_current_page == NULL || !vt_current_page->IsShown())
-	{
-		/* Vertical tool pane has no pages, or the page is hidden. Hide it. */
-		if(v_splitter->IsSplit())
-		{
-			v_splitter->Unsplit();
-		}
-	}
-	else{
-		if(!v_splitter->IsSplit())
-		{
-			v_splitter->SplitVertically(h_splitter, v_tools);
-		}
-		
-		int vtp_bw = std::max(vt_current_page->GetBestSize().GetWidth(), 0);
-		
-		/* Size overhead added by v_tools wxNotebook. */
-		int extra_w = v_tools->GetSize().GetWidth() - vt_current_page->GetSize().GetWidth();
-		
-		/* Set the current position of the splitter to display the best size of the current
-		 * page and overhead.
-		*/
-		int vs_cw = v_splitter->GetClientSize().GetWidth();
-		v_splitter->SetSashPosition(vs_cw - (vtp_bw + extra_w + v_splitter->GetSashSize()));
-	}
-}
-
-void REHex::MainWindow::Tab::htools_adjust()
-{
-	wxWindow *ht_current_page = h_tools->GetCurrentPage();
-	
-	if(ht_current_page == NULL || !ht_current_page->IsShown())
-	{
-		/* Horizontal tool pane has no pages, or the page is hidden. Hide it. */
-		if(h_splitter->IsSplit())
-		{
-			h_splitter->Unsplit();
-		}
-	}
-	else{
-		if(!h_splitter->IsSplit())
-		{
-			h_splitter->SplitHorizontally(doc, h_tools);
-		}
-		
-		int htp_bh = std::max(ht_current_page->GetBestSize().GetHeight(), 0);
-		
-		/* Size overhead added by h_tools wxNotebook. */
-		int extra_h = h_tools->GetSize().GetHeight() - ht_current_page->GetSize().GetHeight();
-		
-		/* Set the sash position to display the tool page's best size. */
-		int hs_ch = h_splitter->GetClientSize().GetHeight();
-		h_splitter->SetSashPosition(hs_ch - (htp_bh + extra_h + h_splitter->GetSashSize()));
-	}
-}
-
-/* The size of a wxNotebook page doesn't seem to be set correctly during
- * initialisation (or immediately after adding a page), so we can't use it to
- * determine how much size overhead the wxNotebook adds at that point. Instead
- * we defer setting of the tool pane sizes until the first idle tick, by which
- * point the sizes seem to have been set up properly (on GTK anyway).
-*/
-
-void REHex::MainWindow::Tab::vtools_adjust_on_idle()
-{
-	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::vtools_adjust_now_idle, this);
-}
-
-void REHex::MainWindow::Tab::vtools_adjust_now_idle(wxIdleEvent &event)
-{
-	Unbind(wxEVT_IDLE, &REHex::MainWindow::Tab::vtools_adjust_now_idle, this);
-	event.Skip();
-	
-	vtools_adjust();
-}
-
-void REHex::MainWindow::Tab::htools_adjust_on_idle()
-{
-	Bind(wxEVT_IDLE, &REHex::MainWindow::Tab::htools_adjust_now_idle, this);
-}
-
-void REHex::MainWindow::Tab::htools_adjust_now_idle(wxIdleEvent &event)
-{
-	Unbind(wxEVT_IDLE, &REHex::MainWindow::Tab::htools_adjust_now_idle, this);
-	event.Skip();
-	
-	htools_adjust();
-}
-
-void REHex::MainWindow::Tab::init_default_doc_view()
-{
-	wxConfig *config = wxGetApp().config;
-	config->SetPath("/default-view/");
-	
-	doc->set_bytes_per_line(             config->Read    ("bytes-per-line",             doc->get_bytes_per_line()));
-	doc->set_bytes_per_group(            config->Read    ("bytes-per-group",            doc->get_bytes_per_group()));
-	doc->set_show_offsets(               config->ReadBool("show-offsets",               doc->get_show_offsets()));
-	doc->set_show_ascii(                 config->ReadBool("show-ascii",                 doc->get_show_ascii()));
-	doc->set_highlight_selection_match(  config->ReadBool("highlight-selection-match",  doc->get_highlight_selection_match()));
-	
-	int inline_comments = config->Read("inline-comments", (int)(doc->get_inline_comment_mode()));
-	if(inline_comments >= 0 && inline_comments <= REHex::Document::ICM_MAX)
-	{
-		doc->set_inline_comment_mode((REHex::Document::InlineCommentMode)(inline_comments));
-	}
-	
-	int offset_display_base = config->Read("offset-display-base", (int)(doc->get_offset_display_base()));
-	if(offset_display_base >= OFFSET_BASE_MIN && offset_display_base <= OFFSET_BASE_MAX)
-	{
-		doc->set_offset_display_base((OffsetBase)(offset_display_base));
-	}
-}
-
-void REHex::MainWindow::Tab::init_default_tools()
-{
-	wxConfig *config = wxGetApp().config;
-	
-	/* TODO: Load h_tools state. */
-	
-	for(unsigned int i = 0;; ++i)
-	{
-		char base_p[64];
-		snprintf(base_p, sizeof(base_p), "/default-view/vtools/panels/0/tab/%u/", i);
-		
-		if(config->HasGroup(base_p))
-		{
-			config->SetPath(base_p);
-			
-			std::string name = config->Read    ("name", "").ToStdString();
-			bool selected    = config->ReadBool("selected", false);
-			
-			if(ToolPanelRegistry::by_name(name) != NULL)
-			{
-				tool_create(name, selected, config, false);
-			}
-			else{
-				/* TODO: Some kind of warning? */
-			}
-		}
-		else{
-			break;
 		}
 	}
 }

@@ -1226,6 +1226,17 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
+	if(inline_comment_mode == ICM_HIDDEN)
+	{
+		/* Inline comments are hidden. Just show a single big data region. */
+		
+		std::list<DocumentCtrl::Region*> regions;
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, doc->buffer_length(), *doc));
+		doc_ctrl->replace_all_regions(regions);
+		
+		return;
+	}
+	
 	auto comments = doc->get_comments();
 	
 	bool nest = (inline_comment_mode == ICM_SHORT_INDENT || inline_comment_mode == ICM_FULL_INDENT);

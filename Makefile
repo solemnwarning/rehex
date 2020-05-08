@@ -182,8 +182,13 @@ $(EXE): $(APP_OBJS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
+	res/icon16.o \
+	res/icon32.o \
+	res/icon48.o \
+	res/icon64.o \
 	src/buffer.o \
 	src/CommentTree.o \
+	src/DiffWindow.o \
 	src/document.o \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
@@ -197,6 +202,7 @@ TEST_OBJS := \
 	tests/buffer.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
+	tests/DiffWindow.o \
 	tests/Document.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \

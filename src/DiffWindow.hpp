@@ -62,10 +62,13 @@ namespace REHex {
 						doc_ctrl(NULL),
 						help_panel(NULL) {}
 					
+					off_t get_offset() const { return offset; }
+					off_t get_length() const { return length; }
+					
 				friend DiffWindow;
 			};
 			
-			DiffWindow(wxWindow *parent);
+			DiffWindow(wxWindow *parent, bool set_icons = true);
 			virtual ~DiffWindow();
 			
 			const std::list<Range> &get_ranges() const;

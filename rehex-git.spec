@@ -12,6 +12,7 @@ Source0:  rehex-%{git_commit_sha}.tar.gz
 
 BuildRequires: gcc-c++
 BuildRequires: jansson-devel
+BuildRequires: make
 BuildRequires: wxGTK3-devel
 BuildRequires: xorg-x11-server-Xvfb
 

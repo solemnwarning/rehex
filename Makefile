@@ -145,14 +145,23 @@ clean:
 distclean: clean
 
 APP_OBJS := \
+	res/ascii16.o \
+	res/ascii24.o \
+	res/ascii32.o \
+	res/ascii48.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
 	res/icon64.o \
 	res/icon128.o \
 	res/license.o \
+	res/offsets16.o \
+	res/offsets24.o \
+	res/offsets32.o \
+	res/offsets48.o \
 	src/AboutDialog.o \
 	src/app.o \
+	src/ArtProvider.o \
 	src/buffer.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \
@@ -182,10 +191,19 @@ $(EXE): $(APP_OBJS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
+	res/ascii16.o \
+	res/ascii24.o \
+	res/ascii32.o \
+	res/ascii48.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
 	res/icon64.o \
+	res/offsets16.o \
+	res/offsets24.o \
+	res/offsets32.o \
+	res/offsets48.o \
+	src/ArtProvider.o \
 	src/buffer.o \
 	src/CommentTree.o \
 	src/DiffWindow.o \
@@ -220,6 +238,7 @@ $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 src/AboutDialog.o: res/icon128.h
+src/ArtProvider.o: res/ascii16.h res/ascii24.h res/ascii32.h res/ascii48.h res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
 src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h

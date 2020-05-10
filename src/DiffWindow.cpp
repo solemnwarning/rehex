@@ -17,9 +17,11 @@
 
 #include <algorithm>
 #include <set>
+#include <wx/artprov.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 
+#include "ArtProvider.hpp"
 #include "DiffWindow.hpp"
 #include "Palette.hpp"
 
@@ -28,17 +30,36 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
+enum {
+	ID_SHOW_OFFSETS = 1,
+	ID_SHOW_ASCII,
+};
+
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_SIZE(REHex::DiffWindow::OnSize)
 	EVT_IDLE(REHex::DiffWindow::OnIdle)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
 	
 	EVT_CURSORUPDATE(wxID_ANY, REHex::DiffWindow::OnCursorUpdate)
+	
+	EVT_MENU(ID_SHOW_OFFSETS, REHex::DiffWindow::OnToggleOffsets)
+	EVT_MENU(ID_SHOW_ASCII,   REHex::DiffWindow::OnToggleASCII)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent, bool set_icons):
 	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
 {
+	wxToolBar *toolbar = CreateToolBar();
+	
+	show_offsets_button = toolbar->AddCheckTool(ID_SHOW_OFFSETS, "Show offsets", wxArtProvider::GetBitmap(ART_OFFSETS_ICON, wxART_TOOLBAR), wxNullBitmap, "Show offsets");
+	show_ascii_button   = toolbar->AddCheckTool(ID_SHOW_ASCII,   "Show ASCII",   wxArtProvider::GetBitmap(ART_ASCII_ICON,   wxART_TOOLBAR), wxNullBitmap, "Show ASCII");
+	
+	/* Enable offset and ASCII columns by default. */
+	show_offsets_button->Toggle(true);
+	show_ascii_button  ->Toggle(true);
+	
+	toolbar->Realize();
+	
 	/* For some reason, trying to set up the icon bundle during unit tests triggers the
 	 * following assertion failure in wxWidgets:
 	 *
@@ -160,6 +181,9 @@ void REHex::DiffWindow::add_range(const Range &range)
 	
 	doc_update(&*new_range);
 	
+	new_range->doc_ctrl->set_show_offsets(show_offsets_button->IsToggled());
+	new_range->doc_ctrl->set_show_ascii  (show_ascii_button  ->IsToggled());
+	
 	new_range->doc_ctrl->set_cursor_position(new_range->offset);
 	new_range->doc_ctrl->set_offset_display_base(new_range->main_doc_ctrl->get_offset_display_base());
 	
@@ -171,7 +195,6 @@ void REHex::DiffWindow::add_range(const Range &range)
 		
 		new_range->doc_ctrl->linked_scroll_insert_self_after(prev_range->doc_ctrl);
 		
-		// new_range->doc_ctrl->set_show_offsets(false);
 		new_range->splitter->Unsplit();
 	}
 	
@@ -517,6 +540,26 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 			r->doc_ctrl->set_cursor_position(pos_from_r, event.cursor_state);
 		}
 	}
+}
+
+void REHex::DiffWindow::OnToggleOffsets(wxCommandEvent &event)
+{
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_show_offsets(event.IsChecked());
+	}
+	
+	resize_splitters();
+}
+
+void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
+{
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_show_ascii(event.IsChecked());
+	}
+	
+	resize_splitters();
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):

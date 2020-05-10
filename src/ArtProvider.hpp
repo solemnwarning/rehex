@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,25 +15,25 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <gtest/gtest.h>
-#include <wx/app.h>
-#include <wx/init.h>
+#ifndef REHEX_ARTPROVIDER_HPP
+#define REHEX_ARTPROVIDER_HPP
 
-#include "../src/ArtProvider.hpp"
+#include <wx/artprov.h>
+#include <wx/wx.h>
 
-wxApp &wxGetApp()
+namespace REHex
 {
-       return *wxTheApp;
+	extern const wxArtID ART_ASCII_ICON;
+	extern const wxArtID ART_OFFSETS_ICON;
+	
+	class ArtProvider: public wxArtProvider
+	{
+		public:
+			static void init();
+			
+		protected:
+			virtual wxBitmap CreateBitmap(const wxArtID &id, const wxArtClient &client, const wxSize &size) override;
+	};
 }
 
-int main(int argc, char **argv)
-{
-	wxApp::SetInstance(new wxApp());
-	wxInitializer wxinit;
-	
-	wxImage::AddHandler(new wxPNGHandler);
-	REHex::ArtProvider::init();
-	
-	testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
+#endif /* !REHEX_ARTPROVIDER_HPP */

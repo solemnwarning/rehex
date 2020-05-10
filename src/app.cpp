@@ -19,6 +19,7 @@
 #include <llvm-c/Target.h>
 
 #include "app.hpp"
+#include "ArtProvider.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 
@@ -37,6 +38,8 @@ bool REHex::App::OnInit()
 	#endif
 	
 	wxImage::AddHandler(new wxPNGHandler);
+	
+	ArtProvider::init();
 	
 	config = new wxConfig("REHex");
 	

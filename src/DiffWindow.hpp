@@ -68,7 +68,7 @@ namespace REHex {
 				friend DiffWindow;
 			};
 			
-			DiffWindow(wxWindow *parent, bool set_icons = true);
+			DiffWindow(wxWindow *parent);
 			virtual ~DiffWindow();
 			
 			const std::list<Range> &get_ranges() const;

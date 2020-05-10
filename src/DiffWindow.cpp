@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <set>
+#include <tuple>
 #include <wx/artprov.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
@@ -120,7 +121,7 @@ const std::list<REHex::DiffWindow::Range> &REHex::DiffWindow::get_ranges() const
 	return ranges;
 }
 
-void REHex::DiffWindow::add_range(const Range &range)
+std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const Range &range)
 {
 	auto new_range = ranges.insert(ranges.end(), range);
 	
@@ -204,6 +205,8 @@ void REHex::DiffWindow::add_range(const Range &range)
 	}
 	
 	resize_splitters();
+	
+	return new_range;
 }
 
 std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(std::list<Range>::iterator range)
@@ -439,6 +442,44 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 					doc_update(&*r);
 				}
 			}
+			
+			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
+			if(event.offset <= cursor_pos)
+			{
+				cursor_pos -= std::min(event.length, (cursor_pos - event.offset));
+				
+				if(cursor_pos >= (r->offset + r->length))
+				{
+					/* Move the cursor back if the end of the region is deleted under it. */
+					cursor_pos = r->offset + r->length - 1;
+				}
+				
+				assert(cursor_pos >= r->offset);
+				assert(cursor_pos < (r->offset + r->length));
+				
+				r->doc_ctrl->set_cursor_position(cursor_pos);
+			}
+			
+			off_t selection_off, selection_length;
+			std::tie(selection_off, selection_length) = r->doc_ctrl->get_selection();
+			
+			if(selection_length > 0)
+			{
+				if((event.offset < selection_off && (event.offset + event.length) > selection_off)
+					|| (event.offset >= selection_off && event.offset < (selection_off + selection_length)))
+				{
+					r->doc_ctrl->clear_selection();
+				}
+				else if(event.offset < selection_off)
+				{
+					selection_off -= event.length;
+					
+					assert(selection_off >= r->offset);
+					assert((selection_off + selection_length) <= (r->offset + r->length));
+					
+					r->doc_ctrl->set_selection(selection_off, selection_length);
+				}
+			}
 		}
 		
 		++r;
@@ -456,7 +497,7 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 	{
 		if(r->doc == src)
 		{
-			if(event.offset < r->offset)
+			if(event.offset <= r->offset)
 			{
 				r->offset += event.length;
 				doc_update(&*r);
@@ -465,6 +506,36 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 			{
 				r->length += event.length;
 				doc_update(&*r);
+			}
+			
+			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
+			if(event.offset <= cursor_pos)
+			{
+				cursor_pos += event.length;
+				
+				assert(cursor_pos >= r->offset);
+				assert(cursor_pos < (r->offset + r->length));
+				
+				r->doc_ctrl->set_cursor_position(cursor_pos);
+			}
+			
+			off_t selection_off, selection_length;
+			std::tie(selection_off, selection_length) = r->doc_ctrl->get_selection();
+			if(selection_length > 0)
+			{
+				if(event.offset <= selection_off)
+				{
+					selection_off += event.length;
+					
+					assert(selection_off >= r->offset);
+					assert((selection_off + selection_length) <= (r->offset + r->length));
+					
+					r->doc_ctrl->set_selection(selection_off, selection_length);
+				}
+				else if(event.offset < (selection_off + selection_length))
+				{
+					r->doc_ctrl->clear_selection();
+				}
 			}
 		}
 	}
@@ -481,6 +552,16 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 	{
 		if(r->doc == src)
 		{
+			off_t selection_off, selection_length;
+			std::tie(selection_off, selection_length) = r->doc_ctrl->get_selection();
+			
+			if(selection_length > 0 && (
+				(event.offset < selection_off && (event.offset + event.length) > selection_off)
+				|| (event.offset >= selection_off && event.offset < (selection_off + selection_length))))
+			{
+				r->doc_ctrl->clear_selection();
+			}
+			
 			r->doc_ctrl->Refresh();
 		}
 	}

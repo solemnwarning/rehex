@@ -65,6 +65,9 @@ namespace REHex {
 					off_t get_offset() const { return offset; }
 					off_t get_length() const { return length; }
 					
+					/* Not a gaping encapsulation hole in the name of testing. */
+					DocumentCtrl *_im_a_test_give_me_doc_ctrl() { return doc_ctrl; }
+					
 				friend DiffWindow;
 			};
 			
@@ -72,7 +75,7 @@ namespace REHex {
 			virtual ~DiffWindow();
 			
 			const std::list<Range> &get_ranges() const;
-			void add_range(const Range &range);
+			std::list<Range>::iterator add_range(const Range &range);
 			
 		private:
 			class DiffDataRegion: public DocumentCtrl::DataRegion

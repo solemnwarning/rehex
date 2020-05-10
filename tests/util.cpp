@@ -44,6 +44,8 @@
 #define PARSE_HEX_STRING_BAD(hex) \
 	EXPECT_THROW(REHex::parse_hex_string(hex), REHex::ParseError) << "REHex::parse_hex_string(" #hex ") throws ParseError";
 
+using namespace REHex;
+
 TEST(Util, parse_ascii_nibble)
 {
 	PARSE_ASCII_NIBBLE_BAD('\0');
@@ -113,4 +115,22 @@ TEST(Util, parse_hex_string)
 	PARSE_HEX_STRING_BAD("G");
 	PARSE_HEX_STRING_BAD("`");
 	PARSE_HEX_STRING_BAD("g");
+}
+
+TEST(Util, format_offset)
+{
+	EXPECT_EQ(format_offset(0, OFFSET_BASE_HEX, 0), "0000:0000");
+	EXPECT_EQ(format_offset(0, OFFSET_BASE_DEC, 0), "0000000000");
+	
+	EXPECT_EQ(format_offset( 0xABCDEF10LL, OFFSET_BASE_HEX,         0x0LL),         "ABCD:EF10");
+	EXPECT_EQ(format_offset( 0xABCDEF10LL, OFFSET_BASE_HEX,  0xFFFFFFFFLL),         "ABCD:EF10");
+	EXPECT_EQ(format_offset( 0xABCDEF10LL, OFFSET_BASE_HEX, 0x100000000LL), "00000000:ABCDEF10");
+	EXPECT_EQ(format_offset( 0xFFFFFFFFLL, OFFSET_BASE_HEX,         0x0LL),         "FFFF:FFFF");
+	EXPECT_EQ(format_offset(0x100000000LL, OFFSET_BASE_HEX,         0x0LL), "00000001:00000000");
+	
+	EXPECT_EQ(format_offset(1234567890LL, OFFSET_BASE_DEC,          0LL),          "1234567890");
+	EXPECT_EQ(format_offset(1234567890LL, OFFSET_BASE_DEC, 4294967295LL),          "1234567890");
+	EXPECT_EQ(format_offset(1234567890LL, OFFSET_BASE_DEC, 4294967296LL), "0000000001234567890");
+	EXPECT_EQ(format_offset(4294967295LL, OFFSET_BASE_DEC,          0LL),          "4294967295");
+	EXPECT_EQ(format_offset(4294967296LL, OFFSET_BASE_DEC,          0LL), "0000000004294967296");
 }

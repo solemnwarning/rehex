@@ -90,8 +90,6 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
 	doc.auto_cleanup_bind(CURSOR_UPDATE,         &REHex::Tab::OnEventToForward<CursorUpdateEvent>, this);
-	doc.auto_cleanup_bind(EV_SELECTION_CHANGED,  &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
-	doc.auto_cleanup_bind(EV_INSERT_TOGGLED,     &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	doc.auto_cleanup_bind(EV_UNDO_UPDATE,        &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	doc.auto_cleanup_bind(EV_BECAME_DIRTY,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	doc.auto_cleanup_bind(EV_BECAME_CLEAN,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
@@ -146,8 +144,6 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
 	doc.auto_cleanup_bind(CURSOR_UPDATE,         &REHex::Tab::OnEventToForward<CursorUpdateEvent>, this);
-	doc.auto_cleanup_bind(EV_SELECTION_CHANGED,  &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
-	doc.auto_cleanup_bind(EV_INSERT_TOGGLED,     &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	doc.auto_cleanup_bind(EV_UNDO_UPDATE,        &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	doc.auto_cleanup_bind(EV_BECAME_DIRTY,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
 	doc.auto_cleanup_bind(EV_BECAME_CLEAN,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);

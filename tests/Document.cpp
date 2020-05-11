@@ -348,6 +348,120 @@ TEST_F(DocumentTest, OverwriteDataUndo)
 	ASSERT_DATA("CREDITlibrarydaughter");
 }
 
+TEST_F(DocumentTest, EraseData)
+{
+	/* Preload document with data. */
+	const char *DATA1 = "signROOMYgateMUGgraceful";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	ASSERT_DATA("signROOMYgateMUGgraceful");
+	
+	/* Erase from middle of document... */
+	
+	events.clear();
+	
+	doc->erase_data(4, 5, 4, Document::CSTATE_HEX, "next");
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(4, 5)",
+		"CURSOR_UPDATE(4, 0)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 4)                 << "Document::erase_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::erase_data() sets cursor to requested state";
+	
+	ASSERT_DATA("signgateMUGgraceful");
+	
+	/* Erase from beginning of document... */
+	
+	events.clear();
+	
+	doc->erase_data(0, 4, 0, Document::CSTATE_ASCII, "bridge");
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(0, 4)",
+		"CURSOR_UPDATE(0, 2)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 0)                   << "Document::erase_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::erase_data() sets cursor to requested state";
+	
+	ASSERT_DATA("gateMUGgraceful");
+	
+	/* Erase from end of document... */
+	
+	events.clear();
+	
+	doc->erase_data(7, 8, 6, Document::CSTATE_GOTO, "question");
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(7, 8)",
+		"CURSOR_UPDATE(6, 2)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 6)                   << "Document::erase_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::erase_data() sets cursor to requested state";
+	
+	ASSERT_DATA("gateMUG");
+}
+
+TEST_F(DocumentTest, EraseDataUndo)
+{
+	/* Preload document with data. */
+	const char *DATA1 = "signROOMYgateMUGgraceful";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	ASSERT_DATA("signROOMYgateMUGgraceful");
+	
+	/* Erase from middle of document... */
+	
+	events.clear();
+	
+	doc->erase_data(4, 5, 4, Document::CSTATE_HEX, "next");
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(4, 5)",
+		"CURSOR_UPDATE(4, 0)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 4)                 << "Document::erase_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::erase_data() sets cursor to requested state";
+	
+	ASSERT_DATA("signgateMUGgraceful");
+	
+	/* Undo the erase... */
+	
+	events.clear();
+	
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(4, 5)",
+		"CURSOR_UPDATE(0, 0)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 0)                 << "Document::undo() restores cursor to position before Document::overwrite_data() call";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::undo() restores cursor state to before Document::overwrite_data() call";
+	
+	ASSERT_DATA("signROOMYgateMUGgraceful");
+	
+	/* Redo the erase... */
+	
+	events.clear();
+	
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(4, 5)",
+		"CURSOR_UPDATE(4, 0)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 4)                 << "Document::redo() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::redo() sets cursor to requested state";
+	
+	ASSERT_DATA("signgateMUGgraceful");
+}
+
 TEST_F(DocumentTest, SetHighlight)
 {
 	/* Preload document with data. */

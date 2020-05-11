@@ -266,6 +266,11 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 	assert(highlight_colour_idx >= 0);
 	assert(highlight_colour_idx < Palette::NUM_HIGHLIGHT_COLOURS);
 	
+	if(off < 0 || length < 1 || (off + length) > buffer_length())
+	{
+		return false;
+	}
+	
 	if(!NestedOffsetLengthMap_can_set(highlights, off, length))
 	{
 		return false;
@@ -278,9 +283,10 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 			_raise_highlights_changed();
 		},
 		
-		[]()
+		[this]()
 		{
 			/* Highlight changes are undone implicitly. */
+			_raise_highlights_changed();
 		});
 	
 	return true;
@@ -300,9 +306,10 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 			_raise_highlights_changed();
 		},
 		
-		[]()
+		[this]()
 		{
 			/* Highlight changes are undone implicitly. */
+			_raise_highlights_changed();
 		});
 	
 	return true;
@@ -361,8 +368,6 @@ void REHex::Document::undo()
 		cursor_state = act.old_cursor_state;
 		comments     = act.old_comments;
 		highlights   = act.old_highlights;
-		
-		_raise_highlights_changed();
 		
 		if(cursor_updated)
 		{
@@ -445,7 +450,10 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 			_raise_comment_modified();
 		}
 		
-		NestedOffsetLengthMap_data_inserted(highlights, offset, length);
+		if(NestedOffsetLengthMap_data_inserted(highlights, offset, length) > 0)
+		{
+			_raise_highlights_changed();
+		}
 	}
 	
 }
@@ -468,7 +476,10 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 			_raise_comment_modified();
 		}
 		
-		NestedOffsetLengthMap_data_erased(highlights, offset, length);
+		if(NestedOffsetLengthMap_data_erased(highlights, offset, length) > 0)
+		{
+			_raise_highlights_changed();
+		}
 	}
 }
 

@@ -25,6 +25,12 @@
 #include "../src/document.hpp"
 #include "../src/Events.hpp"
 
+static const char *IPSUM =
+	"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"
+	" incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud"
+	" exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure"
+	" dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.";
+
 using namespace REHex;
 
 class DocumentTest: public ::testing::Test
@@ -198,7 +204,6 @@ TEST_F(DocumentTest, InsertDataUndo)
 	
 	EXPECT_EVENTS(
 		"DATA_ERASE(0, 8)",
-		"EV_HIGHLIGHTS_CHANGED", /* BUG */
 		"CURSOR_UPDATE(0, 0)",
 	);
 	
@@ -318,7 +323,6 @@ TEST_F(DocumentTest, OverwriteDataUndo)
 	
 	EXPECT_EVENTS(
 		"DATA_OVERWRITE(0, 6)",
-		"EV_HIGHLIGHTS_CHANGED", /* BUG */
 		"CURSOR_UPDATE(0, 0)",
 	);
 	
@@ -342,4 +346,579 @@ TEST_F(DocumentTest, OverwriteDataUndo)
 	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::redo() sets cursor to requested state";
 	
 	ASSERT_DATA("CREDITlibrarydaughter");
+}
+
+TEST_F(DocumentTest, SetHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE(doc->set_highlight(10, 20, 0)) << "Document::set_highlight() allows range within file";
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED"
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, SetHighlightWholeFile)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE(doc->set_highlight(0, strlen(IPSUM), 1)) << "Document::set_highlight() allows highlight spanning entire file";
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(0, strlen(IPSUM)) ] = 1;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, SetHighlightMultiple)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE(doc->set_highlight(0,  10, 2));
+	ASSERT_TRUE(doc->set_highlight(20, 10, 3));
+	ASSERT_TRUE(doc->set_highlight(30, 10, 4));
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(0,  10) ] = 2;
+	expect_highlights[ NestedOffsetLengthMapKey(20, 10) ] = 3;
+	expect_highlights[ NestedOffsetLengthMapKey(30, 10) ] = 4;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, SetHighlightNested)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE(doc->set_highlight(0,  20, 1));
+	ASSERT_TRUE(doc->set_highlight(0,  10, 2));
+	ASSERT_TRUE(doc->set_highlight(40, 10, 3));
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(0,  10) ] = 2;
+	expect_highlights[ NestedOffsetLengthMapKey(0,  20) ] = 1;
+	expect_highlights[ NestedOffsetLengthMapKey(40, 10) ] = 3;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, SetHighlightOverwrite)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE(doc->set_highlight(0, 20, 1));
+	ASSERT_TRUE(doc->set_highlight(0, 20, 2));
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(0, 20) ] = 2;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, SetHighlightConflict)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE (doc->set_highlight(10, 20, 1));
+	ASSERT_FALSE(doc->set_highlight( 0, 20, 2));
+	ASSERT_FALSE(doc->set_highlight(20, 20, 3));
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(10, 20) ] = 1;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, SetHighlightAtEndOfFile)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_FALSE(doc->set_highlight(strlen(IPSUM), 0, 0)) << "Document::set_highlight() rejects offset at end of file";
+	EXPECT_EVENTS();
+}
+
+TEST_F(DocumentTest, SetHighlightRunOverEndOfFile)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_FALSE(doc->set_highlight((strlen(IPSUM) - 1), 2, 0)) << "Document::set_highlight() rejects range that runs over end of file";
+	EXPECT_EVENTS();
+}
+
+TEST_F(DocumentTest, SetHighlightUndo)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	events.clear();
+	
+	ASSERT_TRUE(doc->set_highlight(10, 20, 0)) << "Document::set_highlight() allows range within file";
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED"
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+	
+	/* Undo the highlight... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> no_highlights;
+	EXPECT_EQ(doc->get_highlights(), no_highlights);
+	
+	/* Redo the highlight... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, InsertBeforeHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(20, 10, 1));
+	ASSERT_TRUE(doc->set_highlight(40, 10, 2));
+	
+	events.clear();
+	
+	doc->insert_data(20, (const unsigned char*)(IPSUM), 5);
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(20, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	expect_highlights_post[ NestedOffsetLengthMapKey(25, 10) ] = 1;
+	expect_highlights_post[ NestedOffsetLengthMapKey(45, 10) ] = 2;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+	
+	/* Undo the insert... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(20, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	/* Redo the highlight... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(20, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, InsertWithinHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(20, 10, 1));
+	
+	events.clear();
+	
+	doc->insert_data(25, (const unsigned char*)(IPSUM), 5);
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(25, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	expect_highlights_post[ NestedOffsetLengthMapKey(20, 15) ] = 1;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+	
+	/* Undo the insert... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(25, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	/* Redo the insert... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(25, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, InsertAfterHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(20, 10, 1));
+	ASSERT_TRUE(doc->set_highlight(40, 10, 2));
+	
+	events.clear();
+	
+	doc->insert_data(50, (const unsigned char*)(IPSUM), 5);
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(50, 5)",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	expect_highlights[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+	
+	/* Undo the insert... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(50, 5)",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+	
+	/* Redo the insert... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(50, 5)",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, EraseBeforeHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(20, 10, 1));
+	ASSERT_TRUE(doc->set_highlight(40, 10, 2));
+	
+	events.clear();
+	
+	doc->erase_data(15, 5);
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(15, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	expect_highlights_post[ NestedOffsetLengthMapKey(15, 10) ] = 1;
+	expect_highlights_post[ NestedOffsetLengthMapKey(35, 10) ] = 2;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+	
+	/* Undo the erase... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(15, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	/* Redo the erase... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(15, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, EraseWithinHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(20, 10, 1));
+	
+	events.clear();
+	
+	doc->erase_data(20, 5);
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(20, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	expect_highlights_post[ NestedOffsetLengthMapKey(20, 5) ] = 1;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+	
+	/* Undo the erase... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(20, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	/* Redo the erase... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(20, 5)",
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, EraseAfterHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(20, 10, 1));
+	ASSERT_TRUE(doc->set_highlight(40, 10, 2));
+	
+	events.clear();
+	
+	doc->erase_data(50, 5);
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(50, 5)",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights;
+	expect_highlights[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	expect_highlights[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+	
+	/* Undo the erase... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(50, 5)",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+	
+	/* Redo the erase... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(50, 5)",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights);
+}
+
+TEST_F(DocumentTest, EraseHighlight)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	
+	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	events.clear();
+	
+	ASSERT_FALSE(doc->erase_highlight(10,  5)) << "Document::erase_highlight() returns false when length doesn't match existing key";
+	ASSERT_FALSE(doc->erase_highlight(20, 20)) << "Document::erase_highlight() returns false when offset doesn't match existing key";
+	
+	EXPECT_EVENTS();
+	
+	events.clear();
+	
+	ASSERT_TRUE(doc->erase_highlight(10, 20));
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, EraseHighlightNested)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
+	ASSERT_TRUE(doc->set_highlight(10,  5, 1));
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(10,  5) ] = 1;
+	
+	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	events.clear();
+	
+	ASSERT_TRUE(doc->erase_highlight(10, 20));
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	expect_highlights_post[ NestedOffsetLengthMapKey(10,  5) ] = 1;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, EraseHighlightUndo)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
+	
+	NestedOffsetLengthMap<int> expect_highlights_pre;
+	expect_highlights_pre[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	
+	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	ASSERT_TRUE(doc->erase_highlight(10, 20));
+	
+	NestedOffsetLengthMap<int> expect_highlights_post;
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+	
+	/* Undo the erase... */
+	
+	events.clear();
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_pre);
+	
+	/* Redo the erase... */
+	
+	events.clear();
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"EV_HIGHLIGHTS_CHANGED",
+	);
+	
+	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 }

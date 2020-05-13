@@ -639,31 +639,44 @@ REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(off_t off) const
 {
-	std::vector<unsigned char> my_data = range->doc->read_data(off, 1);
-	
-	assert(off >= range->offset);
-	off_t off_from_range_begin = off - range->offset;
-	
-	const std::list<Range> &ranges = diff_window->get_ranges();
-	
-	for(auto r = ranges.begin(); r != ranges.end(); ++r)
-	{
-		if(&*r == range)
+	try {
+		std::vector<unsigned char> my_data = range->doc->read_data(off, 1);
+		
+		assert(off >= range->offset);
+		off_t off_from_range_begin = off - range->offset;
+		
+		const std::list<Range> &ranges = diff_window->get_ranges();
+		
+		for(auto r = ranges.begin(); r != ranges.end(); ++r)
 		{
-			/* This one is me. */
-			continue;
+			if(&*r == range)
+			{
+				/* This one is me. */
+				continue;
+			}
+			
+			std::vector<unsigned char> their_data = r->doc->read_data(r->offset + off_from_range_begin, 1);
+			
+			if(off_from_range_begin >= r->length || their_data != my_data)
+			{
+				return Highlight(
+					Palette::PAL_DIRTY_TEXT_FG,
+					Palette::PAL_DIRTY_TEXT_BG,
+					true);
+			}
 		}
 		
-		std::vector<unsigned char> their_data = r->doc->read_data(r->offset + off_from_range_begin, 1);
-		
-		if(off_from_range_begin >= r->length || their_data != my_data)
-		{
-			return Highlight(
-				Palette::PAL_DIRTY_TEXT_FG,
-				Palette::PAL_DIRTY_TEXT_BG,
-				true);
-		}
+		return NoHighlight();
 	}
-	
-	return NoHighlight();
+	catch(const std::exception &e)
+	{
+		/* Highlight byte if an exception was thrown - most likely a file I/O error. */
+		
+		fprintf(stderr, "Exception in REHex::DiffWindow::DiffDataRegion::highlight_at_off: %s\n", e.what());
+		
+		return Highlight(
+			Palette::PAL_DIRTY_TEXT_FG,
+			Palette::PAL_DIRTY_TEXT_BG,
+			true);
+	}
 }

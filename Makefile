@@ -134,7 +134,21 @@ check: tests/all-tests
 
 .PHONY: clean
 clean:
-	rm -f res/license.c res/license.h res/icon16.c res/icon16.h res/icon32.c res/icon32.h res/icon48.c res/icon48.h res/icon64.c res/icon64.h res/icon128.c res/icon128.h
+	rm -f res/ascii16.c   res/ascii16.h \
+	      res/ascii24.c   res/ascii24.h \
+	      res/ascii32.c   res/ascii32.h \
+	      res/ascii48.c   res/ascii48.h \
+	      res/icon16.c    res/icon16.h \
+	      res/icon32.c    res/icon32.h \
+	      res/icon48.c    res/icon48.h \
+	      res/icon64.c    res/icon64.h \
+	      res/icon128.c   res/icon128.h \
+	      res/license.c   res/license.h \
+	      res/offsets16.c res/offsets16.h \
+	      res/offsets24.c res/offsets24.h \
+	      res/offsets32.c res/offsets32.h \
+	      res/offsets48.c res/offsets48.h
+	
 	rm -f $(APP_OBJS)
 	rm -f $(EXE)
 	rm -f $(TEST_OBJS)

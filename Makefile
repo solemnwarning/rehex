@@ -243,6 +243,7 @@ TEST_OBJS := \
 	tests/search-text.o \
 	tests/SearchValue.o \
 	tests/SafeWindowPointer.o \
+	tests/SharedDocumentPointer.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)

@@ -30,14 +30,14 @@ namespace REHex
 	/**
 	 * @brief Wrapper around a shared_ptr<Document> with some convenience methods.
 	*/
-	class SharedDocumentPointer
+	template<typename T> class SharedDocumentPointerImpl
 	{
 		private:
-			std::shared_ptr<Document> document;
+			std::shared_ptr<T> document;
 			
 			std::stack< std::function<void()> > cleanups;
 			
-			SharedDocumentPointer(std::shared_ptr<Document> &document):
+			SharedDocumentPointerImpl<T>(std::shared_ptr<T> &document):
 				document(document) {}
 			
 		public:
@@ -56,10 +56,10 @@ namespace REHex
 				});
 			}
 			
-			SharedDocumentPointer(const SharedDocumentPointer &document):
+			SharedDocumentPointerImpl<T>(const SharedDocumentPointerImpl<T> &document):
 				document(document.document) {}
 			
-			~SharedDocumentPointer()
+			~SharedDocumentPointerImpl<T>()
 			{
 				while(!cleanups.empty())
 				{
@@ -68,18 +68,18 @@ namespace REHex
 				}
 			}
 			
-			operator Document*() const
+			operator T*() const
 			{
 				return document.get();
 			}
 			
-			Document* operator->() const
+			T* operator->() const
 			{
 				return document.get();
 			}
 			
 			/* Equality just checks Document pointers match. */
-			bool operator==(const SharedDocumentPointer &rhs) const
+			bool operator==(const SharedDocumentPointerImpl<T> &rhs) const
 			{
 				return document == rhs.document;
 			}
@@ -87,21 +87,23 @@ namespace REHex
 			/**
 			 * @brief Construct a new Document and return a SharedDocumentPointer.
 			*/
-			static SharedDocumentPointer make()
+			static SharedDocumentPointerImpl<T> make()
 			{
-				std::shared_ptr<Document> s = std::make_shared<Document>();
-				return SharedDocumentPointer(s);
+				std::shared_ptr<T> s = std::make_shared<T>();
+				return SharedDocumentPointerImpl<T>(s);
 			}
 			
 			/**
 			 * @brief Construct a new Document and return a SharedDocumentPointer.
 			*/
-			static SharedDocumentPointer make(const std::string &filename)
+			static SharedDocumentPointerImpl<T> make(const std::string &filename)
 			{
-				std::shared_ptr<Document> s = std::make_shared<Document>(filename);
-				return SharedDocumentPointer(s);
+				std::shared_ptr<T> s = std::make_shared<T>(filename);
+				return SharedDocumentPointerImpl<T>(s);
 			}
 	};
+	
+	using SharedDocumentPointer = SharedDocumentPointerImpl<Document>;
 }
 
 #endif /* !REHEX_SHAREDDOCUMENTPOINTER_HPP */

@@ -92,6 +92,23 @@ namespace REHex
 			 * @brief Get a reference to the internal std::set.
 			*/
 			const std::set<Range> &get_ranges() const;
+			
+			/**
+			 * @brief Adjust for data being inserted into file.
+			 *
+			 * Ranges after the insertion will be moved along by the size of the
+			 * insertion. Ranges spanning the insertion will be split.
+			*/
+			void data_inserted(off_t offset, off_t length);
+			
+			/**
+			 * @brief Adjust for data being erased from file.
+			 *
+			 * Ranges after the section erased will be moved back by the size of the
+			 * insertion. Ranges wholly within the erased section will be lost. Ranges
+			 * on either side of the erase will be truncated and merged as necessary.
+			*/
+			void data_erased(off_t offset, off_t length);
 	};
 }
 

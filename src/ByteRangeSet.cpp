@@ -158,3 +158,92 @@ const std::set<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() co
 {
 	return ranges;
 }
+
+void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
+{
+	std::set<Range> new_ranges;
+	
+	for(auto i = ranges.begin(); i != ranges.end(); ++i)
+	{
+		if(i->offset >= offset)
+		{
+			new_ranges.emplace((i->offset + length), i->length);
+		}
+		else if(i->offset < offset && (i->offset + i->length) > offset)
+		{
+			new_ranges.emplace(i->offset,         (offset - i->offset));
+			new_ranges.emplace((offset + length), (i->length - (offset - i->offset)));
+		}
+		else{
+			new_ranges.emplace(*i);
+		}
+	}
+	
+	ranges.swap(new_ranges);
+}
+
+void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
+{
+	std::set<Range> new_ranges;
+	
+	/* Find the range of elements overlapping the range to be erased. */
+	
+	auto next = ranges.lower_bound(Range((offset + length), 0));
+	
+	std::set<Range>::iterator skip_begin = next;
+	std::set<Range>::iterator skip_end   = next;
+	
+	while(skip_begin != ranges.begin())
+	{
+		auto sb_prev = std::prev(skip_begin);
+		
+		if((sb_prev->offset + sb_prev->length) > offset)
+		{
+			skip_begin = sb_prev;
+		}
+		else{
+			break;
+		}
+	}
+	
+	/* Add a single range encompassing the existing range(s) immediately before or after the
+	 * erase window (if any exist).
+	*/
+	
+	if(skip_begin != skip_end)
+	{
+		auto skip_last = std::prev(skip_end);
+		
+		off_t begin = std::min(skip_begin->offset, offset);
+		off_t end   = skip_last->offset + skip_last->length;
+		
+		if(end > (offset + length))
+		{
+			end -= length;
+			new_ranges.emplace(begin, (end - begin));
+		}
+		else if(begin < offset)
+		{
+			end = offset;
+			new_ranges.emplace(begin, (end - begin));
+		}
+	}
+	
+	/* Preserve ranges from before the erase window. */
+	
+	while(skip_begin != ranges.begin())
+	{
+		--skip_begin;
+		new_ranges.emplace(*skip_begin);
+	}
+	
+	/* Adjust the offset of ranges after the erase window. */
+	
+	while(skip_end != ranges.end())
+	{
+		new_ranges.emplace((skip_end->offset - length), skip_end->length);
+		++skip_end;
+	}
+	
+	ranges.swap(new_ranges);
+}

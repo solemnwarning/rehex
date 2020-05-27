@@ -390,3 +390,210 @@ TEST(ByteRangeSet, IsSetNoRanges)
 	
 	EXPECT_FALSE(brs.isset(10));
 }
+
+TEST(ByteRangeSet, DataInsertedBeforeRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_inserted(9, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(15, 20),
+		ByteRangeSet::Range(45, 10),
+		ByteRangeSet::Range(65, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataInsertedAfterRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_inserted(70, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(40, 10),
+		ByteRangeSet::Range(60, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataInsertedBetweenRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_inserted(35, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(45, 10),
+		ByteRangeSet::Range(65, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataInsertedAtStartOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_inserted(10, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(15, 20),
+		ByteRangeSet::Range(45, 10),
+		ByteRangeSet::Range(65, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataInsertedAtEndOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_inserted(29, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 19),
+		ByteRangeSet::Range(34,  1),
+		ByteRangeSet::Range(45, 10),
+		ByteRangeSet::Range(65, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataInsertedIntoRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_inserted(44, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(40,  4),
+		ByteRangeSet::Range(49,  6),
+		ByteRangeSet::Range(65, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedBeforeRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(5, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range( 5, 20),
+		ByteRangeSet::Range(35, 10),
+		ByteRangeSet::Range(55, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedAfterRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(70, 5);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(40, 10),
+		ByteRangeSet::Range(60, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedMatchingRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(40, 10);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(50, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedOverlappingStartOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(35, 10);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(35,  5),
+		ByteRangeSet::Range(50, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedOverlappingEndOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(45, 10);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(40,  5),
+		ByteRangeSet::Range(50, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedOverlappingMultipleRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range( 5,  2);
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	brs.set_range(80,  5);
+	
+	brs.data_erased(15, 50);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range( 5,  2),
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30,  5),
+	);
+}

@@ -133,6 +133,11 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 	ranges.insert(collateral_damage.begin(), collateral_damage.end());
 }
 
+void REHex::ByteRangeSet::clear_all()
+{
+	ranges.clear();
+}
+
 bool REHex::ByteRangeSet::isset(off_t offset) const
 {
 	auto lb = ranges.lower_bound(Range(offset, 0));

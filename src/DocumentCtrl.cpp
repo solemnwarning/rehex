@@ -2678,6 +2678,13 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 			active_palette->get_highlight_bg_idx(highlight->second),
 			true);
 	}
+	else if(doc.is_byte_dirty(off))
+	{
+		return Highlight(
+			Palette::PAL_DIRTY_TEXT_FG,
+			Palette::PAL_DIRTY_TEXT_BG,
+			true);
+	}
 	else{
 		return NoHighlight();
 	}

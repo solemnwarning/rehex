@@ -84,6 +84,11 @@ namespace REHex
 			void clear_range(off_t offset, off_t length);
 			
 			/**
+			 * @brief Clear all ranges in the set.
+			*/
+			void clear_all();
+			
+			/**
 			 * @brief Check if a byte is set in the set.
 			*/
 			bool isset(off_t offset) const;

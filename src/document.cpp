@@ -82,6 +82,7 @@ void REHex::Document::save()
 	buffer->write_inplace();
 	_save_metadata(filename + ".rehex-meta");
 	
+	dirty_bytes.clear_all();
 	set_dirty(false);
 }
 
@@ -95,6 +96,7 @@ void REHex::Document::save(const std::string &filename)
 	
 	_save_metadata(filename + ".rehex-meta");
 	
+	dirty_bytes.clear_all();
 	set_dirty(false);
 	
 	DocumentTitleEvent document_title_event(this, title);
@@ -114,6 +116,11 @@ std::string REHex::Document::get_filename()
 bool REHex::Document::is_dirty()
 {
 	return dirty;
+}
+
+bool REHex::Document::is_byte_dirty(off_t offset) const
+{
+	return dirty_bytes.isset(offset);
 }
 
 off_t REHex::Document::get_cursor_position() const
@@ -368,6 +375,9 @@ void REHex::Document::undo()
 		cursor_state = act.old_cursor_state;
 		comments     = act.old_comments;
 		highlights   = act.old_highlights;
+		dirty_bytes  = act.old_dirty_bytes;
+		
+		set_dirty(act.old_dirty);
 		
 		if(cursor_updated)
 		{
@@ -425,6 +435,7 @@ void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned cha
 	
 	if(ok)
 	{
+		dirty_bytes.set_range(offset, length);
 		set_dirty(true);
 		
 		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, offset, length);
@@ -440,6 +451,8 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 	
 	if(ok)
 	{
+		dirty_bytes.data_inserted(offset, length);
+		dirty_bytes.set_range(offset, length);
 		set_dirty(true);
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
@@ -466,6 +479,7 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 	
 	if(ok)
 	{
+		dirty_bytes.data_erased(offset, length);
 		set_dirty(true);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
@@ -594,6 +608,8 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	change.old_cursor_state = cursor_state;
 	change.old_comments     = comments;
 	change.old_highlights   = highlights;
+	change.old_dirty        = dirty;
+	change.old_dirty_bytes  = dirty_bytes;
 	
 	do_func();
 	

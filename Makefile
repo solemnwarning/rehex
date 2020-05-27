@@ -177,6 +177,7 @@ APP_OBJS := \
 	src/app.o \
 	src/ArtProvider.o \
 	src/buffer.o \
+	src/ByteRangeSet.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/CommentTree.o \

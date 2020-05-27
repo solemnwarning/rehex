@@ -28,6 +28,8 @@ Version TBA
 
  * Clean up search threads when a tab is closed while a search is running.
 
+ * Display bytes which have been modified since the file was saved in red.
+
 Version 0.1.0 (2020-03-12)
 
  * Initial release.

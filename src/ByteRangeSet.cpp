@@ -41,8 +41,6 @@ void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 		
 		if((eb_prev->offset + eb_prev->length) >= offset)
 		{
-			assert(eb_prev->offset <= offset);
-			
 			off_t merged_begin = std::min(eb_prev->offset, offset);
 			off_t merged_end   = std::max((eb_prev->offset + eb_prev->length), (offset + length));
 			
@@ -105,8 +103,6 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 	std::set<Range> collateral_damage;
 	if(erase_begin != erase_end)
 	{
-		assert(erase_begin->offset <= offset);
-		
 		if(erase_begin->offset < offset)
 		{
 			/* Clear range is within erase range, so create a new Range from the start

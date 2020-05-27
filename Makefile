@@ -219,6 +219,7 @@ TEST_OBJS := \
 	res/offsets48.o \
 	src/ArtProvider.o \
 	src/buffer.o \
+	src/ByteRangeSet.o \
 	src/CommentTree.o \
 	src/DiffWindow.o \
 	src/document.o \
@@ -232,6 +233,7 @@ TEST_OBJS := \
 	src/util.o \
 	src/win32lib.o \
 	tests/buffer.o \
+	tests/ByteRangeSet.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/DiffWindow.o \

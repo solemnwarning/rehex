@@ -294,6 +294,12 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	
 	resize_splitters();
 	
+	if(ranges.empty())
+	{
+		/* Last tab was closed. Destroy this DiffWindow. */
+		Destroy();
+	}
+	
 	return next;
 }
 

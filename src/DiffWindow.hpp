@@ -106,6 +106,7 @@ namespace REHex {
 			
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);
+			void OnCharHook(wxKeyEvent &event);
 			void OnDocumentTitleChange(DocumentTitleEvent &event);
 			void OnDocumentDataErase(OffsetLengthEvent &event);
 			void OnDocumentDataInsert(OffsetLengthEvent &event);
@@ -113,6 +114,7 @@ namespace REHex {
 			void OnDocumentBaseChange(wxCommandEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);
 			void OnCursorUpdate(CursorUpdateEvent &event);
+			void OnDataRightClick(wxCommandEvent &event);
 			void OnToggleOffsets(wxCommandEvent &event);
 			void OnToggleASCII(wxCommandEvent &event);
 			

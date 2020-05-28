@@ -23,6 +23,8 @@
 #include <wx/filename.h>
 #include <wx/utils.h>
 
+#include "document.hpp"
+#include "DocumentCtrl.hpp"
 #include "util.hpp"
 
 /* These MUST come after any wxWidgets headers. */
@@ -177,4 +179,115 @@ std::string REHex::format_offset(off_t offset, OffsetBase base, off_t upper_boun
 	}
 	
 	return fmt_out;
+}
+
+void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut)
+{
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	off_t selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	
+	if(selection_length <= 0)
+	{
+		/* Nothing selected - nothing to copy. */
+		wxBell();
+		return;
+	}
+	
+	/* Warn the user this might be a bad idea before dumping silly amounts
+	 * of data (>16MiB) into the clipboard.
+	*/
+	
+	static size_t COPY_MAX_SOFT = 16777216;
+	
+	size_t upper_limit = cursor_state == Document::CSTATE_ASCII
+		? selection_length
+		: (selection_length * 2);
+	
+	if(upper_limit > COPY_MAX_SOFT)
+	{
+		char msg[128];
+		snprintf(msg, sizeof(msg),
+			"You are about to copy %uMB into the clipboard.\n"
+			"This may take a long time and/or crash some applications.",
+			(unsigned)(upper_limit / 1000000));
+		
+		int result = wxMessageBox(msg, "Warning", (wxOK | wxCANCEL | wxICON_EXCLAMATION), dialog_parent);
+		if(result != wxOK)
+		{
+			return;
+		}
+	}
+	
+	wxTextDataObject *copy_data = NULL;
+	try {
+		std::vector<unsigned char> selection_data = doc->read_data(selection_off, selection_length);
+		assert((off_t)(selection_data.size()) == selection_length);
+		
+		if(cursor_state == Document::CSTATE_ASCII)
+		{
+			std::string ascii_string;
+			ascii_string.reserve(selection_data.size());
+			
+			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			{
+				if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+				{
+					ascii_string.push_back(*c);
+				}
+			}
+			
+			if(!ascii_string.empty())
+			{
+				copy_data = new wxTextDataObject(ascii_string);
+			}
+		}
+		else{
+			std::string hex_string;
+			hex_string.reserve(selection_data.size() * 2);
+			
+			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			{
+				const char *nibble_to_hex = "0123456789ABCDEF";
+				
+				unsigned char high_nibble = (*c & 0xF0) >> 4;
+				unsigned char low_nibble  = (*c & 0x0F);
+				
+				hex_string.push_back(nibble_to_hex[high_nibble]);
+				hex_string.push_back(nibble_to_hex[low_nibble]);
+			}
+			
+			copy_data = new wxTextDataObject(hex_string);
+		}
+	}
+	catch(const std::bad_alloc &e)
+	{
+		wxMessageBox(
+			"Memory allocation failed while preparing clipboard buffer.",
+			"Error", (wxOK | wxICON_ERROR), dialog_parent);
+		return;
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), dialog_parent);
+		return;
+	}
+	
+	if(copy_data != NULL)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			wxTheClipboard->SetData(copy_data);
+			
+			if(cut)
+			{
+				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "cut selection");
+			}
+		}
+		else{
+			delete copy_data;
+		}
+	}
 }

@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <wx/window.h>
 
 namespace REHex {
 	class ParseError: public std::runtime_error

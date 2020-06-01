@@ -10,8 +10,11 @@ It is still in early development and should be considered in beta state at the m
 * Decoding of integer/floating point value types
 * Disassembly of machine code
 * Highlighting and annotation of ranges of bytes
+* Side by side comparision of selections
 
-![Screenshot](screenshot.png)
+![Screenshot](doc/screenshot.png)
+
+![Screenshot](doc/screenshot-diff.png)
 
 \* I've gone up to 1TiB in cursory testing, but it should be able to go a lot higher... just in case you want to start editing big disk images.
 

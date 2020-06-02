@@ -1,4 +1,4 @@
-Version TBA
+Version 0.2.0 (2020-06-02)
 
  * Allow copying comments from a document and pasting them elsewhere in the
    same document or into another one.

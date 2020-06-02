@@ -836,8 +836,18 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			
 			diff_window->add_range(DiffWindow::Range(doc, doc_ctrl, selection_off, selection_length));
 			
-			diff_window->Iconize(false);
-			diff_window->Raise();
+			/* Raise the DiffWindow to the top of the Z order sometime after the
+			 * current event has been processed, else the menu/mouse event handling
+			 * will interfere and move the MainWindow back to the top.
+			*/
+			CallAfter([]()
+			{
+				if(diff_window != NULL)
+				{
+					diff_window->Iconize(false);
+					diff_window->Raise();
+				}
+			});
 		}, itm->GetId(), itm->GetId());
 	}
 	

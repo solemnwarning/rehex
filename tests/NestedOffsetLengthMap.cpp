@@ -54,11 +54,11 @@
 #define GET_ALL_CHECK(map, offset, ...) \
 { \
 	auto got_iterators = NestedOffsetLengthMap_get_all(map, offset); \
-	const int expect_indexes[] = { __VA_ARGS__ }; \
+	const std::vector<int> expect_indexes = { __VA_ARGS__ }; \
 	std::list<NestedOffsetLengthMap<int>::const_iterator> expect_iterators; \
-	for(const int *i = expect_indexes; i < expect_indexes + sizeof(expect_indexes) / sizeof(*expect_indexes); ++i) \
+	for(const int i : expect_indexes) \
 	{ \
-		expect_iterators.push_back(std::next(map.begin(), *i)); \
+		expect_iterators.push_back(std::next(map.begin(), i)); \
 	} \
 	EXPECT_EQ(got_iterators, expect_iterators); \
 }
@@ -66,11 +66,11 @@
 #define GET_RECURSIVE_CHECK(map, offset, length, ...) \
 { \
 	auto got_iterators = NestedOffsetLengthMap_get_recursive(map, NestedOffsetLengthMapKey(offset, length)); \
-	const int expect_indexes[] = { __VA_ARGS__ }; \
+	const std::vector<int> expect_indexes = { __VA_ARGS__ }; \
 	std::list<NestedOffsetLengthMap<int>::const_iterator> expect_iterators; \
-	for(const int *i = expect_indexes; i < expect_indexes + sizeof(expect_indexes) / sizeof(*expect_indexes); ++i) \
+	for(const int i : expect_indexes) \
 	{ \
-		expect_iterators.push_back(std::next(map.begin(), *i)); \
+		expect_iterators.push_back(std::next(map.begin(), i)); \
 	} \
 	EXPECT_EQ(got_iterators, expect_iterators); \
 }

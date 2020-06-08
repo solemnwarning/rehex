@@ -20,6 +20,7 @@
 #include <wx/init.h>
 
 #include "../src/ArtProvider.hpp"
+#include "../src/Palette.hpp"
 
 wxApp &wxGetApp()
 {
@@ -34,6 +35,8 @@ int main(int argc, char **argv)
 	wxImage::AddHandler(new wxPNGHandler);
 	REHex::ArtProvider::init();
 	
+	REHex::active_palette = REHex::Palette::create_system_palette();
+
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }

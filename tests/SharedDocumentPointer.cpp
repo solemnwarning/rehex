@@ -119,8 +119,7 @@ std::vector<std::string> TestDocument::calls;
 
 #define EXPECT_CALLS(...) \
 { \
-	std::string expected_calls_[] = { __VA_ARGS__ }; \
-	std::vector<std::string> expected_calls(expected_calls_, expected_calls_ + (sizeof(expected_calls_) / sizeof(*expected_calls_))); \
+	std::vector<std::string> expected_calls({ __VA_ARGS__ }); \
 	EXPECT_EQ(expected_calls, TestDocument::calls); \
 }
 

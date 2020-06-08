@@ -28,7 +28,7 @@
 }
 
 #define PARSE_ASCII_NIBBLE_BAD(c) \
-	EXPECT_THROW(REHex::parse_ascii_nibble(c), REHex::ParseError) << "REHex::parse_ascii_nibble(" << c << ") throws ParseError";
+	EXPECT_THROW(REHex::parse_ascii_nibble((char)c), REHex::ParseError) << "REHex::parse_ascii_nibble(" << c << ") throws ParseError";
 
 #define PARSE_HEX_STRING_OK(hex, ...) \
 { \

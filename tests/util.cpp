@@ -28,12 +28,11 @@
 }
 
 #define PARSE_ASCII_NIBBLE_BAD(c) \
-	EXPECT_THROW(REHex::parse_ascii_nibble(c), REHex::ParseError) << "REHex::parse_ascii_nibble(" << c << ") throws ParseError";
+	EXPECT_THROW(REHex::parse_ascii_nibble((char)c), REHex::ParseError) << "REHex::parse_ascii_nibble(" << c << ") throws ParseError";
 
 #define PARSE_HEX_STRING_OK(hex, ...) \
 { \
-	unsigned const char expect_tmp[] = { __VA_ARGS__ }; \
-	std::vector<unsigned char> expect_data(expect_tmp, expect_tmp + sizeof(expect_tmp)); \
+	std::vector<unsigned char> expect_data( { __VA_ARGS__ } ); \
 	\
 	EXPECT_NO_THROW({ \
 		std::vector<unsigned char> got_data = REHex::parse_hex_string(hex); \

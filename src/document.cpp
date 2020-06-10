@@ -875,7 +875,7 @@ REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject
 	
 	const unsigned char *data = (const unsigned char*)(GetData());
 	const unsigned char *end = data + GetSize();
-	const Header *header;
+	const Header *header = nullptr;
 	
 	while(data + sizeof(Header) < end && (header = (const Header*)(data)), (data + sizeof(Header) + header->text_length <= end))
 	{

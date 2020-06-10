@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    This is a property sheet to be included in MSVS projects.
+    Use "View|Property Manager" and choose "Add Existing Property Sheet..." from the context menu
+    to add it from the IDE.
+  -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!--
+      _CRT_SECURE_NO_WARNINGS: Disable warnings/errors about the _s versions of printf, scanf, etc
+      _CRT_NONSTDC_NO_WARNINGS: Disable warnings/errors about fileno instead of _fileno
+      NOMINMAX: Disable definition of MIN, MAX macro
+      WIN23_LEAN_AND_MEAN: exclude rarely used stuff from windows.h
+      _OFF_T_DEFINED: Ensure off_t and _off_t are not defined
+      -->
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;NOMINMAX;WIN23_LEAN_AND_MEAN;_OFF_T_DEFINED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..;$(MSBuildThisFileDirectory)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

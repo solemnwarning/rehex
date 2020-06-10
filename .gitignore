@@ -62,3 +62,6 @@ msvc/embed/Debug/
 res/version_msvc.h
 msvc/x64/
 msvc/embed/x64/
+msvc/all-tests/x64/
+msvc/all-tests-appcode/x64/
+msvc/all-tests/tests/

@@ -15,9 +15,11 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <assert.h>
 
 #include "ByteRangeSet.hpp"
+#include <algorithm>
 
 void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 {

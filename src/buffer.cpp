@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
+
 #ifdef _WIN32
 #include <io.h>
 #endif
@@ -29,12 +31,14 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef _MSC_VER
 #include <unistd.h>
-#include <vector>
-
+#endif
 #ifdef _WIN32
 #define O_NOCTTY 0
 #endif
+#include <vector>
+#include <algorithm>
 
 #include "buffer.hpp"
 #include "win32lib.hpp"

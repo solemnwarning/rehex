@@ -17,6 +17,7 @@
 
 #ifdef _WIN32
 
+#include "platform.hpp"
 #include <windows.h>
 #include <string>
 
@@ -24,7 +25,7 @@ std::string GetLastError_strerror(DWORD errnum)
 {
 	char buf[1024];
 	
-	if(!FormatMessage(
+	if(!FormatMessageA(
 		FORMAT_MESSAGE_FROM_SYSTEM,
 		NULL,
 		errnum,

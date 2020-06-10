@@ -18,6 +18,7 @@
 #ifndef REHEX_BYTERANGESET_HPP
 #define REHEX_BYTERANGESET_HPP
 
+#include "platform.hpp"
 #include <set>
 #include <sys/types.h>
 

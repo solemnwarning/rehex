@@ -17,6 +17,7 @@
 
 #define __STDC_FORMAT_MACROS
 
+#include "platform.hpp"
 #include <assert.h>
 #include <inttypes.h>
 

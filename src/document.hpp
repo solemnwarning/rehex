@@ -18,6 +18,7 @@
 #ifndef REHEX_DOCUMENT_HPP
 #define REHEX_DOCUMENT_HPP
 
+#include "platform.hpp"
 #include <functional>
 #include <jansson.h>
 #include <list>

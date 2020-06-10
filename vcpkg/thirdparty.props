@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    This is a property sheet to be included in MSVS projects.
+    Use "View|Property Manager" and choose "Add Existing Property Sheet..." from the context menu
+    to add it from the IDE.
+  -->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <!-- Define the root directory where all vcpkg stuff is installed -->
+    <vcpkgInstallDir>$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static</vcpkgInstallDir>
+
+    <!-- Define the root directory where all vcpkg stuff is installed -->
+    <vcpkgDebugFolder Condition="'$(Configuration)'=='Debug'">\debug</vcpkgDebugFolder>
+
+    <!-- Debug versions of wxWidget libraries have a 'd' suffix -->
+    <wxDebugSuffix Condition="'$(Configuration)'=='Debug'">d</wxDebugSuffix>
+
+    <!-- And jansson decided that it needed to be unique -->
+    <janssonDebugSuffix Condition="'$(Configuration)'=='Debug'">_d</janssonDebugSuffix>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(vcpkgInstallDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <!-- Tell wxWidgets what we are -->
+      <PreprocessorDefinitions>__WXMSW__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(vcpkgInstallDir)$(vcpkgDebugFolder)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+
+      <!-- Add wxWidgets base core aui propgrid adv -->
+      <AdditionalDependencies>wxbase31u$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_core.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_aui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_propgrid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_adv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libpng16$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zlib$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- Windows dependencies for wxWidgets -->
+      <AdditionalDependencies>comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+
+      <!-- Add jansson -->
+      <AdditionalDependencies>jansson$(janssonDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+
+      <!-- Add capstone -->
+      <AdditionalDependencies>capstone.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

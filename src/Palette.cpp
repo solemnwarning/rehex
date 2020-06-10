@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <assert.h>
 #include <wx/colour.h>
 #include <wx/settings.h>

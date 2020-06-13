@@ -670,7 +670,7 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 				search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(bv)), (unsigned char*)(&(bv) + 1))); \
 			} \
 		} \
-		catch(const REHex::NumericTextCtrl::RangeError &e) \
+		catch(const REHex::NumericTextCtrl::RangeError &) \
 		{ \
 			try { \
 				int ## x ## _t v = search_for_tc->GetValue<int ## x ## _t>(); \
@@ -687,9 +687,9 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 					search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(bv)), (unsigned char*)(&(bv) + 1))); \
 				} \
 			} \
-			catch(REHex::NumericTextCtrl::InputError &e) {} \
+			catch(REHex::NumericTextCtrl::InputError &) {} \
 		} \
-		catch(REHex::NumericTextCtrl::InputError &e) {} \
+		catch(REHex::NumericTextCtrl::InputError &) {} \
 	} \
 }
 
@@ -703,15 +703,15 @@ bool REHex::Search::Value::read_window_controls()
 			uint8_t v = search_for_tc->GetValue<uint8_t>();
 			search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
 		}
-		catch(const REHex::NumericTextCtrl::RangeError &e)
+		catch(const REHex::NumericTextCtrl::RangeError &)
 		{
 			try {
 				int8_t v = search_for_tc->GetValue<int8_t>();
 				search_for.push_back(std::vector<unsigned char>((unsigned char*)(&(v)), (unsigned char*)(&(v) + 1)));
 			}
-			catch(REHex::NumericTextCtrl::InputError &e) {}
+			catch(REHex::NumericTextCtrl::InputError &) {}
 		}
-		catch(REHex::NumericTextCtrl::InputError &e) {}
+		catch(REHex::NumericTextCtrl::InputError &) {}
 	}
 	
 	INTEGER_TYPE_SIZE(16);
@@ -732,32 +732,32 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	i8_cb->Disable();
 	
 	try { search_for_tc->GetValue<int8_t>(); i8_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	try { search_for_tc->GetValue<uint8_t>(); i8_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	i16_cb->Disable();
 	
 	try { search_for_tc->GetValue<int16_t>(); i16_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	try { search_for_tc->GetValue<uint16_t>(); i16_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	i32_cb->Disable();
 	
 	try { search_for_tc->GetValue<int32_t>(); i32_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	try { search_for_tc->GetValue<uint32_t>(); i32_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	i64_cb->Disable();
 	
 	try { search_for_tc->GetValue<int64_t>(); i64_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 	
 	try { search_for_tc->GetValue<uint64_t>(); i64_cb->Enable(); }
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError &) {}
 }

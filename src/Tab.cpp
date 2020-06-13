@@ -370,7 +370,7 @@ void REHex::Tab::paste_text(const std::string &text)
 			std::vector<unsigned char> clipboard_data = REHex::parse_hex_string(text);
 			paste_data(clipboard_data.data(), clipboard_data.size());
 		}
-		catch(const REHex::ParseError &e)
+		catch(const REHex::ParseError &)
 		{
 			/* Ignore paste if clipboard didn't contain a valid hex string. */
 		}

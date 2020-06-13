@@ -56,7 +56,7 @@ namespace REHex {
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
-			void* disassembler;
+			size_t disassembler;
 			
 			wxChoice *arch;
 			CodeCtrl *assembly;

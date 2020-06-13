@@ -261,7 +261,7 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 			copy_data = new wxTextDataObject(hex_string);
 		}
 	}
-	catch(const std::bad_alloc &e)
+	catch(const std::bad_alloc &)
 	{
 		wxMessageBox(
 			"Memory allocation failed while preparing clipboard buffer.",

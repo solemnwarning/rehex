@@ -20,6 +20,8 @@
 
 #include "disassemble.hpp"
 #include "Events.hpp"
+#include <llvm-c/Disassembler.h>
+#include <llvm-c/Target.h>
 
 static REHex::ToolPanel *Disassemble_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -76,6 +78,58 @@ static LLVMArchitecture arch_list[] = {
 };
 
 static const char *DEFAULT_ARCH = "x86_64";
+
+std::once_flag g_Initialize_disassembler;
+static void Initialize_disassembler()
+{
+	#ifdef LLVM_ENABLE_AARCH64
+	LLVMInitializeAArch64AsmPrinter();
+	LLVMInitializeAArch64Disassembler();
+	LLVMInitializeAArch64Target();
+	LLVMInitializeAArch64TargetInfo();
+	LLVMInitializeAArch64TargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_ARM
+	LLVMInitializeARMAsmPrinter();
+	LLVMInitializeARMDisassembler();
+	LLVMInitializeARMTarget();
+	LLVMInitializeARMTargetInfo();
+	LLVMInitializeARMTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_MIPS
+	LLVMInitializeMipsAsmPrinter();
+	LLVMInitializeMipsDisassembler();
+	LLVMInitializeMipsTarget();
+	LLVMInitializeMipsTargetInfo();
+	LLVMInitializeMipsTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_POWERPC
+	LLVMInitializePowerPCAsmPrinter();
+	LLVMInitializePowerPCDisassembler();
+	LLVMInitializePowerPCTarget();
+	LLVMInitializePowerPCTargetInfo();
+	LLVMInitializePowerPCTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_SPARC
+	LLVMInitializeSparcAsmPrinter();
+	LLVMInitializeSparcDisassembler();
+	LLVMInitializeSparcTarget();
+	LLVMInitializeSparcTargetInfo();
+	LLVMInitializeSparcTargetMC();
+	#endif
+	
+	#ifdef LLVM_ENABLE_X86
+	LLVMInitializeX86AsmPrinter();
+	LLVMInitializeX86Disassembler();
+	LLVMInitializeX86Target();
+	LLVMInitializeX86TargetInfo();
+	LLVMInitializeX86TargetMC();
+	#endif
+}
 
 REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent), document(document), document_ctrl(document_ctrl), disassembler(NULL)
@@ -256,6 +310,7 @@ void REHex::Disassemble::reinit_disassembler()
 {
 	const char *triple = arch_list[ arch->GetSelection() ].triple;
 	
+	std::call_once(g_Initialize_disassembler, Initialize_disassembler);
 	if(disassembler != NULL)
 	{
 		LLVMDisasmDispose(disassembler);

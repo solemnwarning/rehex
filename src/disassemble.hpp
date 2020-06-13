@@ -18,8 +18,6 @@
 #ifndef REHEX_DISASSEMBLE_HPP
 #define REHEX_DISASSEMBLE_HPP
 
-#include <llvm-c/Disassembler.h>
-#include <llvm-c/Target.h>
 #include <map>
 #include <string>
 #include <wx/choice.h>
@@ -58,7 +56,7 @@ namespace REHex {
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
-			LLVMDisasmContextRef disassembler;
+			void* disassembler;
 			
 			wxChoice *arch;
 			CodeCtrl *assembly;

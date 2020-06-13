@@ -15,8 +15,6 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <llvm-c/Disassembler.h>
-#include <llvm-c/Target.h>
 
 #include "app.hpp"
 #include "ArtProvider.hpp"
@@ -79,54 +77,6 @@ bool REHex::App::OnInit()
 	{
 		active_palette = Palette::create_system_palette();
 	}
-	
-	#ifdef LLVM_ENABLE_AARCH64
-	LLVMInitializeAArch64AsmPrinter();
-	LLVMInitializeAArch64Disassembler();
-	LLVMInitializeAArch64Target();
-	LLVMInitializeAArch64TargetInfo();
-	LLVMInitializeAArch64TargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_ARM
-	LLVMInitializeARMAsmPrinter();
-	LLVMInitializeARMDisassembler();
-	LLVMInitializeARMTarget();
-	LLVMInitializeARMTargetInfo();
-	LLVMInitializeARMTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_MIPS
-	LLVMInitializeMipsAsmPrinter();
-	LLVMInitializeMipsDisassembler();
-	LLVMInitializeMipsTarget();
-	LLVMInitializeMipsTargetInfo();
-	LLVMInitializeMipsTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_POWERPC
-	LLVMInitializePowerPCAsmPrinter();
-	LLVMInitializePowerPCDisassembler();
-	LLVMInitializePowerPCTarget();
-	LLVMInitializePowerPCTargetInfo();
-	LLVMInitializePowerPCTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_SPARC
-	LLVMInitializeSparcAsmPrinter();
-	LLVMInitializeSparcDisassembler();
-	LLVMInitializeSparcTarget();
-	LLVMInitializeSparcTargetInfo();
-	LLVMInitializeSparcTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_X86
-	LLVMInitializeX86AsmPrinter();
-	LLVMInitializeX86Disassembler();
-	LLVMInitializeX86Target();
-	LLVMInitializeX86TargetInfo();
-	LLVMInitializeX86TargetMC();
-	#endif
 	
 	REHex::MainWindow *window = new REHex::MainWindow();
 	window->Show(true);

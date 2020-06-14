@@ -52,7 +52,7 @@ namespace REHex {
 			
 			typedef std::pair<int, int> CodeCharRef;
 			
-			wxFont *font;
+			wxFont font;
 			int font_width;
 			int font_height;
 			int code_xoff;

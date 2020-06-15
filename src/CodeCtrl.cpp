@@ -42,6 +42,7 @@ END_EVENT_TABLE()
 
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
+	font(wxFontInfo().Family(wxFONTFAMILY_MODERN)),
 	max_line_width(0),
 	offset_display_base(OFFSET_BASE_HEX),
 	offset_display_upper_bound(0xFFFFFFFF),
@@ -54,14 +55,10 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	selection_begin(-1, -1),
 	selection_end(-1, -1)
 {
-	wxFontInfo finfo;
-	finfo.Family(wxFONTFAMILY_MODERN);
-	
-	font = new wxFont(finfo);
-	assert(font->IsFixedWidth());
+	assert(font.IsFixedWidth());
 	
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	wxSize char_extent = dc.GetTextExtent("X");
 	font_width  = char_extent.GetWidth();
@@ -74,7 +71,7 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool active)
 {
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	/* GetTextExtent() doesn't seem to handle tabs correctly, so we expand
 	 * them into spaces.
@@ -187,7 +184,7 @@ REHex::CodeCtrl::CodeCharRef REHex::CodeCtrl::char_near_abs_xy(int abs_x, int ab
 	int col = 0;
 	
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	while((code_xoff + dc.GetTextExtent(std::string((col + 1), 'X')).GetWidth()) < abs_x && col < (int)(line.text.length()))
 	{
@@ -253,7 +250,7 @@ void REHex::CodeCtrl::set_offset_display(REHex::OffsetBase offset_display_base, 
 	this->offset_display_upper_bound = offset_display_upper_bound;
 	
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	std::string offset_str = format_offset(0, offset_display_base, offset_display_upper_bound);
 	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
@@ -279,7 +276,7 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 	
 	wxBufferedPaintDC dc(this);
 	
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	dc.SetBackground(*wxWHITE_BRUSH);
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	

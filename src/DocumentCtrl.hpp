@@ -232,7 +232,7 @@ namespace REHex {
 			std::list<Region*> regions;
 			
 			/* Fixed-width font used for drawing hex data. */
-			wxFont *hex_font;
+			wxFont hex_font;
 			
 			/* Size of a character in hex_font. */
 			unsigned char hf_height;

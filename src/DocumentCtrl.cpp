@@ -164,6 +164,11 @@ void REHex::DocumentCtrl::set_bytes_per_group(unsigned int bytes_per_group)
 {
 	this->bytes_per_group = bytes_per_group;
 	_handle_width_change();
+
+	wxCommandEvent event(REHex::EV_DISP_SETTING_CHANGED);
+	event.SetEventObject(this);
+
+	wxPostEvent(this, event);
 }
 
 bool REHex::DocumentCtrl::get_show_offsets()
@@ -187,7 +192,7 @@ void REHex::DocumentCtrl::set_offset_display_base(REHex::OffsetBase offset_displ
 	this->offset_display_base = offset_display_base;
 	_handle_width_change();
 	
-	wxCommandEvent event(REHex::EV_BASE_CHANGED);
+	wxCommandEvent event(REHex::EV_DISP_SETTING_CHANGED);
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);

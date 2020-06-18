@@ -112,7 +112,7 @@ REHex::DiffWindow::~DiffWindow()
 	{
 		if(d->second != NULL)
 		{
-			d->second->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
+			d->second->Unbind(EV_DISP_SETTING_CHANGED,  &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 		}
 		
 		d->first->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
@@ -209,7 +209,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 		new_range->doc->Bind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		new_range->doc->Bind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
 		
-		new_range->main_doc_ctrl->Bind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
+		new_range->main_doc_ctrl->Bind(EV_DISP_SETTING_CHANGED, &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 	}
 	
 	resize_splitters();
@@ -277,7 +277,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	{
 		if(range_mdc != NULL)
 		{
-			range_mdc->Unbind(EV_BASE_CHANGED,  &REHex::DiffWindow::OnDocumentBaseChange,  this);
+			range_mdc->Unbind(EV_DISP_SETTING_CHANGED, &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 		}
 		
 		range_doc->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
@@ -603,7 +603,7 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 	event.Skip();
 }
 
-void REHex::DiffWindow::OnDocumentBaseChange(wxCommandEvent &event)
+void REHex::DiffWindow::OnDocumentDisplaySettingsChange(wxCommandEvent &event)
 {
 	wxObject *src = event.GetEventObject();
 	
@@ -612,6 +612,7 @@ void REHex::DiffWindow::OnDocumentBaseChange(wxCommandEvent &event)
 		if(r->main_doc_ctrl == src)
 		{
 			r->doc_ctrl->set_offset_display_base(r->main_doc_ctrl->get_offset_display_base());
+			r->doc_ctrl->set_bytes_per_group(r->main_doc_ctrl->get_bytes_per_group());
 			r->notebook->SetPageText(0, range_title(&*r));
 		}
 	}

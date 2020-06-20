@@ -161,7 +161,7 @@ REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::Disassemble::OnDataModified, this);
 	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::Disassemble::OnDataModified, this);
 	
-	this->document_ctrl.auto_cleanup_bind(EV_BASE_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
+	this->document_ctrl.auto_cleanup_bind(EV_DISP_SETTING_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
 	
 	reinit_disassembler();
 	update();

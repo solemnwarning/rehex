@@ -44,7 +44,7 @@ wxDEFINE_EVENT(REHex::EV_COMMENT_MODIFIED,    wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_UNDO_UPDATE,         wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_BASE_CHANGED,        wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 
 REHex::Document::Document():

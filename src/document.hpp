@@ -39,7 +39,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_UNDO_UPDATE,         wxCommandEvent);
 	wxDECLARE_EVENT(EV_BECAME_CLEAN,        wxCommandEvent);
 	wxDECLARE_EVENT(EV_BECAME_DIRTY,        wxCommandEvent);
-	wxDECLARE_EVENT(EV_BASE_CHANGED,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	
 	class Document: public wxEvtHandler {

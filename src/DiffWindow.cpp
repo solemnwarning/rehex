@@ -617,6 +617,11 @@ void REHex::DiffWindow::OnDocumentDisplaySettingsChange(wxCommandEvent &event)
 		}
 	}
 	
+	/* Changing offset base or byte grouping may change how many bytes can fit on one line
+	 * without scrolling.
+	*/
+	resize_splitters();
+	
 	event.Skip();
 }
 

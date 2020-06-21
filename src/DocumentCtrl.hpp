@@ -208,6 +208,7 @@ namespace REHex {
 			void replace_all_regions(std::list<Region*> &new_regions);
 			
 			void OnPaint(wxPaintEvent &event);
+			void OnErase(wxEraseEvent& event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			void OnWheel(wxMouseEvent &event);

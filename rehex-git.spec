@@ -10,6 +10,7 @@ License:  GPLv2
 URL:      https://www.github.com/solemnwarning/rehex/
 Source0:  rehex-%{git_commit_sha}.tar.gz
 
+BuildRequires: capstone-devel
 BuildRequires: gcc-c++
 BuildRequires: jansson-devel
 BuildRequires: make
@@ -18,6 +19,8 @@ BuildRequires: xorg-x11-server-Xvfb
 
 Requires: jansson
 Requires: wxGTK3
+
+# TODO: Remove LLVM dependencies when switch to Capstone is complete
 
 %if 0%{?el7}
 %define extra_make_flags WX_CONFIG=wx-config-3.0 LLVM_CONFIG=llvm-config-7.0-64

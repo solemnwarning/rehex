@@ -14,26 +14,6 @@ Install path: C:\x86_64-w64-mingw32\
 
 You can use a different install path, but it will impact the following steps, and it MUST NOT contain any spaces.
 
-### CMake (required to build LLVM)
-
-Download and run the official CMake installer, enable the option to add it to your PATH.
-
-### Python (required to build LLVM)
-
-Download and run the official Python 3 installer, enable the option to add it to your PATH.
-
-### LLVM
-
-Unpack the LLVM source code and create a `build-release-static-x86_64` directory under it.
-
-Use the Start Menu shortcut created by the mingw-w64 installer to open a terminal and change to the `build-release-static-x86_64` directory.
-
-Run the following commands:
-
-    > cmake .. -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=C:\x86_64-w64-mingw32\llvm-7.0.0-release-static\ -DLLVM_BUILD_LLVM_DYLIB=OFF -G"MinGW Makefiles"
-    > cmake --build .
-    > cmake --build . --target install
-
 ### MSYS2
 
 Download and install MSYS2 from http://www.msys2.org/
@@ -85,6 +65,18 @@ Build and install Jansson.
     $ make
     $ make install
 
+### Capstone
+
+Open the MSYS2 command line.
+
+    $ cd capstone-4.0.2
+
+Edit the makefile, comment the next lines in the install step:
+    mkdir -p $(LIBDIR)
+    $(call install-library,$(LIBDIR))
+
+    $ PREFIX= DESTDIR=/mingw64 CAPSTONE_STATIC=yes CAPSTONE_BUILD_CORE_ONLY=yes CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ make install
+
 ## Build rehex
 
 Once the above steps are done, you should be able to build from the MSYS2 command line so long as you have the appropriate environment variables set.
@@ -93,7 +85,6 @@ Once the above steps are done, you should be able to build from the MSYS2 comman
     $ export CC=x86_64-w64-mingw32-gcc
     $ export CXX=x86_64-w64-mingw32-g++
     $ export WX_CONFIG=/c/x86_64-w64-mingw32/wxWidgets-3.0.4-release-static/bin/wx-config
-    $ export LLVM_CONFIG=/c/x86_64-w64-mingw32/llvm-7.0.0-release-static/bin/llvm-config
     
     $ make -f Makefile.win
     $ make -f Makefile.win check

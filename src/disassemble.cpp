@@ -20,8 +20,7 @@
 
 #include "disassemble.hpp"
 #include "Events.hpp"
-#include <llvm-c/Disassembler.h>
-#include <llvm-c/Target.h>
+#include <capstone/capstone.h>
 
 static REHex::ToolPanel *Disassemble_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -34,109 +33,72 @@ BEGIN_EVENT_TABLE(REHex::Disassemble, wxPanel)
 	EVT_CHOICE(wxID_ANY, REHex::Disassemble::OnArch)
 END_EVENT_TABLE()
 
-struct LLVMArchitecture {
+struct CSArchitecture {
 	const char *triple;
 	const char *label;
+	cs_arch arch;
+	cs_mode mode;
 };
 
-static LLVMArchitecture arch_list[] = {
-	#ifdef LLVM_ENABLE_ARM
-	{ "arm",   "ARM" },
-	{ "armeb", "ARM (big endian)" },
-	#endif
+cs_mode operator|(const cs_mode& lhs, const cs_mode& rhs)
+{
+	return static_cast<cs_mode>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+/* List of all known architectures */
+static const CSArchitecture known_arch_list[] = {
+	{ "arm",   "ARM",               CS_ARCH_ARM, CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN },
+	{ "armeb", "ARM (big endian)",  CS_ARCH_ARM, CS_MODE_ARM | CS_MODE_BIG_ENDIAN },
+	/* Add THUMB? */
 	
-	#ifdef LLVM_ENABLE_AARCH64
-	{ "aarch64",    "AArch64 (ARM64)" },
-	{ "aarch64_be", "AArch64 (ARM64, big endian)" },
-	#endif
+	{ "aarch64",    "AArch64 (ARM64)",              CS_ARCH_ARM64, CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN },
+	{ "aarch64_be", "AArch64 (ARM64, big endian)",  CS_ARCH_ARM64, CS_MODE_ARM | CS_MODE_BIG_ENDIAN },
 	
-	#ifdef LLVM_ENABLE_MIPS
-	{ "mips",     "MIPS" },
-	{ "mipsel",   "MIPS (little endian)" },
-	{ "mips64",   "MIPS (64-bit)" },
-	{ "mips64el", "MIPS (64-bit, little endian)" },
-	#endif
+	{ "mips",     "MIPS",                           CS_ARCH_MIPS, CS_MODE_MIPS32 | CS_MODE_BIG_ENDIAN },
+	{ "mipsel",   "MIPS (little endian)",           CS_ARCH_MIPS, CS_MODE_MIPS32 | CS_MODE_LITTLE_ENDIAN },
+	{ "mips64",   "MIPS (64-bit)",                  CS_ARCH_MIPS, CS_MODE_MIPS64 | CS_MODE_BIG_ENDIAN },
+	{ "mips64el", "MIPS (64-bit, little endian)",   CS_ARCH_MIPS, CS_MODE_MIPS64 | CS_MODE_LITTLE_ENDIAN },
 	
-	#ifdef LLVM_ENABLE_POWERPC
-	{ "powerpc",     "PowerPC" },
-	{ "powerpc64",   "PowerPC (64-bit)" },
-	{ "powerpc64le", "PowerPC (64-bit) (little endian)" },
-	#endif
+	{ "powerpc",     "PowerPC",                     CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN },
+	{ "powerpc64",   "PowerPC (64-bit)",            CS_ARCH_PPC, CS_MODE_64 | CS_MODE_BIG_ENDIAN },
+	{ "powerpc64le", "PowerPC (64-bit) (little endian)",CS_ARCH_PPC, CS_MODE_64 | CS_MODE_LITTLE_ENDIAN },
 	
-	#ifdef LLVM_ENABLE_SPARC
-	{ "sparc",   "SPARC" },
-	{ "sparcel", "SPARC (little endian)" },
-	{ "sparcv9", "SPARC V9 (SPARC64)" },
-	#endif
+	{ "sparc",   "SPARC",                   CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN },
+	{ "sparcel", "SPARC (little endian)",   CS_ARCH_SPARC, CS_MODE_LITTLE_ENDIAN },
+	{ "sparcv9", "SPARC V9 (SPARC64)",      CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN | CS_MODE_V9 },
 	
-	#ifdef LLVM_ENABLE_X86
-	{ "i386",   "X86" },
-	{ "x86_64", "X86-64 (AMD64)" },
-	#endif
-	
-	{ NULL, NULL },
+	{ "i386",   "X86",              CS_ARCH_X86, CS_MODE_32 },
+	{ "x86_64", "X86-64 (AMD64)",   CS_ARCH_X86, CS_MODE_64 },
 };
 
+/* List of all supported architectures */
+static std::vector<CSArchitecture> arch_list;
 static const char *DEFAULT_ARCH = "x86_64";
 
-std::once_flag g_Initialize_disassembler;
+static std::once_flag g_Initialize_disassembler;
 static void Initialize_disassembler()
 {
-	#ifdef LLVM_ENABLE_AARCH64
-	LLVMInitializeAArch64AsmPrinter();
-	LLVMInitializeAArch64Disassembler();
-	LLVMInitializeAArch64Target();
-	LLVMInitializeAArch64TargetInfo();
-	LLVMInitializeAArch64TargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_ARM
-	LLVMInitializeARMAsmPrinter();
-	LLVMInitializeARMDisassembler();
-	LLVMInitializeARMTarget();
-	LLVMInitializeARMTargetInfo();
-	LLVMInitializeARMTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_MIPS
-	LLVMInitializeMipsAsmPrinter();
-	LLVMInitializeMipsDisassembler();
-	LLVMInitializeMipsTarget();
-	LLVMInitializeMipsTargetInfo();
-	LLVMInitializeMipsTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_POWERPC
-	LLVMInitializePowerPCAsmPrinter();
-	LLVMInitializePowerPCDisassembler();
-	LLVMInitializePowerPCTarget();
-	LLVMInitializePowerPCTargetInfo();
-	LLVMInitializePowerPCTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_SPARC
-	LLVMInitializeSparcAsmPrinter();
-	LLVMInitializeSparcDisassembler();
-	LLVMInitializeSparcTarget();
-	LLVMInitializeSparcTargetInfo();
-	LLVMInitializeSparcTargetMC();
-	#endif
-	
-	#ifdef LLVM_ENABLE_X86
-	LLVMInitializeX86AsmPrinter();
-	LLVMInitializeX86Disassembler();
-	LLVMInitializeX86Target();
-	LLVMInitializeX86TargetInfo();
-	LLVMInitializeX86TargetMC();
-	#endif
+	for(const auto& desc : known_arch_list)
+	{
+		/* Check if this architecture is supported by the currently used capstone */
+		if(cs_support(desc.arch))
+		{
+			arch_list.push_back(desc);
+		}
+		else
+		{
+			/* FIXME: Add debug printing? */
+		}
+	}
 }
 
 REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
-	ToolPanel(parent), document(document), document_ctrl(document_ctrl), disassembler(NULL)
+	ToolPanel(parent), document(document), document_ctrl(document_ctrl), disassembler(0)
 {
 	arch = new wxChoice(this, wxID_ANY);
 	
-	for(int i = 0; arch_list[i].triple != NULL; ++i)
+	std::call_once(g_Initialize_disassembler, Initialize_disassembler);
+	for(int i = 0; i < (int)arch_list.size(); ++i)
 	{
 		arch->Append(arch_list[i].label);
 		
@@ -169,10 +131,9 @@ REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &documen
 
 REHex::Disassemble::~Disassemble()
 {
-	if(disassembler != NULL)
+	if(disassembler != 0)
 	{
-		LLVMDisasmDispose(disassembler);
-		disassembler = NULL;
+		cs_close(&disassembler);
 	}
 }
 
@@ -213,7 +174,7 @@ wxSize REHex::Disassemble::DoGetBestClientSize() const
 
 void REHex::Disassemble::update()
 {
-	if(disassembler == NULL)
+	if(disassembler == 0)
 	{
 		assembly->clear();
 		assembly->append_line(0, "<error>");
@@ -308,57 +269,43 @@ void REHex::Disassemble::update()
 
 void REHex::Disassemble::reinit_disassembler()
 {
-	const char *triple = arch_list[ arch->GetSelection() ].triple;
+	const CSArchitecture& desc = arch_list[ arch->GetSelection() ];
 	
-	std::call_once(g_Initialize_disassembler, Initialize_disassembler);
-	if(disassembler != NULL)
+	if(disassembler != 0)
 	{
-		LLVMDisasmDispose(disassembler);
-		disassembler = NULL;
+		cs_close(&disassembler);
 	}
 	
-	disassembler = LLVMCreateDisasm(triple, NULL, 0, NULL, NULL);
-	if(disassembler == NULL)
+	cs_err error = cs_open(desc.arch, desc.mode, &disassembler);
+	if(error != CS_ERR_OK)
 	{
 		/* TODO: Report error */
 		return;
 	}
-	
-	/* Use Intel assembly syntax. */
-	LLVMSetDisasmOptions(disassembler, LLVMDisassembler_Option_AsmPrinterVariant);
 }
 
 std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble(off_t offset, const void *code, size_t size)
 {
-	/* LLVM takes a NON-CONST buffer, wheee. */
-	std::vector<unsigned char> code_copy(
-		(const unsigned char*)(code),
-		(const unsigned char*)(code) + size);
-	
 	std::map<off_t, Instruction> instructions;
+	char disasm_buf[256];
 	
-	for(size_t i = 0; i < size;)
+	const uint8_t* code_ = static_cast<const uint8_t*>(code);
+	size_t code_size = size;
+	uint64_t address = offset;
+	cs_insn* insn = cs_malloc(disassembler);
+	
+	/* NOTE: @code, @code_size & @address variables are all updated! */
+	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
 	{
-		char disasm_buf[256];
-		size_t inst_size = LLVMDisasmInstruction(disassembler, code_copy.data() + i, code_copy.size() - i, 0, disasm_buf, sizeof(disasm_buf));
+		Instruction inst;
 		
-		if(inst_size > 0)
-		{
-			/* LLVM indents decoded instructions?! */
-			const char *disasm = disasm_buf + strspn(disasm_buf, "\t ");
-			
-			Instruction inst;
-			inst.length = inst_size;
-			inst.disasm = disasm;
-			
-			instructions.insert(std::make_pair((off_t)(offset + i), inst));
-			
-			i += inst_size;
-		}
-		else{
-			break;
-		}
+		snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
+		inst.length = insn->size;
+		inst.disasm = disasm_buf;
+		
+		instructions.insert(std::make_pair(insn->address, inst));
 	}
+	cs_free(insn, 1);
 	
 	return instructions;
 }

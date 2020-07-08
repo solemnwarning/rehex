@@ -70,12 +70,13 @@ Build and install Jansson.
 Open the MSYS2 command line.
 
     $ cd capstone-4.0.2
-
-Edit the makefile, comment the next lines in the install step:
-    mkdir -p $(LIBDIR)
-    $(call install-library,$(LIBDIR))
-
-    $ PREFIX= DESTDIR=/mingw64 CAPSTONE_STATIC=yes CAPSTONE_BUILD_CORE_ONLY=yes CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ make install
+    $ PREFIX=/c/x86_64-w64-mingw32/mingw64/x86_64-w64-mingw32/ \
+      CAPSTONE_STATIC=yes \
+      CAPSTONE_SHARED=no \
+      CAPSTONE_BUILD_CORE_ONLY=yes \
+      CC=x86_64-w64-mingw32-gcc \
+      CXX=x86_64-w64-mingw32-g++ \
+      make install
 
 ## Build rehex
 

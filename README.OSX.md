@@ -28,26 +28,23 @@
     $ make
     $ sudo make install
 
-### LLVM
+### Capstone
 
-    $ tar xf llvm-7.0.0.src.tar.xz
-    $ cd llvm-7.0.0.src/
+    $ tar xf capstone-4.0.2.tar.xz
+    $ cd capstone-4.0.2/
     
     $ mkdir build-release
     $ cd build-release/
     
-    $ cmake .. -DCMAKE_BUILD_TYPE=Release \
-               -DCMAKE_INSTALL_PREFIX=/opt/llvm-7.0.0-release-static/ \
-               -DLLVM_BUILD_LLVM_DYLIB=OFF \
-               -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++" \
-               -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10
-    $ cmake --build .
-    $ sudo cmake --build . --target install
+    $ PREFIX=/usr/local/ \
+      CAPSTONE_STATIC=yes \
+      CAPSTONE_SHARED=no \
+      CAPSTONE_BUILD_CORE_ONLY=yes
+      sudo make install
 
 ## Building the editor
 
     $ WX_CONFIG=/opt/wxWidgets-3.0.4-debug/bin/wx-config \
-        LLVM_CONFIG=/opt/llvm-7.0.0-release-static/bin/llvm-config \
         make -f Makefile.osx
 
 To build a dmg, run:

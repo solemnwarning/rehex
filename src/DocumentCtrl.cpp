@@ -869,10 +869,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		return;
 	}
 	else if((modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT || ((modifiers & ~wxMOD_SHIFT) == wxMOD_CONTROL && (key == WXK_HOME || key == WXK_END)))
-		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END))
+		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END || key == WXK_PAGEUP || key == WXK_PAGEDOWN))
 	{
 		off_t new_cursor_pos = cursor_pos;
-		
+		bool update_scrollpos = false;
 		DataRegion *cur_region = _data_region_by_offset(cursor_pos);
 		assert(cur_region != NULL);
 		
@@ -1045,9 +1045,36 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 				(cursor_pos + ((cur_region->bytes_per_line_actual - offset_within_line) - 1)),
 				((cur_region->d_offset + cur_region->d_length) - 1));
 		}
+		else if (key == WXK_PAGEUP)
+		{
+			new_cursor_pos = std::max<off_t>(cursor_pos - (off_t)cur_region->bytes_per_line_actual * visible_lines, 0);
+			scroll_yoff -= visible_lines;
+			update_scrollpos = true;
+		}
+		else if (key == WXK_PAGEDOWN)
+		{
+			new_cursor_pos = std::min(cursor_pos + (off_t)cur_region->bytes_per_line_actual * visible_lines, doc->buffer_length());
+			scroll_yoff += visible_lines;
+			update_scrollpos = true;
+		}
 		
 		_set_cursor_position(new_cursor_pos, Document::CSTATE_GOTO);
 		
+		if (update_scrollpos)
+		{
+			if (scroll_yoff < 0)
+			{
+				scroll_yoff = 0;
+			}
+			else if (scroll_yoff > scroll_yoff_max)
+			{
+				scroll_yoff = scroll_yoff_max;
+			}
+
+			_update_vscroll_pos();
+			Refresh();
+		}
+
 		if(modifiers & wxMOD_SHIFT)
 		{
 			off_t selection_end = selection_off + selection_length;

@@ -67,6 +67,7 @@ static const CSArchitecture known_arch_list[] = {
 	{ "sparcel", "SPARC (little endian)",   CS_ARCH_SPARC, CS_MODE_LITTLE_ENDIAN },
 	{ "sparcv9", "SPARC V9 (SPARC64)",      CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN | CS_MODE_V9 },
 	
+	{ "x86_16", "X86-16",           CS_ARCH_X86, CS_MODE_16 },
 	{ "i386",   "X86",              CS_ARCH_X86, CS_MODE_32 },
 	{ "x86_64", "X86-64 (AMD64)",   CS_ARCH_X86, CS_MODE_64 },
 };

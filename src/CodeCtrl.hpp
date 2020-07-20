@@ -88,6 +88,7 @@ namespace REHex {
 			void select_all();
 			
 			void OnPaint(wxPaintEvent &event);
+			void OnErase(wxEraseEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			void OnWheel(wxMouseEvent &event);

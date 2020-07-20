@@ -27,6 +27,7 @@ enum {
 
 BEGIN_EVENT_TABLE(REHex::CodeCtrl, wxControl)
 	EVT_PAINT(REHex::CodeCtrl::OnPaint)
+	EVT_ERASE_BACKGROUND(REHex::CodeCtrl::OnErase)
 	EVT_SIZE(REHex::CodeCtrl::OnSize)
 	EVT_SCROLLWIN(REHex::CodeCtrl::OnScroll)
 	EVT_MOUSEWHEEL(REHex::CodeCtrl::OnWheel)
@@ -353,6 +354,11 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 		
 		flush();
 	}
+}
+
+void REHex::CodeCtrl::OnErase(wxEraseEvent& event)
+{
+	// Left blank to disable erase
 }
 
 void REHex::CodeCtrl::OnSize(wxSizeEvent &event)

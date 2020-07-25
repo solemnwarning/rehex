@@ -154,7 +154,7 @@ void REHex::Disassemble::load_state(wxConfig *config)
 	std::string cur_triple = arch_list[ arch->GetSelection() ].triple;
 	std::string new_triple = config->Read("arch", cur_triple).ToStdString();
 	
-	for(int i = 0; arch_list[i].triple != NULL; ++i)
+	for(int i = 0; i < (int)arch_list.size(); ++i)
 	{
 		if(new_triple == arch_list[i].triple)
 		{

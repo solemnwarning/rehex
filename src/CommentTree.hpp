@@ -78,6 +78,7 @@ namespace REHex {
 			
 			virtual void save_state(wxConfig *config) const override;
 			virtual void load_state(wxConfig *config) override;
+			virtual void update() override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			

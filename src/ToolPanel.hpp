@@ -58,9 +58,12 @@ namespace REHex {
 			
 			virtual void save_state(wxConfig *config) const = 0;
 			virtual void load_state(wxConfig *config) = 0;
+			virtual void update() = 0;
+			void set_visible(bool visible);
 			
 		protected:
 			ToolPanel(wxWindow *parent);
+			bool is_visible;
 	};
 	
 	class ToolPanelRegistration;

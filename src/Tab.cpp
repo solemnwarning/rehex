@@ -418,6 +418,26 @@ void REHex::Tab::OnSize(wxSizeEvent &event)
 
 void REHex::Tab::OnHToolChange(wxNotebookEvent& event)
 {
+	if (event.GetOldSelection() != wxNOT_FOUND)
+	{
+		wxWindow* page = h_tools->GetPage(event.GetOldSelection());
+		assert(page != NULL);
+		
+		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
+		assert(tp != NULL);
+		tp->set_visible(false);
+	}
+	
+	if (event.GetSelection() != wxNOT_FOUND)
+	{
+		wxWindow* page = h_tools->GetPage(event.GetSelection());
+		assert(page != NULL);
+		
+		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
+		assert(tp != NULL);
+		tp->set_visible(true);
+	}
+	
 	htools_adjust();
 }
 

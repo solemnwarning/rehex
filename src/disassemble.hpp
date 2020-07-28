@@ -44,6 +44,7 @@ namespace REHex {
 			
 			virtual void save_state(wxConfig *config) const override;
 			virtual void load_state(wxConfig *config) override;
+			virtual void update() override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			
@@ -62,7 +63,6 @@ namespace REHex {
 			CodeCtrl *assembly;
 			
 			void reinit_disassembler();
-			void update();
 			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
 			
 			void OnCursorUpdate(CursorUpdateEvent &event);

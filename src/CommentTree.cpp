@@ -87,6 +87,11 @@ void REHex::CommentTree::load_state(wxConfig *config)
 	/* No state to load. */
 }
 
+void REHex::CommentTree::update()
+{
+	/* Nothing to update */
+}
+
 wxSize REHex::CommentTree::DoGetBestClientSize() const
 {
 	/* TODO: Calculate a reasonable best size. */

@@ -121,6 +121,7 @@ namespace REHex
 			void vtools_adjust_now_idle(wxIdleEvent &event);
 			void htools_adjust_on_idle();
 			void htools_adjust_now_idle(wxIdleEvent &event);
+			void xtools_fix_visibility(wxNotebook *notebook);
 			
 			void repopulate_regions();
 			

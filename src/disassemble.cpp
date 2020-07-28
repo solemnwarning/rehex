@@ -175,6 +175,11 @@ wxSize REHex::Disassemble::DoGetBestClientSize() const
 
 void REHex::Disassemble::update()
 {
+	if (!is_visible)
+	{
+		/* There is no sense in updating this if we are not visible */
+		return;
+	}
 	if(disassembler == 0)
 	{
 		assembly->clear();

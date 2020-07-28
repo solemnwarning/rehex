@@ -206,6 +206,8 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 		
 		tools.insert(std::make_pair(name, tool_window));
 		
+		xtools_fix_visibility(v_tools);
+		
 		if(adjust)
 		{
 			vtools_adjust_on_idle();
@@ -222,6 +224,8 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 		h_tools->AddPage(tool_window, tpr->label, switch_to);
 		
 		tools.insert(std::make_pair(name, tool_window));
+		
+		xtools_fix_visibility(h_tools);
 		
 		if(adjust)
 		{
@@ -248,6 +252,8 @@ void REHex::Tab::tool_destroy(const std::string &name)
 	assert(page_idx != wxNOT_FOUND);
 	
 	notebook->DeletePage(page_idx);
+	
+	xtools_fix_visibility(notebook);
 	
 	if(notebook == v_tools)
 	{
@@ -1109,6 +1115,28 @@ void REHex::Tab::htools_adjust_now_idle(wxIdleEvent &event)
 	event.Skip();
 	
 	htools_adjust();
+}
+
+/* wxEVT_NOTEBOOK_PAGE_CHANGED events aren't generated consistently between platforms and versions
+ * of wxWidgets when the selected tab is changed due to adding/removing a page, so this method is
+ * used to correct the visible state of all ToolPanel's in a notebook after adding or removing one.
+*/
+void REHex::Tab::xtools_fix_visibility(wxNotebook *notebook)
+{
+	size_t n_pages    = notebook->GetPageCount();
+	int selected_page = notebook->GetSelection();
+	
+	for(size_t i = 0; i < n_pages; ++i)
+	{
+		wxWindow* page = v_tools->GetPage(i);
+		assert(page != NULL);
+		
+		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
+		assert(tp != NULL);
+		
+		bool this_tab_is_selected = ((int)(i) == selected_page);
+		tp->set_visible(this_tab_is_selected);
+	}
 }
 
 void REHex::Tab::init_default_doc_view()

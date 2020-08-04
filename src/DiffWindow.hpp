@@ -98,7 +98,7 @@ namespace REHex {
 			
 			static DiffWindow *instance;
 			
-			std::list<Range>::iterator remove_range(std::list<Range>::iterator range);
+			std::list<Range>::iterator remove_range(std::list<Range>::iterator range, bool called_from_page_closed_handler);
 			
 			void doc_update(Range *range);
 			std::string range_title(Range *range);

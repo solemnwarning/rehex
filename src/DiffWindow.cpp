@@ -217,7 +217,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 	return new_range;
 }
 
-std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(std::list<Range>::iterator range)
+std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(std::list<Range>::iterator range, bool called_from_page_closed_handler)
 {
 	auto next = std::next(range);
 	
@@ -267,7 +267,24 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	
 	SharedDocumentPointer range_doc(range->doc);
 	DocumentCtrl *range_mdc = range->main_doc_ctrl;
-	
+
+	if(!called_from_page_closed_handler)
+	{
+		/* There may still be a wxEVT_PAINT event pending on this range's DocumentCtrl,
+		 * which would result in DiffDataRegion::highlight_at_off() being called with an
+		 * invalid 'range' pointer after we erase it.
+		 *
+		 * We reinitialise the DocumentCtrl with a useless-but-valid DataRegion to work
+		 * around this case. What gets drawn doesn't matter since the control will be
+		 * destroyed when wxWidgets next runs idle events.
+		*/
+
+		std::list<DocumentCtrl::Region*> regions;
+		regions.push_back(new DocumentCtrl::DataRegion(0, 0));
+
+		range->doc_ctrl->replace_all_regions(regions);
+	}
+
 	ranges.erase(range);
 	
 	/* If this was the last Range using this Document, remove event bindings. */
@@ -388,7 +405,7 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	{
 		if((DocumentCtrl*)(i->main_doc_ctrl) == NULL)
 		{
-			i = remove_range(i);
+			i = remove_range(i, false);
 		}
 		else{
 			++i;
@@ -453,7 +470,7 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				
 				if(r->length == 0)
 				{
-					r = remove_range(r);
+					r = remove_range(r, false);
 					continue;
 				}
 				else{
@@ -469,7 +486,7 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				
 				if(r->length == 0)
 				{
-					r = remove_range(r);
+					r = remove_range(r, false);
 					continue;
 				}
 				else{
@@ -630,7 +647,7 @@ void REHex::DiffWindow::OnNotebookClosed(wxAuiNotebookEvent &event)
 	auto nb_range = std::find_if(ranges.begin(), ranges.end(), [event](const Range &range) { return range.notebook == event.GetEventObject(); });
 	assert(nb_range != ranges.end());
 	
-	remove_range(nb_range);
+	remove_range(nb_range, true);
 }
 
 void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)

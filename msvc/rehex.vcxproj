@@ -102,9 +102,13 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
+    <PreLinkEvent>
       <Command>
       </Command>
-    </PreBuildEvent>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -119,9 +123,13 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
+    <PreLinkEvent>
       <Command>
       </Command>
-    </PreBuildEvent>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

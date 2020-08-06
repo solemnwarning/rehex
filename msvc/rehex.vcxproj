@@ -257,13 +257,12 @@
     <ClInclude Include="..\src\ToolPanel.hpp" />
     <ClInclude Include="..\src\util.hpp" />
     <ClInclude Include="..\src\win32lib.hpp" />
-    <ClInclude Include="resource.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="rehex.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\res\icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\res\winres.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

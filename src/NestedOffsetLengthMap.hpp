@@ -26,7 +26,6 @@
 #ifndef REHEX_NESTEDOFFSETLENGTHMAP_HPP
 #define REHEX_NESTEDOFFSETLENGTHMAP_HPP
 
-#include "platform.hpp"
 #include <iterator>
 #include <limits>
 #include <list>

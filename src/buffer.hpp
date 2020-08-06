@@ -18,7 +18,6 @@
 #ifndef REHEX_BUFFER_HPP
 #define REHEX_BUFFER_HPP
 
-#include "platform.hpp"
 #include <list>
 #include <map>
 #include <mutex>

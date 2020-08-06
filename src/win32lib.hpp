@@ -20,7 +20,6 @@
 
 #ifdef _WIN32
 
-#include "platform.hpp"
 #include <windows.h>
 #include <string>
 #include <string.h>

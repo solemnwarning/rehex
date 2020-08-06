@@ -105,18 +105,6 @@
     <ClCompile Include="..\res\ascii48.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\res\document_new32.c">
-      <Filter>res</Filter>
-    </ClCompile>
-    <ClCompile Include="..\res\document_open32.c">
-      <Filter>res</Filter>
-    </ClCompile>
-    <ClCompile Include="..\res\document_save_as32.c">
-      <Filter>res</Filter>
-    </ClCompile>
-    <ClCompile Include="..\res\document_save32.c">
-      <Filter>res</Filter>
-    </ClCompile>
     <ClCompile Include="..\res\icon16.c">
       <Filter>res</Filter>
     </ClCompile>
@@ -130,15 +118,6 @@
       <Filter>res</Filter>
     </ClCompile>
     <ClCompile Include="..\res\icon128.c">
-      <Filter>res</Filter>
-    </ClCompile>
-    <ClCompile Include="..\res\icon256.c">
-      <Filter>res</Filter>
-    </ClCompile>
-    <ClCompile Include="..\res\icon512.c">
-      <Filter>res</Filter>
-    </ClCompile>
-    <ClCompile Include="..\res\icon1024.c">
       <Filter>res</Filter>
     </ClCompile>
     <ClCompile Include="..\res\license.c">
@@ -263,18 +242,6 @@
     <ClInclude Include="..\res\ascii48.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\res\document_new32.h">
-      <Filter>res</Filter>
-    </ClInclude>
-    <ClInclude Include="..\res\document_open32.h">
-      <Filter>res</Filter>
-    </ClInclude>
-    <ClInclude Include="..\res\document_save_as32.h">
-      <Filter>res</Filter>
-    </ClInclude>
-    <ClInclude Include="..\res\document_save32.h">
-      <Filter>res</Filter>
-    </ClInclude>
     <ClInclude Include="..\res\icon16.h">
       <Filter>res</Filter>
     </ClInclude>
@@ -288,15 +255,6 @@
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="..\res\icon128.h">
-      <Filter>res</Filter>
-    </ClInclude>
-    <ClInclude Include="..\res\icon256.h">
-      <Filter>res</Filter>
-    </ClInclude>
-    <ClInclude Include="..\res\icon512.h">
-      <Filter>res</Filter>
-    </ClInclude>
-    <ClInclude Include="..\res\icon1024.h">
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="..\res\license.h">

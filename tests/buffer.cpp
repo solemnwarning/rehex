@@ -16,6 +16,7 @@
 */
 
 #undef NDEBUG
+#include "../src/platform.hpp"
 #include <assert.h>
 
 #include <errno.h>
@@ -25,7 +26,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #define UNIT_TEST
 #include "../src/buffer.hpp"
@@ -36,7 +39,7 @@
 static void write_file(const char *filename, const std::vector<unsigned char>& data)
 {
 	FILE *fh = fopen(filename, "wb");
-	assert(fh);
+	assert(fh);	// Ensure the 'tests' directory can be accessed when hitting this
 	
 	if(data.size() > 0)
 		assert(fwrite(data.data(), data.size(), 1, fh) == 1);

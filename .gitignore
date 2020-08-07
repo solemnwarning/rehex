@@ -3,13 +3,25 @@
 /rehex
 
 /res/ascii16.c
-res/ascii16.h
+/res/ascii16.h
 /res/ascii24.c
 /res/ascii24.h
 /res/ascii32.c
 /res/ascii32.h
 /res/ascii48.c
 /res/ascii48.h
+
+/res/document_new32.c
+/res/document_new32.h
+
+/res/document_open32.c
+/res/document_open32.h
+
+/res/document_save32.c
+/res/document_save32.h
+
+/res/document_save_as32.c
+/res/document_save_as32.h
 
 /res/icon16.c
 /res/icon16.h
@@ -38,3 +50,12 @@ res/ascii16.h
 /tests/all-tests
 /tests/document.t
 /tools/embed
+msvc/.vs/
+msvc/Debug/
+msvc/embed/Debug/
+res/version_msvc.h
+msvc/x64/
+msvc/embed/x64/
+msvc/all-tests/x64/
+msvc/all-tests-appcode/x64/
+msvc/all-tests/tests/

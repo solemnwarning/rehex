@@ -16,6 +16,7 @@
 */
 
 #undef NDEBUG
+#include "../src/platform.hpp"
 #include <assert.h>
 
 #include <gtest/gtest.h>

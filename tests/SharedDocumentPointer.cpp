@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "../src/platform.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 #include <stdexcept>
@@ -27,12 +28,28 @@
 
 using namespace REHex;
 
-class ClassX
+class ClassY
 {
 	public:
-		void method_a(wxCommandEvent &event) {}
-		void method_b(wxCommandEvent &event) {}
+		/* When compiling with MSVCs "Release" configuration, the optimiser flattens both
+		 * of the below methods to the same address if they have the same code, preventing
+		 * the Bind/Unbind methods from identifying which callback they were given.
+		 *
+		 * Despite the above, the compiler does some shennanigans to make comparing the
+		 * method symbols work, so the following conditions are all simultaniously true!
+		 *
+		 * &ClassY::method_a   != &ClassY::method_b
+		 * method_pointer_to_a == &ClassY::method_a
+		 * method_pointer_to_a == &ClassY::method_b
+		*/
+
+		static volatile int fuck;
+
+		void method_a(wxCommandEvent& event) { fuck = 1; }
+		void method_b(wxCommandEvent& event) { fuck = 2; }
 };
+
+volatile int ClassY::fuck;
 
 class TestDocument: public wxEvtHandler
 {
@@ -78,38 +95,38 @@ class TestDocument: public wxEvtHandler
 		}
 		
 		template <typename EventTag, typename EventArg, typename EventHandler>
-			void Bind(const EventTag &eventType, void (ClassX::*method)(EventArg &), EventHandler *handler)
+			void Bind(const EventTag &eventType, void (ClassY::*method)(EventArg &), EventHandler *handler)
 		{
 			wxEvtHandler::Bind(eventType, method, handler);
 			
-			if(method == &ClassX::method_a)
+			if(method == &ClassY::method_a)
 			{
-				calls.push_back(call_fmt("Bind", eventType, "&ClassX::method_a", handler));
+				calls.push_back(call_fmt("Bind", eventType, "&ClassY::method_a", handler));
 			}
-			else if(method == &ClassX::method_b)
+			else if(method == &ClassY::method_b)
 			{
-				calls.push_back(call_fmt("Bind", eventType, "&ClassX::method_b", handler));
+				calls.push_back(call_fmt("Bind", eventType, "&ClassY::method_b", handler));
 			}
 			else{
-				calls.push_back(call_fmt("Bind", eventType, "&ClassX::???", handler));
+				calls.push_back(call_fmt("Bind", eventType, "&ClassY::???", handler));
 			}
 		}
 		
 		template <typename EventTag, typename EventArg, typename EventHandler>
-			void Unbind(const EventTag &eventType, void (ClassX::*method)(EventArg &), EventHandler *handler)
+			void Unbind(const EventTag &eventType, void (ClassY::*method)(EventArg &), EventHandler *handler)
 		{
 			wxEvtHandler::Unbind(eventType, method, handler);
 			
-			if(method == &ClassX::method_a)
+			if(method == &ClassY::method_a)
 			{
-				calls.push_back(call_fmt("Unbind", eventType, "&ClassX::method_a", handler));
+				calls.push_back(call_fmt("Unbind", eventType, "&ClassY::method_a", handler));
 			}
-			else if(method == &ClassX::method_b)
+			else if(method == &ClassY::method_b)
 			{
-				calls.push_back(call_fmt("Unbind", eventType, "&ClassX::method_b", handler));
+				calls.push_back(call_fmt("Unbind", eventType, "&ClassY::method_b", handler));
 			}
 			else{
-				calls.push_back(call_fmt("Unbind", eventType, "&ClassX::???", handler));
+				calls.push_back(call_fmt("Unbind", eventType, "&ClassY::???", handler));
 			}
 		}
 };
@@ -163,12 +180,12 @@ TEST(SharedDocumentPointer, CreateBindDestroy)
 	/* --- Bind events via ptr --- */
 	
 	TestDocument::calls.clear();
-	ptr->auto_cleanup_bind(wxEVT_BUTTON, &ClassX::method_a, (ClassX*)(0xDEAD));
-	ptr->auto_cleanup_bind(wxEVT_MENU,   &ClassX::method_b, (ClassX*)(0xBEEF));
+	ptr->auto_cleanup_bind(wxEVT_BUTTON, &ClassY::method_a, (ClassY*)(0xDEAD));
+	ptr->auto_cleanup_bind(wxEVT_MENU,   &ClassY::method_b, (ClassY*)(0xBEEF));
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xDEAD)),
-		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBEEF)),
+		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xDEAD)),
+		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBEEF)),
 	);
 	
 	/* --- Destroy ptr --- */
@@ -179,8 +196,8 @@ TEST(SharedDocumentPointer, CreateBindDestroy)
 	EXPECT_EQ(TestDocument::instance, (TestDocument*)(NULL)) << "TestDocument destroyed with last SharedDocumentPointer";
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBEEF)),
-		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xDEAD)),
+		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBEEF)),
+		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xDEAD)),
 	);
 }
 
@@ -201,12 +218,12 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroy)
 	/* --- Bind events via ptr --- */
 	
 	TestDocument::calls.clear();
-	ptr->auto_cleanup_bind(wxEVT_BUTTON, &ClassX::method_a, (ClassX*)(0xDEAD));
-	ptr->auto_cleanup_bind(wxEVT_MENU,   &ClassX::method_b, (ClassX*)(0xBEEF));
+	ptr->auto_cleanup_bind(wxEVT_BUTTON, &ClassY::method_a, (ClassY*)(0xDEAD));
+	ptr->auto_cleanup_bind(wxEVT_MENU,   &ClassY::method_b, (ClassY*)(0xBEEF));
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xDEAD)),
-		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBEEF)),
+		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xDEAD)),
+		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBEEF)),
 	);
 	
 	/* --- Create copy of ptr --- */
@@ -222,12 +239,12 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroy)
 	/* --- Bind events via ptr2 --- */
 	
 	TestDocument::calls.clear();
-	ptr2->auto_cleanup_bind(wxEVT_BUTTON, &ClassX::method_a, (ClassX*)(0xF000));
-	ptr2->auto_cleanup_bind(wxEVT_MENU,   &ClassX::method_b, (ClassX*)(0xBAAA));
+	ptr2->auto_cleanup_bind(wxEVT_BUTTON, &ClassY::method_a, (ClassY*)(0xF000));
+	ptr2->auto_cleanup_bind(wxEVT_MENU,   &ClassY::method_b, (ClassY*)(0xBAAA));
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xF000)),
-		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBAAA)),
+		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xF000)),
+		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBAAA)),
 	);
 	
 	/* --- Destroy ptr2 --- */
@@ -238,8 +255,8 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroy)
 	EXPECT_NE(TestDocument::instance, (TestDocument*)(NULL)) << "TestDocument not destroyed with non-final SharedDocumentPointer";
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBAAA)),
-		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xF000)),
+		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBAAA)),
+		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xF000)),
 	);
 	
 	/* --- Destroy ptr --- */
@@ -250,8 +267,8 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroy)
 	EXPECT_EQ(TestDocument::instance, (TestDocument*)(NULL)) << "TestDocument destroyed with last SharedDocumentPointer";
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBEEF)),
-		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xDEAD)),
+		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBEEF)),
+		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xDEAD)),
 	);
 }
 
@@ -272,12 +289,12 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroyOutOfOrder)
 	/* --- Bind events via ptr --- */
 	
 	TestDocument::calls.clear();
-	ptr->auto_cleanup_bind(wxEVT_BUTTON, &ClassX::method_a, (ClassX*)(0xDEAD));
-	ptr->auto_cleanup_bind(wxEVT_MENU,   &ClassX::method_b, (ClassX*)(0xBEEF));
+	ptr->auto_cleanup_bind(wxEVT_BUTTON, &ClassY::method_a, (ClassY*)(0xDEAD));
+	ptr->auto_cleanup_bind(wxEVT_MENU,   &ClassY::method_b, (ClassY*)(0xBEEF));
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xDEAD)),
-		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBEEF)),
+		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xDEAD)),
+		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBEEF)),
 	);
 	
 	/* -- Create copy of ptr --- */
@@ -293,12 +310,12 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroyOutOfOrder)
 	/* -- Bind events via ptr2 --- */
 	
 	TestDocument::calls.clear();
-	ptr2->auto_cleanup_bind(wxEVT_BUTTON, &ClassX::method_a, (ClassX*)(0xF000));
-	ptr2->auto_cleanup_bind(wxEVT_MENU,   &ClassX::method_b, (ClassX*)(0xBAAA));
+	ptr2->auto_cleanup_bind(wxEVT_BUTTON, &ClassY::method_a, (ClassY*)(0xF000));
+	ptr2->auto_cleanup_bind(wxEVT_MENU,   &ClassY::method_b, (ClassY*)(0xBAAA));
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xF000)),
-		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBAAA)),
+		TestDocument::call_fmt("Bind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xF000)),
+		TestDocument::call_fmt("Bind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBAAA)),
 	);
 	
 	/* -- Destroy ptr --- */
@@ -309,8 +326,8 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroyOutOfOrder)
 	EXPECT_NE(TestDocument::instance, (TestDocument*)(NULL)) << "TestDocument not destroyed with non-final SharedDocumentPointer";
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBEEF)),
-		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xDEAD)),
+		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBEEF)),
+		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xDEAD)),
 	);
 	
 	/* --- Destroy ptr2 --- */
@@ -321,7 +338,7 @@ TEST(SharedDocumentPointer, CreateBindCopyBindDestroyOutOfOrder)
 	EXPECT_EQ(TestDocument::instance, (TestDocument*)(NULL)) << "TestDocument destroyed with last SharedDocumentPointer";
 	
 	EXPECT_CALLS(
-		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassX::method_b", (ClassX*)(0xBAAA)),
-		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassX::method_a", (ClassX*)(0xF000)),
+		TestDocument::call_fmt("Unbind", wxEVT_MENU,   "&ClassY::method_b", (ClassY*)(0xBAAA)),
+		TestDocument::call_fmt("Unbind", wxEVT_BUTTON, "&ClassY::method_a", (ClassY*)(0xF000)),
 	);
 }

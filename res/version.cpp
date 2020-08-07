@@ -16,6 +16,9 @@
 */
 
 #include "version.h"
+#ifdef _MSC_VER
+#include "version_msvc.h"
+#endif
 
 extern "C" {
 	const char *REHEX_VERSION = LONG_VERSION;

@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "../src/platform.hpp"
 #include <gtest/gtest.h>
 #include <memory>
 #include <stdio.h>
@@ -29,9 +30,25 @@ using namespace REHex;
 class ClassX
 {
 	public:
-		void method_a(wxCommandEvent &event) {}
-		void method_b(wxCommandEvent &event) {}
+		/* When compiling with MSVCs "Release" configuration, the optimiser flattens both
+		 * of the below methods to the same address if they have the same code, preventing
+		 * the Bind/Unbind methods from identifying which callback they were given.
+		 *
+		 * Despite the above, the compiler does some shennanigans to make comparing the
+		 * method symbols work, so the following conditions are all simultaniously true!
+		 *
+		 * &ClassX::method_a   != &ClassX::method_b
+		 * method_pointer_to_a == &ClassX::method_a
+		 * method_pointer_to_a == &ClassX::method_b
+		*/
+
+		static volatile int fuck;
+
+		void method_a(wxCommandEvent& event) { fuck = 1; }
+		void method_b(wxCommandEvent& event) { fuck = 2; }
 };
+
+volatile int ClassX::fuck;
 
 class TestWindow: public wxEvtHandler
 {
@@ -75,7 +92,7 @@ class TestWindow: public wxEvtHandler
 			void Bind(const EventTag &eventType, void (ClassX::*method)(EventArg &), EventHandler *handler)
 		{
 			wxEvtHandler::Bind(eventType, method, handler);
-			
+
 			if(method == &ClassX::method_a)
 			{
 				calls.push_back(call_fmt("Bind", eventType, "&ClassX::method_a", handler));

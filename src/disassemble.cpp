@@ -55,10 +55,36 @@ static const CSArchitecture known_arch_list[] = {
 	{ "aarch64",    "AArch64 (ARM64)",              CS_ARCH_ARM64, CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN },
 	{ "aarch64_be", "AArch64 (ARM64, big endian)",  CS_ARCH_ARM64, CS_MODE_ARM | CS_MODE_BIG_ENDIAN },
 	
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(4, 0)
+	{ "m680x-6301",  "Hitachi 6301/6303",  CS_ARCH_M680X,  CS_MODE_M680X_6301 },
+	{ "m680x-6309",  "Hitachi 6309",       CS_ARCH_M680X,  CS_MODE_M680X_6309 },
+	#endif
+	
 	{ "mips",     "MIPS",                           CS_ARCH_MIPS, CS_MODE_MIPS32 | CS_MODE_BIG_ENDIAN },
 	{ "mipsel",   "MIPS (little endian)",           CS_ARCH_MIPS, CS_MODE_MIPS32 | CS_MODE_LITTLE_ENDIAN },
 	{ "mips64",   "MIPS (64-bit)",                  CS_ARCH_MIPS, CS_MODE_MIPS64 | CS_MODE_BIG_ENDIAN },
 	{ "mips64el", "MIPS (64-bit, little endian)",   CS_ARCH_MIPS, CS_MODE_MIPS64 | CS_MODE_LITTLE_ENDIAN },
+	
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(4, 0)
+	{ "m680x-6800",   "Motorola 6800/6802",             CS_ARCH_M680X,  CS_MODE_M680X_6800  },
+	{ "m680x-6801",   "Motorola 6801/6803",             CS_ARCH_M680X,  CS_MODE_M680X_6801  },
+	{ "m680x-6805",   "Motorola/Freescale 6805",        CS_ARCH_M680X,  CS_MODE_M680X_6805  },
+	{ "m680x-6808",   "Motorola/Freescale/NXP 68HC08",  CS_ARCH_M680X,  CS_MODE_M680X_6808  },
+	{ "m680x-6809",   "Motorola 6809",                  CS_ARCH_M680X,  CS_MODE_M680X_6809  },
+	{ "m680x-6811",   "Motorola/Freescale/NXP 68HC11",  CS_ARCH_M680X,  CS_MODE_M680X_6811  },
+	{ "m680x-cpu12",  "Motorola/Freescale/NXP 68HC12",  CS_ARCH_M680X,  CS_MODE_M680X_CPU12 },
+	
+	{ "m68k-68000", "Motorola 68000", CS_ARCH_M68K, CS_MODE_M68K_000 },
+	{ "m68k-68000", "Motorola 68010", CS_ARCH_M68K, CS_MODE_M68K_010 },
+	{ "m68k-68000", "Motorola 68020", CS_ARCH_M68K, CS_MODE_M68K_020 },
+	{ "m68k-68000", "Motorola 68030", CS_ARCH_M68K, CS_MODE_M68K_030 },
+	{ "m68k-68000", "Motorola 68040", CS_ARCH_M68K, CS_MODE_M68K_040 },
+	{ "m68k-68000", "Motorola 68060", CS_ARCH_M68K, CS_MODE_M68K_060 },
+	#endif
+	
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(5, 0)
+	{ "mos65xx", "MOS 65XX (including 6502)", CS_ARCH_MOS65XX, 0 },
+	#endif
 	
 	{ "powerpc",     "PowerPC",                     CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN },
 	{ "powerpc64",   "PowerPC (64-bit)",            CS_ARCH_PPC, CS_MODE_64 | CS_MODE_BIG_ENDIAN },

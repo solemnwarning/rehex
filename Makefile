@@ -33,7 +33,7 @@ WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgri
 CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CFLAGS)
 CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS) $(CXXFLAGS)
 
-LIBS := $(WX_LIBS) -ljansson -lcapstone $(LIBS)
+LIBS := $(LIBS) $(WX_LIBS) -ljansson -lcapstone
 
 ifeq ($(DEBUG),)
 	DEBUG=0

@@ -28,6 +28,14 @@ wxApp &wxGetApp()
        return *wxTheApp;
 }
 
+struct Cleanup
+{
+	~Cleanup()
+	{
+		delete REHex::active_palette;
+	}
+};
+
 int main(int argc, char **argv)
 {
 	wxApp::SetInstance(new wxApp());
@@ -37,6 +45,7 @@ int main(int argc, char **argv)
 	REHex::ArtProvider::init();
 	
 	REHex::active_palette = REHex::Palette::create_system_palette();
+	Cleanup cleanup;
 
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();

@@ -146,6 +146,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_AUINOTEBOOK_PAGE_CLOSE(    wxID_ANY, REHex::MainWindow::OnDocumentClose)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
 	EVT_AUINOTEBOOK_TAB_RIGHT_DOWN(wxID_ANY, REHex::MainWindow::OnDocumentMenu)
+	EVT_AUINOTEBOOK_TAB_MIDDLE_UP( wxID_ANY, REHex::MainWindow::OnDocumentMiddleMouse)
 	
 	EVT_CURSORUPDATE(wxID_ANY, REHex::MainWindow::OnCursorUpdate)
 	
@@ -1062,6 +1063,17 @@ void REHex::MainWindow::OnDocumentMenu(wxAuiNotebookEvent &event)
 	}, close_others->GetId(), close_others->GetId());
 	
 	PopupMenu(&menu);
+}
+
+void REHex::MainWindow::OnDocumentMiddleMouse(wxAuiNotebookEvent& event)
+{
+	wxWindow* page = notebook->GetPage(event.GetSelection());
+	assert(page != NULL);
+
+	auto tab = dynamic_cast<Tab*>(page);
+	assert(tab != NULL);
+
+	close_tab(tab);
 }
 
 void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)

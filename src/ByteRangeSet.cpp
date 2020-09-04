@@ -166,6 +166,21 @@ const std::set<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() co
 	return ranges;
 }
 
+std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::begin() const
+{
+	return ranges.begin();
+}
+
+std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end() const
+{
+	return ranges.end();
+}
+
+size_t REHex::ByteRangeSet::size() const
+{
+	return ranges.size();
+}
+
 void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 {
 	std::set<Range> new_ranges;

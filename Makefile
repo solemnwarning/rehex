@@ -134,6 +134,7 @@ APP_OBJS := \
 	src/Palette.o \
 	src/search.o \
 	src/SelectRangeDialog.o \
+	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
 	src/ToolPanel.o \

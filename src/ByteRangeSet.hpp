@@ -99,6 +99,21 @@ namespace REHex
 			const std::set<Range> &get_ranges() const;
 			
 			/**
+			 * @brief Returns a const_iterator to the first Range in the set.
+			*/
+			std::set<Range>::const_iterator begin() const;
+			
+			/**
+			 * @brief Returns a const_iterator to the end of the set.
+			*/
+			std::set<Range>::const_iterator end() const;
+			
+			/**
+			 * @brief Returns the number of ranges in the set.
+			*/
+			size_t size() const;
+			
+			/**
 			 * @brief Adjust for data being inserted into file.
 			 *
 			 * Ranges after the insertion will be moved along by the size of the

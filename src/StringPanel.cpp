@@ -24,7 +24,7 @@
 
 static const size_t MIN_STRING_LENGTH = 4;
 static const size_t WINDOW_SIZE = 2 * 1024 * 1024; /* 2MiB */
-static const size_t MAX_STRINGS = 0xFFFFFFFF;
+static const size_t MAX_STRINGS = 1000000;
 static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
 
 static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
@@ -65,7 +65,7 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	
 	dirty.set_range(0, document->buffer_length());
 	
-	wxTimer *timer = new wxTimer(this, wxID_ANY);
+	timer = new wxTimer(this, wxID_ANY);
 	
 	this->Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 	{
@@ -79,6 +79,7 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 
 REHex::StringPanel::~StringPanel()
 {
+	timer->Stop();
 	stop_threads();
 }
 
@@ -200,6 +201,12 @@ void REHex::StringPanel::thread_main()
 			if(string_length >= MIN_STRING_LENGTH)
 			{
 				std::lock_guard<std::mutex> sl(strings_lock);
+				
+				if(strings.size() >= MAX_STRINGS)
+				{
+					threads_exit = true;
+					break;
+				}
 				
 				strings.set_range(string_base, string_length);
 				update_needed = true;

@@ -83,6 +83,7 @@ namespace REHex {
 			
 			std::list<std::thread> threads;  /* List of threads created and not yet reaped. */
 			std::atomic<bool> threads_exit;  /* Threads should exit. */
+			wxTimer *timer;
 			
 			std::mutex pause_lock;              /* Mutex protecting access to this block of members: */
 			std::atomic<bool> threads_pause;    /* Running threads should enter paused state. */

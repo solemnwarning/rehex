@@ -19,6 +19,7 @@
 #define REHEX_STRINGPANEL_HPP
 
 #include <atomic>
+#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <stddef.h>
@@ -80,13 +81,21 @@ namespace REHex {
 			ssize_t last_item_idx;
 			std::set<ByteRangeSet::Range>::const_iterator last_item_iter;
 			
-			std::list<std::thread> threads;
-			std::atomic<bool> run_threads;
-			unsigned int running_threads;
+			std::list<std::thread> threads;  /* List of threads created and not yet reaped. */
+			std::atomic<bool> threads_exit;  /* Threads should exit. */
+			
+			std::mutex pause_lock;              /* Mutex protecting access to this block of members: */
+			std::atomic<bool> threads_pause;    /* Running threads should enter paused state. */
+			unsigned int spawned_threads;       /* Number of threads created. */
+			unsigned int running_threads;       /* Number of threads not paused. */
+			std::condition_variable paused_cv;  /* Notifies pause_threads() that a thread has paused. */
+			std::condition_variable resume_cv;  /* Notifies paused threads that they should resume. */
 			
 			void thread_main();
 			void start_threads();
 			void stop_threads();
+			void pause_threads();
+			void resume_threads();
 			
 			std::set<ByteRangeSet::Range>::const_iterator get_nth_string(ssize_t n);
 			

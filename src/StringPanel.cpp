@@ -25,6 +25,7 @@
 static const size_t MIN_STRING_LENGTH = 4;
 static const size_t WINDOW_SIZE = 2 * 1024 * 1024; /* 2MiB */
 static const size_t MAX_STRINGS = 0xFFFFFFFF;
+static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
 
 static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -39,7 +40,9 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	document_ctrl(document_ctrl),
 	update_needed(false),
 	last_item_idx(-1),
-	run_threads(false),
+	threads_exit(true),
+	threads_pause(false),
+	spawned_threads(0),
 	running_threads(0)
 {
 	list_ctrl = new StringPanelListCtrl(this);
@@ -59,8 +62,6 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_ERASE_ABORTED,        &REHex::StringPanel::OnDataModifyAborted,    this);
 	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::StringPanel::OnDataModifying,        this);
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::StringPanel::OnDataModifyAborted,    this);
-	this->document.auto_cleanup_bind(DATA_OVERWRITING,          &REHex::StringPanel::OnDataModifying,        this);
-	this->document.auto_cleanup_bind(DATA_OVERWRITE_ABORTED,    &REHex::StringPanel::OnDataModifyAborted,    this);
 	
 	dirty.set_range(0, document->buffer_length());
 	
@@ -120,7 +121,7 @@ void REHex::StringPanel::thread_main()
 {
 	std::unique_lock<std::mutex> dl(dirty_lock);
 	
-	while(run_threads)
+	while(!threads_exit)
 	{
 		/* Take up to WINDOW_SIZE bytes from the next range in the dirty pool to be
 		 * processed in this thread.
@@ -134,7 +135,7 @@ void REHex::StringPanel::thread_main()
 			break;
 		}
 		
-		size_t window_base   = next_dirty_range->offset;
+		off_t  window_base   = next_dirty_range->offset;
 		size_t window_length = std::min<off_t>(next_dirty_range->length, WINDOW_SIZE);
 		
 		dirty.clear_range(window_base, window_length);
@@ -148,25 +149,52 @@ void REHex::StringPanel::thread_main()
 		
 		off_t window_pre = std::min<off_t>(window_base, MIN_STRING_LENGTH);
 		
-		window_base   -= window_pre;
-		window_length += window_pre;
-		
-		window_length += MIN_STRING_LENGTH;
+		off_t  window_base_adj   = window_base   - window_pre;
+		size_t window_length_adj = window_length + window_pre + MIN_STRING_LENGTH;
 		
 		/* Read the data from our window and search for strings in it. */
 		
-		std::vector<unsigned char> data = document->read_data(window_base, window_length);
+		std::vector<unsigned char> data = document->read_data(window_base_adj, window_length_adj);
 		const char *data_p = (const char*)(data.data());
 		
 		for(size_t i = 0; i < data.size(); ++i)
 		{
-			off_t  string_base   = window_base + i;
+			off_t  string_base   = window_base_adj + i;
 			size_t string_length = 0;
 			
-			while(isascii(data_p[i]) && isprint(data_p[i]) && i < data.size())
+			while(!threads_pause && isascii(data_p[i]) && isprint(data_p[i]) && i < data.size())
 			{
 				++string_length;
 				++i;
+			}
+			
+			if(threads_pause)
+			{
+				/* We are being paused to allow for data being inserted or erased.
+				 * This may invalidate the base and/or length of our window, so we
+				 * mark the window as dirty again from the last point we started
+				 * processing so that it can be adjusted correctly and then resumed
+				 * when processing continues.
+				*/
+				
+				off_t  new_dirty_base   = std::max(window_base, string_base);
+				size_t new_dirty_length = window_length - (string_base - window_base);
+				
+				dl.lock();
+				dirty.set_range(new_dirty_base, new_dirty_length);
+				dl.unlock();
+				
+				std::unique_lock<std::mutex> pl(pause_lock);
+				
+				--running_threads;
+				
+				paused_cv.notify_all();
+				resume_cv.wait(pl, [this]() { return !threads_pause; });
+				
+				++running_threads;
+				
+				/* Window is no longer valid, get a new one. */
+				break;
 			}
 			
 			if(string_length >= MIN_STRING_LENGTH)
@@ -183,11 +211,16 @@ void REHex::StringPanel::thread_main()
 		dl.lock();
 	}
 	
+	std::lock_guard<std::mutex> pl(pause_lock);
+	
 	--running_threads;
+	--spawned_threads;
 }
 
 void REHex::StringPanel::start_threads()
 {
+	resume_threads();
+	
 	std::lock_guard<std::mutex> dl(dirty_lock);
 	
 	size_t dirty_total = 0;
@@ -198,39 +231,78 @@ void REHex::StringPanel::start_threads()
 	
 	if(dirty_total > 0)
 	{
-		run_threads = true;
+		threads_exit = false;
 		
-		unsigned int max_threads  = std::thread::hardware_concurrency();
-		unsigned int want_threads = dirty_total / WINDOW_SIZE;
-		
-		if(want_threads == 0)
+		if(dirty_total > UI_THREAD_THRESH)
 		{
-			want_threads = 1;
+			/* There is more than one "window" worth of data to process, either we are
+			 * still initialising, or a huge amount of data has just changed. We shall
+			 * do our processing in background threads.
+			*/
+			
+			unsigned int max_threads  = std::thread::hardware_concurrency();
+			unsigned int want_threads = dirty_total / WINDOW_SIZE;
+			
+			if(want_threads == 0)
+			{
+				want_threads = 1;
+			}
+			else if(want_threads > max_threads)
+			{
+				want_threads = max_threads;
+			}
+			
+			std::lock_guard<std::mutex> pl(pause_lock);
+			
+			while(spawned_threads < want_threads)
+			{
+				threads.emplace_back(&REHex::StringPanel::thread_main, this);
+				
+				++spawned_threads;
+				++running_threads;
+			}
 		}
-		else if(want_threads > max_threads)
-		{
-			want_threads = max_threads;
-		}
-		
-		fprintf(stderr, "spawning threads %u => %u\n", running_threads, want_threads);
-		
-		while(running_threads < want_threads)
-		{
-			threads.emplace_back(&REHex::StringPanel::thread_main, this);
-			++running_threads;
+		else{
+			/* There is very little data to analyse, do it in the UI thread to avoid
+			 * starting and stopping background threads on every changed nibble since
+			 * the context switching gets expensive.
+			*/
+			
+			thread_main();
 		}
 	}
 }
 
 void REHex::StringPanel::stop_threads()
 {
-	run_threads = false;
+	threads_exit = true;
+	
+	resume_threads();
 	
 	while(!threads.empty())
 	{
 		threads.front().join();
 		threads.pop_front();
 	}
+}
+
+void REHex::StringPanel::pause_threads()
+{
+	std::unique_lock<std::mutex> pl(pause_lock);
+	
+	threads_pause = true;
+	
+	paused_cv.wait(pl, [this]() { return running_threads == 0; });
+}
+
+void REHex::StringPanel::resume_threads()
+{
+	{
+		std::lock_guard<std::mutex> pl(pause_lock);
+		threads_pause = false;
+	}
+	
+	resume_cv.notify_all();
 }
 
 std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::StringPanel::get_nth_string(ssize_t n)
@@ -255,7 +327,7 @@ std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::StringPanel::get_nth
 
 void REHex::StringPanel::OnDataModifying(OffsetLengthEvent &event)
 {
-	stop_threads();
+	pause_threads();
 	
 	/* Continue propogation. */
 	event.Skip();

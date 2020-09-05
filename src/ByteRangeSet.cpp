@@ -32,10 +32,10 @@ void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 	 * and the one we are creating will grow on either end as necessary to encompass them.
 	*/
 	
-	auto next = ranges.lower_bound(Range((offset + length), 0));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
 	
-	std::set<Range>::iterator erase_begin = next;
-	std::set<Range>::iterator erase_end   = next;
+	std::vector<Range>::iterator erase_begin = next;
+	std::vector<Range>::iterator erase_end   = next;
 	
 	while(erase_begin != ranges.begin())
 	{
@@ -63,12 +63,12 @@ void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 	}
 	
 	/* Erase adjacent and/or overlapping ranges. */
-	ranges.erase(erase_begin, erase_end);
+	auto insert_pos = ranges.erase(erase_begin, erase_end);
 	
 	assert(length > 0);
 	
 	/* Insert new range. */
-	ranges.insert(Range(offset, length));
+	ranges.insert(insert_pos, Range(offset, length));
 }
 
 void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
@@ -80,10 +80,10 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 	
 	/* Find the range of elements overlapping the range to be cleared. */
 	
-	auto next = ranges.lower_bound(Range((offset + length), 0));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
 	
-	std::set<Range>::iterator erase_begin = next;
-	std::set<Range>::iterator erase_end   = next;
+	std::vector<Range>::iterator erase_begin = next;
+	std::vector<Range>::iterator erase_end   = next;
 	
 	while(erase_begin != ranges.begin())
 	{
@@ -102,7 +102,7 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 	 * populate collateral_damage with up to two elements to re-instate the lost ranges.
 	*/
 	
-	std::set<Range> collateral_damage;
+	std::vector<Range> collateral_damage;
 	if(erase_begin != erase_end)
 	{
 		if(erase_begin->offset < offset)
@@ -111,7 +111,7 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 			 * of the range to be erased up to the start of the range to be cleared.
 			*/
 			
-			collateral_damage.insert(Range(erase_begin->offset, (offset - erase_begin->offset)));
+			collateral_damage.push_back(Range(erase_begin->offset, (offset - erase_begin->offset)));
 		}
 		
 		auto erase_last = std::prev(erase_end);
@@ -127,12 +127,12 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 			
 			assert(to > from);
 			
-			collateral_damage.insert(Range(from, (to - from)));
+			collateral_damage.push_back(Range(from, (to - from)));
 		}
 	}
 	
-	ranges.erase(erase_begin, erase_end);
-	ranges.insert(collateral_damage.begin(), collateral_damage.end());
+	auto insert_pos = ranges.erase(erase_begin, erase_end);
+	ranges.insert(insert_pos, collateral_damage.begin(), collateral_damage.end());
 }
 
 void REHex::ByteRangeSet::clear_all()
@@ -142,7 +142,7 @@ void REHex::ByteRangeSet::clear_all()
 
 bool REHex::ByteRangeSet::isset(off_t offset) const
 {
-	auto lb = ranges.lower_bound(Range(offset, 0));
+	auto lb = std::lower_bound(ranges.begin(), ranges.end(), Range(offset, 0));
 	
 	if(lb != ranges.end() && lb->offset == offset)
 	{
@@ -161,17 +161,17 @@ bool REHex::ByteRangeSet::isset(off_t offset) const
 	return false;
 }
 
-const std::set<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const
+const std::vector<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const
 {
 	return ranges;
 }
 
-std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::begin() const
+std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::begin() const
 {
 	return ranges.begin();
 }
 
-std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end() const
+std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end() const
 {
 	return ranges.end();
 }
@@ -183,45 +183,39 @@ size_t REHex::ByteRangeSet::size() const
 
 void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 {
-	std::set<Range> new_ranges;
-	
 	for(auto i = ranges.begin(); i != ranges.end(); ++i)
 	{
 		if(i->offset >= offset)
 		{
-			new_ranges.emplace((i->offset + length), i->length);
+			i->offset += length;
 		}
 		else if(i->offset < offset && (i->offset + i->length) > offset)
 		{
-			new_ranges.emplace(i->offset,         (offset - i->offset));
-			new_ranges.emplace((offset + length), (i->length - (offset - i->offset)));
-		}
-		else{
-			new_ranges.emplace(*i);
+			i = ranges.insert(i, Range(i->offset, (offset - i->offset)));
+			++i;
+			
+			i->length -= (offset - i->offset);
+			i->offset = offset + length;
 		}
 	}
-	
-	ranges.swap(new_ranges);
 }
 
 void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 {
-	std::set<Range> new_ranges;
-	
 	/* Find the range of elements overlapping the range to be erased. */
 	
-	auto next = ranges.lower_bound(Range((offset + length), 0));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
 	
-	std::set<Range>::iterator skip_begin = next;
-	std::set<Range>::iterator skip_end   = next;
+	std::vector<Range>::iterator erase_begin = next;
+	std::vector<Range>::iterator erase_end   = next;
 	
-	while(skip_begin != ranges.begin())
+	while(erase_begin != ranges.begin())
 	{
-		auto sb_prev = std::prev(skip_begin);
+		auto sb_prev = std::prev(erase_begin);
 		
 		if((sb_prev->offset + sb_prev->length) > offset)
 		{
-			skip_begin = sb_prev;
+			erase_begin = sb_prev;
 		}
 		else{
 			break;
@@ -232,40 +226,34 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 	 * erase window (if any exist).
 	*/
 	
-	if(skip_begin != skip_end)
+	if(erase_begin != erase_end)
 	{
-		auto skip_last = std::prev(skip_end);
+		auto erase_last = std::prev(erase_end);
 		
-		off_t begin = std::min(skip_begin->offset, offset);
-		off_t end   = skip_last->offset + skip_last->length;
+		off_t begin = std::min(erase_begin->offset, offset);
+		off_t end   = erase_last->offset + erase_last->length;
+		
+		erase_end = ranges.erase(erase_begin, erase_end);
 		
 		if(end > (offset + length))
 		{
 			end -= length;
-			new_ranges.emplace(begin, (end - begin));
+			erase_end = ranges.insert(erase_end, Range(begin, (end - begin)));
+			++erase_end;
 		}
 		else if(begin < offset)
 		{
 			end = offset;
-			new_ranges.emplace(begin, (end - begin));
+			erase_end = ranges.insert(erase_end, Range(begin, (end - begin)));
+			++erase_end;
 		}
-	}
-	
-	/* Preserve ranges from before the erase window. */
-	
-	while(skip_begin != ranges.begin())
-	{
-		--skip_begin;
-		new_ranges.emplace(*skip_begin);
 	}
 	
 	/* Adjust the offset of ranges after the erase window. */
 	
-	while(skip_end != ranges.end())
+	while(erase_end != ranges.end())
 	{
-		new_ranges.emplace((skip_end->offset - length), skip_end->length);
-		++skip_end;
+		erase_end->offset -= length;
+		++erase_end;
 	}
-	
-	ranges.swap(new_ranges);
 }

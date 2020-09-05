@@ -18,8 +18,8 @@
 #ifndef REHEX_BYTERANGESET_HPP
 #define REHEX_BYTERANGESET_HPP
 
-#include <set>
 #include <sys/types.h>
+#include <vector>
 
 namespace REHex
 {
@@ -62,7 +62,7 @@ namespace REHex
 			};
 			
 		private:
-			std::set<Range> ranges;
+			std::vector<Range> ranges;
 			
 		public:
 			/**
@@ -96,17 +96,17 @@ namespace REHex
 			/**
 			 * @brief Get a reference to the internal std::set.
 			*/
-			const std::set<Range> &get_ranges() const;
+			const std::vector<Range> &get_ranges() const;
 			
 			/**
 			 * @brief Returns a const_iterator to the first Range in the set.
 			*/
-			std::set<Range>::const_iterator begin() const;
+			std::vector<Range>::const_iterator begin() const;
 			
 			/**
 			 * @brief Returns a const_iterator to the end of the set.
 			*/
-			std::set<Range>::const_iterator end() const;
+			std::vector<Range>::const_iterator end() const;
 			
 			/**
 			 * @brief Returns the number of ranges in the set.

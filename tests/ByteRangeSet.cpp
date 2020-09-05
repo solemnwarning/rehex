@@ -25,8 +25,7 @@ using namespace REHex;
 
 #define EXPECT_RANGES(...) \
 { \
-	std::vector<ByteRangeSet::Range> ranges_a = { __VA_ARGS__ }; \
-	std::set<ByteRangeSet::Range> ranges(ranges_a.begin(), ranges_a.end()); \
+	std::vector<ByteRangeSet::Range> ranges = { __VA_ARGS__ }; \
 	EXPECT_EQ(brs.get_ranges(), ranges); \
 }
 

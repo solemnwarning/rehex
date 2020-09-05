@@ -78,9 +78,6 @@ namespace REHex {
 			ByteRangeSet strings;
 			bool update_needed;
 			
-			ssize_t last_item_idx;
-			std::set<ByteRangeSet::Range>::const_iterator last_item_iter;
-			
 			std::list<std::thread> threads;  /* List of threads created and not yet reaped. */
 			std::atomic<bool> threads_exit;  /* Threads should exit. */
 			wxTimer *timer;
@@ -97,8 +94,6 @@ namespace REHex {
 			void stop_threads();
 			void pause_threads();
 			void resume_threads();
-			
-			std::set<ByteRangeSet::Range>::const_iterator get_nth_string(ssize_t n);
 			
 			void OnDataModifying(OffsetLengthEvent &event);
 			void OnDataModifyAborted(OffsetLengthEvent &event);

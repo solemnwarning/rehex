@@ -39,7 +39,6 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	document(document),
 	document_ctrl(document_ctrl),
 	update_needed(false),
-	last_item_idx(-1),
 	threads_exit(true),
 	threads_pause(false),
 	spawned_threads(0),
@@ -210,8 +209,6 @@ void REHex::StringPanel::thread_main()
 				
 				strings.set_range(string_base, string_length);
 				update_needed = true;
-				
-				last_item_idx = -1;
 			}
 		}
 		
@@ -312,26 +309,6 @@ void REHex::StringPanel::resume_threads()
 	resume_cv.notify_all();
 }
 
-std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::StringPanel::get_nth_string(ssize_t n)
-{
-	assert(n < strings.size());
-	
-	if(last_item_idx < 0)
-	{
-		/* last_item_idx is negative, last_item_iter is invalid. Restart. */
-		last_item_iter = strings.begin();
-		last_item_idx  = 0;
-	}
-	
-	/* Advance last_item_iter to the requested element.
-	 * NOTE: Will compute negative distance and walk backwards if necessary.
-	*/
-	last_item_iter = std::next(last_item_iter, (n - last_item_idx));
-	last_item_idx  = n;
-	
-	return last_item_iter;
-}
-
 void REHex::StringPanel::OnDataModifying(OffsetLengthEvent &event)
 {
 	pause_threads();
@@ -353,8 +330,6 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 	{
 		std::lock_guard<std::mutex> sl(strings_lock);
 		strings.data_erased(event.offset, event.length);
-		
-		last_item_idx = -1;
 	}
 	
 	{
@@ -373,8 +348,6 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 	{
 		std::lock_guard<std::mutex> sl(strings_lock);
 		strings.data_inserted(event.offset, event.length);
-		
-		last_item_idx = -1;
 	}
 	
 	{
@@ -423,20 +396,20 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 		return "???";
 	}
 	
-	auto si = parent->get_nth_string(item);
+	const ByteRangeSet::Range &si = parent->strings.get_ranges()[item];
 	
 	switch(column)
 	{
 		case 0:
 		{
 			/* Offset column */
-			return format_offset(si->offset, parent->document_ctrl->get_offset_display_base(), parent->document->buffer_length());
+			return format_offset(si.offset, parent->document_ctrl->get_offset_display_base(), parent->document->buffer_length());
 		}
 		
 		case 1:
 		{
 			/* Text column */
-			std::vector<unsigned char> string_data = parent->document->read_data(si->offset, si->length);
+			std::vector<unsigned char> string_data = parent->document->read_data(si.offset, si.length);
 			std::string string((const char*)(string_data.data()), string_data.size());
 			
 			return string;

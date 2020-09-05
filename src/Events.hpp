@@ -80,9 +80,15 @@ namespace REHex
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
 	
-	wxDECLARE_EVENT(DATA_ERASE,        OffsetLengthEvent);
-	wxDECLARE_EVENT(DATA_INSERT,       OffsetLengthEvent);
-	wxDECLARE_EVENT(DATA_OVERWRITE,    OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_ERASING,              OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_ERASE,                OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_ERASE_ABORTED,        OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_INSERTING,            OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_INSERT,               OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_INSERT_ABORTED,       OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_OVERWRITING,          OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_OVERWRITE,            OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_OVERWRITE_ABORTED,    OffsetLengthEvent);
 	
 	wxDECLARE_EVENT(CURSOR_UPDATE,    CursorUpdateEvent);
 	

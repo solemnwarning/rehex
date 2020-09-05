@@ -39,7 +39,8 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	document_ctrl(document_ctrl),
 	update_needed(false),
 	last_item_idx(-1),
-	run_threads(true)
+	run_threads(false),
+	running_threads(0)
 {
 	list_ctrl = new StringPanelListCtrl(this);
 	
@@ -54,6 +55,13 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::StringPanel::OnDataInsert,    this);
 	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::StringPanel::OnDataOverwrite, this);
 	
+	this->document.auto_cleanup_bind(DATA_ERASING,              &REHex::StringPanel::OnDataModifying,        this);
+	this->document.auto_cleanup_bind(DATA_ERASE_ABORTED,        &REHex::StringPanel::OnDataModifyAborted,    this);
+	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::StringPanel::OnDataModifying,        this);
+	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::StringPanel::OnDataModifyAborted,    this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITING,          &REHex::StringPanel::OnDataModifying,        this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE_ABORTED,    &REHex::StringPanel::OnDataModifyAborted,    this);
+	
 	dirty.set_range(0, document->buffer_length());
 	
 	wxTimer *timer = new wxTimer(this, wxID_ANY);
@@ -65,27 +73,12 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	
 	timer->Start(200, wxTIMER_CONTINUOUS);
 	
-	/* Spawn a worker for each CPU.
-	 * TODO: Stop and spawn these as necessary to avoid filling up the process table...
-	*/
-	
-	unsigned int thread_count = std::thread::hardware_concurrency();
-	
-	for(unsigned int i = 0; i < thread_count; ++i)
-	{
-		threads.emplace_back(&REHex::StringPanel::thread_main, this);
-	}
+	start_threads();
 }
 
 REHex::StringPanel::~StringPanel()
 {
-	run_threads = false;
-	// TODO: Signal threads
-	
-	for(auto t = threads.begin(); t != threads.end(); ++t)
-	{
-		t->join();
-	}
+	stop_threads();
 }
 
 std::string REHex::StringPanel::name() const
@@ -111,6 +104,12 @@ wxSize REHex::StringPanel::DoGetBestClientSize() const
 
 void REHex::StringPanel::update()
 {
+	if (!is_visible)
+	{
+		/* There is no sense in updating this if we are not visible */
+		return;
+	}
+	
 	std::lock_guard<std::mutex> sl(strings_lock);
 	list_ctrl->SetItemCount(strings.size());
 	
@@ -183,6 +182,55 @@ void REHex::StringPanel::thread_main()
 		
 		dl.lock();
 	}
+	
+	--running_threads;
+}
+
+void REHex::StringPanel::start_threads()
+{
+	std::lock_guard<std::mutex> dl(dirty_lock);
+	
+	size_t dirty_total = 0;
+	for(auto i = dirty.begin(); i != dirty.end(); ++i)
+	{
+		dirty_total += i->length;
+	}
+	
+	if(dirty_total > 0)
+	{
+		run_threads = true;
+		
+		unsigned int max_threads  = std::thread::hardware_concurrency();
+		unsigned int want_threads = dirty_total / WINDOW_SIZE;
+		
+		if(want_threads == 0)
+		{
+			want_threads = 1;
+		}
+		else if(want_threads > max_threads)
+		{
+			want_threads = max_threads;
+		}
+		
+		fprintf(stderr, "spawning threads %u => %u\n", running_threads, want_threads);
+		
+		while(running_threads < want_threads)
+		{
+			threads.emplace_back(&REHex::StringPanel::thread_main, this);
+			++running_threads;
+		}
+	}
+}
+
+void REHex::StringPanel::stop_threads()
+{
+	run_threads = false;
+	
+	while(!threads.empty())
+	{
+		threads.front().join();
+		threads.pop_front();
+	}
 }
 
 std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::StringPanel::get_nth_string(ssize_t n)
@@ -205,6 +253,22 @@ std::set<REHex::ByteRangeSet::Range>::const_iterator REHex::StringPanel::get_nth
 	return last_item_iter;
 }
 
+void REHex::StringPanel::OnDataModifying(OffsetLengthEvent &event)
+{
+	stop_threads();
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::StringPanel::OnDataModifyAborted(OffsetLengthEvent &event)
+{
+	start_threads();
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
 void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 {
 	{
@@ -218,6 +282,8 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 		std::lock_guard<std::mutex> dl(dirty_lock);
 		dirty.data_erased(event.offset, event.length);
 	}
+	
+	start_threads();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -238,6 +304,8 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 		dirty.set_range(event.offset, event.length);
 	}
 	
+	start_threads();
+	
 	/* Continue propogation. */
 	event.Skip();
 }
@@ -248,6 +316,8 @@ void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 		std::lock_guard<std::mutex> dl(dirty_lock);
 		dirty.set_range(event.offset, event.length);
 	}
+	
+	start_threads();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -280,11 +350,13 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 	{
 		case 0:
 		{
+			/* Offset column */
 			return format_offset(si->offset, parent->document_ctrl->get_offset_display_base(), parent->document->buffer_length());
 		}
 		
 		case 1:
 		{
+			/* Text column */
 			std::vector<unsigned char> string_data = parent->document->read_data(si->offset, si->length);
 			std::string string((const char*)(string_data.data()), string_data.size());
 			
@@ -292,6 +364,7 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 		}
 		
 		default:
+			/* Unknown column */
 			abort();
 	}
 }

@@ -82,10 +82,16 @@ namespace REHex {
 			
 			std::list<std::thread> threads;
 			std::atomic<bool> run_threads;
+			unsigned int running_threads;
 			
 			void thread_main();
+			void start_threads();
+			void stop_threads();
+			
 			std::set<ByteRangeSet::Range>::const_iterator get_nth_string(ssize_t n);
 			
+			void OnDataModifying(OffsetLengthEvent &event);
+			void OnDataModifyAborted(OffsetLengthEvent &event);
 			void OnDataErase(OffsetLengthEvent &event);
 			void OnDataInsert(OffsetLengthEvent &event);
 			void OnDataOverwrite(OffsetLengthEvent &event);

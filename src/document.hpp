@@ -167,7 +167,7 @@ namespace REHex {
 			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
 			
-			json_t *_dump_metadata();
+			json_t *_dump_metadata(bool& has_data);
 			void _save_metadata(const std::string &filename);
 			
 			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);

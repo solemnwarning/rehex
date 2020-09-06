@@ -207,6 +207,151 @@ TEST(ByteRangeSet, AddZeroLengthRange)
 	EXPECT_RANGES();
 }
 
+TEST(ByteRangeSet, AddMultiRanges)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.set_ranges(ranges, ranges + (sizeof(ranges) / sizeof(*ranges)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+}
+
+/* Add ranges to the set which involves erasing and replacing a single element. */
+TEST(ByteRangeSet, AddMultiRangesSingleErase)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges1[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.set_ranges(ranges1, ranges1 + (sizeof(ranges1) / sizeof(*ranges1)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+	
+	ByteRangeSet::Range ranges2[] = {
+		ByteRangeSet::Range(5, 20),
+		ByteRangeSet::Range(70, 4),
+	};
+	
+	brs.set_ranges(ranges2, ranges2 + (sizeof(ranges2) / sizeof(*ranges2)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(5, 20),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(70, 4),
+	);
+}
+
+/* Add ranges to the set which involves erasing and replacing contiguous elements. */
+TEST(ByteRangeSet, AddMultiRangesContiguousErase)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges1[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.set_ranges(ranges1, ranges1 + (sizeof(ranges1) / sizeof(*ranges1)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+	
+	ByteRangeSet::Range ranges2[] = {
+		ByteRangeSet::Range(28, 3),
+		ByteRangeSet::Range(45, 30),
+		ByteRangeSet::Range(80, 9),
+	};
+	
+	brs.set_ranges(ranges2, ranges2 + (sizeof(ranges2) / sizeof(*ranges2)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(28, 7),
+		ByteRangeSet::Range(40, 35),
+		ByteRangeSet::Range(80, 9),
+	);
+}
+
+/* Add ranges to the set which involves erasing and replacing discontiguous elements. */
+TEST(ByteRangeSet, AddMultiRangesDiscontiguousErase)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges1[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(100, 15),
+		ByteRangeSet::Range(130, 10),
+		ByteRangeSet::Range(180, 3),
+		ByteRangeSet::Range(190, 6),
+		ByteRangeSet::Range(200, 10),
+		ByteRangeSet::Range(220, 10),
+	};
+	
+	brs.set_ranges(ranges1, ranges1 + (sizeof(ranges1) / sizeof(*ranges1)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(100, 15),
+		ByteRangeSet::Range(130, 10),
+		ByteRangeSet::Range(180, 3),
+		ByteRangeSet::Range(190, 6),
+		ByteRangeSet::Range(200, 10),
+		ByteRangeSet::Range(220, 10),
+	);
+	
+	ByteRangeSet::Range ranges2[] = {
+		ByteRangeSet::Range(5, 2),
+		ByteRangeSet::Range(28, 3),
+		ByteRangeSet::Range(80, 10),
+		ByteRangeSet::Range(110, 20),
+		ByteRangeSet::Range(150, 1),
+		ByteRangeSet::Range(183, 17),
+		ByteRangeSet::Range(250, 5),
+	};
+	
+	brs.set_ranges(ranges2, ranges2 + (sizeof(ranges2) / sizeof(*ranges2)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(5, 2),
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(28, 7),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(80, 10),
+		ByteRangeSet::Range(100, 40),
+		ByteRangeSet::Range(150, 1),
+		ByteRangeSet::Range(180, 30),
+		ByteRangeSet::Range(220, 10),
+		ByteRangeSet::Range(250, 5),
+	);
+}
+
 TEST(ByteRangeSet, ClearRange)
 {
 	ByteRangeSet brs;

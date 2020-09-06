@@ -28,47 +28,8 @@ void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 		return;
 	}
 	
-	/* Find the range of elements that intersects the one we are inserting. They will be erased
-	 * and the one we are creating will grow on either end as necessary to encompass them.
-	*/
-	
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
-	
-	std::vector<Range>::iterator erase_begin = next;
-	std::vector<Range>::iterator erase_end   = next;
-	
-	while(erase_begin != ranges.begin())
-	{
-		auto eb_prev = std::prev(erase_begin);
-		
-		if((eb_prev->offset + eb_prev->length) >= offset)
-		{
-			off_t merged_begin = std::min(eb_prev->offset, offset);
-			off_t merged_end   = std::max((eb_prev->offset + eb_prev->length), (offset + length));
-			
-			offset = merged_begin;
-			length = merged_end - merged_begin;
-			
-			erase_begin = eb_prev;
-		}
-		else{
-			break;
-		}
-	}
-	
-	if(erase_end != ranges.end() && erase_end->offset == (offset + length))
-	{
-		length += erase_end->length;
-		++erase_end;
-	}
-	
-	/* Erase adjacent and/or overlapping ranges. */
-	auto insert_pos = ranges.erase(erase_begin, erase_end);
-	
-	assert(length > 0);
-	
-	/* Insert new range. */
-	ranges.insert(insert_pos, Range(offset, length));
+	Range range(offset, length);
+	set_ranges(&range, (&range) + 1);
 }
 
 void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
@@ -179,6 +140,11 @@ std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end
 size_t REHex::ByteRangeSet::size() const
 {
 	return ranges.size();
+}
+
+bool REHex::ByteRangeSet::empty() const
+{
+	return ranges.empty();
 }
 
 void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)

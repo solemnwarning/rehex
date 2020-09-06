@@ -18,6 +18,8 @@
 #ifndef REHEX_BYTERANGESET_HPP
 #define REHEX_BYTERANGESET_HPP
 
+#include <assert.h>
+#include <iterator>
 #include <sys/types.h>
 #include <vector>
 
@@ -75,6 +77,17 @@ namespace REHex
 			void set_range(off_t offset, off_t length);
 			
 			/**
+			 * @brief Set multiple ranges of bytes in the set.
+			 *
+			 * This method takes a pair of Range iterators (or pointers) and adds all
+			 * of the ranges to the set. It is more efficient than calling set_range()
+			 * multiple times.
+			 *
+			 * NOTE: The ranges MUST be in order and MUST NOT be adjacent.
+			*/
+			template<typename T> void set_ranges(const T begin, const T end);
+			
+			/**
 			 * @brief Clear a range of bytes in the set.
 			 *
 			 * This method clears a range of bytes in the set. Ranges within the set
@@ -114,6 +127,11 @@ namespace REHex
 			size_t size() const;
 			
 			/**
+			 * @brief Returns true if the set is empty.
+			*/
+			bool empty() const;
+			
+			/**
 			 * @brief Adjust for data being inserted into file.
 			 *
 			 * Ranges after the insertion will be moved along by the size of the
@@ -130,6 +148,110 @@ namespace REHex
 			*/
 			void data_erased(off_t offset, off_t length);
 	};
+}
+
+template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T end)
+{
+	ranges.reserve(ranges.size() + std::distance(begin, end));
+	
+	auto next = ranges.begin();
+	
+	/* Existing elements which intersect the ones we are inserting are erased and the new ones
+	 * expand to encompass the whole range.
+	 *
+	 * Adjacent erase and insert operations are merged for performance. The group_erase_begin
+	 * and group_erase_end iterators encompass the full range of adjacent elements to be erased
+	 * from sequential inserts and group_ranges contains all adjacent elements to be inserted.
+	*/
+	std::vector<Range>::iterator group_erase_begin;
+	std::vector<Range>::iterator group_erase_end;
+	std::vector<Range> group_ranges;
+	
+	for(auto r = begin; r != end;)
+	{
+		assert(r == begin || (std::prev(r)->offset + std::prev(r)->length) < r->offset);
+		
+		off_t offset = r->offset;
+		off_t length = r->length;
+		
+		/* Find the range of elements that intersects the one we are inserting. They will be erased
+		 * and the one we are creating will grow on either end as necessary to encompass them.
+		*/
+		
+		next = std::lower_bound(next, ranges.end(), Range((offset + length), 0));
+		
+		std::vector<Range>::iterator erase_begin = next;
+		std::vector<Range>::iterator erase_end   = next;
+		
+		while(erase_begin != ranges.begin())
+		{
+			auto eb_prev = std::prev(erase_begin);
+			
+			if((eb_prev->offset + eb_prev->length) >= offset)
+			{
+				off_t merged_begin = std::min(eb_prev->offset, offset);
+				off_t merged_end   = std::max((eb_prev->offset + eb_prev->length), (offset + length));
+				
+				offset = merged_begin;
+				length = merged_end - merged_begin;
+				
+				erase_begin = eb_prev;
+			}
+			else{
+				break;
+			}
+		}
+		
+		if(erase_end != ranges.end() && erase_end->offset == (offset + length))
+		{
+			length += erase_end->length;
+			++erase_end;
+		}
+		
+		assert(length > 0);
+		
+		if(!group_ranges.empty() && erase_begin != group_erase_end)
+		{
+			/* We have elements pending to be inserted earlier in the vector, flush
+			 * them out so we can start a new group.
+			*/
+			
+			next = ranges.erase(group_erase_begin, group_erase_end);
+			
+			next = ranges.insert(next, group_ranges.begin(), group_ranges.end());
+			std::advance(next, group_ranges.size());
+			
+			group_ranges.clear();
+			
+			/* The erase and insert operations have invalidated the erase_begin and
+			 * erase_end iterators, so start processing this Range again.
+			*/
+			continue;
+		}
+		
+		if(group_ranges.empty())
+		{
+			/* We are starting a new range of insertions, initialize group_erase_begin
+			 * to the erase_begin of this range.
+			*/
+			group_erase_begin = erase_begin;
+		}
+		
+		/* Advance group_erase_end to the end of this range's erase block. */
+		group_erase_end = erase_end;
+		
+		group_ranges.push_back(Range(offset, length));
+		
+		++r;
+	}
+	
+	if(!group_ranges.empty())
+	{
+		/* Flush pending erase/insert operations. */
+		
+		next = ranges.erase(group_erase_begin, group_erase_end);
+		ranges.insert(next, group_ranges.begin(), group_ranges.end());
+	}
 }
 
 #endif /* !REHEX_BYTERANGESET_HPP */

@@ -140,6 +140,11 @@ namespace REHex
 			void data_inserted(off_t offset, off_t length);
 			
 			/**
+			 * @brief Minimum number of ranges to make data_inserted() use threads.
+			*/
+			static const size_t DATA_INSERTED_THREAD_MIN = 100000;
+			
+			/**
 			 * @brief Adjust for data being erased from file.
 			 *
 			 * Ranges after the section erased will be moved back by the size of the

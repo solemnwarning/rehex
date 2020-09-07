@@ -16,10 +16,13 @@
 */
 
 #include "platform.hpp"
+
+#include <algorithm>
 #include <assert.h>
+#include <mutex>
+#include <thread>
 
 #include "ByteRangeSet.hpp"
-#include <algorithm>
 
 void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 {
@@ -149,20 +152,84 @@ bool REHex::ByteRangeSet::empty() const
 
 void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 {
-	for(auto i = ranges.begin(); i != ranges.end(); ++i)
+	std::mutex lock;
+	std::vector<Range> insert_elem;
+	size_t insert_idx;
+	
+	auto process_block = [&](size_t work_base, size_t work_length)
 	{
-		if(i->offset >= offset)
+		for(size_t i = work_base; i < (work_base + work_length); ++i)
 		{
-			i->offset += length;
-		}
-		else if(i->offset < offset && (i->offset + i->length) > offset)
-		{
-			i = ranges.insert(i, Range(i->offset, (offset - i->offset)));
-			++i;
+			Range *range = &(ranges[i]);
 			
-			i->length -= (offset - i->offset);
-			i->offset = offset + length;
+			if(range->offset >= offset)
+			{
+				/* Range begins after the insertion point, offset it. */
+				range->offset += length;
+			}
+			else if(range->offset < offset && (range->offset + range->length) > offset)
+			{
+				/* Range straddles the insertion point, split it.
+				 *
+				 * The first half of the new range is queued for insertion later,
+				 * after processing is done so threads don't need to synchronise or
+				 * handle the vector moving around.
+				 *
+				 * Second half of the new range replaces the range.
+				*/
+				
+				std::unique_lock<std::mutex> l(lock);
+				
+				assert(insert_elem.empty());
+				
+				insert_elem.push_back(Range(range->offset, (offset - range->offset)));
+				insert_idx = i;
+				
+				range->length -= (offset - range->offset);
+				range->offset = offset + length;
+			}
 		}
+	};
+	
+	/* Split the ranges vector up into blocks which can be processed by different threads.
+	 * A thread is spawned for each block up to the CPU limit (including the current thread).
+	*/
+	
+	unsigned int max_threads = std::thread::hardware_concurrency();
+	
+	size_t next_block = 0;
+	size_t thread_block_size = ranges.size() / max_threads;
+	
+	if(ranges.size() < DATA_INSERTED_THREAD_MIN)
+	{
+		/* We don't have enough data to be worth the overhead of spawning threads. */
+		thread_block_size = 0;
+	}
+	
+	std::vector<std::thread> threads;
+	
+	for(unsigned int i = 1; thread_block_size > 0 && i < max_threads; ++i)
+	{
+		threads.emplace_back(process_block, next_block, thread_block_size);
+		next_block += thread_block_size;
+	}
+	
+	/* We process the last block in this thread, up to the end of the vector as
+	 * thread_block_size is likely to have rounding errors.
+	*/
+	process_block(next_block, (ranges.size() - next_block));
+	
+	/* Wait for other threads to finish. */
+	for(auto t = threads.begin(); t != threads.end(); ++t)
+	{
+		t->join();
+	}
+	
+	/* Perform queued insertion, if there was a range straddling the insertion point. */
+	if(!insert_elem.empty())
+	{
+		assert(insert_elem.size() == 1);
+		ranges.insert(std::next(ranges.begin(), insert_idx), insert_elem[0]);
 	}
 }
 

@@ -640,6 +640,51 @@ TEST(ByteRangeSet, DataInsertedIntoRange)
 	);
 }
 
+/* Tests ByteRangeSet::data_inserted() on a large enough set to use threading. */
+TEST(ByteRangeSet, DataInsertedParallel)
+{
+	ByteRangeSet brs;
+	
+	/* Populate a reference vector with double the ranges necessary to trigger necessary to
+	 * trigger threading, then some change to check the remainder is handled properly.
+	*/
+	
+	const size_t N_RANGES = ByteRangeSet::DATA_INSERTED_THREAD_MIN * 2 + 5;
+	size_t next_range = 0;
+	
+	std::vector<ByteRangeSet::Range> ranges;
+	ranges.reserve(N_RANGES);
+	
+	for(size_t i = 0; i < N_RANGES; ++i)
+	{
+		ranges.push_back(ByteRangeSet::Range(next_range, 5));
+		next_range += 10;
+	}
+	
+	/* Populate ByteRangeSet with reference data. */
+	
+	brs.set_ranges(ranges.begin(), ranges.end());
+	EXPECT_TRUE(brs.get_ranges() == ranges) << "ByteRangeSet initial data populated correctly";
+	
+	/* Insert some data within the 10th range. */
+	
+	brs.data_inserted(102, 5);
+	EXPECT_TRUE(brs.get_ranges() != ranges) << "ByteRangeSet::data_inserted() modified ranges";
+	
+	/* Munge our data to reflect what should be the new reality... */
+	
+	ranges[10].length = 2;
+	ranges.insert(std::next(ranges.begin(), 11), ByteRangeSet::Range(107, 3));
+	
+	for(size_t i = 12; i < ranges.size(); ++i)
+	{
+		ranges[i].offset += 5;
+	}
+	
+	/* ...and check it matches. */
+	EXPECT_TRUE(brs.get_ranges() == ranges) << "ByteRangeSet::data_inserted() correctly modified ranges";
+}
+
 TEST(ByteRangeSet, DataErasedBeforeRanges)
 {
 	ByteRangeSet brs;

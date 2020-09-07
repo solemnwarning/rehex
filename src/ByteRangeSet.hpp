@@ -218,8 +218,22 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 			
 			next = ranges.erase(group_erase_begin, group_erase_end);
 			
+			/* Workaround for older GCC/libstd++ which have the wrong return type
+			 * (void) on multi-element std::vector::insert(), even under C++11 mode.
+			 *
+			 * Not 100% sure which version actually fixed it.
+			*/
+			
+			#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+			for(auto i = group_ranges.begin(); i != group_ranges.end(); ++i)
+			{
+				next = ranges.insert(next, *i);
+				++next;
+			}
+			#else
 			next = ranges.insert(next, group_ranges.begin(), group_ranges.end());
 			std::advance(next, group_ranges.size());
+			#endif
 			
 			group_ranges.clear();
 			

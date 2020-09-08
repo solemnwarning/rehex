@@ -290,3 +290,55 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 		++erase_end;
 	}
 }
+
+REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, const ByteRangeSet &b)
+{
+	if(a.empty() || b.empty())
+	{
+		return ByteRangeSet();
+	}
+	
+	ByteRangeSet intersection;
+	
+	auto ai = a.begin();
+	auto bi = b.begin();
+	
+	while(ai != a.end() && bi != b.end())
+	{
+		off_t a_end = ai->offset + ai->length;
+		off_t b_end = bi->offset + bi->length;
+		
+		if(a_end <= bi->offset)
+		{
+			++ai;
+		}
+		else if(b_end <= ai->offset)
+		{
+			++bi;
+		}
+		else{
+			off_t overlap_begin = std::max(ai->offset, bi->offset);
+			off_t overlap_end   = std::min(a_end, b_end);
+			
+			if(overlap_end > overlap_begin)
+			{
+				intersection.set_range(overlap_begin, (overlap_end - overlap_begin));
+			}
+			
+			if(a_end < b_end)
+			{
+				++ai;
+			}
+			else if(b_end < a_end)
+			{
+				++bi;
+			}
+			else{
+				++ai;
+				++bi;
+			}
+		}
+	}
+	
+	return intersection;
+}

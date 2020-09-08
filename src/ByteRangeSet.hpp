@@ -68,6 +68,22 @@ namespace REHex
 			
 		public:
 			/**
+			 * @brief Construct an empty set.
+			*/
+			ByteRangeSet() {}
+			
+			ByteRangeSet(const ByteRangeSet &src):
+				ranges(src.ranges) {}
+			
+			/**
+			 * @brief Construct a set from a sequence of ranges.
+			 *
+			 * NOTE: The ranges MUST be in order and MUST NOT be adjacent.
+			*/
+			template<typename T> ByteRangeSet(const T begin, const T end):
+				ranges(begin, end) {}
+			
+			/**
 			 * @brief Set a range of bytes in the set.
 			 *
 			 * This method adds a range of bytes to the set. Any existing ranges
@@ -152,6 +168,14 @@ namespace REHex
 			 * on either side of the erase will be truncated and merged as necessary.
 			*/
 			void data_erased(off_t offset, off_t length);
+			
+			/**
+			 * @brief Find the intersection of two sets.
+			 *
+			 * Returns a ByteRangeSet containing only the ranges of bytes which are set
+			 * in BOTH sets.
+			*/
+			static ByteRangeSet intersection(const ByteRangeSet &a, const ByteRangeSet &b);
 	};
 }
 

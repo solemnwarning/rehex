@@ -787,3 +787,215 @@ TEST(ByteRangeSet, DataErasedOverlappingMultipleRanges)
 		ByteRangeSet::Range(30,  5),
 	);
 }
+
+TEST(ByteRangeSet, IntersectionNoOverlap)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 20),
+		ByteRangeSet::Range(70, 10),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionPartialOverlap)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(90, 10),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(60, 20),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(60, 10),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionSubset)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(50, 30),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(60, 5),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(60, 5),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionExactMatch)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(70, 10),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(50, 20),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionMultipleSubsetsOfSingleRange)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(0, 100),
+		ByteRangeSet::Range(110, 50),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 40),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 20),
+		ByteRangeSet::Range(110, 10),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionCombined)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		/* No overlap */
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 20),
+		ByteRangeSet::Range(70, 10),
+		
+		/* Partial overlap */
+		ByteRangeSet::Range(150, 20),
+		ByteRangeSet::Range(190, 10),
+		
+		/* Subset */
+		ByteRangeSet::Range(250, 30),
+		
+		/* Exact match */
+		ByteRangeSet::Range(350, 20),
+		
+		/* Multiple subsets */
+		ByteRangeSet::Range(400, 100),
+		ByteRangeSet::Range(510, 50),
+		
+		ByteRangeSet::Range(0, 100),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		/* No overlap */
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 10),
+		
+		/* Partial overlap */
+		ByteRangeSet::Range(120, 10),
+		ByteRangeSet::Range(160, 20),
+		
+		/* Subset */
+		ByteRangeSet::Range(260, 5),
+		
+		/* Exact match */
+		ByteRangeSet::Range(350, 20),
+		
+		/* Multiple subsets */
+		ByteRangeSet::Range(420, 10),
+		ByteRangeSet::Range(450, 20),
+		ByteRangeSet::Range(480, 40),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		/* Partial overlap */
+		ByteRangeSet::Range(160, 10),
+		
+		/* Subset */
+		ByteRangeSet::Range(260, 5),
+		
+		/* Exact match */
+		ByteRangeSet::Range(350, 20),
+		
+		/* Multiple subsets */
+		ByteRangeSet::Range(420, 10),
+		ByteRangeSet::Range(450, 20),
+		ByteRangeSet::Range(480, 20),
+		ByteRangeSet::Range(510, 10),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionEmptySet)
+{
+	const std::vector<ByteRangeSet::Range> NON_EMPTY_RANGE = {
+		ByteRangeSet::Range(10, 10),
+	};
+	
+	const ByteRangeSet NON_EMPTY_SET(NON_EMPTY_RANGE.begin(), NON_EMPTY_RANGE.end());
+	
+	const std::vector<ByteRangeSet::Range> EMPTY_RANGE = {};
+	const ByteRangeSet EMPTY_SET;
+	
+	EXPECT_EQ(ByteRangeSet::intersection( NON_EMPTY_SET, EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
+	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     NON_EMPTY_SET ).get_ranges(), EMPTY_RANGE);
+	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
+}

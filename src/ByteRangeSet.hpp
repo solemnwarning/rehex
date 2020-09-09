@@ -100,8 +100,12 @@ namespace REHex
 			 * multiple times.
 			 *
 			 * NOTE: The ranges MUST be in order and MUST NOT be adjacent.
+			 *
+			 * If size_hint is provided and the internal vector is near its limit, the
+			 * vector's capacity will be expanded to size_hint elements instead of only
+			 * growing enough to accomodate this operation.
 			*/
-			template<typename T> void set_ranges(const T begin, const T end);
+			template<typename T> void set_ranges(const T begin, const T end, size_t size_hint = 0);
 			
 			/**
 			 * @brief Clear a range of bytes in the set.
@@ -111,6 +115,18 @@ namespace REHex
 			 * cleared.
 			*/
 			void clear_range(off_t offset, off_t length);
+			
+			/**
+			 * @brief Clear multiple ranges of bytes in the set.
+			 *
+			 * This method takes a pair of Range iterators (or pointers) and removes
+			 * all of the ranges from the set. It is more efficient than calling
+			 * clear_range() multiple times.
+			 *
+			 * NOTE: The ranges MUST be in order, MUST NOT be adjacent and MUST NOT be
+			 * within the set itself.
+			*/
+			template<typename T> void clear_ranges(const T begin, const T end);
 			
 			/**
 			 * @brief Clear all ranges in the set.
@@ -179,9 +195,13 @@ namespace REHex
 	};
 }
 
-template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T end)
+template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T end, size_t size_hint)
 {
-	ranges.reserve(ranges.size() + std::distance(begin, end));
+	size_t min_size_hint = ranges.size() + std::distance(begin, end);
+	if(ranges.capacity() < min_size_hint)
+	{
+		ranges.reserve(std::max(min_size_hint, size_hint));
+	}
 	
 	auto next = ranges.begin();
 	
@@ -294,6 +314,15 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 		
 		next = ranges.erase(group_erase_begin, group_erase_end);
 		ranges.insert(next, group_ranges.begin(), group_ranges.end());
+	}
+}
+
+template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const T end)
+{
+	// TODO: More efficient implementation
+	for(auto i = begin; i != end; ++i)
+	{
+		clear_range(i->offset, i->length);
 	}
 }
 

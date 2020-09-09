@@ -19,13 +19,16 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <numeric>
 
 #include "StringPanel.hpp"
 
-static const size_t MIN_STRING_LENGTH = 4;
+static const off_t MIN_STRING_LENGTH = 4;
 static const size_t WINDOW_SIZE = 2 * 1024 * 1024; /* 2MiB */
 static const size_t MAX_STRINGS = 1000000;
 static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
+
+static const size_t MAX_STRINGS_BATCH = 64;
 
 static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -62,7 +65,7 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::StringPanel::OnDataModifying,        this);
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::StringPanel::OnDataModifyAborted,    this);
 	
-	dirty.set_range(0, document->buffer_length());
+	mark_dirty(0, document->buffer_length());
 	
 	timer = new wxTimer(this, wxID_ANY);
 	
@@ -111,15 +114,63 @@ void REHex::StringPanel::update()
 		return;
 	}
 	
-	std::lock_guard<std::mutex> sl(strings_lock);
-	list_ctrl->SetItemCount(strings.size());
+	if(update_needed)
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		
+		list_ctrl->SetItemCount(strings.size());
+		
+		static size_t old_capacity = 0;
+		
+		fprintf(stderr, "update %zu (capacity %zu => %zu)\n", strings.size(), old_capacity, strings.get_ranges().capacity());
+		old_capacity = strings.get_ranges().capacity();
+	}
+}
+
+void REHex::StringPanel::mark_dirty(off_t offset, off_t length)
+{
+	ByteRangeSet to_pending;
+	to_pending.set_range(offset, length);
 	
-	fprintf(stderr, "update %zu\n", strings.size());
+	ByteRangeSet to_dirty = ByteRangeSet::intersection(to_pending, working);
+	
+	to_pending.clear_ranges(to_dirty.begin(), to_dirty.end());
+	
+	dirty  .set_ranges(  to_dirty.begin(),   to_dirty.end());
+	pending.set_ranges(to_pending.begin(), to_pending.end());
+	
+	if(!pending.empty())
+	{
+		/* Notify any sleeping workers that there is now work to be done. */
+		resume_cv.notify_all();
+	}
+}
+
+void REHex::StringPanel::mark_work_done(off_t offset, off_t length)
+{
+	ByteRangeSet work_done;
+	work_done.set_range(offset, length);
+	
+	ByteRangeSet to_pending = ByteRangeSet::intersection(work_done, dirty);
+	
+	working.clear_range(offset, length);
+	
+	dirty.clear_ranges(to_pending.begin(), to_pending.end());
+	pending.set_ranges(to_pending.begin(), to_pending.end());
+	
+	if(!pending.empty())
+	{
+		/* Notify any sleeping workers that there is now work to be done. */
+		resume_cv.notify_all();
+	}
 }
 
 void REHex::StringPanel::thread_main()
 {
-	std::unique_lock<std::mutex> dl(dirty_lock);
+	std::unique_lock<std::mutex> pl(pause_lock);
+	
+	ByteRangeSet set_ranges;
+	ByteRangeSet clear_ranges;
 	
 	while(!threads_exit)
 	{
@@ -127,20 +178,37 @@ void REHex::StringPanel::thread_main()
 		 * processed in this thread.
 		*/
 		
-		auto next_dirty_range = dirty.begin();
-		
-		if(next_dirty_range == dirty.end())
+		auto next_dirty_range = pending.begin();
+		if(next_dirty_range == pending.end())
 		{
-			/* Nothing to do. */
-			break;
+			/* Nothing to do.
+			 * Wait until some work is available or we need to pause/stop the thread.
+			*/
+			
+			thread_flush(&set_ranges, &clear_ranges, true);
+			
+			resume_cv.wait(pl, [&]() { return !pending.empty() || threads_pause || threads_exit; });
+			
+			if(threads_pause)
+			{
+				--running_threads;
+				
+				paused_cv.notify_all();
+				resume_cv.wait(pl, [this]() { return !threads_pause; });
+				
+				++running_threads;
+			}
+			
+			continue;
 		}
 		
 		off_t  window_base   = next_dirty_range->offset;
 		size_t window_length = std::min<off_t>(next_dirty_range->length, WINDOW_SIZE);
 		
-		dirty.clear_range(window_base, window_length);
+		pending.clear_range(window_base, window_length);
+		working.set_range(  window_base, window_length);
 		
-		dl.unlock();
+		pl.unlock();
 		
 		/* Grow both ends of our window by MIN_STRING_LENGTH bytes to ensure we can match
 		 * strings starting before/after it. Any data that is part of the string beyond our
@@ -157,16 +225,17 @@ void REHex::StringPanel::thread_main()
 		std::vector<unsigned char> data = document->read_data(window_base_adj, window_length_adj);
 		const char *data_p = (const char*)(data.data());
 		
-		for(size_t i = 0; i < data.size(); ++i)
+		for(size_t i = 0; i < data.size();)
 		{
-			off_t  string_base   = window_base_adj + i;
-			size_t string_length = 0;
+			off_t string_base = window_base_adj + i;
+			off_t string_end  = string_base;
 			
-			while(!threads_pause && isascii(data_p[i]) && isprint(data_p[i]) && i < data.size())
-			{
-				++string_length;
+			bool is_really_string = isascii(data_p[i]) && isprint(data_p[i]);
+			
+			do {
+				++string_end;
 				++i;
-			}
+			} while(!threads_pause && i < data.size() && (isascii(data_p[i]) && isprint(data_p[i])) == is_really_string);
 			
 			if(threads_pause)
 			{
@@ -178,13 +247,19 @@ void REHex::StringPanel::thread_main()
 				*/
 				
 				off_t  new_dirty_base   = std::max(window_base, string_base);
-				size_t new_dirty_length = window_length - (string_base - window_base);
+				size_t new_dirty_length = window_length - (new_dirty_base - window_base);
 				
-				dl.lock();
-				dirty.set_range(new_dirty_base, new_dirty_length);
-				dl.unlock();
+				/* vvvvvvvv */
+				pl.lock();
 				
-				std::unique_lock<std::mutex> pl(pause_lock);
+				if(string_base > window_base)
+				{
+					mark_work_done(window_base, (string_base - window_base));
+				}
+				
+				mark_dirty(new_dirty_base, new_dirty_length);
+				
+				thread_flush(&set_ranges, &clear_ranges, true);
 				
 				--running_threads;
 				
@@ -193,52 +268,97 @@ void REHex::StringPanel::thread_main()
 				
 				++running_threads;
 				
+				pl.unlock();
+				/* ^^^^^^^^ */
+				
 				/* Window is no longer valid, get a new one. */
+				window_length = 0;
 				break;
 			}
 			
-			if(string_length >= MIN_STRING_LENGTH)
+			off_t clamped_string_base = std::max(string_base, window_base);
+			off_t clamped_string_end  = std::min(string_end,  (off_t)(window_base + window_length));
+			
+			if(clamped_string_base < clamped_string_end)
 			{
-				std::lock_guard<std::mutex> sl(strings_lock);
-				
-				if(strings.size() >= MAX_STRINGS)
+				if(is_really_string && (string_end - string_base) >= (off_t)(MIN_STRING_LENGTH))
 				{
-					threads_exit = true;
-					break;
+					set_ranges.set_range(clamped_string_base, (clamped_string_end - clamped_string_base));
 				}
-				
-				strings.set_range(string_base, string_length);
-				update_needed = true;
+				else if(clamped_string_base <= clamped_string_end)
+				{
+					clear_ranges.set_range(clamped_string_base, (clamped_string_end - clamped_string_base));
+				}
 			}
+			
+			thread_flush(&set_ranges, &clear_ranges, false);
 		}
 		
-		dl.lock();
+		pl.lock();
+		
+		mark_work_done(window_base, window_length);
 	}
 	
-	std::lock_guard<std::mutex> pl(pause_lock);
+	thread_flush(&set_ranges, &clear_ranges, true);
 	
 	--running_threads;
 	--spawned_threads;
+}
+
+void REHex::StringPanel::thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *clear_ranges, bool force)
+{
+	if(force || clear_ranges->size() >= MAX_STRINGS_BATCH)
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		
+		strings.clear_ranges(clear_ranges->begin(), clear_ranges->end());
+		clear_ranges->clear_all();
+		
+		update_needed = true;
+	}
+	
+	if(force || set_ranges->size() >= MAX_STRINGS_BATCH)
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		
+		off_t dirty_total
+			= std::accumulate(dirty.begin(),   dirty.end(),   (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; })
+			+ std::accumulate(pending.begin(), pending.end(), (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
+		
+		size_t size_hint = (double)(strings.size()) * ((double)(document->buffer_length()) / (double)(document->buffer_length() - dirty_total));
+		
+		strings.set_ranges(set_ranges->begin(), set_ranges->end(), size_hint);
+		set_ranges->clear_all();
+		
+		update_needed = true;
+		
+		if(strings.size() >= MAX_STRINGS)
+		{
+			/* Reached the string limit, start spinning down. */
+			threads_exit = true;
+		}
+	}
 }
 
 void REHex::StringPanel::start_threads()
 {
 	resume_threads();
 	
-	std::lock_guard<std::mutex> dl(dirty_lock);
+	std::lock_guard<std::mutex> pl(pause_lock);
 	
-	size_t dirty_total = 0;
-	for(auto i = dirty.begin(); i != dirty.end(); ++i)
-	{
-		dirty_total += i->length;
-	}
+	/* Sum up the lengths of all ranges in dirty and pending. */
+	off_t dirty_total
+		= std::accumulate(dirty.begin(),   dirty.end(),   (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; })
+		+ std::accumulate(pending.begin(), pending.end(), (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
 	
 	if(dirty_total > 0)
 	{
 		threads_exit = false;
 		
-		if(dirty_total > UI_THREAD_THRESH)
+		#if 0
+		if(dirty_total >= (off_t)(UI_THREAD_THRESH))
 		{
+		#endif
 			/* There is more than one "window" worth of data to process, either we are
 			 * still initialising, or a huge amount of data has just changed. We shall
 			 * do our processing in background threads.
@@ -256,8 +376,6 @@ void REHex::StringPanel::start_threads()
 				want_threads = max_threads;
 			}
 			
-			std::lock_guard<std::mutex> pl(pause_lock);
-			
 			while(spawned_threads < want_threads)
 			{
 				threads.emplace_back(&REHex::StringPanel::thread_main, this);
@@ -265,6 +383,7 @@ void REHex::StringPanel::start_threads()
 				++spawned_threads;
 				++running_threads;
 			}
+		#if 0
 		}
 		else{
 			/* There is very little data to analyse, do it in the UI thread to avoid
@@ -272,8 +391,10 @@ void REHex::StringPanel::start_threads()
 			 * the context switching gets expensive.
 			*/
 			
+			// TODO
 			thread_main();
 		}
+		#endif
 	}
 }
 
@@ -333,8 +454,11 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 	}
 	
 	{
-		std::lock_guard<std::mutex> dl(dirty_lock);
-		dirty.data_erased(event.offset, event.length);
+		off_t dirtify_off = std::max((event.offset - MIN_STRING_LENGTH), (off_t)(0));
+		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
+		
+		std::lock_guard<std::mutex> pl(pause_lock);
+		mark_dirty(dirtify_off, dirtify_len);
 	}
 	
 	start_threads();
@@ -351,9 +475,12 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 	}
 	
 	{
-		std::lock_guard<std::mutex> dl(dirty_lock);
+		off_t dirtify_off = std::max((event.offset - MIN_STRING_LENGTH), (off_t)(0));
+		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
+		
+		std::lock_guard<std::mutex> pl(pause_lock);
 		dirty.data_inserted(event.offset, event.length);
-		dirty.set_range(event.offset, event.length);
+		mark_dirty(dirtify_off, dirtify_len);
 	}
 	
 	start_threads();
@@ -365,8 +492,11 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 {
 	{
-		std::lock_guard<std::mutex> dl(dirty_lock);
-		dirty.set_range(event.offset, event.length);
+		off_t dirtify_off = std::max((event.offset - MIN_STRING_LENGTH), (off_t)(0));
+		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
+		
+		std::lock_guard<std::mutex> pl(pause_lock);
+		mark_dirty(dirtify_off, dirtify_len);
 	}
 	
 	start_threads();

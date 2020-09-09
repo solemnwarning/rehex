@@ -71,9 +71,6 @@ namespace REHex {
 			
 			StringPanelListCtrl *list_ctrl;
 			
-			std::mutex dirty_lock;
-			ByteRangeSet dirty;
-			
 			std::mutex strings_lock;
 			ByteRangeSet strings;
 			bool update_needed;
@@ -88,8 +85,15 @@ namespace REHex {
 			unsigned int running_threads;       /* Number of threads not paused. */
 			std::condition_variable paused_cv;  /* Notifies pause_threads() that a thread has paused. */
 			std::condition_variable resume_cv;  /* Notifies paused threads that they should resume. */
+			ByteRangeSet dirty;                 /* Ranges which are dirty, but not yet ready to be processed. */
+			ByteRangeSet pending;               /* Ranges waiting to be processed. */
+			ByteRangeSet working;               /* Ranges currently being processed. */
+			
+			void mark_dirty(off_t offset, off_t length);
+			void mark_work_done(off_t offset, off_t length);
 			
 			void thread_main();
+			void thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *clear_ranges, bool force);
 			void start_threads();
 			void stop_threads();
 			void pause_threads();

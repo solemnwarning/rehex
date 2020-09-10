@@ -464,6 +464,163 @@ TEST(ByteRangeSet, ClearBetweenRanges)
 	);
 }
 
+/* Clear ranges from the set which involves erasing a single element. */
+TEST(ByteRangeSet, ClearMultiRangesSingleErase)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+	);
+}
+
+/* Clear ranges from the set which involves erasing and replacing a single element. */
+TEST(ByteRangeSet, ClearMultiRangesSingleReplace)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(35, 10),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(45, 15),
+	);
+}
+
+/* Clear ranges from the set which involves erasing multiple contiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesContiguousErase)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(62, 8),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(80, 10),
+	);
+}
+
+/* Clear ranges from the set which involves erasing and replacing multiple contiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesContiguousReplace)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(45, 22),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 5),
+		ByteRangeSet::Range(67, 3),
+		ByteRangeSet::Range(80, 10),
+	);
+}
+
+/* Clear ranges from the set which involves erasing multiple discontiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesDiscontiguousErase)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(60, 40),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+}
+
+/* Clear ranges from the set which involves erasing and replacing multiple discontiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesDiscontiguousReplace)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(8,  10),
+		ByteRangeSet::Range(50, 18),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(18, 2),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 10),
+		ByteRangeSet::Range(68, 2),
+		ByteRangeSet::Range(80, 10),
+	);
+}
+
 TEST(ByteRangeSet, IsSetAtStartOfRange)
 {
 	ByteRangeSet brs;

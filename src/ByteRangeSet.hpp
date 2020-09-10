@@ -319,11 +319,133 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 
 template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const T end)
 {
-	// TODO: More efficient implementation
-	for(auto i = begin; i != end; ++i)
+	auto next = ranges.begin();
+	
+	/* Existing elements which intersect the ones we are clearing are erased and any adjacent
+	 * bytes which become cleared as a side effect are re-inserted as new ranges.
+	 *
+	 * Adjacent erase and insert operations are merged for performance. The group_erase_begin
+	 * and group_erase_end iterators encompass the full range of adjacent elements to be erased
+	 * from sequential inserts and group_replacements contains all adjacent ranges to be
+	 * re-inserted at the same position.
+	*/
+	std::vector<Range>::iterator group_erase_begin = ranges.end();
+	std::vector<Range>::iterator group_erase_end   = ranges.end();
+	std::vector<Range> group_replacements;
+	
+	for(auto r = begin; r != end;)
 	{
-		clear_range(i->offset, i->length);
+		assert(r == begin || (std::prev(r)->offset + std::prev(r)->length) < r->offset);
+		
+		off_t offset = r->offset;
+		off_t length = r->length;
+		
+		/* Find the range of elements overlapping the range to be cleared. */
+		
+		next = std::lower_bound(next, ranges.end(), Range((offset + length), 0));
+		
+		std::vector<Range>::iterator erase_begin = next;
+		std::vector<Range>::iterator erase_end   = next;
+		
+		while(erase_begin != ranges.begin())
+		{
+			auto eb_prev = std::prev(erase_begin);
+			
+			if((eb_prev->offset + eb_prev->length) >= offset)
+			{
+				erase_begin = eb_prev;
+			}
+			else{
+				break;
+			}
+		}
+		
+		if(group_erase_begin != group_erase_end)
+		{
+			if(erase_begin != group_erase_end)
+			{
+				/* We have elements pending to be erased/replaced earlier in the
+				 * vector, flush them out so we can start a new group.
+				*/
+				
+				next = ranges.erase(group_erase_begin, group_erase_end);
+				
+				/* Workaround for older GCC/libstd++ which have the wrong return type
+				 * (void) on multi-element std::vector::insert(), even under C++11 mode.
+				 *
+				 * Not 100% sure which version actually fixed it.
+				*/
+				
+				#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+				for(auto i = group_replacements.begin(); i != group_replacements.end(); ++i)
+				{
+					next = ranges.insert(next, *i);
+					++next;
+				}
+				#else
+				next = ranges.insert(next, group_replacements.begin(), group_replacements.end());
+				std::advance(next, group_replacements.size());
+				#endif
+				
+				group_erase_begin = ranges.end();
+				group_erase_end   = ranges.end();
+				group_replacements.clear();
+				
+				/* The erase and insert operations have invalidated the erase_begin
+				 * and erase_end iterators, so start processing this Range again.
+				*/
+				continue;
+			}
+		}
+		else{
+			group_erase_begin = erase_begin;
+		}
+		
+		/* Advance group_erase_end to the end of this range's erase block. */
+		group_erase_end = erase_end;
+		
+		/* If the elements to be erased to not fall fully within the given range, then we shall
+		 * populate group_replacements with up to two elements to re-instate the lost ranges.
+		*/
+		
+		if(erase_begin != erase_end)
+		{
+			if(erase_begin->offset < offset)
+			{
+				/* Clear range is within erase range, so create a new Range from
+				 * the start of the range to be erased up to the start of the range
+				 * to be cleared.
+				*/
+				
+				group_replacements.push_back(Range(erase_begin->offset, (offset - erase_begin->offset)));
+			}
+			
+			auto erase_last = std::prev(erase_end);
+			
+			if((erase_last->offset + erase_last->length) > (offset + length))
+			{
+				/* Clear range falls short of the end of the range to be erased, so
+				 * create a range from the end of the clear range to the end of the
+				 * erase range.
+				*/
+				
+				off_t from = offset + length;
+				off_t to   = erase_last->offset + erase_last->length;
+				
+				assert(to > from);
+				
+				group_replacements.push_back(Range(from, (to - from)));
+			}
+		}
+		
+		++r;
 	}
+	
+	
+	/* Flush pending erase/insert operations. */
+	
+	next = ranges.erase(group_erase_begin, group_erase_end);
+	ranges.insert(next, group_replacements.begin(), group_replacements.end());
 }
 
 #endif /* !REHEX_BYTERANGESET_HPP */

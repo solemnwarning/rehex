@@ -42,61 +42,8 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 		return;
 	}
 	
-	/* Find the range of elements overlapping the range to be cleared. */
-	
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
-	
-	std::vector<Range>::iterator erase_begin = next;
-	std::vector<Range>::iterator erase_end   = next;
-	
-	while(erase_begin != ranges.begin())
-	{
-		auto eb_prev = std::prev(erase_begin);
-		
-		if((eb_prev->offset + eb_prev->length) >= offset)
-		{
-			erase_begin = eb_prev;
-		}
-		else{
-			break;
-		}
-	}
-	
-	/* If the elements to be erased to not fall fully within the given range, then we shall
-	 * populate collateral_damage with up to two elements to re-instate the lost ranges.
-	*/
-	
-	std::vector<Range> collateral_damage;
-	if(erase_begin != erase_end)
-	{
-		if(erase_begin->offset < offset)
-		{
-			/* Clear range is within erase range, so create a new Range from the start
-			 * of the range to be erased up to the start of the range to be cleared.
-			*/
-			
-			collateral_damage.push_back(Range(erase_begin->offset, (offset - erase_begin->offset)));
-		}
-		
-		auto erase_last = std::prev(erase_end);
-		
-		if((erase_last->offset + erase_last->length) > (offset + length))
-		{
-			/* Clear range falls short of the end of the range to be erased, so create
-			 * a range from the end of the clear range to the end of the erase range.
-			*/
-			
-			off_t from = offset + length;
-			off_t to   = erase_last->offset + erase_last->length;
-			
-			assert(to > from);
-			
-			collateral_damage.push_back(Range(from, (to - from)));
-		}
-	}
-	
-	auto insert_pos = ranges.erase(erase_begin, erase_end);
-	ranges.insert(insert_pos, collateral_damage.begin(), collateral_damage.end());
+	Range range(offset, length);
+	clear_ranges(&range, (&range) + 1);
 }
 
 void REHex::ByteRangeSet::clear_all()

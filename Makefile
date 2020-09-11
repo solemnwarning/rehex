@@ -33,7 +33,7 @@ WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgri
 CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CFLAGS)
 CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS) $(CXXFLAGS)
 
-LIBS := $(LIBS) $(WX_LIBS) -ljansson -lcapstone
+LDLIBS := $(WX_LIBS) -ljansson -lcapstone $(LDLIBS)
 
 ifeq ($(DEBUG),)
 	DEBUG=0
@@ -143,7 +143,7 @@ APP_OBJS := \
 
 $(EXE): $(APP_OBJS)
 	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $^ res/version.o $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
@@ -191,7 +191,7 @@ TEST_OBJS := \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<

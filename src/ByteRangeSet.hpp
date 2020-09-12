@@ -154,6 +154,11 @@ namespace REHex
 			std::vector<Range>::const_iterator end() const;
 			
 			/**
+			 * @brief Access the n-th range in the set.
+			*/
+			const Range &operator[](size_t idx) const;
+			
+			/**
 			 * @brief Returns the number of ranges in the set.
 			*/
 			size_t size() const;

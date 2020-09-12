@@ -106,7 +106,10 @@ namespace REHex {
 			void OnDataErase(OffsetLengthEvent &event);
 			void OnDataInsert(OffsetLengthEvent &event);
 			void OnDataOverwrite(OffsetLengthEvent &event);
+			void OnItemActivate(wxListEvent &event);
 			
+		DECLARE_EVENT_TABLE()
+		
 		friend StringPanelListCtrl;
 	};
 }

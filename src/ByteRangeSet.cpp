@@ -87,6 +87,12 @@ std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end
 	return ranges.end();
 }
 
+const REHex::ByteRangeSet::Range &REHex::ByteRangeSet::operator[](size_t idx) const
+{
+	assert(idx < ranges.size());
+	return ranges[idx];
+}
+
 size_t REHex::ByteRangeSet::size() const
 {
 	return ranges.size();

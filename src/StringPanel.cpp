@@ -37,6 +37,10 @@ static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocu
 
 static REHex::ToolPanelRegistration tpr("StringPanel", "Strings", REHex::ToolPanel::TPS_TALL, &StringPanel_factory);
 
+BEGIN_EVENT_TABLE(REHex::StringPanel, wxPanel)
+	EVT_LIST_ITEM_ACTIVATED(wxID_ANY, REHex::StringPanel::OnItemActivate)
+END_EVENT_TABLE()
+
 REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
@@ -533,6 +537,24 @@ void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 	
 	/* Continue propogation. */
 	event.Skip();
+}
+
+void REHex::StringPanel::OnItemActivate(wxListEvent &event)
+{
+	long item_idx = event.GetIndex();
+	
+	std::lock_guard<std::mutex> sl(strings_lock);
+	
+	if(item_idx >= strings.size())
+	{
+		/* UI thread probably hasn't caught up to worker threads yet. */
+		return;
+	}
+	
+	const ByteRangeSet::Range &string_range = strings[item_idx];
+	
+	document->set_cursor_position(string_range.offset);
+	document_ctrl->set_selection(string_range.offset, string_range.length);
 }
 
 REHex::StringPanel::StringPanelListCtrl::StringPanelListCtrl(StringPanel *parent):

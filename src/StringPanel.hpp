@@ -91,6 +91,8 @@ namespace REHex {
 			
 			void mark_dirty(off_t offset, off_t length);
 			void mark_work_done(off_t offset, off_t length);
+			off_t sum_dirty_bytes();
+			off_t sum_clean_bytes();
 			
 			void thread_main();
 			void thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *clear_ranges, bool force);

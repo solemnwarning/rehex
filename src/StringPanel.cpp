@@ -25,7 +25,7 @@
 
 static const off_t MIN_STRING_LENGTH = 4;
 static const size_t WINDOW_SIZE = 2 * 1024 * 1024; /* 2MiB */
-static const size_t MAX_STRINGS = 1000000;
+static const size_t MAX_STRINGS = 5000000;
 static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
 
 static const size_t MAX_STRINGS_BATCH = 64;
@@ -116,14 +116,16 @@ void REHex::StringPanel::update()
 	
 	if(update_needed)
 	{
-		std::lock_guard<std::mutex> sl(strings_lock);
+		size_t strings_count;
 		
-		list_ctrl->SetItemCount(strings.size());
+		{
+			std::lock_guard<std::mutex> sl(strings_lock);
+			
+			strings_count = strings.size();
+			update_needed = false;
+		}
 		
-		static size_t old_capacity = 0;
-		
-		fprintf(stderr, "update %zu (capacity %zu => %zu)\n", strings.size(), old_capacity, strings.get_ranges().capacity());
-		old_capacity = strings.get_ranges().capacity();
+		list_ctrl->SetItemCount(strings_count);
 	}
 }
 
@@ -163,6 +165,21 @@ void REHex::StringPanel::mark_work_done(off_t offset, off_t length)
 		/* Notify any sleeping workers that there is now work to be done. */
 		resume_cv.notify_all();
 	}
+}
+
+off_t REHex::StringPanel::sum_dirty_bytes()
+{
+	/* Sum up the lengths of all ranges in dirty and pending. */
+	off_t dirty_total
+		= std::accumulate(dirty.begin(),   dirty.end(),   (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; })
+		+ std::accumulate(pending.begin(), pending.end(), (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
+	
+	return dirty_total;
+}
+
+off_t REHex::StringPanel::sum_clean_bytes()
+{
+	return document->buffer_length() - sum_dirty_bytes();
 }
 
 void REHex::StringPanel::thread_main()
@@ -321,11 +338,13 @@ void REHex::StringPanel::thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *cl
 	{
 		std::lock_guard<std::mutex> sl(strings_lock);
 		
-		off_t dirty_total
-			= std::accumulate(dirty.begin(),   dirty.end(),   (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; })
-			+ std::accumulate(pending.begin(), pending.end(), (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
+		off_t processed_total = sum_clean_bytes();
+		size_t size_hint = (double)(strings.size()) * ((double)(document->buffer_length()) / (double)(processed_total));
 		
-		size_t size_hint = (double)(strings.size()) * ((double)(document->buffer_length()) / (double)(document->buffer_length() - dirty_total));
+		if(size_hint > MAX_STRINGS)
+		{
+			size_hint = MAX_STRINGS;
+		}
 		
 		strings.set_ranges(set_ranges->begin(), set_ranges->end(), size_hint);
 		set_ranges->clear_all();
@@ -342,14 +361,21 @@ void REHex::StringPanel::thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *cl
 
 void REHex::StringPanel::start_threads()
 {
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		
+		if(strings.size() >= MAX_STRINGS)
+		{
+			/* Already at the strings limit, don't restart threads. */
+			return;
+		}
+	}
+	
 	resume_threads();
 	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	
-	/* Sum up the lengths of all ranges in dirty and pending. */
-	off_t dirty_total
-		= std::accumulate(dirty.begin(),   dirty.end(),   (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; })
-		+ std::accumulate(pending.begin(), pending.end(), (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
+	off_t dirty_total = sum_dirty_bytes();
 	
 	if(dirty_total > 0)
 	{
@@ -400,8 +426,12 @@ void REHex::StringPanel::start_threads()
 
 void REHex::StringPanel::stop_threads()
 {
-	threads_exit = true;
+	{
+		std::lock_guard<std::mutex> pl(pause_lock);
+		threads_exit = true;
+	}
 	
+	/* Wake any threads that are paused so they can exit. */
 	resume_threads();
 	
 	while(!threads.empty())

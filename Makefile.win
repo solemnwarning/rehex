@@ -16,7 +16,7 @@
 
 EXE            := rehex.exe
 EXTRA_APP_OBJS := res/winres.o
-LIBS           += -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
+LDLIBS         += -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
 EMBED_EXE      := tools/embed.exe
 
 # Needed for PRIxNN macros from inttypes.h under MinGW

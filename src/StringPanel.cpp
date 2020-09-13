@@ -451,6 +451,10 @@ void REHex::StringPanel::pause_threads()
 	
 	threads_pause = true;
 	
+	/* Wake any threads that are waiting for work so they can be paused. */
+	resume_cv.notify_all();
+	
+	/* Wait for all threads to pause. */
 	paused_cv.wait(pl, [this]() { return running_threads == 0; });
 }
 

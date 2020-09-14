@@ -171,6 +171,7 @@ TEST_OBJS := \
 	src/Events.o \
 	src/Palette.o \
 	src/search.o \
+	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
@@ -189,6 +190,7 @@ TEST_OBJS := \
 	tests/SearchValue.o \
 	tests/SafeWindowPointer.o \
 	tests/SharedDocumentPointer.o \
+	tests/StringPanel.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)

@@ -53,6 +53,10 @@ namespace REHex {
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			
+			ByteRangeSet get_strings();
+			off_t get_clean_bytes();
+			size_t get_num_threads();
+			
 		private:
 			class StringPanelListCtrl: public wxListCtrl
 			{
@@ -107,6 +111,7 @@ namespace REHex {
 			void OnDataInsert(OffsetLengthEvent &event);
 			void OnDataOverwrite(OffsetLengthEvent &event);
 			void OnItemActivate(wxListEvent &event);
+			void OnTimerTick(wxTimerEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 		

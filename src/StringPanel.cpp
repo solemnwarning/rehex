@@ -38,6 +38,7 @@ static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocu
 static REHex::ToolPanelRegistration tpr("StringPanel", "Strings", REHex::ToolPanel::TPS_TALL, &StringPanel_factory);
 
 BEGIN_EVENT_TABLE(REHex::StringPanel, wxPanel)
+	EVT_TIMER(wxID_ANY, REHex::StringPanel::OnTimerTick)
 	EVT_LIST_ITEM_ACTIVATED(wxID_ANY, REHex::StringPanel::OnItemActivate)
 END_EVENT_TABLE()
 
@@ -72,11 +73,6 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	mark_dirty(0, document->buffer_length());
 	
 	timer = new wxTimer(this, wxID_ANY);
-	
-	this->Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
-	{
-		update();
-	});
 	
 	timer->Start(200, wxTIMER_CONTINUOUS);
 	
@@ -184,6 +180,23 @@ off_t REHex::StringPanel::sum_dirty_bytes()
 off_t REHex::StringPanel::sum_clean_bytes()
 {
 	return document->buffer_length() - sum_dirty_bytes();
+}
+
+REHex::ByteRangeSet REHex::StringPanel::get_strings()
+{
+	std::lock_guard<std::mutex> sl(strings_lock);
+	return strings;
+}
+
+off_t REHex::StringPanel::get_clean_bytes()
+{
+	std::lock_guard<std::mutex> pl(pause_lock);
+	return sum_clean_bytes();
+}
+
+size_t REHex::StringPanel::get_num_threads()
+{
+	return threads.size();
 }
 
 void REHex::StringPanel::thread_main()
@@ -546,10 +559,11 @@ void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 void REHex::StringPanel::OnItemActivate(wxListEvent &event)
 {
 	long item_idx = event.GetIndex();
+	assert(item_idx >= 0);
 	
 	std::lock_guard<std::mutex> sl(strings_lock);
 	
-	if(item_idx >= strings.size())
+	if((size_t)(item_idx) >= strings.size())
 	{
 		/* UI thread probably hasn't caught up to worker threads yet. */
 		return;
@@ -559,6 +573,24 @@ void REHex::StringPanel::OnItemActivate(wxListEvent &event)
 	
 	document->set_cursor_position(string_range.offset);
 	document_ctrl->set_selection(string_range.offset, string_range.length);
+}
+
+void REHex::StringPanel::OnTimerTick(wxTimerEvent &event)
+{
+	off_t dirty_total;
+	
+	{
+		std::lock_guard<std::mutex> pl(pause_lock);
+		dirty_total = sum_dirty_bytes();
+	}
+	
+	if(dirty_total == 0)
+	{
+		/* Processing is finished. Shut down threads. */
+		stop_threads();
+	}
+	
+	update();
 }
 
 REHex::StringPanel::StringPanelListCtrl::StringPanelListCtrl(StringPanel *parent):

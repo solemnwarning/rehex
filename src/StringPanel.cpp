@@ -169,10 +169,17 @@ void REHex::StringPanel::mark_work_done(off_t offset, off_t length)
 
 off_t REHex::StringPanel::sum_dirty_bytes()
 {
-	/* Sum up the lengths of all ranges in dirty and pending. */
-	off_t dirty_total
-		= std::accumulate(dirty.begin(),   dirty.end(),   (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; })
-		+ std::accumulate(pending.begin(), pending.end(), (off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
+	/* Merge the all the ranges in dirty, pending and working. */
+	
+	ByteRangeSet merged;
+	merged.set_ranges(dirty.begin(), dirty.end());
+	merged.set_ranges(pending.begin(), pending.end());
+	merged.set_ranges(working.begin(), working.end());
+	
+	/* Sum the length of the merged ranges. */
+	
+	off_t dirty_total = std::accumulate(merged.begin(), merged.end(),
+		(off_t)(0), [](off_t sum, const ByteRangeSet::Range &range) { return sum + range.length; });
 	
 	return dirty_total;
 }
@@ -291,6 +298,7 @@ void REHex::StringPanel::thread_main()
 					mark_work_done(window_base, (string_base - window_base));
 				}
 				
+				working.clear_range(new_dirty_base, new_dirty_length);
 				mark_dirty(new_dirty_base, new_dirty_length);
 				
 				thread_flush(&set_ranges, &clear_ranges, true);
@@ -509,6 +517,11 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
 		
 		std::lock_guard<std::mutex> pl(pause_lock);
+		
+		dirty.data_erased(event.offset, event.length);
+		pending.data_erased(event.offset, event.length);
+		assert(working.empty());
+		
 		mark_dirty(dirtify_off, dirtify_len);
 	}
 	
@@ -530,7 +543,11 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
 		
 		std::lock_guard<std::mutex> pl(pause_lock);
+		
 		dirty.data_inserted(event.offset, event.length);
+		pending.data_inserted(event.offset, event.length);
+		assert(working.empty());
+		
 		mark_dirty(dirtify_off, dirtify_len);
 	}
 	

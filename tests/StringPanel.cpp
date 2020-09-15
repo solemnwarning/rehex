@@ -84,6 +84,7 @@ class StringPanelTest: public ::testing::Test
 TEST_F(StringPanelTest, EmptyFile)
 {
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel doesn't spawn workers for an empty file";
 	
@@ -101,6 +102,7 @@ TEST_F(StringPanelTest, TextOnlyFile)
 	doc->insert_data(0, DATA.data(), DATA.size());
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
 	
@@ -125,6 +127,7 @@ TEST_F(StringPanelTest, BinaryOnlyFile)
 	doc->insert_data(0, DATA.data(), DATA.size());
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	EXPECT_TRUE(string_panel->get_num_threads() > 0U) << "StringPanel spawns workers for non-empty file";
 	
@@ -153,6 +156,7 @@ TEST_F(StringPanelTest, MixedFile)
 	doc->insert_data(0, data.data(), data.size());
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
 	
@@ -184,6 +188,7 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	doc->overwrite_data(256, "crazy nutty grass", 17);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -234,6 +239,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	doc->overwrite_data(256, "broad slope peep", 16);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -285,6 +291,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	doc->overwrite_data(256, "broad slope peep", 16);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -325,6 +332,53 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	}
 }
 
+TEST_F(StringPanelTest, OverwriteDataCompletesString)
+{
+	const std::vector<unsigned char> BIN_DATA(1024, 0x1B);
+	
+	doc->insert_data(0, BIN_DATA.data(), BIN_DATA.size());
+	
+	doc->overwrite_data(128, "abc", 3);
+	
+	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
+	
+	wait_for_idle(1000);
+	
+	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
+	ASSERT_EQ(string_panel->get_num_threads(), 0U);
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {};
+		
+		ASSERT_EQ(got_strings, EXPECT_STRINGS);
+	}
+	
+	unsigned const char DATA[] = { 'd' };
+	doc->overwrite_data(131, DATA, 1);
+	
+	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an overwrite";
+	
+	wait_for_idle(1000);
+	
+	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
+	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {
+			ByteRangeSet::Range(128, 4),
+		};
+		
+		EXPECT_EQ(got_strings, EXPECT_STRINGS) << "StringPanel finds string completed by overwrite";
+	}
+}
+
 TEST_F(StringPanelTest, InsertData)
 {
 	const std::vector<unsigned char> BIN_DATA(1024, 0x1B);
@@ -336,6 +390,7 @@ TEST_F(StringPanelTest, InsertData)
 	doc->overwrite_data(512, "knowledge spotty identify", 25);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -381,6 +436,54 @@ TEST_F(StringPanelTest, InsertData)
 	}
 }
 
+TEST_F(StringPanelTest, InsertDataCompletesString)
+{
+	const std::vector<unsigned char> BIN_DATA(1024, 0x1B);
+	
+	doc->insert_data(0, BIN_DATA.data(), BIN_DATA.size());
+	
+	doc->overwrite_data(128, "abc", 3);
+	
+	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
+	
+	wait_for_idle(1000);
+	
+	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
+	ASSERT_EQ(string_panel->get_num_threads(), 0U);
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {};
+		
+		ASSERT_EQ(got_strings, EXPECT_STRINGS);
+	}
+	
+	const unsigned char INSERT_DATA[] = { 'd' };
+	
+	doc->insert_data(131, INSERT_DATA, 1);
+	
+	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an insert";
+	
+	wait_for_idle(1000);
+	
+	EXPECT_EQ(string_panel->get_clean_bytes(), 1025U) << "StringPanel processed all data in file";
+	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {
+			ByteRangeSet::Range(128, 4),
+		};
+		
+		EXPECT_EQ(got_strings, EXPECT_STRINGS) << "StringPanel finds strings completed by insert";
+	}
+}
+
 TEST_F(StringPanelTest, EraseData)
 {
 	const std::vector<unsigned char> BIN_DATA(1024, 0x1B);
@@ -392,6 +495,7 @@ TEST_F(StringPanelTest, EraseData)
 	doc->overwrite_data(512, "pumped stick feeble",   19);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -444,6 +548,7 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	doc->overwrite_data(256, "sturdy books scrape", 19);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -493,6 +598,7 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	doc->overwrite_data(256, "kettle kneel supply", 19);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	
@@ -532,6 +638,53 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	}
 }
 
+TEST_F(StringPanelTest, EraseDataCompletesString)
+{
+	const std::vector<unsigned char> BIN_DATA(1024, 0x1B);
+	
+	doc->insert_data(0, BIN_DATA.data(), BIN_DATA.size());
+	
+	doc->overwrite_data(128, "abc", 3);
+	doc->overwrite_data(132, "d", 1);
+	
+	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
+	
+	wait_for_idle(1000);
+	
+	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
+	ASSERT_EQ(string_panel->get_num_threads(), 0U);
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {};
+		
+		ASSERT_EQ(got_strings, EXPECT_STRINGS);
+	}
+	
+	doc->erase_data(131, 1);
+	
+	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an erase";
+	
+	wait_for_idle(1000);
+	
+	EXPECT_EQ(string_panel->get_clean_bytes(), 1023U) << "StringPanel processed all data in file";
+	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {
+			ByteRangeSet::Range(128, 4),
+		};
+		
+		EXPECT_EQ(got_strings, EXPECT_STRINGS) << "StringPanel finds strings completed by erase";
+	}
+}
+
 TEST_F(StringPanelTest, BackToBackModifications)
 {
 	static const size_t kiB = 1024;
@@ -543,6 +696,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	doc->insert_data(0, BIN_DATA.data(), 16 * MiB);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
 	

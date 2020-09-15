@@ -74,14 +74,11 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	
 	timer = new wxTimer(this, wxID_ANY);
 	
-	timer->Start(200, wxTIMER_CONTINUOUS);
-	
 	start_threads();
 }
 
 REHex::StringPanel::~StringPanel()
 {
-	timer->Stop();
 	stop_threads();
 }
 
@@ -434,6 +431,11 @@ void REHex::StringPanel::start_threads()
 				++spawned_threads;
 				++running_threads;
 			}
+			
+			if(!timer->IsRunning())
+			{
+				timer->Start(100, wxTIMER_CONTINUOUS);
+			}
 		#if 0
 		}
 		else{
@@ -451,6 +453,8 @@ void REHex::StringPanel::start_threads()
 
 void REHex::StringPanel::stop_threads()
 {
+	timer->Stop();
+	
 	{
 		std::lock_guard<std::mutex> pl(pause_lock);
 		threads_exit = true;
@@ -464,6 +468,9 @@ void REHex::StringPanel::stop_threads()
 		threads.front().join();
 		threads.pop_front();
 	}
+	
+	/* Process any lingering update. */
+	update();
 }
 
 void REHex::StringPanel::pause_threads()

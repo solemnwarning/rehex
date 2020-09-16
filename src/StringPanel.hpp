@@ -26,6 +26,7 @@
 #include <thread>
 #include <wx/listctrl.h>
 #include <wx/panel.h>
+#include <wx/stattext.h>
 #include <wx/timer.h>
 #include <wx/wx.h>
 
@@ -74,6 +75,7 @@ namespace REHex {
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			StringPanelListCtrl *list_ctrl;
+			wxStaticText *status_text;
 			
 			std::mutex strings_lock;
 			ByteRangeSet strings;

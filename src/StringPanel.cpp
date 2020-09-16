@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <numeric>
+#include <wx/numformatter.h>
 
 #include "StringPanel.hpp"
 
@@ -57,7 +58,10 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	list_ctrl->AppendColumn("Offset");
 	list_ctrl->AppendColumn("Text");
 	
+	status_text = new wxStaticText(this, wxID_ANY, "");
+	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+	sizer->Add(status_text, 0);
 	sizer->Add(list_ctrl, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
@@ -123,6 +127,12 @@ void REHex::StringPanel::update()
 		}
 		
 		list_ctrl->SetItemCount(strings_count);
+		
+		status_text->SetLabelText(
+			wxString("Found ")
+			+ wxNumberFormatter::ToString((long)(strings_count))
+			+ " strings"
+			+ (threads.empty() ? "" : "..."));
 	}
 }
 

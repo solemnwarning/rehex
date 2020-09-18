@@ -698,7 +698,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(1000);
+	wait_for_idle(5000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), (off_t)(16 * MiB));
 	ASSERT_EQ(string_panel->get_num_threads(), 0U);

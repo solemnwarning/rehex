@@ -177,6 +177,7 @@
     <ClCompile Include="..\..\tests\search-text.cpp" />
     <ClCompile Include="..\..\tests\SearchValue.cpp" />
     <ClCompile Include="..\..\tests\SharedDocumentPointer.cpp" />
+    <ClCompile Include="..\..\tests\StringPanel.cpp" />
     <ClCompile Include="..\..\tests\util.cpp" />
   </ItemGroup>
   <ItemGroup>

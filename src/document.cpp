@@ -431,6 +431,9 @@ const char *REHex::Document::redo_desc()
 
 void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length)
 {
+	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, offset, length);
+	ProcessEvent(data_overwriting_event);
+	
 	bool ok = buffer->overwrite_data(offset, data, length);
 	assert(ok);
 	
@@ -442,11 +445,18 @@ void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned cha
 		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, offset, length);
 		ProcessEvent(data_overwrite_event);
 	}
+	else{
+		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, offset, length);
+		ProcessEvent(data_overwrite_aborted_event);
+	}
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length)
 {
+	OffsetLengthEvent data_inserting_event(this, DATA_INSERTING, offset, length);
+	ProcessEvent(data_inserting_event);
+	
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
 	
@@ -469,12 +479,18 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 			_raise_highlights_changed();
 		}
 	}
-	
+	else{
+		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
+		ProcessEvent(data_insert_aborted_event);
+	}
 }
 
 /* Erase a range of data from the Buffer and update our own data structures. */
 void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 {
+	OffsetLengthEvent data_erasing_event(this, DATA_ERASING, offset, length);
+	ProcessEvent(data_erasing_event);
+	
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
 	
@@ -495,6 +511,10 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		{
 			_raise_highlights_changed();
 		}
+	}
+	else{
+		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);
+		ProcessEvent(data_erase_aborted_event);
 	}
 }
 

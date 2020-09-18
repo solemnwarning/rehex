@@ -16,10 +16,13 @@
 */
 
 #include "platform.hpp"
+
+#include <algorithm>
 #include <assert.h>
+#include <mutex>
+#include <thread>
 
 #include "ByteRangeSet.hpp"
-#include <algorithm>
 
 void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 {
@@ -28,47 +31,8 @@ void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 		return;
 	}
 	
-	/* Find the range of elements that intersects the one we are inserting. They will be erased
-	 * and the one we are creating will grow on either end as necessary to encompass them.
-	*/
-	
-	auto next = ranges.lower_bound(Range((offset + length), 0));
-	
-	std::set<Range>::iterator erase_begin = next;
-	std::set<Range>::iterator erase_end   = next;
-	
-	while(erase_begin != ranges.begin())
-	{
-		auto eb_prev = std::prev(erase_begin);
-		
-		if((eb_prev->offset + eb_prev->length) >= offset)
-		{
-			off_t merged_begin = std::min(eb_prev->offset, offset);
-			off_t merged_end   = std::max((eb_prev->offset + eb_prev->length), (offset + length));
-			
-			offset = merged_begin;
-			length = merged_end - merged_begin;
-			
-			erase_begin = eb_prev;
-		}
-		else{
-			break;
-		}
-	}
-	
-	if(erase_end != ranges.end() && erase_end->offset == (offset + length))
-	{
-		length += erase_end->length;
-		++erase_end;
-	}
-	
-	/* Erase adjacent and/or overlapping ranges. */
-	ranges.erase(erase_begin, erase_end);
-	
-	assert(length > 0);
-	
-	/* Insert new range. */
-	ranges.insert(Range(offset, length));
+	Range range(offset, length);
+	set_ranges(&range, (&range) + 1);
 }
 
 void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
@@ -78,61 +42,8 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 		return;
 	}
 	
-	/* Find the range of elements overlapping the range to be cleared. */
-	
-	auto next = ranges.lower_bound(Range((offset + length), 0));
-	
-	std::set<Range>::iterator erase_begin = next;
-	std::set<Range>::iterator erase_end   = next;
-	
-	while(erase_begin != ranges.begin())
-	{
-		auto eb_prev = std::prev(erase_begin);
-		
-		if((eb_prev->offset + eb_prev->length) >= offset)
-		{
-			erase_begin = eb_prev;
-		}
-		else{
-			break;
-		}
-	}
-	
-	/* If the elements to be erased to not fall fully within the given range, then we shall
-	 * populate collateral_damage with up to two elements to re-instate the lost ranges.
-	*/
-	
-	std::set<Range> collateral_damage;
-	if(erase_begin != erase_end)
-	{
-		if(erase_begin->offset < offset)
-		{
-			/* Clear range is within erase range, so create a new Range from the start
-			 * of the range to be erased up to the start of the range to be cleared.
-			*/
-			
-			collateral_damage.insert(Range(erase_begin->offset, (offset - erase_begin->offset)));
-		}
-		
-		auto erase_last = std::prev(erase_end);
-		
-		if((erase_last->offset + erase_last->length) > (offset + length))
-		{
-			/* Clear range falls short of the end of the range to be erased, so create
-			 * a range from the end of the clear range to the end of the erase range.
-			*/
-			
-			off_t from = offset + length;
-			off_t to   = erase_last->offset + erase_last->length;
-			
-			assert(to > from);
-			
-			collateral_damage.insert(Range(from, (to - from)));
-		}
-	}
-	
-	ranges.erase(erase_begin, erase_end);
-	ranges.insert(collateral_damage.begin(), collateral_damage.end());
+	Range range(offset, length);
+	clear_ranges(&range, (&range) + 1);
 }
 
 void REHex::ByteRangeSet::clear_all()
@@ -142,7 +53,7 @@ void REHex::ByteRangeSet::clear_all()
 
 bool REHex::ByteRangeSet::isset(off_t offset) const
 {
-	auto lb = ranges.lower_bound(Range(offset, 0));
+	auto lb = std::lower_bound(ranges.begin(), ranges.end(), Range(offset, 0));
 	
 	if(lb != ranges.end() && lb->offset == offset)
 	{
@@ -161,52 +72,136 @@ bool REHex::ByteRangeSet::isset(off_t offset) const
 	return false;
 }
 
-const std::set<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const
+const std::vector<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const
 {
 	return ranges;
 }
 
+std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::begin() const
+{
+	return ranges.begin();
+}
+
+std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end() const
+{
+	return ranges.end();
+}
+
+const REHex::ByteRangeSet::Range &REHex::ByteRangeSet::operator[](size_t idx) const
+{
+	assert(idx < ranges.size());
+	return ranges[idx];
+}
+
+size_t REHex::ByteRangeSet::size() const
+{
+	return ranges.size();
+}
+
+bool REHex::ByteRangeSet::empty() const
+{
+	return ranges.empty();
+}
+
 void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 {
-	std::set<Range> new_ranges;
+	std::mutex lock;
+	std::vector<Range> insert_elem;
+	size_t insert_idx;
 	
-	for(auto i = ranges.begin(); i != ranges.end(); ++i)
+	auto process_block = [&](size_t work_base, size_t work_length)
 	{
-		if(i->offset >= offset)
+		for(size_t i = work_base; i < (work_base + work_length); ++i)
 		{
-			new_ranges.emplace((i->offset + length), i->length);
+			Range *range = &(ranges[i]);
+			
+			if(range->offset >= offset)
+			{
+				/* Range begins after the insertion point, offset it. */
+				range->offset += length;
+			}
+			else if(range->offset < offset && (range->offset + range->length) > offset)
+			{
+				/* Range straddles the insertion point, split it.
+				 *
+				 * The first half of the new range is queued for insertion later,
+				 * after processing is done so threads don't need to synchronise or
+				 * handle the vector moving around.
+				 *
+				 * Second half of the new range replaces the range.
+				*/
+				
+				std::unique_lock<std::mutex> l(lock);
+				
+				assert(insert_elem.empty());
+				
+				insert_elem.push_back(Range(range->offset, (offset - range->offset)));
+				insert_idx = i;
+				
+				range->length -= (offset - range->offset);
+				range->offset = offset + length;
+			}
 		}
-		else if(i->offset < offset && (i->offset + i->length) > offset)
-		{
-			new_ranges.emplace(i->offset,         (offset - i->offset));
-			new_ranges.emplace((offset + length), (i->length - (offset - i->offset)));
-		}
-		else{
-			new_ranges.emplace(*i);
-		}
+	};
+	
+	/* Split the ranges vector up into blocks which can be processed by different threads.
+	 * A thread is spawned for each block up to the CPU limit (including the current thread).
+	*/
+	
+	unsigned int max_threads = std::thread::hardware_concurrency();
+	
+	size_t next_block = 0;
+	size_t thread_block_size = ranges.size() / max_threads;
+	
+	if(ranges.size() < DATA_INSERTED_THREAD_MIN)
+	{
+		/* We don't have enough data to be worth the overhead of spawning threads. */
+		thread_block_size = 0;
 	}
 	
-	ranges.swap(new_ranges);
+	std::vector<std::thread> threads;
+	
+	for(unsigned int i = 1; thread_block_size > 0 && i < max_threads; ++i)
+	{
+		threads.emplace_back(process_block, next_block, thread_block_size);
+		next_block += thread_block_size;
+	}
+	
+	/* We process the last block in this thread, up to the end of the vector as
+	 * thread_block_size is likely to have rounding errors.
+	*/
+	process_block(next_block, (ranges.size() - next_block));
+	
+	/* Wait for other threads to finish. */
+	for(auto t = threads.begin(); t != threads.end(); ++t)
+	{
+		t->join();
+	}
+	
+	/* Perform queued insertion, if there was a range straddling the insertion point. */
+	if(!insert_elem.empty())
+	{
+		assert(insert_elem.size() == 1);
+		ranges.insert(std::next(ranges.begin(), insert_idx), insert_elem[0]);
+	}
 }
 
 void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 {
-	std::set<Range> new_ranges;
-	
 	/* Find the range of elements overlapping the range to be erased. */
 	
-	auto next = ranges.lower_bound(Range((offset + length), 0));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
 	
-	std::set<Range>::iterator skip_begin = next;
-	std::set<Range>::iterator skip_end   = next;
+	std::vector<Range>::iterator erase_begin = next;
+	std::vector<Range>::iterator erase_end   = next;
 	
-	while(skip_begin != ranges.begin())
+	while(erase_begin != ranges.begin())
 	{
-		auto sb_prev = std::prev(skip_begin);
+		auto sb_prev = std::prev(erase_begin);
 		
 		if((sb_prev->offset + sb_prev->length) > offset)
 		{
-			skip_begin = sb_prev;
+			erase_begin = sb_prev;
 		}
 		else{
 			break;
@@ -217,40 +212,86 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 	 * erase window (if any exist).
 	*/
 	
-	if(skip_begin != skip_end)
+	if(erase_begin != erase_end)
 	{
-		auto skip_last = std::prev(skip_end);
+		auto erase_last = std::prev(erase_end);
 		
-		off_t begin = std::min(skip_begin->offset, offset);
-		off_t end   = skip_last->offset + skip_last->length;
+		off_t begin = std::min(erase_begin->offset, offset);
+		off_t end   = erase_last->offset + erase_last->length;
+		
+		erase_end = ranges.erase(erase_begin, erase_end);
 		
 		if(end > (offset + length))
 		{
 			end -= length;
-			new_ranges.emplace(begin, (end - begin));
+			erase_end = ranges.insert(erase_end, Range(begin, (end - begin)));
+			++erase_end;
 		}
 		else if(begin < offset)
 		{
 			end = offset;
-			new_ranges.emplace(begin, (end - begin));
+			erase_end = ranges.insert(erase_end, Range(begin, (end - begin)));
+			++erase_end;
 		}
-	}
-	
-	/* Preserve ranges from before the erase window. */
-	
-	while(skip_begin != ranges.begin())
-	{
-		--skip_begin;
-		new_ranges.emplace(*skip_begin);
 	}
 	
 	/* Adjust the offset of ranges after the erase window. */
 	
-	while(skip_end != ranges.end())
+	while(erase_end != ranges.end())
 	{
-		new_ranges.emplace((skip_end->offset - length), skip_end->length);
-		++skip_end;
+		erase_end->offset -= length;
+		++erase_end;
+	}
+}
+
+REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, const ByteRangeSet &b)
+{
+	if(a.empty() || b.empty())
+	{
+		return ByteRangeSet();
 	}
 	
-	ranges.swap(new_ranges);
+	ByteRangeSet intersection;
+	
+	auto ai = a.begin();
+	auto bi = b.begin();
+	
+	while(ai != a.end() && bi != b.end())
+	{
+		off_t a_end = ai->offset + ai->length;
+		off_t b_end = bi->offset + bi->length;
+		
+		if(a_end <= bi->offset)
+		{
+			++ai;
+		}
+		else if(b_end <= ai->offset)
+		{
+			++bi;
+		}
+		else{
+			off_t overlap_begin = std::max(ai->offset, bi->offset);
+			off_t overlap_end   = std::min(a_end, b_end);
+			
+			if(overlap_end > overlap_begin)
+			{
+				intersection.set_range(overlap_begin, (overlap_end - overlap_begin));
+			}
+			
+			if(a_end < b_end)
+			{
+				++ai;
+			}
+			else if(b_end < a_end)
+			{
+				++bi;
+			}
+			else{
+				++ai;
+				++bi;
+			}
+		}
+	}
+	
+	return intersection;
 }

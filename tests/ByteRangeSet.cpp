@@ -25,8 +25,7 @@ using namespace REHex;
 
 #define EXPECT_RANGES(...) \
 { \
-	std::vector<ByteRangeSet::Range> ranges_a = { __VA_ARGS__ }; \
-	std::set<ByteRangeSet::Range> ranges(ranges_a.begin(), ranges_a.end()); \
+	std::vector<ByteRangeSet::Range> ranges = { __VA_ARGS__ }; \
 	EXPECT_EQ(brs.get_ranges(), ranges); \
 }
 
@@ -208,6 +207,151 @@ TEST(ByteRangeSet, AddZeroLengthRange)
 	EXPECT_RANGES();
 }
 
+TEST(ByteRangeSet, AddMultiRanges)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.set_ranges(ranges, ranges + (sizeof(ranges) / sizeof(*ranges)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+}
+
+/* Add ranges to the set which involves erasing and replacing a single element. */
+TEST(ByteRangeSet, AddMultiRangesSingleErase)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges1[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.set_ranges(ranges1, ranges1 + (sizeof(ranges1) / sizeof(*ranges1)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+	
+	ByteRangeSet::Range ranges2[] = {
+		ByteRangeSet::Range(5, 20),
+		ByteRangeSet::Range(70, 4),
+	};
+	
+	brs.set_ranges(ranges2, ranges2 + (sizeof(ranges2) / sizeof(*ranges2)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(5, 20),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(70, 4),
+	);
+}
+
+/* Add ranges to the set which involves erasing and replacing contiguous elements. */
+TEST(ByteRangeSet, AddMultiRangesContiguousErase)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges1[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.set_ranges(ranges1, ranges1 + (sizeof(ranges1) / sizeof(*ranges1)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+	
+	ByteRangeSet::Range ranges2[] = {
+		ByteRangeSet::Range(28, 3),
+		ByteRangeSet::Range(45, 30),
+		ByteRangeSet::Range(80, 9),
+	};
+	
+	brs.set_ranges(ranges2, ranges2 + (sizeof(ranges2) / sizeof(*ranges2)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(28, 7),
+		ByteRangeSet::Range(40, 35),
+		ByteRangeSet::Range(80, 9),
+	);
+}
+
+/* Add ranges to the set which involves erasing and replacing discontiguous elements. */
+TEST(ByteRangeSet, AddMultiRangesDiscontiguousErase)
+{
+	ByteRangeSet brs;
+	
+	ByteRangeSet::Range ranges1[] = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(100, 15),
+		ByteRangeSet::Range(130, 10),
+		ByteRangeSet::Range(180, 3),
+		ByteRangeSet::Range(190, 6),
+		ByteRangeSet::Range(200, 10),
+		ByteRangeSet::Range(220, 10),
+	};
+	
+	brs.set_ranges(ranges1, ranges1 + (sizeof(ranges1) / sizeof(*ranges1)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(100, 15),
+		ByteRangeSet::Range(130, 10),
+		ByteRangeSet::Range(180, 3),
+		ByteRangeSet::Range(190, 6),
+		ByteRangeSet::Range(200, 10),
+		ByteRangeSet::Range(220, 10),
+	);
+	
+	ByteRangeSet::Range ranges2[] = {
+		ByteRangeSet::Range(5, 2),
+		ByteRangeSet::Range(28, 3),
+		ByteRangeSet::Range(80, 10),
+		ByteRangeSet::Range(110, 20),
+		ByteRangeSet::Range(150, 1),
+		ByteRangeSet::Range(183, 17),
+		ByteRangeSet::Range(250, 5),
+	};
+	
+	brs.set_ranges(ranges2, ranges2 + (sizeof(ranges2) / sizeof(*ranges2)));
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(5, 2),
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(28, 7),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(80, 10),
+		ByteRangeSet::Range(100, 40),
+		ByteRangeSet::Range(150, 1),
+		ByteRangeSet::Range(180, 30),
+		ByteRangeSet::Range(220, 10),
+		ByteRangeSet::Range(250, 5),
+	);
+}
+
 TEST(ByteRangeSet, ClearRange)
 {
 	ByteRangeSet brs;
@@ -317,6 +461,163 @@ TEST(ByteRangeSet, ClearBetweenRanges)
 	EXPECT_RANGES(
 		ByteRangeSet::Range(10, 20),
 		ByteRangeSet::Range(40, 20),
+	);
+}
+
+/* Clear ranges from the set which involves erasing a single element. */
+TEST(ByteRangeSet, ClearMultiRangesSingleErase)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+	);
+}
+
+/* Clear ranges from the set which involves erasing and replacing a single element. */
+TEST(ByteRangeSet, ClearMultiRangesSingleReplace)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(35, 10),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(45, 15),
+	);
+}
+
+/* Clear ranges from the set which involves erasing multiple contiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesContiguousErase)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(62, 8),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(80, 10),
+	);
+}
+
+/* Clear ranges from the set which involves erasing and replacing multiple contiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesContiguousReplace)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(45, 22),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 5),
+		ByteRangeSet::Range(67, 3),
+		ByteRangeSet::Range(80, 10),
+	);
+}
+
+/* Clear ranges from the set which involves erasing multiple discontiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesDiscontiguousErase)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(60, 40),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+	);
+}
+
+/* Clear ranges from the set which involves erasing and replacing multiple discontiguous elements. */
+TEST(ByteRangeSet, ClearMultiRangesDiscontiguousReplace)
+{
+	const std::vector<ByteRangeSet::Range> INITIAL_RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 20),
+		ByteRangeSet::Range(65, 5),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	ByteRangeSet brs(INITIAL_RANGES.begin(), INITIAL_RANGES.end());
+	
+	const std::vector<ByteRangeSet::Range> CLEAR_RANGES = {
+		ByteRangeSet::Range(8,  10),
+		ByteRangeSet::Range(50, 18),
+	};
+	
+	brs.clear_ranges(CLEAR_RANGES.begin(), CLEAR_RANGES.end());
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(18, 2),
+		ByteRangeSet::Range(30, 5),
+		ByteRangeSet::Range(40, 10),
+		ByteRangeSet::Range(68, 2),
+		ByteRangeSet::Range(80, 10),
 	);
 }
 
@@ -496,6 +797,51 @@ TEST(ByteRangeSet, DataInsertedIntoRange)
 	);
 }
 
+/* Tests ByteRangeSet::data_inserted() on a large enough set to use threading. */
+TEST(ByteRangeSet, DataInsertedParallel)
+{
+	ByteRangeSet brs;
+	
+	/* Populate a reference vector with double the ranges necessary to trigger necessary to
+	 * trigger threading, then some change to check the remainder is handled properly.
+	*/
+	
+	const size_t N_RANGES = ByteRangeSet::DATA_INSERTED_THREAD_MIN * 2 + 5;
+	size_t next_range = 0;
+	
+	std::vector<ByteRangeSet::Range> ranges;
+	ranges.reserve(N_RANGES);
+	
+	for(size_t i = 0; i < N_RANGES; ++i)
+	{
+		ranges.push_back(ByteRangeSet::Range(next_range, 5));
+		next_range += 10;
+	}
+	
+	/* Populate ByteRangeSet with reference data. */
+	
+	brs.set_ranges(ranges.begin(), ranges.end());
+	EXPECT_TRUE(brs.get_ranges() == ranges) << "ByteRangeSet initial data populated correctly";
+	
+	/* Insert some data within the 10th range. */
+	
+	brs.data_inserted(102, 5);
+	EXPECT_TRUE(brs.get_ranges() != ranges) << "ByteRangeSet::data_inserted() modified ranges";
+	
+	/* Munge our data to reflect what should be the new reality... */
+	
+	ranges[10].length = 2;
+	ranges.insert(std::next(ranges.begin(), 11), ByteRangeSet::Range(107, 3));
+	
+	for(size_t i = 12; i < ranges.size(); ++i)
+	{
+		ranges[i].offset += 5;
+	}
+	
+	/* ...and check it matches. */
+	EXPECT_TRUE(brs.get_ranges() == ranges) << "ByteRangeSet::data_inserted() correctly modified ranges";
+}
+
 TEST(ByteRangeSet, DataErasedBeforeRanges)
 {
 	ByteRangeSet brs;
@@ -597,4 +943,216 @@ TEST(ByteRangeSet, DataErasedOverlappingMultipleRanges)
 		ByteRangeSet::Range(10, 10),
 		ByteRangeSet::Range(30,  5),
 	);
+}
+
+TEST(ByteRangeSet, IntersectionNoOverlap)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 20),
+		ByteRangeSet::Range(70, 10),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionPartialOverlap)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(90, 10),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(60, 20),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(60, 10),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionSubset)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(50, 30),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(60, 5),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(60, 5),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionExactMatch)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(70, 10),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 10),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(50, 20),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionMultipleSubsetsOfSingleRange)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		ByteRangeSet::Range(0, 100),
+		ByteRangeSet::Range(110, 50),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 40),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 20),
+		ByteRangeSet::Range(110, 10),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionCombined)
+{
+	const std::vector<ByteRangeSet::Range> RANGES_A = {
+		/* No overlap */
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(30, 20),
+		ByteRangeSet::Range(70, 10),
+		
+		/* Partial overlap */
+		ByteRangeSet::Range(150, 20),
+		ByteRangeSet::Range(190, 10),
+		
+		/* Subset */
+		ByteRangeSet::Range(250, 30),
+		
+		/* Exact match */
+		ByteRangeSet::Range(350, 20),
+		
+		/* Multiple subsets */
+		ByteRangeSet::Range(400, 100),
+		ByteRangeSet::Range(510, 50),
+		
+		ByteRangeSet::Range(0, 100),
+	};
+	
+	const ByteRangeSet SET_A(RANGES_A.begin(), RANGES_A.end());
+	
+	const std::vector<ByteRangeSet::Range> RANGES_B = {
+		/* No overlap */
+		ByteRangeSet::Range(20, 10),
+		ByteRangeSet::Range(50, 20),
+		ByteRangeSet::Range(80, 10),
+		
+		/* Partial overlap */
+		ByteRangeSet::Range(120, 10),
+		ByteRangeSet::Range(160, 20),
+		
+		/* Subset */
+		ByteRangeSet::Range(260, 5),
+		
+		/* Exact match */
+		ByteRangeSet::Range(350, 20),
+		
+		/* Multiple subsets */
+		ByteRangeSet::Range(420, 10),
+		ByteRangeSet::Range(450, 20),
+		ByteRangeSet::Range(480, 40),
+	};
+	
+	const ByteRangeSet SET_B(RANGES_B.begin(), RANGES_B.end());
+	
+	const std::vector<ByteRangeSet::Range> INTERSECTION = {
+		/* Partial overlap */
+		ByteRangeSet::Range(160, 10),
+		
+		/* Subset */
+		ByteRangeSet::Range(260, 5),
+		
+		/* Exact match */
+		ByteRangeSet::Range(350, 20),
+		
+		/* Multiple subsets */
+		ByteRangeSet::Range(420, 10),
+		ByteRangeSet::Range(450, 20),
+		ByteRangeSet::Range(480, 20),
+		ByteRangeSet::Range(510, 10),
+	};
+	
+	EXPECT_EQ(ByteRangeSet::intersection(SET_A, SET_B).get_ranges(), INTERSECTION);
+	EXPECT_EQ(ByteRangeSet::intersection(SET_B, SET_A).get_ranges(), INTERSECTION);
+}
+
+TEST(ByteRangeSet, IntersectionEmptySet)
+{
+	const std::vector<ByteRangeSet::Range> NON_EMPTY_RANGE = {
+		ByteRangeSet::Range(10, 10),
+	};
+	
+	const ByteRangeSet NON_EMPTY_SET(NON_EMPTY_RANGE.begin(), NON_EMPTY_RANGE.end());
+	
+	const std::vector<ByteRangeSet::Range> EMPTY_RANGE = {};
+	const ByteRangeSet EMPTY_SET;
+	
+	EXPECT_EQ(ByteRangeSet::intersection( NON_EMPTY_SET, EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
+	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     NON_EMPTY_SET ).get_ranges(), EMPTY_RANGE);
+	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
 }

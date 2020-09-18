@@ -63,6 +63,9 @@
     <ClCompile Include="..\..\tests\SharedDocumentPointer.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\StringPanel.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\tests\util.cpp">
       <Filter>tests</Filter>
     </ClCompile>

@@ -203,6 +203,7 @@
     <ClCompile Include="..\src\Palette.cpp" />
     <ClCompile Include="..\src\search.cpp" />
     <ClCompile Include="..\src\SelectRangeDialog.cpp" />
+    <ClCompile Include="..\src\StringPanel.cpp" />
     <ClCompile Include="..\src\Tab.cpp" />
     <ClCompile Include="..\src\textentrydialog.cpp" />
     <ClCompile Include="..\src\ToolPanel.cpp" />
@@ -252,6 +253,7 @@
     <ClInclude Include="..\src\search.hpp" />
     <ClInclude Include="..\src\SelectRangeDialog.hpp" />
     <ClInclude Include="..\src\SharedDocumentPointer.hpp" />
+    <ClInclude Include="..\src\StringPanel.hpp" />
     <ClInclude Include="..\src\Tab.hpp" />
     <ClInclude Include="..\src\textentrydialog.hpp" />
     <ClInclude Include="..\src\ToolPanel.hpp" />

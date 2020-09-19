@@ -1,3 +1,28 @@
+Version TBA
+
+ * [Mark Jansen] Use byte grouping setting from main window in diff window.
+
+ * [Mark Jansen] Use Capstone disassembler rather than LLVM.
+
+ * [Mark Jansen] Support disassembling 16-bit x86 machine code.
+
+ * [Mark Jansen] Don't update tools which aren't visible.
+
+ * [Vincent Bermel] Unhardcode linux launcher icon file type.
+
+ * Fix an uncommon use-after-free crash when closing tabs in diff window.
+
+ * Support for disassembling 6800/68000 and MOS6502 instruction sets
+   (requires recent Capstone version).
+
+ * [Mark Jansen] Close document when tab is clicked with middle mouse button.
+
+ * [Mark Jansen] Don't create .rehex-meta files when there is nothing to save.
+
+ * Implement Strings tool to find and list ASCII strings in the file.
+
+ * Add option to calculate automatic bytes per line in whole byte groups.
+
 Version 0.2.0 (2020-06-02)
 
  * Allow copying comments from a document and pasting them elsewhere in the

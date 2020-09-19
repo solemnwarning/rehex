@@ -30,6 +30,7 @@
 
 #include "AboutDialog.hpp"
 #include "app.hpp"
+#include "BytesPerLineDialog.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "Palette.hpp"
@@ -716,31 +717,12 @@ void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 {
-	/* There are rendering/performance issues with very large values here, which we just bypass
-	 * with a nice arbitrary limit for now.
-	*/
-	const int MAX_BYTES_PER_LINE = 128;
+	Tab *tab = active_tab();
 	
-	wxWindow *cpage = notebook->GetCurrentPage();
-	assert(cpage != NULL);
-	
-	auto tab = dynamic_cast<Tab*>(cpage);
-	assert(tab != NULL);
-	
-	/* TODO: Make a dialog with an explicit "auto" radio choice? */
-	int new_value = wxGetNumberFromUser(
-		"Number of bytes to show on each line\n(0 fits to the window width)",
-		"Bytes",
-		"Set bytes per line",
-		tab->doc_ctrl->get_bytes_per_line(),
-		0,
-		MAX_BYTES_PER_LINE,
-		this);
-	
-	/* We get a negative value if the user cancels. */
-	if(new_value >= 0)
+	BytesPerLineDialog bpld(this, tab->doc_ctrl->get_bytes_per_line());
+	if(bpld.ShowModal() == wxID_OK)
 	{
-		tab->doc_ctrl->set_bytes_per_line(new_value);
+		tab->doc_ctrl->set_bytes_per_line(bpld.get_bytes_per_line());
 	}
 }
 

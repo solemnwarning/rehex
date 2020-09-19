@@ -1145,7 +1145,7 @@ void REHex::Tab::init_default_doc_view()
 	wxConfig *config = wxGetApp().config;
 	config->SetPath("/default-view/");
 	
-	doc_ctrl->set_bytes_per_line(             config->Read    ("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
+	doc_ctrl->set_bytes_per_line(             config->ReadLong("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
 	doc_ctrl->set_bytes_per_group(            config->Read    ("bytes-per-group",            doc_ctrl->get_bytes_per_group()));
 	doc_ctrl->set_show_offsets(               config->ReadBool("show-offsets",               doc_ctrl->get_show_offsets()));
 	doc_ctrl->set_show_ascii(                 config->ReadBool("show-ascii",                 doc_ctrl->get_show_ascii()));

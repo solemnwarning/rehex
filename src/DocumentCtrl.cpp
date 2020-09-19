@@ -83,7 +83,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	client_width      = 0;
 	client_height     = 0;
 	visible_lines     = 1;
-	bytes_per_line    = 0;
+	bytes_per_line    = BYTES_PER_LINE_FIT_BYTES;
 	bytes_per_group   = 4;
 	offset_display_base = OFFSET_BASE_HEX;
 	show_ascii        = true;
@@ -143,12 +143,12 @@ REHex::DocumentCtrl::~DocumentCtrl()
 	}
 }
 
-unsigned int REHex::DocumentCtrl::get_bytes_per_line()
+int REHex::DocumentCtrl::get_bytes_per_line()
 {
 	return bytes_per_line;
 }
 
-void REHex::DocumentCtrl::set_bytes_per_line(unsigned int bytes_per_line)
+void REHex::DocumentCtrl::set_bytes_per_line(int bytes_per_line)
 {
 	this->bytes_per_line = bytes_per_line;
 	_handle_width_change();
@@ -1988,7 +1988,7 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 {
 	/* Decide how many bytes to display per line */
 	
-	if(doc.bytes_per_line == 0) /* 0 is "as many as will fit in the window" */
+	if(doc.bytes_per_line == BYTES_PER_LINE_FIT_BYTES)
 	{
 		/* TODO: Can I do this algorithmically? */
 		
@@ -1997,6 +1997,15 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 		while(calc_width_for_bytes(doc, bytes_per_line_actual + 1) <= doc.client_width)
 		{
 			++bytes_per_line_actual;
+		}
+	}
+	else if(doc.bytes_per_line == BYTES_PER_LINE_FIT_GROUPS)
+	{
+		bytes_per_line_actual = doc.bytes_per_group;
+		
+		while(calc_width_for_bytes(doc, bytes_per_line_actual + doc.bytes_per_group) <= doc.client_width)
+		{
+			bytes_per_line_actual += doc.bytes_per_group;
 		}
 	}
 	else{

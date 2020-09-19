@@ -118,6 +118,7 @@ APP_OBJS := \
 	src/app.o \
 	src/ArtProvider.o \
 	src/buffer.o \
+	src/BytesPerLineDialog.o \
 	src/ByteRangeSet.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \

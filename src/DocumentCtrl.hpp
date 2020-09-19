@@ -171,8 +171,13 @@ namespace REHex {
 			DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc);
 			~DocumentCtrl();
 			
-			unsigned int get_bytes_per_line();
-			void set_bytes_per_line(unsigned int bytes_per_line);
+			static const int BYTES_PER_LINE_FIT_BYTES  = 0;
+			static const int BYTES_PER_LINE_FIT_GROUPS = -1;
+			static const int BYTES_PER_LINE_MIN        = 1;
+			static const int BYTES_PER_LINE_MAX        = 128;
+			
+			int get_bytes_per_line();
+			void set_bytes_per_line(int bytes_per_line);
 			
 			unsigned int get_bytes_per_group();
 			void set_bytes_per_group(unsigned int bytes_per_group);
@@ -249,7 +254,7 @@ namespace REHex {
 			int virtual_width;
 			
 			/* Display options */
-			unsigned int bytes_per_line;
+			int bytes_per_line;
 			unsigned int bytes_per_group;
 			
 			bool offset_column{true};

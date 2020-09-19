@@ -187,6 +187,7 @@
     <ClCompile Include="..\src\app.cpp" />
     <ClCompile Include="..\src\ArtProvider.cpp" />
     <ClCompile Include="..\src\buffer.cpp" />
+    <ClCompile Include="..\src\BytesPerLineDialog.cpp" />
     <ClCompile Include="..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\src\ClickText.cpp" />
     <ClCompile Include="..\src\CodeCtrl.cpp" />
@@ -231,6 +232,7 @@
     <ClInclude Include="..\src\app.hpp" />
     <ClInclude Include="..\src\ArtProvider.hpp" />
     <ClInclude Include="..\src\buffer.hpp" />
+    <ClInclude Include="..\src\BytesPerLineDialog.hpp" />
     <ClInclude Include="..\src\ByteRangeSet.hpp" />
     <ClInclude Include="..\src\ClickText.hpp" />
     <ClInclude Include="..\src\CodeCtrl.hpp" />

@@ -270,7 +270,28 @@ void REHex::StringPanel::thread_main()
 		
 		/* Read the data from our window and search for strings in it. */
 		
-		std::vector<unsigned char> data = document->read_data(window_base_adj, window_length_adj);
+		std::vector<unsigned char> data;
+		try {
+			data = document->read_data(window_base_adj, window_length_adj);
+		}
+		catch(const std::exception &e)
+		{
+			/* Failed to read the file. Stick this back in the dirty queue and fetch
+			 * another block to process.
+			 *
+			 * TODO: Somehow de-prioritise this block or delay it becoming available
+			 * again. Permanent I/O errors will result in worker threads trying to read
+			 * the same bad blocks over and over as things stand now.
+			*/
+			
+			pl.lock();
+			
+			working.clear_range(window_base, window_length);
+			mark_dirty(window_base, window_length);
+			
+			continue;
+		}
+		
 		const char *data_p = (const char*)(data.data());
 		
 		for(size_t i = 0; i < data.size();)
@@ -661,10 +682,18 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 		case 1:
 		{
 			/* Text column */
-			std::vector<unsigned char> string_data = parent->document->read_data(si.offset, si.length);
-			std::string string((const char*)(string_data.data()), string_data.size());
 			
-			return string;
+			try {
+				std::vector<unsigned char> string_data = parent->document->read_data(si.offset, si.length);
+				std::string string((const char*)(string_data.data()), string_data.size());
+				
+				return string;
+			}
+			catch(const std::exception &e)
+			{
+				/* Probably a file I/O error. */
+				return "???";
+			}
 		}
 		
 		default:

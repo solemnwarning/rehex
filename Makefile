@@ -130,6 +130,7 @@ APP_OBJS := \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
 	src/Events.o \
+	src/FillRangeDialog.o \
 	src/LicenseDialog.o \
 	src/mainwindow.o \
 	src/Palette.o \

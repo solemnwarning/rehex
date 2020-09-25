@@ -31,6 +31,7 @@
 #include "AboutDialog.hpp"
 #include "app.hpp"
 #include "BytesPerLineDialog.hpp"
+#include "FillRangeDialog.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "Palette.hpp"
@@ -70,6 +71,7 @@ enum {
 	ID_HEX_OFFSETS,
 	ID_DEC_OFFSETS,
 	ID_SELECT_RANGE,
+	ID_FILL_RANGE,
 	ID_SYSTEM_PALETTE,
 	ID_LIGHT_PALETTE,
 	ID_DARK_PALETTE,
@@ -107,6 +109,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SELECTALL, REHex::MainWindow::OnSelectAll)
 	EVT_MENU(ID_SELECT_RANGE, REHex::MainWindow::OnSelectRange)
 	
+	EVT_MENU(ID_FILL_RANGE, REHex::MainWindow::OnFillRange)
 	EVT_MENU(ID_OVERWRITE_MODE, REHex::MainWindow::OnOverwriteMode)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
@@ -187,6 +190,8 @@ REHex::MainWindow::MainWindow():
 	edit_menu->Append(ID_SELECT_RANGE, "Select range...");
 	
 	edit_menu->AppendSeparator();
+	
+	edit_menu->Append(ID_FILL_RANGE, "Fill range...");
 	
 	#ifdef __APPLE__
 	edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode");
@@ -707,6 +712,14 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 	
 	REHex::SelectRangeDialog srd(this, *(tab->doc), *(tab->doc_ctrl));
 	srd.ShowModal();
+}
+
+void REHex::MainWindow::OnFillRange(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	REHex::FillRangeDialog frd(this, *(tab->doc), *(tab->doc_ctrl));
+	frd.ShowModal();
 }
 
 void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)

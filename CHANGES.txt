@@ -23,6 +23,8 @@ Version TBA
 
  * Add option to calculate automatic bytes per line in whole byte groups.
 
+ * Add "Fill range" tool for overwriting ranges of bytes with a pattern.
+
 Version 0.2.0 (2020-06-02)
 
  * Allow copying comments from a document and pasting them elsewhere in the

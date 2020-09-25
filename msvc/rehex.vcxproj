@@ -199,6 +199,7 @@
     <ClCompile Include="..\src\DocumentCtrl.cpp" />
     <ClCompile Include="..\src\EditCommentDialog.cpp" />
     <ClCompile Include="..\src\Events.cpp" />
+    <ClCompile Include="..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\src\LicenseDialog.cpp" />
     <ClCompile Include="..\src\mainwindow.cpp" />
     <ClCompile Include="..\src\Palette.cpp" />
@@ -244,6 +245,7 @@
     <ClInclude Include="..\src\DocumentCtrl.hpp" />
     <ClInclude Include="..\src\EditCommentDialog.hpp" />
     <ClInclude Include="..\src\Events.hpp" />
+    <ClInclude Include="..\src\FillRangeDialog.hpp" />
     <ClInclude Include="..\src\LicenseDialog.hpp" />
     <ClInclude Include="..\src\mainwindow.hpp" />
     <ClInclude Include="..\src\NestedOffsetLengthMap.hpp" />

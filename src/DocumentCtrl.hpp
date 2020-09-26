@@ -115,6 +115,7 @@ namespace REHex {
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
 					
 					unsigned int bytes_per_line_actual;  /* Number of bytes being displayed per line. */
+					unsigned int first_line_pad_bytes;   /* Number of bytes to pad first line with. */
 					
 				public:
 					DataRegion(off_t d_offset, off_t d_length);

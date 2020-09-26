@@ -2012,6 +2012,8 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 		bytes_per_line_actual = doc.bytes_per_line;
 	}
 	
+	first_line_pad_bytes = d_offset % bytes_per_line_actual;
+	
 	return calc_width_for_bytes(doc, bytes_per_line_actual);
 }
 
@@ -2038,12 +2040,18 @@ void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc, wxDC
 	hex_text_x    = indent_width + doc.offset_column_width;
 	ascii_text_x  = (doc.virtual_width - indent_width) - doc.hf_string_width(bytes_per_line_actual);
 	
+	/* If we are rendering the first line of the region, then we offset it to (mostly)
+	 * preserve column alignment between regions.
+	*/
+	
+	off_t effective_length = d_length + first_line_pad_bytes;
+	
 	/* Height of the region is simply the number of complete lines of data plus an incomplete
 	 * one if the data isn't a round number of lines.
 	*/
-	y_lines = (d_length / bytes_per_line_actual) + !!(d_length % bytes_per_line_actual) + indent_final;
+	y_lines = (effective_length / bytes_per_line_actual) + !!(effective_length % bytes_per_line_actual) + indent_final;
 	
-	if((d_offset + d_length) == doc.doc->buffer_length() && (d_length % bytes_per_line_actual) == 0)
+	if((d_offset + d_length) == doc.doc->buffer_length() && (effective_length % bytes_per_line_actual) == 0)
 	{
 		/* This is the last data region in the document. Make it one row taller if the last
 		 * row is full so there is always somewhere to draw the insert cursor.
@@ -2171,13 +2179,21 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);
 		}
 		
-		int hex_base_x = x + hex_text_x;  /* Base X co-ordinate to draw hex characters from */
-		int hex_x      = hex_base_x;      /* X co-ordinate of current hex character */
-		int hex_x_char = 0;               /* Column of current hex character */
+		/* If we are rendering the first line of the region, then we offset it to (mostly)
+		 * preserve column alignment between regions.
+		*/
 		
-		int ascii_base_x = x + ascii_text_x;  /* Base X co-ordinate to draw ASCII characters from */
-		int ascii_x      = ascii_base_x;      /* X co-ordinate of current ASCII character */
-		int ascii_x_char = 0;                 /* Column of current ASCII character */
+		unsigned int line_pad_bytes = (cur_off == d_offset)
+			? first_line_pad_bytes
+			: 0;
+		
+		int hex_base_x = x + hex_text_x;                                                 /* Base X co-ordinate to draw hex characters from */
+		int hex_x_char = (line_pad_bytes * 2) + (line_pad_bytes / doc.bytes_per_group);  /* Column of current hex character */
+		int hex_x      = hex_base_x + doc.hf_string_width(hex_x_char);                   /* X co-ordinate of current hex character */
+		
+		int ascii_base_x = x + ascii_text_x;                                  /* Base X co-ordinate to draw ASCII characters from */
+		int ascii_x_char = line_pad_bytes;                                    /* Column of current ASCII character */
+		int ascii_x      = ascii_base_x + doc.hf_string_width(ascii_x_char);  /* X co-ordinate of current ASCII character */
 		
 		auto draw_end_cursor = [&]()
 		{
@@ -2265,9 +2281,9 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			dc.DrawRectangle(char_x, y, doc.hf_char_width(), doc.hf_height);
 		};
 		
-		for(unsigned int c = 0; c < bytes_per_line_actual && di != data.end(); ++c)
+		for(unsigned int c = line_pad_bytes; c < bytes_per_line_actual && di != data.end(); ++c)
 		{
-			if(c > 0 && (c % doc.bytes_per_group) == 0)
+			if(c > line_pad_bytes && (c % doc.bytes_per_group) == 0)
 			{
 				hex_x = hex_base_x + doc.hf_string_width(++hex_x_char);
 			}
@@ -2558,7 +2574,7 @@ off_t REHex::DocumentCtrl::DataRegion::offset_at_xy_hex(REHex::DocumentCtrl &doc
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_begin = (d_offset - first_line_pad_bytes) + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
 	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
@@ -2572,7 +2588,12 @@ off_t REHex::DocumentCtrl::DataRegion::offset_at_xy_hex(REHex::DocumentCtrl &doc
 		unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
 		off_t clicked_offset                = line_data_begin + line_offset_bytes;
 		
-		if(clicked_offset < line_data_end)
+		if(clicked_offset < d_offset)
+		{
+			/* Clicked in padding on first line. */
+			return -1;
+		}
+		else if(clicked_offset < line_data_end)
 		{
 			/* Clicked on a byte */
 			return clicked_offset;
@@ -2596,13 +2617,18 @@ off_t REHex::DocumentCtrl::DataRegion::offset_at_xy_ascii(REHex::DocumentCtrl &d
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_begin = (d_offset - first_line_pad_bytes) + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
 	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	off_t clicked_offset     = line_data_begin + char_offset;
 	
-	if(clicked_offset < line_data_end)
+	if(clicked_offset < d_offset)
+	{
+		/* Clicked in padding on first line. */
+		return -1;
+	}
+	else if(clicked_offset < line_data_end)
 	{
 		/* Clicked on a character */
 		return clicked_offset;
@@ -2618,7 +2644,7 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_hex(REHex::DocumentCtrl &d
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_begin = (d_offset - first_line_pad_bytes) + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
 	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
 	if(mouse_x_px < hex_text_x)
@@ -2635,7 +2661,12 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_hex(REHex::DocumentCtrl &d
 	unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
 	off_t clicked_offset                = line_data_begin + line_offset_bytes;
 	
-	if(clicked_offset < line_data_end)
+	if(clicked_offset < d_offset)
+	{
+		/* Mouse is in padding area on first line, return offset of last byte of previous line. */
+		return d_offset - 1;
+	}
+	else if(clicked_offset < line_data_end)
 	{
 		/* Mouse is on a byte. */
 		return clicked_offset;
@@ -2651,7 +2682,7 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 	/* Calculate the offset within the Buffer of the first byte on this line
 	 * and the offset (plus one) of the last byte on this line.
 	*/
-	off_t line_data_begin = d_offset + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
+	off_t line_data_begin = (d_offset - first_line_pad_bytes) + ((off_t)(bytes_per_line_actual) * mouse_y_lines);
 	off_t line_data_end   = std::min((line_data_begin + bytes_per_line_actual), (d_offset + d_length));
 	
 	if(!doc.show_ascii || mouse_x_px < ascii_text_x)
@@ -2665,7 +2696,12 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 	unsigned int char_offset = doc.hf_char_at_x(mouse_x_px);
 	off_t clicked_offset     = line_data_begin + char_offset;
 	
-	if(clicked_offset < line_data_end)
+	if(clicked_offset < d_offset)
+	{
+		/* Mouse is in padding area on first line, return offset of last byte of previous line. */
+		return d_offset - 1;
+	}
+	else if(clicked_offset < line_data_end)
 	{
 		/* Mouse is on a character. */
 		return clicked_offset;

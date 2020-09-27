@@ -2088,6 +2088,12 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
 	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
+	if(skip_bytes > 0)
+	{
+		assert(skip_bytes > first_line_pad_bytes);
+		skip_bytes -= first_line_pad_bytes;
+	}
+	
 	if(skip_lines >= (y_lines - indent_final))
 	{
 		/* All of our data is past the top of the client area, all that needed to be

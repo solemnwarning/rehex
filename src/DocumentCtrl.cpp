@@ -1952,7 +1952,7 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 		
 		for(int i = 0; i < indent_depth; ++i)
 		{
-			if(box_h < (int64_t)(doc.client_height) && (i + indent_final) == indent_depth)
+			if(box_h <= (int64_t)(doc.client_height) && (i + indent_final) == indent_depth)
 			{
 				box_h  -= ch / 2;
 				box_hc -= ch / 2;
@@ -1961,7 +1961,7 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 			dc.DrawLine(box_x, box_y, box_x, (box_y + box_hc));
 			dc.DrawLine((box_x + box_w - 1), box_y, (box_x + box_w - 1), (box_y + box_hc));
 			
-			if(box_h < (int64_t)(doc.client_height) && (i + indent_final) >= indent_depth)
+			if(box_h <= (int64_t)(doc.client_height) && (i + indent_final) >= indent_depth)
 			{
 				dc.DrawLine(box_x, (box_y + box_h), (box_x + box_w - 1), (box_y + box_h));
 				

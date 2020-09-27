@@ -1998,6 +1998,8 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 		{
 			++bytes_per_line_actual;
 		}
+		
+		first_line_pad_bytes = 0;
 	}
 	else if(doc.bytes_per_line == BYTES_PER_LINE_FIT_GROUPS)
 	{
@@ -2007,12 +2009,14 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 		{
 			bytes_per_line_actual += doc.bytes_per_group;
 		}
+		
+		first_line_pad_bytes = 0;
 	}
 	else{
 		bytes_per_line_actual = doc.bytes_per_line;
+		
+		first_line_pad_bytes = d_offset % bytes_per_line_actual;
 	}
-	
-	first_line_pad_bytes = d_offset % bytes_per_line_actual;
 	
 	return calc_width_for_bytes(doc, bytes_per_line_actual);
 }

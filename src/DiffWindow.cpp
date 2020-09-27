@@ -747,6 +747,16 @@ void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):
 	DataRegion(d_offset, d_length), diff_window(diff_window), range(range) {}
 
+int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
+{
+	int width = REHex::DocumentCtrl::DataRegion::calc_width(doc);
+	
+	/* Override padding set by base class. */
+	first_line_pad_bytes = 0;
+	
+	return width;
+}
+
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(off_t off) const
 {
 	try {

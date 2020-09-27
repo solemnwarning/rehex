@@ -88,6 +88,7 @@ namespace REHex {
 					DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range);
 					
 				protected:
+					virtual int calc_width(REHex::DocumentCtrl &doc) override;
 					virtual Highlight highlight_at_off(off_t off) const override;
 			};
 			

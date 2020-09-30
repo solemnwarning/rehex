@@ -32,7 +32,7 @@ namespace REHex {
 	class MainWindow: public wxFrame
 	{
 		public:
-			MainWindow();
+			MainWindow(const wxSize& size);
 			virtual ~MainWindow();
 			
 			void new_file();

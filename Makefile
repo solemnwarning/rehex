@@ -179,6 +179,7 @@ TEST_OBJS := \
 	src/util.o \
 	src/win32lib.o \
 	tests/buffer.o \
+	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \

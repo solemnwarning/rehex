@@ -305,11 +305,7 @@ void REHex::Tab::unhide_child_windows()
 
 void REHex::Tab::save_view(wxConfig *config)
 {
-	config->SetPath("/");
-	config->Write("theme", wxString(active_palette->get_name()));
-	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
-	
-	config->DeleteGroup("/default-view/");
+	// Ensure we are in the correct node
 	config->SetPath("/default-view/");
 	
 	config->Write("bytes-per-line", doc_ctrl->get_bytes_per_line());
@@ -322,6 +318,9 @@ void REHex::Tab::save_view(wxConfig *config)
 	
 	/* TODO: Save h_tools state */
 	
+	config->SetPath("/default-view/vtools/");
+	config->Write("width", v_tools->GetSize().x);
+
 	for(size_t i = 0; i < v_tools->GetPageCount(); ++i)
 	{
 		char path[64];
@@ -1336,6 +1335,10 @@ void REHex::Tab::init_default_tools()
 {
 	wxConfig *config = wxGetApp().config;
 	
+	int size = 0;
+	config->Read("/default-view/vtools/width", &size, 0);
+	if (size != 0)
+		v_tools->SetSize(size, v_tools->GetSize().y);
 	/* TODO: Load h_tools state. */
 	
 	for(unsigned int i = 0;; ++i)

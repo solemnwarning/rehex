@@ -25,9 +25,68 @@
 #include <wx/sizer.h>
 
 #include "app.hpp"
+#include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "EditCommentDialog.hpp"
 #include "Tab.hpp"
+
+class U32DR: public REHex::DocumentCtrl::Region
+{
+	private:
+		REHex::SharedDocumentPointer doc;
+		off_t d_offset, d_length;
+		
+	public:
+		U32DR(REHex::SharedDocumentPointer &doc, off_t offset, off_t length):
+			doc(doc),
+			d_offset(offset),
+			d_length(length)
+		{
+			assert(length == 4);
+			
+			indent_offset = offset;
+		}
+		
+	protected:
+		virtual int calc_width(REHex::DocumentCtrl &doc) override
+		{
+			return 50;
+		}
+		
+		virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override
+		{
+			y_lines = indent_final + 1;
+		}
+		
+		virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override
+		{
+			draw_container(doc, dc, x, y);
+			
+			x += 50; /* Arbitary padding to get us inside the borders. */
+			
+			dc.SetFont(doc.get_font());
+			
+			dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG]);
+			dc.SetBackgroundMode(wxTRANSPARENT);
+			
+			std::vector<unsigned char> data = this->doc->read_data(d_offset, d_length);
+			assert(data.size() == 4);
+			
+			char buf[64];
+			sprintf(buf, "U32: %u\n", *(unsigned int*)(data.data()));
+			
+			dc.DrawText(buf, x, y);
+		}
+		
+		// virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
+};
+
+static REHex::DocumentCtrl::Region *U32DR_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
+{
+	return new U32DR(doc, offset, length);
+}
+
+REHex::DataTypeRegistration u32dtr("u32", "unsigned 32-bit", &U32DR_factory);
 
 /* Is the given byte a printable 7-bit ASCII character? */
 static bool isasciiprint(int c)
@@ -896,6 +955,27 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				}
 			});
 		}, itm->GetId(), itm->GetId());
+		
+		menu.AppendSeparator();
+		
+		wxMenuItem *itm2 = menu.Append(wxID_ANY, "Data");
+		
+		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
+		{
+			doc->set_data_type(selection_off, selection_length, "");
+			CallAfter([this]() { repopulate_regions(); });
+		}, itm2->GetId(), itm2->GetId());
+		
+		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
+		{
+			wxMenuItem *itm = menu.Append(wxID_ANY, dt->second->label);
+			
+			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			{
+				doc->set_data_type(selection_off, selection_length, dt->second->name);
+				CallAfter([this]() { repopulate_regions(); });
+			}, itm->GetId(), itm->GetId());
+		}
 	}
 	
 	PopupMenu(&menu);
@@ -1211,6 +1291,7 @@ void REHex::Tab::repopulate_regions()
 	}
 	
 	auto comments = doc->get_comments();
+	auto types = doc->get_data_types();
 	
 	bool nest = (inline_comment_mode == ICM_SHORT_INDENT || inline_comment_mode == ICM_FULL_INDENT);
 	bool truncate = (inline_comment_mode == ICM_SHORT || inline_comment_mode == ICM_SHORT_INDENT);
@@ -1218,6 +1299,7 @@ void REHex::Tab::repopulate_regions()
 	/* Construct a list of interlaced comment/data regions. */
 	
 	auto offset_base = comments.begin();
+	auto types_iter = types.begin();
 	off_t next_data = 0, remain_data = doc->buffer_length();
 	
 	std::list<DocumentCtrl::Region*> regions;
@@ -1273,10 +1355,30 @@ void REHex::Tab::repopulate_regions()
 			dr_limit.pop();
 		}
 		
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));
+		assert(types_iter != types.end());
+		assert(types_iter->first.offset <= next_data && (types_iter->first.offset + types_iter->first.length) > next_data);
+		
+		dr_length = std::min(
+			dr_length,
+			types_iter->first.length - (next_data - types_iter->first.offset));
+		
+		const DataTypeRegistration *dtr = DataTypeRegistry::by_name(types_iter->second);
+		
+		if(dtr != NULL)
+		{
+			regions.push_back(dtr->region_factory(doc, next_data, dr_length));
+		}
+		else{
+			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));
+		}
 		
 		next_data   += dr_length;
 		remain_data -= dr_length;
+		
+		if(next_data >= (types_iter->first.offset + types_iter->first.length))
+		{
+			++types_iter;
+		}
 	}
 	
 	if(regions.empty())

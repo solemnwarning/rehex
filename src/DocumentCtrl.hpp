@@ -213,6 +213,8 @@ namespace REHex {
 			const std::list<Region*> &get_regions() const;
 			void replace_all_regions(std::list<Region*> &new_regions);
 			
+			wxFont &get_font();
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent& event);
 			void OnSize(wxSizeEvent &event);

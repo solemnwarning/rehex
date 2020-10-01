@@ -68,6 +68,9 @@ namespace REHex
 				}
 			};
 			
+			typedef typename std::vector< std::pair<Range, T> >::iterator iterator;
+			typedef typename std::vector< std::pair<Range, T> >::const_iterator const_iterator;
+			
 		private:
 			const T default_value;
 			
@@ -110,6 +113,9 @@ namespace REHex
 			{
 				return ranges;
 			}
+			
+			const_iterator begin() const { return ranges.begin(); }
+			const_iterator end() const { return ranges.end(); }
 			
 			/**
 			 * @brief Adjust for data being inserted into file.

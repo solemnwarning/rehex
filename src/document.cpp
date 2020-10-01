@@ -63,6 +63,8 @@ REHex::Document::Document(const std::string &filename):
 {
 	buffer = new REHex::Buffer(filename);
 	
+	types.set_range(0, buffer->length(), "");
+	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
@@ -323,6 +325,16 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	return true;
 }
 
+const REHex::ByteRangeMap<std::string> &REHex::Document::get_data_types() const
+{
+	return types;
+}
+
+void REHex::Document::set_data_type(off_t offset, off_t length, const std::string &type)
+{
+	types.set_range(offset, length, type);
+}
+
 void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
@@ -466,6 +478,8 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		dirty_bytes.set_range(offset, length);
 		set_dirty(true);
 		
+		types.data_inserted(offset, length);
+		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
@@ -498,6 +512,8 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 	{
 		dirty_bytes.data_erased(offset, length);
 		set_dirty(true);
+		
+		types.data_erased(offset, length);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);

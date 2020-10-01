@@ -1912,6 +1912,11 @@ void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
 	_handle_width_change();
 }
 
+wxFont &REHex::DocumentCtrl::get_font()
+{
+	return hex_font;
+}
+
 REHex::DocumentCtrl::Region::Region():
 	indent_offset(0), indent_length(0), indent_depth(0), indent_final(0) {}
 

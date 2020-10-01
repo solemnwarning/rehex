@@ -28,6 +28,7 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "ByteRangeMap.hpp"
 #include "ByteRangeSet.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
@@ -107,6 +108,9 @@ namespace REHex {
 			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
 			bool erase_highlight(off_t off, off_t length);
 			
+			const ByteRangeMap<std::string> &get_data_types() const;
+			void set_data_type(off_t offset, off_t length, const std::string &type);
+			
 			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
 			void undo();
@@ -143,6 +147,7 @@ namespace REHex {
 			
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
+			ByteRangeMap<std::string> types;
 			
 			std::string title;
 			

@@ -123,6 +123,7 @@ APP_OBJS := \
 	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
+	src/DataType.o \
 	src/decodepanel.o \
 	src/DiffWindow.o \
 	src/disassemble.o \

@@ -316,11 +316,12 @@ namespace REHex {
 			
 			void linked_scroll_visit_others(const std::function<void(DocumentCtrl*)> &func);
 			
-			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
-			int _indent_width(int depth);
-			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
+			
+		public:
+			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			int indent_width(int depth);
 			
 			int hf_char_width();
 			int hf_string_width(int length);

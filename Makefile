@@ -117,6 +117,7 @@ APP_OBJS := \
 	src/AboutDialog.o \
 	src/app.o \
 	src/ArtProvider.o \
+	src/BasicDataTypes.o \
 	src/buffer.o \
 	src/BytesPerLineDialog.o \
 	src/ByteRangeSet.o \

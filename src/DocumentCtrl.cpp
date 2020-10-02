@@ -1251,7 +1251,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 			*/
 			
 			int hf_width = hf_char_width();
-			int indent_width = _indent_width(cr->indent_depth);
+			int indent_width = this->indent_width(cr->indent_depth);
 			
 			if(
 				(line_off > 0 || (mouse_y % hf_height) >= (hf_height / 4)) /* Not above top edge. */
@@ -1388,7 +1388,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 			*/
 			
 			int hf_width = hf_char_width();
-			int indent_width = _indent_width(cr->indent_depth);
+			int indent_width = this->indent_width(cr->indent_depth);
 			
 			if(
 				(line_off > 0 || (mouse_y % hf_height) >= (hf_height / 4)) /* Not above top edge. */
@@ -1765,7 +1765,7 @@ void REHex::DocumentCtrl::_make_byte_visible(off_t offset)
 	}
 }
 
-std::list<wxString> REHex::DocumentCtrl::_format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
+std::list<wxString> REHex::DocumentCtrl::format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
 {
 	assert(cols > 0);
 	
@@ -1804,7 +1804,7 @@ std::list<wxString> REHex::DocumentCtrl::_format_text(const wxString &text, unsi
 	return lines;
 }
 
-int REHex::DocumentCtrl::_indent_width(int depth)
+int REHex::DocumentCtrl::indent_width(int depth)
 {
 	return hf_char_width() * depth;
 }
@@ -2030,7 +2030,7 @@ int REHex::DocumentCtrl::DataRegion::calc_width_for_bytes(DocumentCtrl &doc_ctrl
 {
 	return doc_ctrl.offset_column_width
 		/* indentation */
-		+ (doc_ctrl._indent_width(indent_depth) * 2)
+		+ (doc_ctrl.indent_width(indent_depth) * 2)
 		
 		/* hex data */
 		+ doc_ctrl.hf_string_width(line_bytes * 2)
@@ -2043,7 +2043,7 @@ int REHex::DocumentCtrl::DataRegion::calc_width_for_bytes(DocumentCtrl &doc_ctrl
 
 void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
 {
-	int indent_width = doc._indent_width(indent_depth);
+	int indent_width = doc.indent_width(indent_depth);
 	
 	offset_text_x = indent_width;
 	hex_text_x    = indent_width + doc.offset_column_width;
@@ -2778,14 +2778,14 @@ void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc, w
 		return;
 	}
 	
-	unsigned int row_chars = doc.hf_char_at_x(doc.virtual_width - (2 * doc._indent_width(indent_depth))) - 1;
+	unsigned int row_chars = doc.hf_char_at_x(doc.virtual_width - (2 * doc.indent_width(indent_depth))) - 1;
 	if(row_chars == 0)
 	{
 		/* Zero columns of width. Probably still initialising. */
 		this->y_lines = 1 + indent_final;
 	}
 	else{
-		auto comment_lines = _format_text(c_text, row_chars);
+		auto comment_lines = format_text(c_text, row_chars);
 		this->y_lines  = comment_lines.size() + 1 + indent_final;
 	}
 }
@@ -2794,7 +2794,7 @@ void REHex::DocumentCtrl::CommentRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc
 {
 	draw_container(doc, dc, x, y);
 	
-	int indent_width = doc._indent_width(indent_depth);
+	int indent_width = doc.indent_width(indent_depth);
 	x += indent_width;
 	
 	dc.SetFont(doc.hex_font);
@@ -2806,7 +2806,7 @@ void REHex::DocumentCtrl::CommentRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc
 		return;
 	}
 	
-	auto lines = _format_text(c_text, row_chars);
+	auto lines = format_text(c_text, row_chars);
 	
 	if(truncate && lines.size() > 1)
 	{
@@ -2856,7 +2856,7 @@ void REHex::DocumentCtrl::CommentRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc
 wxCursor REHex::DocumentCtrl::CommentRegion::cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px)
 {
 	int hf_width = doc.hf_char_width();
-	int indent_width = doc._indent_width(indent_depth);
+	int indent_width = doc.indent_width(indent_depth);
 	
 	if(
 		(y_lines > 0 || y_px >= (doc.hf_height / 4)) /* Not above top edge. */

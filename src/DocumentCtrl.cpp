@@ -1809,10 +1809,20 @@ int REHex::DocumentCtrl::indent_width(int depth)
 	return hf_char_width() * depth;
 }
 
+int REHex::DocumentCtrl::get_offset_column_width()
+{
+	return offset_column_width;
+}
+
 /* Calculate the width of a character in hex_font. */
 int REHex::DocumentCtrl::hf_char_width()
 {
 	return hf_string_width(1);
+}
+
+int REHex::DocumentCtrl::hf_char_height()
+{
+	return hf_height;
 }
 
 /* Calculate the bounding box for a string which is length characters long when

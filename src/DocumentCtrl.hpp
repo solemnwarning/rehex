@@ -322,8 +322,10 @@ namespace REHex {
 		public:
 			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			int indent_width(int depth);
+			int get_offset_column_width();
 			
 			int hf_char_width();
+			int hf_char_height();
 			int hf_string_width(int length);
 			int hf_char_at_x(int x_px);
 			

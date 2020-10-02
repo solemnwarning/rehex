@@ -65,9 +65,28 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Re
 			x += indent_width;
 			
 			dc.SetFont(doc_ctrl.get_font());
+			dc.SetBackgroundMode(wxSOLID);
 			
 			dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG]);
-			dc.SetBackgroundMode(wxTRANSPARENT);
+			dc.SetTextBackground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
+			
+			if(doc_ctrl.get_show_offsets())
+			{
+				/* Draw the offsets to the left */
+				
+				std::string offset_str = REHex::format_offset(d_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+				
+				dc.DrawText(offset_str, x, y);
+				
+				x += doc_ctrl.get_offset_column_width();
+				
+				int offset_vl_x = x - (doc_ctrl.hf_char_width() / 2);
+				
+				wxPen norm_fg_1px((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG], 1);
+				
+				dc.SetPen(norm_fg_1px);
+				dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
+			}
 			
 			std::vector<unsigned char> data = doc->read_data(d_offset, d_length);
 			assert(data.size() == sizeof(T));

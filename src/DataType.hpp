@@ -60,7 +60,10 @@ namespace REHex
 			
 			RegionFactoryFunction region_factory;
 			
-			DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory);
+			off_t min_size;
+			off_t max_size;
+			
+			DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, off_t min_size = -1, off_t max_size = -1);
 			~DataTypeRegistration();
 			
 			DataTypeRegistration(const DataTypeRegistration &src) = delete;

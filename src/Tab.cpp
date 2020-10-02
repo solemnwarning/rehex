@@ -30,19 +30,22 @@
 #include "EditCommentDialog.hpp"
 #include "Tab.hpp"
 
-class U32DR: public REHex::DocumentCtrl::Region
+template<typename T> class XXDR: public REHex::DocumentCtrl::Region
 {
 	private:
 		REHex::SharedDocumentPointer doc;
 		off_t d_offset, d_length;
 		
+		const char *fmt;
+		
 	public:
-		U32DR(REHex::SharedDocumentPointer &doc, off_t offset, off_t length):
+		XXDR(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, const char *fmt):
 			doc(doc),
 			d_offset(offset),
-			d_length(length)
+			d_length(length),
+			fmt(fmt)
 		{
-			assert(length == 4);
+			assert(length == sizeof(T));
 			
 			indent_offset = offset;
 		}
@@ -70,10 +73,10 @@ class U32DR: public REHex::DocumentCtrl::Region
 			dc.SetBackgroundMode(wxTRANSPARENT);
 			
 			std::vector<unsigned char> data = this->doc->read_data(d_offset, d_length);
-			assert(data.size() == 4);
+			assert(data.size() == sizeof(T));
 			
 			char buf[64];
-			sprintf(buf, "U32: %u\n", *(unsigned int*)(data.data()));
+			sprintf(buf, fmt, *(const T*)(data.data()));
 			
 			dc.DrawText(buf, x, y);
 		}
@@ -81,12 +84,18 @@ class U32DR: public REHex::DocumentCtrl::Region
 		// virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 };
 
-static REHex::DocumentCtrl::Region *U32DR_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
+static REHex::DocumentCtrl::Region *U16DR_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
 {
-	return new U32DR(doc, offset, length);
+	return new XXDR<uint16_t>(doc, offset, length, "%hu <uint16_t>");
 }
 
-REHex::DataTypeRegistration u32dtr("u32", "unsigned 32-bit", &U32DR_factory);
+static REHex::DocumentCtrl::Region *U32DR_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
+{
+	return new XXDR<uint32_t>(doc, offset, length, "%u <uint32_t>");
+}
+
+REHex::DataTypeRegistration u16dtr("u16", "unsigned 16-bit", &U16DR_factory, sizeof(uint16_t), sizeof(uint16_t));
+REHex::DataTypeRegistration u32dtr("u32", "unsigned 32-bit", &U32DR_factory, sizeof(uint32_t), sizeof(uint32_t));
 
 /* Is the given byte a printable 7-bit ASCII character? */
 static bool isasciiprint(int c)
@@ -968,6 +977,13 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
 		{
+			if((dt->second->min_size >= 0 && selection_length < dt->second->min_size)
+				|| (dt->second->max_size >= 0 && selection_length > dt->second->max_size))
+			{
+				/* Selection is too short/long for this type. */
+				continue;
+			}
+			
 			wxMenuItem *itm = menu.Append(wxID_ANY, dt->second->label);
 			
 			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
@@ -1366,6 +1382,11 @@ void REHex::Tab::repopulate_regions()
 		
 		if(dtr != NULL)
 		{
+			if(dr_length > dtr->max_size)
+			{
+				dr_length = dtr->max_size;
+			}
+			
 			regions.push_back(dtr->region_factory(doc, next_data, dr_length));
 		}
 		else{

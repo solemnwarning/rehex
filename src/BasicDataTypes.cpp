@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <functional>
 #include <inttypes.h>
 #include <stdint.h>
@@ -24,6 +25,11 @@
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "SharedDocumentPointer.hpp"
+
+/* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
+ * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
+*/
+#include <portable_endian.h>
 
 template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Region
 {

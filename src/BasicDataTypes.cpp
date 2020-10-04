@@ -31,11 +31,10 @@
 */
 #include <portable_endian.h>
 
-template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Region
+template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::GenericDataRegion
 {
 	private:
 		REHex::SharedDocumentPointer doc;
-		off_t d_offset, d_length;
 		
 		std::string type_label;
 		
@@ -43,9 +42,8 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Re
 		
 	public:
 		NumericDataTypeRegion(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, const std::function<std::string(const T*)> &to_string, const std::string &type_label):
+			GenericDataRegion(offset, length),
 			doc(doc),
-			d_offset(offset),
-			d_length(length),
 			type_label(type_label),
 			to_string(to_string)
 		{
@@ -107,6 +105,26 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Re
 			
 			std::string type_string = std::string("<") + type_label + ">";
 			dc.DrawText(type_string, x, y);
+		}
+		
+		virtual off_t offset_at_xy_hex(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
+		{
+			return -1;
+		}
+		
+		virtual off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
+		{
+			return -1;
+		}
+		
+		virtual off_t offset_near_xy_hex(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
+		{
+			return d_offset;
+		}
+		
+		virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
+		{
+			return d_offset;
 		}
 };
 

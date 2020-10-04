@@ -75,7 +75,23 @@ namespace REHex {
 				friend DocumentCtrl;
 			};
 			
-			class DataRegion: public Region
+			class GenericDataRegion: public Region
+			{
+				protected:
+					GenericDataRegion(off_t d_offset, off_t d_length);
+					
+				public:
+					const off_t d_offset;
+					const off_t d_length;
+					
+					virtual off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+					virtual off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+					
+					virtual off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+					virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+			};
+			
+			class DataRegion: public GenericDataRegion
 			{
 				public:
 					struct Highlight
@@ -107,9 +123,6 @@ namespace REHex {
 					};
 					
 				protected:
-					off_t d_offset;
-					off_t d_length;
-					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
@@ -128,11 +141,11 @@ namespace REHex {
 					virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 					
-					off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-					off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					virtual off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
+					virtual off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
 					
-					off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-					off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					virtual off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
+					virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					
@@ -300,9 +313,9 @@ namespace REHex {
 			
 			void _set_cursor_position(off_t position, Document::CursorState cursor_state);
 			
-			DataRegion *_data_region_by_offset(off_t offset);
-			DataRegion *_prev_data_region(DataRegion *dr);
-			DataRegion *_next_data_region(DataRegion *dr);
+			GenericDataRegion *_data_region_by_offset(off_t offset);
+			GenericDataRegion *_prev_data_region(GenericDataRegion *dr);
+			GenericDataRegion *_next_data_region(GenericDataRegion *dr);
 			
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);

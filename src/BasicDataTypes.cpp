@@ -37,13 +37,16 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Re
 		REHex::SharedDocumentPointer doc;
 		off_t d_offset, d_length;
 		
+		std::string type_label;
+		
 		std::function<std::string(const T*)> to_string;
 		
 	public:
-		NumericDataTypeRegion(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, const std::function<std::string(const T*)> &to_string):
+		NumericDataTypeRegion(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, const std::function<std::string(const T*)> &to_string, const std::string &type_label):
 			doc(doc),
 			d_offset(offset),
 			d_length(length),
+			type_label(type_label),
 			to_string(to_string)
 		{
 			assert(length == sizeof(T));
@@ -99,6 +102,11 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Re
 			
 			std::string data_string = to_string((const T*)(data.data()));
 			dc.DrawText(data_string, x, y);
+			
+			x += doc_ctrl.hf_string_width(22);
+			
+			std::string type_string = std::string("<") + type_label + ">";
+			dc.DrawText(type_string, x, y);
 		}
 };
 
@@ -107,10 +115,10 @@ static REHex::DocumentCtrl::Region *u16le_factory(REHex::SharedDocumentPointer &
 	return new NumericDataTypeRegion<uint16_t>(doc, offset, length, [](const uint16_t *data)
 	{
 		char buf[128];
-		snprintf(buf, sizeof(buf), "%" PRIu16 " <uint16>", le16toh(*data));
+		snprintf(buf, sizeof(buf), "%" PRIu16, le16toh(*data));
 		
 		return std::string(buf);
-	});
+	}, "unsigned 16-bit (little endian)");
 }
 
 static REHex::DocumentCtrl::Region *u16be_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
@@ -118,10 +126,10 @@ static REHex::DocumentCtrl::Region *u16be_factory(REHex::SharedDocumentPointer &
 	return new NumericDataTypeRegion<uint16_t>(doc, offset, length, [](const uint16_t *data)
 	{
 		char buf[128];
-		snprintf(buf, sizeof(buf), "%" PRIu16 " <uint16>", be16toh(*data));
+		snprintf(buf, sizeof(buf), "%" PRIu16, be16toh(*data));
 		
 		return std::string(buf);
-	});
+	}, "unsigned 16-bit (big endian)");
 }
 
 static REHex::DocumentCtrl::Region *s16le_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
@@ -129,10 +137,10 @@ static REHex::DocumentCtrl::Region *s16le_factory(REHex::SharedDocumentPointer &
 	return new NumericDataTypeRegion<int16_t>(doc, offset, length, [](const int16_t *data)
 	{
 		char buf[128];
-		snprintf(buf, sizeof(buf), "%" PRId16 " <int16>", le16toh(*data));
+		snprintf(buf, sizeof(buf), "%" PRId16, le16toh(*data));
 		
 		return std::string(buf);
-	});
+	}, "signed 16-bit (little endian)");
 }
 
 static REHex::DocumentCtrl::Region *s16be_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
@@ -140,10 +148,10 @@ static REHex::DocumentCtrl::Region *s16be_factory(REHex::SharedDocumentPointer &
 	return new NumericDataTypeRegion<int16_t>(doc, offset, length, [](const int16_t *data)
 	{
 		char buf[128];
-		snprintf(buf, sizeof(buf), "%" PRIu16 " <int16>", be16toh(*data));
+		snprintf(buf, sizeof(buf), "%" PRIu16, be16toh(*data));
 		
 		return std::string(buf);
-	});
+	}, "signed 16-bit (big endian)");
 }
 
 REHex::DataTypeRegistration u16le_dtr("u16le", "unsigned 16-bit (little endian)", &u16le_factory, sizeof(uint16_t), sizeof(uint16_t));

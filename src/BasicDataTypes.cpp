@@ -98,8 +98,85 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Ge
 			std::vector<unsigned char> data = doc->read_data(d_offset, d_length);
 			assert(data.size() == sizeof(T));
 			
-			std::string data_string = to_string((const T*)(data.data()));
-			dc.DrawText(data_string, x, y);
+			off_t cursor_pos = doc->get_cursor_position();
+			
+			off_t selection_off, selection_length;
+			std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+			
+			off_t selection_end = selection_off + selection_length;
+			off_t d_end = d_offset + d_length;
+			
+			if(selection_length > 0
+				&& (selection_off != d_offset || selection_length != d_length)
+				&& selection_off < d_end && d_offset < selection_end)
+			{
+				/* Selection encompasses *some* of our bytes and/or stretches
+				 * beyond either end. Render the underlying hex bytes.
+				*/
+				
+				unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+				unsigned int col = 0;
+				
+				for(size_t i = 0; i < data.size(); ++i)
+				{
+					if(i > 0 && (i % bytes_per_group) == 0)
+					{
+						++col;
+					}
+					
+					const char *nibble_to_hex = "0123456789ABCDEF";
+					
+					const char hex_str[] = {
+						nibble_to_hex[ (data[i] & 0xF0) >> 4 ],
+						nibble_to_hex[ data[i] & 0x0F ],
+						'\0'
+					};
+					
+					if(selection_off <= (d_offset + (off_t)(i)) && selection_end > (d_offset + (off_t)(i)))
+					{
+						dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_SELECTED_TEXT_FG]);
+						dc.SetTextBackground((*REHex::active_palette)[REHex::Palette::PAL_SELECTED_TEXT_BG]);
+					}
+					else{
+						dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG]);
+						dc.SetTextBackground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
+					}
+					
+					dc.DrawText(hex_str, x + doc_ctrl.hf_string_width(col), y);
+					col += 2;
+				}
+			}
+			else if(cursor_pos == d_offset && doc_ctrl.get_cursor_visible())
+			{
+				/* Invert colour for cursor position/blink. */
+				
+				dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_INVERT_TEXT_FG]);
+				dc.SetTextBackground((*REHex::active_palette)[REHex::Palette::PAL_INVERT_TEXT_BG]);
+				
+				std::string data_string = to_string((const T*)(data.data()));
+				dc.DrawText(data_string, x, y);
+			}
+			else if(selection_length > 0 && (selection_off == d_offset && selection_length == d_length))
+			{
+				/* Selection matches our range exactly. Render value using selected
+				 * text colours.
+				*/
+				
+				dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_SELECTED_TEXT_FG]);
+				dc.SetTextBackground((*REHex::active_palette)[REHex::Palette::PAL_SELECTED_TEXT_BG]);
+				
+				std::string data_string = to_string((const T*)(data.data()));
+				dc.DrawText(data_string, x, y);
+			}
+			else{
+				/* No data in our range is selected. Render normally. */
+				
+				std::string data_string = to_string((const T*)(data.data()));
+				dc.DrawText(data_string, x, y);
+			}
+			
+			dc.SetTextForeground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG]);
+			dc.SetTextBackground((*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
 			
 			x += doc_ctrl.hf_string_width(22);
 			

@@ -1822,6 +1822,11 @@ int REHex::DocumentCtrl::get_offset_column_width()
 	return offset_column_width;
 }
 
+bool REHex::DocumentCtrl::get_cursor_visible()
+{
+	return cursor_visible;
+}
+
 /* Calculate the width of a character in hex_font. */
 int REHex::DocumentCtrl::hf_char_width()
 {

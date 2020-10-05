@@ -89,6 +89,54 @@ namespace REHex {
 					
 					virtual off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
 					virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+					
+					static const off_t CURSOR_PREV_REGION = -2;
+					static const off_t CURSOR_NEXT_REGION = -3;
+					
+					/**
+					 * @brief Returns the offset of the cursor position left of the given offset. May return CURSOR_PREV_REGION.
+					*/
+					virtual off_t cursor_left_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position right of the given offset. May return CURSOR_NEXT_REGION.
+					*/
+					virtual off_t cursor_right_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position up from the given offset. May return CURSOR_PREV_REGION.
+					*/
+					virtual off_t cursor_up_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position down from the given offset. May return CURSOR_NEXT_REGION.
+					*/
+					virtual off_t cursor_down_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position at the start of the line from the given offset.
+					*/
+					virtual off_t cursor_home_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position at the end of the line from the given offset.
+					*/
+					virtual off_t cursor_end_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the screen column index of the given offset within the region.
+					*/
+					virtual int cursor_column(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position nearest the given column on the first screen line of the region.
+					*/
+					virtual off_t first_row_nearest_column(int column) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position nearest the given column on the last screen line of the region.
+					*/
+					virtual off_t last_row_nearest_column(int column) = 0;
 			};
 			
 			class DataRegion: public GenericDataRegion
@@ -146,6 +194,17 @@ namespace REHex {
 					
 					virtual off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
 					virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
+					
+					virtual off_t cursor_left_from(off_t pos) override;
+					virtual off_t cursor_right_from(off_t pos) override;
+					virtual off_t cursor_up_from(off_t pos) override;
+					virtual off_t cursor_down_from(off_t pos) override;
+					virtual off_t cursor_home_from(off_t pos) override;
+					virtual off_t cursor_end_from(off_t pos) override;
+					
+					virtual int cursor_column(off_t pos) override;
+					virtual off_t first_row_nearest_column(int column) override;
+					virtual off_t last_row_nearest_column(int column) override;
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					

@@ -885,12 +885,10 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		
 		if(key == WXK_LEFT)
 		{
-			if(cursor_pos > cur_region->d_offset)
+			new_cursor_pos = cur_region->cursor_left_from(new_cursor_pos);
+			
+			if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
 			{
-				/* Cursor is past the start of this region. Move back one. */
-				new_cursor_pos = cursor_pos - 1;
-			}
-			else{
 				/* Cursor is at the start of this region. Move to the last byte in
 				 * the previous region.
 				*/
@@ -898,116 +896,85 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 				GenericDataRegion *prev_region = _prev_data_region(cur_region);
 				if(prev_region != NULL)
 				{
-					new_cursor_pos = (prev_region->d_offset + prev_region->d_length) - 1;
+					new_cursor_pos = prev_region->last_row_nearest_column(INT_MAX);
+					assert(new_cursor_pos >= 0);
 				}
+				else{
+					/* No previous region. Nowhere to go. */
+					new_cursor_pos = cursor_pos;
+				}
+			}
+			else{
+				assert(new_cursor_pos >= 0);
 			}
 		}
 		else if(key == WXK_RIGHT)
 		{
-			GenericDataRegion *next_region = _next_data_region(cur_region);
+			new_cursor_pos = cur_region->cursor_right_from(new_cursor_pos);
 			
-			if(cursor_pos < (cur_region->d_offset + cur_region->d_length) - !(get_insert_mode() && next_region == NULL))
+			if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
 			{
-				/* Move the cursor no farther than the last byte INSIDE this
-				 * region, or one byte past the end if it is the final region AND
-				 * we are in insert mode.
-				*/
-				
-				new_cursor_pos = cursor_pos + 1;
-			}
-			else if(next_region != NULL)
-			{
-				/* Move the cursor to the first byte in the next region. */
-				new_cursor_pos = next_region->d_offset;
-			}
-		}
-#if 0
-		else if(key == WXK_UP)
-		{
-			off_t offset_within_cur = cursor_pos - cur_region->d_offset;
-			
-			GenericDataRegion *prev_region;
-			if(offset_within_cur >= cur_region->bytes_per_line_actual)
-			{
-				/* We are at least on the second line of the current
-				 * region, can jump to the previous one.
-				*/
-				new_cursor_pos = cursor_pos - cur_region->bytes_per_line_actual;
-			}
-			else if((prev_region = _prev_data_region(cur_region)) != NULL)
-			{
-				/* We are on the first line of the current region, but there is at
-				 * last one region before us.
-				*/
-				
-				/* How many bytes on the last line of prev_region? */
-				off_t pr_last_line_len = (prev_region->d_length % prev_region->bytes_per_line_actual);
-				if(pr_last_line_len == 0)
+				GenericDataRegion *next_region = _next_data_region(cur_region);
+				if(next_region != NULL)
 				{
-					pr_last_line_len = std::min(prev_region->d_length, (off_t)(prev_region->bytes_per_line_actual));
-				}
-				
-				if(pr_last_line_len > offset_within_cur)
-				{
-					/* The last line of the previous block is at least long
-					 * enough to have a byte above the current cursor position
-					 * on the screen.
-					*/
-					
-					off_t pr_last_line_off = prev_region->d_length - pr_last_line_len;
-					new_cursor_pos = prev_region->d_offset + pr_last_line_off + offset_within_cur;
+					new_cursor_pos = next_region->first_row_nearest_column(0);
+					assert(new_cursor_pos >= 0);
 				}
 				else{
-					/* The last line of the previous block falls short of the
-					 * horizontal position of the cursor, just jump to the end
-					 * of it.
-					*/
-					
-					new_cursor_pos = (prev_region->d_offset + prev_region->d_length) - 1;
+					/* No previous region. Nowhere to go. */
+					new_cursor_pos = cursor_pos;
 				}
+			}
+			else{
+				assert(new_cursor_pos >= 0);
+			}
+		}
+		else if(key == WXK_UP)
+		{
+			new_cursor_pos = cur_region->cursor_up_from(new_cursor_pos);
+			
+			if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
+			{
+				int cur_column = cur_region->cursor_column(cursor_pos);
+				
+				GenericDataRegion *prev_region = _prev_data_region(cur_region);
+				if(prev_region != NULL)
+				{
+					new_cursor_pos = prev_region->last_row_nearest_column(cur_column);
+					assert(new_cursor_pos >= 0);
+				}
+				else{
+					/* No previous region. Nowhere to go. */
+					new_cursor_pos = cursor_pos;
+				}
+			}
+			else{
+				assert(new_cursor_pos >= 0);
 			}
 		}
 		else if(key == WXK_DOWN)
 		{
-			off_t offset_within_cur = cursor_pos - cur_region->d_offset;
-			off_t remain_within_cur = cur_region->d_length - offset_within_cur;
+			new_cursor_pos = cur_region->cursor_down_from(new_cursor_pos);
 			
-			off_t last_line_within_cur = cur_region->d_length
-				- (((cur_region->d_length % cur_region->bytes_per_line_actual) == 0)
-					? cur_region->bytes_per_line_actual
-					: (cur_region->d_length % cur_region->bytes_per_line_actual));
-			
-			if(remain_within_cur > cur_region->bytes_per_line_actual)
+			if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
 			{
-				/* There is at least one more line's worth of bytes in the
-				 * current region, can just skip ahead.
-				*/
-				new_cursor_pos = cursor_pos + cur_region->bytes_per_line_actual;
-			}
-			else if(offset_within_cur < last_line_within_cur)
-			{
-				/* There is another line in the current region which falls short of
-				 * the cursor's horizontal position, jump to its end.
-				*/
-				new_cursor_pos = cur_region->d_offset + cur_region->d_length - 1;
-			}
-			else{
-				GenericDataRegion *next_region = _next_data_region(cur_region);
+				int cur_column = cur_region->cursor_column(cursor_pos);
 				
+				GenericDataRegion *next_region = _next_data_region(cur_region);
 				if(next_region != NULL)
 				{
-					/* Move the cursor down to the first line in the next region. */
-					new_cursor_pos = next_region->d_offset + (offset_within_cur % cur_region->bytes_per_line_actual);
-					
-					/* Clamp to the end of the next region. */
-					new_cursor_pos = std::min((next_region->d_offset + next_region->d_length - 1), new_cursor_pos);
-					
-					/* Clamp to the end of the first line. */
-					new_cursor_pos = std::min((next_region->d_offset + next_region->bytes_per_line_actual - 1), new_cursor_pos);
+					new_cursor_pos = next_region->first_row_nearest_column(cur_column);
+					assert(new_cursor_pos >= 0);
+				}
+				else{
+					/* No previous region. Nowhere to go. */
+					new_cursor_pos = cursor_pos;
 				}
 			}
+			else{
+				assert(new_cursor_pos >= 0);
+			}
 		}
-#endif
 		else if(key == WXK_HOME && (modifiers & wxMOD_CONTROL))
 		{
 			/* Move cursor to first byte in first region. */
@@ -1020,17 +987,11 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			
 			new_cursor_pos = first_dr->d_offset;
 		}
-#if 0
 		else if(key == WXK_HOME)
 		{
 			/* Move cursor to start of line. */
-			
-			off_t offset_within_cur  = cursor_pos - cur_region->d_offset;
-			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
-			
-			new_cursor_pos = cursor_pos - offset_within_line;
+			new_cursor_pos = cur_region->cursor_home_from(new_cursor_pos);
 		}
-#endif
 		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
 		{
 			/* Move cursor to last byte in last region, or one past the end if we are
@@ -1045,19 +1006,11 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			
 			new_cursor_pos = (last_dr->d_offset + last_dr->d_length) - (off_t)(!insert_mode);
 		}
-#if 0
 		else if(key == WXK_END)
 		{
 			/* Move cursor to end of line. */
-			
-			off_t offset_within_cur  = cursor_pos - cur_region->d_offset;
-			off_t offset_within_line = (offset_within_cur % cur_region->bytes_per_line_actual);
-			
-			new_cursor_pos = std::min(
-				(cursor_pos + ((cur_region->bytes_per_line_actual - offset_within_line) - 1)),
-				((cur_region->d_offset + cur_region->d_length) - 1));
+			new_cursor_pos = cur_region->cursor_end_from(new_cursor_pos);
 		}
-#endif
 		
 		_set_cursor_position(new_cursor_pos, Document::CSTATE_GOTO);
 		
@@ -2753,6 +2706,161 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 		/* Mouse is beyond end of line, return last byte of this line. */
 		return line_data_end - 1;
 	}
+}
+
+off_t REHex::DocumentCtrl::DataRegion::cursor_left_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t new_pos = pos - 1;
+	
+	if(new_pos >= d_offset && new_pos < (d_offset + d_length))
+	{
+		return new_pos;
+	}
+	else{
+		return CURSOR_PREV_REGION;
+	}
+}
+
+off_t REHex::DocumentCtrl::DataRegion::cursor_right_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t new_pos = pos + 1;
+	
+	if(new_pos >= d_offset && new_pos < (d_offset + d_length))
+	{
+		return new_pos;
+	}
+	else{
+		return CURSOR_NEXT_REGION;
+	}
+}
+
+off_t REHex::DocumentCtrl::DataRegion::cursor_up_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t new_pos = pos - bytes_per_line_actual;
+	
+	if(new_pos >= d_offset && new_pos < (d_offset + d_length))
+	{
+		return new_pos;
+	}
+	else{
+		return CURSOR_PREV_REGION;
+	}
+}
+
+off_t REHex::DocumentCtrl::DataRegion::cursor_down_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t new_pos = pos + bytes_per_line_actual;
+	
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
+	off_t last_row_off = visual_offset + ((d_length / bytes_per_line_actual) * bytes_per_line_actual);
+	
+	if(pos < last_row_off && new_pos >= (d_offset + d_length))
+	{
+		/* There is a line below the current line, but it isn't as long as this one, so
+		 * jump to the end of it.
+		*/
+		return d_offset + d_length - 1;
+	}
+	
+	if(new_pos >= d_offset && new_pos < (d_offset + d_length))
+	{
+		return new_pos;
+	}
+	else{
+		return CURSOR_NEXT_REGION;
+	}
+}
+
+off_t REHex::DocumentCtrl::DataRegion::cursor_home_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
+	off_t bytes_from_start_of_visual_line = (pos - visual_offset) % bytes_per_line_actual;
+	
+	off_t new_pos = std::max(
+		(pos - bytes_from_start_of_visual_line),
+		d_offset);
+	
+	return new_pos;
+}
+
+off_t REHex::DocumentCtrl::DataRegion::cursor_end_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
+	off_t bytes_from_start_of_visual_line = (pos - visual_offset) % bytes_per_line_actual;
+	
+	if(bytes_from_start_of_visual_line == (bytes_per_line_actual - 1))
+	{
+		/* Already at the end of the line. */
+		return pos;
+	}
+	
+	off_t new_pos = std::min(
+		(pos + (bytes_per_line_actual - bytes_from_start_of_visual_line) - 1),
+		(d_offset + d_length - 1));
+	
+	return new_pos;
+}
+
+int REHex::DocumentCtrl::DataRegion::cursor_column(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos < (d_offset + d_length));
+	
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
+	off_t region_offset = pos - visual_offset;
+	
+	int column = region_offset % bytes_per_line_actual;
+	
+	return column;
+}
+
+off_t REHex::DocumentCtrl::DataRegion::first_row_nearest_column(int column)
+{
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
+	
+	off_t offset_at_col = visual_offset + column;
+	
+	offset_at_col = std::max(offset_at_col, d_offset);
+	offset_at_col = std::min(offset_at_col, (visual_offset + (off_t)(bytes_per_line_actual) - 1));
+	
+	assert(offset_at_col >= d_offset);
+	assert(offset_at_col < (d_offset + d_length));
+	
+	return offset_at_col;
+}
+
+off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
+{
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
+	off_t last_row_off = visual_offset + ((d_length / bytes_per_line_actual) * bytes_per_line_actual);
+	
+	off_t offset_at_col = last_row_off + column;
+	
+	offset_at_col = std::max(offset_at_col, last_row_off);
+	offset_at_col = std::min(offset_at_col, (d_offset + d_length - 1));
+	
+	assert(offset_at_col >= d_offset);
+	assert(offset_at_col < (d_offset + d_length));
+	
+	return offset_at_col;
 }
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(off_t off) const

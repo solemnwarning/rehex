@@ -203,6 +203,72 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Ge
 		{
 			return d_offset;
 		}
+		
+		virtual off_t cursor_left_from(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return CURSOR_PREV_REGION;
+		}
+		
+		virtual off_t cursor_right_from(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return CURSOR_NEXT_REGION;
+		}
+		
+		virtual off_t cursor_up_from(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return CURSOR_PREV_REGION;
+		}
+		
+		virtual off_t cursor_down_from(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return CURSOR_NEXT_REGION;
+		}
+		
+		virtual off_t cursor_home_from(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return d_offset;
+		}
+		
+		virtual off_t cursor_end_from(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return d_offset;
+		}
+		
+		virtual int cursor_column(off_t pos) override
+		{
+			assert(pos >= d_offset);
+			assert(pos < (d_offset + d_length));
+			
+			return 0;
+		}
+		
+		virtual off_t first_row_nearest_column(int column) override
+		{
+			return d_offset;
+		}
+		
+		virtual off_t last_row_nearest_column(int column) override
+		{
+			return d_offset;
+		}
 };
 
 static REHex::DocumentCtrl::Region *u16le_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)

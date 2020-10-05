@@ -98,7 +98,7 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Ge
 			std::vector<unsigned char> data = doc->read_data(d_offset, d_length);
 			assert(data.size() == sizeof(T));
 			
-			off_t cursor_pos = doc->get_cursor_position();
+			off_t cursor_pos = doc_ctrl.get_cursor_position();
 			
 			off_t selection_off, selection_length;
 			std::tie(selection_off, selection_length) = doc_ctrl.get_selection();

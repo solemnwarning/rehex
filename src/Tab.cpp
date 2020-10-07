@@ -323,6 +323,26 @@ void REHex::Tab::save_view(wxConfig *config)
 		config->Write("selected", (page == v_tools->GetCurrentPage()));
 		tp->save_state(config);
 	}
+
+
+	for (size_t i = 0; i < h_tools->GetPageCount(); ++i)
+	{
+		char path[64];
+		snprintf(path, sizeof(path), "/default-view/htools/panels/0/tab/%u/", (unsigned)(i));
+
+		config->SetPath(path);
+
+		wxWindow* page = h_tools->GetPage(i);
+		assert(page != NULL);
+
+		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
+		assert(tp != NULL);
+
+		config->Write("name", wxString(tp->name()));
+		config->Write("selected", (page == h_tools->GetCurrentPage()));
+		tp->save_state(config);
+	}
+
 }
 
 void REHex::Tab::handle_copy(bool cut)
@@ -1192,6 +1212,32 @@ void REHex::Tab::init_default_tools()
 			}
 		}
 		else{
+			break;
+		}
+	}
+
+
+	for (unsigned int i = 0;; ++i)
+	{
+		char base_p[64];
+		snprintf(base_p, sizeof(base_p), "/default-view/htools/panels/0/tab/%u/", i);
+
+		if (config->HasGroup(base_p))
+		{
+			config->SetPath(base_p);
+
+			std::string name = config->Read("name", "").ToStdString();
+			bool selected = config->ReadBool("selected", false);
+
+			if (ToolPanelRegistry::by_name(name) != NULL)
+			{
+				tool_create(name, selected, config, false);
+			}
+			else {
+				/* TODO: Some kind of warning? */
+			}
+		}
+		else {
 			break;
 		}
 	}

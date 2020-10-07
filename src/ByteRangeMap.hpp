@@ -72,7 +72,7 @@ namespace REHex
 			typedef typename std::vector< std::pair<Range, T> >::const_iterator const_iterator;
 			
 		private:
-			const T default_value;
+			T default_value;
 			
 			std::vector< std::pair<Range, T> > ranges;
 			

@@ -177,6 +177,7 @@ namespace REHex {
 			
 			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
 			void _raise_comment_modified();

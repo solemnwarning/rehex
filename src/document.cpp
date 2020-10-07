@@ -714,6 +714,34 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		has_data = true;
 	}
 	
+	json_t *data_types = json_array();
+	if(json_object_set_new(root, "data_types", data_types) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto dt = this->types.begin(); dt != this->types.end(); ++dt)
+	{
+		if(dt->second == "")
+		{
+			/* Don't bother serialising "this is data" */
+			continue;
+		}
+		
+		json_t *data_type = json_object();
+		if(json_array_append(data_types, data_type) == -1
+			|| json_object_set_new(data_type, "offset", json_integer(dt->first.offset)) == -1
+			|| json_object_set_new(data_type, "length", json_integer(dt->first.length)) == -1
+			|| json_object_set_new(data_type, "type",   json_string(dt->second.c_str())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+		
+		has_data = true;
+	}
+	
 	return root;
 }
 
@@ -791,6 +819,33 @@ REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t
 	return highlights;
 }
 
+REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
+{
+	ByteRangeMap<std::string> types;
+	types.set_range(0, buffer_length, "");
+	
+	json_t *j_types = json_object_get(meta, "data_types");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_types, index, value)
+	{
+		off_t offset     = json_integer_value(json_object_get(value, "offset"));
+		off_t length     = json_integer_value(json_object_get(value, "length"));
+		const char *type = json_string_value(json_object_get(value, "type"));
+		
+		if(offset >= 0 && offset < buffer_length
+			&& length > 0 && (offset + length) <= buffer_length
+			&& type != NULL)
+		{
+			types.set_range(offset, length, type);
+		}
+	}
+	
+	return types;
+}
+
 void REHex::Document::_load_metadata(const std::string &filename)
 {
 	/* TODO: Report errors */
@@ -800,6 +855,7 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	
 	comments = _load_comments(meta, buffer_length());
 	highlights = _load_highlights(meta, buffer_length());
+	types = _load_types(meta, buffer_length());
 	
 	json_decref(meta);
 }

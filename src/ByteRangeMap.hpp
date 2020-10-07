@@ -98,6 +98,13 @@ namespace REHex
 				ranges(begin, end) {}
 			
 			/**
+			 * @brief Search the map for a range encompassing the given offset.
+			 *
+			 * Returns an iterator to the relevant range, end if there isn't one.
+			*/
+			const_iterator get_range(off_t offset) const;
+			
+			/**
 			 * @brief Set a range of bytes in the map.
 			 *
 			 * This method adds a range of bytes to the set. Any existing ranges
@@ -139,6 +146,28 @@ namespace REHex
 			*/
 			void data_erased(off_t offset, off_t length);
 	};
+}
+
+template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::ByteRangeMap<T>::get_range(off_t offset) const
+{
+	/* Starting from the first element after us (or the end of the vector)... */
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + 1), 0), default_value));
+	
+	/* ...check to see if there is an element prior... */
+	if(i != ranges.begin())
+	{
+		--i;
+		
+		/* ...and if it encompasses the given offset... */
+		if(i->first.offset <= offset && (i->first.offset + i->first.length) > offset)
+		{
+			/* ...it does, return it. */
+			return i;
+		}
+	}
+	
+	/* No match. */
+	return end();
 }
 
 template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t length, const T &value)

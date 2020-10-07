@@ -46,6 +46,34 @@ TEST(ByteRangeMap, EmptyMap)
 	EXPECT_RANGES();
 }
 
+TEST(ByteRangeMap, GetRange)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "veil"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  1), "suggest"),
+		std::make_pair(ByteRangeMap<std::string>::Range(42,  1), "rebel"),
+	};
+	
+	ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	EXPECT_EQ(brm.get_range(9),  brm.end());
+	EXPECT_EQ(brm.get_range(10), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(29), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(30), brm.end());
+	EXPECT_EQ(brm.get_range(39), brm.end());
+	EXPECT_EQ(brm.get_range(40), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range(41), brm.end());
+	EXPECT_EQ(brm.get_range(42), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range(43), brm.end());
+}
+
+TEST(ByteRangeMap, GetRangeEmptyMap)
+{
+	ByteRangeMap<std::string> brm;
+	
+	EXPECT_EQ(brm.get_range(0),  brm.end());
+}
+
 TEST(ByteRangeMap, SetOneRange)
 {
 	ByteRangeMap<std::string> brm;

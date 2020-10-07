@@ -97,8 +97,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	selection_off     = 0;
 	selection_length  = 0;
 	cursor_visible    = true;
-	mouse_down_in_hex = false;
-	mouse_down_in_ascii = false;
+	mouse_down_area   = GenericDataRegion::SA_NONE;
 	mouse_shift_initial = -1;
 	cursor_state      = Document::CSTATE_HEX;
 	
@@ -1106,101 +1105,65 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		REHex::DocumentCtrl::DataRegion    *dr = dynamic_cast<REHex::DocumentCtrl::DataRegion*>   (*region);
-		REHex::DocumentCtrl::CommentRegion *cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region);
+		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
+		CommentRegion     *cr = dynamic_cast<CommentRegion*>    (*region);
 		
 		if(dr != NULL)
 		{
-			if(rel_x < offset_column_width)
+			off_t clicked_offset;
+			GenericDataRegion::ScreenArea clicked_area;
+			
+			std::tie(clicked_offset, clicked_area) = dr->offset_near_xy(*this, rel_x, line_off, GenericDataRegion::SA_NONE);
+			
+			if(clicked_offset >= 0)
 			{
-				/* Click was within the offset area */
-			}
-			else if(show_ascii && rel_x >= dr->ascii_text_x)
-			{
-				/* Click was within the ASCII area */
+				assert(clicked_area != GenericDataRegion::SA_NONE);
 				
-				off_t clicked_offset = dr->offset_near_xy_ascii(*this, rel_x, line_off);
-				if(clicked_offset >= 0)
+				off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
+				
+				switch(clicked_area)
 				{
-					/* Clicked on a character */
-					
-					if(event.ShiftDown())
-					{
-						off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
+					case GenericDataRegion::SA_HEX:
+						_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
+						break;
+						
+					case GenericDataRegion::SA_ASCII:
 						_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
+						break;
 						
-						if(clicked_offset > old_position)
-						{
-							set_selection(old_position, (clicked_offset - old_position));
-						}
-						else{
-							set_selection(clicked_offset, (old_position - clicked_offset));
-						}
-						
-						mouse_shift_initial  = old_position;
-						mouse_down_at_offset = clicked_offset;
-						mouse_down_at_x      = rel_x;
-						mouse_down_in_ascii  = true;
+					default:
+						_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
+						break;
+				}
+				
+				if(event.ShiftDown())
+				{
+					if(clicked_offset > old_position)
+					{
+						set_selection(old_position, (clicked_offset - old_position));
 					}
 					else{
-						_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
-						
-						clear_selection();
-						
-						mouse_down_at_offset = clicked_offset;
-						mouse_down_at_x      = rel_x;
-						mouse_down_in_ascii  = true;
+						set_selection(clicked_offset, (old_position - clicked_offset));
 					}
 					
-					CaptureMouse();
-					mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
-					
-					/* TODO: Limit paint to affected area */
-					Refresh();
+					mouse_shift_initial  = old_position;
+					mouse_down_at_offset = clicked_offset;
+					mouse_down_at_x      = rel_x;
+					mouse_down_area      = clicked_area;
 				}
-			}
-			else{
-				/* Click was within the hex area */
+				else{
+					clear_selection();
+					
+					mouse_down_at_offset = clicked_offset;
+					mouse_down_at_x      = rel_x;
+					mouse_down_area      = clicked_area;
+				}
 				
-				off_t clicked_offset = dr->offset_near_xy_hex(*this, rel_x, line_off);
-				if(clicked_offset >= 0)
-				{
-					/* Clicked on a byte */
-					
-					if(event.ShiftDown())
-					{
-						off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position());
-						_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
-						
-						if(clicked_offset > old_position)
-						{
-							set_selection(old_position, (clicked_offset - old_position));
-						}
-						else{
-							set_selection(clicked_offset, (old_position - clicked_offset));
-						}
-						
-						mouse_shift_initial  = old_position;
-						mouse_down_at_offset = old_position;
-						mouse_down_at_x      = rel_x;
-						mouse_down_in_hex    = true;
-					}
-					else{
-						_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
-						
-						clear_selection();
-						
-						mouse_down_at_offset = clicked_offset;
-						mouse_down_at_x      = rel_x;
-						mouse_down_in_hex    = true;
-					}
-					
-					CaptureMouse();
-					mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
-					
-					/* TODO: Limit paint to affected area */
-					Refresh();
-				}
+				CaptureMouse();
+				mouse_select_timer.Start(MOUSE_SELECT_INTERVAL, wxTIMER_CONTINUOUS);
+				
+				/* TODO: Limit paint to affected area */
+				Refresh();
 			}
 		}
 		else if(cr != NULL)
@@ -1230,14 +1193,13 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 
 void REHex::DocumentCtrl::OnLeftUp(wxMouseEvent &event)
 {
-	if(mouse_down_in_hex || mouse_down_in_ascii)
+	if(mouse_down_area != GenericDataRegion::SA_NONE)
 	{
 		mouse_select_timer.Stop();
 		ReleaseMouse();
 	}
 	
-	mouse_down_in_hex   = false;
-	mouse_down_in_ascii = false;
+	mouse_down_area = GenericDataRegion::SA_NONE;
 }
 
 void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
@@ -1248,13 +1210,12 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	 * windows...
 	*/
 	
-	if(mouse_down_in_hex || mouse_down_in_ascii)
+	if(mouse_down_area != GenericDataRegion::SA_NONE)
 	{
 		mouse_select_timer.Stop();
 		ReleaseMouse();
 		
-		mouse_down_in_hex   = false;
-		mouse_down_in_ascii = false;
+		mouse_down_area = GenericDataRegion::SA_NONE;
 	}
 	
 	wxClientDC dc(this);
@@ -1286,51 +1247,35 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		REHex::DocumentCtrl::DataRegion *dr = dynamic_cast<REHex::DocumentCtrl::DataRegion*>(*region);
+		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
 		if(dr != NULL)
 		{
-			if(rel_x < offset_column_width)
+			off_t clicked_offset;
+			GenericDataRegion::ScreenArea clicked_area;
+			
+			std::tie(clicked_offset, clicked_area) = dr->offset_at_xy(*this, rel_x, line_off);
+			
+			if(clicked_offset >= 0)
 			{
-				/* Click was within the offset area */
-			}
-			else if(show_ascii && rel_x >= dr->ascii_text_x)
-			{
-				/* Click was within the ASCII area */
-				
-				off_t clicked_offset = dr->offset_at_xy_ascii(*this, rel_x, line_off);
-				if(clicked_offset >= 0)
+				if(clicked_area == GenericDataRegion::SA_HEX)
 				{
-					/* Clicked on a character */
-					
-					_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
-					
-					if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
-					{
-						clear_selection();
-					}
-					
-					/* TODO: Limit paint to affected area */
-					Refresh();
-				}
-			}
-			else{
-				/* Click was within the hex area */
-				
-				off_t clicked_offset = dr->offset_at_xy_hex(*this, rel_x, line_off);
-				if(clicked_offset >= 0)
-				{
-					/* Clicked on a byte */
-					
 					_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
-					
-					if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
-					{
-						clear_selection();
-					}
-					
-					/* TODO: Limit paint to affected area */
-					Refresh();
 				}
+				else if(clicked_area == GenericDataRegion::SA_ASCII)
+				{
+					_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
+				}
+				else{
+					_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
+				}
+				
+				if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
+				{
+					clear_selection();
+				}
+				
+				/* TODO: Limit paint to affected area */
+				Refresh();
 			}
 			
 			wxCommandEvent event(DATA_RIGHT_CLICK, GetId());
@@ -1415,7 +1360,7 @@ void REHex::DocumentCtrl::OnSelectTick(wxTimerEvent &event)
 
 void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 {
-	if(!mouse_down_in_ascii && !mouse_down_in_hex)
+	if(mouse_down_area == GenericDataRegion::SA_NONE)
 	{
 		return;
 	}
@@ -1483,72 +1428,37 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		CommentRegion *cr;
 		if(dr != NULL)
 		{
-			if(mouse_down_in_hex)
+			off_t select_to_offset = dr->offset_near_xy(*this, rel_x, line_off, mouse_down_area).first;
+			
+			if(select_to_offset >= 0)
 			{
-				/* Started dragging in hex area */
+				off_t new_sel_off, new_sel_len;
 				
-				off_t select_to_offset = dr->offset_near_xy_hex(*this, rel_x, line_off);
-				if(select_to_offset >= 0)
+				if(select_to_offset >= mouse_down_at_offset)
 				{
-					off_t new_sel_off, new_sel_len;
-					
-					if(select_to_offset >= mouse_down_at_offset)
-					{
-						new_sel_off = mouse_down_at_offset;
-						new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
-					}
-					else{
-						new_sel_off = select_to_offset;
-						new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
-					}
-					
-					if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < hf_char_width())
-					{
-						clear_selection();
-					}
-					else{
-						set_selection(new_sel_off, new_sel_len);
-					}
-					
-					/* TODO: Limit paint to affected area */
-					Refresh();
+					new_sel_off = mouse_down_at_offset;
+					new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
 				}
-			}
-			else if(mouse_down_in_ascii)
-			{
-				/* Started dragging in ASCII area */
+				else{
+					new_sel_off = select_to_offset;
+					new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+				}
 				
-				off_t select_to_offset = dr->offset_near_xy_ascii(*this, rel_x, line_off);
-				if(select_to_offset >= 0)
+				if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
 				{
-					off_t new_sel_off, new_sel_len;
-					
-					if(select_to_offset >= mouse_down_at_offset)
-					{
-						new_sel_off = mouse_down_at_offset;
-						new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
-					}
-					else{
-						new_sel_off = select_to_offset;
-						new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
-					}
-					
-					if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
-					{
-						clear_selection();
-					}
-					else{
-						set_selection(new_sel_off, new_sel_len);
-					}
-					
-					/* TODO: Limit paint to affected area */
-					Refresh();
+					clear_selection();
 				}
+				else{
+					set_selection(new_sel_off, new_sel_len);
+				}
+				
+				/* TODO: Limit paint to affected area */
+				Refresh();
 			}
 		}
 		else if((cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region)) != NULL)
 		{
-			if(mouse_down_in_hex || mouse_down_in_ascii)
+			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{
 				off_t select_to_offset = cr->c_offset;
 				off_t new_sel_off, new_sel_len;
@@ -2705,6 +2615,57 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl 
 	else{
 		/* Mouse is beyond end of line, return last byte of this line. */
 		return line_data_end - 1;
+	}
+}
+
+std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DocumentCtrl::DataRegion::offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines)
+{
+	if(doc.show_ascii && mouse_x_px >= ascii_text_x)
+	{
+		off_t off = offset_at_xy_ascii(doc, mouse_x_px, mouse_y_lines);
+		return std::make_pair(off, (off >= 0 ? SA_ASCII : SA_NONE));
+	}
+	else if(mouse_x_px >= hex_text_x)
+	{
+		off_t off = offset_at_xy_hex(doc, mouse_x_px, mouse_y_lines);
+		return std::make_pair(off, (off >= 0 ? SA_HEX : SA_NONE));
+	}
+	else{
+		return std::make_pair(-1, SA_NONE);
+	}
+}
+
+std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DocumentCtrl::DataRegion::offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
+{
+	if(type_hint == SA_ASCII)
+	{
+		if(doc.show_ascii)
+		{
+			off_t off = offset_near_xy_ascii(doc, mouse_x_px, mouse_y_lines);
+			return std::make_pair(off, (off >= 0 ? SA_ASCII : SA_NONE));
+		}
+		else{
+			return std::make_pair(-1, SA_NONE);
+		}
+	}
+	else if(type_hint == SA_HEX)
+	{
+		off_t off = offset_near_xy_hex(doc, mouse_x_px, mouse_y_lines);
+		return std::make_pair(off, (off >= 0 ? SA_HEX : SA_NONE));
+	}
+	
+	if(doc.show_ascii && mouse_x_px >= ascii_text_x)
+	{
+		off_t off = offset_near_xy_ascii(doc, mouse_x_px, mouse_y_lines);
+		return std::make_pair(off, (off >= 0 ? SA_ASCII : SA_NONE));
+	}
+	else if(mouse_x_px >= hex_text_x)
+	{
+		off_t off = offset_near_xy_hex(doc, mouse_x_px, mouse_y_lines);
+		return std::make_pair(off, (off >= 0 ? SA_HEX : SA_NONE));
+	}
+	else{
+		return std::make_pair(-1, SA_NONE);
 	}
 }
 

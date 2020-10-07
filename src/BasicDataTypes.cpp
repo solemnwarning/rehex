@@ -184,24 +184,14 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Ge
 			dc.DrawText(type_string, x, y);
 		}
 		
-		virtual off_t offset_at_xy_hex(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
+		virtual std::pair<off_t, ScreenArea> offset_at_xy(REHex::DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override
 		{
-			return -1;
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 		}
 		
-		virtual off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
+		virtual std::pair<off_t, ScreenArea> offset_near_xy(REHex::DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
 		{
-			return -1;
-		}
-		
-		virtual off_t offset_near_xy_hex(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
-		{
-			return d_offset;
-		}
-		
-		virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override
-		{
-			return d_offset;
+			return std::make_pair(d_offset, SA_SPECIAL);
 		}
 		
 		virtual off_t cursor_left_from(off_t pos) override

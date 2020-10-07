@@ -84,11 +84,30 @@ namespace REHex {
 					const off_t d_offset;
 					const off_t d_length;
 					
-					virtual off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
-					virtual off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+					/**
+					 * @brief Represents an on-screen area of the region.
+					*/
+					enum ScreenArea
+					{
+						SA_NONE,     /**< No/Unknown area. */
+						SA_HEX,      /**< The hex (data) view. */
+						SA_ASCII,    /**< The ASCII (text) view. */
+						SA_SPECIAL,  /**< Region-specific data area. */
+					};
 					
-					virtual off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
-					virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) = 0;
+					/**
+					 * @brief Returns the offset of the byte at the given co-ordinates, negative if there isn't one.
+					*/
+					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) = 0;
+					
+					/**
+					 * @brief Returns the offset of the byte nearest the given co-ordinates and the screen area.
+					 *
+					 * If type_hint is specified, and supported by the region
+					 * type, the nearest character in that area will be
+					 * returned rather than in the area under or closest to the
+					*/
+					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) = 0;
 					
 					static const off_t CURSOR_PREV_REGION = -2;
 					static const off_t CURSOR_NEXT_REGION = -3;
@@ -189,11 +208,14 @@ namespace REHex {
 					virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 					
-					virtual off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
-					virtual off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
+					off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 					
-					virtual off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
-					virtual off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines) override;
+					off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					
+					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
+					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 					
 					virtual off_t cursor_left_from(off_t pos) override;
 					virtual off_t cursor_right_from(off_t pos) override;
@@ -362,7 +384,7 @@ namespace REHex {
 			
 			static const int MOUSE_SELECT_INTERVAL = 100;
 			
-			bool mouse_down_in_hex, mouse_down_in_ascii;
+			GenericDataRegion::ScreenArea mouse_down_area;
 			off_t mouse_down_at_offset;
 			int mouse_down_at_x;
 			wxTimer mouse_select_timer;

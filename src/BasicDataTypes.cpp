@@ -305,10 +305,10 @@ static REHex::DocumentCtrl::Region *s16be_factory(REHex::SharedDocumentPointer &
 	}, "signed 16-bit (big endian)");
 }
 
-REHex::DataTypeRegistration u16le_dtr("u16le", "unsigned 16-bit (little endian)", &u16le_factory, sizeof(uint16_t), sizeof(uint16_t));
-REHex::DataTypeRegistration u16be_dtr("u16be", "unsigned 16-bit (big endian)",    &u16be_factory, sizeof(uint16_t), sizeof(uint16_t));
-REHex::DataTypeRegistration s16le_dtr("s16le", "signed 16-bit (little endian)",   &s16le_factory, sizeof(int16_t), sizeof(int16_t));
-REHex::DataTypeRegistration s16be_dtr("s16be", "signed 16-bit (big endian)",      &s16be_factory, sizeof(int16_t), sizeof(int16_t));
+REHex::DataTypeRegistration u16le_dtr("u16le", "unsigned 16-bit (little endian)", &u16le_factory, sizeof(uint16_t));
+REHex::DataTypeRegistration u16be_dtr("u16be", "unsigned 16-bit (big endian)",    &u16be_factory, sizeof(uint16_t));
+REHex::DataTypeRegistration s16le_dtr("s16le", "signed 16-bit (little endian)",   &s16le_factory, sizeof(int16_t));
+REHex::DataTypeRegistration s16be_dtr("s16be", "signed 16-bit (big endian)",      &s16be_factory, sizeof(int16_t));
 
 static REHex::DocumentCtrl::Region *u32le_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
 {
@@ -354,10 +354,10 @@ static REHex::DocumentCtrl::Region *s32be_factory(REHex::SharedDocumentPointer &
 	}, "signed 32-bit (big endian)");
 }
 
-REHex::DataTypeRegistration u32le_dtr("u32le", "unsigned 32-bit (little endian)", &u32le_factory, sizeof(uint32_t), sizeof(uint32_t));
-REHex::DataTypeRegistration u32be_dtr("u32be", "unsigned 32-bit (big endian)",    &u32be_factory, sizeof(uint32_t), sizeof(uint32_t));
-REHex::DataTypeRegistration s32le_dtr("s32le", "signed 32-bit (little endian)",   &s32le_factory, sizeof(int32_t), sizeof(int32_t));
-REHex::DataTypeRegistration s32be_dtr("s32be", "signed 32-bit (big endian)",      &s32be_factory, sizeof(int32_t), sizeof(int32_t));
+REHex::DataTypeRegistration u32le_dtr("u32le", "unsigned 32-bit (little endian)", &u32le_factory, sizeof(uint32_t));
+REHex::DataTypeRegistration u32be_dtr("u32be", "unsigned 32-bit (big endian)",    &u32be_factory, sizeof(uint32_t));
+REHex::DataTypeRegistration s32le_dtr("s32le", "signed 32-bit (little endian)",   &s32le_factory, sizeof(int32_t));
+REHex::DataTypeRegistration s32be_dtr("s32be", "signed 32-bit (big endian)",      &s32be_factory, sizeof(int32_t));
 
 static REHex::DocumentCtrl::Region *u64le_factory(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
 {
@@ -403,7 +403,7 @@ static REHex::DocumentCtrl::Region *s64be_factory(REHex::SharedDocumentPointer &
 	}, "signed 64-bit (big endian)");
 }
 
-REHex::DataTypeRegistration u64le_dtr("u64le", "unsigned 64-bit (little endian)", &u64le_factory, sizeof(uint64_t), sizeof(uint64_t));
-REHex::DataTypeRegistration u64be_dtr("u64be", "unsigned 64-bit (big endian)",    &u64be_factory, sizeof(uint64_t), sizeof(uint64_t));
-REHex::DataTypeRegistration s64le_dtr("s64le", "signed 64-bit (little endian)",   &s64le_factory, sizeof(int64_t), sizeof(int64_t));
-REHex::DataTypeRegistration s64be_dtr("s64be", "signed 64-bit (big endian)",      &s64be_factory, sizeof(int64_t), sizeof(int64_t));
+REHex::DataTypeRegistration u64le_dtr("u64le", "unsigned 64-bit (little endian)", &u64le_factory, sizeof(uint64_t));
+REHex::DataTypeRegistration u64be_dtr("u64be", "unsigned 64-bit (big endian)",    &u64be_factory, sizeof(uint64_t));
+REHex::DataTypeRegistration s64le_dtr("s64le", "signed 64-bit (little endian)",   &s64le_factory, sizeof(int64_t));
+REHex::DataTypeRegistration s64be_dtr("s64be", "signed 64-bit (big endian)",      &s64be_factory, sizeof(int64_t));

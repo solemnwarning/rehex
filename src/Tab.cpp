@@ -910,8 +910,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
 		{
-			if((dt->second->min_size >= 0 && selection_length < dt->second->min_size)
-				|| (dt->second->max_size >= 0 && selection_length > dt->second->max_size))
+			if(dt->second->fixed_size >= 0 && selection_length != dt->second->fixed_size)
 			{
 				/* Selection is too short/long for this type. */
 				continue;
@@ -1313,11 +1312,11 @@ void REHex::Tab::repopulate_regions()
 		
 		const DataTypeRegistration *dtr = DataTypeRegistry::by_name(types_iter->second);
 		
-		if(dtr != NULL)
+		if(dtr != NULL && dtr->fixed_size <= dr_length)
 		{
-			if(dr_length > dtr->max_size)
+			if(dtr->fixed_size >= 0 && dr_length > dtr->fixed_size)
 			{
-				dr_length = dtr->max_size;
+				dr_length = dtr->fixed_size;
 			}
 			
 			regions.push_back(dtr->region_factory(doc, next_data, dr_length));

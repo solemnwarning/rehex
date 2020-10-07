@@ -54,12 +54,11 @@ const REHex::DataTypeRegistration *REHex::DataTypeRegistry::by_name(const std::s
 	}
 }
 
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, off_t min_size, off_t max_size):
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, off_t fixed_size):
 	name(name),
 	label(label),
 	region_factory(region_factory),
-	min_size(min_size),
-	max_size(max_size)
+	fixed_size(fixed_size)
 {
 	if(DataTypeRegistry::registrations == NULL)
 	{

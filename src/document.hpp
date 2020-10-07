@@ -42,6 +42,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_BECAME_DIRTY,        wxCommandEvent);
 	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
+	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
 	
 	class Document: public wxEvtHandler {
 		public:
@@ -109,7 +110,7 @@ namespace REHex {
 			bool erase_highlight(off_t off, off_t length);
 			
 			const ByteRangeMap<std::string> &get_data_types() const;
-			void set_data_type(off_t offset, off_t length, const std::string &type);
+			bool set_data_type(off_t offset, off_t length, const std::string &type);
 			
 			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
@@ -132,6 +133,7 @@ namespace REHex {
 				CursorState old_cursor_state;
 				NestedOffsetLengthMap<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
+				ByteRangeMap<std::string> old_types;
 				
 				bool old_dirty;
 				ByteRangeSet old_dirty_bytes;
@@ -185,6 +187,7 @@ namespace REHex {
 			void _raise_dirty();
 			void _raise_clean();
 			void _raise_highlights_changed();
+			void _raise_types_changed();
 			
 		public:
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;

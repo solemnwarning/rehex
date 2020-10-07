@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <atomic>
 #include <iterator>
 #include <mutex>
 #include <sys/types.h>
@@ -87,6 +88,16 @@ namespace REHex
 				default_value(src.default_value),
 				ranges(src.ranges) {}
 			
+			bool operator==(const ByteRangeMap<T> &rhs) const
+			{
+				return ranges == rhs.ranges;
+			}
+			
+			bool operator!=(const ByteRangeMap<T> &rhs) const
+			{
+				return ranges != rhs.ranges;
+			}
+			
 			/**
 			 * @brief Construct a map from a sequence of ranges.
 			 *
@@ -130,7 +141,7 @@ namespace REHex
 			 * Ranges after the insertion will be moved along by the size of the
 			 * insertion. Ranges spanning the insertion will be split.
 			*/
-			void data_inserted(off_t offset, off_t length);
+			bool data_inserted(off_t offset, off_t length);
 			
 			/**
 			 * @brief Minimum number of ranges to make data_inserted() use threads.
@@ -144,7 +155,7 @@ namespace REHex
 			 * insertion. Ranges wholly within the erased section will be lost. Ranges
 			 * on either side of the erase will be truncated and merged as necessary.
 			*/
-			void data_erased(off_t offset, off_t length);
+			bool data_erased(off_t offset, off_t length);
 	};
 }
 
@@ -289,11 +300,13 @@ template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t 
 	}
 }
 
-template<typename T> void REHex::ByteRangeMap<T>::data_inserted(off_t offset, off_t length)
+template<typename T> bool REHex::ByteRangeMap<T>::data_inserted(off_t offset, off_t length)
 {
 	std::mutex lock;
 	std::vector< std::pair<Range, T> > insert_elem;
 	size_t insert_idx;
+	
+	std::atomic<bool> elements_changed(false);
 	
 	auto process_block = [&](size_t work_base, size_t work_length)
 	{
@@ -305,6 +318,8 @@ template<typename T> void REHex::ByteRangeMap<T>::data_inserted(off_t offset, of
 			{
 				/* Range begins after the insertion point, offset it. */
 				range->first.offset += length;
+				
+				elements_changed = true;
 			}
 			else if(range->first.offset < offset && (range->first.offset + range->first.length) > offset)
 			{
@@ -326,6 +341,8 @@ template<typename T> void REHex::ByteRangeMap<T>::data_inserted(off_t offset, of
 				
 				range->first.length -= (offset - range->first.offset);
 				range->first.offset = offset + length;
+				
+				elements_changed = true;
 			}
 		}
 	};
@@ -370,9 +387,11 @@ template<typename T> void REHex::ByteRangeMap<T>::data_inserted(off_t offset, of
 		assert(insert_elem.size() == 1);
 		ranges.insert(std::next(ranges.begin(), insert_idx), insert_elem[0]);
 	}
+	
+	return elements_changed;
 }
 
-template<typename T> void REHex::ByteRangeMap<T>::data_erased(off_t offset, off_t length)
+template<typename T> bool REHex::ByteRangeMap<T>::data_erased(off_t offset, off_t length)
 {
 	/* Find the range of elements overlapping the range to be erased. */
 	
@@ -393,6 +412,8 @@ template<typename T> void REHex::ByteRangeMap<T>::data_erased(off_t offset, off_
 			break;
 		}
 	}
+	
+	bool elements_changed = false;
 	
 	/* Add range(s) encompassing the existing byte ranges immediately before or after the erase
 	 * window (if either exist).
@@ -438,6 +459,8 @@ template<typename T> void REHex::ByteRangeMap<T>::data_erased(off_t offset, off_
 			erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (end - begin)), begin_value));
 			++erase_end;
 		}
+		
+		elements_changed = true;
 	}
 	
 	/* Adjust the offset of ranges after the erase window. */
@@ -446,7 +469,11 @@ template<typename T> void REHex::ByteRangeMap<T>::data_erased(off_t offset, off_
 	{
 		erase_end->first.offset -= length;
 		++erase_end;
+		
+		elements_changed = true;
 	}
+	
+	return elements_changed;
 }
 
 #endif /* !REHEX_BYTERANGEMAP_HPP */

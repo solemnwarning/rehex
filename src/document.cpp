@@ -47,6 +47,7 @@ wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 
 REHex::Document::Document():
 	dirty(false),
@@ -330,9 +331,28 @@ const REHex::ByteRangeMap<std::string> &REHex::Document::get_data_types() const
 	return types;
 }
 
-void REHex::Document::set_data_type(off_t offset, off_t length, const std::string &type)
+bool REHex::Document::set_data_type(off_t offset, off_t length, const std::string &type)
 {
-	types.set_range(offset, length, type);
+	if(offset < 0 || length < 1 || (offset + length) > buffer_length())
+	{
+		return false;
+	}
+	
+	_tracked_change("set data type",
+		[this, offset, length, type]()
+		{
+			types.set_range(offset, length, type);
+			set_dirty(true);
+			
+			_raise_types_changed();
+		},
+		
+		[this]()
+		{
+			/* Data type changes are undone implicitly. */
+		});
+	
+	return true;
 }
 
 void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
@@ -389,6 +409,12 @@ void REHex::Document::undo()
 		comments     = act.old_comments;
 		highlights   = act.old_highlights;
 		dirty_bytes  = act.old_dirty_bytes;
+		
+		if(types != act.old_types)
+		{
+			types = act.old_types;
+			_raise_types_changed();
+		}
 		
 		set_dirty(act.old_dirty);
 		
@@ -478,8 +504,6 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		dirty_bytes.set_range(offset, length);
 		set_dirty(true);
 		
-		types.data_inserted(offset, length);
-		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
@@ -491,6 +515,11 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		if(NestedOffsetLengthMap_data_inserted(highlights, offset, length) > 0)
 		{
 			_raise_highlights_changed();
+		}
+		
+		if(types.data_inserted(offset, length))
+		{
+			_raise_types_changed();
 		}
 	}
 	else{
@@ -513,8 +542,6 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		dirty_bytes.data_erased(offset, length);
 		set_dirty(true);
 		
-		types.data_erased(offset, length);
-		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
 		
@@ -526,6 +553,11 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		if(NestedOffsetLengthMap_data_erased(highlights, offset, length) > 0)
 		{
 			_raise_highlights_changed();
+		}
+		
+		if(types.data_erased(offset, length))
+		{
+			_raise_types_changed();
 		}
 	}
 	else{
@@ -645,6 +677,7 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	change.old_cursor_state = cursor_state;
 	change.old_comments     = comments;
 	change.old_highlights   = highlights;
+	change.old_types        = types;
 	change.old_dirty        = dirty;
 	change.old_dirty_bytes  = dirty_bytes;
 	
@@ -895,6 +928,14 @@ void REHex::Document::_raise_clean()
 void REHex::Document::_raise_highlights_changed()
 {
 	wxCommandEvent event(REHex::EV_HIGHLIGHTS_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
+}
+
+void REHex::Document::_raise_types_changed()
+{
+	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);

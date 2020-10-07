@@ -106,6 +106,7 @@ namespace REHex
 			void OnDocumentCtrlCursorUpdate(CursorUpdateEvent &event);
 			void OnDocumentCommentModified(wxCommandEvent &event);
 			void OnDocumenHighlightsChanged(wxCommandEvent &event);
+			void OnDocumentDataTypesChanged(wxCommandEvent &event);
 			
 			template<typename T> void OnEventToForward(T &event)
 			{

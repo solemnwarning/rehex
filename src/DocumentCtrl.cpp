@@ -1248,6 +1248,8 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	if(region != regions.end())
 	{
 		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
+		CommentRegion *cr = dynamic_cast<CommentRegion*>(*region);
+		
 		if(dr != NULL)
 		{
 			off_t clicked_offset;
@@ -1283,9 +1285,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 			
 			ProcessWindowEvent(event);
 		}
-		
-		REHex::DocumentCtrl::CommentRegion *cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region);
-		if(cr != NULL)
+		else if(cr != NULL)
 		{
 			/* Mouse was clicked within a Comment region, ensure we are within the border drawn around the
 			 * comment text.

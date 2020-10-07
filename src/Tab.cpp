@@ -88,6 +88,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc_ctrl->Bind(       CURSOR_UPDATE,          &REHex::Tab::OnDocumentCtrlCursorUpdate,  this);
 	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
 	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
+	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
@@ -142,6 +143,7 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	doc_ctrl->Bind(       CURSOR_UPDATE,          &REHex::Tab::OnDocumentCtrlCursorUpdate,  this);
 	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
 	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
+	doc.auto_cleanup_bind(EV_TYPES_CHANGED,  &REHex::Tab::OnDocumentDataTypesChanged,  this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
@@ -882,7 +884,6 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		#endif
 		{
 			doc->set_data_type(selection_off, selection_length, "");
-			CallAfter([this]() { repopulate_regions(); }); /* TODO: Remove when event makes redundant. */
 		}, data_itm->GetId(), data_itm->GetId());
 		
 		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
@@ -908,7 +909,6 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			#endif
 			{
 				doc->set_data_type(selection_off, selection_length, dt->second->name);
-				CallAfter([this]() { repopulate_regions(); }); /* TODO: Remove when event makes redundant. */
 			}, itm->GetId(), itm->GetId());
 		}
 		
@@ -998,6 +998,12 @@ void REHex::Tab::OnDocumentCommentModified(wxCommandEvent &event)
 void REHex::Tab::OnDocumenHighlightsChanged(wxCommandEvent &event)
 {
 	doc_ctrl->Refresh();
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumentDataTypesChanged(wxCommandEvent &event)
+{
+	repopulate_regions();
 	event.Skip();
 }
 

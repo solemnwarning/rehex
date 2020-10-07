@@ -860,6 +860,63 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	if(selection_length > 0)
 	{
+		const ByteRangeMap<std::string> &data_types = doc->get_data_types();
+		
+		auto selection_off_type = data_types.get_range(selection_off);
+		assert(selection_off_type != data_types.end());
+		
+		wxMenu *dtmenu = new wxMenu();
+		
+		wxMenuItem *data_itm = dtmenu->AppendCheckItem(wxID_ANY, "Data");
+		
+		if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
+			&& selection_off_type->second == "")
+		{
+			data_itm->Check(true);
+		}
+		
+		#ifdef _WIN32
+		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
+		#else
+		dtmenu->Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
+		#endif
+		{
+			doc->set_data_type(selection_off, selection_length, "");
+			CallAfter([this]() { repopulate_regions(); }); /* TODO: Remove when event makes redundant. */
+		}, data_itm->GetId(), data_itm->GetId());
+		
+		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
+		{
+			if(dt->second->fixed_size >= 0 && (selection_length % dt->second->fixed_size) != 0)
+			{
+				/* Selection is too short/long for this type. */
+				continue;
+			}
+			
+			wxMenuItem *itm = dtmenu->AppendCheckItem(wxID_ANY, dt->second->label);
+			
+			if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
+				&& selection_off_type->second == dt->second->name)
+			{
+				itm->Check(true);
+			}
+			
+			#ifdef _WIN32
+			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			#else
+			dtmenu->Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			#endif
+			{
+				doc->set_data_type(selection_off, selection_length, dt->second->name);
+				CallAfter([this]() { repopulate_regions(); }); /* TODO: Remove when event makes redundant. */
+			}, itm->GetId(), itm->GetId());
+		}
+		
+		menu.AppendSubMenu(dtmenu, "Set data type");
+	}
+	
+	if(selection_length > 0)
+	{
 		menu.AppendSeparator();
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare...");
 		
@@ -897,33 +954,6 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				}
 			});
 		}, itm->GetId(), itm->GetId());
-		
-		menu.AppendSeparator();
-		
-		wxMenuItem *itm2 = menu.Append(wxID_ANY, "Data");
-		
-		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
-		{
-			doc->set_data_type(selection_off, selection_length, "");
-			CallAfter([this]() { repopulate_regions(); });
-		}, itm2->GetId(), itm2->GetId());
-		
-		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
-		{
-			if(dt->second->fixed_size >= 0 && selection_length != dt->second->fixed_size)
-			{
-				/* Selection is too short/long for this type. */
-				continue;
-			}
-			
-			wxMenuItem *itm = menu.Append(wxID_ANY, dt->second->label);
-			
-			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
-			{
-				doc->set_data_type(selection_off, selection_length, dt->second->name);
-				CallAfter([this]() { repopulate_regions(); });
-			}, itm->GetId(), itm->GetId());
-		}
 	}
 	
 	PopupMenu(&menu);

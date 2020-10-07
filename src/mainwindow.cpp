@@ -162,7 +162,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow():
-	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
+	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(900, 700))
 {
 	file_menu = new wxMenu;
 	recent_files_menu = new wxMenu;

@@ -1293,6 +1293,11 @@ void REHex::Tab::repopulate_regions()
 	{
 		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
+		while(!dr_limit.empty() && dr_limit.top() <= next_data)
+		{
+			dr_limit.pop();
+		}
+		
 		/* We process any comments at the same offset from largest to smallest, ensuring
 		 * smaller comments are parented to the next-larger one at the same offset.
 		 *
@@ -1331,12 +1336,11 @@ void REHex::Tab::repopulate_regions()
 			dr_length = offset_base->first.offset - next_data;
 		}
 		
-		while(!dr_limit.empty() && (next_data + dr_length) >= dr_limit.top())
+		if(!dr_limit.empty() && (next_data + dr_length) >= dr_limit.top())
 		{
 			assert(dr_limit.top() > next_data);
 			
 			dr_length = dr_limit.top() - next_data;
-			dr_limit.pop();
 		}
 		
 		assert(types_iter != types.end());

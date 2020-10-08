@@ -42,14 +42,14 @@ static std::vector<std::string> stringify_regions(const std::list<DocumentCtrl::
 		if(cr != NULL)
 		{
 			snprintf(buf, sizeof(buf),
-				"CommentRegion(c_offset = %zd, c_length = %zd, indent_offset = %zd, indent_length = %zd, c_text = '%s', truncate = %d)",
-				cr->c_offset, cr->c_length, cr->indent_offset, cr->indent_length, cr->c_text.ToStdString().c_str(), (int)(cr->truncate));
+				"CommentRegion(c_offset = %ld, c_length = %ld, indent_offset = %ld, indent_length = %ld, c_text = '%s', truncate = %d)",
+				(long)(cr->c_offset), (long)(cr->c_length), (long)(cr->indent_offset), (long)(cr->indent_length), cr->c_text.ToStdString().c_str(), (int)(cr->truncate));
 		}
 		else if(drdh != NULL)
 		{
 			snprintf(buf, sizeof(buf),
-				"DataRegionDocHighlight(d_offset = %zd, d_length = %zd, indent_offset = %zd, indent_length = %zd)",
-				drdh->d_offset, drdh->d_length, drdh->indent_offset, drdh->indent_length);
+				"DataRegionDocHighlight(d_offset = %ld, d_length = %ld, indent_offset = %ld, indent_length = %ld)",
+				(long)(drdh->d_offset), (long)(drdh->d_length), (long)(drdh->indent_offset), (long)(drdh->indent_length));
 		}
 		else{
 			throw std::runtime_error("Unknown Region subclass encountered");

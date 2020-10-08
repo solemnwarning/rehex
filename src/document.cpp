@@ -291,6 +291,8 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 		[this, off, length, highlight_colour_idx]()
 		{
 			NestedOffsetLengthMap_set(highlights, off, length, highlight_colour_idx);
+			set_dirty(true);
+
 			_raise_highlights_changed();
 		},
 		
@@ -314,6 +316,8 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 		[this, off, length]()
 		{
 			highlights.erase(NestedOffsetLengthMapKey(off, length));
+			set_dirty(true);
+
 			_raise_highlights_changed();
 		},
 		

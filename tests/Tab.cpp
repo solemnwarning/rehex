@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../src/BasicDataTypes.hpp"
 #include "../src/document.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 #include "../src/Tab.hpp"
@@ -39,6 +40,9 @@ static std::vector<std::string> stringify_regions(const std::list<DocumentCtrl::
 		DocumentCtrl::CommentRegion          *cr   = dynamic_cast<DocumentCtrl::CommentRegion*>(*r);
 		DocumentCtrl::DataRegionDocHighlight *drdh = dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(*r);
 		
+		S16LEDataRegion *s16le = dynamic_cast<S16LEDataRegion*>(*r);
+		S64LEDataRegion *s64le = dynamic_cast<S64LEDataRegion*>(*r);
+		
 		if(cr != NULL)
 		{
 			snprintf(buf, sizeof(buf),
@@ -50,6 +54,18 @@ static std::vector<std::string> stringify_regions(const std::list<DocumentCtrl::
 			snprintf(buf, sizeof(buf),
 				"DataRegionDocHighlight(d_offset = %ld, d_length = %ld, indent_offset = %ld, indent_length = %ld)",
 				(long)(drdh->d_offset), (long)(drdh->d_length), (long)(drdh->indent_offset), (long)(drdh->indent_length));
+		}
+		else if(s16le != NULL)
+		{
+			snprintf(buf, sizeof(buf),
+				"S16LEDataRegion(d_offset = %ld, d_length = %ld, indent_offset = %ld, indent_length = %ld)",
+				(long)(s16le->d_offset), (long)(s16le->d_length), (long)(s16le->indent_offset), (long)(s16le->indent_length));
+		}
+		else if(s64le != NULL)
+		{
+			snprintf(buf, sizeof(buf),
+				"S64LEDataRegion(d_offset = %ld, d_length = %ld, indent_offset = %ld, indent_length = %ld)",
+				(long)(s64le->d_offset), (long)(s64le->d_length), (long)(s64le->indent_offset), (long)(s64le->indent_length));
 		}
 		else{
 			throw std::runtime_error("Unknown Region subclass encountered");
@@ -75,7 +91,7 @@ TEST(Tab, ComputeRegionsEmptyFile)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_HIDDEN);
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -261,6 +277,235 @@ TEST(Tab, ComputeRegionsNestedShortComments)
 		"CommentRegion(c_offset = 2048, c_length = 64, indent_offset = 2048, indent_length = 64, c_text = 'crowded', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 2048, d_length = 64, indent_offset = 2048, indent_length = 0)",
 		"DataRegionDocHighlight(d_offset = 2112, d_length = 1984, indent_offset = 2112, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypes)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_data_type(128, 2, "s16le");
+	doc->set_data_type(132, 8, "s64le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 128, indent_offset = 0, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 128, d_length = 2, indent_offset = 128, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 130, d_length = 2, indent_offset = 130, indent_length = 0)",
+		"S64LEDataRegion(d_offset = 132, d_length = 8, indent_offset = 132, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 140, d_length = 3956, indent_offset = 140, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesRepeated)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_data_type(128, 8, "s16le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 128, indent_offset = 0, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 128, d_length = 2, indent_offset = 128, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 130, d_length = 2, indent_offset = 130, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 132, d_length = 2, indent_offset = 132, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 134, d_length = 2, indent_offset = 134, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 136, d_length = 3960, indent_offset = 136, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesNestedInComment)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(126, 8, REHex::Document::Comment("special"));
+	doc->set_data_type(128, 2, "s16le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 126, indent_offset = 0, indent_length = 0)",
+		
+		"CommentRegion(c_offset = 126, c_length = 8, indent_offset = 126, indent_length = 8, c_text = 'special', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 126, d_length = 2, indent_offset = 126, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 128, d_length = 2, indent_offset = 128, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 130, d_length = 4, indent_offset = 130, indent_length = 0)",
+		
+		"DataRegionDocHighlight(d_offset = 134, d_length = 3962, indent_offset = 134, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesNestedAtStartOfComment)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(140, 10, REHex::Document::Comment("gusty"));
+	doc->set_data_type(140, 4, "s16le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 140, indent_offset = 0, indent_length = 0)",
+		
+		"CommentRegion(c_offset = 140, c_length = 10, indent_offset = 140, indent_length = 10, c_text = 'gusty', truncate = 0)",
+		"S16LEDataRegion(d_offset = 140, d_length = 2, indent_offset = 140, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 142, d_length = 2, indent_offset = 142, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 144, d_length = 6, indent_offset = 144, indent_length = 0)",
+		
+		"DataRegionDocHighlight(d_offset = 150, d_length = 3946, indent_offset = 150, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesNestedAtEndOfComment)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(160, 10, REHex::Document::Comment("call"));
+	doc->set_data_type(168, 2, "s16le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 160, indent_offset = 0, indent_length = 0)",
+		
+		"CommentRegion(c_offset = 160, c_length = 10, indent_offset = 160, indent_length = 10, c_text = 'call', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 160, d_length = 8, indent_offset = 160, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 168, d_length = 2, indent_offset = 168, indent_length = 0)",
+		
+		"DataRegionDocHighlight(d_offset = 170, d_length = 3926, indent_offset = 170, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesNestedOccupyingWholeComment)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(180, 2, REHex::Document::Comment("wind"));
+	doc->set_data_type(180, 2, "s16le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 180, indent_offset = 0, indent_length = 0)",
+		
+		"CommentRegion(c_offset = 180, c_length = 2, indent_offset = 180, indent_length = 2, c_text = 'wind', truncate = 0)",
+		"S16LEDataRegion(d_offset = 180, d_length = 2, indent_offset = 180, indent_length = 0)",
+		
+		"DataRegionDocHighlight(d_offset = 182, d_length = 3914, indent_offset = 182, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesNestedMultipleInComment)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(256, 64, REHex::Document::Comment("sister"));
+	doc->set_data_type(260, 2, "s16le");
+	doc->set_data_type(270, 8, "s16le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 256, indent_offset = 0, indent_length = 0)",
+		
+		"CommentRegion(c_offset = 256, c_length = 64, indent_offset = 256, indent_length = 64, c_text = 'sister', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 256, d_length = 4, indent_offset = 256, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 260, d_length = 2, indent_offset = 260, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 262, d_length = 8, indent_offset = 262, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 270, d_length = 2, indent_offset = 270, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 272, d_length = 2, indent_offset = 272, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 274, d_length = 2, indent_offset = 274, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 276, d_length = 2, indent_offset = 276, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 278, d_length = 42, indent_offset = 278, indent_length = 0)",
+		
+		"DataRegionDocHighlight(d_offset = 320, d_length = 3776, indent_offset = 320, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsDataTypesNotFixedSizeMultiple)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_data_type(128,  1, "s16le");
+	doc->set_data_type(132,  3, "s16le");
+	doc->set_data_type(140, 23, "s64le");
+	
+	std::list<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		/* Having all these fragmented data regions isn't ideal, but probably not worth the
+		 * extra complexity of merging them to handle what should only ever happen if the
+		 * metadata has been corrupted anyway.
+		*/
+		
+		"DataRegionDocHighlight(d_offset = 0, d_length = 128, indent_offset = 0, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 128, d_length = 1, indent_offset = 128, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 129, d_length = 3, indent_offset = 129, indent_length = 0)",
+		"S16LEDataRegion(d_offset = 132, d_length = 2, indent_offset = 132, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 134, d_length = 1, indent_offset = 134, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 135, d_length = 5, indent_offset = 135, indent_length = 0)",
+		"S64LEDataRegion(d_offset = 140, d_length = 8, indent_offset = 140, indent_length = 0)",
+		"S64LEDataRegion(d_offset = 148, d_length = 8, indent_offset = 148, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 156, d_length = 7, indent_offset = 156, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 163, d_length = 3933, indent_offset = 163, indent_length = 0)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";

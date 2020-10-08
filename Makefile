@@ -165,6 +165,7 @@ TEST_OBJS := \
 	res/offsets32.o \
 	res/offsets48.o \
 	src/ArtProvider.o \
+	src/BasicDataTypes.o \
 	src/buffer.o \
 	src/ByteRangeSet.o \
 	src/CommentTree.o \

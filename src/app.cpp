@@ -21,6 +21,7 @@
 #include "ArtProvider.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "../plugin/hooks.hpp"
 
 /* These MUST come after any wxWidgets headers. */
 #ifdef _WIN32
@@ -31,11 +32,14 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	//_CrtSetBreakAlloc(20060);
 	#ifdef _WIN32
 	/* Needed for shell API calls. */
 	CoInitialize(NULL);
 	#endif
 	
+	locale = new wxLocale(wxLANGUAGE_DEFAULT);
+
 	wxImage::AddHandler(new wxPNGHandler);
 	
 	ArtProvider::init();
@@ -79,6 +83,8 @@ bool REHex::App::OnInit()
 		active_palette = Palette::create_system_palette();
 	}
 	
+	plugin_hooks::init(argv[0]);
+
 	REHex::MainWindow *window = new REHex::MainWindow();
 	window->Show(true);
 	
@@ -104,9 +110,12 @@ int REHex::App::OnExit()
 	config->SetPath("/");
 	config->Write("last-directory", wxString(last_directory));
 	
+	plugin_hooks::exit();
+
 	delete active_palette;
 	delete recent_files;
 	delete config;
+	delete locale;
 	
 	#ifdef _WIN32
 	CoUninitialize();

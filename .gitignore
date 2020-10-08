@@ -60,3 +60,4 @@ msvc/all-tests/x64/
 msvc/all-tests-appcode/x64/
 msvc/all-tests/tests/
 msvc/resources/x64/
+msvc/plugin/x64/

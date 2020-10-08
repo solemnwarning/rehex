@@ -73,6 +73,9 @@ namespace REHex
 			InlineCommentMode get_inline_comment_mode() const;
 			void set_inline_comment_mode(InlineCommentMode inline_comment_mode);
 			
+			/* Public for use by unit tests. */
+			static std::list<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode);
+			
 		private:
 			InlineCommentMode inline_comment_mode;
 			

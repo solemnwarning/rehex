@@ -168,6 +168,7 @@ TEST_OBJS := \
 	src/buffer.o \
 	src/ByteRangeSet.o \
 	src/CommentTree.o \
+	src/DataType.o \
 	src/DiffWindow.o \
 	src/document.o \
 	src/DocumentCtrl.o \
@@ -176,6 +177,7 @@ TEST_OBJS := \
 	src/Palette.o \
 	src/search.o \
 	src/StringPanel.o \
+	src/Tab.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
@@ -196,6 +198,7 @@ TEST_OBJS := \
 	tests/SafeWindowPointer.o \
 	tests/SharedDocumentPointer.o \
 	tests/StringPanel.o \
+	tests/Tab.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)

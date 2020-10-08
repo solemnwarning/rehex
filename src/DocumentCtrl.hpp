@@ -43,17 +43,18 @@ namespace REHex {
 					int64_t y_offset; /* First on-screen line in region */
 					int64_t y_lines;  /* Number of on-screen lines in region */
 					
-					off_t indent_offset;
-					off_t indent_length;
-					
 					int indent_depth;  /* Indentation depth */
 					int indent_final;  /* Number of inner indentation levels we are the final region in */
 					
 				public:
-					Region();
+					const off_t indent_offset;
+					const off_t indent_length;
+					
 					virtual ~Region();
 					
 				protected:
+					Region(off_t indent_offset, off_t indent_length);
+					
 					virtual int calc_width(REHex::DocumentCtrl &doc);
 					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
 					

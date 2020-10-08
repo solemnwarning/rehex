@@ -1263,15 +1263,20 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
+	std::list<DocumentCtrl::Region*> regions = compute_regions(doc, inline_comment_mode);
+	doc_ctrl->replace_all_regions(regions);
+}
+
+std::list<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode)
+{
 	if(inline_comment_mode == ICM_HIDDEN)
 	{
 		/* Inline comments are hidden. Just show a single big data region. */
 		
 		std::list<DocumentCtrl::Region*> regions;
 		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, doc->buffer_length(), *doc));
-		doc_ctrl->replace_all_regions(regions);
 		
-		return;
+		return regions;
 	}
 	
 	auto comments = doc->get_comments();
@@ -1382,5 +1387,5 @@ void REHex::Tab::repopulate_regions()
 		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, *doc));
 	}
 	
-	doc_ctrl->replace_all_regions(regions);
+	return regions;
 }

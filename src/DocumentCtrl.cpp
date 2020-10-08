@@ -1803,8 +1803,11 @@ wxFont &REHex::DocumentCtrl::get_font()
 	return hex_font;
 }
 
-REHex::DocumentCtrl::Region::Region():
-	indent_offset(0), indent_length(0), indent_depth(0), indent_final(0) {}
+REHex::DocumentCtrl::Region::Region(off_t indent_offset, off_t indent_length):
+	indent_depth(0),
+	indent_final(0),
+	indent_offset(indent_offset),
+	indent_length(indent_length)  {}
 
 REHex::DocumentCtrl::Region::~Region() {}
 
@@ -1867,13 +1870,12 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 }
 
 REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length):
+	Region(d_offset, 0),
 	d_offset(d_offset),
 	d_length(d_length)
 {
 	assert(d_offset >= 0);
 	assert(d_length >= 0);
-	
-	indent_offset = d_offset;
 }
 
 REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):
@@ -2857,15 +2859,11 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 }
 
 REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool nest_children, bool truncate):
-	c_offset(c_offset), c_length(c_length), c_text(c_text), truncate(truncate)
-{
-	indent_offset = c_offset;
-	
-	if(nest_children)
-	{
-		indent_length = c_length;
-	}
-}
+	Region(c_offset, (nest_children ? c_length : 0)),
+	c_offset(c_offset),
+	c_length(c_length),
+	c_text(c_text),
+	truncate(truncate) {}
 
 void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
 {

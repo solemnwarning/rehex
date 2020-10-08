@@ -48,8 +48,6 @@ template<typename T> class NumericDataTypeRegion: public REHex::DocumentCtrl::Ge
 			to_string(to_string)
 		{
 			assert(length == sizeof(T));
-			
-			indent_offset = offset;
 		}
 		
 	protected:

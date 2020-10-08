@@ -508,6 +508,9 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		dirty_bytes.set_range(offset, length);
 		set_dirty(true);
 		
+		types.data_inserted(offset, length);
+		types.set_range(offset, length, "");
+		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
@@ -519,11 +522,6 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		if(NestedOffsetLengthMap_data_inserted(highlights, offset, length) > 0)
 		{
 			_raise_highlights_changed();
-		}
-		
-		if(types.data_inserted(offset, length))
-		{
-			_raise_types_changed();
 		}
 	}
 	else{
@@ -546,6 +544,8 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		dirty_bytes.data_erased(offset, length);
 		set_dirty(true);
 		
+		types.data_erased(offset, length);
+		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
 		
@@ -557,11 +557,6 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		if(NestedOffsetLengthMap_data_erased(highlights, offset, length) > 0)
 		{
 			_raise_highlights_changed();
-		}
-		
-		if(types.data_erased(offset, length))
-		{
-			_raise_types_changed();
 		}
 	}
 	else{

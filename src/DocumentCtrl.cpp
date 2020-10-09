@@ -2710,6 +2710,12 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_up_from(off_t pos)
 	
 	off_t new_pos = pos - bytes_per_line_actual;
 	
+	if(new_pos < d_offset && new_pos >= (d_offset - (off_t)(first_line_pad_bytes)))
+	{
+		/* Moving from second line to first line, but first line is padded past this column. */
+		new_pos = d_offset;
+	}
+	
 	if(new_pos >= d_offset && new_pos < (d_offset + d_length))
 	{
 		return new_pos;
@@ -2817,6 +2823,7 @@ off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
 	
 	off_t offset_at_col = last_row_off + column;
 	
+	offset_at_col = std::max(offset_at_col, d_offset);
 	offset_at_col = std::max(offset_at_col, last_row_off);
 	offset_at_col = std::min(offset_at_col, (d_offset + d_length - 1));
 	

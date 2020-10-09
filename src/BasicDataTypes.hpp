@@ -19,6 +19,7 @@
 #define REHEX_BASICDATATYPES_HPP
 
 #include <assert.h>
+#include <exception>
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -105,8 +106,24 @@ namespace REHex
 					dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
 				}
 				
-				std::vector<unsigned char> data = doc->read_data(d_offset, d_length);
-				assert(data.size() == sizeof(T));
+				bool data_err = false;
+				std::vector<unsigned char> data;
+				std::string data_string;
+				
+				try {
+					data = doc->read_data(d_offset, d_length);
+					assert(data.size() == sizeof(T));
+					
+					data_string = to_string((const T*)(data.data()));
+				}
+				catch(const std::exception &e)
+				{
+					fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::draw: %s\n", e.what());
+					
+					data_err = true;
+					data.insert(data.end(), d_length, '?');
+					data_string = "????";
+				}
 				
 				off_t cursor_pos = doc_ctrl.get_cursor_position();
 				
@@ -134,7 +151,9 @@ namespace REHex
 							++col;
 						}
 						
-						const char *nibble_to_hex = "0123456789ABCDEF";
+						const char *nibble_to_hex = data_err
+							? "????????????????"
+							: "0123456789ABCDEF";
 						
 						const char hex_str[] = {
 							nibble_to_hex[ (data[i] & 0xF0) >> 4 ],
@@ -158,8 +177,6 @@ namespace REHex
 				{
 					/* Invert colour for cursor position/blink. */
 					
-					std::string data_string = to_string((const T*)(data.data()));
-					
 					normal_text();
 					dc.DrawText("[", x, y);
 					
@@ -175,8 +192,6 @@ namespace REHex
 					* text colours.
 					*/
 					
-					std::string data_string = to_string((const T*)(data.data()));
-					
 					normal_text();
 					dc.DrawText("[", x, y);
 					
@@ -189,10 +204,8 @@ namespace REHex
 				else{
 					/* No data in our range is selected. Render normally. */
 					
-					std::string data_string = "[" + to_string((const T*)(data.data())) + "]";
-					
 					normal_text();
-					dc.DrawText(data_string, x, y);
+					dc.DrawText("[" + data_string + "]", x, y);
 				}
 				
 				x += doc_ctrl.hf_string_width(22);

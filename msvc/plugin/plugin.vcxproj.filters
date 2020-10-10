@@ -45,4 +45,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\test_broken.lua" />
+    <None Include="..\test1.lua" />
+    <None Include="..\test2.lua" />
+  </ItemGroup>
 </Project>

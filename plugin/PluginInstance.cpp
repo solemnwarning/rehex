@@ -6,7 +6,6 @@
 #include <wx/dir.h>
 #include <wx/filename.h>
 
-#include <sol/sol.hpp>
 #include "luaenvironment.hpp"
 
 #include "PluginInstance.hpp"
@@ -91,10 +90,10 @@ public:
 				continue;
 			}
 
-			sol::protected_function test = script->Env["test"];
-			if (test)
+			sol::protected_function init = script->Env["init"];
+			if (init)
 			{
-				result = test("testarg");
+				result = init(doc);
 				if (!result.valid())
 				{
 					sol::error err = result;

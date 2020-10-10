@@ -1,9 +1,6 @@
 
 #include "platform.hpp"
 
-#define SOL_ALL_SAFETIES_ON 1
-#include <sol/sol.hpp>
-
 #include "luaenvironment.hpp"
 #include "hooks.hpp"
 
@@ -45,10 +42,23 @@ void luaenvironment::init(sol::state& lua, IPlugin* plugin)
 	);
 
 	// Replace the print function
-	lua.set_function("print", [plugin](sol::this_state s, sol::variadic_args va)
+	lua.set_function("print",
+		[plugin](sol::this_state s, sol::variadic_args va)
 		{
 			lua_print(s, va, plugin);
 		});
+
+
+	// Register a document
+	lua.new_usertype<REHex::Document>("Document",
+		"get_title", &REHex::Document::get_title,
+		"get_filename", &REHex::Document::get_filename,
+
+		"is_dirty", &REHex::Document::is_dirty,
+
+		"buffer_length", &REHex::Document::buffer_length
+
+	);
 }
 
 

@@ -54,11 +54,10 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::numeric_limits<T>::is_signed, T>::type
-				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
+				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
-				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				if(sval.length() == 0)
 				{
 					/* String is empty */
@@ -119,11 +118,10 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<!std::numeric_limits<T>::is_signed, T>::type
-				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
+				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
-				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				if(sval.length() == 0)
 				{
 					/* String is empty */
@@ -203,6 +201,13 @@ namespace REHex {
 				}
 				
 				return ival;
+			}
+			
+			template<typename T>
+				T GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
+			{
+				std::string sval = wxTextCtrl::GetValue().ToStdString();
+				return ParseValue<T>(sval, min, max, rel_base);
 			}
 	};
 }

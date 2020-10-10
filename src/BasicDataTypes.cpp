@@ -25,6 +25,7 @@
 #include "DataType.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
+#include "NumericTextCtrl.hpp"
 #include "SharedDocumentPointer.hpp"
 
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
@@ -46,7 +47,14 @@
 	\
 	bool REHex::NAME::write_string_value(const std::string &value) \
 	{ \
-		T buf = atoi(value.c_str()); /* TODO: Use correct functions, detect errors. */ \
+		T buf; \
+		try { \
+			buf = NumericTextCtrl::ParseValue<T>(value); \
+		} \
+		catch(const REHex::NumericTextCtrl::InputError &e) \
+		{ \
+			return false; \
+		} \
 		buf = HTOX(buf); \
 		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
 		return true; \

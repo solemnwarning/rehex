@@ -27,28 +27,6 @@ enum {
 };
 
 
-static REHex::PluginPanel* g_Panel = nullptr;
-
-// This cannot live in the PluginPanel!
-// We can receive logging before the UI is created, and we cannot create the panel without a window!
-std::mutex lock;
-std::list<wxString> new_text;
-bool need_update = false;
-
-
-static REHex::ToolPanel *PluginPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer& document, REHex::DocumentCtrl* document_ctrl)
-{
-	//FIXME: THIS DOES NOT WORK!
-	// WE NEED ONE WINDOW PER DOCUMENT.......
-	//if (g_Panel == nullptr)
-	{
-		g_Panel = new REHex::PluginPanel(parent);
-	}
-	return g_Panel;
-}
-
-static REHex::ToolPanelRegistration tpr("PluginPanel", "Plugins", REHex::ToolPanel::TPS_WIDE, &PluginPanel_factory);
-
 BEGIN_EVENT_TABLE(REHex::PluginPanel, wxPanel)
 	EVT_COMMAND(wxID_ANY, wxEVT_USER_FIRST, REHex::PluginPanel::onPlugintextAdded)
 END_EVENT_TABLE()
@@ -65,10 +43,6 @@ REHex::PluginPanel::PluginPanel(wxWindow *parent):
 
 REHex::PluginPanel::~PluginPanel()
 {
-	if (g_Panel == this)
-	{
-		g_Panel = nullptr;
-	}
 }
 
 std::string REHex::PluginPanel::name() const
@@ -124,7 +98,7 @@ void REHex::PluginPanel::onPlugintextAdded(wxCommandEvent& evt)
 }
 
 
-void plugin_hooks::log(const wxString& output)
+void REHex::PluginPanel::log(const wxString& output)
 {
 	bool post_update = false;
 
@@ -137,10 +111,10 @@ void plugin_hooks::log(const wxString& output)
 	}
 
 
-	if (post_update && g_Panel)
+	if (post_update)
 	{
 		// We need to update the UI, post an event so we can handle this later (no longer in the context of the plugin)
 		wxCommandEvent event(wxEVT_USER_FIRST, wxEVT_ANY);
-		g_Panel->GetEventHandler()->AddPendingEvent(event);
+		GetEventHandler()->AddPendingEvent(event);
 	}
 }

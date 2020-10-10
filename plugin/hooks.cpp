@@ -2,18 +2,23 @@
 #include "platform.hpp"
 
 #include "hooks.hpp"
-#include "luaenvironment.hpp"
+#include "PluginInstance.hpp"
 
 
-void plugin_hooks::init(const wxString& program)
+wxString plugins_dir;
+
+void plugin_hooks::init(const wxString& defaultPluginsDir, wxConfig* config)
 {
-	luaenvironment::init(program);
-
-	log("Initializing plugins:");
+	config->SetPath("/");
+	plugins_dir = config->Read("plugin-dir", defaultPluginsDir);
 }
-
 
 void plugin_hooks::exit()
 {
-	luaenvironment::exit();
 }
+
+IPlugin* plugin_hooks::document_opened(REHex::SharedDocumentPointer& doc)
+{
+	return plugin_factory(doc, plugins_dir);
+}
+

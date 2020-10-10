@@ -22,6 +22,7 @@
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 #include "../plugin/hooks.hpp"
+#include <wx/stdpaths.h>
 
 /* These MUST come after any wxWidgets headers. */
 #ifdef _WIN32
@@ -83,7 +84,7 @@ bool REHex::App::OnInit()
 		active_palette = Palette::create_system_palette();
 	}
 	
-	plugin_hooks::init(argv[0]);
+	plugin_hooks::init(wxStandardPaths::Get().GetPluginsDir(), config);
 
 	REHex::MainWindow *window = new REHex::MainWindow();
 	window->Show(true);

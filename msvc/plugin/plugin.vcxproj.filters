@@ -27,6 +27,9 @@
     <ClInclude Include="..\..\plugin\luaenvironment.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\plugin\PluginInstance.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\plugin\hooks.cpp">
@@ -36,6 +39,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\plugin\luaenvironment.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\plugin\PluginInstance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

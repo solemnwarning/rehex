@@ -9,7 +9,7 @@
 
 
 // modeled after luaB_print
-void lua_print(sol::this_state s, sol::variadic_args va)
+void lua_print(sol::this_state s, sol::variadic_args va, IPlugin* plugin)
 {
 	sol::state_view lua(s);
 	std::stringstream ss;
@@ -32,10 +32,10 @@ void lua_print(sol::this_state s, sol::variadic_args va)
 		}
 	}
 	ss << std::endl;
-	plugin_hooks::log(ss.str());
+	plugin_hooks::log(plugin, ss.str());
 }
 
-void register_lua(sol::state& lua)
+void luaenvironment::init(sol::state& lua, IPlugin* plugin)
 {
 	lua.open_libraries(
 		sol::lib::base,		// print, assert, and other base functions
@@ -45,20 +45,14 @@ void register_lua(sol::state& lua)
 	);
 
 	// Replace the print function
-	lua.set_function("print", lua_print);
+	lua.set_function("print", [plugin](sol::this_state s, sol::variadic_args va)
+		{
+			lua_print(s, va, plugin);
+		});
 }
 
 
-void luaenvironment::init(const wxString& program)
+void luaenvironment::exit(sol::state& lua)
 {
-	sol::state lua;
-
-	register_lua(lua);
-
-	lua.script("print('Hello', 'from lua!')");
-}
-
-
-void luaenvironment::exit()
-{
+	lua.collect_garbage();
 }

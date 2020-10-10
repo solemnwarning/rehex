@@ -24,6 +24,7 @@
 #include <wx/dataobj.h>
 #include <wx/sizer.h>
 
+#include "../plugin/hooks.hpp"
 #include "app.hpp"
 #include "DiffWindow.hpp"
 #include "EditCommentDialog.hpp"
@@ -68,7 +69,10 @@ END_EVENT_TABLE()
 REHex::Tab::Tab(wxWindow *parent):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make())
+	,plugin(nullptr)
 {
+	plugin = plugin_hooks::document_opened(doc);
+
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
 	v_splitter->SetMinimumPaneSize(20);
@@ -117,12 +121,17 @@ REHex::Tab::Tab(wxWindow *parent):
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
+
+	plugin_hooks::document_initialized(plugin);
 }
 
 REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make(filename))
+	, plugin(nullptr)
 {
+	plugin = plugin_hooks::document_opened(doc);
+
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
 	v_splitter->SetMinimumPaneSize(20);
@@ -165,15 +174,19 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(v_splitter, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
-	
+
 	init_default_tools();
 	
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
+
+	plugin_hooks::document_initialized(plugin);
 }
 
 REHex::Tab::~Tab()
 {
+	delete plugin;
+
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->Unbind(wxEVT_DESTROY, &REHex::Tab::OnSearchDialogDestroy, this);

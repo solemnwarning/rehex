@@ -22,11 +22,13 @@
     <ClInclude Include="..\..\plugin\hooks.hpp" />
     <ClInclude Include="..\..\plugin\luaenvironment.hpp" />
     <ClInclude Include="..\..\plugin\platform.hpp" />
+    <ClInclude Include="..\..\plugin\PluginInstance.hpp" />
     <ClInclude Include="..\..\plugin\PluginPanel.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\plugin\hooks.cpp" />
     <ClCompile Include="..\..\plugin\luaenvironment.cpp" />
+    <ClCompile Include="..\..\plugin\PluginInstance.cpp" />
     <ClCompile Include="..\..\plugin\PluginPanel.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -39,11 +39,17 @@ namespace REHex
 			
 			virtual wxSize DoGetBestClientSize() const override;
 
+			void log(const wxString& output);
+
 		protected:
 			void onPlugintextAdded(wxCommandEvent& evt);
 
 		private:
 			wxTextCtrl *output_text;
+
+			std::mutex lock;
+			std::list<wxString> new_text;
+			bool need_update = false;
 
 		DECLARE_EVENT_TABLE()
 		

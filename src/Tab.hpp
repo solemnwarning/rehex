@@ -34,6 +34,8 @@
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
+class IPlugin;
+
 namespace REHex
 {
 	enum InlineCommentMode {
@@ -80,6 +82,7 @@ namespace REHex
 			wxSplitterWindow   *h_splitter;
 			wxNotebook         *v_tools;
 			wxNotebook         *h_tools;
+			IPlugin            *plugin;
 			
 			std::map<std::string, ToolPanel*> tools;
 			std::set<wxDialog*> search_dialogs;

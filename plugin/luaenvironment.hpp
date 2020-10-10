@@ -1,10 +1,10 @@
 #pragma once
 
-#include <wx/string.h>
+class IPlugin;
 
 namespace luaenvironment
 {
-	void init(const wxString& program);
-	void exit();
+	void init(sol::state& lua, IPlugin* plugin);
+	void exit(sol::state& lua);
 }
 

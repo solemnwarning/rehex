@@ -1129,7 +1129,7 @@ void REHex::Tab::xtools_fix_visibility(wxNotebook *notebook)
 	
 	for(size_t i = 0; i < n_pages; ++i)
 	{
-		wxWindow* page = v_tools->GetPage(i);
+		wxWindow* page = notebook->GetPage(i);
 		assert(page != NULL);
 		
 		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);

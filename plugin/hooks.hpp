@@ -13,6 +13,11 @@
 #include <wx/config.h>
 #include "../src/SharedDocumentPointer.hpp"
 
+namespace REHex
+{
+	class Tab;
+}
+
 
 /// <summary>
 /// Communication object for plugins
@@ -24,9 +29,21 @@ public:
 
 	virtual ~IPlugin() { ; }
 
-	virtual void document_initialized() = 0;
+	//virtual void document_initialized() = 0;
 
 	virtual void log(const wxString& output) = 0;
+};
+
+
+class ITabPlugin
+{
+public:
+	virtual ~ITabPlugin() { ; }
+
+	virtual IPlugin* document_initialized() = 0;
+
+	virtual IPlugin* activated_menu(const wxString& name) = 0;
+
 };
 
 
@@ -35,20 +52,36 @@ namespace plugin_hooks
 	void init(const wxString& defaultPluginsDir, wxConfig* config);
 	void exit();
 
-	/// <summary>
-	/// Notifies the plugin system of a new document being opened
-	/// </summary>
-	/// <param name="doc">The document pointer that can be used by plugins</param>
-	/// <returns>A new IPlugin instance that can be used to communicate with the plugins</returns>
-	IPlugin* document_opened(REHex::SharedDocumentPointer& doc);
-	//void document_closed(REHex::SharedDocumentPointer& doc);
+
+	bool update_menu(wxMenu* plugins_menu, int first_id, int last_id);
 
 
-	inline void document_initialized(IPlugin* plugin)
+	ITabPlugin* tab_opened(REHex::Tab* tab, REHex::SharedDocumentPointer& doc);
+
+	inline IPlugin* document_initialized(ITabPlugin* tab)
 	{
-		if (plugin)
-			plugin->document_initialized();
+		if (tab)
+			return tab->document_initialized();
+		return nullptr;
 	}
+
+	IPlugin* activated_menu(ITabPlugin* tab, int command_id);
+
+
+	///// <summary>
+	///// Notifies the plugin system of a new document being opened
+	///// </summary>
+	///// <param name="doc">The document pointer that can be used by plugins</param>
+	///// <returns>A new IPlugin instance that can be used to communicate with the plugins</returns>
+	//IPlugin* document_opened(REHex::Tab* tab, REHex::SharedDocumentPointer& doc);
+	////void document_closed(REHex::SharedDocumentPointer& doc);
+
+
+	//inline void document_initialized(IPlugin* plugin)
+	//{
+	//	if (plugin)
+	//		plugin->document_initialized();
+	//}
 
 
 	inline void log(IPlugin* plugin, const wxString& output)

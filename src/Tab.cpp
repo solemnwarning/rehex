@@ -69,9 +69,9 @@ END_EVENT_TABLE()
 REHex::Tab::Tab(wxWindow *parent):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make())
-	,plugin(nullptr)
+	, tab_plugin(nullptr)
 {
-	plugin = plugin_hooks::document_opened(doc);
+	tab_plugin = plugin_hooks::tab_opened(this, doc);
 
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -122,15 +122,17 @@ REHex::Tab::Tab(wxWindow *parent):
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
 
-	plugin_hooks::document_initialized(plugin);
+	auto plugin = plugin_hooks::document_initialized(tab_plugin);
+	if (plugin)
+		plugins.push_back(plugin);
 }
 
 REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make(filename))
-	, plugin(nullptr)
+	, tab_plugin(nullptr)
 {
-	plugin = plugin_hooks::document_opened(doc);
+	tab_plugin = plugin_hooks::tab_opened(this, doc);
 
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -180,12 +182,19 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	htools_adjust_on_idle();
 	vtools_adjust_on_idle();
 
-	plugin_hooks::document_initialized(plugin);
+	auto plugin = plugin_hooks::document_initialized(tab_plugin);
+	if (plugin)
+		plugins.push_back(plugin);
 }
 
 REHex::Tab::~Tab()
 {
-	delete plugin;
+	for (auto* plugin : plugins)
+	{
+		delete plugin;
+	}
+	plugins.clear();
+	delete tab_plugin;
 
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
@@ -404,6 +413,13 @@ void REHex::Tab::paste_text(const std::string &text)
 			/* Ignore paste if clipboard didn't contain a valid hex string. */
 		}
 	}
+}
+
+void REHex::Tab::plugin_activate(int command_id)
+{
+	auto plugin = plugin_hooks::activated_menu(tab_plugin, command_id);
+	if (plugin)
+		plugins.push_back(plugin);
 }
 
 REHex::InlineCommentMode REHex::Tab::get_inline_comment_mode() const

@@ -39,6 +39,7 @@ namespace REHex
 			
 			virtual wxSize DoGetBestClientSize() const override;
 
+			void set_name(const wxString& name);
 			void log(const wxString& output);
 
 		protected:
@@ -46,6 +47,7 @@ namespace REHex
 
 		private:
 			wxTextCtrl *output_text;
+			wxString panel_name;
 
 			std::mutex lock;
 			std::list<wxString> new_text;

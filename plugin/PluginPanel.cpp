@@ -45,9 +45,14 @@ REHex::PluginPanel::~PluginPanel()
 {
 }
 
+void REHex::PluginPanel::set_name(const wxString& name)
+{
+	panel_name = name;
+}
+
 std::string REHex::PluginPanel::name() const
 {
-	return "PluginPanel";
+	return panel_name;
 }
 
 void REHex::PluginPanel::save_state(wxConfig *config) const

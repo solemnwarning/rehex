@@ -24,6 +24,7 @@
     <ClInclude Include="..\..\plugin\platform.hpp" />
     <ClInclude Include="..\..\plugin\PluginInstance.hpp" />
     <ClInclude Include="..\..\plugin\PluginPanel.hpp" />
+    <ClInclude Include="..\..\plugin\PluginScript.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\plugin\hooks.cpp" />

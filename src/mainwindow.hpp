@@ -76,6 +76,8 @@ namespace REHex {
 			void OnDecOffsets(wxCommandEvent &event);
 			void OnSaveView(wxCommandEvent &event);
 			
+			void OnPlugin(wxCommandEvent &event);
+
 			void OnGithub(wxCommandEvent &event);
 			void OnDonate(wxCommandEvent &event);
 			void OnAbout(wxCommandEvent &event);

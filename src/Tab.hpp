@@ -34,6 +34,7 @@
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
+class ITabPlugin;
 class IPlugin;
 
 namespace REHex
@@ -71,6 +72,8 @@ namespace REHex
 			
 			void handle_copy(bool cut);
 			void paste_text(const std::string &text);
+
+			void plugin_activate(int command_id);
 			
 			InlineCommentMode get_inline_comment_mode() const;
 			void set_inline_comment_mode(InlineCommentMode inline_comment_mode);
@@ -82,7 +85,8 @@ namespace REHex
 			wxSplitterWindow   *h_splitter;
 			wxNotebook         *v_tools;
 			wxNotebook         *h_tools;
-			IPlugin            *plugin;
+			ITabPlugin         *tab_plugin;
+			std::vector<IPlugin*> plugins;
 			
 			std::map<std::string, ToolPanel*> tools;
 			std::set<wxDialog*> search_dialogs;

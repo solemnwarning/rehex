@@ -40,6 +40,8 @@
 #include "ToolPanel.hpp"
 #include "util.hpp"
 
+#include "../plugin/hooks.hpp"
+
 #include "../res/icon16.h"
 #include "../res/icon32.h"
 #include "../res/icon48.h"
@@ -79,6 +81,9 @@ enum {
 	ID_CLOSE_OTHERS,
 	ID_GITHUB,
 	ID_DONATE,
+
+	ID_FIRST_PLUGIN = 100,
+	ID_LAST_PLUGIN = 200,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -145,6 +150,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_GITHUB,  REHex::MainWindow::OnGithub)
 	EVT_MENU(ID_DONATE,  REHex::MainWindow::OnDonate)
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
+
+	EVT_MENU_RANGE(ID_FIRST_PLUGIN, ID_LAST_PLUGIN, REHex::MainWindow::OnPlugin)
 	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(  wxID_ANY, REHex::MainWindow::OnDocumentChange)
 	EVT_AUINOTEBOOK_PAGE_CLOSE(    wxID_ANY, REHex::MainWindow::OnDocumentClose)
@@ -238,15 +245,18 @@ REHex::MainWindow::MainWindow():
 	
 	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
-		const ToolPanelRegistration *tpr = i->second;
-		wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->label);
-		
-		Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)
+		const ToolPanelRegistration* tpr = i->second;
+		if (!tpr->v_label.empty())
 		{
-			OnShowToolPanel(event, tpr);
-		}, itm->GetId(), itm->GetId());
+			wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->v_label);
 		
-		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+			Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)
+			{
+				OnShowToolPanel(event, tpr);
+			}, itm->GetId(), itm->GetId());
+		
+			tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+			}
 	}
 	
 	view_menu->AppendSeparator();
@@ -281,6 +291,13 @@ REHex::MainWindow::MainWindow():
 	
 	view_menu->Append(ID_SAVE_VIEW, "Save current view as default");
 	
+	wxMenu* plugins_menu = new wxMenu;
+	if (!plugin_hooks::update_menu(plugins_menu, ID_FIRST_PLUGIN, ID_LAST_PLUGIN))
+	{
+		delete plugins_menu;
+		plugins_menu = nullptr;
+	}
+
 	wxMenu *help_menu = new wxMenu;
 	
 	help_menu->Append(ID_GITHUB, "Visit &Github page");
@@ -291,6 +308,8 @@ REHex::MainWindow::MainWindow():
 	menu_bar->Append(file_menu, "&File");
 	menu_bar->Append(edit_menu, "&Edit");
 	menu_bar->Append(view_menu,  "&View");
+	if (plugins_menu)
+		menu_bar->Append(plugins_menu, "&Plugins");
 	menu_bar->Append(help_menu, "&Help");
 	
 	SetMenuBar(menu_bar);
@@ -889,6 +908,20 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	tab->save_view(config);
 }
 
+void REHex::MainWindow::OnPlugin(wxCommandEvent& event)
+{
+	wxWindow* cpage = notebook->GetCurrentPage();
+	assert(cpage != NULL);
+
+	auto tab = dynamic_cast<Tab*>(cpage);
+	assert(tab != NULL);
+
+	if (tab)
+	{
+		tab->plugin_activate(event.GetId());
+	}
+}
+
 void REHex::MainWindow::OnGithub(wxCommandEvent &event)
 {
 	wxLaunchDefaultBrowser("https://github.com/solemnwarning/rehex/");
@@ -968,10 +1001,13 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	{
 		const ToolPanelRegistration *tpr = i->second;
 		
-		int menu_id = tool_panel_name_to_tpm_id[tpr->name];
-		bool active = tab->tool_active(tpr->name);
-		
-		tool_panels_menu->Check(menu_id, active);
+		if (!tpr->v_label.empty())
+		{
+			int menu_id = tool_panel_name_to_tpm_id[tpr->name];
+			bool active = tab->tool_active(tpr->name);
+
+			tool_panels_menu->Check(menu_id, active);
+		}
 	}
 	
 	_update_status_offset(tab->doc_ctrl);

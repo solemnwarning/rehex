@@ -29,10 +29,11 @@ void lua_print(sol::this_state s, sol::variadic_args va, IPlugin* plugin)
 		}
 	}
 	ss << std::endl;
+
 	plugin_hooks::log(plugin, ss.str());
 }
 
-void luaenvironment::init(sol::state& lua, IPlugin* plugin)
+void luaenvironment::initvm(sol::state& lua)
 {
 	lua.open_libraries(
 		sol::lib::base,		// print, assert, and other base functions
@@ -40,14 +41,6 @@ void luaenvironment::init(sol::state& lua, IPlugin* plugin)
 		sol::lib::string,	// string library
 		sol::lib::table		// the table manipulator and observer functions
 	);
-
-	// Replace the print function
-	lua.set_function("print",
-		[plugin](sol::this_state s, sol::variadic_args va)
-		{
-			lua_print(s, va, plugin);
-		});
-
 
 	// Register a document
 	lua.new_usertype<REHex::Document>("Document",
@@ -62,7 +55,18 @@ void luaenvironment::init(sol::state& lua, IPlugin* plugin)
 }
 
 
-void luaenvironment::exit(sol::state& lua)
+void luaenvironment::exitvm(sol::state& lua)
 {
-	lua.collect_garbage();
+//	lua.collect_garbage();
+}
+
+void luaenvironment::initenv(sol::environment& env, IPlugin* plugin)
+{
+	// Register a plugin specific print function
+	env.set_function("print",
+		[plugin](sol::this_state s, sol::variadic_args va)
+		{
+			lua_print(s, va, plugin);
+		});
+
 }

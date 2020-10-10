@@ -14,8 +14,12 @@ class IPlugin;
 
 namespace luaenvironment
 {
-	void init(sol::state& lua, IPlugin* plugin);
-	void exit(sol::state& lua);
+	// Init the (per document) vm
+	void initvm(sol::state& lua);
+	void exitvm(sol::state& lua);
+
+	// Personalize the (per script) sandbox
+	void initenv(sol::environment& env, IPlugin* plugin);
 }
 
 

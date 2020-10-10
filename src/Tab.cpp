@@ -508,6 +508,12 @@ void REHex::Tab::OnSearchDialogDestroy(wxWindowDestroyEvent &event)
 
 void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 {
+	if(doc_ctrl->region_OnChar(event))
+	{
+		/* Key press handled by cursor region. */
+		return;
+	}
+	
 	int key       = event.GetKeyCode();
 	int modifiers = event.GetModifiers();
 	

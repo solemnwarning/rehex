@@ -22,6 +22,7 @@
 #include <exception>
 #include <inttypes.h>
 #include <stdint.h>
+#include <wx/utils.h>
 
 #include "DataType.hpp"
 #include "document.hpp"
@@ -32,21 +33,55 @@ namespace REHex
 {
 	template<typename T> class NumericDataTypeRegion: public DocumentCtrl::GenericDataRegion
 	{
-		private:
+		protected:
 			SharedDocumentPointer doc;
 			
+		private:
 			std::string type_label;
+			
+			bool input_active;
+			std::string input_buf;
+			size_t input_pos;
+			
+			void activate()
+			{
+				if(input_active)
+				{
+					/* Already active. */
+					return;
+				}
+				
+				assert(input_buf.empty());
+				assert(input_pos == 0);
+				
+				input_active = true;
+			}
+			
+			void commit()
+			{
+				if(!write_string_value(input_buf))
+				{
+					wxBell();
+				}
+				
+				input_pos = 0;
+				input_buf.clear();
+				input_active = false;
+			}
 			
 		protected:
 			NumericDataTypeRegion(SharedDocumentPointer &doc, off_t offset, off_t length, const std::string &type_label):
 				GenericDataRegion(offset, length),
 				doc(doc),
-				type_label(type_label)
+				type_label(type_label),
+				input_active(false),
+				input_pos(0)
 			{
 				assert(length == sizeof(T));
 			}
 			
 			virtual std::string to_string(const T *data) const = 0;
+			virtual bool write_string_value(const std::string &value) = 0;
 			
 			virtual int calc_width(DocumentCtrl &doc_ctrl) override
 			{
@@ -61,6 +96,17 @@ namespace REHex
 			
 			virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override
 			{
+				off_t cursor_pos = doc_ctrl.get_cursor_position();
+				
+				if(input_active && cursor_pos != d_offset)
+				{
+					/* Filthy hack - using the draw() function to detect the cursor
+					 * moving off and comitting the in-progress edit.
+					*/
+					
+					commit();
+				}
+				
 				draw_container(doc_ctrl, dc, x, y);
 				
 				int indent_width = doc_ctrl.indent_width(indent_depth);
@@ -125,15 +171,24 @@ namespace REHex
 					data_string = "????";
 				}
 				
-				off_t cursor_pos = doc_ctrl.get_cursor_position();
-				
 				off_t selection_off, selection_length;
 				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
 				
 				off_t selection_end = selection_off + selection_length;
 				off_t d_end = d_offset + d_length;
 				
-				if(selection_length > 0
+				if(input_active)
+				{
+					normal_text();
+					dc.DrawText("[" + input_buf + "]", x, y);
+					
+					if(doc_ctrl.get_cursor_visible())
+					{
+						int cursor_x = x + doc_ctrl.hf_string_width(1 + input_pos);
+						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
+					}
+				}
+				else if(selection_length > 0
 					&& (selection_off != d_offset || selection_length != d_length)
 					&& selection_off < d_end && d_offset < selection_end)
 				{
@@ -291,6 +346,100 @@ namespace REHex
 			{
 				return d_offset;
 			}
+			
+			virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event) override
+			{
+				int key = event.GetKeyCode();
+				
+				if(key >= '0' && key <= '9')
+				{
+					activate();
+					
+					input_buf.insert(input_pos, 1, key);
+					++input_pos;
+					
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				else if(key == '-')
+				{
+					if(input_pos == 0)
+					{
+						activate();
+						
+						input_buf.insert(input_pos, 1, key);
+						++input_pos;
+						
+						doc_ctrl->Refresh();
+					}
+					
+					return true;
+				}
+				else if(key == WXK_DELETE)
+				{
+					activate();
+					
+					if(input_pos < input_buf.length())
+					{
+						input_buf.erase(input_pos, 1);
+					}
+					
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				else if(key == WXK_BACK) /* Backspace */
+				{
+					activate();
+					
+					if(input_pos > 0)
+					{
+						--input_pos;
+						input_buf.erase(input_pos, 1);
+					}
+					
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				else if(key == WXK_ESCAPE)
+				{
+					input_pos = 0;
+					input_buf.clear();
+					input_active = false;
+					
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				else if(key == WXK_RETURN)
+				{
+					if(input_active)
+					{
+						commit();
+						doc_ctrl->Refresh();
+					}
+					
+					return true;
+				}
+				else if(key == WXK_LEFT && input_pos > 0)
+				{
+					--input_pos;
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				else if(key == WXK_RIGHT && input_pos < input_buf.length())
+				{
+					++input_pos;
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				
+				return false;
+			}
 	};
 	
 	#define DECLARE_NDTR_CLASS(NAME, T) \
@@ -301,6 +450,7 @@ namespace REHex
 				\
 			protected: \
 				virtual std::string to_string(const T *data) const override; \
+				virtual bool write_string_value(const std::string &value) override; \
 		};
 	
 	DECLARE_NDTR_CLASS(U16LEDataRegion, uint16_t)

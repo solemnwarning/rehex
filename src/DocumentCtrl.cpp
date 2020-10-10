@@ -840,6 +840,12 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 	
 	off_t cursor_pos = get_cursor_position();
 	
+	if(region_OnChar(event))
+	{
+		/* Key press handled by cursor region. */
+		return;
+	}
+	
 	if(key == WXK_TAB && modifiers == wxMOD_NONE)
 	{
 		if(cursor_state != Document::CSTATE_ASCII)
@@ -1798,6 +1804,16 @@ void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
 	_handle_width_change();
 }
 
+bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)
+{
+	off_t cursor_pos = get_cursor_position();
+	
+	GenericDataRegion *cur_region = _data_region_by_offset(cursor_pos);
+	assert(cur_region != NULL);
+	
+	return cur_region->OnChar(this, event);
+}
+
 wxFont &REHex::DocumentCtrl::get_font()
 {
 	return hex_font;
@@ -1876,6 +1892,11 @@ REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t 
 {
 	assert(d_offset >= 0);
 	assert(d_length >= 0);
+}
+
+bool REHex::DocumentCtrl::GenericDataRegion::OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event)
+{
+	return false;
 }
 
 REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):

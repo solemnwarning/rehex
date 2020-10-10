@@ -157,6 +157,24 @@ namespace REHex {
 					 * @brief Returns the offset of the cursor position nearest the given column on the last screen line of the region.
 					*/
 					virtual off_t last_row_nearest_column(int column) = 0;
+					
+					/**
+					 * @brief Process key presses while the cursor is in this region.
+					 * @return true if the event was handled, false otherwise.
+					 *
+					 * This method is called to process keypresses while the
+					 * cursor is in this region.
+					 *
+					 * If it returns true, no further processing of the event
+					 * will be performed, if it returns false, processing will
+					 * continue and any default processing of the key press
+					 * will be used.
+					 *
+					 * The method may be called multiple times for the same
+					 * event if it returns false, the method MUST be idempotent
+					 * when it returns false.
+					*/
+					virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event);
 			};
 			
 			class DataRegion: public GenericDataRegion
@@ -307,6 +325,7 @@ namespace REHex {
 			
 			const std::list<Region*> &get_regions() const;
 			void replace_all_regions(std::list<Region*> &new_regions);
+			bool region_OnChar(wxKeyEvent &event);
 			
 			wxFont &get_font();
 			

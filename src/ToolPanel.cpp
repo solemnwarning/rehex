@@ -72,7 +72,7 @@ const REHex::ToolPanelRegistration *REHex::ToolPanelRegistry::by_name(const std:
 }
 
 REHex::ToolPanelRegistration::ToolPanelRegistration(const std::string &name, const std::string &label, REHex::ToolPanel::Shape shape, REHex::ToolPanelRegistration::FactoryFunction factory):
-	name(name), label(label), shape(shape), factory(factory)
+	name(name), v_label(label), shape(shape), factory(factory)
 {
 	if(ToolPanelRegistry::registrations == NULL)
 	{

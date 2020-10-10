@@ -96,7 +96,7 @@ namespace REHex {
 			typedef ToolPanel* (*FactoryFunction)(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			std::string name;
-			std::string label;
+			std::string v_label;
 			ToolPanel::Shape shape;
 			FactoryFunction factory;
 			

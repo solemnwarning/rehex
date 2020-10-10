@@ -205,7 +205,16 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 		return;
 	}
 	
-	const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
+
+	// Resolve a factory registration for name:subname to just name
+	std::string factory_name = name;
+	size_t divider = factory_name.find(':');
+	if (divider != std::string::npos)
+	{
+		factory_name = factory_name.substr(0, divider);
+	}
+
+	const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(factory_name);
 	assert(tpr != NULL);
 	
 	if(tpr->shape == ToolPanel::TPS_TALL)
@@ -216,7 +225,7 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 			tool_window->load_state(config);
 		}
 		
-		v_tools->AddPage(tool_window, tpr->label, switch_to);
+		v_tools->AddPage(tool_window, tpr->v_label, switch_to);
 		
 		tools.insert(std::make_pair(name, tool_window));
 		
@@ -235,7 +244,7 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 			tool_window->load_state(config);
 		}
 		
-		h_tools->AddPage(tool_window, tpr->label, switch_to);
+		h_tools->AddPage(tool_window, tool_window->name(), switch_to);
 		
 		tools.insert(std::make_pair(name, tool_window));
 		

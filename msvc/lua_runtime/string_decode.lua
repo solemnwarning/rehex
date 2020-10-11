@@ -3,6 +3,7 @@
 --
 
 local stringdecode = {}
+local bit32 = bit32 or require('bitops52')
 
 -- From http://lua-users.org/wiki/LuaUnicode
 local function utf8_to_32(utf8str)

@@ -40,7 +40,7 @@
 	std::string REHex::NAME::to_string(const T *data) const \
 	{ \
 		char buf[128]; \
-		snprintf(buf, sizeof(buf), FMT, XTOH(*data)); \
+		snprintf(buf, sizeof(buf), FMT, (T)(XTOH(*data))); \
 		\
 		return std::string(buf); \
 	} \

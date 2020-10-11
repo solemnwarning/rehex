@@ -39,8 +39,9 @@ namespace REHex
 		private:
 			std::string type_label;
 			
-			static const int TYPE_X_CHAR = 24; /**< X position to display type relative to left edge of data, in characters. */
-			static const int TYPE_MAX_LEN = 5; /**< Maximum length of type_label. */
+			static const int MAX_INPUT_LEN = 20;               /* Wide enough for any decimal 64-bit value. */
+			static const int TYPE_X_CHAR = MAX_INPUT_LEN + 2;  /**< X position to display type relative to left edge of data, in characters. */
+			static const int TYPE_MAX_LEN = 5;                 /**< Maximum length of type_label. */
 			
 			bool input_active;
 			std::string input_buf;
@@ -361,18 +362,26 @@ namespace REHex
 			{
 				int key = event.GetKeyCode();
 				
-				if(key >= '0' && key <= '9')
+				if((key >= '0' && key <= '9')
+					|| (key >= 'a' && key <= 'z')
+					|| (key >= 'A' && key <= 'Z'))
 				{
 					activate();
 					
-					input_buf.insert(input_pos, 1, key);
-					++input_pos;
-					
-					doc_ctrl->Refresh();
+					if(input_buf.length() < MAX_INPUT_LEN)
+					{
+						input_buf.insert(input_pos, 1, key);
+						++input_pos;
+						
+						doc_ctrl->Refresh();
+					}
+					else{
+						wxBell();
+					}
 					
 					return true;
 				}
-				else if(key == '-')
+				else if(key == '-' || key == '+')
 				{
 					if(input_pos == 0)
 					{

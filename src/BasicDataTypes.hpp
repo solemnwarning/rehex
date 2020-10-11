@@ -39,6 +39,9 @@ namespace REHex
 		private:
 			std::string type_label;
 			
+			static const int TYPE_X_CHAR = 24; /**< X position to display type relative to left edge of data, in characters. */
+			static const int TYPE_MAX_LEN = 5; /**< Maximum length of type_label. */
+			
 			bool input_active;
 			std::string input_buf;
 			size_t input_pos;
@@ -85,8 +88,15 @@ namespace REHex
 			
 			virtual int calc_width(DocumentCtrl &doc_ctrl) override
 			{
-				/* TODO */
-				return 50;
+				int indent_width = doc_ctrl.indent_width(indent_depth);
+				
+				int offset_column_width = doc_ctrl.get_show_offsets()
+					? doc_ctrl.get_offset_column_width()
+					: 0;
+				
+				return (2 * indent_width)
+					+ offset_column_width
+					+ doc_ctrl.hf_string_width(TYPE_X_CHAR + TYPE_MAX_LEN + 2 /* <> characters */);
 			}
 			
 			virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override
@@ -263,7 +273,7 @@ namespace REHex
 					dc.DrawText("[" + data_string + "]", x, y);
 				}
 				
-				x += doc_ctrl.hf_string_width(22);
+				x += doc_ctrl.hf_string_width(TYPE_X_CHAR);
 				
 				std::string type_string = std::string("<") + type_label + ">";
 				

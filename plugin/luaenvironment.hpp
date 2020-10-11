@@ -20,6 +20,7 @@ namespace luaenvironment
 
 	// Personalize the (per script) sandbox
 	void initenv(sol::environment& env, IPlugin* plugin);
+	void exitenv(sol::environment& env);
 }
 
 

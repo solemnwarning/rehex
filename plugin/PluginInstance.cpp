@@ -23,7 +23,6 @@ class PluginInstance: public IPlugin
 
 	PluginScript script;
 	sol::environment Env;
-
 	
 
 public:
@@ -38,6 +37,7 @@ public:
 
 	~PluginInstance()
 	{
+		luaenvironment::exitenv(Env);
 	}
 
 	void initialize(sol::state& lua)
@@ -103,7 +103,7 @@ public:
 	}
 	~PluginTabInstance()
 	{
-
+		luaenvironment::exitvm(lua);
 	}
 
 	void add_scripts(const std::vector<PluginScript>& plugin_scripts)

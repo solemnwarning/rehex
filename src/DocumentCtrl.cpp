@@ -925,8 +925,16 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					new_cursor_pos = next_region->first_row_nearest_column(0);
 					assert(new_cursor_pos >= 0);
 				}
+				else if(get_insert_mode())
+				{
+					/* Special case: Can move one past the end of the final
+					 * data region in insert mode.
+					*/
+					
+					new_cursor_pos = cur_region->d_offset + cur_region->d_length;
+				}
 				else{
-					/* No previous region. Nowhere to go. */
+					/* No further region. Nowhere to go. */
 					new_cursor_pos = cursor_pos;
 				}
 			}
@@ -971,8 +979,16 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					new_cursor_pos = next_region->first_row_nearest_column(cur_column);
 					assert(new_cursor_pos >= 0);
 				}
+				else if(get_insert_mode())
+				{
+					/* Special case: Can move one past the end of the final
+					 * data region in insert mode.
+					*/
+					
+					new_cursor_pos = cur_region->d_offset + cur_region->d_length;
+				}
 				else{
-					/* No previous region. Nowhere to go. */
+					/* No further region. Nowhere to go. */
 					new_cursor_pos = cursor_pos;
 				}
 			}
@@ -1015,6 +1031,18 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		{
 			/* Move cursor to end of line. */
 			new_cursor_pos = cur_region->cursor_end_from(new_cursor_pos);
+			
+			/* Special case: If "end" is pressed on the last line of the final data
+			 * region when in insert mode, jump past it.
+			*/
+			if(get_insert_mode() && cur_region->last_row_nearest_column(INT_MAX) == new_cursor_pos)
+			{
+				GenericDataRegion *next_region = _next_data_region(cur_region);
+				if(next_region == NULL)
+				{
+					new_cursor_pos = cur_region->d_offset + cur_region->d_length;
+				}
+			}
 		}
 		
 		_set_cursor_position(new_cursor_pos, Document::CSTATE_GOTO);
@@ -2710,7 +2738,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Docu
 off_t REHex::DocumentCtrl::DataRegion::cursor_left_from(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t new_pos = pos - 1;
 	
@@ -2726,7 +2754,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_left_from(off_t pos)
 off_t REHex::DocumentCtrl::DataRegion::cursor_right_from(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t new_pos = pos + 1;
 	
@@ -2742,7 +2770,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_right_from(off_t pos)
 off_t REHex::DocumentCtrl::DataRegion::cursor_up_from(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t new_pos = pos - bytes_per_line_actual;
 	
@@ -2764,7 +2792,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_up_from(off_t pos)
 off_t REHex::DocumentCtrl::DataRegion::cursor_down_from(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t new_pos = pos + bytes_per_line_actual;
 	
@@ -2791,7 +2819,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_down_from(off_t pos)
 off_t REHex::DocumentCtrl::DataRegion::cursor_home_from(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
 	off_t bytes_from_start_of_visual_line = (pos - visual_offset) % bytes_per_line_actual;
@@ -2806,7 +2834,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_home_from(off_t pos)
 off_t REHex::DocumentCtrl::DataRegion::cursor_end_from(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
 	off_t bytes_from_start_of_visual_line = (pos - visual_offset) % bytes_per_line_actual;
@@ -2827,7 +2855,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_end_from(off_t pos)
 int REHex::DocumentCtrl::DataRegion::cursor_column(off_t pos)
 {
 	assert(pos >= d_offset);
-	assert(pos < (d_offset + d_length));
+	assert(pos <= (d_offset + d_length));
 	
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
 	off_t region_offset = pos - visual_offset;
@@ -2847,7 +2875,7 @@ off_t REHex::DocumentCtrl::DataRegion::first_row_nearest_column(int column)
 	offset_at_col = std::min(offset_at_col, (visual_offset + (off_t)(bytes_per_line_actual) - 1));
 	
 	assert(offset_at_col >= d_offset);
-	assert(offset_at_col < (d_offset + d_length));
+	assert(offset_at_col < (d_offset + d_length + (d_length == 0)));
 	
 	return offset_at_col;
 }
@@ -2864,7 +2892,7 @@ off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
 	offset_at_col = std::min(offset_at_col, (d_offset + d_length - 1));
 	
 	assert(offset_at_col >= d_offset);
-	assert(offset_at_col < (d_offset + d_length));
+	assert(offset_at_col < (d_offset + d_length + (d_length == 0)));
 	
 	return offset_at_col;
 }

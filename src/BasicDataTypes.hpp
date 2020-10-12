@@ -383,7 +383,7 @@ namespace REHex
 			virtual off_t cursor_left_from(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_PREV_REGION;
 			}
@@ -391,7 +391,7 @@ namespace REHex
 			virtual off_t cursor_right_from(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_NEXT_REGION;
 			}
@@ -399,7 +399,7 @@ namespace REHex
 			virtual off_t cursor_up_from(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_PREV_REGION;
 			}
@@ -407,7 +407,7 @@ namespace REHex
 			virtual off_t cursor_down_from(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_NEXT_REGION;
 			}
@@ -415,7 +415,7 @@ namespace REHex
 			virtual off_t cursor_home_from(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return d_offset;
 			}
@@ -423,7 +423,7 @@ namespace REHex
 			virtual off_t cursor_end_from(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return d_offset;
 			}
@@ -431,7 +431,7 @@ namespace REHex
 			virtual int cursor_column(off_t pos) override
 			{
 				assert(pos >= d_offset);
-				assert(pos < (d_offset + d_length));
+				assert(pos <= (d_offset + d_length));
 				
 				return 0;
 			}

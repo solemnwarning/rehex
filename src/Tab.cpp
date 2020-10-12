@@ -1388,6 +1388,15 @@ std::list<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocume
 		/* Empty buffers need a data region too! */
 		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, *doc));
 	}
+	else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(regions.back()) == NULL)
+	{
+		/* End region isn't a DataRegionDocHighlight - means its a comment or a custom
+		 * data region type. Push one on the end so there's somewhere to put the cursor to
+		 * insert more data at the end.
+		*/
+		
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, *doc));
+	}
 	
 	return regions;
 }

@@ -43,9 +43,12 @@ namespace REHex
 			static const int TYPE_X_CHAR = MAX_INPUT_LEN + 2;  /**< X position to display type relative to left edge of data, in characters. */
 			static const int TYPE_MAX_LEN = 5;                 /**< Maximum length of type_label. */
 			
-			bool input_active;
-			std::string input_buf;
-			size_t input_pos;
+			int offset_text_x;  /**< Virtual X coord of left edge of offsets, in pixels. */
+			int data_text_x;    /**< Virtual X coord of left edge of data, in pixels. */
+			
+			bool input_active;      /**< Is the user typing a new value for this range in? */
+			std::string input_buf;  /**< Input text buffer, empty when input_active is false. */
+			size_t input_pos;       /**< Insert cursor position in input_buf, zero when input_active is false. */
 			
 			void activate()
 			{
@@ -73,6 +76,16 @@ namespace REHex
 				input_active = false;
 			}
 			
+			bool partial_selection(off_t selection_off, off_t selection_length)
+			{
+				off_t selection_end = selection_off + selection_length;
+				off_t d_end = d_offset + d_length;
+				
+				return selection_length > 0
+					&& (selection_off != d_offset || selection_length != d_length)
+					&& selection_off < d_end && d_offset < selection_end;
+			}
+			
 		protected:
 			NumericDataTypeRegion(SharedDocumentPointer &doc, off_t offset, off_t length, const std::string &type_label):
 				GenericDataRegion(offset, length),
@@ -95,6 +108,9 @@ namespace REHex
 					? doc_ctrl.get_offset_column_width()
 					: 0;
 				
+				offset_text_x = indent_width;
+				data_text_x   = indent_width + offset_column_width;
+				
 				return (2 * indent_width)
 					+ offset_column_width
 					+ doc_ctrl.hf_string_width(TYPE_X_CHAR + TYPE_MAX_LEN + 2 /* <> characters */);
@@ -109,7 +125,7 @@ namespace REHex
 			{
 				off_t cursor_pos = doc_ctrl.get_cursor_position();
 				
-				if(input_active && cursor_pos != d_offset)
+				if(input_active && (cursor_pos < d_offset || cursor_pos >= (d_offset + d_length)))
 				{
 					/* Filthy hack - using the draw() function to detect the cursor
 					 * moving off and comitting the in-progress edit.
@@ -119,9 +135,6 @@ namespace REHex
 				}
 				
 				draw_container(doc_ctrl, dc, x, y);
-				
-				int indent_width = doc_ctrl.indent_width(indent_depth);
-				x += indent_width;
 				
 				dc.SetFont(doc_ctrl.get_font());
 				dc.SetBackgroundMode(wxSOLID);
@@ -144,6 +157,8 @@ namespace REHex
 					dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 				};
 				
+				x += offset_text_x;
+				
 				if(doc_ctrl.get_show_offsets())
 				{
 					/* Draw the offsets to the left */
@@ -153,7 +168,7 @@ namespace REHex
 					normal_text();
 					dc.DrawText(offset_str, x, y);
 					
-					x += doc_ctrl.get_offset_column_width();
+					x += (data_text_x - offset_text_x);
 					
 					int offset_vl_x = x - (doc_ctrl.hf_char_width() / 2);
 					
@@ -186,7 +201,6 @@ namespace REHex
 				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
 				
 				off_t selection_end = selection_off + selection_length;
-				off_t d_end = d_offset + d_length;
 				
 				if(input_active)
 				{
@@ -199,9 +213,7 @@ namespace REHex
 						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
 					}
 				}
-				else if(selection_length > 0
-					&& (selection_off != d_offset || selection_length != d_length)
-					&& selection_off < d_end && d_offset < selection_end)
+				else if(partial_selection(selection_off, selection_length))
 				{
 					/* Selection encompasses *some* of our bytes and/or stretches
 					* beyond either end. Render the underlying hex bytes.
@@ -239,7 +251,7 @@ namespace REHex
 						col += 2;
 					}
 				}
-				else if(cursor_pos == d_offset && doc_ctrl.get_cursor_visible())
+				else if(cursor_pos >= d_offset && cursor_pos < (d_offset + d_length) && doc_ctrl.get_cursor_visible())
 				{
 					/* Invert colour for cursor position/blink. */
 					
@@ -287,9 +299,16 @@ namespace REHex
 				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 			}
 			
-			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
+			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
 			{
-				return std::make_pair(d_offset, SA_SPECIAL);
+				mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
+				mouse_x_px = std::max(mouse_x_px, 0);
+				
+				off_t mouse_x_bytes = std::min(
+					(d_offset + (mouse_x_px / doc_ctrl.hf_string_width(2))),
+					(d_offset + d_length - 1));
+				
+				return std::make_pair(mouse_x_bytes, SA_SPECIAL);
 			}
 			
 			virtual off_t cursor_left_from(off_t pos) override

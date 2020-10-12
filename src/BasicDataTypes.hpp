@@ -294,9 +294,76 @@ namespace REHex
 				dc.DrawText(type_string, x, y);
 			}
 			
-			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override
+			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				off_t selection_off, selection_length;
+				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+				
+				if(partial_selection(selection_off, selection_length))
+				{
+					/* Our data is partially selected. We are displaying hex bytes. */
+					
+					if(mouse_x_px < data_text_x)
+					{
+						/* Click was left of data area. */
+						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+					}
+					
+					mouse_x_px -= data_text_x;
+					
+					unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+					
+					unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px);
+					if(((char_offset + 1) % ((bytes_per_group * 2) + 1)) == 0)
+					{
+						/* Click was over a space between byte groups. */
+						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+					}
+					else{
+						unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
+						unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
+						off_t clicked_offset                = d_offset + line_offset_bytes;
+						
+						if(clicked_offset < (d_offset + d_length))
+						{
+							/* Clicked on a byte */
+							return std::make_pair(clicked_offset, SA_HEX);
+						}
+						else{
+							/* Clicked past the end of the line */
+							return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+						}
+					}
+				}
+				else{
+					/* We are displaying normally (i.e. the value in square brackets) */
+					
+					std::vector<unsigned char> data;
+					
+					try {
+						data = doc->read_data(d_offset, d_length);
+						assert(data.size() == sizeof(T));
+					}
+					catch(const std::exception &e)
+					{
+						fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::offset_at_xy: %s\n", e.what());
+						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+					}
+					
+					std::string data_string = to_string((const T*)(data.data()));
+					
+					mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
+					unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px);
+					
+					if(mouse_x_px >= 0 && char_offset < data_string.length())
+					{
+						/* Within screen area of data_string. */
+						return std::make_pair(d_offset, SA_SPECIAL);
+					}
+					else{
+						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+					}
+				}
 			}
 			
 			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override

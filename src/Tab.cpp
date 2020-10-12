@@ -1275,16 +1275,6 @@ void REHex::Tab::repopulate_regions()
 
 std::list<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode)
 {
-	if(inline_comment_mode == ICM_HIDDEN)
-	{
-		/* Inline comments are hidden. Just show a single big data region. */
-		
-		std::list<DocumentCtrl::Region*> regions;
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, doc->buffer_length(), *doc));
-		
-		return regions;
-	}
-	
 	auto comments = doc->get_comments();
 	auto types = doc->get_data_types();
 	
@@ -1296,6 +1286,12 @@ std::list<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocume
 	auto offset_base = comments.begin();
 	auto types_iter = types.begin();
 	off_t next_data = 0, remain_data = doc->buffer_length();
+	
+	if(inline_comment_mode == ICM_HIDDEN)
+	{
+		/* Inline comments are hidden. Skip over the comments. */
+		offset_base = comments.end();
+	}
 	
 	std::list<DocumentCtrl::Region*> regions;
 	std::stack<off_t> dr_limit;

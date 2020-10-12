@@ -1642,32 +1642,14 @@ void REHex::DocumentCtrl::_make_x_visible(int x_px, int width_px)
 */
 void REHex::DocumentCtrl::_make_byte_visible(off_t offset)
 {
-#if 0
 	GenericDataRegion *dr = _data_region_by_offset(offset);
 	assert(dr != NULL);
 	
-	/* TODO: Move these maths into Region::Data */
+	Rect bounds = dr->calc_offset_bounds(offset, this);
+	assert(bounds.h == 1);
 	
-	off_t region_offset = offset - dr->d_offset;
-	
-	uint64_t region_line = dr->y_offset + (region_offset / dr->bytes_per_line_actual);
-	_make_line_visible(region_line);
-	
-	off_t line_off = region_offset % dr->bytes_per_line_actual;
-	
-	if(cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID)
-	{
-		unsigned int line_x = offset_column_width
-			+ hf_string_width(line_off * 2)
-			+ hf_string_width(line_off / bytes_per_group);
-		_make_x_visible(line_x, hf_string_width(2));
-	}
-	else if(cursor_state == Document::CSTATE_ASCII)
-	{
-		off_t byte_x = dr->ascii_text_x + hf_string_width(line_off);
-		_make_x_visible(byte_x, hf_char_width());
-	}
-#endif
+	_make_line_visible(bounds.y);
+	_make_x_visible(bounds.x, bounds.w);
 }
 
 std::list<wxString> REHex::DocumentCtrl::format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
@@ -2797,7 +2779,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_down_from(off_t pos)
 	off_t new_pos = pos + bytes_per_line_actual;
 	
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
-	off_t last_row_off = visual_offset + ((d_length / bytes_per_line_actual) * bytes_per_line_actual);
+	off_t last_row_off = visual_offset + (((d_length + (off_t)(first_line_pad_bytes)) / bytes_per_line_actual) * bytes_per_line_actual);
 	
 	if(pos < last_row_off && new_pos >= (d_offset + d_length))
 	{
@@ -2873,6 +2855,7 @@ off_t REHex::DocumentCtrl::DataRegion::first_row_nearest_column(int column)
 	
 	offset_at_col = std::max(offset_at_col, d_offset);
 	offset_at_col = std::min(offset_at_col, (visual_offset + (off_t)(bytes_per_line_actual) - 1));
+	offset_at_col = std::min(offset_at_col, (d_offset + d_length - (d_length > 0)));
 	
 	assert(offset_at_col >= d_offset);
 	assert(offset_at_col < (d_offset + d_length + (d_length == 0)));
@@ -2895,6 +2878,46 @@ off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
 	assert(offset_at_col < (d_offset + d_length + (d_length == 0)));
 	
 	return offset_at_col;
+}
+
+REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)
+{
+	assert(offset >= d_offset);
+	assert(offset <= (d_offset + d_length));
+	
+	off_t region_offset = offset - (d_offset - first_line_pad_bytes);
+	
+	uint64_t region_line = y_offset + (region_offset / bytes_per_line_actual);
+	
+	off_t line_off = region_offset % bytes_per_line_actual;
+	
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	if(cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID)
+	{
+		unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+		int line_x = hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group));
+		
+		return Rect(
+			line_x,                        /* x */
+			region_line,                   /* y */
+			doc_ctrl->hf_string_width(2),  /* w */
+			1);                            /* h */
+	}
+	else if(cursor_state == Document::CSTATE_ASCII)
+	{
+		int byte_x = ascii_text_x + doc_ctrl->hf_string_width(line_off);
+		
+		return Rect(
+			byte_x,                     /* x */
+			region_line,                /* y */
+			doc_ctrl->hf_char_width(),  /* w */
+			1);                         /* h */
+	}
+	else{
+		/* Unreachable. Return invalid rect. */
+		return Rect();
+	}
 }
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(off_t off) const

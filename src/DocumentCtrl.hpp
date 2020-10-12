@@ -37,6 +37,21 @@
 namespace REHex {
 	class DocumentCtrl: public wxControl {
 		public:
+			/**
+			 * @brief An on-screen rectangle in the DocumentCtrl.
+			*/
+			struct Rect
+			{
+				int x;      /**< X co-ordinate, in pixels. */
+				int64_t y;  /**< Y co-ordinate, in lines. */
+				
+				int w;      /**< Width, in pixels. */
+				int64_t h;  /**< Height, in lines. */
+				
+				Rect(): x(-1), y(-1), w(-1), h(-1) {}
+				Rect(int x, int64_t y, int w, int64_t h): x(x), y(y), w(w), h(h) {}
+			};
+			
 			class Region
 			{
 				protected:
@@ -157,6 +172,11 @@ namespace REHex {
 					 * @brief Returns the offset of the cursor position nearest the given column on the last screen line of the region.
 					*/
 					virtual off_t last_row_nearest_column(int column) = 0;
+					
+					/**
+					 * @brief Calculate the on-screen bounding box of a byte in the region.
+					*/
+					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Process key presses while the cursor is in this region.
@@ -282,6 +302,8 @@ namespace REHex {
 					virtual int cursor_column(off_t pos) override;
 					virtual off_t first_row_nearest_column(int column) override;
 					virtual off_t last_row_nearest_column(int column) override;
+					
+					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					

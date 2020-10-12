@@ -446,6 +446,42 @@ namespace REHex
 				return d_offset;
 			}
 			
+			DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override
+			{
+				assert(offset >= d_offset);
+				assert(offset <= (d_offset + d_length));
+				
+				off_t selection_off, selection_length;
+				std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+				
+				if(partial_selection(selection_off, selection_length))
+				{
+					/* Our data is partially selected. We are displaying hex bytes. */
+					
+					off_t rel_offset = offset - d_offset;
+					
+					unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+					int line_x = data_text_x + doc_ctrl->hf_string_width((rel_offset * 2) + (rel_offset / bytes_per_group));
+					
+					return DocumentCtrl::Rect(
+						line_x,                        /* x */
+						y_offset,                      /* y */
+						doc_ctrl->hf_string_width(2),  /* w */
+						1);                            /* h */
+				}
+				else{
+					/* We are displaying normally (i.e. the value in square brackets) */
+					
+					std::vector<unsigned char> data;
+					
+					return DocumentCtrl::Rect(
+						data_text_x,                                   /* x */
+						y_offset,                                      /* y */
+						doc_ctrl->hf_string_width(MAX_INPUT_LEN + 2),  /* w */
+						1);                                            /* h */
+				}
+			}
+			
 			virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event) override
 			{
 				int key = event.GetKeyCode();

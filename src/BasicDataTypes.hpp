@@ -22,6 +22,7 @@
 #include <exception>
 #include <inttypes.h>
 #include <stdint.h>
+#include <wx/dataobj.h>
 #include <wx/utils.h>
 
 #include "DataType.hpp"
@@ -544,6 +545,41 @@ namespace REHex
 				}
 				
 				return false;
+			}
+			
+			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override
+			{
+				off_t selection_off, selection_length;
+				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+				
+				assert(selection_off >= d_offset);
+				assert((selection_off + selection_length) <= (d_offset + d_length));
+				
+				if(selection_off == d_offset && selection_length == d_length)
+				{
+					/* Selection matches our data range. Copy stringified
+					 * numeric value to clipboard.
+					*/
+					
+					std::vector<unsigned char> data;
+					
+					try {
+						data = doc->read_data(d_offset, d_length);
+						assert(data.size() == sizeof(T));
+					}
+					catch(const std::exception &e)
+					{
+						fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::OnCopy: %s\n", e.what());
+						return NULL;
+					}
+					
+					std::string data_string = to_string((const T*)(data.data()));
+					
+					return new wxTextDataObject(data_string);
+				}
+				
+				/* Fall back to default handling - copy selected bytes. */
+				return NULL;
 			}
 	};
 	

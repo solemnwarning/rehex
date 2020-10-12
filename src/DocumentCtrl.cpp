@@ -1814,6 +1814,11 @@ bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)
 	return cur_region->OnChar(this, event);
 }
 
+REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::data_region_by_offset(off_t offset)
+{
+	return _data_region_by_offset(offset);
+}
+
 wxFont &REHex::DocumentCtrl::get_font()
 {
 	return hex_font;
@@ -1897,6 +1902,11 @@ REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t 
 bool REHex::DocumentCtrl::GenericDataRegion::OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event)
 {
 	return false;
+}
+
+wxDataObject *REHex::DocumentCtrl::GenericDataRegion::OnCopy(DocumentCtrl &doc_ctrl)
+{
+	return NULL;
 }
 
 REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):

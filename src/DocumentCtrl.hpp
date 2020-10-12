@@ -175,6 +175,23 @@ namespace REHex {
 					 * when it returns false.
 					*/
 					virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event);
+					
+					/**
+					 * @brief Process a clipboard copy operation within this region.
+					 * @return wxDataObject pointer, or NULL.
+					 *
+					 * This method is called to process copy events when the
+					 * selection is entirely within a single region.
+					 *
+					 * Returns a pointer to a wxDataObject object to be placed
+					 * into the clipboard, or NULL if the region has no special
+					 * clipboard handling, in which case the default copy
+					 * behaviour will take over.
+					 *
+					 * The caller is responsible for ensuring any returned
+					 * wxDataObject is deleted.
+					*/
+					virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl);
 			};
 			
 			class DataRegion: public GenericDataRegion
@@ -326,6 +343,7 @@ namespace REHex {
 			const std::list<Region*> &get_regions() const;
 			void replace_all_regions(std::list<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
+			GenericDataRegion *data_region_by_offset(off_t offset);
 			
 			wxFont &get_font();
 			

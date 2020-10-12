@@ -196,6 +196,22 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 		return;
 	}
 	
+	wxDataObject *copy_data = NULL;
+	
+	/* If the selection is contained within a single Region, give it the chance to do something
+	 * special rather than just copying out the hex/ASCII for the selection.
+	*/
+	
+	REHex::DocumentCtrl::GenericDataRegion *selection_region = doc_ctrl->data_region_by_offset(selection_off);
+	assert(selection_region != NULL);
+	
+	assert(selection_region->d_offset <= selection_off);
+	
+	if((selection_region->d_offset + selection_region->d_length) >= (selection_off + selection_length))
+	{
+		copy_data = selection_region->OnCopy(*doc_ctrl);
+	}
+	
 	/* Warn the user this might be a bad idea before dumping silly amounts
 	 * of data (>16MiB) into the clipboard.
 	*/
@@ -221,58 +237,60 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 		}
 	}
 	
-	wxTextDataObject *copy_data = NULL;
-	try {
-		std::vector<unsigned char> selection_data = doc->read_data(selection_off, selection_length);
-		assert((off_t)(selection_data.size()) == selection_length);
-		
-		if(cursor_state == Document::CSTATE_ASCII)
-		{
-			std::string ascii_string;
-			ascii_string.reserve(selection_data.size());
+	if(copy_data == NULL)
+	{
+		try {
+			std::vector<unsigned char> selection_data = doc->read_data(selection_off, selection_length);
+			assert((off_t)(selection_data.size()) == selection_length);
 			
-			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+			if(cursor_state == Document::CSTATE_ASCII)
 			{
-				if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+				std::string ascii_string;
+				ascii_string.reserve(selection_data.size());
+				
+				for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
 				{
-					ascii_string.push_back(*c);
+					if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+					{
+						ascii_string.push_back(*c);
+					}
+				}
+				
+				if(!ascii_string.empty())
+				{
+					copy_data = new wxTextDataObject(ascii_string);
 				}
 			}
-			
-			if(!ascii_string.empty())
-			{
-				copy_data = new wxTextDataObject(ascii_string);
+			else{
+				std::string hex_string;
+				hex_string.reserve(selection_data.size() * 2);
+				
+				for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+				{
+					const char *nibble_to_hex = "0123456789ABCDEF";
+					
+					unsigned char high_nibble = (*c & 0xF0) >> 4;
+					unsigned char low_nibble  = (*c & 0x0F);
+					
+					hex_string.push_back(nibble_to_hex[high_nibble]);
+					hex_string.push_back(nibble_to_hex[low_nibble]);
+				}
+				
+				copy_data = new wxTextDataObject(hex_string);
 			}
 		}
-		else{
-			std::string hex_string;
-			hex_string.reserve(selection_data.size() * 2);
-			
-			for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
-			{
-				const char *nibble_to_hex = "0123456789ABCDEF";
-				
-				unsigned char high_nibble = (*c & 0xF0) >> 4;
-				unsigned char low_nibble  = (*c & 0x0F);
-				
-				hex_string.push_back(nibble_to_hex[high_nibble]);
-				hex_string.push_back(nibble_to_hex[low_nibble]);
-			}
-			
-			copy_data = new wxTextDataObject(hex_string);
+		catch(const std::bad_alloc &)
+		{
+			wxMessageBox(
+				"Memory allocation failed while preparing clipboard buffer.",
+				"Error", (wxOK | wxICON_ERROR), dialog_parent);
+			return;
 		}
-	}
-	catch(const std::bad_alloc &)
-	{
-		wxMessageBox(
-			"Memory allocation failed while preparing clipboard buffer.",
-			"Error", (wxOK | wxICON_ERROR), dialog_parent);
-		return;
-	}
-	catch(const std::exception &e)
-	{
-		wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), dialog_parent);
-		return;
+		catch(const std::exception &e)
+		{
+			wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), dialog_parent);
+			return;
+		}
 	}
 	
 	if(copy_data != NULL)

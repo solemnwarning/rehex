@@ -510,6 +510,31 @@ namespace REHex
 					
 					return true;
 				}
+				else if(key == WXK_F2)
+				{
+					/* Activate input mode with current string value. */
+					
+					std::vector<unsigned char> data;
+					
+					try {
+						data = doc->read_data(d_offset, d_length);
+						assert(data.size() == sizeof(T));
+					}
+					catch(const std::exception &e)
+					{
+						fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::OnChar: %s\n", e.what());
+						return true;
+					}
+					
+					activate();
+					
+					input_buf = to_string((const T*)(data.data()));
+					input_pos = input_buf.length();
+					
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
 				else if(key == WXK_ESCAPE)
 				{
 					input_pos = 0;

@@ -22,6 +22,7 @@
 #include <exception>
 #include <inttypes.h>
 #include <stdint.h>
+#include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/utils.h>
 
@@ -580,6 +581,50 @@ namespace REHex
 				
 				/* Fall back to default handling - copy selected bytes. */
 				return NULL;
+			}
+			
+			virtual bool OnPaste(DocumentCtrl *doc_ctrl)
+			{
+				off_t selection_off, selection_length;
+				std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+				
+				if(selection_length > 0 && (selection_off != d_offset || selection_length != d_length))
+				{
+					/* There is a selection and it doesn't exactly match our
+					 * data range. Fall back to default handling.
+					*/
+					
+					return false;
+				}
+				
+				if(wxTheClipboard->IsSupported(wxDF_TEXT))
+				{
+					/* Clipboard contains text. Act like it was typed in. */
+					
+					wxTextDataObject clipboard_data;
+					wxTheClipboard->GetData(clipboard_data);
+					
+					std::string clipboard_text = clipboard_data.GetText().ToStdString();
+					
+					activate();
+					
+					input_buf.insert(input_pos, clipboard_text);
+					input_pos += clipboard_text.length();
+					
+					if(input_buf.length() > MAX_INPUT_LEN)
+					{
+						/* Clipboard text is too long. */
+						
+						input_buf.erase(MAX_INPUT_LEN);
+						wxBell();
+					}
+					
+					doc_ctrl->Refresh();
+					
+					return true;
+				}
+				
+				return false;
 			}
 	};
 	

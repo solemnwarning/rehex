@@ -1909,6 +1909,11 @@ wxDataObject *REHex::DocumentCtrl::GenericDataRegion::OnCopy(DocumentCtrl &doc_c
 	return NULL;
 }
 
+bool REHex::DocumentCtrl::GenericDataRegion::OnPaste(DocumentCtrl *doc_ctrl)
+{
+	return false;
+}
+
 REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):
 	GenericDataRegion(d_offset, d_length),
 	bytes_per_line_actual(1) {}

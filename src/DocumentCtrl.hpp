@@ -192,6 +192,25 @@ namespace REHex {
 					 * wxDataObject is deleted.
 					*/
 					virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl);
+					
+					/**
+					 * @brief Process a clipboard paste operation within this region.
+					 * @return true if the event was handled, false otherwise.
+					 *
+					 * This method is called when the user attempts to paste and
+					 * one or both of the following is true:
+					 *
+					 * a) A range of bytes exclusively within this region are selected.
+					 *
+					 * b) The cursor is within this region.
+					 *
+					 * The clipboard will already be locked by the caller when
+					 * this method is called.
+					 *
+					 * If this method returns false, default paste handling
+					 * will be invoked.
+					*/
+					virtual bool OnPaste(DocumentCtrl *doc_ctrl);
 			};
 			
 			class DataRegion: public GenericDataRegion

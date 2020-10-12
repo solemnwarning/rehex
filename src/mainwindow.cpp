@@ -653,6 +653,45 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 	ClipboardGuard cg;
 	if(cg)
 	{
+		/* If there is a selection and it is entirely contained within a Region, give that
+		 * region the chance to handle the paste event.
+		*/
+		
+		off_t selection_off, selection_length;
+		std::tie(selection_off, selection_length) = tab->doc_ctrl->get_selection();
+		
+		if(selection_length > 0)
+		{
+			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_off);
+			assert(selection_region != NULL);
+			
+			assert(selection_region->d_offset <= selection_off);
+			
+			if((selection_region->d_offset + selection_region->d_length) >= (selection_off + selection_length))
+			{
+				if(selection_region->OnPaste(tab->doc_ctrl))
+				{
+					/* Region consumed the paste event. */
+					return;
+				}
+			}
+		}
+		
+		/* Give the region the cursor is in a chance to handle the paste event. */
+		
+		off_t cursor_pos = tab->doc_ctrl->get_cursor_position();
+		
+		REHex::DocumentCtrl::GenericDataRegion *cursor_region = tab->doc_ctrl->data_region_by_offset(cursor_pos);
+		assert(cursor_region != NULL);
+		
+		if(cursor_region->OnPaste(tab->doc_ctrl))
+		{
+			/* Region consumed the paste event. */
+			return;
+		}
+		
+		/* No region consumed the event. Fallback to default handling. */
+		
 		if(wxTheClipboard->IsSupported(CommentsDataObject::format))
 		{
 			CommentsDataObject data;

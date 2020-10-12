@@ -569,6 +569,26 @@ namespace REHex
 					
 					return true;
 				}
+				else if(key == WXK_HOME)
+				{
+					if(input_active)
+					{
+						input_pos = 0;
+						doc_ctrl->Refresh();
+					}
+					
+					return true;
+				}
+				else if(key == WXK_END)
+				{
+					if(input_active)
+					{
+						input_pos = input_buf.length();
+						doc_ctrl->Refresh();
+					}
+					
+					return true;
+				}
 				
 				return false;
 			}

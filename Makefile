@@ -117,12 +117,14 @@ APP_OBJS := \
 	src/AboutDialog.o \
 	src/app.o \
 	src/ArtProvider.o \
+	src/BasicDataTypes.o \
 	src/buffer.o \
 	src/BytesPerLineDialog.o \
 	src/ByteRangeSet.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
+	src/DataType.o \
 	src/decodepanel.o \
 	src/DiffWindow.o \
 	src/disassemble.o \
@@ -163,9 +165,11 @@ TEST_OBJS := \
 	res/offsets32.o \
 	res/offsets48.o \
 	src/ArtProvider.o \
+	src/BasicDataTypes.o \
 	src/buffer.o \
 	src/ByteRangeSet.o \
 	src/CommentTree.o \
+	src/DataType.o \
 	src/DiffWindow.o \
 	src/document.o \
 	src/DocumentCtrl.o \
@@ -174,11 +178,13 @@ TEST_OBJS := \
 	src/Palette.o \
 	src/search.o \
 	src/StringPanel.o \
+	src/Tab.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
 	tests/buffer.o \
+	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
@@ -193,6 +199,7 @@ TEST_OBJS := \
 	tests/SafeWindowPointer.o \
 	tests/SharedDocumentPointer.o \
 	tests/StringPanel.o \
+	tests/Tab.o \
 	tests/util.o
 
 tests/all-tests: $(TEST_OBJS)

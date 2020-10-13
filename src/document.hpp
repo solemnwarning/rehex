@@ -28,6 +28,7 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "ByteRangeMap.hpp"
 #include "ByteRangeSet.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
@@ -41,6 +42,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_BECAME_DIRTY,        wxCommandEvent);
 	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
+	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
 	
 	class Document: public wxEvtHandler {
 		public:
@@ -107,6 +109,9 @@ namespace REHex {
 			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
 			bool erase_highlight(off_t off, off_t length);
 			
+			const ByteRangeMap<std::string> &get_data_types() const;
+			bool set_data_type(off_t offset, off_t length, const std::string &type);
+			
 			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
 			void undo();
@@ -128,6 +133,7 @@ namespace REHex {
 				CursorState old_cursor_state;
 				NestedOffsetLengthMap<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
+				ByteRangeMap<std::string> old_types;
 				
 				bool old_dirty;
 				ByteRangeSet old_dirty_bytes;
@@ -143,6 +149,7 @@ namespace REHex {
 			
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
+			ByteRangeMap<std::string> types;
 			
 			std::string title;
 			
@@ -172,6 +179,7 @@ namespace REHex {
 			
 			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
 			void _raise_comment_modified();
@@ -179,6 +187,7 @@ namespace REHex {
 			void _raise_dirty();
 			void _raise_clean();
 			void _raise_highlights_changed();
+			void _raise_types_changed();
 			
 		public:
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;

@@ -69,5 +69,8 @@
     <ClCompile Include="..\..\tests\util.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\ByteRangeMap.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

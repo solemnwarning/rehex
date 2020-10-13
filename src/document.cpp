@@ -47,6 +47,7 @@ wxDEFINE_EVENT(REHex::EV_BECAME_DIRTY,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 
 REHex::Document::Document():
 	dirty(false),
@@ -62,6 +63,8 @@ REHex::Document::Document(const std::string &filename):
 	cursor_state(CSTATE_HEX)
 {
 	buffer = new REHex::Buffer(filename);
+	
+	types.set_range(0, buffer->length(), "");
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -327,6 +330,35 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	return true;
 }
 
+const REHex::ByteRangeMap<std::string> &REHex::Document::get_data_types() const
+{
+	return types;
+}
+
+bool REHex::Document::set_data_type(off_t offset, off_t length, const std::string &type)
+{
+	if(offset < 0 || length < 1 || (offset + length) > buffer_length())
+	{
+		return false;
+	}
+	
+	_tracked_change("set data type",
+		[this, offset, length, type]()
+		{
+			types.set_range(offset, length, type);
+			set_dirty(true);
+			
+			_raise_types_changed();
+		},
+		
+		[this]()
+		{
+			/* Data type changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
 void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
@@ -381,6 +413,12 @@ void REHex::Document::undo()
 		comments     = act.old_comments;
 		highlights   = act.old_highlights;
 		dirty_bytes  = act.old_dirty_bytes;
+		
+		if(types != act.old_types)
+		{
+			types = act.old_types;
+			_raise_types_changed();
+		}
 		
 		set_dirty(act.old_dirty);
 		
@@ -470,6 +508,9 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		dirty_bytes.set_range(offset, length);
 		set_dirty(true);
 		
+		types.data_inserted(offset, length);
+		types.set_range(offset, length, "");
+		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
@@ -502,6 +543,8 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 	{
 		dirty_bytes.data_erased(offset, length);
 		set_dirty(true);
+		
+		types.data_erased(offset, length);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
@@ -633,6 +676,7 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	change.old_cursor_state = cursor_state;
 	change.old_comments     = comments;
 	change.old_highlights   = highlights;
+	change.old_types        = types;
 	change.old_dirty        = dirty;
 	change.old_dirty_bytes  = dirty_bytes;
 	
@@ -699,6 +743,34 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 			json_decref(root);
 			return NULL;
 		}
+		has_data = true;
+	}
+	
+	json_t *data_types = json_array();
+	if(json_object_set_new(root, "data_types", data_types) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto dt = this->types.begin(); dt != this->types.end(); ++dt)
+	{
+		if(dt->second == "")
+		{
+			/* Don't bother serialising "this is data" */
+			continue;
+		}
+		
+		json_t *data_type = json_object();
+		if(json_array_append(data_types, data_type) == -1
+			|| json_object_set_new(data_type, "offset", json_integer(dt->first.offset)) == -1
+			|| json_object_set_new(data_type, "length", json_integer(dt->first.length)) == -1
+			|| json_object_set_new(data_type, "type",   json_string(dt->second.c_str())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+		
 		has_data = true;
 	}
 	
@@ -779,6 +851,33 @@ REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t
 	return highlights;
 }
 
+REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
+{
+	ByteRangeMap<std::string> types;
+	types.set_range(0, buffer_length, "");
+	
+	json_t *j_types = json_object_get(meta, "data_types");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_types, index, value)
+	{
+		off_t offset     = json_integer_value(json_object_get(value, "offset"));
+		off_t length     = json_integer_value(json_object_get(value, "length"));
+		const char *type = json_string_value(json_object_get(value, "type"));
+		
+		if(offset >= 0 && offset < buffer_length
+			&& length > 0 && (offset + length) <= buffer_length
+			&& type != NULL)
+		{
+			types.set_range(offset, length, type);
+		}
+	}
+	
+	return types;
+}
+
 void REHex::Document::_load_metadata(const std::string &filename)
 {
 	/* TODO: Report errors */
@@ -788,6 +887,7 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	
 	comments = _load_comments(meta, buffer_length());
 	highlights = _load_highlights(meta, buffer_length());
+	types = _load_types(meta, buffer_length());
 	
 	json_decref(meta);
 }
@@ -827,6 +927,14 @@ void REHex::Document::_raise_clean()
 void REHex::Document::_raise_highlights_changed()
 {
 	wxCommandEvent event(REHex::EV_HIGHLIGHTS_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
+}
+
+void REHex::Document::_raise_types_changed()
+{
+	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);

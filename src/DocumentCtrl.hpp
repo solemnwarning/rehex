@@ -37,23 +37,39 @@
 namespace REHex {
 	class DocumentCtrl: public wxControl {
 		public:
+			/**
+			 * @brief An on-screen rectangle in the DocumentCtrl.
+			*/
+			struct Rect
+			{
+				int x;      /**< X co-ordinate, in pixels. */
+				int64_t y;  /**< Y co-ordinate, in lines. */
+				
+				int w;      /**< Width, in pixels. */
+				int64_t h;  /**< Height, in lines. */
+				
+				Rect(): x(-1), y(-1), w(-1), h(-1) {}
+				Rect(int x, int64_t y, int w, int64_t h): x(x), y(y), w(w), h(h) {}
+			};
+			
 			class Region
 			{
 				protected:
 					int64_t y_offset; /* First on-screen line in region */
 					int64_t y_lines;  /* Number of on-screen lines in region */
 					
-					off_t indent_offset;
-					off_t indent_length;
-					
 					int indent_depth;  /* Indentation depth */
 					int indent_final;  /* Number of inner indentation levels we are the final region in */
 					
 				public:
-					Region();
+					const off_t indent_offset;
+					const off_t indent_length;
+					
 					virtual ~Region();
 					
 				protected:
+					Region(off_t indent_offset, off_t indent_length);
+					
 					virtual int calc_width(REHex::DocumentCtrl &doc);
 					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
 					
@@ -75,7 +91,149 @@ namespace REHex {
 				friend DocumentCtrl;
 			};
 			
-			class DataRegion: public Region
+			class GenericDataRegion: public Region
+			{
+				protected:
+					GenericDataRegion(off_t d_offset, off_t d_length);
+					
+				public:
+					const off_t d_offset;
+					const off_t d_length;
+					
+					/**
+					 * @brief Represents an on-screen area of the region.
+					*/
+					enum ScreenArea
+					{
+						SA_NONE,     /**< No/Unknown area. */
+						SA_HEX,      /**< The hex (data) view. */
+						SA_ASCII,    /**< The ASCII (text) view. */
+						SA_SPECIAL,  /**< Region-specific data area. */
+					};
+					
+					/**
+					 * @brief Returns the offset of the byte at the given co-ordinates, negative if there isn't one.
+					*/
+					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) = 0;
+					
+					/**
+					 * @brief Returns the offset of the byte nearest the given co-ordinates and the screen area.
+					 *
+					 * If type_hint is specified, and supported by the region
+					 * type, the nearest character in that area will be
+					 * returned rather than in the area under or closest to the
+					*/
+					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) = 0;
+					
+					static const off_t CURSOR_PREV_REGION = -2;
+					static const off_t CURSOR_NEXT_REGION = -3;
+					
+					/**
+					 * @brief Returns the offset of the cursor position left of the given offset. May return CURSOR_PREV_REGION.
+					*/
+					virtual off_t cursor_left_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position right of the given offset. May return CURSOR_NEXT_REGION.
+					*/
+					virtual off_t cursor_right_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position up from the given offset. May return CURSOR_PREV_REGION.
+					*/
+					virtual off_t cursor_up_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position down from the given offset. May return CURSOR_NEXT_REGION.
+					*/
+					virtual off_t cursor_down_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position at the start of the line from the given offset.
+					*/
+					virtual off_t cursor_home_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position at the end of the line from the given offset.
+					*/
+					virtual off_t cursor_end_from(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the screen column index of the given offset within the region.
+					*/
+					virtual int cursor_column(off_t pos) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position nearest the given column on the first screen line of the region.
+					*/
+					virtual off_t first_row_nearest_column(int column) = 0;
+					
+					/**
+					 * @brief Returns the offset of the cursor position nearest the given column on the last screen line of the region.
+					*/
+					virtual off_t last_row_nearest_column(int column) = 0;
+					
+					/**
+					 * @brief Calculate the on-screen bounding box of a byte in the region.
+					*/
+					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) = 0;
+					
+					/**
+					 * @brief Process key presses while the cursor is in this region.
+					 * @return true if the event was handled, false otherwise.
+					 *
+					 * This method is called to process keypresses while the
+					 * cursor is in this region.
+					 *
+					 * If it returns true, no further processing of the event
+					 * will be performed, if it returns false, processing will
+					 * continue and any default processing of the key press
+					 * will be used.
+					 *
+					 * The method may be called multiple times for the same
+					 * event if it returns false, the method MUST be idempotent
+					 * when it returns false.
+					*/
+					virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event);
+					
+					/**
+					 * @brief Process a clipboard copy operation within this region.
+					 * @return wxDataObject pointer, or NULL.
+					 *
+					 * This method is called to process copy events when the
+					 * selection is entirely within a single region.
+					 *
+					 * Returns a pointer to a wxDataObject object to be placed
+					 * into the clipboard, or NULL if the region has no special
+					 * clipboard handling, in which case the default copy
+					 * behaviour will take over.
+					 *
+					 * The caller is responsible for ensuring any returned
+					 * wxDataObject is deleted.
+					*/
+					virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl);
+					
+					/**
+					 * @brief Process a clipboard paste operation within this region.
+					 * @return true if the event was handled, false otherwise.
+					 *
+					 * This method is called when the user attempts to paste and
+					 * one or both of the following is true:
+					 *
+					 * a) A range of bytes exclusively within this region are selected.
+					 *
+					 * b) The cursor is within this region.
+					 *
+					 * The clipboard will already be locked by the caller when
+					 * this method is called.
+					 *
+					 * If this method returns false, default paste handling
+					 * will be invoked.
+					*/
+					virtual bool OnPaste(DocumentCtrl *doc_ctrl);
+			};
+			
+			class DataRegion: public GenericDataRegion
 			{
 				public:
 					struct Highlight
@@ -107,9 +265,6 @@ namespace REHex {
 					};
 					
 				protected:
-					off_t d_offset;
-					off_t d_length;
-					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
@@ -133,6 +288,22 @@ namespace REHex {
 					
 					off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 					off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					
+					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
+					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
+					
+					virtual off_t cursor_left_from(off_t pos) override;
+					virtual off_t cursor_right_from(off_t pos) override;
+					virtual off_t cursor_up_from(off_t pos) override;
+					virtual off_t cursor_down_from(off_t pos) override;
+					virtual off_t cursor_home_from(off_t pos) override;
+					virtual off_t cursor_end_from(off_t pos) override;
+					
+					virtual int cursor_column(off_t pos) override;
+					virtual off_t first_row_nearest_column(int column) override;
+					virtual off_t last_row_nearest_column(int column) override;
+					
+					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					
@@ -212,6 +383,10 @@ namespace REHex {
 			
 			const std::list<Region*> &get_regions() const;
 			void replace_all_regions(std::list<Region*> &new_regions);
+			bool region_OnChar(wxKeyEvent &event);
+			GenericDataRegion *data_region_by_offset(off_t offset);
+			
+			wxFont &get_font();
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent& event);
@@ -288,7 +463,7 @@ namespace REHex {
 			
 			static const int MOUSE_SELECT_INTERVAL = 100;
 			
-			bool mouse_down_in_hex, mouse_down_in_ascii;
+			GenericDataRegion::ScreenArea mouse_down_area;
 			off_t mouse_down_at_offset;
 			int mouse_down_at_x;
 			wxTimer mouse_select_timer;
@@ -298,9 +473,9 @@ namespace REHex {
 			
 			void _set_cursor_position(off_t position, Document::CursorState cursor_state);
 			
-			DataRegion *_data_region_by_offset(off_t offset);
-			DataRegion *_prev_data_region(DataRegion *dr);
-			DataRegion *_next_data_region(DataRegion *dr);
+			GenericDataRegion *_data_region_by_offset(off_t offset);
+			GenericDataRegion *_prev_data_region(GenericDataRegion *dr);
+			GenericDataRegion *_next_data_region(GenericDataRegion *dr);
 			
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);
@@ -314,13 +489,17 @@ namespace REHex {
 			
 			void linked_scroll_visit_others(const std::function<void(DocumentCtrl*)> &func);
 			
-			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
-			int _indent_width(int depth);
-			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
 			
+		public:
+			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			int indent_width(int depth);
+			int get_offset_column_width();
+			bool get_cursor_visible();
+			
 			int hf_char_width();
+			int hf_char_height();
 			int hf_string_width(int length);
 			int hf_char_at_x(int x_px);
 			

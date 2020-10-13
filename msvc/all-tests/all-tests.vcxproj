@@ -164,6 +164,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\googletest\src\gtest-all.cc" />
     <ClCompile Include="..\..\tests\buffer.cpp" />
+    <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\tests\CommentsDataObject.cpp" />
     <ClCompile Include="..\..\tests\CommentTree.cpp" />

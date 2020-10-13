@@ -167,6 +167,7 @@
     <ClCompile Include="..\..\res\offsets32.c" />
     <ClCompile Include="..\..\res\offsets48.c" />
     <ClCompile Include="..\..\src\ArtProvider.cpp" />
+    <ClCompile Include="..\..\src\BasicDataTypes.cpp" />
     <ClCompile Include="..\..\src\buffer.cpp" />
     <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\src\CommentTree.cpp" />
@@ -197,7 +198,9 @@
     <ClInclude Include="..\..\res\offsets32.h" />
     <ClInclude Include="..\..\res\offsets48.h" />
     <ClInclude Include="..\..\src\ArtProvider.hpp" />
+    <ClInclude Include="..\..\src\BasicDataTypes.hpp" />
     <ClInclude Include="..\..\src\buffer.hpp" />
+    <ClInclude Include="..\..\src\ByteRangeMap.hpp" />
     <ClInclude Include="..\..\src\ByteRangeSet.hpp" />
     <ClInclude Include="..\..\src\CommentTree.hpp" />
     <ClInclude Include="..\..\src\DiffWindow.hpp" />

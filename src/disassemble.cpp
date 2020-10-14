@@ -83,7 +83,7 @@ static const CSArchitecture known_arch_list[] = {
 	#endif
 	
 	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(5, 0)
-	{ "mos65xx", "MOS 65XX (including 6502)", CS_ARCH_MOS65XX, 0 },
+	{ "mos65xx", "MOS 65XX (including 6502)", CS_ARCH_MOS65XX, CS_MODE_LITTLE_ENDIAN },
 	#endif
 	
 	{ "powerpc",     "PowerPC",                     CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN },

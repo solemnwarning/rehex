@@ -25,6 +25,14 @@ Version TBA
 
  * Add "Fill range" tool for overwriting ranges of bytes with a pattern.
 
+ * Preserve column alignment after comments.
+
+ * [Mark Jansen] Mark a document dirty if highlighting is changed.
+
+ * Add data type annotations.
+
+ * Show ranges marked as integers in their decoded form in the hex view.
+
 Version 0.2.0 (2020-06-02)
 
  * Allow copying comments from a document and pasting them elsewhere in the

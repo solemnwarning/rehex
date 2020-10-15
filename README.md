@@ -1,28 +1,28 @@
-# Reverse Engineer's Hex Editor
+# ![rehex logo](https://raw.githubusercontent.com/solemnwarning/rehex/master/res/icon64.png) Reverse Engineers' Hex Editor
 
-## What is this?
+A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and everything else.
 
-As the name implies, this is a hex editor. It aims to be a good general-purpose hex editor and to have a wide selection of features for analysing and annotating binary file formats.
+## Features
 
-It is still in early development and should be considered in beta state at the moment. Current features include:
-
-* Large* file support
+* Large (1TB+) file support
 * Decoding of integer/floating point value types
 * Disassembly of machine code
 * Highlighting and annotation of ranges of bytes
 * Side by side comparision of selections
 
-![Screenshot](doc/screenshot.png)
+![inline comments + data types demo](doc/comments-types.gif)
 
-![Screenshot](doc/screenshot-diff.png)
+![file diff demo](doc/file-diff.gif)
 
-\* I've gone up to 1TiB in cursory testing, but it should be able to go a lot higher... just in case you want to start editing big disk images.
+## Installation
 
-## How can I run it?
+The [Releases](https://github.com/solemnwarning/rehex/releases) page has standalone packages for Windows and Mac, as well as installable packages for popular Linux distributions.
 
-If you're running Linux, just checkout the source and run `make`. You will need Jansson, wxWidgets and capstone installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev` and `libcapstone-dev` on Ubuntu).
+The same packages are also produced for Git commits (look for the tick), if you want to try the latest/unreleased version.
 
-If you're running Windows or OS X, the quickest way is to go to the commit history, follow a link to the relevant Buildkite job and download the binary from the artifacts tab.
+If you want to compile it yourself on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets and capstone installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev` and `libcapstone-dev` on Ubuntu).
+
+For Windows or Mac build instructions, see the relevant README: [README.Windows.md](README.Windows.md) [README.OSX.md](README.OSX.md)
 
 ## Feedback
 

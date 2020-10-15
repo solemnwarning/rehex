@@ -1,4 +1,4 @@
-# ![rehex logo](https://raw.githubusercontent.com/solemnwarning/rehex/master/res/icon64.png) Reverse Engineers' Hex Editor
+# ![rehex logo](res/icon64.png) Reverse Engineers' Hex Editor
 
 A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and everything else.
 

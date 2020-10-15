@@ -884,7 +884,9 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		&& (key == WXK_LEFT || key == WXK_RIGHT || key == WXK_UP || key == WXK_DOWN || key == WXK_HOME || key == WXK_END || key == WXK_PAGEUP || key == WXK_PAGEDOWN))
 	{
 		off_t new_cursor_pos = cursor_pos;
+		
 		bool update_scrollpos = false;
+		int64_t new_scroll_yoff;
 		
 		GenericDataRegion *cur_region = _data_region_by_offset(cursor_pos);
 		assert(cur_region != NULL);
@@ -1051,17 +1053,17 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			 * to the first visible data region line on screen (if there are any).
 			*/
 			
-			scroll_yoff = std::max<int64_t>((scroll_yoff - (int64_t)(visible_lines)), 0);
+			new_scroll_yoff = std::max<int64_t>((scroll_yoff - (int64_t)(visible_lines)), 0);
 			int cur_column = cur_region->cursor_column(cursor_pos);
 			
-			auto region = _region_by_y_offset(scroll_yoff);
+			auto region = _region_by_y_offset(new_scroll_yoff);
 			
-			while(region != regions.end() && (*region)->y_offset < (scroll_yoff + (int64_t)(visible_lines)))
+			while(region != regions.end() && (*region)->y_offset < (new_scroll_yoff + (int64_t)(visible_lines)))
 			{
 				GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
 				if(dr != NULL)
 				{
-					int64_t cursor_to_line_rel = std::max<int64_t>((scroll_yoff - dr->y_offset), 0);
+					int64_t cursor_to_line_rel = std::max<int64_t>((new_scroll_yoff - dr->y_offset), 0);
 					new_cursor_pos = dr->nth_row_nearest_column(cursor_to_line_rel, cur_column);
 					
 					break;
@@ -1078,19 +1080,19 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			 * cursor to the last data region line visible on screen (if any).
 			*/
 			
-			scroll_yoff = std::min((scroll_yoff + (int64_t)(visible_lines)), scroll_yoff_max);
+			new_scroll_yoff = std::min((scroll_yoff + (int64_t)(visible_lines)), scroll_yoff_max);
 			int cur_column = cur_region->cursor_column(cursor_pos);
 			
-			auto region = _region_by_y_offset(scroll_yoff);
+			auto region = _region_by_y_offset(new_scroll_yoff);
 			
-			while(region != regions.end() && (*region)->y_offset < (scroll_yoff + (int64_t)(visible_lines)))
+			while(region != regions.end() && (*region)->y_offset < (new_scroll_yoff + (int64_t)(visible_lines)))
 			{
 				GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
 				if(dr != NULL)
 				{
 					int64_t cursor_to_line_abs = std::min(
 						(dr->y_offset + dr->y_lines - 1),
-						(scroll_yoff + (int64_t)(visible_lines) - 1));
+						(new_scroll_yoff + (int64_t)(visible_lines) - 1));
 					
 					new_cursor_pos = dr->nth_row_nearest_column((cursor_to_line_abs - dr->y_offset), cur_column);
 				}
@@ -1105,6 +1107,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		
 		if (update_scrollpos)
 		{
+			scroll_yoff = new_scroll_yoff;
 			_update_vscroll_pos();
 			Refresh();
 		}

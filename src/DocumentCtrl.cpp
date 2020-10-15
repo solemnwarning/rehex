@@ -1047,14 +1047,57 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if (key == WXK_PAGEUP)
 		{
-			new_cursor_pos = std::max<off_t>(cursor_pos - (off_t)cur_region->bytes_per_line_actual * visible_lines, 0);
-			scroll_yoff -= visible_lines;
+			/* Scroll the screen up one full times its height and reposition the cursor
+			 * to the first visible data region line on screen (if there are any).
+			*/
+			
+			scroll_yoff = std::max<int64_t>((scroll_yoff - (int64_t)(visible_lines)), 0);
+			int cur_column = cur_region->cursor_column(cursor_pos);
+			
+			auto region = _region_by_y_offset(scroll_yoff);
+			
+			while(region != regions.end() && (*region)->y_offset < (scroll_yoff + (int64_t)(visible_lines)))
+			{
+				GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
+				if(dr != NULL)
+				{
+					int64_t cursor_to_line_rel = std::max<int64_t>((scroll_yoff - dr->y_offset), 0);
+					new_cursor_pos = dr->nth_row_nearest_column(cursor_to_line_rel, cur_column);
+					
+					break;
+				}
+				
+				++region;
+			}
+			
 			update_scrollpos = true;
 		}
 		else if (key == WXK_PAGEDOWN)
 		{
-			new_cursor_pos = std::min(cursor_pos + (off_t)cur_region->bytes_per_line_actual * visible_lines, doc->buffer_length());
-			scroll_yoff += visible_lines;
+			/* Scroll the screen down one full times its height and reposition the
+			 * cursor to the last data region line visible on screen (if any).
+			*/
+			
+			scroll_yoff = std::min((scroll_yoff + (int64_t)(visible_lines)), scroll_yoff_max);
+			int cur_column = cur_region->cursor_column(cursor_pos);
+			
+			auto region = _region_by_y_offset(scroll_yoff);
+			
+			while(region != regions.end() && (*region)->y_offset < (scroll_yoff + (int64_t)(visible_lines)))
+			{
+				GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
+				if(dr != NULL)
+				{
+					int64_t cursor_to_line_abs = std::min(
+						(dr->y_offset + dr->y_lines - 1),
+						(scroll_yoff + (int64_t)(visible_lines) - 1));
+					
+					new_cursor_pos = dr->nth_row_nearest_column((cursor_to_line_abs - dr->y_offset), cur_column);
+				}
+				
+				++region;
+			}
+			
 			update_scrollpos = true;
 		}
 		
@@ -1062,15 +1105,6 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		
 		if (update_scrollpos)
 		{
-			if (scroll_yoff < 0)
-			{
-				scroll_yoff = 0;
-			}
-			else if (scroll_yoff > scroll_yoff_max)
-			{
-				scroll_yoff = scroll_yoff_max;
-			}
-
 			_update_vscroll_pos();
 			Refresh();
 		}
@@ -1609,6 +1643,21 @@ REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::_next_data_region(G
 	}
 	
 	return NULL;
+}
+
+std::list<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::_region_by_y_offset(int64_t y_offset)
+{
+	/* Iterate over the regions to find the last one which does NOT start beyond the current
+	 * scroll_y.
+	*/
+	
+	auto region = regions.begin();
+	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= y_offset; ++next)
+	{
+		region = next;
+	}
+	
+	return region;
 }
 
 /* Scroll the Document vertically to make the given line visible.
@@ -2906,6 +2955,19 @@ off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
 	assert(offset_at_col < (d_offset + d_length + (d_length == 0)));
 	
 	return offset_at_col;
+}
+
+off_t REHex::DocumentCtrl::DataRegion::nth_row_nearest_column(int64_t row, int column)
+{
+	assert(row >= 0);
+	assert(row < y_lines);
+	
+	off_t first_row_off = first_row_nearest_column(column);
+	off_t last_row_off  = last_row_nearest_column(column);
+	
+	return std::min(
+		(first_row_off + ((off_t)(row) * (off_t)(bytes_per_line_actual))),
+		last_row_off);
 }
 
 REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)

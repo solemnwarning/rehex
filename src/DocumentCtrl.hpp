@@ -174,6 +174,11 @@ namespace REHex {
 					virtual off_t last_row_nearest_column(int column) = 0;
 					
 					/**
+					 * @brief Returns the offset of the cursor position nearest the given column on the given row within the region.
+					*/
+					virtual off_t nth_row_nearest_column(int64_t row, int column) = 0;
+					
+					/**
 					 * @brief Calculate the on-screen bounding box of a byte in the region.
 					*/
 					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) = 0;
@@ -302,6 +307,7 @@ namespace REHex {
 					virtual int cursor_column(off_t pos) override;
 					virtual off_t first_row_nearest_column(int column) override;
 					virtual off_t last_row_nearest_column(int column) override;
+					virtual off_t nth_row_nearest_column(int64_t row, int column) override;
 					
 					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
 					
@@ -476,6 +482,8 @@ namespace REHex {
 			GenericDataRegion *_data_region_by_offset(off_t offset);
 			GenericDataRegion *_prev_data_region(GenericDataRegion *dr);
 			GenericDataRegion *_next_data_region(GenericDataRegion *dr);
+			
+			std::list<Region*>::iterator _region_by_y_offset(int64_t y_offset);
 			
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);

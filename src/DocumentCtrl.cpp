@@ -1784,11 +1784,12 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 	
 	/* Erase the old regions and swap the contents of the new list in. */
 	
-	for(auto r = regions.begin(); r != regions.end();)
+	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
 		delete *r;
-		r = regions.erase(r);
 	}
+	
+	regions.clear();
 	
 	regions.swap(new_regions);
 	

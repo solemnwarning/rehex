@@ -395,15 +395,8 @@ void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 	dc.SetBackground(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.Clear();
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = _region_by_y_offset(scroll_yoff);
 	
 	int64_t yo_end = scroll_yoff + visible_lines + 1;
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
@@ -1116,15 +1109,8 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 	int rel_x   = mouse_x + this->scroll_xoff;
 	int mouse_y = event.GetY();
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = _region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1258,15 +1244,8 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	int rel_x   = mouse_x + this->scroll_xoff;
 	int mouse_y = event.GetY();
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = _region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1351,15 +1330,8 @@ void REHex::DocumentCtrl::OnMotion(wxMouseEvent &event)
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = _region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1435,15 +1407,8 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = _region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1581,6 +1546,59 @@ REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::_next_data_region(G
 	}
 	
 	return NULL;
+}
+
+std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::_region_by_y_offset(int64_t y_offset)
+{
+	/* Find region that encompasses the given line using binary search. */
+	
+	class StubRegion: public Region
+	{
+		public:
+			StubRegion(int64_t y_offset):
+				Region(0, 0)
+			{
+				this->y_offset = y_offset;
+			}
+			
+			virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override
+			{
+				abort();
+			}
+			
+			virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override
+			{
+				abort();
+			}
+			
+			virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override
+			{
+				abort();
+			}
+	};
+	
+	const StubRegion y_offset_to_find(y_offset);
+	
+	auto cmp_by_y_offset = [](const Region *lhs, const Region *rhs)
+	{
+		return lhs->y_offset < rhs->y_offset;
+	};
+	
+	/* std::upper_bound() will give us the first element whose y_offset is greater than the one
+	 * we're looking for...
+	*/
+	auto region = std::upper_bound(regions.begin(), regions.end(), &y_offset_to_find, cmp_by_y_offset);
+	
+	/* ...by definition that can't be the first element... */
+	assert(region != regions.begin());
+	
+	/* ...so step backwards to get to the correct element. */
+	--region;
+	
+	assert((*region)->y_offset <= y_offset);
+	assert(((*region)->y_offset + (*region)->y_lines) > y_offset);
+	
+	return region;
 }
 
 /* Scroll the Document vertically to make the given line visible.
@@ -1755,12 +1773,12 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 	}
 }
 
-const std::list<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
+const std::vector<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
 {
 	return regions;
 }
 
-void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
+void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 {
 	assert(!new_regions.empty());
 	

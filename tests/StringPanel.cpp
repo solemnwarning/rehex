@@ -54,10 +54,10 @@ class StringPanelTest: public ::testing::Test
 			main_doc_ctrl = new DocumentCtrl(&frame, doc);
 			
 			/* Need to put a Region in the DocumentCtrl to avoid crashes. */
-			std::list<DocumentCtrl::Region*> regions;
+			std::vector<DocumentCtrl::Region*> regions;
 			regions.push_back(new DocumentCtrl::DataRegion(0, 0));
 			main_doc_ctrl->replace_all_regions(regions);
-
+			
 			check_timer = new wxTimer(&frame, ID_CHECK_TIMER);
 			timeout_timer = new wxTimer(&frame, ID_TIMEOUT_TIMER);
 			

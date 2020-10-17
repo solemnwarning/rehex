@@ -39,6 +39,9 @@
     <ClCompile Include="..\..\tests\Document.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\DocumentCtrl.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\tests\main.cpp">
       <Filter>tests</Filter>
     </ClCompile>

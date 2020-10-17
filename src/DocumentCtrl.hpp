@@ -386,6 +386,7 @@ namespace REHex {
 			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
 			GenericDataRegion *data_region_by_offset(off_t offset);
+			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
 			wxFont &get_font();
 			
@@ -477,8 +478,6 @@ namespace REHex {
 			GenericDataRegion *_data_region_by_offset(off_t offset);
 			GenericDataRegion *_prev_data_region(GenericDataRegion *dr);
 			GenericDataRegion *_next_data_region(GenericDataRegion *dr);
-			
-			std::vector<Region*>::iterator _region_by_y_offset(int64_t y_offset);
 			
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);

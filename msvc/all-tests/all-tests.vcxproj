@@ -170,6 +170,7 @@
     <ClCompile Include="..\..\tests\CommentTree.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />
+    <ClCompile Include="..\..\tests\DocumentCtrl.cpp" />
     <ClCompile Include="..\..\tests\main.cpp" />
     <ClCompile Include="..\..\tests\NestedOffsetLengthMap.cpp" />
     <ClCompile Include="..\..\tests\NumericTextCtrl.cpp" />

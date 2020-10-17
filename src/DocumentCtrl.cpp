@@ -396,7 +396,7 @@ void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 	dc.Clear();
 	
 	/* Find the region containing the first visible line. */
-	auto region = _region_by_y_offset(scroll_yoff);
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	int64_t yo_end = scroll_yoff + visible_lines + 1;
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
@@ -1110,7 +1110,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 	int mouse_y = event.GetY();
 	
 	/* Find the region containing the first visible line. */
-	auto region = _region_by_y_offset(scroll_yoff);
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1245,7 +1245,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	int mouse_y = event.GetY();
 	
 	/* Find the region containing the first visible line. */
-	auto region = _region_by_y_offset(scroll_yoff);
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1331,7 +1331,7 @@ void REHex::DocumentCtrl::OnMotion(wxMouseEvent &event)
 	int rel_x = mouse_x + scroll_xoff;
 	
 	/* Find the region containing the first visible line. */
-	auto region = _region_by_y_offset(scroll_yoff);
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1408,7 +1408,7 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 	int rel_x = mouse_x + scroll_xoff;
 	
 	/* Find the region containing the first visible line. */
-	auto region = _region_by_y_offset(scroll_yoff);
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1548,7 +1548,7 @@ REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::_next_data_region(G
 	return NULL;
 }
 
-std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::_region_by_y_offset(int64_t y_offset)
+std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_by_y_offset(int64_t y_offset)
 {
 	/* Find region that encompasses the given line using binary search. */
 	

@@ -413,7 +413,8 @@ namespace REHex {
 			
 			SharedDocumentPointer doc;
 			
-			std::vector<Region*> regions;
+			std::vector<Region*> regions;                  /**< List of regions to be displayed. */
+			std::vector<GenericDataRegion*> data_regions;  /**< Subset of regions which are a GenericDataRegion. */
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
@@ -475,9 +476,7 @@ namespace REHex {
 			
 			void _set_cursor_position(off_t position, Document::CursorState cursor_state);
 			
-			GenericDataRegion *_data_region_by_offset(off_t offset);
-			GenericDataRegion *_prev_data_region(GenericDataRegion *dr);
-			GenericDataRegion *_next_data_region(GenericDataRegion *dr);
+			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(off_t offset);
 			
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);

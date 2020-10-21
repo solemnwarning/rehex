@@ -38,6 +38,12 @@ namespace REHex {
 			void new_file();
 			void open_file(const std::string &filename);
 			
+			wxMenuBar *get_menu_bar() const;
+			wxMenu *get_file_menu() const;
+			wxMenu *get_edit_menu() const;
+			wxMenu *get_view_menu() const;
+			wxMenu *get_help_menu() const;
+			
 			void OnWindowClose(wxCloseEvent& event);
 			
 			void OnNew(wxCommandEvent &event);
@@ -95,6 +101,77 @@ namespace REHex {
 			void OnBecameDirty(wxCommandEvent &event);
 			void OnBecameClean(wxCommandEvent &event);
 			
+			/**
+			 * @brief MainWindow setup phases, in order of execution.
+			*/
+			enum class SetupPhase
+			{
+				FILE_MENU_PRE,     /**< About to create file menu - use for adding menus left of it. */
+				FILE_MENU_TOP,     /**< About to populate file menu - use for adding items to the top. */
+				FILE_MENU_BOTTOM,  /**< Finished populating file menu - use for adding items to the bottom. */
+				FILE_MENU_POST,    /**< Added file menu - use for adding menus right of it. */
+				
+				EDIT_MENU_PRE,     /**< About to create edit menu - use for adding menus left of it. */
+				EDIT_MENU_TOP,     /**< About to populate edit menu - use for adding items to the top. */
+				EDIT_MENU_BOTTOM,  /**< Finished populating edit menu - use for adding items to the bottom. */
+				EDIT_MENU_POST,    /**< Added edit menu - use for adding menus right of it. */
+				
+				VIEW_MENU_PRE,     /**< About to create view menu - use for adding menus left of it. */
+				VIEW_MENU_TOP,     /**< About to populate view menu - use for adding items to the top. */
+				VIEW_MENU_BOTTOM,  /**< Finished populating view menu - use for adding items to the bottom. */
+				VIEW_MENU_POST,    /**< Added view menu - use for adding menus right of it. */
+				
+				HELP_MENU_PRE,     /**< About to create help menu - use for adding menus left of it. */
+				HELP_MENU_TOP,     /**< About to populate help menu - use for adding items to the top. */
+				HELP_MENU_BOTTOM,  /**< Finished populating help menu - use for adding items to the bottom. */
+				HELP_MENU_POST,    /**< Added help menu - use for adding menus right of it. */
+			};
+			
+			typedef std::function<void(MainWindow*)> SetupHookFunction;
+			
+			/**
+			 * @brief Register a hook function to be called during a setup phase.
+			 *
+			 * @param phase  Setup phase to call the hook during.
+			 * @param func   Pointer to a std::function to invoke.
+			 *
+			 * You should probably use SetupHookRegistration rather than calling this
+			 * function directly.
+			 *
+			 * NOTE: The std::function pointed to by func MUST remain valid until
+			 * unregister_setup_hook() is used - it will be used to call the function
+			 * and identifies the unique binding until is is unregistered.
+			*/
+			static void register_setup_hook(SetupPhase phase, const SetupHookFunction *func);
+			
+			/**
+			 * @brief Unregister a setup hook.
+			*/
+			static void unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func);
+			
+			/**
+			 * @brief Performs RAII-style MainWindow setup hook registration.
+			*/
+			class SetupHookRegistration
+			{
+				public:
+					SetupPhase phase;        /**< MainWindow setup phase to call function during. */
+					SetupHookFunction func;  /**< Hook function to be called. */
+					
+					/**
+					 * @brief Register the setup hook.
+					 *
+					 * @param phase  MainWindow setup phase to call function during.
+					 * @param func   Hook function to be called.
+					*/
+					SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func);
+					
+					/**
+					 * @brief Unregister the setup hook.
+					*/
+					~SetupHookRegistration();
+			};
+			
 		private:
 			class DropTarget: public wxFileDropTarget
 			{
@@ -108,10 +185,12 @@ namespace REHex {
 					virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString &filenames) override;
 			};
 			
+			wxMenuBar *menu_bar;
 			wxMenu *file_menu;
 			wxMenu *recent_files_menu;
 			wxMenu *edit_menu;
 			wxMenu *view_menu;
+			wxMenu *help_menu;
 			
 			wxAuiNotebook *notebook;
 			wxBitmap notebook_dirty_bitmap;
@@ -136,6 +215,9 @@ namespace REHex {
 			void close_tab(Tab *tab);
 			void close_all_tabs();
 			void close_other_tabs(Tab *tab);
+			
+			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
+			void call_setup_hooks(SetupPhase phase);
 			
 			DECLARE_EVENT_TABLE()
 	};

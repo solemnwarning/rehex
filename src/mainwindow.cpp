@@ -172,6 +172,7 @@ REHex::MainWindow::MainWindow():
 	file_menu(NULL),
 	edit_menu(NULL),
 	view_menu(NULL),
+	tools_menu(NULL),
 	help_menu(NULL)
 {
 	menu_bar = new wxMenuBar;
@@ -338,6 +339,28 @@ REHex::MainWindow::MainWindow():
 		menu_bar->Append(view_menu, "&View");
 		
 		call_setup_hooks(SetupPhase::VIEW_MENU_POST);
+	}
+	
+	{
+		call_setup_hooks(SetupPhase::TOOLS_MENU_PRE);
+		
+		tools_menu = new wxMenu;
+		
+		call_setup_hooks(SetupPhase::TOOLS_MENU_TOP);
+		call_setup_hooks(SetupPhase::TOOLS_MENU_BOTTOM);
+		
+		if(tools_menu->GetMenuItemCount() > 0)
+		{
+			menu_bar->Append(tools_menu, "&Tools");
+		}
+		else{
+			/* No plugins created an item under the "Tools" menu - get rid of it. */
+			
+			delete tools_menu;
+			tools_menu = NULL;
+		}
+		
+		call_setup_hooks(SetupPhase::TOOLS_MENU_POST);
 	}
 	
 	{
@@ -1559,6 +1582,11 @@ wxMenu *REHex::MainWindow::get_edit_menu() const
 wxMenu *REHex::MainWindow::get_view_menu() const
 {
 	return view_menu;
+}
+
+wxMenu *REHex::MainWindow::get_tools_menu() const
+{
+	return tools_menu;
 }
 
 wxMenu *REHex::MainWindow::get_help_menu() const

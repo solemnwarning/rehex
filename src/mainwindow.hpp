@@ -42,6 +42,7 @@ namespace REHex {
 			wxMenu *get_file_menu() const;
 			wxMenu *get_edit_menu() const;
 			wxMenu *get_view_menu() const;
+			wxMenu *get_tools_menu() const;
 			wxMenu *get_help_menu() const;
 			
 			void OnWindowClose(wxCloseEvent& event);
@@ -121,6 +122,11 @@ namespace REHex {
 				VIEW_MENU_BOTTOM,  /**< Finished populating view menu - use for adding items to the bottom. */
 				VIEW_MENU_POST,    /**< Added view menu - use for adding menus right of it. */
 				
+				TOOLS_MENU_PRE,     /**< About to create tools menu - use for adding menus left of it. */
+				TOOLS_MENU_TOP,     /**< About to populate tools menu - use for adding items to the top. */
+				TOOLS_MENU_BOTTOM,  /**< Finished populating tools menu - use for adding items to the bottom. */
+				TOOLS_MENU_POST,    /**< Added tools menu - use for adding menus right of it. */
+				
 				HELP_MENU_PRE,     /**< About to create help menu - use for adding menus left of it. */
 				HELP_MENU_TOP,     /**< About to populate help menu - use for adding items to the top. */
 				HELP_MENU_BOTTOM,  /**< Finished populating help menu - use for adding items to the bottom. */
@@ -190,6 +196,7 @@ namespace REHex {
 			wxMenu *recent_files_menu;
 			wxMenu *edit_menu;
 			wxMenu *view_menu;
+			wxMenu *tools_menu;
 			wxMenu *help_menu;
 			
 			wxAuiNotebook *notebook;

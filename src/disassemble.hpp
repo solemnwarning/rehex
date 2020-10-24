@@ -119,6 +119,7 @@ namespace REHex {
 			virtual int cursor_column(off_t pos) override;
 			virtual off_t first_row_nearest_column(int column) override;
 			virtual off_t last_row_nearest_column(int column) override;
+			virtual off_t nth_row_nearest_column(int64_t row, int column) override;
 			
 			virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
 	};

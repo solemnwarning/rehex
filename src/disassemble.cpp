@@ -548,6 +548,11 @@ off_t REHex::DisassemblyRegion::last_row_nearest_column(int column)
 	return instructions.back().offset;
 }
 
+off_t REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
+{
+	return instructions.back().offset;
+}
+
 REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)
 {
 	abort();

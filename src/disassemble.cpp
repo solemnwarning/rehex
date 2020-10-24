@@ -19,6 +19,7 @@
 #include <string.h>
 #include <vector>
 
+#include "DataType.hpp"
 #include "disassemble.hpp"
 #include "Events.hpp"
 #include <capstone/capstone.h>
@@ -372,3 +373,190 @@ void REHex::Disassemble::OnBaseChanged(wxCommandEvent &event)
 	/* Continue propogation. */
 	event.Skip();
 }
+
+REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode):
+	GenericDataRegion(offset, length),
+	doc(doc)
+{
+	cs_err error = cs_open(arch, mode, &disassembler);
+	if(error != CS_ERR_OK)
+	{
+		/* TODO: Report error */
+		abort();
+	}
+	
+	cs_option(disassembler, CS_OPT_SKIPDATA, CS_OPT_ON);
+	
+	longest_instruction = 0;
+	longest_disasm = 0;
+	
+	std::vector<unsigned char> data = doc->read_data(offset, length);
+	
+	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
+	size_t code_size = data.size();
+	uint64_t address = offset;
+	cs_insn* insn = cs_malloc(disassembler);
+	
+	/* NOTE: @code, @code_size & @address variables are all updated! */
+	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	{
+		Instruction inst;
+		
+		char disasm_buf[256];
+		snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
+		
+		inst.offset = insn->address;
+		inst.length = insn->size;
+		inst.disasm = disasm_buf;
+		
+		instructions.push_back(inst);
+		
+		longest_instruction = std::max<off_t>(longest_instruction, insn->size);
+		longest_disasm = std::max(longest_disasm, inst.disasm.length());
+	}
+	
+	cs_free(insn, 1);
+}
+
+REHex::DisassemblyRegion::~DisassemblyRegion()
+{
+	cs_close(&disassembler);
+}
+
+int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
+{
+	int indent_width = doc_ctrl.indent_width(indent_depth);
+	
+	int offset_column_width = doc_ctrl.get_show_offsets()
+		? doc_ctrl.get_offset_column_width()
+		: 0;
+	
+	unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+	
+	offset_text_x = indent_width;
+	hex_text_x    = offset_text_x + offset_column_width;
+	code_text_x   = hex_text_x
+		+ doc_ctrl.hf_string_width(
+			(longest_instruction * 2)
+			+ ((longest_instruction - 1) / bytes_per_group)
+			+ 1);
+	
+	return code_text_x + doc_ctrl.hf_string_width(longest_disasm) + indent_width;
+}
+
+void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+{
+	y_lines = instructions.size() + indent_final;
+}
+
+void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
+{
+	draw_container(doc_ctrl, dc, x, y);
+	
+	int hf_char_height = doc_ctrl.hf_char_height();
+	
+	int64_t skip_lines = (y < 0 ? (-y / hf_char_height) : 0);
+	y += skip_lines * hf_char_height;
+	
+	wxSize client_size = doc_ctrl.GetClientSize();
+	
+	bool alternate = false;
+	
+	for(size_t i = skip_lines; y < client_size.GetHeight() && i < instructions.size(); ++i)
+	{
+		dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+		
+		if(doc_ctrl.get_show_offsets())
+		{
+			/* Draw the offsets to the left */
+			
+			std::string offset_str = format_offset(instructions[i].offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+			
+			dc.DrawText(offset_str, x + offset_text_x, y);
+			
+			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
+			
+			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+			
+			dc.SetPen(norm_fg_1px);
+			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
+		}
+		
+		if(alternate)
+		{
+			dc.SetTextForeground((*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]);
+		}
+		
+		alternate = !alternate;
+		
+		bool data_err = false;
+		std::vector<unsigned char> data = doc->read_data(instructions[i].offset, instructions[i].length);
+		
+		unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+		
+		for(size_t j = 0; j < data.size(); ++j)
+		{
+			const char *nibble_to_hex = data_err
+				? "????????????????"
+				: "0123456789ABCDEF";
+			
+			const char hex_str[] = {
+				nibble_to_hex[ (data[j] & 0xF0) >> 4 ],
+				nibble_to_hex[ data[j] & 0x0F ],
+				'\0'
+			};
+			
+			dc.DrawText(hex_str, (x + hex_text_x + doc_ctrl.hf_string_width((j * 2) + (j / bytes_per_group))), y);
+		}
+		
+		dc.DrawText(instructions[i].disasm, x + code_text_x, y);
+		
+		y += hf_char_height;
+	}
+}
+
+std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
+{
+	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+}
+
+std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
+{
+	return std::make_pair(d_offset, SA_SPECIAL);
+}
+
+off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos) { return d_offset; }
+off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos) { return d_offset; }
+off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos) { return d_offset; }
+off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos) { return d_offset; }
+off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos) { return d_offset; }
+off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos) { return d_offset; }
+
+int REHex::DisassemblyRegion::cursor_column(off_t pos)
+{
+	return 0;
+}
+
+off_t REHex::DisassemblyRegion::first_row_nearest_column(int column)
+{
+	return instructions.front().offset;
+}
+
+off_t REHex::DisassemblyRegion::last_row_nearest_column(int column)
+{
+	return instructions.back().offset;
+}
+
+REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)
+{
+	abort();
+}
+
+static REHex::DocumentCtrl::Region *XXX(REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
+{
+	CSArchitecture arch = { "x86_64", "X86-64 (AMD64)",   CS_ARCH_X86, CS_MODE_64 };
+	return new REHex::DisassemblyRegion(doc, offset, length, arch.arch, arch.mode);
+}
+
+static REHex::DataTypeRegistration u16le_dtr("x86", "Machine code (X86-64 (AMD64))", &XXX);

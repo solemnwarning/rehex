@@ -18,6 +18,7 @@
 #ifndef REHEX_DISASSEMBLE_HPP
 #define REHEX_DISASSEMBLE_HPP
 
+#include <capstone/capstone.h>
 #include <map>
 #include <string>
 #include <wx/choice.h>
@@ -72,6 +73,54 @@ namespace REHex {
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()
+	};
+	
+	class DisassemblyRegion: public DocumentCtrl::GenericDataRegion
+	{
+		private:
+			SharedDocumentPointer doc;
+			
+			size_t disassembler;
+			
+			int offset_text_x;
+			int hex_text_x;
+			int code_text_x;
+			
+			struct Instruction {
+				off_t offset, length;
+				std::string disasm;
+			};
+			
+			std::vector<Instruction> instructions;
+			
+			off_t longest_instruction;
+			size_t longest_disasm;
+			
+		public:
+			DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode);
+			~DisassemblyRegion();
+			
+		protected:
+			virtual int calc_width(DocumentCtrl &doc_ctrl) override;
+			virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override;
+			
+			virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
+			
+			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override;
+			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
+			
+			virtual off_t cursor_left_from(off_t pos) override;
+			virtual off_t cursor_right_from(off_t pos) override;
+			virtual off_t cursor_up_from(off_t pos) override;
+			virtual off_t cursor_down_from(off_t pos) override;
+			virtual off_t cursor_home_from(off_t pos) override;
+			virtual off_t cursor_end_from(off_t pos) override;
+			
+			virtual int cursor_column(off_t pos) override;
+			virtual off_t first_row_nearest_column(int column) override;
+			virtual off_t last_row_nearest_column(int column) override;
+			
+			virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
 	};
 }
 

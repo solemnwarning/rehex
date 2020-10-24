@@ -20,13 +20,8 @@ BuildRequires: xorg-x11-server-Xvfb
 Requires: jansson
 Requires: wxGTK3
 
-# TODO: Remove LLVM dependencies when switch to Capstone is complete
-
 %if 0%{?el7}
-%define extra_make_flags WX_CONFIG=wx-config-3.0 LLVM_CONFIG=llvm-config-7.0-64
-BuildRequires: llvm7.0-devel
-%else
-BuildRequires: llvm-devel
+%define extra_make_flags WX_CONFIG=wx-config-3.0
 %endif
 
 %description

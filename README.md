@@ -22,8 +22,10 @@ The same packages are also produced for Git commits (look for the tick), if you 
 
 If you want to compile it yourself on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets and capstone installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev` and `libcapstone-dev` on Ubuntu).
 
+**NOTE:** Ubuntu users must have the "Universe" package repository enabled to install some of the dependencies.
+
 For Windows or Mac build instructions, see the relevant README: [README.Windows.md](README.Windows.md) [README.OSX.md](README.OSX.md)
 
 ## Feedback
 
-If you find any bugs or have suggestions for improvements or new features, please open an issue on Github.
+If you find any bugs or have suggestions for improvements or new features, please open an issue on Github, or join the `#rehex` IRC channel on `irc.freenode.net`.

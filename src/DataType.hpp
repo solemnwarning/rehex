@@ -18,6 +18,7 @@
 #ifndef REHEX_DATATYPE_HPP
 #define REHEX_DATATYPE_HPP
 
+#include <functional>
 #include <map>
 #include <string>
 
@@ -53,7 +54,7 @@ namespace REHex
 	class DataTypeRegistration
 	{
 		public:
-			typedef DocumentCtrl::Region* (*RegionFactoryFunction)(SharedDocumentPointer &document, off_t offset, off_t length);
+			typedef std::function<DocumentCtrl::Region*(SharedDocumentPointer &document, off_t offset, off_t length)> RegionFactoryFunction;
 			
 			std::string name;
 			std::string label;

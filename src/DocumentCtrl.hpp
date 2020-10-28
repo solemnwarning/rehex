@@ -24,6 +24,7 @@
 #include <memory>
 #include <stdint.h>
 #include <utility>
+#include <vector>
 #include <wx/dataobj.h>
 #include <wx/wx.h>
 
@@ -387,10 +388,11 @@ namespace REHex {
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
 			
-			const std::list<Region*> &get_regions() const;
-			void replace_all_regions(std::list<Region*> &new_regions);
+			const std::vector<Region*> &get_regions() const;
+			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
 			GenericDataRegion *data_region_by_offset(off_t offset);
+			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
 			wxFont &get_font();
 			
@@ -417,7 +419,8 @@ namespace REHex {
 			
 			SharedDocumentPointer doc;
 			
-			std::list<Region*> regions;
+			std::vector<Region*> regions;                  /**< List of regions to be displayed. */
+			std::vector<GenericDataRegion*> data_regions;  /**< Subset of regions which are a GenericDataRegion. */
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
@@ -479,9 +482,7 @@ namespace REHex {
 			
 			void _set_cursor_position(off_t position, Document::CursorState cursor_state);
 			
-			GenericDataRegion *_data_region_by_offset(off_t offset);
-			GenericDataRegion *_prev_data_region(GenericDataRegion *dr);
-			GenericDataRegion *_next_data_region(GenericDataRegion *dr);
+			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(off_t offset);
 			
 			std::list<Region*>::iterator _region_by_y_offset(int64_t y_offset);
 			

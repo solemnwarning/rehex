@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 #include <wx/dialog.h>
 #include <wx/notebook.h>
 #include <wx/panel.h>
@@ -74,7 +75,7 @@ namespace REHex
 			void set_inline_comment_mode(InlineCommentMode inline_comment_mode);
 			
 			/* Public for use by unit tests. */
-			static std::list<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode);
+			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode);
 			
 		private:
 			InlineCommentMode inline_comment_mode;

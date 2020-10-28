@@ -395,15 +395,8 @@ void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 	dc.SetBackground(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.Clear();
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	int64_t yo_end = scroll_yoff + visible_lines + 1;
 	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
@@ -888,12 +881,12 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		bool update_scrollpos = false;
 		int64_t new_scroll_yoff;
 		
-		GenericDataRegion *cur_region = _data_region_by_offset(cursor_pos);
-		assert(cur_region != NULL);
+		auto cur_region = _data_region_by_offset(cursor_pos);
+		assert(cur_region != data_regions.end());
 		
 		if(key == WXK_LEFT)
 		{
-			new_cursor_pos = cur_region->cursor_left_from(new_cursor_pos);
+			new_cursor_pos = (*cur_region)->cursor_left_from(new_cursor_pos);
 			
 			if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
 			{
@@ -901,10 +894,11 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 				 * the previous region.
 				*/
 				
-				GenericDataRegion *prev_region = _prev_data_region(cur_region);
-				if(prev_region != NULL)
+				if(cur_region != data_regions.begin())
 				{
-					new_cursor_pos = prev_region->last_row_nearest_column(INT_MAX);
+					auto prev_region = std::prev(cur_region);
+					
+					new_cursor_pos = (*prev_region)->last_row_nearest_column(INT_MAX);
 					assert(new_cursor_pos >= 0);
 				}
 				else{
@@ -918,14 +912,14 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_RIGHT)
 		{
-			new_cursor_pos = cur_region->cursor_right_from(new_cursor_pos);
+			new_cursor_pos = (*cur_region)->cursor_right_from(new_cursor_pos);
 			
 			if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
 			{
-				GenericDataRegion *next_region = _next_data_region(cur_region);
-				if(next_region != NULL)
+				auto next_region = std::next(cur_region);
+				if(next_region != data_regions.end())
 				{
-					new_cursor_pos = next_region->first_row_nearest_column(0);
+					new_cursor_pos = (*next_region)->first_row_nearest_column(0);
 					assert(new_cursor_pos >= 0);
 				}
 				else if(get_insert_mode())
@@ -934,7 +928,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					 * data region in insert mode.
 					*/
 					
-					new_cursor_pos = cur_region->d_offset + cur_region->d_length;
+					new_cursor_pos = (*cur_region)->d_offset + (*cur_region)->d_length;
 				}
 				else{
 					/* No further region. Nowhere to go. */
@@ -947,16 +941,17 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_UP)
 		{
-			new_cursor_pos = cur_region->cursor_up_from(new_cursor_pos);
+			new_cursor_pos = (*cur_region)->cursor_up_from(new_cursor_pos);
 			
 			if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
 			{
-				int cur_column = cur_region->cursor_column(cursor_pos);
+				int cur_column = (*cur_region)->cursor_column(cursor_pos);
 				
-				GenericDataRegion *prev_region = _prev_data_region(cur_region);
-				if(prev_region != NULL)
+				if(cur_region != data_regions.begin())
 				{
-					new_cursor_pos = prev_region->last_row_nearest_column(cur_column);
+					auto prev_region = std::prev(cur_region);
+					
+					new_cursor_pos = (*prev_region)->last_row_nearest_column(cur_column);
 					assert(new_cursor_pos >= 0);
 				}
 				else{
@@ -970,16 +965,16 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_DOWN)
 		{
-			new_cursor_pos = cur_region->cursor_down_from(new_cursor_pos);
+			new_cursor_pos = (*cur_region)->cursor_down_from(new_cursor_pos);
 			
 			if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
 			{
-				int cur_column = cur_region->cursor_column(cursor_pos);
+				int cur_column = (*cur_region)->cursor_column(cursor_pos);
 				
-				GenericDataRegion *next_region = _next_data_region(cur_region);
-				if(next_region != NULL)
+				auto next_region = std::next(cur_region);
+				if(next_region != data_regions.end())
 				{
-					new_cursor_pos = next_region->first_row_nearest_column(cur_column);
+					new_cursor_pos = (*next_region)->first_row_nearest_column(cur_column);
 					assert(new_cursor_pos >= 0);
 				}
 				else if(get_insert_mode())
@@ -988,7 +983,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					 * data region in insert mode.
 					*/
 					
-					new_cursor_pos = cur_region->d_offset + cur_region->d_length;
+					new_cursor_pos = (*cur_region)->d_offset + (*cur_region)->d_length;
 				}
 				else{
 					/* No further region. Nowhere to go. */
@@ -1001,49 +996,49 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_HOME && (modifiers & wxMOD_CONTROL))
 		{
-			/* Move cursor to first byte in first region. */
+			/* Move cursor to first position in first region. */
 			
-			auto first_dr_iter = std::find_if(regions.begin(), regions.end(), [](Region* r) { return dynamic_cast<GenericDataRegion*>(r) != NULL; });
-			assert(first_dr_iter != regions.end());
+			assert(!data_regions.empty());
+			GenericDataRegion *first_dr = data_regions.front();
 			
-			GenericDataRegion *first_dr = dynamic_cast<GenericDataRegion*>(*first_dr_iter);
-			assert(first_dr != NULL);
-			
-			new_cursor_pos = first_dr->d_offset;
+			new_cursor_pos = first_dr->first_row_nearest_column(0);
 		}
 		else if(key == WXK_HOME)
 		{
 			/* Move cursor to start of line. */
-			new_cursor_pos = cur_region->cursor_home_from(new_cursor_pos);
+			new_cursor_pos = (*cur_region)->cursor_home_from(new_cursor_pos);
 		}
 		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
 		{
-			/* Move cursor to last byte in last region, or one past the end if we are
-			 * in insert mode.
+			/* Move cursor to last position in last region, or one past the end if we
+			 * are in insert mode.
 			*/
 			
-			auto last_dr_iter = std::find_if(regions.rbegin(), regions.rend(), [](Region* r) { return dynamic_cast<GenericDataRegion*>(r) != NULL; });
-			assert(last_dr_iter != regions.rend());
+			assert(!data_regions.empty());
+			GenericDataRegion *last_dr = data_regions.back();
 			
-			GenericDataRegion *last_dr = dynamic_cast<GenericDataRegion*>(*last_dr_iter);
-			assert(last_dr != NULL);
-			
-			new_cursor_pos = (last_dr->d_offset + last_dr->d_length) - (off_t)(!insert_mode);
+			if(get_insert_mode())
+			{
+				new_cursor_pos = last_dr->d_offset + last_dr->d_length;
+			}
+			else{
+				new_cursor_pos = last_dr->last_row_nearest_column(INT_MAX);
+			}
 		}
 		else if(key == WXK_END)
 		{
 			/* Move cursor to end of line. */
-			new_cursor_pos = cur_region->cursor_end_from(new_cursor_pos);
+			new_cursor_pos = (*cur_region)->cursor_end_from(new_cursor_pos);
 			
 			/* Special case: If "end" is pressed on the last line of the final data
 			 * region when in insert mode, jump past it.
 			*/
-			if(get_insert_mode() && cur_region->last_row_nearest_column(INT_MAX) == new_cursor_pos)
+			if(get_insert_mode() && (*cur_region)->last_row_nearest_column(INT_MAX) == new_cursor_pos)
 			{
-				GenericDataRegion *next_region = _next_data_region(cur_region);
-				if(next_region == NULL)
+				auto next_region = std::next(cur_region);
+				if(next_region == data_regions.end())
 				{
-					new_cursor_pos = cur_region->d_offset + cur_region->d_length;
+					new_cursor_pos = (*cur_region)->d_offset + (*cur_region)->d_length;
 				}
 			}
 		}
@@ -1054,9 +1049,9 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			*/
 			
 			new_scroll_yoff = std::max<int64_t>((scroll_yoff - (int64_t)(visible_lines)), 0);
-			int cur_column = cur_region->cursor_column(cursor_pos);
+			int cur_column = (*cur_region)->cursor_column(cursor_pos);
 			
-			auto region = _region_by_y_offset(new_scroll_yoff);
+			auto region = region_by_y_offset(new_scroll_yoff);
 			
 			while(region != regions.end() && (*region)->y_offset < (new_scroll_yoff + (int64_t)(visible_lines)))
 			{
@@ -1081,9 +1076,9 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			*/
 			
 			new_scroll_yoff = std::min((scroll_yoff + (int64_t)(visible_lines)), scroll_yoff_max);
-			int cur_column = cur_region->cursor_column(cursor_pos);
+			int cur_column = (*cur_region)->cursor_column(cursor_pos);
 			
-			auto region = _region_by_y_offset(new_scroll_yoff);
+			auto region = region_by_y_offset(new_scroll_yoff);
 			
 			while(region != regions.end() && (*region)->y_offset < (new_scroll_yoff + (int64_t)(visible_lines)))
 			{
@@ -1181,15 +1176,8 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 	int rel_x   = mouse_x + this->scroll_xoff;
 	int mouse_y = event.GetY();
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1323,15 +1311,8 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	int rel_x   = mouse_x + this->scroll_xoff;
 	int mouse_y = event.GetY();
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1416,15 +1397,8 @@ void REHex::DocumentCtrl::OnMotion(wxMouseEvent &event)
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1500,15 +1474,8 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
-	*/
-	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= scroll_yoff; ++next)
-	{
-		region = next;
-	}
+	/* Find the region containing the first visible line. */
+	auto region = region_by_y_offset(scroll_yoff);
 	
 	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
 	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
@@ -1595,70 +1562,118 @@ void REHex::DocumentCtrl::OnRedrawCursor(wxTimerEvent &event)
 	Refresh();
 }
 
-REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::_data_region_by_offset(off_t offset)
+std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCtrl::_data_region_by_offset(off_t offset)
 {
-	for(auto region = regions.begin(); region != regions.end(); ++region)
+	/* Find region that encompasses the given offset using binary search. */
+	
+	class StubRegion: public GenericDataRegion
 	{
-		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
-		if(dr != NULL
-			&& dr->d_offset <= offset
-			&& ((dr->d_offset + dr->d_length) > offset
-				|| ((dr->d_offset + dr->d_length) == offset && doc->buffer_length() == offset)))
-		{
-			return dr;
-		}
-	}
+		public:
+			StubRegion(off_t offset):
+				GenericDataRegion(offset, 0) {}
+				
+				virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
+				virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
+				virtual off_t cursor_left_from(off_t pos) override { abort(); }
+				virtual off_t cursor_right_from(off_t pos) override { abort(); }
+				virtual off_t cursor_up_from(off_t pos) override { abort(); }
+				virtual off_t cursor_down_from(off_t pos) override { abort(); }
+				virtual off_t cursor_home_from(off_t pos) override { abort(); }
+				virtual off_t cursor_end_from(off_t pos) override { abort(); }
+				virtual int cursor_column(off_t pos) override { abort(); }
+				virtual off_t first_row_nearest_column(int column) override { abort(); }
+				virtual off_t last_row_nearest_column(int column) override { abort(); }
+				virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
+				virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
+				
+				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override { abort(); }
+				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override { abort(); }
+				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override { abort(); }
+	};
 	
-	return NULL;
-}
-
-REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::_prev_data_region(GenericDataRegion *dr)
-{
-	auto dr_it = std::find_if(regions.begin(), regions.end(), [&](Region *r) { return r == dr; });
-	assert(dr_it != regions.end());
+	const StubRegion d_offset_to_find(offset);
 	
-	while(dr_it != regions.begin())
+	auto cmp_by_d_offset = [](const GenericDataRegion *lhs, const GenericDataRegion *rhs)
 	{
-		--dr_it;
-		
-		GenericDataRegion *prev_dr = dynamic_cast<GenericDataRegion*>(*dr_it);
-		if(prev_dr != NULL)
-		{
-			return prev_dr;
-		}
-	}
+		return lhs->d_offset < rhs->d_offset;
+	};
 	
-	return NULL;
-}
-
-REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::_next_data_region(GenericDataRegion *dr)
-{
-	auto dr_it = std::find_if(regions.begin(), regions.end(), [&](Region *r) { return r == dr; });
-	assert(dr_it != regions.end());
-	
-	while(++dr_it != regions.end())
-	{
-		GenericDataRegion *next_dr = dynamic_cast<GenericDataRegion*>(*dr_it);
-		if(next_dr != NULL)
-		{
-			return next_dr;
-		}
-	}
-	
-	return NULL;
-}
-
-std::list<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::_region_by_y_offset(int64_t y_offset)
-{
-	/* Iterate over the regions to find the last one which does NOT start beyond the current
-	 * scroll_y.
+	/* std::upper_bound() will give us the first element whose d_offset is greater than the one
+	 * we're looking for...
 	*/
+	auto region = std::upper_bound(data_regions.begin(), data_regions.end(), &d_offset_to_find, cmp_by_d_offset);
 	
-	auto region = regions.begin();
-	for(auto next = std::next(region); next != regions.end() && (*next)->y_offset <= y_offset; ++next)
+	if(region == data_regions.begin())
 	{
-		region = next;
+		/* No region encompassing the requested offset. */
+		return data_regions.end();
 	}
+	
+	/* ...so step backwards to get to the correct element. */
+	--region;
+	
+	if((*region)->d_offset <= offset
+		/* Requested offset must be within region range to match, or one past the end if
+		 * this is the last data region.
+		*/
+		&& ((*region)->d_offset + (*region)->d_length + (region == std::prev(data_regions.end())) > offset))
+	{
+		return region;
+	}
+	else{
+		return data_regions.end();
+	}
+}
+
+std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_by_y_offset(int64_t y_offset)
+{
+	/* Find region that encompasses the given line using binary search. */
+	
+	class StubRegion: public Region
+	{
+		public:
+			StubRegion(int64_t y_offset):
+				Region(0, 0)
+			{
+				this->y_offset = y_offset;
+			}
+			
+			virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override
+			{
+				abort();
+			}
+			
+			virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override
+			{
+				abort();
+			}
+			
+			virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override
+			{
+				abort();
+			}
+	};
+	
+	const StubRegion y_offset_to_find(y_offset);
+	
+	auto cmp_by_y_offset = [](const Region *lhs, const Region *rhs)
+	{
+		return lhs->y_offset < rhs->y_offset;
+	};
+	
+	/* std::upper_bound() will give us the first element whose y_offset is greater than the one
+	 * we're looking for...
+	*/
+	auto region = std::upper_bound(regions.begin(), regions.end(), &y_offset_to_find, cmp_by_y_offset);
+	
+	/* ...by definition that can't be the first element... */
+	assert(region != regions.begin());
+	
+	/* ...so step backwards to get to the correct element. */
+	--region;
+	
+	assert((*region)->y_offset <= y_offset);
+	assert(((*region)->y_offset + (*region)->y_lines) > y_offset);
 	
 	return region;
 }
@@ -1722,10 +1737,10 @@ void REHex::DocumentCtrl::_make_x_visible(int x_px, int width_px)
 */
 void REHex::DocumentCtrl::_make_byte_visible(off_t offset)
 {
-	GenericDataRegion *dr = _data_region_by_offset(offset);
-	assert(dr != NULL);
+	auto dr = _data_region_by_offset(offset);
+	assert(dr != data_regions.end());
 	
-	Rect bounds = dr->calc_offset_bounds(offset, this);
+	Rect bounds = (*dr)->calc_offset_bounds(offset, this);
 	assert(bounds.h == 1);
 	
 	_make_line_visible(bounds.y);
@@ -1835,22 +1850,23 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 	}
 }
 
-const std::list<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
+const std::vector<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
 {
 	return regions;
 }
 
-void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
+void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 {
 	assert(!new_regions.empty());
 	
 	/* Erase the old regions and swap the contents of the new list in. */
 	
-	for(auto r = regions.begin(); r != regions.end();)
+	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
 		delete *r;
-		r = regions.erase(r);
 	}
+	
+	regions.clear();
 	
 	regions.swap(new_regions);
 	
@@ -1890,6 +1906,19 @@ void REHex::DocumentCtrl::replace_all_regions(std::list<Region*> &new_regions)
 	
 	regions.back()->indent_final = indent_to.size();
 	
+	/* Clear and repopulate data_regions with the GenericDataRegion regions. */
+	
+	data_regions.clear();
+	
+	for(auto r = regions.begin(); r != regions.end(); ++r)
+	{
+		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*r);
+		if(dr != NULL)
+		{
+			data_regions.push_back(dr);
+		}
+	}
+	
 	/* Recalculates region widths/heights and updates scroll bars */
 	_handle_width_change();
 }
@@ -1898,15 +1927,16 @@ bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)
 {
 	off_t cursor_pos = get_cursor_position();
 	
-	GenericDataRegion *cur_region = _data_region_by_offset(cursor_pos);
-	assert(cur_region != NULL);
+	auto cur_region = _data_region_by_offset(cursor_pos);
+	assert(cur_region != data_regions.end());
 	
-	return cur_region->OnChar(this, event);
+	return (*cur_region)->OnChar(this, event);
 }
 
 REHex::DocumentCtrl::GenericDataRegion *REHex::DocumentCtrl::data_region_by_offset(off_t offset)
 {
-	return _data_region_by_offset(offset);
+	auto region = _data_region_by_offset(offset);
+	return region != data_regions.end() ? *region : NULL;
 }
 
 wxFont &REHex::DocumentCtrl::get_font()

@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 #include <wx/frame.h>
+#include <wx/settings.h>
 
 #include "../src/document.hpp"
 #include "../src/DocumentCtrl.hpp"
@@ -311,4 +312,201 @@ TEST_F(DocumentCtrlTest, CursorRightNowhereToGo)
 	doc_ctrl->GetEventHandler()->ProcessEvent(event);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 91) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpWithinRegionFixedWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(75);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 65) << "Cursor moved up within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpWithinRegionFixedWidthClampStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(74);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 65) << "Cursor clamped to first column of previous line within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpWithinRegionAutoWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(DocumentCtrl::BYTES_PER_LINE_FIT_BYTES);
+	doc_ctrl->set_bytes_per_group(50);
+	
+	doc_ctrl->set_show_offsets(false);
+	doc_ctrl->set_show_ascii(false);
+	
+	/* Set the DocumentCtrl size to fit 10 bytes per line. */
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20) + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X), 256));
+	
+	doc_ctrl->set_cursor_position(25);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor moved up within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(63);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 33) << "Cursor moved up to matching column in last line of previous data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 2);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(63);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor moved up to start of last line of previous data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 2);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(69);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 16) << "Cursor moved up to end of last line of previous data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(DocumentCtrl::BYTES_PER_LINE_FIT_BYTES);
+	doc_ctrl->set_bytes_per_group(11);
+	
+	doc_ctrl->set_show_offsets(false);
+	doc_ctrl->set_show_ascii(false);
+	
+	/* Set the DocumentCtrl size to fit 10 bytes per line. */
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20) + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X), 256));
+	
+	doc_ctrl->set_cursor_position(63);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 26) << "Cursor moved up to matching column in last line of previous data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidthClampStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 5);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(DocumentCtrl::BYTES_PER_LINE_FIT_BYTES);
+	doc_ctrl->set_bytes_per_group(11);
+	
+	doc_ctrl->set_show_offsets(false);
+	doc_ctrl->set_show_ascii(false);
+	
+	/* Set the DocumentCtrl size to fit 10 bytes per line. */
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20) + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X), 256));
+	
+	doc_ctrl->set_cursor_position(70);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 19) << "Cursor moved up to last column in last line of previous data region";
 }

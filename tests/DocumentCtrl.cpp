@@ -510,3 +510,25 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidthClampStartOfLine)
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 19) << "Cursor moved up to last column in last line of previous data region";
 }
+
+TEST_F(DocumentCtrlTest, CursorUpNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(15);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor not moved";
+}

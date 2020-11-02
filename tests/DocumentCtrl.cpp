@@ -410,6 +410,44 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidth)
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 33) << "Cursor moved up to matching column in last line of previous data region";
 }
 
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthStartOfRow)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(50);
+	
+	process_char_event(WXK_UP);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 20) << "Cursor moved up to matching column in last line of previous data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthEndOfRow)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(59);
+	
+	process_char_event(WXK_UP);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 29) << "Cursor moved up to matching column in last line of previous data region";
+}
+
 TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampStartOfLine)
 {
 	std::vector<unsigned char> Z_DATA(128);
@@ -519,4 +557,237 @@ TEST_F(DocumentCtrlTest, CursorUpNowhereToGo)
 	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownWithinRegionFixedWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(65);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 75) << "Cursor moved down within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownWithinRegionFixedWidthClampEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(75);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 84) << "Cursor clamped to last column of next line within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownWithinRegionAutoWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(DocumentCtrl::BYTES_PER_LINE_FIT_BYTES);
+	doc_ctrl->set_bytes_per_group(50);
+	
+	doc_ctrl->set_show_offsets(false);
+	doc_ctrl->set_show_ascii(false);
+	
+	/* Set the DocumentCtrl size to fit 10 bytes per line. */
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(15);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 25) << "Cursor moved down within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(33);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 63) << "Cursor moved down to matching column in first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthStartOfRow)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(20);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 50) << "Cursor moved down to matching column in first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthEndOfRow)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(29);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 59) << "Cursor moved down to matching column in first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthClampStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(64, 2);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(32);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 64) << "Cursor moved down to start of first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthClampEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 25);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(64, 2);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(38);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 65) << "Cursor moved down to end of first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionAutoWidth)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(DocumentCtrl::BYTES_PER_LINE_FIT_BYTES);
+	doc_ctrl->set_bytes_per_group(11);
+	
+	doc_ctrl->set_show_offsets(false);
+	doc_ctrl->set_show_ascii(false);
+	
+	/* Set the DocumentCtrl size to fit 10 bytes per line. */
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(26);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 63) << "Cursor moved down to matching column in first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownToNextRegionAutoWidthClampEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 2);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(DocumentCtrl::BYTES_PER_LINE_FIT_BYTES);
+	doc_ctrl->set_bytes_per_group(11);
+	
+	doc_ctrl->set_show_offsets(false);
+	doc_ctrl->set_show_ascii(false);
+	
+	/* Set the DocumentCtrl size to fit 10 bytes per line. */
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(34);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 61) << "Cursor moved up to last column in first line of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorDownNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(80);
+	
+	process_char_event(WXK_DOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 80) << "Cursor not moved";
 }

@@ -952,7 +952,9 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					auto prev_region = std::prev(cur_region);
 					
 					new_cursor_pos = (*prev_region)->last_row_nearest_column(cur_column);
-					assert(new_cursor_pos >= 0);
+					
+					assert(new_cursor_pos >= (*prev_region)->d_offset);
+					assert(new_cursor_pos <= (*prev_region)->d_offset + (*prev_region)->d_length);
 				}
 				else{
 					/* No previous region. Nowhere to go. */
@@ -2976,7 +2978,9 @@ off_t REHex::DocumentCtrl::DataRegion::first_row_nearest_column(int column)
 off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
 {
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
-	off_t last_row_off = visual_offset + ((d_length / bytes_per_line_actual) * bytes_per_line_actual);
+	off_t visual_length = d_length + (off_t)(first_line_pad_bytes);
+	
+	off_t last_row_off = visual_offset + (((visual_length - 1) / bytes_per_line_actual) * bytes_per_line_actual);
 	
 	off_t offset_at_col = last_row_off + column;
 	

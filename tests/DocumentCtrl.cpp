@@ -38,7 +38,7 @@ class DocumentCtrlTest: public ::testing::Test
 		DocumentCtrlTest();
 		
 		void process_size_event();
-		void process_char_event(int key_code);
+		void process_char_event(int key_code, wxKeyModifier modifiers = wxMOD_NONE);
 };
 
 DocumentCtrlTest::DocumentCtrlTest():
@@ -65,10 +65,16 @@ void DocumentCtrlTest::process_size_event()
 	doc_ctrl->GetEventHandler()->ProcessEvent(size_event);
 }
 
-void DocumentCtrlTest::process_char_event(int key_code)
+void DocumentCtrlTest::process_char_event(int key_code, wxKeyModifier modifiers)
 {
 	wxKeyEvent event(wxEVT_CHAR);
 	event.m_keyCode = key_code; /* No setter API, but the member is public... */
+	
+	event.SetControlDown(    !!(modifiers & wxMOD_CONTROL)     );
+	event.SetRawControlDown( !!(modifiers & wxMOD_RAW_CONTROL) );
+	event.SetShiftDown(      !!(modifiers & wxMOD_SHIFT)       );
+	event.SetAltDown(        !!(modifiers & wxMOD_ALT)         );
+	event.SetMetaDown(       !!(modifiers & wxMOD_META)        );
 	
 	doc_ctrl->GetEventHandler()->ProcessEvent(event);
 }
@@ -790,4 +796,194 @@ TEST_F(DocumentCtrlTest, CursorDownNowhereToGo)
 	process_char_event(WXK_DOWN);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 80) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorToStartOfDocument)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(70);
+	
+	process_char_event(WXK_HOME, wxMOD_CONTROL);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor moved to start of first data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorToStartOfDocumentNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(15);
+	
+	process_char_event(WXK_HOME, wxMOD_CONTROL);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorToStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(74);
+	
+	process_char_event(WXK_HOME);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 70) << "Cursor moved to start of line";
+}
+
+TEST_F(DocumentCtrlTest, CursorToStartOfLineClamp)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(67);
+	
+	process_char_event(WXK_HOME);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 65) << "Cursor moved to start of line";
+}
+
+TEST_F(DocumentCtrlTest, CursorToStartOfLineNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(70);
+	
+	process_char_event(WXK_HOME);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 70) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorToEndOfDocument)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(20);
+	
+	process_char_event(WXK_END, wxMOD_CONTROL);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 84) << "Cursor moved to end of last data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorToEndOfDocumentNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(84);
+	
+	process_char_event(WXK_END, wxMOD_CONTROL);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 84) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorToEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(16);
+	
+	process_char_event(WXK_END);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 19) << "Cursor moved to end of line";
+}
+
+TEST_F(DocumentCtrlTest, CursorToEndOfLineClamp)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(30);
+	
+	process_char_event(WXK_END);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 34) << "Cursor moved to end of line";
+}
+
+TEST_F(DocumentCtrlTest, CursorToEndOfLineNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	doc_ctrl->set_cursor_position(29);
+	
+	process_char_event(WXK_END);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 29) << "Cursor moved to end of line";
 }

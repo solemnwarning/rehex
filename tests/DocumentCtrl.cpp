@@ -38,6 +38,7 @@ class DocumentCtrlTest: public ::testing::Test
 		DocumentCtrlTest();
 		
 		void process_size_event();
+		void process_char_event(int key_code);
 };
 
 DocumentCtrlTest::DocumentCtrlTest():
@@ -62,6 +63,14 @@ void DocumentCtrlTest::process_size_event()
 	
 	wxSizeEvent size_event(dc_size, dc_id);
 	doc_ctrl->GetEventHandler()->ProcessEvent(size_event);
+}
+
+void DocumentCtrlTest::process_char_event(int key_code)
+{
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = key_code; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
 }
 
 class FixedHeightRegion: public DocumentCtrl::Region
@@ -222,10 +231,7 @@ TEST_F(DocumentCtrlTest, CursorLeftWithinRegion)
 	
 	doc_ctrl->set_cursor_position(70);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_LEFT; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_LEFT);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 69) << "Cursor moved back within DataRegion";
 }
@@ -243,10 +249,7 @@ TEST_F(DocumentCtrlTest, CursorLeftToPrevRegion)
 	
 	doc_ctrl->set_cursor_position(60);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_LEFT; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_LEFT);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 41) << "Cursor moved to end of previous data region";
 }
@@ -264,10 +267,7 @@ TEST_F(DocumentCtrlTest, CursorLeftNowhereToGo)
 	
 	doc_ctrl->set_cursor_position(10);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_LEFT; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_LEFT);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 10) << "Cursor not moved";
 }
@@ -285,10 +285,7 @@ TEST_F(DocumentCtrlTest, CursorRightWithinRegion)
 	
 	doc_ctrl->set_cursor_position(70);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_RIGHT; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_RIGHT);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 71) << "Cursor moved forward within DataRegion";
 }
@@ -306,10 +303,7 @@ TEST_F(DocumentCtrlTest, CursorRightToNextRegion)
 	
 	doc_ctrl->set_cursor_position(41);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_RIGHT; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_RIGHT);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 60) << "Cursor moved to start of next data region";
 }
@@ -327,10 +321,7 @@ TEST_F(DocumentCtrlTest, CursorRightNowhereToGo)
 	
 	doc_ctrl->set_cursor_position(91);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_RIGHT; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_RIGHT);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 91) << "Cursor not moved";
 }
@@ -349,10 +340,7 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionFixedWidth)
 	
 	doc_ctrl->set_cursor_position(75);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 65) << "Cursor moved up within DataRegion";
 }
@@ -371,10 +359,7 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionFixedWidthClampStartOfLine)
 	
 	doc_ctrl->set_cursor_position(74);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 65) << "Cursor clamped to first column of previous line within DataRegion";
 }
@@ -401,10 +386,7 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionAutoWidth)
 	
 	doc_ctrl->set_cursor_position(25);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor moved up within DataRegion";
 }
@@ -423,10 +405,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidth)
 	
 	doc_ctrl->set_cursor_position(63);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 33) << "Cursor moved up to matching column in last line of previous data region";
 }
@@ -445,10 +424,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampStartOfLine)
 	
 	doc_ctrl->set_cursor_position(63);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor moved up to start of last line of previous data region";
 }
@@ -467,10 +443,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampEndOfLine)
 	
 	doc_ctrl->set_cursor_position(69);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 16) << "Cursor moved up to end of last line of previous data region";
 }
@@ -497,10 +470,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidth)
 	
 	doc_ctrl->set_cursor_position(63);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 26) << "Cursor moved up to matching column in last line of previous data region";
 }
@@ -527,10 +497,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidthClampStartOfLine)
 	
 	doc_ctrl->set_cursor_position(70);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 19) << "Cursor moved up to last column in last line of previous data region";
 }
@@ -549,10 +516,7 @@ TEST_F(DocumentCtrlTest, CursorUpNowhereToGo)
 	
 	doc_ctrl->set_cursor_position(15);
 	
-	wxKeyEvent event(wxEVT_CHAR);
-	event.m_keyCode = WXK_UP; /* No setter API, but the member is public... */
-	
-	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	process_char_event(WXK_UP);
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor not moved";
 }

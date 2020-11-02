@@ -2891,7 +2891,9 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_down_from(off_t pos)
 	off_t new_pos = pos + bytes_per_line_actual;
 	
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
-	off_t last_row_off = visual_offset + (((d_length + (off_t)(first_line_pad_bytes)) / bytes_per_line_actual) * bytes_per_line_actual);
+	off_t visual_length = d_length + (off_t)(first_line_pad_bytes);
+	
+	off_t last_row_off = visual_offset + (((visual_length - 1) / bytes_per_line_actual) * bytes_per_line_actual);
 	
 	if(pos < last_row_off && new_pos >= (d_offset + d_length))
 	{

@@ -186,3 +186,129 @@ TEST_F(DocumentCtrlTest, GetDataRegionByOffset)
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(70), r7);
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(71), (DocumentCtrl::Region*)(NULL));
 }
+
+TEST_F(DocumentCtrlTest, CursorLeftWithinRegion)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(70);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_LEFT; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 69) << "Cursor moved back within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorLeftToPrevRegion)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(60);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_LEFT; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 41) << "Cursor moved to end of previous data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorLeftNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(10);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_LEFT; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 10) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorRightWithinRegion)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(70);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_RIGHT; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 71) << "Cursor moved forward within DataRegion";
+}
+
+TEST_F(DocumentCtrlTest, CursorRightToNextRegion)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(41);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_RIGHT; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 60) << "Cursor moved to start of next data region";
+}
+
+TEST_F(DocumentCtrlTest, CursorRightNowhereToGo)
+{
+	std::vector<unsigned char> Z_DATA(128);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(91);
+	
+	wxKeyEvent event(wxEVT_CHAR);
+	event.m_keyCode = WXK_RIGHT; /* No setter API, but the member is public... */
+	
+	doc_ctrl->GetEventHandler()->ProcessEvent(event);
+	
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 91) << "Cursor not moved";
+}

@@ -18,8 +18,8 @@
 #include "../src/platform.hpp"
 
 #include <gtest/gtest.h>
+#include <wx/event.h>
 #include <wx/frame.h>
-#include <wx/settings.h>
 
 #include "../src/document.hpp"
 #include "../src/DocumentCtrl.hpp"
@@ -35,13 +35,34 @@ class DocumentCtrlTest: public ::testing::Test
 		SharedDocumentPointer doc;
 		DocumentCtrl *doc_ctrl;
 		
-		DocumentCtrlTest():
-			frame(NULL, wxID_ANY, "REHex Tests"),
-			doc(SharedDocumentPointer::make())
-		{
-			doc_ctrl = new DocumentCtrl(&frame, doc);
-		}
+		DocumentCtrlTest();
+		
+		void process_size_event();
 };
+
+DocumentCtrlTest::DocumentCtrlTest():
+	frame(NULL, wxID_ANY, "REHex Tests"),
+	doc(SharedDocumentPointer::make())
+{
+	doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	/* Need a data region to avoid crashing during wxEVT_SIZE handler. */
+	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(0, 0) };
+	doc_ctrl->replace_all_regions(regions);
+	
+	/* Give the DocumentCtrl an initial size. */
+	doc_ctrl->SetSize(wxSize(1024, 768));
+	process_size_event();
+}
+
+void DocumentCtrlTest::process_size_event()
+{
+	wxSize dc_size = doc_ctrl->GetSize();
+	int dc_id = doc_ctrl->GetId();
+	
+	wxSizeEvent size_event(dc_size, dc_id);
+	doc_ctrl->GetEventHandler()->ProcessEvent(size_event);
+}
 
 class FixedHeightRegion: public DocumentCtrl::Region
 {
@@ -375,7 +396,8 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionAutoWidth)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20) + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	process_size_event();
 	
 	doc_ctrl->set_cursor_position(25);
 	
@@ -470,7 +492,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidth)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20) + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	process_size_event();
 	
 	doc_ctrl->set_cursor_position(63);
 	
@@ -499,7 +522,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidthClampStartOfLine)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20) + wxSystemSettings::GetMetric(wxSYS_VSCROLL_X), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	process_size_event();
 	
 	doc_ctrl->set_cursor_position(70);
 	

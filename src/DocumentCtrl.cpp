@@ -1946,6 +1946,28 @@ wxFont &REHex::DocumentCtrl::get_font()
 	return hex_font;
 }
 
+int64_t REHex::DocumentCtrl::get_scroll_yoff() const
+{
+	return scroll_yoff;
+}
+
+void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff)
+{
+	if(scroll_yoff < 0)
+	{
+		scroll_yoff = 0;
+	}
+	else if(scroll_yoff > scroll_yoff_max)
+	{
+		scroll_yoff = scroll_yoff_max;
+	}
+	
+	this->scroll_yoff = scroll_yoff;
+	
+	_update_vscroll_pos();
+	Refresh();
+}
+
 REHex::DocumentCtrl::Region::Region(off_t indent_offset, off_t indent_length):
 	indent_depth(0),
 	indent_final(0),

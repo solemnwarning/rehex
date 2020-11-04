@@ -987,3 +987,317 @@ TEST_F(DocumentCtrlTest, CursorToEndOfLineNowhereToGo)
 	
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 29) << "Cursor moved to end of line";
 }
+
+TEST_F(DocumentCtrlTest, CursorPageUpAllDataRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(128);
+	doc_ctrl->set_scroll_yoff(6);
+	
+	process_char_event(WXK_PAGEUP);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 1) << "Screen scrolled up by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 28) << "Cursor moved to nearest column in first visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageUpMixedRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new FixedHeightRegion(10, 0, 0);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(60, 150);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_scroll_yoff(13);
+	doc_ctrl->set_cursor_position(76);
+	
+	process_char_event(WXK_PAGEUP);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 8) << "Screen scrolled up by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 16) << "Cursor moved to nearest column in first visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageUpNoDataRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new FixedHeightRegion(10, 0, 0);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 30);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_scroll_yoff(8);
+	doc_ctrl->set_cursor_position(14);
+	
+	process_char_event(WXK_PAGEUP);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 3) << "Screen scrolled up by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 14) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageUpLimitScroll)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_scroll_yoff(2);
+	doc_ctrl->set_cursor_position(25);
+	
+	process_char_event(WXK_PAGEUP);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 0) << "Screen scrolled up to limit";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 15) << "Cursor moved to nearest column in first visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageUpClampStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(28, 2);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(70);
+	doc_ctrl->set_scroll_yoff(5);
+	
+	process_char_event(WXK_PAGEUP);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 0) << "Screen scrolled up by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 28) << "Cursor moved to nearest column in first visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageUpClampEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 2);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(78);
+	doc_ctrl->set_scroll_yoff(5);
+	
+	process_char_event(WXK_PAGEUP);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 0) << "Screen scrolled up by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 11) << "Cursor moved to nearest column in first visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageDownAllDataRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(14);
+	doc_ctrl->set_scroll_yoff(0);
+	
+	process_char_event(WXK_PAGEDOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 5) << "Screen scrolled down by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 124) << "Cursor moved to nearest column in last fully visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageDownMixedRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 40);
+	DocumentCtrl::Region *r3 = new FixedHeightRegion(10, 100, 0);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(14);
+	doc_ctrl->set_scroll_yoff(0);
+	
+	process_char_event(WXK_PAGEDOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 5) << "Screen scrolled down by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 94) << "Cursor moved to nearest column in last fully visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageDownNoDataRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new FixedHeightRegion(14, 100, 0);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(14);
+	doc_ctrl->set_scroll_yoff(0);
+	
+	process_char_event(WXK_PAGEDOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 5) << "Screen scrolled down by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 14) << "Cursor not moved";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageDownLimitScroll)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 40);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(14);
+	doc_ctrl->set_scroll_yoff(0);
+	
+	process_char_event(WXK_PAGEDOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 2) << "Screen scrolled down to limit";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 94) << "Cursor moved to nearest column in last fully visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageDownClampStartOfLine)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 90);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(106, 2);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(14);
+	doc_ctrl->set_scroll_yoff(0);
+	
+	process_char_event(WXK_PAGEDOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 5) << "Screen scrolled down by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 106) << "Cursor moved to nearest column in last fully visible data line";
+}
+
+TEST_F(DocumentCtrlTest, CursorPageDownClampEndOfLine)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 90);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(102, 2);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
+	doc_ctrl->replace_all_regions(regions);
+	doc_ctrl->set_bytes_per_line(10);
+	
+	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
+	int line_height = doc_ctrl->hf_char_height();
+	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
+	process_size_event();
+	
+	doc_ctrl->set_cursor_position(18);
+	doc_ctrl->set_scroll_yoff(0);
+	
+	process_char_event(WXK_PAGEDOWN);
+	
+	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 5) << "Screen scrolled down by visible number of lines";
+	EXPECT_EQ(doc_ctrl->get_cursor_position(), 103) << "Cursor moved to nearest column in last fully visible data line";
+}

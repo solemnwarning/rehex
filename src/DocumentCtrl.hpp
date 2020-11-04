@@ -396,6 +396,16 @@ namespace REHex {
 			
 			wxFont &get_font();
 			
+			/**
+			 * @brief Returns the current vertical scroll position, in lines.
+			*/
+			int64_t get_scroll_yoff() const;
+			
+			/**
+			 * @brief Set the vertical scroll position, in lines.
+			*/
+			void set_scroll_yoff(int64_t scroll_yoff);
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent& event);
 			void OnSize(wxSizeEvent &event);

@@ -3023,12 +3023,15 @@ off_t REHex::DocumentCtrl::DataRegion::nth_row_nearest_column(int64_t row, int c
 	assert(row >= 0);
 	assert(row < y_lines);
 	
-	off_t first_row_off = first_row_nearest_column(column);
-	off_t last_row_off  = last_row_nearest_column(column);
+	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
 	
-	return std::min(
-		(first_row_off + ((off_t)(row) * (off_t)(bytes_per_line_actual))),
-		last_row_off);
+	off_t offset_at_col = (visual_offset + (off_t)(column) + ((off_t)(row) * (off_t)(bytes_per_line_actual)));
+	
+	/* Clamp to data range. */
+	offset_at_col = std::max(offset_at_col, d_offset);
+	offset_at_col = std::min(offset_at_col, (d_offset + d_length - (d_length > 0)));
+	
+	return offset_at_col;
 }
 
 REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)

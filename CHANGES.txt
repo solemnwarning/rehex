@@ -33,6 +33,8 @@ Version TBA
 
  * Show ranges marked as integers in their decoded form in the hex view.
 
+ * Performance improvements for documents with large numbers of comments.
+
 Version 0.2.0 (2020-06-02)
 
  * Allow copying comments from a document and pasting them elsewhere in the

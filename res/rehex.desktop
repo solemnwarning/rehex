@@ -5,4 +5,4 @@ Name=Reverse Engineers' Hex Editor
 Icon=rehex
 Exec=rehex %F
 Terminal=false
-Categories=Utility
+Categories=Utility;

@@ -1,1 +1,1 @@
-rehex-0.2.0.spec
+rehex-0.3.0.spec

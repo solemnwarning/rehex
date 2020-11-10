@@ -1,4 +1,4 @@
-Version TBA
+Version 0.3.0 (2020-11-10)
 
  * [Mark Jansen] Use byte grouping setting from main window in diff window.
 

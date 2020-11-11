@@ -122,7 +122,7 @@ namespace REHex {
 			Tab *active_tab();
 			Document *active_document();
 			
-			void _update_status_offset(REHex::DocumentCtrl *doc_ctrl);
+			void _update_status_offset(Tab *tab);
 			void _update_status_selection(REHex::DocumentCtrl *doc_ctrl);
 			void _update_status_mode(REHex::DocumentCtrl *doc_ctrl);
 			void _update_undo(REHex::Document *doc);

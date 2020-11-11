@@ -142,11 +142,25 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 		{
 			case ID_GOTO:
 				document->set_cursor_position(key->offset);
+				
+				CallAfter([this]()
+				{
+					document_ctrl->SetFocus();
+					document_ctrl->Refresh(); /* TODO: Refresh in DocumentCtrl when it gains focus. */
+				});
+				
 				break;
 				
 			case ID_SELECT:
 				document->set_cursor_position(key->offset);
 				document_ctrl->set_selection(key->offset, key->length);
+				
+				CallAfter([this]()
+				{
+					document_ctrl->SetFocus();
+					document_ctrl->Refresh(); /* TODO: Refresh in DocumentCtrl when it gains focus. */
+				});
+				
 				break;
 				
 			case ID_EDIT_COMMENT:
@@ -185,6 +199,12 @@ void REHex::CommentTree::OnActivated(wxDataViewEvent &event)
 	assert(key != NULL);
 	
 	document->set_cursor_position(key->offset);
+	
+	CallAfter([this]()
+	{
+		document_ctrl->SetFocus();
+		document_ctrl->Refresh(); /* TODO: Refresh in DocumentCtrl when it gains focus. */
+	});
 }
 
 REHex::CommentTreeModel::CommentTreeModel(REHex::Document *document):

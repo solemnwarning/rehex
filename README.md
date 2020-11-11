@@ -69,6 +69,11 @@ Finally, you can install the package:
     $ sudo dnf copr enable solemnwarning/rehex
     $ sudo dnf install rehex
 
+### openSUSE
+    $ sudo zypper ar obs://editors editors
+    $ sudo zypper ref
+    $ sudo zypper in rehex
+
 ## Building
 
 If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets and capstone installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev` and `libcapstone-dev` on Ubuntu).

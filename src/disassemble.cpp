@@ -16,7 +16,9 @@
 */
 
 #include "platform.hpp"
+
 #include <list>
+#include <numeric>
 #include <string.h>
 #include <vector>
 
@@ -402,6 +404,9 @@ REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t of
 	longest_instruction = 0;
 	longest_disasm = 0;
 	
+	dirty.set_range(d_offset, d_length);
+	
+	#if 0
 	std::vector<unsigned char> data = doc->read_data(offset, length);
 	
 	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
@@ -428,6 +433,7 @@ REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t of
 	}
 	
 	cs_free(insn, 1);
+	#endif
 }
 
 REHex::DisassemblyRegion::~DisassemblyRegion()
@@ -458,7 +464,10 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 
 void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
 {
-	y_lines = instructions.size() + indent_final;
+	int64_t total_lines = std::accumulate(processed.begin(), processed.end(),
+		(int64_t)(0), [](int64_t sum, const InstructionRange &ir) { return sum + ir.y_lines; });
+	
+	y_lines = total_lines + indent_final;
 }
 
 void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
@@ -467,13 +476,105 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	int hf_char_height = doc_ctrl.hf_char_height();
 	
-	int64_t skip_lines = (y < 0 ? (-y / hf_char_height) : 0);
-	y += skip_lines * hf_char_height;
+	int64_t line_num = (y < 0 ? (-y / hf_char_height) : 0);
+	y += line_num * hf_char_height;
 	
 	wxSize client_size = doc_ctrl.GetClientSize();
 	
 	bool alternate = false;
 	
+	/* Find the element in processed that encompasses our start line. */
+	auto pr = std::find_if(processed.begin(), processed.end(),
+		[&](const InstructionRange &ir)
+		{
+			return ir.rel_y_offset <= line_num && (ir.rel_y_offset + ir.y_lines) > line_num;
+		});
+	
+	while(pr != processed.end() && y < client_size.GetHeight())
+	{
+		std::vector<Instruction> instructions;
+		
+		std::vector<unsigned char> data = doc->read_data(pr->offset, pr->length);
+		
+		const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
+		size_t code_size = data.size();
+		uint64_t address = pr->offset;
+		cs_insn* insn = cs_malloc(disassembler);
+		
+		/* NOTE: @code, @code_size & @address variables are all updated! */
+		while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+		{
+			Instruction inst;
+			
+			char disasm_buf[256];
+			snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
+			
+			inst.offset = insn->address;
+			inst.length = insn->size;
+			inst.disasm = disasm_buf;
+			
+			instructions.push_back(inst);
+		}
+		
+		cs_free(insn, 1);
+		
+		for(size_t i = (line_num - pr->rel_y_offset); i < instructions.size() && y < client_size.GetHeight(); ++i)
+		{
+			dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
+			dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+			
+			if(doc_ctrl.get_show_offsets())
+			{
+				/* Draw the offsets to the left */
+				
+				std::string offset_str = format_offset(instructions[i].offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+				
+				dc.DrawText(offset_str, x + offset_text_x, y);
+				
+				int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
+				
+				wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+				
+				dc.SetPen(norm_fg_1px);
+				dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
+			}
+			
+			if(alternate)
+			{
+				dc.SetTextForeground((*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]);
+			}
+			
+			alternate = !alternate;
+			
+			bool data_err = false;
+			std::vector<unsigned char> data = doc->read_data(instructions[i].offset, instructions[i].length);
+			
+			unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+			
+			for(size_t j = 0; j < data.size(); ++j)
+			{
+				const char *nibble_to_hex = data_err
+					? "????????????????"
+					: "0123456789ABCDEF";
+				
+				const char hex_str[] = {
+					nibble_to_hex[ (data[j] & 0xF0) >> 4 ],
+					nibble_to_hex[ data[j] & 0x0F ],
+					'\0'
+				};
+				
+				dc.DrawText(hex_str, (x + hex_text_x + doc_ctrl.hf_string_width((j * 2) + (j / bytes_per_group))), y);
+			}
+			
+			dc.DrawText(instructions[i].disasm, x + code_text_x, y);
+			
+			y += hf_char_height;
+		}
+		
+		++pr;
+	}
+	
+	#if 0
 	for(size_t i = skip_lines; y < client_size.GetHeight() && i < instructions.size(); ++i)
 	{
 		dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
@@ -526,6 +627,85 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		y += hf_char_height;
 	}
+	#endif
+}
+
+unsigned int REHex::DisassemblyRegion::check()
+{
+	if(dirty.empty())
+	{
+		/* Range is fully analysed. */
+		return Region::IDLE;
+	}
+	
+	unsigned int state = Region::IDLE;
+	
+	static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
+	
+	ByteRangeSet::Range first_dirty_range = dirty[0];
+	
+	off_t process_base = first_dirty_range.offset;
+	off_t process_len  = std::min(first_dirty_range.length, SOFT_IR_LIMIT);
+	
+	std::vector<unsigned char> data = doc->read_data(process_base, process_len);
+	
+	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
+	size_t code_size = data.size();
+	uint64_t address = process_base;
+	cs_insn* insn = cs_malloc(disassembler);
+	
+	// TODO: Handle instructions straddling ranges
+	// cs_option(disassembler, CS_OPT_SKIPDATA, CS_OPT_OFF);
+	
+	InstructionRange new_ir;
+	new_ir.offset               = process_base;
+	new_ir.length               = 0;
+	new_ir.longest_instruction  = 0;
+	new_ir.longest_disasm       = 0;
+	new_ir.rel_y_offset         = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
+	new_ir.y_lines              = 0;
+	
+	/* NOTE: @code, @code_size & @address variables are all updated! */
+	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	{
+		size_t disasm_length = strlen(insn->mnemonic) + 1 + strlen(insn->op_str);
+		
+		new_ir.length += insn->size;
+		
+		new_ir.longest_instruction = std::max<off_t>(new_ir.longest_instruction, insn->size);
+		new_ir.longest_disasm = std::max(new_ir.longest_disasm, disasm_length);
+		
+		++(new_ir.y_lines);
+		
+		state |= (StateFlag)Region::HEIGHT_CHANGE;
+	}
+	
+	cs_free(insn, 1);
+	
+	// TODO: Merge into processed
+	assert(processed.empty() || (processed.back().offset + processed.back().length) == new_ir.offset);
+	processed.push_back(new_ir);
+	
+	if(new_ir.longest_instruction > longest_instruction)
+	{
+		longest_instruction = new_ir.longest_instruction;
+		state |= (StateFlag)Region::WIDTH_CHANGE;
+	}
+	
+	if(new_ir.longest_disasm > longest_disasm)
+	{
+		longest_disasm = new_ir.longest_disasm;
+		state |= (StateFlag)Region::WIDTH_CHANGE;
+	}
+	
+	dirty.clear_range(new_ir.offset, new_ir.length);
+	
+	if(!dirty.empty())
+	{
+		state |= (StateFlag)Region::PROCESSING;
+	}
+	
+	return state;
 }
 
 std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
@@ -552,17 +732,20 @@ int REHex::DisassemblyRegion::cursor_column(off_t pos)
 
 off_t REHex::DisassemblyRegion::first_row_nearest_column(int column)
 {
-	return instructions.front().offset;
+	return d_offset;
+	//return instructions.front().offset;
 }
 
 off_t REHex::DisassemblyRegion::last_row_nearest_column(int column)
 {
-	return instructions.back().offset;
+	return d_offset;
+	// return instructions.back().offset;
 }
 
 off_t REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
 {
-	return instructions.back().offset;
+	return d_offset;
+	// return instructions.back().offset;
 }
 
 REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)

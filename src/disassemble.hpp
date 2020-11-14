@@ -25,6 +25,7 @@
 #include <wx/panel.h>
 #include <wx/wx.h>
 
+#include "ByteRangeSet.hpp"
 #include "CodeCtrl.hpp"
 #include "document.hpp"
 #include "Events.hpp"
@@ -91,7 +92,20 @@ namespace REHex {
 				std::string disasm;
 			};
 			
-			std::vector<Instruction> instructions;
+			struct InstructionRange
+			{
+				off_t offset, length;
+				
+				off_t longest_instruction;
+				size_t longest_disasm;
+				
+				int64_t rel_y_offset;
+				int64_t y_lines;
+			};
+			
+			ByteRangeSet dirty;                       /**< Bytes which are waiting to be analysed. */
+			std::vector<InstructionRange> processed;  /**< Ranges of up-to-date analysed code. */
+			// std::vector<Instruction> instructions;    /**< Recently disassembled instructions. */
 			
 			off_t longest_instruction;
 			size_t longest_disasm;
@@ -105,6 +119,8 @@ namespace REHex {
 			virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override;
 			
 			virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
+			
+			virtual unsigned int check() override;
 			
 			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override;
 			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;

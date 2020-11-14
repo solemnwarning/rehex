@@ -64,6 +64,7 @@ BEGIN_EVENT_TABLE(REHex::DocumentCtrl, wxControl)
 	EVT_MOTION(REHex::DocumentCtrl::OnMotion)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::DocumentCtrl::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::DocumentCtrl::OnRedrawCursor)
+	EVT_IDLE(REHex::DocumentCtrl::OnIdle)
 END_EVENT_TABLE()
 
 REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
@@ -1564,6 +1565,55 @@ void REHex::DocumentCtrl::OnRedrawCursor(wxTimerEvent &event)
 	Refresh();
 }
 
+void REHex::DocumentCtrl::OnIdle(wxIdleEvent &event)
+{
+	bool width_changed = false;
+	bool height_changed = false;
+	bool redraw = false;
+	
+	for(auto r = processing_regions.begin(); r != processing_regions.end();)
+	{
+		unsigned int status = (*r)->check();
+		
+		if(status & Region::WIDTH_CHANGE)
+		{
+			width_changed = true;
+		}
+		
+		if(status & Region::HEIGHT_CHANGE)
+		{
+			height_changed = true;
+		}
+		
+		if(status & Region::REDRAW)
+		{
+			redraw = true;
+		}
+		
+		if(status & Region::PROCESSING)
+		{
+			++r;
+		}
+		else{
+			r = processing_regions.erase(r);
+		}
+	}
+	
+	if(width_changed || height_changed)
+	{
+		_handle_width_change();
+	}
+	else if(redraw)
+	{
+		Refresh();
+	}
+	
+	if(!processing_regions.empty())
+	{
+		event.RequestMore();
+	}
+}
+
 std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCtrl::_data_region_by_offset(off_t offset)
 {
 	/* Find region that encompasses the given offset using binary search. */
@@ -1921,6 +1971,18 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 		}
 	}
 	
+	/* Clear and repopulate processing_regions with the regions which have some background work to do. */
+	
+	processing_regions.clear();
+	
+	for(auto r = regions.begin(); r != regions.end(); ++r)
+	{
+		if((*r)->check() != Region::IDLE)
+		{
+			processing_regions.push_back(*r);
+		}
+	}
+	
 	/* Recalculates region widths/heights and updates scroll bars */
 	_handle_width_change();
 }
@@ -1975,6 +2037,11 @@ REHex::DocumentCtrl::Region::Region(off_t indent_offset, off_t indent_length):
 	indent_length(indent_length)  {}
 
 REHex::DocumentCtrl::Region::~Region() {}
+
+unsigned int REHex::DocumentCtrl::Region::check()
+{
+	return StateFlag::IDLE;
+}
 
 int REHex::DocumentCtrl::Region::calc_width(REHex::DocumentCtrl &doc)
 {

@@ -68,6 +68,18 @@ namespace REHex {
 					
 					virtual ~Region();
 					
+					enum StateFlag
+					{
+						IDLE       = 0,
+						PROCESSING = (1 << 0),
+						
+						WIDTH_CHANGE  = (1 << 1),
+						HEIGHT_CHANGE = (1 << 2),
+						REDRAW        = (1 << 3),
+					};
+					
+					virtual unsigned int check();
+					
 				protected:
 					Region(off_t indent_offset, off_t indent_length);
 					
@@ -420,6 +432,7 @@ namespace REHex {
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnClearHighlight(wxCommandEvent &event);
+			void OnIdle(wxIdleEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:
@@ -431,6 +444,7 @@ namespace REHex {
 			
 			std::vector<Region*> regions;                  /**< List of regions to be displayed. */
 			std::vector<GenericDataRegion*> data_regions;  /**< Subset of regions which are a GenericDataRegion. */
+			std::vector<Region*> processing_regions;       /**< Subset of regions which are doing background processing. */
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;

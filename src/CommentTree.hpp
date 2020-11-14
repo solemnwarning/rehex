@@ -95,6 +95,7 @@ namespace REHex {
 			void OnCommentModified(wxCommandEvent &event);
 			
 			void OnContextMenu(wxDataViewEvent &event);
+			void OnActivated(wxDataViewEvent &event);
 			
 		/* Keep at end. */
 		DECLARE_EVENT_TABLE()

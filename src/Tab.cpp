@@ -1269,11 +1269,11 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
-	std::list<DocumentCtrl::Region*> regions = compute_regions(doc, inline_comment_mode);
+	std::vector<DocumentCtrl::Region*> regions = compute_regions(doc, inline_comment_mode);
 	doc_ctrl->replace_all_regions(regions);
 }
 
-std::list<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode)
+std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode)
 {
 	auto comments = doc->get_comments();
 	auto types = doc->get_data_types();
@@ -1293,7 +1293,7 @@ std::list<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocume
 		offset_base = comments.end();
 	}
 	
-	std::list<DocumentCtrl::Region*> regions;
+	std::vector<DocumentCtrl::Region*> regions;
 	std::stack<off_t> dr_limit;
 	
 	while(remain_data > 0)

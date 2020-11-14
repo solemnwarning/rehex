@@ -190,6 +190,7 @@ TEST_OBJS := \
 	tests/CommentTree.o \
 	tests/DiffWindow.o \
 	tests/Document.o \
+	tests/DocumentCtrl.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \

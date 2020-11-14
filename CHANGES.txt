@@ -1,4 +1,14 @@
-Version TBA
+Version 0.3.1 (2020-11-13)
+
+ * Correctly display signed 16-bit values in "Decode values" panel.
+
+ * Fix status bar offset going out of sync.
+
+ * Move cursor when a row in the "Comments" panel is double clicked.
+
+ * Focus document after updating position/selection via "Comments" panel.
+
+Version 0.3.0 (2020-11-10)
 
  * [Mark Jansen] Use byte grouping setting from main window in diff window.
 
@@ -32,6 +42,8 @@ Version TBA
  * Add data type annotations.
 
  * Show ranges marked as integers in their decoded form in the hex view.
+
+ * Performance improvements for documents with large numbers of comments.
 
 Version 0.2.0 (2020-06-02)
 

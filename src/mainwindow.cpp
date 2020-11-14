@@ -901,7 +901,7 @@ void REHex::MainWindow::OnHexOffsets(wxCommandEvent &event)
 	
 	tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_HEX);
 	
-	_update_status_offset(tab->doc_ctrl);
+	_update_status_offset(tab);
 	_update_status_selection(tab->doc_ctrl);
 }
 
@@ -911,7 +911,7 @@ void REHex::MainWindow::OnDecOffsets(wxCommandEvent &event)
 	
 	tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_DEC);
 	
-	_update_status_offset(tab->doc_ctrl);
+	_update_status_offset(tab);
 	_update_status_selection(tab->doc_ctrl);
 }
 
@@ -1013,7 +1013,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		tool_panels_menu->Check(menu_id, active);
 	}
 	
-	_update_status_offset(tab->doc_ctrl);
+	_update_status_offset(tab);
 	_update_status_selection(tab->doc_ctrl);
 	_update_status_mode(tab->doc_ctrl);
 	_update_undo(tab->doc);
@@ -1121,7 +1121,7 @@ void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 		/* Only update the status bar if the event originated from the
 		 * active document.
 		*/
-		_update_status_offset(active_tab->doc_ctrl);
+		_update_status_offset(active_tab);
 	}
 	
 	event.Skip();
@@ -1235,11 +1235,11 @@ REHex::Document *REHex::MainWindow::active_document()
 	return active_tab()->doc;
 }
 
-void REHex::MainWindow::_update_status_offset(REHex::DocumentCtrl *doc_ctrl)
+void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
-	off_t off = doc_ctrl->get_cursor_position();
+	off_t off = tab->doc->get_cursor_position();
 	
-	std::string off_text = format_offset(off, doc_ctrl->get_offset_display_base());
+	std::string off_text = format_offset(off, tab->doc_ctrl->get_offset_display_base());
 	
 	SetStatusText(off_text, 0);
 }

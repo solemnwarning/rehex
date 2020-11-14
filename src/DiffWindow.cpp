@@ -280,7 +280,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		 * destroyed when wxWidgets next runs idle events.
 		*/
 
-		std::list<DocumentCtrl::Region*> regions;
+		std::vector<DocumentCtrl::Region*> regions;
 		regions.push_back(new DocumentCtrl::DataRegion(0, 0));
 
 		range->doc_ctrl->replace_all_regions(regions);
@@ -324,7 +324,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 
 void REHex::DiffWindow::doc_update(Range *range)
 {
-	std::list<DocumentCtrl::Region*> regions;
+	std::vector<DocumentCtrl::Region*> regions;
 	regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
 	
 	range->doc_ctrl->replace_all_regions(regions);

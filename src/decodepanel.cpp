@@ -278,20 +278,20 @@ void REHex::DecodePanel::update()
 	{
 		/* Big endian */
 		
-		TC_UPDATE(s16, int16_t, "%" PRId16, be16toh(*(int16_t*)(data)));
-		TC_UPDATE(u16, int16_t, "%" PRIu16, be16toh(*(uint16_t*)(data)));
-		TC_UPDATE(h16, int16_t, "%" PRIx16, be16toh(*(uint16_t*)(data)));
-		TC_UPDATE(o16, int16_t, "%" PRIo16, be16toh(*(uint16_t*)(data)));
+		TC_UPDATE(s16, int16_t, "%" PRId16, (int16_t)(be16toh(*(int16_t*)(data))));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, (uint16_t)(be16toh(*(uint16_t*)(data))));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, (uint16_t)(be16toh(*(uint16_t*)(data))));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, (uint16_t)(be16toh(*(uint16_t*)(data))));
 		
-		TC_UPDATE(s32, int32_t, "%" PRId32, be32toh(*(int32_t*)(data)));
-		TC_UPDATE(u32, int32_t, "%" PRIu32, be32toh(*(uint32_t*)(data)));
-		TC_UPDATE(h32, int32_t, "%" PRIx32, be32toh(*(uint32_t*)(data)));
-		TC_UPDATE(o32, int32_t, "%" PRIo32, be32toh(*(uint32_t*)(data)));
+		TC_UPDATE(s32, int32_t, "%" PRId32, (int32_t)(be32toh(*(int32_t*)(data))));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, (uint32_t)(be32toh(*(uint32_t*)(data))));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, (uint32_t)(be32toh(*(uint32_t*)(data))));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, (uint32_t)(be32toh(*(uint32_t*)(data))));
 		
-		TC_UPDATE(s64, int64_t, "%" PRId64, be64toh(*(int64_t*)(data)));
-		TC_UPDATE(u64, int64_t, "%" PRIu64, be64toh(*(uint64_t*)(data)));
-		TC_UPDATE(h64, int64_t, "%" PRIx64, be64toh(*(uint64_t*)(data)));
-		TC_UPDATE(o64, int64_t, "%" PRIo64, be64toh(*(uint64_t*)(data)));
+		TC_UPDATE(s64, int64_t, "%" PRId64, (int64_t)(be64toh(*(int64_t*)(data))));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, (uint64_t)(be64toh(*(uint64_t*)(data))));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, (uint64_t)(be64toh(*(uint64_t*)(data))));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, (uint64_t)(be64toh(*(uint64_t*)(data))));
 		
 		TC_UPDATE(f32, float,  "%.9g", beftoh(*(float*)(data)));
 		TC_UPDATE(f64, double, "%.9g", bedtoh(*(double*)(data)));
@@ -299,20 +299,20 @@ void REHex::DecodePanel::update()
 	else{
 		/* Little endian */
 		
-		TC_UPDATE(s16, int16_t, "%" PRId16, le16toh(*(int16_t*)(data)));
-		TC_UPDATE(u16, int16_t, "%" PRIu16, le16toh(*(uint16_t*)(data)));
-		TC_UPDATE(h16, int16_t, "%" PRIx16, le16toh(*(uint16_t*)(data)));
-		TC_UPDATE(o16, int16_t, "%" PRIo16, le16toh(*(uint16_t*)(data)));
+		TC_UPDATE(s16, int16_t, "%" PRId16, (int16_t)(le16toh(*(int16_t*)(data))));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, (uint16_t)(le16toh(*(uint16_t*)(data))));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, (uint16_t)(le16toh(*(uint16_t*)(data))));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, (uint16_t)(le16toh(*(uint16_t*)(data))));
 		
-		TC_UPDATE(s32, int32_t, "%" PRId32, le32toh(*(int32_t*)(data)));
-		TC_UPDATE(u32, int32_t, "%" PRIu32, le32toh(*(uint32_t*)(data)));
-		TC_UPDATE(h32, int32_t, "%" PRIx32, le32toh(*(uint32_t*)(data)));
-		TC_UPDATE(o32, int32_t, "%" PRIo32, le32toh(*(uint32_t*)(data)));
+		TC_UPDATE(s32, int32_t, "%" PRId32, (int32_t)(le32toh(*(int32_t*)(data))));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, (uint32_t)(le32toh(*(uint32_t*)(data))));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, (uint32_t)(le32toh(*(uint32_t*)(data))));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, (uint32_t)(le32toh(*(uint32_t*)(data))));
 		
-		TC_UPDATE(s64, int64_t, "%" PRId64, le64toh(*(int64_t*)(data)));
-		TC_UPDATE(u64, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
-		TC_UPDATE(h64, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
-		TC_UPDATE(o64, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
+		TC_UPDATE(s64, int64_t, "%" PRId64, (int64_t)(le64toh(*(int64_t*)(data))));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, (uint64_t)(le64toh(*(uint64_t*)(data))));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, (uint64_t)(le64toh(*(uint64_t*)(data))));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, (uint64_t)(le64toh(*(uint64_t*)(data))));
 		
 		TC_UPDATE(f32, float,  "%.9g", leftoh(*(float*)(data)));
 		TC_UPDATE(f64, double, "%.9g", ledtoh(*(double*)(data)));

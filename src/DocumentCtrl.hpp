@@ -101,6 +101,37 @@ namespace REHex {
 					
 					void draw_container(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y);
 					
+					struct Highlight
+					{
+						public:
+							const bool enable;
+							
+							const Palette::ColourIndex fg_colour_idx;
+							const Palette::ColourIndex bg_colour_idx;
+							const bool strong;
+							
+							Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
+								enable(true),
+								fg_colour_idx(fg_colour_idx),
+								bg_colour_idx(bg_colour_idx),
+								strong(strong) {}
+						
+						protected:
+							Highlight():
+								enable(false),
+								fg_colour_idx(Palette::PAL_INVALID),
+								bg_colour_idx(Palette::PAL_INVALID),
+								strong(false) {}
+					};
+					
+					struct NoHighlight: Highlight
+					{
+						NoHighlight(): Highlight() {}
+					};
+					
+					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, const std::function<Highlight(off_t)> &highlight_at_off);
+					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, const std::function<Highlight(off_t)> &highlight_at_off);
+					
 				friend DocumentCtrl;
 			};
 			
@@ -253,35 +284,6 @@ namespace REHex {
 			
 			class DataRegion: public GenericDataRegion
 			{
-				public:
-					struct Highlight
-					{
-						public:
-							const bool enable;
-							
-							const Palette::ColourIndex fg_colour_idx;
-							const Palette::ColourIndex bg_colour_idx;
-							const bool strong;
-							
-							Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
-								enable(true),
-								fg_colour_idx(fg_colour_idx),
-								bg_colour_idx(bg_colour_idx),
-								strong(strong) {}
-						
-						protected:
-							Highlight():
-								enable(false),
-								fg_colour_idx(Palette::PAL_INVALID),
-								bg_colour_idx(Palette::PAL_INVALID),
-								strong(false) {}
-					};
-					
-					struct NoHighlight: Highlight
-					{
-						NoHighlight(): Highlight() {}
-					};
-					
 				protected:
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */

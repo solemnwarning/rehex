@@ -494,6 +494,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	{
 		std::vector<Instruction> instructions;
 		
+		bool data_err = false;
 		std::vector<unsigned char> data = doc->read_data(pr->offset, pr->length);
 		
 		const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
@@ -546,20 +547,22 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			alternate = !alternate;
 			
-			bool data_err = false;
-			std::vector<unsigned char> data = doc->read_data(instructions[i].offset, instructions[i].length);
+			off_t instruction_off_in_pr = instructions[i].offset - pr->offset;
+			
+			assert(instruction_off_in_pr >= 0);
+			assert((instruction_off_in_pr + instructions[i].length) <= pr->length);
 			
 			unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
 			
-			for(size_t j = 0; j < data.size(); ++j)
+			for(size_t j = 0; j < instructions[i].length && (instruction_off_in_pr + j) < data.size(); ++j)
 			{
 				const char *nibble_to_hex = data_err
 					? "????????????????"
 					: "0123456789ABCDEF";
 				
 				const char hex_str[] = {
-					nibble_to_hex[ (data[j] & 0xF0) >> 4 ],
-					nibble_to_hex[ data[j] & 0x0F ],
+					nibble_to_hex[ (data[instruction_off_in_pr + j] & 0xF0) >> 4 ],
+					nibble_to_hex[ data[instruction_off_in_pr + j] & 0x0F ],
 					'\0'
 				};
 				

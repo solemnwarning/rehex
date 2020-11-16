@@ -451,12 +451,16 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 	
 	unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
 	
+	off_t bytes_per_line = (longest_instruction > 0)
+		? longest_instruction
+		: 8;
+	
 	offset_text_x = indent_width;
 	hex_text_x    = offset_text_x + offset_column_width;
 	code_text_x   = hex_text_x
 		+ doc_ctrl.hf_string_width(
-			(longest_instruction * 2)
-			+ ((longest_instruction - 1) / bytes_per_group)
+			(bytes_per_line * 2)
+			+ ((bytes_per_line - 1) / bytes_per_group)
 			+ 1);
 	
 	return code_text_x + doc_ctrl.hf_string_width(longest_disasm) + indent_width;
@@ -467,7 +471,14 @@ void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
 	int64_t total_lines = std::accumulate(processed.begin(), processed.end(),
 		(int64_t)(0), [](int64_t sum, const InstructionRange &ir) { return sum + ir.y_lines; });
 	
-	y_lines = total_lines + indent_final;
+	off_t up_bytes_per_line = (longest_instruction > 0)
+		? longest_instruction
+		: 8;
+	
+	off_t up_total = unprocessed_bytes();
+	int64_t up_lines = (up_total + (up_bytes_per_line - 1)) / up_bytes_per_line;
+	
+	y_lines = total_lines + up_lines + indent_final;
 }
 
 void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
@@ -484,11 +495,26 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	bool alternate = false;
 	
 	/* Find the element in processed that encompasses our start line. */
+	/* TODO: Optimise. */
 	auto pr = std::find_if(processed.begin(), processed.end(),
 		[&](const InstructionRange &ir)
 		{
 			return ir.rel_y_offset <= line_num && (ir.rel_y_offset + ir.y_lines) > line_num;
 		});
+	
+	auto highlight_func = [&](off_t offset)
+	{
+		/* TODO */
+		return NoHighlight();
+	};
+	
+	auto set_text_attribs = [&]()
+	{
+		dc.SetFont(doc_ctrl.get_font());
+		
+		dc.SetTextForeground((*active_palette)[alternate ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG]);
+		dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+	};
 	
 	while(pr != processed.end() && y < client_size.GetHeight())
 	{
@@ -521,8 +547,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		for(size_t i = (line_num - pr->rel_y_offset); i < instructions.size() && y < client_size.GetHeight(); ++i)
 		{
-			dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
-			dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+			assert(line_num < (y_offset + y_lines - indent_final));
 			
 			if(doc_ctrl.get_show_offsets())
 			{
@@ -530,6 +555,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 				
 				std::string offset_str = format_offset(instructions[i].offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 				
+				set_text_attribs();
 				dc.DrawText(offset_str, x + offset_text_x, y);
 				
 				int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
@@ -540,11 +566,6 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 				dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
 			}
 			
-			if(alternate)
-			{
-				dc.SetTextForeground((*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]);
-			}
-			
 			alternate = !alternate;
 			
 			off_t instruction_off_in_pr = instructions[i].offset - pr->offset;
@@ -552,29 +573,59 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			assert(instruction_off_in_pr >= 0);
 			assert((instruction_off_in_pr + instructions[i].length) <= pr->length);
 			
-			unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+			draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, data.data() + instruction_off_in_pr, instructions[i].length, 0, instructions[i].offset, highlight_func);
 			
-			for(size_t j = 0; j < instructions[i].length && (instruction_off_in_pr + j) < data.size(); ++j)
-			{
-				const char *nibble_to_hex = data_err
-					? "????????????????"
-					: "0123456789ABCDEF";
-				
-				const char hex_str[] = {
-					nibble_to_hex[ (data[instruction_off_in_pr + j] & 0xF0) >> 4 ],
-					nibble_to_hex[ data[instruction_off_in_pr + j] & 0x0F ],
-					'\0'
-				};
-				
-				dc.DrawText(hex_str, (x + hex_text_x + doc_ctrl.hf_string_width((j * 2) + (j / bytes_per_group))), y);
-			}
-			
+			set_text_attribs();
 			dc.DrawText(instructions[i].disasm, x + code_text_x, y);
 			
 			y += hf_char_height;
+			++line_num;
 		}
 		
 		++pr;
+	}
+	
+	off_t up_off    = unprocessed_offset();
+	off_t up_remain = unprocessed_bytes();
+	
+	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_offset + y_lines - indent_final))
+	{
+		if(doc_ctrl.get_show_offsets())
+		{
+			/* Draw the offsets to the left */
+			
+			std::string offset_str = format_offset(up_off, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+			
+			set_text_attribs();
+			dc.DrawText(offset_str, x + offset_text_x, y);
+			
+			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
+			
+			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+			
+			dc.SetPen(norm_fg_1px);
+			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
+		}
+		
+		off_t line_len = std::min(up_remain, longest_instruction);
+		
+		bool data_err = false;
+		std::vector<unsigned char> line_data = doc->read_data(up_off, line_len);
+		assert(line_data.size() == line_len);
+		
+		const unsigned char *ldp = data_err ? NULL : line_data.data();
+		size_t ldl = data_err ? line_len : line_data.size();
+		
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, highlight_func);
+		
+		set_text_attribs();
+		dc.DrawText("<< PROCESSING >>", x + code_text_x, y);
+		
+		y += hf_char_height;
+		++line_num;
+		
+		up_off    += line_len;
+		up_remain -= line_len;
 	}
 	
 	#if 0
@@ -754,4 +805,20 @@ off_t REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
 REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)
 {
 	abort();
+}
+
+off_t REHex::DisassemblyRegion::unprocessed_offset() const
+{
+	if(processed.empty())
+	{
+		return d_offset;
+	}
+	else{
+		return processed.back().offset + processed.back().length;
+	}
+}
+
+off_t REHex::DisassemblyRegion::unprocessed_bytes() const
+{
+	return d_length - unprocessed_offset();
 }

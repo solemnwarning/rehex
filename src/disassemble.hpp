@@ -110,6 +110,9 @@ namespace REHex {
 			off_t longest_instruction;
 			size_t longest_disasm;
 			
+			off_t unprocessed_offset() const;
+			off_t unprocessed_bytes() const;
+			
 		public:
 			DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode);
 			~DisassemblyRegion();

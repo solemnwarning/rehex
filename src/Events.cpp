@@ -36,6 +36,8 @@ wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
 
 wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
 
+wxDEFINE_EVENT(REHex::FONT_SIZE_ADJUSTMENT_CHANGED, REHex::FontSizeAdjustmentEvent);
+
 REHex::OffsetLengthEvent::OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length):
 	wxEvent(source->GetId(), event), offset(offset), length(length)
 {
@@ -97,4 +99,13 @@ REHex::DocumentTitleEvent::DocumentTitleEvent(wxObject *source, const std::strin
 wxEvent *REHex::DocumentTitleEvent::Clone() const
 {
 	return new DocumentTitleEvent(*this);
+}
+
+REHex::FontSizeAdjustmentEvent::FontSizeAdjustmentEvent(int font_size_adjustment):
+	wxEvent(wxID_NONE, FONT_SIZE_ADJUSTMENT_CHANGED),
+	font_size_adjustment(font_size_adjustment) {}
+
+wxEvent *REHex::FontSizeAdjustmentEvent::Clone() const
+{
+	return new FontSizeAdjustmentEvent(font_size_adjustment);
 }

@@ -30,6 +30,7 @@
 
 #include "buffer.hpp"
 #include "document.hpp"
+#include "Events.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "Palette.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -420,6 +421,7 @@ namespace REHex {
 			void OnMotionTick(int mouse_x, int mouse_y);
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnClearHighlight(wxCommandEvent &event);
+			void OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event);
 			
 		#ifndef UNIT_TEST
 		private:

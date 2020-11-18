@@ -105,7 +105,6 @@ int REHex::App::OnExit()
 	
 	config->SetPath("/");
 	config->Write("last-directory", wxString(last_directory));
-	config->Write("font-size-adjustment", (long)(font_size_adjustment));
 	
 	delete active_palette;
 	delete recent_files;

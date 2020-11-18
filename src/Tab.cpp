@@ -295,6 +295,7 @@ void REHex::Tab::save_view(wxConfig *config)
 {
 	config->SetPath("/");
 	config->Write("theme", wxString(active_palette->get_name()));
+	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
 	
 	config->DeleteGroup("/default-view/");
 	config->SetPath("/default-view/");

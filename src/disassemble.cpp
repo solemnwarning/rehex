@@ -119,7 +119,8 @@ static void Initialize_disassembler()
 			arch_list.push_back(desc);
 			
 			disasm_dtrs.emplace_back(
-				desc.triple, (std::string("Machine code (") + desc.label + ")"),
+				(std::string("code:") + desc.triple),
+				(std::string("Machine code (") + desc.label + ")"),
 				[desc](REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
 				{
 					return new REHex::DisassemblyRegion(doc, offset, length, desc.arch, desc.mode);

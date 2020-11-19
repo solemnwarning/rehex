@@ -20,12 +20,13 @@
 #include <wx/app.h>
 #include <wx/init.h>
 
+#include "../src/app.hpp"
 #include "../src/ArtProvider.hpp"
 #include "../src/Palette.hpp"
 
-wxApp &wxGetApp()
+REHex::App &wxGetApp()
 {
-       return *wxTheApp;
+	return *(REHex::App*)(wxTheApp);
 }
 
 struct Cleanup
@@ -38,7 +39,7 @@ struct Cleanup
 
 int main(int argc, char **argv)
 {
-	wxApp::SetInstance(new wxApp());
+	wxApp::SetInstance(new REHex::App());
 	wxInitializer wxinit;
 	
 	wxImage::AddHandler(new wxPNGHandler);
@@ -50,3 +51,20 @@ int main(int argc, char **argv)
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }
+
+bool REHex::App::OnInit()
+{
+	return true;
+}
+
+int REHex::App::OnExit()
+{
+	return 0;
+}
+
+int REHex::App::get_font_size_adjustment() const
+{
+	return 0;
+}
+
+void REHex::App::set_font_size_adjustment(int font_size_adjustment) {}

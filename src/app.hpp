@@ -33,11 +33,15 @@ namespace REHex {
 			const std::string &get_last_directory();
 			void set_last_directory(const std::string &last_directory);
 			
+			int get_font_size_adjustment() const;
+			void set_font_size_adjustment(int font_size_adjustment);
+			
 			virtual bool OnInit();
 			virtual int OnExit();
 			
 		private:
 			std::string last_directory;
+			int font_size_adjustment;
 	};
 }
 

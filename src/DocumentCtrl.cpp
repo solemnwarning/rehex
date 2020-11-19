@@ -75,6 +75,15 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
+	App &app = wxGetApp();
+	
+	app.Bind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::DocumentCtrl::OnFontSizeAdjustmentChanged, this);
+	
+	int font_size_adjustment = app.get_font_size_adjustment();
+	
+	while(font_size_adjustment > 0) { hex_font.MakeLarger(); --font_size_adjustment; }
+	while(font_size_adjustment < 0) { hex_font.MakeSmaller(); ++font_size_adjustment; }
+	
 	/* The background style MUST be set before the control is created. */
 	SetBackgroundStyle(wxBG_STYLE_PAINT);
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
@@ -140,6 +149,37 @@ REHex::DocumentCtrl::~DocumentCtrl()
 	{
 		delete *region;
 	}
+	
+	wxGetApp().Unbind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::DocumentCtrl::OnFontSizeAdjustmentChanged, this);
+}
+
+void REHex::DocumentCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event)
+{
+	hex_font = wxFont(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	
+	for(int i = 0; i < event.font_size_adjustment; ++i) { hex_font.MakeLarger(); }
+	for(int i = 0; i > event.font_size_adjustment; --i) { hex_font.MakeSmaller(); }
+	
+	assert(hex_font.IsFixedWidth());
+	
+	{
+		wxClientDC dc(this);
+		dc.SetFont(hex_font);
+		
+		hf_height = dc.GetTextExtent("X").GetHeight();
+		
+		/* Precompute widths for hf_string_width() */
+		
+		for(unsigned int i = 0; i < PRECOMP_HF_STRING_WIDTH_TO; ++i)
+		{
+			hf_string_width_precomp[i]
+				= dc.GetTextExtent(std::string((i + 1), 'X')).GetWidth();
+		}
+	}
+	
+	_handle_width_change();
+	
+	event.Skip();
 }
 
 int REHex::DocumentCtrl::get_bytes_per_line()

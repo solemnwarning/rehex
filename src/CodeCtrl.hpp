@@ -24,12 +24,14 @@
 #include <wx/control.h>
 #include <wx/wx.h>
 
+#include "Events.hpp"
 #include "util.hpp"
 
 namespace REHex {
 	class CodeCtrl: public wxControl {
 		public:
 			CodeCtrl(wxWindow *parent, wxWindowID id = wxID_ANY);
+			~CodeCtrl();
 			
 			void append_line(off_t offset, const std::string &text, bool active = false);
 			void clear();
@@ -82,6 +84,7 @@ namespace REHex {
 			CodeCharRef selection_end;
 			
 			void update_scrollbars();
+			void update_widths();
 			CodeCharRef char_near_abs_xy(int abs_x, int abs_y);
 			CodeCharRef char_near_rel_xy(int rel_x, int rel_y);
 			void copy_selection();
@@ -90,6 +93,7 @@ namespace REHex {
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent &event);
 			void OnSize(wxSizeEvent &event);
+			void OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event);
 			void OnScroll(wxScrollWinEvent &event);
 			void OnWheel(wxMouseEvent &event);
 			void OnChar(wxKeyEvent &event);

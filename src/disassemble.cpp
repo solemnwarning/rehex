@@ -517,7 +517,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 	};
 	
-	while(pr != processed.end() && y < client_size.GetHeight())
+	while(pr != processed.end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
 		std::vector<Instruction> instructions;
 		
@@ -546,10 +546,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		cs_free(insn, 1);
 		
-		for(size_t i = (line_num - pr->rel_y_offset); i < instructions.size() && y < client_size.GetHeight(); ++i)
+		for(size_t i = (line_num - pr->rel_y_offset); i < instructions.size() && y < client_size.GetHeight() && line_num < (y_lines - indent_final); ++i)
 		{
-			assert(line_num < (y_offset + y_lines - indent_final));
-			
 			if(doc_ctrl.get_show_offsets())
 			{
 				/* Draw the offsets to the left */
@@ -589,7 +587,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	off_t up_off    = unprocessed_offset();
 	off_t up_remain = unprocessed_bytes();
 	
-	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_offset + y_lines - indent_final))
+	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
 		if(doc_ctrl.get_show_offsets())
 		{

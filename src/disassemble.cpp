@@ -819,5 +819,5 @@ off_t REHex::DisassemblyRegion::unprocessed_offset() const
 
 off_t REHex::DisassemblyRegion::unprocessed_bytes() const
 {
-	return d_length - unprocessed_offset();
+	return d_length - (unprocessed_offset() - d_offset);
 }

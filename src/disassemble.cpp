@@ -391,6 +391,9 @@ void REHex::Disassemble::OnBaseChanged(wxCommandEvent &event)
 	event.Skip();
 }
 
+static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
+static const size_t INSTRUCTION_CACHE_LIMIT = 250000;
+
 REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode):
 	GenericDataRegion(offset, length),
 	doc(doc)
@@ -670,8 +673,6 @@ unsigned int REHex::DisassemblyRegion::check()
 	}
 	
 	unsigned int state = Region::IDLE;
-	
-	static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
 	
 	ByteRangeSet::Range first_dirty_range = dirty[0];
 	
@@ -1155,9 +1156,19 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	assert(next_i == instructions.begin() || (std::prev(next_i)->offset + std::prev(next_i)->length) <= new_instructions.front().offset);
 	assert(next_i == instructions.end() || next_i->offset >= new_instructions.back().offset + new_instructions.back().length);
 	
-	instructions.insert(next_i, new_instructions.begin(), new_instructions.end());
+	/* If we're about to exceed the disassembly cache size, clear it and start again with only
+	 * the range we just disassembled. A bit of a dumb approach, but disassembly *should* be
+	 * fast enough to quickly repopulate the cache on demand, or else responsiveness would suck
+	 * with the current design anyway.
+	*/
 	
-	/* TODO: Don't grow cache infinitely. */
+	if((instructions.size() + new_instructions.size()) > INSTRUCTION_CACHE_LIMIT)
+	{
+		instructions.clear();
+		next_i = instructions.end();
+	}
+	
+	instructions.insert(next_i, new_instructions.begin(), new_instructions.end());
 	
 	return instruction_by_offset(abs_offset);
 }

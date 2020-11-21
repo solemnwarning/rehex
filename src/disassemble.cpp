@@ -17,6 +17,8 @@
 
 #include "platform.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <list>
 #include <numeric>
 #include <string.h>
@@ -495,14 +497,6 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	bool alternate = false;
 	
-	/* Find the element in processed that encompasses our start line. */
-	/* TODO: Optimise. */
-	auto pr = std::find_if(processed.begin(), processed.end(),
-		[&](const InstructionRange &ir)
-		{
-			return ir.rel_y_offset <= line_num && (ir.rel_y_offset + ir.y_lines) > line_num;
-		});
-	
 	auto highlight_func = [&](off_t offset)
 	{
 		/* TODO */
@@ -517,72 +511,58 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 	};
 	
-	while(pr != processed.end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
+	/* Draw disassembled instructions within the visible rows. */
+	
+	auto instr_first = instruction_by_line(line_num);
+	
+	const std::vector<Instruction> *instr_vec = &(instr_first.first);
+	std::vector<Instruction>::const_iterator instr = instr_first.second;
+	
+	while(instr != instr_vec->end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
-		std::vector<Instruction> instructions;
-		
-		bool data_err = false;
-		std::vector<unsigned char> data = doc->read_data(pr->offset, pr->length);
-		
-		const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
-		size_t code_size = data.size();
-		uint64_t address = pr->offset;
-		cs_insn* insn = cs_malloc(disassembler);
-		
-		/* NOTE: @code, @code_size & @address variables are all updated! */
-		while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+		if(doc_ctrl.get_show_offsets())
 		{
-			Instruction inst;
+			/* Draw the offsets to the left */
 			
-			char disasm_buf[256];
-			snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
-			
-			inst.offset = insn->address;
-			inst.length = insn->size;
-			inst.disasm = disasm_buf;
-			
-			instructions.push_back(inst);
-		}
-		
-		cs_free(insn, 1);
-		
-		for(size_t i = (line_num - pr->rel_y_offset); i < instructions.size() && y < client_size.GetHeight() && line_num < (y_lines - indent_final); ++i)
-		{
-			if(doc_ctrl.get_show_offsets())
-			{
-				/* Draw the offsets to the left */
-				
-				std::string offset_str = format_offset(instructions[i].offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
-				
-				set_text_attribs();
-				dc.DrawText(offset_str, x + offset_text_x, y);
-				
-				int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
-				
-				wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
-				
-				dc.SetPen(norm_fg_1px);
-				dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
-			}
-			
-			alternate = !alternate;
-			
-			off_t instruction_off_in_pr = instructions[i].offset - pr->offset;
-			
-			assert(instruction_off_in_pr >= 0);
-			assert((instruction_off_in_pr + instructions[i].length) <= pr->length);
-			
-			draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, data.data() + instruction_off_in_pr, instructions[i].length, 0, instructions[i].offset, highlight_func);
+			std::string offset_str = format_offset(instr->offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
 			set_text_attribs();
-			dc.DrawText(instructions[i].disasm, x + code_text_x, y);
+			dc.DrawText(offset_str, x + offset_text_x, y);
 			
-			y += hf_char_height;
-			++line_num;
+			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
+			
+			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+			
+			dc.SetPen(norm_fg_1px);
+			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
 		}
 		
-		++pr;
+		alternate = !alternate;
+		
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, highlight_func);
+		
+		set_text_attribs();
+		dc.DrawText(instr->disasm, x + code_text_x, y);
+		
+		y += hf_char_height;
+		++line_num;
+		
+		/* Advancing instr to the end means we've either reached unprocessed data and will
+		 * have to stop, or have run out of cached instructions and need to cache more.
+		*/
+		
+		++instr;
+		
+		if(instr == instr_vec->end())
+		{
+			auto next_instr = instruction_by_line(line_num);
+			
+			instr_vec = &(next_instr.first);
+			instr = next_instr.second;
+		}
 	}
+	
+	/* Draw bytes not yet disassembled within the visible rows. */
 	
 	off_t up_off    = unprocessed_offset();
 	off_t up_remain = unprocessed_bytes();
@@ -820,4 +800,163 @@ off_t REHex::DisassemblyRegion::unprocessed_offset() const
 off_t REHex::DisassemblyRegion::unprocessed_bytes() const
 {
 	return d_length - (unprocessed_offset() - d_offset);
+}
+
+std::vector<REHex::DisassemblyRegion::InstructionRange>::iterator REHex::DisassemblyRegion::processed_by_offset(off_t abs_offset)
+{
+	InstructionRange ir_v;
+	ir_v.offset = abs_offset;
+	
+	auto next_ir = std::upper_bound(processed.begin(), processed.end(), ir_v,
+		[](const InstructionRange &lhs, const InstructionRange &rhs)
+		{
+			return lhs.offset < rhs.offset;
+		});
+	
+	if(next_ir == processed.begin())
+	{
+		return processed.end();
+	}
+	
+	auto ir = std::prev(next_ir);
+	
+	if(ir->offset <= abs_offset && (ir->offset + ir->length) > abs_offset)
+	{
+		return ir;
+	}
+	else{
+		return processed.end();
+	}
+}
+
+std::vector<REHex::DisassemblyRegion::InstructionRange>::iterator REHex::DisassemblyRegion::processed_by_line(int64_t rel_line)
+{
+	InstructionRange ir_v;
+	ir_v.rel_y_offset = rel_line;
+	
+	auto next_ir = std::upper_bound(processed.begin(), processed.end(), ir_v,
+		[](const InstructionRange &lhs, const InstructionRange &rhs)
+		{
+			return lhs.rel_y_offset < rhs.rel_y_offset;
+		});
+	
+	if(next_ir == processed.begin())
+	{
+		return processed.end();
+	}
+	
+	auto ir = std::prev(next_ir);
+	
+	if(ir->rel_y_offset <= rel_line && (ir->rel_y_offset + ir->y_lines) > rel_line)
+	{
+		return ir;
+	}
+	else{
+		return processed.end();
+	}
+}
+
+std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector<REHex::DisassemblyRegion::Instruction>::const_iterator> REHex::DisassemblyRegion::instruction_by_offset(off_t abs_offset)
+{
+	static const std::vector<Instruction> EMPTY;
+	static const std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> EMPTY_END(EMPTY, EMPTY.end());
+	
+	Instruction i_v;
+	i_v.offset = abs_offset;
+	
+	auto next_i = std::upper_bound(instructions.begin(), instructions.end(), i_v,
+		[](const Instruction &lhs, const Instruction &rhs)
+		{
+			return lhs.offset < rhs.offset;
+		});
+	
+	if(next_i != instructions.begin())
+	{
+		auto i = std::prev(next_i);
+		
+		if(i->offset <= abs_offset && (i->offset + i->length) > abs_offset)
+		{
+			return std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator>(
+				instructions,
+				i);
+		}
+	}
+	
+	auto ir = processed_by_offset(abs_offset);
+	if(ir == processed.end())
+	{
+		return EMPTY_END;
+	}
+	
+	std::vector<unsigned char> ir_data;
+	try {
+		ir_data = doc->read_data(ir->offset, ir->length);
+	}
+	catch(const std::exception &e)
+	{
+		fprintf(stderr, "Exception in REHex::DisassemblyRegion::instruction_by_offset: %s\n", e.what());
+		return EMPTY_END;
+	}
+	
+	std::vector<Instruction> new_instructions;
+	
+	const uint8_t* code_ = static_cast<const uint8_t*>(ir_data.data());
+	size_t code_size = ir_data.size();
+	uint64_t address = ir->offset;
+	cs_insn* insn = cs_malloc(disassembler);
+	
+	/* NOTE: @code, @code_size & @address variables are all updated! */
+	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	{
+		Instruction inst;
+		
+		char disasm_buf[256];
+		snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
+		
+		inst.offset = insn->address;
+		inst.length = insn->size;
+		inst.data   = std::vector<unsigned char>((unsigned char*)(code_ - insn->size), (unsigned char*)(code_));
+		inst.disasm = disasm_buf;
+		
+		new_instructions.push_back(inst);
+	}
+	
+	cs_free(insn, 1);
+	
+	assert(next_i == instructions.begin() || (std::prev(next_i)->offset + std::prev(next_i)->length) <= new_instructions.front().offset);
+	assert(next_i == instructions.end() || next_i->offset >= new_instructions.back().offset + new_instructions.back().length);
+	
+	instructions.insert(next_i, new_instructions.begin(), new_instructions.end());
+	
+	/* TODO: Don't grow cache infinitely. */
+	
+	return instruction_by_offset(abs_offset);
+}
+
+std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector<REHex::DisassemblyRegion::Instruction>::const_iterator> REHex::DisassemblyRegion::instruction_by_line(int64_t rel_line)
+{
+	static const std::vector<Instruction> EMPTY;
+	static const std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> EMPTY_END(EMPTY, EMPTY.end());
+	
+	auto ir = processed_by_line(rel_line);
+	if(ir == processed.end())
+	{
+		return EMPTY_END;
+	}
+	
+	int64_t line_within_ir = rel_line - ir->rel_y_offset;
+	assert(line_within_ir >= 0);
+	assert(line_within_ir < (ir->rel_y_offset + ir->y_lines));
+	
+	auto ir_first_i = instruction_by_offset(ir->offset);
+	if(ir_first_i.second == ir_first_i.first.end())
+	{
+		return EMPTY_END;
+	}
+	
+	assert(std::distance(ir_first_i.second, ir_first_i.first.end()) > line_within_ir);
+	
+	return std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator>(
+		ir_first_i.first,
+		std::next(ir_first_i.second, line_within_ir));
 }

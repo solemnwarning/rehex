@@ -21,6 +21,7 @@
 #include <capstone/capstone.h>
 #include <map>
 #include <string>
+#include <utility>
 #include <wx/choice.h>
 #include <wx/panel.h>
 #include <wx/wx.h>
@@ -89,6 +90,7 @@ namespace REHex {
 			
 			struct Instruction {
 				off_t offset, length;
+				std::vector<unsigned char> data;
 				std::string disasm;
 			};
 			
@@ -105,13 +107,45 @@ namespace REHex {
 			
 			ByteRangeSet dirty;                       /**< Bytes which are waiting to be analysed. */
 			std::vector<InstructionRange> processed;  /**< Ranges of up-to-date analysed code. */
-			// std::vector<Instruction> instructions;    /**< Recently disassembled instructions. */
+			std::vector<Instruction> instructions;    /**< Recently disassembled instructions. */
 			
 			off_t longest_instruction;
 			size_t longest_disasm;
 			
 			off_t unprocessed_offset() const;
 			off_t unprocessed_bytes() const;
+			
+			/**
+			 * @brief Find the element in processed which encompasses an offset.
+			 * @returns Iterator to matching element, or end iterator if none match.
+			*/
+			std::vector<InstructionRange>::iterator processed_by_offset(off_t abs_offset);
+			
+			/**
+			 * @brief Find the element in processed which encompasses a line.
+			 * @returns Iterator to matching element, or end iterator if none match.
+			*/
+			std::vector<InstructionRange>::iterator processed_by_line(int64_t rel_line);
+			
+			/**
+			 * @brief Find the Instruction which encompasses an offset.
+			 * @returns Reference to vector and iterator to element, or end iterator on error.
+			 *
+			 * NOTE: This method may disassemble an InstructionRange if the requested
+			 * Instruction hasn't been cached, and may invalidate references/iterators
+			 * returned by previous calls.
+			*/
+			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_offset(off_t abs_offset);
+			
+			/**
+			 * @brief Find the Instruction on the given line.
+			 * @returns Reference to vector and iterator to element, or end iterator on error.
+			 *
+			 * NOTE: This method may disassemble an InstructionRange if the requested
+			 * Instruction hasn't been cached, and may invalidate references/iterators
+			 * returned by previous calls.
+			*/
+			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_line(int64_t rel_line);
 			
 		public:
 			DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode);

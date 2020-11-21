@@ -749,12 +749,236 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 	return std::make_pair(d_offset, SA_SPECIAL);
 }
 
-off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos) { return d_offset; }
-off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos) { return d_offset; }
-off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos) { return d_offset; }
-off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos) { return d_offset; }
-off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos) { return d_offset; }
-off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos) { return d_offset; }
+off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	if(pos > d_offset)
+	{
+		return pos - 1;
+	}
+	else{
+		return CURSOR_PREV_REGION;
+	}
+}
+
+off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	if((pos + 1) < (d_offset + d_length))
+	{
+		return pos + 1;
+	}
+	else{
+		return CURSOR_NEXT_REGION;
+	}
+}
+
+off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	off_t up_off = unprocessed_offset();
+	
+	off_t up_bytes_per_line = max_bytes_per_line();
+	
+	if(pos < up_off)
+	{
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t this_instr_off = instr.second->offset;
+		
+		if(this_instr_off == d_offset)
+		{
+			/* Already on first line in region. */
+			return CURSOR_PREV_REGION;
+		}
+		
+		auto prev_instr = instruction_by_offset(this_instr_off - 1);
+		if(prev_instr.second == prev_instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t prev_instr_off = prev_instr.second->offset;
+		off_t prev_instr_len = prev_instr.second->length;
+		
+		return std::min(
+			(prev_instr_off + (pos - this_instr_off)),
+			(prev_instr_off + prev_instr_len - 1));
+	}
+	else if(pos < (up_off + up_bytes_per_line))
+	{
+		/* Move from top of unprocessed data to last line of disassembly. */
+		
+		if(up_off == d_offset)
+		{
+			return CURSOR_PREV_REGION;
+		}
+		else{
+			auto instr = instruction_by_offset(up_off - 1);
+			if(instr.second == instr.first.end())
+			{
+				/* Couldn't get instruction. */
+				return pos;
+			}
+			
+			return std::min(
+				(instr.second->offset + (pos - up_off)),
+				(instr.second->offset + instr.second->length - 1));
+		}
+	}
+	else{
+		/* Move between unprocessed lines. */
+		return pos - up_bytes_per_line;
+	}
+}
+
+off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	off_t up_off = unprocessed_offset();
+	
+	off_t up_bytes_per_line = max_bytes_per_line();
+	
+	if(pos < up_off)
+	{
+		/* Move down a line from within disassembly. */
+		
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t this_instr_off = instr.second->offset;
+		off_t this_instr_len = instr.second->length;
+		
+		off_t up_off = unprocessed_offset();
+		
+		if((this_instr_off + this_instr_len) == (d_offset + d_length))
+		{
+			/* Already on last line in region. */
+			return CURSOR_NEXT_REGION;
+		}
+		else if((this_instr_off + this_instr_len) == up_off)
+		{
+			/* On last line in disassembly. */
+			
+			return std::min(
+				(up_off + (pos - this_instr_off)),
+				(d_offset + d_length - 1));
+		}
+		
+		auto next_instr = instruction_by_offset(this_instr_off + this_instr_len);
+		if(next_instr.second == next_instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t next_instr_off = next_instr.second->offset;
+		off_t next_instr_len = next_instr.second->length;
+		
+		return std::min(
+			(next_instr_off + (pos - this_instr_off)),
+			(next_instr_off + next_instr_len - 1));
+	}
+	else{
+		/* Move down a line from within unprocessed data. */
+		off_t line_pos = (pos - up_off) % up_bytes_per_line;
+		off_t next_line_begin = (pos - line_pos) + up_bytes_per_line;
+		off_t next_line_pos = pos + up_bytes_per_line;
+		
+		if(next_line_pos < (d_offset + d_length))
+		{
+			/* Move to same position in next line. */
+			return next_line_pos;
+		}
+		else if(next_line_begin < (d_offset + d_length))
+		{
+			/* Move to end of next (last) line. */
+			return (d_offset + d_length - 1);
+		}
+		else{
+			/* Move to next region. */
+			return CURSOR_NEXT_REGION;
+		}
+	}
+}
+
+off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	off_t up_off = unprocessed_offset();
+	
+	off_t up_bytes_per_line = max_bytes_per_line();
+	
+	if(pos < up_off)
+	{
+		/* Move to start of line in disassembly. */
+		
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get Instruction. */
+			return pos;
+		}
+		
+		return instr.second->offset;
+	}
+	else{
+		/* Move to start of unprocessed line. */
+		off_t line_pos = (pos - up_off) % up_bytes_per_line;
+		return pos - line_pos;
+	}
+}
+
+off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos)
+{
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	off_t up_off = unprocessed_offset();
+	
+	off_t up_bytes_per_line = max_bytes_per_line();
+	
+	if(pos < up_off)
+	{
+		/* Move to end of line in disassembly. */
+		
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get Instruction. */
+			return pos;
+		}
+		
+		return instr.second->offset + instr.second->length - 1;
+	}
+	else{
+		/* Move to end of unprocessed line. */
+		off_t line_pos = (pos - up_off) % up_bytes_per_line;
+		return std::min(
+			((pos - line_pos) + (up_bytes_per_line - 1)),
+			(d_offset + d_length - 1));
+	}
+}
 
 int REHex::DisassemblyRegion::cursor_column(off_t pos)
 {

@@ -3200,7 +3200,7 @@ off_t REHex::DocumentCtrl::DataRegion::last_row_nearest_column(int column)
 	
 	offset_at_col = std::max(offset_at_col, d_offset);
 	offset_at_col = std::max(offset_at_col, last_row_off);
-	offset_at_col = std::min(offset_at_col, (d_offset + d_length - 1));
+	offset_at_col = std::min(offset_at_col, (d_offset + d_length - (d_length > 0)));
 	
 	assert(offset_at_col >= d_offset);
 	assert(offset_at_col < (d_offset + d_length + (d_length == 0)));

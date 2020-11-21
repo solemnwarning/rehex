@@ -563,10 +563,13 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	/* Draw bytes not yet disassembled within the visible rows. */
 	
-	off_t up_off    = unprocessed_offset();
-	off_t up_remain = unprocessed_bytes();
-	
 	off_t up_bytes_per_line = max_bytes_per_line();
+	
+	int64_t up_first_line = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
+	off_t up_skip_bytes = (line_num - up_first_line) * up_bytes_per_line;
+	
+	off_t up_off    = unprocessed_offset() + up_skip_bytes;
+	off_t up_remain = unprocessed_bytes() - up_skip_bytes;
 	
 	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{

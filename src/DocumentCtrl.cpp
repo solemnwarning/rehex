@@ -2381,11 +2381,11 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		const unsigned char *line_data = data_err ? NULL : data_p;
 		size_t line_data_len = std::min<size_t>(data_remain, (bytes_per_line_actual - line_pad_bytes));
 		
-		draw_hex_line(&doc, dc, hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, highlight_func);
+		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, highlight_func);
 		
 		if(doc.show_ascii)
 		{
-			draw_ascii_line(&doc, dc, ascii_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, highlight_func);
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, highlight_func);
 		}
 		
 		cur_off += line_data_len;

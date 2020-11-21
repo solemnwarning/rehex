@@ -454,9 +454,7 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 	
 	unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
 	
-	off_t bytes_per_line = (longest_instruction > 0)
-		? longest_instruction
-		: 8;
+	off_t bytes_per_line = max_bytes_per_line();
 	
 	offset_text_x = indent_width;
 	hex_text_x    = offset_text_x + offset_column_width;
@@ -474,9 +472,7 @@ void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
 	int64_t total_lines = std::accumulate(processed.begin(), processed.end(),
 		(int64_t)(0), [](int64_t sum, const InstructionRange &ir) { return sum + ir.y_lines; });
 	
-	off_t up_bytes_per_line = (longest_instruction > 0)
-		? longest_instruction
-		: 8;
+	off_t up_bytes_per_line = max_bytes_per_line();
 	
 	off_t up_total = unprocessed_bytes();
 	int64_t up_lines = (up_total + (up_bytes_per_line - 1)) / up_bytes_per_line;
@@ -567,6 +563,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	off_t up_off    = unprocessed_offset();
 	off_t up_remain = unprocessed_bytes();
 	
+	off_t up_bytes_per_line = max_bytes_per_line();
+	
 	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
 		if(doc_ctrl.get_show_offsets())
@@ -586,7 +584,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
 		}
 		
-		off_t line_len = std::min(up_remain, longest_instruction);
+		off_t line_len = std::min(up_remain, up_bytes_per_line);
 		
 		bool data_err = false;
 		std::vector<unsigned char> line_data = doc->read_data(up_off, line_len);
@@ -800,6 +798,13 @@ off_t REHex::DisassemblyRegion::unprocessed_offset() const
 off_t REHex::DisassemblyRegion::unprocessed_bytes() const
 {
 	return d_length - (unprocessed_offset() - d_offset);
+}
+
+off_t REHex::DisassemblyRegion::max_bytes_per_line() const
+{
+	return (longest_instruction > 0)
+		? longest_instruction
+		: 8;
 }
 
 std::vector<REHex::DisassemblyRegion::InstructionRange>::iterator REHex::DisassemblyRegion::processed_by_offset(off_t abs_offset)

@@ -115,6 +115,8 @@ namespace REHex {
 			off_t unprocessed_offset() const;
 			off_t unprocessed_bytes() const;
 			
+			off_t max_bytes_per_line() const;
+			
 			/**
 			 * @brief Find the element in processed which encompasses an offset.
 			 * @returns Iterator to matching element, or end iterator if none match.

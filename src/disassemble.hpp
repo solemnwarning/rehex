@@ -92,6 +92,7 @@ namespace REHex {
 				off_t offset, length;
 				std::vector<unsigned char> data;
 				std::string disasm;
+				int64_t rel_y_offset;
 			};
 			
 			struct InstructionRange

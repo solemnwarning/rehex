@@ -986,30 +986,134 @@ off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos)
 
 int REHex::DisassemblyRegion::cursor_column(off_t pos)
 {
-	return 0;
+	assert(pos >= d_offset);
+	assert(pos <= (d_offset + d_length));
+	
+	off_t up_off = unprocessed_offset();
+	
+	if(pos < up_off)
+	{
+		/* Offset is within disassembled area. */
+		
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. Fallback. */
+			return 0;
+		}
+		
+		assert(instr.second->offset <= pos);
+		assert((instr.second->offset + instr.second->length) > pos);
+		
+		return pos - instr.second->offset;
+	}
+	else{
+		/* Offset is within not-yet-processed data. */
+		
+		return (pos - up_off) % max_bytes_per_line();
+	}
 }
 
 off_t REHex::DisassemblyRegion::first_row_nearest_column(int column)
 {
-	return d_offset;
-	//return instructions.front().offset;
+	return nth_row_nearest_column(0, column);
 }
 
 off_t REHex::DisassemblyRegion::last_row_nearest_column(int column)
 {
-	return d_offset;
-	// return instructions.back().offset;
+	return nth_row_nearest_column(y_lines, column);
 }
 
 off_t REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
 {
-	return d_offset;
-	// return instructions.back().offset;
+	int64_t processed_lines = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
+	
+	if(row < processed_lines)
+	{
+		/* Line has been processed. */
+		
+		auto instr = instruction_by_line(row);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. Fallback. */
+			return d_offset;
+		}
+		
+		return std::min(
+			(instr.second->offset + column),
+			(instr.second->offset + instr.second->length - 1));
+	}
+	else{
+		/* Line isn't processed yet. */
+		
+		off_t up_base = unprocessed_offset();
+		int64_t up_row = row - processed_lines;
+		
+		return std::min(
+			(up_base + (up_row * max_bytes_per_line()) + column),
+			(d_offset + d_length - 1));
+	}
 }
 
 REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)
 {
-	abort();
+	off_t up_off = unprocessed_offset();
+	
+	unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+	
+	if(offset < up_off)
+	{
+		/* Offset is within disassembly. */
+		
+		auto instr = instruction_by_offset(offset);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. Fallback. */
+			return DocumentCtrl::Rect(y_offset, y_lines, 1, 1);
+		}
+		
+		assert(instr.second->offset <= offset);
+		assert((instr.second->offset + instr.second->length) > offset);
+		
+		off_t line_off = offset - instr.second->offset;
+		
+		return DocumentCtrl::Rect(
+			/* Left X co-ordinate of hex byte. */
+			hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+			
+			/* Line number. */
+			(y_offset + instr.second->rel_y_offset),
+			
+			/* Width of hex byte. */
+			doc_ctrl->hf_string_width(2),
+			
+			/* Height of instruction (in lines). */
+			1);
+	}
+	else{
+		/* Offset hasn't been processed yet. */
+		
+		off_t up_bytes_per_line = max_bytes_per_line();
+		
+		off_t offset_within_up = offset - up_off;
+		off_t line_off = offset_within_up % up_bytes_per_line;
+		
+		int64_t processed_lines = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
+		int64_t up_line = offset_within_up / up_bytes_per_line;
+		
+		return DocumentCtrl::Rect(
+			/* Left X co-ordinate of hex byte. */
+			hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+			
+			/* Line number. */
+			(y_offset + processed_lines + up_line),
+			
+			/* Width of hex byte. */
+			doc_ctrl->hf_string_width(2),
+			
+			/* Height (in lines). */
+			1);
+	}
 }
 
 off_t REHex::DisassemblyRegion::unprocessed_offset() const
@@ -1146,10 +1250,11 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 		char disasm_buf[256];
 		snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
 		
-		inst.offset = insn->address;
-		inst.length = insn->size;
-		inst.data   = std::vector<unsigned char>((unsigned char*)(code_ - insn->size), (unsigned char*)(code_));
-		inst.disasm = disasm_buf;
+		inst.offset       = insn->address;
+		inst.length       = insn->size;
+		inst.data         = std::vector<unsigned char>((unsigned char*)(code_ - insn->size), (unsigned char*)(code_));
+		inst.disasm       = disasm_buf;
+		inst.rel_y_offset = ir->rel_y_offset + new_instructions.size();
 		
 		new_instructions.push_back(inst);
 	}

@@ -411,35 +411,6 @@ REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t of
 	longest_disasm = 0;
 	
 	dirty.set_range(d_offset, d_length);
-	
-	#if 0
-	std::vector<unsigned char> data = doc->read_data(offset, length);
-	
-	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
-	size_t code_size = data.size();
-	uint64_t address = offset;
-	cs_insn* insn = cs_malloc(disassembler);
-	
-	/* NOTE: @code, @code_size & @address variables are all updated! */
-	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
-	{
-		Instruction inst;
-		
-		char disasm_buf[256];
-		snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
-		
-		inst.offset = insn->address;
-		inst.length = insn->size;
-		inst.disasm = disasm_buf;
-		
-		instructions.push_back(inst);
-		
-		longest_instruction = std::max<off_t>(longest_instruction, insn->size);
-		longest_disasm = std::max(longest_disasm, inst.disasm.length());
-	}
-	
-	cs_free(insn, 1);
-	#endif
 }
 
 REHex::DisassemblyRegion::~DisassemblyRegion()
@@ -610,61 +581,6 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		up_off    += line_len;
 		up_remain -= line_len;
 	}
-	
-	#if 0
-	for(size_t i = skip_lines; y < client_size.GetHeight() && i < instructions.size(); ++i)
-	{
-		dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
-		
-		if(doc_ctrl.get_show_offsets())
-		{
-			/* Draw the offsets to the left */
-			
-			std::string offset_str = format_offset(instructions[i].offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
-			
-			dc.DrawText(offset_str, x + offset_text_x, y);
-			
-			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
-			
-			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
-			
-			dc.SetPen(norm_fg_1px);
-			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
-		}
-		
-		if(alternate)
-		{
-			dc.SetTextForeground((*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]);
-		}
-		
-		alternate = !alternate;
-		
-		bool data_err = false;
-		std::vector<unsigned char> data = doc->read_data(instructions[i].offset, instructions[i].length);
-		
-		unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
-		
-		for(size_t j = 0; j < data.size(); ++j)
-		{
-			const char *nibble_to_hex = data_err
-				? "????????????????"
-				: "0123456789ABCDEF";
-			
-			const char hex_str[] = {
-				nibble_to_hex[ (data[j] & 0xF0) >> 4 ],
-				nibble_to_hex[ data[j] & 0x0F ],
-				'\0'
-			};
-			
-			dc.DrawText(hex_str, (x + hex_text_x + doc_ctrl.hf_string_width((j * 2) + (j / bytes_per_group))), y);
-		}
-		
-		dc.DrawText(instructions[i].disasm, x + code_text_x, y);
-		
-		y += hf_char_height;
-	}
-	#endif
 }
 
 unsigned int REHex::DisassemblyRegion::check()

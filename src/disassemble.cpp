@@ -22,6 +22,7 @@
 #include <list>
 #include <numeric>
 #include <string.h>
+#include <tuple>
 #include <vector>
 
 #include "app.hpp"
@@ -469,8 +470,37 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	auto highlight_func = [&](off_t offset)
 	{
-		/* TODO */
-		return NoHighlight();
+		/* TODO: Support secondary selection. */
+		
+		off_t selection_off, selection_len;
+		std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
+		
+		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
+		{
+			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, true);
+		}
+		else{
+			const NestedOffsetLengthMap<int> &highlights = doc->get_highlights();
+			
+			auto highlight = NestedOffsetLengthMap_get(highlights, offset);
+			if(highlight != highlights.end())
+			{
+				return Highlight(
+					active_palette->get_highlight_fg_idx(highlight->second),
+					active_palette->get_highlight_bg_idx(highlight->second),
+					true);
+			}
+			else if(doc->is_byte_dirty(offset))
+			{
+				return Highlight(
+					Palette::PAL_DIRTY_TEXT_FG,
+					Palette::PAL_DIRTY_TEXT_BG,
+					true);
+			}
+			else{
+				return (Highlight)(NoHighlight());
+			}
+		}
 	};
 	
 	auto set_text_attribs = [&]()

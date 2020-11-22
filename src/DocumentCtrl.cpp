@@ -2883,6 +2883,29 @@ off_t REHex::DocumentCtrl::DataRegion::offset_at_xy_hex(REHex::DocumentCtrl &doc
 	}
 }
 
+int REHex::DocumentCtrl::Region::offset_at_x_hex(DocumentCtrl *doc_ctrl, int rel_x)
+{
+	if(rel_x < 0)
+	{
+		return -1;
+	}
+	
+	unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+	
+	unsigned int char_offset = doc_ctrl->hf_char_at_x(rel_x);
+	if(((char_offset + 1) % ((bytes_per_group * 2) + 1)) == 0)
+	{
+		/* Click was over a space between byte groups. */
+		return -1;
+	}
+	else{
+		unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
+		int line_offset_bytes = char_offset_sub_spaces / 2;
+		
+		return line_offset_bytes;
+	}
+}
+
 off_t REHex::DocumentCtrl::DataRegion::offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines)
 {
 	if(!doc.show_ascii || mouse_x_px < ascii_text_x)
@@ -2953,6 +2976,23 @@ off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_hex(REHex::DocumentCtrl &d
 		/* Mouse is past end of line, return last byte of this line. */
 		return line_data_end - 1;
 	}
+}
+
+int REHex::DocumentCtrl::Region::offset_near_x_hex(DocumentCtrl *doc_ctrl, int rel_x)
+{
+	if(rel_x < 0)
+	{
+		return -1;
+	}
+	
+	unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+	
+	unsigned int char_offset = doc_ctrl->hf_char_at_x(rel_x);
+	
+	unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
+	int line_offset_bytes = char_offset_sub_spaces / 2;
+	
+	return line_offset_bytes;
 }
 
 off_t REHex::DocumentCtrl::DataRegion::offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines)

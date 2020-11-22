@@ -661,12 +661,146 @@ unsigned int REHex::DisassemblyRegion::check()
 
 std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
 {
+	int64_t processed_lines = this->processed_lines();
+	
+	if(mouse_y_lines < processed_lines)
+	{
+		/* Line has been processed. */
+		
+		auto instr = instruction_by_line(mouse_y_lines);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. Don't know how long the line is. */
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+		}
+		
+		if(mouse_x_px >= hex_text_x)
+		{
+			/* Mouse in hex area. */
+			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
+			if(line_offset < 0 || line_offset >= instr.second->length)
+			{
+				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			}
+			
+			return std::make_pair<off_t, ScreenArea>((instr.second->offset + line_offset), SA_HEX);
+		}
+		else{
+			/* Mouse in offset area. */
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+		}
+	}
+	else{
+		/* Line isn't processed yet. */
+		
+		off_t up_base = unprocessed_offset();
+		off_t up_bytes_per_line = max_bytes_per_line();
+		
+		int64_t up_row = mouse_y_lines - processed_lines;
+		
+		off_t line_base = up_base + (up_row * up_bytes_per_line);
+		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_offset + d_length - 1));
+		off_t line_len  = line_end - line_base;
+		
+		if(mouse_x_px >= hex_text_x)
+		{
+			/* Mouse in hex area. */
+			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
+			if(line_offset < 0 || line_offset >= line_len)
+			{
+				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			}
+			
+			return std::make_pair<off_t, ScreenArea>((line_base + line_offset), SA_HEX);
+		}
+		else{
+			/* Mouse in offset area. */
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+		}
+	}
+	
 	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 }
 
 std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
 {
-	return std::make_pair(d_offset, SA_SPECIAL);
+	int64_t processed_lines = this->processed_lines();
+	
+	if(mouse_y_lines < processed_lines)
+	{
+		/* Line has been processed. */
+		
+		auto instr = instruction_by_line(mouse_y_lines);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. Don't know how long the line is. */
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+		}
+		
+		off_t instr_base = instr.second->offset;
+		off_t instr_end  = instr.second->offset + instr.second->length;
+		
+		if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
+		{
+			/* Mouse in hex area. */
+			int line_offset = offset_near_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
+			
+			off_t real_offset;
+			
+			if(line_offset < 0)
+			{
+				real_offset = std::max<off_t>((instr_base - 1), 0);
+			}
+			else{
+				real_offset = std::min(
+					(instr_base + line_offset),
+					(instr_end - 1));
+			}
+			
+			return std::make_pair(real_offset, SA_HEX);
+		}
+		else{
+			/* Mouse in offset area. */
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+		}
+	}
+	else{
+		/* Line isn't processed yet. */
+		
+		off_t up_base = unprocessed_offset();
+		off_t up_bytes_per_line = max_bytes_per_line();
+		
+		int64_t up_row = mouse_y_lines - processed_lines;
+		
+		off_t line_base = up_base + (up_row * up_bytes_per_line);
+		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_offset + d_length - 1));
+		
+		if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
+		{
+			/* Mouse in hex area. */
+			int line_offset = offset_near_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
+			
+			off_t real_offset;
+			
+			if(line_offset < 0)
+			{
+				real_offset = std::max<off_t>((line_base - 1), 0);
+			}
+			else{
+				real_offset = std::min(
+					(line_base + line_offset),
+					(line_end - 1));
+			}
+			
+			return std::make_pair(real_offset, SA_HEX);
+		}
+		else{
+			/* Mouse in offset area. */
+			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+		}
+	}
+	
+	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 }
 
 off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos)
@@ -1046,6 +1180,17 @@ off_t REHex::DisassemblyRegion::unprocessed_offset() const
 off_t REHex::DisassemblyRegion::unprocessed_bytes() const
 {
 	return d_length - (unprocessed_offset() - d_offset);
+}
+
+int64_t REHex::DisassemblyRegion::processed_lines() const
+{
+	if(processed.empty())
+	{
+		return 0;
+	}
+	else{
+		return processed.back().rel_y_offset + processed.back().y_lines;
+	}
 }
 
 off_t REHex::DisassemblyRegion::max_bytes_per_line() const

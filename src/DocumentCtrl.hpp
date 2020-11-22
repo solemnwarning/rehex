@@ -132,6 +132,25 @@ namespace REHex {
 					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, const std::function<Highlight(off_t)> &highlight_at_off);
 					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, const std::function<Highlight(off_t)> &highlight_at_off);
 					
+					/**
+					 * @brief Calculate offset of byte at X co-ordinate.
+					 *
+					 * Calculates the offset of the byte at the given X
+					 * co-ordinate in a line drawn with draw_hex_line(). Returns
+					 * -1 if the co-ordinate is negative or falls between byte
+					 * groups.
+					*/
+					static int offset_at_x_hex(DocumentCtrl *doc_ctrl, int rel_x);
+					
+					/**
+					 * @brief Calculate offset of byte near X co-ordinate.
+					 *
+					 * Calculates the offset of the byte nearest the given X
+					 * co-ordinate in a line drawn with draw_hex_line(). Returns
+					 * -1 if the co-ordinate is negative.
+					*/
+					static int offset_near_x_hex(DocumentCtrl *doc_ctrl, int rel_x);
+					
 				friend DocumentCtrl;
 			};
 			

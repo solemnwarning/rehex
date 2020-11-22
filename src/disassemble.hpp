@@ -115,6 +115,7 @@ namespace REHex {
 			
 			off_t unprocessed_offset() const;
 			off_t unprocessed_bytes() const;
+			int64_t processed_lines() const;
 			
 			off_t max_bytes_per_line() const;
 			

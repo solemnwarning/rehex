@@ -628,15 +628,12 @@ unsigned int REHex::DisassemblyRegion::check()
 	off_t process_base = first_dirty_range.offset;
 	off_t process_len  = std::min(first_dirty_range.length, SOFT_IR_LIMIT);
 	
-	std::vector<unsigned char> data = doc->read_data(process_base, process_len);
+	std::vector<unsigned char> data = doc->read_data(process_base, process_len + 128);
 	
 	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
 	size_t code_size = data.size();
 	uint64_t address = process_base;
 	cs_insn* insn = cs_malloc(disassembler);
-	
-	// TODO: Handle instructions straddling ranges
-	// cs_option(disassembler, CS_OPT_SKIPDATA, CS_OPT_OFF);
 	
 	InstructionRange new_ir;
 	new_ir.offset               = process_base;
@@ -647,7 +644,7 @@ unsigned int REHex::DisassemblyRegion::check()
 	new_ir.y_lines              = 0;
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
-	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	while(code_ < (data.data() + process_len) && cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
 	{
 		size_t disasm_length = strlen(insn->mnemonic) + 1 + strlen(insn->op_str);
 		

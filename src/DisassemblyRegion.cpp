@@ -863,7 +863,7 @@ off_t REHex::DisassemblyRegion::max_bytes_per_line() const
 		: 8;
 }
 
-std::vector<REHex::DisassemblyRegion::InstructionRange>::iterator REHex::DisassemblyRegion::processed_by_offset(off_t abs_offset)
+std::vector<REHex::DisassemblyRegion::InstructionRange>::const_iterator REHex::DisassemblyRegion::processed_by_offset(off_t abs_offset)
 {
 	InstructionRange ir_v;
 	ir_v.offset = abs_offset;
@@ -890,7 +890,7 @@ std::vector<REHex::DisassemblyRegion::InstructionRange>::iterator REHex::Disasse
 	}
 }
 
-std::vector<REHex::DisassemblyRegion::InstructionRange>::iterator REHex::DisassemblyRegion::processed_by_line(int64_t rel_line)
+std::vector<REHex::DisassemblyRegion::InstructionRange>::const_iterator REHex::DisassemblyRegion::processed_by_line(int64_t rel_line)
 {
 	InstructionRange ir_v;
 	ir_v.rel_y_offset = rel_line;

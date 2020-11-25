@@ -73,24 +73,24 @@ namespace REHex
 			off_t longest_instruction;
 			size_t longest_disasm;
 			
+		public:
 			off_t unprocessed_offset() const;
 			off_t unprocessed_bytes() const;
 			int64_t processed_lines() const;
 			
 			off_t max_bytes_per_line() const;
 			
-		public:
 			/**
 			 * @brief Find the element in processed which encompasses an offset.
 			 * @returns Iterator to matching element, or end iterator if none match.
 			*/
-			std::vector<InstructionRange>::iterator processed_by_offset(off_t abs_offset);
+			std::vector<InstructionRange>::const_iterator processed_by_offset(off_t abs_offset);
 			
 			/**
 			 * @brief Find the element in processed which encompasses a line.
 			 * @returns Iterator to matching element, or end iterator if none match.
 			*/
-			std::vector<InstructionRange>::iterator processed_by_line(int64_t rel_line);
+			std::vector<InstructionRange>::const_iterator processed_by_line(int64_t rel_line);
 			
 			/**
 			 * @brief Find the Instruction which encompasses an offset.

@@ -22,7 +22,7 @@ EMBED_EXE ?= ./tools/embed
 # Wrapper around the $(shell) function that aborts the build if the command
 # exits with a nonzero status.
 shell-or-die = $\
-	$(eval sod_out := $(shell $(1); echo $$?))$\
+	$(eval sod_out := $$(shell $(1); echo $$$$?))$\
 	$(if $(filter 0,$(lastword $(sod_out))),$\
 		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)),$\
 		$(error $(1) exited with status $(lastword $(sod_out))))
@@ -50,13 +50,27 @@ endif
 # Define this for releases
 # VERSION := x
 
-# NOTE: Not evaluated when building from dist
-GIT_COMMIT_SHA  ?= $(call shell-or-die,git log -1 --format="%H")
-GIT_COMMIT_TIME  = $(call shell-or-die,git log -1 --format="%ct")
-
 ifdef VERSION
 	LONG_VERSION := Version $(VERSION)
 else
+	# Get commit SHA and timestamp from file. This is used by git-archive
+	# copies of the source (e.g. "Download ZIP" on Github).
+	
+	GIT_COMMIT_SHA_FILE  := $(call shell-or-die,cat .git-commit-sha)
+	GIT_COMMIT_TIME_FILE := $(call shell-or-die,cat .git-commit-time)
+	
+	ifneq ($(GIT_COMMIT_SHA_FILE),$$Format:%H$$)
+		GIT_COMMIT_SHA ?= $(GIT_COMMIT_SHA_FILE)
+	else
+		GIT_COMMIT_SHA ?= $(call shell-or-die,git log -1 --format="%H")
+	endif
+	
+	ifneq ($(GIT_COMMIT_TIME_FILE),$$Format:%ct$$)
+		GIT_COMMIT_TIME ?= $(GIT_COMMIT_TIME_FILE)
+	else
+		GIT_COMMIT_TIME ?= $(call shell-or-die,git log -1 --format="%ct")
+	endif
+	
 	VERSION      := $(GIT_COMMIT_SHA)
 	LONG_VERSION := Snapshot $(GIT_COMMIT_SHA)
 endif

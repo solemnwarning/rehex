@@ -397,10 +397,11 @@ void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 	dc.Clear();
 	
 	/* Find the region containing the first visible line. */
-	auto region = region_by_y_offset(scroll_yoff);
-	
+	auto base_region = region_by_y_offset(scroll_yoff);
 	int64_t yo_end = scroll_yoff + visible_lines + 1;
-	for(; region != regions.end() && (*region)->y_offset < yo_end; ++region)
+	
+	/* Iterate over the visible regions and draw them. */
+	for(auto region = base_region; region != regions.end() && (*region)->y_offset < yo_end; ++region)
 	{
 		int x_px = 0 - scroll_xoff;
 		
@@ -411,6 +412,42 @@ void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 		y_px *= hf_height;
 		
 		(*region)->draw(*this, dc, x_px, y_px);
+	}
+	
+	/* Iterate over the visible regions again and give them a chance to do any processing. */
+	
+	bool width_changed = false;
+	bool height_changed = false;
+	bool redraw = false;
+	
+	for(auto region = base_region; region != regions.end() && (*region)->y_offset < yo_end; ++region)
+	{
+		if(std::find_if(processing_regions.begin(), processing_regions.end(),
+			[&](const Region *r) { return r == *region; }) != processing_regions.end())
+		{
+			/* This region is already in processing_regions - will be checked on next idle. */
+			continue;
+		}
+		
+		unsigned int state = (*region)->check();
+		
+		if(state & Region::PROCESSING)
+		{
+			processing_regions.push_back(*region);
+		}
+		
+		if(state & Region::WIDTH_CHANGE)  { width_changed = true; }
+		if(state & Region::HEIGHT_CHANGE) { height_changed = true; }
+		if(state & Region::REDRAW)        { redraw = true; }
+	}
+	
+	if(width_changed || height_changed)
+	{
+		_handle_width_change();
+	}
+	else if(redraw)
+	{
+		Refresh();
 	}
 }
 

@@ -28,6 +28,7 @@
 
 #include "ByteRangeSet.hpp"
 #include "DocumentCtrl.hpp"
+#include "Events.hpp"
 #include "SharedDocumentPointer.hpp"
 
 namespace REHex
@@ -72,6 +73,8 @@ namespace REHex
 			
 			off_t longest_instruction;
 			size_t longest_disasm;
+			
+			void OnDataOverwrite(OffsetLengthEvent &event);
 			
 		public:
 			off_t unprocessed_offset() const;

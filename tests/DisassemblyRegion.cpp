@@ -154,3 +154,121 @@ TEST(DisassemblyRegion, ProcessFile)
 		EXPECT_EQ(region->processed_lines(), 18840);
 	}
 }
+
+TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64));
+	
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	
+	/* Check the region is half-processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	
+	char data[4] = { 0 };
+	doc->overwrite_data(0x46EC, data, 4);
+	
+	EXPECT_EQ(region->unprocessed_offset(), 0xE6FA) << "Region not affected by data overwrite before d_offset";
+}
+
+TEST(DisassemblyRegion, OverwriteDataAtStart)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64));
+	
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	
+	/* Check the region is half-processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	
+	char data[4] = { 0 };
+	doc->overwrite_data(0x46EE, data, 4);
+	
+	EXPECT_EQ(region->unprocessed_offset(), 0x46F0) << "Processing reset by overwrite straddling d_offset";
+}
+
+TEST(DisassemblyRegion, OverwriteDataInRegion)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64));
+	
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	
+	/* Check the region is half-processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	
+	char data[4] = { 0 };
+	doc->overwrite_data(0xAAAA, data, 4);
+	
+	EXPECT_EQ(region->unprocessed_offset(), 0x96F5) << "Processing reset to InstructionRange where overwrite happened";
+}
+
+TEST(DisassemblyRegion, OverwriteDataAtEnd)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64));
+	
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_FALSE(region->check() & DocumentCtrl::Region::PROCESSING);
+	
+	/* Check the region is fully processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	
+	char data[4] = { 0 };
+	doc->overwrite_data(0x16CAC, data, 4);
+	
+	EXPECT_EQ(region->unprocessed_offset(), 0x15EFA) << "Processing reset to InstructionRange where overwrite happened";
+}
+
+TEST(DisassemblyRegion, OverwriteDataAfterRegion)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64));
+	
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
+	EXPECT_FALSE(region->check() & DocumentCtrl::Region::PROCESSING);
+	
+	/* Check the region is fully processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	
+	char data[4] = { 0 };
+	doc->overwrite_data(0x16CAE, data, 4);
+	
+	EXPECT_EQ(region->unprocessed_offset(), 0x16CAE) << "Region not affected by overwriting data after it";
+}

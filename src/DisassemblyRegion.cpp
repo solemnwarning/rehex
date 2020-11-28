@@ -47,12 +47,34 @@ REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t of
 	longest_instruction = 0;
 	longest_disasm = 0;
 	
+	this->doc.auto_cleanup_bind(DATA_OVERWRITE, &REHex::DisassemblyRegion::OnDataOverwrite, this);
+	
 	dirty.set_range(d_offset, d_length);
 }
 
 REHex::DisassemblyRegion::~DisassemblyRegion()
 {
 	cs_close(&disassembler);
+}
+
+void REHex::DisassemblyRegion::OnDataOverwrite(OffsetLengthEvent &event)
+{
+	off_t d_end = d_offset + d_length;
+	off_t event_end = event.offset + event.length;
+	
+	if(event.offset < d_end && event_end > d_offset)
+	{
+		off_t intersection_offset = std::max(d_offset, event.offset);
+		
+		auto p_erase_begin = processed_by_offset(intersection_offset);
+		
+		dirty.set_range(p_erase_begin->offset, (d_length - (intersection_offset - d_offset)));
+		
+		processed.erase(p_erase_begin, processed.end());
+		instructions.clear();
+	}
+	
+	event.Skip();
 }
 
 int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
@@ -296,7 +318,6 @@ unsigned int REHex::DisassemblyRegion::check()
 	
 	cs_free(insn, 1);
 	
-	// TODO: Merge into processed
 	assert(processed.empty() || (processed.back().offset + processed.back().length) == new_ir.offset);
 	processed.push_back(new_ir);
 	

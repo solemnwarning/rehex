@@ -53,23 +53,16 @@ endif
 ifdef VERSION
 	LONG_VERSION := Version $(VERSION)
 else
-	# Get commit SHA and timestamp from file. This is used by git-archive
-	# copies of the source (e.g. "Download ZIP" on Github).
+	# Check if we are actually in a git checkout before trying to get the
+	# commit hash with `git log`, else we blow up in a git-archive export.
 	
-	GIT_COMMIT_SHA_FILE  := $(call shell-or-die,cat .git-commit-sha)
-	GIT_COMMIT_TIME_FILE := $(call shell-or-die,cat .git-commit-time)
-	
-	ifneq ($(GIT_COMMIT_SHA_FILE),$$Format:%H$$)
-		GIT_COMMIT_SHA ?= $(GIT_COMMIT_SHA_FILE)
-	else
+	ifneq ($(wildcard .git/*),)
 		GIT_COMMIT_SHA ?= $(call shell-or-die,git log -1 --format="%H")
+	else
+		GIT_COMMIT_SHA ?= UNKNOWN
 	endif
 	
-	ifneq ($(GIT_COMMIT_TIME_FILE),$$Format:%ct$$)
-		GIT_COMMIT_TIME ?= $(GIT_COMMIT_TIME_FILE)
-	else
-		GIT_COMMIT_TIME ?= $(call shell-or-die,git log -1 --format="%ct")
-	endif
+	GIT_COMMIT_TIME ?= $(call shell-or-die,git log -1 --format="%ct")
 	
 	VERSION      := $(GIT_COMMIT_SHA)
 	LONG_VERSION := Snapshot $(GIT_COMMIT_SHA)

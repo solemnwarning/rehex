@@ -70,7 +70,7 @@ void REHex::DisassemblyRegion::OnDataOverwrite(OffsetLengthEvent &event)
 		/* Workaround for older GCC/libstd++ which don't support passing a const_iterator
 		 * to std::vector::erase() despite claiming to be C++11.
 		*/
-		#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+		#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
 		auto p_erase_begin_c = processed_by_offset(intersection_offset);
 		auto p_erase_begin = const_iterator_to_iterator(p_erase_begin_c, processed);
 		#else

@@ -278,7 +278,7 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 			 * Not 100% sure which version actually fixed it.
 			*/
 			
-			#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+			#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
 			for(auto i = group_ranges.begin(); i != group_ranges.end(); ++i)
 			{
 				next = ranges.insert(next, *i);
@@ -381,7 +381,7 @@ template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const
 				 * Not 100% sure which version actually fixed it.
 				*/
 				
-				#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+				#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
 				for(auto i = group_replacements.begin(); i != group_replacements.end(); ++i)
 				{
 					next = ranges.insert(next, *i);

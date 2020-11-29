@@ -71,7 +71,7 @@ namespace REHex {
 		 * Not 100% sure which version actually fixed it.
 		*/
 		
-		#if defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+		#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
 		return std::next(container.begin(), std::distance(container.cbegin(), const_iter));
 		#else
 		return container.erase(const_iter, const_iter);

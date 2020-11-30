@@ -2250,21 +2250,21 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 {
 	draw_container(doc, dc, x, y);
 	
+	/* If we are scrolled part-way into a data region, don't render data above the client area
+	 * as it would get expensive very quickly with large files.
+	*/
+	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
+	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
+	
 	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
 	
-	bool alternate_row = true;
+	bool alternate_row = ((y_offset + skip_lines) % 2) != 0;
 	
 	auto normal_text_colour = [&dc,&alternate_row]()
 	{
 		dc.SetTextForeground((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
-	
-	/* If we are scrolled part-way into a data region, don't render data above the client area
-	 * as it would get expensive very quickly with large files.
-	*/
-	int64_t skip_lines = (y < 0 ? (-y / doc.hf_height) : 0);
-	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
 	if(skip_bytes > 0)
 	{
@@ -2395,8 +2395,6 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final))
 	{
-		alternate_row = !alternate_row;
-		
 		if(doc.offset_column)
 		{
 			/* Draw the offsets to the left */
@@ -2418,11 +2416,11 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		const unsigned char *line_data = data_err ? NULL : data_p;
 		size_t line_data_len = std::min<size_t>(data_remain, (bytes_per_line_actual - line_pad_bytes));
 		
-		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, highlight_func);
+		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, highlight_func);
 		
 		if(doc.show_ascii)
 		{
-			draw_ascii_line(&doc, dc, x + ascii_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, highlight_func);
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, highlight_func);
 		}
 		
 		cur_off += line_data_len;
@@ -2432,10 +2430,12 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		
 		y += doc.hf_height;
 		++cur_line;
+		
+		alternate_row = !alternate_row;
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, const std::function<Highlight(off_t)> &highlight_at_off)
+void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off)
 {
 	int hex_base_x = x;                                                          /* Base X co-ordinate to draw hex characters from */
 	int hex_x_char = (pad_bytes * 2) + (pad_bytes / doc_ctrl->bytes_per_group);  /* Column of current hex character */
@@ -2448,8 +2448,6 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
-	
-	bool alternate_row = true;
 	
 	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->cursor_state != Document::CSTATE_ASCII;
 	
@@ -2673,7 +2671,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, const std::function<Highlight(off_t)> &highlight_at_off)
+void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off)
 {
 	int ascii_base_x = x;                                                       /* Base X co-ordinate to draw ASCII characters from */
 	int ascii_x_char = pad_bytes;                                               /* Column of current ASCII character */
@@ -2684,8 +2682,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
-	
-	bool alternate_row = true;
 	
 	off_t cur_off = base_off;
 	

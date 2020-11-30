@@ -133,7 +133,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	wxSize client_size = doc_ctrl.GetClientSize();
 	
-	bool alternate = false;
+	bool alternate = ((y_offset + line_num) % 2) != 0;
 	
 	auto highlight_func = [&](off_t offset)
 	{
@@ -204,9 +204,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
 		}
 		
-		alternate = !alternate;
-		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, highlight_func);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, highlight_func);
 		
 		set_text_attribs();
 		dc.DrawText(instr->disasm, x + code_text_x, y);
@@ -227,6 +225,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			instr_vec = &(next_instr.first);
 			instr = next_instr.second;
 		}
+		
+		alternate = !alternate;
 	}
 	
 	/* Draw bytes not yet disassembled within the visible rows. */
@@ -267,7 +267,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		const unsigned char *ldp = data_err ? NULL : line_data.data();
 		size_t ldl = data_err ? line_len : line_data.size();
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, highlight_func);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, highlight_func);
 		
 		set_text_attribs();
 		dc.DrawText("<< PROCESSING >>", x + code_text_x, y);
@@ -277,6 +277,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		up_off    += line_len;
 		up_remain -= line_len;
+		
+		alternate = !alternate;
 	}
 }
 

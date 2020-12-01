@@ -1003,8 +1003,14 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	{
 		Instruction inst;
 		
-		char disasm_buf[256];
-		snprintf(disasm_buf, sizeof(disasm_buf), "%s\t%s", insn->mnemonic, insn->op_str);
+		/* Align instruction operands to tab boundaries using spaces. */
+		
+		const size_t OP_ALIGN = 8;
+		
+		size_t mnemonic_len = strlen(insn->mnemonic);
+		size_t space_count = (OP_ALIGN - (mnemonic_len % OP_ALIGN));
+		
+		std::string disasm_buf = std::string(insn->mnemonic) + std::string(space_count, ' ') + insn->op_str;
 		
 		inst.offset       = insn->address;
 		inst.length       = insn->size;

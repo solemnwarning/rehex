@@ -274,8 +274,16 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		off_t line_len = std::min(up_remain, up_bytes_per_line);
 		
 		bool data_err = false;
-		std::vector<unsigned char> line_data = doc->read_data(up_off, line_len);
-		assert(line_data.size() == line_len);
+		std::vector<unsigned char> line_data;
+		try {
+			line_data = doc->read_data(up_off, line_len);
+			assert(line_data.size() == (size_t)(line_len));
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::DisassemblyRegion::draw: %s\n", e.what());
+			data_err = true;
+		}
 		
 		const unsigned char *ldp = data_err ? NULL : line_data.data();
 		size_t ldl = data_err ? line_len : line_data.size();
@@ -310,7 +318,15 @@ unsigned int REHex::DisassemblyRegion::check()
 	off_t process_base = first_dirty_range.offset;
 	off_t process_len  = std::min(first_dirty_range.length, SOFT_IR_LIMIT);
 	
-	std::vector<unsigned char> data = doc->read_data(process_base, process_len + 128);
+	std::vector<unsigned char> data;
+	try {
+		data = doc->read_data(process_base, process_len + 128);
+	}
+	catch(const std::exception &e)
+	{
+		fprintf(stderr, "Exception in REHex::DisassemblyRegion::check: %s\n", e.what());
+		return Region::PROCESSING; /* Will make us spin so long as the read error persists. ugh. */
+	}
 	
 	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
 	size_t code_size = data.size();

@@ -170,12 +170,20 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		}
 	};
 	
-	auto set_text_attribs = [&]()
+	auto set_text_attribs = [&](bool selected)
 	{
 		dc.SetFont(doc_ctrl.get_font());
+		dc.SetBackgroundMode(wxSOLID);
 		
-		dc.SetTextForeground((*active_palette)[alternate ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG]);
-		dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+		if(selected)
+		{
+			dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
+			dc.SetTextBackground((*active_palette)[Palette::PAL_SELECTED_TEXT_BG]);
+		}
+		else{
+			dc.SetTextForeground((*active_palette)[alternate ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG]);
+			dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+		}
 	};
 	
 	/* Draw disassembled instructions within the visible rows. */
@@ -185,6 +193,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const std::vector<Instruction> *instr_vec = &(instr_first.first);
 	std::vector<Instruction>::const_iterator instr = instr_first.second;
 	
+	off_t selection_off, selection_len;
+	std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
+	
 	while(instr != instr_vec->end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
 		if(doc_ctrl.get_show_offsets())
@@ -193,7 +204,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			std::string offset_str = format_offset(instr->offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
-			set_text_attribs();
+			set_text_attribs(false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
 			
 			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
@@ -206,7 +217,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, highlight_func);
 		
-		set_text_attribs();
+		bool selected = selection_len > 0 && selection_off <= instr->offset && (selection_off + selection_len) >= (instr->offset + instr->length);
+		
+		set_text_attribs(selected);
 		dc.DrawText(instr->disasm, x + code_text_x, y);
 		
 		y += hf_char_height;
@@ -247,7 +260,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			std::string offset_str = format_offset(up_off, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
-			set_text_attribs();
+			set_text_attribs(false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
 			
 			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
@@ -269,7 +282,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, highlight_func);
 		
-		set_text_attribs();
+		set_text_attribs(false);
 		dc.DrawText("<< PROCESSING >>", x + code_text_x, y);
 		
 		y += hf_char_height;

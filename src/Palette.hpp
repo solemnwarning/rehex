@@ -67,6 +67,8 @@ namespace REHex {
 			static ColourIndex get_highlight_bg_idx(int index);
 			static ColourIndex get_highlight_fg_idx(int index);
 			
+			wxColour get_average_colour(int colour_a_idx, int colour_b_idx) const;
+			
 			static Palette *create_system_palette();
 			static Palette *create_light_palette();
 			static Palette *create_dark_palette();

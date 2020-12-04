@@ -85,6 +85,17 @@ REHex::Palette::ColourIndex REHex::Palette::get_highlight_fg_idx(int index)
 	return (ColourIndex)(PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2));
 }
 
+wxColour REHex::Palette::get_average_colour(int colour_a_idx, int colour_b_idx) const
+{
+	const wxColour &colour_a = (*this)[colour_a_idx];
+	const wxColour &colour_b = (*this)[colour_b_idx];
+	
+	return wxColour(
+		(((int)(colour_a.Red())   + (int)(colour_b.Red()))   / 2),
+		(((int)(colour_a.Green()) + (int)(colour_b.Green())) / 2),
+		(((int)(colour_a.Blue())  + (int)(colour_b.Blue()))  / 2));
+}
+
 REHex::Palette *REHex::Palette::create_system_palette()
 {
 	const wxColour WINDOW        = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);

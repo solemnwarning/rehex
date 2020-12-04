@@ -2378,16 +2378,36 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto highlight_func = [&](off_t offset)
 	{
-		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
-		{
-			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, true);
-		}
-		else if(ranges_matching_selection.isset(offset))
+		if(ranges_matching_selection.isset(offset))
 		{
 			return Highlight(Palette::PAL_SECONDARY_SELECTED_TEXT_FG, Palette::PAL_SECONDARY_SELECTED_TEXT_BG, true);
 		}
 		else{
 			return highlight_at_off(offset);
+		}
+	};
+	
+	auto hex_highlight_func = [&](off_t offset)
+	{
+		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
+		{
+			bool hex_active = doc.get_cursor_state() != Document::CSTATE_ASCII;
+			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, hex_active);
+		}
+		else{
+			return highlight_func(offset);
+		}
+	};
+	
+	auto ascii_highlight_func = [&](off_t offset)
+	{
+		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
+		{
+			bool ascii_active = doc.get_cursor_state() == Document::CSTATE_ASCII;
+			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, ascii_active);
+		}
+		else{
+			return highlight_func(offset);
 		}
 	};
 	
@@ -2416,11 +2436,11 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		const unsigned char *line_data = data_err ? NULL : data_p;
 		size_t line_data_len = std::min<size_t>(data_remain, (bytes_per_line_actual - line_pad_bytes));
 		
-		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, highlight_func);
+		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, hex_highlight_func);
 		
 		if(doc.show_ascii)
 		{
-			draw_ascii_line(&doc, dc, x + ascii_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, highlight_func);
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, ascii_highlight_func);
 		}
 		
 		cur_off += line_data_len;
@@ -2519,9 +2539,43 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	 * touched by that particular wxDC::DrawText() call by inserting spaces.
 	*/
 	
-	auto fill_char_bg = [&](int char_x, Palette::ColourIndex colour_idx)
+	auto fill_char_bg = [&](int char_x, Palette::ColourIndex colour_idx, bool strong)
 	{
-		wxBrush bg_brush((*active_palette)[colour_idx]);
+		/* Abandoned dithering experiment. */
+		#if 0
+		wxBitmap bitmap(2, 2);
+		
+		{
+			wxMemoryDC imagememDC;
+			imagememDC.SelectObject(bitmap);
+			
+			wxBrush bg_brush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+			wxBrush fg_brush((*active_palette)[colour_idx]);
+			
+			imagememDC.SetBackground(bg_brush);
+			imagememDC.Clear();
+			
+			imagememDC.SetBrush(fg_brush);
+			imagememDC.SetPen(*wxTRANSPARENT_PEN);
+			
+			if(strong)
+			{
+				imagememDC.DrawRectangle(wxRect(0, 0, 2, 2));
+			}
+			else{
+				imagememDC.DrawRectangle(wxRect(0, 0, 1, 1));
+				imagememDC.DrawRectangle(wxRect(1, 1, 1, 1));
+			}
+		}
+		
+		wxBrush bg_brush(bitmap);
+		#endif
+		
+		wxColour bg_colour = strong
+			? (*active_palette)[colour_idx]
+			: active_palette->get_average_colour(colour_idx, Palette::PAL_NORMAL_TEXT_BG);
+		
+		wxBrush bg_brush(bg_colour);
 		
 		dc.SetBrush(bg_brush);
 		dc.SetPen(*wxTRANSPARENT_PEN);
@@ -2550,12 +2604,12 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			
 			if(invert && doc_ctrl->cursor_visible)
 			{
-				fill_char_bg(hex_x, Palette::PAL_INVERT_TEXT_BG);
+				fill_char_bg(hex_x, Palette::PAL_INVERT_TEXT_BG, true);
 				draw_char_deferred(hex_base_x, Palette::PAL_INVERT_TEXT_FG, hex_x_char, nibble_to_hex[nibble]);
 			}
 			else if(highlight.enable)
 			{
-				fill_char_bg(hex_x, highlight.bg_colour_idx);
+				fill_char_bg(hex_x, highlight.bg_colour_idx, highlight.strong);
 				draw_char_deferred(hex_base_x, highlight.fg_colour_idx, hex_x_char, nibble_to_hex[nibble]);
 			}
 			else{
@@ -2755,9 +2809,13 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	 * touched by that particular wxDC::DrawText() call by inserting spaces.
 	*/
 	
-	auto fill_char_bg = [&](int char_x, Palette::ColourIndex colour_idx)
+	auto fill_char_bg = [&](int char_x, Palette::ColourIndex colour_idx, bool strong)
 	{
-		wxBrush bg_brush((*active_palette)[colour_idx]);
+		wxColour bg_colour = strong
+			? (*active_palette)[colour_idx]
+			: active_palette->get_average_colour(colour_idx, Palette::PAL_NORMAL_TEXT_BG);
+		
+		wxBrush bg_brush(bg_colour);
 		
 		dc.SetBrush(bg_brush);
 		dc.SetPen(*wxTRANSPARENT_PEN);
@@ -2779,12 +2837,12 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		{
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->cursor_visible)
 			{
-				fill_char_bg(ascii_x, Palette::PAL_INVERT_TEXT_BG);
+				fill_char_bg(ascii_x, Palette::PAL_INVERT_TEXT_BG, true);
 				draw_char_deferred(ascii_base_x, Palette::PAL_INVERT_TEXT_FG, ascii_x_char, ascii_byte);
 			}
 			else if(highlight.enable)
 			{
-				fill_char_bg(ascii_x, highlight.bg_colour_idx);
+				fill_char_bg(ascii_x, highlight.bg_colour_idx, highlight.strong);
 				draw_char_deferred(ascii_base_x, highlight.fg_colour_idx, ascii_x_char, ascii_byte);
 			}
 			else{
@@ -2794,7 +2852,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		else{
 			if(highlight.enable)
 			{
-				fill_char_bg(ascii_x, highlight.bg_colour_idx);
+				fill_char_bg(ascii_x, highlight.bg_colour_idx, highlight.strong);
 				draw_char_deferred(ascii_base_x, highlight.fg_colour_idx, ascii_x_char, ascii_byte);
 			}
 			else{

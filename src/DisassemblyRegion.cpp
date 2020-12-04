@@ -922,6 +922,68 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 	}
 }
 
+wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
+{
+	if(doc_ctrl.special_view_active())
+	{
+		off_t selection_off, selection_length;
+		std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+		
+		assert(selection_off >= d_offset);
+		assert((selection_off + selection_length) <= (d_offset + d_length));
+		
+		/* Copy disassembled instructions within selection. */
+		
+		auto instr_first = instruction_by_offset(selection_off);
+		
+		const std::vector<Instruction> *instr_vec = &(instr_first.first);
+		std::vector<Instruction>::const_iterator instr = instr_first.second;
+		
+		std::string data_string;
+		
+		while(instr != instr_vec->end() && (instr->offset + instr->length) <= (selection_off + selection_length))
+		{
+			if(instr->offset >= selection_off)
+			{
+				if(!data_string.empty())
+				{
+					data_string.append("\n");
+				}
+				
+				data_string.append(instr->disasm);
+			}
+			
+			/* Advancing instr to the end means we've either reached unprocessed data
+			 * and will have to stop, or have run out of cached instructions and need
+			 * to cache more.
+			*/
+			
+			off_t next_off = instr->offset + instr->length;
+			
+			++instr;
+			
+			if(instr == instr_vec->end())
+			{
+				auto next_instr = instruction_by_offset(next_off);
+				
+				instr_vec = &(next_instr.first);
+				instr = next_instr.second;
+			}
+		}
+		
+		if(!data_string.empty())
+		{
+			return new wxTextDataObject(data_string);
+		}
+		else{
+			return NULL;
+		}
+	}
+	
+	/* Fall back to default handling - copy selected bytes. */
+	return NULL;
+}
+
 off_t REHex::DisassemblyRegion::unprocessed_offset() const
 {
 	if(processed.empty())

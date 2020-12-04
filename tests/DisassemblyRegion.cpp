@@ -529,3 +529,167 @@ TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 	
 	EXPECT_EQ(region->unprocessed_offset(), 0x16CAE) << "Region not affected by overwriting data after it";
 }
+
+TEST(DisassemblyRegion, CopyWholeInstructions)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64);
+	
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	
+	/* Check the region is fully processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
+	doc_ctrl->set_selection(0x7150, 22);
+	
+	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
+	
+	ASSERT_NE(data_obj, (wxDataObject*)(NULL));
+	
+	wxTextDataObject *tdo = dynamic_cast<wxTextDataObject*>(data_obj);
+	ASSERT_NE(tdo, (wxTextDataObject*)(NULL));
+	
+	EXPECT_EQ(tdo->GetText(),
+		"push    r12\n"
+		"push    rbp\n"
+		"mov     rbp, rsi\n"
+		"mov     rsi, rdx\n"
+		"push    rbx\n"
+		"mov     ebx, edi\n"
+		"mov     edi, 4\n"
+		"call    0x14630");
+	
+	delete data_obj;
+}
+
+TEST(DisassemblyRegion, CopyInHexView)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64);
+	
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	
+	/* Check the region is fully processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_HEX);
+	doc_ctrl->set_selection(0x7150, 22);
+	
+	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
+	
+	EXPECT_EQ(data_obj, (wxDataObject*)(NULL));
+}
+
+TEST(DisassemblyRegion, CopyPartialInstructions)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64);
+	
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	
+	/* Check the region is fully processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
+	doc_ctrl->set_selection(0x7151, 20);
+	
+	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
+	
+	ASSERT_NE(data_obj, (wxDataObject*)(NULL));
+	
+	wxTextDataObject *tdo = dynamic_cast<wxTextDataObject*>(data_obj);
+	ASSERT_NE(tdo, (wxTextDataObject*)(NULL));
+	
+	EXPECT_EQ(tdo->GetText(),
+		"push    rbp\n"
+		"mov     rbp, rsi\n"
+		"mov     rsi, rdx\n"
+		"push    rbx\n"
+		"mov     ebx, edi\n"
+		"mov     edi, 4");
+	
+	delete data_obj;
+}
+
+TEST(DisassemblyRegion, CopyPartialInstruction)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, CS_ARCH_X86, CS_MODE_64);
+	
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	region->check();
+	
+	/* Check the region is fully processed. */
+	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
+	doc_ctrl->set_selection(0x7153, 2);
+	
+	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
+	
+	EXPECT_EQ(data_obj, (wxDataObject*)(NULL));
+}

@@ -229,6 +229,21 @@ REHex::Document::CursorState REHex::DocumentCtrl::get_cursor_state() const
 	return cursor_state;
 }
 
+bool REHex::DocumentCtrl::hex_view_active() const
+{
+	return cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID;
+}
+
+bool REHex::DocumentCtrl::ascii_view_active() const
+{
+	return cursor_state == Document::CSTATE_ASCII;
+}
+
+bool REHex::DocumentCtrl::special_view_active() const
+{
+	return cursor_state == Document::CSTATE_SPECIAL;
+}
+
 void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorState cursor_state)
 {
 	assert(position >= 0 && position <= doc->buffer_length());
@@ -1258,6 +1273,10 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 						_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
 						break;
 						
+					case GenericDataRegion::SA_SPECIAL:
+						_set_cursor_position(clicked_offset, Document::CSTATE_SPECIAL);
+						break;
+						
 					default:
 						_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
 						break;
@@ -1386,6 +1405,10 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 				else if(clicked_area == GenericDataRegion::SA_ASCII)
 				{
 					_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
+				}
+				else if(clicked_area == GenericDataRegion::SA_SPECIAL)
+				{
+					_set_cursor_position(clicked_offset, Document::CSTATE_SPECIAL);
 				}
 				else{
 					_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
@@ -2393,7 +2416,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	{
 		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
 		{
-			bool hex_active = doc.get_cursor_state() != Document::CSTATE_ASCII;
+			bool hex_active = doc.hex_view_active();
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, hex_active);
 		}
 		else{
@@ -2405,7 +2428,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	{
 		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
 		{
-			bool ascii_active = doc.get_cursor_state() == Document::CSTATE_ASCII;
+			bool ascii_active = doc.ascii_view_active();
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, ascii_active);
 		}
 		else{
@@ -2471,7 +2494,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
-	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->cursor_state != Document::CSTATE_ASCII;
+	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->hex_view_active();
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
 	
@@ -2483,7 +2506,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	
 	auto draw_end_cursor = [&]()
 	{
-		if((doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active)
+		if((doc_ctrl->cursor_visible && doc_ctrl->hex_view_active()) || !hex_active)
 		{
 			if(doc_ctrl->insert_mode || !hex_active)
 			{
@@ -2741,7 +2764,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	off_t cur_off = base_off;
 	
-	bool ascii_active = doc_ctrl->HasFocus() && doc_ctrl->cursor_state == Document::CSTATE_ASCII;
+	bool ascii_active = doc_ctrl->HasFocus() && doc_ctrl->ascii_view_active();
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
 	
@@ -2753,7 +2776,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	auto draw_end_cursor = [&]()
 	{
-		if((doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_ASCII) || !ascii_active)
+		if((doc_ctrl->cursor_visible && doc_ctrl->ascii_view_active()) || !ascii_active)
 		{
 			if(doc_ctrl->insert_mode || !ascii_active)
 			{

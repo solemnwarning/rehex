@@ -144,7 +144,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
 		{
-			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, true);
+			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, doc_ctrl.hex_view_active());
 		}
 		else{
 			const NestedOffsetLengthMap<int> &highlights = doc->get_highlights();
@@ -177,8 +177,12 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		if(selected)
 		{
+			wxColour selected_bg_colour = doc_ctrl.special_view_active()
+				? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
+				: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG);
+			
 			dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
-			dc.SetTextBackground((*active_palette)[Palette::PAL_SELECTED_TEXT_BG]);
+			dc.SetTextBackground(selected_bg_colour);
 		}
 		else{
 			dc.SetTextForeground((*active_palette)[alternate ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG]);

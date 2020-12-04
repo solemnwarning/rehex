@@ -73,6 +73,7 @@ namespace REHex {
 				CSTATE_HEX,
 				CSTATE_HEX_MID,
 				CSTATE_ASCII,
+				CSTATE_SPECIAL,
 				
 				/* Only valid as parameter to _set_cursor_position(), will go
 				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.

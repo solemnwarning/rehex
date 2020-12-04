@@ -409,6 +409,10 @@ namespace REHex {
 			off_t get_cursor_position() const;
 			Document::CursorState get_cursor_state() const;
 			
+			bool hex_view_active() const;
+			bool ascii_view_active() const;
+			bool special_view_active() const;
+			
 			void set_cursor_position(off_t position, Document::CursorState cursor_state = Document::CSTATE_GOTO);
 			
 			bool get_insert_mode();

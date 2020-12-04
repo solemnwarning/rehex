@@ -2014,7 +2014,9 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 	
 	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
-		if((*r)->check() != Region::IDLE)
+		unsigned int status = (*r)->check();
+		
+		if(status & Region::PROCESSING)
 		{
 			processing_regions.push_back(*r);
 		}

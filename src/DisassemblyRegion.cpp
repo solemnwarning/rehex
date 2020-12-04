@@ -382,7 +382,17 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 		}
 		
-		if(mouse_x_px >= hex_text_x)
+		if(mouse_x_px >= code_text_x)
+		{
+			/* Mouse in code area. */
+			
+			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
+			if(char_offset < instr.second->disasm.length())
+			{
+				return std::make_pair(instr.second->offset, SA_SPECIAL);
+			}
+		}
+		else if(mouse_x_px >= hex_text_x)
 		{
 			/* Mouse in hex area. */
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
@@ -448,7 +458,25 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		off_t instr_base = instr.second->offset;
 		off_t instr_end  = instr.second->offset + instr.second->length;
 		
-		if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
+		if((mouse_x_px >= code_text_x && type_hint == SA_NONE) || type_hint == SA_SPECIAL)
+		{
+			/* Mouse in code area. */
+			
+			if(mouse_x_px < code_text_x)
+			{
+				return std::make_pair(std::max<off_t>((instr.second->offset - 1), 0), SA_SPECIAL);
+			}
+			
+			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
+			if(char_offset < instr.second->disasm.length())
+			{
+				return std::make_pair(instr.second->offset, SA_SPECIAL);
+			}
+			else{
+				return std::make_pair((instr.second->offset + instr.second->length - 1), SA_SPECIAL);
+			}
+		}
+		else if((mouse_x_px >= hex_text_x && type_hint == SA_NONE) || type_hint == SA_HEX)
 		{
 			/* Mouse in hex area. */
 			int line_offset = offset_near_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));

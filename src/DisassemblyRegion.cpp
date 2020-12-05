@@ -170,12 +170,17 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		}
 	};
 	
-	auto set_text_attribs = [&](bool selected)
+	auto set_text_attribs = [&](bool invert, bool selected)
 	{
 		dc.SetFont(doc_ctrl.get_font());
 		dc.SetBackgroundMode(wxSOLID);
 		
-		if(selected)
+		if(invert)
+		{
+			dc.SetTextForeground((*active_palette)[Palette::PAL_INVERT_TEXT_FG]);
+			dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
+		}
+		else if(selected)
 		{
 			wxColour selected_bg_colour = doc_ctrl.special_view_active()
 				? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
@@ -197,6 +202,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const std::vector<Instruction> *instr_vec = &(instr_first.first);
 	std::vector<Instruction>::const_iterator instr = instr_first.second;
 	
+	off_t cursor_pos = doc_ctrl.get_cursor_position();
+	
 	off_t selection_off, selection_len;
 	std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
 	
@@ -208,7 +215,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			std::string offset_str = format_offset(instr->offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
-			set_text_attribs(false);
+			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
 			
 			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
@@ -221,9 +228,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, highlight_func);
 		
+		bool invert = cursor_pos >= instr->offset && cursor_pos < (instr->offset + instr->length) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
 		bool selected = selection_len > 0 && selection_off <= instr->offset && (selection_off + selection_len) >= (instr->offset + instr->length);
 		
-		set_text_attribs(selected);
+		set_text_attribs(invert, selected);
+		
 		dc.DrawText(instr->disasm, x + code_text_x, y);
 		
 		y += hf_char_height;
@@ -264,7 +273,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			std::string offset_str = format_offset(up_off, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
-			set_text_attribs(false);
+			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
 			
 			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
@@ -294,7 +303,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, highlight_func);
 		
-		set_text_attribs(false);
+		set_text_attribs(false, false);
 		dc.DrawText("<< PROCESSING >>", x + code_text_x, y);
 		
 		y += hf_char_height;

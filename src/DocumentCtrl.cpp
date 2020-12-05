@@ -1276,7 +1276,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 					}
 					
 					mouse_shift_initial  = old_position;
-					mouse_down_at_offset = clicked_offset;
+					mouse_down_at_offset = old_position;
 					mouse_down_at_x      = rel_x;
 					mouse_down_area      = clicked_area;
 				}

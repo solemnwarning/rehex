@@ -357,7 +357,14 @@ unsigned int REHex::DisassemblyRegion::check()
 	/* NOTE: @code, @code_size & @address variables are all updated! */
 	while(code_ < (data.data() + process_len) && cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
 	{
-		size_t disasm_length = strlen(insn->mnemonic) + 1 + strlen(insn->op_str);
+		/* Instruction operands are aligned to tab boundaries using spaces. */
+		
+		const size_t OP_ALIGN = 8;
+		
+		size_t mnemonic_len = strlen(insn->mnemonic);
+		size_t space_count = (OP_ALIGN - (mnemonic_len % OP_ALIGN));
+		
+		size_t disasm_length = mnemonic_len + space_count + strlen(insn->op_str);
 		
 		new_ir.length += insn->size;
 		

@@ -412,6 +412,82 @@ TEST(DisassemblyRegion, InstructionByLine)
 	}
 }
 
+TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
+{
+	/* Open test executable. */
+	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	
+	/* Create region covering the entire .text section */
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 9, CS_ARCH_X86, CS_MODE_64));
+	
+	region->check();
+	region->check();
+	
+	{
+		const std::vector<DisassemblyRegion::InstructionRange> &ranges = region->get_processed();
+		ASSERT_EQ(ranges.size(), 1U);
+		
+		EXPECT_EQ(ranges[0].offset, 0x46F0);
+		EXPECT_EQ(ranges[0].length, 9);
+		EXPECT_EQ(ranges[0].rel_y_offset, 0);
+		EXPECT_EQ(ranges[0].y_lines, 4);
+	}
+	
+	{
+		auto x = region->instruction_by_offset(0x46F0);
+		
+		ASSERT_NE(x.second, x.first.end());
+		
+		EXPECT_EQ(x.second->offset, 0x46F0);
+		EXPECT_EQ(x.second->length, 5);
+		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x8B, 0xF9, 0xFF, 0xFF}));
+		EXPECT_EQ(x.second->disasm, "call    0x4080");
+		EXPECT_EQ(x.second->rel_y_offset, 0);
+	}
+	
+	{
+		auto x = region->instruction_by_offset(0x46F5);
+		
+		ASSERT_NE(x.second, x.first.end());
+		
+		EXPECT_EQ(x.second->offset, 0x46F5);
+		EXPECT_EQ(x.second->length, 1);
+		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8}));
+		EXPECT_EQ(x.second->disasm, ".byte   0xe8");
+		EXPECT_EQ(x.second->rel_y_offset, 1);
+	}
+	
+	{
+		auto x = region->instruction_by_offset(0x46F6);
+		
+		ASSERT_NE(x.second, x.first.end());
+		
+		EXPECT_EQ(x.second->offset, 0x46F6);
+		EXPECT_EQ(x.second->length, 2);
+		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x86, 0xF9}));
+		EXPECT_EQ(x.second->disasm, "xchg    cl, bh");
+		EXPECT_EQ(x.second->rel_y_offset, 2);
+	}
+	
+	{
+		auto x = region->instruction_by_offset(0x46F8);
+		
+		ASSERT_NE(x.second, x.first.end());
+		
+		EXPECT_EQ(x.second->offset, 0x46F8);
+		EXPECT_EQ(x.second->length, 1);
+		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xFF}));
+		EXPECT_EQ(x.second->disasm, ".byte   0xff");
+		EXPECT_EQ(x.second->rel_y_offset, 3);
+	}
+	
+	{
+		auto x = region->instruction_by_offset(0x49F9);
+		ASSERT_EQ(x.second, x.first.end());
+	}
+	
+}
+
 TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
 {
 	/* Open test executable. */

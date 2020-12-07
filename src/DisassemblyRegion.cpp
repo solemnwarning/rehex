@@ -360,9 +360,19 @@ unsigned int REHex::DisassemblyRegion::check()
 	off_t process_base = first_dirty_range.offset;
 	off_t process_len  = std::min(first_dirty_range.length, SOFT_IR_LIMIT);
 	
+	/* Read in some extra data after the range to be processed (if available), but NOT beyond
+	 * the end of the region, so we can correctly disassemble an instruction spanning the end
+	 * of the range and expand the InstructionRange to encompass it.
+	*/
+	
+	off_t remain_after = (d_offset + d_length) - (process_base + process_len);
+	assert(remain_after >= 0);
+	
+	off_t process_extra = std::min<off_t>(128, remain_after);
+	
 	std::vector<unsigned char> data;
 	try {
-		data = doc->read_data(process_base, process_len + 128);
+		data = doc->read_data(process_base, process_len + process_extra);
 	}
 	catch(const std::exception &e)
 	{

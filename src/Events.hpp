@@ -76,6 +76,21 @@ namespace REHex
 	#define EVT_DOCUMENTTITLE(id, func) \
 		wx__DECLARE_EVT1(DOCUMENT_TITLE_CHANGED, id, wxEVENT_HANDLER_CAST(DocumentTitleEventFunction, func))
 	
+	class FontSizeAdjustmentEvent: public wxEvent
+	{
+		public:
+			const int font_size_adjustment;
+			
+			FontSizeAdjustmentEvent(int font_size_adjustment);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
+	typedef void (wxEvtHandler::*FontSizeAdjustmentEventFunction)(FontSizeAdjustmentEvent&);
+	
+	#define EVT_FONTSIZEADJUSTMENT(func) \
+		wx__DECLARE_EVT1(FONT_SIZE_ADJUSTMENT_CHANGED, wxID_ANY, wxEVENT_HANDLER_CAST(FontSizeAdjustmentEventFunction, func))
+	
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     OffsetLengthEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
@@ -93,6 +108,8 @@ namespace REHex
 	wxDECLARE_EVENT(CURSOR_UPDATE,    CursorUpdateEvent);
 	
 	wxDECLARE_EVENT(DOCUMENT_TITLE_CHANGED,  DocumentTitleEvent);
+	
+	wxDECLARE_EVENT(FONT_SIZE_ADJUSTMENT_CHANGED, FontSizeAdjustmentEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

@@ -19,6 +19,7 @@
 
 #include "app.hpp"
 #include "ArtProvider.hpp"
+#include "Events.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 
@@ -46,6 +47,7 @@ bool REHex::App::OnInit()
 	
 	config->SetPath("/");
 	last_directory = config->Read("last-directory", "");
+	font_size_adjustment = config->ReadLong("font-size-adjustment", 0);
 	
 	/* Display default tool panels if a default view hasn't been configured. */
 	if(!config->HasGroup("/default-view/"))
@@ -129,6 +131,19 @@ const std::string &REHex::App::get_last_directory()
 void REHex::App::set_last_directory(const std::string &last_directory)
 {
 	this->last_directory = last_directory;
+}
+
+int REHex::App::get_font_size_adjustment() const
+{
+	return font_size_adjustment;
+}
+
+void REHex::App::set_font_size_adjustment(int font_size_adjustment)
+{
+	this->font_size_adjustment = font_size_adjustment;
+	
+	FontSizeAdjustmentEvent event(font_size_adjustment);
+	ProcessEvent(event);
 }
 
 std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;

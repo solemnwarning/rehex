@@ -75,6 +75,8 @@ enum {
 	ID_SYSTEM_PALETTE,
 	ID_LIGHT_PALETTE,
 	ID_DARK_PALETTE,
+	ID_FSA_INCREASE,
+	ID_FSA_DECREASE,
 	ID_CLOSE_ALL,
 	ID_CLOSE_OTHERS,
 	ID_GITHUB,
@@ -138,6 +140,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_DARK_PALETTE,   REHex::MainWindow::OnPalette)
+	
+	EVT_MENU(ID_FSA_INCREASE, REHex::MainWindow::OnFSAIncrease)
+	EVT_MENU(ID_FSA_DECREASE, REHex::MainWindow::OnFSADecrease)
 	
 	EVT_MENU(ID_HEX_OFFSETS,   REHex::MainWindow::OnHexOffsets)
 	EVT_MENU(ID_DEC_OFFSETS,   REHex::MainWindow::OnDecOffsets)
@@ -276,6 +281,11 @@ REHex::MainWindow::MainWindow():
 	{
 		palette_menu->Check(ID_SYSTEM_PALETTE, true);
 	}
+	
+	view_menu->AppendSeparator();
+	
+	view_menu->Append(ID_FSA_INCREASE, "Increase font size");
+	view_menu->Append(ID_FSA_DECREASE, "Decrease font size");
 	
 	view_menu->AppendSeparator();
 	
@@ -893,6 +903,18 @@ void REHex::MainWindow::OnPalette(wxCommandEvent &event)
 	}
 	
 	Refresh();
+}
+
+void REHex::MainWindow::OnFSAIncrease(wxCommandEvent &event)
+{
+	App &app = wxGetApp();
+	app.set_font_size_adjustment(app.get_font_size_adjustment() + 1);
+}
+
+void REHex::MainWindow::OnFSADecrease(wxCommandEvent &event)
+{
+	App &app = wxGetApp();
+	app.set_font_size_adjustment(app.get_font_size_adjustment() - 1);
 }
 
 void REHex::MainWindow::OnHexOffsets(wxCommandEvent &event)

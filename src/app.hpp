@@ -35,6 +35,9 @@ namespace REHex {
 			const std::string &get_last_directory();
 			void set_last_directory(const std::string &last_directory);
 			
+			int get_font_size_adjustment() const;
+			void set_font_size_adjustment(int font_size_adjustment);
+			
 			/**
 			 * @brief App setup phases, in order of execution.
 			*/
@@ -98,6 +101,7 @@ namespace REHex {
 			
 		private:
 			std::string last_directory;
+			int font_size_adjustment;
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);

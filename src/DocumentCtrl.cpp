@@ -2163,6 +2163,22 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 	}
 }
 
+void REHex::DocumentCtrl::Region::draw_full_height_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int64_t y)
+{
+	int cw = doc_ctrl->hf_char_width();
+	int ch = doc_ctrl->hf_height;
+	
+	int64_t skip_lines = (y < 0 ? (-y / ch) : 0);
+	
+	int     box_y  = y + (skip_lines * (int64_t)(ch));
+	int64_t box_h  = (y_lines - skip_lines) * (int64_t)(ch);
+	int     box_hc = std::min(box_h, (int64_t)(doc_ctrl->client_height));
+	
+	dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
+	
+	dc.DrawLine(x, box_y, x, (box_y + box_hc));
+}
+
 REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length):
 	Region(d_offset, 0),
 	d_offset(d_offset),

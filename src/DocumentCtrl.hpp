@@ -100,6 +100,7 @@ namespace REHex {
 					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px);
 					
 					void draw_container(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y);
+					void draw_full_height_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int64_t y);
 					
 					struct Highlight
 					{

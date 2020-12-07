@@ -66,6 +66,7 @@ namespace REHex
 			int offset_text_x;  /**< X co-ordinate of left edge of offsets. */
 			int hex_text_x;     /**< X co-ordinate of left edge of hex data. */
 			int code_text_x;    /**< X co-ordinate of left edge of disassembly. */
+			int ascii_text_x;
 			
 			ByteRangeSet dirty;                       /**< Bytes which are waiting to be analysed. */
 			std::vector<InstructionRange> processed;  /**< Ranges of up-to-date analysed code. */

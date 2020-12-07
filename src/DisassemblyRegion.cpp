@@ -98,6 +98,10 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 	
 	off_t bytes_per_line = max_bytes_per_line();
 	
+	int ascii_column_chars = doc_ctrl.get_show_ascii()
+		? bytes_per_line
+		: 0;
+	
 	offset_text_x = indent_width;
 	hex_text_x    = offset_text_x + offset_column_width;
 	code_text_x   = hex_text_x
@@ -105,8 +109,10 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 			(bytes_per_line * 2)
 			+ ((bytes_per_line - 1) / bytes_per_group)
 			+ 1);
+	ascii_text_x = code_text_x
+		+ doc_ctrl.hf_string_width(longest_disasm + 1);
 	
-	return code_text_x + doc_ctrl.hf_string_width(longest_disasm) + indent_width;
+	return ascii_text_x + doc_ctrl.hf_string_width(ascii_column_chars) + indent_width;
 }
 
 void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
@@ -127,6 +133,19 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	draw_container(doc_ctrl, dc, x, y);
 	
 	int hf_char_height = doc_ctrl.hf_char_height();
+	int hf_char_width = doc_ctrl.hf_char_width();
+	
+	if(doc_ctrl.get_show_offsets())
+	{
+		draw_full_height_line(&doc_ctrl, dc, x + hex_text_x - (hf_char_width / 2), y);
+	}
+	
+	draw_full_height_line(&doc_ctrl, dc, x + code_text_x - (hf_char_width / 2), y);
+	
+	if(doc_ctrl.get_show_ascii())
+	{
+		draw_full_height_line(&doc_ctrl, dc, x + ascii_text_x - (hf_char_width / 2), y);
+	}
 	
 	int64_t line_num = (y < 0 ? (-y / hf_char_height) : 0);
 	y += line_num * hf_char_height;
@@ -135,40 +154,59 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	bool alternate = ((y_offset + line_num) % 2) != 0;
 	
-	auto highlight_func = [&](off_t offset)
+	off_t cursor_pos = doc_ctrl.get_cursor_position();
+	
+	off_t selection_off, selection_len;
+	std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
+	
+	auto base_highlight_func = [&](off_t offset)
 	{
 		/* TODO: Support secondary selection. */
 		
-		off_t selection_off, selection_len;
-		std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
+		const NestedOffsetLengthMap<int> &highlights = doc->get_highlights();
 		
+		auto highlight = NestedOffsetLengthMap_get(highlights, offset);
+		if(highlight != highlights.end())
+		{
+			return Highlight(
+				active_palette->get_highlight_fg_idx(highlight->second),
+				active_palette->get_highlight_bg_idx(highlight->second),
+				true);
+		}
+		else if(doc->is_byte_dirty(offset))
+		{
+			return Highlight(
+				Palette::PAL_DIRTY_TEXT_FG,
+				Palette::PAL_DIRTY_TEXT_BG,
+				true);
+		}
+		else{
+			return (Highlight)(NoHighlight());
+		}
+	};
+	
+	auto hex_highlight_func = [&](off_t offset)
+	{
 		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
 		{
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, doc_ctrl.hex_view_active());
 		}
 		else{
-			const NestedOffsetLengthMap<int> &highlights = doc->get_highlights();
-			
-			auto highlight = NestedOffsetLengthMap_get(highlights, offset);
-			if(highlight != highlights.end())
-			{
-				return Highlight(
-					active_palette->get_highlight_fg_idx(highlight->second),
-					active_palette->get_highlight_bg_idx(highlight->second),
-					true);
-			}
-			else if(doc->is_byte_dirty(offset))
-			{
-				return Highlight(
-					Palette::PAL_DIRTY_TEXT_FG,
-					Palette::PAL_DIRTY_TEXT_BG,
-					true);
-			}
-			else{
-				return (Highlight)(NoHighlight());
-			}
+			return base_highlight_func(offset);
 		}
 	};
+	
+	auto ascii_highlight_func = [&](off_t offset)
+	{
+		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
+		{
+			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, doc_ctrl.ascii_view_active());
+		}
+		else{
+			return base_highlight_func(offset);
+		}
+	};
+
 	
 	auto set_text_attribs = [&](bool invert, bool selected)
 	{
@@ -202,11 +240,6 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const std::vector<Instruction> *instr_vec = &(instr_first.first);
 	std::vector<Instruction>::const_iterator instr = instr_first.second;
 	
-	off_t cursor_pos = doc_ctrl.get_cursor_position();
-	
-	off_t selection_off, selection_len;
-	std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
-	
 	while(instr != instr_vec->end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
 		if(doc_ctrl.get_show_offsets())
@@ -217,16 +250,14 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
-			
-			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
-			
-			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
-			
-			dc.SetPen(norm_fg_1px);
-			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
 		}
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, highlight_func);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, hex_highlight_func);
+		
+		if(doc_ctrl.get_show_ascii())
+		{
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, ascii_highlight_func);
+		}
 		
 		bool invert = cursor_pos >= instr->offset && cursor_pos < (instr->offset + instr->length) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
 		bool selected = selection_len > 0 && selection_off <= instr->offset && (selection_off + selection_len) >= (instr->offset + instr->length);
@@ -275,13 +306,6 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			
 			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
-			
-			int offset_vl_x = x + hex_text_x - (doc_ctrl.hf_char_width() / 2);
-			
-			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
-			
-			dc.SetPen(norm_fg_1px);
-			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + hf_char_height);
 		}
 		
 		off_t line_len = std::min(up_remain, up_bytes_per_line);
@@ -301,7 +325,12 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		const unsigned char *ldp = data_err ? NULL : line_data.data();
 		size_t ldl = data_err ? line_len : line_data.size();
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, highlight_func);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, hex_highlight_func);
+		
+		if(doc_ctrl.get_show_ascii())
+		{
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, up_off, alternate, ascii_highlight_func);
+		}
 		
 		set_text_attribs(false, false);
 		dc.DrawText("<< PROCESSING >>", x + code_text_x, y);
@@ -418,7 +447,19 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 		}
 		
-		if(mouse_x_px >= code_text_x)
+		if(doc_ctrl.get_show_ascii() && mouse_x_px >= ascii_text_x)
+		{
+			/* Mouse in ASCII area. */
+			
+			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+			if(line_offset >= instr.second->length)
+			{
+				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			}
+			
+			return std::make_pair<off_t, ScreenArea>((instr.second->offset + line_offset), SA_ASCII);
+		}
+		else if(mouse_x_px >= code_text_x)
 		{
 			/* Mouse in code area. */
 			
@@ -456,7 +497,19 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_offset + d_length - 1));
 		off_t line_len  = line_end - line_base;
 		
-		if(mouse_x_px >= hex_text_x)
+		if(doc_ctrl.get_show_ascii() && mouse_x_px >= ascii_text_x)
+		{
+			/* Mouse in ASCII area. */
+			
+			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+			if(line_offset >= line_len)
+			{
+				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			}
+			
+			return std::make_pair<off_t, ScreenArea>((line_base + line_offset), SA_ASCII);
+		}
+		else if(mouse_x_px >= hex_text_x)
 		{
 			/* Mouse in hex area. */
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
@@ -494,7 +547,25 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		off_t instr_base = instr.second->offset;
 		off_t instr_end  = instr.second->offset + instr.second->length;
 		
-		if((mouse_x_px >= code_text_x && type_hint == SA_NONE) || type_hint == SA_SPECIAL)
+		if(doc_ctrl.get_show_ascii() && ((mouse_x_px >= ascii_text_x && type_hint == SA_NONE) || type_hint == SA_ASCII))
+		{
+			/* Mouse in ASCII area. */
+			
+			if(mouse_x_px < ascii_text_x)
+			{
+				return std::make_pair(std::max<off_t>((instr_base - 1), 0), SA_ASCII);
+			}
+			else{
+				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+				
+				off_t real_offset = std::min(
+					(instr_base + line_offset),
+					(instr_end - 1));
+				
+				return std::make_pair(real_offset, SA_ASCII);
+			}
+		}
+		else if((mouse_x_px >= code_text_x && type_hint == SA_NONE) || type_hint == SA_SPECIAL)
 		{
 			/* Mouse in code area. */
 			
@@ -547,7 +618,25 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		off_t line_base = up_base + (up_row * up_bytes_per_line);
 		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_offset + d_length - 1));
 		
-		if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
+		if(doc_ctrl.get_show_ascii() && ((mouse_x_px >= ascii_text_x && type_hint == SA_NONE) || type_hint == SA_ASCII))
+		{
+			/* Mouse in ASCII area. */
+			
+			if(mouse_x_px < ascii_text_x)
+			{
+				return std::make_pair(std::max<off_t>((line_base - 1), 0), SA_ASCII);
+			}
+			else{
+				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+				
+				off_t real_offset = std::min(
+					(line_base + line_offset),
+					(line_end - 1));
+				
+				return std::make_pair(real_offset, SA_ASCII);
+			}
+		}
+		else if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
 		{
 			/* Mouse in hex area. */
 			int line_offset = offset_near_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
@@ -899,18 +988,52 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 		
 		off_t line_off = offset - instr.second->offset;
 		
-		return DocumentCtrl::Rect(
-			/* Left X co-ordinate of hex byte. */
-			hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+		if(doc_ctrl->hex_view_active())
+		{
+			return DocumentCtrl::Rect(
+				/* Left X co-ordinate of hex byte. */
+				hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+				
+				/* Line number. */
+				(y_offset + instr.second->rel_y_offset),
+				
+				/* Width of hex byte. */
+				doc_ctrl->hf_string_width(2),
+				
+				/* Height of instruction (in lines). */
+				1);
+		}
+		else if(doc_ctrl->special_view_active())
+		{
+			return DocumentCtrl::Rect(
+				/* Left X co-ordinate of disassembly. */
+				code_text_x,
+				
+				/* Line number. */
+				(y_offset + instr.second->rel_y_offset),
+				
+				/* Width of instruction disassembly. */
+				doc_ctrl->hf_string_width(instr.second->disasm.length()),
+				
+				/* Height of instruction (in lines). */
+				1);
+		}
+		else{
+			assert(doc_ctrl->ascii_view_active());
 			
-			/* Line number. */
-			(y_offset + instr.second->rel_y_offset),
-			
-			/* Width of hex byte. */
-			doc_ctrl->hf_string_width(2),
-			
-			/* Height of instruction (in lines). */
-			1);
+			return DocumentCtrl::Rect(
+				/* Left X co-ordinate of ASCII character. */
+				ascii_text_x + doc_ctrl->hf_string_width(line_off),
+				
+				/* Line number. */
+				(y_offset + instr.second->rel_y_offset),
+				
+				/* Width of character. */
+				doc_ctrl->hf_char_width(),
+				
+				/* Height of instruction (in lines). */
+				1);
+		}
 	}
 	else{
 		/* Offset hasn't been processed yet. */
@@ -923,18 +1046,35 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 		int64_t processed_lines = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
 		int64_t up_line = offset_within_up / up_bytes_per_line;
 		
-		return DocumentCtrl::Rect(
-			/* Left X co-ordinate of hex byte. */
-			hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
-			
-			/* Line number. */
-			(y_offset + processed_lines + up_line),
-			
-			/* Width of hex byte. */
-			doc_ctrl->hf_string_width(2),
-			
-			/* Height (in lines). */
-			1);
+		if(doc_ctrl->ascii_view_active())
+		{
+			return DocumentCtrl::Rect(
+				/* Left X co-ordinate of ASCII character. */
+				ascii_text_x + doc_ctrl->hf_string_width(line_off),
+				
+				/* Line number. */
+				(y_offset + processed_lines + up_line),
+				
+				/* Width of character. */
+				doc_ctrl->hf_char_width(),
+				
+				/* Height of instruction (in lines). */
+				1);
+		}
+		else{
+			return DocumentCtrl::Rect(
+				/* Left X co-ordinate of hex byte. */
+				hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+				
+				/* Line number. */
+				(y_offset + processed_lines + up_line),
+				
+				/* Width of hex byte. */
+				doc_ctrl->hf_string_width(2),
+				
+				/* Height (in lines). */
+				1);
+		}
 	}
 }
 

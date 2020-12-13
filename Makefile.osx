@@ -59,7 +59,7 @@ $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
 ifneq ($(ICONUTIL),)
 	$(ICONUTIL) -c icns -o $@ $(ICONSET)
 else ifneq ($(PNG2ICNS),)
-	$(PNG2ICNS) $@ $(ICONSET)/*
+	$(PNG2ICNS) $@ $(filter-out %@2x.png,$(wildcard $(ICONSET)/*.png))
 else
 	$(error Neither iconutil nor png2icns found in PATH. Install one or set ICONUTIL/PNG2ICNS as necessary)
 endif

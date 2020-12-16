@@ -176,6 +176,9 @@ namespace REHex {
 					 * @brief Unregister the setup hook.
 					*/
 					~SetupHookRegistration();
+					
+					SetupHookRegistration(const SetupHookRegistration &src) = delete;
+					SetupHookRegistration &operator=(const SetupHookRegistration &rhs) = delete;
 			};
 			
 		private:

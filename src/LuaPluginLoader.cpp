@@ -22,6 +22,7 @@
 
 #include "app.hpp"
 #include "lua-bindings/rehex_bind.h"
+#include "lua-plugin-preload.h"
 #include "mainwindow.hpp"
 
 static std::list<wxLuaState> states;
@@ -50,35 +51,22 @@ static void load_lua_plugins()
 			});
 			
 			wxLuaState s(eh);
-			int x = s.RunFile(file_path.GetFullPath());
 			
-			fprintf(stderr, "s.RunFile(\"%s\") returned %d\n", file_path.GetFullPath().mb_str().data(), x);
+			int run_state = s.RunBuffer((const char*)(LUA_PLUGIN_PRELOAD), sizeof(LUA_PLUGIN_PRELOAD), "lua-plugin-preload.lua");
+			if(run_state == 0)
+			{
+				run_state = s.RunFile(file_path.GetFullPath());
+			}
 			
-			if(x == 0)
+			if(run_state == 0)
 			{
 				states.push_back(s);
 			}
 			else{
-				fprintf(stderr, "wxlua_LUA_ERR_msg: %s\n", wxlua_LUA_ERR_msg(x).mb_str().data());
+				fprintf(stderr, "Failed to load plugin %s: %s\n",
+					filename.mb_str().data(),
+					wxlua_LUA_ERR_msg(run_state).mb_str().data());
 			}
-			
-			int top1 = s.lua_GetTop();
-			
-			s.lua_GetGlobal("init");
-			assert(s.lua_IsFunction(-1));
-			
-			x = s.LuaPCall(0 /* arguments */, 0 /* return values */);
-			if(x != 0)
-			{
-				fprintf(stderr, "init function failed...\n");
-			}
-			
-			/* assert(s.lua_IsBoolean(-1));
-			s.lua_Pop(1); */
-			
-			s.lua_Pop(1);
-			
-			s.lua_SetTop(top1);
 		} while (dir.GetNext(&filename));
 	}
 }

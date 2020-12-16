@@ -143,6 +143,7 @@ APP_OBJS := \
 	src/Events.o \
 	src/FillRangeDialog.o \
 	src/LicenseDialog.o \
+	src/lua-plugin-preload.o \
 	src/LuaPluginLoader.o \
 	src/mainwindow.o \
 	src/Palette.o \
@@ -236,6 +237,9 @@ res/%.c res/%.h: res/%.png $(EMBED_EXE)
 src/lua-bindings/rehex_bind.cpp src/lua-bindings/rehex_bind.h: src/lua-bindings/rehex.i src/lua-bindings/rehex_override.hpp src/lua-bindings/rehex_rules.lua
 	lua -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" /home/solemnwarning/src/wxlua/wxLua/bindings/genwxbind.lua
 	touch src/lua-bindings/rehex_bind.cpp src/lua-bindings/rehex_bind.h
+
+src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.lua
+	$(EMBED_EXE) $< LUA_PLUGIN_PRELOAD src/lua-plugin-preload.c src/lua-plugin-preload.h
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<

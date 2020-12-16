@@ -10,6 +10,10 @@ rehex.OnAppDone(function()
 	print("OnAppDone hook called");
 end);
 
+rehex.AddToToolsMenu("test", function(mainwindow)
+	wx.wxMessageBox("hello");
+end);
+
 --function init()
 --	print("init() called");
 --	print(inspect(rehex));

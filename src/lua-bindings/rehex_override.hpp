@@ -34,3 +34,29 @@ static int LUACALL wxLua_REHex_App_SetupHookRegistration_constructor(lua_State *
 	return 1;
 }
 %end
+
+%override wxLua_REHex_MainWindow_SetupHookRegistration_constructor
+static int LUACALL wxLua_REHex_MainWindow_SetupHookRegistration_constructor(lua_State *L)
+{
+	// REHex::MainWindow::SetupPhase phase
+	REHex::MainWindow::SetupPhase phase = (REHex::MainWindow::SetupPhase)(wxlua_getenumtype(L, 1));
+	
+	if (!lua_isfunction(L, 2))
+	{
+		wxlua_argerror(L, 2, wxT("a 'Lua function'"));
+		return 0;
+	}
+	
+	FuncWrapper_MainWindow func_wrapper(L, 2);
+	
+	// call constructor
+	REHex::MainWindow::SetupHookRegistration* returns = new REHex::MainWindow::SetupHookRegistration(phase, func_wrapper);
+	
+	// add to tracked memory list
+	wxluaO_addgcobject(L, returns, wxluatype_REHex_MainWindow_SetupHookRegistration);
+	// push the constructed class pointer
+	wxluaT_pushuserdatatype(L, returns, wxluatype_REHex_MainWindow_SetupHookRegistration);
+	
+	return 1;
+}
+%end

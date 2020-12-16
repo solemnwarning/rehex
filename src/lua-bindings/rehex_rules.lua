@@ -108,8 +108,7 @@ override_fileTable =  { "rehex_override.hpp" }
 --        files are updated. Make sure you delete or have updated any cache file
 --        that changes any data types used by this binding.
 
--- datatype_cache_input_fileTable = { "/home/solemnwarning/src/wxlua/wxLua/bindings/wxwidgets/wxcore_datatypes.lua" }
-datatype_cache_input_fileTable = { }
+datatype_cache_input_fileTable = { "/home/solemnwarning/src/wxlua/wxLua/bindings/wxwidgets/wxcore_datatypes.lua" }
 
 -- ----------------------------------------------------------------------------
 -- The file to output the data type cache for later use with a binding that

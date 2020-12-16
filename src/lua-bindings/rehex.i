@@ -1,4 +1,5 @@
 #include "../app.hpp"
+#include "../document.hpp"
 #include "../mainwindow.hpp"
 
 // TODO: Make this a proper enum class?
@@ -54,4 +55,12 @@ class REHex::MainWindow: public wxFrame
 	wxMenu *get_view_menu() const;
 	wxMenu *get_tools_menu() const;
 	wxMenu *get_help_menu() const;
+	
+	REHex::Document *active_document();
+};
+
+class REHex::Document: public wxEvtHandler
+{
+	wxString read_data(off_t offset, off_t max_length) const;
+	off_t buffer_length();
 };

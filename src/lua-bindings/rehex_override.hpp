@@ -60,3 +60,23 @@ static int LUACALL wxLua_REHex_MainWindow_SetupHookRegistration_constructor(lua_
 	return 1;
 }
 %end
+
+%override wxLua_REHex_Document_read_data
+static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
+{
+	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+	
+	off_t offset     = (off_t)(wxlua_getnumbertype(L, 2));
+	off_t max_length = (off_t)(wxlua_getnumbertype(L, 3));
+	
+	// TODO: Handle exceptions(?)
+	
+	std::vector<unsigned char> data = self->read_data(offset, max_length);
+	
+	/* Pack data into a wxString and push return value onto Lua stack. */
+	wxString data_string(wxString::From8BitData((const char*)(data.data()), data.size()));
+	wxlua_pushwxString(L, data_string);
+	
+	return 1;
+}
+%end

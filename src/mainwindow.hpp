@@ -45,6 +45,9 @@ namespace REHex {
 			wxMenu *get_tools_menu() const;
 			wxMenu *get_help_menu() const;
 			
+			Tab *active_tab();
+			Document *active_document();
+			
 			void OnWindowClose(wxCloseEvent& event);
 			
 			void OnNew(wxCommandEvent &event);
@@ -209,9 +212,6 @@ namespace REHex {
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
 			
 			wxMenu *inline_comments_menu;
-			
-			Tab *active_tab();
-			Document *active_document();
 			
 			void _update_status_offset(Tab *tab);
 			void _update_status_selection(REHex::DocumentCtrl *doc_ctrl);

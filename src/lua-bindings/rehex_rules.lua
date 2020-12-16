@@ -65,7 +65,8 @@ hook_cpp_binding_includes = ""
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim below the
 --   #includes of every generated cpp file or "" for none
-hook_cpp_binding_post_includes = ""
+hook_cpp_binding_post_includes =
+    "#include \"FuncWrapper.hpp\"\n"
 
 -- ----------------------------------------------------------------------------
 -- Add additional include information or C++ code for the binding header file.

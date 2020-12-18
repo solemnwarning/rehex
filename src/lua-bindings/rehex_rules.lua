@@ -140,7 +140,8 @@ datatypes_cache_output_filename = hook_cpp_namespace.."_datatypes.lua"
 
 -- ----------------------------------------------------------------------------
 -- Add additional data types here
--- example: AllocDataType("wxArrayInt", "class",false)
+
+AllocDataType("off_t", "number", true)
 
 -- ============================================================================
 -- Generate comments into binding C++ code

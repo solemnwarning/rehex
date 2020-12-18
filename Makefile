@@ -171,7 +171,6 @@ APP_OBJS := \
 	res/offsets24.o \
 	res/offsets32.o \
 	res/offsets48.o \
-	src/lua-bindings/rehex_bind.o \
 	src/AboutDialog.o \
 	src/app.o \
 	src/ArtProvider.o \
@@ -193,6 +192,7 @@ APP_OBJS := \
 	src/Events.o \
 	src/FillRangeDialog.o \
 	src/LicenseDialog.o \
+	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \
 	src/LuaPluginLoader.o \
 	src/mainwindow.o \
@@ -278,6 +278,7 @@ src/AboutDialog.o: res/icon128.h
 src/ArtProvider.o: res/ascii16.h res/ascii24.h res/ascii32.h res/ascii48.h res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
 src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
+src/LuaPluginLoader.o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h
 src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 
 res/license.c res/license.h: LICENSE.txt $(EMBED_EXE)

@@ -7,10 +7,10 @@
 #include <wx/event.h>
 #include <wx/filename.h>
 
-#include <wxlua/wxbind/include/wxadv_bind.h>
-#include <wxlua/wxbind/include/wxaui_bind.h>
-#include <wxlua/wxbind/include/wxbase_bind.h>
-#include <wxlua/wxbind/include/wxbinddefs.h>
+#include <wxbind/include/wxadv_bind.h>
+#include <wxbind/include/wxaui_bind.h>
+#include <wxbind/include/wxbase_bind.h>
+#include <wxbind/include/wxbinddefs.h>
 #include <wxlua/wxlua.h>
 
 #include "app.hpp"

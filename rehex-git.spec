@@ -23,9 +23,10 @@ Requires: jansson
 Requires: wxGTK3
 
 %if 0%{?el7}
-%define extra_make_flags WX_CONFIG=wx-config-3.0
+%define extra_make_flags LUA_PKG=lua WX_CONFIG=wx-config-3.0
 BuildRequires: pkgconfig
 %else
+%define extra_make_flags LUA_PKG=lua
 BuildRequires: pkgconf
 %endif
 

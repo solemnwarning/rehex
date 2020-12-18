@@ -13,6 +13,7 @@ Source0:  rehex-%{git_commit_sha}.tar.gz
 BuildRequires: capstone-devel
 BuildRequires: gcc-c++
 BuildRequires: jansson-devel
+BuildRequires: lua
 BuildRequires: make
 BuildRequires: wxGTK3-devel
 BuildRequires: xorg-x11-server-Xvfb
@@ -22,6 +23,9 @@ Requires: wxGTK3
 
 %if 0%{?el7}
 %define extra_make_flags WX_CONFIG=wx-config-3.0
+BuildRequires: pkgconfig
+%else
+BuildRequires: pkgconf
 %endif
 
 %description

@@ -1,35 +1,39 @@
 -- ----------------------------------------------------------------------------
--- Rules to build wxWidgets' wxAUI binding for wxLua
+-- Rules to build wxWidgets' wxGL binding for wxLua
 --  load using : $lua -e"rulesFilename=\"rules.lua\"" genwxbind.lua
 -- ----------------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- Set the root directory of the wxLua distribution, used only in this file
+wxlua_dir = "../"
 
 -- ============================================================================
 -- Set the Lua namespace (Lua table) that the bindings will be placed into.
 --   See wxLuaBinding::GetLuaNamespace(); eg. wx.wxWindow(...)
-hook_lua_namespace = "rehex"
+hook_lua_namespace = "wx"
 
 -- Set the unique C++ "namespace" for the bindings, not a real namespace, but
 --   a string used in declared C++ objects to prevent duplicate names.
 --   See wxLuaBinding::GetBindingName().
-hook_cpp_namespace = "rehex"
+hook_cpp_namespace = "wxgl"
 
 -- ============================================================================
 -- Set the directory to output the bindings to, both C++ header and source files
-output_cpp_header_filepath = "./src/lua-bindings/"
-output_cpp_filepath        = "./src/lua-bindings/"
+output_cpp_header_filepath = wxlua_dir.."modules/wxbind/include"
+output_cpp_filepath        = wxlua_dir.."modules/wxbind/src"
 
 -- ============================================================================
 -- Set the DLLIMPEXP macros for compiling these bindings into a DLL
 --  Use "WXLUA_NO_DLLIMPEXP" and "WXLUA_NO_DLLIMPEXP_DATA" for no IMPEXP macros
 
-output_cpp_impexpsymbol     = ""
-output_cpp_impexpdatasymbol = ""
+output_cpp_impexpsymbol     = "WXDLLIMPEXP_BINDWXGL"
+output_cpp_impexpdatasymbol = "WXDLLIMPEXP_DATA_BINDWXGL"
 
 -- ----------------------------------------------------------------------------
 -- Set the name of the header file that will have the #includes from the
 --   bindings in it. This will be used as #include "hook_cpp_header_filename" in
 --   the C++ wrapper files, so it must include the proper #include path.
-hook_cpp_header_filename = hook_cpp_namespace.."_bind.h"
+hook_cpp_header_filename = "wxbind/include/"..hook_cpp_namespace.."_bind.h"
 
 -- ----------------------------------------------------------------------------
 -- Set the name of the main binding file that will have the glue code for the
@@ -65,8 +69,7 @@ hook_cpp_binding_includes = ""
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim below the
 --   #includes of every generated cpp file or "" for none
-hook_cpp_binding_post_includes =
-    "#include \"FuncWrapper.hpp\"\n"
+hook_cpp_binding_post_includes = ""
 
 -- ----------------------------------------------------------------------------
 -- Add additional include information or C++ code for the binding header file.
@@ -83,7 +86,7 @@ hook_cpp_binding_source_includes = ""
 
 -- ============================================================================
 -- Set the bindings directory that contains the *.i interface files
-interface_filepath = "./src/lua-bindings/"
+interface_filepath = wxlua_dir.."bindings/wxwidgets"
 
 -- ----------------------------------------------------------------------------
 -- A list of interface files to use to make the bindings. These files will be
@@ -91,14 +94,14 @@ interface_filepath = "./src/lua-bindings/"
 --   The files are loaded from the interface_filepath.
 interface_fileTable =
 {
-    "rehex.i"
+    "wxgl_gl.i"
 }
 
 -- ----------------------------------------------------------------------------
 -- A list of files that contain bindings that need to be overridden or empty
 --   table {} for none.
 --   The files are loaded from the interface_filepath.
-override_fileTable =  { "rehex_override.hpp" }
+--override_fileTable = { "wxgl_override.hpp" }
 
 -- ============================================================================
 -- A table containing filenames of XXX_datatype.lua from other wrappers to
@@ -108,7 +111,7 @@ override_fileTable =  { "rehex_override.hpp" }
 --        files are updated. Make sure you delete or have updated any cache file
 --        that changes any data types used by this binding.
 
-datatype_cache_input_fileTable = { "./wxLua/bindings/wxwidgets/wxcore_datatypes.lua" }
+datatype_cache_input_fileTable = { wxlua_dir.."bindings/wxwidgets/wxcore_datatypes.lua" }
 
 -- ----------------------------------------------------------------------------
 -- The file to output the data type cache for later use with a binding that
@@ -140,8 +143,7 @@ datatypes_cache_output_filename = hook_cpp_namespace.."_datatypes.lua"
 
 -- ----------------------------------------------------------------------------
 -- Add additional data types here
-
-AllocDataType("off_t", "number", true)
+-- example: AllocDataType("wxArrayInt", "class",false)
 
 -- ============================================================================
 -- Generate comments into binding C++ code

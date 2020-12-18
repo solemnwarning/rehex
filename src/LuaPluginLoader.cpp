@@ -7,17 +7,10 @@
 #include <wx/event.h>
 #include <wx/filename.h>
 
-#include <wxlua/debugger/wxluadebugger_bind.h>
 #include <wxlua/wxbind/include/wxadv_bind.h>
 #include <wxlua/wxbind/include/wxaui_bind.h>
 #include <wxlua/wxbind/include/wxbase_bind.h>
 #include <wxlua/wxbind/include/wxbinddefs.h>
-#include <wxlua/wxbind/include/wxgl_bind.h>
-#include <wxlua/wxbind/include/wxhtml_bind.h>
-#include <wxlua/wxbind/include/wxmedia_bind.h>
-#include <wxlua/wxbind/include/wxxml_bind.h>
-#include <wxlua/wxbind/include/wxxrc_bind.h>
-#include <wxlua/wxbind/include/wxstc_bind.h>
 #include <wxlua/wxlua.h>
 
 #include "app.hpp"
@@ -32,8 +25,14 @@ static void load_lua_plugins()
 	wxDir dir("./");
 	wxString filename;
 	
-	WXLUA_IMPLEMENT_BIND_ALL
+	/* Register wxLua wxWidgets bindings. */
+	WXLUA_IMPLEMENT_BIND_WXLUA
+	WXLUA_IMPLEMENT_BIND_WXBASE
+	WXLUA_IMPLEMENT_BIND_WXCORE
+	WXLUA_IMPLEMENT_BIND_WXADV
+	WXLUA_IMPLEMENT_BIND_WXAUI
 	
+	/* Register wxLua REHex bindings. */
 	wxLuaBinding_rehex_init();
 	
 	if (dir.GetFirst(&filename, "*.lua", wxDIR_FILES))

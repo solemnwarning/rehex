@@ -14,6 +14,7 @@ BuildRequires: capstone-devel
 BuildRequires: gcc-c++
 BuildRequires: jansson-devel
 BuildRequires: lua
+BuildRequires: lua-devel
 BuildRequires: make
 BuildRequires: wxGTK3-devel
 BuildRequires: xorg-x11-server-Xvfb

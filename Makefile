@@ -14,10 +14,11 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-LUA       ?= lua
-WX_CONFIG ?= wx-config
-
-LUA_PKG ?= lua5.3
+LUA          ?= lua
+WX_CONFIG    ?= wx-config
+CAPSTONE_PKG ?= capstone
+JANSSON_PKG  ?= jansson
+LUA_PKG      ?= $(shell pkg-config --exists lua5.3 && echo lua5.3 || echo lua)
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
@@ -33,13 +34,19 @@ shell-or-die = $\
 WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
 WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
 
+CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
+CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
+
+JANSSON_CFLAGS ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --cflags)
+JANSSON_LIBS   ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --libs)
+
 LUA_CFLAGS ?= $(call shell-or-die,pkg-config $(LUA_PKG) --cflags)
 LUA_LIBS   ?= $(call shell-or-die,pkg-config $(LUA_PKG) --libs)
 
-CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ -IwxLua/modules/ $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ -IwxLua/modules/ $(WX_CXXFLAGS) $(LUA_CFLAGS) $(CXXFLAGS)
+CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ -IwxLua/modules/ $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ -IwxLua/modules/ $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
 
-LDLIBS := $(WX_LIBS) $(LUA_LIBS) -ljansson -lcapstone $(LDLIBS)
+LDLIBS := $(WX_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 ifeq ($(DEBUG),)
 	DEBUG=0

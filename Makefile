@@ -84,6 +84,12 @@ WXLUA_BINDINGS := wxLua/bindings/.done
 .PHONY: all
 all: $(EXE)
 
+# Stop Make from deleting intermediate files at-will. Some intermediates (e.g. resources) are used
+# by multiple targets (all and test) and so they should persist. Others are generated as a
+# side-effect of another target (wxLua bindings) so Make cannot properly track how to build them
+# when it needs to recreate them later.
+.SECONDARY:
+
 .PHONY: check
 check: tests/all-tests
 	./tests/all-tests
@@ -301,7 +307,7 @@ $(WXLUA_BINDINGS):
 	make -C wxLua/bindings/ -W wxlua_debugger -W wxluacan LUA=$(LUA)
 	touch $@
 
-src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.lua
+src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.lua $(EMBED_EXE)
 	$(EMBED_EXE) $< LUA_PLUGIN_PRELOAD src/lua-plugin-preload.c src/lua-plugin-preload.h
 
 %.o: %.c $(WXLUA_BINDINGS)

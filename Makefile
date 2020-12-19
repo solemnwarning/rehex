@@ -327,7 +327,7 @@ googletest/src/%.o: googletest/src/%.cc
 wxLua/%.cpp: $(WXLUA_BINDINGS)
 	@true
 
-include $(shell find .d/ -name '*.d' -type f)
+include $(shell test -d .d/ && find .d/ -name '*.d' -type f)
 
 prefix      ?= /usr/local
 exec_prefix ?= $(prefix)

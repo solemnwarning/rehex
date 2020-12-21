@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -14,11 +14,22 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+ICONUTIL ?= $(shell which iconutil > /dev/null && echo iconutil)
+PNG2ICNS ?= $(shell which png2icns > /dev/null && echo png2icns)
+
 EXTRA_APP_OBJS := \
 	res/document_new32.o \
 	res/document_open32.o \
 	res/document_save32.o \
 	res/document_save_as32.o
+
+# Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
+CAPSTONE_CFLAGS ?=
+CAPSTONE_LIBS   ?= -lcapstone
+JANSSON_CFLAGS  ?=
+JANSSON_LIBS    ?= -ljansson
+LUA_CFLAGS      ?=
+LUA_LIBS        ?= -llua
 
 all: REHex.app
 
@@ -52,7 +63,14 @@ $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
 	cp res/icon512.png  $(ICONSET)/icon_256x256@2x.png
 	cp res/icon512.png  $(ICONSET)/icon_512x512.png
 	cp res/icon1024.png $(ICONSET)/icon_512x512@2x.png
-	iconutil -c icns -o $@ $(ICONSET)
+	
+ifneq ($(ICONUTIL),)
+	$(ICONUTIL) -c icns -o $@ $(ICONSET)
+else ifneq ($(PNG2ICNS),)
+	$(PNG2ICNS) $@ $(filter-out %@2x.png,$(wildcard $(ICONSET)/*.png))
+else
+	$(error Neither iconutil nor png2icns found in PATH. Install one or set ICONUTIL/PNG2ICNS as necessary)
+endif
 
 REHex.dmg: REHex.app
 	rm -rf $(DMGTMP)

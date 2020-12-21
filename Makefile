@@ -14,7 +14,9 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-WX_CONFIG ?= wx-config
+WX_CONFIG    ?= wx-config
+CAPSTONE_PKG ?= capstone
+JANSSON_PKG  ?= jansson
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
@@ -30,10 +32,16 @@ shell-or-die = $\
 WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
 WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
 
-CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CFLAGS)
-CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(WX_CXXFLAGS) $(CXXFLAGS)
+CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
+CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
 
-LDLIBS := $(WX_LIBS) -ljansson -lcapstone $(LDLIBS)
+JANSSON_CFLAGS ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --cflags)
+JANSSON_LIBS   ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --libs)
+
+CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(CFLAGS)
+CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+
+LDLIBS := $(WX_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LDLIBS)
 
 ifeq ($(DEBUG),)
 	DEBUG=0

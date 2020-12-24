@@ -311,7 +311,7 @@ src/lua-bindings/rehex_bind.cpp src/lua-bindings/rehex_bind.h: src/lua-bindings/
 	touch -c src/lua-bindings/rehex_bind.h
 
 $(WXLUA_BINDINGS):
-	make -C wxLua/bindings/ -W wxlua_debugger -W wxluacan LUA=$(LUA)
+	$(MAKE) -C wxLua/bindings/ wxadv wxaui wxbase wxcore wxlua wxpropgrid LUA=$(LUA)
 	touch $@
 
 src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.lua $(EMBED_EXE)

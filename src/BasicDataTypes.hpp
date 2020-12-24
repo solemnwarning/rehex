@@ -93,6 +93,8 @@ namespace REHex
 				GenericDataRegion(offset, length),
 				doc(doc),
 				type_label(type_label),
+				offset_text_x(-1),
+				data_text_x(-1),
 				input_active(false),
 				input_pos(0)
 			{

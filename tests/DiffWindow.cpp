@@ -75,12 +75,7 @@ class DiffWindowTest: public ::testing::Test
 			main_doc_ctrl1 = new DocumentCtrl(&frame, doc1);
 			main_doc_ctrl2 = new DocumentCtrl(&frame, doc2);
 			
-			diff_window = new DiffWindow(NULL);
-		}
-		
-		~DiffWindowTest()
-		{
-			diff_window->Destroy();
+			diff_window = new DiffWindow(&frame);
 		}
 };
 

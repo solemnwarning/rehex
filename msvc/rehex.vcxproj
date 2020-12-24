@@ -197,6 +197,7 @@
     <ClCompile Include="..\src\decodepanel.cpp" />
     <ClCompile Include="..\src\DiffWindow.cpp" />
     <ClCompile Include="..\src\disassemble.cpp" />
+    <ClCompile Include="..\src\DisassemblyRegion.cpp" />
     <ClCompile Include="..\src\document.cpp" />
     <ClCompile Include="..\src\DocumentCtrl.cpp" />
     <ClCompile Include="..\src\EditCommentDialog.cpp" />

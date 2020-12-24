@@ -2415,7 +2415,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	ByteRangeSet ranges_matching_selection;
 	
-	const unsigned char *data_p;
+	const unsigned char *data_p = NULL;
 	size_t data_remain;
 	
 	try {

@@ -28,11 +28,11 @@ all: $(ALL_BINDINGS)
 #----------------------------------------------------------------------------
 # wxWidgets bindings
 
-wxadv:
+wxadv: wxcore
 	@echo Building wxAdv
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxadv_rules.lua\"" genwxbind.lua)
 
-wxaui:
+wxaui: wxcore
 	@echo Building wxAui
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxaui_rules.lua\"" genwxbind.lua)
 
@@ -40,71 +40,71 @@ wxbase:
 	@echo Building wxBase
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxbase_rules.lua\"" genwxbind.lua)
 
-wxcore:
+wxcore: wxbase
 	@echo Building wxCore
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxcore_rules.lua\"" genwxbind.lua)
 
-wxgl:
+wxgl: wxcore
 	@echo Building wxGL
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxgl_rules.lua\"" genwxbind.lua)
 
-wxhtml:
+wxhtml: wxcore
 	@echo Building wxHtml
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxhtml_rules.lua\"" genwxbind.lua)
 
-wxmedia:
+wxmedia: wxcore wxnet
 	@echo Building wxMedia
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxmedia_rules.lua\"" genwxbind.lua)
 
-wxnet:
+wxnet: wxcore
 	@echo Building wxNet
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxnet_rules.lua\"" genwxbind.lua)
 
-wxpropgrid:
+wxpropgrid: wxcore
 	@echo Building wxPropertyGrid
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxpropgrid_rules.lua\"" genwxbind.lua)
 
-wxrichtext:
+wxrichtext: wxcore
 	@echo Building wxRichText
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxrichtext_rules.lua\"" genwxbind.lua)
 
-wxstc:
+wxstc: wxcore
 	@echo Building wxStc
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxstc_rules.lua\"" genwxbind.lua)
 
-wxwebview:
+wxwebview: wxcore
 	@echo Building wxWebView
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxwebview_rules.lua\"" genwxbind.lua)
 
-wxxml:
+wxxml: wxbase
 	@echo Building wxXml
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxxml_rules.lua\"" genwxbind.lua)
 
-wxxrc:
+wxxrc: wxcore
 	@echo Building wxXrc
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxxrc_rules.lua\"" genwxbind.lua)
 
 # ---------------------------------------------------------------------------
 # wxLua bindings
 
-wxlua:
+wxlua: wxbase
 	@echo Building wxLua
 	@($(LUA) -e"rulesFilename=\"wxlua/wxlua_rules.lua\"" genwxbind.lua)
 
-wxlua_debugger:
+wxlua_debugger: wxcore
 	@echo Building wxLuaDebugger
 	@($(LUA) -e"rulesFilename=\"wxlua_debugger/wxluadebugger_rules.lua\"" genwxbind.lua)
 
 # ---------------------------------------------------------------------------
 
-wxluacan:
+wxluacan: wxdatatypes
 	@echo Building wxLuaCan
 	@(cd $(WXLUA_DIR)/apps/wxluacan && $(MAKE) LUA=$(LUA_ABS) genwxbind)
 
 # ---------------------------------------------------------------------------
 # Generate the datatypes file that declares all the known data types.
 
-wxdatatypes:
+wxdatatypes: wxadv wxaui wxbase wxcore wxgl wxhtml wxmedia wxnet wxrichtext wxstc wxxml wxxrc
 	@echo Building wx DataTypes
 	@($(LUA) -e"rulesFilename=\"wxwidgets/wxdatatypes_rules.lua\"" genwxbind.lua)
 

@@ -21,7 +21,7 @@ class SizeTestPanel: public REHex::ToolPanel
 		DECLARE_EVENT_TABLE()
 };
 
-BEGIN_EVENT_TABLE(SizeTestPanel, wxControl)
+BEGIN_EVENT_TABLE(SizeTestPanel, REHex::ToolPanel)
 	EVT_PAINT(SizeTestPanel::OnPaint)
 END_EVENT_TABLE()
 

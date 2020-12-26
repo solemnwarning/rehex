@@ -85,22 +85,22 @@ void SizeTestPanel::OnPaint(wxPaintEvent &event)
 
 static REHex::ToolPanel *short_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 0, 20, 0, 40, 10000, 80);
+	return new SizeTestPanel(parent, 0, 20, 0, 40, 10000, 300);
 }
 
 static REHex::ToolPanel *tall_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 0, 200, 0, 250, 10000, 300);
+	return new SizeTestPanel(parent, 0, 200, 0, 250, 10000, 400);
 }
 
 static REHex::ToolPanel *narrow_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 20, 0, 40, 0, 80, 10000);
+	return new SizeTestPanel(parent, 20, 0, 40, 0, 250, 10000);
 }
 
 static REHex::ToolPanel *wide_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 200, 0, 250, 0, 300, 10000);
+	return new SizeTestPanel(parent, 200, 0, 250, 0, 400, 10000);
 }
 
 static REHex::ToolPanelRegistration short_tpr("short_tp", "Short panel", REHex::ToolPanel::TPS_WIDE, &short_factory);

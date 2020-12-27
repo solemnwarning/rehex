@@ -123,6 +123,7 @@ namespace REHex
 			
 			bool vtools_adjust_pending;
 			bool vtools_adjust_force;
+			int vtools_initial_size;
 			
 			bool htools_adjust_pending;
 			bool htools_adjust_force;

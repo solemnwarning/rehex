@@ -71,6 +71,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc(SharedDocumentPointer::make()),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
+	vtools_initial_size(-1),
 	htools_adjust_pending(false),
 	htools_adjust_force(false)
 {
@@ -130,6 +131,7 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	doc(SharedDocumentPointer::make(filename)),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
+	vtools_initial_size(-1),
 	htools_adjust_pending(false),
 	htools_adjust_force(false)
 {
@@ -1140,7 +1142,14 @@ void REHex::Tab::vtools_adjust(bool force_resize)
 		
 		int vtp_cw = vt_current_page->GetSize().GetWidth();
 		
-		if(force_resize)
+		if(vtools_initial_size > 0)
+		{
+			/* Adjust sash to fit saved ToolPanel size. */
+			
+			int adj_width = vtools_initial_size - vtp_cw;
+			v_splitter->SetSashPosition(v_splitter->GetSashPosition() - adj_width);
+		}
+		else if(force_resize)
 		{
 			/* Adjust sash to fit ToolPanel best size. */
 			
@@ -1164,6 +1173,7 @@ void REHex::Tab::vtools_adjust(bool force_resize)
 	}
 	
 	vtools_adjust_force = false;
+	vtools_initial_size = -1;
 }
 
 void REHex::Tab::htools_adjust(bool force_resize)
@@ -1335,10 +1345,8 @@ void REHex::Tab::init_default_tools()
 {
 	wxConfig *config = wxGetApp().config;
 	
-	int size = 0;
-	config->Read("/default-view/vtools/width", &size, 0);
-	if (size != 0)
-		v_tools->SetSize(size, v_tools->GetSize().y);
+	vtools_initial_size = config->ReadLong("/default-view/vtools/width", -1);
+	
 	/* TODO: Load h_tools state. */
 	
 	for(unsigned int i = 0;; ++i)

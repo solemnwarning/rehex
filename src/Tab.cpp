@@ -196,7 +196,7 @@ bool REHex::Tab::tool_active(const std::string &name)
 	return tools.find(name) != tools.end();
 }
 
-void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *config, bool adjust)
+void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *config)
 {
 	if(tool_active(name))
 	{
@@ -219,11 +219,7 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 		tools.insert(std::make_pair(name, tool_window));
 		
 		xtools_fix_visibility(v_tools);
-		
-		if(adjust)
-		{
-			vtools_adjust_on_idle(false);
-		}
+		vtools_adjust_on_idle(false);
 	}
 	else if(tpr->shape == ToolPanel::TPS_WIDE)
 	{
@@ -238,11 +234,7 @@ void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *
 		tools.insert(std::make_pair(name, tool_window));
 		
 		xtools_fix_visibility(h_tools);
-		
-		if(adjust)
-		{
-			htools_adjust_on_idle(false);
-		}
+		htools_adjust_on_idle(false);
 	}
 }
 
@@ -1348,7 +1340,7 @@ void REHex::Tab::init_default_tools()
 			
 			if(ToolPanelRegistry::by_name(name) != NULL)
 			{
-				tool_create(name, selected, config, false);
+				tool_create(name, selected, config);
 			}
 			else{
 				/* TODO: Some kind of warning? */

@@ -58,7 +58,7 @@ namespace REHex
 			DocumentCtrl *doc_ctrl;
 			
 			bool tool_active(const std::string &name);
-			void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
+			void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL);
 			void tool_destroy(const std::string &name);
 			
 			void search_dialog_register(wxDialog *search_dialog);

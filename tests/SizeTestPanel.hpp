@@ -20,7 +20,7 @@
 
 #include <string>
 
-#include "ToolPanel.hpp"
+#include "../src/ToolPanel.hpp"
 
 class SizeTestPanel: public REHex::ToolPanel
 {

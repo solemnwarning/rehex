@@ -3449,18 +3449,7 @@ REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(of
 	
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	if(cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID)
-	{
-		unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
-		int line_x = hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group));
-		
-		return Rect(
-			line_x,                        /* x */
-			region_line,                   /* y */
-			doc_ctrl->hf_string_width(2),  /* w */
-			1);                            /* h */
-	}
-	else if(cursor_state == Document::CSTATE_ASCII)
+	if(cursor_state == Document::CSTATE_ASCII)
 	{
 		int byte_x = ascii_text_x + doc_ctrl->hf_string_width(line_off);
 		
@@ -3471,8 +3460,14 @@ REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(of
 			1);                         /* h */
 	}
 	else{
-		/* Unreachable. Return invalid rect. */
-		return Rect();
+		unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+		int line_x = hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group));
+		
+		return Rect(
+			line_x,                        /* x */
+			region_line,                   /* y */
+			doc_ctrl->hf_string_width(2),  /* w */
+			1);                            /* h */
 	}
 }
 

@@ -515,6 +515,7 @@ TEST(Tab, ComputeRegionsDataTypesNotFixedSizeMultiple)
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
 }
 
+#if 0
 static void run_wx(int run_for_ms)
 {
 	wxFrame frame(NULL, wxID_ANY, "Unit tests");
@@ -553,3 +554,4 @@ TEST(Tab, CreateVerticalToolPanel)
 	
 	EXPECT_EQ(tp->GetSize().GetWidth(), tp->GetBestSize().GetWidth()) << "Sizer position set for ToolPanel's best size";
 }
+#endif

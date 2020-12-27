@@ -215,7 +215,6 @@ TEST_OBJS := \
 	tests/SearchValue.o \
 	tests/SafeWindowPointer.o \
 	tests/SharedDocumentPointer.o \
-	tests/SizeTestPanel.o \
 	tests/StringPanel.o \
 	tests/Tab.o \
 	tests/util.o

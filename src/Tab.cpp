@@ -269,6 +269,18 @@ void REHex::Tab::tool_destroy(const std::string &name)
 	}
 }
 
+REHex::ToolPanel *REHex::Tab::tool_get(const std::string &name)
+{
+	auto t = tools.find(name);
+	if(t != tools.end())
+	{
+		return t->second;
+	}
+	else{
+		return NULL;
+	}
+}
+
 void REHex::Tab::search_dialog_register(wxDialog *search_dialog)
 {
 	search_dialogs.insert(search_dialog);

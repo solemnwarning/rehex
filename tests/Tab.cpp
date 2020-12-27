@@ -20,11 +20,16 @@
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <vector>
+#include <wx/frame.h>
+#include <wx/timer.h>
 
 #include "../src/BasicDataTypes.hpp"
 #include "../src/document.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 #include "../src/Tab.hpp"
+
+#define FRAME_WIDTH 800
+#define FRAME_HEIGHT 600
 
 using namespace REHex;
 
@@ -508,4 +513,43 @@ TEST(Tab, ComputeRegionsDataTypesNotFixedSizeMultiple)
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+static void run_wx(int run_for_ms)
+{
+	wxFrame frame(NULL, wxID_ANY, "Unit tests");
+	
+	wxTimer *timer = new wxTimer(&frame, wxID_ANY);
+	
+	frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+	{
+		wxTheApp->ExitMainLoop();
+	}, timer->GetId(), timer->GetId());
+	
+	timer->Start(run_for_ms, wxTIMER_ONE_SHOT);
+	
+	wxTheApp->OnRun();
+	
+	timer->Stop();
+}
+
+TEST(Tab, CreateVerticalToolPanel)
+{
+	wxFrame frame(NULL, wxID_ANY, "Unit tests", wxDefaultPosition, wxSize(FRAME_WIDTH, FRAME_HEIGHT));
+	
+	Tab *tab = new Tab(&frame);
+	
+	frame.PostSizeEvent();
+	frame.Show();
+	
+	run_wx(100);
+	
+	tab->tool_create("wide_tp", false);
+	ToolPanel *tp = tab->tool_get("wide_tp");
+	
+	run_wx(100);
+	
+	ASSERT_NE(tp, (ToolPanel*)(NULL)) << "ToolPanel was created";
+	
+	EXPECT_EQ(tp->GetSize().GetWidth(), tp->GetBestSize().GetWidth()) << "Sizer position set for ToolPanel's best size";
 }

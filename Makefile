@@ -153,13 +153,13 @@ APP_OBJS := \
 	src/Palette.o \
 	src/search.o \
 	src/SelectRangeDialog.o \
-	src/SizeTestPanel.o \
 	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
+	tests/SizeTestPanel.o \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS)
@@ -215,6 +215,7 @@ TEST_OBJS := \
 	tests/SearchValue.o \
 	tests/SafeWindowPointer.o \
 	tests/SharedDocumentPointer.o \
+	tests/SizeTestPanel.o \
 	tests/StringPanel.o \
 	tests/Tab.o \
 	tests/util.o

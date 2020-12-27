@@ -1,32 +1,29 @@
-#include "ToolPanel.hpp"
+/* Reverse Engineer's Hex Editor
+ * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 as published by
+ * the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
-class SizeTestPanel: public REHex::ToolPanel
-{
-	public:
-		SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height);
-		virtual wxSize DoGetBestClientSize() const override;
-		
-		virtual std::string name() const override { return "???"; }
-		
-		virtual void save_state(wxConfig *config) const override {}
-		virtual void load_state(wxConfig *config) override {}
-		virtual void update() override {}
-		
-	private:
-		int min_width, min_height;
-		int best_width, best_height;
-		int max_width, max_height;
-		
-		void OnPaint(wxPaintEvent &event);
-		DECLARE_EVENT_TABLE()
-};
+#include "SizeTestPanel.hpp"
 
 BEGIN_EVENT_TABLE(SizeTestPanel, REHex::ToolPanel)
 	EVT_PAINT(SizeTestPanel::OnPaint)
 END_EVENT_TABLE()
 
-SizeTestPanel::SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height):
+SizeTestPanel::SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height, const std::string &name_s):
 	ToolPanel(parent),
+	name_s(name_s),
 	min_width(min_width), min_height(min_height),
 	best_width(best_width), best_height(best_height),
 	max_width(max_width), max_height(max_height)
@@ -85,22 +82,22 @@ void SizeTestPanel::OnPaint(wxPaintEvent &event)
 
 static REHex::ToolPanel *short_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 0, 20, 0, 40, 10000, 300);
+	return new SizeTestPanel(parent, 0, 20, 0, 40, 10000, 300, "short_tp");
 }
 
 static REHex::ToolPanel *tall_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 0, 200, 0, 250, 10000, 400);
+	return new SizeTestPanel(parent, 0, 200, 0, 250, 10000, 400, "tall_tp");
 }
 
 static REHex::ToolPanel *narrow_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 20, 0, 40, 0, 250, 10000);
+	return new SizeTestPanel(parent, 20, 0, 40, 0, 250, 10000, "narrow_tp");
 }
 
 static REHex::ToolPanel *wide_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 200, 0, 250, 0, 400, 10000);
+	return new SizeTestPanel(parent, 200, 0, 250, 0, 400, 10000, "wide_tp");
 }
 
 static REHex::ToolPanelRegistration short_tpr("short_tp", "Short panel", REHex::ToolPanel::TPS_WIDE, &short_factory);

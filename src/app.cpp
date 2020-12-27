@@ -85,6 +85,10 @@ bool REHex::App::OnInit()
 	config->Read("/default-view/window-width", &windowSize.x, windowSize.x);
 	config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
 	REHex::MainWindow *window = new REHex::MainWindow(windowSize);
+	
+	bool maximise = config->ReadBool("/default-view/window-maximised", false);
+	window->Maximize(maximise);
+	
 	window->Show(true);
 	
 	if(argc > 1)

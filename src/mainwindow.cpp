@@ -960,7 +960,10 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	wxSize size = GetSize();
 	config->Write("window-width", size.x);
 	config->Write("window-height", size.y);
-
+	
+	bool maximised = IsMaximized();
+	config->Write("window-maximised", maximised);
+	
 	tab->save_view(config);
 }
 

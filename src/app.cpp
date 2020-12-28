@@ -82,12 +82,18 @@ bool REHex::App::OnInit()
 	}
 	
 	wxSize windowSize(740, 540);
+	
+	#ifndef __APPLE__
 	config->Read("/default-view/window-width", &windowSize.x, windowSize.x);
 	config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
+	#endif
+	
 	REHex::MainWindow *window = new REHex::MainWindow(windowSize);
 	
+	#ifndef __APPLE__
 	bool maximise = config->ReadBool("/default-view/window-maximised", false);
 	window->Maximize(maximise);
+	#endif
 	
 	window->Show(true);
 	

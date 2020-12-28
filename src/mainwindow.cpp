@@ -955,7 +955,8 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	// Clean out all previous settings
 	config->DeleteGroup("/default-view/");
 	config->SetPath("/default-view/");
-
+	
+	#ifndef __APPLE__
 	// Save our current window size
 	wxSize size = GetSize();
 	config->Write("window-width", size.x);
@@ -963,6 +964,7 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	
 	bool maximised = IsMaximized();
 	config->Write("window-maximised", maximised);
+	#endif
 	
 	tab->save_view(config);
 }

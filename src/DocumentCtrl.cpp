@@ -26,8 +26,6 @@
 #include <map>
 #include <stack>
 #include <string>
-#include <wx/window.h>
-#include <wx/caret.h>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
@@ -130,8 +128,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 		}
 	}
 	
-	int blink_time = wxCaret::GetBlinkTime();
-	redraw_cursor_timer.Start(blink_time, wxTIMER_CONTINUOUS);
+	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
 	
 	/* SetDoubleBuffered() isn't implemented on all platforms. */
 	#if defined(__WXMSW__) || defined(__WXGTK__)

@@ -159,6 +159,7 @@ APP_OBJS := \
 	src/ToolPanel.o \
 	src/util.o \
 	src/win32lib.o \
+	tests/SizeTestPanel.o \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS)

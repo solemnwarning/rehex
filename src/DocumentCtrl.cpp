@@ -965,34 +965,67 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 	
 	if(key == WXK_TAB && modifiers == wxMOD_NONE)
 	{
-		if(cursor_state != Document::CSTATE_ASCII)
+		GenericDataRegion *cur_region = data_region_by_offset(cursor_pos);
+		assert(cur_region != NULL);
+		
+		GenericDataRegion::ScreenArea valid_areas = cur_region->screen_areas_at_offset(cursor_pos, this);
+		assert((valid_areas & (GenericDataRegion::SA_HEX | GenericDataRegion::SA_ASCII | GenericDataRegion::SA_SPECIAL)) != 0);
+		
+		switch(cursor_state)
 		{
-			/* Hex view is focused, focus the ASCII view. */
-			_set_cursor_position(cursor_pos, Document::CSTATE_ASCII);
-		}
-		else{
-			/* ASCII view is focused, get wxWidgets to process this and focus the next
-			 * control in the window.
-			*/
-			
-			HandleAsNavigationKey(event);
+			case Document::CSTATE_HEX:
+			case Document::CSTATE_HEX_MID:
+				if((valid_areas & GenericDataRegion::SA_SPECIAL) != 0)
+				{
+					/* Focus "special" view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_SPECIAL);
+					break;
+				}
+				
+			case Document::CSTATE_SPECIAL:
+				if((valid_areas & GenericDataRegion::SA_ASCII) != 0)
+				{
+					/* Focus ASCII view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_ASCII);
+					break;
+				}
+				
+			default:
+				/* Let wxWidgets handle the event and focus the next control. */
+				HandleAsNavigationKey(event);
 		}
 		
 		return;
 	}
 	else if(key == WXK_TAB && modifiers == wxMOD_SHIFT)
 	{
-		if(cursor_state == Document::CSTATE_ASCII)
+		GenericDataRegion *cur_region = data_region_by_offset(cursor_pos);
+		assert(cur_region != NULL);
+		
+		GenericDataRegion::ScreenArea valid_areas = cur_region->screen_areas_at_offset(cursor_pos, this);
+		assert((valid_areas & (GenericDataRegion::SA_HEX | GenericDataRegion::SA_ASCII | GenericDataRegion::SA_SPECIAL)) != 0);
+		
+		switch(cursor_state)
 		{
-			/* ASCII view is focused, focus the hex view. */
-			_set_cursor_position(cursor_pos, Document::CSTATE_HEX);
-		}
-		else{
-			/* Hex view is focused, get wxWidgets to process this and focus the previous
-			 * control in the window.
-			*/
-			
-			HandleAsNavigationKey(event);
+			case Document::CSTATE_ASCII:
+				if((valid_areas & GenericDataRegion::SA_SPECIAL) != 0)
+				{
+					/* Focus "special" view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_SPECIAL);
+					break;
+				}
+				
+			case Document::CSTATE_SPECIAL:
+				if((valid_areas & GenericDataRegion::SA_HEX) != 0)
+				{
+					/* Focus hex view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_HEX);
+					break;
+				}
+				
+			default:
+				/* Let wxWidgets handle the event and focus the previous control. */
+				HandleAsNavigationKey(event);
 		}
 		
 		return;

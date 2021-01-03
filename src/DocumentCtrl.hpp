@@ -170,10 +170,10 @@ namespace REHex {
 					*/
 					enum ScreenArea
 					{
-						SA_NONE,     /**< No/Unknown area. */
-						SA_HEX,      /**< The hex (data) view. */
-						SA_ASCII,    /**< The ASCII (text) view. */
-						SA_SPECIAL,  /**< Region-specific data area. */
+						SA_NONE    = 0,  /**< No/Unknown area. */
+						SA_HEX     = 1,  /**< The hex (data) view. */
+						SA_ASCII   = 2,  /**< The ASCII (text) view. */
+						SA_SPECIAL = 4,  /**< Region-specific data area. */
 					};
 					
 					/**
@@ -247,6 +247,12 @@ namespace REHex {
 					 * @brief Calculate the on-screen bounding box of a byte in the region.
 					*/
 					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) = 0;
+					
+					/**
+					 * @brief Find which screen areas exist for the cursor to occupy at the given offset.
+					 * @return SA_XXX constants bitwise OR'd together.
+					*/
+					virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Process key presses while the cursor is in this region.
@@ -346,6 +352,7 @@ namespace REHex {
 					virtual off_t nth_row_nearest_column(int64_t row, int column) override;
 					
 					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
+					virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override;
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					

@@ -1088,6 +1088,26 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 	}
 }
 
+REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl)
+{
+	assert(offset >= d_offset);
+	assert(offset <= (d_offset + d_length));
+	
+	ScreenArea areas = SA_HEX;
+	
+	if(doc_ctrl->get_show_ascii())
+	{
+		areas = (ScreenArea)(areas | SA_ASCII);
+	}
+	
+	if(offset < unprocessed_offset())
+	{
+		areas = (ScreenArea)(areas | SA_SPECIAL);
+	}
+	
+	return areas;
+}
+
 wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 {
 	if(doc_ctrl.special_view_active())

@@ -146,6 +146,7 @@ namespace REHex
 			virtual off_t nth_row_nearest_column(int64_t row, int column) override;
 			
 			virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
+			virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override;
 			
 			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override;
 	};

@@ -51,11 +51,11 @@ void REHex::ByteRangeSet::clear_all()
 	ranges.clear();
 }
 
-bool REHex::ByteRangeSet::isset(off_t offset) const
+bool REHex::ByteRangeSet::isset(off_t offset, off_t length) const
 {
 	auto lb = std::lower_bound(ranges.begin(), ranges.end(), Range(offset, 0));
 	
-	if(lb != ranges.end() && lb->offset == offset)
+	if(lb != ranges.end() && lb->offset == offset && (lb->offset + lb->length) >= (offset + length))
 	{
 		return true;
 	}
@@ -63,7 +63,7 @@ bool REHex::ByteRangeSet::isset(off_t offset) const
 	{
 		--lb;
 		
-		if(lb->offset <= offset && (lb->offset + lb->length) > offset)
+		if(lb->offset <= offset && (lb->offset + lb->length) >= (offset + length))
 		{
 			return true;
 		}

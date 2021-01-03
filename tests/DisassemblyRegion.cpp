@@ -504,10 +504,17 @@ TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
 	/* Check the region is half-processed. */
 	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
 	
+	ByteRangeSet expect_dirty;
+	expect_dirty.set_range(0xE6FA, (0x125BE - (0xE6FA - 0x46F0)));
+	
+	ASSERT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges());
+	
 	char data[4] = { 0 };
 	doc->overwrite_data(0x46EC, data, 4);
 	
 	EXPECT_EQ(region->unprocessed_offset(), 0xE6FA) << "Region not affected by data overwrite before d_offset";
+	
+	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Region not affected by data overwrite before d_offset";
 }
 
 TEST(DisassemblyRegion, OverwriteDataAtStart)
@@ -530,6 +537,11 @@ TEST(DisassemblyRegion, OverwriteDataAtStart)
 	doc->overwrite_data(0x46EE, data, 4);
 	
 	EXPECT_EQ(region->unprocessed_offset(), 0x46F0) << "Processing reset by overwrite straddling d_offset";
+	
+	ByteRangeSet expect_dirty;
+	expect_dirty.set_range(0x46F0, 0x125BE);
+	
+	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Processing reset by overwrite straddling d_offset";
 }
 
 TEST(DisassemblyRegion, OverwriteDataInRegion)
@@ -552,6 +564,11 @@ TEST(DisassemblyRegion, OverwriteDataInRegion)
 	doc->overwrite_data(0xAAAA, data, 4);
 	
 	EXPECT_EQ(region->unprocessed_offset(), 0x96F5) << "Processing reset to InstructionRange where overwrite happened";
+	
+	ByteRangeSet expect_dirty;
+	expect_dirty.set_range(0x96F5, (0x125BE - (0x96F5 - 0x46F0)));
+	
+	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Processing reset to InstructionRange where overwrite happened";
 }
 
 TEST(DisassemblyRegion, OverwriteDataAtEnd)
@@ -578,6 +595,11 @@ TEST(DisassemblyRegion, OverwriteDataAtEnd)
 	doc->overwrite_data(0x16CAC, data, 4);
 	
 	EXPECT_EQ(region->unprocessed_offset(), 0x15EFA) << "Processing reset to InstructionRange where overwrite happened";
+	
+	ByteRangeSet expect_dirty;
+	expect_dirty.set_range(0x15EFA, (0x125BE - (0x15EFA - 0x46F0)));
+	
+	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Processing reset to InstructionRange where overwrite happened";
 }
 
 TEST(DisassemblyRegion, OverwriteDataAfterRegion)
@@ -600,10 +622,15 @@ TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 	/* Check the region is fully processed. */
 	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
 	
+	const ByteRangeSet EMPTY_SET;
+	ASSERT_EQ(region->get_dirty().get_ranges(), EMPTY_SET.get_ranges());
+	
 	char data[4] = { 0 };
 	doc->overwrite_data(0x16CAE, data, 4);
 	
 	EXPECT_EQ(region->unprocessed_offset(), 0x16CAE) << "Region not affected by overwriting data after it";
+	
+	EXPECT_EQ(region->get_dirty().get_ranges(), EMPTY_SET.get_ranges()) << "Region not affected by overwriting data after it";
 }
 
 TEST(DisassemblyRegion, CopyWholeInstructions)

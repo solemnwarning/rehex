@@ -134,9 +134,9 @@ namespace REHex
 			void clear_all();
 			
 			/**
-			 * @brief Check if a byte is set in the set.
+			 * @brief Check if a range is set in the set.
 			*/
-			bool isset(off_t offset) const;
+			bool isset(off_t offset, off_t length = 1) const;
 			
 			/**
 			 * @brief Get a reference to the internal std::set.

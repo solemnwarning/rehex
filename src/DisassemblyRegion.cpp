@@ -77,10 +77,17 @@ void REHex::DisassemblyRegion::OnDataOverwrite(OffsetLengthEvent &event)
 		auto p_erase_begin = processed_by_offset(intersection_offset);
 		#endif
 		
-		dirty.set_range(p_erase_begin->offset, (d_length - (intersection_offset - d_offset)));
+		if(p_erase_begin != processed.end())
+		{
+			assert(p_erase_begin->offset <= intersection_offset);
+			
+			dirty.set_range(p_erase_begin->offset, (d_length - (p_erase_begin->offset - d_offset)));
+			
+			processed.erase(p_erase_begin, processed.end());
+			instructions.clear();
+		}
 		
-		processed.erase(p_erase_begin, processed.end());
-		instructions.clear();
+		assert(dirty.isset(intersection_offset, (d_length - (intersection_offset - d_offset))));
 	}
 	
 	event.Skip();

@@ -159,6 +159,31 @@ void REHex::App::set_font_size_adjustment(int font_size_adjustment)
 	ProcessEvent(event);
 }
 
+std::vector<std::string> REHex::App::get_plugin_directories()
+{
+	std::vector<std::string> plugin_directories;
+	
+	plugin_directories.push_back("./plugins/");
+	
+	/* TODO: Sensible plugins paths
+	 *
+	 * Linux
+	 *   ~/.rehex/plugins/ OR ${XDG_DATA_HOME}/rehex/plugins/ ?
+	 *   <libdir>/rehex/
+	 *
+	 * Windows
+	 *   <exe dir>/Plugins/
+	 *   <Local Settings>/Application Data/REHex/Plugins/
+	 *
+	 * Mac OS
+	 *   <Bundle>/Contents/PlugIns/
+	 *
+	 * Also want plugins relative to binary when doing dev on Linux...
+	*/
+	
+	return plugin_directories;
+}
+
 std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;
 
 void REHex::App::register_setup_hook(SetupPhase phase, const SetupHookFunction *func)

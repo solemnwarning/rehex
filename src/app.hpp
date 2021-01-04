@@ -21,6 +21,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <vector>
 #include <wx/config.h>
 #include <wx/filehistory.h>
 #include <wx/wx.h>
@@ -37,6 +38,8 @@ namespace REHex {
 			
 			int get_font_size_adjustment() const;
 			void set_font_size_adjustment(int font_size_adjustment);
+			
+			std::vector<std::string> get_plugin_directories();
 			
 			/**
 			 * @brief App setup phases, in order of execution.

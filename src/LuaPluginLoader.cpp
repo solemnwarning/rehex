@@ -61,9 +61,6 @@ void REHex::LuaPluginLoader::load_all_plugins()
 		fprintf(stderr, "wxEVT_LUA_PRINT: %s\n", event.GetString().mb_str().data());
 	});
 	
-	wxDir dir("./");
-	wxString filename;
-	
 	/* Register wxLua wxWidgets bindings. */
 	WXLUA_IMPLEMENT_BIND_WXLUA
 	WXLUA_IMPLEMENT_BIND_WXBASE
@@ -74,20 +71,28 @@ void REHex::LuaPluginLoader::load_all_plugins()
 	/* Register wxLua REHex bindings. */
 	wxLuaBinding_rehex_init();
 	
-	if (dir.GetFirst(&filename, "*.lua", wxDIR_FILES))
+	std::vector<std::string> plugin_directories = wxGetApp().get_plugin_directories();
+	
+	for(auto pd = plugin_directories.begin(); pd != plugin_directories.end(); ++pd)
 	{
-		do
+		wxDir dir(*pd);
+		wxString filename;
+		
+		if (dir.GetFirst(&filename, "*.lua", wxDIR_FILES))
 		{
-			wxFileName file_path(dir.GetName(), filename);
-			
-			try {
-				loaded_plugins.push_back(load_plugin(file_path.GetFullPath().ToStdString()));
-			}
-			catch(const std::exception &e)
+			do
 			{
-				fprintf(stderr, "====\nFailed to load plugin %s\n\n%s\n====\n", filename.mb_str().data(), e.what());
-			}
-		} while (dir.GetNext(&filename));
+				wxFileName file_path(dir.GetName(), filename);
+				
+				try {
+					loaded_plugins.push_back(load_plugin(file_path.GetFullPath().ToStdString()));
+				}
+				catch(const std::exception &e)
+				{
+					fprintf(stderr, "====\nFailed to load plugin %s\n\n%s\n====\n", filename.mb_str().data(), e.what());
+				}
+			} while (dir.GetNext(&filename));
+		}
 	}
 }
 

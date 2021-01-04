@@ -32,6 +32,8 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	call_setup_hooks(SetupPhase::EARLY);
+	
 	#ifdef _WIN32
 	/* Needed for shell API calls. */
 	CoInitialize(NULL);
@@ -81,6 +83,8 @@ bool REHex::App::OnInit()
 		active_palette = Palette::create_system_palette();
 	}
 	
+	call_setup_hooks(SetupPhase::READY);
+	
 	wxSize windowSize(740, 540);
 	
 	#ifndef __APPLE__
@@ -107,6 +111,8 @@ bool REHex::App::OnInit()
 	else{
 		window->new_file();
 	}
+	
+	call_setup_hooks(SetupPhase::DONE);
 	
 	return true;
 }
@@ -151,4 +157,61 @@ void REHex::App::set_font_size_adjustment(int font_size_adjustment)
 	
 	FontSizeAdjustmentEvent event(font_size_adjustment);
 	ProcessEvent(event);
+}
+
+std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;
+
+void REHex::App::register_setup_hook(SetupPhase phase, const SetupHookFunction *func)
+{
+	if(setup_hooks == NULL)
+	{
+		setup_hooks = new std::multimap<SetupPhase, const SetupHookFunction*>;
+	}
+	
+	setup_hooks->insert(std::make_pair(phase, func));
+}
+
+void REHex::App::unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func)
+{
+	auto i = std::find_if(
+		setup_hooks->begin(), setup_hooks->end(),
+		[&](const std::pair<SetupPhase, const SetupHookFunction*> &elem) { return elem.first == phase && elem.second == func; });
+	
+	setup_hooks->erase(i);
+	
+	if(setup_hooks->empty())
+	{
+		delete setup_hooks;
+		setup_hooks = NULL;
+	}
+}
+
+void REHex::App::call_setup_hooks(SetupPhase phase)
+{
+	if(setup_hooks == NULL)
+	{
+		/* No hooks registered. */
+		return;
+	}
+	
+	for(auto i = setup_hooks->begin(); i != setup_hooks->end(); ++i)
+	{
+		if(i->first == phase)
+		{
+			const SetupHookFunction &func = *(i->second);
+			func();
+		}
+	}
+}
+
+REHex::App::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):
+	phase(phase),
+	func(func)
+{
+	App::register_setup_hook(phase, &(this->func));
+}
+
+REHex::App::SetupHookRegistration::~SetupHookRegistration()
+{
+	App::unregister_setup_hook(phase, &func);
 }

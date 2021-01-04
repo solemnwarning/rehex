@@ -18,8 +18,10 @@
 #ifndef REHEX_DISASSEMBLE_HPP
 #define REHEX_DISASSEMBLE_HPP
 
+#include <capstone/capstone.h>
 #include <map>
 #include <string>
+#include <utility>
 #include <wx/choice.h>
 #include <wx/panel.h>
 #include <wx/wx.h>

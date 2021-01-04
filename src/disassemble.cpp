@@ -16,10 +16,19 @@
 */
 
 #include "platform.hpp"
+
+#include <algorithm>
+#include <iterator>
+#include <list>
+#include <numeric>
 #include <string.h>
+#include <tuple>
 #include <vector>
 
+#include "app.hpp"
+#include "DataType.hpp"
 #include "disassemble.hpp"
+#include "DisassemblyRegion.hpp"
 #include "Events.hpp"
 #include <capstone/capstone.h>
 
@@ -101,9 +110,9 @@ static const CSArchitecture known_arch_list[] = {
 
 /* List of all supported architectures */
 static std::vector<CSArchitecture> arch_list;
+static std::list<REHex::DataTypeRegistration> disasm_dtrs;
 static const char *DEFAULT_ARCH = "x86_64";
 
-static std::once_flag g_Initialize_disassembler;
 static void Initialize_disassembler()
 {
 	for(const auto& desc : known_arch_list)
@@ -112,6 +121,14 @@ static void Initialize_disassembler()
 		if(cs_support(desc.arch))
 		{
 			arch_list.push_back(desc);
+			
+			disasm_dtrs.emplace_back(
+				(std::string("code:") + desc.triple),
+				(std::string("Machine code (") + desc.label + ")"),
+				[desc](REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
+				{
+					return new REHex::DisassemblyRegion(doc, offset, length, desc.arch, desc.mode);
+				});
 		}
 		else
 		{
@@ -120,12 +137,15 @@ static void Initialize_disassembler()
 	}
 }
 
+static REHex::App::SetupHookRegistration Initialize_disassembler_hook(
+	REHex::App::SetupPhase::READY,
+	&Initialize_disassembler);
+
 REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent), document(document), document_ctrl(document_ctrl), disassembler(0)
 {
 	arch = new wxChoice(this, wxID_ANY);
 	
-	std::call_once(g_Initialize_disassembler, Initialize_disassembler);
 	for(int i = 0; i < (int)arch_list.size(); ++i)
 	{
 		arch->Append(arch_list[i].label);

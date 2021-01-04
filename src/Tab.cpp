@@ -541,7 +541,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	if(cursor_state != Document::CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
+	if(doc_ctrl->hex_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
 	{
 		unsigned char nibble = REHex::parse_ascii_nibble(key);
 		
@@ -588,7 +588,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		
 		return;
 	}
-	else if(cursor_state == Document::CSTATE_ASCII && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
+	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
 	{
 		unsigned char byte = key;
 		

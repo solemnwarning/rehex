@@ -143,6 +143,7 @@ APP_OBJS := \
 	src/decodepanel.o \
 	src/DiffWindow.o \
 	src/disassemble.o \
+	src/DisassemblyRegion.o \
 	src/document.o \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
@@ -187,6 +188,7 @@ TEST_OBJS := \
 	src/CommentTree.o \
 	src/DataType.o \
 	src/DiffWindow.o \
+	src/DisassemblyRegion.o \
 	src/document.o \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
@@ -205,6 +207,7 @@ TEST_OBJS := \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/DiffWindow.o \
+	tests/DisassemblyRegion.o \
 	tests/Document.o \
 	tests/DocumentCtrl.o \
 	tests/main.o \

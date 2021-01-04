@@ -487,6 +487,17 @@ namespace REHex
 				}
 			}
 			
+			virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override
+			{
+				assert(offset >= d_offset);
+				assert(offset <= (d_offset + d_length));
+				
+				return SA_HEX; /* We currently don't make use of the SA_SPECIAL
+				                * screen area for our numeric values and
+				                * selectively render them in the hex area instead.
+				               */
+			}
+			
 			virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event) override
 			{
 				int key = event.GetKeyCode();

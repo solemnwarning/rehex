@@ -401,8 +401,10 @@ unsigned int REHex::DisassemblyRegion::check()
 	new_ir.y_lines              = 0;
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
-	while(code_ < (data.data() + process_len) && cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	while(code_ < (data.data() + process_len))
 	{
+		disasm_instruction(&code_, &code_size, &address, insn);
+		
 		/* Instruction operands are aligned to tab boundaries using spaces. */
 		
 		const size_t OP_ALIGN = 8;
@@ -1315,8 +1317,10 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	cs_insn* insn = cs_malloc(disassembler);
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
-	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	while(code_ < (ir_data.data() + ir_data.size()))
 	{
+		disasm_instruction(&code_, &code_size, &address, insn);
+		
 		Instruction inst;
 		
 		/* Align instruction operands to tab boundaries using spaces. */
@@ -1385,4 +1389,35 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	return std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator>(
 		ir_first_i.first,
 		std::next(ir_first_i.second, line_within_ir));
+}
+
+void REHex::DisassemblyRegion::disasm_instruction(const uint8_t **code, size_t *size, uint64_t *address, cs_insn *insn)
+{
+	assert(*size > 0);
+	
+	/* Setting the CS_OPT_SKIPDATA option makes Capstone insert .byte "instructions" into the
+	 * disassembly where an invalid instruction is encountered, but under some situations it
+	 * won't do that (e.g. sequences of trailing bytes that are shorter than the fixed
+	 * instruction length on ARM), in which case we never finish disassembly. So we generate
+	 * our own .byte instructions where Capstone chooses not to.
+	*/
+	
+	bool valid_instr = cs_disasm_iter(disassembler, code, size, address, insn);
+	if(!valid_instr)
+	{
+		insn->id      = 0;
+		insn->address = *address;
+		insn->size    = 1;
+		insn->detail  = NULL;
+		
+		assert(sizeof(insn->bytes) >= insn->size);
+		memcpy(insn->bytes, *code, insn->size);
+		
+		snprintf(insn->mnemonic, sizeof(insn->mnemonic), ".byte");
+		snprintf(insn->op_str,   sizeof(insn->op_str),   "0x%02x", (unsigned)(**code));
+		
+		*code    += insn->size;
+		*size    -= insn->size;
+		*address += insn->size;
+	}
 }

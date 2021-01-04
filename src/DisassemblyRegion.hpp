@@ -75,6 +75,8 @@ namespace REHex
 			off_t longest_instruction;
 			size_t longest_disasm;
 			
+			void disasm_instruction(const uint8_t **code, size_t *size, uint64_t *address, cs_insn *insn);
+			
 			void OnDataOverwrite(OffsetLengthEvent &event);
 			
 		public:

@@ -34,20 +34,25 @@ struct Cleanup
 	~Cleanup()
 	{
 		delete REHex::active_palette;
+		delete wxGetApp().config;
 	}
 };
 
 int main(int argc, char **argv)
 {
-	wxApp::SetInstance(new REHex::App());
+	REHex::App *app = new REHex::App();
+	
+	wxApp::SetInstance(app);
 	wxInitializer wxinit;
+	
+	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	
 	wxImage::AddHandler(new wxPNGHandler);
 	REHex::ArtProvider::init();
 	
 	REHex::active_palette = REHex::Palette::create_system_palette();
 	Cleanup cleanup;
-
+	
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 }

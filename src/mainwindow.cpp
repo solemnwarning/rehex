@@ -166,8 +166,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_CLEAN,      REHex::MainWindow::OnBecameClean)
 END_EVENT_TABLE()
 
-REHex::MainWindow::MainWindow():
-	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
+REHex::MainWindow::MainWindow(const wxSize& size):
+	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, size),
 	menu_bar(NULL),
 	file_menu(NULL),
 	edit_menu(NULL),
@@ -1024,6 +1024,25 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	
 	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
+	
+	// Save the active theme
+	config->SetPath("/");
+	config->Write("theme", wxString(active_palette->get_name()));
+	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
+
+	// Clean out all previous settings
+	config->DeleteGroup("/default-view/");
+	config->SetPath("/default-view/");
+	
+	#ifndef __APPLE__
+	// Save our current window size
+	wxSize size = GetSize();
+	config->Write("window-width", size.x);
+	config->Write("window-height", size.y);
+	
+	bool maximised = IsMaximized();
+	config->Write("window-maximised", maximised);
+	#endif
 	
 	tab->save_view(config);
 }

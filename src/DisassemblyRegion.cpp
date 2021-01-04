@@ -77,10 +77,17 @@ void REHex::DisassemblyRegion::OnDataOverwrite(OffsetLengthEvent &event)
 		auto p_erase_begin = processed_by_offset(intersection_offset);
 		#endif
 		
-		dirty.set_range(p_erase_begin->offset, (d_length - (intersection_offset - d_offset)));
+		if(p_erase_begin != processed.end())
+		{
+			assert(p_erase_begin->offset <= intersection_offset);
+			
+			dirty.set_range(p_erase_begin->offset, (d_length - (p_erase_begin->offset - d_offset)));
+			
+			processed.erase(p_erase_begin, processed.end());
+			instructions.clear();
+		}
 		
-		processed.erase(p_erase_begin, processed.end());
-		instructions.clear();
+		assert(dirty.isset(intersection_offset, (d_length - (intersection_offset - d_offset))));
 	}
 	
 	event.Skip();
@@ -394,8 +401,10 @@ unsigned int REHex::DisassemblyRegion::check()
 	new_ir.y_lines              = 0;
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
-	while(code_ < (data.data() + process_len) && cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	while(code_ < (data.data() + process_len))
 	{
+		disasm_instruction(&code_, &code_size, &address, insn);
+		
 		/* Instruction operands are aligned to tab boundaries using spaces. */
 		
 		const size_t OP_ALIGN = 8;
@@ -1088,6 +1097,26 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 	}
 }
 
+REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl)
+{
+	assert(offset >= d_offset);
+	assert(offset <= (d_offset + d_length));
+	
+	ScreenArea areas = SA_HEX;
+	
+	if(doc_ctrl->get_show_ascii())
+	{
+		areas = (ScreenArea)(areas | SA_ASCII);
+	}
+	
+	if(offset < unprocessed_offset())
+	{
+		areas = (ScreenArea)(areas | SA_SPECIAL);
+	}
+	
+	return areas;
+}
+
 wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 {
 	if(doc_ctrl.special_view_active())
@@ -1288,8 +1317,10 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	cs_insn* insn = cs_malloc(disassembler);
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
-	while(cs_disasm_iter(disassembler, &code_, &code_size, &address, insn))
+	while(code_ < (ir_data.data() + ir_data.size()))
 	{
+		disasm_instruction(&code_, &code_size, &address, insn);
+		
 		Instruction inst;
 		
 		/* Align instruction operands to tab boundaries using spaces. */
@@ -1358,4 +1389,35 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	return std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator>(
 		ir_first_i.first,
 		std::next(ir_first_i.second, line_within_ir));
+}
+
+void REHex::DisassemblyRegion::disasm_instruction(const uint8_t **code, size_t *size, uint64_t *address, cs_insn *insn)
+{
+	assert(*size > 0);
+	
+	/* Setting the CS_OPT_SKIPDATA option makes Capstone insert .byte "instructions" into the
+	 * disassembly where an invalid instruction is encountered, but under some situations it
+	 * won't do that (e.g. sequences of trailing bytes that are shorter than the fixed
+	 * instruction length on ARM), in which case we never finish disassembly. So we generate
+	 * our own .byte instructions where Capstone chooses not to.
+	*/
+	
+	bool valid_instr = cs_disasm_iter(disassembler, code, size, address, insn);
+	if(!valid_instr)
+	{
+		insn->id      = 0;
+		insn->address = *address;
+		insn->size    = 1;
+		insn->detail  = NULL;
+		
+		assert(sizeof(insn->bytes) >= insn->size);
+		memcpy(insn->bytes, *code, insn->size);
+		
+		snprintf(insn->mnemonic, sizeof(insn->mnemonic), ".byte");
+		snprintf(insn->op_str,   sizeof(insn->op_str),   "0x%02x", (unsigned)(**code));
+		
+		*code    += insn->size;
+		*size    -= insn->size;
+		*address += insn->size;
+	}
 }

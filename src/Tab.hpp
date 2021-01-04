@@ -58,8 +58,9 @@ namespace REHex
 			DocumentCtrl *doc_ctrl;
 			
 			bool tool_active(const std::string &name);
-			void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
+			void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL);
 			void tool_destroy(const std::string &name);
+			ToolPanel *tool_get(const std::string &name);
 			
 			void search_dialog_register(wxDialog *search_dialog);
 			
@@ -120,11 +121,18 @@ namespace REHex
 				ProcessWindowEvent(event_copy);
 			}
 			
-			void vtools_adjust();
-			void htools_adjust();
-			void vtools_adjust_on_idle();
+			bool vtools_adjust_pending;
+			bool vtools_adjust_force;
+			int vtools_initial_size;
+			
+			bool htools_adjust_pending;
+			bool htools_adjust_force;
+			
+			void vtools_adjust(bool force_resize = false);
+			void htools_adjust(bool force_resize = false);
+			void vtools_adjust_on_idle(bool force_resize);
 			void vtools_adjust_now_idle(wxIdleEvent &event);
-			void htools_adjust_on_idle();
+			void htools_adjust_on_idle(bool force_resize);
 			void htools_adjust_now_idle(wxIdleEvent &event);
 			void xtools_fix_visibility(wxNotebook *notebook);
 			

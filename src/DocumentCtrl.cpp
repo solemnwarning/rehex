@@ -304,6 +304,34 @@ void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorSt
 		}
 	}
 	
+	/* Clamp cursor state to states valid at the new position. */
+	
+	GenericDataRegion *region = data_region_by_offset(position);
+	assert(region != NULL);
+	
+	GenericDataRegion::ScreenArea valid_areas = region->screen_areas_at_offset(position, this);
+	assert((valid_areas & (GenericDataRegion::SA_HEX | GenericDataRegion::SA_ASCII | GenericDataRegion::SA_SPECIAL)) != 0);
+	
+	if(((cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID) && (valid_areas & GenericDataRegion::SA_HEX) == 0)
+		|| (cursor_state == Document::CSTATE_ASCII && (valid_areas & GenericDataRegion::SA_ASCII) == 0)
+		|| (cursor_state == Document::CSTATE_SPECIAL && (valid_areas & GenericDataRegion::SA_SPECIAL) == 0))
+	{
+		/* Requested cursor state is not valid. Pick something that is. */
+		
+		if((valid_areas & GenericDataRegion::SA_HEX) != 0)
+		{
+			cursor_state = Document::CSTATE_HEX;
+		}
+		else if((valid_areas & GenericDataRegion::SA_ASCII) != 0)
+		{
+			cursor_state = Document::CSTATE_ASCII;
+		}
+		else if((valid_areas & GenericDataRegion::SA_SPECIAL) != 0)
+		{
+			cursor_state = Document::CSTATE_SPECIAL;
+		}
+	}
+	
 	/* Blink cursor to visibility and reset timer */
 	cursor_visible = true;
 	redraw_cursor_timer.Start();
@@ -324,9 +352,12 @@ void REHex::DocumentCtrl::_set_cursor_position(off_t position, REHex::Document::
 	
 	set_cursor_position(position, cursor_state);
 	
-	if(old_cursor_pos != cpos_off || old_cursor_state != cursor_state)
+	off_t new_cursor_pos                   = get_cursor_position();
+	Document::CursorState new_cursor_state = get_cursor_state();
+	
+	if(old_cursor_pos != new_cursor_pos || old_cursor_state != new_cursor_state)
 	{
-		CursorUpdateEvent cursor_update_event(this, cpos_off, cursor_state);
+		CursorUpdateEvent cursor_update_event(this, new_cursor_pos, new_cursor_state);
 		ProcessWindowEvent(cursor_update_event);
 	}
 }
@@ -934,34 +965,67 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 	
 	if(key == WXK_TAB && modifiers == wxMOD_NONE)
 	{
-		if(cursor_state != Document::CSTATE_ASCII)
+		GenericDataRegion *cur_region = data_region_by_offset(cursor_pos);
+		assert(cur_region != NULL);
+		
+		GenericDataRegion::ScreenArea valid_areas = cur_region->screen_areas_at_offset(cursor_pos, this);
+		assert((valid_areas & (GenericDataRegion::SA_HEX | GenericDataRegion::SA_ASCII | GenericDataRegion::SA_SPECIAL)) != 0);
+		
+		switch(cursor_state)
 		{
-			/* Hex view is focused, focus the ASCII view. */
-			_set_cursor_position(cursor_pos, Document::CSTATE_ASCII);
-		}
-		else{
-			/* ASCII view is focused, get wxWidgets to process this and focus the next
-			 * control in the window.
-			*/
-			
-			HandleAsNavigationKey(event);
+			case Document::CSTATE_HEX:
+			case Document::CSTATE_HEX_MID:
+				if((valid_areas & GenericDataRegion::SA_SPECIAL) != 0)
+				{
+					/* Focus "special" view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_SPECIAL);
+					break;
+				}
+				
+			case Document::CSTATE_SPECIAL:
+				if((valid_areas & GenericDataRegion::SA_ASCII) != 0)
+				{
+					/* Focus ASCII view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_ASCII);
+					break;
+				}
+				
+			default:
+				/* Let wxWidgets handle the event and focus the next control. */
+				HandleAsNavigationKey(event);
 		}
 		
 		return;
 	}
 	else if(key == WXK_TAB && modifiers == wxMOD_SHIFT)
 	{
-		if(cursor_state == Document::CSTATE_ASCII)
+		GenericDataRegion *cur_region = data_region_by_offset(cursor_pos);
+		assert(cur_region != NULL);
+		
+		GenericDataRegion::ScreenArea valid_areas = cur_region->screen_areas_at_offset(cursor_pos, this);
+		assert((valid_areas & (GenericDataRegion::SA_HEX | GenericDataRegion::SA_ASCII | GenericDataRegion::SA_SPECIAL)) != 0);
+		
+		switch(cursor_state)
 		{
-			/* ASCII view is focused, focus the hex view. */
-			_set_cursor_position(cursor_pos, Document::CSTATE_HEX);
-		}
-		else{
-			/* Hex view is focused, get wxWidgets to process this and focus the previous
-			 * control in the window.
-			*/
-			
-			HandleAsNavigationKey(event);
+			case Document::CSTATE_ASCII:
+				if((valid_areas & GenericDataRegion::SA_SPECIAL) != 0)
+				{
+					/* Focus "special" view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_SPECIAL);
+					break;
+				}
+				
+			case Document::CSTATE_SPECIAL:
+				if((valid_areas & GenericDataRegion::SA_HEX) != 0)
+				{
+					/* Focus hex view. */
+					_set_cursor_position(cursor_pos, Document::CSTATE_HEX);
+					break;
+				}
+				
+			default:
+				/* Let wxWidgets handle the event and focus the previous control. */
+				HandleAsNavigationKey(event);
 		}
 		
 		return;
@@ -1737,6 +1801,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 				virtual off_t last_row_nearest_column(int column) override { abort(); }
 				virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
 				virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
 				
 				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override { abort(); }
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override { abort(); }
@@ -3449,18 +3514,7 @@ REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(of
 	
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	if(cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID)
-	{
-		unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
-		int line_x = hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group));
-		
-		return Rect(
-			line_x,                        /* x */
-			region_line,                   /* y */
-			doc_ctrl->hf_string_width(2),  /* w */
-			1);                            /* h */
-	}
-	else if(cursor_state == Document::CSTATE_ASCII)
+	if(cursor_state == Document::CSTATE_ASCII)
 	{
 		int byte_x = ascii_text_x + doc_ctrl->hf_string_width(line_off);
 		
@@ -3471,8 +3525,28 @@ REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(of
 			1);                         /* h */
 	}
 	else{
-		/* Unreachable. Return invalid rect. */
-		return Rect();
+		unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
+		int line_x = hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group));
+		
+		return Rect(
+			line_x,                        /* x */
+			region_line,                   /* y */
+			doc_ctrl->hf_string_width(2),  /* w */
+			1);                            /* h */
+	}
+}
+
+REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegion::screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl)
+{
+	assert(offset >= d_offset);
+	assert(offset <= (d_offset + d_length));
+	
+	if(doc_ctrl->get_show_ascii())
+	{
+		return (ScreenArea)(SA_HEX | SA_ASCII);
+	}
+	else{
+		return SA_HEX;
 	}
 }
 

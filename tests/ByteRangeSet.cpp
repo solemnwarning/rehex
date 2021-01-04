@@ -686,6 +686,72 @@ TEST(ByteRangeSet, IsSetBetweenRanges)
 	EXPECT_FALSE(brs.isset(29));
 }
 
+TEST(ByteRangeSet, IsSetOverlappingStartOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 10);
+	brs.set_range(30, 10);
+	
+	EXPECT_FALSE(brs.isset(9, 2));
+	EXPECT_FALSE(brs.isset(29, 2));
+}
+
+TEST(ByteRangeSet, IsSetRangeAtStartOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 10);
+	brs.set_range(30, 10);
+	
+	EXPECT_TRUE(brs.isset(10, 2));
+	EXPECT_TRUE(brs.isset(30, 2));
+}
+
+TEST(ByteRangeSet, IsSetRangeInRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 10);
+	brs.set_range(30, 10);
+	
+	EXPECT_TRUE(brs.isset(12, 5));
+	EXPECT_TRUE(brs.isset(34, 4));
+}
+
+TEST(ByteRangeSet, IsSetRangeAtEndOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 10);
+	brs.set_range(30, 10);
+	
+	EXPECT_TRUE(brs.isset(18, 2));
+	EXPECT_TRUE(brs.isset(38, 2));
+}
+
+TEST(ByteRangeSet, IsSetOverlappingEndOfRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 10);
+	brs.set_range(30, 10);
+	
+	EXPECT_FALSE(brs.isset(19, 2));
+	EXPECT_FALSE(brs.isset(39, 2));
+}
+
+TEST(ByteRangeSet, IsSetRangeEncompassingRange)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 10);
+	brs.set_range(30, 10);
+	
+	EXPECT_FALSE(brs.isset(5, 20));
+	EXPECT_FALSE(brs.isset(25, 20));
+}
+
 TEST(ByteRangeSet, IsSetNoRanges)
 {
 	ByteRangeSet brs;

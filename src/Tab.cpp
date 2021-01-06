@@ -619,7 +619,8 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, (selection_off - 1), Document::CSTATE_GOTO, "delete selection");
+				off_t new_cursor_pos = std::max<off_t>(0, selection_off - 1);
+				doc->erase_data(selection_off, selection_length, new_cursor_pos, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
 			else if((cursor_pos + 1) < doc->buffer_length())

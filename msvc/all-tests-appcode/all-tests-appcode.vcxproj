@@ -172,6 +172,7 @@
     <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\src\CommentTree.cpp" />
     <ClCompile Include="..\..\src\DiffWindow.cpp" />
+    <ClCompile Include="..\..\src\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\src\document.cpp" />
     <ClCompile Include="..\..\src\DocumentCtrl.cpp" />
     <ClCompile Include="..\..\src\EditCommentDialog.cpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="..\..\src\ByteRangeSet.hpp" />
     <ClInclude Include="..\..\src\CommentTree.hpp" />
     <ClInclude Include="..\..\src\DiffWindow.hpp" />
+    <ClInclude Include="..\..\src\DisassemblyRegion.hpp" />
     <ClInclude Include="..\..\src\document.hpp" />
     <ClInclude Include="..\..\src\DocumentCtrl.hpp" />
     <ClInclude Include="..\..\src\EditCommentDialog.hpp" />

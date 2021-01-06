@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,6 +18,8 @@
 #ifndef REHEX_APP_HPP
 #define REHEX_APP_HPP
 
+#include "ConsoleBuffer.hpp"
+
 #include <functional>
 #include <map>
 #include <string>
@@ -31,6 +33,8 @@ namespace REHex {
 		public:
 			wxConfig *config;
 			wxFileHistory *recent_files;
+			
+			ConsoleBuffer *console;
 			
 			const std::string &get_last_directory();
 			void set_last_directory(const std::string &last_directory);

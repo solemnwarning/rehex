@@ -139,6 +139,8 @@ APP_OBJS := \
 	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
+	src/ConsoleBuffer.o \
+	src/ConsolePanel.o \
 	src/DataType.o \
 	src/decodepanel.o \
 	src/DiffWindow.o \

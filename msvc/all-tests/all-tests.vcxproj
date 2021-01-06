@@ -169,6 +169,7 @@
     <ClCompile Include="..\..\tests\CommentsDataObject.cpp" />
     <ClCompile Include="..\..\tests\CommentTree.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
+    <ClCompile Include="..\..\tests\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />
     <ClCompile Include="..\..\tests\DocumentCtrl.cpp" />
     <ClCompile Include="..\..\tests\main.cpp" />

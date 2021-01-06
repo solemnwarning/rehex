@@ -2515,6 +2515,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		
 		data.insert(data.end(), std::min(max_bytes, (d_length - std::min(skip_bytes, d_length))), '?');
 		data_err = true;
+		data_p = NULL;
 	}
 	
 	/* The offset of the character in the Buffer currently being drawn. */

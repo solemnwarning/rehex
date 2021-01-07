@@ -38,16 +38,14 @@ REHex::ConsolePanel::ConsolePanel(wxWindow *parent, ConsoleBuffer *buffer, const
 	SetSizer(sizer);
 	
 	buffer->Bind(CONSOLE_PRINT, &REHex::ConsolePanel::OnConsolePrint, this);
+	buffer->Bind(CONSOLE_ERASE, &REHex::ConsolePanel::OnConsoleErase, this);
 	
-	auto messages = buffer->get_messages();
-	for(auto m = messages.begin(); m != messages.end(); ++m)
-	{
-		output_text->AppendText(m->text);
-	}
+	output_text->AppendText(buffer->get_messages_text());
 }
 
 REHex::ConsolePanel::~ConsolePanel()
 {
+	buffer->Unbind(CONSOLE_ERASE, &REHex::ConsolePanel::OnConsoleErase, this);
 	buffer->Unbind(CONSOLE_PRINT, &REHex::ConsolePanel::OnConsolePrint, this);
 }
 
@@ -70,5 +68,14 @@ void REHex::ConsolePanel::update() {}
 void REHex::ConsolePanel::OnConsolePrint(ConsolePrintEvent &event)
 {
 	output_text->AppendText(event.text);
-	event.Skip();
+	
+	event.Skip(); /* Continue propagation */
+}
+
+void REHex::ConsolePanel::OnConsoleErase(ConsoleEraseEvent &event)
+{
+	output_text->Remove(0, event.count);
+	output_text->SetInsertionPointEnd();
+	
+	event.Skip(); /* Continue propagation */
 }

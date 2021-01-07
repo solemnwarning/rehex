@@ -48,6 +48,7 @@ namespace REHex
 			std::string panel_name;
 			
 			void OnConsolePrint(ConsolePrintEvent &event);
+			void OnConsoleErase(ConsoleEraseEvent &event);
 		
 	};
 }

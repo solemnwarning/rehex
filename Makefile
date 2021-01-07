@@ -29,8 +29,8 @@ shell-or-die = $\
 		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)),$\
 		$(error $(1) exited with status $(lastword $(sod_out))))
 
-WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
-WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
+WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
+WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
 
 CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
 CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)

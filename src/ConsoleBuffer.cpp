@@ -17,6 +17,9 @@
 
 #include "platform.hpp"
 
+#include <stdarg.h>
+#include <vector>
+
 #include "ConsoleBuffer.hpp"
 
 REHex::ConsoleBuffer::ConsoleBuffer(size_t total_text_max):
@@ -107,6 +110,30 @@ void REHex::ConsoleBuffer::print(Level level, const std::string &text)
 	
 	ConsolePrintEvent event(this, level, text);
 	wxPostEvent(this, event);
+}
+
+void REHex::ConsoleBuffer::printf(Level level, const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	vprintf(level, fmt, argv);
+	
+	va_end(argv);
+}
+
+void REHex::ConsoleBuffer::vprintf(Level level, const char *fmt, va_list argv)
+{
+	/* vsnprintf() invalidates argv, so we must make a copy for the first call. */
+	va_list argv_c;
+	va_copy(argv_c, argv);
+	int n_chars = vsnprintf(NULL, 0, fmt, argv_c);
+	va_end(argv_c);
+	
+	std::vector<char> buf(n_chars + 1);
+	vsnprintf(buf.data(), buf.size(), fmt, argv);
+	
+	print(level, buf.data());
 }
 
 void REHex::ConsoleBuffer::clear()

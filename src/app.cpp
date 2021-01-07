@@ -17,6 +17,8 @@
 
 #include "platform.hpp"
 
+#include <stdarg.h>
+
 #include "app.hpp"
 #include "ArtProvider.hpp"
 #include "Events.hpp"
@@ -162,6 +164,51 @@ void REHex::App::set_font_size_adjustment(int font_size_adjustment)
 	
 	FontSizeAdjustmentEvent event(font_size_adjustment);
 	ProcessEvent(event);
+}
+
+void REHex::App::print_debug(const std::string &text)
+{
+	console->print(ConsoleBuffer::Level::DEBUG, text);
+}
+
+void REHex::App::printf_debug(const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	console->vprintf(ConsoleBuffer::Level::DEBUG, fmt, argv);
+	
+	va_end(argv);
+}
+
+void REHex::App::print_info(const std::string &text)
+{
+	console->print(ConsoleBuffer::Level::INFO, text);
+}
+
+void REHex::App::printf_info(const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	console->vprintf(ConsoleBuffer::Level::INFO, fmt, argv);
+	
+	va_end(argv);
+}
+
+void REHex::App::print_error(const std::string &text)
+{
+	console->print(ConsoleBuffer::Level::ERROR, text);
+}
+
+void REHex::App::printf_error(const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	console->vprintf(ConsoleBuffer::Level::ERROR, fmt, argv);
+	
+	va_end(argv);
 }
 
 std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;

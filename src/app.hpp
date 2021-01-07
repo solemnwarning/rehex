@@ -43,6 +43,36 @@ namespace REHex {
 			void set_font_size_adjustment(int font_size_adjustment);
 			
 			/**
+			 * @brief Print a debug message to the application console.
+			*/
+			void print_debug(const std::string &text);
+			
+			/**
+			 * @brief Print a printf format debug message to the application console.
+			*/
+			void printf_debug(const char *fmt, ...);
+			
+			/**
+			 * @brief Print a message to the application console.
+			*/
+			void print_info(const std::string &text);
+			
+			/**
+			 * @brief Print a printf format message to the application console.
+			*/
+			void printf_info(const char *fmt, ...);
+			
+			/**
+			 * @brief Print an error message to the application console.
+			*/
+			void print_error(const std::string &text);
+			
+			/**
+			 * @brief Print a printf format error message to the application console.
+			*/
+			void printf_error(const char *fmt, ...);
+			
+			/**
 			 * @brief App setup phases, in order of execution.
 			*/
 			enum class SetupPhase

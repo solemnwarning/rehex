@@ -19,6 +19,7 @@
 #define REHEX_CONSOLEBUFFER_HPP
 
 #include <list>
+#include <stdarg.h>
 #include <string>
 #include <wx/event.h>
 
@@ -73,6 +74,18 @@ namespace REHex {
 			 * will also be raised.
 			*/
 			void print(Level level, const std::string &text);
+			
+			/**
+			 * @brief Append a printf format message to the buffer.
+			 * @see print()
+			*/
+			void printf(Level level, const char *fmt, ...);
+			
+			/**
+			 * @brief Append a printf format message to the buffer.
+			 * @see print()
+			*/
+			void vprintf(Level level, const char *fmt, va_list argv);
 			
 			/**
 			 * @brief Clear all messages from the buffer.

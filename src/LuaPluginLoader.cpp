@@ -53,12 +53,12 @@ void REHex::LuaPluginLoader::load_all_plugins()
 	
 	default_handler->Bind(wxEVT_LUA_ERROR, [&](wxLuaEvent &event)
 	{
-		fprintf(stderr, "wxEVT_LUA_ERROR: %s\n", event.GetString().mb_str().data());
+		wxGetApp().print_error(event.GetString().mb_str().data());
 	});
 	
 	default_handler->Bind(wxEVT_LUA_PRINT, [&](wxLuaEvent &event)
 	{
-		fprintf(stderr, "wxEVT_LUA_PRINT: %s\n", event.GetString().mb_str().data());
+		wxGetApp().print_info(event.GetString().ToStdString() + "\n");
 	});
 	
 	/* Register wxLua wxWidgets bindings. */
@@ -70,6 +70,11 @@ void REHex::LuaPluginLoader::load_all_plugins()
 	
 	/* Register wxLua REHex bindings. */
 	wxLuaBinding_rehex_init();
+	
+	/* Don't let wxLua do things like printing output or invoking the wxWidgets event loop
+	 * before the App::OnInit() method completes.
+	*/
+	wxLuaState::sm_wxAppMainLoop_will_run = true;
 	
 	std::vector<std::string> plugin_directories = wxGetApp().get_plugin_directories();
 	
@@ -89,7 +94,7 @@ void REHex::LuaPluginLoader::load_all_plugins()
 				}
 				catch(const std::exception &e)
 				{
-					fprintf(stderr, "====\nFailed to load plugin %s\n\n%s\n====\n", filename.mb_str().data(), e.what());
+					wxGetApp().printf_error("====\nFailed to load plugin %s\n\n%s\n====\n", filename.mb_str().data(), e.what());
 				}
 			} while (dir.GetNext(&filename));
 		}
@@ -125,7 +130,7 @@ REHex::LuaPlugin REHex::LuaPluginLoader::load_plugin(const std::string &filename
 	}
 	
 	s.SetEventHandler(default_handler.get());
-	printf("%s", output.c_str());
+	wxGetApp().print_info(output);
 	
 	return LuaPlugin(s);
 }

@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -31,8 +31,8 @@ shell-or-die = $\
 		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)),$\
 		$(error $(1) exited with status $(lastword $(sod_out))))
 
-WX_CXXFLAGS := $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
-WX_LIBS     := $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
+WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
+WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
 
 CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
 CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
@@ -197,6 +197,8 @@ APP_OBJS := \
 	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
+	src/ConsoleBuffer.o \
+	src/ConsolePanel.o \
 	src/DataType.o \
 	src/decodepanel.o \
 	src/DiffWindow.o \
@@ -249,6 +251,7 @@ TEST_OBJS := \
 	src/buffer.o \
 	src/ByteRangeSet.o \
 	src/CommentTree.o \
+	src/ConsoleBuffer.o \
 	src/DataType.o \
 	src/DiffWindow.o \
 	src/DisassemblyRegion.o \
@@ -269,6 +272,7 @@ TEST_OBJS := \
 	tests/ByteRangeSet.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
+	tests/ConsoleBuffer.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \
 	tests/Document.o \

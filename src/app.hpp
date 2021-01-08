@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,6 +18,8 @@
 #ifndef REHEX_APP_HPP
 #define REHEX_APP_HPP
 
+#include "ConsoleBuffer.hpp"
+
 #include <functional>
 #include <map>
 #include <string>
@@ -33,6 +35,8 @@ namespace REHex {
 			wxConfig *config;
 			wxFileHistory *recent_files;
 			
+			ConsoleBuffer *console;
+			
 			const std::string &get_last_directory();
 			void set_last_directory(const std::string &last_directory);
 			
@@ -40,6 +44,36 @@ namespace REHex {
 			void set_font_size_adjustment(int font_size_adjustment);
 			
 			std::vector<std::string> get_plugin_directories();
+			
+			/**
+			 * @brief Print a debug message to the application console.
+			*/
+			void print_debug(const std::string &text);
+			
+			/**
+			 * @brief Print a printf format debug message to the application console.
+			*/
+			void printf_debug(const char *fmt, ...);
+			
+			/**
+			 * @brief Print a message to the application console.
+			*/
+			void print_info(const std::string &text);
+			
+			/**
+			 * @brief Print a printf format message to the application console.
+			*/
+			void printf_info(const char *fmt, ...);
+			
+			/**
+			 * @brief Print an error message to the application console.
+			*/
+			void print_error(const std::string &text);
+			
+			/**
+			 * @brief Print a printf format error message to the application console.
+			*/
+			void printf_error(const char *fmt, ...);
 			
 			/**
 			 * @brief App setup phases, in order of execution.

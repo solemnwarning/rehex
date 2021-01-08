@@ -320,9 +320,13 @@ void REHex::Tab::save_view(wxConfig *config)
 	config->Write("highlight-selection-match", doc_ctrl->get_highlight_selection_match());
 	config->Write("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	
-	config->SetPath("/default-view/htools/");
-	config->Write("height", h_tools->GetSize().y);
-
+	wxWindow *ht_current_page = h_tools->GetCurrentPage();
+	if(ht_current_page != NULL)
+	{
+		config->SetPath("/default-view/htools/");
+		config->Write("height", ht_current_page->GetSize().y);
+	}
+	
 	for(size_t i = 0; i < h_tools->GetPageCount(); ++i)
 	{
 		char path[64];
@@ -341,9 +345,13 @@ void REHex::Tab::save_view(wxConfig *config)
 		tp->save_state(config);
 	}
 	
-	config->SetPath("/default-view/vtools/");
-	config->Write("width", v_tools->GetSize().x);
-
+	wxWindow *vt_current_page = v_tools->GetCurrentPage();
+	if(vt_current_page != NULL)
+	{
+		config->SetPath("/default-view/vtools/");
+		config->Write("width", vt_current_page->GetSize().x);
+	}
+	
 	for(size_t i = 0; i < v_tools->GetPageCount(); ++i)
 	{
 		char path[64];

@@ -156,6 +156,11 @@ void REHex::ConsoleBuffer::clear()
 REHex::ConsoleBuffer::Message::Message(Level level, const std::string &text):
 	level(level), text(text) {}
 
+bool REHex::ConsoleBuffer::Message::operator==(const Message &rhs) const
+{
+	return level == rhs.level && text == rhs.text;
+}
+
 wxDEFINE_EVENT(REHex::CONSOLE_PRINT, REHex::ConsolePrintEvent);
 
 REHex::ConsolePrintEvent::ConsolePrintEvent(ConsoleBuffer *source, ConsoleBuffer::Level &level, const std::string &text):

@@ -43,6 +43,8 @@ namespace REHex {
 				std::string text;
 				
 				Message(Level level, const std::string &text);
+				
+				bool operator==(const Message &rhs) const;
 			};
 			
 			/**

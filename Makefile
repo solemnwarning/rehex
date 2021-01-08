@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -188,6 +188,7 @@ TEST_OBJS := \
 	src/buffer.o \
 	src/ByteRangeSet.o \
 	src/CommentTree.o \
+	src/ConsoleBuffer.o \
 	src/DataType.o \
 	src/DiffWindow.o \
 	src/DisassemblyRegion.o \
@@ -208,6 +209,7 @@ TEST_OBJS := \
 	tests/ByteRangeSet.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
+	tests/ConsoleBuffer.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \
 	tests/Document.o \

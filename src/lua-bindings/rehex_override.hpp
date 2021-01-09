@@ -72,10 +72,7 @@ static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 	// TODO: Handle exceptions(?)
 	
 	std::vector<unsigned char> data = self->read_data(offset, max_length);
-	
-	/* Pack data into a wxString and push return value onto Lua stack. */
-	wxString data_string(wxString::From8BitData((const char*)(data.data()), data.size()));
-	wxlua_pushwxString(L, data_string);
+	lua_pushlstring(L, (const char*)(data.data()), data.size());
 	
 	return 1;
 }

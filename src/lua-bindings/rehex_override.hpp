@@ -77,3 +77,19 @@ static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 	return 1;
 }
 %end
+
+%override wxLua_REHex_Document_set_data_type
+static int LUACALL wxLua_REHex_Document_set_data_type(lua_State *L)
+{
+	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
+	
+	off_t offset = (off_t)wxlua_getnumbertype(L, 2);
+	off_t length = (off_t)wxlua_getnumbertype(L, 3);
+	const wxString type = wxlua_getwxStringtype(L, 4);
+	
+	bool returns = self->set_data_type(offset, length, type.ToStdString());
+	lua_pushboolean(L, returns);
+	
+	return 1;
+}
+%end

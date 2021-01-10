@@ -40,7 +40,19 @@ REHex::ConsolePanel::ConsolePanel(wxWindow *parent, ConsoleBuffer *buffer, const
 	buffer->Bind(CONSOLE_PRINT, &REHex::ConsolePanel::OnConsolePrint, this);
 	buffer->Bind(CONSOLE_ERASE, &REHex::ConsolePanel::OnConsoleErase, this);
 	
-	output_text->AppendText(buffer->get_messages_text());
+	/* When ConsolePanel is initially constructed, the ConsoleBuffer may have events pending
+	 * for messages which are already in the buffer, if we consumed those messages from the
+	 * buffer and then carried on our merry way we would wind up showing them doubled when the
+	 * wxWidgets event loop dispatches the CONSOLE_PRINT events.
+	 *
+	 * Instead of that, we register an event to be handled when the loop next becomes idle and
+	 * reinitialise our control from the buffer at that point, ensuring no ConsoleBuffer events
+	 * are pending when reading from it.
+	 *
+	 * This only has to be done once; OnFirstIdle() removes the wxEVT_IDLE binding.
+	*/
+	
+	this->Bind(wxEVT_IDLE, &REHex::ConsolePanel::OnFirstIdle, this);
 }
 
 REHex::ConsolePanel::~ConsolePanel()
@@ -78,4 +90,12 @@ void REHex::ConsolePanel::OnConsoleErase(ConsoleEraseEvent &event)
 	output_text->SetInsertionPointEnd();
 	
 	event.Skip(); /* Continue propagation */
+}
+
+void REHex::ConsolePanel::OnFirstIdle(wxIdleEvent &event)
+{
+	this->Unbind(wxEVT_IDLE, &REHex::ConsolePanel::OnFirstIdle, this);
+	
+	output_text->Clear();
+	output_text->AppendText(buffer->get_messages_text());
 }

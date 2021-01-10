@@ -49,6 +49,7 @@ namespace REHex
 			
 			void OnConsolePrint(ConsolePrintEvent &event);
 			void OnConsoleErase(ConsoleEraseEvent &event);
+			void OnFirstIdle(wxIdleEvent &event);
 		
 	};
 }

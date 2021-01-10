@@ -26,3 +26,10 @@ rehex.AddToToolsMenu = function(label, callback)
 	
 	table.insert(registrations, registration);
 end
+
+if _rehex_plugin_dir ~= nil then
+	rehex.PLUGIN_DIR = _rehex_plugin_dir
+	_rehex_plugin_dir = nil
+	
+	package.path = rehex.PLUGIN_DIR .. "/?.lua;" .. package.path
+end

@@ -89,19 +89,45 @@ void REHex::LuaPluginLoader::load_all_plugins()
 			{
 				wxFileName file_path(dir.GetName(), filename);
 				
+				wxGetApp().printf_info("Loading %s\n", file_path.GetFullPath().mb_str().data());
+				
 				try {
 					loaded_plugins.push_back(load_plugin(file_path.GetFullPath().ToStdString()));
+					wxGetApp().printf_info("Loaded %s\n", file_path.GetFullPath().mb_str().data());
 				}
 				catch(const std::exception &e)
 				{
-					wxGetApp().printf_error("====\nFailed to load plugin %s\n\n%s\n====\n", filename.mb_str().data(), e.what());
+					wxGetApp().printf_error("====\nFailed to load plugin %s\n\n%s\n====\n", file_path.GetFullPath().mb_str().data(), e.what());
+				}
+			} while (dir.GetNext(&filename));
+		}
+		
+		if (dir.GetFirst(&filename, "", wxDIR_DIRS))
+		{
+			do
+			{
+				wxFileName file_path(dir.GetName(), "plugin.lua");
+				file_path.AppendDir(filename);
+				
+				if(file_path.Exists(wxFILE_EXISTS_REGULAR))
+				{
+					wxGetApp().printf_info("Loading %s\n", file_path.GetFullPath().mb_str().data());
+					
+					try {
+						loaded_plugins.push_back(load_plugin(file_path.GetFullPath().ToStdString(), file_path.GetPath().ToStdString()));
+						wxGetApp().printf_info("Loaded %s\n", file_path.GetFullPath().mb_str().data());
+					}
+					catch(const std::exception &e)
+					{
+						wxGetApp().printf_error("====\nFailed to load plugin %s\n\n%s\n====\n", file_path.GetFullPath().mb_str().data(), e.what());
+					}
 				}
 			} while (dir.GetNext(&filename));
 		}
 	}
 }
 
-REHex::LuaPlugin REHex::LuaPluginLoader::load_plugin(const std::string &filename)
+REHex::LuaPlugin REHex::LuaPluginLoader::load_plugin(const std::string &filename, const std::string &plugin_dir)
 {
 	wxEvtHandler local_handler;
 	std::string output;
@@ -117,6 +143,12 @@ REHex::LuaPlugin REHex::LuaPluginLoader::load_plugin(const std::string &filename
 	});
 	
 	wxLuaState s(&local_handler);
+	
+	if(!plugin_dir.empty())
+	{
+		s.lua_PushString(plugin_dir.c_str());
+		s.lua_SetGlobal("_rehex_plugin_dir");
+	}
 	
 	int run_state = s.RunBuffer((const char*)(LUA_PLUGIN_PRELOAD), sizeof(LUA_PLUGIN_PRELOAD), "lua-plugin-preload.lua");
 	if(run_state == 0)

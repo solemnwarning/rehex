@@ -73,7 +73,8 @@ REHex::Tab::Tab(wxWindow *parent):
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
 	htools_adjust_pending(false),
-	htools_adjust_force(false)
+	htools_adjust_force(false),
+	htools_initial_size(-1)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -133,7 +134,8 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
 	htools_adjust_pending(false),
-	htools_adjust_force(false)
+	htools_adjust_force(false),
+	htools_initial_size(-1)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -318,11 +320,38 @@ void REHex::Tab::save_view(wxConfig *config)
 	config->Write("highlight-selection-match", doc_ctrl->get_highlight_selection_match());
 	config->Write("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	
-	/* TODO: Save h_tools state */
+	wxWindow *ht_current_page = h_tools->GetCurrentPage();
+	if(ht_current_page != NULL)
+	{
+		config->SetPath("/default-view/htools/");
+		config->Write("height", ht_current_page->GetSize().y);
+	}
 	
-	config->SetPath("/default-view/vtools/");
-	config->Write("width", v_tools->GetSize().x);
-
+	for(size_t i = 0; i < h_tools->GetPageCount(); ++i)
+	{
+		char path[64];
+		snprintf(path, sizeof(path), "/default-view/htools/panels/0/tab/%u/", (unsigned)(i));
+		
+		config->SetPath(path);
+		
+		wxWindow *page = h_tools->GetPage(i);
+		assert(page != NULL);
+		
+		ToolPanel *tp = dynamic_cast<ToolPanel*>(page);
+		assert(tp != NULL);
+		
+		config->Write("name", wxString(tp->name()));
+		config->Write("selected", (page == h_tools->GetCurrentPage()));
+		tp->save_state(config);
+	}
+	
+	wxWindow *vt_current_page = v_tools->GetCurrentPage();
+	if(vt_current_page != NULL)
+	{
+		config->SetPath("/default-view/vtools/");
+		config->Write("width", vt_current_page->GetSize().x);
+	}
+	
 	for(size_t i = 0; i < v_tools->GetPageCount(); ++i)
 	{
 		char path[64];
@@ -619,7 +648,11 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, (selection_off - 1), Document::CSTATE_GOTO, "delete selection");
+				off_t new_cursor_pos = ((selection_off + selection_length) >= doc->buffer_length() && selection_off > 0 && !insert_mode)
+					? (selection_off - 1)
+					: selection_off;
+				
+				doc->erase_data(selection_off, selection_length, new_cursor_pos, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
 			else if((cursor_pos + 1) < doc->buffer_length())
@@ -637,7 +670,11 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, (selection_off - 1), Document::CSTATE_GOTO, "delete selection");
+				off_t new_cursor_pos = ((selection_off + selection_length) >= doc->buffer_length() && selection_off > 0 && !insert_mode)
+					? (selection_off - 1)
+					: selection_off;
+				
+				doc->erase_data(selection_off, selection_length, new_cursor_pos, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
 			else if(cursor_state == Document::CSTATE_HEX_MID)
@@ -1209,7 +1246,14 @@ void REHex::Tab::htools_adjust(bool force_resize)
 		
 		int htp_ch = ht_current_page->GetSize().GetHeight();
 		
-		if(force_resize)
+		if(htools_initial_size > 0)
+		{
+			/* Adjust sash to fit saved ToolPanel size. */
+			
+			int adj_height = htools_initial_size - htp_ch;
+			h_splitter->SetSashPosition(h_splitter->GetSashPosition() - adj_height);
+		}
+		else if(force_resize)
 		{
 			/* Adjust sash to fit ToolPanel best size. */
 			
@@ -1231,6 +1275,8 @@ void REHex::Tab::htools_adjust(bool force_resize)
 			h_splitter->SetSashPosition(h_splitter->GetSashPosition() - adj_height);
 		}
 	}
+	
+	htools_initial_size = -1;
 }
 
 /* The size of a wxNotebook page doesn't seem to be set correctly during
@@ -1345,9 +1391,33 @@ void REHex::Tab::init_default_tools()
 {
 	wxConfig *config = wxGetApp().config;
 	
+	htools_initial_size = config->ReadLong("/default-view/htools/height", -1);
 	vtools_initial_size = config->ReadLong("/default-view/vtools/width", -1);
 	
-	/* TODO: Load h_tools state. */
+	for(unsigned int i = 0;; ++i)
+	{
+		char base_p[64];
+		snprintf(base_p, sizeof(base_p), "/default-view/htools/panels/0/tab/%u/", i);
+		
+		if(config->HasGroup(base_p))
+		{
+			config->SetPath(base_p);
+			
+			std::string name = config->Read    ("name", "").ToStdString();
+			bool selected    = config->ReadBool("selected", false);
+			
+			if(ToolPanelRegistry::by_name(name) != NULL)
+			{
+				tool_create(name, selected, config);
+			}
+			else{
+				/* TODO: Some kind of warning? */
+			}
+		}
+		else{
+			break;
+		}
+	}
 	
 	for(unsigned int i = 0;; ++i)
 	{

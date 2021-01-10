@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,6 +17,8 @@
 
 #include "platform.hpp"
 
+#include <stdarg.h>
+
 #include "app.hpp"
 #include "ArtProvider.hpp"
 #include "Events.hpp"
@@ -32,6 +34,8 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	console = new ConsoleBuffer();
+	
 	call_setup_hooks(SetupPhase::EARLY);
 	
 	#ifdef _WIN32
@@ -119,6 +123,8 @@ bool REHex::App::OnInit()
 
 int REHex::App::OnExit()
 {
+	call_setup_hooks(SetupPhase::SHUTDOWN);
+	
 	config->SetPath("/recent-files/");
 	recent_files->Save(*config);
 	
@@ -132,6 +138,11 @@ int REHex::App::OnExit()
 	#ifdef _WIN32
 	CoUninitialize();
 	#endif
+	
+	call_setup_hooks(SetupPhase::SHUTDOWN_LATE);
+	
+	delete console;
+	console = NULL;
 	
 	return 0;
 }
@@ -182,6 +193,51 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 	*/
 	
 	return plugin_directories;
+}
+
+void REHex::App::print_debug(const std::string &text)
+{
+	console->print(ConsoleBuffer::Level::DEBUG, text);
+}
+
+void REHex::App::printf_debug(const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	console->vprintf(ConsoleBuffer::Level::DEBUG, fmt, argv);
+	
+	va_end(argv);
+}
+
+void REHex::App::print_info(const std::string &text)
+{
+	console->print(ConsoleBuffer::Level::INFO, text);
+}
+
+void REHex::App::printf_info(const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	console->vprintf(ConsoleBuffer::Level::INFO, fmt, argv);
+	
+	va_end(argv);
+}
+
+void REHex::App::print_error(const std::string &text)
+{
+	console->print(ConsoleBuffer::Level::ERROR, text);
+}
+
+void REHex::App::printf_error(const char *fmt, ...)
+{
+	va_list argv;
+	va_start(argv, fmt);
+	
+	console->vprintf(ConsoleBuffer::Level::ERROR, fmt, argv);
+	
+	va_end(argv);
 }
 
 std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;

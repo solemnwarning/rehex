@@ -59,8 +59,16 @@ class REHex::MainWindow: public wxFrame
 	REHex::Document *active_document();
 };
 
+struct %delete REHex::Document::Comment
+{
+	REHex::Document::Comment(const wxString &text);
+};
+
 class REHex::Document: public wxEvtHandler
 {
 	wxString read_data(off_t offset, off_t max_length) const;
 	off_t buffer_length();
+	
+	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
+	bool set_data_type(off_t offset, off_t length, const wxString &type);
 };

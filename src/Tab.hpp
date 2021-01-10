@@ -127,6 +127,7 @@ namespace REHex
 			
 			bool htools_adjust_pending;
 			bool htools_adjust_force;
+			int htools_initial_size;
 			
 			void vtools_adjust(bool force_resize = false);
 			void htools_adjust(bool force_resize = false);

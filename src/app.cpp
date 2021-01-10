@@ -123,6 +123,8 @@ bool REHex::App::OnInit()
 
 int REHex::App::OnExit()
 {
+	call_setup_hooks(SetupPhase::SHUTDOWN);
+	
 	config->SetPath("/recent-files/");
 	recent_files->Save(*config);
 	
@@ -136,6 +138,8 @@ int REHex::App::OnExit()
 	#ifdef _WIN32
 	CoUninitialize();
 	#endif
+	
+	call_setup_hooks(SetupPhase::SHUTDOWN_LATE);
 	
 	delete console;
 	console = NULL;

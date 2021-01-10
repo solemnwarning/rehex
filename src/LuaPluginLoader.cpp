@@ -40,6 +40,10 @@ static REHex::App::SetupHookRegistration load_lua_plugins_hook(
 	REHex::App::SetupPhase::READY,
 	&REHex::LuaPluginLoader::load_all_plugins);
 
+static REHex::App::SetupHookRegistration unload_lua_plugins_hook(
+	REHex::App::SetupPhase::SHUTDOWN,
+	&REHex::LuaPluginLoader::unload_all_plugins);
+
 std::unique_ptr<wxEvtHandler> REHex::LuaPluginLoader::default_handler;
 std::list<REHex::LuaPlugin> REHex::LuaPluginLoader::loaded_plugins;
 
@@ -125,6 +129,11 @@ void REHex::LuaPluginLoader::load_all_plugins()
 			} while (dir.GetNext(&filename));
 		}
 	}
+}
+
+void REHex::LuaPluginLoader::unload_all_plugins()
+{
+	loaded_plugins.clear();
 }
 
 REHex::LuaPlugin REHex::LuaPluginLoader::load_plugin(const std::string &filename, const std::string &plugin_dir)

@@ -83,6 +83,9 @@ namespace REHex {
 				EARLY,  /**< About to begin App OnInit() method. */
 				READY,  /**< Global state initialised - about to construct initial MainWindow. */
 				DONE,   /**< About to return from OnInit() method. */
+				
+				SHUTDOWN,       /**< About to start App OnExit() method. */
+				SHUTDOWN_LATE,  /**< Called near end of OnExit(), symmetric with EARLY. */
 			};
 			
 			typedef std::function<void()> SetupHookFunction;

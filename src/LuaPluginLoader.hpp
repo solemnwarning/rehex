@@ -43,6 +43,8 @@ namespace REHex
 			
 		public:
 			static void load_all_plugins();
+			static void unload_all_plugins();
+			
 			static LuaPlugin load_plugin(const std::string &filename, const std::string &plugin_dir = "");
 	};
 }

@@ -32,6 +32,8 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	locale = new wxLocale(wxLANGUAGE_DEFAULT);
+	
 	call_setup_hooks(SetupPhase::EARLY);
 	
 	#ifdef _WIN32
@@ -132,6 +134,9 @@ int REHex::App::OnExit()
 	#ifdef _WIN32
 	CoUninitialize();
 	#endif
+	
+	delete locale;
+	locale = NULL;
 	
 	return 0;
 }

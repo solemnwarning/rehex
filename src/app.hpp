@@ -23,6 +23,7 @@
 #include <string>
 #include <wx/config.h>
 #include <wx/filehistory.h>
+#include <wx/intl.h>
 #include <wx/wx.h>
 
 namespace REHex {
@@ -31,6 +32,7 @@ namespace REHex {
 		public:
 			wxConfig *config;
 			wxFileHistory *recent_files;
+			wxLocale *locale;
 			
 			const std::string &get_last_directory();
 			void set_last_directory(const std::string &last_directory);

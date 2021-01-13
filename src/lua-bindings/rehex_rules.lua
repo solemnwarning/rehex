@@ -60,7 +60,7 @@ hook_cpp_class_funcname    = "wxLuaGetClassList_"..hook_cpp_namespace
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim at the top of
 --   every generated cpp file or "" for none
-hook_cpp_binding_includes = ""
+hook_cpp_binding_includes = "#include \"../platform.hpp\"\n"
 
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim below the

@@ -26,26 +26,26 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -58,15 +58,19 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -85,8 +89,11 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -99,6 +106,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -113,6 +122,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -127,8 +138,11 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -250,6 +264,46 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxadv_wxladv.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_base.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_config.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_data.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_file.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_core.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_event.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_help.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_image.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_print.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_wxlcore.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\bit.c" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\lbitlib.c" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlbind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlcallb.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxllua.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlobject.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlstate.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlua_bind.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

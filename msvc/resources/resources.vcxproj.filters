@@ -47,5 +47,6 @@
     <CustomBuild Include="..\..\res\offsets48.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\src\lua-plugin-preload.lua" />
   </ItemGroup>
 </Project>

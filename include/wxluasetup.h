@@ -7,7 +7,15 @@
 
 #define wxUSE_FS_INET 0
 
+#ifdef wxUSE_SOUND
+#undef wxUSE_SOUND
+#endif
+
+#define wxUSE_SOUND 0
+
 #define wxLUA_USE_wxHelpController 0
+#define wxLUA_USE_wxJoystick 0
+#define wxLUA_USE_wxRegEx 0
 #define wxLUA_USE_wxTranslations 0
 
 /* Include base wxluasetup.h to initialise anything we haven't set. */

@@ -26,6 +26,7 @@
 #include <vector>
 #include <wx/config.h>
 #include <wx/filehistory.h>
+#include <wx/intl.h>
 #include <wx/wx.h>
 
 namespace REHex {
@@ -34,6 +35,7 @@ namespace REHex {
 		public:
 			wxConfig *config;
 			wxFileHistory *recent_files;
+			wxLocale *locale;
 			
 			ConsoleBuffer *console;
 			

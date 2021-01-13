@@ -34,6 +34,7 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
 	
 	call_setup_hooks(SetupPhase::EARLY);
@@ -139,10 +140,14 @@ int REHex::App::OnExit()
 	CoUninitialize();
 	#endif
 	
+	
 	call_setup_hooks(SetupPhase::SHUTDOWN_LATE);
 	
 	delete console;
 	console = NULL;
+	
+	delete locale;
+	locale = NULL;
 	
 	return 0;
 }

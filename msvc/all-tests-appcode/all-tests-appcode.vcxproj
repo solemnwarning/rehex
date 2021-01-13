@@ -207,6 +207,7 @@
     <ClInclude Include="..\..\src\ByteRangeSet.hpp" />
     <ClInclude Include="..\..\src\CommentTree.hpp" />
     <ClInclude Include="..\..\src\DiffWindow.hpp" />
+    <ClInclude Include="..\..\src\DisassemblyRegion.hpp" />
     <ClInclude Include="..\..\src\document.hpp" />
     <ClInclude Include="..\..\src\DocumentCtrl.hpp" />
     <ClInclude Include="..\..\src\EditCommentDialog.hpp" />

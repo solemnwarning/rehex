@@ -633,9 +633,6 @@ void REHex::DocumentCtrl::_handle_width_change()
 		virtual_width = client_width;
 	}
 	
-	/* TODO: Preserve/scale the position as the window size changes. */
-	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
-	
 	/* Recalculate the height and y offset of each region. */
 	
 	{
@@ -651,6 +648,9 @@ void REHex::DocumentCtrl::_handle_width_change()
 			next_yo += (*i)->y_lines;
 		}
 	}
+
+	/* TODO: Preserve/scale the position as the window size changes. */
+	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
 	
 	/* Update vertical scrollbar, since we just recalculated the height of the document. */
 	_update_vscroll();

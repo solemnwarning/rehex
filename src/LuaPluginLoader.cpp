@@ -86,6 +86,11 @@ void REHex::LuaPluginLoader::load_all_plugins()
 	{
 		wxDir dir(*pd);
 		wxString filename;
+
+		if (!dir.IsOpened())
+		{
+			continue;
+		}
 		
 		if (dir.GetFirst(&filename, "*.lua", wxDIR_FILES))
 		{

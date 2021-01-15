@@ -18,12 +18,16 @@
 #include "platform.hpp"
 
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string>
+#include <wx/filename.h>
 
 #include "app.hpp"
 #include "ArtProvider.hpp"
 #include "Events.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "../res/version.h"
 
 /* These MUST come after any wxWidgets headers. */
 #ifdef _WIN32
@@ -179,23 +183,53 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 {
 	std::vector<std::string> plugin_directories;
 	
-	plugin_directories.push_back("./plugins/");
+	const char *REHEX_PLUGIN_DIR = getenv("REHEX_PLUGIN_DIR");
+	if(REHEX_PLUGIN_DIR != NULL)
+	{
+		plugin_directories.push_back(REHEX_PLUGIN_DIR);
+	}
 	
-	/* TODO: Sensible plugins paths
-	 *
-	 * Linux
-	 *   ~/.rehex/plugins/ OR ${XDG_DATA_HOME}/rehex/plugins/ ?
-	 *   <libdir>/rehex/
-	 *
-	 * Windows
-	 *   <exe dir>/Plugins/
-	 *   <Local Settings>/Application Data/REHex/Plugins/
-	 *
-	 * Mac OS
-	 *   <Bundle>/Contents/PlugIns/
-	 *
-	 * Also want plugins relative to binary when doing dev on Linux...
-	*/
+	#if defined(_WIN32)
+		/* Windows. Plugins should be alongside the EXE. */
+		wxString exe_path = wxStandardPaths::Get().GetExecutablePath();
+		wxFileName exe_wxfn(exe_path);
+		
+		plugin_directories.push_back((exe_wxfn.GetPathWithSep() + "Plugins\\").ToStdString());
+	#elif defined(__APPLE__)
+		/* Mac. Plugins should be in the application bundle. */
+		std::string exe_path = wxStandardPaths::Get().GetExecutablePath().ToStdString();
+		
+		const std::string REPLACE      = "Contents/MacOS/REHex";
+		const std::string REPLACE_WITH = "Contents/PlugIns/";
+		
+		if(exe_path.length() > REPLACE.length() && exe_path.substr((exe_path.length() - REPLACE.length())) == REPLACE)
+		{
+			plugin_directories.push_back(exe_path.substr((exe_path.length() - REPLACE.length())) + REPLACE_WITH);
+		}
+		else{
+			printf_error("Unexpected executable path (%s), bundle plugins will not be loaded\n", exe_path.c_str());
+		}
+	#else
+		/* Assume Linux/UNIX */
+		
+		const char *XDG_DATA_HOME = getenv("XDG_DATA_HOME");
+		if(XDG_DATA_HOME != NULL)
+		{
+			plugin_directories.push_back(std::string(XDG_DATA_HOME) + "/rehex/plugins/");
+		}
+		else{
+			const char *HOME = getenv("HOME");
+			if(HOME != NULL)
+			{
+				plugin_directories.push_back(std::string(HOME) + "/.local/share/rehex/plugins/");
+			}
+			else{
+				printf_error("Neither $XDG_DATA_HOME nor $HOME is set in the environment, user plugins won't be loaded");
+			}
+		}
+		
+		plugin_directories.push_back(std::string(REHEX_LIBDIR) + "/rehex/");
+	#endif
 	
 	return plugin_directories;
 }

@@ -229,7 +229,7 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $^ res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
@@ -351,6 +351,19 @@ prefix      ?= /usr/local
 exec_prefix ?= $(prefix)
 bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
+libdir      ?= $(exec_prefix)/lib
+
+PLUGINS_INSTALL := \
+	exe/bitops52.lua \
+	exe/class.lua \
+	exe/document_stream.lua \
+	exe/enum.lua \
+	exe/kaitaistruct.lua \
+	exe/microsoft_pe.lua \
+	exe/plugin.lua \
+	exe/string_decode.lua \
+	exe/string_stream.lua \
+	exe/utils.lua
 
 .PHONY: install
 install: $(EXE)
@@ -362,6 +375,11 @@ install: $(EXE)
 	done
 	
 	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+	
+	for f in $(PLUGINS_INSTALL); \
+	do \
+		install -D -m 0644 plugins/$${f} $(DESTDIR)$(libdir)/rehex/$${f}; \
+	done
 
 .PHONY: uninstall
 uninstall:
@@ -372,6 +390,14 @@ uninstall:
 	do \
 		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
 	done
+	
+	for f in $(PLUGINS_INSTALL); \
+	do \
+		rm -f $(DESTDIR)$(libdir)/rehex/$${f}; \
+	done
+	
+	# Delete any empty directories, preserving plugins we didn't install
+	find $(DESTDIR)$(libdir)/rehex/ -type d -empty -delete
 
 .PHONY: dist
 dist:

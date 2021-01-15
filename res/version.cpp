@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,4 +23,8 @@
 extern "C" {
 	const char *REHEX_VERSION = LONG_VERSION;
 	const char *REHEX_BUILD_DATE = __DATE__;
+	
+	#if !defined(_WIN32) && !defined(__APPLE__)
+	const char *REHEX_LIBDIR = LIBDIR;
+	#endif
 }

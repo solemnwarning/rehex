@@ -49,6 +49,12 @@ REHex.app: res/Info.plist $(EXE) $(ICNS)
 	cp        $(EXE)          $@/Contents/MacOS/REHex
 	mkdir -p                  $@/Contents/Resources/
 	cp        $(ICNS)         $@/Contents/Resources/REHex.icns
+	
+	rm -rf $@/Contents/PlugIns/
+	for f in $(PLUGINS_INSTALL); \
+	do \
+		install -D -m 0644 plugins/$${f} $@/Contents/PlugIns/$${f}; \
+	done
 
 $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
 	rm -rf $(ICONSET)

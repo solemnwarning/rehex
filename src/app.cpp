@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string>
 #include <wx/filename.h>
+#include <wx/stdpaths.h>
 
 #include "app.hpp"
 #include "ArtProvider.hpp"

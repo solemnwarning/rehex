@@ -53,7 +53,8 @@ REHex.app: res/Info.plist $(EXE) $(ICNS)
 	rm -rf $@/Contents/PlugIns/
 	for f in $(PLUGINS_INSTALL); \
 	do \
-		install -D -m 0644 plugins/$${f} $@/Contents/PlugIns/$${f}; \
+		mkdir -p $@/Contents/PlugIns/`dirname $${f}`; \
+		install -m 0644 plugins/$${f} $@/Contents/PlugIns/$${f}; \
 	done
 
 $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png

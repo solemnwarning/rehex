@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,6 +20,7 @@
 #include <inttypes.h>
 #include <stack>
 #include <tuple>
+#include <vector>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/sizer.h>
@@ -905,6 +906,8 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			data_itm->Check(true);
 		}
 		
+		dtmenu->AppendSeparator();
+		
 		#ifdef _WIN32
 		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
 		#else
@@ -914,18 +917,38 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			doc->set_data_type(selection_off, selection_length, "");
 		}, data_itm->GetId(), data_itm->GetId());
 		
-		for(auto dt = DataTypeRegistry::begin(); dt != DataTypeRegistry::end(); ++dt)
+		std::vector<const DataTypeRegistration*> sorted_dts = DataTypeRegistry::sorted_by_group();
+		
+		wxMenu *group_menu = dtmenu;
+		wxMenuItem *gm_item = NULL;
+		
+		for(auto dti = sorted_dts.begin(); dti != sorted_dts.end(); ++dti)
 		{
-			if(dt->second->fixed_size >= 0 && (selection_length % dt->second->fixed_size) != 0)
+			const DataTypeRegistration *dt = *dti;
+			
+			if(dt->fixed_size >= 0 && (selection_length % dt->fixed_size) != 0)
 			{
 				/* Selection is too short/long for this type. */
 				continue;
 			}
 			
-			wxMenuItem *itm = dtmenu->AppendCheckItem(wxID_ANY, dt->second->label);
+			if(!dt->group.empty())
+			{
+				if(gm_item == NULL || gm_item->GetItemLabel() != dt->group)
+				{
+					group_menu = new wxMenu;
+					gm_item = dtmenu->AppendSubMenu(group_menu, dt->group);
+				}
+			}
+			else{
+				group_menu = dtmenu;
+				gm_item = NULL;
+			}
+			
+			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dt->label);
 			
 			if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
-				&& selection_off_type->second == dt->second->name)
+				&& selection_off_type->second == dt->name)
 			{
 				itm->Check(true);
 			}
@@ -933,10 +956,10 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			#ifdef _WIN32
 			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
 			#else
-			dtmenu->Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			group_menu->Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
 			#endif
 			{
-				doc->set_data_type(selection_off, selection_length, dt->second->name);
+				doc->set_data_type(selection_off, selection_length, dt->name);
 			}, itm->GetId(), itm->GetId());
 		}
 		

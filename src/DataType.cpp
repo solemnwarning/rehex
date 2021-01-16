@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -16,6 +16,8 @@
 */
 
 #include "platform.hpp"
+
+#include <algorithm>
 #include <utility>
 
 #include "DataType.hpp"
@@ -54,10 +56,35 @@ const REHex::DataTypeRegistration *REHex::DataTypeRegistry::by_name(const std::s
 	}
 }
 
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, off_t fixed_size):
+std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_by_group()
+{
+	if(registrations == NULL)
+	{
+		return std::vector<const DataTypeRegistration*>(); /* Empty vector. */
+	}
+	
+	std::vector<const DataTypeRegistration*> sorted_registrations;
+	sorted_registrations.reserve(registrations->size());
+	
+	for(auto r = registrations->begin(); r != registrations->end(); ++r)
+	{
+		sorted_registrations.push_back(r->second);
+	}
+	
+	std::sort(sorted_registrations.begin(), sorted_registrations.end(),
+		[](const DataTypeRegistration *a, const DataTypeRegistration *b)
+		{
+			return a->group < b->group || a->label < b->label;
+		});
+	
+	return sorted_registrations;
+}
+
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::string &group, off_t fixed_size):
 	name(name),
 	label(label),
 	region_factory(region_factory),
+	group(group),
 	fixed_size(fixed_size)
 {
 	if(DataTypeRegistry::registrations == NULL)

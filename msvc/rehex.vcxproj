@@ -190,7 +190,8 @@
     <ClCompile Include="..\res\offsets48.c" />
     <ClCompile Include="..\res\version.cpp" />
     <ClCompile Include="..\src\AboutDialog.cpp" />
-    <ClCompile Include="..\src\app.cpp" />
+    <ClCompile Include="..\src\AppMain.cpp" />
+    <ClCompile Include="..\src\AppTestable.cpp" />
     <ClCompile Include="..\src\ArtProvider.cpp" />
     <ClCompile Include="..\src\BasicDataTypes.cpp" />
     <ClCompile Include="..\src\buffer.cpp" />
@@ -244,7 +245,7 @@
     <ClInclude Include="..\res\version.h" />
     <ClInclude Include="..\res\winres.h" />
     <ClInclude Include="..\src\AboutDialog.hpp" />
-    <ClInclude Include="..\src\app.hpp" />
+    <ClInclude Include="..\src\App.hpp" />
     <ClInclude Include="..\src\ArtProvider.hpp" />
     <ClInclude Include="..\src\BasicDataTypes.hpp" />
     <ClInclude Include="..\src\buffer.hpp" />

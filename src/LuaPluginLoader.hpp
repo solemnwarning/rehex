@@ -42,9 +42,43 @@ namespace REHex
 			static std::list<LuaPlugin> loaded_plugins;
 			
 		public:
+			static void OnAppInit();
+			static void OnAppShutdown();
+			
+			/**
+			 * @brief Initialise LuaPluginLoader.
+			 *
+			 * This method must be called before attempting to load any plugins.
+			*/
+			static void init();
+			
+			/**
+			 * @brief Shutdown LuaPluginLoader.
+			 *
+			 * This releases objects created by init(), all plugins MUST be unloaded before it is
+			 * called.
+			*/
+			static void shutdown();
+			
+			/**
+			 * @brief Find and load all plugins.
+			*/
 			static void load_all_plugins();
+			
+			/**
+			 * @brief Unload plugins loaded by load_all_plugins()
+			*/
 			static void unload_all_plugins();
 			
+			/**
+			 * @brief Load a Lua plugin from the filesystem.
+			 *
+			 * @param filename   - Filename of Lua script.
+			 * @param plugin_dir - Directory to load extra resources from.
+			 *
+			 * Loads a Lua plugin. If plugin_dir is provided, it will be added to Lua's module
+			 * search path and provided to the script in the rehex.PLUGIN_DIR global.
+			*/
 			static LuaPlugin load_plugin(const std::string &filename, const std::string &plugin_dir = "");
 	};
 }

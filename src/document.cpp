@@ -29,7 +29,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
-#include "app.hpp"
+#include "App.hpp"
 #include "document.hpp"
 #include "Events.hpp"
 #include "Palette.hpp"

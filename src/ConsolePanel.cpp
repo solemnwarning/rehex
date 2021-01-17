@@ -18,7 +18,7 @@
 
 #include "platform.hpp"
 
-#include "app.hpp"
+#include "App.hpp"
 #include "ConsolePanel.hpp"
 
 static REHex::ToolPanel *main_console_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)

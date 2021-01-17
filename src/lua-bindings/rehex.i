@@ -1,4 +1,4 @@
-#include "../app.hpp"
+#include "../App.hpp"
 #include "../document.hpp"
 #include "../mainwindow.hpp"
 

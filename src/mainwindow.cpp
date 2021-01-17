@@ -29,7 +29,7 @@
 #include <wx/numdlg.h>
 
 #include "AboutDialog.hpp"
-#include "app.hpp"
+#include "App.hpp"
 #include "BytesPerLineDialog.hpp"
 #include "FillRangeDialog.hpp"
 #include "mainwindow.hpp"

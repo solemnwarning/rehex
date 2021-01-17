@@ -31,55 +31,80 @@
 #include <wxbind/include/wxbinddefs.h>
 #include <wxlua/wxlua.h>
 
-#include "app.hpp"
+#include "App.hpp"
 #include "lua-bindings/rehex_bind.h"
 #include "lua-plugin-preload.h"
 #include "LuaPluginLoader.hpp"
 
 static REHex::App::SetupHookRegistration load_lua_plugins_hook(
 	REHex::App::SetupPhase::READY,
-	&REHex::LuaPluginLoader::load_all_plugins);
+	&REHex::LuaPluginLoader::OnAppInit);
+
+void REHex::LuaPluginLoader::OnAppInit()
+{
+	init();
+	load_all_plugins();
+}
 
 static REHex::App::SetupHookRegistration unload_lua_plugins_hook(
 	REHex::App::SetupPhase::SHUTDOWN,
-	&REHex::LuaPluginLoader::unload_all_plugins);
+	&REHex::LuaPluginLoader::OnAppShutdown);
+
+void REHex::LuaPluginLoader::OnAppShutdown()
+{
+	unload_all_plugins();
+	shutdown();
+}
 
 std::unique_ptr<wxEvtHandler> REHex::LuaPluginLoader::default_handler;
 std::list<REHex::LuaPlugin> REHex::LuaPluginLoader::loaded_plugins;
 
+void REHex::LuaPluginLoader::init()
+{
+	if(!default_handler)
+	{
+		default_handler.reset(new wxEvtHandler);
+		
+		default_handler->Bind(wxEVT_LUA_ERROR, [&](wxLuaEvent &event)
+		{
+			wxGetApp().print_error(event.GetString().mb_str().data());
+		});
+		
+		default_handler->Bind(wxEVT_LUA_PRINT, [&](wxLuaEvent &event)
+		{
+			wxGetApp().print_info(event.GetString().ToStdString() + "\n");
+		});
+	}
+	
+	static bool bindings_initialised = false;
+	if(!bindings_initialised)
+	{
+		/* Register wxLua wxWidgets bindings. */
+		WXLUA_IMPLEMENT_BIND_WXLUA
+		WXLUA_IMPLEMENT_BIND_WXBASE
+		WXLUA_IMPLEMENT_BIND_WXCORE
+		WXLUA_IMPLEMENT_BIND_WXADV
+		WXLUA_IMPLEMENT_BIND_WXAUI
+		
+		/* Register wxLua REHex bindings. */
+		wxLuaBinding_rehex_init();
+		
+		/* Don't let wxLua do things like printing output or invoking the wxWidgets event loop
+		 * before the App::OnInit() method completes.
+		*/
+		wxLuaState::sm_wxAppMainLoop_will_run = true;
+		
+		bindings_initialised = true;
+	}
+}
+
+void REHex::LuaPluginLoader::shutdown()
+{
+	default_handler.reset(NULL);
+}
+
 void REHex::LuaPluginLoader::load_all_plugins()
 {
-	static bool is_first_call = true;
-	assert(is_first_call);
-	is_first_call = false;
-	
-	default_handler.reset(new wxEvtHandler);
-	
-	default_handler->Bind(wxEVT_LUA_ERROR, [&](wxLuaEvent &event)
-	{
-		wxGetApp().print_error(event.GetString().mb_str().data());
-	});
-	
-	default_handler->Bind(wxEVT_LUA_PRINT, [&](wxLuaEvent &event)
-	{
-		wxGetApp().print_info(event.GetString().ToStdString() + "\n");
-	});
-	
-	/* Register wxLua wxWidgets bindings. */
-	WXLUA_IMPLEMENT_BIND_WXLUA
-	WXLUA_IMPLEMENT_BIND_WXBASE
-	WXLUA_IMPLEMENT_BIND_WXCORE
-	WXLUA_IMPLEMENT_BIND_WXADV
-	WXLUA_IMPLEMENT_BIND_WXAUI
-	
-	/* Register wxLua REHex bindings. */
-	wxLuaBinding_rehex_init();
-	
-	/* Don't let wxLua do things like printing output or invoking the wxWidgets event loop
-	 * before the App::OnInit() method completes.
-	*/
-	wxLuaState::sm_wxAppMainLoop_will_run = true;
-	
 	std::vector<std::string> plugin_directories = wxGetApp().get_plugin_directories();
 	
 	for(auto pd = plugin_directories.begin(); pd != plugin_directories.end(); ++pd)

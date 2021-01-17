@@ -188,7 +188,8 @@ APP_OBJS := \
 	res/offsets32.o \
 	res/offsets48.o \
 	src/AboutDialog.o \
-	src/app.o \
+	src/AppMain.o \
+	src/AppTestable.o \
 	src/ArtProvider.o \
 	src/BasicDataTypes.o \
 	src/buffer.o \
@@ -242,14 +243,20 @@ TEST_OBJS := \
 	res/icon32.o \
 	res/icon48.o \
 	res/icon64.o \
+	res/icon128.o \
+	res/license.o \
 	res/offsets16.o \
 	res/offsets24.o \
 	res/offsets32.o \
 	res/offsets48.o \
+	src/AboutDialog.o \
+	src/AppTestable.o \
 	src/ArtProvider.o \
 	src/BasicDataTypes.o \
 	src/buffer.o \
 	src/ByteRangeSet.o \
+	src/BytesPerLineDialog.o \
+	src/ClickText.o \
 	src/CommentTree.o \
 	src/ConsoleBuffer.o \
 	src/DataType.o \
@@ -259,8 +266,15 @@ TEST_OBJS := \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
 	src/Events.o \
+	src/FillRangeDialog.o \
+	src/LicenseDialog.o \
+	src/lua-bindings/rehex_bind.o \
+	src/lua-plugin-preload.o \
+	src/LuaPluginLoader.o \
+	src/mainwindow.o \
 	src/Palette.o \
 	src/search.o \
+	src/SelectRangeDialog.o \
 	src/StringPanel.o \
 	src/Tab.o \
 	src/textentrydialog.o \
@@ -277,6 +291,7 @@ TEST_OBJS := \
 	tests/DisassemblyRegion.o \
 	tests/Document.o \
 	tests/DocumentCtrl.o \
+	tests/LuaPluginLoader.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
@@ -287,10 +302,13 @@ TEST_OBJS := \
 	tests/SharedDocumentPointer.o \
 	tests/StringPanel.o \
 	tests/Tab.o \
-	tests/util.o
+	tests/util.o \
+	$(WXLUA_OBJS) \
+	$(WXBIND_OBJS)
 
 tests/all-tests: $(TEST_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^ res/version.o $(LDFLAGS) $(LDLIBS)
 
 $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<

@@ -21,7 +21,10 @@
     <ClCompile Include="..\src\AboutDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\app.cpp">
+    <ClCompile Include="..\src\AppMain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\AppTestable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ArtProvider.cpp">
@@ -176,7 +179,7 @@
     <ClInclude Include="..\src\AboutDialog.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\app.hpp">
+    <ClInclude Include="..\src\App.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ArtProvider.hpp">

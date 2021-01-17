@@ -24,7 +24,7 @@
 #include <wx/dataobj.h>
 #include <wx/sizer.h>
 
-#include "app.hpp"
+#include "App.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "EditCommentDialog.hpp"

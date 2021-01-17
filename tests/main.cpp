@@ -20,7 +20,7 @@
 #include <wx/app.h>
 #include <wx/init.h>
 
-#include "../src/app.hpp"
+#include "../src/App.hpp"
 #include "../src/ArtProvider.hpp"
 #include "../src/Palette.hpp"
 
@@ -35,6 +35,7 @@ struct Cleanup
 	{
 		delete REHex::active_palette;
 		delete wxGetApp().config;
+		delete wxGetApp().console;
 	}
 };
 
@@ -45,6 +46,7 @@ int main(int argc, char **argv)
 	wxApp::SetInstance(app);
 	wxInitializer wxinit;
 	
+	app->console = new REHex::ConsoleBuffer();
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	
 	wxImage::AddHandler(new wxPNGHandler);
@@ -66,10 +68,3 @@ int REHex::App::OnExit()
 {
 	return 0;
 }
-
-int REHex::App::get_font_size_adjustment() const
-{
-	return 0;
-}
-
-void REHex::App::set_font_size_adjustment(int font_size_adjustment) {}

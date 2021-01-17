@@ -25,7 +25,7 @@
 #include <tuple>
 #include <vector>
 
-#include "app.hpp"
+#include "App.hpp"
 #include "DataType.hpp"
 #include "disassemble.hpp"
 #include "DisassemblyRegion.hpp"

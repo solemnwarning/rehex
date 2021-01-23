@@ -74,7 +74,13 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 	std::sort(sorted_registrations.begin(), sorted_registrations.end(),
 		[](const DataTypeRegistration *a, const DataTypeRegistration *b)
 		{
-			return a->group < b->group || a->label < b->label;
+			if(a->group != b->group)
+			{
+				return a->group < b->group;
+			}
+			else{
+				return a->label < b->label;
+			}
 		});
 	
 	return sorted_registrations;

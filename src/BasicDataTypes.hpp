@@ -504,7 +504,8 @@ namespace REHex
 				
 				if((key >= '0' && key <= '9')
 					|| (key >= 'a' && key <= 'z')
-					|| (key >= 'A' && key <= 'Z'))
+					|| (key >= 'A' && key <= 'Z')
+					|| key == '.')
 				{
 					activate();
 					
@@ -750,6 +751,11 @@ namespace REHex
 	DECLARE_NDTR_CLASS(U64BEDataRegion, uint64_t)
 	DECLARE_NDTR_CLASS(S64LEDataRegion, int64_t)
 	DECLARE_NDTR_CLASS(S64BEDataRegion, int64_t)
+	
+	DECLARE_NDTR_CLASS(F32LEDataRegion, float);
+	DECLARE_NDTR_CLASS(F32BEDataRegion, float);
+	DECLARE_NDTR_CLASS(F64LEDataRegion, double);
+	DECLARE_NDTR_CLASS(F64BEDataRegion, double);
 }
 
 #endif /* !REHEX_BASICDATATYPES_HPP */

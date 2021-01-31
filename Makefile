@@ -304,7 +304,8 @@ TEST_OBJS := \
 	tests/Tab.o \
 	tests/util.o \
 	$(WXLUA_OBJS) \
-	$(WXBIND_OBJS)
+	$(WXBIND_OBJS) \
+	$(EXTRA_TEST_OBJS)
 
 tests/all-tests: $(TEST_OBJS)
 	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp

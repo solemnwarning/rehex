@@ -445,6 +445,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	}
 	
 	SetIcons(icons);
+	
+	call_setup_hooks(SetupPhase::DONE);
 }
 
 REHex::MainWindow::~MainWindow()
@@ -457,6 +459,9 @@ void REHex::MainWindow::new_file()
 	Tab *tab = new Tab(notebook);
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
 }
 
 void REHex::MainWindow::open_file(const std::string &filename)
@@ -494,6 +499,9 @@ void REHex::MainWindow::open_file(const std::string &filename)
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
@@ -1683,4 +1691,17 @@ REHex::MainWindow::SetupHookRegistration::SetupHookRegistration(SetupPhase phase
 REHex::MainWindow::SetupHookRegistration::~SetupHookRegistration()
 {
 	MainWindow::unregister_setup_hook(phase, &func);
+}
+
+wxDEFINE_EVENT(REHex::TAB_CREATED, REHex::TabCreatedEvent);
+
+REHex::TabCreatedEvent::TabCreatedEvent(MainWindow *source, Tab *tab):
+	wxEvent(source->GetId(), TAB_CREATED), tab(tab)
+{
+	SetEventObject(source);
+}
+
+wxEvent *REHex::TabCreatedEvent::Clone() const
+{
+	return new TabCreatedEvent(*this);
 }

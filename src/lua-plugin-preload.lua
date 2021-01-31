@@ -10,6 +10,19 @@ rehex.OnAppDone = function(callback)
 	table.insert(registrations, registration);
 end
 
+rehex.OnTabCreated = function(callback)
+	local registration = rehex.REHex_MainWindow_SetupHookRegistration.new(
+		rehex.MainWindow_SetupPhase_DONE,
+		function(mainwindow)
+			mainwindow:Connect(rehex["REHex::TAB_CREATED"], function(event)
+				callback(event:GetEventObject(), event.tab)
+				event:Skip() -- Continue propagation
+			end);
+		end);
+	
+	table.insert(registrations, registration);
+end
+
 rehex.AddToToolsMenu = function(label, callback)
 	local registration = rehex.REHex_MainWindow_SetupHookRegistration.new(
 		rehex.MainWindow_SetupPhase_TOOLS_MENU_BOTTOM,

@@ -40,6 +40,7 @@ enum REHex::MainWindow::SetupPhase
 #define MainWindow_SetupPhase_HELP_MENU_TOP      (double)(REHex::MainWindow::SetupPhase::HELP_MENU_TOP)
 #define MainWindow_SetupPhase_HELP_MENU_BOTTOM   (double)(REHex::MainWindow::SetupPhase::HELP_MENU_BOTTOM)
 #define MainWindow_SetupPhase_HELP_MENU_POST     (double)(REHex::MainWindow::SetupPhase::HELP_MENU_POST)
+#define MainWindow_SetupPhase_DONE               (double)(REHex::MainWindow::SetupPhase::DONE)
 
 // TODO: Less obnoxious name in Lua environment.
 class %delete REHex::MainWindow::SetupHookRegistration
@@ -71,4 +72,19 @@ class REHex::Document: public wxEvtHandler
 	
 	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
 	bool set_data_type(off_t offset, off_t length, const wxString &type);
+};
+
+class REHex::Tab: public wxPanel
+{
+	const REHex::Document *doc;
+};
+
+class REHex::TabCreatedEvent: public wxEvent
+{
+	%wxEventType REHex::TAB_CREATED
+	
+	REHex::Tab *tab;
+	
+	// Filthy hack to get the MainWindow handle into Lua land rather than an opaque userdata.
+	REHex::MainWindow *GetEventObject();
 };

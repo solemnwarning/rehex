@@ -134,6 +134,8 @@ namespace REHex {
 				HELP_MENU_TOP,     /**< About to populate help menu - use for adding items to the top. */
 				HELP_MENU_BOTTOM,  /**< Finished populating help menu - use for adding items to the bottom. */
 				HELP_MENU_POST,    /**< Added help menu - use for adding menus right of it. */
+				
+				DONE,              /**< MainWindow constructor is about to return. */
 			};
 			
 			typedef std::function<void(MainWindow*)> SetupHookFunction;
@@ -231,6 +233,18 @@ namespace REHex {
 			
 			DECLARE_EVENT_TABLE()
 	};
+	
+	class TabCreatedEvent: public wxEvent
+	{
+		public:
+			Tab *tab;
+			
+			TabCreatedEvent(MainWindow *source, Tab *tab);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
+	wxDECLARE_EVENT(TAB_CREATED, TabCreatedEvent);
 }
 
 #endif /* !REHEX_MAINWINDOW_HPP */

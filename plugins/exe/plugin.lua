@@ -17,9 +17,7 @@
 require('microsoft_pe')
 DocumentStream = require('document_stream')
 
-rehex.AddToToolsMenu("exe", function(mainwindow)
-	local doc = mainwindow:active_document();
-	
+function process_document(doc)
 	local kai_object = MicrosoftPe(KaitaiStream(DocumentStream(doc)));
 	
 	local code_type = nil
@@ -60,4 +58,28 @@ rehex.AddToToolsMenu("exe", function(mainwindow)
 			doc:set_comment(section_off, section_len, rehex.REHex_Document_Comment.new(comment_text))
 		end
 	end
+end
+
+rehex.OnTabCreated(function(mainwindow, tab)
+	local filename = tab.doc:get_filename()
+	
+	-- TODO: Skip if this has been done before (file has comments?)
+	
+	if string.match(filename:lower(), "%.exe$") or string.match(filename:lower(), "%.dll$") then
+		-- Get the last component of the filename (i.e. skip any directories)
+		local basename_off = filename:find("[^\\/]+$")
+		local basename = filename:sub(basename_off)
+		
+		local message = basename .. " might be a PE EXE/DLL, attempt to analyse?"
+		
+		local res = wx.wxMessageBox(message, "Analyse PE file", wx.wxYES_NO, mainwindow)
+		if res == wx.wxYES then
+			process_document(tab.doc)
+		end
+	end
+end)
+
+rehex.AddToToolsMenu("exe", function(mainwindow)
+	local doc = mainwindow:active_document()
+	process_document(doc)
 end);

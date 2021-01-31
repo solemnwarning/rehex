@@ -67,6 +67,9 @@ struct %delete REHex::Document::Comment
 
 class REHex::Document: public wxEvtHandler
 {
+	wxString get_title();
+	wxString get_filename();
+	
 	wxString read_data(off_t offset, off_t max_length) const;
 	off_t buffer_length();
 	

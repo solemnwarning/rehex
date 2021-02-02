@@ -22,10 +22,10 @@ BuildRequires: xorg-x11-server-Xvfb
 Requires: jansson
 Requires: wxGTK3
 
-%define extra_make_flags LUA_PKG=lua  bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
+%define base_make_flags LUA_PKG=lua bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
 
 %if 0%{?el7}
-%define extra_make_flags %{extra_make_flags} WX_CONFIG=wx-config-3.0
+%define extra_make_flags WX_CONFIG=wx-config-3.0
 BuildRequires: pkgconfig
 %else
 BuildRequires: pkgconf
@@ -37,14 +37,14 @@ BuildRequires: pkgconf
 %setup -q -n rehex-%{git_commit_sha}
 
 %build
-make %{?_smp_mflags} %{?extra_make_flags}
+make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
 
 %check
-xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{?extra_make_flags} check
+xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
 
 %install
 rm -rf %{buildroot}
-make %{?extra_make_flags} DESTDIR=%{buildroot} install
+make %{base_make_flags} %{?extra_make_flags} DESTDIR=%{buildroot} install
 
 %clean
 rm -rf %{buildroot}

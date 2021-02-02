@@ -15,7 +15,7 @@
       _OFF_T_DEFINED: Ensure off_t and _off_t are not defined
       -->
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_WARNINGS;NOMINMAX;WIN23_LEAN_AND_MEAN;_OFF_T_DEFINED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..;$(MSBuildThisFileDirectory)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\include\msvc-win-include;$(MSBuildThisFileDirectory)..;$(MSBuildThisFileDirectory)..\include;$(MSBuildThisFileDirectory)..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>

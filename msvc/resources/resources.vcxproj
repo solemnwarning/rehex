@@ -221,6 +221,23 @@
       <Outputs>..\..\res\offsets48.c;..\..\res\offsets48.h;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\src\lua-plugin-preload.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)embed.exe ..\..\src\lua-plugin-preload.lua LUA_PLUGIN_PRELOAD ..\..\src\lua-plugin-preload.c ..\..\src\lua-plugin-preload.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)embed.exe ..\..\src\lua-plugin-preload.lua LUA_PLUGIN_PRELOAD ..\..\src\lua-plugin-preload.c ..\..\src\lua-plugin-preload.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)embed.exe ..\..\src\lua-plugin-preload.lua LUA_PLUGIN_PRELOAD ..\..\src\lua-plugin-preload.c ..\..\src\lua-plugin-preload.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)embed.exe ..\..\src\lua-plugin-preload.lua LUA_PLUGIN_PRELOAD ..\..\src\lua-plugin-preload.c ..\..\src\lua-plugin-preload.h</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\src\lua-plugin-preload.c;..\..\src\lua-plugin-preload.h</Outputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\src\lua-plugin-preload.c;..\..\src\lua-plugin-preload.h</Outputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\src\lua-plugin-preload.c;..\..\src\lua-plugin-preload.h</Outputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\src\lua-plugin-preload.c;..\..\src\lua-plugin-preload.h</Outputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

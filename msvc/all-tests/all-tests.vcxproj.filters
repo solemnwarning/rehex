@@ -78,5 +78,8 @@
     <ClCompile Include="..\..\tests\DisassemblyRegion.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\Tab.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

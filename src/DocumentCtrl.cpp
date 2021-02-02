@@ -29,7 +29,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
-#include "app.hpp"
+#include "App.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
@@ -633,9 +633,6 @@ void REHex::DocumentCtrl::_handle_width_change()
 		virtual_width = client_width;
 	}
 	
-	/* TODO: Preserve/scale the position as the window size changes. */
-	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
-	
 	/* Recalculate the height and y offset of each region. */
 	
 	{
@@ -651,6 +648,9 @@ void REHex::DocumentCtrl::_handle_width_change()
 			next_yo += (*i)->y_lines;
 		}
 	}
+
+	/* TODO: Preserve/scale the position as the window size changes. */
+	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
 	
 	/* Update vertical scrollbar, since we just recalculated the height of the document. */
 	_update_vscroll();
@@ -2480,7 +2480,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	ByteRangeSet ranges_matching_selection;
 	
-	const unsigned char *data_p;
+	const unsigned char *data_p = NULL;
 	size_t data_remain;
 	
 	try {

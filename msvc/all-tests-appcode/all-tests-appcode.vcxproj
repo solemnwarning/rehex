@@ -171,6 +171,7 @@
     <ClCompile Include="..\..\src\buffer.cpp" />
     <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\src\CommentTree.cpp" />
+    <ClCompile Include="..\..\src\DataType.cpp" />
     <ClCompile Include="..\..\src\DiffWindow.cpp" />
     <ClCompile Include="..\..\src\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\src\document.cpp" />
@@ -180,6 +181,7 @@
     <ClCompile Include="..\..\src\Palette.cpp" />
     <ClCompile Include="..\..\src\search.cpp" />
     <ClCompile Include="..\..\src\StringPanel.cpp" />
+    <ClCompile Include="..\..\src\Tab.cpp" />
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
     <ClCompile Include="..\..\src\ToolPanel.cpp" />
     <ClCompile Include="..\..\src\util.cpp" />

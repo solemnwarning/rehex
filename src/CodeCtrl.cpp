@@ -20,7 +20,7 @@
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
-#include "app.hpp"
+#include "App.hpp"
 #include "CodeCtrl.hpp"
 
 enum {

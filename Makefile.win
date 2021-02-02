@@ -26,6 +26,10 @@ LDLIBS    += -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc+
 CFLAGS   += -D__STDC_FORMAT_MACROS
 CXXFLAGS += -D__STDC_FORMAT_MACROS
 
+# Include compatibility headers
+CFLAGS   += -Iinclude/gcc-win-include/
+CXXFLAGS += -Iinclude/gcc-win-include/
+
 include Makefile
 
 res/winres.o: res/winres.rc res/winres.h

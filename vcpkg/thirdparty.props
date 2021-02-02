@@ -35,7 +35,10 @@
       <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_aui.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_propgrid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_adv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>jpeg$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>libpng16$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lzma$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>tiff$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>zlib$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <!-- Windows dependencies for wxWidgets -->
       <AdditionalDependencies>comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -46,6 +49,9 @@
 
       <!-- Add capstone -->
       <AdditionalDependencies>capstone.lib;%(AdditionalDependencies)</AdditionalDependencies>
+
+      <!-- Add lua -->
+      <AdditionalDependencies>lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 </Project>

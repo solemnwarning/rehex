@@ -23,6 +23,12 @@ EXTRA_APP_OBJS := \
 	res/document_save32.o \
 	res/document_save_as32.o
 
+EXTRA_TEST_OBJS := \
+	res/document_new32.o \
+	res/document_open32.o \
+	res/document_save32.o \
+	res/document_save_as32.o
+
 # Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
 CAPSTONE_CFLAGS ?=
 CAPSTONE_LIBS   ?= -lcapstone
@@ -49,6 +55,13 @@ REHex.app: res/Info.plist $(EXE) $(ICNS)
 	cp        $(EXE)          $@/Contents/MacOS/REHex
 	mkdir -p                  $@/Contents/Resources/
 	cp        $(ICNS)         $@/Contents/Resources/REHex.icns
+	
+	rm -rf $@/Contents/PlugIns/
+	for f in $(PLUGINS_INSTALL); \
+	do \
+		mkdir -p $@/Contents/PlugIns/`dirname $${f}`; \
+		install -m 0644 plugins/$${f} $@/Contents/PlugIns/$${f}; \
+	done
 
 $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
 	rm -rf $(ICONSET)

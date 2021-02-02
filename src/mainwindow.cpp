@@ -29,7 +29,7 @@
 #include <wx/numdlg.h>
 
 #include "AboutDialog.hpp"
-#include "app.hpp"
+#include "App.hpp"
 #include "BytesPerLineDialog.hpp"
 #include "FillRangeDialog.hpp"
 #include "mainwindow.hpp"
@@ -167,141 +167,219 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::MainWindow::MainWindow(const wxSize& size):
-	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, size)
+	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, size),
+	menu_bar(NULL),
+	file_menu(NULL),
+	edit_menu(NULL),
+	view_menu(NULL),
+	tools_menu(NULL),
+	help_menu(NULL)
 {
-	file_menu = new wxMenu;
-	recent_files_menu = new wxMenu;
+	menu_bar = new wxMenuBar;
 	
-	file_menu->Append(wxID_NEW,    "&New\tCtrl-N");
-	file_menu->Append(wxID_OPEN,   "&Open\tCtrl-O");
-	file_menu->AppendSubMenu(recent_files_menu, "Open &Recent");
-	file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
-	file_menu->Append(wxID_SAVEAS, "&Save As");
-	file_menu->AppendSeparator();
-	file_menu->Append(wxID_CLOSE,  "&Close\tCtrl-W");
-	file_menu->Append(ID_CLOSE_ALL, "Close All");
-	file_menu->Append(ID_CLOSE_OTHERS, "Close Others");
-	file_menu->AppendSeparator();
-	file_menu->Append(wxID_EXIT,   "&Exit");
-	
-	edit_menu = new wxMenu;
-	
-	edit_menu->Append(wxID_UNDO, "&Undo\tCtrl-Z");
-	edit_menu->Append(wxID_REDO, "&Redo\tCtrl-Shift-Z");
-	
-	edit_menu->AppendSeparator();
-	
-	edit_menu->Append(wxID_SELECTALL, "Select &All\tCtrl-A");
-	edit_menu->Append(ID_SELECT_RANGE, "Select range...");
-	
-	edit_menu->AppendSeparator();
-	
-	edit_menu->Append(ID_FILL_RANGE, "Fill range...");
-	
-	#ifdef __APPLE__
-	edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode");
-	#else
-	edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode\tIns");
-	#endif
-	
-	edit_menu->AppendSeparator();
-	
-	edit_menu->Append(ID_SEARCH_TEXT,  "Search for text...");
-	edit_menu->Append(ID_SEARCH_BSEQ,  "Search for byte sequence...");
-	edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
-	
-	edit_menu->AppendSeparator();
-	
-	edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...\tCtrl-G");
-	
-	edit_menu->AppendSeparator();
-	
-	edit_menu->Append(wxID_CUT,   "Cu&t\tCtrl-X");
-	edit_menu->Append(wxID_COPY,  "&Copy\tCtrl-C");
-	edit_menu->Append(wxID_PASTE, "&Paste\tCtrl-V");
-	
-	view_menu = new wxMenu;
-	
-	view_menu->Append(ID_BYTES_LINE,  "Set bytes per line");
-	view_menu->Append(ID_BYTES_GROUP, "Set bytes per group");
-	view_menu->AppendCheckItem(ID_SHOW_OFFSETS, "Show offsets");
-	view_menu->AppendCheckItem(ID_SHOW_ASCII, "Show ASCII");
-	
-	inline_comments_menu = new wxMenu;
-	view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
-	
-	view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
-	
-	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
-	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
-	inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_FULL,   "Full");
-	inline_comments_menu->AppendSeparator();
-	inline_comments_menu->AppendCheckItem(ID_INLINE_COMMENTS_INDENT, "Nest comments");
-	
-	tool_panels_menu = new wxMenu;
-	view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
-	
-	for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 	{
-		const ToolPanelRegistration *tpr = i->second;
-		wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->label);
+		call_setup_hooks(SetupPhase::FILE_MENU_PRE);
 		
-		Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)
+		file_menu = new wxMenu;
+		
+		call_setup_hooks(SetupPhase::FILE_MENU_TOP);
+		
+		file_menu->Append(wxID_NEW,  "&New\tCtrl-N");
+		file_menu->Append(wxID_OPEN, "&Open\tCtrl-O");
+		
+		recent_files_menu = new wxMenu;
+		file_menu->AppendSubMenu(recent_files_menu, "Open &Recent");
+		
+		file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
+		file_menu->Append(wxID_SAVEAS, "&Save As");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(wxID_CLOSE,  "&Close\tCtrl-W");
+		file_menu->Append(ID_CLOSE_ALL, "Close All");
+		file_menu->Append(ID_CLOSE_OTHERS, "Close Others");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(wxID_EXIT, "&Exit");
+		
+		call_setup_hooks(SetupPhase::FILE_MENU_BOTTOM);
+		
+		menu_bar->Append(file_menu, "&File");
+		
+		call_setup_hooks(SetupPhase::FILE_MENU_POST);
+	}
+	
+	{
+		call_setup_hooks(SetupPhase::EDIT_MENU_PRE);
+		
+		edit_menu = new wxMenu;
+		
+		call_setup_hooks(SetupPhase::EDIT_MENU_TOP);
+		
+		edit_menu->Append(wxID_UNDO, "&Undo\tCtrl-Z");
+		edit_menu->Append(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+		
+		edit_menu->AppendSeparator(); /* ---- */
+		
+		edit_menu->Append(wxID_SELECTALL, "Select &All\tCtrl-A");
+		edit_menu->Append(ID_SELECT_RANGE, "Select range...");
+		
+		edit_menu->AppendSeparator(); /* ---- */
+		
+		edit_menu->Append(ID_FILL_RANGE, "Fill range...");
+		
+		#ifdef __APPLE__
+		edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode");
+		#else
+		edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode\tIns");
+		#endif
+		
+		edit_menu->AppendSeparator(); /* ---- */
+		
+		edit_menu->Append(ID_SEARCH_TEXT,  "Search for text...");
+		edit_menu->Append(ID_SEARCH_BSEQ,  "Search for byte sequence...");
+		edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
+		
+		edit_menu->AppendSeparator();
+		
+		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...\tCtrl-G");
+		
+		edit_menu->AppendSeparator(); /* ---- */
+		
+		edit_menu->Append(wxID_CUT,   "Cu&t\tCtrl-X");
+		edit_menu->Append(wxID_COPY,  "&Copy\tCtrl-C");
+		edit_menu->Append(wxID_PASTE, "&Paste\tCtrl-V");
+		
+		call_setup_hooks(SetupPhase::EDIT_MENU_BOTTOM);
+		
+		menu_bar->Append(edit_menu, "&Edit");
+		
+		call_setup_hooks(SetupPhase::EDIT_MENU_POST);
+	}
+	
+	{
+		call_setup_hooks(SetupPhase::VIEW_MENU_PRE);
+		
+		view_menu = new wxMenu;
+		
+		call_setup_hooks(SetupPhase::VIEW_MENU_TOP);
+		
+		view_menu->Append(ID_BYTES_LINE,  "Set bytes per line");
+		view_menu->Append(ID_BYTES_GROUP, "Set bytes per group");
+		view_menu->AppendCheckItem(ID_SHOW_OFFSETS, "Show offsets");
+		view_menu->AppendCheckItem(ID_SHOW_ASCII, "Show ASCII");
+		
+		inline_comments_menu = new wxMenu;
+		view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
+		
+		view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
+		
+		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
+		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
+		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_FULL,   "Full");
+		inline_comments_menu->AppendSeparator();
+		inline_comments_menu->AppendCheckItem(ID_INLINE_COMMENTS_INDENT, "Nest comments");
+		
+		tool_panels_menu = new wxMenu;
+		view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
+		
+		for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 		{
-			OnShowToolPanel(event, tpr);
-		}, itm->GetId(), itm->GetId());
+			const ToolPanelRegistration *tpr = i->second;
+			wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->label);
+			
+			Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)
+			{
+				OnShowToolPanel(event, tpr);
+			}, itm->GetId(), itm->GetId());
+			
+			tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+		}
 		
-		tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+		view_menu->AppendSeparator(); /* ---- */
+		
+		view_menu->AppendRadioItem(ID_HEX_OFFSETS, "Display offsets in hexadecimal");
+		view_menu->AppendRadioItem(ID_DEC_OFFSETS, "Display offsets in decimal");
+		
+		view_menu->AppendSeparator(); /* ---- */
+		
+		wxMenu *palette_menu = new wxMenu;
+		view_menu->AppendSubMenu(palette_menu, "Colour scheme");
+		
+		palette_menu->AppendRadioItem(ID_SYSTEM_PALETTE, "System");
+		palette_menu->AppendRadioItem(ID_LIGHT_PALETTE,  "Light");
+		palette_menu->AppendRadioItem(ID_DARK_PALETTE,   "Dark");
+		
+		std::string palette_name = active_palette->get_name();
+		if(palette_name == "light")
+		{
+			palette_menu->Check(ID_LIGHT_PALETTE, true);
+		}
+		else if(palette_name == "dark")
+		{
+			palette_menu->Check(ID_DARK_PALETTE, true);
+		}
+		else /* if(palette_name == "system") */
+		{
+			palette_menu->Check(ID_SYSTEM_PALETTE, true);
+		}
+		
+		view_menu->AppendSeparator(); /* ---- */
+		
+		view_menu->Append(ID_FSA_INCREASE, "Increase font size");
+		view_menu->Append(ID_FSA_DECREASE, "Decrease font size");
+		
+		view_menu->AppendSeparator();  /* ---- */
+		
+		view_menu->Append(ID_SAVE_VIEW, "Save current view as default");
+		
+		call_setup_hooks(SetupPhase::VIEW_MENU_BOTTOM);
+		
+		menu_bar->Append(view_menu, "&View");
+		
+		call_setup_hooks(SetupPhase::VIEW_MENU_POST);
 	}
 	
-	view_menu->AppendSeparator();
-	
-	view_menu->AppendRadioItem(ID_HEX_OFFSETS, "Display offsets in hexadecimal");
-	view_menu->AppendRadioItem(ID_DEC_OFFSETS, "Display offsets in decimal");
-	
-	view_menu->AppendSeparator();
-	
-	wxMenu *palette_menu = new wxMenu;
-	view_menu->AppendSubMenu(palette_menu, "Colour scheme");
-	
-	palette_menu->AppendRadioItem(ID_SYSTEM_PALETTE, "System");
-	palette_menu->AppendRadioItem(ID_LIGHT_PALETTE,  "Light");
-	palette_menu->AppendRadioItem(ID_DARK_PALETTE,   "Dark");
-	
-	std::string palette_name = active_palette->get_name();
-	if(palette_name == "light")
 	{
-		palette_menu->Check(ID_LIGHT_PALETTE, true);
+		call_setup_hooks(SetupPhase::TOOLS_MENU_PRE);
+		
+		tools_menu = new wxMenu;
+		
+		call_setup_hooks(SetupPhase::TOOLS_MENU_TOP);
+		call_setup_hooks(SetupPhase::TOOLS_MENU_BOTTOM);
+		
+		if(tools_menu->GetMenuItemCount() > 0)
+		{
+			menu_bar->Append(tools_menu, "&Tools");
+		}
+		else{
+			/* No plugins created an item under the "Tools" menu - get rid of it. */
+			
+			delete tools_menu;
+			tools_menu = NULL;
+		}
+		
+		call_setup_hooks(SetupPhase::TOOLS_MENU_POST);
 	}
-	else if(palette_name == "dark")
+	
 	{
-		palette_menu->Check(ID_DARK_PALETTE, true);
+		call_setup_hooks(SetupPhase::HELP_MENU_PRE);
+		
+		help_menu = new wxMenu;
+		
+		call_setup_hooks(SetupPhase::HELP_MENU_TOP);
+		
+		help_menu->Append(ID_GITHUB, "Visit &Github page");
+		help_menu->Append(ID_DONATE, "Donate with &Paypal");
+		help_menu->Append(wxID_ABOUT, "&About");
+		
+		call_setup_hooks(SetupPhase::HELP_MENU_BOTTOM);
+		
+		menu_bar->Append(help_menu, "&Help");
+		
+		call_setup_hooks(SetupPhase::HELP_MENU_POST);
 	}
-	else /* if(palette_name == "system") */
-	{
-		palette_menu->Check(ID_SYSTEM_PALETTE, true);
-	}
-	
-	view_menu->AppendSeparator();
-	
-	view_menu->Append(ID_FSA_INCREASE, "Increase font size");
-	view_menu->Append(ID_FSA_DECREASE, "Decrease font size");
-	
-	view_menu->AppendSeparator();
-	
-	view_menu->Append(ID_SAVE_VIEW, "Save current view as default");
-	
-	wxMenu *help_menu = new wxMenu;
-	
-	help_menu->Append(ID_GITHUB, "Visit &Github page");
-	help_menu->Append(ID_DONATE, "Donate with &Paypal");
-	help_menu->Append(wxID_ABOUT, "&About");
-	
-	wxMenuBar *menu_bar = new wxMenuBar;
-	menu_bar->Append(file_menu, "&File");
-	menu_bar->Append(edit_menu, "&Edit");
-	menu_bar->Append(view_menu,  "&View");
-	menu_bar->Append(help_menu, "&Help");
 	
 	SetMenuBar(menu_bar);
 	
@@ -367,6 +445,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	}
 	
 	SetIcons(icons);
+	
+	call_setup_hooks(SetupPhase::DONE);
 }
 
 REHex::MainWindow::~MainWindow()
@@ -379,6 +459,9 @@ void REHex::MainWindow::new_file()
 	Tab *tab = new Tab(notebook);
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
 }
 
 void REHex::MainWindow::open_file(const std::string &filename)
@@ -416,6 +499,9 @@ void REHex::MainWindow::open_file(const std::string &filename)
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
@@ -1505,6 +1591,36 @@ void REHex::MainWindow::close_other_tabs(Tab *tab)
 	}
 }
 
+wxMenuBar *REHex::MainWindow::get_menu_bar() const
+{
+	return menu_bar;
+}
+
+wxMenu *REHex::MainWindow::get_file_menu() const
+{
+	return file_menu;
+}
+
+wxMenu *REHex::MainWindow::get_edit_menu() const
+{
+	return edit_menu;
+}
+
+wxMenu *REHex::MainWindow::get_view_menu() const
+{
+	return view_menu;
+}
+
+wxMenu *REHex::MainWindow::get_tools_menu() const
+{
+	return tools_menu;
+}
+
+wxMenu *REHex::MainWindow::get_help_menu() const
+{
+	return help_menu;
+}
+
 REHex::MainWindow::DropTarget::DropTarget(MainWindow *window):
 	window(window) {}
 
@@ -1518,4 +1634,74 @@ bool REHex::MainWindow::DropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxAr
 	}
 	
 	return true;
+}
+
+std::multimap<REHex::MainWindow::SetupPhase, const REHex::MainWindow::SetupHookFunction*> *REHex::MainWindow::setup_hooks = NULL;
+
+void REHex::MainWindow::register_setup_hook(SetupPhase phase, const SetupHookFunction *func)
+{
+	if(setup_hooks == NULL)
+	{
+		setup_hooks = new std::multimap<SetupPhase, const SetupHookFunction*>;
+	}
+	
+	setup_hooks->insert(std::make_pair(phase, func));
+}
+
+void REHex::MainWindow::unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func)
+{
+	auto i = std::find_if(
+		setup_hooks->begin(), setup_hooks->end(),
+		[&](const std::pair<SetupPhase, const SetupHookFunction*> &elem) { return elem.first == phase && elem.second == func; });
+	
+	setup_hooks->erase(i);
+	
+	if(setup_hooks->empty())
+	{
+		delete setup_hooks;
+		setup_hooks = NULL;
+	}
+}
+
+void REHex::MainWindow::call_setup_hooks(SetupPhase phase)
+{
+	if(setup_hooks == NULL)
+	{
+		/* No hooks registered. */
+		return;
+	}
+	
+	for(auto i = setup_hooks->begin(); i != setup_hooks->end(); ++i)
+	{
+		if(i->first == phase)
+		{
+			const SetupHookFunction &func = *(i->second);
+			func(this);
+		}
+	}
+}
+
+REHex::MainWindow::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):
+	phase(phase),
+	func(func)
+{
+	MainWindow::register_setup_hook(phase, &(this->func));
+}
+
+REHex::MainWindow::SetupHookRegistration::~SetupHookRegistration()
+{
+	MainWindow::unregister_setup_hook(phase, &func);
+}
+
+wxDEFINE_EVENT(REHex::TAB_CREATED, REHex::TabCreatedEvent);
+
+REHex::TabCreatedEvent::TabCreatedEvent(MainWindow *source, Tab *tab):
+	wxEvent(source->GetId(), TAB_CREATED), tab(tab)
+{
+	SetEventObject(source);
+}
+
+wxEvent *REHex::TabCreatedEvent::Clone() const
+{
+	return new TabCreatedEvent(*this);
 }

@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{518C9FD0-CC93-44D7-AE12-8974CE814FCF}</ProjectGuid>
+    <RootNamespace>wxlua</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\vcpkg\thirdparty.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\..\include;..\..\wxLua\modules;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxadv_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxadv_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxadv_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxadv_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxadv_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\modules\wxbind\include\wxadv_bind.h;..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxadv_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\modules\wxbind\include\wxadv_bind.h;..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxadv_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\modules\wxbind\include\wxadv_bind.h;..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxadv_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\modules\wxbind\include\wxadv_bind.h;..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxadv_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(AdditionalInputs)</AdditionalInputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxaui_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxaui_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxaui_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxaui_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxaui_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\modules\wxbind\include\wxaui_bind.h;..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxaui_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\modules\wxbind\include\wxaui_bind.h;..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxaui_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\modules\wxbind\include\wxaui_bind.h;..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxaui_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\modules\wxbind\include\wxaui_bind.h;..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxaui_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxbase_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxbase_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxbase_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxbase_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxbase_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\modules\wxbind\src\wxbase_base.cpp;..\..\wxLua\modules\wxbind\src\wxbase_config.cpp;..\..\wxLua\modules\wxbind\src\wxbase_data.cpp;..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp;..\..\wxLua\modules\wxbind\src\wxbase_file.cpp;..\..\wxLua\modules\wxbind\include\wxbase_bind.h;..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\modules\wxbind\src\wxbase_base.cpp;..\..\wxLua\modules\wxbind\src\wxbase_config.cpp;..\..\wxLua\modules\wxbind\src\wxbase_data.cpp;..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp;..\..\wxLua\modules\wxbind\src\wxbase_file.cpp;..\..\wxLua\modules\wxbind\include\wxbase_bind.h;..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\modules\wxbind\src\wxbase_base.cpp;..\..\wxLua\modules\wxbind\src\wxbase_config.cpp;..\..\wxLua\modules\wxbind\src\wxbase_data.cpp;..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp;..\..\wxLua\modules\wxbind\src\wxbase_file.cpp;..\..\wxLua\modules\wxbind\include\wxbase_bind.h;..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\modules\wxbind\src\wxbase_base.cpp;..\..\wxLua\modules\wxbind\src\wxbase_config.cpp;..\..\wxLua\modules\wxbind\src\wxbase_data.cpp;..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp;..\..\wxLua\modules\wxbind\src\wxbase_file.cpp;..\..\wxLua\modules\wxbind\include\wxbase_bind.h;..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxcore_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxcore_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxcore_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxcore_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxcore_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp;..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp;..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp;..\..\wxLua\modules\wxbind\src\wxcore_core.cpp;..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp;..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp;..\..\wxLua\modules\wxbind\src\wxcore_event.cpp;..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp;..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp;..\..\wxLua\modules\wxbind\src\wxcore_help.cpp;..\..\wxLua\modules\wxbind\src\wxcore_image.cpp;..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp;..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp;..\..\wxLua\modules\wxbind\src\wxcore_print.cpp;..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp;..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp;..\..\wxLua\modules\wxbind\include\wxcore_bind.h;..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp;..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp;..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp;..\..\wxLua\modules\wxbind\src\wxcore_core.cpp;..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp;..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp;..\..\wxLua\modules\wxbind\src\wxcore_event.cpp;..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp;..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp;..\..\wxLua\modules\wxbind\src\wxcore_help.cpp;..\..\wxLua\modules\wxbind\src\wxcore_image.cpp;..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp;..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp;..\..\wxLua\modules\wxbind\src\wxcore_print.cpp;..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp;..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp;..\..\wxLua\modules\wxbind\include\wxcore_bind.h;..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp;..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp;..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp;..\..\wxLua\modules\wxbind\src\wxcore_core.cpp;..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp;..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp;..\..\wxLua\modules\wxbind\src\wxcore_event.cpp;..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp;..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp;..\..\wxLua\modules\wxbind\src\wxcore_help.cpp;..\..\wxLua\modules\wxbind\src\wxcore_image.cpp;..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp;..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp;..\..\wxLua\modules\wxbind\src\wxcore_print.cpp;..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp;..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp;..\..\wxLua\modules\wxbind\include\wxcore_bind.h;..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp;..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp;..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp;..\..\wxLua\modules\wxbind\src\wxcore_core.cpp;..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp;..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp;..\..\wxLua\modules\wxbind\src\wxcore_event.cpp;..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp;..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp;..\..\wxLua\modules\wxbind\src\wxcore_help.cpp;..\..\wxLua\modules\wxbind\src\wxcore_image.cpp;..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp;..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp;..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp;..\..\wxLua\modules\wxbind\src\wxcore_print.cpp;..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp;..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp;..\..\wxLua\modules\wxbind\include\wxcore_bind.h;..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxpropgrid_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxpropgrid_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxpropgrid_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxpropgrid_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxwidgets/wxpropgrid_rules.lua\"" genwxbind.lua</Command>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\modules\wxbind\include\wxpropgrid_bind.h;..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxpropgrid_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\modules\wxbind\include\wxpropgrid_bind.h;..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxpropgrid_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\modules\wxbind\include\wxpropgrid_bind.h;..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxpropgrid_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\modules\wxbind\include\wxpropgrid_bind.h;..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp;..\..\wxLua\bindings\wxwidgets\wxpropgrid_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\bindings\wxwidgets\wxcore_datatypes.lua</AdditionalInputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\wxLua\bindings\wxlua\wxlua_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxlua/wxlua_rules.lua\"" genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxlua/wxlua_rules.lua\"" genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxlua/wxlua_rules.lua\"" genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\..\wxLua\bindings &amp;&amp; ..\..\vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"wxlua/wxlua_rules.lua\"" genwxbind.lua</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\modules\wxlua\wxlua_bind.h;..\..\wxLua\modules\wxlua\wxlua_bind.cpp;..\..\wxLua\bindings\wxlua\wxlua_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\modules\wxlua\wxlua_bind.h;..\..\wxLua\modules\wxlua\wxlua_bind.cpp;..\..\wxLua\bindings\wxlua\wxlua_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\modules\wxlua\wxlua_bind.h;..\..\wxLua\modules\wxlua\wxlua_bind.cpp;..\..\wxLua\bindings\wxlua\wxlua_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\modules\wxlua\wxlua_bind.h;..\..\wxLua\modules\wxlua\wxlua_bind.cpp;..\..\wxLua\bindings\wxlua\wxlua_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\wxLua\bindings\wxwidgets\wxbase_datatypes.lua</AdditionalInputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxadv_wxladv.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_base.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_config.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_data.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_file.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_core.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_event.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_help.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_image.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_print.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_wxlcore.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\bit.c" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\lbitlib.c" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlbind.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlcallb.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxllua.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlobject.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlstate.cpp" />
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlua_bind.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

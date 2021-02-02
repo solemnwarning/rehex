@@ -105,7 +105,13 @@
     <ClCompile Include="..\..\src\BasicDataTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\DataType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\DisassemblyRegion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Tab.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

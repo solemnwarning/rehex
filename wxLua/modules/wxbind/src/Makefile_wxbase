@@ -1,0 +1,59 @@
+# File:		Makefile
+# Author:	John Labenski, J Winwood
+# Created:	2002
+# Updated:
+# Copyright: (c) 2002 Lomtick Software. All rights reserved.
+#
+# Makefile for wxLuaBinding library using gmake
+
+# Override this on the command line to use your own wxluasetup.h
+WXLUASETUP = wxluasetup.h
+
+# ----------------------------------------------------------------------------
+# Set path to root of wxLua
+WXLUA_DIR = ../../..
+
+# ----------------------------------------------------------------------------
+# Include wxLua settings using wx-config for wxWidgets parameters
+
+include $(WXLUA_DIR)/build/Makefile_wx-config.in
+
+# ----------------------------------------------------------------------------
+
+WXLUA_TARGET_LIBNAME = lib$(WXLUABINDBASE_LIB)
+
+# ----------------------------------------------------------------------------
+
+HEADERS =
+SOURCES = \
+    wxbase_base.cpp \
+    wxbase_bind.cpp \
+    wxbase_config.cpp \
+    wxbase_data.cpp \
+    wxbase_datetime.cpp \
+    wxbase_file.cpp
+
+OBJECTS=$(SOURCES:.cpp=.o)
+DEPFILES=$(OBJECTS:.o=.d)
+
+# ----------------------------------------------------------------------------
+
+.cpp.o:
+	$(CXX) -include $(WXLUASETUP) -c $(CXXFLAGS) $(APPEXTRADEFS) -o $@ $<
+
+all: $(WXLUA_TARGET_LIB_STATIC) $(WXLUA_TARGET_LIB_SHARED)
+
+clean: cleanlib
+
+# A test to make a shared lib to test dependencies
+test: $(OBJECTS) $(LUA_LIBS)
+	$(CXX) $(CXXFLAGS) $(APPEXTRADEFS) -g -O -o test -fPIC \
+	`wx-config --libs base` -l$(LUA_LIBS) -l$(WXLUA_LIB) test.cpp
+
+
+# ----------------------------------------------------------------------------
+# Include wxLua targets using wx-config for wxWidgets parameters
+
+include $(WXLUA_DIR)/build/Makefile_wx-config_targets.in
+
+-include $(DEPFILES)

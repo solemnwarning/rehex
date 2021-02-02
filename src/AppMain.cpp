@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,9 +17,8 @@
 
 #include "platform.hpp"
 
-#include "app.hpp"
+#include "App.hpp"
 #include "ArtProvider.hpp"
-#include "Events.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 
@@ -33,6 +32,7 @@ IMPLEMENT_APP(REHex::App);
 bool REHex::App::OnInit()
 {
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
+	console = new ConsoleBuffer();
 	
 	call_setup_hooks(SetupPhase::EARLY);
 	
@@ -121,6 +121,8 @@ bool REHex::App::OnInit()
 
 int REHex::App::OnExit()
 {
+	call_setup_hooks(SetupPhase::SHUTDOWN);
+	
 	config->SetPath("/recent-files/");
 	recent_files->Save(*config);
 	
@@ -135,88 +137,13 @@ int REHex::App::OnExit()
 	CoUninitialize();
 	#endif
 	
+	call_setup_hooks(SetupPhase::SHUTDOWN_LATE);
+	
+	delete console;
+	console = NULL;
+	
 	delete locale;
 	locale = NULL;
 	
 	return 0;
-}
-
-const std::string &REHex::App::get_last_directory()
-{
-	return last_directory;
-}
-
-void REHex::App::set_last_directory(const std::string &last_directory)
-{
-	this->last_directory = last_directory;
-}
-
-int REHex::App::get_font_size_adjustment() const
-{
-	return font_size_adjustment;
-}
-
-void REHex::App::set_font_size_adjustment(int font_size_adjustment)
-{
-	this->font_size_adjustment = font_size_adjustment;
-	
-	FontSizeAdjustmentEvent event(font_size_adjustment);
-	ProcessEvent(event);
-}
-
-std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;
-
-void REHex::App::register_setup_hook(SetupPhase phase, const SetupHookFunction *func)
-{
-	if(setup_hooks == NULL)
-	{
-		setup_hooks = new std::multimap<SetupPhase, const SetupHookFunction*>;
-	}
-	
-	setup_hooks->insert(std::make_pair(phase, func));
-}
-
-void REHex::App::unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func)
-{
-	auto i = std::find_if(
-		setup_hooks->begin(), setup_hooks->end(),
-		[&](const std::pair<SetupPhase, const SetupHookFunction*> &elem) { return elem.first == phase && elem.second == func; });
-	
-	setup_hooks->erase(i);
-	
-	if(setup_hooks->empty())
-	{
-		delete setup_hooks;
-		setup_hooks = NULL;
-	}
-}
-
-void REHex::App::call_setup_hooks(SetupPhase phase)
-{
-	if(setup_hooks == NULL)
-	{
-		/* No hooks registered. */
-		return;
-	}
-	
-	for(auto i = setup_hooks->begin(); i != setup_hooks->end(); ++i)
-	{
-		if(i->first == phase)
-		{
-			const SetupHookFunction &func = *(i->second);
-			func();
-		}
-	}
-}
-
-REHex::App::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):
-	phase(phase),
-	func(func)
-{
-	App::register_setup_hook(phase, &(this->func));
-}
-
-REHex::App::SetupHookRegistration::~SetupHookRegistration()
-{
-	App::unregister_setup_hook(phase, &func);
 }

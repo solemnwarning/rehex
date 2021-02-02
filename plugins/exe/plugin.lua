@@ -79,7 +79,7 @@ rehex.OnTabCreated(function(mainwindow, tab)
 	end
 end)
 
-rehex.AddToToolsMenu("exe", function(mainwindow)
+rehex.AddToToolsMenu("Analyse PE EXE/DLL", function(mainwindow)
 	local doc = mainwindow:active_document()
 	process_document(doc)
 end);

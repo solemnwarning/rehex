@@ -22,11 +22,12 @@ BuildRequires: xorg-x11-server-Xvfb
 Requires: jansson
 Requires: wxGTK3
 
+%define extra_make_flags LUA_PKG=lua  bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
+
 %if 0%{?el7}
-%define extra_make_flags LUA_PKG=lua WX_CONFIG=wx-config-3.0
+%define extra_make_flags %{extra_make_flags} WX_CONFIG=wx-config-3.0
 BuildRequires: pkgconfig
 %else
-%define extra_make_flags LUA_PKG=lua
 BuildRequires: pkgconf
 %endif
 
@@ -43,7 +44,7 @@ xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{?extra_make_flags} check
 
 %install
 rm -rf %{buildroot}
-make %{?extra_make_flags} bindir=%{_bindir} datarootdir=%{_datadir} DESTDIR=%{buildroot} install
+make %{?extra_make_flags} DESTDIR=%{buildroot} install
 
 %clean
 rm -rf %{buildroot}
@@ -59,3 +60,4 @@ rm -rf %{buildroot}
 %{_datadir}/icons/hicolor/128x128/apps/rehex.png
 %{_datadir}/icons/hicolor/256x256/apps/rehex.png
 %{_datadir}/icons/hicolor/512x512/apps/rehex.png
+%{_libdir}/rehex/

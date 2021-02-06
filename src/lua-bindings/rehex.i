@@ -73,6 +73,7 @@ class REHex::Document: public wxEvtHandler
 	wxString read_data(off_t offset, off_t max_length) const;
 	off_t buffer_length();
 	
+	LuaTable get_comments() const;
 	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
 	bool set_data_type(off_t offset, off_t length, const wxString &type);
 };

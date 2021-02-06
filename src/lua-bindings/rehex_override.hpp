@@ -61,6 +61,42 @@ static int LUACALL wxLua_REHex_MainWindow_SetupHookRegistration_constructor(lua_
 }
 %end
 
+%override wxLua_REHex_Document_get_comments
+static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
+{
+	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+	
+	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> comments = self->get_comments();
+	
+	lua_newtable(L);            /* Table to return */
+	lua_Integer table_idx = 1;  /* Next index to use in return table */
+	
+	for(auto c = comments.begin(); c != comments.end(); ++c)
+	{
+		lua_pushinteger(L, table_idx++);
+		
+		lua_newtable(L);  /* Table for comment. */
+		
+		lua_pushstring(L, "offset");
+		lua_pushinteger(L, c->first.offset);
+		lua_settable(L, -3);
+		
+		lua_pushstring(L, "length");
+		lua_pushinteger(L, c->first.length);
+		lua_settable(L, -3);
+		
+		lua_pushstring(L, "text");
+		lua_pushlstring(L, c->second.text->mb_str().data(), c->second.text->mb_str().length());
+		lua_settable(L, -3);
+		
+		/* Push comment table onto return table */
+		lua_settable(L, -3);
+	}
+	
+	return 1;
+}
+%end
+
 %override wxLua_REHex_Document_read_data
 static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 {

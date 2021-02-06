@@ -61,9 +61,13 @@ function process_document(doc)
 end
 
 rehex.OnTabCreated(function(mainwindow, tab)
-	local filename = tab.doc:get_filename()
+	local comments = tab.doc:get_comments()
+	if #comments > 0 then
+		-- Don't offer to analyse if there are any comments.
+		return
+	end
 	
-	-- TODO: Skip if this has been done before (file has comments?)
+	local filename = tab.doc:get_filename()
 	
 	if string.match(filename:lower(), "%.exe$") or string.match(filename:lower(), "%.dll$") then
 		-- Get the last component of the filename (i.e. skip any directories)

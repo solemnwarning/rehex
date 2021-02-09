@@ -116,6 +116,14 @@ namespace REHex
 			const_iterator get_range(off_t offset) const;
 			
 			/**
+			 * @brief Search the map for a range intersecting with the given range.
+			 *
+			 * Returns an iterator to the first intersecting range, end if there aren't
+			 * any.
+			*/
+			const_iterator get_range_in(off_t offset, off_t length) const;
+			
+			/**
 			 * @brief Set a range of bytes in the map.
 			 *
 			 * This method adds a range of bytes to the set. Any existing ranges
@@ -188,6 +196,30 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 	
 	/* No match. */
 	return end();
+}
+
+template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::ByteRangeMap<T>::get_range_in(off_t offset, off_t length) const
+{
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), default_value));
+	
+	if(i != ranges.begin())
+	{
+		--i;
+	}
+	
+	for(; i != ranges.end() && i->first.offset < (offset + length); ++i)
+	{
+		off_t end = offset + length;
+		off_t i_end = i->first.offset + i->first.length;
+		
+		if(i->first.offset < end && offset < i_end)
+		{
+			return i;
+		}
+	}
+	
+	/* No match. */
+	return ranges.end();
 }
 
 template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t length, const T &value)

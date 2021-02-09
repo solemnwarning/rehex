@@ -74,6 +74,40 @@ TEST(ByteRangeMap, GetRangeEmptyMap)
 	EXPECT_EQ(brm.get_range(0),  brm.end());
 }
 
+TEST(ByteRangeMap, GetRangeIn)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "fumbling"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "false"),
+		std::make_pair(ByteRangeMap<std::string>::Range(60, 10), "oval"),
+	};
+	
+	const ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	EXPECT_EQ(brm.get_range_in( 0, 10), brm.end());
+	EXPECT_EQ(brm.get_range_in( 0, 15), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in( 0, 35), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(10,  0), brm.end());
+	EXPECT_EQ(brm.get_range_in(10,  1), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(10, 10), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(10, 20), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(29, 20), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(30, 10), brm.end());
+	EXPECT_EQ(brm.get_range_in(30, 20), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range_in(30, 50), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range_in(50, 10), brm.end());
+	EXPECT_EQ(brm.get_range_in(50, 11), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range_in(69,  1), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range_in(70, 10), brm.end());
+}
+
+TEST(ByteRangeMap, GetRangeInEmptyMap)
+{
+	const ByteRangeMap<std::string> brm;
+	
+	EXPECT_EQ(brm.get_range_in(0, 10), brm.end());
+}
+
 TEST(ByteRangeMap, SetOneRange)
 {
 	ByteRangeMap<std::string> brm;

@@ -1,0 +1,31 @@
+---
+-- The main application window. Future versions of rehex may support multiple of these.
+-- @classmod rehex.MainWindow
+
+--- Get the currently active document.
+-- @function active_document
+-- @return rehex.Document object
+
+--- Get the wxMenuBar of the window.
+-- @function get_menu_bar
+-- @return wx.wxMenuBar object
+
+--- Get the "File" menu of the window.
+-- @function get_file_menu
+-- @return wx.wxMenu object
+
+--- Get the "Edit" menu of the window.
+-- @function get_edit_menu
+-- @return wx.wxMenu object
+
+--- Get the "View" menu of the window.
+-- @function get_view_menu
+-- @return wx.wxMenu object
+
+--- Get the "Tools" menu of the window.
+-- @function get_tools_menu
+-- @return wx.wxMenu object
+
+--- Get the "Help" menu of the window.
+-- @function get_tools_menu
+-- @return wx.wxMenu object

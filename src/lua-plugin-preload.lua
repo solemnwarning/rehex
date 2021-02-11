@@ -1,14 +1,40 @@
+--- Reverse Engineers' Hex Editor Lua plugin API
+-- @module rehex
+
 local registrations = {};
+
+--- Register a function to be called during app initialisation.
+--
+-- @param callback Callback function.
+--
+-- The given function will be called during the REHex::App::SetupPhase::READY hook (i.e. after most
+-- initialisation is complete, but before the MainWindow is created.
 
 rehex.OnAppReady = function(callback)
 	local registration = rehex.REHex_App_SetupHookRegistration.new(rehex.App_SetupPhase_READY, callback);
 	table.insert(registrations, registration);
 end
 
+--- Register a function to be called during app initialisation.
+--
+-- @param callback Callback function.
+--
+-- The given function will be called during the REHex::App::SetupPhase::DONE hook (i.e. after the
+-- MainWindow has been created and any files opened.
+
 rehex.OnAppDone = function(callback)
 	local registration = rehex.REHex_App_SetupHookRegistration.new(rehex.App_SetupPhase_DONE, callback);
 	table.insert(registrations, registration);
 end
+
+--- Register a function to be called when a new tab is created.
+--
+-- @param callback Callback function.
+--
+-- Registers a function to be called whenever a file is opened or a new one created.
+-- This should typically be called during your plugin's initialisation.
+--
+-- The callback function will be passed references to the MainWindow and Tab objects.
 
 rehex.OnTabCreated = function(callback)
 	local registration = rehex.REHex_MainWindow_SetupHookRegistration.new(
@@ -22,6 +48,16 @@ rehex.OnTabCreated = function(callback)
 	
 	table.insert(registrations, registration);
 end
+
+--- Add a command to the "Tools" menu.
+--
+-- @param label Label to display in the menu.
+-- @param callback Callback function to be called when the command is activated.
+--
+-- Adds a command to the "Tools" menu of the main window. This must be called before the window is
+-- constructed, usually as part of your plugin's initialisation.
+--
+-- The callback function will be passed a reference to the MainWindow object when activated.
 
 rehex.AddToToolsMenu = function(label, callback)
 	local registration = rehex.REHex_MainWindow_SetupHookRegistration.new(
@@ -41,6 +77,8 @@ rehex.AddToToolsMenu = function(label, callback)
 end
 
 if _rehex_plugin_dir ~= nil then
+	--- Path to plugin data directory, nil if the plugin is a script in the top-level plugins
+	--  directory.
 	rehex.PLUGIN_DIR = _rehex_plugin_dir
 	_rehex_plugin_dir = nil
 	

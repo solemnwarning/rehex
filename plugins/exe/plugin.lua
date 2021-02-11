@@ -55,7 +55,7 @@ function process_document(doc)
 				comment_text = comment_text .. "\nMemory access: " .. table.concat(access, ", ")
 			end
 			
-			doc:set_comment(section_off, section_len, rehex.REHex_Document_Comment.new(comment_text))
+			doc:set_comment(section_off, section_len, rehex.Comment.new(comment_text))
 		end
 	end
 end

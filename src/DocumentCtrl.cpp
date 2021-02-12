@@ -286,7 +286,10 @@ bool REHex::DocumentCtrl::special_view_active() const
 
 void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorState cursor_state)
 {
-	assert(position >= 0 && position <= doc->buffer_length());
+	/* TODO: Clamp to positions with corresponding regions? */
+	
+	position = std::max<off_t>(position, 0);
+	position = std::min(position, doc->buffer_length());
 	
 	if(!insert_mode && position > 0 && position == doc->buffer_length())
 	{

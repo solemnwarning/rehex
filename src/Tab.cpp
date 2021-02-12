@@ -649,11 +649,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				off_t new_cursor_pos = ((selection_off + selection_length) >= doc->buffer_length() && selection_off > 0 && !insert_mode)
-					? (selection_off - 1)
-					: selection_off;
-				
-				doc->erase_data(selection_off, selection_length, new_cursor_pos, Document::CSTATE_GOTO, "delete selection");
+				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
 			else if((cursor_pos + 1) < doc->buffer_length())
@@ -671,11 +667,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				off_t new_cursor_pos = ((selection_off + selection_length) >= doc->buffer_length() && selection_off > 0 && !insert_mode)
-					? (selection_off - 1)
-					: selection_off;
-				
-				doc->erase_data(selection_off, selection_length, new_cursor_pos, Document::CSTATE_GOTO, "delete selection");
+				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
 			else if(cursor_state == Document::CSTATE_HEX_MID)

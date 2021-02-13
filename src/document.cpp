@@ -48,6 +48,7 @@ wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
 	dirty(false),
@@ -206,7 +207,7 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const un
 	_tracked_replace_data(change_desc, offset, old_data_length, new_data, new_data_length, new_cursor_pos, new_cursor_state);
 }
 
-off_t REHex::Document::buffer_length()
+off_t REHex::Document::buffer_length() const
 {
 	return buffer->length();
 }
@@ -359,6 +360,197 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 	return true;
 }
 
+bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
+{
+	if(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end()
+		|| virt_to_real_segs.get_range_in(virt_offset, length) != virt_to_real_segs.end())
+	{
+		return false;
+	}
+	
+	_tracked_change("set virtual address mapping",
+		[this, real_offset, virt_offset, length]()
+		{
+			assert(real_to_virt_segs.get_range_in(real_offset, length) == real_to_virt_segs.end());
+			assert(virt_to_real_segs.get_range_in(virt_offset, length) == virt_to_real_segs.end());
+			
+			real_to_virt_segs.set_range(real_offset, length, virt_offset);
+			virt_to_real_segs.set_range(virt_offset, length, real_offset);
+			set_dirty(true);
+			
+			_raise_mappings_changed();
+		},
+		
+		[this]()
+		{
+			/* Address mapping changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
+void REHex::Document::clear_virt_mapping_r(off_t real_offset, off_t length)
+{
+	if(real_to_virt_segs.get_range_in(real_offset, length) == real_to_virt_segs.end())
+	{
+		/* No mapping here - nothing to do. */
+		return;
+	}
+	
+	_tracked_change("clear virtual address mapping",
+		[this, real_offset, length]()
+		{
+			assert(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end());
+			
+			off_t real_end = real_offset + length;
+			
+			ByteRangeMap<off_t>::const_iterator i;
+			while((i = real_to_virt_segs.get_range_in(real_offset, length)) != real_to_virt_segs.end())
+			{
+				off_t seg_real_off = i->first.offset;
+				off_t seg_length   = i->first.length;
+				off_t seg_virt_off = i->second;
+				
+				off_t seg_real_end = seg_real_off + seg_length;
+				off_t seg_virt_end = seg_virt_off + seg_length;
+				
+				off_t virt_off = seg_virt_off + (real_offset - seg_real_off);
+				off_t virt_end = virt_off + length;
+				
+				if(seg_real_end > real_end)
+				{
+					real_to_virt_segs.set_range(real_end, (seg_real_end - real_end), virt_end);
+					virt_to_real_segs.set_range(virt_end, (seg_virt_end - virt_end), real_end);
+					
+					off_t clear_virt_from = std::max(virt_off, seg_virt_off);
+					
+					real_to_virt_segs.clear_range(real_offset,     (real_end - real_offset));
+					virt_to_real_segs.clear_range(clear_virt_from, (virt_end - clear_virt_from));
+				}
+				else{
+					assert(real_offset < seg_real_end);
+					assert(virt_off    < seg_virt_end);
+					
+					real_to_virt_segs.clear_range(real_offset, (seg_real_end - real_offset));
+					virt_to_real_segs.clear_range(virt_off,    (seg_virt_end - virt_off));
+				}
+			}
+			
+			set_dirty(true);
+			
+			_raise_mappings_changed();
+		},
+		
+		[this]()
+		{
+			/* Address mapping changes are undone implicitly. */
+		});
+}
+
+void REHex::Document::clear_virt_mapping_v(off_t virt_offset, off_t length)
+{
+	if(virt_to_real_segs.get_range_in(virt_offset, length) == virt_to_real_segs.end())
+	{
+		/* No mapping here - nothing to do. */
+		return;
+	}
+	
+	_tracked_change("clear virtual address mapping",
+		[this, virt_offset, length]()
+		{
+			assert(virt_to_real_segs.get_range_in(virt_offset, length) != virt_to_real_segs.end());
+			
+			off_t virt_end = virt_offset + length;
+			
+			ByteRangeMap<off_t>::const_iterator i;
+			while((i = virt_to_real_segs.get_range_in(virt_offset, length)) != virt_to_real_segs.end())
+			{
+				off_t seg_virt_off = i->first.offset;
+				off_t seg_length   = i->first.length;
+				off_t seg_real_off = i->second;
+				
+				off_t seg_real_end = seg_real_off + seg_length;
+				off_t seg_virt_end = seg_virt_off + seg_length;
+				
+				off_t real_off = seg_real_off + (virt_offset - seg_virt_off);
+				off_t real_end = real_off + length;
+				
+				if(seg_virt_end > virt_end)
+				{
+					real_to_virt_segs.set_range(real_end, (seg_real_end - real_end), virt_end);
+					virt_to_real_segs.set_range(virt_end, (seg_virt_end - virt_end), real_end);
+					
+					off_t clear_real_from = std::max(real_off, seg_real_off);
+					
+					real_to_virt_segs.clear_range(clear_real_from, (real_end - clear_real_from));
+					virt_to_real_segs.clear_range(virt_offset,     (virt_end - virt_offset));
+				}
+				else{
+					assert(real_off    < seg_real_end);
+					assert(virt_offset < seg_virt_end);
+					
+					real_to_virt_segs.clear_range(real_off,    (seg_real_end - real_off));
+					virt_to_real_segs.clear_range(virt_offset, (seg_virt_end - virt_offset));
+				}
+			}
+			
+			set_dirty(true);
+			
+			_raise_mappings_changed();
+		},
+		
+		[this]()
+		{
+			/* Address mapping changes are undone implicitly. */
+		});
+}
+
+const REHex::ByteRangeMap<off_t> &REHex::Document::get_real_to_virt_segs() const
+{
+	return real_to_virt_segs;
+}
+
+const REHex::ByteRangeMap<off_t> &REHex::Document::get_virt_to_real_segs() const
+{
+	return virt_to_real_segs;
+}
+
+off_t REHex::Document::real_to_virt_offset(off_t real_offset) const
+{
+	auto i = real_to_virt_segs.get_range(real_offset);
+	if(i != real_to_virt_segs.end())
+	{
+		assert(i->first.offset <= real_offset);
+		assert((i->first.offset + i->first.length) > real_offset);
+		
+		off_t virt_offset = i->second + (real_offset - i->first.offset);
+		return virt_offset;
+	}
+	else{
+		return -1;
+	}
+}
+
+off_t REHex::Document::virt_to_real_offset(off_t virt_offset) const
+{
+	auto i = virt_to_real_segs.get_range(virt_offset);
+	if(i != virt_to_real_segs.end())
+	{
+		assert(i->first.offset <= virt_offset);
+		assert((i->first.offset + i->first.length) > virt_offset);
+		
+		off_t real_offset = i->second + (virt_offset - i->first.offset);
+		
+		assert(real_offset >= 0);
+		assert(real_offset < buffer_length());
+		
+		return real_offset;
+	}
+	else{
+		return -1;
+	}
+}
+
 void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
@@ -418,6 +610,13 @@ void REHex::Document::undo()
 		{
 			types = act.old_types;
 			_raise_types_changed();
+		}
+		
+		if(real_to_virt_segs != act.old_real_to_virt_segs || virt_to_real_segs != act.old_virt_to_real_segs)
+		{
+			real_to_virt_segs = act.old_real_to_virt_segs;
+			virt_to_real_segs = act.old_virt_to_real_segs;
+			_raise_mappings_changed();
 		}
 		
 		set_dirty(act.old_dirty);
@@ -523,6 +722,8 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		{
 			_raise_highlights_changed();
 		}
+		
+		/* TODO: Update virtual mappings. */
 	}
 	else{
 		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
@@ -558,6 +759,8 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		{
 			_raise_highlights_changed();
 		}
+		
+		/* TODO: Update virtual mappings. */
 	}
 	else{
 		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);
@@ -677,6 +880,8 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	change.old_comments     = comments;
 	change.old_highlights   = highlights;
 	change.old_types        = types;
+	change.old_real_to_virt_segs = real_to_virt_segs;
+	change.old_virt_to_real_segs = virt_to_real_segs;
 	change.old_dirty        = dirty;
 	change.old_dirty_bytes  = dirty_bytes;
 	
@@ -935,6 +1140,14 @@ void REHex::Document::_raise_highlights_changed()
 void REHex::Document::_raise_types_changed()
 {
 	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
+}
+
+void REHex::Document::_raise_mappings_changed()
+{
+	wxCommandEvent event(REHex::EV_MAPPINGS_CHANGED);
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);

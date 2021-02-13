@@ -43,6 +43,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_MAPPINGS_CHANGED,    wxCommandEvent);
 	
 	class Document: public wxEvtHandler {
 		public:
@@ -113,6 +114,16 @@ namespace REHex {
 			const ByteRangeMap<std::string> &get_data_types() const;
 			bool set_data_type(off_t offset, off_t length, const std::string &type);
 			
+			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
+			void clear_virt_mapping_r(off_t real_offset, off_t length);
+			void clear_virt_mapping_v(off_t virt_offset, off_t length);
+			
+			const ByteRangeMap<off_t> &get_real_to_virt_segs() const;
+			const ByteRangeMap<off_t> &get_virt_to_real_segs() const;
+			
+			off_t real_to_virt_offset(off_t real_offset) const;
+			off_t virt_to_real_offset(off_t virt_offset) const;
+			
 			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
 			void undo();
@@ -136,6 +147,9 @@ namespace REHex {
 				NestedOffsetLengthMap<int> old_highlights;
 				ByteRangeMap<std::string> old_types;
 				
+				ByteRangeMap<off_t> old_real_to_virt_segs;
+				ByteRangeMap<off_t> old_virt_to_real_segs;
+				
 				bool old_dirty;
 				ByteRangeSet old_dirty_bytes;
 			};
@@ -151,6 +165,9 @@ namespace REHex {
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights;
 			ByteRangeMap<std::string> types;
+			
+			ByteRangeMap<off_t> real_to_virt_segs;
+			ByteRangeMap<off_t> virt_to_real_segs;
 			
 			std::string title;
 			
@@ -189,10 +206,11 @@ namespace REHex {
 			void _raise_clean();
 			void _raise_highlights_changed();
 			void _raise_types_changed();
+			void _raise_mappings_changed();
 			
 		public:
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
-			off_t buffer_length();
+			off_t buffer_length() const;
 			
 			void overwrite_data(off_t offset, const void *data, off_t length,                                            off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			void insert_data(off_t offset, const unsigned char *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");

@@ -192,7 +192,7 @@ off_t REHex::VirtualMappingDialog::get_real_base()
 
 off_t REHex::VirtualMappingDialog::get_virt_base()
 {
-	return virt_base_input->GetValue<off_t>(1);
+	return virt_base_input->GetValue<off_t>(0);
 }
 
 off_t REHex::VirtualMappingDialog::get_segment_length(off_t real_base)
@@ -242,14 +242,34 @@ void REHex::VirtualMappingDialog::update_warning()
 		off_t virt_base = get_virt_base();
 		off_t segment_length = get_segment_length(real_base);
 		
+		bool found_conflict = false;
+		
 		const ByteRangeMap<off_t> &real_to_virt_segs = document->get_real_to_virt_segs();
 		const ByteRangeMap<off_t> &virt_to_real_segs = document->get_virt_to_real_segs();
 		
-		auto r2v = real_to_virt_segs.get_range_in(real_base, segment_length);
-		auto v2r = virt_to_real_segs.get_range_in(virt_base, segment_length);
+		for(
+			auto r2v = real_to_virt_segs.get_range_in(real_base, segment_length);
+			r2v != real_to_virt_segs.end() && r2v->first.offset < (real_base + segment_length) && !found_conflict;
+			++r2v)
+		{
+			if(r2v->first.offset != initial_real_base || r2v->first.length != initial_segment_length)
+			{
+				found_conflict = true;
+			}
+		}
 		
-		if((r2v != real_to_virt_segs.end() && (r2v->first.offset != initial_real_base || r2v->first.length != initial_segment_length))
-			|| (v2r != virt_to_real_segs.end() && (v2r->first.offset != initial_virt_base || v2r->first.length != initial_segment_length)))
+		for(
+			auto v2r = virt_to_real_segs.get_range_in(virt_base, segment_length);
+			v2r != virt_to_real_segs.end() && v2r->first.offset < (virt_base + segment_length) && !found_conflict;
+			++v2r)
+		{
+			if(v2r->first.offset != initial_virt_base || v2r->first.length != initial_segment_length)
+			{
+				found_conflict = true;
+			}
+		}
+		
+		if(found_conflict)
 		{
 			conflict_warning->Show();
 		}

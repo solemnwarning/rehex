@@ -31,7 +31,7 @@ BEGIN_EVENT_TABLE(REHex::VirtualMappingDialog, wxDialog)
 	EVT_TEXT(wxID_ANY, REHex::VirtualMappingDialog::OnText)
 END_EVENT_TABLE()
 
-REHex::VirtualMappingDialog::VirtualMappingDialog(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
+REHex::VirtualMappingDialog::VirtualMappingDialog(wxWindow *parent, SharedDocumentPointer &document, off_t real_base, off_t segment_length):
 	wxDialog(parent, wxID_ANY, "Set virtual mapping"),
 	initialised(false),
 	initial_real_base(-1),
@@ -52,29 +52,26 @@ REHex::VirtualMappingDialog::VirtualMappingDialog(wxWindow *parent, SharedDocume
 	char initial_virt_base_text[64] = "";
 	char initial_segment_length_text[64] = "";
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = document_ctrl->get_selection();
-	
-	if(selection_length > 0)
+	if(real_base >= 0)
 	{
-		snprintf(initial_real_base_text, sizeof(initial_real_base_text), "0x%08llX", (long long unsigned)(selection_off));
-		snprintf(initial_segment_length_text,  sizeof(initial_segment_length_text),  "0x%08llX", (long long unsigned)(selection_length));
+		snprintf(initial_real_base_text, sizeof(initial_real_base_text), "0x%08llX", (long long unsigned)(real_base));
 		
-		const ByteRangeMap<off_t> &real_to_virt_segs = document->get_real_to_virt_segs();
-		
-		auto r2v = real_to_virt_segs.get_range_in(selection_off, selection_length);
-		if(r2v != real_to_virt_segs.end() && r2v->first.offset == selection_off && r2v->first.length == selection_length)
+		if(segment_length > 0)
 		{
-			initial_real_base      = r2v->first.offset;
-			initial_virt_base      = r2v->second;
-			initial_segment_length = r2v->first.length;
+			snprintf(initial_segment_length_text,  sizeof(initial_segment_length_text),  "0x%08llX", (long long unsigned)(segment_length));
 			
-			snprintf(initial_virt_base_text, sizeof(initial_virt_base_text), "0x%08llX", (long long unsigned)(r2v->second));
+			const ByteRangeMap<off_t> &real_to_virt_segs = document->get_real_to_virt_segs();
+			
+			auto r2v = real_to_virt_segs.get_range_in(real_base, segment_length);
+			if(r2v != real_to_virt_segs.end() && r2v->first.offset == real_base && r2v->first.length == segment_length)
+			{
+				initial_real_base      = r2v->first.offset;
+				initial_virt_base      = r2v->second;
+				initial_segment_length = r2v->first.length;
+				
+				snprintf(initial_virt_base_text, sizeof(initial_virt_base_text), "0x%08llX", (long long unsigned)(r2v->second));
+			}
 		}
-	}
-	else{
-		off_t cursor_pos = document_ctrl->get_cursor_position();
-		snprintf(initial_real_base_text, sizeof(initial_real_base_text), "0x%08llX", (long long unsigned)(cursor_pos));
 	}
 	
 	wxBoxSizer *input_field_sizer = new wxBoxSizer(wxVERTICAL);

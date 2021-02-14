@@ -224,6 +224,7 @@ APP_OBJS := \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \
+	src/VirtualMappingList.o \
 	src/win32lib.o \
 	tests/SizeTestPanel.o \
 	$(WXLUA_OBJS) \

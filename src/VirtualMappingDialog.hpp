@@ -31,7 +31,7 @@ namespace REHex {
 	class VirtualMappingDialog: public wxDialog
 	{
 		public:
-			VirtualMappingDialog(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			VirtualMappingDialog(wxWindow *parent, SharedDocumentPointer &document, off_t real_base, off_t segment_length);
 			virtual ~VirtualMappingDialog();
 			
 		private:

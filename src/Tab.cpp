@@ -989,9 +989,9 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		wxMenuItem *vm_itm = menu.Append(wxID_ANY, "Set virtual address mapping...");
 		
-		menu.Bind(wxEVT_MENU, [this, cursor_pos](wxCommandEvent &event)
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			VirtualMappingDialog d(this, doc, doc_ctrl);
+			VirtualMappingDialog d(this, doc, selection_off, selection_length);
 			d.ShowModal();
 		}, vm_itm->GetId(), vm_itm->GetId());
 	}

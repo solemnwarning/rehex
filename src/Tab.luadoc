@@ -1,0 +1,8 @@
+---
+-- A top-level tab in the application.
+-- The Tab holds an open Document and any associated objects (main DocumentCtrl, tool panels, etc).
+--
+-- @classmod rehex.Tab
+
+--- The Document object within the tab.
+rehex.Tab.doc = nil

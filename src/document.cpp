@@ -145,7 +145,8 @@ void REHex::Document::set_cursor_position(off_t off, CursorState cursor_state)
 
 void REHex::Document::_set_cursor_position(off_t position, enum CursorState cursor_state)
 {
-	assert(position >= 0 && position <= buffer->length());
+	position = std::max<off_t>(position, 0);
+	position = std::min(position, buffer_length());
 	
 	if(cursor_state == CSTATE_GOTO)
 	{

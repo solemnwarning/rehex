@@ -30,6 +30,7 @@
 #include "DiffWindow.hpp"
 #include "EditCommentDialog.hpp"
 #include "Tab.hpp"
+#include "VirtualMappingDialog.hpp"
 
 /* Is the given byte a printable 7-bit ASCII character? */
 static bool isasciiprint(int c)
@@ -993,6 +994,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		}
 		
 		menu.AppendSubMenu(dtmenu, "Set data type");
+		
+		wxMenuItem *vm_itm = menu.Append(wxID_ANY, "Set virtual address mapping...");
+		
+		menu.Bind(wxEVT_MENU, [this, cursor_pos](wxCommandEvent &event)
+		{
+			VirtualMappingDialog d(this, doc, doc_ctrl);
+			d.ShowModal();
+		}, vm_itm->GetId(), vm_itm->GetId());
 	}
 	
 	if(selection_length > 0)

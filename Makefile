@@ -223,6 +223,7 @@ APP_OBJS := \
 	src/Tab.o \
 	src/ToolPanel.o \
 	src/util.o \
+	src/VirtualMappingDialog.o \
 	src/win32lib.o \
 	tests/SizeTestPanel.o \
 	$(WXLUA_OBJS) \
@@ -280,6 +281,7 @@ TEST_OBJS := \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \
+	src/VirtualMappingDialog.o \
 	src/win32lib.o \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \

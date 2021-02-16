@@ -55,14 +55,15 @@ REHex::VirtualMappingList::VirtualMappingList(wxWindow *parent, SharedDocumentPo
 	
 	dvc_file_base_col = dvc->AppendTextColumn("File offset", VirtualMappingListModel::COLUMN_REAL_BASE);
 	dvc_file_base_col->SetSortable(true);
+	set_column_width(dvc_file_base_col, "0x00000000");
 	
 	dvc_virt_base_col = dvc->AppendTextColumn("Virtual address", VirtualMappingListModel::COLUMN_VIRT_BASE);
 	dvc_virt_base_col->SetSortable(true);
+	set_column_width(dvc_virt_base_col, "0x00000000");
 	
 	dvc_segment_length_col = dvc->AppendTextColumn("Length", VirtualMappingListModel::COLUMN_SEGMENT_LENGTH);
 	dvc_segment_length_col->SetSortable(true);
-	
-	/* TODO: Calculate and set column widths. */
+	set_column_width(dvc_segment_length_col, "0x00000000");
 	
 	dvc->AssociateModel(model);
 	
@@ -74,6 +75,14 @@ REHex::VirtualMappingList::VirtualMappingList(wxWindow *parent, SharedDocumentPo
 	SetSizerAndFit(sizer);
 	
 	this->document.auto_cleanup_bind(EV_MAPPINGS_CHANGED, &REHex::VirtualMappingList::OnMappingsChanged, this);
+	
+	wxSize min_size = GetMinClientSize();
+	min_size.SetWidth(
+		dvc_file_base_col->GetMinWidth()
+		+ dvc_virt_base_col->GetMinWidth()
+		+ dvc_segment_length_col->GetMinWidth());
+	
+	SetMinClientSize(min_size);
 	
 	refresh_mappings();
 }
@@ -105,19 +114,34 @@ void REHex::VirtualMappingList::update()
 
 wxSize REHex::VirtualMappingList::DoGetBestClientSize() const
 {
-	/* TODO: Calculate a reasonable best size. */
-	return wxSize(300, -1);
+	int width = dvc_file_base_col->GetWidth()
+		+ dvc_virt_base_col->GetWidth()
+		+ dvc_segment_length_col->GetWidth();
+	
+	return wxSize(width, -1);
+}
+
+void REHex::VirtualMappingList::set_column_width(wxDataViewColumn *column, const char *sample_value)
+{
+	/* We could just set the widths of each column to wxCOL_WIDTH_AUTOSIZE and let wxWidgets take
+	 * care of this for us... except it doesn't work properly on GTK. The Internet says the only
+	 * "reliable" way is to size the columns yourself...
+	*/
+	
+	wxSize title_size = dvc->GetTextExtent(column->GetTitle());
+	wxSize sample_size = dvc->GetTextExtent(sample_value);
+	
+	int col_width = std::max(title_size.GetWidth(), sample_size.GetWidth());
+	
+	/* Multipliers pulled out of my ass... they seem about right on my laptop at least. */
+	
+	column->SetMinWidth(col_width * 1.25);
+	column->SetWidth(col_width * 1.5);
 }
 
 void REHex::VirtualMappingList::refresh_mappings()
 {
 	model->refresh_mappings(document);
-	
-	/* Refresh column widths */
-	//dvc_file_base_col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
-	//dvc_virt_base_col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
-	//dvc_segment_length_col->SetWidth(wxCOL_WIDTH_AUTOSIZE);
-	
 	dvc->Refresh();
 }
 

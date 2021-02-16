@@ -97,6 +97,7 @@ namespace REHex {
 			
 			VirtualMappingListModel *model;
 			
+			void set_column_width(wxDataViewColumn *column, const char *sample_value);
 			void refresh_mappings();
 			
 			void OnMappingsChanged(wxCommandEvent &event);

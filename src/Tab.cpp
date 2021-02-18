@@ -1568,10 +1568,10 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 				dr_length = dtr->fixed_size;
 			}
 			
-			regions.push_back(dtr->region_factory(doc, next_data, dr_length));
+			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_data));
 		}
 		else{
-			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));
+			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, next_data, *doc));
 		}
 		
 		next_data   += dr_length;
@@ -1588,7 +1588,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		assert(doc->buffer_length() == 0);
 		
 		/* Empty buffers need a data region too! */
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, *doc));
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, 0, *doc));
 	}
 	else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(regions.back()) == NULL)
 	{
@@ -1597,7 +1597,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		 * insert more data at the end.
 		*/
 		
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, *doc));
+		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, doc->buffer_length(), *doc));
 	}
 	
 	return regions;

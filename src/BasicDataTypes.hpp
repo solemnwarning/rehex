@@ -37,6 +37,7 @@ namespace REHex
 	{
 		protected:
 			SharedDocumentPointer doc;
+			off_t virt_offset;
 			
 		private:
 			std::string type_label;
@@ -89,9 +90,10 @@ namespace REHex
 			}
 			
 		protected:
-			NumericDataTypeRegion(SharedDocumentPointer &doc, off_t offset, off_t length, const std::string &type_label):
-				GenericDataRegion(offset, length),
+			NumericDataTypeRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, const std::string &type_label):
+				GenericDataRegion(offset, length, virt_offset),
 				doc(doc),
+				virt_offset(virt_offset),
 				type_label(type_label),
 				offset_text_x(-1),
 				data_text_x(-1),
@@ -732,7 +734,7 @@ namespace REHex
 		class NAME: public NumericDataTypeRegion<T> \
 		{ \
 			public: \
-				NAME(SharedDocumentPointer &doc, off_t offset, off_t length); \
+				NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset); \
 				\
 			protected: \
 				virtual std::string to_string(const T *data) const override; \

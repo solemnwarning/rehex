@@ -60,6 +60,7 @@ namespace REHex
 			
 		private:
 			SharedDocumentPointer doc;
+			off_t virt_offset;
 			
 			size_t disassembler;
 			
@@ -118,7 +119,7 @@ namespace REHex
 			*/
 			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_line(int64_t rel_line);
 			
-			DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode);
+			DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, cs_arch arch, cs_mode mode);
 			~DisassemblyRegion();
 			
 			/* For unit testing. */

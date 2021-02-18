@@ -1789,7 +1789,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	{
 		public:
 			StubRegion(off_t offset):
-				GenericDataRegion(offset, 0) {}
+				GenericDataRegion(offset, 0, 0) {}
 				
 				virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
 				virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
@@ -2287,8 +2287,8 @@ void REHex::DocumentCtrl::Region::draw_full_height_line(DocumentCtrl *doc_ctrl, 
 	dc.DrawLine(x, box_y, x, (box_y + box_hc));
 }
 
-REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length):
-	Region(d_offset, 0),
+REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length, off_t indent_offset):
+	Region(indent_offset, 0),
 	d_offset(d_offset),
 	d_length(d_length)
 {
@@ -2311,8 +2311,9 @@ bool REHex::DocumentCtrl::GenericDataRegion::OnPaste(DocumentCtrl *doc_ctrl)
 	return false;
 }
 
-REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):
-	GenericDataRegion(d_offset, d_length),
+REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length, off_t virt_offset):
+	GenericDataRegion(d_offset, d_length, virt_offset),
+	virt_offset(virt_offset),
 	bytes_per_line_actual(1) {}
 
 int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
@@ -3559,8 +3560,8 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 	return NoHighlight();
 }
 
-REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(off_t d_offset, off_t d_length, Document &doc):
-	DataRegion(d_offset, d_length), doc(doc) {}
+REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(off_t d_offset, off_t d_length, off_t virt_offset, Document &doc):
+	DataRegion(d_offset, d_length, virt_offset), doc(doc) {}
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(off_t off) const
 {

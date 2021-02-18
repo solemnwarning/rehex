@@ -32,9 +32,10 @@
 static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
 static const size_t INSTRUCTION_CACHE_LIMIT = 250000;
 
-REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, cs_arch arch, cs_mode mode):
-	GenericDataRegion(offset, length),
-	doc(doc)
+REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, cs_arch arch, cs_mode mode):
+	GenericDataRegion(offset, length, virt_offset),
+	doc(doc),
+	virt_offset(virt_offset)
 {
 	cs_err error = cs_open(arch, mode, &disassembler);
 	if(error != CS_ERR_OK)

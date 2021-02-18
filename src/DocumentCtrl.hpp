@@ -159,7 +159,7 @@ namespace REHex {
 			class GenericDataRegion: public Region
 			{
 				protected:
-					GenericDataRegion(off_t d_offset, off_t d_length);
+					GenericDataRegion(off_t d_offset, off_t d_length, off_t indent_offset);
 					
 				public:
 					const off_t d_offset;
@@ -312,6 +312,8 @@ namespace REHex {
 			class DataRegion: public GenericDataRegion
 			{
 				protected:
+					off_t virt_offset;
+					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
@@ -320,7 +322,7 @@ namespace REHex {
 					unsigned int first_line_pad_bytes;   /* Number of bytes to pad first line with. */
 					
 				public:
-					DataRegion(off_t d_offset, off_t d_length);
+					DataRegion(off_t d_offset, off_t d_length, off_t virt_offset);
 					
 					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
 					
@@ -365,7 +367,7 @@ namespace REHex {
 					Document &doc;
 					
 				public:
-					DataRegionDocHighlight(off_t d_offset, off_t d_length, Document &doc);
+					DataRegionDocHighlight(off_t d_offset, off_t d_length, off_t virt_offset, Document &doc);
 					
 				protected:
 					virtual Highlight highlight_at_off(off_t off) const override;

@@ -1812,18 +1812,19 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	};
 	
 	const StubRegion d_offset_to_find(offset);
+	std::vector<GenericDataRegion*> d_offset_to_find_vec({ (GenericDataRegion*)(&d_offset_to_find) });
 	
-	auto cmp_by_d_offset = [](const GenericDataRegion *lhs, const GenericDataRegion *rhs)
+	auto cmp_by_d_offset = [](std::vector<GenericDataRegion*>::iterator lhs, std::vector<GenericDataRegion*>::iterator rhs)
 	{
-		return lhs->d_offset < rhs->d_offset;
+		return (*lhs)->d_offset < (*rhs)->d_offset;
 	};
 	
 	/* std::upper_bound() will give us the first element whose d_offset is greater than the one
 	 * we're looking for...
 	*/
-	auto region = std::upper_bound(data_regions.begin(), data_regions.end(), &d_offset_to_find, cmp_by_d_offset);
+	auto region = std::upper_bound(data_regions_sorted.begin(), data_regions_sorted.end(), d_offset_to_find_vec.begin(), cmp_by_d_offset);
 	
-	if(region == data_regions.begin())
+	if(region == data_regions_sorted.begin())
 	{
 		/* No region encompassing the requested offset. */
 		return data_regions.end();
@@ -1832,13 +1833,13 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	/* ...so step backwards to get to the correct element. */
 	--region;
 	
-	if((*region)->d_offset <= offset
+	if((**region)->d_offset <= offset
 		/* Requested offset must be within region range to match, or one past the end if
 		 * this is the last data region.
 		*/
-		&& ((*region)->d_offset + (*region)->d_length + (region == std::prev(data_regions.end())) > offset))
+		&& ((**region)->d_offset + (**region)->d_length + (region == std::prev(data_regions_sorted.end())) > offset))
 	{
-		return region;
+		return *region;
 	}
 	else{
 		return data_regions.end();
@@ -2138,6 +2139,23 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 			data_regions.push_back(dr);
 		}
 	}
+	
+	/* Clear and repopulate data_regions_sorted with iterators to each element in data_regions
+	 * sorted by d_offset.
+	*/
+	
+	data_regions_sorted.clear();
+	
+	for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
+	{
+		data_regions_sorted.push_back(r);
+	}
+	
+	std::sort(data_regions_sorted.begin(), data_regions_sorted.end(),
+		[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
+		{
+			return (*lhs)->d_offset < (*rhs)->d_offset;
+		});
 	
 	/* Clear and repopulate processing_regions with the regions which have some background work to do. */
 	

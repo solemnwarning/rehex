@@ -224,6 +224,34 @@ TEST_F(DocumentCtrlTest, GetDataRegionByOffset)
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(71), (DocumentCtrl::Region*)(NULL));
 }
 
+TEST_F(DocumentCtrlTest, GetDataRegionByOffsetVirtualOrder)
+{
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(40,  5, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 10, 20);
+	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(60, 10, 30);
+	DocumentCtrl::Region *r4 = new DocumentCtrl::DataRegion(45,  5, 40);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3, r4 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->data_region_by_offset( 0), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset( 9), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(10), r2);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(19), r2);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(20), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(39), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(40), r1);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(44), r1);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(45), r4);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(49), r4);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(50), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(59), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(60), r3);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(69), r3);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(70), r3);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(71), (DocumentCtrl::Region*)(NULL));
+}
+
 TEST_F(DocumentCtrlTest, CursorLeftWithinRegion)
 {
 	std::vector<unsigned char> Z_DATA(128);

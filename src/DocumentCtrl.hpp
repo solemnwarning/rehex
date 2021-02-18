@@ -483,6 +483,9 @@ namespace REHex {
 			std::vector<GenericDataRegion*> data_regions;  /**< Subset of regions which are a GenericDataRegion. */
 			std::vector<Region*> processing_regions;       /**< Subset of regions which are doing background processing. */
 			
+			/** List of iterators into data_regions, sorted by d_offset. */
+			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted;
+			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
 			

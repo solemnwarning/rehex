@@ -25,6 +25,15 @@
 #include <vector>
 
 namespace REHex {
+	/**
+	 * @brief Paged read-write access to a file on disk.
+	 *
+	 * This class provides scalable read/write access to a file on disk - paging sections in
+	 * and out as necessary to fulfil read requests without keeping the whole file in memory.
+	 *
+	 * Blocks which have been modified are not paged out and will remain resident until the
+	 * file is written out.
+	*/
 	class Buffer
 	{
 		private:
@@ -98,20 +107,113 @@ namespace REHex {
 			
 			const off_t block_size;
 			
+			/**
+			 * @brief Create an empty Buffer with no backing file.
+			*/
 			Buffer();
+			
+			/**
+			 * @brief Create a Buffer with a backing file on disk.
+			*/
 			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
+			
 			~Buffer();
 			
+			/**
+			 * @brief Write changes to backing file.
+			 *
+			 * Writes pending changes to the current backing file.
+			 *
+			 * Throws on I/O errors.
+			*/
 			void write_inplace();
+			
+			/**
+			 * @brief Write out buffer to a new backing file.
+			 *
+			 * @param filename Filename of new backing file.
+			 *
+			 * Writes out the current buffer state to a file and makes it the new
+			 * backing file of the buffer. The old backing file is unchanged.
+			 *
+			 * Throws on I/O errors.
+			*/
 			void write_inplace(const std::string &filename);
+			
+			/**
+			 * @brief Write out buffer to a file.
+			 *
+			 * @param filename Filename of file.
+			 *
+			 * Writes out the current buffer state to a file, leaving the backing file
+			 * unchanged and all changes to it still pending.
+			 *
+			 * Throws on I/O errors.
+			*/
 			void write_copy(const std::string &filename);
 			
+			/**
+			 * @brief Get the length of the Buffer.
+			*/
 			off_t length();
 			
+			/**
+			 * @brief Read data from the Buffer.
+			 *
+			 * @param offset      Offset to read from.
+			 * @param max_length  Maximum number of bytes to read.
+			 *
+			 * Reads data from the Buffer, paging blocks in from disk if necessary.
+			 *
+			 * Returns a vector containing up to the requested number of bytes from the
+			 * given offset, ending early only if the end of file is reached.
+			 *
+			 * Throws on I/O or memory allocation error.
+			*/
 			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
 			
+			/**
+			 * @brief Overwrite a series of bytes in the Buffer.
+			 *
+			 * @param offset  Offset to write from.
+			 * @param data    Data to write into the buffer.
+			 * @param length  Length of data to write.
+			 *
+			 * Overwrites the given range of data in the buffer, returning true if the
+			 * write was successful, false if the offset and/or length are beyond the
+			 * current size of the buffer.
+			 *
+			 * Throws on I/O or memory allocation error.
+			*/
 			bool overwrite_data(off_t offset, unsigned const char *data, off_t length);
+			
+			/**
+			 * @brief Insert a series of bytes into the buffer.
+			 *
+			 * @param offset  Offset to write from.
+			 * @param data    Data to write into the buffer.
+			 * @param length  Length of data to write.
+			 *
+			 * Inserts the given range of data into the buffer, returning true if the
+			 * write was successful, false if the offset is beyond the current size of
+			 * buffer.
+			 *
+			 * Throws on I/O or memory allocation error.
+			*/
 			bool insert_data(off_t offset, unsigned const char *data, off_t length);
+			
+			/**
+			 * @brief Erase a series of bytes from the buffer.
+			 *
+			 * @param offset  Offset to erase from.
+			 * @param length  Length of range to erase.
+			 *
+			 * Erases the given range from the buffer, returning true if the erase was
+			 * successful, false if the offset and/or length are beyond the current
+			 * size of the buffer.
+			 *
+			 * Throws on I/O or memory allocation error.
+			*/
 			bool erase_data(off_t offset, off_t length);
 	};
 }

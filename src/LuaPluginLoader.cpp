@@ -36,7 +36,7 @@
 #include "lua-plugin-preload.h"
 #include "LuaPluginLoader.hpp"
 
-static REHex::App::SetupHookRegistration load_lua_plugins_hook(
+REHex::App::SetupHookRegistration REHex::LuaPluginLoader::init_hook(
 	REHex::App::SetupPhase::READY,
 	&REHex::LuaPluginLoader::OnAppInit);
 
@@ -46,7 +46,7 @@ void REHex::LuaPluginLoader::OnAppInit()
 	load_all_plugins();
 }
 
-static REHex::App::SetupHookRegistration unload_lua_plugins_hook(
+REHex::App::SetupHookRegistration REHex::LuaPluginLoader::shutdown_hook(
 	REHex::App::SetupPhase::SHUTDOWN,
 	&REHex::LuaPluginLoader::OnAppShutdown);
 
@@ -100,6 +100,7 @@ void REHex::LuaPluginLoader::init()
 
 void REHex::LuaPluginLoader::shutdown()
 {
+	assert(LuaPlugin::get_num_instances() == 0);
 	default_handler.reset(NULL);
 }
 
@@ -206,4 +207,27 @@ REHex::LuaPlugin REHex::LuaPluginLoader::load_plugin(const std::string &filename
 	return LuaPlugin(s);
 }
 
-REHex::LuaPlugin::LuaPlugin(const wxLuaState &lua): lua(lua) {}
+int REHex::LuaPlugin::num_instances = 0;
+
+REHex::LuaPlugin::LuaPlugin(const wxLuaState &lua):
+	lua(lua)
+{
+	++num_instances;
+}
+
+REHex::LuaPlugin::LuaPlugin(const LuaPlugin &src):
+	lua(src.lua)
+{
+	++num_instances;
+}
+
+REHex::LuaPlugin::~LuaPlugin()
+{
+	assert(num_instances > 0);
+	--num_instances;
+}
+
+int REHex::LuaPlugin::get_num_instances()
+{
+	return num_instances;
+}

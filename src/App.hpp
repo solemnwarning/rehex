@@ -39,12 +39,40 @@ namespace REHex {
 			
 			ConsoleBuffer *console;
 			
+			/**
+			 * @brief Get the last directory browsed to in a load/save dialog.
+			*/
 			const std::string &get_last_directory();
+			
+			/**
+			 * @brief Set the last directory browsed to in a load/save dialog.
+			*/
 			void set_last_directory(const std::string &last_directory);
 			
+			/**
+			 * @brief Get the current "font size adjustment" setting.
+			 *
+			 * The font size adjustment indicates how fonts in the application should
+			 * be scaled - the default setting is zero, positive values should make any
+			 * fonts increasingly larger and negative ones increasingly smaller.
+			*/
 			int get_font_size_adjustment() const;
+			
+			/**
+			 * @brief Set the "font size adjustment" setting.
+			 *
+			 * Replaces the "font size adjustment" setting and raises a
+			 * FontSizeAdjustmentEvent event.
+			 *
+			 * The font size adjustment indicates how fonts in the application should
+			 * be scaled - the default setting is zero, positive values should make any
+			 * fonts increasingly larger and negative ones increasingly smaller.
+			*/
 			void set_font_size_adjustment(int font_size_adjustment);
 			
+			/**
+			 * @brief Get a list of directories to search for plugins.
+			*/
 			std::vector<std::string> get_plugin_directories();
 			
 			/**
@@ -118,8 +146,8 @@ namespace REHex {
 			class SetupHookRegistration
 			{
 				public:
-					SetupPhase phase;        /**< App setup phase to call function during. */
-					SetupHookFunction func;  /**< Hook function to be called. */
+					SetupPhase phase;        /**< @brief App setup phase to call function during. */
+					SetupHookFunction func;  /**< @brief Hook function to be called. */
 					
 					/**
 					 * @brief Register the setup hook.

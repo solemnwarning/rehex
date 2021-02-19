@@ -60,10 +60,13 @@ namespace REHex
 	#define EVT_CURSORUPDATE(id, func) \
 		wx__DECLARE_EVT1(CURSOR_UPDATE, id, wxEVENT_HANDLER_CAST(CursorUpdateEventFunction, func))
 	
+	/**
+	 * @brief Event raised by a Document when its title changes.
+	*/
 	class DocumentTitleEvent: public wxEvent
 	{
 		public:
-			const std::string title;
+			const std::string title; /**< @brief The new document title. */
 			
 			DocumentTitleEvent(wxWindow *source, const std::string &title);
 			DocumentTitleEvent(wxObject *source, const std::string &title);
@@ -76,10 +79,13 @@ namespace REHex
 	#define EVT_DOCUMENTTITLE(id, func) \
 		wx__DECLARE_EVT1(DOCUMENT_TITLE_CHANGED, id, wxEVENT_HANDLER_CAST(DocumentTitleEventFunction, func))
 	
+	/**
+	 * @brief Event raised by the App when the font size adjustment is changed.
+	*/
 	class FontSizeAdjustmentEvent: public wxEvent
 	{
 		public:
-			const int font_size_adjustment;
+			const int font_size_adjustment; /**< @brief The new font size adjustment value. */
 			
 			FontSizeAdjustmentEvent(int font_size_adjustment);
 			

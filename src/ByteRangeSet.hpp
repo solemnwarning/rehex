@@ -26,11 +26,11 @@
 namespace REHex
 {
 	/**
-	 * @brief Wrapper around std::set for storing ranges in a file.
+	 * @brief Stores ranges of bytes and provides set operations.
 	 *
-	 * This class is a wrapper around std::set that can be used for storing ranges. Any ranges
-	 * which are adjacent or overlapping will be merged to reduce memory consumption, so only
-	 * each unique contiguous range added will take space in memory.
+	 * This class is a wrapper around std::vector that can be used for efficiently storing
+	 * ranges. Any ranges which are adjacent or overlapping will be merged to reduce memory
+	 * consumption, so only each unique contiguous range added will take space in memory.
 	*/
 	class ByteRangeSet
 	{
@@ -139,7 +139,7 @@ namespace REHex
 			bool isset(off_t offset, off_t length = 1) const;
 			
 			/**
-			 * @brief Get a reference to the internal std::set.
+			 * @brief Get a reference to the internal std::vector.
 			*/
 			const std::vector<Range> &get_ranges() const;
 			

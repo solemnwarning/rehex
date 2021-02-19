@@ -443,6 +443,17 @@ void REHex::Tab::set_inline_comment_mode(InlineCommentMode inline_comment_mode)
 	repopulate_regions();
 }
 
+REHex::DocumentDisplayMode REHex::Tab::get_document_display_mode() const
+{
+	return document_display_mode;
+}
+
+void REHex::Tab::set_document_display_mode(DocumentDisplayMode document_display_mode)
+{
+	this->document_display_mode = document_display_mode;
+	repopulate_regions();
+}
+
 void REHex::Tab::OnSize(wxSizeEvent &event)
 {
 	if(h_splitter->IsSplit())
@@ -1471,11 +1482,62 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
-	std::vector<DocumentCtrl::Region*> regions = compute_regions(doc, inline_comment_mode);
-	doc_ctrl->replace_all_regions(regions);
+	if(document_display_mode == DDM_VIRTUAL)
+	{
+		/* Virtual segments view. */
+		
+		const ByteRangeMap<off_t> &virt_to_real_segs = doc->get_virt_to_real_segs();
+		
+		std::vector<DocumentCtrl::Region*> regions;
+		
+		if(virt_to_real_segs.empty())
+		{
+			/* TODO: Make a read-only comment/message type. */
+			/* TODO: Avoid crash due to no data regions. */
+			static const wxString C_TEXT = "No virtual sections defined - Select \"Display file data\" in the View menu.";
+			regions.push_back(new DocumentCtrl::CommentRegion(0, 0, 0, C_TEXT, false, false));
+		}
+		else{
+			for(auto i = virt_to_real_segs.begin(); i != virt_to_real_segs.end(); ++i)
+			{
+				off_t real_offset_base = i->second;
+				off_t virt_offset_base = i->first.offset;
+				off_t length = i->first.length;
+				
+				std::vector<DocumentCtrl::Region*> v_regions = compute_regions(doc, real_offset_base, virt_offset_base, length, inline_comment_mode);
+				regions.insert(regions.end(), v_regions.begin(), v_regions.end());
+			}
+		}
+		
+		doc_ctrl->replace_all_regions(regions);
+	}
+	else{
+		/* File view. */
+		
+		std::vector<DocumentCtrl::Region*> regions = compute_regions(doc, 0, 0, doc->buffer_length(), inline_comment_mode);
+		
+		if(regions.empty())
+		{
+			assert(doc->buffer_length() == 0);
+			
+			/* Empty buffers need a data region too! */
+			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, 0, *doc));
+		}
+		else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(regions.back()) == NULL)
+		{
+			/* End region isn't a DataRegionDocHighlight - means its a comment or a custom
+			 * data region type. Push one on the end so there's somewhere to put the cursor to
+			 * insert more data at the end.
+			*/
+			
+			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, doc->buffer_length(), *doc));
+		}
+		
+		doc_ctrl->replace_all_regions(regions);
+	}
 }
 
-std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode)
+std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode)
 {
 	auto comments = doc->get_comments();
 	auto types = doc->get_data_types();
@@ -1487,7 +1549,11 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	auto offset_base = comments.begin();
 	auto types_iter = types.begin();
-	off_t next_data = 0, remain_data = doc->buffer_length();
+	off_t next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
+	
+	/* Skip over comments/types prior to real_offset_base. */
+	while(offset_base != comments.end() && offset_base->first.offset < next_data) { ++offset_base; }
+	while(types_iter != types.end() && (types_iter->first.offset + types_iter->first.length <= next_data)) { ++types_iter; }
 	
 	if(inline_comment_mode == ICM_HIDDEN)
 	{
@@ -1526,7 +1592,10 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			do {
 				--c;
 				
-				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), nest, truncate));
+				assert(c->first.offset == next_data);
+				
+				/* TODO: Clamp indent_length */
+				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, next_virt, *(c->second.text), nest, truncate));
 				
 				if(nest && c->first.length > 0)
 				{
@@ -1568,36 +1637,20 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 				dr_length = dtr->fixed_size;
 			}
 			
-			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_data));
+			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_virt));
 		}
 		else{
-			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, next_data, *doc));
+			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, next_virt, *doc));
 		}
 		
 		next_data   += dr_length;
+		next_virt   += dr_length;
 		remain_data -= dr_length;
 		
 		if(next_data >= (types_iter->first.offset + types_iter->first.length))
 		{
 			++types_iter;
 		}
-	}
-	
-	if(regions.empty())
-	{
-		assert(doc->buffer_length() == 0);
-		
-		/* Empty buffers need a data region too! */
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, 0, *doc));
-	}
-	else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(regions.back()) == NULL)
-	{
-		/* End region isn't a DataRegionDocHighlight - means its a comment or a custom
-		 * data region type. Push one on the end so there's somewhere to put the cursor to
-		 * insert more data at the end.
-		*/
-		
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, doc->buffer_length(), *doc));
 	}
 	
 	return regions;

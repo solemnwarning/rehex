@@ -386,7 +386,7 @@ namespace REHex {
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
-				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool nest_children, bool truncate);
+				CommentRegion(off_t c_offset, off_t c_length, off_t indent_offset, const wxString &c_text, bool nest_children, bool truncate);
 				
 				friend DocumentCtrl;
 			};

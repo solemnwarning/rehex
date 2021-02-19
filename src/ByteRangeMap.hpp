@@ -151,6 +151,7 @@ namespace REHex
 			
 			const_iterator begin() const { return ranges.begin(); }
 			const_iterator end() const { return ranges.end(); }
+			bool empty() const { return ranges.empty(); }
 			
 			/**
 			 * @brief Adjust for data being inserted into file.

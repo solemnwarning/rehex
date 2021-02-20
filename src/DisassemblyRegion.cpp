@@ -254,7 +254,10 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		{
 			/* Draw the offsets to the left */
 			
-			std::string offset_str = format_offset(instr->offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+			off_t offset_within_region = instr->offset - d_offset;
+			off_t display_offset = virt_offset + offset_within_region;
+			
+			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
 			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
@@ -310,7 +313,10 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		{
 			/* Draw the offsets to the left */
 			
-			std::string offset_str = format_offset(up_off, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+			off_t offset_within_region = up_off - d_offset;
+			off_t display_offset = virt_offset + offset_within_region;
+			
+			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 			
 			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);

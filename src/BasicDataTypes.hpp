@@ -169,7 +169,7 @@ namespace REHex
 				{
 					/* Draw the offsets to the left */
 					
-					std::string offset_str = format_offset(d_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+					std::string offset_str = format_offset(virt_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
 					
 					normal_text();
 					dc.DrawText(offset_str, x, y);

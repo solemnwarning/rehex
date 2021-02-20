@@ -2588,7 +2588,10 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		{
 			/* Draw the offsets to the left */
 			
-			std::string offset_str = format_offset(cur_off, doc.offset_display_base, doc.doc->buffer_length());
+			off_t offset_within_region = cur_off - d_offset;
+			off_t display_offset = virt_offset + offset_within_region;
+			
+			std::string offset_str = format_offset(display_offset, doc.offset_display_base, doc.doc->buffer_length());
 			
 			normal_text_colour();
 			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);

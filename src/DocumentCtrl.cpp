@@ -286,12 +286,17 @@ bool REHex::DocumentCtrl::special_view_active() const
 
 void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorState cursor_state)
 {
-	/* TODO: Clamp to positions with corresponding regions? */
+	/* Clamp the cursor position to the valid ranges defined by the data regions. */
 	
-	position = std::max<off_t>(position, 0);
-	position = std::min(position, doc->buffer_length());
+	GenericDataRegion *first_dr = data_regions.front();
+	GenericDataRegion *last_dr = data_regions.back();
 	
-	if(!insert_mode && position > 0 && position == doc->buffer_length())
+	if(_data_region_by_offset(position) == data_regions.end())
+	{
+		position = first_dr->d_offset;
+	}
+	
+	if(!insert_mode && position > last_dr->d_offset && position == (last_dr->d_offset + last_dr->d_length))
 	{
 		--position;
 	}
@@ -1837,7 +1842,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 		/* Requested offset must be within region range to match, or one past the end if
 		 * this is the last data region.
 		*/
-		&& ((**region)->d_offset + (**region)->d_length + (region == std::prev(data_regions_sorted.end())) > offset))
+		&& ((**region)->d_offset + (**region)->d_length + (*region == std::prev(data_regions.end())) > offset))
 	{
 		return *region;
 	}
@@ -2173,6 +2178,9 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 	
 	/* Recalculates region widths/heights and updates scroll bars */
 	_handle_width_change();
+	
+	/* Update the cursor position/state if not valid within the new regions. */
+	_set_cursor_position(get_cursor_position(), get_cursor_state());
 }
 
 bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)

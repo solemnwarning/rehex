@@ -103,9 +103,58 @@ class FixedHeightRegion: public DocumentCtrl::Region
 		int get_indent_final() const { return indent_final; }
 };
 
+class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
+{
+	private:
+		int64_t height;
+		
+	public:
+		FixedHeightDataRegion(int64_t height, off_t d_offset, off_t d_length, off_t indent_offset):
+			GenericDataRegion(d_offset, d_length, indent_offset),
+			height(height) {}
+		
+		virtual void calc_height(DocumentCtrl &doc, wxDC &dc) override
+		{
+			y_lines = height + indent_final;
+		}
+		
+		virtual void draw(DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override {}
+		
+		virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
+		virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
+		virtual off_t cursor_left_from(off_t pos) override { abort(); }
+		virtual off_t cursor_right_from(off_t pos) override { abort(); }
+		virtual off_t cursor_up_from(off_t pos) override { abort(); }
+		virtual off_t cursor_down_from(off_t pos) override { abort(); }
+		virtual off_t cursor_home_from(off_t pos) override { abort(); }
+		virtual off_t cursor_end_from(off_t pos) override { abort(); }
+		virtual int cursor_column(off_t pos) override { abort(); }
+		virtual off_t first_row_nearest_column(int column) override { abort(); }
+		virtual off_t last_row_nearest_column(int column) override { abort(); }
+		virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
+		
+		virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override
+		{
+			return DocumentCtrl::Rect(y_offset, 1, 1, 1);
+		}
+		
+		virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override
+		{
+			return SA_HEX;
+		}
+		
+		virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override { abort(); }
+		
+		int64_t get_y_position() const { return y_offset; }
+		int64_t get_height() const { return y_lines; }
+		
+		int get_indent_depth() const { return indent_depth; }
+		int get_indent_final() const { return indent_final; }
+};
+
 TEST_F(DocumentCtrlTest, ReplaceAllRegions)
 {
-	FixedHeightRegion *r1 = new FixedHeightRegion(4, 0, 0);
+	FixedHeightDataRegion *r1 = new FixedHeightDataRegion(4, 0, 0, 0);
 	FixedHeightRegion *r2 = new FixedHeightRegion(8, 0, 0);
 	FixedHeightRegion *r3 = new FixedHeightRegion(6, 0, 0);
 	FixedHeightRegion *r4 = new FixedHeightRegion(3, 0, 0);
@@ -158,9 +207,9 @@ TEST_F(DocumentCtrlTest, ReplaceAllRegions)
 TEST_F(DocumentCtrlTest, GetRegionByYOffset)
 {
 	std::vector<DocumentCtrl::Region*> regions;
-	regions.push_back(new FixedHeightRegion(4, 0, 0));
-	regions.push_back(new FixedHeightRegion(8, 0, 0));
-	regions.push_back(new FixedHeightRegion(4, 0, 0));
+	regions.push_back(new FixedHeightDataRegion(4,  0, 10,  0));
+	regions.push_back(new FixedHeightDataRegion(8, 10, 10, 10));
+	regions.push_back(new FixedHeightDataRegion(4, 20, 10, 20));
 	
 	doc_ctrl->replace_all_regions(regions);
 	
@@ -244,11 +293,11 @@ TEST_F(DocumentCtrlTest, GetDataRegionByOffsetVirtualOrder)
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(44), r1);
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(45), r4);
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(49), r4);
-	EXPECT_EQ(doc_ctrl->data_region_by_offset(50), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(50), r4);
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(59), (DocumentCtrl::Region*)(NULL));
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(60), r3);
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(69), r3);
-	EXPECT_EQ(doc_ctrl->data_region_by_offset(70), r3);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(70), (DocumentCtrl::Region*)(NULL));
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(71), (DocumentCtrl::Region*)(NULL));
 }
 

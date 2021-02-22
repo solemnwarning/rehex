@@ -761,12 +761,74 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 			_raise_highlights_changed();
 		}
 		
-		/* TODO: Update virtual mappings. */
+		_virt_to_real_segs_data_erased(offset, length);
+		bool r2v_updated = real_to_virt_segs.data_erased(offset, length);
+		
+		if(r2v_updated)
+		{
+			_raise_mappings_changed();
+		}
 	}
 	else{
 		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);
 		ProcessEvent(data_erase_aborted_event);
 	}
+}
+
+bool REHex::Document::_virt_to_real_segs_data_erased(off_t offset, off_t length)
+{
+	auto i = std::lower_bound(real_to_virt_segs.begin(), real_to_virt_segs.end(),
+		std::make_pair(ByteRangeMap<off_t>::Range(offset, 0), (off_t)(0)));
+	
+	if(i != real_to_virt_segs.begin())
+	{
+		auto i_prev = std::prev(i);
+		
+		if((i_prev->first.offset + i_prev->first.length) > offset)
+		{
+			i = i_prev;
+		}
+	}
+	
+	bool segs_changed = (i != real_to_virt_segs.end());
+	
+	for(; i != real_to_virt_segs.end(); ++i)
+	{
+		off_t seg_real_off = i->first.offset;
+		off_t seg_length   = i->first.length;
+		off_t seg_virt_off = i->second;
+		
+		virt_to_real_segs.clear_range(seg_virt_off, seg_length);
+		
+		if(seg_real_off >= (offset + length))
+		{
+			/* Segment starts after erased data. Just move it back. */
+			seg_real_off -= length;
+		}
+		else if(seg_real_off >= offset)
+		{
+			/* Segment starts within erased data. Move back and shrink it. */
+			seg_length -= length - (seg_real_off - offset);
+			seg_real_off = offset;
+		}
+		else if((seg_real_off + seg_length) > (offset + length))
+		{
+			/* Segment straddles both sides of erased data. Shrink. */
+			seg_length -= length;
+		}
+		else{
+			/* Segment starts before erased data. Truncate. */
+			assert(offset >= seg_real_off);
+			seg_length = offset - seg_real_off;
+		}
+		
+		if(seg_length > 0)
+		{
+			virt_to_real_segs.set_range(seg_virt_off, seg_length, seg_real_off);
+		}
+	}
+	
+	return segs_changed;
 }
 
 void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)

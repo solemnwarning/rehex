@@ -2000,3 +2000,345 @@ TEST_F(DocumentTest, VirtToRealOffset)
 	EXPECT_EQ(doc->virt_to_real_offset(2039), 69);
 	EXPECT_EQ(doc->virt_to_real_offset(2040), -1);
 }
+
+TEST_F(DocumentTest, EraseDataBetweenMappings)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	doc->set_virt_mapping(100, 1000, 20);
+	doc->set_virt_mapping(200, 2000, 40);
+	doc->set_virt_mapping(300, 1020, 10);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(300, 10), 1020),
+		};
+		
+		ASSERT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V) << "Sanity check";
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 300),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		ASSERT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R)  << "Sanity check";
+	}
+	
+	events.clear();
+	doc->erase_data(180, 20);
+	EXPECT_EVENTS(
+		"DATA_ERASE(180, 20)",
+		"EV_MAPPINGS_CHANGED",
+	);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(180, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(280, 10), 1020),
+		};
+		
+		EXPECT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V);
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 280),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 180),
+		};
+		
+		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
+	}
+}
+
+TEST_F(DocumentTest, EraseDataOverlappingStartOfMapping)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	doc->set_virt_mapping(100, 1000, 20);
+	doc->set_virt_mapping(200, 2000, 40);
+	doc->set_virt_mapping(300, 1020, 10);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(300, 10), 1020),
+		};
+		
+		ASSERT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V) << "Sanity check";
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 300),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		ASSERT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R)  << "Sanity check";
+	}
+	
+	events.clear();
+	doc->erase_data(295, 10);
+	EXPECT_EVENTS(
+		"DATA_ERASE(295, 10)",
+		"EV_MAPPINGS_CHANGED",
+	);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(295,  5), 1020),
+		};
+		
+		EXPECT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V);
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020,  5), 295),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
+	}
+}
+
+TEST_F(DocumentTest, EraseDataAtStartOfMapping)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	doc->set_virt_mapping(100, 1000, 20);
+	doc->set_virt_mapping(200, 2000, 40);
+	doc->set_virt_mapping(300, 1020, 10);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(300, 10), 1020),
+		};
+		
+		ASSERT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V) << "Sanity check";
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 300),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		ASSERT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R)  << "Sanity check";
+	}
+	
+	events.clear();
+	doc->erase_data(100, 10);
+	EXPECT_EVENTS(
+		"DATA_ERASE(100, 10)",
+		"EV_MAPPINGS_CHANGED",
+	);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 10), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(190, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(290, 10), 1020),
+		};
+		
+		EXPECT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V);
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 10), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 290),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 190),
+		};
+		
+		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
+	}
+}
+
+TEST_F(DocumentTest, EraseDataInMapping)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	doc->set_virt_mapping(100, 1000, 20);
+	doc->set_virt_mapping(200, 2000, 40);
+	doc->set_virt_mapping(300, 1020, 10);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(300, 10), 1020),
+		};
+		
+		ASSERT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V) << "Sanity check";
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 300),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		ASSERT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R)  << "Sanity check";
+	}
+	
+	events.clear();
+	doc->erase_data(210, 10);
+	EXPECT_EVENTS(
+		"DATA_ERASE(210, 10)",
+		"EV_MAPPINGS_CHANGED",
+	);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 30), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(290, 10), 1020),
+		};
+		
+		EXPECT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V);
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 290),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 30), 200),
+		};
+		
+		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
+	}
+}
+
+TEST_F(DocumentTest, EraseDataAtEndOfMapping)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	doc->set_virt_mapping(100, 1000, 20);
+	doc->set_virt_mapping(200, 2000, 40);
+	doc->set_virt_mapping(300, 1020, 10);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(300, 10), 1020),
+		};
+		
+		ASSERT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V) << "Sanity check";
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 300),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		ASSERT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R)  << "Sanity check";
+	}
+	
+	events.clear();
+	doc->erase_data(110, 10);
+	EXPECT_EVENTS(
+		"DATA_ERASE(110, 10)",
+		"EV_MAPPINGS_CHANGED",
+	);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 10), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(190, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(290, 10), 1020),
+		};
+		
+		EXPECT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V);
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 10), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 290),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 190),
+		};
+		
+		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
+	}
+}
+
+TEST_F(DocumentTest, EraseDataOverlappingEndOfMapping)
+{
+	/* Preload document with data. */
+	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
+	
+	doc->set_virt_mapping(100, 1000, 20);
+	doc->set_virt_mapping(200, 2000, 40);
+	doc->set_virt_mapping(300, 1020, 10);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 40), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(300, 10), 1020),
+		};
+		
+		ASSERT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V) << "Sanity check";
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 300),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 40), 200),
+		};
+		
+		ASSERT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R)  << "Sanity check";
+	}
+	
+	events.clear();
+	doc->erase_data(235, 10);
+	EXPECT_EVENTS(
+		"DATA_ERASE(235, 10)",
+		"EV_MAPPINGS_CHANGED",
+	);
+	
+	{
+		const std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_R2V = {
+			std::make_pair(ByteRangeMap<off_t>::Range(100, 20), 1000),
+			std::make_pair(ByteRangeMap<off_t>::Range(200, 35), 2000),
+			std::make_pair(ByteRangeMap<off_t>::Range(290, 10), 1020),
+		};
+		
+		EXPECT_EQ(doc->get_real_to_virt_segs().get_ranges(), EXPECT_R2V);
+	}
+	
+	{
+		std::vector< std::pair<ByteRangeMap<off_t>::Range, off_t> > EXPECT_V2R = {
+			std::make_pair(ByteRangeMap<off_t>::Range(1000, 20), 100),
+			std::make_pair(ByteRangeMap<off_t>::Range(1020, 10), 290),
+			std::make_pair(ByteRangeMap<off_t>::Range(2000, 35), 200),
+		};
+		
+		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
+	}
+}

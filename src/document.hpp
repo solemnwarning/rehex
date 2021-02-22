@@ -186,6 +186,8 @@ namespace REHex {
 			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length);
 			void _UNTRACKED_erase_data(off_t offset, off_t length);
 			
+			bool _virt_to_real_segs_data_erased(off_t offset, off_t length);
+			
 			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_erase_data(const char *change_desc, off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);

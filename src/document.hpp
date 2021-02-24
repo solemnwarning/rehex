@@ -183,9 +183,11 @@ namespace REHex {
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			
 			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length);
-			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length);
-			void _UNTRACKED_erase_data(off_t offset, off_t length);
 			
+			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length);
+			void _update_mappings_data_inserted(off_t offset, off_t length);
+			
+			void _UNTRACKED_erase_data(off_t offset, off_t length);
 			bool _virt_to_real_segs_data_erased(off_t offset, off_t length);
 			
 			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);

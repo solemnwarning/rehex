@@ -724,11 +724,82 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 			_raise_highlights_changed();
 		}
 		
-		/* TODO: Update virtual mappings. */
+		_update_mappings_data_inserted(offset, length);
 	}
 	else{
 		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
 		ProcessEvent(data_insert_aborted_event);
+	}
+}
+
+void REHex::Document::_update_mappings_data_inserted(off_t offset, off_t length)
+{
+	/* ByteRangeMap::data_inserted() will split elements that span the insertion point leaving
+	 * the same values on either side. We need every element to have the point to the base of
+	 * the mapped address, so if there is one spanning the insertion point, split it now so the
+	 * second half of the element has the right base address after adjustment.
+	*/
+	
+	auto i = real_to_virt_segs.get_range(offset);
+	if(i != real_to_virt_segs.end() && i->first.offset < offset)
+	{
+		off_t seg_real_off = i->first.offset;
+		off_t seg_length   = i->first.length;
+		off_t seg_virt_off = i->second;
+		
+		real_to_virt_segs.clear_range(seg_real_off, seg_length);
+		virt_to_real_segs.clear_range(seg_virt_off, seg_length);
+		
+		off_t seg1_real_off = seg_real_off;
+		off_t seg1_length   = offset - seg_real_off;
+		off_t seg1_virt_off = seg_virt_off;
+		
+		real_to_virt_segs.set_range(seg1_real_off, seg1_length, seg1_virt_off);
+		virt_to_real_segs.set_range(seg1_virt_off, seg1_length, seg1_real_off);
+		
+		off_t seg2_real_off = seg1_real_off + seg1_length;
+		off_t seg2_length   = seg_length - seg1_length;
+		off_t seg2_virt_off = seg_virt_off + seg1_length;
+		
+		real_to_virt_segs.set_range(seg2_real_off, seg2_length, seg2_virt_off);
+		virt_to_real_segs.set_range(seg2_virt_off, seg2_length, seg2_real_off);
+	}
+	
+	/* Find the first element on/after the insertion point and adjust the corresponding
+	 * elements in the virt_to_real_segs table. We must erase all first and then insert as
+	 * separate steps to avoid potential collisions.
+	*/
+	
+	i = std::lower_bound(real_to_virt_segs.begin(), real_to_virt_segs.end(),
+		std::make_pair(ByteRangeMap<off_t>::Range(offset, 0), (off_t)(0)));
+	
+	for(auto j = i; j != real_to_virt_segs.end(); ++j)
+	{
+		assert(j->first.offset >= offset);
+		
+		off_t seg_length   = j->first.length;
+		off_t seg_virt_off = j->second;
+		
+		virt_to_real_segs.clear_range(seg_virt_off, seg_length);
+	}
+	
+	for(auto j = i; j != real_to_virt_segs.end(); ++j)
+	{
+		off_t seg_real_off = j->first.offset;
+		off_t seg_length   = j->first.length;
+		off_t seg_virt_off = j->second;
+		
+		seg_real_off += length;
+		
+		virt_to_real_segs.set_range(seg_virt_off, seg_length, seg_real_off);
+	}
+	
+	/* Raise an EV_MAPPINGS_CHANGED event if any segments were affected by the insertion. */
+	
+	bool mappings_changed = real_to_virt_segs.data_inserted(offset, length);
+	if(mappings_changed)
+	{
+		_raise_mappings_changed();
 	}
 }
 

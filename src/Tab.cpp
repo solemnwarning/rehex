@@ -1495,7 +1495,7 @@ void REHex::Tab::repopulate_regions()
 			/* TODO: Make a read-only comment/message type. */
 			/* TODO: Avoid crash due to no data regions. */
 			static const wxString C_TEXT = "No virtual sections defined - Select \"Display file data\" in the View menu.";
-			regions.push_back(new DocumentCtrl::CommentRegion(0, 0, 0, C_TEXT, false, false));
+			regions.push_back(new DocumentCtrl::CommentRegion(0, 0, C_TEXT, false, 0, 0));
 		}
 		else{
 			for(auto i = virt_to_real_segs.begin(); i != virt_to_real_segs.end(); ++i)
@@ -1566,6 +1566,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	while(remain_data > 0)
 	{
+		assert((next_data + remain_data) <= doc->buffer_length());
 		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
 		while(!dr_limit.empty() && dr_limit.top() <= next_data)
@@ -1594,8 +1595,18 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 				
 				assert(c->first.offset == next_data);
 				
-				/* TODO: Clamp indent_length */
-				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, next_virt, *(c->second.text), nest, truncate));
+				off_t indent_offset = next_virt;
+				off_t indent_length = nest
+					? std::min(c->first.length, remain_data)
+					: 0;
+				
+				regions.push_back(new DocumentCtrl::CommentRegion(
+					c->first.offset,
+					c->first.length,
+					*(c->second.text),
+					truncate,
+					indent_offset,
+					indent_length));
 				
 				if(nest && c->first.length > 0)
 				{

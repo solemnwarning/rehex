@@ -3616,8 +3616,8 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 	}
 }
 
-REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, off_t indent_offset, const wxString &c_text, bool nest_children, bool truncate):
-	Region(indent_offset, (nest_children ? c_length : 0)),
+REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, off_t indent_offset, off_t indent_length):
+	Region(indent_offset, indent_length),
 	c_offset(c_offset),
 	c_length(c_length),
 	c_text(c_text),

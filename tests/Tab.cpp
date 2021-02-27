@@ -289,6 +289,71 @@ TEST(Tab, ComputeRegionsNestedShortComments)
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
 }
 
+TEST(Tab, ComputeRegionsClampStart)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(1024,   128, REHex::Document::Comment("unite"));
+	doc->set_comment(1024,     0, REHex::Document::Comment("robin"));
+	doc->set_comment(1024,    64, REHex::Document::Comment("release"));
+	doc->set_comment(1088,    64, REHex::Document::Comment("uncle"));
+	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
+	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
+	
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 1050, 1050, (doc->buffer_length() - 1050), ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 1050, d_length = 38, indent_offset = 1050, indent_length = 0)",
+		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088, indent_length = 64, c_text = 'uncle', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1088, d_length = 64, indent_offset = 1088, indent_length = 0)",
+		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152, indent_length = 64, c_text = 'scarecrow', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1152, d_length = 64, indent_offset = 1152, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 1216, d_length = 832, indent_offset = 1216, indent_length = 0)",
+		"CommentRegion(c_offset = 2048, c_length = 2048, indent_offset = 2048, indent_length = 2048, c_text = 'crowded', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 2048, d_length = 2048, indent_offset = 2048, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsClampEnd)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(1024,   128, REHex::Document::Comment("unite"));
+	doc->set_comment(1024,     0, REHex::Document::Comment("robin"));
+	doc->set_comment(1024,    64, REHex::Document::Comment("release"));
+	doc->set_comment(1088,    64, REHex::Document::Comment("uncle"));
+	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
+	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
+	
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, 1200, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 1024, indent_offset = 0, indent_length = 0)",
+		"CommentRegion(c_offset = 1024, c_length = 128, indent_offset = 1024, indent_length = 128, c_text = 'unite', truncate = 0)",
+		"CommentRegion(c_offset = 1024, c_length = 64, indent_offset = 1024, indent_length = 64, c_text = 'release', truncate = 0)",
+		"CommentRegion(c_offset = 1024, c_length = 0, indent_offset = 1024, indent_length = 0, c_text = 'robin', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1024, d_length = 64, indent_offset = 1024, indent_length = 0)",
+		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088, indent_length = 64, c_text = 'uncle', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1088, d_length = 64, indent_offset = 1088, indent_length = 0)",
+		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152, indent_length = 48, c_text = 'scarecrow', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1152, d_length = 48, indent_offset = 1152, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
 TEST(Tab, ComputeRegionsDataTypes)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());

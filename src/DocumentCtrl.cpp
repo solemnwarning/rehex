@@ -1697,7 +1697,7 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 				Refresh();
 			}
 		}
-		else if((cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region)) != NULL)
+		else if((cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region)) != NULL && cr->c_offset >= 0)
 		{
 			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{

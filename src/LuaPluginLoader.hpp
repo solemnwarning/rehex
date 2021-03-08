@@ -26,25 +26,48 @@
 
 namespace REHex
 {
+	/**
+	 * @brief Handle to a loaded Lua plugin.
+	 *
+	 * This (copyable, reference-counted) class holds the interpreter state for a loaded Lua
+	 * plugin. When the last reference to a plugin is destroyed, the plugin is unloaded.
+	 *
+	 * Don't construct this directly - use REHex::LuaPluginLoader::load_plugin() instead.
+	*/
 	class LuaPlugin
 	{
 		public:
 			LuaPlugin(const wxLuaState &lua);
+			LuaPlugin(const LuaPlugin &src);
+			~LuaPlugin();
+			
+			/**
+			 * @brief Get the number of active instances of this class.
+			*/
+			static int get_num_instances();
 			
 		private:
+			static int num_instances;
+			
 			wxLuaState lua;
 	};
 	
+	/**
+	 * @brief Static class which handles Lua interpreter initialisation and plugin loading.
+	*/
 	class LuaPluginLoader
 	{
 		private:
 			static std::unique_ptr<wxEvtHandler> default_handler;
 			static std::list<LuaPlugin> loaded_plugins;
 			
-		public:
+			static App::SetupHookRegistration init_hook;
 			static void OnAppInit();
+			
+			static App::SetupHookRegistration shutdown_hook;
 			static void OnAppShutdown();
 			
+		public:
 			/**
 			 * @brief Initialise LuaPluginLoader.
 			 *
@@ -55,8 +78,8 @@ namespace REHex
 			/**
 			 * @brief Shutdown LuaPluginLoader.
 			 *
-			 * This releases objects created by init(), all plugins MUST be unloaded before it is
-			 * called.
+			 * This releases objects created by init(), all plugins MUST be unloaded
+			 * before it is called.
 			*/
 			static void shutdown();
 			

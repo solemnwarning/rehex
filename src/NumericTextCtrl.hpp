@@ -23,35 +23,64 @@
 #include <wx/textctrl.h>
 
 namespace REHex {
+	/**
+	 * @brief Text control for entering numeric types.
+	 *
+	 * This control is based on wxTextCtrl, look there for most documentation.
+	*/
 	class NumericTextCtrl: public wxTextCtrl
 	{
 		using wxTextCtrl::wxTextCtrl; /* Inherit wxTextCtrl c'tors */
 		
 		public:
+			/**
+			 * @brief Base class of input exceptions thrown by NumericTextCtrl.
+			*/
 			class InputError: public std::runtime_error
 			{
 				protected:
 					InputError(const char *what): runtime_error(what) {}
 			};
 			
+			/**
+			 * @brief Exception thrown by NumericTextCtrl when the input value is out of range.
+			*/
 			class RangeError: public InputError
 			{
 				public:
 					RangeError(): InputError("Number is out of range") {}
 			};
 			
+			/**
+			 * @brief Exception thrown by NumericTextCtrl when the input value is not in a known format.
+			*/
 			class FormatError: public InputError
 			{
 				public:
 					FormatError(): InputError("Number is not of a known format") {}
 			};
 			
+			/**
+			 * @brief Exception thrown by NumericTextCtrl when the input value is empty.
+			*/
 			class EmptyError: public InputError
 			{
 				public:
 					EmptyError(): InputError("No number provided") {}
 			};
 			
+			/**
+			 * @brief Parse a numeric string value.
+			 *
+			 * @param sval      String to parse.
+			 * @param min       Minium permissable value.
+			 * @param max       Maximum permissable value.
+			 * @param rel_base  Value to be added to sval, before min/max check
+			 *
+			 * Parses a numeric string value and returns the result.
+			 *
+			 * On error throws an exception of type NumericTextCtrl::InputError.
+			*/
 			template<typename T>
 				typename std::enable_if<std::numeric_limits<T>::is_signed, T>::type
 				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
@@ -203,6 +232,15 @@ namespace REHex {
 				return ival;
 			}
 			
+			/**
+			 * @brief Parse the control value and return as a number.
+			 *
+			 * @param min       Minium permissable value.
+			 * @param max       Maximum permissable value.
+			 * @param rel_base  Value to be added to sval, before min/max check
+			 *
+			 * On error throws an exception of type NumericTextCtrl::InputError.
+			*/
 			template<typename T>
 				T GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
 			{

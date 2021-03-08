@@ -22,6 +22,9 @@
 #include <wx/colour.h>
 
 namespace REHex {
+	/**
+	 * @brief Colour palette to use when drawing custom controls.
+	*/
 	class Palette
 	{
 		public:
@@ -56,17 +59,57 @@ namespace REHex {
 			
 			Palette(const std::string &name, const std::string &label, const wxColour colours[]);
 			
+			/**
+			 * @brief Get the internal name of the palette.
+			*/
 			const std::string &get_name() const;
+			
+			/**
+			 * @brief Get the display name of the palette.
+			*/
 			const std::string &get_label() const;
 			
+			/**
+			 * @brief Get the colour at the given palette index.
+			 *
+			 * @param index Palette index slot (0 .. PAL_MAX).
+			*/
 			const wxColour &operator[](int index) const;
 			
+			/**
+			 * @brief Get the background colour for the given text highlight colour.
+			 *
+			 * @param highlight_idx Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
+			*/
 			const wxColour &get_highlight_bg(int highlight_idx) const;
+			
+			/**
+			 * @brief Get the foreground colour for the given text highlight colour.
+			 *
+			 * @param highlight_idx Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
+			*/
 			const wxColour &get_highlight_fg(int highlight_idx) const;
 			
+			/**
+			 * @brief Get the background colour palette index for the given text highlight colour.
+			 *
+			 * @param index Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
+			*/
 			static ColourIndex get_highlight_bg_idx(int index);
+			
+			/**
+			 * @brief Get the foreground colour palette index for the given text highlight colour.
+			 *
+			 * @param index Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
+			*/
 			static ColourIndex get_highlight_fg_idx(int index);
 			
+			/**
+			 * @brief Blend two palette colours together.
+			 *
+			 * @param colour_a_idx Palette index of colour A (0 .. PAL_MAX).
+			 * @param colour_b_idx Palette index of colour B (0 .. PAL_MAX).
+			*/
 			wxColour get_average_colour(int colour_a_idx, int colour_b_idx) const;
 			
 			static Palette *create_system_palette();
@@ -80,6 +123,9 @@ namespace REHex {
 			wxColour palette[PAL_MAX + 1];
 	};
 	
+	/**
+	 * @brief The active colour palette.
+	*/
 	extern Palette *active_palette;
 }
 

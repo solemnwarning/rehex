@@ -29,13 +29,23 @@
 #include "ToolPanel.hpp"
 
 namespace REHex {
+	/**
+	 * @brief The main application window.
+	*/
 	class MainWindow: public wxFrame
 	{
 		public:
 			MainWindow(const wxSize& size);
 			virtual ~MainWindow();
 			
+			/**
+			 * @brief Create a new tab with an empty file.
+			*/
 			void new_file();
+			
+			/**
+			 * @brief Create a new tab with a file loaded from disk.
+			*/
 			void open_file(const std::string &filename);
 			
 			wxMenuBar *get_menu_bar() const;
@@ -45,7 +55,14 @@ namespace REHex {
 			wxMenu *get_tools_menu() const;
 			wxMenu *get_help_menu() const;
 			
+			/**
+			 * @brief Gets the currently visible Tab.
+			*/
 			Tab *active_tab();
+			
+			/**
+			 * @brief Gets the Document in the currently visible Tab.
+			*/
 			Document *active_document();
 			
 			void OnWindowClose(wxCloseEvent& event);
@@ -167,8 +184,8 @@ namespace REHex {
 			class SetupHookRegistration
 			{
 				public:
-					SetupPhase phase;        /**< MainWindow setup phase to call function during. */
-					SetupHookFunction func;  /**< Hook function to be called. */
+					SetupPhase phase;        /**< @brief MainWindow setup phase to call function during. */
+					SetupHookFunction func;  /**< @brief Hook function to be called. */
 					
 					/**
 					 * @brief Register the setup hook.
@@ -235,10 +252,13 @@ namespace REHex {
 			DECLARE_EVENT_TABLE()
 	};
 	
+	/**
+	 * @brief Event raised by MainWindow when a document is created or opened.
+	*/
 	class TabCreatedEvent: public wxEvent
 	{
 		public:
-			Tab *tab;
+			Tab *tab; /**< @brief The new tab. */
 			
 			TabCreatedEvent(MainWindow *source, Tab *tab);
 			

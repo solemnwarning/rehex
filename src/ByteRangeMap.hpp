@@ -31,7 +31,7 @@
 namespace REHex
 {
 	/**
-	 * @brief Wrapper around std::vector for storing ranges in a file.
+	 * @brief Associative container for mapping byte ranges to values.
 	 *
 	 * This class is a wrapper around std::vector that can be used for associating values with
 	 * ranges in the file. Any ranges which are adjacent or overlapping and have the same value

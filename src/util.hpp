@@ -31,17 +31,36 @@ namespace REHex {
 			ParseError(const char *what);
 	};
 	
+	/**
+	 * @brief RAII-style access to the clipboard.
+	 *
+	 * This class provides an RAII-style wrapper around the Open() and Close() methods of the
+	 * wxTheClipboard object.
+	*/
 	class ClipboardGuard
 	{
 		private:
 			bool open;
 			
 		public:
+			/**
+			 * @brief Attempts to open the clipboard. Does not throw an exception on failure.
+			*/
 			ClipboardGuard();
+			
+			/**
+			 * @brief Closes the clipboard, if open.
+			*/
 			~ClipboardGuard();
 			
+			/**
+			 * @brief Close the clipboard early.
+			*/
 			void close();
 			
+			/**
+			 * @brief Check if the clipboard is open.
+			*/
 			operator bool() const
 			{
 				return open;

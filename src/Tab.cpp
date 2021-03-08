@@ -97,6 +97,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
 	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
 	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
+	doc.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::Tab::OnDocumentMappingsChanged,   this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
@@ -157,7 +158,8 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	doc_ctrl->Bind(       CURSOR_UPDATE,          &REHex::Tab::OnDocumentCtrlCursorUpdate,  this);
 	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
 	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
-	doc.auto_cleanup_bind(EV_TYPES_CHANGED,  &REHex::Tab::OnDocumentDataTypesChanged,  this);
+	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
+	doc.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::Tab::OnDocumentMappingsChanged,   this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
@@ -1109,6 +1111,16 @@ void REHex::Tab::OnDocumenHighlightsChanged(wxCommandEvent &event)
 void REHex::Tab::OnDocumentDataTypesChanged(wxCommandEvent &event)
 {
 	repopulate_regions();
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumentMappingsChanged(wxCommandEvent &event)
+{
+	if(document_display_mode == DDM_VIRTUAL)
+	{
+		repopulate_regions();
+	}
+	
 	event.Skip();
 }
 

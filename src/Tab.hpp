@@ -123,6 +123,7 @@ namespace REHex
 			void OnDocumentCommentModified(wxCommandEvent &event);
 			void OnDocumenHighlightsChanged(wxCommandEvent &event);
 			void OnDocumentDataTypesChanged(wxCommandEvent &event);
+			void OnDocumentMappingsChanged(wxCommandEvent &event);
 			
 			template<typename T> void OnEventToForward(T &event)
 			{

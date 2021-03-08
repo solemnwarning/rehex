@@ -26,6 +26,7 @@
 #include <map>
 #include <stack>
 #include <string>
+#include <tuple>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
@@ -1113,6 +1114,28 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		has_data = true;
 	}
 	
+	json_t *virt_mappings = json_array();
+	if(json_object_set_new(root, "virt_mappings", virt_mappings) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto r2v = real_to_virt_segs.begin(); r2v != real_to_virt_segs.end(); ++r2v)
+	{
+		json_t *mapping = json_object();
+		if(json_array_append(virt_mappings, mapping) == -1
+			|| json_object_set_new(mapping, "real_offset", json_integer(r2v->first.offset)) == -1
+			|| json_object_set_new(mapping, "virt_offset", json_integer(r2v->second)) == -1
+			|| json_object_set_new(mapping, "length",      json_integer(r2v->first.length)) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+		
+		has_data = true;
+	}
+	
 	return root;
 }
 
@@ -1217,6 +1240,35 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 	return types;
 }
 
+std::pair< REHex::ByteRangeMap<off_t>, REHex::ByteRangeMap<off_t> > REHex::Document::_load_virt_mappings(const json_t *meta, off_t buffer_length)
+{
+	ByteRangeMap<off_t> real_to_virt_segs;
+	ByteRangeMap<off_t> virt_to_real_segs;
+	
+	json_t *j_mappings = json_object_get(meta, "virt_mappings");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_mappings, index, value)
+	{
+		off_t real_offset = json_integer_value(json_object_get(value, "real_offset"));
+		off_t virt_offset = json_integer_value(json_object_get(value, "virt_offset"));
+		off_t length      = json_integer_value(json_object_get(value, "length"));
+		
+		if(real_offset >= 0 && real_offset < buffer_length
+			&& length > 0 && (real_offset + length) <= buffer_length
+			&& real_to_virt_segs.get_range_in(real_offset, length) == real_to_virt_segs.end()
+			&& virt_to_real_segs.get_range_in(virt_offset, length) == virt_to_real_segs.end())
+		{
+			real_to_virt_segs.set_range(real_offset, length, virt_offset);
+			virt_to_real_segs.set_range(virt_offset, length, real_offset);
+		}
+	}
+	
+	return std::make_pair(real_to_virt_segs, virt_to_real_segs);
+}
+
 void REHex::Document::_load_metadata(const std::string &filename)
 {
 	/* TODO: Report errors */
@@ -1227,6 +1279,7 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	comments = _load_comments(meta, buffer_length());
 	highlights = _load_highlights(meta, buffer_length());
 	types = _load_types(meta, buffer_length());
+	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
 	
 	json_decref(meta);
 }

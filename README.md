@@ -6,9 +6,11 @@ A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and e
 
 * Large (1TB+) file support
 * Decoding of integer/floating point value types
-* Disassembly of machine code
+* Inline disassembly of machine code
 * Highlighting and annotation of ranges of bytes
 * Side by side comparision of selections
+* Lua scripting support
+* Virtual address mapping support
 
 ![inline comments + data types demo](doc/comments-types.gif)
 

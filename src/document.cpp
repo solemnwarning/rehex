@@ -26,6 +26,7 @@
 #include <map>
 #include <stack>
 #include <string>
+#include <tuple>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
@@ -48,6 +49,7 @@ wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
 	dirty(false),
@@ -207,7 +209,7 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const un
 	_tracked_replace_data(change_desc, offset, old_data_length, new_data, new_data_length, new_cursor_pos, new_cursor_state);
 }
 
-off_t REHex::Document::buffer_length()
+off_t REHex::Document::buffer_length() const
 {
 	return buffer->length();
 }
@@ -360,6 +362,197 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 	return true;
 }
 
+bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
+{
+	if(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end()
+		|| virt_to_real_segs.get_range_in(virt_offset, length) != virt_to_real_segs.end())
+	{
+		return false;
+	}
+	
+	_tracked_change("set virtual address mapping",
+		[this, real_offset, virt_offset, length]()
+		{
+			assert(real_to_virt_segs.get_range_in(real_offset, length) == real_to_virt_segs.end());
+			assert(virt_to_real_segs.get_range_in(virt_offset, length) == virt_to_real_segs.end());
+			
+			real_to_virt_segs.set_range(real_offset, length, virt_offset);
+			virt_to_real_segs.set_range(virt_offset, length, real_offset);
+			set_dirty(true);
+			
+			_raise_mappings_changed();
+		},
+		
+		[this]()
+		{
+			/* Address mapping changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
+void REHex::Document::clear_virt_mapping_r(off_t real_offset, off_t length)
+{
+	if(real_to_virt_segs.get_range_in(real_offset, length) == real_to_virt_segs.end())
+	{
+		/* No mapping here - nothing to do. */
+		return;
+	}
+	
+	_tracked_change("clear virtual address mapping",
+		[this, real_offset, length]()
+		{
+			assert(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end());
+			
+			off_t real_end = real_offset + length;
+			
+			ByteRangeMap<off_t>::const_iterator i;
+			while((i = real_to_virt_segs.get_range_in(real_offset, length)) != real_to_virt_segs.end())
+			{
+				off_t seg_real_off = i->first.offset;
+				off_t seg_length   = i->first.length;
+				off_t seg_virt_off = i->second;
+				
+				off_t seg_real_end = seg_real_off + seg_length;
+				off_t seg_virt_end = seg_virt_off + seg_length;
+				
+				off_t virt_off = seg_virt_off + (real_offset - seg_real_off);
+				off_t virt_end = virt_off + length;
+				
+				if(seg_real_end > real_end)
+				{
+					real_to_virt_segs.set_range(real_end, (seg_real_end - real_end), virt_end);
+					virt_to_real_segs.set_range(virt_end, (seg_virt_end - virt_end), real_end);
+					
+					off_t clear_virt_from = std::max(virt_off, seg_virt_off);
+					
+					real_to_virt_segs.clear_range(real_offset,     (real_end - real_offset));
+					virt_to_real_segs.clear_range(clear_virt_from, (virt_end - clear_virt_from));
+				}
+				else{
+					assert(real_offset < seg_real_end);
+					assert(virt_off    < seg_virt_end);
+					
+					real_to_virt_segs.clear_range(real_offset, (seg_real_end - real_offset));
+					virt_to_real_segs.clear_range(virt_off,    (seg_virt_end - virt_off));
+				}
+			}
+			
+			set_dirty(true);
+			
+			_raise_mappings_changed();
+		},
+		
+		[this]()
+		{
+			/* Address mapping changes are undone implicitly. */
+		});
+}
+
+void REHex::Document::clear_virt_mapping_v(off_t virt_offset, off_t length)
+{
+	if(virt_to_real_segs.get_range_in(virt_offset, length) == virt_to_real_segs.end())
+	{
+		/* No mapping here - nothing to do. */
+		return;
+	}
+	
+	_tracked_change("clear virtual address mapping",
+		[this, virt_offset, length]()
+		{
+			assert(virt_to_real_segs.get_range_in(virt_offset, length) != virt_to_real_segs.end());
+			
+			off_t virt_end = virt_offset + length;
+			
+			ByteRangeMap<off_t>::const_iterator i;
+			while((i = virt_to_real_segs.get_range_in(virt_offset, length)) != virt_to_real_segs.end())
+			{
+				off_t seg_virt_off = i->first.offset;
+				off_t seg_length   = i->first.length;
+				off_t seg_real_off = i->second;
+				
+				off_t seg_real_end = seg_real_off + seg_length;
+				off_t seg_virt_end = seg_virt_off + seg_length;
+				
+				off_t real_off = seg_real_off + (virt_offset - seg_virt_off);
+				off_t real_end = real_off + length;
+				
+				if(seg_virt_end > virt_end)
+				{
+					real_to_virt_segs.set_range(real_end, (seg_real_end - real_end), virt_end);
+					virt_to_real_segs.set_range(virt_end, (seg_virt_end - virt_end), real_end);
+					
+					off_t clear_real_from = std::max(real_off, seg_real_off);
+					
+					real_to_virt_segs.clear_range(clear_real_from, (real_end - clear_real_from));
+					virt_to_real_segs.clear_range(virt_offset,     (virt_end - virt_offset));
+				}
+				else{
+					assert(real_off    < seg_real_end);
+					assert(virt_offset < seg_virt_end);
+					
+					real_to_virt_segs.clear_range(real_off,    (seg_real_end - real_off));
+					virt_to_real_segs.clear_range(virt_offset, (seg_virt_end - virt_offset));
+				}
+			}
+			
+			set_dirty(true);
+			
+			_raise_mappings_changed();
+		},
+		
+		[this]()
+		{
+			/* Address mapping changes are undone implicitly. */
+		});
+}
+
+const REHex::ByteRangeMap<off_t> &REHex::Document::get_real_to_virt_segs() const
+{
+	return real_to_virt_segs;
+}
+
+const REHex::ByteRangeMap<off_t> &REHex::Document::get_virt_to_real_segs() const
+{
+	return virt_to_real_segs;
+}
+
+off_t REHex::Document::real_to_virt_offset(off_t real_offset) const
+{
+	auto i = real_to_virt_segs.get_range(real_offset);
+	if(i != real_to_virt_segs.end())
+	{
+		assert(i->first.offset <= real_offset);
+		assert((i->first.offset + i->first.length) > real_offset);
+		
+		off_t virt_offset = i->second + (real_offset - i->first.offset);
+		return virt_offset;
+	}
+	else{
+		return -1;
+	}
+}
+
+off_t REHex::Document::virt_to_real_offset(off_t virt_offset) const
+{
+	auto i = virt_to_real_segs.get_range(virt_offset);
+	if(i != virt_to_real_segs.end())
+	{
+		assert(i->first.offset <= virt_offset);
+		assert((i->first.offset + i->first.length) > virt_offset);
+		
+		off_t real_offset = i->second + (virt_offset - i->first.offset);
+		
+		assert(real_offset >= 0);
+		assert(real_offset < buffer_length());
+		
+		return real_offset;
+	}
+	else{
+		return -1;
+	}
+}
+
 void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
@@ -419,6 +612,13 @@ void REHex::Document::undo()
 		{
 			types = act.old_types;
 			_raise_types_changed();
+		}
+		
+		if(real_to_virt_segs != act.old_real_to_virt_segs || virt_to_real_segs != act.old_virt_to_real_segs)
+		{
+			real_to_virt_segs = act.old_real_to_virt_segs;
+			virt_to_real_segs = act.old_virt_to_real_segs;
+			_raise_mappings_changed();
 		}
 		
 		set_dirty(act.old_dirty);
@@ -524,10 +724,83 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		{
 			_raise_highlights_changed();
 		}
+		
+		_update_mappings_data_inserted(offset, length);
 	}
 	else{
 		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
 		ProcessEvent(data_insert_aborted_event);
+	}
+}
+
+void REHex::Document::_update_mappings_data_inserted(off_t offset, off_t length)
+{
+	/* ByteRangeMap::data_inserted() will split elements that span the insertion point leaving
+	 * the same values on either side. We need every element to have the point to the base of
+	 * the mapped address, so if there is one spanning the insertion point, split it now so the
+	 * second half of the element has the right base address after adjustment.
+	*/
+	
+	auto i = real_to_virt_segs.get_range(offset);
+	if(i != real_to_virt_segs.end() && i->first.offset < offset)
+	{
+		off_t seg_real_off = i->first.offset;
+		off_t seg_length   = i->first.length;
+		off_t seg_virt_off = i->second;
+		
+		real_to_virt_segs.clear_range(seg_real_off, seg_length);
+		virt_to_real_segs.clear_range(seg_virt_off, seg_length);
+		
+		off_t seg1_real_off = seg_real_off;
+		off_t seg1_length   = offset - seg_real_off;
+		off_t seg1_virt_off = seg_virt_off;
+		
+		real_to_virt_segs.set_range(seg1_real_off, seg1_length, seg1_virt_off);
+		virt_to_real_segs.set_range(seg1_virt_off, seg1_length, seg1_real_off);
+		
+		off_t seg2_real_off = seg1_real_off + seg1_length;
+		off_t seg2_length   = seg_length - seg1_length;
+		off_t seg2_virt_off = seg_virt_off + seg1_length;
+		
+		real_to_virt_segs.set_range(seg2_real_off, seg2_length, seg2_virt_off);
+		virt_to_real_segs.set_range(seg2_virt_off, seg2_length, seg2_real_off);
+	}
+	
+	/* Find the first element on/after the insertion point and adjust the corresponding
+	 * elements in the virt_to_real_segs table. We must erase all first and then insert as
+	 * separate steps to avoid potential collisions.
+	*/
+	
+	i = std::lower_bound(real_to_virt_segs.begin(), real_to_virt_segs.end(),
+		std::make_pair(ByteRangeMap<off_t>::Range(offset, 0), (off_t)(0)));
+	
+	for(auto j = i; j != real_to_virt_segs.end(); ++j)
+	{
+		assert(j->first.offset >= offset);
+		
+		off_t seg_length   = j->first.length;
+		off_t seg_virt_off = j->second;
+		
+		virt_to_real_segs.clear_range(seg_virt_off, seg_length);
+	}
+	
+	for(auto j = i; j != real_to_virt_segs.end(); ++j)
+	{
+		off_t seg_real_off = j->first.offset;
+		off_t seg_length   = j->first.length;
+		off_t seg_virt_off = j->second;
+		
+		seg_real_off += length;
+		
+		virt_to_real_segs.set_range(seg_virt_off, seg_length, seg_real_off);
+	}
+	
+	/* Raise an EV_MAPPINGS_CHANGED event if any segments were affected by the insertion. */
+	
+	bool mappings_changed = real_to_virt_segs.data_inserted(offset, length);
+	if(mappings_changed)
+	{
+		_raise_mappings_changed();
 	}
 }
 
@@ -559,11 +832,75 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		{
 			_raise_highlights_changed();
 		}
+		
+		_virt_to_real_segs_data_erased(offset, length);
+		bool r2v_updated = real_to_virt_segs.data_erased(offset, length);
+		
+		if(r2v_updated)
+		{
+			_raise_mappings_changed();
+		}
 	}
 	else{
 		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);
 		ProcessEvent(data_erase_aborted_event);
 	}
+}
+
+bool REHex::Document::_virt_to_real_segs_data_erased(off_t offset, off_t length)
+{
+	auto i = std::lower_bound(real_to_virt_segs.begin(), real_to_virt_segs.end(),
+		std::make_pair(ByteRangeMap<off_t>::Range(offset, 0), (off_t)(0)));
+	
+	if(i != real_to_virt_segs.begin())
+	{
+		auto i_prev = std::prev(i);
+		
+		if((i_prev->first.offset + i_prev->first.length) > offset)
+		{
+			i = i_prev;
+		}
+	}
+	
+	bool segs_changed = (i != real_to_virt_segs.end());
+	
+	for(; i != real_to_virt_segs.end(); ++i)
+	{
+		off_t seg_real_off = i->first.offset;
+		off_t seg_length   = i->first.length;
+		off_t seg_virt_off = i->second;
+		
+		virt_to_real_segs.clear_range(seg_virt_off, seg_length);
+		
+		if(seg_real_off >= (offset + length))
+		{
+			/* Segment starts after erased data. Just move it back. */
+			seg_real_off -= length;
+		}
+		else if(seg_real_off >= offset)
+		{
+			/* Segment starts within erased data. Move back and shrink it. */
+			seg_length -= length - (seg_real_off - offset);
+			seg_real_off = offset;
+		}
+		else if((seg_real_off + seg_length) > (offset + length))
+		{
+			/* Segment straddles both sides of erased data. Shrink. */
+			seg_length -= length;
+		}
+		else{
+			/* Segment starts before erased data. Truncate. */
+			assert(offset >= seg_real_off);
+			seg_length = offset - seg_real_off;
+		}
+		
+		if(seg_length > 0)
+		{
+			virt_to_real_segs.set_range(seg_virt_off, seg_length, seg_real_off);
+		}
+	}
+	
+	return segs_changed;
 }
 
 void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
@@ -678,6 +1015,8 @@ void REHex::Document::_tracked_change(const char *desc, std::function< void() > 
 	change.old_comments     = comments;
 	change.old_highlights   = highlights;
 	change.old_types        = types;
+	change.old_real_to_virt_segs = real_to_virt_segs;
+	change.old_virt_to_real_segs = virt_to_real_segs;
 	change.old_dirty        = dirty;
 	change.old_dirty_bytes  = dirty_bytes;
 	
@@ -767,6 +1106,28 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 			|| json_object_set_new(data_type, "offset", json_integer(dt->first.offset)) == -1
 			|| json_object_set_new(data_type, "length", json_integer(dt->first.length)) == -1
 			|| json_object_set_new(data_type, "type",   json_string(dt->second.c_str())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+		
+		has_data = true;
+	}
+	
+	json_t *virt_mappings = json_array();
+	if(json_object_set_new(root, "virt_mappings", virt_mappings) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto r2v = real_to_virt_segs.begin(); r2v != real_to_virt_segs.end(); ++r2v)
+	{
+		json_t *mapping = json_object();
+		if(json_array_append(virt_mappings, mapping) == -1
+			|| json_object_set_new(mapping, "real_offset", json_integer(r2v->first.offset)) == -1
+			|| json_object_set_new(mapping, "virt_offset", json_integer(r2v->second)) == -1
+			|| json_object_set_new(mapping, "length",      json_integer(r2v->first.length)) == -1)
 		{
 			json_decref(root);
 			return NULL;
@@ -879,6 +1240,35 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 	return types;
 }
 
+std::pair< REHex::ByteRangeMap<off_t>, REHex::ByteRangeMap<off_t> > REHex::Document::_load_virt_mappings(const json_t *meta, off_t buffer_length)
+{
+	ByteRangeMap<off_t> real_to_virt_segs;
+	ByteRangeMap<off_t> virt_to_real_segs;
+	
+	json_t *j_mappings = json_object_get(meta, "virt_mappings");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_mappings, index, value)
+	{
+		off_t real_offset = json_integer_value(json_object_get(value, "real_offset"));
+		off_t virt_offset = json_integer_value(json_object_get(value, "virt_offset"));
+		off_t length      = json_integer_value(json_object_get(value, "length"));
+		
+		if(real_offset >= 0 && real_offset < buffer_length
+			&& length > 0 && (real_offset + length) <= buffer_length
+			&& real_to_virt_segs.get_range_in(real_offset, length) == real_to_virt_segs.end()
+			&& virt_to_real_segs.get_range_in(virt_offset, length) == virt_to_real_segs.end())
+		{
+			real_to_virt_segs.set_range(real_offset, length, virt_offset);
+			virt_to_real_segs.set_range(virt_offset, length, real_offset);
+		}
+	}
+	
+	return std::make_pair(real_to_virt_segs, virt_to_real_segs);
+}
+
 void REHex::Document::_load_metadata(const std::string &filename)
 {
 	/* TODO: Report errors */
@@ -889,6 +1279,7 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	comments = _load_comments(meta, buffer_length());
 	highlights = _load_highlights(meta, buffer_length());
 	types = _load_types(meta, buffer_length());
+	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
 	
 	json_decref(meta);
 }
@@ -936,6 +1327,14 @@ void REHex::Document::_raise_highlights_changed()
 void REHex::Document::_raise_types_changed()
 {
 	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
+}
+
+void REHex::Document::_raise_mappings_changed()
+{
+	wxCommandEvent event(REHex::EV_MAPPINGS_CHANGED);
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);

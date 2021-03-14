@@ -281,7 +281,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		*/
 
 		std::vector<DocumentCtrl::Region*> regions;
-		regions.push_back(new DocumentCtrl::DataRegion(0, 0));
+		regions.push_back(new DocumentCtrl::DataRegion(0, 0, 0));
 
 		range->doc_ctrl->replace_all_regions(regions);
 	}
@@ -745,7 +745,7 @@ void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):
-	DataRegion(d_offset, d_length), diff_window(diff_window), range(range) {}
+	DataRegion(d_offset, d_length, d_offset), diff_window(diff_window), range(range) {}
 
 int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 {

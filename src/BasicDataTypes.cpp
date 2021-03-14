@@ -34,8 +34,8 @@
 #include <portable_endian.h>
 
 #define IMPLEMENT_NDTR_CLASS(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length): \
-		NumericDataTypeRegion(doc, offset, length, LABEL) {} \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
+		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
 	std::string REHex::NAME::to_string(const T *data) const \
 	{ \
@@ -60,9 +60,9 @@
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset) \
 	{ \
-		return new REHex::NAME(doc, offset, length); \
+		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
 
 IMPLEMENT_NDTR_CLASS(U16LEDataRegion, uint16_t, "u16le", "%" PRIu16, le16toh, htole16, u16le_factory)
@@ -133,8 +133,8 @@ static float  htolef(float  he_float)  { return leftoh(he_float); }
 static double htoled(double he_double) { return ledtoh(he_double); }
 
 #define IMPLEMENT_NDTR_CLASS_FLOAT(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length): \
-		NumericDataTypeRegion(doc, offset, length, LABEL) {} \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
+		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
 	std::string REHex::NAME::to_string(const T *data) const \
 	{ \
@@ -169,9 +169,9 @@ static double htoled(double he_double) { return ledtoh(he_double); }
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset) \
 	{ \
-		return new REHex::NAME(doc, offset, length); \
+		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
 
 IMPLEMENT_NDTR_CLASS_FLOAT(F32LEDataRegion, float,  "f32le", "%.9g", leftoh, htolef, f32le_factory)
@@ -181,8 +181,8 @@ static REHex::DataTypeRegistration f32le_dtr("f32le", "32-bit float (little endi
 static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)",    &f32be_factory, "Number", sizeof(float));
 
 #define IMPLEMENT_NDTR_CLASS_DOUBLE(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length): \
-		NumericDataTypeRegion(doc, offset, length, LABEL) {} \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
+		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
 	std::string REHex::NAME::to_string(const T *data) const \
 	{ \
@@ -217,9 +217,9 @@ static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset) \
 	{ \
-		return new REHex::NAME(doc, offset, length); \
+		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
 
 IMPLEMENT_NDTR_CLASS_DOUBLE(F64LEDataRegion, double, "f64le", "%.9g", ledtoh, htoled, f64le_factory)

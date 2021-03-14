@@ -30,6 +30,7 @@
 #include "DiffWindow.hpp"
 #include "EditCommentDialog.hpp"
 #include "Tab.hpp"
+#include "VirtualMappingDialog.hpp"
 
 /* Is the given byte a printable 7-bit ASCII character? */
 static bool isasciiprint(int c)
@@ -96,6 +97,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
 	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
 	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
+	doc.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::Tab::OnDocumentMappingsChanged,   this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
@@ -156,7 +158,8 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	doc_ctrl->Bind(       CURSOR_UPDATE,          &REHex::Tab::OnDocumentCtrlCursorUpdate,  this);
 	doc.auto_cleanup_bind(EV_COMMENT_MODIFIED,    &REHex::Tab::OnDocumentCommentModified,   this);
 	doc.auto_cleanup_bind(EV_HIGHLIGHTS_CHANGED,  &REHex::Tab::OnDocumenHighlightsChanged,  this);
-	doc.auto_cleanup_bind(EV_TYPES_CHANGED,  &REHex::Tab::OnDocumentDataTypesChanged,  this);
+	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
+	doc.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::Tab::OnDocumentMappingsChanged,   this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
@@ -442,6 +445,17 @@ void REHex::Tab::set_inline_comment_mode(InlineCommentMode inline_comment_mode)
 	repopulate_regions();
 }
 
+REHex::DocumentDisplayMode REHex::Tab::get_document_display_mode() const
+{
+	return document_display_mode;
+}
+
+void REHex::Tab::set_document_display_mode(DocumentDisplayMode document_display_mode)
+{
+	this->document_display_mode = document_display_mode;
+	repopulate_regions();
+}
+
 void REHex::Tab::OnSize(wxSizeEvent &event)
 {
 	if(h_splitter->IsSplit())
@@ -700,13 +714,26 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 
 void REHex::Tab::OnCommentLeftClick(OffsetLengthEvent &event)
 {
-	EditCommentDialog::run_modal(this, doc, event.offset, event.length);
+	off_t c_offset = event.offset;
+	off_t c_length = event.length;
+	
+	if(c_offset < 0)
+	{
+		return;
+	}
+	
+	EditCommentDialog::run_modal(this, doc, c_offset, c_length);
 }
 
 void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 {
 	off_t c_offset = event.offset;
 	off_t c_length = event.length;
+	
+	if(c_offset < 0)
+	{
+		return;
+	}
 	
 	wxMenu menu;
 	
@@ -985,6 +1012,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		}
 		
 		menu.AppendSubMenu(dtmenu, "Set data type");
+		
+		wxMenuItem *vm_itm = menu.Append(wxID_ANY, "Set virtual address mapping...");
+		
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		{
+			VirtualMappingDialog d(this, doc, selection_off, selection_length);
+			d.ShowModal();
+		}, vm_itm->GetId(), vm_itm->GetId());
 	}
 	
 	if(selection_length > 0)
@@ -1076,6 +1111,16 @@ void REHex::Tab::OnDocumenHighlightsChanged(wxCommandEvent &event)
 void REHex::Tab::OnDocumentDataTypesChanged(wxCommandEvent &event)
 {
 	repopulate_regions();
+	event.Skip();
+}
+
+void REHex::Tab::OnDocumentMappingsChanged(wxCommandEvent &event)
+{
+	if(document_display_mode == DDM_VIRTUAL)
+	{
+		repopulate_regions();
+	}
+	
 	event.Skip();
 }
 
@@ -1462,11 +1507,63 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
-	std::vector<DocumentCtrl::Region*> regions = compute_regions(doc, inline_comment_mode);
+	std::vector<DocumentCtrl::Region*> regions;
+	
+	if(document_display_mode == DDM_VIRTUAL)
+	{
+		/* Virtual segments view. */
+		
+		const ByteRangeMap<off_t> &virt_to_real_segs = doc->get_virt_to_real_segs();
+		
+		if(virt_to_real_segs.empty())
+		{
+			static const wxString C_TEXT = "No virtual sections defined, displaying file data instead.";
+			regions.push_back(new DocumentCtrl::CommentRegion(-1, 0, C_TEXT, false, -1, 0));
+			
+			goto DO_FILE_VIEW;
+		}
+		else{
+			for(auto i = virt_to_real_segs.begin(); i != virt_to_real_segs.end(); ++i)
+			{
+				off_t real_offset_base = i->second;
+				off_t virt_offset_base = i->first.offset;
+				off_t length = i->first.length;
+				
+				std::vector<DocumentCtrl::Region*> v_regions = compute_regions(doc, real_offset_base, virt_offset_base, length, inline_comment_mode);
+				regions.insert(regions.end(), v_regions.begin(), v_regions.end());
+			}
+		}
+	}
+	else{
+		/* File view. */
+		DO_FILE_VIEW:
+		
+		std::vector<DocumentCtrl::Region*> file_regions = compute_regions(doc, 0, 0, doc->buffer_length(), inline_comment_mode);
+		
+		if(file_regions.empty())
+		{
+			assert(doc->buffer_length() == 0);
+			
+			/* Empty buffers need a data region too! */
+			file_regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, 0, *doc));
+		}
+		else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(file_regions.back()) == NULL)
+		{
+			/* End region isn't a DataRegionDocHighlight - means its a comment or a custom
+			 * data region type. Push one on the end so there's somewhere to put the cursor to
+			 * insert more data at the end.
+			*/
+			
+			file_regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, doc->buffer_length(), *doc));
+		}
+		
+		regions.insert(regions.end(), file_regions.begin(), file_regions.end());
+	}
+	
 	doc_ctrl->replace_all_regions(regions);
 }
 
-std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode)
+std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode)
 {
 	auto comments = doc->get_comments();
 	auto types = doc->get_data_types();
@@ -1478,7 +1575,11 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	auto offset_base = comments.begin();
 	auto types_iter = types.begin();
-	off_t next_data = 0, remain_data = doc->buffer_length();
+	off_t next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
+	
+	/* Skip over comments/types prior to real_offset_base. */
+	while(offset_base != comments.end() && offset_base->first.offset < next_data) { ++offset_base; }
+	while(types_iter != types.end() && (types_iter->first.offset + types_iter->first.length <= next_data)) { ++types_iter; }
 	
 	if(inline_comment_mode == ICM_HIDDEN)
 	{
@@ -1491,6 +1592,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	while(remain_data > 0)
 	{
+		assert((next_data + remain_data) <= doc->buffer_length());
 		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
 		
 		while(!dr_limit.empty() && dr_limit.top() <= next_data)
@@ -1517,7 +1619,20 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			do {
 				--c;
 				
-				regions.push_back(new DocumentCtrl::CommentRegion(c->first.offset, c->first.length, *(c->second.text), nest, truncate));
+				assert(c->first.offset == next_data);
+				
+				off_t indent_offset = next_virt;
+				off_t indent_length = nest
+					? std::min(c->first.length, remain_data)
+					: 0;
+				
+				regions.push_back(new DocumentCtrl::CommentRegion(
+					c->first.offset,
+					c->first.length,
+					*(c->second.text),
+					truncate,
+					indent_offset,
+					indent_length));
 				
 				if(nest && c->first.length > 0)
 				{
@@ -1559,36 +1674,20 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 				dr_length = dtr->fixed_size;
 			}
 			
-			regions.push_back(dtr->region_factory(doc, next_data, dr_length));
+			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_virt));
 		}
 		else{
-			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, *doc));
+			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(next_data, dr_length, next_virt, *doc));
 		}
 		
 		next_data   += dr_length;
+		next_virt   += dr_length;
 		remain_data -= dr_length;
 		
 		if(next_data >= (types_iter->first.offset + types_iter->first.length))
 		{
 			++types_iter;
 		}
-	}
-	
-	if(regions.empty())
-	{
-		assert(doc->buffer_length() == 0);
-		
-		/* Empty buffers need a data region too! */
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(0, 0, *doc));
-	}
-	else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(regions.back()) == NULL)
-	{
-		/* End region isn't a DataRegionDocHighlight - means its a comment or a custom
-		 * data region type. Push one on the end so there's somewhere to put the cursor to
-		 * insert more data at the end.
-		*/
-		
-		regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc->buffer_length(), 0, *doc));
 	}
 	
 	return regions;

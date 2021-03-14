@@ -91,11 +91,13 @@ static void free_regions(std::vector<DocumentCtrl::Region*> &regions)
 	regions.clear();
 }
 
+#if 0
+/* Logic moved into Tab::repopulate_regions() */
 TEST(Tab, ComputeRegionsEmptyFile)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -105,6 +107,7 @@ TEST(Tab, ComputeRegionsEmptyFile)
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
 }
+#endif
 
 TEST(Tab, ComputeRegionsNoComments)
 {
@@ -113,7 +116,7 @@ TEST(Tab, ComputeRegionsNoComments)
 	const std::vector<unsigned char> ZERO_4K(4096);
 	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -138,7 +141,7 @@ TEST(Tab, ComputeRegionsFlatComments)
 	doc->set_comment(1152,  64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  64, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -173,7 +176,7 @@ TEST(Tab, ComputeRegionsShortComments)
 	doc->set_comment( 128,  64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  64, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_SHORT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_SHORT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -202,7 +205,7 @@ TEST(Tab, ComputeRegionsHiddenComments)
 	
 	doc->set_comment(1024, 128, REHex::Document::Comment("unite"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_HIDDEN);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_HIDDEN);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -227,7 +230,7 @@ TEST(Tab, ComputeRegionsNestedComments)
 	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -263,7 +266,7 @@ TEST(Tab, ComputeRegionsNestedShortComments)
 	doc->set_comment(1152,  64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  64, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_SHORT_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_SHORT_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -286,6 +289,71 @@ TEST(Tab, ComputeRegionsNestedShortComments)
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
 }
 
+TEST(Tab, ComputeRegionsClampStart)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(1024,   128, REHex::Document::Comment("unite"));
+	doc->set_comment(1024,     0, REHex::Document::Comment("robin"));
+	doc->set_comment(1024,    64, REHex::Document::Comment("release"));
+	doc->set_comment(1088,    64, REHex::Document::Comment("uncle"));
+	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
+	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
+	
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 1050, 1050, (doc->buffer_length() - 1050), ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 1050, d_length = 38, indent_offset = 1050, indent_length = 0)",
+		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088, indent_length = 64, c_text = 'uncle', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1088, d_length = 64, indent_offset = 1088, indent_length = 0)",
+		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152, indent_length = 64, c_text = 'scarecrow', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1152, d_length = 64, indent_offset = 1152, indent_length = 0)",
+		"DataRegionDocHighlight(d_offset = 1216, d_length = 832, indent_offset = 1216, indent_length = 0)",
+		"CommentRegion(c_offset = 2048, c_length = 2048, indent_offset = 2048, indent_length = 2048, c_text = 'crowded', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 2048, d_length = 2048, indent_offset = 2048, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
+TEST(Tab, ComputeRegionsClampEnd)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	const std::vector<unsigned char> ZERO_4K(4096);
+	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
+	
+	doc->set_comment(1024,   128, REHex::Document::Comment("unite"));
+	doc->set_comment(1024,     0, REHex::Document::Comment("robin"));
+	doc->set_comment(1024,    64, REHex::Document::Comment("release"));
+	doc->set_comment(1088,    64, REHex::Document::Comment("uncle"));
+	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
+	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
+	
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, 1200, ICM_FULL_INDENT);
+	std::vector<std::string> s_regions = stringify_regions(regions);
+	free_regions(regions);
+	
+	const std::vector<std::string> EXPECT_REGIONS = {
+		"DataRegionDocHighlight(d_offset = 0, d_length = 1024, indent_offset = 0, indent_length = 0)",
+		"CommentRegion(c_offset = 1024, c_length = 128, indent_offset = 1024, indent_length = 128, c_text = 'unite', truncate = 0)",
+		"CommentRegion(c_offset = 1024, c_length = 64, indent_offset = 1024, indent_length = 64, c_text = 'release', truncate = 0)",
+		"CommentRegion(c_offset = 1024, c_length = 0, indent_offset = 1024, indent_length = 0, c_text = 'robin', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1024, d_length = 64, indent_offset = 1024, indent_length = 0)",
+		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088, indent_length = 64, c_text = 'uncle', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1088, d_length = 64, indent_offset = 1088, indent_length = 0)",
+		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152, indent_length = 48, c_text = 'scarecrow', truncate = 0)",
+		"DataRegionDocHighlight(d_offset = 1152, d_length = 48, indent_offset = 1152, indent_length = 0)",
+	};
+	
+	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
+}
+
 TEST(Tab, ComputeRegionsDataTypes)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
@@ -296,7 +364,7 @@ TEST(Tab, ComputeRegionsDataTypes)
 	doc->set_data_type(128, 2, "s16le");
 	doc->set_data_type(132, 8, "s64le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -320,7 +388,7 @@ TEST(Tab, ComputeRegionsDataTypesRepeated)
 	
 	doc->set_data_type(128, 8, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -346,7 +414,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedInComment)
 	doc->set_comment(126, 8, REHex::Document::Comment("special"));
 	doc->set_data_type(128, 2, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -374,7 +442,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedAtStartOfComment)
 	doc->set_comment(140, 10, REHex::Document::Comment("gusty"));
 	doc->set_data_type(140, 4, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -402,7 +470,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedAtEndOfComment)
 	doc->set_comment(160, 10, REHex::Document::Comment("call"));
 	doc->set_data_type(168, 2, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -429,7 +497,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedOccupyingWholeComment)
 	doc->set_comment(180, 2, REHex::Document::Comment("wind"));
 	doc->set_data_type(180, 2, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -456,7 +524,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedMultipleInComment)
 	doc->set_data_type(260, 2, "s16le");
 	doc->set_data_type(270, 8, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -490,7 +558,7 @@ TEST(Tab, ComputeRegionsDataTypesNotFixedSizeMultiple)
 	doc->set_data_type(132,  3, "s16le");
 	doc->set_data_type(140, 23, "s64le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -116,6 +116,14 @@ namespace REHex
 			const_iterator get_range(off_t offset) const;
 			
 			/**
+			 * @brief Search the map for a range intersecting with the given range.
+			 *
+			 * Returns an iterator to the first intersecting range, end if there aren't
+			 * any.
+			*/
+			const_iterator get_range_in(off_t offset, off_t length) const;
+			
+			/**
 			 * @brief Set a range of bytes in the map.
 			 *
 			 * This method adds a range of bytes to the set. Any existing ranges
@@ -123,6 +131,15 @@ namespace REHex
 			 * and removed from the set.
 			*/
 			void set_range(off_t offset, off_t length, const T &value);
+			
+			/**
+			 * @brief Clear a range of bytes in the map.
+			 *
+			 * This method removes any elements from the map overlapping the given byte
+			 * range. If any elements partially intersect the given range, the portion
+			 * outside of the range will be preserved.
+			*/
+			void clear_range(off_t offset, off_t length);
 			
 			/**
 			 * @brief Get a reference to the internal std::vector.
@@ -134,6 +151,7 @@ namespace REHex
 			
 			const_iterator begin() const { return ranges.begin(); }
 			const_iterator end() const { return ranges.end(); }
+			bool empty() const { return ranges.empty(); }
 			
 			/**
 			 * @brief Adjust for data being inserted into file.
@@ -179,6 +197,30 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 	
 	/* No match. */
 	return end();
+}
+
+template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::ByteRangeMap<T>::get_range_in(off_t offset, off_t length) const
+{
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), default_value));
+	
+	if(i != ranges.begin())
+	{
+		--i;
+	}
+	
+	for(; i != ranges.end() && i->first.offset < (offset + length); ++i)
+	{
+		off_t end = offset + length;
+		off_t i_end = i->first.offset + i->first.length;
+		
+		if(i->first.offset < end && offset < i_end)
+		{
+			return i;
+		}
+	}
+	
+	/* No match. */
+	return ranges.end();
 }
 
 template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t length, const T &value)
@@ -288,6 +330,82 @@ template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t 
 	/* Insert new range. */
 	erase_end = ranges.insert(erase_end, std::make_pair(Range(offset, length), value));
 	++erase_end;
+	
+	if(!insert_after.empty())
+	{
+		/* Re-insert range with different value immediately after the range beging set
+		 * that was lost above.
+		*/
+		
+		erase_end = ranges.insert(erase_end, insert_after.front());
+		++erase_end;
+	}
+}
+
+template<typename T> void REHex::ByteRangeMap<T>::clear_range(off_t offset, off_t length)
+{
+	if(length <= 0)
+	{
+		return;
+	}
+	
+	/* Find the range of elements that intersects the one we are inserting. They will be erased
+	 * and the one we are creating will grow on either end as necessary to encompass them.
+	*/
+	
+	/* Starting from the first element after us (or the end of the vector)... */
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value));
+	
+	typename std::vector< std::pair<Range, T> >::iterator erase_begin = next;
+	typename std::vector< std::pair<Range, T> >::iterator erase_end   = next;
+	
+	std::vector< std::pair<Range, T> > insert_before;
+	std::vector< std::pair<Range, T> > insert_after;
+	
+	while(erase_begin != ranges.begin())
+	{
+		/* ...walking backwards... */
+		auto eb_prev = std::prev(erase_begin);
+		
+		if((eb_prev->first.offset + eb_prev->first.length) >= offset)
+		{
+			/* ...the previous element intersects the range we wish to erase to some extent... */
+			
+			if(eb_prev->first.offset < offset)
+			{
+				insert_before.push_back(std::make_pair(Range(eb_prev->first.offset, (offset - eb_prev->first.offset)), eb_prev->second));
+			}
+			
+			if((eb_prev->first.offset + eb_prev->first.length) > (offset + length))
+			{
+				off_t begin = offset + length;
+				off_t end   = eb_prev->first.offset + eb_prev->first.length;
+				
+				insert_after.push_back(std::make_pair(Range(begin, (end - begin)), eb_prev->second));
+			}
+			
+			erase_begin = eb_prev;
+		}
+		else{
+			break;
+		}
+	}
+	
+	assert(insert_before.size() <= 1);
+	assert(insert_after.size() <= 1);
+	
+	/* Erase adjacent and/or overlapping ranges. */
+	erase_end = ranges.erase(erase_begin, erase_end);
+	
+	if(!insert_before.empty())
+	{
+		/* Re-insert range with different value immediately before the range beging set
+		 * that was lost above.
+		*/
+		
+		erase_end = ranges.insert(erase_end, insert_before.front());
+		++erase_end;
+	}
 	
 	if(!insert_after.empty())
 	{

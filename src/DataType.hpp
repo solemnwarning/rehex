@@ -57,7 +57,7 @@ namespace REHex
 	class DataTypeRegistration
 	{
 		public:
-			typedef std::function<DocumentCtrl::Region*(SharedDocumentPointer &document, off_t offset, off_t length)> RegionFactoryFunction;
+			typedef std::function<DocumentCtrl::Region*(SharedDocumentPointer &document, off_t offset, off_t length, off_t virt_offset)> RegionFactoryFunction;
 			
 			std::string name;
 			std::string label;

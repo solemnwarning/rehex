@@ -159,7 +159,7 @@ namespace REHex {
 			class GenericDataRegion: public Region
 			{
 				protected:
-					GenericDataRegion(off_t d_offset, off_t d_length);
+					GenericDataRegion(off_t d_offset, off_t d_length, off_t indent_offset);
 					
 				public:
 					const off_t d_offset;
@@ -312,6 +312,8 @@ namespace REHex {
 			class DataRegion: public GenericDataRegion
 			{
 				protected:
+					off_t virt_offset;
+					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
@@ -320,7 +322,7 @@ namespace REHex {
 					unsigned int first_line_pad_bytes;   /* Number of bytes to pad first line with. */
 					
 				public:
-					DataRegion(off_t d_offset, off_t d_length);
+					DataRegion(off_t d_offset, off_t d_length, off_t virt_offset);
 					
 					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
 					
@@ -365,7 +367,7 @@ namespace REHex {
 					Document &doc;
 					
 				public:
-					DataRegionDocHighlight(off_t d_offset, off_t d_length, Document &doc);
+					DataRegionDocHighlight(off_t d_offset, off_t d_length, off_t virt_offset, Document &doc);
 					
 				protected:
 					virtual Highlight highlight_at_off(off_t off) const override;
@@ -384,7 +386,7 @@ namespace REHex {
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
-				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool nest_children, bool truncate);
+				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, off_t indent_offset, off_t indent_length);
 				
 				friend DocumentCtrl;
 			};
@@ -480,6 +482,9 @@ namespace REHex {
 			std::vector<Region*> regions;                  /**< List of regions to be displayed. */
 			std::vector<GenericDataRegion*> data_regions;  /**< Subset of regions which are a GenericDataRegion. */
 			std::vector<Region*> processing_regions;       /**< Subset of regions which are doing background processing. */
+			
+			/** List of iterators into data_regions, sorted by d_offset. */
+			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted;
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;

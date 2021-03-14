@@ -56,6 +56,8 @@ function process_document(doc)
 			end
 			
 			doc:set_comment(section_off, section_len, rehex.Comment.new(comment_text))
+			
+			doc:set_virt_mapping(section_off, section.virtual_address, section_len)
 		end
 	end
 end

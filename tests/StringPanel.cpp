@@ -55,7 +55,7 @@ class StringPanelTest: public ::testing::Test
 			
 			/* Need to put a Region in the DocumentCtrl to avoid crashes. */
 			std::vector<DocumentCtrl::Region*> regions;
-			regions.push_back(new DocumentCtrl::DataRegion(0, 0));
+			regions.push_back(new DocumentCtrl::DataRegion(0, 0, 0));
 			main_doc_ctrl->replace_all_regions(regions);
 			
 			check_timer = new wxTimer(&frame, ID_CHECK_TIMER);

@@ -43,6 +43,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_MAPPINGS_CHANGED,    wxCommandEvent);
 	
 	/**
 	 * @brief Data and metadata of an open file.
@@ -237,6 +238,16 @@ namespace REHex {
 			*/
 			bool set_data_type(off_t offset, off_t length, const std::string &type);
 			
+			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
+			void clear_virt_mapping_r(off_t real_offset, off_t length);
+			void clear_virt_mapping_v(off_t virt_offset, off_t length);
+			
+			const ByteRangeMap<off_t> &get_real_to_virt_segs() const;
+			const ByteRangeMap<off_t> &get_virt_to_real_segs() const;
+			
+			off_t real_to_virt_offset(off_t real_offset) const;
+			off_t virt_to_real_offset(off_t virt_offset) const;
+			
 			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
 			
 			/**
@@ -275,6 +286,9 @@ namespace REHex {
 				NestedOffsetLengthMap<int> old_highlights;
 				ByteRangeMap<std::string> old_types;
 				
+				ByteRangeMap<off_t> old_real_to_virt_segs;
+				ByteRangeMap<off_t> old_virt_to_real_segs;
+				
 				bool old_dirty;
 				ByteRangeSet old_dirty_bytes;
 			};
@@ -291,6 +305,9 @@ namespace REHex {
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
 			ByteRangeMap<std::string> types;
 			
+			ByteRangeMap<off_t> real_to_virt_segs;
+			ByteRangeMap<off_t> virt_to_real_segs;
+			
 			std::string title;
 			
 			off_t cpos_off{0};
@@ -305,8 +322,12 @@ namespace REHex {
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			
 			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length);
+			
 			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length);
+			void _update_mappings_data_inserted(off_t offset, off_t length);
+			
 			void _UNTRACKED_erase_data(off_t offset, off_t length);
+			bool _virt_to_real_segs_data_erased(off_t offset, off_t length);
 			
 			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
@@ -320,6 +341,7 @@ namespace REHex {
 			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
 			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
+			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
 			void _raise_comment_modified();
@@ -328,6 +350,7 @@ namespace REHex {
 			void _raise_clean();
 			void _raise_highlights_changed();
 			void _raise_types_changed();
+			void _raise_mappings_changed();
 			
 		public:
 			/**
@@ -339,7 +362,7 @@ namespace REHex {
 			/**
 			 * @brief Return the current length of the file in bytes.
 			*/
-			off_t buffer_length();
+			off_t buffer_length() const;
 			
 			/**
 			 * @brief Overwrite a range of bytes in the file.

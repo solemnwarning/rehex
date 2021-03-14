@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -72,6 +72,40 @@ TEST(ByteRangeMap, GetRangeEmptyMap)
 	ByteRangeMap<std::string> brm;
 	
 	EXPECT_EQ(brm.get_range(0),  brm.end());
+}
+
+TEST(ByteRangeMap, GetRangeIn)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "fumbling"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "false"),
+		std::make_pair(ByteRangeMap<std::string>::Range(60, 10), "oval"),
+	};
+	
+	const ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	EXPECT_EQ(brm.get_range_in( 0, 10), brm.end());
+	EXPECT_EQ(brm.get_range_in( 0, 15), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in( 0, 35), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(10,  0), brm.end());
+	EXPECT_EQ(brm.get_range_in(10,  1), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(10, 10), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(10, 20), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(29, 20), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(30, 10), brm.end());
+	EXPECT_EQ(brm.get_range_in(30, 20), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range_in(30, 50), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range_in(50, 10), brm.end());
+	EXPECT_EQ(brm.get_range_in(50, 11), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range_in(69,  1), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range_in(70, 10), brm.end());
+}
+
+TEST(ByteRangeMap, GetRangeInEmptyMap)
+{
+	const ByteRangeMap<std::string> brm;
+	
+	EXPECT_EQ(brm.get_range_in(0, 10), brm.end());
 }
 
 TEST(ByteRangeMap, SetOneRange)
@@ -274,6 +308,99 @@ TEST(ByteRangeMap, AddZeroLengthRange)
 	brm.set_range(10, 0, "discreet");
 	
 	EXPECT_RANGES();
+}
+
+TEST(ByteRangeMap, ClearExactRange)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "homorganic"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "redeceiving"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "antisophistication"),
+	};
+	
+	ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	brm.clear_range(10, 20);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "redeceiving"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "antisophistication"),
+	);
+}
+
+TEST(ByteRangeMap, ClearStartOfRange)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "gliomata"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "pereirine"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "condyle"),
+	};
+	
+	ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	brm.clear_range(45, 10);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "gliomata"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "pereirine"),
+		std::make_pair(ByteRangeMap<std::string>::Range(55,  5), "condyle"),
+	);
+}
+
+TEST(ByteRangeMap, ClearEndOfRange)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "ninon"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "zoophyte"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "recruit"),
+	};
+	
+	ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	brm.clear_range(42, 3);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "ninon"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  2), "zoophyte"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "recruit"),
+	);
+}
+
+TEST(ByteRangeMap, ClearMiddleOfRange)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "boundary"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "worry"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "silly"),
+	};
+	
+	ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	brm.clear_range(15, 5);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10,  5), "boundary"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "boundary"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "worry"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "silly"),
+	);
+}
+
+TEST(ByteRangeMap, ClearMultipleRanges)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "vivacious"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40,  5), "snotty"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 10), "nervous"),
+	};
+	
+	ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	brm.clear_range(5, 50);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(55, 5), "nervous"),
+	);
 }
 
 TEST(ByteRangeMap, DataInsertedBeforeRanges)

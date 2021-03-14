@@ -46,6 +46,13 @@ namespace REHex
 		ICM_MAX          = 4,
 	};
 	
+	enum DocumentDisplayMode {
+		DDM_NORMAL = 0,
+		DDM_VIRTUAL = 1,
+		
+		DDM_MAX = 2,
+	};
+	
 	class Tab: public wxPanel
 	{
 		public:
@@ -75,11 +82,15 @@ namespace REHex
 			InlineCommentMode get_inline_comment_mode() const;
 			void set_inline_comment_mode(InlineCommentMode inline_comment_mode);
 			
+			DocumentDisplayMode get_document_display_mode() const;
+			void set_document_display_mode(DocumentDisplayMode document_display_mode);
+			
 			/* Public for use by unit tests. */
-			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, InlineCommentMode inline_comment_mode);
+			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode);
 			
 		private:
 			InlineCommentMode inline_comment_mode;
+			DocumentDisplayMode document_display_mode;
 			
 			wxSplitterWindow   *v_splitter;
 			wxSplitterWindow   *h_splitter;
@@ -112,6 +123,7 @@ namespace REHex
 			void OnDocumentCommentModified(wxCommandEvent &event);
 			void OnDocumenHighlightsChanged(wxCommandEvent &event);
 			void OnDocumentDataTypesChanged(wxCommandEvent &event);
+			void OnDocumentMappingsChanged(wxCommandEvent &event);
 			
 			template<typename T> void OnEventToForward(T &event)
 			{

@@ -48,7 +48,7 @@ DocumentCtrlTest::DocumentCtrlTest():
 	doc_ctrl = new DocumentCtrl(&frame, doc);
 	
 	/* Need a data region to avoid crashing during wxEVT_SIZE handler. */
-	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(0, 0) };
+	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(0, 0, 0) };
 	doc_ctrl->replace_all_regions(regions);
 	
 	/* Give the DocumentCtrl an initial size. */
@@ -103,9 +103,58 @@ class FixedHeightRegion: public DocumentCtrl::Region
 		int get_indent_final() const { return indent_final; }
 };
 
+class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
+{
+	private:
+		int64_t height;
+		
+	public:
+		FixedHeightDataRegion(int64_t height, off_t d_offset, off_t d_length, off_t indent_offset):
+			GenericDataRegion(d_offset, d_length, indent_offset),
+			height(height) {}
+		
+		virtual void calc_height(DocumentCtrl &doc, wxDC &dc) override
+		{
+			y_lines = height + indent_final;
+		}
+		
+		virtual void draw(DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override {}
+		
+		virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
+		virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
+		virtual off_t cursor_left_from(off_t pos) override { abort(); }
+		virtual off_t cursor_right_from(off_t pos) override { abort(); }
+		virtual off_t cursor_up_from(off_t pos) override { abort(); }
+		virtual off_t cursor_down_from(off_t pos) override { abort(); }
+		virtual off_t cursor_home_from(off_t pos) override { abort(); }
+		virtual off_t cursor_end_from(off_t pos) override { abort(); }
+		virtual int cursor_column(off_t pos) override { abort(); }
+		virtual off_t first_row_nearest_column(int column) override { abort(); }
+		virtual off_t last_row_nearest_column(int column) override { abort(); }
+		virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
+		
+		virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override
+		{
+			return DocumentCtrl::Rect(y_offset, 1, 1, 1);
+		}
+		
+		virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override
+		{
+			return SA_HEX;
+		}
+		
+		virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override { abort(); }
+		
+		int64_t get_y_position() const { return y_offset; }
+		int64_t get_height() const { return y_lines; }
+		
+		int get_indent_depth() const { return indent_depth; }
+		int get_indent_final() const { return indent_final; }
+};
+
 TEST_F(DocumentCtrlTest, ReplaceAllRegions)
 {
-	FixedHeightRegion *r1 = new FixedHeightRegion(4, 0, 0);
+	FixedHeightDataRegion *r1 = new FixedHeightDataRegion(4, 0, 0, 0);
 	FixedHeightRegion *r2 = new FixedHeightRegion(8, 0, 0);
 	FixedHeightRegion *r3 = new FixedHeightRegion(6, 0, 0);
 	FixedHeightRegion *r4 = new FixedHeightRegion(3, 0, 0);
@@ -158,9 +207,9 @@ TEST_F(DocumentCtrlTest, ReplaceAllRegions)
 TEST_F(DocumentCtrlTest, GetRegionByYOffset)
 {
 	std::vector<DocumentCtrl::Region*> regions;
-	regions.push_back(new FixedHeightRegion(4, 0, 0));
-	regions.push_back(new FixedHeightRegion(8, 0, 0));
-	regions.push_back(new FixedHeightRegion(4, 0, 0));
+	regions.push_back(new FixedHeightDataRegion(4,  0, 10,  0));
+	regions.push_back(new FixedHeightDataRegion(8, 10, 10, 10));
+	regions.push_back(new FixedHeightDataRegion(4, 20, 10, 20));
 	
 	doc_ctrl->replace_all_regions(regions);
 	
@@ -195,13 +244,13 @@ TEST_F(DocumentCtrlTest, GetRegionByYOffset)
 
 TEST_F(DocumentCtrlTest, GetDataRegionByOffset)
 {
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 10);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 10, 10);
 	DocumentCtrl::Region *r2 = new FixedHeightRegion(4, 40, 0);
-	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(40, 5);
-	DocumentCtrl::Region *r4 = new DocumentCtrl::DataRegion(45, 5);
+	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(40, 5, 40);
+	DocumentCtrl::Region *r4 = new DocumentCtrl::DataRegion(45, 5, 45);
 	DocumentCtrl::Region *r5 = new FixedHeightRegion(4, 60, 0);
 	DocumentCtrl::Region *r6 = new FixedHeightRegion(4, 60, 0);
-	DocumentCtrl::Region *r7 = new DocumentCtrl::DataRegion(60, 10);
+	DocumentCtrl::Region *r7 = new DocumentCtrl::DataRegion(60, 10, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3, r4, r5, r6, r7 };
 	doc_ctrl->replace_all_regions(regions);
@@ -224,13 +273,41 @@ TEST_F(DocumentCtrlTest, GetDataRegionByOffset)
 	EXPECT_EQ(doc_ctrl->data_region_by_offset(71), (DocumentCtrl::Region*)(NULL));
 }
 
+TEST_F(DocumentCtrlTest, GetDataRegionByOffsetVirtualOrder)
+{
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(40,  5, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 10, 20);
+	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(60, 10, 30);
+	DocumentCtrl::Region *r4 = new DocumentCtrl::DataRegion(45,  5, 40);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3, r4 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->data_region_by_offset( 0), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset( 9), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(10), r2);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(19), r2);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(20), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(39), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(40), r1);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(44), r1);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(45), r4);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(49), r4);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(50), r4);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(59), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(60), r3);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(69), r3);
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(70), (DocumentCtrl::Region*)(NULL));
+	EXPECT_EQ(doc_ctrl->data_region_by_offset(71), (DocumentCtrl::Region*)(NULL));
+}
+
 TEST_F(DocumentCtrlTest, CursorLeftWithinRegion)
 {
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -247,8 +324,8 @@ TEST_F(DocumentCtrlTest, CursorLeftToPrevRegion)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -265,8 +342,8 @@ TEST_F(DocumentCtrlTest, CursorLeftNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -283,8 +360,8 @@ TEST_F(DocumentCtrlTest, CursorRightWithinRegion)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -301,8 +378,8 @@ TEST_F(DocumentCtrlTest, CursorRightToNextRegion)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -319,8 +396,8 @@ TEST_F(DocumentCtrlTest, CursorRightNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 32, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 32, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -337,8 +414,8 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionFixedWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -356,8 +433,8 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionFixedWidthClampStartOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -375,8 +452,8 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionAutoWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -402,8 +479,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -421,8 +498,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthStartOfRow)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20, 50);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -440,8 +517,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthEndOfRow)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20, 50);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -459,8 +536,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampStartOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 2);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 2, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -478,8 +555,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionFixedWidthClampEndOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 2);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 2, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -497,8 +574,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -524,8 +601,8 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidthClampStartOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 5);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 5, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -551,8 +628,8 @@ TEST_F(DocumentCtrlTest, CursorUpNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -570,8 +647,8 @@ TEST_F(DocumentCtrlTest, CursorDownWithinRegionFixedWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -589,8 +666,8 @@ TEST_F(DocumentCtrlTest, CursorDownWithinRegionFixedWidthClampEndOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -608,8 +685,8 @@ TEST_F(DocumentCtrlTest, CursorDownWithinRegionAutoWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -635,8 +712,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -654,8 +731,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthStartOfRow)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20, 50);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -673,8 +750,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthEndOfRow)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 20, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(50, 20, 50);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -692,8 +769,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthClampStartOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(64, 2);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(64, 2, 64);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -711,8 +788,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionFixedWidthClampEndOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 25);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(64, 2);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 25, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(64, 2, 64);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -730,8 +807,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionAutoWidth)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(62, 20, 62);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -757,8 +834,8 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionAutoWidthClampEndOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 2);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 2, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -784,8 +861,8 @@ TEST_F(DocumentCtrlTest, CursorDownNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -803,8 +880,8 @@ TEST_F(DocumentCtrlTest, CursorToStartOfDocument)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -822,8 +899,8 @@ TEST_F(DocumentCtrlTest, CursorToStartOfDocumentNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -841,8 +918,8 @@ TEST_F(DocumentCtrlTest, CursorToStartOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -860,8 +937,8 @@ TEST_F(DocumentCtrlTest, CursorToStartOfLineClamp)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -879,8 +956,8 @@ TEST_F(DocumentCtrlTest, CursorToStartOfLineNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -898,8 +975,8 @@ TEST_F(DocumentCtrlTest, CursorToEndOfDocument)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -917,8 +994,8 @@ TEST_F(DocumentCtrlTest, CursorToEndOfDocumentNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -936,8 +1013,8 @@ TEST_F(DocumentCtrlTest, CursorToEndOfLine)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -955,8 +1032,8 @@ TEST_F(DocumentCtrlTest, CursorToEndOfLineClamp)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -974,8 +1051,8 @@ TEST_F(DocumentCtrlTest, CursorToEndOfLineNowhereToGo)
 	std::vector<unsigned char> Z_DATA(128);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(15, 20, 15);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(65, 20, 65);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -993,8 +1070,8 @@ TEST_F(DocumentCtrlTest, CursorPageUpAllDataRegions)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1020,8 +1097,8 @@ TEST_F(DocumentCtrlTest, CursorPageUpMixedRegions)
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
 	DocumentCtrl::Region *r1 = new FixedHeightRegion(10, 0, 0);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 30);
-	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(60, 150);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 30, 10);
+	DocumentCtrl::Region *r3 = new DocumentCtrl::DataRegion(60, 150, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1047,7 +1124,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpNoDataRegions)
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
 	DocumentCtrl::Region *r1 = new FixedHeightRegion(10, 0, 0);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(10, 30, 10);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1072,8 +1149,8 @@ TEST_F(DocumentCtrlTest, CursorPageUpLimitScroll)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1098,8 +1175,8 @@ TEST_F(DocumentCtrlTest, CursorPageUpClampStartOfLine)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(28, 2);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(28, 2, 28);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1124,8 +1201,8 @@ TEST_F(DocumentCtrlTest, CursorPageUpClampEndOfLine)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 2);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 2, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1150,8 +1227,8 @@ TEST_F(DocumentCtrlTest, CursorPageDownAllDataRegions)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 150, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1176,8 +1253,8 @@ TEST_F(DocumentCtrlTest, CursorPageDownMixedRegions)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 40);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 40, 60);
 	DocumentCtrl::Region *r3 = new FixedHeightRegion(10, 100, 0);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3 };
@@ -1203,7 +1280,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownNoDataRegions)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30, 10);
 	DocumentCtrl::Region *r2 = new FixedHeightRegion(14, 100, 0);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
@@ -1229,8 +1306,8 @@ TEST_F(DocumentCtrlTest, CursorPageDownLimitScroll)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 40);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 30, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(60, 40, 60);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1255,8 +1332,8 @@ TEST_F(DocumentCtrlTest, CursorPageDownClampStartOfLine)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 90);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(106, 2);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 90, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(106, 2, 106);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);
@@ -1281,8 +1358,8 @@ TEST_F(DocumentCtrlTest, CursorPageDownClampEndOfLine)
 	std::vector<unsigned char> Z_DATA(256);
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
-	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 90);
-	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(102, 2);
+	DocumentCtrl::Region *r1 = new DocumentCtrl::DataRegion(10, 90, 10);
+	DocumentCtrl::Region *r2 = new DocumentCtrl::DataRegion(102, 2, 102);
 	
 	std::vector<DocumentCtrl::Region*> regions = { r1, r2 };
 	doc_ctrl->replace_all_regions(regions);

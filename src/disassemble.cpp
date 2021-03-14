@@ -125,9 +125,9 @@ static void Initialize_disassembler()
 			disasm_dtrs.emplace_back(
 				(std::string("code:") + desc.triple),
 				(std::string("Machine code (") + desc.label + ")"),
-				[desc](REHex::SharedDocumentPointer &doc, off_t offset, off_t length)
+				[desc](REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset)
 				{
-					return new REHex::DisassemblyRegion(doc, offset, length, desc.arch, desc.mode);
+					return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
 				},
 				"Machine code");
 		}

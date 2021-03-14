@@ -96,6 +96,7 @@ namespace REHex {
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
 			void OnInlineCommentsMode(wxCommandEvent &event);
+			void OnDocumentDisplayMode(wxCommandEvent &event);
 			void OnHighlightSelectionMatch(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
 			void OnPalette(wxCommandEvent &event);

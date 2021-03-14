@@ -70,6 +70,8 @@ enum {
 	ID_HIGHLIGHT_SELECTION_MATCH,
 	ID_HEX_OFFSETS,
 	ID_DEC_OFFSETS,
+	ID_DDM_NORMAL,
+	ID_DDM_VIRTUAL,
 	ID_SELECT_RANGE,
 	ID_FILL_RANGE,
 	ID_SYSTEM_PALETTE,
@@ -146,6 +148,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(ID_HEX_OFFSETS,   REHex::MainWindow::OnHexOffsets)
 	EVT_MENU(ID_DEC_OFFSETS,   REHex::MainWindow::OnDecOffsets)
+	
+	EVT_MENU(ID_DDM_NORMAL,     REHex::MainWindow::OnDocumentDisplayMode)
+	EVT_MENU(ID_DDM_VIRTUAL,    REHex::MainWindow::OnDocumentDisplayMode)
 	
 	EVT_MENU(ID_GITHUB,  REHex::MainWindow::OnGithub)
 	EVT_MENU(ID_DONATE,  REHex::MainWindow::OnDonate)
@@ -301,6 +306,11 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		view_menu->AppendRadioItem(ID_HEX_OFFSETS, "Display offsets in hexadecimal");
 		view_menu->AppendRadioItem(ID_DEC_OFFSETS, "Display offsets in decimal");
+		
+		view_menu->AppendSeparator(); /* ---- */
+		
+		view_menu->AppendRadioItem(ID_DDM_NORMAL,  "Display file data");
+		view_menu->AppendRadioItem(ID_DDM_VIRTUAL, "Display virtual sections");
 		
 		view_menu->AppendSeparator(); /* ---- */
 		
@@ -943,6 +953,20 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnDocumentDisplayMode(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	if(view_menu->IsChecked(ID_DDM_NORMAL))
+	{
+		tab->set_document_display_mode(DDM_NORMAL);
+	}
+	else if(view_menu->IsChecked(ID_DDM_VIRTUAL))
+	{
+		tab->set_document_display_mode(DDM_VIRTUAL);
+	}
+}
+
 void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1127,6 +1151,18 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 	};
+	
+	DocumentDisplayMode ddm = tab->get_document_display_mode();
+	switch(ddm)
+	{
+		case DDM_NORMAL:
+			view_menu->Check(ID_DDM_NORMAL, true);
+			break;
+			
+		case DDM_VIRTUAL:
+			view_menu->Check(ID_DDM_VIRTUAL, true);
+			break;
+	}
 	
 	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc_ctrl->get_highlight_selection_match());
 	

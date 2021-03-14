@@ -286,12 +286,17 @@ bool REHex::DocumentCtrl::special_view_active() const
 
 void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorState cursor_state)
 {
-	/* TODO: Clamp to positions with corresponding regions? */
+	/* Clamp the cursor position to the valid ranges defined by the data regions. */
 	
-	position = std::max<off_t>(position, 0);
-	position = std::min(position, doc->buffer_length());
+	GenericDataRegion *first_dr = data_regions.front();
+	GenericDataRegion *last_dr = data_regions.back();
 	
-	if(!insert_mode && position > 0 && position == doc->buffer_length())
+	if(_data_region_by_offset(position) == data_regions.end())
+	{
+		position = first_dr->d_offset;
+	}
+	
+	if(!insert_mode && position > last_dr->d_offset && position == (last_dr->d_offset + last_dr->d_length))
 	{
 		--position;
 	}
@@ -1692,7 +1697,7 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 				Refresh();
 			}
 		}
-		else if((cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region)) != NULL)
+		else if((cr = dynamic_cast<REHex::DocumentCtrl::CommentRegion*>(*region)) != NULL && cr->c_offset >= 0)
 		{
 			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{
@@ -1789,7 +1794,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	{
 		public:
 			StubRegion(off_t offset):
-				GenericDataRegion(offset, 0) {}
+				GenericDataRegion(offset, 0, 0) {}
 				
 				virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
 				virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
@@ -1812,18 +1817,19 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	};
 	
 	const StubRegion d_offset_to_find(offset);
+	std::vector<GenericDataRegion*> d_offset_to_find_vec({ (GenericDataRegion*)(&d_offset_to_find) });
 	
-	auto cmp_by_d_offset = [](const GenericDataRegion *lhs, const GenericDataRegion *rhs)
+	auto cmp_by_d_offset = [](std::vector<GenericDataRegion*>::iterator lhs, std::vector<GenericDataRegion*>::iterator rhs)
 	{
-		return lhs->d_offset < rhs->d_offset;
+		return (*lhs)->d_offset < (*rhs)->d_offset;
 	};
 	
 	/* std::upper_bound() will give us the first element whose d_offset is greater than the one
 	 * we're looking for...
 	*/
-	auto region = std::upper_bound(data_regions.begin(), data_regions.end(), &d_offset_to_find, cmp_by_d_offset);
+	auto region = std::upper_bound(data_regions_sorted.begin(), data_regions_sorted.end(), d_offset_to_find_vec.begin(), cmp_by_d_offset);
 	
-	if(region == data_regions.begin())
+	if(region == data_regions_sorted.begin())
 	{
 		/* No region encompassing the requested offset. */
 		return data_regions.end();
@@ -1832,13 +1838,13 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	/* ...so step backwards to get to the correct element. */
 	--region;
 	
-	if((*region)->d_offset <= offset
+	if((**region)->d_offset <= offset
 		/* Requested offset must be within region range to match, or one past the end if
 		 * this is the last data region.
 		*/
-		&& ((*region)->d_offset + (*region)->d_length + (region == std::prev(data_regions.end())) > offset))
+		&& ((**region)->d_offset + (**region)->d_length + (*region == std::prev(data_regions.end())) > offset))
 	{
-		return region;
+		return *region;
 	}
 	else{
 		return data_regions.end();
@@ -2139,6 +2145,23 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 		}
 	}
 	
+	/* Clear and repopulate data_regions_sorted with iterators to each element in data_regions
+	 * sorted by d_offset.
+	*/
+	
+	data_regions_sorted.clear();
+	
+	for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
+	{
+		data_regions_sorted.push_back(r);
+	}
+	
+	std::sort(data_regions_sorted.begin(), data_regions_sorted.end(),
+		[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
+		{
+			return (*lhs)->d_offset < (*rhs)->d_offset;
+		});
+	
 	/* Clear and repopulate processing_regions with the regions which have some background work to do. */
 	
 	processing_regions.clear();
@@ -2155,6 +2178,9 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 	
 	/* Recalculates region widths/heights and updates scroll bars */
 	_handle_width_change();
+	
+	/* Update the cursor position/state if not valid within the new regions. */
+	_set_cursor_position(get_cursor_position(), get_cursor_state());
 }
 
 bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)
@@ -2287,8 +2313,8 @@ void REHex::DocumentCtrl::Region::draw_full_height_line(DocumentCtrl *doc_ctrl, 
 	dc.DrawLine(x, box_y, x, (box_y + box_hc));
 }
 
-REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length):
-	Region(d_offset, 0),
+REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length, off_t indent_offset):
+	Region(indent_offset, 0),
 	d_offset(d_offset),
 	d_length(d_length)
 {
@@ -2311,8 +2337,9 @@ bool REHex::DocumentCtrl::GenericDataRegion::OnPaste(DocumentCtrl *doc_ctrl)
 	return false;
 }
 
-REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length):
-	GenericDataRegion(d_offset, d_length),
+REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length, off_t virt_offset):
+	GenericDataRegion(d_offset, d_length, virt_offset),
+	virt_offset(virt_offset),
 	bytes_per_line_actual(1) {}
 
 int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
@@ -2569,7 +2596,10 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		{
 			/* Draw the offsets to the left */
 			
-			std::string offset_str = format_offset(cur_off, doc.offset_display_base, doc.doc->buffer_length());
+			off_t offset_within_region = cur_off - d_offset;
+			off_t display_offset = virt_offset + offset_within_region;
+			
+			std::string offset_str = format_offset(display_offset, doc.offset_display_base, doc.doc->buffer_length());
 			
 			normal_text_colour();
 			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);
@@ -3559,8 +3589,8 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 	return NoHighlight();
 }
 
-REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(off_t d_offset, off_t d_length, Document &doc):
-	DataRegion(d_offset, d_length), doc(doc) {}
+REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(off_t d_offset, off_t d_length, off_t virt_offset, Document &doc):
+	DataRegion(d_offset, d_length, virt_offset), doc(doc) {}
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(off_t off) const
 {
@@ -3586,8 +3616,8 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 	}
 }
 
-REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool nest_children, bool truncate):
-	Region(c_offset, (nest_children ? c_length : 0)),
+REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, off_t indent_offset, off_t indent_length):
+	Region(indent_offset, indent_length),
 	c_offset(c_offset),
 	c_length(c_length),
 	c_text(c_text),

@@ -76,6 +76,16 @@ class REHex::Document: public wxEvtHandler
 	LuaTable get_comments() const;
 	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
 	bool set_data_type(off_t offset, off_t length, const wxString &type);
+	
+	bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
+	void clear_virt_mapping_r(off_t real_offset, off_t length);
+	void clear_virt_mapping_v(off_t virt_offset, off_t length);
+	
+	// TODO const ByteRangeMap<off_t> &get_real_to_virt_segs() const;
+	// TODO const ByteRangeMap<off_t> &get_virt_to_real_segs() const;
+	
+	off_t real_to_virt_offset(off_t real_offset) const;
+	off_t virt_to_real_offset(off_t virt_offset) const;
 };
 
 class REHex::Tab: public wxPanel

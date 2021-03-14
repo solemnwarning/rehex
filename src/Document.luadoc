@@ -71,3 +71,44 @@
 --    "u16le"      - unsigned 16-bit (little endian)
 --    "f32be"      - 32-bit float (big endian)
 --    "code:i386"  - Machine code (X86)
+
+--- Set up a virtual address mapping in the document.
+-- @function set_virt_mapping
+--
+-- @param real_offset Offset to start of segment in file.
+-- @param virt_offset Virtual address of segment.
+-- @param length Length of segment in bytes.
+--
+-- @return true on success, false on conflict.
+
+--- Clear virtual address mapping by file offset.
+-- @function clear_virt_mapping_r
+--
+-- @param real_offset Offset to segment to clear in file.
+-- @param length Length to clear in bytes.
+--
+-- This method can be used to clear partial of whole segments. Any byte ranges which are not part
+-- of a virtual segment will be ignored.
+
+--- Clear virtual address mapping by virtual address.
+-- @function clear_virt_mapping_v
+--
+-- @param virt_offset Address of segment to clear.
+-- @param length Length to clear in bytes.
+--
+-- This method can be used to clear partial of whole segments. Any byte ranges which are not part
+-- of a virtual segment will be ignored.
+
+--- Convert a file offset to a virtual address.
+-- @function real_to_virt_offset
+--
+-- @param real_offset - File offset.
+--
+-- @return Virtual address of file offset, negative if offset isn't part of a virtual segment.
+
+--- Convert a virtual address to a file offset.
+-- @function virt_to_real_offset
+--
+-- @param virt_offset - Virtual address.
+--
+-- @return File offset of virtual address, negative if address isn't part of a virtual segment.

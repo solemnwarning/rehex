@@ -34,6 +34,7 @@ struct Cleanup
 	~Cleanup()
 	{
 		delete REHex::active_palette;
+		delete wxGetApp().recent_files;
 		delete wxGetApp().config;
 		delete wxGetApp().console;
 	}
@@ -48,6 +49,7 @@ int main(int argc, char **argv)
 	
 	app->console = new REHex::ConsoleBuffer();
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
+	app->recent_files = new wxFileHistory();
 	
 	wxImage::AddHandler(new wxPNGHandler);
 	REHex::ArtProvider::init();

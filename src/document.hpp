@@ -277,13 +277,11 @@ namespace REHex {
 			{
 				const std::function<TransOpFunc()> func;
 				
-				TransOpFunc operator()() const
-				{
-					return func();
-				}
+				TransOpFunc(const std::function<TransOpFunc()> &func);
+				TransOpFunc(const TransOpFunc &src);
+				TransOpFunc(TransOpFunc &&src);
 				
-				TransOpFunc(const std::function<TransOpFunc()> &func):
-					func(func) {}
+				TransOpFunc operator()() const;
 			};
 			
 			struct Transaction

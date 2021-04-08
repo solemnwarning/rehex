@@ -27,6 +27,7 @@
 #include <stack>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
@@ -1514,6 +1515,20 @@ wxString REHex::Document::Comment::menu_preview() const
 	else{
 		return first_line;
 	}
+}
+
+REHex::Document::TransOpFunc::TransOpFunc(const std::function<TransOpFunc()> &func):
+	func(func) {}
+
+REHex::Document::TransOpFunc::TransOpFunc(const TransOpFunc &src):
+	func(src.func) {}
+
+REHex::Document::TransOpFunc::TransOpFunc(TransOpFunc &&src):
+	func(std::move(src.func)) {}
+
+REHex::Document::TransOpFunc REHex::Document::TransOpFunc::operator()() const
+{
+	return func();
 }
 
 const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");

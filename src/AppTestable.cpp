@@ -76,7 +76,7 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 		
 		if(exe_path.length() > REPLACE.length() && exe_path.substr((exe_path.length() - REPLACE.length())) == REPLACE)
 		{
-			plugin_directories.push_back(exe_path.substr((exe_path.length() - REPLACE.length())) + REPLACE_WITH);
+			plugin_directories.push_back(exe_path.substr(0, (exe_path.length() - REPLACE.length())) + REPLACE_WITH);
 		}
 		else{
 			printf_error("Unexpected executable path (%s), bundle plugins will not be loaded\n", exe_path.c_str());

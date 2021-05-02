@@ -8,7 +8,7 @@ Summary:  Reverse Engineers' Hex Editor
 
 License:  GPLv2
 URL:      https://www.github.com/solemnwarning/rehex/
-Source0:  rehex-%{bast_version}.tar.gz
+Source0:  rehex-%{base_version}.tar.gz
 
 BuildRequires: capstone-devel
 BuildRequires: gcc-c++

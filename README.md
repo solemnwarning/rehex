@@ -9,7 +9,7 @@ A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and e
 * Inline disassembly of machine code
 * Highlighting and annotation of ranges of bytes
 * Side by side comparision of selections
-* Lua scripting support
+* Lua scripting support ([API reference here](http://www.solemnwarning.net/rehex-luadoc/))
 * Virtual address mapping support
 
 ![inline comments + data types demo](doc/comments-types.gif)

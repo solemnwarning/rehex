@@ -100,7 +100,22 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 			}
 		}
 		
+		/* If we're running from an AppImage, the APPDIR environment variable tells us
+		 * where the squashfs image (e.g. our AppDir) is mounted.
+		*/
+		
+		#ifdef REHEX_APPIMAGE
+		const char *APPDIR = getenv("APPDIR");
+		if(APPDIR != NULL)
+		{
+			plugin_directories.push_back(std::string(APPDIR) + "/" + REHEX_LIBDIR + "/rehex/");
+		}
+		else{
+			printf_error("APPDIR environment variable not set, plugins inside the AppImage wont be loaded\n");
+		}
+		#else
 		plugin_directories.push_back(std::string(REHEX_LIBDIR) + "/rehex/");
+		#endif
 	#endif
 	
 	return plugin_directories;

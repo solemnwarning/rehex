@@ -1,3 +1,7 @@
+Version 0.3.91 (2021-05-03)
+
+ * Fix loading of plugins bundled as part of an AppImage.
+
 Version 0.3.90 (2021-05-02)
 
  * Show disassembly of machine code in the main document view (#94).

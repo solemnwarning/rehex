@@ -11,10 +11,10 @@ REHex is built on Windows using MinGW and libraries from the MSYS2 project.
 3) Install required packages:
 
     # For 64-bit
-    $ pacman -S base-devel git mingw-w64-x86_64-{toolchain,wxWidgets,jansson,capstone,jbigkit}
+    $ pacman -S base-devel git mingw-w64-x86_64-{toolchain,wxWidgets,jansson,capstone,jbigkit,lua}
 
     # For 32-bit
-    $ pacman -S base-devel git mingw-w64-i686-{toolchain,wxWidgets,jansson,capstone,jbigkit}
+    $ pacman -S base-devel git mingw-w64-i686-{toolchain,wxWidgets,jansson,capstone,jbigkit,lua}
 
 4) Build it
 

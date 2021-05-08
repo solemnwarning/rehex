@@ -9,7 +9,7 @@ A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and e
 * Inline disassembly of machine code
 * Highlighting and annotation of ranges of bytes
 * Side by side comparision of selections
-* Lua scripting support
+* Lua scripting support ([API reference here](http://www.solemnwarning.net/rehex-luadoc/))
 * Virtual address mapping support
 
 ![inline comments + data types demo](doc/comments-types.gif)
@@ -78,7 +78,7 @@ Finally, you can install the package:
 
 ## Building
 
-If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets and capstone installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev` and `libcapstone-dev` on Ubuntu).
+If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets, Capstone and Lua installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev`, `libcapstone-dev`, `liblua5.3-dev` and `lua5.3` on Ubuntu).
 
 The resulting build can be installed using `make install`, which accepts all the standard environment variables.
 

@@ -1,3 +1,35 @@
+Version 0.3.91 (2021-05-03)
+
+ * Fix loading of plugins bundled as part of an AppImage.
+
+Version 0.3.90 (2021-05-02)
+
+ * Show disassembly of machine code in the main document view (#94).
+
+ * Add font size settings to "View" menu (#97).
+
+ * Add float/double types to "Set data type" menu (#104).
+
+ * Fix selection by holding shift and clicking (#109).
+
+ * Initial support for Lua plugins.
+
+ * Process sections from PE EXE/DLL headers (#86).
+
+ * [Mark Jansen] Save size of main window and tool panels (#88).
+
+ * Don't resize tool panels unnecessarily.
+
+ * Fix invalid cursor state when moving between regions.
+
+ * Fix crash when deleting data (#113, #123).
+
+ * Fix opening files with 8-bit filenames, and other encoding issues (#117).
+
+ * Virtual segment mapping and display (#7).
+
+ * Display inline comments by default (didn't always work).
+
 Version 0.3.1 (2020-11-13)
 
  * Correctly display signed 16-bit values in "Decode values" panel.

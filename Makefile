@@ -226,7 +226,6 @@ APP_OBJS := \
 	src/VirtualMappingDialog.o \
 	src/VirtualMappingList.o \
 	src/win32lib.o \
-	tests/SizeTestPanel.o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(EXTRA_APP_OBJS)

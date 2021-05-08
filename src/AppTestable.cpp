@@ -76,7 +76,7 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 		
 		if(exe_path.length() > REPLACE.length() && exe_path.substr((exe_path.length() - REPLACE.length())) == REPLACE)
 		{
-			plugin_directories.push_back(exe_path.substr((exe_path.length() - REPLACE.length())) + REPLACE_WITH);
+			plugin_directories.push_back(exe_path.substr(0, (exe_path.length() - REPLACE.length())) + REPLACE_WITH);
 		}
 		else{
 			printf_error("Unexpected executable path (%s), bundle plugins will not be loaded\n", exe_path.c_str());
@@ -100,7 +100,22 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 			}
 		}
 		
+		/* If we're running from an AppImage, the APPDIR environment variable tells us
+		 * where the squashfs image (e.g. our AppDir) is mounted.
+		*/
+		
+		#ifdef REHEX_APPIMAGE
+		const char *APPDIR = getenv("APPDIR");
+		if(APPDIR != NULL)
+		{
+			plugin_directories.push_back(std::string(APPDIR) + "/" + REHEX_LIBDIR + "/rehex/");
+		}
+		else{
+			printf_error("APPDIR environment variable not set, plugins inside the AppImage wont be loaded\n");
+		}
+		#else
 		plugin_directories.push_back(std::string(REHEX_LIBDIR) + "/rehex/");
+		#endif
 	#endif
 	
 	return plugin_directories;

@@ -71,6 +71,8 @@ END_EVENT_TABLE()
 REHex::Tab::Tab(wxWindow *parent):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make()),
+	inline_comment_mode(ICM_FULL_INDENT),
+	document_display_mode(DDM_NORMAL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -133,6 +135,8 @@ REHex::Tab::Tab(wxWindow *parent):
 REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make(filename)),
+	inline_comment_mode(ICM_FULL_INDENT),
+	document_display_mode(DDM_NORMAL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),

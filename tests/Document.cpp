@@ -2631,3 +2631,160 @@ TEST_F(DocumentTest, InsertDataAfterMapping)
 		EXPECT_EQ(doc->get_virt_to_real_segs().get_ranges(), EXPECT_V2R);
 	}
 }
+
+TEST_F(DocumentTest, UndoTransaction)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "smoothorangemixed";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1), -1, Document::CSTATE_CURRENT, "initialise");
+	
+	ASSERT_DATA("smoothorangemixed");
+	
+	/* Start a transaction. */
+	doc->transact_begin("greet");
+	
+	events.clear();
+	
+	/* Insert at beginning of document. */
+	const char *DATA2 = "MAGIC";
+	doc->insert_data(0, (const unsigned char*)(DATA2), strlen(DATA2));
+	
+	/* Erase in middle of document. */
+	doc->erase_data(5, 6);
+	
+	/* Overwrite at end of document... */
+	const char *DATA3 = "RINGS";
+	doc->overwrite_data(11, (const unsigned char*)(DATA3), strlen(DATA3));
+	
+	/* Commit transaction. */
+	doc->transact_commit();
+	
+	{
+		const char *undo_desc = doc->undo_desc();
+		EXPECT_EQ(std::string(undo_desc ? undo_desc : "(null)"), "greet");
+	}
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 5)",
+		"DATA_ERASE(5, 6)",
+		"DATA_OVERWRITE(11, 5)",
+	);
+	
+	ASSERT_DATA("MAGICorangeRINGS");
+	
+	/* Undo the transaction... */
+	
+	events.clear();
+	
+	doc->undo();
+	
+	{
+		const char *undo_desc = doc->undo_desc();
+		EXPECT_EQ(std::string(undo_desc ? undo_desc : "(null)"), "initialise");
+	}
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(11, 5)",
+		"DATA_INSERT(5, 6)",
+		"DATA_ERASE(0, 5)",
+	);
+	
+	ASSERT_DATA("smoothorangemixed");
+	
+	/* Redo the overwrite... */
+	
+	events.clear();
+	
+	doc->redo();
+	
+	{
+		const char *undo_desc = doc->undo_desc();
+		EXPECT_EQ(std::string(undo_desc ? undo_desc : "(null)"), "greet");
+	}
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 5)",
+		"DATA_ERASE(5, 6)",
+		"DATA_OVERWRITE(11, 5)",
+	);
+	
+	ASSERT_DATA("MAGICorangeRINGS");
+}
+
+TEST_F(DocumentTest, RollbackTransaction)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "smoothorangemixed";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1), -1, Document::CSTATE_CURRENT, "initialise");
+	
+	ASSERT_DATA("smoothorangemixed");
+	
+	/* Start a transaction. */
+	doc->transact_begin("greet");
+	
+	events.clear();
+	
+	/* Insert at beginning of document. */
+	const char *DATA2 = "MAGIC";
+	doc->insert_data(0, (const unsigned char*)(DATA2), strlen(DATA2));
+	
+	/* Erase in middle of document. */
+	doc->erase_data(5, 6);
+	
+	/* Overwrite at end of document... */
+	const char *DATA3 = "RINGS";
+	doc->overwrite_data(11, (const unsigned char*)(DATA3), strlen(DATA3));
+	
+	{
+		const char *undo_desc = doc->undo_desc();
+		EXPECT_EQ(std::string(undo_desc ? undo_desc : "(null)"), "greet");
+	}
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 5)",
+		"DATA_ERASE(5, 6)",
+		"DATA_OVERWRITE(11, 5)",
+	);
+	
+	ASSERT_DATA("MAGICorangeRINGS");
+	
+	/* Rollback transaction. */
+	
+	events.clear();
+	
+	doc->transact_rollback();
+	
+	{
+		const char *undo_desc = doc->undo_desc();
+		EXPECT_EQ(std::string(undo_desc ? undo_desc : "(null)"), "initialise");
+	}
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(11, 5)",
+		"DATA_INSERT(5, 6)",
+		"DATA_ERASE(0, 5)",
+	);
+	
+	ASSERT_DATA("smoothorangemixed");
+	
+	/* Redo the overwrite... */
+	
+	events.clear();
+	
+	doc->redo();
+	
+	{
+		const char *undo_desc = doc->undo_desc();
+		EXPECT_EQ(std::string(undo_desc ? undo_desc : "(null)"), "greet");
+	}
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 5)",
+		"DATA_ERASE(5, 6)",
+		"DATA_OVERWRITE(11, 5)",
+	);
+	
+	ASSERT_DATA("MAGICorangeRINGS");
+}

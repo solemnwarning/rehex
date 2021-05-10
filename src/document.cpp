@@ -27,6 +27,7 @@
 #include <stack>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
@@ -182,7 +183,45 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
-	_tracked_overwrite_data(change_desc, offset, (const unsigned char*)(data), length, new_cursor_pos, new_cursor_state);
+	TransOpFunc first_op([&]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+		assert(old_data->size() == (size_t)(length));
+		
+		_UNTRACKED_overwrite_data(offset, (const unsigned char*)(data), length);
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
+	
+	transact_step(first_op, change_desc);
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(std::move( read_data(offset, old_data->size()) )));
+		assert(new_data->size() == old_data->size());
+		
+		_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size());
+		
+		return _op_overwrite_redo(offset, new_data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, new_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, new_data->size()) )));
+		assert(old_data->size() == new_data->size());
+		
+		_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size());
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
 }
 
 void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
@@ -190,7 +229,39 @@ void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
-	_tracked_insert_data(change_desc, offset, data, length, new_cursor_pos, new_cursor_state);
+	TransOpFunc first_op([&]()
+	{
+		_UNTRACKED_insert_data(offset, (const unsigned char*)(data), length);
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_insert_undo(offset, length, new_cursor_pos, new_cursor_state);
+	});
+	
+	transact_step(first_op, change_desc);
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, length, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+		assert(data->size() == (size_t)(length));
+		
+		_UNTRACKED_erase_data(offset, data->size());
+		
+		return _op_insert_redo(offset, data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, data, new_cursor_pos, new_cursor_state]()
+	{
+		_UNTRACKED_insert_data(offset, data->data(), data->size());
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_insert_undo(offset, data->size(), new_cursor_pos, new_cursor_state);
+	});
 }
 
 void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
@@ -198,7 +269,42 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
-	_tracked_erase_data(change_desc, offset, length, new_cursor_pos, new_cursor_state);
+	TransOpFunc first_op([&]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+		assert(old_data->size() == (size_t)(length));
+		
+		_UNTRACKED_erase_data(offset, old_data->size());
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
+	
+	transact_step(first_op, change_desc);
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
+	{
+		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size());
+		
+		return _op_erase_redo(offset, old_data->size(), new_cursor_pos, new_cursor_state);
+	});
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, length, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
+		assert(old_data->size() == (size_t)(length));
+		
+		_UNTRACKED_erase_data(offset, old_data->size());
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
 }
 
 void REHex::Document::replace_data(off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
@@ -206,7 +312,56 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const un
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
-	_tracked_replace_data(change_desc, offset, old_data_length, new_data, new_data_length, new_cursor_pos, new_cursor_state);
+	if(old_data_length == new_data_length)
+	{
+		/* Save unnecessary shuffling of the Buffer pages. */
+		
+		overwrite_data(offset, new_data, new_data_length, new_cursor_pos, new_cursor_state, change_desc);
+		return;
+	}
+	
+	TransOpFunc first_op([&]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
+		assert(old_data->size() == (size_t)(old_data_length));
+		
+		_UNTRACKED_erase_data(offset, old_data->size());
+		_UNTRACKED_insert_data(offset, new_data, new_data_length);
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_replace_undo(offset, old_data, new_data_length, new_cursor_pos, new_cursor_state);
+	});
+	
+	transact_step(first_op, change_desc);
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, old_data, new_data_length, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(std::move( read_data(offset, new_data_length) )));
+		assert(new_data->size() == (size_t)(new_data_length));
+		
+		_UNTRACKED_erase_data(offset, new_data_length);
+		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size());
+		
+		return _op_replace_redo(offset, old_data->size(), new_data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, old_data_length, new_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
+		assert(old_data->size() == (size_t)(old_data_length));
+		
+		_UNTRACKED_erase_data(offset, old_data_length);
+		_UNTRACKED_insert_data(offset, new_data->data(), new_data->size());
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_replace_undo(offset, old_data, new_data->size(), new_cursor_pos, new_cursor_state);
+	});
 }
 
 off_t REHex::Document::buffer_length() const
@@ -597,31 +752,40 @@ void REHex::Document::undo()
 {
 	if(!undo_stack.empty())
 	{
-		auto &act = undo_stack.back();
-		act.undo();
+		auto &trans = undo_stack.back();
 		
-		bool cursor_updated = (cpos_off != act.old_cpos_off || cursor_state != act.old_cursor_state);
+		std::list<TransOpFunc> redo_funcs;
 		
-		cpos_off     = act.old_cpos_off;
-		cursor_state = act.old_cursor_state;
-		comments     = act.old_comments;
-		highlights   = act.old_highlights;
-		dirty_bytes  = act.old_dirty_bytes;
-		
-		if(types != act.old_types)
+		for(auto undo_func = trans.ops.begin(); undo_func != trans.ops.end(); ++undo_func)
 		{
-			types = act.old_types;
+			TransOpFunc redo_func = (*undo_func)();
+			redo_funcs.push_front(redo_func);
+		}
+		
+		trans.ops.swap(redo_funcs);
+		
+		bool cursor_updated = (cpos_off != trans.old_cpos_off || cursor_state != trans.old_cursor_state);
+		
+		cpos_off     = trans.old_cpos_off;
+		cursor_state = trans.old_cursor_state;
+		comments     = trans.old_comments;
+		highlights   = trans.old_highlights;
+		dirty_bytes  = trans.old_dirty_bytes;
+		
+		if(types != trans.old_types)
+		{
+			types = trans.old_types;
 			_raise_types_changed();
 		}
 		
-		if(real_to_virt_segs != act.old_real_to_virt_segs || virt_to_real_segs != act.old_virt_to_real_segs)
+		if(real_to_virt_segs != trans.old_real_to_virt_segs || virt_to_real_segs != trans.old_virt_to_real_segs)
 		{
-			real_to_virt_segs = act.old_real_to_virt_segs;
-			virt_to_real_segs = act.old_virt_to_real_segs;
+			real_to_virt_segs = trans.old_real_to_virt_segs;
+			virt_to_real_segs = trans.old_virt_to_real_segs;
 			_raise_mappings_changed();
 		}
 		
-		set_dirty(act.old_dirty);
+		set_dirty(trans.old_dirty);
 		
 		if(cursor_updated)
 		{
@@ -629,7 +793,7 @@ void REHex::Document::undo()
 			ProcessEvent(cursor_update_event);
 		}
 		
-		redo_stack.push_back(act);
+		redo_stack.push_back(trans);
 		undo_stack.pop_back();
 		
 		_raise_undo_update();
@@ -640,7 +804,7 @@ const char *REHex::Document::undo_desc()
 {
 	if(!undo_stack.empty())
 	{
-		return undo_stack.back().desc;
+		return undo_stack.back().desc.c_str();
 	}
 	else{
 		return NULL;
@@ -651,10 +815,19 @@ void REHex::Document::redo()
 {
 	if(!redo_stack.empty())
 	{
-		auto &act = redo_stack.back();
-		act.redo();
+		auto &trans = redo_stack.back();
 		
-		undo_stack.push_back(act);
+		std::list<TransOpFunc> undo_funcs;
+		
+		for(auto redo_func = trans.ops.begin(); redo_func != trans.ops.end(); ++redo_func)
+		{
+			TransOpFunc undo_func = (*redo_func)();
+			undo_funcs.push_front(undo_func);
+		}
+		
+		trans.ops.swap(undo_funcs);
+		
+		undo_stack.push_back(trans);
 		redo_stack.pop_back();
 		
 		_raise_undo_update();
@@ -665,11 +838,69 @@ const char *REHex::Document::redo_desc()
 {
 	if(!redo_stack.empty())
 	{
-		return redo_stack.back().desc;
+		return redo_stack.back().desc.c_str();
 	}
 	else{
 		return NULL;
 	}
+}
+
+void REHex::Document::transact_begin(const std::string &desc)
+{
+	if(undo_stack.empty() || undo_stack.back().complete)
+	{
+		undo_stack.emplace_back(desc, this);
+		redo_stack.clear();
+		
+		_raise_undo_update();
+	}
+	else{
+		throw std::runtime_error("Attempted to start a transaction when one is already open");
+	}
+}
+
+void REHex::Document::transact_step(const TransOpFunc &op, const std::string &desc)
+{
+	if(undo_stack.empty() || undo_stack.back().complete)
+	{
+		/* No transaction open, this op will be executed within its own one. */
+		
+		ScopedTransaction t(this, desc);
+		
+		TransOpFunc undo_op = op();
+		undo_stack.back().ops.push_front(undo_op);
+		
+		t.commit();
+	}
+	else{
+		TransOpFunc undo_op = op();
+		undo_stack.back().ops.push_front(undo_op);
+	}
+}
+
+void REHex::Document::transact_commit()
+{
+	if(undo_stack.empty() || undo_stack.back().complete)
+	{
+		throw std::runtime_error("Attempted to commit without an open transaction");
+	}
+	
+	undo_stack.back().complete = true;
+	
+	while(undo_stack.size() > UNDO_MAX)
+	{
+		undo_stack.pop_front();
+	}
+}
+
+void REHex::Document::transact_rollback()
+{
+	if(undo_stack.empty() || undo_stack.back().complete)
+	{
+		throw std::runtime_error("Attempted to rollback without an open transaction");
+	}
+	
+	undo();
 }
 
 void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length)
@@ -903,134 +1134,18 @@ bool REHex::Document::_virt_to_real_segs_data_erased(off_t offset, off_t length)
 	return segs_changed;
 }
 
-void REHex::Document::_tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+void REHex::Document::_tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func)
 {
-	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
-	 * lambdas without actually making a copy.
-	*/
-	
-	std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
-	assert(old_data->size() == (size_t)(length));
-	
-	std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(data, data + length));
-	
-	_tracked_change(change_desc,
-		[this, offset, new_data, new_cursor_pos, new_cursor_state]()
-		{
-			_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size());
-			_set_cursor_position(new_cursor_pos, new_cursor_state);
-		},
-		 
-		[this, offset, old_data]()
-		{
-			_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size());
-		});
+	transact_step(_op_tracked_change(do_func, undo_func), desc);
 }
 
-void REHex::Document::_tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func)
 {
-	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
-	 * lambdas without actually making a copy.
-	*/
-	
-	std::shared_ptr< std::vector<unsigned char> > data_copy(new std::vector<unsigned char>(data, data + length));
-	
-	_tracked_change(change_desc,
-		[this, offset, data_copy, new_cursor_pos, new_cursor_state]()
-		{
-			_UNTRACKED_insert_data(offset, data_copy->data(), data_copy->size());
-			_set_cursor_position(new_cursor_pos, new_cursor_state);
-		},
-		 
-		[this, offset, length]()
-		{
-			_UNTRACKED_erase_data(offset, length);
-		});
-}
-
-void REHex::Document::_tracked_erase_data(const char *change_desc, off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
-{
-	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
-	 * lambdas without actually making a copy.
-	*/
-	
-	std::shared_ptr< std::vector<unsigned char> > erase_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
-	assert(erase_data->size() == (size_t)(length));
-	
-	_tracked_change(change_desc,
-		[this, offset, length, new_cursor_pos, new_cursor_state]()
-		{
-			_UNTRACKED_erase_data(offset, length);
-			set_cursor_position(new_cursor_pos, new_cursor_state);
-		},
-		
-		[this, offset, erase_data]()
-		{
-			_UNTRACKED_insert_data(offset, erase_data->data(), erase_data->size());
-		});
-}
-
-void REHex::Document::_tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state)
-{
-	if(old_data_length == new_data_length)
+	return TransOpFunc([this, func, next_func]()
 	{
-		/* Save unnecessary shuffling of the Buffer pages. */
-		/* TODO */
-	}
-	
-	/* Move data into a std::vector managed by a shared_ptr so that it can be "copied" into
-	 * lambdas without actually making a copy.
-	*/
-	
-	std::shared_ptr< std::vector<unsigned char> > old_data_copy(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
-	assert(old_data_copy->size() == old_data_length);
-	
-	std::shared_ptr< std::vector<unsigned char> > new_data_copy(new std::vector<unsigned char>(new_data, new_data + new_data_length));
-	
-	_tracked_change(change_desc,
-		[this, offset, old_data_length, new_data_copy, new_cursor_pos, new_cursor_state]()
-		{
-			_UNTRACKED_erase_data(offset, old_data_length);
-			_UNTRACKED_insert_data(offset, new_data_copy->data(), new_data_copy->size());
-			_set_cursor_position(new_cursor_pos, new_cursor_state);
-		},
-		
-		[this, offset, old_data_copy, new_data_length]()
-		{
-			_UNTRACKED_erase_data(offset, new_data_length);
-			_UNTRACKED_insert_data(offset, old_data_copy->data(), old_data_copy->size());
-		});
-}
-
-void REHex::Document::_tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func)
-{
-	struct TrackedChange change;
-	
-	change.desc = desc;
-	change.undo = undo_func;
-	change.redo = do_func;
-	
-	change.old_cpos_off     = cpos_off;
-	change.old_cursor_state = cursor_state;
-	change.old_comments     = comments;
-	change.old_highlights   = highlights;
-	change.old_types        = types;
-	change.old_real_to_virt_segs = real_to_virt_segs;
-	change.old_virt_to_real_segs = virt_to_real_segs;
-	change.old_dirty        = dirty;
-	change.old_dirty_bytes  = dirty_bytes;
-	
-	do_func();
-	
-	while(undo_stack.size() >= UNDO_MAX)
-	{
-		undo_stack.pop_front();
-	}
-	
-	undo_stack.push_back(change);
-	redo_stack.clear();
-	
-	_raise_undo_update();
+		func();
+		return _op_tracked_change(next_func, func);
+	});
 }
 
 json_t *REHex::Document::_dump_metadata(bool& has_data)
@@ -1400,6 +1515,20 @@ wxString REHex::Document::Comment::menu_preview() const
 	else{
 		return first_line;
 	}
+}
+
+REHex::Document::TransOpFunc::TransOpFunc(const std::function<TransOpFunc()> &func):
+	func(func) {}
+
+REHex::Document::TransOpFunc::TransOpFunc(const TransOpFunc &src):
+	func(src.func) {}
+
+REHex::Document::TransOpFunc::TransOpFunc(TransOpFunc &&src):
+	func(std::move(src.func)) {}
+
+REHex::Document::TransOpFunc REHex::Document::TransOpFunc::operator()() const
+{
+	return func();
 }
 
 const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");

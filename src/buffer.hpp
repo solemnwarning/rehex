@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -104,6 +104,7 @@ namespace REHex {
 		public:
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
 			static const unsigned int MAX_CLEAN_BLOCKS   = 4;
+			static const unsigned int BLOCK_TRIM_THRESH  = 262144; /* 256KiB */
 			
 			const off_t block_size;
 			

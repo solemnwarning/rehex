@@ -315,7 +315,7 @@ void REHex::VirtualMappingDialog::OnOK(wxCommandEvent &event)
 		return;
 	}
 	
-	/* TODO: Roll all these into same undo transaction. */
+	ScopedTransaction transact(document, "set virtual address mapping");
 	
 	if(initial_real_base >= 0)
 	{
@@ -327,6 +327,8 @@ void REHex::VirtualMappingDialog::OnOK(wxCommandEvent &event)
 	document->clear_virt_mapping_v(virt_base, segment_length);
 	
 	document->set_virt_mapping(real_base, virt_base, segment_length);
+	
+	transact.commit();
 	
 	Close();
 }

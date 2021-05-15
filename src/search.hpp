@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -36,6 +36,8 @@
 namespace REHex {
 	class Search: public wxDialog {
 		public:
+			enum class SearchDirection { FORWARDS = 1, BACKWARDS = -1 };
+			
 			class Text;
 			class ByteSequence;
 			class Value;
@@ -68,6 +70,8 @@ namespace REHex {
 			off_t search_base;
 			off_t search_end;
 			
+			SearchDirection search_direction;
+			
 			wxProgressDialog *progress;
 			wxTimer timer;
 			
@@ -83,7 +87,7 @@ namespace REHex {
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
 			
 			off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
-			void begin_search(off_t from_offset, off_t range_end, size_t window_size = DEFAULT_WINDOW_SIZE);
+			void begin_search(off_t range_begin, off_t range_end, SearchDirection direction, size_t window_size = DEFAULT_WINDOW_SIZE);
 			void end_search();
 			
 			virtual bool test(const void *data, size_t data_size) = 0;
@@ -91,6 +95,7 @@ namespace REHex {
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
+			void OnFindPrev(wxCommandEvent &event);
 			void OnCancel(wxCommandEvent &event);
 			void OnTimer(wxTimerEvent &event);
 			void OnClose(wxCloseEvent &event);

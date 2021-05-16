@@ -146,6 +146,16 @@ void REHex::Search::setup_window()
 	SetSizerAndFit(main_sizer);
 }
 
+bool REHex::Search::wrap_query(const char *message)
+{
+	return wxMessageBox(message, wxMessageBoxCaptionStr, (wxYES_NO | wxCENTRE), this) == wxYES;
+}
+
+void REHex::Search::not_found_notification()
+{
+	wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
+}
+
 void REHex::Search::limit_range(off_t range_begin, off_t range_end)
 {
 	assert(range_begin >= 0);
@@ -185,26 +195,26 @@ off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 	return match_found_at;
 }
 
-void REHex::Search::begin_search(off_t range_begin, off_t range_end, SearchDirection direction, size_t window_size)
+void REHex::Search::begin_search(off_t sub_range_begin, off_t sub_range_end, SearchDirection direction, size_t window_size)
 {
 	assert(!running);
 	
 	size_t compare_size = test_max_window();
 	
 	/* Clamp local search range to configured range. */
-	if(range_begin < this->range_begin) { range_begin = this->range_begin; }
-	if(range_end   > this->range_end)   { range_end   = this->range_end;   }
+	if(sub_range_begin < range_begin) { sub_range_begin = range_begin; }
+	if(sub_range_end   > range_end)   { sub_range_end   = range_end;   }
 	
-	search_base = range_begin;
-	search_end  = range_end;
+	search_base = sub_range_begin;
+	search_end  = sub_range_end;
 	
 	if(direction == SearchDirection::FORWARDS)
 	{
-		next_window_start = range_begin;
+		next_window_start = sub_range_begin;
 	}
 	else /* if(direction == SearchDirection::BACKWARDS) */
 	{
-		next_window_start = std::max((range_end - (off_t)(window_size)), range_begin);
+		next_window_start = std::max((sub_range_end - (off_t)(window_size)), sub_range_begin);
 	}
 	
 	match_found_at = -1;
@@ -257,7 +267,7 @@ void REHex::Search::OnFindPrev(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		begin_search(range_begin, (doc->get_cursor_position() - 1), SearchDirection::BACKWARDS);
+		begin_search(range_begin, doc->get_cursor_position(), SearchDirection::BACKWARDS);
 	}
 }
 
@@ -283,6 +293,8 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 			doc->set_cursor_position(match_found_at);
 		}
 		else{
+			size_t compare_size = test_max_window();
+			
 			if(search_direction == SearchDirection::FORWARDS && search_base > range_begin)
 			{
 				/* Search was not from beginning of file/range, ask if we should go back to the start. */
@@ -291,9 +303,9 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 					? "Not found. Continue search from start of range?"
 					: "Not found. Continue search from start of file?";
 				
-				if(wxMessageBox(message, wxMessageBoxCaptionStr, (wxYES_NO | wxCENTRE), this) == wxYES)
+				if(wrap_query(message))
 				{
-					begin_search(range_begin, search_base, SearchDirection::FORWARDS);
+					begin_search(range_begin, search_base + compare_size, SearchDirection::FORWARDS);
 				}
 			}
 			else if(search_direction == SearchDirection::BACKWARDS && search_end < range_end)
@@ -304,13 +316,13 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 					? "Not found. Continue search from end of range?"
 					: "Not found. Continue search from end of file?";
 				
-				if(wxMessageBox(message, wxMessageBoxCaptionStr, (wxYES_NO | wxCENTRE), this) == wxYES)
+				if(wrap_query(message))
 				{
-					begin_search(search_end, range_end, SearchDirection::BACKWARDS);
+					begin_search(search_end - compare_size, range_end, SearchDirection::BACKWARDS);
 				}
 			}
 			else{
-				wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
+				not_found_notification();
 			}
 		}
 	}
@@ -389,10 +401,12 @@ bool REHex::Search::read_base_window_controls()
 	{
 		read_off_value(&range_begin, range_begin_tc, false, "start of range");
 		read_off_value(&range_begin, range_begin_tc, false, "end of range");
+		
+		++range_end;
 	}
 	else{
 		range_begin = 0;
-		range_end   = doc->buffer_length() - 1;
+		range_end   = doc->buffer_length();
 	}
 	
 	if(align_cb->GetValue())
@@ -425,7 +439,7 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 		if(search_direction == SearchDirection::FORWARDS)
 		{
 			window_begin = next_window_start.fetch_add(window_size);
-			window_end = std::min((off_t)(window_begin + window_size), (search_end + 1));
+			window_end = std::min((off_t)(window_begin + window_size), search_end);
 			
 			at = window_begin;
 			if(((at - align_from) % align_to) != 0)
@@ -438,7 +452,7 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 		else /* if(direction == SearchDirection::BACKWARDS) */
 		{
 			window_begin = next_window_start.fetch_sub(window_size);
-			window_end = std::min((off_t)(window_begin + window_size), (search_end + 1));
+			window_end = std::min((off_t)(window_begin + window_size), search_end);
 			
 			at = window_end - 1;
 			if(((at - align_from) % align_to) != 0)
@@ -461,12 +475,15 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 		}
 		
 		try {
-			std::vector<unsigned char> window = doc->read_data(window_begin, window_size + compare_size);
+			off_t read_size = std::min(((window_end - window_begin) + (off_t)(compare_size)), (search_end - window_begin));
+			std::vector<unsigned char> window = doc->read_data(window_begin, read_size);
 			
-			for(; at >= window_begin && at < window_end; at += step)
+			size_t window_off = at - window_begin;
+			
+			for(; at >= window_begin && at < window_end && window_off < window.size(); at += step, window_off += step)
 			{
-				off_t  window_off   = at - window_begin;
-				size_t window_avail = std::min((size_t)(window.size() - window_off), (size_t)(search_end - at));
+				size_t window_avail = window.size() - window_off;
+				assert(window_avail > 0);
 				
 				if(test((window.data() + window_off), window_avail))
 				{
@@ -497,6 +514,10 @@ REHex::Search::Text::Text(wxWindow *parent, SharedDocumentPointer &doc, const st
 	setup_window();
 }
 
+/* NOTE: end_search() is called from subclass destructor rather than base to ensure search is
+ * stopped before the subclass becomes invalid, else there is a race where the base class will try
+ * calling the subclass's test() method and trigger undefined behaviour.
+*/
 REHex::Search::Text::~Text()
 {
 	if(running)
@@ -563,6 +584,10 @@ REHex::Search::ByteSequence::ByteSequence(wxWindow *parent, SharedDocumentPointe
 	setup_window();
 }
 
+/* NOTE: end_search() is called from subclass destructor rather than base to ensure search is
+ * stopped before the subclass becomes invalid, else there is a race where the base class will try
+ * calling the subclass's test() method and trigger undefined behaviour.
+*/
 REHex::Search::ByteSequence::~ByteSequence()
 {
 	if(running)
@@ -623,6 +648,10 @@ REHex::Search::Value::Value(wxWindow *parent, SharedDocumentPointer &doc):
 	setup_window();
 }
 
+/* NOTE: end_search() is called from subclass destructor rather than base to ensure search is
+ * stopped before the subclass becomes invalid, else there is a race where the base class will try
+ * calling the subclass's test() method and trigger undefined behaviour.
+*/
 REHex::Search::Value::~Value()
 {
 	if(running)

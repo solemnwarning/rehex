@@ -50,7 +50,6 @@ namespace REHex {
 			off_t range_begin, range_end;
 			off_t align_to, align_from;
 			
-		private:
 			wxCheckBox *range_cb;
 			wxTextCtrl *range_begin_tc, *range_end_tc;
 			
@@ -81,6 +80,9 @@ namespace REHex {
 			void setup_window();
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) = 0;
 			virtual bool read_window_controls() = 0;
+			
+			virtual bool wrap_query(const char *message);
+			virtual void not_found_notification();
 			
 		public:
 			void limit_range(off_t range_begin, off_t range_end);

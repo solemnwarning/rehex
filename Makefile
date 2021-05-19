@@ -302,6 +302,7 @@ TEST_OBJS := \
 	tests/NumericTextCtrl.o \
 	tests/search-bseq.o \
 	tests/search-text.o \
+	tests/SearchBase.o \
 	tests/SearchValue.o \
 	tests/SafeWindowPointer.o \
 	tests/SharedDocumentPointer.o \

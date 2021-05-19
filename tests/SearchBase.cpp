@@ -149,7 +149,23 @@ class SearchBaseTest: public ::testing::Test {
 		
 		void search_for_match(off_t sub_range_begin, off_t sub_range_end, Search::SearchDirection direction, off_t expect_match_at, off_t window_size = 128)
 		{
-			s.begin_search(sub_range_begin, sub_range_end, direction, window_size);
+			/* Starting a search will create a wxProgressDialog, which will install its
+			 * own event loop(!) if one isn't already set up, which there isn't when
+			 * running the tests, furthermore the dialog gets destroyed WITHIN the
+			 * event loop that gets created by wxApp::OnRun() later, and the
+			 * out-of-order event loop setup/destruction leads to a dangling event loop
+			 * pointer! Yay!
+			 *
+			 * So we set up our own event loop just while the dialog is being created
+			 * to avoid that.
+			*/
+			
+			{
+				wxEventLoop loop;
+				wxEventLoopActivator activate(&loop);
+				
+				s.begin_search(sub_range_begin, sub_range_end, direction, window_size);
+			}
 			
 			wait_for_search();
 			
@@ -166,7 +182,23 @@ class SearchBaseTest: public ::testing::Test {
 		
 		void search_for_no_match(off_t sub_range_begin, off_t sub_range_end, Search::SearchDirection direction, off_t window_size = 128)
 		{
-			s.begin_search(sub_range_begin, sub_range_end, direction, window_size);
+			/* Starting a search will create a wxProgressDialog, which will install its
+			 * own event loop(!) if one isn't already set up, which there isn't when
+			 * running the tests, furthermore the dialog gets destroyed WITHIN the
+			 * event loop that gets created by wxApp::OnRun() later, and the
+			 * out-of-order event loop setup/destruction leads to a dangling event loop
+			 * pointer! Yay!
+			 *
+			 * So we set up our own event loop just while the dialog is being created
+			 * to avoid that.
+			*/
+			
+			{
+				wxEventLoop loop;
+				wxEventLoopActivator activate(&loop);
+				
+				s.begin_search(sub_range_begin, sub_range_end, direction, window_size);
+			}
 			
 			wait_for_search();
 			

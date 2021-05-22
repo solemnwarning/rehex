@@ -1012,6 +1012,9 @@ void REHex::MainWindow::OnPalette(wxCommandEvent &event)
 			abort();
 	}
 	
+	wxCommandEvent pc_event(PALETTE_CHANGED);
+	wxGetApp().ProcessEvent(pc_event);
+	
 	Refresh();
 }
 

@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <inttypes.h>
 
+#include "App.hpp"
 #include "decodepanel.hpp"
 #include "Events.hpp"
 
@@ -109,6 +110,9 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, SharedDocumentPointer &documen
 	
 	pgrid = new wxPropertyGrid(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		wxPG_STATIC_SPLITTER);
+	
+	wxGetApp().Bind(PALETTE_CHANGED, [this](wxCommandEvent &event) { set_pgrid_colours(); });
+	set_pgrid_colours();
 	
 	pgrid->Append(c8 = new wxPropertyCategory("8 bit integer"));
 	pgrid->AppendIn(c8, (s8 = new wxStringProperty("S Dec", "s8", "0000000000000000")));
@@ -205,6 +209,20 @@ void REHex::DecodePanel::load_state(wxConfig *config)
 	}
 	
 	update();
+}
+
+void REHex::DecodePanel::set_pgrid_colours()
+{
+	pgrid->SetCaptionBackgroundColour(    (*active_palette)[Palette::PAL_COMMENT_BG]         );
+	pgrid->SetCaptionTextColour(          (*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]  );
+	pgrid->SetCellBackgroundColour(       (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]     );
+	pgrid->SetCellDisabledTextColour(     (*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]  );
+	pgrid->SetCellTextColour(             (*active_palette)[Palette::PAL_NORMAL_TEXT_FG]     );
+	pgrid->SetEmptySpaceColour(           (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]     );
+	pgrid->SetLineColour(                 (*active_palette)[Palette::PAL_COMMENT_BG]         );
+	pgrid->SetMarginColour(               (*active_palette)[Palette::PAL_COMMENT_BG]         );
+	pgrid->SetSelectionBackgroundColour(  (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]   );
+	pgrid->SetSelectionTextColour(        (*active_palette)[Palette::PAL_SELECTED_TEXT_FG]   );
 }
 
 wxSize REHex::DecodePanel::DoGetBestClientSize() const

@@ -75,6 +75,8 @@ namespace REHex {
 			
 			std::vector<unsigned char> last_data;
 			
+			void set_pgrid_colours();
+			
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnDataModified(OffsetLengthEvent &event);
 			void OnPropertyGridChanged(wxPropertyGridEvent& event);

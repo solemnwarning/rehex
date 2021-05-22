@@ -38,6 +38,8 @@ wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
 
 wxDEFINE_EVENT(REHex::FONT_SIZE_ADJUSTMENT_CHANGED, REHex::FontSizeAdjustmentEvent);
 
+wxDEFINE_EVENT(REHex::PALETTE_CHANGED, wxCommandEvent);
+
 REHex::OffsetLengthEvent::OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length):
 	wxEvent(source->GetId(), event), offset(offset), length(length)
 {

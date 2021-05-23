@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -455,6 +455,16 @@ void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
 	selection_off    = off;
 	selection_length = length;
 	
+	if(length > 0)
+	{
+		selection_begin = off;
+		selection_end   = off + length - 1;
+	}
+	else{
+		selection_begin = -1;
+		selection_end   = -2;
+	}
+	
 	if(length <= 0 || mouse_shift_initial < off || mouse_shift_initial > (off + length))
 	{
 		mouse_shift_initial = -1;
@@ -479,6 +489,89 @@ void REHex::DocumentCtrl::clear_selection()
 std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection()
 {
 	return std::make_pair(selection_off, selection_length);
+}
+
+std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
+{
+	if(selection_begin < 0)
+	{
+		/* No selection. */
+		return std::make_pair(-1, -1);
+	}
+	else{
+		assert(selection_end >= selection_begin);
+		return std::make_pair(selection_begin, ((selection_end - selection_begin) + 1));
+	}
+}
+
+REHex::ByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
+{
+	ByteRangeSet selected_ranges;
+	
+	auto region = _data_region_by_offset(selection_begin);
+	off_t region_select_begin = selection_begin;
+	
+	while(region != data_regions.end())
+	{
+		assert(region_select_begin >= (*region)->d_offset);
+		assert(region_select_begin <= ((*region)->d_offset + (*region)->d_length));
+		
+		if((*region)->d_offset <= selection_end && ((*region)->d_length + (*region)->d_offset) >= selection_end)
+		{
+			if(selection_end > region_select_begin)
+			{
+				selected_ranges.set_range(region_select_begin, selection_end - region_select_begin);
+			}
+			
+			break;
+		}
+		else{
+			selected_ranges.set_range(region_select_begin, ((*region)->d_offset + (*region)->d_length) - region_select_begin);
+		}
+		
+		++region;
+		
+		if(region != data_regions.end())
+		{
+			region_select_begin = (*region)->d_offset;
+		}
+	}
+	
+	return selected_ranges;
+}
+
+std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_in_region(GenericDataRegion *region)
+{
+	if(selection_begin < 0)
+	{
+		/* No selection. */
+		return std::make_pair<off_t, off_t>(-1, -1);
+	}
+	
+	auto region_iter = _data_region_by_offset(region->d_offset);
+	assert(region_iter != data_regions.end());
+	
+	auto sel_begin_iter = _data_region_by_offset(selection_begin);
+	assert(sel_begin_iter != data_regions.end());
+	
+	auto sel_end_iter = _data_region_by_offset(selection_end);
+	assert(sel_end_iter != data_regions.end());
+	
+	if(sel_begin_iter > region_iter || sel_end_iter < region_iter)
+	{
+		/* Selection doesn't overlap region. */
+		return std::make_pair<off_t, off_t>(-1, -1);
+	}
+	
+	off_t region_selection_offset = (sel_begin_iter < region_iter)
+		? region->d_offset
+		: selection_begin;
+	
+	off_t region_selection_length = (sel_end_iter > region_iter)
+		? (region->d_length - (region_selection_offset - region->d_offset))
+		: ((selection_end - region_selection_offset) + 1);
+	
+	return std::make_pair(region_selection_offset, region_selection_length);
 }
 
 void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)

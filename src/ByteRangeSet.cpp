@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <mutex>
+#include <numeric>
 #include <thread>
 
 #include "ByteRangeSet.hpp"
@@ -70,6 +71,14 @@ bool REHex::ByteRangeSet::isset(off_t offset, off_t length) const
 	}
 	
 	return false;
+}
+
+off_t REHex::ByteRangeSet::total_bytes() const
+{
+	off_t total_bytes = std::accumulate(ranges.begin(), ranges.end(),
+		(off_t)(0), [](off_t sum, const Range &range) { return sum + range.length; });
+	
+	return total_bytes;
 }
 
 const std::vector<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const

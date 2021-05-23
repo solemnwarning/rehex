@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -137,6 +137,11 @@ namespace REHex
 			 * @brief Check if a range is set in the set.
 			*/
 			bool isset(off_t offset, off_t length = 1) const;
+			
+			/**
+			 * @brief Get the total number of bytes encompassed by the set.
+			*/
+			off_t total_bytes() const;
 			
 			/**
 			 * @brief Get a reference to the internal std::vector.

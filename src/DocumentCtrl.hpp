@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,7 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "ByteRangeSet.hpp"
 #include "document.hpp"
 #include "Events.hpp"
 #include "NestedOffsetLengthMap.hpp"
@@ -436,6 +437,37 @@ namespace REHex {
 			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
 			
+			/**
+			 * @brief Returns the "raw" selection as an offset and a length.
+			 *
+			 * The return value from this method is misleading - the selection is
+			 * internally stored as a start/end offset and the *ACTUAL* selection is
+			 * derived from the data regions that exist between those two points.
+			 *
+			 * You probably want to use the other get_selection_XXX methods either
+			 * instead of or in addition to this method.
+			*/
+			std::pair<off_t, off_t> get_selection_raw();
+			
+			/**
+			 * @brief Returns the subset of the current selection scoped to a region.
+			 *
+			 * The return value from this method is the offset (file relative) and the
+			 * length of the current selection, scoped to the given region.
+			 *
+			 * If there is no selection, or the selection doesn't include any bytes
+			 * from the given region, the returned length will be <= 0.
+			*/
+			std::pair<off_t, off_t> get_selection_in_region(GenericDataRegion *region);
+			
+			/**
+			 * @brief Returns the set of all bytes currently selected.
+			 *
+			 * NOTE: This method may be expensive to call, as it potentially has to
+			 * iterate through all (data) regions in the file.
+			*/
+			ByteRangeSet get_selection_ranges();
+			
 			const std::vector<Region*> &get_regions() const;
 			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
@@ -530,6 +562,9 @@ namespace REHex {
 			
 			off_t selection_off;
 			off_t selection_length;
+			
+			off_t selection_begin;
+			off_t selection_end;
 			
 			bool cursor_visible;
 			wxTimer redraw_cursor_timer;

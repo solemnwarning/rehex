@@ -802,6 +802,16 @@ REHex::DocumentCtrl::FuzzyScrollPosition REHex::DocumentCtrl::get_scroll_positio
 {
 	FuzzyScrollPosition fsp;
 	
+	if(scroll_yoff >= (regions.back()->y_offset + regions.back()->y_lines))
+	{
+		/* This can happen in obscure cases where the DocumentCtrl is "empty", e.g. the
+		 * data backing a DiffWindow range is erased. Avoid an assertion failure within
+		 * the region_by_y_offset() call.
+		*/
+		
+		return fsp;
+	}
+	
 	auto base_region = region_by_y_offset(scroll_yoff);
 	
 	fsp.region_idx       = base_region - regions.begin();

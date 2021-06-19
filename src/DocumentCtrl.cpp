@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -348,6 +348,7 @@ void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorSt
 	this->cursor_state = cursor_state;
 	
 	_make_byte_visible(cpos_off);
+	save_scroll_position();
 	
 	/* TODO: Limit paint to affected area */
 	Refresh();
@@ -690,20 +691,7 @@ void REHex::DocumentCtrl::_update_vscroll()
 	{
 		int64_t new_scroll_yoff_max = total_lines - visible_lines;
 		
-		/* Try to keep the vertical scroll position at roughly the same point in the file. */
-		scroll_yoff = (scroll_yoff > 0)
-			? ((double)(scroll_yoff) * ((double)(new_scroll_yoff_max) / (double)(scroll_yoff_max)))
-			: 0;
-		
-		/* In case of rounding errors. */
-		if(scroll_yoff > scroll_yoff_max)
-		{
-			scroll_yoff = scroll_yoff_max;
-		}
-		else if(scroll_yoff < 0)
-		{
-			scroll_yoff = 0;
-		}
+		restore_scroll_position();
 		
 		int range, thumb, position;
 		
@@ -810,6 +798,101 @@ void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
 	}
 }
 
+REHex::DocumentCtrl::FuzzyScrollPosition REHex::DocumentCtrl::get_scroll_position_fuzzy()
+{
+	FuzzyScrollPosition fsp;
+	
+	auto base_region = region_by_y_offset(scroll_yoff);
+	
+	fsp.region_idx       = base_region - regions.begin();
+	fsp.region_idx_line  = (*base_region)->y_offset - scroll_yoff;
+	fsp.region_idx_valid = true;
+	
+	/* Figure out where the cursor is in screen space. */
+	
+	off_t cursor_pos = get_cursor_position();
+	
+	GenericDataRegion *cursor_dr = data_region_by_offset(cursor_pos);
+	assert(cursor_dr != NULL);
+	
+	Rect cursor_rect = cursor_dr->calc_offset_bounds(cursor_pos, this);
+	
+	if(cursor_rect.y >= scroll_yoff && cursor_rect.y < (scroll_yoff + visible_lines))
+	{
+		/* Cursor is on-screen, use it as the scroll position anchor. */
+		
+		fsp.data_offset       = cursor_pos;
+		fsp.data_offset_line  = cursor_rect.y - scroll_yoff;
+		fsp.data_offset_valid = true;
+	}
+	else{
+		/* Cursor isn't on-screen, use first visible line of data (if any) as the scroll
+		 * position anchor.
+		*/
+		
+		for(auto r = base_region; r != regions.end() && (*r)->y_offset < (scroll_yoff + visible_lines); ++r)
+		{
+			GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*r);
+			if(dr == NULL)
+			{
+				continue;
+			}
+			
+			if(dr->y_offset >= scroll_yoff)
+			{
+				fsp.data_offset       = dr->nth_row_nearest_column(0, 0);
+				fsp.data_offset_line  = dr->y_offset - scroll_yoff;
+				fsp.data_offset_valid = true;
+			}
+			else{
+				fsp.data_offset       = dr->nth_row_nearest_column((scroll_yoff - dr->y_offset), 0);
+				fsp.data_offset_line  = 0;
+				fsp.data_offset_valid = true;
+			}
+			
+			break;
+		}
+	}
+	
+	return fsp;
+}
+
+void REHex::DocumentCtrl::set_scroll_position_fuzzy(const FuzzyScrollPosition &fsp)
+{
+	if(fsp.data_offset_valid)
+	{
+		auto dr = _data_region_by_offset(fsp.data_offset);
+		if(dr != data_regions.end())
+		{
+			Rect byte_rect = (*dr)->calc_offset_bounds(fsp.data_offset, this);
+			set_scroll_yoff_clamped(byte_rect.y - fsp.data_offset_line);
+			
+			return;
+		}
+	}
+	
+	if(fsp.region_idx_valid)
+	{
+		if(regions.size() > fsp.region_idx)
+		{
+			Region *r = regions[fsp.region_idx];
+			set_scroll_yoff_clamped(r->y_offset - fsp.region_idx_line);
+			
+			return;
+		}
+	}
+}
+
+void REHex::DocumentCtrl::save_scroll_position()
+{
+	saved_scroll_position = get_scroll_position_fuzzy();
+}
+
+void REHex::DocumentCtrl::restore_scroll_position()
+{
+	set_scroll_position_fuzzy(saved_scroll_position);
+}
+
 void REHex::DocumentCtrl::OnScroll(wxScrollWinEvent &event)
 {
 	wxEventType type = event.GetEventType();
@@ -868,6 +951,8 @@ void REHex::DocumentCtrl::OnScroll(wxScrollWinEvent &event)
 		
 		_update_vscroll_pos();
 		Refresh();
+		
+		save_scroll_position();
 	}
 	else if(orientation == wxHORIZONTAL)
 	{
@@ -933,6 +1018,8 @@ void REHex::DocumentCtrl::OnWheel(wxMouseEvent &event)
 		
 		_update_vscroll_pos();
 		Refresh();
+		
+		save_scroll_position();
 	}
 	else if(axis == wxMOUSE_WHEEL_HORIZONTAL)
 	{
@@ -1271,6 +1358,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		{
 			scroll_yoff = new_scroll_yoff;
 			_update_vscroll_pos();
+			save_scroll_position();
 			Refresh();
 		}
 
@@ -1646,6 +1734,8 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		
 		mouse_y = client_height - 1;
 	}
+	
+	save_scroll_position();
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
@@ -2211,6 +2301,15 @@ int64_t REHex::DocumentCtrl::get_scroll_yoff() const
 
 void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff)
 {
+	set_scroll_yoff_clamped(scroll_yoff);
+	
+	_update_vscroll_pos();
+	save_scroll_position();
+	Refresh();
+}
+
+void REHex::DocumentCtrl::set_scroll_yoff_clamped(int64_t scroll_yoff)
+{
 	if(scroll_yoff < 0)
 	{
 		scroll_yoff = 0;
@@ -2221,9 +2320,6 @@ void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff)
 	}
 	
 	this->scroll_yoff = scroll_yoff;
-	
-	_update_vscroll_pos();
-	Refresh();
 }
 
 REHex::DocumentCtrl::Region::Region(off_t indent_offset, off_t indent_length):

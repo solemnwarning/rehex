@@ -1,3 +1,20 @@
+UNRELEASED
+
+ * Reduce persistent memory usage (#52).
+
+ * Fully undo virtual mapping changes in one step (#126).
+
+ * Fix build dependency errors (#129).
+
+ * Add "Find previous" button to search dialogs (#111).
+
+ * Fix hard-to-see colours in "Decode values" panel on some systems (#127).
+
+ * Fix build errors on FreeBSD (#133).
+
+ * Prevent document from jumping around when the window is resized or
+   disassembly is in progress (#132).
+
 Version 0.3.91 (2021-05-03)
 
  * Fix loading of plugins bundled as part of an AppImage.

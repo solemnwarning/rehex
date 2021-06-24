@@ -2,6 +2,11 @@
 /.d/
 /rehex
 
+/rehex.exe
+
+/AppDir/
+/rehex.AppImage
+
 /res/ascii16.c
 /res/ascii16.h
 /res/ascii24.c
@@ -34,6 +39,7 @@
 /res/icon128.c
 /res/icon128.h
 
+/res/license.done
 /res/license.c
 /res/license.h
 
@@ -46,16 +52,20 @@
 /res/offsets48.c
 /res/offsets48.h
 
+/src/lua-bindings/.done
 /src/lua-bindings/rehex_bind.cpp
 /src/lua-bindings/rehex_bind.h
 /src/lua-bindings/rehex_datatypes.lua
+/src/lua-plugin-preload.done
 /src/lua-plugin-preload.c
 /src/lua-plugin-preload.h
 
 /tests/.tmpfile*
 /tests/all-tests
+/tests/all-tests.exe
 /tests/document.t
 /tools/embed
+/tools/embed.exe
 msvc/.vs/
 msvc/Debug/
 msvc/embed/Debug/

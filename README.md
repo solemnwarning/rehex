@@ -86,4 +86,4 @@ For Windows or Mac build instructions, see the relevant README: [README.Windows.
 
 ## Feedback
 
-If you find any bugs or have suggestions for improvements or new features, please open an issue on Github, or join the `#rehex` IRC channel on `irc.freenode.net`.
+If you find any bugs or have suggestions for improvements or new features, please open an issue on Github, or join the `#rehex` IRC channel on `irc.libera.chat`.

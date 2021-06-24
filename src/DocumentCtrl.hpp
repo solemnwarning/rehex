@@ -595,6 +595,55 @@ namespace REHex {
 			void _update_vscroll();
 			void _update_vscroll_pos(bool update_linked_scroll_others = true);
 			
+			/**
+			 * @brief Fuzzy description of the DocumentCtrl scroll position.
+			 *
+			 * This struct describes the DocumentCtrl scroll position, in terms of its
+			 * contents so it can be restored (as close as possible) when the window
+			 * size changes or regions are added/removed/grow/shrink/etc.
+			*/
+			struct FuzzyScrollPosition
+			{
+				bool data_offset_valid;   /**< True if data_offset and data_offset_line are valid. */
+				off_t data_offset;        /**< File offset used as reference point. */
+				int64_t data_offset_line; /**< Visible (on-screen) line where data_offset is. */
+				
+				bool region_idx_valid;    /**< True if region_idx and region_idx_line are valid. */
+				size_t region_idx;        /**< Index of region whose first line is our reference point. */
+				int64_t region_idx_line;  /**< Visible (on-screen) line where region begins (may be negative). */
+				
+				FuzzyScrollPosition():
+					data_offset_valid(false),
+					region_idx_valid(false) {}
+			};
+			
+			/**
+			 * @brief Set scroll_yoff, clamped to valid range.
+			*/
+			void set_scroll_yoff_clamped(int64_t scroll_yoff);
+			
+			/**
+			 * @brief Fetch the current scroll position.
+			*/
+			FuzzyScrollPosition get_scroll_position_fuzzy();
+			
+			/**
+			 * @brief Jump to a fuzzy scroll position.
+			*/
+			void set_scroll_position_fuzzy(const FuzzyScrollPosition &fsp);
+			
+			FuzzyScrollPosition saved_scroll_position;
+			
+			/**
+			 * @brief Save the current scroll position.
+			*/
+			void save_scroll_position();
+			
+			/**
+			 * @brief Restore the last saved scroll position.
+			*/
+			void restore_scroll_position();
+			
 			void linked_scroll_visit_others(const std::function<void(DocumentCtrl*)> &func);
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;

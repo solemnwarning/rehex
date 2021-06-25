@@ -193,8 +193,8 @@ namespace REHex
 					data_string = "????";
 				}
 				
-				off_t total_selection_offset, total_selection_length;
-				std::tie(total_selection_offset, total_selection_length) = doc_ctrl.get_selection_raw();
+				off_t total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
 				off_t region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
@@ -212,7 +212,7 @@ namespace REHex
 						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
 					}
 				}
-				else if(region_selection_length > 0 && (total_selection_offset != d_offset || total_selection_length != d_length))
+				else if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
 				{
 					/* Selection encompasses *some* of our bytes and/or stretches
 					* beyond either end. Render the underlying hex bytes.
@@ -295,13 +295,13 @@ namespace REHex
 			
 			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
 			{
-				off_t total_selection_offset, total_selection_length;
-				std::tie(total_selection_offset, total_selection_length) = doc_ctrl.get_selection_raw();
+				off_t total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
 				off_t region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
 				
-				if(region_selection_length > 0 && (total_selection_offset != d_offset || total_selection_length != d_length))
+				if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -456,13 +456,13 @@ namespace REHex
 				assert(offset >= d_offset);
 				assert(offset <= (d_offset + d_length));
 				
-				off_t total_selection_offset, total_selection_length;
-				std::tie(total_selection_offset, total_selection_length) = doc_ctrl->get_selection_raw();
+				off_t total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl->get_selection_raw();
 				
 				off_t region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl->get_selection_in_region(this);
 				
-				if(region_selection_length > 0 && (total_selection_offset != d_offset || total_selection_length != d_length))
+				if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					

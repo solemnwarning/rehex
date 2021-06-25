@@ -1126,14 +1126,14 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::scr
 
 wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 {
+	off_t selection_off, selection_last;
+	std::tie(selection_off, selection_last) = doc_ctrl.get_selection_raw();
+	
+	assert(selection_off >= d_offset);
+	assert(selection_last < (d_offset + d_length));
+	
 	if(doc_ctrl.special_view_active())
 	{
-		off_t selection_off, selection_length;
-		std::tie(selection_off, selection_length) = doc_ctrl.get_selection_raw();
-		
-		assert(selection_off >= d_offset);
-		assert((selection_off + selection_length) <= (d_offset + d_length));
-		
 		/* Copy disassembled instructions within selection. */
 		
 		auto instr_first = instruction_by_offset(selection_off);
@@ -1143,7 +1143,7 @@ wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 		
 		std::string data_string;
 		
-		while(instr != instr_vec->end() && (instr->offset + instr->length) <= (selection_off + selection_length))
+		while(instr != instr_vec->end() && (instr->offset + instr->length - 1) <= selection_last)
 		{
 			if(instr->offset >= selection_off)
 			{

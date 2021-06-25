@@ -73,6 +73,8 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	hex_font(wxFontInfo().Family(wxFONTFAMILY_MODERN)),
 	linked_scroll_prev(NULL),
 	linked_scroll_next(NULL),
+	selection_begin(-1),
+	selection_end(-1),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
@@ -463,7 +465,7 @@ void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
 	}
 	else{
 		selection_begin = -1;
-		selection_end   = -2;
+		selection_end   = -1;
 	}
 	
 	if(length <= 0 || mouse_shift_initial < off || mouse_shift_initial > (off + length))
@@ -500,8 +502,7 @@ std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
 		return std::make_pair(-1, -1);
 	}
 	else{
-		assert(selection_end >= selection_begin);
-		return std::make_pair(selection_begin, ((selection_end - selection_begin) + 1));
+		return std::make_pair(selection_begin, selection_end);
 	}
 }
 

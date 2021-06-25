@@ -438,14 +438,10 @@ namespace REHex {
 			std::pair<off_t, off_t> get_selection();
 			
 			/**
-			 * @brief Returns the "raw" selection as an offset and a length.
+			 * @brief Returns the "raw" selection as a begin and end offset.
 			 *
-			 * The return value from this method is misleading - the selection is
-			 * internally stored as a start/end offset and the *ACTUAL* selection is
-			 * derived from the data regions that exist between those two points.
-			 *
-			 * You probably want to use the other get_selection_XXX methods either
-			 * instead of or in addition to this method.
+			 * NOTE: Unlike most "end" pointers, the end offset returned from this
+			 * method is the last byte in the selection, not one past it.
 			*/
 			std::pair<off_t, off_t> get_selection_raw();
 			

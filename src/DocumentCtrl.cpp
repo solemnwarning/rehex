@@ -455,20 +455,34 @@ void REHex::DocumentCtrl::linked_scroll_visit_others(const std::function<void(Do
 
 void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
 {
-	selection_off    = off;
-	selection_length = length;
+	set_selection_raw(off, off + length - 1);
+}
+
+bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
+{
+	assert(begin >= 0);
+	assert(end >= 0);
 	
-	if(length > 0)
 	{
-		selection_begin = off;
-		selection_end   = off + length - 1;
-	}
-	else{
-		selection_begin = -1;
-		selection_end   = -1;
+		auto begin_region = _data_region_by_offset(begin);
+		auto end_region = _data_region_by_offset(end);
+		
+		if(begin_region == data_regions.end()
+			|| end_region == data_regions.end()
+			|| begin_region > end_region
+			|| (begin_region == end_region && begin > end))
+		{
+			return false;
+		}
 	}
 	
-	if(length <= 0 || mouse_shift_initial < off || mouse_shift_initial > (off + length))
+	selection_begin = begin;
+	selection_end = end;
+	
+	selection_off = begin;
+	selection_length = end - begin + 1;
+	
+	if(mouse_shift_initial < begin || mouse_shift_initial > end)
 	{
 		mouse_shift_initial = -1;
 	}
@@ -480,13 +494,29 @@ void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
 		wxPostEvent(this, event);
 	}
 	
-	/* TODO: Limit paint to affected area */
 	Refresh();
+	
+	return true;
 }
 
 void REHex::DocumentCtrl::clear_selection()
 {
-	set_selection(0, 0);
+	selection_begin = -1;
+	selection_end   = -1;
+	
+	selection_off    = 0;
+	selection_length = 0;
+	
+	mouse_shift_initial = -1;
+	
+	{
+		wxCommandEvent event(REHex::EV_SELECTION_CHANGED);
+		event.SetEventObject(this);
+		
+		wxPostEvent(this, event);
+	}
+	
+	Refresh();
 }
 
 std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection()

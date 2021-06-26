@@ -433,9 +433,22 @@ namespace REHex {
 			void linked_scroll_insert_self_after(DocumentCtrl *p);
 			void linked_scroll_remove_self();
 			
+			/* NOTE: Both of these are deprecated. */
 			void set_selection(off_t off, off_t length);
-			void clear_selection();
 			std::pair<off_t, off_t> get_selection();
+			
+			/**
+			 * @brief Set the selection range.
+			 *
+			 * @param begin Data offset at beginning of selection.
+			 * @param end Data offset at end of selection (inclusive).
+			*/
+			bool set_selection_raw(off_t begin, off_t end);
+			
+			/**
+			 * @brief Clear the selection (if any).
+			*/
+			void clear_selection();
 			
 			/**
 			 * @brief Returns the "raw" selection as a begin and end offset.

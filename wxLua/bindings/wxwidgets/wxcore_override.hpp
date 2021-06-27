@@ -1449,6 +1449,52 @@ static int LUACALL wxLua_wxFontMapper_GetAltForEncoding(lua_State *L)
 }
 %end
 
+%override wxLua_wxPen_GetDashes
+// void GetDashes()
+static int LUACALL wxLua_wxPen_GetDashes(lua_State *L)
+{
+    // get this
+    wxPen *self = (wxPen *)wxluaT_getuserdatatype(L, 1, wxluatype_wxPen);
+    // get dashes
+    wxDash *dashes;
+    int nb_dashes = self->GetDashes(&dashes);
+    if (nb_dashes == 0)
+        return 0;  //  No dashes are defined
+    // create a table (which will be the return value)
+    lua_newtable(L);
+    for (int idx = 0; idx < nb_dashes; ++idx) {
+        lua_pushinteger(L, dashes[idx]);
+        lua_rawseti(L, -2, idx + 1);
+    }
+    //  return the number of parameters
+    return 1;
+}
+%end
+
+%override wxLua_wxPen_SetDashes
+// void SetDashes()
+static int LUACALL wxLua_wxPen_SetDashes(lua_State *L)
+{
+    // get this
+    wxPen *self = (wxPen *)wxluaT_getuserdatatype(L, 1, wxluatype_wxPen);
+    // check if we have a table argument
+    if (!wxlua_iswxluatype(lua_type(L, 2), WXLUA_TTABLE))
+        wxlua_argerror(L, 2, wxT("a 'table'"));
+    int count = lua_objlen(L, 2);
+    // allocate an array of wxDashes
+    // TODO: this memory will leak when wxPen is destroyed. The wxWidgets document states
+    // that we should not free 'dashes' until we destroy the wxPen.
+    wxDash *dashes = new wxDash[count];
+    for (int idx = 1; idx <= count; idx++) {
+        lua_rawgeti(L, 2, idx);
+        dashes[idx - 1] = (wxDash)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+    }
+    self->SetDashes(count, dashes);
+    return 0;
+}
+%end
+
 %override wxLua_wxPalette_Create
 // bool Create(int n, const unsigned char* red, const unsigned char* green, const unsigned char* blue)
 static int LUACALL wxLua_wxPalette_Create(lua_State *L)

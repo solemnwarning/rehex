@@ -2405,3 +2405,44 @@ class %delete wxTreeListEvent : public wxNotifyEvent
 };
 
 #endif //wxLUA_USE_wxTreeListCtrl && wxUSE_TREELISTCTRL && %wxchkver_2_9_3
+
+#if wxUSE_SEARCHCTRL
+
+#include "wx/srchctrl.h"
+
+class wxSearchCtrl : public wxTextCtrl
+{
+public:
+    wxSearchCtrl();
+
+    wxSearchCtrl(wxWindow* parent, wxWindowID id,
+                 const wxString& value = wxEmptyString,
+                 const wxPoint& pos = wxDefaultPosition,
+                 const wxSize& size = wxDefaultSize,
+                 long style = 0,
+                 const wxValidator& validator = wxDefaultValidator,
+                 const wxString& name = wxSearchCtrlNameStr);
+
+    bool Create(wxWindow* parent, wxWindowID id,
+                 const wxString& value = wxEmptyString,
+                 const wxPoint& pos = wxDefaultPosition,
+                 const wxSize& size = wxDefaultSize,
+                 long style = 0,
+                 const wxValidator& validator = wxDefaultValidator,
+                 const wxString& name = wxSearchCtrlNameStr);
+
+    virtual wxMenu* GetMenu();
+    virtual bool IsSearchButtonVisible() const;
+    virtual bool IsCancelButtonVisible() const;
+    // wxLua Note: menu will delete the control when it is destroyed.
+    virtual void SetMenu(%ungc wxMenu* menu);
+    virtual void ShowCancelButton(bool show);
+    virtual void ShowSearchButton(bool show);
+    void        SetDescriptiveText(const wxString& text);
+    wxString    GetDescriptiveText() const;
+
+    virtual void SetValue(const wxString& value);
+    wxString GetValue() const;
+};
+
+#endif

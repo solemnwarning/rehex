@@ -2128,6 +2128,107 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	return region;
 }
 
+off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
+{
+	auto r = _data_region_by_offset(base);
+	if(r == data_regions.end())
+	{
+		/* Base offset is invalid. */
+		return -1;
+	}
+	
+	if(add > 0)
+	{
+		/* Increment base by walking forwards from base's data region until we've covered
+		 * the requested number of bytes, or run out of regions.
+		*/
+		
+		while(r != data_regions.end())
+		{
+			assert(base >= (*r)->d_offset);
+			
+			off_t remaining_in_r = (*r)->d_length - (base - (*r)->d_offset);
+			
+			if(remaining_in_r <= add)
+			{
+				++r;
+				
+				if(r == data_regions.end())
+				{
+					if(remaining_in_r == add)
+					{
+						/* Special case: Last region in document includes
+						 * one byte past its end (for inserting at end).
+						*/
+						
+						return base + add;
+					}
+				}
+				else{
+					base = (*r)->d_offset;
+					add -= remaining_in_r;
+				}
+			}
+			else{
+				return base + add;
+			}
+		}
+	}
+	else if(add < 0)
+	{
+		/* Decrement by walking backwards from base's data region until we've subtracted
+		 * the requested number of bytes, or ran out of regions and failed.
+		*/
+		
+		off_t sub = -add;
+		
+		while(true)
+		{
+			assert(base >= (*r)->d_offset);
+			
+			off_t remaining_in_r = base - (*r)->d_offset;
+			
+			if(remaining_in_r < sub)
+			{
+				/* Current region doesn't have enough bytes left before base to
+				 * fulfil subtraction requirement. Count what it has and jump to
+				 * end of previous region.
+				*/
+				
+				if(r == data_regions.begin())
+				{
+					/* No more regions. Fail. */
+					break;
+				}
+				else{
+					--r;
+					
+					assert((*r)->d_length > 0);
+					
+					base = (*r)->d_offset + (*r)->d_length - 1;
+					sub -= remaining_in_r + 1;
+				}
+			}
+			else{
+				return base - sub;
+			}
+		}
+	}
+	else if(add == 0)
+	{
+		/* Nothing to add - just return base. */
+		return base;
+	}
+	
+	/* Ran out of regions while adding/subtracting above. */
+	return -1;
+}
+
+off_t REHex::DocumentCtrl::region_offset_sub(off_t base, off_t sub)
+{
+	return region_offset_add(base, -sub);
+}
+
 /* Scroll the Document vertically to make the given line visible.
  * Does nothing if the line is already on-screen.
 */

@@ -483,6 +483,26 @@ namespace REHex {
 			GenericDataRegion *data_region_by_offset(off_t offset);
 			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
+			/**
+			 * @brief Increment an offset in the address space defined by the regions.
+			 *
+			 * @param base Base offset to start at.
+			 * @param add Number of bytes to increment base by.
+			 *
+			 * @return New offset, negative if invalid.
+			*/
+			off_t region_offset_add(off_t base, off_t add);
+			
+			/**
+			 * @brief Decrement an offset in the address space defined by the regions.
+			 *
+			 * @param base Base offset to start at.
+			 * @param add Number of bytes to decrement base by.
+			 *
+			 * @return New offset, negative if invalid.
+			*/
+			off_t region_offset_sub(off_t base, off_t sub);
+			
 			wxFont &get_font();
 			
 			/**

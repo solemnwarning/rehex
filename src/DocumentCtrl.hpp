@@ -451,6 +451,11 @@ namespace REHex {
 			void clear_selection();
 			
 			/**
+			 * @brief Returns true if there is a selection.
+			*/
+			bool has_selection();
+			
+			/**
 			 * @brief Returns the "raw" selection as a begin and end offset.
 			 *
 			 * NOTE: Unlike most "end" pointers, the end offset returned from this

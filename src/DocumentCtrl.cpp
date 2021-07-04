@@ -524,6 +524,12 @@ std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection()
 	return std::make_pair(selection_off, selection_length);
 }
 
+bool REHex::DocumentCtrl::has_selection()
+{
+	assert((selection_begin < 0) == (selection_end < 0));
+	return !(selection_begin < 0 || selection_end < 0);
+}
+
 std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
 {
 	if(selection_begin < 0)

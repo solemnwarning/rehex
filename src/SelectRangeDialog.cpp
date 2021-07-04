@@ -139,7 +139,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 	if(range_to_enable->GetValue())
 	{
 		try {
-			selection_last = range_to->GetValue<off_t>(selection_first, (doc_length - 1));
+			selection_last = range_to->GetValue<off_t>(0, (doc_length - 1));
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -152,7 +152,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 		off_t selection_length;
 		
 		try {
-			selection_length = range_len->GetValue<off_t>(1, (doc_length - selection_first));
+			selection_length = range_len->GetValue<off_t>(1);
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -172,7 +172,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 		/* TODO: Display warning about discontiguous selection? */
 	}
 	
-	document_ctrl.set_selection_raw(selection_first, selection_last);
+	document_ctrl.set_selection_raw(selection_first, selection_last); /* TODO: Warn about invalid selections. */
 	Close();
 }
 

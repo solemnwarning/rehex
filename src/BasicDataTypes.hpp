@@ -651,13 +651,13 @@ namespace REHex
 			
 			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override
 			{
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+				off_t selection_first, selection_last;
+				std::tie(selection_first, selection_last) = doc_ctrl.get_selection_raw();
 				
-				assert(selection_off >= d_offset);
-				assert((selection_off + selection_length) <= (d_offset + d_length));
+				assert(selection_first >= d_offset);
+				assert(selection_last < (d_offset + d_length));
 				
-				if(selection_off == d_offset && selection_length == d_length)
+				if(selection_first == d_offset && selection_last == (d_offset + d_length - 1))
 				{
 					/* Selection matches our data range. Copy stringified
 					 * numeric value to clipboard.
@@ -686,10 +686,10 @@ namespace REHex
 			
 			virtual bool OnPaste(DocumentCtrl *doc_ctrl)
 			{
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+				off_t selection_first, selection_last;
+				std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 				
-				if(selection_length > 0 && (selection_off != d_offset || selection_length != d_length))
+				if(doc_ctrl->has_selection() && (selection_first != d_offset || selection_last != (d_offset + d_length - 1)))
 				{
 					/* There is a selection and it doesn't exactly match our
 					 * data range. Fall back to default handling.

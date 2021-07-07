@@ -1867,7 +1867,13 @@ int wxLuaState::lua_PCall(int nargs, int nresults, int errfunc)
 int wxLuaState::lua_CPCall(lua_CFunction func, void *ud)
 {
     wxCHECK_MSG(Ok(), 0, wxT("Invalid wxLuaState"));
+#if LUA_VERSION_NUM >= 503
+    lua_pushcfunction(M_WXLSTATEDATA->m_lua_State, func);
+    lua_pushlightuserdata(M_WXLSTATEDATA->m_lua_State, ud);
+    return lua_pcall(M_WXLSTATEDATA->m_lua_State, 1, 0, 0);
+#else
     return lua_cpcall(M_WXLSTATEDATA->m_lua_State, func, ud);
+#endif
 }
 #if LUA_VERSION_NUM < 502
 int  wxLuaState::lua_Load(lua_Reader reader, void *dt, const char* chunkname)

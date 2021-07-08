@@ -1542,3 +1542,50 @@ TEST_F(DocumentCtrlTest, RegionOffsetSubOutOfOrder)
 	EXPECT_EQ(doc_ctrl->region_offset_sub(39, 29), 50);
 	EXPECT_EQ(doc_ctrl->region_offset_sub(39, 30), -1);
 }
+
+TEST_F(DocumentCtrlTest, RegionRangeLinear)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 1000),
+		
+		new DocumentCtrl::DataRegion(200, 50, 2000),
+		new DocumentCtrl::DataRegion(250, 50, 2050),
+		
+		new DocumentCtrl::DataRegion(300, 50, 3000),
+		new DocumentCtrl::DataRegion(360, 40, 3050),
+		
+		new DocumentCtrl::DataRegion(450, 50, 4000),
+		new DocumentCtrl::DataRegion(400, 50, 4050),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	/* Basic tests. */
+	EXPECT_FALSE( doc_ctrl->region_range_linear(  0,   9)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear( 99,  99)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear( 99, 100)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(100, 100)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(100, 149)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(100, 150)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(149, 149)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(150, 150)  );
+	
+	/* Consecutive regions. */
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(200, 249)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(200, 299)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(250, 299)  );
+	
+	/* Discontiguous regions. */
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(300, 349)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(300, 350)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(300, 389)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(360, 389)  );
+	
+	/* Out of order regions. */
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(400, 449)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(400, 499)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(450, 499)  );
+}

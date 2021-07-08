@@ -2235,6 +2235,33 @@ off_t REHex::DocumentCtrl::region_offset_sub(off_t base, off_t sub)
 	return region_offset_add(base, -sub);
 }
 
+bool REHex::DocumentCtrl::region_range_linear(off_t begin_offset, off_t end_offset_incl)
+{
+	off_t at = begin_offset;
+	auto r = _data_region_by_offset(at);
+	
+	if(r == data_regions.end())
+	{
+		return false;
+	}
+	
+	while(true)
+	{
+		at += (*r)->d_length - (at - (*r)->d_offset);
+		++r;
+		
+		if(at > end_offset_incl)
+		{
+			return true;
+		}
+		
+		if(r == data_regions.end() || (*r)->d_offset != at)
+		{
+			return false;
+		}
+	}
+}
+
 /* Scroll the Document vertically to make the given line visible.
  * Does nothing if the line is already on-screen.
 */

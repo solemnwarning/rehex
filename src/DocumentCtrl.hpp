@@ -508,6 +508,11 @@ namespace REHex {
 			*/
 			off_t region_offset_sub(off_t base, off_t sub);
 			
+			/**
+			 * @brief Check if a range of offsets is linear and contiguous.
+			*/
+			bool region_range_linear(off_t begin_offset, off_t end_offset_incl);
+			
 			wxFont &get_font();
 			
 			/**

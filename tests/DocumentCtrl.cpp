@@ -1589,3 +1589,148 @@ TEST_F(DocumentCtrlTest, RegionRangeLinear)
 	EXPECT_FALSE( doc_ctrl->region_range_linear(400, 499)  );
 	EXPECT_TRUE(  doc_ctrl->region_range_linear(450, 499)  );
 }
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesWithinRegion)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(250, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	/* 100 - */
+	
+	doc_ctrl->set_selection_raw(120, 129);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(120, 10));
+	
+	doc_ctrl->set_selection_raw(100, 119);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(100, 20));
+	
+	doc_ctrl->set_selection_raw(120, 149);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(120, 30));
+	
+	doc_ctrl->set_selection_raw(100, 149);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(100, 50));
+	
+	/* 350 - */
+	
+	doc_ctrl->set_selection_raw(370, 379);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(370, 10));
+	
+	doc_ctrl->set_selection_raw(350, 369);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(350, 20));
+	
+	doc_ctrl->set_selection_raw(370, 399);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(370, 30));
+	
+	doc_ctrl->set_selection_raw(350, 399);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(350, 50));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningContiguousRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(250, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(220, 269);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(220, 50));
+	
+	doc_ctrl->set_selection_raw(200, 299);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(200, 100));
+	
+	doc_ctrl->set_selection_raw(200, 399);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(200, 200));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningDiscontiguousRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(250, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(120, 219);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(120, 30).set_range(200, 20));
+	
+	doc_ctrl->set_selection_raw(100, 299);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(100, 50).set_range(200, 100));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(150, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(220, 319);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(220, 30).set_range(150, 50).set_range(300, 20));
+	
+	doc_ctrl->set_selection_raw(200, 349);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		ByteRangeSet().set_range(150, 100).set_range(300, 50));
+}

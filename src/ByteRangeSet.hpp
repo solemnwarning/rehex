@@ -83,14 +83,21 @@ namespace REHex
 			template<typename T> ByteRangeSet(const T begin, const T end):
 				ranges(begin, end) {}
 			
+			bool operator==(const ByteRangeSet &rhs) const
+			{
+				return ranges == rhs.ranges;
+			}
+			
 			/**
 			 * @brief Set a range of bytes in the set.
 			 *
 			 * This method adds a range of bytes to the set. Any existing ranges
 			 * adjacent to or within the new range will be merged into the new range
 			 * and removed from the set.
+			 *
+			 * Returns a reference to the set to allow for chaining.
 			*/
-			void set_range(off_t offset, off_t length);
+			ByteRangeSet &set_range(off_t offset, off_t length);
 			
 			/**
 			 * @brief Set multiple ranges of bytes in the set.

@@ -25,15 +25,17 @@
 
 #include "ByteRangeSet.hpp"
 
-void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
+REHex::ByteRangeSet &REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 {
 	if(length <= 0)
 	{
-		return;
+		return *this;
 	}
 	
 	Range range(offset, length);
 	set_ranges(&range, (&range) + 1);
+	
+	return *this;
 }
 
 void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)

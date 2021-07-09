@@ -554,11 +554,11 @@ REHex::ByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
 		assert(region_select_begin >= (*region)->d_offset);
 		assert(region_select_begin <= ((*region)->d_offset + (*region)->d_length));
 		
-		if((*region)->d_offset <= selection_end && ((*region)->d_length + (*region)->d_offset) >= selection_end)
+		if((*region)->d_offset <= selection_end && ((*region)->d_length + (*region)->d_offset) > selection_end)
 		{
 			if(selection_end > region_select_begin)
 			{
-				selected_ranges.set_range(region_select_begin, selection_end - region_select_begin);
+				selected_ranges.set_range(region_select_begin, (selection_end - region_select_begin) + 1);
 			}
 			
 			break;

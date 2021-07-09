@@ -146,6 +146,11 @@ namespace REHex
 			bool isset(off_t offset, off_t length = 1) const;
 			
 			/**
+			 * @brief Check if any bytes in a range are set in the set.
+			*/
+			bool isset_any(off_t offset, off_t length) const;
+			
+			/**
 			 * @brief Get the total number of bytes encompassed by the set.
 			*/
 			off_t total_bytes() const;

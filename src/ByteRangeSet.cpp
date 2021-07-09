@@ -75,6 +75,16 @@ bool REHex::ByteRangeSet::isset(off_t offset, off_t length) const
 	return false;
 }
 
+bool REHex::ByteRangeSet::isset_any(off_t offset, off_t length) const
+{
+	ByteRangeSet check;
+	check.set_range(offset, length);
+	
+	ByteRangeSet i = intersection(*this, check);
+	
+	return !i.empty();
+}
+
 off_t REHex::ByteRangeSet::total_bytes() const
 {
 	off_t total_bytes = std::accumulate(ranges.begin(), ranges.end(),

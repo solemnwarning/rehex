@@ -497,6 +497,17 @@ namespace REHex {
 			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
 			/**
+			 * @brief Compare two offsets in the address space defined by the regions.
+			 *
+			 * Returns zero if the two offsets are equal, a negative integer if a is
+			 * less than b and a positive integer if a is greater than b.
+			 *
+			 * Throws an exception of type std::invalid_argument if either of the
+			 * offsets are invalid.
+			*/
+			int region_offset_cmp(off_t a, off_t b);
+			
+			/**
 			 * @brief Increment an offset in the address space defined by the regions.
 			 *
 			 * @param base Base offset to start at.

@@ -2145,6 +2145,34 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	return region;
 }
 
+int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
+{
+	auto ra = _data_region_by_offset(a);
+	auto rb = _data_region_by_offset(b);
+	
+	if(ra == data_regions.end() || rb == data_regions.end())
+	{
+		throw std::invalid_argument("Invalid offset passed to REHex::DocumentCtrl::region_offset_cmp()");
+	}
+	
+	if(a == b)
+	{
+		return 0;
+	}
+	else if(ra < rb || (ra == rb && a < b))
+	{
+		return -1;
+	}
+	else if(ra > rb || (ra == rb && a > b))
+	{
+		return 1;
+	}
+	else{
+		/* Unreachable. */
+		abort();
+	}
+}
+
 off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
 {
 	auto r = _data_region_by_offset(base);

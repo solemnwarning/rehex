@@ -1734,3 +1734,32 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
 		doc_ctrl->get_selection_ranges(),
 		ByteRangeSet().set_range(150, 100).set_range(300, 50));
 }
+
+TEST_F(DocumentCtrlTest, RegionOffsetCompare)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(150, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(150, 150), 0);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(350, 350), 0);
+	
+	EXPECT_LT(doc_ctrl->region_offset_cmp(150, 180), 0);
+	EXPECT_LT(doc_ctrl->region_offset_cmp(200, 150), 0);
+	EXPECT_LT(doc_ctrl->region_offset_cmp(300, 350), 0);
+	
+	EXPECT_GT(doc_ctrl->region_offset_cmp(180, 150), 0);
+	EXPECT_GT(doc_ctrl->region_offset_cmp(150, 200), 0);
+	EXPECT_GT(doc_ctrl->region_offset_cmp(350, 300), 0);
+	
+	EXPECT_THROW(doc_ctrl->region_offset_cmp(100, 150), std::invalid_argument);
+	EXPECT_THROW(doc_ctrl->region_offset_cmp(150, 100), std::invalid_argument);
+}

@@ -482,6 +482,14 @@ namespace REHex {
 			*/
 			ByteRangeSet get_selection_ranges();
 			
+			/**
+			 * @brief Returns the offset and length of the selection, if linear.
+			 *
+			 * If there is no selection, or the selection isn't linear and contiguous, the length
+			 * will be zero.
+			*/
+			std::pair<off_t, off_t> get_selection_linear();
+			
 			const std::vector<Region*> &get_regions() const;
 			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);

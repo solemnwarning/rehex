@@ -612,6 +612,17 @@ std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_in_region(GenericData
 	return std::make_pair(region_selection_offset, region_selection_length);
 }
 
+std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_linear()
+{
+	if(has_selection() && region_range_linear(selection_begin, selection_end))
+	{
+		return std::pair<off_t, off_t>(selection_begin, (selection_end - selection_begin) + 1);
+	}
+	else{
+		return std::pair<off_t, off_t>(-1, 0);
+	}
+}
+
 void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 {
 	wxBufferedPaintDC dc(this);

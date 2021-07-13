@@ -1515,51 +1515,62 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 
 		if(modifiers & wxMOD_SHIFT)
 		{
-			off_t selection_end = selection_off + selection_length;
-			
-			if(new_cursor_pos < cursor_pos)
+			if(region_offset_cmp(new_cursor_pos, cursor_pos) < 0)
 			{
-				if(selection_length > 0)
+				/* Cursor moved backwards. */
+				
+				if(has_selection())
 				{
-					if(selection_off >= cursor_pos)
+					if(region_offset_cmp(selection_begin, cursor_pos) >= 0)
 					{
-						assert(selection_end >= new_cursor_pos);
-						set_selection(new_cursor_pos, (selection_end - new_cursor_pos));
+						set_selection_raw(new_cursor_pos, selection_end);
 					}
 					else{
-						if(new_cursor_pos < selection_off)
+						if(region_offset_cmp(new_cursor_pos, selection_begin) < 0)
 						{
-							set_selection(new_cursor_pos, (selection_off - new_cursor_pos));
+							set_selection_raw(new_cursor_pos, region_offset_sub(selection_begin, 1));
+						}
+						else if(region_offset_cmp(selection_begin, new_cursor_pos) < 0)
+						{
+							set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos, 1));
 						}
 						else{
-							set_selection(selection_off, (new_cursor_pos - selection_off));
+							clear_selection();
 						}
 					}
 				}
 				else{
-					set_selection(new_cursor_pos, (cursor_pos - new_cursor_pos));
+					set_selection_raw(new_cursor_pos, region_offset_sub(cursor_pos, 1));
 				}
 			}
-			else if(new_cursor_pos > cursor_pos)
+			else if(region_offset_cmp(new_cursor_pos, cursor_pos) > 0)
 			{
-				if(selection_length > 0)
+				/* Cursor moved forwards. */
+				
+				if(has_selection())
 				{
-					if(selection_off >= cursor_pos)
+					if(region_offset_cmp(selection_begin, cursor_pos) >= 0)
 					{
-						if(new_cursor_pos >= selection_end)
+						/* Selected backwards, now going forwards back over selection. */
+						
+						if(region_offset_cmp(new_cursor_pos, selection_end) <= 0)
 						{
-							set_selection(selection_end, (new_cursor_pos - selection_end));
+							set_selection_raw(new_cursor_pos, selection_end);
+						}
+						else if(region_offset_cmp(region_offset_add(selection_end, 1), new_cursor_pos) == 0)
+						{
+							clear_selection();
 						}
 						else{
-							set_selection(new_cursor_pos, (selection_end - new_cursor_pos));
+							set_selection_raw(region_offset_add(selection_end, 1), region_offset_sub(new_cursor_pos, 1));
 						}
 					}
 					else{
-						set_selection(selection_off, (new_cursor_pos - selection_off));
+						set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos, 1));
 					}
 				}
 				else{
-					set_selection(cursor_pos, (new_cursor_pos - cursor_pos));
+					set_selection_raw(cursor_pos, region_offset_sub(new_cursor_pos, 1));
 				}
 			}
 		}
@@ -1635,12 +1646,12 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 				
 				if(event.ShiftDown())
 				{
-					if(clicked_offset > old_position)
+					if(region_offset_cmp(clicked_offset, old_position) > 0)
 					{
-						set_selection(old_position, (clicked_offset - old_position));
+						set_selection_raw(old_position, clicked_offset);
 					}
 					else{
-						set_selection(clicked_offset, (old_position - clicked_offset));
+						set_selection_raw(clicked_offset, old_position);
 					}
 					
 					mouse_shift_initial  = old_position;
@@ -1914,24 +1925,24 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 			
 			if(select_to_offset >= 0)
 			{
-				off_t new_sel_off, new_sel_len;
+				off_t new_sel_begin, new_sel_end;
 				
 				if(select_to_offset >= mouse_down_at_offset)
 				{
-					new_sel_off = mouse_down_at_offset;
-					new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
+					new_sel_begin = mouse_down_at_offset;
+					new_sel_end   = select_to_offset;
 				}
 				else{
-					new_sel_off = select_to_offset;
-					new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+					new_sel_begin = select_to_offset;
+					new_sel_end   = mouse_down_at_offset;
 				}
 				
-				if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
+				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
 				{
 					clear_selection();
 				}
 				else{
-					set_selection(new_sel_off, new_sel_len);
+					set_selection_raw(new_sel_begin, new_sel_end);
 				}
 				
 				/* TODO: Limit paint to affected area */
@@ -1943,24 +1954,24 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{
 				off_t select_to_offset = cr->c_offset;
-				off_t new_sel_off, new_sel_len;
+				off_t new_sel_begin, new_sel_end;
 				
-				if(select_to_offset >= mouse_down_at_offset)
+				if(select_to_offset > mouse_down_at_offset)
 				{
-					new_sel_off = mouse_down_at_offset;
-					new_sel_len = select_to_offset - mouse_down_at_offset;
+					new_sel_begin = mouse_down_at_offset;
+					new_sel_end   = region_offset_sub(select_to_offset, 1);
 				}
 				else{
-					new_sel_off = select_to_offset;
-					new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+					new_sel_begin = select_to_offset;
+					new_sel_end   = mouse_down_at_offset;
 				}
 				
-				if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
+				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
 				{
 					clear_selection();
 				}
 				else{
-					set_selection(new_sel_off, new_sel_len);
+					set_selection_raw(new_sel_begin, new_sel_end);
 				}
 				
 				/* TODO: Limit paint to affected area */

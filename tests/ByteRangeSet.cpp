@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1221,4 +1221,78 @@ TEST(ByteRangeSet, IntersectionEmptySet)
 	EXPECT_EQ(ByteRangeSet::intersection( NON_EMPTY_SET, EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
 	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     NON_EMPTY_SET ).get_ranges(), EMPTY_RANGE);
 	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
+}
+
+TEST(OrderedByteRangeSet, EmptySet)
+{
+	OrderedByteRangeSet brs;
+	
+	EXPECT_RANGES();
+}
+
+TEST(OrderedByteRangeSet, AddOneRange)
+{
+	OrderedByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+	);
+}
+
+TEST(OrderedByteRangeSet, AddExclusiveRanges)
+{
+	OrderedByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(80, 40);
+	brs.set_range(40, 30);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(80, 40),
+		ByteRangeSet::Range(40, 30),
+	);
+}
+
+TEST(OrderedByteRangeSet, AddSameRange)
+{
+	OrderedByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(10, 20);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+	);
+}
+
+TEST(OrderedByteRangeSet, AddOverlappingRanges)
+{
+	OrderedByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(15, 40);
+	brs.set_range(20, 10);
+	
+	brs.set_range(80, 10);
+	brs.set_range(70, 15);
+	brs.set_range(85, 10);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(30, 25),
+		ByteRangeSet::Range(80, 10),
+		ByteRangeSet::Range(70, 10),
+		ByteRangeSet::Range(90,  5),
+	);
+	
+	EXPECT_FALSE(brs.isset(9));
+	EXPECT_TRUE(brs.isset(10, 45));
+	EXPECT_FALSE(brs.isset(55));
+	
+	EXPECT_FALSE(brs.isset(69));
+	EXPECT_TRUE(brs.isset(70, 25));
+	EXPECT_FALSE(brs.isset(95));
 }

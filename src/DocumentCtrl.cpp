@@ -542,9 +542,9 @@ std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
 	}
 }
 
-REHex::ByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
+REHex::OrderedByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
 {
-	ByteRangeSet selected_ranges;
+	OrderedByteRangeSet selected_ranges;
 	
 	auto region = _data_region_by_offset(selection_begin);
 	off_t region_select_begin = selection_begin;

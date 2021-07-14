@@ -1611,44 +1611,44 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesWithinRegion)
 	doc_ctrl->set_selection_raw(120, 129);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(120, 10));
+		OrderedByteRangeSet().set_range(120, 10));
 	
 	doc_ctrl->set_selection_raw(100, 119);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(100, 20));
+		OrderedByteRangeSet().set_range(100, 20));
 	
 	doc_ctrl->set_selection_raw(120, 149);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(120, 30));
+		OrderedByteRangeSet().set_range(120, 30));
 	
 	doc_ctrl->set_selection_raw(100, 149);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(100, 50));
+		OrderedByteRangeSet().set_range(100, 50));
 	
 	/* 350 - */
 	
 	doc_ctrl->set_selection_raw(370, 379);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(370, 10));
+		OrderedByteRangeSet().set_range(370, 10));
 	
 	doc_ctrl->set_selection_raw(350, 369);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(350, 20));
+		OrderedByteRangeSet().set_range(350, 20));
 	
 	doc_ctrl->set_selection_raw(370, 399);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(370, 30));
+		OrderedByteRangeSet().set_range(370, 30));
 	
 	doc_ctrl->set_selection_raw(350, 399);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(350, 50));
+		OrderedByteRangeSet().set_range(350, 50));
 }
 
 TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningContiguousRegions)
@@ -1670,17 +1670,17 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningContiguousRegions)
 	doc_ctrl->set_selection_raw(220, 269);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(220, 50));
+		OrderedByteRangeSet().set_range(220, 30).set_range(250, 20));
 	
 	doc_ctrl->set_selection_raw(200, 299);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(200, 100));
+		OrderedByteRangeSet().set_range(200, 50).set_range(250, 50));
 	
 	doc_ctrl->set_selection_raw(200, 399);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(200, 200));
+		OrderedByteRangeSet().set_range(200, 50).set_range(250, 50).set_range(300, 50).set_range(350, 50));
 }
 
 TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningDiscontiguousRegions)
@@ -1702,12 +1702,12 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningDiscontiguousRegions)
 	doc_ctrl->set_selection_raw(120, 219);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(120, 30).set_range(200, 20));
+		OrderedByteRangeSet().set_range(120, 30).set_range(200, 20));
 	
 	doc_ctrl->set_selection_raw(100, 299);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(100, 50).set_range(200, 100));
+		OrderedByteRangeSet().set_range(100, 50).set_range(200, 50).set_range(250, 50));
 }
 
 TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
@@ -1727,12 +1727,12 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
 	doc_ctrl->set_selection_raw(220, 319);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(220, 30).set_range(150, 50).set_range(300, 20));
+		OrderedByteRangeSet().set_range(220, 30).set_range(150, 50).set_range(300, 20));
 	
 	doc_ctrl->set_selection_raw(200, 349);
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		ByteRangeSet().set_range(150, 100).set_range(300, 50));
+		OrderedByteRangeSet().set_range(200, 50).set_range(150, 50).set_range(300, 50));
 }
 
 TEST_F(DocumentCtrlTest, RegionOffsetCompare)

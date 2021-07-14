@@ -186,7 +186,7 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 {
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	ByteRangeSet selection = doc_ctrl->get_selection_ranges();
+	OrderedByteRangeSet selection = doc_ctrl->get_selection_ranges();
 	
 	if(selection.empty())
 	{

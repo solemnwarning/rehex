@@ -480,7 +480,7 @@ namespace REHex {
 			 * NOTE: This method may be expensive to call, as it potentially has to
 			 * iterate through all (data) regions in the file.
 			*/
-			ByteRangeSet get_selection_ranges();
+			OrderedByteRangeSet get_selection_ranges();
 			
 			/**
 			 * @brief Returns the offset and length of the selection, if linear.

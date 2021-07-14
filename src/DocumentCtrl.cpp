@@ -2978,9 +2978,12 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		}
 	};
 	
+	off_t scoped_selection_offset, scoped_selection_length;
+	std::tie(scoped_selection_offset, scoped_selection_length) = doc.get_selection_in_region(this);
+	
 	auto hex_highlight_func = [&](off_t offset)
 	{
-		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
+		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			bool hex_active = doc.hex_view_active();
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, hex_active);
@@ -2992,7 +2995,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto ascii_highlight_func = [&](off_t offset)
 	{
-		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
+		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			bool ascii_active = doc.ascii_view_active();
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, ascii_active);

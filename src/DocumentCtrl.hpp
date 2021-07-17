@@ -491,6 +491,7 @@ namespace REHex {
 			std::pair<off_t, off_t> get_selection_linear();
 			
 			const std::vector<Region*> &get_regions() const;
+			const std::vector<GenericDataRegion*> &get_data_regions() const;
 			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
 			GenericDataRegion *data_region_by_offset(off_t offset);

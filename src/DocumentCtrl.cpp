@@ -2489,6 +2489,11 @@ const std::vector<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_region
 	return regions;
 }
 
+const std::vector<REHex::DocumentCtrl::GenericDataRegion*> &REHex::DocumentCtrl::get_data_regions() const
+{
+	return data_regions;
+}
+
 void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 {
 	assert(!new_regions.empty());

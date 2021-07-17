@@ -849,7 +849,14 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
-	tab->doc_ctrl->set_selection(0, tab->doc->buffer_length());
+	
+	DocumentCtrl::GenericDataRegion *first_region = tab->doc_ctrl->get_data_regions().front();
+	DocumentCtrl::GenericDataRegion *last_region = tab->doc_ctrl->get_data_regions().back();
+	
+	off_t first_off = first_region->d_offset;
+	off_t last_off  = last_region->d_offset + last_region->d_length - (last_region->d_length > 0);
+	
+	tab->doc_ctrl->set_selection_raw(first_off, last_off);
 }
 
 void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)

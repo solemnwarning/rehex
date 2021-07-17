@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -627,7 +627,7 @@ void REHex::StringPanel::OnItemActivate(wxListEvent &event)
 	const ByteRangeSet::Range &string_range = strings[item_idx];
 	
 	document->set_cursor_position(string_range.offset);
-	document_ctrl->set_selection(string_range.offset, string_range.length);
+	document_ctrl->set_selection_raw(string_range.offset, (string_range.offset + string_range.length - 1));
 }
 
 void REHex::StringPanel::OnTimerTick(wxTimerEvent &event)

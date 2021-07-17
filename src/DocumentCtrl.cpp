@@ -106,8 +106,6 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	scroll_ydiv       = 1;
 	wheel_vert_accum  = 0;
 	wheel_horiz_accum = 0;
-	selection_off     = 0;
-	selection_length  = 0;
 	cursor_visible    = true;
 	mouse_down_area   = GenericDataRegion::SA_NONE;
 	mouse_shift_initial = -1;
@@ -453,11 +451,6 @@ void REHex::DocumentCtrl::linked_scroll_visit_others(const std::function<void(Do
 	}
 }
 
-void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
-{
-	set_selection_raw(off, off + length - 1);
-}
-
 bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
 {
 	assert(begin >= 0);
@@ -481,9 +474,6 @@ bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
 	selection_begin = begin;
 	selection_end = end;
 	
-	selection_off = begin;
-	selection_length = end - begin + 1;
-	
 	if(mouse_shift_initial < begin || mouse_shift_initial > end)
 	{
 		mouse_shift_initial = -1;
@@ -506,9 +496,6 @@ void REHex::DocumentCtrl::clear_selection()
 	selection_begin = -1;
 	selection_end   = -1;
 	
-	selection_off    = 0;
-	selection_length = 0;
-	
 	mouse_shift_initial = -1;
 	
 	{
@@ -519,11 +506,6 @@ void REHex::DocumentCtrl::clear_selection()
 	}
 	
 	Refresh();
-}
-
-std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection()
-{
-	return std::make_pair(selection_off, selection_length);
 }
 
 bool REHex::DocumentCtrl::has_selection()
@@ -1778,7 +1760,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 					_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
 				}
 				
-				if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
+				if(has_selection() && (clicked_offset < selection_begin || clicked_offset > selection_end))
 				{
 					clear_selection();
 				}
@@ -2913,11 +2895,14 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	static const int SECONDARY_SELECTION_MAX = 4096;
 	
+	off_t linear_selection_off, linear_selection_len;
+	std::tie(linear_selection_off, linear_selection_len) = doc.get_selection_linear();
+	
 	std::vector<unsigned char> selection_data;
-	if(doc.get_highlight_selection_match() && doc.selection_length > 0 && doc.selection_length <= SECONDARY_SELECTION_MAX)
+	if(doc.get_highlight_selection_match() && linear_selection_len > 0 && linear_selection_len <= SECONDARY_SELECTION_MAX)
 	{
 		try {
-			selection_data = doc.doc->read_data(doc.selection_off, doc.selection_length);
+			selection_data = doc.doc->read_data(linear_selection_off, linear_selection_len);
 		}
 		catch(const std::exception &e)
 		{
@@ -3250,49 +3235,6 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		draw_nibble(high_nibble, inv_high);
 		draw_nibble(low_nibble,  inv_low);
 		
-		if(cur_off >= doc_ctrl->selection_off && cur_off < (doc_ctrl->selection_off + doc_ctrl->selection_length) && !hex_active)
-		{
-			#if 0
-			dc.SetPen(selected_bg_1px);
-			
-			if(cur_off == doc_ctrl->selection_off || c == 0)
-			{
-				/* Draw vertical line left of selection. */
-				dc.DrawLine(pd_hx, y, pd_hx, (y + doc_ctrl->hf_height));
-			}
-			
-			if(cur_off == (doc_ctrl->selection_off + doc_ctrl->selection_length - 1) || i == (data_len - 1))
-			{
-				/* Draw vertical line right of selection. */
-				dc.DrawLine((pd_hx + doc_ctrl->hf_string_width(2) - 1), y, (pd_hx + doc_ctrl->hf_string_width(2) - 1), (y + doc_ctrl->hf_height));
-			}
-			
-			if(cur_off < (doc_ctrl->selection_off + bytes_per_line_actual))
-			{
-				/* Draw horizontal line above selection. */
-				dc.DrawLine(pd_hx, y, (pd_hx + doc_ctrl->hf_string_width(2)), y);
-			}
-			
-			if(cur_off > doc_ctrl->selection_off && cur_off <= (doc_ctrl->selection_off + bytes_per_line_actual) && c > 0 && (c % doc_ctrl->bytes_per_group) == 0)
-			{
-				/* Draw horizontal line above gap along top of selection. */
-				dc.DrawLine((pd_hx - doc_ctrl->hf_char_width()), y, pd_hx, y);
-			}
-			
-			if(cur_off >= (doc_ctrl->selection_off + doc_ctrl->selection_length - bytes_per_line_actual))
-			{
-				/* Draw horizontal line below selection. */
-				dc.DrawLine(pd_hx, (y + doc_ctrl->hf_height - 1), (pd_hx + doc_ctrl->hf_string_width(2)), (y + doc_ctrl->hf_height - 1));
-				
-				if(c > 0 && (c % doc_ctrl->bytes_per_group) == 0 && cur_off > doc_ctrl->selection_off)
-				{
-					/* Draw horizontal line below gap along bottom of selection. */
-					dc.DrawLine((pd_hx - doc_ctrl->hf_char_width()), (y + doc_ctrl->hf_height - 1), pd_hx, (y + doc_ctrl->hf_height - 1));
-				}
-			}
-			#endif
-		}
-		
 		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
 		{
 			/* Draw insert cursor. */
@@ -3469,36 +3411,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				dc.SetPen(norm_fg_1px);
 				
 				dc.DrawRectangle(ascii_x, y, doc_ctrl->hf_char_width(), doc_ctrl->hf_height);
-			}
-			else if(cur_off >= doc_ctrl->selection_off && cur_off < (doc_ctrl->selection_off + doc_ctrl->selection_length))
-			{
-				#if 0
-				dc.SetPen(selected_bg_1px);
-				
-				if(cur_off == doc_ctrl->selection_off || c == 0)
-				{
-					/* Draw vertical line left of selection. */
-					dc.DrawLine(ascii_x, y, ascii_x, (y + doc_ctrl->hf_height));
-				}
-				
-				if(cur_off == (doc_ctrl->selection_off + doc_ctrl->selection_length - 1) || c == (bytes_per_line_actual - 1))
-				{
-					/* Draw vertical line right of selection. */
-					dc.DrawLine((ascii_x + doc_ctrl->hf_char_width() - 1), y, (ascii_x + doc_ctrl->hf_char_width() - 1), (y + doc_ctrl->hf_height));
-				}
-				
-				if(cur_off < (doc_ctrl->selection_off + bytes_per_line_actual))
-				{
-					/* Draw horizontal line above selection. */
-					dc.DrawLine(ascii_x, y, (ascii_x + doc_ctrl->hf_char_width()), y);
-				}
-				
-				if(cur_off >= (doc_ctrl->selection_off + doc_ctrl->selection_length - bytes_per_line_actual))
-				{
-					/* Draw horizontal line below selection. */
-					dc.DrawLine(ascii_x, (y + doc_ctrl->hf_height - 1), (ascii_x + doc_ctrl->hf_char_width()), (y + doc_ctrl->hf_height - 1));
-				}
-				#endif
 			}
 		}
 		

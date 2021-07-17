@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -40,7 +40,7 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 	char initial_to[64]   = "";
 	char initial_len[64]  = "";
 	
-	std::pair<off_t, off_t> selection = document_ctrl.get_selection();
+	std::pair<off_t, off_t> selection = document_ctrl.get_selection_linear();
 	off_t selection_off    = selection.first;
 	off_t selection_length = selection.second;
 	

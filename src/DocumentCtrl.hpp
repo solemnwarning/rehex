@@ -433,10 +433,6 @@ namespace REHex {
 			void linked_scroll_insert_self_after(DocumentCtrl *p);
 			void linked_scroll_remove_self();
 			
-			/* NOTE: Both of these are deprecated. */
-			void set_selection(off_t off, off_t length);
-			std::pair<off_t, off_t> get_selection();
-			
 			/**
 			 * @brief Set the selection range.
 			 *
@@ -618,9 +614,6 @@ namespace REHex {
 			
 			off_t cpos_off{0};
 			bool insert_mode{false};
-			
-			off_t selection_off;
-			off_t selection_length;
 			
 			off_t selection_begin;
 			off_t selection_end;

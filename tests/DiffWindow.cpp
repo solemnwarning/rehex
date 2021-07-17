@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -270,7 +270,8 @@ TEST_F(DiffWindowTest, InsertDataWithinFullSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(100, 100);
+	doc_ctrl->set_selection_raw(100, 199);
+	ASSERT_TRUE(doc_ctrl->has_selection());
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data(199, x, 10);

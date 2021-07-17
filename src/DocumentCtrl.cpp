@@ -470,7 +470,9 @@ bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
 		if(begin_region == data_regions.end()
 			|| end_region == data_regions.end()
 			|| begin_region > end_region
-			|| (begin_region == end_region && begin > end))
+			|| (begin_region == end_region && begin > end)
+			/* Don't allow selecting the imaginary byte after the end. */
+			|| end == ((*end_region)->d_offset + (*end_region)->d_length))
 		{
 			return false;
 		}

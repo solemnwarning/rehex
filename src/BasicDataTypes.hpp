@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -77,16 +77,6 @@ namespace REHex
 				input_pos = 0;
 				input_buf.clear();
 				input_active = false;
-			}
-			
-			bool partial_selection(off_t selection_off, off_t selection_length)
-			{
-				off_t selection_end = selection_off + selection_length;
-				off_t d_end = d_offset + d_length;
-				
-				return selection_length > 0
-					&& (selection_off != d_offset || selection_length != d_length)
-					&& selection_off < d_end && d_offset < selection_end;
 			}
 			
 		protected:
@@ -203,10 +193,13 @@ namespace REHex
 					data_string = "????";
 				}
 				
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+				off_t total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
-				off_t selection_end = selection_off + selection_length;
+				off_t region_selection_offset, region_selection_length;
+				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
+				
+				off_t region_selection_end = region_selection_offset + region_selection_length;
 				
 				if(input_active)
 				{
@@ -219,7 +212,7 @@ namespace REHex
 						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
 					}
 				}
-				else if(partial_selection(selection_off, selection_length))
+				else if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
 				{
 					/* Selection encompasses *some* of our bytes and/or stretches
 					* beyond either end. Render the underlying hex bytes.
@@ -245,7 +238,7 @@ namespace REHex
 							'\0'
 						};
 						
-						if(selection_off <= (d_offset + (off_t)(i)) && selection_end > (d_offset + (off_t)(i)))
+						if(region_selection_offset <= (d_offset + (off_t)(i)) && region_selection_end > (d_offset + (off_t)(i)))
 						{
 							selected_text();
 						}
@@ -270,7 +263,7 @@ namespace REHex
 					normal_text();
 					dc.DrawText("]", (x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
 				}
-				else if(selection_length > 0 && (selection_off == d_offset && selection_length == d_length))
+				else if(region_selection_length > 0)
 				{
 					/* Selection matches our range exactly. Render value using selected
 					* text colours.
@@ -302,10 +295,13 @@ namespace REHex
 			
 			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
 			{
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+				off_t total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
-				if(partial_selection(selection_off, selection_length))
+				off_t region_selection_offset, region_selection_length;
+				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
+				
+				if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -460,10 +456,13 @@ namespace REHex
 				assert(offset >= d_offset);
 				assert(offset <= (d_offset + d_length));
 				
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+				off_t total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl->get_selection_raw();
 				
-				if(partial_selection(selection_off, selection_length))
+				off_t region_selection_offset, region_selection_length;
+				std::tie(region_selection_offset, region_selection_length) = doc_ctrl->get_selection_in_region(this);
+				
+				if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -652,13 +651,13 @@ namespace REHex
 			
 			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override
 			{
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
+				off_t selection_first, selection_last;
+				std::tie(selection_first, selection_last) = doc_ctrl.get_selection_raw();
 				
-				assert(selection_off >= d_offset);
-				assert((selection_off + selection_length) <= (d_offset + d_length));
+				assert(selection_first >= d_offset);
+				assert(selection_last < (d_offset + d_length));
 				
-				if(selection_off == d_offset && selection_length == d_length)
+				if(selection_first == d_offset && selection_last == (d_offset + d_length - 1))
 				{
 					/* Selection matches our data range. Copy stringified
 					 * numeric value to clipboard.
@@ -687,10 +686,10 @@ namespace REHex
 			
 			virtual bool OnPaste(DocumentCtrl *doc_ctrl)
 			{
-				off_t selection_off, selection_length;
-				std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+				off_t selection_first, selection_last;
+				std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 				
-				if(selection_length > 0 && (selection_off != d_offset || selection_length != d_length))
+				if(doc_ctrl->has_selection() && (selection_first != d_offset || selection_last != (d_offset + d_length - 1)))
 				{
 					/* There is a selection and it doesn't exactly match our
 					 * data range. Fall back to default handling.

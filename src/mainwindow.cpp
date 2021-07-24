@@ -763,17 +763,18 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		 * region the chance to handle the paste event.
 		*/
 		
-		off_t selection_off, selection_length;
-		std::tie(selection_off, selection_length) = tab->doc_ctrl->get_selection();
-		
-		if(selection_length > 0)
+		if(tab->doc_ctrl->has_selection())
 		{
-			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_off);
+			off_t selection_first, selection_last;
+			std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
+			
+			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_first);
 			assert(selection_region != NULL);
 			
-			assert(selection_region->d_offset <= selection_off);
+			assert(selection_region->d_offset <= selection_last);
+			assert((selection_region->d_offset + (selection_region->d_length)) > selection_first);
 			
-			if((selection_region->d_offset + selection_region->d_length) >= (selection_off + selection_length))
+			if((selection_region->d_offset + selection_region->d_length) > selection_last)
 			{
 				if(selection_region->OnPaste(tab->doc_ctrl))
 				{
@@ -848,7 +849,14 @@ void REHex::MainWindow::OnRedo(wxCommandEvent &event)
 void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
-	tab->doc_ctrl->set_selection(0, tab->doc->buffer_length());
+	
+	DocumentCtrl::GenericDataRegion *first_region = tab->doc_ctrl->get_data_regions().front();
+	DocumentCtrl::GenericDataRegion *last_region = tab->doc_ctrl->get_data_regions().back();
+	
+	off_t first_off = first_region->d_offset;
+	off_t last_off  = last_region->d_offset + last_region->d_length - (last_region->d_length > 0);
+	
+	tab->doc_ctrl->set_selection_raw(first_off, last_off);
 }
 
 void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
@@ -1412,24 +1420,23 @@ void REHex::MainWindow::_update_status_offset(Tab *tab)
 
 void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 {
-	std::pair<off_t,off_t> selection = doc_ctrl->get_selection();
-	
-	off_t selection_off    = selection.first;
-	off_t selection_length = selection.second;
-	
-	if(selection_length > 0)
+	if(doc_ctrl->has_selection())
 	{
-		off_t selection_end = (selection_off + selection_length) - 1;
+		off_t selection_first, selection_last;
+		std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 		
-		std::string from_text = format_offset(selection_off, doc_ctrl->get_offset_display_base(), selection_end);
-		std::string to_text   = format_offset(selection_end, doc_ctrl->get_offset_display_base(), selection_end);
+		std::string from_text = format_offset(selection_first, doc_ctrl->get_offset_display_base(), selection_last);
+		std::string to_text   = format_offset(selection_last,  doc_ctrl->get_offset_display_base(), selection_last);
+		
+		ByteRangeSet selection = doc_ctrl->get_selection_ranges();
+		off_t selection_bytes = selection.total_bytes();
 		
 		char buf[64];
 		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u bytes)",
 			from_text.c_str(),
 			to_text.c_str(),
 			
-			(unsigned int)(selection_length));
+			(unsigned int)(selection_bytes));
 		
 		SetStatusText(buf, 1);
 	}

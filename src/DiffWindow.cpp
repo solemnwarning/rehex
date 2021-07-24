@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -512,24 +512,25 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				r->doc_ctrl->set_cursor_position(cursor_pos);
 			}
 			
-			off_t selection_off, selection_length;
-			std::tie(selection_off, selection_length) = r->doc_ctrl->get_selection();
-			
-			if(selection_length > 0)
+			if(r->doc_ctrl->has_selection())
 			{
-				if((event.offset < selection_off && (event.offset + event.length) > selection_off)
-					|| (event.offset >= selection_off && event.offset < (selection_off + selection_length)))
+				off_t selection_first, selection_last;
+				std::tie(selection_first, selection_last) = r->doc_ctrl->get_selection_raw();
+				
+				if((event.offset < selection_first && (event.offset + event.length) > selection_first)
+					|| (event.offset >= selection_first && event.offset <= selection_last))
 				{
 					r->doc_ctrl->clear_selection();
 				}
-				else if(event.offset < selection_off)
+				else if(event.offset < selection_first)
 				{
-					selection_off -= event.length;
+					selection_first -= event.length;
+					selection_last  -= event.length;
 					
-					assert(selection_off >= r->offset);
-					assert((selection_off + selection_length) <= (r->offset + r->length));
+					assert(selection_first >= r->offset);
+					assert(selection_last < (r->offset + r->length));
 					
-					r->doc_ctrl->set_selection(selection_off, selection_length);
+					r->doc_ctrl->set_selection_raw(selection_first, selection_last);
 				}
 			}
 		}
@@ -571,20 +572,22 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 				r->doc_ctrl->set_cursor_position(cursor_pos);
 			}
 			
-			off_t selection_off, selection_length;
-			std::tie(selection_off, selection_length) = r->doc_ctrl->get_selection();
-			if(selection_length > 0)
+			if(r->doc_ctrl->has_selection())
 			{
-				if(event.offset <= selection_off)
+				off_t selection_first, selection_last;
+				std::tie(selection_first, selection_last) = r->doc_ctrl->get_selection_raw();
+				
+				if(event.offset <= selection_first)
 				{
-					selection_off += event.length;
+					selection_first += event.length;
+					selection_last  += event.length;
 					
-					assert(selection_off >= r->offset);
-					assert((selection_off + selection_length) <= (r->offset + r->length));
+					assert(selection_first >= r->offset);
+					assert(selection_last < (r->offset + r->length));
 					
-					r->doc_ctrl->set_selection(selection_off, selection_length);
+					r->doc_ctrl->set_selection_raw(selection_first, selection_last);
 				}
-				else if(event.offset < (selection_off + selection_length))
+				else if(event.offset <= selection_last)
 				{
 					r->doc_ctrl->clear_selection();
 				}
@@ -604,12 +607,9 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 	{
 		if(r->doc == src)
 		{
-			off_t selection_off, selection_length;
-			std::tie(selection_off, selection_length) = r->doc_ctrl->get_selection();
+			ByteRangeSet selection = r->doc_ctrl->get_selection_ranges();
 			
-			if(selection_length > 0 && (
-				(event.offset < selection_off && (event.offset + event.length) > selection_off)
-				|| (event.offset >= selection_off && event.offset < (selection_off + selection_length))))
+			if(selection.isset_any(event.offset, event.length))
 			{
 				r->doc_ctrl->clear_selection();
 			}
@@ -680,14 +680,12 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 	assert(source_range != ranges.end());
 	
 	off_t cursor_pos = source_range->doc_ctrl->get_cursor_position();
-	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = source_range->doc_ctrl->get_selection();
+	bool has_selection = source_range->doc_ctrl->has_selection();
 	
 	wxMenu menu;
 	
 	menu.Append(wxID_COPY, "&Copy");
-	menu.Enable(wxID_COPY, (selection_length > 0));
+	menu.Enable(wxID_COPY, has_selection);
 	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 	{
 		copy_from_doc(source_range->doc, source_range->doc_ctrl, this, false);

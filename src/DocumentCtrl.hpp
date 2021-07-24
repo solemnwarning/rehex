@@ -29,6 +29,7 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "ByteRangeSet.hpp"
 #include "document.hpp"
 #include "Events.hpp"
 #include "NestedOffsetLengthMap.hpp"
@@ -432,15 +433,101 @@ namespace REHex {
 			void linked_scroll_insert_self_after(DocumentCtrl *p);
 			void linked_scroll_remove_self();
 			
-			void set_selection(off_t off, off_t length);
+			/**
+			 * @brief Set the selection range.
+			 *
+			 * @param begin Data offset at beginning of selection.
+			 * @param end Data offset at end of selection (inclusive).
+			*/
+			bool set_selection_raw(off_t begin, off_t end);
+			
+			/**
+			 * @brief Clear the selection (if any).
+			*/
 			void clear_selection();
-			std::pair<off_t, off_t> get_selection();
+			
+			/**
+			 * @brief Returns true if there is a selection.
+			*/
+			bool has_selection();
+			
+			/**
+			 * @brief Returns the "raw" selection as a begin and end offset.
+			 *
+			 * NOTE: Unlike most "end" pointers, the end offset returned from this
+			 * method is the last byte in the selection, not one past it.
+			*/
+			std::pair<off_t, off_t> get_selection_raw();
+			
+			/**
+			 * @brief Returns the subset of the current selection scoped to a region.
+			 *
+			 * The return value from this method is the offset (file relative) and the
+			 * length of the current selection, scoped to the given region.
+			 *
+			 * If there is no selection, or the selection doesn't include any bytes
+			 * from the given region, the returned length will be <= 0.
+			*/
+			std::pair<off_t, off_t> get_selection_in_region(GenericDataRegion *region);
+			
+			/**
+			 * @brief Returns the set of all bytes currently selected.
+			 *
+			 * NOTE: This method may be expensive to call, as it potentially has to
+			 * iterate through all (data) regions in the file.
+			*/
+			OrderedByteRangeSet get_selection_ranges();
+			
+			/**
+			 * @brief Returns the offset and length of the selection, if linear.
+			 *
+			 * If there is no selection, or the selection isn't linear and contiguous, the length
+			 * will be zero.
+			*/
+			std::pair<off_t, off_t> get_selection_linear();
 			
 			const std::vector<Region*> &get_regions() const;
+			const std::vector<GenericDataRegion*> &get_data_regions() const;
 			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
 			GenericDataRegion *data_region_by_offset(off_t offset);
 			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
+			
+			/**
+			 * @brief Compare two offsets in the address space defined by the regions.
+			 *
+			 * Returns zero if the two offsets are equal, a negative integer if a is
+			 * less than b and a positive integer if a is greater than b.
+			 *
+			 * Throws an exception of type std::invalid_argument if either of the
+			 * offsets are invalid.
+			*/
+			int region_offset_cmp(off_t a, off_t b);
+			
+			/**
+			 * @brief Increment an offset in the address space defined by the regions.
+			 *
+			 * @param base Base offset to start at.
+			 * @param add Number of bytes to increment base by.
+			 *
+			 * @return New offset, negative if invalid.
+			*/
+			off_t region_offset_add(off_t base, off_t add);
+			
+			/**
+			 * @brief Decrement an offset in the address space defined by the regions.
+			 *
+			 * @param base Base offset to start at.
+			 * @param add Number of bytes to decrement base by.
+			 *
+			 * @return New offset, negative if invalid.
+			*/
+			off_t region_offset_sub(off_t base, off_t sub);
+			
+			/**
+			 * @brief Check if a range of offsets is linear and contiguous.
+			*/
+			bool region_range_linear(off_t begin_offset, off_t end_offset_incl);
 			
 			wxFont &get_font();
 			
@@ -528,8 +615,8 @@ namespace REHex {
 			off_t cpos_off{0};
 			bool insert_mode{false};
 			
-			off_t selection_off;
-			off_t selection_length;
+			off_t selection_begin;
+			off_t selection_end;
 			
 			bool cursor_visible;
 			wxTimer redraw_cursor_timer;

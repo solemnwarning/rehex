@@ -73,6 +73,8 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	hex_font(wxFontInfo().Family(wxFONTFAMILY_MODERN)),
 	linked_scroll_prev(NULL),
 	linked_scroll_next(NULL),
+	selection_begin(-1),
+	selection_end(-1),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
@@ -104,8 +106,6 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	scroll_ydiv       = 1;
 	wheel_vert_accum  = 0;
 	wheel_horiz_accum = 0;
-	selection_off     = 0;
-	selection_length  = 0;
 	cursor_visible    = true;
 	mouse_down_area   = GenericDataRegion::SA_NONE;
 	mouse_shift_initial = -1;
@@ -451,12 +451,30 @@ void REHex::DocumentCtrl::linked_scroll_visit_others(const std::function<void(Do
 	}
 }
 
-void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
+bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
 {
-	selection_off    = off;
-	selection_length = length;
+	assert(begin >= 0);
+	assert(end >= 0);
 	
-	if(length <= 0 || mouse_shift_initial < off || mouse_shift_initial > (off + length))
+	{
+		auto begin_region = _data_region_by_offset(begin);
+		auto end_region = _data_region_by_offset(end);
+		
+		if(begin_region == data_regions.end()
+			|| end_region == data_regions.end()
+			|| begin_region > end_region
+			|| (begin_region == end_region && begin > end)
+			/* Don't allow selecting the imaginary byte after the end. */
+			|| end == ((*end_region)->d_offset + (*end_region)->d_length))
+		{
+			return false;
+		}
+	}
+	
+	selection_begin = begin;
+	selection_end = end;
+	
+	if(mouse_shift_initial < begin || mouse_shift_initial > end)
 	{
 		mouse_shift_initial = -1;
 	}
@@ -468,18 +486,125 @@ void REHex::DocumentCtrl::set_selection(off_t off, off_t length)
 		wxPostEvent(this, event);
 	}
 	
-	/* TODO: Limit paint to affected area */
 	Refresh();
+	
+	return true;
 }
 
 void REHex::DocumentCtrl::clear_selection()
 {
-	set_selection(0, 0);
+	selection_begin = -1;
+	selection_end   = -1;
+	
+	mouse_shift_initial = -1;
+	
+	{
+		wxCommandEvent event(REHex::EV_SELECTION_CHANGED);
+		event.SetEventObject(this);
+		
+		wxPostEvent(this, event);
+	}
+	
+	Refresh();
 }
 
-std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection()
+bool REHex::DocumentCtrl::has_selection()
 {
-	return std::make_pair(selection_off, selection_length);
+	assert((selection_begin < 0) == (selection_end < 0));
+	return !(selection_begin < 0 || selection_end < 0);
+}
+
+std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
+{
+	if(selection_begin < 0)
+	{
+		/* No selection. */
+		return std::make_pair(-1, -1);
+	}
+	else{
+		return std::make_pair(selection_begin, selection_end);
+	}
+}
+
+REHex::OrderedByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
+{
+	OrderedByteRangeSet selected_ranges;
+	
+	auto region = _data_region_by_offset(selection_begin);
+	off_t region_select_begin = selection_begin;
+	
+	while(region != data_regions.end())
+	{
+		assert(region_select_begin >= (*region)->d_offset);
+		assert(region_select_begin <= ((*region)->d_offset + (*region)->d_length));
+		
+		if((*region)->d_offset <= selection_end && ((*region)->d_length + (*region)->d_offset) > selection_end)
+		{
+			if(selection_end > region_select_begin)
+			{
+				selected_ranges.set_range(region_select_begin, (selection_end - region_select_begin) + 1);
+			}
+			
+			break;
+		}
+		else{
+			selected_ranges.set_range(region_select_begin, ((*region)->d_offset + (*region)->d_length) - region_select_begin);
+		}
+		
+		++region;
+		
+		if(region != data_regions.end())
+		{
+			region_select_begin = (*region)->d_offset;
+		}
+	}
+	
+	return selected_ranges;
+}
+
+std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_in_region(GenericDataRegion *region)
+{
+	if(selection_begin < 0)
+	{
+		/* No selection. */
+		return std::make_pair<off_t, off_t>(-1, -1);
+	}
+	
+	auto region_iter = _data_region_by_offset(region->d_offset);
+	assert(region_iter != data_regions.end());
+	
+	auto sel_begin_iter = _data_region_by_offset(selection_begin);
+	assert(sel_begin_iter != data_regions.end());
+	
+	auto sel_end_iter = _data_region_by_offset(selection_end);
+	assert(sel_end_iter != data_regions.end());
+	
+	if(sel_begin_iter > region_iter || sel_end_iter < region_iter)
+	{
+		/* Selection doesn't overlap region. */
+		return std::make_pair<off_t, off_t>(-1, -1);
+	}
+	
+	off_t region_selection_offset = (sel_begin_iter < region_iter)
+		? region->d_offset
+		: selection_begin;
+	
+	off_t region_selection_length = (sel_end_iter > region_iter)
+		? (region->d_length - (region_selection_offset - region->d_offset))
+		: ((selection_end - region_selection_offset) + 1);
+	
+	return std::make_pair(region_selection_offset, region_selection_length);
+}
+
+std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_linear()
+{
+	if(has_selection() && region_range_linear(selection_begin, selection_end))
+	{
+		return std::pair<off_t, off_t>(selection_begin, (selection_end - selection_begin) + 1);
+	}
+	else{
+		return std::pair<off_t, off_t>(-1, 0);
+	}
 }
 
 void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
@@ -1377,51 +1502,62 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 
 		if(modifiers & wxMOD_SHIFT)
 		{
-			off_t selection_end = selection_off + selection_length;
-			
-			if(new_cursor_pos < cursor_pos)
+			if(region_offset_cmp(new_cursor_pos, cursor_pos) < 0)
 			{
-				if(selection_length > 0)
+				/* Cursor moved backwards. */
+				
+				if(has_selection())
 				{
-					if(selection_off >= cursor_pos)
+					if(region_offset_cmp(selection_begin, cursor_pos) >= 0)
 					{
-						assert(selection_end >= new_cursor_pos);
-						set_selection(new_cursor_pos, (selection_end - new_cursor_pos));
+						set_selection_raw(new_cursor_pos, selection_end);
 					}
 					else{
-						if(new_cursor_pos < selection_off)
+						if(region_offset_cmp(new_cursor_pos, selection_begin) < 0)
 						{
-							set_selection(new_cursor_pos, (selection_off - new_cursor_pos));
+							set_selection_raw(new_cursor_pos, region_offset_sub(selection_begin, 1));
+						}
+						else if(region_offset_cmp(selection_begin, new_cursor_pos) < 0)
+						{
+							set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos, 1));
 						}
 						else{
-							set_selection(selection_off, (new_cursor_pos - selection_off));
+							clear_selection();
 						}
 					}
 				}
 				else{
-					set_selection(new_cursor_pos, (cursor_pos - new_cursor_pos));
+					set_selection_raw(new_cursor_pos, region_offset_sub(cursor_pos, 1));
 				}
 			}
-			else if(new_cursor_pos > cursor_pos)
+			else if(region_offset_cmp(new_cursor_pos, cursor_pos) > 0)
 			{
-				if(selection_length > 0)
+				/* Cursor moved forwards. */
+				
+				if(has_selection())
 				{
-					if(selection_off >= cursor_pos)
+					if(region_offset_cmp(selection_begin, cursor_pos) >= 0)
 					{
-						if(new_cursor_pos >= selection_end)
+						/* Selected backwards, now going forwards back over selection. */
+						
+						if(region_offset_cmp(new_cursor_pos, selection_end) <= 0)
 						{
-							set_selection(selection_end, (new_cursor_pos - selection_end));
+							set_selection_raw(new_cursor_pos, selection_end);
+						}
+						else if(region_offset_cmp(region_offset_add(selection_end, 1), new_cursor_pos) == 0)
+						{
+							clear_selection();
 						}
 						else{
-							set_selection(new_cursor_pos, (selection_end - new_cursor_pos));
+							set_selection_raw(region_offset_add(selection_end, 1), region_offset_sub(new_cursor_pos, 1));
 						}
 					}
 					else{
-						set_selection(selection_off, (new_cursor_pos - selection_off));
+						set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos, 1));
 					}
 				}
 				else{
-					set_selection(cursor_pos, (new_cursor_pos - cursor_pos));
+					set_selection_raw(cursor_pos, region_offset_sub(new_cursor_pos, 1));
 				}
 			}
 		}
@@ -1497,12 +1633,12 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 				
 				if(event.ShiftDown())
 				{
-					if(clicked_offset > old_position)
+					if(region_offset_cmp(clicked_offset, old_position) > 0)
 					{
-						set_selection(old_position, (clicked_offset - old_position));
+						set_selection_raw(old_position, clicked_offset);
 					}
 					else{
-						set_selection(clicked_offset, (old_position - clicked_offset));
+						set_selection_raw(clicked_offset, old_position);
 					}
 					
 					mouse_shift_initial  = old_position;
@@ -1627,7 +1763,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 					_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
 				}
 				
-				if(clicked_offset < selection_off || clicked_offset >= selection_off + selection_length)
+				if(has_selection() && (clicked_offset < selection_begin || clicked_offset > selection_end))
 				{
 					clear_selection();
 				}
@@ -1776,24 +1912,24 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 			
 			if(select_to_offset >= 0)
 			{
-				off_t new_sel_off, new_sel_len;
+				off_t new_sel_begin, new_sel_end;
 				
 				if(select_to_offset >= mouse_down_at_offset)
 				{
-					new_sel_off = mouse_down_at_offset;
-					new_sel_len = (select_to_offset - mouse_down_at_offset) + 1;
+					new_sel_begin = mouse_down_at_offset;
+					new_sel_end   = select_to_offset;
 				}
 				else{
-					new_sel_off = select_to_offset;
-					new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+					new_sel_begin = select_to_offset;
+					new_sel_end   = mouse_down_at_offset;
 				}
 				
-				if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
+				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
 				{
 					clear_selection();
 				}
 				else{
-					set_selection(new_sel_off, new_sel_len);
+					set_selection_raw(new_sel_begin, new_sel_end);
 				}
 				
 				/* TODO: Limit paint to affected area */
@@ -1805,24 +1941,24 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{
 				off_t select_to_offset = cr->c_offset;
-				off_t new_sel_off, new_sel_len;
+				off_t new_sel_begin, new_sel_end;
 				
-				if(select_to_offset >= mouse_down_at_offset)
+				if(select_to_offset > mouse_down_at_offset)
 				{
-					new_sel_off = mouse_down_at_offset;
-					new_sel_len = select_to_offset - mouse_down_at_offset;
+					new_sel_begin = mouse_down_at_offset;
+					new_sel_end   = region_offset_sub(select_to_offset, 1);
 				}
 				else{
-					new_sel_off = select_to_offset;
-					new_sel_len = (mouse_down_at_offset - select_to_offset) + 1;
+					new_sel_begin = select_to_offset;
+					new_sel_end   = mouse_down_at_offset;
 				}
 				
-				if(new_sel_len == 1 && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
+				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
 				{
 					clear_selection();
 				}
 				else{
-					set_selection(new_sel_off, new_sel_len);
+					set_selection_raw(new_sel_begin, new_sel_end);
 				}
 				
 				/* TODO: Limit paint to affected area */
@@ -2007,6 +2143,162 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	return region;
 }
 
+int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
+{
+	auto ra = _data_region_by_offset(a);
+	auto rb = _data_region_by_offset(b);
+	
+	if(ra == data_regions.end() || rb == data_regions.end())
+	{
+		throw std::invalid_argument("Invalid offset passed to REHex::DocumentCtrl::region_offset_cmp()");
+	}
+	
+	if(a == b)
+	{
+		return 0;
+	}
+	else if(ra < rb || (ra == rb && a < b))
+	{
+		return -1;
+	}
+	else if(ra > rb || (ra == rb && a > b))
+	{
+		return 1;
+	}
+	else{
+		/* Unreachable. */
+		abort();
+	}
+}
+
+off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
+{
+	auto r = _data_region_by_offset(base);
+	if(r == data_regions.end())
+	{
+		/* Base offset is invalid. */
+		return -1;
+	}
+	
+	if(add > 0)
+	{
+		/* Increment base by walking forwards from base's data region until we've covered
+		 * the requested number of bytes, or run out of regions.
+		*/
+		
+		while(r != data_regions.end())
+		{
+			assert(base >= (*r)->d_offset);
+			
+			off_t remaining_in_r = (*r)->d_length - (base - (*r)->d_offset);
+			
+			if(remaining_in_r <= add)
+			{
+				++r;
+				
+				if(r == data_regions.end())
+				{
+					if(remaining_in_r == add)
+					{
+						/* Special case: Last region in document includes
+						 * one byte past its end (for inserting at end).
+						*/
+						
+						return base + add;
+					}
+				}
+				else{
+					base = (*r)->d_offset;
+					add -= remaining_in_r;
+				}
+			}
+			else{
+				return base + add;
+			}
+		}
+	}
+	else if(add < 0)
+	{
+		/* Decrement by walking backwards from base's data region until we've subtracted
+		 * the requested number of bytes, or ran out of regions and failed.
+		*/
+		
+		off_t sub = -add;
+		
+		while(true)
+		{
+			assert(base >= (*r)->d_offset);
+			
+			off_t remaining_in_r = base - (*r)->d_offset;
+			
+			if(remaining_in_r < sub)
+			{
+				/* Current region doesn't have enough bytes left before base to
+				 * fulfil subtraction requirement. Count what it has and jump to
+				 * end of previous region.
+				*/
+				
+				if(r == data_regions.begin())
+				{
+					/* No more regions. Fail. */
+					break;
+				}
+				else{
+					--r;
+					
+					assert((*r)->d_length > 0);
+					
+					base = (*r)->d_offset + (*r)->d_length - 1;
+					sub -= remaining_in_r + 1;
+				}
+			}
+			else{
+				return base - sub;
+			}
+		}
+	}
+	else if(add == 0)
+	{
+		/* Nothing to add - just return base. */
+		return base;
+	}
+	
+	/* Ran out of regions while adding/subtracting above. */
+	return -1;
+}
+
+off_t REHex::DocumentCtrl::region_offset_sub(off_t base, off_t sub)
+{
+	return region_offset_add(base, -sub);
+}
+
+bool REHex::DocumentCtrl::region_range_linear(off_t begin_offset, off_t end_offset_incl)
+{
+	off_t at = begin_offset;
+	auto r = _data_region_by_offset(at);
+	
+	if(r == data_regions.end())
+	{
+		return false;
+	}
+	
+	while(true)
+	{
+		at += (*r)->d_length - (at - (*r)->d_offset);
+		++r;
+		
+		if(at > end_offset_incl)
+		{
+			return true;
+		}
+		
+		if(r == data_regions.end() || (*r)->d_offset != at)
+		{
+			return false;
+		}
+	}
+}
+
 /* Scroll the Document vertically to make the given line visible.
  * Does nothing if the line is already on-screen.
 */
@@ -2182,6 +2474,11 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 const std::vector<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
 {
 	return regions;
+}
+
+const std::vector<REHex::DocumentCtrl::GenericDataRegion*> &REHex::DocumentCtrl::get_data_regions() const
+{
+	return data_regions;
 }
 
 void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
@@ -2601,11 +2898,14 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	static const int SECONDARY_SELECTION_MAX = 4096;
 	
+	off_t linear_selection_off, linear_selection_len;
+	std::tie(linear_selection_off, linear_selection_len) = doc.get_selection_linear();
+	
 	std::vector<unsigned char> selection_data;
-	if(doc.get_highlight_selection_match() && doc.selection_length > 0 && doc.selection_length <= SECONDARY_SELECTION_MAX)
+	if(doc.get_highlight_selection_match() && linear_selection_len > 0 && linear_selection_len <= SECONDARY_SELECTION_MAX)
 	{
 		try {
-			selection_data = doc.doc->read_data(doc.selection_off, doc.selection_length);
+			selection_data = doc.doc->read_data(linear_selection_off, linear_selection_len);
 		}
 		catch(const std::exception &e)
 		{
@@ -2673,9 +2973,12 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		}
 	};
 	
+	off_t scoped_selection_offset, scoped_selection_length;
+	std::tie(scoped_selection_offset, scoped_selection_length) = doc.get_selection_in_region(this);
+	
 	auto hex_highlight_func = [&](off_t offset)
 	{
-		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
+		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			bool hex_active = doc.hex_view_active();
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, hex_active);
@@ -2687,7 +2990,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto ascii_highlight_func = [&](off_t offset)
 	{
-		if(doc.selection_length > 0 && offset >= doc.selection_off && offset < (doc.selection_off + doc.selection_length))
+		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			bool ascii_active = doc.ascii_view_active();
 			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, ascii_active);
@@ -2935,49 +3238,6 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		draw_nibble(high_nibble, inv_high);
 		draw_nibble(low_nibble,  inv_low);
 		
-		if(cur_off >= doc_ctrl->selection_off && cur_off < (doc_ctrl->selection_off + doc_ctrl->selection_length) && !hex_active)
-		{
-			#if 0
-			dc.SetPen(selected_bg_1px);
-			
-			if(cur_off == doc_ctrl->selection_off || c == 0)
-			{
-				/* Draw vertical line left of selection. */
-				dc.DrawLine(pd_hx, y, pd_hx, (y + doc_ctrl->hf_height));
-			}
-			
-			if(cur_off == (doc_ctrl->selection_off + doc_ctrl->selection_length - 1) || i == (data_len - 1))
-			{
-				/* Draw vertical line right of selection. */
-				dc.DrawLine((pd_hx + doc_ctrl->hf_string_width(2) - 1), y, (pd_hx + doc_ctrl->hf_string_width(2) - 1), (y + doc_ctrl->hf_height));
-			}
-			
-			if(cur_off < (doc_ctrl->selection_off + bytes_per_line_actual))
-			{
-				/* Draw horizontal line above selection. */
-				dc.DrawLine(pd_hx, y, (pd_hx + doc_ctrl->hf_string_width(2)), y);
-			}
-			
-			if(cur_off > doc_ctrl->selection_off && cur_off <= (doc_ctrl->selection_off + bytes_per_line_actual) && c > 0 && (c % doc_ctrl->bytes_per_group) == 0)
-			{
-				/* Draw horizontal line above gap along top of selection. */
-				dc.DrawLine((pd_hx - doc_ctrl->hf_char_width()), y, pd_hx, y);
-			}
-			
-			if(cur_off >= (doc_ctrl->selection_off + doc_ctrl->selection_length - bytes_per_line_actual))
-			{
-				/* Draw horizontal line below selection. */
-				dc.DrawLine(pd_hx, (y + doc_ctrl->hf_height - 1), (pd_hx + doc_ctrl->hf_string_width(2)), (y + doc_ctrl->hf_height - 1));
-				
-				if(c > 0 && (c % doc_ctrl->bytes_per_group) == 0 && cur_off > doc_ctrl->selection_off)
-				{
-					/* Draw horizontal line below gap along bottom of selection. */
-					dc.DrawLine((pd_hx - doc_ctrl->hf_char_width()), (y + doc_ctrl->hf_height - 1), pd_hx, (y + doc_ctrl->hf_height - 1));
-				}
-			}
-			#endif
-		}
-		
 		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
 		{
 			/* Draw insert cursor. */
@@ -3154,36 +3414,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				dc.SetPen(norm_fg_1px);
 				
 				dc.DrawRectangle(ascii_x, y, doc_ctrl->hf_char_width(), doc_ctrl->hf_height);
-			}
-			else if(cur_off >= doc_ctrl->selection_off && cur_off < (doc_ctrl->selection_off + doc_ctrl->selection_length))
-			{
-				#if 0
-				dc.SetPen(selected_bg_1px);
-				
-				if(cur_off == doc_ctrl->selection_off || c == 0)
-				{
-					/* Draw vertical line left of selection. */
-					dc.DrawLine(ascii_x, y, ascii_x, (y + doc_ctrl->hf_height));
-				}
-				
-				if(cur_off == (doc_ctrl->selection_off + doc_ctrl->selection_length - 1) || c == (bytes_per_line_actual - 1))
-				{
-					/* Draw vertical line right of selection. */
-					dc.DrawLine((ascii_x + doc_ctrl->hf_char_width() - 1), y, (ascii_x + doc_ctrl->hf_char_width() - 1), (y + doc_ctrl->hf_height));
-				}
-				
-				if(cur_off < (doc_ctrl->selection_off + bytes_per_line_actual))
-				{
-					/* Draw horizontal line above selection. */
-					dc.DrawLine(ascii_x, y, (ascii_x + doc_ctrl->hf_char_width()), y);
-				}
-				
-				if(cur_off >= (doc_ctrl->selection_off + doc_ctrl->selection_length - bytes_per_line_actual))
-				{
-					/* Draw horizontal line below selection. */
-					dc.DrawLine(ascii_x, (y + doc_ctrl->hf_height - 1), (ascii_x + doc_ctrl->hf_char_width()), (y + doc_ctrl->hf_height - 1));
-				}
-				#endif
 			}
 		}
 		

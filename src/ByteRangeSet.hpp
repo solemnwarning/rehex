@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -83,14 +83,21 @@ namespace REHex
 			template<typename T> ByteRangeSet(const T begin, const T end):
 				ranges(begin, end) {}
 			
+			bool operator==(const ByteRangeSet &rhs) const
+			{
+				return ranges == rhs.ranges;
+			}
+			
 			/**
 			 * @brief Set a range of bytes in the set.
 			 *
 			 * This method adds a range of bytes to the set. Any existing ranges
 			 * adjacent to or within the new range will be merged into the new range
 			 * and removed from the set.
+			 *
+			 * Returns a reference to the set to allow for chaining.
 			*/
-			void set_range(off_t offset, off_t length);
+			ByteRangeSet &set_range(off_t offset, off_t length);
 			
 			/**
 			 * @brief Set multiple ranges of bytes in the set.
@@ -137,6 +144,16 @@ namespace REHex
 			 * @brief Check if a range is set in the set.
 			*/
 			bool isset(off_t offset, off_t length = 1) const;
+			
+			/**
+			 * @brief Check if any bytes in a range are set in the set.
+			*/
+			bool isset_any(off_t offset, off_t length) const;
+			
+			/**
+			 * @brief Get the total number of bytes encompassed by the set.
+			*/
+			off_t total_bytes() const;
 			
 			/**
 			 * @brief Get a reference to the internal std::vector.
@@ -197,6 +214,87 @@ namespace REHex
 			 * in BOTH sets.
 			*/
 			static ByteRangeSet intersection(const ByteRangeSet &a, const ByteRangeSet &b);
+	};
+	
+	/**
+	 * @brief Variant of ByteRangeSet that preserves insertion order of ranges.
+	 *
+	 * This class is similar to ByteRangeSet, except when iterating over the ranges in the set
+	 * you will get them in the order they were inserted rather than sorted by offset.
+	 *
+	 * An OrderedByteRangeSet can be inplicitly converted to a ByteRangeSet, but the reverse is
+	 * not true.
+	 *
+	 * NOTE: Doesn't implement all functionality of ByteRangeSet, uses more memory and is
+	 * slower - only use it if you need the ordered behaviour.
+	*/
+	class OrderedByteRangeSet
+	{
+		private:
+			ByteRangeSet brs;
+			std::vector<ByteRangeSet::Range> sorted_ranges;
+			
+		public:
+			bool operator==(const OrderedByteRangeSet &rhs) const
+			{
+				return sorted_ranges == rhs.sorted_ranges;
+			}
+			
+			/* Allow conversion to a (const) ByteRangeSet reference. */
+			operator const ByteRangeSet&() const
+			{
+				return brs;
+			}
+			
+			/**
+			 * @see ByteRangeSet::set_range()
+			*/
+			OrderedByteRangeSet &set_range(off_t offset, off_t length);
+			
+			/**
+			 * @see ByteRangeSet::isset()
+			*/
+			bool isset(off_t offset, off_t length = 1) const;
+			
+			/**
+			 * @see ByteRangeSet::isset_any()
+			*/
+			bool isset_any(off_t offset, off_t length) const;
+			
+			/**
+			 * @see ByteRangeSet::total_bytes()
+			*/
+			off_t total_bytes() const;
+			
+			/**
+			 * @see ByteRangeSet::get_ranges()
+			*/
+			const std::vector<ByteRangeSet::Range> &get_ranges() const;
+			
+			/**
+			 * @see ByteRangeSet::begin()
+			*/
+			std::vector<ByteRangeSet::Range>::const_iterator begin() const;
+			
+			/**
+			 * @see ByteRangeSet::end()
+			*/
+			std::vector<ByteRangeSet::Range>::const_iterator end() const;
+			
+			/**
+			 * @brief Access the n-th range in the set.
+			*/
+			const ByteRangeSet::Range &operator[](size_t idx) const;
+			
+			/**
+			 * @see ByteRangeSet::size()
+			*/
+			size_t size() const;
+			
+			/**
+			 * @see ByteRangeSet::empty()
+			*/
+			bool empty() const;
 	};
 }
 

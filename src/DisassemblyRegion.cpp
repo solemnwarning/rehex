@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -165,7 +165,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	off_t cursor_pos = doc_ctrl.get_cursor_position();
 	
 	off_t selection_off, selection_len;
-	std::tie(selection_off, selection_len) = doc_ctrl.get_selection();
+	std::tie(selection_off, selection_len) = doc_ctrl.get_selection_in_region(this);
 	
 	auto base_highlight_func = [&](off_t offset)
 	{
@@ -1126,14 +1126,14 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::scr
 
 wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 {
+	off_t selection_off, selection_last;
+	std::tie(selection_off, selection_last) = doc_ctrl.get_selection_raw();
+	
+	assert(selection_off >= d_offset);
+	assert(selection_last < (d_offset + d_length));
+	
 	if(doc_ctrl.special_view_active())
 	{
-		off_t selection_off, selection_length;
-		std::tie(selection_off, selection_length) = doc_ctrl.get_selection();
-		
-		assert(selection_off >= d_offset);
-		assert((selection_off + selection_length) <= (d_offset + d_length));
-		
 		/* Copy disassembled instructions within selection. */
 		
 		auto instr_first = instruction_by_offset(selection_off);
@@ -1143,7 +1143,7 @@ wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 		
 		std::string data_string;
 		
-		while(instr != instr_vec->end() && (instr->offset + instr->length) <= (selection_off + selection_length))
+		while(instr != instr_vec->end() && (instr->offset + instr->length - 1) <= selection_last)
 		{
 			if(instr->offset >= selection_off)
 			{

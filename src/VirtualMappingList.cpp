@@ -187,7 +187,7 @@ void REHex::VirtualMappingList::OnContextMenu(wxDataViewEvent &event)
 				
 			case ID_SELECT:
 				document->set_cursor_position(v->real_base);
-				document_ctrl->set_selection(v->real_base, v->segment_length);
+				document_ctrl->set_selection_raw(v->real_base, (v->real_base + v->segment_length - 1));
 				
 				CallAfter([this]()
 				{

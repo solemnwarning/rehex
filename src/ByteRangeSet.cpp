@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,19 +20,22 @@
 #include <algorithm>
 #include <assert.h>
 #include <mutex>
+#include <numeric>
 #include <thread>
 
 #include "ByteRangeSet.hpp"
 
-void REHex::ByteRangeSet::set_range(off_t offset, off_t length)
+REHex::ByteRangeSet &REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 {
 	if(length <= 0)
 	{
-		return;
+		return *this;
 	}
 	
 	Range range(offset, length);
 	set_ranges(&range, (&range) + 1);
+	
+	return *this;
 }
 
 void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
@@ -70,6 +73,24 @@ bool REHex::ByteRangeSet::isset(off_t offset, off_t length) const
 	}
 	
 	return false;
+}
+
+bool REHex::ByteRangeSet::isset_any(off_t offset, off_t length) const
+{
+	ByteRangeSet check;
+	check.set_range(offset, length);
+	
+	ByteRangeSet i = intersection(*this, check);
+	
+	return !i.empty();
+}
+
+off_t REHex::ByteRangeSet::total_bytes() const
+{
+	off_t total_bytes = std::accumulate(ranges.begin(), ranges.end(),
+		(off_t)(0), [](off_t sum, const Range &range) { return sum + range.length; });
+	
+	return total_bytes;
 }
 
 const std::vector<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const
@@ -294,4 +315,75 @@ REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, con
 	}
 	
 	return intersection;
+}
+
+REHex::OrderedByteRangeSet &REHex::OrderedByteRangeSet::set_range(off_t offset, off_t length)
+{
+	/* Exclude any ranges already set from the offset/length so we can push exclusive ranges
+	 * onto the sorted_ranges vector.
+	*/
+	
+	ByteRangeSet ranges_to_set;
+	ranges_to_set.set_range(offset, length);
+	
+	for(auto i = sorted_ranges.begin(); i != sorted_ranges.end(); ++i)
+	{
+		ranges_to_set.clear_range(i->offset, i->length);
+	}
+	
+	/* Set any resulting ranges in the internal ByteRangeSet and our sorted_ranges vector. */
+	
+	for(auto i = ranges_to_set.begin(); i != ranges_to_set.end(); ++i)
+	{
+		brs.set_range(offset, length);
+		sorted_ranges.push_back(*i);
+	}
+	
+	return *this;
+}
+
+bool REHex::OrderedByteRangeSet::isset(off_t offset, off_t length) const
+{
+	return brs.isset(offset, length);
+}
+
+bool REHex::OrderedByteRangeSet::isset_any(off_t offset, off_t length) const
+{
+	return brs.isset_any(offset, length);
+}
+
+off_t REHex::OrderedByteRangeSet::total_bytes() const
+{
+	return brs.total_bytes();
+}
+
+const std::vector<REHex::ByteRangeSet::Range> &REHex::OrderedByteRangeSet::get_ranges() const
+{
+	return sorted_ranges;
+}
+
+std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::OrderedByteRangeSet::begin() const
+{
+	return sorted_ranges.begin();
+}
+
+std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::OrderedByteRangeSet::end() const
+{
+	return sorted_ranges.end();
+}
+
+const REHex::ByteRangeSet::Range &REHex::OrderedByteRangeSet::operator[](size_t idx) const
+{
+	assert(idx < sorted_ranges.size());
+	return sorted_ranges[idx];
+}
+
+size_t REHex::OrderedByteRangeSet::size() const
+{
+	return sorted_ranges.size();
+}
+
+bool REHex::OrderedByteRangeSet::empty() const
+{
+	return sorted_ranges.empty();
 }

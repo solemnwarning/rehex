@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -186,10 +186,9 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 {
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	OrderedByteRangeSet selection = doc_ctrl->get_selection_ranges();
 	
-	if(selection_length <= 0)
+	if(selection.empty())
 	{
 		/* Nothing selected - nothing to copy. */
 		wxBell();
@@ -200,16 +199,21 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 	
 	/* If the selection is contained within a single Region, give it the chance to do something
 	 * special rather than just copying out the hex/ASCII for the selection.
+	 *
+	 * TODO: Check how much space will be needed and warn the user like below...
 	*/
 	
-	REHex::DocumentCtrl::GenericDataRegion *selection_region = doc_ctrl->data_region_by_offset(selection_off);
-	assert(selection_region != NULL);
-	
-	assert(selection_region->d_offset <= selection_off);
-	
-	if((selection_region->d_offset + selection_region->d_length) >= (selection_off + selection_length))
+	if(selection.size() == 1)
 	{
-		copy_data = selection_region->OnCopy(*doc_ctrl);
+		REHex::DocumentCtrl::GenericDataRegion *selection_region = doc_ctrl->data_region_by_offset(selection[0].offset);
+		assert(selection_region != NULL);
+		
+		assert(selection_region->d_offset <= selection[0].offset);
+		
+		if((selection_region->d_offset + selection_region->d_length) >= (selection[0].offset + selection[0].length))
+		{
+			copy_data = selection_region->OnCopy(*doc_ctrl);
+		}
 	}
 	
 	/* Warn the user this might be a bad idea before dumping silly amounts
@@ -219,10 +223,10 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 	static size_t COPY_MAX_SOFT = 16777216;
 	
 	size_t upper_limit = cursor_state == Document::CSTATE_ASCII
-		? selection_length
-		: (selection_length * 2);
+		? selection.total_bytes()
+		: (selection.total_bytes() * 2);
 	
-	if(upper_limit > COPY_MAX_SOFT)
+	if(copy_data == NULL && upper_limit > COPY_MAX_SOFT)
 	{
 		char msg[128];
 		snprintf(msg, sizeof(msg),
@@ -240,43 +244,41 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 	if(copy_data == NULL)
 	{
 		try {
-			std::vector<unsigned char> selection_data = doc->read_data(selection_off, selection_length);
-			assert((off_t)(selection_data.size()) == selection_length);
+			std::string data_string;
+			data_string.reserve(upper_limit);
 			
-			if(cursor_state == Document::CSTATE_ASCII)
+			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 			{
-				std::string ascii_string;
-				ascii_string.reserve(selection_data.size());
+				std::vector<unsigned char> selection_data = doc->read_data(sr->offset, sr->length);
+				assert((off_t)(selection_data.size()) == sr->length);
 				
-				for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+				if(cursor_state == Document::CSTATE_ASCII)
 				{
-					if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+					for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
 					{
-						ascii_string.push_back(*c);
+						if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+						{
+							data_string.push_back(*c);
+						}
 					}
 				}
-				
-				if(!ascii_string.empty())
-				{
-					copy_data = new wxTextDataObject(ascii_string);
+				else{
+					for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+					{
+						const char *nibble_to_hex = "0123456789ABCDEF";
+						
+						unsigned char high_nibble = (*c & 0xF0) >> 4;
+						unsigned char low_nibble  = (*c & 0x0F);
+						
+						data_string.push_back(nibble_to_hex[high_nibble]);
+						data_string.push_back(nibble_to_hex[low_nibble]);
+					}
 				}
 			}
-			else{
-				std::string hex_string;
-				hex_string.reserve(selection_data.size() * 2);
-				
-				for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
-				{
-					const char *nibble_to_hex = "0123456789ABCDEF";
-					
-					unsigned char high_nibble = (*c & 0xF0) >> 4;
-					unsigned char low_nibble  = (*c & 0x0F);
-					
-					hex_string.push_back(nibble_to_hex[high_nibble]);
-					hex_string.push_back(nibble_to_hex[low_nibble]);
-				}
-				
-				copy_data = new wxTextDataObject(hex_string);
+			
+			if(!data_string.empty())
+			{
+				copy_data = new wxTextDataObject(data_string);
 			}
 		}
 		catch(const std::bad_alloc &)
@@ -302,7 +304,14 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 			
 			if(cut)
 			{
-				doc->erase_data(selection_off, selection_length, -1, Document::CSTATE_CURRENT, "cut selection");
+				ScopedTransaction t(doc, "cut selection");
+				
+				for(auto sr = selection.begin(); sr != selection.end(); ++sr)
+				{
+					doc->erase_data(sr->offset, sr->length);
+				}
+				
+				t.commit();
 			}
 		}
 		else{

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -190,7 +190,7 @@ TEST_F(DiffWindowTest, InsertDataBeforeSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data( 25, x, 10); /* Insert before range */
@@ -200,11 +200,11 @@ TEST_F(DiffWindowTest, InsertDataBeforeSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    180) << "Selection offset increased by inserting data before selection";
-	EXPECT_EQ(selection_length,  10) << "Selection length not affected by inserting data before selection";
+	EXPECT_EQ(selection_first, 180) << "Selection start increased by inserting data before selection";
+	EXPECT_EQ(selection_last,  189) << "Selection end increased by inserting data before selection";
 }
 
 TEST_F(DiffWindowTest, InsertDataWithinSelection)
@@ -212,7 +212,7 @@ TEST_F(DiffWindowTest, InsertDataWithinSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data(159, x, 10);
@@ -220,10 +220,7 @@ TEST_F(DiffWindowTest, InsertDataWithinSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by inserting data within selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by inserting data within selection";
 }
 
 TEST_F(DiffWindowTest, InsertDataAfterSelection)
@@ -231,7 +228,7 @@ TEST_F(DiffWindowTest, InsertDataAfterSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data(160, x, 10); /* Insert within range, immediately after selection */
@@ -240,11 +237,11 @@ TEST_F(DiffWindowTest, InsertDataAfterSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    150) << "Selection offset not affected by inserting data after selection";
-	EXPECT_EQ(selection_length,  10) << "Selection length not affected by inserting data after selection";
+	EXPECT_EQ(selection_first, 150) << "Selection start not affected by inserting data after selection";
+	EXPECT_EQ(selection_last,  159) << "Selection end not affected by inserting data after selection";
 }
 
 TEST_F(DiffWindowTest, InsertDataBeforeFullSelection)
@@ -252,7 +249,7 @@ TEST_F(DiffWindowTest, InsertDataBeforeFullSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(100, 100);
+	doc_ctrl->set_selection_raw(100, 199);
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data( 25, x, 10); /* Insert before range */
@@ -261,11 +258,11 @@ TEST_F(DiffWindowTest, InsertDataBeforeFullSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    120) << "Selection offset increased by inserting data before selection encompassing whole range";
-	EXPECT_EQ(selection_length, 100) << "Selection length not affected by inserting data before selection encompassing whole range";
+	EXPECT_EQ(selection_first, 120) << "Selection start increased by inserting data before selection encompassing whole range";
+	EXPECT_EQ(selection_last,  219) << "Selection end increased by inserting data before selection encompassing whole range";
 }
 
 TEST_F(DiffWindowTest, InsertDataWithinFullSelection)
@@ -273,7 +270,8 @@ TEST_F(DiffWindowTest, InsertDataWithinFullSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(100, 100);
+	doc_ctrl->set_selection_raw(100, 199);
+	ASSERT_TRUE(doc_ctrl->has_selection());
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data(199, x, 10);
@@ -281,10 +279,7 @@ TEST_F(DiffWindowTest, InsertDataWithinFullSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by inserting data within selection encompassing whole range";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by inserting data within selection encompassing whole range";
 }
 
 TEST_F(DiffWindowTest, InsertDataAfterFullSelection)
@@ -292,7 +287,7 @@ TEST_F(DiffWindowTest, InsertDataAfterFullSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(100, 100);
+	doc_ctrl->set_selection_raw(100, 199);
 	
 	unsigned char x[10] = { 0 };
 	doc1->insert_data(200, x, 10); /* Insert after range/selection */
@@ -300,11 +295,11 @@ TEST_F(DiffWindowTest, InsertDataAfterFullSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    100) << "Selection offset not affected by inserting data after selection encompassing whole range";
-	EXPECT_EQ(selection_length, 100) << "Selection length not affected by inserting data after selection encompassing whole range";
+	EXPECT_EQ(selection_first, 100) << "Selection start not affected by inserting data after selection encompassing whole range";
+	EXPECT_EQ(selection_last,  199) << "Selection end not affected by inserting data after selection encompassing whole range";
 }
 
 TEST_F(DiffWindowTest, EraseDataBeforeRange)
@@ -485,18 +480,18 @@ TEST_F(DiffWindowTest, EraseDataBeforeSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	doc1->erase_data(140, 10);
 	
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    140) << "Selection offset reduced by erasing data before selection";
-	EXPECT_EQ(selection_length,  10) << "Selection length not affected by erasing data before selection";
+	EXPECT_EQ(selection_first, 140) << "Selection start reduced by erasing data before selection";
+	EXPECT_EQ(selection_last,  149) << "Selection end reduced by erasing data before selection";
 }
 
 TEST_F(DiffWindowTest, EraseDataOverlappingStartOfSelection)
@@ -504,17 +499,14 @@ TEST_F(DiffWindowTest, EraseDataOverlappingStartOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	doc1->erase_data(140, 15);
 	
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by erasing data overlapping start of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by erasing data overlapping start of selection";
 }
 
 TEST_F(DiffWindowTest, EraseDataAtStartOfSelection)
@@ -522,17 +514,14 @@ TEST_F(DiffWindowTest, EraseDataAtStartOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	doc1->erase_data(150, 1);
 	
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by erasing data at start of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by erasing data at start of selection";
 }
 
 TEST_F(DiffWindowTest, EraseDataAtEndOfSelection)
@@ -540,17 +529,14 @@ TEST_F(DiffWindowTest, EraseDataAtEndOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	doc1->erase_data(159, 1);
 	
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by erasing data at end of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by erasing data at end of selection";
 }
 
 TEST_F(DiffWindowTest, EraseDataOverlappingEndOfSelection)
@@ -558,17 +544,14 @@ TEST_F(DiffWindowTest, EraseDataOverlappingEndOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	doc1->erase_data(155, 15);
 	
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by erasing data overlapping end of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by erasing data overlapping end of selection";
 }
 
 TEST_F(DiffWindowTest, EraseDataAfterSelection)
@@ -576,18 +559,18 @@ TEST_F(DiffWindowTest, EraseDataAfterSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	doc1->erase_data(160, 10);
 	
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    150) << "Selection offset not affected by erasing data after selection";
-	EXPECT_EQ(selection_length,  10) << "Selection length not affected by erasing data after selection";
+	EXPECT_EQ(selection_first, 150) << "Selection start not affected by erasing data after selection";
+	EXPECT_EQ(selection_last,  159) << "Selection end not affected by erasing data after selection";
 }
 
 TEST_F(DiffWindowTest, OverwriteDataBeforeSelection)
@@ -595,7 +578,7 @@ TEST_F(DiffWindowTest, OverwriteDataBeforeSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->overwrite_data(140, x, 10);
@@ -603,11 +586,11 @@ TEST_F(DiffWindowTest, OverwriteDataBeforeSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    150) << "Selection offset not affected by overwriting data before selection";
-	EXPECT_EQ(selection_length,  10) << "Selection length not affected by overwriting data before selection";
+	EXPECT_EQ(selection_first, 150) << "Selection start not affected by overwriting data before selection";
+	EXPECT_EQ(selection_last,  159) << "Selection end not affected by overwriting data before selection";
 }
 
 TEST_F(DiffWindowTest, OverwriteDataOverlappingStartOfSelection)
@@ -615,7 +598,7 @@ TEST_F(DiffWindowTest, OverwriteDataOverlappingStartOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->overwrite_data(145, x, 10);
@@ -623,10 +606,7 @@ TEST_F(DiffWindowTest, OverwriteDataOverlappingStartOfSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by overwriting data overlapping start of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by overwriting data overlapping start of selection";
 }
 
 TEST_F(DiffWindowTest, OverwriteDataAtStartOfSelection)
@@ -634,7 +614,7 @@ TEST_F(DiffWindowTest, OverwriteDataAtStartOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->overwrite_data(150, x, 1);
@@ -642,10 +622,7 @@ TEST_F(DiffWindowTest, OverwriteDataAtStartOfSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by overwriting data at start of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by overwriting data at start of selection";
 }
 
 TEST_F(DiffWindowTest, OverwriteDataAtEndOfSelection)
@@ -653,7 +630,7 @@ TEST_F(DiffWindowTest, OverwriteDataAtEndOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->overwrite_data(159, x, 1);
@@ -661,10 +638,7 @@ TEST_F(DiffWindowTest, OverwriteDataAtEndOfSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by overwriting data at end of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by overwriting data at end of selection";
 }
 
 TEST_F(DiffWindowTest, OverwriteDataOverlappingEndOfSelection)
@@ -672,7 +646,7 @@ TEST_F(DiffWindowTest, OverwriteDataOverlappingEndOfSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->overwrite_data(155, x, 10);
@@ -680,10 +654,7 @@ TEST_F(DiffWindowTest, OverwriteDataOverlappingEndOfSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
-	
-	EXPECT_EQ(selection_length, 0) << "Selection cleared by overwriting data overlapping end of selection";
+	EXPECT_FALSE(doc_ctrl->has_selection()) << "Selection cleared by overwriting data overlapping end of selection";
 }
 
 TEST_F(DiffWindowTest, OverwriteDataAfterSelection)
@@ -691,7 +662,7 @@ TEST_F(DiffWindowTest, OverwriteDataAfterSelection)
 	auto range = diff_window->add_range(DiffWindow::Range(doc1, main_doc_ctrl1, 100, 100));
 	SafeWindowPointer<DocumentCtrl> doc_ctrl(range->_im_a_test_give_me_doc_ctrl());
 	
-	doc_ctrl->set_selection(150, 10);
+	doc_ctrl->set_selection_raw(150, 159);
 	
 	unsigned char x[10] = { 0 };
 	doc1->overwrite_data(160, x, 10);
@@ -699,9 +670,9 @@ TEST_F(DiffWindowTest, OverwriteDataAfterSelection)
 	auto ranges = diff_window->get_ranges();
 	ASSERT_EQ(ranges.size(), 1U);
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+	off_t selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 	
-	EXPECT_EQ(selection_off,    150) << "Selection offset not affected by overwriting data after selection";
-	EXPECT_EQ(selection_length,  10) << "Selection length not affected by overwriting data after selection";
+	EXPECT_EQ(selection_first, 150) << "Selection start not affected by overwriting data after selection";
+	EXPECT_EQ(selection_last,  159) << "Selection end not affected by overwriting data after selection";
 }

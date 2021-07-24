@@ -402,7 +402,8 @@ void REHex::Tab::paste_text(const std::string &text)
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
 		off_t selection_off, selection_length;
-		std::tie(selection_off, selection_length) = doc_ctrl->get_selection();
+		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+		bool has_selection = doc_ctrl->has_selection();
 		
 		if(selection_length > 0)
 		{
@@ -410,6 +411,11 @@ void REHex::Tab::paste_text(const std::string &text)
 			
 			doc->replace_data(selection_off, selection_length, data, size, selection_off + size, Document::CSTATE_GOTO, "paste");
 			doc_ctrl->clear_selection();
+		}
+		else if(has_selection)
+		{
+			/* Nonlinear selection. */
+			wxBell();
 		}
 		else if(insert_mode)
 		{
@@ -591,9 +597,9 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
 	
-	auto selection = doc_ctrl->get_selection();
-	off_t selection_off = selection.first;
-	off_t selection_length = selection.second;
+	off_t selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+	bool has_selection = doc_ctrl->has_selection();
 	
 	bool insert_mode = doc_ctrl->get_insert_mode();
 	
@@ -680,6 +686,11 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
 			}
+			else if(has_selection)
+			{
+				/* Nonlinear selection. */
+				wxBell();
+			}
 			else if((cursor_pos + 1) < doc->buffer_length())
 			{
 				doc->erase_data(cursor_pos, 1, cursor_pos, Document::CSTATE_GOTO, "delete");
@@ -697,6 +708,11 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 			{
 				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
 				doc_ctrl->clear_selection();
+			}
+			else if(has_selection)
+			{
+				/* Nonlinear selection. */
+				wxBell();
 			}
 			else if(cursor_state == Document::CSTATE_HEX_MID)
 			{
@@ -787,9 +803,8 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 {
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
 	
-	auto selection = doc_ctrl->get_selection();
-	off_t selection_off = selection.first;
-	off_t selection_length = selection.second;
+	off_t selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
 	const NestedOffsetLengthMap<Document::Comment> &comments   = doc->get_comments();
 	const NestedOffsetLengthMap<int>               &highlights = doc->get_highlights();

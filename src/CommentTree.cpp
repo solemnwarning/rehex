@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -153,7 +153,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				
 			case ID_SELECT:
 				document->set_cursor_position(key->offset);
-				document_ctrl->set_selection(key->offset, key->length);
+				document_ctrl->set_selection_raw(key->offset, (key->offset + key->length - 1));
 				
 				CallAfter([this]()
 				{

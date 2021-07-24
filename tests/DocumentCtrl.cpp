@@ -1378,3 +1378,388 @@ TEST_F(DocumentCtrlTest, CursorPageDownClampEndOfLine)
 	EXPECT_EQ(doc_ctrl->get_scroll_yoff(), 5) << "Screen scrolled down by visible number of lines";
 	EXPECT_EQ(doc_ctrl->get_cursor_position(), 103) << "Cursor moved to nearest column in last fully visible data line";
 }
+
+TEST_F(DocumentCtrlTest, RegionOffsetAddSimple)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion( 0, 10,  0),
+		new DocumentCtrl::DataRegion(10, 10, 10),
+		new DocumentCtrl::DataRegion(20, 10, 20),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_add( 0,  0),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_add( 0,  5),  5);
+	EXPECT_EQ(doc_ctrl->region_offset_add( 5 , 0),  5);
+	EXPECT_EQ(doc_ctrl->region_offset_add(10, 19), 29);
+	EXPECT_EQ(doc_ctrl->region_offset_add(10, 20), 30);
+	EXPECT_EQ(doc_ctrl->region_offset_add(10, 21), -1);
+	EXPECT_EQ(doc_ctrl->region_offset_add(29,  0), 29);
+	EXPECT_EQ(doc_ctrl->region_offset_add(30,  0), 30);
+	EXPECT_EQ(doc_ctrl->region_offset_add(31,  0), -1);
+}
+
+TEST_F(DocumentCtrlTest, RegionOffsetSubSimple)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion( 0, 10,  0),
+		new DocumentCtrl::DataRegion(10, 10, 10),
+		new DocumentCtrl::DataRegion(20, 10, 20),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 0,  0),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 0,  1), -1);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 5,  0),  5);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 5,  1),  4);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 5,  5),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 5,  6), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(10,  0), 10);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(10,  1),  9);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(29,  0), 29);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(29, 29),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(29, 30), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(30,  0), 30);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(30, 30),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(30, 31), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(31,  0), -1);
+}
+
+TEST_F(DocumentCtrlTest, RegionOffsetAddDiscontiguous)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion( 0, 10,  0),
+		new DocumentCtrl::DataRegion(20, 20, 20),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_add( 0,  9),  9);
+	EXPECT_EQ(doc_ctrl->region_offset_add( 9 , 0),  9);
+	EXPECT_EQ(doc_ctrl->region_offset_add( 0, 10), 20);
+	EXPECT_EQ(doc_ctrl->region_offset_add(11,  0), -1);
+	EXPECT_EQ(doc_ctrl->region_offset_add(19,  0), -1);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20,  0), 20);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20, 19), 39);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20, 20), 40);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20, 21), -1);
+	EXPECT_EQ(doc_ctrl->region_offset_add(39,  0), 39);
+	EXPECT_EQ(doc_ctrl->region_offset_add(40,  0), 40);
+	EXPECT_EQ(doc_ctrl->region_offset_add(41,  0), -1);
+}
+
+TEST_F(DocumentCtrlTest, RegionOffsetSubDiscontiguous)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion( 0, 10,  0),
+		new DocumentCtrl::DataRegion(20, 20, 20),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 9,  0),  9);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 9,  9),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_sub( 9, 10), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(10,  0), -1);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(19,  0), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20,  0), 20);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20,  1),  9);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20, 10),  0);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20, 11), -1);
+}
+
+TEST_F(DocumentCtrlTest, RegionOffsetAddOutOfOrder)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(50, 10,  0),
+		new DocumentCtrl::DataRegion(20, 20, 20),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_add(49,  0), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_add(50,  0), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_add(50,  9), 59);
+	EXPECT_EQ(doc_ctrl->region_offset_add(50, 10), 20);
+	EXPECT_EQ(doc_ctrl->region_offset_add(59,  0), 59);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_add(20,  0), 20);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20, 19), 39);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20, 20), 40);
+	EXPECT_EQ(doc_ctrl->region_offset_add(20, 21), -1);
+}
+
+TEST_F(DocumentCtrlTest, RegionOffsetSubOutOfOrder)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(50, 10,  0),
+		new DocumentCtrl::DataRegion(20, 20, 20),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(49,  0), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(50,  0), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(50,  1), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(59,  0), 59);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(59,  9), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(59, 10), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20,  0), 20);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20,  1), 59);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20, 10), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(20, 11), -1);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_sub(39, 29), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_sub(39, 30), -1);
+}
+
+TEST_F(DocumentCtrlTest, RegionRangeLinear)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 1000),
+		
+		new DocumentCtrl::DataRegion(200, 50, 2000),
+		new DocumentCtrl::DataRegion(250, 50, 2050),
+		
+		new DocumentCtrl::DataRegion(300, 50, 3000),
+		new DocumentCtrl::DataRegion(360, 40, 3050),
+		
+		new DocumentCtrl::DataRegion(450, 50, 4000),
+		new DocumentCtrl::DataRegion(400, 50, 4050),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	/* Basic tests. */
+	EXPECT_FALSE( doc_ctrl->region_range_linear(  0,   9)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear( 99,  99)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear( 99, 100)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(100, 100)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(100, 149)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(100, 150)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(149, 149)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(150, 150)  );
+	
+	/* Consecutive regions. */
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(200, 249)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(200, 299)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(250, 299)  );
+	
+	/* Discontiguous regions. */
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(300, 349)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(300, 350)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(300, 389)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(360, 389)  );
+	
+	/* Out of order regions. */
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(400, 449)  );
+	EXPECT_FALSE( doc_ctrl->region_range_linear(400, 499)  );
+	EXPECT_TRUE(  doc_ctrl->region_range_linear(450, 499)  );
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesWithinRegion)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(250, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	/* 100 - */
+	
+	doc_ctrl->set_selection_raw(120, 129);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(120, 10));
+	
+	doc_ctrl->set_selection_raw(100, 119);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(100, 20));
+	
+	doc_ctrl->set_selection_raw(120, 149);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(120, 30));
+	
+	doc_ctrl->set_selection_raw(100, 149);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(100, 50));
+	
+	/* 350 - */
+	
+	doc_ctrl->set_selection_raw(370, 379);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(370, 10));
+	
+	doc_ctrl->set_selection_raw(350, 369);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(350, 20));
+	
+	doc_ctrl->set_selection_raw(370, 399);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(370, 30));
+	
+	doc_ctrl->set_selection_raw(350, 399);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(350, 50));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningContiguousRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(250, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(220, 269);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(220, 30).set_range(250, 20));
+	
+	doc_ctrl->set_selection_raw(200, 299);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(200, 50).set_range(250, 50));
+	
+	doc_ctrl->set_selection_raw(200, 399);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(200, 50).set_range(250, 50).set_range(300, 50).set_range(350, 50));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningDiscontiguousRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(250, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(120, 219);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(120, 30).set_range(200, 20));
+	
+	doc_ctrl->set_selection_raw(100, 299);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(100, 50).set_range(200, 50).set_range(250, 50));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(150, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(220, 319);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(220, 30).set_range(150, 50).set_range(300, 20));
+	
+	doc_ctrl->set_selection_raw(200, 349);
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedByteRangeSet().set_range(200, 50).set_range(150, 50).set_range(300, 50));
+}
+
+TEST_F(DocumentCtrlTest, RegionOffsetCompare)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(200, 50, 200),
+		new DocumentCtrl::DataRegion(150, 50, 250),
+		new DocumentCtrl::DataRegion(300, 50, 300),
+		new DocumentCtrl::DataRegion(350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(150, 150), 0);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(350, 350), 0);
+	
+	EXPECT_LT(doc_ctrl->region_offset_cmp(150, 180), 0);
+	EXPECT_LT(doc_ctrl->region_offset_cmp(200, 150), 0);
+	EXPECT_LT(doc_ctrl->region_offset_cmp(300, 350), 0);
+	
+	EXPECT_GT(doc_ctrl->region_offset_cmp(180, 150), 0);
+	EXPECT_GT(doc_ctrl->region_offset_cmp(150, 200), 0);
+	EXPECT_GT(doc_ctrl->region_offset_cmp(350, 300), 0);
+	
+	EXPECT_THROW(doc_ctrl->region_offset_cmp(100, 150), std::invalid_argument);
+	EXPECT_THROW(doc_ctrl->region_offset_cmp(150, 100), std::invalid_argument);
+}

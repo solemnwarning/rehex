@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -866,7 +866,7 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection(0x7150, 22);
+	doc_ctrl->set_selection_raw(0x7150, 0x7150 + 22 - 1);
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -915,7 +915,7 @@ TEST(DisassemblyRegion, CopyInHexView)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_HEX);
-	doc_ctrl->set_selection(0x7150, 22);
+	doc_ctrl->set_selection_raw(0x7150, 0x7150 + 22 - 1);
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -949,7 +949,7 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection(0x7151, 20);
+	doc_ctrl->set_selection_raw(0x7151, 0x7151 + 20 - 1);
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -996,7 +996,7 @@ TEST(DisassemblyRegion, CopyPartialInstruction)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection(0x7153, 2);
+	doc_ctrl->set_selection_raw(0x7153, 0x7153 + 2 - 1);
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	

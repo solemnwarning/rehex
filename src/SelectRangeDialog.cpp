@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 #include <string>
+#include <tuple>
 #include <wx/stattext.h>
 
 #include "SelectRangeDialog.hpp"
@@ -37,15 +38,17 @@ REHex::SelectRangeDialog::SelectRangeDialog(wxWindow *parent, Document &document
 	char initial_to[64]   = "";
 	char initial_len[64]  = "";
 	
-	std::pair<off_t, off_t> selection = document_ctrl.get_selection();
-	off_t selection_off    = selection.first;
-	off_t selection_length = selection.second;
-	
-	if(selection_length > 0)
+	if(document_ctrl.has_selection())
 	{
-		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(selection_off));
-		snprintf(initial_to,   sizeof(initial_to),   "0x%08llX", (long long unsigned)(selection_off + selection_length - 1));
-		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length));
+		off_t selection_first, selection_last;
+		std::tie(selection_first, selection_last) = document_ctrl.get_selection_raw();
+		
+		off_t selection_diff = document_ctrl.region_offset_sub(selection_last, selection_first);
+		assert(selection_diff >= 0);
+		
+		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(selection_first));
+		snprintf(initial_to,   sizeof(initial_to),   "0x%08llX", (long long unsigned)(selection_last));
+		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_diff + 1));
 	}
 	else{
 		off_t cursor_pos = document_ctrl.get_cursor_position();
@@ -120,10 +123,10 @@ void REHex::SelectRangeDialog::enable_inputs()
 void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 {
 	off_t doc_length = document.buffer_length();
-	off_t selection_off, selection_length;
+	off_t selection_first, selection_last;
 	
 	try {
-		selection_off = range_from->GetValue<off_t>(0, (doc_length - 1));
+		selection_first = range_from->GetValue<off_t>(0, (doc_length - 1));
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -136,8 +139,7 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 	if(range_to_enable->GetValue())
 	{
 		try {
-			off_t selection_to = range_to->GetValue<off_t>(selection_off, (doc_length - 1));
-			selection_length = (selection_to - selection_off) + 1;
+			selection_last = range_to->GetValue<off_t>(0, (doc_length - 1));
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -147,21 +149,30 @@ void REHex::SelectRangeDialog::OnOK(wxCommandEvent &event)
 	}
 	else if(range_len_enable->GetValue())
 	{
+		off_t selection_length;
+		
 		try {
-			selection_length = range_len->GetValue<off_t>(0, (doc_length - selection_off));
+			selection_length = range_len->GetValue<off_t>(1);
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
 			wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
 			return;
 		}
+		
+		selection_last = document_ctrl.region_offset_add(selection_first, selection_length - 1);
 	}
 	else{
 		/* Shouldn't be reachable. */
 		return;
 	}
 	
-	document_ctrl.set_selection(selection_off, selection_length);
+	if(document_ctrl.region_offset_sub(selection_last, selection_first) != (selection_last - selection_first))
+	{
+		/* TODO: Display warning about discontiguous selection? */
+	}
+	
+	document_ctrl.set_selection_raw(selection_first, selection_last); /* TODO: Warn about invalid selections. */
 	Close();
 }
 

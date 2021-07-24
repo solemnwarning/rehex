@@ -24,6 +24,7 @@
 #include <wx/dataobj.h>
 #include <wx/event.h>
 #include <wx/filename.h>
+#include <wx/fontenum.h>
 #include <wx/msgdlg.h>
 #include <wx/aui/auibook.h>
 #include <wx/numdlg.h>
@@ -336,6 +337,28 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		}
 		
 		view_menu->AppendSeparator(); /* ---- */
+		
+		wxMenu *font_menu = new wxMenu;
+		view_menu->AppendSubMenu(font_menu, "Select font");
+		
+		wxArrayString font_names = wxFontEnumerator::GetFacenames(wxFONTENCODING_SYSTEM, true);
+		
+		for(size_t i = 0; i < font_names.GetCount(); ++i)
+		{
+			std::string font_name = font_names[i].ToStdString();
+			
+			wxMenuItem *itm = font_menu->AppendRadioItem(wxID_ANY, font_name);
+			if(font_name == wxGetApp().get_font_name())
+			{
+				itm->Check(true);
+			}
+			
+			Bind(wxEVT_MENU, [this, font_name, itm](wxCommandEvent &event)
+			{
+				wxGetApp().set_font_name(font_name);
+				itm->Check(true);
+			}, itm->GetId(), itm->GetId());
+		}
 		
 		view_menu->Append(ID_FSA_INCREASE, "Increase font size");
 		view_menu->Append(ID_FSA_DECREASE, "Decrease font size");
@@ -1072,7 +1095,8 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	config->SetPath("/");
 	config->Write("theme", wxString(active_palette->get_name()));
 	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
-
+	config->Write("font-name", wxString(wxGetApp().get_font_name()));
+	
 	// Clean out all previous settings
 	config->DeleteGroup("/default-view/");
 	config->SetPath("/default-view/");

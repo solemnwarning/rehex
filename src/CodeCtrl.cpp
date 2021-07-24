@@ -45,7 +45,7 @@ END_EVENT_TABLE()
 
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
-	font(wxFontInfo().Family(wxFONTFAMILY_MODERN)),
+	font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
 	max_line_width(0),
 	offset_display_base(OFFSET_BASE_HEX),
 	offset_display_upper_bound(0xFFFFFFFF),
@@ -388,7 +388,7 @@ void REHex::CodeCtrl::OnSize(wxSizeEvent &event)
 
 void REHex::CodeCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event)
 {
-	font = wxFont(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
 	
 	for(int i = 0; i < event.font_size_adjustment; ++i) { font.MakeLarger(); }
 	for(int i = 0; i > event.font_size_adjustment; --i) { font.MakeSmaller(); }

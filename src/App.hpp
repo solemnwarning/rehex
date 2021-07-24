@@ -71,6 +71,19 @@ namespace REHex {
 			void set_font_size_adjustment(int font_size_adjustment);
 			
 			/**
+			 * @brief Get the selected font face name.
+			*/
+			std::string get_font_name() const;
+			
+			/**
+			 * @brief Set the font face name.
+			 *
+			 * Updates the selected font face name and raises a FontSizeAdjustmentEvent
+			 * event, but only if the font is monospace.
+			*/
+			void set_font_name(const std::string &font_name);
+			
+			/**
 			 * @brief Get a list of directories to search for plugins.
 			*/
 			std::vector<std::string> get_plugin_directories();
@@ -172,6 +185,7 @@ namespace REHex {
 		private:
 			std::string last_directory;
 			int font_size_adjustment;
+			std::string font_name;
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);

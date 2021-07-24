@@ -51,6 +51,13 @@ bool REHex::App::OnInit()
 	last_directory = config->Read("last-directory", "");
 	font_size_adjustment = config->ReadLong("font-size-adjustment", 0);
 	
+	{
+		wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+		font_name = default_font.GetFaceName();
+		
+		set_font_name(config->Read("font-name", font_name).ToStdString());
+	}
+	
 	/* Display default tool panels if a default view hasn't been configured. */
 	if(!config->HasGroup("/default-view/"))
 	{

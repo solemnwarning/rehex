@@ -47,6 +47,9 @@ int main(int argc, char **argv)
 	wxApp::SetInstance(app);
 	wxInitializer wxinit;
 	
+	wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	app->set_font_name(default_font.GetFaceName().ToStdString());
+	
 	app->console = new REHex::ConsoleBuffer();
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	app->recent_files = new wxFileHistory();

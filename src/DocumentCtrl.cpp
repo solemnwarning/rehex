@@ -70,7 +70,7 @@ END_EVENT_TABLE()
 REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	wxControl(),
 	doc(doc),
-	hex_font(wxFontInfo().Family(wxFONTFAMILY_MODERN)),
+	hex_font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
 	linked_scroll_prev(NULL),
 	linked_scroll_next(NULL),
 	selection_begin(-1),
@@ -156,7 +156,7 @@ REHex::DocumentCtrl::~DocumentCtrl()
 
 void REHex::DocumentCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event)
 {
-	hex_font = wxFont(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	hex_font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
 	
 	for(int i = 0; i < event.font_size_adjustment; ++i) { hex_font.MakeLarger(); }
 	for(int i = 0; i > event.font_size_adjustment; --i) { hex_font.MakeSmaller(); }

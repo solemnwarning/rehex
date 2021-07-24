@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string>
 #include <wx/filename.h>
+#include <wx/font.h>
 #include <wx/stdpaths.h>
 
 #include "App.hpp"
@@ -49,6 +50,24 @@ void REHex::App::set_font_size_adjustment(int font_size_adjustment)
 	
 	FontSizeAdjustmentEvent event(font_size_adjustment);
 	ProcessEvent(event);
+}
+
+std::string REHex::App::get_font_name() const
+{
+	return font_name;
+}
+
+void REHex::App::set_font_name(const std::string &font_name)
+{
+	wxFont test_font(wxFontInfo().FaceName(wxString(font_name)));
+	
+	if(test_font.IsFixedWidth())
+	{
+		this->font_name = font_name;
+		
+		FontSizeAdjustmentEvent event(font_size_adjustment);
+		ProcessEvent(event);
+	}
 }
 
 std::vector<std::string> REHex::App::get_plugin_directories()

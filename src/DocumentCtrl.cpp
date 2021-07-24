@@ -818,6 +818,9 @@ void REHex::DocumentCtrl::_update_vscroll()
 		
 		restore_scroll_position();
 		
+		/* Clamp scroll_yoff set by restore_scroll_position() to new scroll_yoff_max value. */
+		scroll_yoff = std::min(scroll_yoff, new_scroll_yoff_max);
+		
 		int range, thumb, position;
 		
 		if(total_lines <= (uint64_t)(MAX_STEPS))

@@ -130,6 +130,11 @@ REHex::Tab::Tab(wxWindow *parent):
 	vtools_adjust_on_idle(true);
 	
 	init_default_tools();
+	
+	CallAfter([&]()
+	{
+		doc_ctrl->set_scroll_yoff(0);
+	});
 }
 
 REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
@@ -193,6 +198,11 @@ REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
 	htools_adjust_on_idle(true);
 	
 	init_default_tools();
+	
+	CallAfter([&]()
+	{
+		doc_ctrl->set_scroll_yoff(0);
+	});
 }
 
 REHex::Tab::~Tab()

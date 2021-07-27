@@ -17,6 +17,7 @@
 
 #include "../src/platform.hpp"
 #include <gtest/gtest.h>
+#include <limits>
 #include <stdio.h>
 #include <string>
 
@@ -106,6 +107,23 @@ TEST(ByteRangeMap, GetRangeInEmptyMap)
 	const ByteRangeMap<std::string> brm;
 	
 	EXPECT_EQ(brm.get_range_in(0, 10), brm.end());
+}
+
+TEST(ByteRangeMap, GetRangeInOverflow)
+{
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "fumbling"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "false"),
+		std::make_pair(ByteRangeMap<std::string>::Range(60, 10), "oval"),
+	};
+	
+	const ByteRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	const off_t MAX = std::numeric_limits<off_t>::max();
+	
+	EXPECT_EQ(brm.get_range_in(10, MAX), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range_in(30, MAX), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range_in(50, MAX), std::next(brm.begin(), 2));
 }
 
 TEST(ByteRangeMap, SetOneRange)

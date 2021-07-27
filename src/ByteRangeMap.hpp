@@ -208,12 +208,13 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 		--i;
 	}
 	
-	for(; i != ranges.end() && i->first.offset < (offset + length); ++i)
+	off_t end = offset + length;
+	
+	for(; i != ranges.end() && (i->first.offset < end || end < offset); ++i)
 	{
-		off_t end = offset + length;
 		off_t i_end = i->first.offset + i->first.length;
 		
-		if(i->first.offset < end && offset < i_end)
+		if((i->first.offset < end || end < offset) && offset < i_end)
 		{
 			return i;
 		}

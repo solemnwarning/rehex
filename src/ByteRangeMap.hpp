@@ -182,6 +182,8 @@ namespace REHex
 			const_iterator begin() const { return ranges.begin(); }
 			const_iterator end() const { return ranges.end(); }
 			bool empty() const { return ranges.empty(); }
+			const std::pair<Range, T> &front() const { assert(!ranges.empty()); return ranges.front(); }
+			const std::pair<Range, T> &back() const { assert(!ranges.empty()); return ranges.back(); }
 			
 			/**
 			 * @brief Adjust for data being inserted into file.

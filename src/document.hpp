@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -301,9 +301,6 @@ namespace REHex {
 				ByteRangeMap<off_t> old_real_to_virt_segs;
 				ByteRangeMap<off_t> old_virt_to_real_segs;
 				
-				bool old_dirty;
-				ByteRangeSet old_dirty_bytes;
-				
 				Transaction(const std::string &desc, Document *doc):
 					desc(desc),
 					complete(false),
@@ -314,9 +311,7 @@ namespace REHex {
 					old_highlights(doc->get_highlights()),
 					old_types(doc->get_data_types()),
 					old_real_to_virt_segs(doc->get_real_to_virt_segs()),
-					old_virt_to_real_segs(doc->get_virt_to_real_segs()),
-					old_dirty(doc->dirty),
-					old_dirty_bytes(doc->dirty_bytes) {}
+					old_virt_to_real_segs(doc->get_virt_to_real_segs()) {}
 			};
 			
 			void transact_step(const TransOpFunc &op, const std::string &desc);
@@ -324,10 +319,9 @@ namespace REHex {
 			Buffer *buffer;
 			std::string filename;
 			
-			bool dirty;
-			ByteRangeSet dirty_bytes;
-			
-			void set_dirty(bool dirty);
+			unsigned int current_seq;
+			ByteRangeMap<unsigned int> data_seq;
+			unsigned int saved_seq;
 			
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
@@ -349,9 +343,9 @@ namespace REHex {
 			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			
-			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length);
+			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
 			
-			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length);
+			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
 			void _update_mappings_data_inserted(off_t offset, off_t length);
 			
 			void _UNTRACKED_erase_data(off_t offset, off_t length);
@@ -361,12 +355,12 @@ namespace REHex {
 			TransOpFunc _op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
 			
 			TransOpFunc _op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
-			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice);
 			
-			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
 			TransOpFunc _op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
 			
-			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
 			TransOpFunc _op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
 			
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);

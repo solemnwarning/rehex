@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -53,7 +53,8 @@ wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
-	dirty(false),
+	current_seq(1),
+	saved_seq(0),
 	cursor_state(CSTATE_HEX)
 {
 	buffer = new REHex::Buffer();
@@ -62,12 +63,14 @@ REHex::Document::Document():
 
 REHex::Document::Document(const std::string &filename):
 	filename(filename),
-	dirty(false),
+	current_seq(0),
+	saved_seq(0),
 	cursor_state(CSTATE_HEX)
 {
 	buffer = new REHex::Buffer(filename);
 	
-	types.set_range(0, buffer->length(), "");
+	data_seq.set_range(0, buffer->length(), 0);
+	types.set_range   (0, buffer->length(), "");
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -89,8 +92,13 @@ void REHex::Document::save()
 	buffer->write_inplace();
 	_save_metadata(filename + ".rehex-meta");
 	
-	dirty_bytes.clear_all();
-	set_dirty(false);
+	if(current_seq != saved_seq)
+	{
+		saved_seq = current_seq;
+		data_seq.set_range(0, buffer->length(), saved_seq);
+		
+		_raise_clean();
+	}
 }
 
 void REHex::Document::save(const std::string &filename)
@@ -103,8 +111,13 @@ void REHex::Document::save(const std::string &filename)
 	
 	_save_metadata(filename + ".rehex-meta");
 	
-	dirty_bytes.clear_all();
-	set_dirty(false);
+	if(current_seq != saved_seq)
+	{
+		saved_seq = current_seq;
+		data_seq.set_range(0, buffer->length(), saved_seq);
+		
+		_raise_clean();
+	}
 	
 	DocumentTitleEvent document_title_event(this, title);
 	ProcessEvent(document_title_event);
@@ -122,12 +135,13 @@ std::string REHex::Document::get_filename()
 
 bool REHex::Document::is_dirty()
 {
-	return dirty;
+	return current_seq != saved_seq;
 }
 
 bool REHex::Document::is_byte_dirty(off_t offset) const
 {
-	return dirty_bytes.isset(offset);
+	auto i = data_seq.get_range(offset);
+	return i != data_seq.end() && i->second != saved_seq;
 }
 
 off_t REHex::Document::get_cursor_position() const
@@ -188,7 +202,11 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
 		assert(old_data->size() == (size_t)(length));
 		
-		_UNTRACKED_overwrite_data(offset, (const unsigned char*)(data), length);
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset, length)
+			.transform([](const unsigned int &value) { return value + 1; });
+		
+		_UNTRACKED_overwrite_data(offset, (const unsigned char*)(data), length, new_data_seq_slice);
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
@@ -204,7 +222,11 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, s
 		std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(std::move( read_data(offset, old_data->size()) )));
 		assert(new_data->size() == old_data->size());
 		
-		_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size());
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset, old_data->size())
+			.transform([](const unsigned int &value) { return value - 1; });
+		
+		_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size(), new_data_seq_slice);
 		
 		return _op_overwrite_redo(offset, new_data, new_cursor_pos, new_cursor_state);
 	});
@@ -217,7 +239,11 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, s
 		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, new_data->size()) )));
 		assert(old_data->size() == new_data->size());
 		
-		_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size());
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset, new_data->size())
+			.transform([](const unsigned int &value) { return value + 1; });
+		
+		_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size(), new_data_seq_slice);
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
@@ -231,7 +257,10 @@ void REHex::Document::insert_data(off_t offset, const unsigned char *data, off_t
 	
 	TransOpFunc first_op([&]()
 	{
-		_UNTRACKED_insert_data(offset, (const unsigned char*)(data), length);
+		ByteRangeMap<unsigned int> new_data_seq_slice;
+		new_data_seq_slice.set_range(offset, length, current_seq);
+		
+		_UNTRACKED_insert_data(offset, (const unsigned char*)(data), length, new_data_seq_slice);
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_insert_undo(offset, length, new_cursor_pos, new_cursor_state);
@@ -247,17 +276,19 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_
 		std::shared_ptr< std::vector<unsigned char> > data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
 		assert(data->size() == (size_t)(length));
 		
+		ByteRangeMap<unsigned int> redo_data_seq_slice = data_seq.get_slice(offset, data->size());
+		
 		_UNTRACKED_erase_data(offset, data->size());
 		
-		return _op_insert_redo(offset, data, new_cursor_pos, new_cursor_state);
+		return _op_insert_redo(offset, data, new_cursor_pos, new_cursor_state, redo_data_seq_slice);
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice)
 {
-	return TransOpFunc([this, offset, data, new_cursor_pos, new_cursor_state]()
+	return TransOpFunc([this, offset, data, new_cursor_pos, new_cursor_state, redo_data_seq_slice]()
 	{
-		_UNTRACKED_insert_data(offset, data->data(), data->size());
+		_UNTRACKED_insert_data(offset, data->data(), data->size(), redo_data_seq_slice);
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_insert_undo(offset, data->size(), new_cursor_pos, new_cursor_state);
@@ -274,20 +305,22 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
 		assert(old_data->size() == (size_t)(length));
 		
+		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
+		
 		_UNTRACKED_erase_data(offset, old_data->size());
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
-		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice);
 	});
 	
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
 {
-	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
+	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
-		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size());
+		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size(), undo_data_seq_slice);
 		
 		return _op_erase_redo(offset, old_data->size(), new_cursor_pos, new_cursor_state);
 	});
@@ -300,10 +333,12 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t
 		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, length) )));
 		assert(old_data->size() == (size_t)(length));
 		
+		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
+		
 		_UNTRACKED_erase_data(offset, old_data->size());
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
-		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice);
 	});
 }
 
@@ -325,25 +360,30 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const un
 		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
 		assert(old_data->size() == (size_t)(old_data_length));
 		
+		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice;
+		new_data_seq_slice.set_range(offset, old_data->size(), current_seq);
+		
 		_UNTRACKED_erase_data(offset, old_data->size());
-		_UNTRACKED_insert_data(offset, new_data, new_data_length);
+		_UNTRACKED_insert_data(offset, new_data, new_data_length, new_data_seq_slice);
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
-		return _op_replace_undo(offset, old_data, new_data_length, new_cursor_pos, new_cursor_state);
+		return _op_replace_undo(offset, old_data, new_data_length, new_cursor_pos, new_cursor_state, undo_data_seq_slice);
 	});
 	
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
 {
-	return TransOpFunc([this, offset, old_data, new_data_length, new_cursor_pos, new_cursor_state]()
+	return TransOpFunc([this, offset, old_data, new_data_length, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
 		std::shared_ptr< std::vector<unsigned char> > new_data(new std::vector<unsigned char>(std::move( read_data(offset, new_data_length) )));
 		assert(new_data->size() == (size_t)(new_data_length));
 		
 		_UNTRACKED_erase_data(offset, new_data_length);
-		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size());
+		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size(), undo_data_seq_slice);
 		
 		return _op_replace_redo(offset, old_data->size(), new_data, new_cursor_pos, new_cursor_state);
 	});
@@ -356,11 +396,16 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 		std::shared_ptr< std::vector<unsigned char> > old_data(new std::vector<unsigned char>(std::move( read_data(offset, old_data_length) )));
 		assert(old_data->size() == (size_t)(old_data_length));
 		
+		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice;
+		new_data_seq_slice.set_range(offset, old_data->size(), current_seq);
+		
 		_UNTRACKED_erase_data(offset, old_data_length);
-		_UNTRACKED_insert_data(offset, new_data->data(), new_data->size());
+		_UNTRACKED_insert_data(offset, new_data->data(), new_data->size(), new_data_seq_slice);
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
-		return _op_replace_undo(offset, old_data, new_data->size(), new_cursor_pos, new_cursor_state);
+		return _op_replace_undo(offset, old_data, new_data->size(), new_cursor_pos, new_cursor_state, undo_data_seq_slice);
 	});
 }
 
@@ -388,8 +433,6 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 		[this, offset, length, comment]()
 		{
 			NestedOffsetLengthMap_set(comments, offset, length, comment);
-			set_dirty(true);
-			
 			_raise_comment_modified();
 		},
 		[this]()
@@ -412,8 +455,6 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 		[this, offset, length]()
 		{
 			comments.erase(NestedOffsetLengthMapKey(offset, length));
-			set_dirty(true);
-			
 			_raise_comment_modified();
 		},
 		[this]()
@@ -449,8 +490,6 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 		[this, off, length, highlight_colour_idx]()
 		{
 			NestedOffsetLengthMap_set(highlights, off, length, highlight_colour_idx);
-			set_dirty(true);
-
 			_raise_highlights_changed();
 		},
 		
@@ -474,8 +513,6 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 		[this, off, length]()
 		{
 			highlights.erase(NestedOffsetLengthMapKey(off, length));
-			set_dirty(true);
-
 			_raise_highlights_changed();
 		},
 		
@@ -504,8 +541,6 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 		[this, offset, length, type]()
 		{
 			types.set_range(offset, length, type);
-			set_dirty(true);
-			
 			_raise_types_changed();
 		},
 		
@@ -533,7 +568,6 @@ bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off
 			
 			real_to_virt_segs.set_range(real_offset, length, virt_offset);
 			virt_to_real_segs.set_range(virt_offset, length, real_offset);
-			set_dirty(true);
 			
 			_raise_mappings_changed();
 		},
@@ -593,8 +627,6 @@ void REHex::Document::clear_virt_mapping_r(off_t real_offset, off_t length)
 				}
 			}
 			
-			set_dirty(true);
-			
 			_raise_mappings_changed();
 		},
 		
@@ -650,8 +682,6 @@ void REHex::Document::clear_virt_mapping_v(off_t virt_offset, off_t length)
 					virt_to_real_segs.clear_range(virt_offset, (seg_virt_end - virt_offset));
 				}
 			}
-			
-			set_dirty(true);
 			
 			_raise_mappings_changed();
 		},
@@ -737,8 +767,6 @@ void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOf
 				NestedOffsetLengthMap_set(comments, cursor_pos + cc->first.offset, cc->first.length, cc->second);
 			}
 			
-			set_dirty(true);
-			
 			_raise_comment_modified();
 		},
 		[this]()
@@ -753,6 +781,8 @@ void REHex::Document::undo()
 	if(!undo_stack.empty())
 	{
 		auto &trans = undo_stack.back();
+		
+		--current_seq;
 		
 		std::list<TransOpFunc> redo_funcs;
 		
@@ -770,7 +800,6 @@ void REHex::Document::undo()
 		cursor_state = trans.old_cursor_state;
 		comments     = trans.old_comments;
 		highlights   = trans.old_highlights;
-		dirty_bytes  = trans.old_dirty_bytes;
 		
 		if(types != trans.old_types)
 		{
@@ -785,7 +814,14 @@ void REHex::Document::undo()
 			_raise_mappings_changed();
 		}
 		
-		set_dirty(trans.old_dirty);
+		if(current_seq == saved_seq)
+		{
+			_raise_clean();
+		}
+		else if(current_seq == saved_seq - 1)
+		{
+			_raise_dirty();
+		}
 		
 		if(cursor_updated)
 		{
@@ -817,12 +853,23 @@ void REHex::Document::redo()
 	{
 		auto &trans = redo_stack.back();
 		
+		++current_seq;
+		
 		std::list<TransOpFunc> undo_funcs;
 		
 		for(auto redo_func = trans.ops.begin(); redo_func != trans.ops.end(); ++redo_func)
 		{
 			TransOpFunc undo_func = (*redo_func)();
 			undo_funcs.push_front(undo_func);
+		}
+		
+		if(current_seq == saved_seq)
+		{
+			_raise_clean();
+		}
+		else if(current_seq == saved_seq + 1)
+		{
+			_raise_dirty();
 		}
 		
 		trans.ops.swap(undo_funcs);
@@ -849,6 +896,22 @@ void REHex::Document::transact_begin(const std::string &desc)
 {
 	if(undo_stack.empty() || undo_stack.back().complete)
 	{
+		++current_seq;
+		
+		if(current_seq == saved_seq)
+		{
+			/* The file has been saved, then changes undone, and NOW we're starting a
+			 * fresh transaction - rewriting history from prior to the save.
+			 *
+			 * Flip the most significant bit of current_seq so it differs from the
+			 * current saved_seq - all that really matters is that any new sequence
+			 * numbers written to data_seq DON'T match saved_seq.
+			*/
+			
+			static const unsigned int SEQ_MSB = (1 << ((sizeof(unsigned int) * CHAR_BIT) - 1));
+			current_seq ^= SEQ_MSB;
+		}
+		
 		undo_stack.emplace_back(desc, this);
 		redo_stack.clear();
 		
@@ -887,6 +950,11 @@ void REHex::Document::transact_commit()
 	
 	undo_stack.back().complete = true;
 	
+	if(current_seq == saved_seq + 1)
+	{
+		_raise_dirty();
+	}
+	
 	while(undo_stack.size() > UNDO_MAX)
 	{
 		undo_stack.pop_front();
@@ -901,10 +969,16 @@ void REHex::Document::transact_rollback()
 	}
 	
 	undo();
+	
+	redo_stack.clear();
+	_raise_undo_update();
 }
 
-void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice)
 {
+	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= offset);
+	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (offset + length));
+	
 	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, offset, length);
 	ProcessEvent(data_overwriting_event);
 	
@@ -913,8 +987,7 @@ void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned cha
 	
 	if(ok)
 	{
-		dirty_bytes.set_range(offset, length);
-		set_dirty(true);
+		data_seq.set_slice(data_seq_slice);
 		
 		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, offset, length);
 		ProcessEvent(data_overwrite_event);
@@ -926,8 +999,11 @@ void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned cha
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
-void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length)
+void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice)
 {
+	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= offset);
+	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (offset + length));
+	
 	OffsetLengthEvent data_inserting_event(this, DATA_INSERTING, offset, length);
 	ProcessEvent(data_inserting_event);
 	
@@ -936,9 +1012,8 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 	
 	if(ok)
 	{
-		dirty_bytes.data_inserted(offset, length);
-		dirty_bytes.set_range(offset, length);
-		set_dirty(true);
+		data_seq.data_inserted(offset, length);
+		data_seq.set_slice(data_seq_slice);
 		
 		types.data_inserted(offset, length);
 		types.set_range(offset, length, "");
@@ -1046,8 +1121,7 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 	
 	if(ok)
 	{
-		dirty_bytes.data_erased(offset, length);
-		set_dirty(true);
+		data_seq.data_erased(offset, length);
 		
 		types.data_erased(offset, length);
 		
@@ -1453,24 +1527,6 @@ void REHex::Document::_raise_mappings_changed()
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);
-}
-
-void REHex::Document::set_dirty(bool dirty)
-{
-	if(this->dirty == dirty)
-	{
-		return;
-	}
-	
-	this->dirty = dirty;
-	
-	if(dirty)
-	{
-		_raise_dirty();
-	}
-	else{
-		_raise_clean();
-	}
 }
 
 REHex::Document::Comment::Comment(const wxString &text):

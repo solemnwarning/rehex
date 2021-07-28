@@ -15,6 +15,14 @@ UNRELEASED
  * Prevent document from jumping around when the window is resized or
    disassembly is in progress (#132).
 
+ * Fix build errors when using wxWidgets 3.1.5 and newer.
+
+ * Refactor selection handling to make sense in virtual section view (#125).
+
+ * Add font face setting to "View" menu (#128).
+
+ * Correctly track whether files have been modified since saving (#122).
+
 Version 0.3.91 (2021-05-03)
 
  * Fix loading of plugins bundled as part of an AppImage.

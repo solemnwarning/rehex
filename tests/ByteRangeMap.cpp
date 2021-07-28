@@ -690,3 +690,207 @@ TEST(ByteRangeMap, DataErasedOverlappingMultipleRangesMerge)
 		std::make_pair(ByteRangeMap<std::string>::Range(30,  5), "rinse"),
 	);
 }
+
+TEST(ByteRangeMap, GetSliceNoMatch)
+{
+	ByteRangeMap<std::string> source;
+	
+	source.set_range(10, 10, "clear");
+	source.set_range(30,  5, "request");
+	source.set_range(35,  5, "pear");
+	source.set_range(50, 10, "limping");
+	
+	ByteRangeMap<std::string> brm = source.get_slice(20, 10);
+	
+	EXPECT_RANGES(
+		/* Empty set */
+	);
+}
+
+TEST(ByteRangeMap, GetSliceMatchOneExact)
+{
+	ByteRangeMap<std::string> source;
+	
+	source.set_range(10, 10, "clear");
+	source.set_range(30,  5, "request");
+	source.set_range(35,  5, "pear");
+	source.set_range(50, 10, "limping");
+	
+	ByteRangeMap<std::string> brm = source.get_slice(10, 10);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "clear"),
+	);
+}
+
+TEST(ByteRangeMap, GetSliceMatchOneInsideRange)
+{
+	ByteRangeMap<std::string> source;
+	
+	source.set_range(10, 10, "clear");
+	source.set_range(30,  5, "request");
+	source.set_range(35,  5, "pear");
+	source.set_range(50, 10, "limping");
+	
+	ByteRangeMap<std::string> brm = source.get_slice(5, 20);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "clear"),
+	);
+}
+
+TEST(ByteRangeMap, GetSliceMatchOneClamped)
+{
+	ByteRangeMap<std::string> source;
+	
+	source.set_range(10, 10, "clear");
+	source.set_range(30,  5, "request");
+	source.set_range(35,  5, "pear");
+	source.set_range(50, 10, "limping");
+	
+	ByteRangeMap<std::string> brm = source.get_slice(12, 5);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(12, 5), "clear"),
+	);
+}
+
+TEST(ByteRangeMap, GetSliceMatchMulti)
+{
+	ByteRangeMap<std::string> source;
+	
+	source.set_range(10, 10, "clear");
+	source.set_range(30,  5, "request");
+	source.set_range(35,  5, "pear");
+	source.set_range(50, 10, "limping");
+	
+	ByteRangeMap<std::string> brm = source.get_slice(30, 10);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(30, 5), "request"),
+		std::make_pair(ByteRangeMap<std::string>::Range(35, 5), "pear"),
+	);
+}
+
+TEST(ByteRangeMap, GetSliceMatchMultiClamp)
+{
+	ByteRangeMap<std::string> source;
+	
+	source.set_range(10, 10, "clear");
+	source.set_range(30,  5, "request");
+	source.set_range(35,  5, "pear");
+	source.set_range(50, 10, "limping");
+	
+	ByteRangeMap<std::string> brm = source.get_slice(32, 20);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(32, 3), "request"),
+		std::make_pair(ByteRangeMap<std::string>::Range(35, 5), "pear"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50, 2), "limping"),
+	);
+}
+
+TEST(ByteRangeMap, SetSliceEmptySource)
+{
+	ByteRangeMap<std::string> source, brm;
+	
+	brm.set_range(10, 10, "kindhearted");
+	brm.set_range(20, 10, "wire");
+	
+	brm.set_slice(source);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "kindhearted"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "wire"),
+	);
+}
+
+TEST(ByteRangeMap, SetSliceEmptyDest)
+{
+	ByteRangeMap<std::string> source, brm;
+	
+	source.set_range(10, 10, "sulky");
+	source.set_range(20, 10, "rough");
+	
+	brm.set_slice(source);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "sulky"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "rough"),
+	);
+}
+
+TEST(ByteRangeMap, SetSliceNoCollisions)
+{
+	ByteRangeMap<std::string> source, brm;
+	
+	brm.set_range(30, 10, "bell");
+	brm.set_range(40, 10, "decorate");
+	
+	source.set_range(10, 10, "park");
+	source.set_range(20, 10, "warlike");
+	
+	brm.set_slice(source);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "park"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "warlike"),
+		std::make_pair(ByteRangeMap<std::string>::Range(30, 10), "bell"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "decorate"),
+	);
+}
+
+TEST(ByteRangeMap, SetSliceExactCollision)
+{
+	ByteRangeMap<std::string> source, brm;
+	
+	brm.set_range(20, 10, "snake");
+	brm.set_range(40, 10, "book");
+	
+	source.set_range(10, 10, "economic");
+	source.set_range(20, 10, "noiseless");
+	
+	brm.set_slice(source);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "economic"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "noiseless"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "book"),
+	);
+}
+
+TEST(ByteRangeMap, SetSliceSpliceCollision)
+{
+	ByteRangeMap<std::string> source, brm;
+	
+	brm.set_range(20, 10, "vase");
+	brm.set_range(40, 10, "succinct");
+	
+	source.set_range(25, 20, "verdant");
+	source.set_range(48,  1, "spiteful");
+	
+	brm.set_slice(source);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(20,  5), "vase"),
+		std::make_pair(ByteRangeMap<std::string>::Range(25, 20), "verdant"),
+		std::make_pair(ByteRangeMap<std::string>::Range(45,  3), "succinct"),
+		std::make_pair(ByteRangeMap<std::string>::Range(48,  1), "spiteful"),
+		std::make_pair(ByteRangeMap<std::string>::Range(49,  1), "succinct"),
+	);
+}
+
+TEST(ByteRangeMap, Transform)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_range(10, 10, "front");
+	brm.set_range(20, 10, "wretched");
+	
+	brm.transform([](const std::string &value) { return value + "!"; });
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "front!"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "wretched!"),
+	);
+}

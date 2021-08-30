@@ -46,6 +46,14 @@ LUA_LIBS   ?= $(call shell-or-die,pkg-config $(LUA_PKG) --libs)
 CFLAGS   := -Wall -std=c99   -ggdb -I. -Iinclude/ -IwxLua/modules/ $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
 CXXFLAGS := -Wall -std=c++11 -ggdb -I. -Iinclude/ -IwxLua/modules/ $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
 
+uname_S := $(shell uname -s 2>/dev/null)
+ifeq ($(uname_S),FreeBSD)
+	LDLIBS += -liconv
+endif
+ifeq ($(uname_S),OpenBSD)
+	LDLIBS += -liconv
+endif
+
 LDLIBS := $(WX_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 ifeq ($(DEBUG),)

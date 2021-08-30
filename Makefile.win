@@ -20,7 +20,7 @@ EXTRA_APP_OBJS := res/winres.o
 
 WX_CONFIG ?= wx-config --static
 LDFLAGS   ?= -Wl,-Bstatic
-LDLIBS    += -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++ -lole32
+LDLIBS    += -lstdc++ -lwinpthread -liconv -Wl,-Bdynamic -static-libgcc -static-libstdc++ -lole32
 
 # Needed for PRIxNN macros from inttypes.h under MinGW
 CFLAGS   += -D__STDC_FORMAT_MACROS

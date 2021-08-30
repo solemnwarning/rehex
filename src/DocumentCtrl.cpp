@@ -30,6 +30,7 @@
 #include <wx/dcbuffer.h>
 
 #include "App.hpp"
+#include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
@@ -3334,22 +3335,57 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	 * The key of the deferred_drawtext map is the X co-ordinate to render the string
 	 * at (hex_base_x or ascii_base_x) and the foreground colour to use.
 	 *
+	 * The value of the deferred_drawtext map is the string to be drawn, and the number of
+	 * fixed-width CHARACTERS that have been added so far.
+	 *
 	 * The draw_char_deferred() function adds a character to be drawn to the map, while
 	 * prefixing it with any spaces necessary to pad it to the correct column from the
 	 * base X co-ordinate.
 	*/
 	
-	std::map<std::pair<int, Palette::ColourIndex>, std::string> deferred_drawtext;
+	std::map<std::pair<int, Palette::ColourIndex>, std::pair<std::string, int> > deferred_drawtext;
 	
 	auto draw_char_deferred = [&](int base_x, Palette::ColourIndex colour_idx, int col, char ch)
 	{
 		std::pair<int, Palette::ColourIndex> k(base_x, colour_idx);
-		std::string &str = deferred_drawtext[k];
+		std::pair<std::string, int> &v = deferred_drawtext[k];
 		
-		assert(str.length() <= (size_t)(col));
+		assert(v.second <= (size_t)(col));
 		
-		str.append((col - str.length()), ' ');
-		str.append(1, ch);
+		/* Add padding to skip to requested column. */
+		v.first.append((col - v.second), ' ');
+		v.second += col - v.second;
+		
+		/* TODO: Document-specific encodings. */
+		const CharacterEncoder *encoder = CharacterEncodingRegistry::by_name("ISO-8859-1")->encoder;
+		
+		try {
+			/* TODO: Cache the result of GetTextExtent, or do something better. */
+			
+			EncodedCharacter ec = encoder->decode(&ch, 1);
+			wxSize decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char.c_str()));
+			
+			if(decoded_char_size.GetWidth() == doc_ctrl->hf_char_width())
+			{
+				v.first.append(ec.utf8_char);
+				++(v.second);
+			}
+			else{
+				v.first.append(".");
+				++(v.second);
+			}
+		}
+		catch(const std::exception &e)
+		{
+			/* Couldn't decode the character in the selected encoding.
+			 * TODO: Highlight this in the interface?
+			*/
+			
+			v.first.append(".");
+			++(v.second);
+		}
+		
+		assert(v.second == (col + 1));
 	};
 	
 	/* Because we need to minimise wxDC::DrawText() calls (see above), we draw any
@@ -3378,9 +3414,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		
 		auto highlight = highlight_at_off(cur_off);
 		
-		char ascii_byte = isasciiprint(byte)
-			? byte
-			: '.';
+		char ascii_byte = byte;
 		
 		if(ascii_active)
 		{
@@ -3435,7 +3469,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		dc.SetTextForeground((*active_palette)[dd->first.second]);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 		
-		dc.DrawText(dd->second, dd->first.first, y);
+		dc.DrawText(wxString::FromUTF8(dd->second.first.c_str()), dd->first.first, y);
 	}
 }
 

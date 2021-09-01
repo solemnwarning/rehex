@@ -3328,6 +3328,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		return;
 	}
 	
+	const ByteRangeMap<std::string> &encodings = doc_ctrl->doc->get_encodings();
+	
 	/* Calling wxDC::DrawText() for each individual character on the screen is
 	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
 	 * area on a per-line basis.
@@ -3356,8 +3358,13 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		v.first.append((col - v.second), ' ');
 		v.second += col - v.second;
 		
-		/* TODO: Document-specific encodings. */
-		const CharacterEncoder *encoder = CharacterEncodingRegistry::by_name("ISO-8859-1")->encoder;
+		auto encoding_at_off = encodings.get_range(cur_off);
+		assert(encoding_at_off != encodings.end());
+		
+		const CharacterEncodingRegistration *encoding_reg = CharacterEncodingRegistry::by_name(encoding_at_off->second);
+		assert(encoding_reg != NULL);
+		
+		const CharacterEncoder *encoder = encoding_reg->encoder;
 		
 		try {
 			/* TODO: Cache the result of GetTextExtent, or do something better. */

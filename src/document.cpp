@@ -50,6 +50,7 @@ wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
+wxDEFINE_EVENT(REHex::EV_ENCODINGS_CHANGED,   wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
@@ -69,8 +70,9 @@ REHex::Document::Document(const std::string &filename):
 {
 	buffer = new REHex::Buffer(filename);
 	
-	data_seq.set_range(0, buffer->length(), 0);
-	types.set_range   (0, buffer->length(), "");
+	data_seq.set_range   (0, buffer->length(), 0);
+	types.set_range      (0, buffer->length(), "");
+	encodings.set_range  (0, buffer->length(), "ASCII");
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -552,6 +554,11 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 	return true;
 }
 
+const REHex::ByteRangeMap<std::string> &REHex::Document::get_encodings() const
+{
+	return encodings;
+}
+
 bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
 {
 	if(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end()
@@ -807,6 +814,12 @@ void REHex::Document::undo()
 			_raise_types_changed();
 		}
 		
+		if(encodings != trans.old_encodings)
+		{
+			encodings = trans.old_encodings;
+			_raise_encodings_changed();
+		}
+		
 		if(real_to_virt_segs != trans.old_real_to_virt_segs || virt_to_real_segs != trans.old_virt_to_real_segs)
 		{
 			real_to_virt_segs = trans.old_real_to_virt_segs;
@@ -1018,6 +1031,9 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		types.data_inserted(offset, length);
 		types.set_range(offset, length, "");
 		
+		encodings.data_inserted(offset, length);
+		encodings.set_range(offset, length, "ASCII");
+		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
@@ -1124,6 +1140,7 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		data_seq.data_erased(offset, length);
 		
 		types.data_erased(offset, length);
+		encodings.data_erased(offset, length);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
@@ -1516,6 +1533,14 @@ void REHex::Document::_raise_highlights_changed()
 void REHex::Document::_raise_types_changed()
 {
 	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
+}
+
+void REHex::Document::_raise_encodings_changed()
+{
+	wxCommandEvent event(REHex::EV_ENCODINGS_CHANGED);
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);

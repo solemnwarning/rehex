@@ -43,6 +43,7 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_ENCODINGS_CHANGED,   wxCommandEvent);
 	wxDECLARE_EVENT(EV_MAPPINGS_CHANGED,    wxCommandEvent);
 	
 	/**
@@ -238,6 +239,8 @@ namespace REHex {
 			*/
 			bool set_data_type(off_t offset, off_t length, const std::string &type);
 			
+			const ByteRangeMap<std::string> &get_encodings() const;
+			
 			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
 			void clear_virt_mapping_r(off_t real_offset, off_t length);
 			void clear_virt_mapping_v(off_t virt_offset, off_t length);
@@ -297,6 +300,7 @@ namespace REHex {
 				NestedOffsetLengthMap<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
 				ByteRangeMap<std::string> old_types;
+				ByteRangeMap<std::string> old_encodings;
 				
 				ByteRangeMap<off_t> old_real_to_virt_segs;
 				ByteRangeMap<off_t> old_virt_to_real_segs;
@@ -310,6 +314,7 @@ namespace REHex {
 					old_comments(doc->get_comments()),
 					old_highlights(doc->get_highlights()),
 					old_types(doc->get_data_types()),
+					old_encodings(doc->get_encodings()),
 					old_real_to_virt_segs(doc->get_real_to_virt_segs()),
 					old_virt_to_real_segs(doc->get_virt_to_real_segs()) {}
 			};
@@ -326,6 +331,7 @@ namespace REHex {
 			NestedOffsetLengthMap<Comment> comments;
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
 			ByteRangeMap<std::string> types;
+			ByteRangeMap<std::string> encodings;
 			
 			ByteRangeMap<off_t> real_to_virt_segs;
 			ByteRangeMap<off_t> virt_to_real_segs;
@@ -381,6 +387,7 @@ namespace REHex {
 			void _raise_clean();
 			void _raise_highlights_changed();
 			void _raise_types_changed();
+			void _raise_encodings_changed();
 			void _raise_mappings_changed();
 			
 		public:

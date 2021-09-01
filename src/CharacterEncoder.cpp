@@ -30,7 +30,7 @@
 #define MAX_CHAR_SIZE 8
 
 static REHex::CharacterEncoderASCII ascii_encoder;
-static REHex::CharacterEncodingRegistration ascii_reg("ascii", "US-ASCII (7-bit)", &ascii_encoder);
+static REHex::CharacterEncodingRegistration ascii_reg("ASCII", "US-ASCII (7-bit)", &ascii_encoder);
 
 REHex::EncodedCharacter::EncodedCharacter(const std::string &encoded_char, const std::string &utf8_char):
 	encoded_char(encoded_char),

@@ -559,6 +559,28 @@ const REHex::ByteRangeMap<std::string> &REHex::Document::get_encodings() const
 	return encodings;
 }
 
+bool REHex::Document::set_encoding(off_t offset, off_t length, const std::string &encoding)
+{
+	if(offset < 0 || length < 1 || (offset + length) > buffer_length())
+	{
+		return false;
+	}
+	
+	_tracked_change("set encoding",
+		[this, offset, length, encoding]()
+		{
+			encodings.set_range(offset, length, encoding);
+			_raise_encodings_changed();
+		},
+		
+		[this]()
+		{
+			/* Data type changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
 bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
 {
 	if(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end()

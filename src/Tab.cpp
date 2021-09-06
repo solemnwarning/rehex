@@ -28,6 +28,7 @@
 #include "App.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
+#include "CharacterEncoder.hpp"
 #include "EditCommentDialog.hpp"
 #include "Tab.hpp"
 #include "VirtualMappingDialog.hpp"
@@ -973,6 +974,8 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		auto selection_off_type = data_types.get_range(selection_off);
 		assert(selection_off_type != data_types.end());
 		
+		/* "Set data type" > */
+		
 		wxMenu *dtmenu = new wxMenu();
 		
 		wxMenuItem *data_itm = dtmenu->AppendCheckItem(wxID_ANY, "Data");
@@ -1041,6 +1044,39 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		}
 		
 		menu.AppendSubMenu(dtmenu, "Set data type");
+		
+		/* "Set text encoding" > */
+		
+		const ByteRangeMap<std::string> &encodings = doc->get_encodings();
+		
+		auto selection_off_encoding = encodings.get_range(selection_off);
+		assert(selection_off_encoding != encodings.end());
+		
+		wxMenu *temenu = new wxMenu();
+		
+		for(auto e = CharacterEncodingRegistry::begin(); e != CharacterEncodingRegistry::end(); ++e)
+		{
+			const CharacterEncodingRegistration *ce = e->second;
+			
+			wxMenuItem *itm = temenu->AppendCheckItem(wxID_ANY, ce->label);
+			
+			if((selection_off_encoding->first.offset + selection_off_encoding->first.length) >= (selection_off + selection_length)
+				&& selection_off_encoding->second == ce->name)
+			{
+				itm->Check(true);
+			}
+			
+			#ifdef _WIN32
+			menu.Bind(wxEVT_MENU, [this, ce, selection_off, selection_length](wxCommandEvent &event)
+			#else
+			temenu->Bind(wxEVT_MENU, [this, ce, selection_off, selection_length](wxCommandEvent &event)
+			#endif
+			{
+				doc->set_encoding(selection_off, selection_length, ce->name);
+			}, itm->GetId(), itm->GetId());
+		}
+		
+		menu.AppendSubMenu(temenu, "Set text encoding");
 		
 		wxMenuItem *vm_itm = menu.Append(wxID_ANY, "Set virtual address mapping...");
 		

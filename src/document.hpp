@@ -240,6 +240,7 @@ namespace REHex {
 			bool set_data_type(off_t offset, off_t length, const std::string &type);
 			
 			const ByteRangeMap<std::string> &get_encodings() const;
+			bool set_encoding(off_t offset, off_t length, const std::string &encoding);
 			
 			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
 			void clear_virt_mapping_r(off_t real_offset, off_t length);

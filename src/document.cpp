@@ -33,6 +33,7 @@
 
 #include "App.hpp"
 #include "document.hpp"
+#include "CharacterEncoder.hpp"
 #include "Events.hpp"
 #include "Palette.hpp"
 #include "textentrydialog.hpp"
@@ -1342,6 +1343,32 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		has_data = true;
 	}
 	
+	json_t *encodings = json_array();
+	if(json_object_set_new(root, "encodings", encodings) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	for(auto enc = this->encodings.begin(); enc != this->encodings.end(); ++enc)
+	{
+		json_t *data_type = json_object();
+		if(json_array_append(encodings, data_type) == -1
+			|| json_object_set_new(data_type, "offset",   json_integer(enc->first.offset)) == -1
+			|| json_object_set_new(data_type, "length",   json_integer(enc->first.length)) == -1
+			|| json_object_set_new(data_type, "encoding", json_string(enc->second.c_str())) == -1)
+		{
+			json_decref(root);
+			return NULL;
+		}
+		
+		if(enc->second != "ASCII" || this->encodings.size() > 1)
+		{
+			/* Only generate a .rehex-meta file if the encoding has been changed from default. */
+			has_data = true;
+		}
+	}
+	
 	json_t *virt_mappings = json_array();
 	if(json_object_set_new(root, "virt_mappings", virt_mappings) == -1)
 	{
@@ -1468,6 +1495,34 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 	return types;
 }
 
+REHex::ByteRangeMap<std::string> REHex::Document::_load_encodings(const json_t *meta, off_t buffer_length)
+{
+	ByteRangeMap<std::string> encodings;
+	encodings.set_range(0, buffer_length, "ASCII");
+	
+	json_t *j_encodings = json_object_get(meta, "encodings");
+	
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j_encodings, index, value)
+	{
+		off_t offset         = json_integer_value(json_object_get(value, "offset"));
+		off_t length         = json_integer_value(json_object_get(value, "length"));
+		const char *encoding = json_string_value(json_object_get(value, "encoding"));
+		
+		if(offset >= 0 && offset < buffer_length
+			&& length > 0 && (offset + length) <= buffer_length
+			&& encoding != NULL
+			&& CharacterEncodingRegistry::by_name(encoding) != NULL)
+		{
+			encodings.set_range(offset, length, encoding);
+		}
+	}
+	
+	return encodings;
+}
+
 std::pair< REHex::ByteRangeMap<off_t>, REHex::ByteRangeMap<off_t> > REHex::Document::_load_virt_mappings(const json_t *meta, off_t buffer_length)
 {
 	ByteRangeMap<off_t> real_to_virt_segs;
@@ -1507,6 +1562,7 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	comments = _load_comments(meta, buffer_length());
 	highlights = _load_highlights(meta, buffer_length());
 	types = _load_types(meta, buffer_length());
+	encodings = _load_encodings(meta, buffer_length());
 	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
 	
 	json_decref(meta);

@@ -73,7 +73,7 @@ REHex::Document::Document(const std::string &filename):
 	
 	data_seq.set_range   (0, buffer->length(), 0);
 	types.set_range      (0, buffer->length(), "");
-	encodings.set_range  (0, buffer->length(), "ASCII");
+	encodings.set_range  (0, buffer->length(), DEFAULT_ENCODING);
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -1055,7 +1055,7 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		types.set_range(offset, length, "");
 		
 		encodings.data_inserted(offset, length);
-		encodings.set_range(offset, length, "ASCII");
+		encodings.set_range(offset, length, DEFAULT_ENCODING);
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
@@ -1362,7 +1362,7 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 			return NULL;
 		}
 		
-		if(enc->second != "ASCII" || this->encodings.size() > 1)
+		if(enc->second != DEFAULT_ENCODING || this->encodings.size() > 1)
 		{
 			/* Only generate a .rehex-meta file if the encoding has been changed from default. */
 			has_data = true;
@@ -1498,7 +1498,7 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 REHex::ByteRangeMap<std::string> REHex::Document::_load_encodings(const json_t *meta, off_t buffer_length)
 {
 	ByteRangeMap<std::string> encodings;
-	encodings.set_range(0, buffer_length, "ASCII");
+	encodings.set_range(0, buffer_length, DEFAULT_ENCODING);
 	
 	json_t *j_encodings = json_object_get(meta, "encodings");
 	

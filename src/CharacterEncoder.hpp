@@ -26,6 +26,8 @@
 
 namespace REHex
 {
+	static const char *DEFAULT_ENCODING = "ASCII";
+	
 	struct EncodedCharacter
 	{
 		std::string encoded_char;  /**< Character encoded in chosen encoding (ISO-8859-1, Shift JIS, etc) */

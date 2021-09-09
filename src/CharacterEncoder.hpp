@@ -26,7 +26,9 @@
 
 namespace REHex
 {
-	static const char *DEFAULT_ENCODING = "ASCII";
+	/* 4 bytes should be enough for any character... so allow double that. */
+	static const size_t MAX_CHAR_SIZE = 8;
+	static const char * const DEFAULT_ENCODING = "ASCII";
 	
 	struct EncodedCharacter
 	{
@@ -126,8 +128,9 @@ namespace REHex
 			const std::string label;
 			
 			const CharacterEncoder * const encoder;
+			const size_t word_size;
 			
-			CharacterEncodingRegistration(const std::string &name, const std::string &label, const CharacterEncoder *encoder);
+			CharacterEncodingRegistration(const std::string &name, const std::string &label, const CharacterEncoder *encoder, size_t word_size);
 			~CharacterEncodingRegistration();
 	};
 	

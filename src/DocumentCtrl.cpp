@@ -2935,7 +2935,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		data = doc.doc->read_data(data_base, data_to_draw + hsm_pre + hsm_post);
 		
 		data_p = data.data() + hsm_pre;
-		data_remain = std::min((data.size() - hsm_pre), (size_t)(data_to_draw));
+		data_remain = std::min<size_t>((data.size() - hsm_pre), data_to_draw);
 		
 		if(!selection_data.empty())
 		{

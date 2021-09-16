@@ -50,6 +50,8 @@ namespace REHex
 					InvalidCharacter(const std::string &what): runtime_error(what) {}
 			};
 			
+			const size_t word_size;
+			
 			/**
 			 * @brief Decode a single character from a buffer to UTF-8.
 			 *
@@ -70,6 +72,9 @@ namespace REHex
 			 * Throws an exception of type InvalidCharacter on error.
 			*/
 			virtual EncodedCharacter encode(const std::string &utf8_char) const = 0;
+			
+		protected:
+			CharacterEncoder(size_t word_size): word_size(word_size) {}
 	};
 	
 	/**
@@ -81,6 +86,8 @@ namespace REHex
 	class CharacterEncoderASCII: public CharacterEncoder
 	{
 		public:
+			CharacterEncoderASCII(): CharacterEncoder(1) {}
+			
 			virtual EncodedCharacter decode(const void *data, size_t len) const override;
 			virtual EncodedCharacter encode(const std::string &utf8_char) const override;
 	};
@@ -114,59 +121,11 @@ namespace REHex
 			iconv_t from_utf8;
 			
 		public:
-			CharacterEncoderIconv(const char *encoding);
+			CharacterEncoderIconv(const char *encoding, size_t word_size);
 			~CharacterEncoderIconv();
 			
 			virtual EncodedCharacter decode(const void *data, size_t len) const override;
 			virtual EncodedCharacter encode(const std::string &utf8_char) const override;
-	};
-	
-	class CharacterEncodingRegistration
-	{
-		public:
-			const std::string name;
-			const std::string label;
-			
-			const CharacterEncoder * const encoder;
-			const size_t word_size;
-			
-			CharacterEncodingRegistration(const std::string &name, const std::string &label, const CharacterEncoder *encoder, size_t word_size);
-			~CharacterEncodingRegistration();
-	};
-	
-	class CharacterEncodingRegistry
-	{
-		friend class CharacterEncodingRegistration;
-		
-		public:
-			/**
-			 * @brief Get an iterator to the first registration.
-			*/
-			static std::map<std::string, const CharacterEncodingRegistration*>::const_iterator begin();
-			
-			/**
-			 * @brief Get an iterator to the end of the registrations.
-			*/
-			static std::map<std::string, const CharacterEncodingRegistration*>::const_iterator end();
-			
-			/**
-			 * @brief Search for a ToolPanelRegistration by its internal name.
-			 *
-			 * @return ToolPanelRegistration pointer, NULL if not found.
-			*/
-			static const CharacterEncodingRegistration *by_name(const std::string &name);
-			
-		private:
-			/* The registrations map is created by the first ToolPanelRegistration and
-			 * destroyed when the last one in it removes itself. This is to avoid
-			 * depending on global variable initialisation order.
-			 *
-			 * The no_registrations map is always empty and used to return iterators
-			 * to an empty map when no registrations exist.
-			*/
-			
-			static std::map<std::string, const CharacterEncodingRegistration*> *registrations;
-			static const std::map<std::string, const CharacterEncodingRegistration*> no_registrations;
 	};
 }
 

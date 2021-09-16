@@ -25,9 +25,10 @@
 
 #include "App.hpp"
 #include "CharacterEncoder.hpp"
+#include "DataType.hpp"
 
-static REHex::CharacterEncoderASCII ascii_encoder;
-static REHex::CharacterEncodingRegistration ascii_reg("ASCII", "US-ASCII (7-bit)", &ascii_encoder, 1);
+// static REHex::CharacterEncoderASCII ascii_encoder;
+// static REHex::CharacterEncodingRegistration ascii_reg("ASCII", "US-ASCII (7-bit)", &ascii_encoder, 1);
 
 REHex::EncodedCharacter::EncodedCharacter(const std::string &encoded_char, const std::string &utf8_char):
 	encoded_char(encoded_char),
@@ -119,7 +120,8 @@ REHex::EncodedCharacter REHex::CharacterEncoder8Bit::encode(const std::string &u
 }
 #endif
 
-REHex::CharacterEncoderIconv::CharacterEncoderIconv(const char *encoding):
+REHex::CharacterEncoderIconv::CharacterEncoderIconv(const char *encoding, size_t word_size):
+	CharacterEncoder(word_size),
 	encoding(encoding)
 {
 	to_utf8 = iconv_open("UTF-8", encoding);
@@ -208,65 +210,6 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::encode(const std::string &
 	}
 }
 
-REHex::CharacterEncodingRegistration::CharacterEncodingRegistration(const std::string &name, const std::string &label, const CharacterEncoder *encoder, size_t word_size):
-	name(name),
-	label(label),
-	encoder(encoder),
-	word_size(word_size)
-{
-	if(CharacterEncodingRegistry::registrations == NULL)
-	{
-		CharacterEncodingRegistry::registrations = new std::map<std::string, const REHex::CharacterEncodingRegistration*>();
-	}
-	
-	CharacterEncodingRegistry::registrations->insert(std::make_pair(name, this));
-}
-
-REHex::CharacterEncodingRegistration::~CharacterEncodingRegistration()
-{
-	CharacterEncodingRegistry::registrations->erase(name);
-	
-	if(CharacterEncodingRegistry::registrations->empty())
-	{
-		delete CharacterEncodingRegistry::registrations;
-		CharacterEncodingRegistry::registrations = NULL;
-	}
-}
-
-std::map<std::string, const REHex::CharacterEncodingRegistration*> *REHex::CharacterEncodingRegistry::registrations = NULL;
-const std::map<std::string, const REHex::CharacterEncodingRegistration*> REHex::CharacterEncodingRegistry::no_registrations;
-
-std::map<std::string, const REHex::CharacterEncodingRegistration*>::const_iterator REHex::CharacterEncodingRegistry::begin()
-{
-	return registrations != NULL
-		? registrations->begin()
-		: no_registrations.begin();
-}
-
-std::map<std::string, const REHex::CharacterEncodingRegistration*>::const_iterator REHex::CharacterEncodingRegistry::end()
-{
-	return registrations != NULL
-		? registrations->end()
-		: no_registrations.end();
-}
-
-const REHex::CharacterEncodingRegistration *REHex::CharacterEncodingRegistry::by_name(const std::string &name)
-{
-	if(registrations == NULL)
-	{
-		return NULL;
-	}
-	
-	auto i = registrations->find(name);
-	if(i != registrations->end())
-	{
-		return i->second;
-	}
-	else{
-		return NULL;
-	}
-}
-
 /* CharacterEncoderIconv depends on the system iconv working and accepting whatever encoding it
  * was given at construction time. I don't want a missing iconv encoding causing the application
  * to crash or being silently ignored, so the IconvCharacterEncodingRegistrationHelper class
@@ -278,23 +221,23 @@ class IconvCharacterEncodingRegistrationHelper
 {
 	private:
 		std::unique_ptr<REHex::CharacterEncoder> encoder;
-		std::unique_ptr<REHex::CharacterEncodingRegistration> registration;
+		std::unique_ptr<REHex::DataTypeRegistration> registration;
 		
 		REHex::App::SetupHookRegistration setup_hook;
-		void deferred_init(const char *encoding, size_t word_size, const char *key, const char *label);
+		void deferred_init(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label);
 		
 	public:
-		IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, const char *key, const char *label);
+		IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label);
 };
 
-IconvCharacterEncodingRegistrationHelper::IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, const char *key, const char *label):
-	setup_hook(REHex::App::SetupPhase::EARLY, [=]() { deferred_init(encoding, word_size, key, label); }) {}
+IconvCharacterEncodingRegistrationHelper::IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label):
+	setup_hook(REHex::App::SetupPhase::EARLY, [=]() { deferred_init(encoding, word_size, text_group, key, label); }) {}
 
-void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encoding, size_t word_size, const char *key, const char *label)
+void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label)
 {
 	try {
-		encoder.reset(new REHex::CharacterEncoderIconv(encoding));
-		registration.reset(new REHex::CharacterEncodingRegistration(key, label, encoder.get(), word_size));
+		encoder.reset(new REHex::CharacterEncoderIconv(encoding, word_size));
+		registration.reset(new REHex::DataTypeRegistration(key, label, std::vector<std::string>({"Text", text_group}), encoder.get()));
 	}
 	catch(const std::exception &e)
 	{
@@ -303,23 +246,23 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 	}
 }
 
-static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, "ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
-static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, "ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");
-static IconvCharacterEncodingRegistrationHelper iso8859_3_r ("ISO-8859-3",  1, "ISO-8859-3",  "Latin-3 (ISO-8859-3: South European and Esperanto)");
-static IconvCharacterEncodingRegistrationHelper iso8859_4_r ("ISO-8859-4",  1, "ISO-8859-4",  "Latin-4 (ISO-8859-4: Baltic, old)");
-static IconvCharacterEncodingRegistrationHelper iso8859_5_r ("ISO-8859-5",  1, "ISO-8859-5",  "Cyrillic (ISO-8859-5)");
-static IconvCharacterEncodingRegistrationHelper iso8859_6_r ("ISO-8859-6",  1, "ISO-8859-6",  "Arabic (ISO-8859-6)");
-static IconvCharacterEncodingRegistrationHelper iso8859_7_r ("ISO-8859-7",  1, "ISO-8859-7",  "Greek (ISO-8859-7)");
-static IconvCharacterEncodingRegistrationHelper iso8859_8_r ("ISO-8859-8",  1, "ISO-8859-8",  "Hebrew (ISO-8859-8)");
-static IconvCharacterEncodingRegistrationHelper iso8859_9_r ("ISO-8859-9",  1, "ISO-8859-9",  "Latin-5 (ISO-8859-9: Turkish)");
-static IconvCharacterEncodingRegistrationHelper iso8859_10_r("ISO-8859-10", 1, "ISO-8859-10", "Latin-6 (ISO-8859-10: Nordic)");
-static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, "ISO-8859-11", "Thai (ISO-8859-11, unofficial)");
-static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, "ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
-static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, "ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
-static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, "ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, "8-bit code pages", "text:ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, "8-bit code pages", "text:ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_3_r ("ISO-8859-3",  1, "8-bit code pages", "text:ISO-8859-3",  "Latin-3 (ISO-8859-3: South European and Esperanto)");
+static IconvCharacterEncodingRegistrationHelper iso8859_4_r ("ISO-8859-4",  1, "8-bit code pages", "text:ISO-8859-4",  "Latin-4 (ISO-8859-4: Baltic, old)");
+static IconvCharacterEncodingRegistrationHelper iso8859_5_r ("ISO-8859-5",  1, "8-bit code pages", "text:ISO-8859-5",  "Cyrillic (ISO-8859-5)");
+static IconvCharacterEncodingRegistrationHelper iso8859_6_r ("ISO-8859-6",  1, "8-bit code pages", "text:ISO-8859-6",  "Arabic (ISO-8859-6)");
+static IconvCharacterEncodingRegistrationHelper iso8859_7_r ("ISO-8859-7",  1, "8-bit code pages", "text:ISO-8859-7",  "Greek (ISO-8859-7)");
+static IconvCharacterEncodingRegistrationHelper iso8859_8_r ("ISO-8859-8",  1, "8-bit code pages", "text:ISO-8859-8",  "Hebrew (ISO-8859-8)");
+static IconvCharacterEncodingRegistrationHelper iso8859_9_r ("ISO-8859-9",  1, "8-bit code pages", "text:ISO-8859-9",  "Latin-5 (ISO-8859-9: Turkish)");
+static IconvCharacterEncodingRegistrationHelper iso8859_10_r("ISO-8859-10", 1, "8-bit code pages", "text:ISO-8859-10", "Latin-6 (ISO-8859-10: Nordic)");
+static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, "8-bit code pages", "text:ISO-8859-11", "Thai (ISO-8859-11, unofficial)");
+static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, "8-bit code pages", "text:ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
+static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, "8-bit code pages", "text:ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
+static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, "8-bit code pages", "text:ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
 
-static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1, "UTF-8",    "UTF-8");
-static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, "UTF-16LE", "UTF-16LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, "UTF-16BE", "UTF-16BE (Big Endian)");
-static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4, "UTF-32LE", "UTF-32LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4, "UTF-32BE", "UTF-32BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1, "Unicode", "text:UTF-8",    "UTF-8");
+static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, "Unicode", "text:UTF-16LE", "UTF-16LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, "Unicode", "text:UTF-16BE", "UTF-16BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4, "Unicode", "text:UTF-32LE", "UTF-32LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4, "Unicode", "text:UTF-32BE", "UTF-32BE (Big Endian)");

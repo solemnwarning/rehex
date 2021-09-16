@@ -51,7 +51,6 @@ wxDEFINE_EVENT(REHex::EV_BECAME_CLEAN,        wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_DISP_SETTING_CHANGED,wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
-wxDEFINE_EVENT(REHex::EV_ENCODINGS_CHANGED,   wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
@@ -73,7 +72,6 @@ REHex::Document::Document(const std::string &filename):
 	
 	data_seq.set_range   (0, buffer->length(), 0);
 	types.set_range      (0, buffer->length(), "");
-	encodings.set_range  (0, buffer->length(), DEFAULT_ENCODING);
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -555,33 +553,6 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 	return true;
 }
 
-const REHex::ByteRangeMap<std::string> &REHex::Document::get_encodings() const
-{
-	return encodings;
-}
-
-bool REHex::Document::set_encoding(off_t offset, off_t length, const std::string &encoding)
-{
-	if(offset < 0 || length < 1 || (offset + length) > buffer_length())
-	{
-		return false;
-	}
-	
-	_tracked_change("set encoding",
-		[this, offset, length, encoding]()
-		{
-			encodings.set_range(offset, length, encoding);
-			_raise_encodings_changed();
-		},
-		
-		[this]()
-		{
-			/* Data type changes are undone implicitly. */
-		});
-	
-	return true;
-}
-
 bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
 {
 	if(real_to_virt_segs.get_range_in(real_offset, length) != real_to_virt_segs.end()
@@ -837,12 +808,6 @@ void REHex::Document::undo()
 			_raise_types_changed();
 		}
 		
-		if(encodings != trans.old_encodings)
-		{
-			encodings = trans.old_encodings;
-			_raise_encodings_changed();
-		}
-		
 		if(real_to_virt_segs != trans.old_real_to_virt_segs || virt_to_real_segs != trans.old_virt_to_real_segs)
 		{
 			real_to_virt_segs = trans.old_real_to_virt_segs;
@@ -1054,9 +1019,6 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		types.data_inserted(offset, length);
 		types.set_range(offset, length, "");
 		
-		encodings.data_inserted(offset, length);
-		encodings.set_range(offset, length, DEFAULT_ENCODING);
-		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
@@ -1163,7 +1125,6 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		data_seq.data_erased(offset, length);
 		
 		types.data_erased(offset, length);
-		encodings.data_erased(offset, length);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
@@ -1343,32 +1304,6 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		has_data = true;
 	}
 	
-	json_t *encodings = json_array();
-	if(json_object_set_new(root, "encodings", encodings) == -1)
-	{
-		json_decref(root);
-		return NULL;
-	}
-	
-	for(auto enc = this->encodings.begin(); enc != this->encodings.end(); ++enc)
-	{
-		json_t *data_type = json_object();
-		if(json_array_append(encodings, data_type) == -1
-			|| json_object_set_new(data_type, "offset",   json_integer(enc->first.offset)) == -1
-			|| json_object_set_new(data_type, "length",   json_integer(enc->first.length)) == -1
-			|| json_object_set_new(data_type, "encoding", json_string(enc->second.c_str())) == -1)
-		{
-			json_decref(root);
-			return NULL;
-		}
-		
-		if(enc->second != DEFAULT_ENCODING || this->encodings.size() > 1)
-		{
-			/* Only generate a .rehex-meta file if the encoding has been changed from default. */
-			has_data = true;
-		}
-	}
-	
 	json_t *virt_mappings = json_array();
 	if(json_object_set_new(root, "virt_mappings", virt_mappings) == -1)
 	{
@@ -1495,34 +1430,6 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 	return types;
 }
 
-REHex::ByteRangeMap<std::string> REHex::Document::_load_encodings(const json_t *meta, off_t buffer_length)
-{
-	ByteRangeMap<std::string> encodings;
-	encodings.set_range(0, buffer_length, DEFAULT_ENCODING);
-	
-	json_t *j_encodings = json_object_get(meta, "encodings");
-	
-	size_t index;
-	json_t *value;
-	
-	json_array_foreach(j_encodings, index, value)
-	{
-		off_t offset         = json_integer_value(json_object_get(value, "offset"));
-		off_t length         = json_integer_value(json_object_get(value, "length"));
-		const char *encoding = json_string_value(json_object_get(value, "encoding"));
-		
-		if(offset >= 0 && offset < buffer_length
-			&& length > 0 && (offset + length) <= buffer_length
-			&& encoding != NULL
-			&& CharacterEncodingRegistry::by_name(encoding) != NULL)
-		{
-			encodings.set_range(offset, length, encoding);
-		}
-	}
-	
-	return encodings;
-}
-
 std::pair< REHex::ByteRangeMap<off_t>, REHex::ByteRangeMap<off_t> > REHex::Document::_load_virt_mappings(const json_t *meta, off_t buffer_length)
 {
 	ByteRangeMap<off_t> real_to_virt_segs;
@@ -1562,7 +1469,6 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	comments = _load_comments(meta, buffer_length());
 	highlights = _load_highlights(meta, buffer_length());
 	types = _load_types(meta, buffer_length());
-	encodings = _load_encodings(meta, buffer_length());
 	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
 	
 	json_decref(meta);
@@ -1611,14 +1517,6 @@ void REHex::Document::_raise_highlights_changed()
 void REHex::Document::_raise_types_changed()
 {
 	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
-	event.SetEventObject(this);
-	
-	ProcessEvent(event);
-}
-
-void REHex::Document::_raise_encodings_changed()
-{
-	wxCommandEvent event(REHex::EV_ENCODINGS_CHANGED);
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);

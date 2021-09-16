@@ -31,6 +31,7 @@
 
 #include "App.hpp"
 #include "CharacterEncoder.hpp"
+#include "DataType.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
@@ -3334,7 +3335,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		return;
 	}
 	
-	const ByteRangeMap<std::string> &encodings = doc_ctrl->doc->get_encodings();
+	const ByteRangeMap<std::string> &types = doc_ctrl->doc->get_data_types();
 	
 	/* If the start of this line isn't aligned to the bounds of a multibyte character, we can
 	 * walk backwards to find where the character began, and correctly initialise consume_chars
@@ -3344,23 +3345,31 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	size_t consume_chars = 0;
 	
 	{
-		auto encoding_at_base = encodings.get_range(base_off);
-		assert(encoding_at_base != encodings.end());
+		auto type_at_base = types.get_range(base_off);
+		assert(type_at_base != types.end());
 		
-		off_t encoding_base = std::max(encoding_at_base->first.offset, alignment_hint);
+		off_t encoding_base = std::max(type_at_base->first.offset, alignment_hint);
 		assert(encoding_base <= base_off);
 		
-		const CharacterEncodingRegistration *encoding_reg = CharacterEncodingRegistry::by_name(encoding_at_base->second);
-		assert(encoding_reg != NULL);
-		
-		const CharacterEncoder *encoder = encoding_reg->encoder;
+		const CharacterEncoder *encoder;
+		if(type_at_base->second != "")
+		{
+			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
+			assert(dt_reg != NULL);
+			
+			encoder = dt_reg->encoder;
+		}
+		else{
+			static REHex::CharacterEncoderASCII ascii_encoder;
+			encoder = &ascii_encoder;
+		}
 		
 		/* Step backwards until we are aligned with the encoding's word size. */
 		
 		size_t step_back = 0;
 		off_t at_offset = base_off;
 		
-		while(((at_offset - encoding_base) % encoding_reg->word_size) != 0)
+		while(((at_offset - encoding_base) % encoder->word_size) != 0)
 		{
 			++step_back;
 			--at_offset;
@@ -3386,8 +3395,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			}
 			catch(const std::exception&) {}
 			
-			step_back += encoding_reg->word_size;
-			at_offset -= encoding_reg->word_size;
+			step_back += encoder->word_size;
+			at_offset -= encoder->word_size;
 		}
 	}
 	
@@ -3431,16 +3440,24 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			return;
 		}
 		
-		auto encoding_at_off = encodings.get_range(cur_off);
-		assert(encoding_at_off != encodings.end());
+		auto type_at_off = types.get_range(cur_off);
+		assert(type_at_off != types.end());
 		
-		off_t encoding_base = std::max(encoding_at_off->first.offset, alignment_hint);
+		off_t encoding_base = std::max(type_at_off->first.offset, alignment_hint);
 		assert(encoding_base <= cur_off);
 		
-		const CharacterEncodingRegistration *encoding_reg = CharacterEncodingRegistry::by_name(encoding_at_off->second);
-		assert(encoding_reg != NULL);
-		
-		const CharacterEncoder *encoder = encoding_reg->encoder;
+		const CharacterEncoder *encoder;
+		if(type_at_off->second != "")
+		{
+			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+			assert(dt_reg != NULL);
+			
+			encoder = dt_reg->encoder;
+		}
+		else{
+			static REHex::CharacterEncoderASCII ascii_encoder;
+			encoder = &ascii_encoder;
+		}
 		
 		try {
 			/* TODO: Cache the result of GetTextExtent, or do something better. */

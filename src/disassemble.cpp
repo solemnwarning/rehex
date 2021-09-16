@@ -129,7 +129,7 @@ static void Initialize_disassembler()
 				{
 					return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
 				},
-				"Machine code");
+				std::vector<std::string>({ "Machine code" }));
 		}
 		else
 		{

@@ -999,8 +999,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		std::vector<const DataTypeRegistration*> sorted_dts = DataTypeRegistry::sorted_by_group();
 		
-		wxMenu *group_menu = dtmenu;
-		wxMenuItem *gm_item = NULL;
+		std::vector< std::pair<std::string, wxMenu*> > group_menus;
 		
 		for(auto dti = sorted_dts.begin(); dti != sorted_dts.end(); ++dti)
 		{
@@ -1012,17 +1011,30 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				continue;
 			}
 			
-			if(!dt->group.empty())
+			wxMenu *group_menu = dtmenu;
+			
 			{
-				if(gm_item == NULL || gm_item->GetItemLabel() != dt->group)
+				auto g = dt->groups.begin();
+				auto p = group_menus.begin();
+				
+				for(; g != dt->groups.end(); ++g, ++p)
 				{
-					group_menu = new wxMenu;
-					gm_item = dtmenu->AppendSubMenu(group_menu, dt->group);
+					if(p == group_menus.end() || p->first != *g)
+					{
+						wxMenu *m = new wxMenu;
+						group_menu->AppendSubMenu(m, *g);
+						group_menu = m;
+						
+						p = group_menus.emplace(p, *g, m);
+					}
+					
+					group_menu = p->second;
 				}
 			}
-			else{
-				group_menu = dtmenu;
-				gm_item = NULL;
+			
+			if(group_menus.size() > dt->groups.size())
+			{
+				group_menus.erase(std::next(group_menus.begin(), dt->groups.size()), group_menus.end());
 			}
 			
 			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dt->label);

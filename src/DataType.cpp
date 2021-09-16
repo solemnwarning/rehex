@@ -74,9 +74,9 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 	std::sort(sorted_registrations.begin(), sorted_registrations.end(),
 		[](const DataTypeRegistration *a, const DataTypeRegistration *b)
 		{
-			if(a->group != b->group)
+			if(a->groups != b->groups)
 			{
-				return a->group < b->group;
+				return a->groups < b->groups;
 			}
 			else{
 				return a->label < b->label;
@@ -86,12 +86,12 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 	return sorted_registrations;
 }
 
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::string &group, off_t fixed_size):
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::vector<std::string> &groups, off_t fixed_size):
 	name(name),
 	label(label),
-	region_factory(region_factory),
-	group(group),
-	fixed_size(fixed_size)
+	groups(groups),
+	fixed_size(fixed_size),
+	region_factory(region_factory)
 {
 	if(DataTypeRegistry::registrations == NULL)
 	{

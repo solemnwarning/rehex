@@ -740,6 +740,9 @@ namespace REHex
 				virtual bool write_string_value(const std::string &value) override; \
 		};
 	
+	DECLARE_NDTR_CLASS(U8DataRegion, uint8_t)
+	DECLARE_NDTR_CLASS(S8DataRegion, int8_t)
+	
 	DECLARE_NDTR_CLASS(U16LEDataRegion, uint16_t)
 	DECLARE_NDTR_CLASS(U16BEDataRegion, uint16_t)
 	DECLARE_NDTR_CLASS(S16LEDataRegion, int16_t)

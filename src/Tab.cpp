@@ -33,12 +33,6 @@
 #include "Tab.hpp"
 #include "VirtualMappingDialog.hpp"
 
-/* Is the given byte a printable 7-bit ASCII character? */
-static bool isasciiprint(int c)
-{
-	return (c >= ' ' && c <= '~');
-}
-
 /* Is the given value a 7-bit ASCII character representing a hex digit? */
 static bool isasciihex(int c)
 {
@@ -594,6 +588,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	}
 	
 	int key       = event.GetKeyCode();
+	wxChar ukey   = event.GetUnicodeKey();
 	int modifiers = event.GetModifiers();
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
@@ -653,23 +648,66 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		
 		return;
 	}
-	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
+	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && ukey != WXK_NONE)
 	{
-		unsigned char byte = key;
+		/* Find the CharacterEncoder to use at the cursor position. */
 		
-		if(insert_mode)
+		const ByteRangeMap<std::string> &types = doc->get_data_types();
+		
+		auto type_at_off = types.get_range(cursor_pos);
+		assert(type_at_off != types.end());
+		
+		const CharacterEncoder *encoder;
+		if(type_at_off->second != "")
 		{
-			doc->insert_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
-		}
-		else if(cursor_pos < doc->buffer_length())
-		{
-			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
-			assert(cur_data.size() == 1);
+			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+			assert(dt_reg != NULL);
 			
-			doc->overwrite_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
+			encoder = dt_reg->encoder;
+		}
+		else{
+			static REHex::CharacterEncoderASCII ascii_encoder;
+			encoder = &ascii_encoder;
 		}
 		
-		doc_ctrl->clear_selection();
+		try {
+			/* Encode the typed character. */
+			
+			wxCharBuffer utf8_buf = wxString(wxUniChar(ukey)).utf8_str();
+			
+			EncodedCharacter ec = encoder->encode(std::string(utf8_buf.data(), utf8_buf.length()));
+			const void *ec_data = ec.encoded_char.data();
+			size_t ec_size = ec.encoded_char.size();
+			
+			/* In case we are inserting new data or writing at the end of a text data
+			 * type, we set the data type of the whole new character to be that of the
+			 * first byte.
+			*/
+			
+			ScopedTransaction t(doc, "change data");
+			
+			if(insert_mode)
+			{
+				doc->insert_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
+			}
+			else if((cursor_pos + (off_t)(ec_size)) <= doc->buffer_length())
+			{
+				std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, ec.encoded_char.size());
+				assert(cur_data.size() == ec.encoded_char.size());
+				
+				doc->overwrite_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
+			}
+			
+			doc->set_data_type(cursor_pos, ec_size, type_at_off->second);
+			
+			t.commit();
+			
+			doc_ctrl->clear_selection();
+		}
+		catch(const CharacterEncoder::InvalidCharacter &e)
+		{
+			/* Ignore unencodable characters. */
+		}
 		
 		return;
 	}

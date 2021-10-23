@@ -417,7 +417,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void insert_data(off_t offset, const unsigned char *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void insert_data(off_t offset, const void *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Erase a range of bytes in the file.

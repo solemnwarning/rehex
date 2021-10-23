@@ -78,7 +78,8 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	selection_begin(-1),
 	selection_end(-1),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
-	mouse_select_timer(this, ID_SELECT_TIMER)
+	mouse_select_timer(this, ID_SELECT_TIMER),
+	hf_gte_cache(GETTEXTEXTENT_CACHE_SIZE)
 {
 	App &app = wxGetApp();
 	
@@ -179,6 +180,8 @@ void REHex::DocumentCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &e
 				= dc.GetTextExtent(std::string((i + 1), 'X')).GetWidth();
 		}
 	}
+	
+	hf_gte_cache.clear();
 	
 	_handle_width_change();
 	
@@ -3460,10 +3463,19 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		}
 		
 		try {
-			/* TODO: Cache the result of GetTextExtent, or do something better. */
-			
 			EncodedCharacter ec = encoder->decode(data, data_len + data_extra_post);
-			wxSize decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char.c_str()));
+			
+			wxSize decoded_char_size;
+			
+			const wxSize *s = doc_ctrl->hf_gte_cache.get(ec.utf8_char);
+			if(s)
+			{
+				decoded_char_size = *s;
+			}
+			else{
+				decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char.c_str()));
+				doc_ctrl->hf_gte_cache.set(ec.utf8_char, decoded_char_size);
+			}
 			
 			if(decoded_char_size.GetWidth() == doc_ctrl->hf_char_width())
 			{

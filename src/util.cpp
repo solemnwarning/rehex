@@ -24,6 +24,8 @@
 #include <wx/filename.h>
 #include <wx/utils.h>
 
+#include "CharacterEncoder.hpp"
+#include "DataType.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "util.hpp"
@@ -244,8 +246,10 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 	if(copy_data == NULL)
 	{
 		try {
-			std::string data_string;
+			wxString data_string;
 			data_string.reserve(upper_limit);
+			
+			const ByteRangeMap<std::string> &types = doc->get_data_types();
 			
 			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 			{
@@ -254,11 +258,35 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 				
 				if(cursor_state == Document::CSTATE_ASCII)
 				{
-					for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+					for(size_t sd_off = 0; sd_off < selection_data.size();)
 					{
-						if((*c >= ' ' && *c <= '~') || *c == '\t' || *c == '\n' || *c == '\r')
+						auto type_at_off = types.get_range(sr->offset + (off_t)(sd_off));
+						assert(type_at_off != types.end());
+						
+						const CharacterEncoder *encoder;
+						if(type_at_off->second != "")
 						{
-							data_string.push_back(*c);
+							const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+							assert(dt_reg != NULL);
+							
+							encoder = dt_reg->encoder;
+						}
+						else{
+							static REHex::CharacterEncoderASCII ascii_encoder;
+							encoder = &ascii_encoder;
+						}
+						
+						try {
+							/* TODO: Should we restrict to printable characters here? */
+							EncodedCharacter ec = encoder->decode((selection_data.data() + sd_off), (selection_data.size() - sd_off));
+							data_string.append(wxString::FromUTF8(ec.utf8_char.c_str()));
+							
+							sd_off += ec.encoded_char.size();
+						}
+						catch(const CharacterEncoder::InvalidCharacter &e)
+						{
+							/* Ignore invalid characters. */
+							++sd_off;
 						}
 					}
 				}
@@ -270,8 +298,8 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 						unsigned char high_nibble = (*c & 0xF0) >> 4;
 						unsigned char low_nibble  = (*c & 0x0F);
 						
-						data_string.push_back(nibble_to_hex[high_nibble]);
-						data_string.push_back(nibble_to_hex[low_nibble]);
+						data_string.append(&(nibble_to_hex[high_nibble]), 1);
+						data_string.append(&(nibble_to_hex[low_nibble]), 1);
 					}
 				}
 			}

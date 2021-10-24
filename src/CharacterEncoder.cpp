@@ -57,9 +57,10 @@ REHex::EncodedCharacter REHex::CharacterEncoderASCII::decode(const void *data, s
 
 REHex::EncodedCharacter REHex::CharacterEncoderASCII::encode(const std::string &utf8_char) const
 {
-	if(utf8_char.size() == 1 && utf8_char[0] >= 0 && utf8_char[0] <= 0x7F)
+	if(utf8_char.size() >= 1 && utf8_char[0] >= 0 && utf8_char[0] <= 0x7F)
 	{
-		return EncodedCharacter(utf8_char, utf8_char);
+		std::string first_byte = utf8_char.substr(0,1);
+		return EncodedCharacter(first_byte, first_byte);
 	}
 	else{
 		char err[64];
@@ -189,25 +190,29 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::encode(const std::string &
 	char utf8_copy[MAX_CHAR_SIZE];
 	memcpy(utf8_copy, utf8_char.data(), std::min<size_t>(utf8_char.size(), MAX_CHAR_SIZE));
 	
-	char *inbuf = utf8_copy;
-	size_t inbytesleft = std::min<size_t>(utf8_char.size(), MAX_CHAR_SIZE);
+	size_t utf8_copy_len = std::min<size_t>(utf8_char.size(), MAX_CHAR_SIZE);
 	
-	char encoded[MAX_CHAR_SIZE];
-	char *outbuf = encoded;
-	size_t outbytesleft = sizeof(encoded);
-	
-	if(iconv(from_utf8, &inbuf, &inbytesleft, &outbuf, &outbytesleft) == (size_t)(-1))
+	for(size_t clen = 1; clen <= utf8_copy_len; ++clen)
 	{
-		const char *iconv_err = strerror(errno);
+		char *inbuf = utf8_copy;
+		size_t inbytesleft = clen;
 		
-		char err[128];
-		snprintf(err, sizeof(err), "Cannot encode UTF-8 character '%s' as %s (%s)", utf8_char.c_str(), encoding.c_str(), iconv_err);
+		char encoded[MAX_CHAR_SIZE];
+		char *outbuf = encoded;
+		size_t outbytesleft = sizeof(encoded);
 		
-		throw InvalidCharacter(err);
+		if(iconv(from_utf8, &inbuf, &inbytesleft, &outbuf, &outbytesleft) != (size_t)(-1))
+		{
+			return EncodedCharacter(std::string(encoded, (outbuf - encoded)), std::string(utf8_copy, (inbuf - utf8_copy)));
+		}
 	}
-	else{
-		return EncodedCharacter(std::string(encoded, (outbuf - encoded)), utf8_char);
-	}
+	
+	const char *iconv_err = strerror(errno);
+	
+	char err[128];
+	snprintf(err, sizeof(err), "Cannot encode UTF-8 character '%s' as %s (%s)", utf8_char.c_str(), encoding.c_str(), iconv_err);
+	
+	throw InvalidCharacter(err);
 }
 
 /* CharacterEncoderIconv depends on the system iconv working and accepting whatever encoding it

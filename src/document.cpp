@@ -364,7 +364,7 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const un
 		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
 		
 		ByteRangeMap<unsigned int> new_data_seq_slice;
-		new_data_seq_slice.set_range(offset, old_data->size(), current_seq);
+		new_data_seq_slice.set_range(offset, new_data_length, current_seq);
 		
 		_UNTRACKED_erase_data(offset, old_data->size());
 		_UNTRACKED_insert_data(offset, new_data, new_data_length, new_data_seq_slice);
@@ -400,7 +400,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
 		
 		ByteRangeMap<unsigned int> new_data_seq_slice;
-		new_data_seq_slice.set_range(offset, old_data->size(), current_seq);
+		new_data_seq_slice.set_range(offset, new_data->size(), current_seq);
 		
 		_UNTRACKED_erase_data(offset, old_data_length);
 		_UNTRACKED_insert_data(offset, new_data->data(), new_data->size(), new_data_seq_slice);

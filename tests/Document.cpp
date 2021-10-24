@@ -125,6 +125,15 @@ class DocumentTest: public ::testing::Test
 	EXPECT_EQ(doc_data, expect_data); \
 }
 
+#define EXPECT_DATA_TYPES(...) \
+{ \
+	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > expect_types = {  __VA_ARGS__ }; \
+	EXPECT_EQ(doc->get_data_types().get_ranges(), expect_types); \
+}
+
+#define DATA_TYPE(offset, length, type) \
+	std::make_pair(ByteRangeMap<std::string>::Range(offset, length), type)
+
 TEST_F(DocumentTest, InsertData)
 {
 	/* Insert into empty document... */
@@ -2975,4 +2984,498 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save and then making new changes");
 	EXPECT_RANGE_DIRTY( 5, 21, "Modified range dirty after undoing changes made prior to save and then making new changes");
+}
+
+TEST_F(DocumentTest, OverwriteTextLatin1)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	doc->set_data_type(0, strlen(DATA1), "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:ISO-8859-1"),
+	);
+	
+	/* Write some nice simple 7-bit characters... */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->overwrite_text(0, "piquant", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 7)",
+		"CURSOR_UPDATE(7, 2)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 7)                   << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_DATA("piquantlsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:ISO-8859-1"),
+	);
+	
+	/* Write some 8-bit characters... */
+	
+	events.clear();
+	
+	// LATIN CAPITAL LETTER AE
+	// Division Sign
+	// Latin Capital Letter Thorn
+	EXPECT_EQ(
+		doc->overwrite_text(8, "\xC3\x86\xC3\xB7\xC3\x9E", -1, Document::CSTATE_CURRENT, "average"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(8, 3)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 7)                   << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_DATA("piquantl" "\xC6\xF7\xDE" "remefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:ISO-8859-1"),
+	);
+	
+	/* Write a mixture of 7-bit, 8-bit and unrepresentable characters */
+	
+	events.clear();
+	
+	// A
+	// LATIN CAPITAL LETTER AE
+	// !
+	// Division Sign
+	// Snowman
+	// Latin Capital Letter Thorn
+	// Hammer and Sickle
+	EXPECT_EQ(
+		doc->overwrite_text(15, "A" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD", -1, Document::CSTATE_CURRENT, "average"),
+		+Document::WRITE_TEXT_SKIPPED);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(15, 5)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 7)                   << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_DATA("piquantl" "\xC6\xF7\xDE" "remeA" "\xC6" "!" "\xF7\xDE" "ten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:ISO-8859-1"),
+	);
+	
+	/* Write some characters that won't all fit in the file */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->overwrite_text(20, "ABCD", -1, Document::CSTATE_CURRENT, "lackadaisical"),
+		+Document::WRITE_TEXT_TRUNCATED);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(20, 3)",
+	);
+	
+	ASSERT_DATA("piquantl" "\xC6\xF7\xDE" "remeA" "\xC6" "!" "\xF7\xDE" "ABC");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:ISO-8859-1"),
+	);
+}
+
+TEST_F(DocumentTest, OverwriteTextUTF8)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	doc->set_data_type(0, strlen(DATA1), "text:UTF-8");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	/* Write some nice simple 7-bit characters... */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->overwrite_text(0, "piquant", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 7)",
+		"CURSOR_UPDATE(7, 2)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 7)                   << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_DATA("piquantlsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	/* Write some 8-bit characters... */
+	
+	events.clear();
+	
+	// LATIN CAPITAL LETTER AE
+	// Division Sign
+	// Latin Capital Letter Thorn
+	EXPECT_EQ(
+		doc->overwrite_text(8, "\xC3\x86\xC3\xB7\xC3\x9E", -1, Document::CSTATE_CURRENT, "average"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(8, 6)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), 7)                   << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_DATA("piquantl" "\xC3\x86\xC3\xB7\xC3\x9E" "efrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	/* Write some characters that won't all fit in the file */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->overwrite_text(20, "\xC3\x86\xC3\xB7", -1, Document::CSTATE_CURRENT, "lackadaisical"),
+		+Document::WRITE_TEXT_TRUNCATED);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(20, 2)",
+	);
+	
+	ASSERT_DATA("piquantl" "\xC3\x86\xC3\xB7\xC3\x9E" "efrigh" "\xC3\x86" "n");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+}
+
+TEST_F(DocumentTest, InsertText7Bit)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	doc->set_data_type( 0, 8, "text:ISO-8859-1");
+	doc->set_data_type( 8, 7, "text:UTF-8");
+	doc->set_data_type(15, 8, "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 8, "text:ISO-8859-1"),
+		DATA_TYPE( 8, 7, "text:UTF-8"),
+		DATA_TYPE(15, 8, "text:ISO-8859-1"),
+	);
+	
+	/* Write some nice simple 7-bit characters... */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->insert_text(0, "piquant", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EQ(
+		doc->insert_text(15, "zesty", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 7)",
+		"CURSOR_UPDATE(7, 2)",
+		"DATA_INSERT(15, 5)",
+		"CURSOR_UPDATE(20, 2)",
+	);
+	
+	ASSERT_DATA("piquantcolossalzestysupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 15, "text:ISO-8859-1"),
+		DATA_TYPE(15, 12, "text:UTF-8"),
+		DATA_TYPE(27, 8, "text:ISO-8859-1"),
+	);
+}
+
+TEST_F(DocumentTest, InsertText8Bit)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	doc->set_data_type( 0, 8, "text:ISO-8859-1");
+	doc->set_data_type( 8, 7, "text:UTF-8");
+	doc->set_data_type(15, 8, "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 8, "text:ISO-8859-1"),
+		DATA_TYPE( 8, 7, "text:UTF-8"),
+		DATA_TYPE(15, 8, "text:ISO-8859-1"),
+	);
+	
+	/* Write some 8-bit characters... */
+	
+	events.clear();
+	
+	// LATIN CAPITAL LETTER AE
+	// Division Sign
+	// Latin Capital Letter Thorn
+	
+	EXPECT_EQ(
+		doc->insert_text(0, "\xC3\x86\xC3\xB7\xC3\x9E", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EQ(
+		doc->insert_text(11, "\xC3\x86\xC3\xB7\xC3\x9E", -1, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 3)",
+		"CURSOR_UPDATE(3, 2)",
+		"DATA_INSERT(11, 6)",
+	);
+	
+	ASSERT_DATA("\xC6\xF7\xDE" "colossal" "\xC3\x86\xC3\xB7\xC3\x9E" "supremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 11, "text:ISO-8859-1"),
+		DATA_TYPE(11, 13, "text:UTF-8"),
+		DATA_TYPE(24, 8, "text:ISO-8859-1"),
+	);
+}
+
+TEST_F(DocumentTest, InsertTextMixed)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	doc->set_data_type( 0, 8, "text:ISO-8859-1");
+	doc->set_data_type( 8, 7, "text:UTF-8");
+	doc->set_data_type(15, 8, "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 8, "text:ISO-8859-1"),
+		DATA_TYPE( 8, 7, "text:UTF-8"),
+		DATA_TYPE(15, 8, "text:ISO-8859-1"),
+	);
+	
+	/* Write a mixture of 7-bit, 8-bit and unrepresentable (in ISO-8859-1) characters */
+	
+	events.clear();
+	
+	// A
+	// LATIN CAPITAL LETTER AE
+	// !
+	// Division Sign
+	// Snowman
+	// Latin Capital Letter Thorn
+	// Hammer and Sickle
+	
+	EXPECT_EQ(
+		doc->insert_text(0, "A" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_SKIPPED);
+	
+	EXPECT_EQ(
+		doc->insert_text(13, "A" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD", -1, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_INSERT(0, 5)",
+		"CURSOR_UPDATE(5, 2)",
+		"DATA_INSERT(13, 14)",
+	);
+	
+	ASSERT_DATA("A" "\xC6" "!" "\xF7\xDE" "colossalA" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD" "supremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 13, "text:ISO-8859-1"),
+		DATA_TYPE(13, 21, "text:UTF-8"),
+		DATA_TYPE(34,  8, "text:ISO-8859-1"),
+	);
+}
+
+TEST_F(DocumentTest, ReplaceText7Bit)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	doc->set_data_type( 0, 8, "text:ISO-8859-1");
+	doc->set_data_type( 8, 7, "text:UTF-8");
+	doc->set_data_type(15, 8, "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 8, "text:ISO-8859-1"),
+		DATA_TYPE( 8, 7, "text:UTF-8"),
+		DATA_TYPE(15, 8, "text:ISO-8859-1"),
+	);
+	
+	/* Write some nice simple 7-bit characters... */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->replace_text(0, 8, "piquant", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EQ(
+		doc->replace_text(7, 7, "zesty", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(0, 8)",
+		"DATA_INSERT(0, 7)",
+		"CURSOR_UPDATE(7, 2)",
+		"DATA_ERASE(7, 7)",
+		"DATA_INSERT(7, 5)",
+		"CURSOR_UPDATE(12, 2)",
+	);
+	
+	ASSERT_DATA("piquantzestyfrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 7, "text:ISO-8859-1"),
+		DATA_TYPE( 7, 5, "text:UTF-8"),
+		DATA_TYPE(12, 8, "text:ISO-8859-1"),
+	);
+}
+
+TEST_F(DocumentTest, ReplaceText8Bit)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	doc->set_data_type( 0, 8, "text:ISO-8859-1");
+	doc->set_data_type( 8, 7, "text:UTF-8");
+	doc->set_data_type(15, 8, "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 8, "text:ISO-8859-1"),
+		DATA_TYPE( 8, 7, "text:UTF-8"),
+		DATA_TYPE(15, 8, "text:ISO-8859-1"),
+	);
+	
+	/* Write some 8-bit characters... */
+	
+	events.clear();
+	
+	// LATIN CAPITAL LETTER AE
+	// Division Sign
+	// Latin Capital Letter Thorn
+	
+	EXPECT_EQ(
+		doc->replace_text(0, 8, "\xC3\x86\xC3\xB7\xC3\x9E", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EQ(
+		doc->replace_text(3, 7, "\xC3\x86\xC3\xB7\xC3\x9E", -1, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(0, 8)",
+		"DATA_INSERT(0, 3)",
+		"CURSOR_UPDATE(3, 2)",
+		"DATA_ERASE(3, 7)",
+		"DATA_INSERT(3, 6)",
+	);
+	
+	ASSERT_DATA("\xC6\xF7\xDE\xC3\x86\xC3\xB7\xC3\x9E" "frighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 3, "text:ISO-8859-1"),
+		DATA_TYPE(3, 6, "text:UTF-8"),
+		DATA_TYPE(9, 8, "text:ISO-8859-1"),
+	);
+}
+
+TEST_F(DocumentTest, ReplaceTextMixed)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	
+	doc->set_data_type( 0, 8, "text:ISO-8859-1");
+	doc->set_data_type( 8, 7, "text:UTF-8");
+	doc->set_data_type(15, 8, "text:ISO-8859-1");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0, 8, "text:ISO-8859-1"),
+		DATA_TYPE( 8, 7, "text:UTF-8"),
+		DATA_TYPE(15, 8, "text:ISO-8859-1"),
+	);
+	
+	/* Write a mixture of 7-bit, 8-bit and unrepresentable (in ISO-8859-1) characters */
+	
+	events.clear();
+	
+	// A
+	// LATIN CAPITAL LETTER AE
+	// !
+	// Division Sign
+	// Snowman
+	// Latin Capital Letter Thorn
+	// Hammer and Sickle
+	
+	EXPECT_EQ(
+		doc->replace_text(0, 10, "A" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD", Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_SKIPPED);
+	
+	EXPECT_EQ(
+		doc->replace_text(5, 5, "A" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD", -1, Document::CSTATE_ASCII, "elite"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_ERASE(0, 10)",
+		"DATA_INSERT(0, 5)",
+		"CURSOR_UPDATE(5, 2)",
+		"DATA_ERASE(5, 5)",
+		"DATA_INSERT(5, 14)",
+	);
+	
+	ASSERT_DATA("A" "\xC6" "!" "\xF7\xDE" "A" "\xC3\x86" "!" "\xC3\xB7\xE2\x98\x83\xC3\x9E\xE2\x98\xAD" "frighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE( 0,  5, "text:ISO-8859-1"),
+		DATA_TYPE( 5, 14, "text:UTF-8"),
+		DATA_TYPE(19,  8, "text:ISO-8859-1"),
+	);
 }

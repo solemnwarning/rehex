@@ -837,7 +837,10 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 			wxTheClipboard->GetData(data);
 			
 			try {
-				tab->paste_text(data.GetText().ToStdString());
+				wxString clipboard_text = data.GetText();
+				const wxScopedCharBuffer clipboard_utf8 = clipboard_text.utf8_str();
+				
+				tab->paste_text(std::string(clipboard_utf8.data(), clipboard_utf8.length()));
 			}
 			catch(const std::exception &e)
 			{

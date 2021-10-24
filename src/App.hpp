@@ -189,6 +189,9 @@ namespace REHex {
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);
+			
+		public:
+			void _test_setup_hooks(SetupPhase phase);
 	};
 }
 

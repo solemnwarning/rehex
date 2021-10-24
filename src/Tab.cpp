@@ -427,13 +427,51 @@ void REHex::Tab::paste_text(const std::string &text)
 		}
 	};
 	
+	auto paste_text = [this](const std::string &utf8_text)
+	{
+		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		bool insert_mode = doc_ctrl->get_insert_mode();
+		
+		off_t selection_off, selection_length;
+		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+		bool has_selection = doc_ctrl->has_selection();
+		
+		int write_flag;
+		
+		if(selection_length > 0)
+		{
+			/* Some data is selected, replace it. */
+			
+			write_flag = doc->replace_text(selection_off, selection_length, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+			doc_ctrl->clear_selection();
+		}
+		else if(has_selection)
+		{
+			/* Nonlinear selection. */
+			write_flag = Document::WRITE_TEXT_BAD_OFFSET;
+		}
+		else if(insert_mode)
+		{
+			/* We are in insert mode, insert at the cursor. */
+			write_flag = doc->insert_text(cursor_pos, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+		}
+		else{
+			/* We are in overwrite mode, overwrite up to the end of the file. */
+			write_flag = doc->overwrite_text(cursor_pos, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+		}
+		
+		if(write_flag != Document::WRITE_TEXT_OK)
+		{
+			wxBell();
+		}
+	};
+	
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
 	if(cursor_state == Document::CSTATE_ASCII)
 	{
 		/* Paste into ASCII view, handle as string of characters. */
-		
-		paste_data((const unsigned char*)(text.data()), text.size());
+		paste_text(text);
 	}
 	else{
 		/* Paste into hex view, handle as hex string of bytes. */

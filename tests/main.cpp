@@ -29,6 +29,11 @@ REHex::App &wxGetApp()
 	return *(REHex::App*)(wxTheApp);
 }
 
+void REHex::App::_test_setup_hooks(SetupPhase phase)
+{
+	call_setup_hooks(phase);
+}
+
 struct Cleanup
 {
 	~Cleanup()
@@ -54,6 +59,8 @@ int main(int argc, char **argv)
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	app->recent_files = new wxFileHistory();
 	
+	app->_test_setup_hooks(REHex::App::SetupPhase::EARLY);
+	
 	wxImage::AddHandler(new wxPNGHandler);
 	REHex::ArtProvider::init();
 	
@@ -61,6 +68,9 @@ int main(int argc, char **argv)
 	Cleanup cleanup;
 	
 	testing::InitGoogleTest(&argc, argv);
+	
+	app->_test_setup_hooks(REHex::App::SetupPhase::SHUTDOWN_LATE);
+	
 	return RUN_ALL_TESTS();
 }
 

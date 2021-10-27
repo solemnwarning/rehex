@@ -68,8 +68,8 @@
 IMPLEMENT_NDTR_CLASS(U8DataRegion, uint8_t, "u8", "%" PRIu8, (uint8_t), (uint8_t), u8_factory)
 IMPLEMENT_NDTR_CLASS(S8DataRegion, int8_t, "s8", "%" PRId8, (int8_t), (int8_t), s8_factory)
 
-static REHex::DataTypeRegistration u8_dtr("u8", "unsigned 8-bit", &u8_factory, "Number", sizeof(uint8_t));
-static REHex::DataTypeRegistration s8_dtr("s8", "signed 8-bit",   &s8_factory, "Number", sizeof(int8_t));
+static REHex::DataTypeRegistration u8_dtr("u8", "unsigned 8-bit", &u8_factory, std::vector<std::string>({"Number"}), sizeof(uint8_t));
+static REHex::DataTypeRegistration s8_dtr("s8", "signed 8-bit",   &s8_factory, std::vector<std::string>({"Number"}), sizeof(int8_t));
 
 IMPLEMENT_NDTR_CLASS(U16LEDataRegion, uint16_t, "u16le", "%" PRIu16, le16toh, htole16, u16le_factory)
 IMPLEMENT_NDTR_CLASS(U16BEDataRegion, uint16_t, "u16be", "%" PRIu16, be16toh, htobe16, u16be_factory)

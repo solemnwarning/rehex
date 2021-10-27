@@ -32,6 +32,7 @@
 #include "ByteRangeSet.hpp"
 #include "document.hpp"
 #include "Events.hpp"
+#include "LRUCache.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "Palette.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -133,7 +134,7 @@ namespace REHex {
 					};
 					
 					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off);
-					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off);
+					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off);
 					
 					/**
 					 * @brief Calculate offset of byte at X co-ordinate.
@@ -700,6 +701,9 @@ namespace REHex {
 			
 			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
+			
+			static const size_t GETTEXTEXTENT_CACHE_SIZE = 4096;
+			LRUCache<std::string, wxSize> hf_gte_cache;
 			
 		public:
 			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);

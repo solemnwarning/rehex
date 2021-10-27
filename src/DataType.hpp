@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 
@@ -62,12 +63,14 @@ namespace REHex
 			std::string name;
 			std::string label;
 			
-			RegionFactoryFunction region_factory;
-			
-			std::string group;
+			std::vector<std::string> groups;
 			off_t fixed_size;
 			
-			DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::string &group = "", off_t fixed_size = -1);
+			RegionFactoryFunction region_factory;
+			const CharacterEncoder *encoder;
+			
+			DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::vector<std::string> &groups = {}, off_t fixed_size = -1);
+			DataTypeRegistration(const std::string &name, const std::string &label, const std::vector<std::string> &groups, const CharacterEncoder *encoder);
 			~DataTypeRegistration();
 			
 			DataTypeRegistration(const DataTypeRegistration &src) = delete;

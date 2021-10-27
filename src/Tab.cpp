@@ -28,15 +28,10 @@
 #include "App.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
+#include "CharacterEncoder.hpp"
 #include "EditCommentDialog.hpp"
 #include "Tab.hpp"
 #include "VirtualMappingDialog.hpp"
-
-/* Is the given byte a printable 7-bit ASCII character? */
-static bool isasciiprint(int c)
-{
-	return (c >= ' ' && c <= '~');
-}
 
 /* Is the given value a 7-bit ASCII character representing a hex digit? */
 static bool isasciihex(int c)
@@ -432,13 +427,51 @@ void REHex::Tab::paste_text(const std::string &text)
 		}
 	};
 	
+	auto paste_text = [this](const std::string &utf8_text)
+	{
+		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		bool insert_mode = doc_ctrl->get_insert_mode();
+		
+		off_t selection_off, selection_length;
+		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+		bool has_selection = doc_ctrl->has_selection();
+		
+		int write_flag;
+		
+		if(selection_length > 0)
+		{
+			/* Some data is selected, replace it. */
+			
+			write_flag = doc->replace_text(selection_off, selection_length, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+			doc_ctrl->clear_selection();
+		}
+		else if(has_selection)
+		{
+			/* Nonlinear selection. */
+			write_flag = Document::WRITE_TEXT_BAD_OFFSET;
+		}
+		else if(insert_mode)
+		{
+			/* We are in insert mode, insert at the cursor. */
+			write_flag = doc->insert_text(cursor_pos, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+		}
+		else{
+			/* We are in overwrite mode, overwrite up to the end of the file. */
+			write_flag = doc->overwrite_text(cursor_pos, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+		}
+		
+		if(write_flag != Document::WRITE_TEXT_OK)
+		{
+			wxBell();
+		}
+	};
+	
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
 	if(cursor_state == Document::CSTATE_ASCII)
 	{
 		/* Paste into ASCII view, handle as string of characters. */
-		
-		paste_data((const unsigned char*)(text.data()), text.size());
+		paste_text(text);
 	}
 	else{
 		/* Paste into hex view, handle as hex string of bytes. */
@@ -593,6 +626,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	}
 	
 	int key       = event.GetKeyCode();
+	wxChar ukey   = event.GetUnicodeKey();
 	int modifiers = event.GetModifiers();
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
@@ -652,23 +686,66 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		
 		return;
 	}
-	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciiprint(key))
+	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && ukey != WXK_NONE)
 	{
-		unsigned char byte = key;
+		/* Find the CharacterEncoder to use at the cursor position. */
 		
-		if(insert_mode)
+		const ByteRangeMap<std::string> &types = doc->get_data_types();
+		
+		auto type_at_off = types.get_range(cursor_pos);
+		assert(type_at_off != types.end());
+		
+		const CharacterEncoder *encoder;
+		if(type_at_off->second != "")
 		{
-			doc->insert_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
-		}
-		else if(cursor_pos < doc->buffer_length())
-		{
-			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
-			assert(cur_data.size() == 1);
+			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+			assert(dt_reg != NULL);
 			
-			doc->overwrite_data(cursor_pos, &byte, 1, cursor_pos + 1, Document::CSTATE_ASCII, "change data");
+			encoder = dt_reg->encoder;
+		}
+		else{
+			static REHex::CharacterEncoderASCII ascii_encoder;
+			encoder = &ascii_encoder;
 		}
 		
-		doc_ctrl->clear_selection();
+		try {
+			/* Encode the typed character. */
+			
+			wxCharBuffer utf8_buf = wxString(wxUniChar(ukey)).utf8_str();
+			
+			EncodedCharacter ec = encoder->encode(std::string(utf8_buf.data(), utf8_buf.length()));
+			const void *ec_data = ec.encoded_char.data();
+			size_t ec_size = ec.encoded_char.size();
+			
+			/* In case we are inserting new data or writing at the end of a text data
+			 * type, we set the data type of the whole new character to be that of the
+			 * first byte.
+			*/
+			
+			ScopedTransaction t(doc, "change data");
+			
+			if(insert_mode)
+			{
+				doc->insert_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
+			}
+			else if((cursor_pos + (off_t)(ec_size)) <= doc->buffer_length())
+			{
+				std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, ec.encoded_char.size());
+				assert(cur_data.size() == ec.encoded_char.size());
+				
+				doc->overwrite_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
+			}
+			
+			doc->set_data_type(cursor_pos, ec_size, type_at_off->second);
+			
+			t.commit();
+			
+			doc_ctrl->clear_selection();
+		}
+		catch(const CharacterEncoder::InvalidCharacter &e)
+		{
+			/* Ignore unencodable characters. */
+		}
 		
 		return;
 	}
@@ -973,6 +1050,8 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		auto selection_off_type = data_types.get_range(selection_off);
 		assert(selection_off_type != data_types.end());
 		
+		/* "Set data type" > */
+		
 		wxMenu *dtmenu = new wxMenu();
 		
 		wxMenuItem *data_itm = dtmenu->AppendCheckItem(wxID_ANY, "Data");
@@ -996,8 +1075,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		std::vector<const DataTypeRegistration*> sorted_dts = DataTypeRegistry::sorted_by_group();
 		
-		wxMenu *group_menu = dtmenu;
-		wxMenuItem *gm_item = NULL;
+		std::vector< std::pair<std::string, wxMenu*> > group_menus;
 		
 		for(auto dti = sorted_dts.begin(); dti != sorted_dts.end(); ++dti)
 		{
@@ -1009,17 +1087,30 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				continue;
 			}
 			
-			if(!dt->group.empty())
+			wxMenu *group_menu = dtmenu;
+			
 			{
-				if(gm_item == NULL || gm_item->GetItemLabel() != dt->group)
+				auto g = dt->groups.begin();
+				auto p = group_menus.begin();
+				
+				for(; g != dt->groups.end(); ++g, ++p)
 				{
-					group_menu = new wxMenu;
-					gm_item = dtmenu->AppendSubMenu(group_menu, dt->group);
+					if(p == group_menus.end() || p->first != *g)
+					{
+						wxMenu *m = new wxMenu;
+						group_menu->AppendSubMenu(m, *g);
+						group_menu = m;
+						
+						p = group_menus.emplace(p, *g, m);
+					}
+					
+					group_menu = p->second;
 				}
 			}
-			else{
-				group_menu = dtmenu;
-				gm_item = NULL;
+			
+			if(group_menus.size() > dt->groups.size())
+			{
+				group_menus.erase(std::next(group_menus.begin(), dt->groups.size()), group_menus.end());
 			}
 			
 			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dt->label);

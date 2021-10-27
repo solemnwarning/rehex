@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "DataType.hpp"
+#include "DocumentCtrl.hpp"
 
 std::map<std::string, const REHex::DataTypeRegistration*> *REHex::DataTypeRegistry::registrations = NULL;
 const std::map<std::string, const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::no_registrations;
@@ -74,9 +75,9 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 	std::sort(sorted_registrations.begin(), sorted_registrations.end(),
 		[](const DataTypeRegistration *a, const DataTypeRegistration *b)
 		{
-			if(a->group != b->group)
+			if(a->groups != b->groups)
 			{
-				return a->group < b->group;
+				return a->groups < b->groups;
 			}
 			else{
 				return a->label < b->label;
@@ -86,12 +87,32 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 	return sorted_registrations;
 }
 
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::string &group, off_t fixed_size):
+static REHex::CharacterEncoderASCII ascii_encoder;
+
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::vector<std::string> &groups, off_t fixed_size):
 	name(name),
 	label(label),
+	groups(groups),
+	fixed_size(fixed_size),
 	region_factory(region_factory),
-	group(group),
-	fixed_size(fixed_size)
+	encoder(&ascii_encoder)
+{
+	if(DataTypeRegistry::registrations == NULL)
+	{
+		DataTypeRegistry::registrations = new std::map<std::string, const REHex::DataTypeRegistration*>();
+	}
+	
+	DataTypeRegistry::registrations->insert(std::make_pair(name, this));
+}
+
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, const std::vector<std::string> &groups, const CharacterEncoder *encoder):
+	name(name),
+	label(label),
+	groups(groups),
+	fixed_size(-1),
+	region_factory([](SharedDocumentPointer &document, off_t offset, off_t length, off_t virt_offset)
+		{ return new DocumentCtrl::DataRegionDocHighlight(offset, length, virt_offset, *document); }),
+	encoder(encoder)
 {
 	if(DataTypeRegistry::registrations == NULL)
 	{

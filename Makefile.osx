@@ -18,16 +18,20 @@ ICONUTIL ?= $(shell which iconutil > /dev/null && echo iconutil)
 PNG2ICNS ?= $(shell which png2icns > /dev/null && echo png2icns)
 
 EXTRA_APP_OBJS := \
+	res/backward32.o \
 	res/document_new32.o \
 	res/document_open32.o \
 	res/document_save32.o \
-	res/document_save_as32.o
+	res/document_save_as32.o \
+	res/forward32.o
 
 EXTRA_TEST_OBJS := \
+	res/backward32.o \
 	res/document_new32.o \
 	res/document_open32.o \
 	res/document_save32.o \
-	res/document_save_as32.o
+	res/document_save_as32.o \
+	res/forward32.o
 
 # Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
 CAPSTONE_CFLAGS ?=
@@ -41,7 +45,7 @@ all: REHex.app
 
 include Makefile
 
-src/mainwindow.o: res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h
+src/mainwindow.o: res/backward32.h res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h res/forward32.h
 
 ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns

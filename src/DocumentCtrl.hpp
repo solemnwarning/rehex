@@ -428,6 +428,12 @@ namespace REHex {
 			
 			void set_cursor_position(off_t position, Document::CursorState cursor_state = Document::CSTATE_GOTO);
 			
+			bool has_prev_cursor_position() const;
+			void goto_prev_cursor_position();
+			
+			bool has_next_cursor_position() const;
+			void goto_next_cursor_position();
+			
 			bool get_insert_mode();
 			void set_insert_mode(bool enabled);
 			
@@ -616,6 +622,11 @@ namespace REHex {
 			off_t cpos_off{0};
 			bool insert_mode{false};
 			
+			static const size_t CPOS_HISTORY_LIMIT = 128;
+			
+			std::vector<off_t> cpos_prev;
+			std::vector<off_t> cpos_next;
+			
 			off_t selection_begin;
 			off_t selection_end;
 			
@@ -632,7 +643,7 @@ namespace REHex {
 			
 			Document::CursorState cursor_state;
 			
-			void _set_cursor_position(off_t position, Document::CursorState cursor_state);
+			void _set_cursor_position(off_t position, Document::CursorState cursor_state, bool preserve_cpos_hist = false);
 			
 			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(off_t offset);
 			

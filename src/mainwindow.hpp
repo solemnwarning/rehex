@@ -77,6 +77,9 @@ namespace REHex {
 			void OnCloseOthers(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
+			void OnCursorPrev(wxCommandEvent &event);
+			void OnCursorNext(wxCommandEvent &event);
+			
 			void OnSearchText(wxCommandEvent &event);
 			void OnSearchBSeq(wxCommandEvent &event);
 			void OnSearchValue(wxCommandEvent &event);
@@ -238,6 +241,7 @@ namespace REHex {
 			void _update_status_mode(REHex::DocumentCtrl *doc_ctrl);
 			void _update_undo(REHex::Document *doc);
 			void _update_dirty(REHex::Document *doc);
+			void _update_cpos_buttons(DocumentCtrl *doc_ctrl);
 			
 			bool unsaved_confirm();
 			bool unsaved_confirm(const std::vector<wxString> &files);

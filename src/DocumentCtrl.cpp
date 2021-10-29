@@ -349,6 +349,22 @@ void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorSt
 	cursor_visible = true;
 	redraw_cursor_timer.Start();
 	
+	if(cpos_off != position)
+	{
+		if(cpos_prev.empty() || cpos_prev.back() != cpos_off)
+		{
+			cpos_prev.push_back(cpos_off);
+		}
+		
+		if(cpos_prev.size() > CPOS_HISTORY_LIMIT)
+		{
+			/* Erase from start of cpos_prev to bring its size down. */
+			cpos_prev.erase(cpos_prev.begin(), std::next(cpos_prev.begin(), (cpos_prev.size() - CPOS_HISTORY_LIMIT)));
+		}
+		
+		cpos_next.clear();
+	}
+	
 	cpos_off = position;
 	this->cursor_state = cursor_state;
 	
@@ -359,12 +375,21 @@ void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorSt
 	Refresh();
 }
 
-void REHex::DocumentCtrl::_set_cursor_position(off_t position, REHex::Document::CursorState cursor_state)
+void REHex::DocumentCtrl::_set_cursor_position(off_t position, REHex::Document::CursorState cursor_state, bool preserve_cpos_hist)
 {
 	off_t old_cursor_pos                   = get_cursor_position();
 	Document::CursorState old_cursor_state = get_cursor_state();
 	
+	std::vector<off_t> old_cpos_prev = cpos_prev;
+	std::vector<off_t> old_cpos_next = cpos_next;
+	
 	set_cursor_position(position, cursor_state);
+	
+	if(preserve_cpos_hist)
+	{
+		cpos_prev = old_cpos_prev;
+		cpos_next = old_cpos_next;
+	}
 	
 	off_t new_cursor_pos                   = get_cursor_position();
 	Document::CursorState new_cursor_state = get_cursor_state();
@@ -374,6 +399,46 @@ void REHex::DocumentCtrl::_set_cursor_position(off_t position, REHex::Document::
 		CursorUpdateEvent cursor_update_event(this, new_cursor_pos, new_cursor_state);
 		ProcessWindowEvent(cursor_update_event);
 	}
+}
+
+bool REHex::DocumentCtrl::has_prev_cursor_position() const
+{
+	return !cpos_prev.empty();
+}
+
+void REHex::DocumentCtrl::goto_prev_cursor_position()
+{
+	if(cpos_prev.empty())
+	{
+		return;
+	}
+	
+	off_t goto_pos = cpos_prev.back();
+	cpos_prev.pop_back();
+	
+	cpos_next.push_back(get_cursor_position());
+	
+	_set_cursor_position(goto_pos, get_cursor_state(), true);
+}
+
+bool REHex::DocumentCtrl::has_next_cursor_position() const
+{
+	return !cpos_next.empty();
+}
+
+void REHex::DocumentCtrl::goto_next_cursor_position()
+{
+	if(cpos_next.empty())
+	{
+		return;
+	}
+	
+	off_t goto_pos = cpos_next.back();
+	cpos_next.pop_back();
+	
+	cpos_prev.push_back(get_cursor_position());
+	
+	_set_cursor_position(goto_pos, get_cursor_state(), true);
 }
 
 bool REHex::DocumentCtrl::get_insert_mode()
@@ -1570,6 +1635,16 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			clear_selection();
 		}
 		
+		return;
+	}
+	else if(key == WXK_LEFT && modifiers == wxMOD_ALT)
+	{
+		goto_prev_cursor_position();
+		return;
+	}
+	else if(key == WXK_RIGHT && modifiers == wxMOD_ALT)
+	{
+		goto_next_cursor_position();
 		return;
 	}
 	

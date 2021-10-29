@@ -47,10 +47,12 @@
 #include "../res/icon64.h"
 
 #ifdef __APPLE__
+#include "../res/backward32.h"
 #include "../res/document_new32.h"
 #include "../res/document_open32.h"
 #include "../res/document_save32.h"
 #include "../res/document_save_as32.h"
+#include "../res/forward32.h"
 #endif
 
 enum {
@@ -97,6 +99,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
 	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
 	EVT_MENU(wxID_EXIT,       REHex::MainWindow::OnExit)
+	
+	EVT_MENU(wxID_BACKWARD, REHex::MainWindow::OnCursorPrev)
+	EVT_MENU(wxID_FORWARD,  REHex::MainWindow::OnCursorNext)
 	
 	EVT_MENU(wxID_FILE1, REHex::MainWindow::OnRecentOpen)
 	EVT_MENU(wxID_FILE2, REHex::MainWindow::OnRecentOpen)
@@ -432,11 +437,21 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	toolbar->AddTool(wxID_OPEN,   "Open",    wxBITMAP_PNG_FROM_DATA(document_open32));
 	toolbar->AddTool(wxID_SAVE,   "Save",    wxBITMAP_PNG_FROM_DATA(document_save32));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", wxBITMAP_PNG_FROM_DATA(document_save_as32));
+	
+	toolbar->AddSeparator();
+	
+	toolbar->AddTool(wxID_BACKWARD, "Previous cursor position", wxBITMAP_PNG_FROM_DATA(backward32));
+	toolbar->AddTool(wxID_FORWARD,  "Next cursor position",     wxBITMAP_PNG_FROM_DATA(forward32));
 	#else
 	toolbar->AddTool(wxID_NEW,    "New",     artp.GetBitmap(wxART_NEW,          wxART_TOOLBAR));
 	toolbar->AddTool(wxID_OPEN,   "Open",    artp.GetBitmap(wxART_FILE_OPEN,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVE,   "Save",    artp.GetBitmap(wxART_FILE_SAVE,    wxART_TOOLBAR));
 	toolbar->AddTool(wxID_SAVEAS, "Save As", artp.GetBitmap(wxART_FILE_SAVE_AS, wxART_TOOLBAR));
+	
+	toolbar->AddSeparator();
+	
+	toolbar->AddTool(wxID_BACKWARD, "Previous cursor position", artp.GetBitmap(wxART_GO_BACK,    wxART_TOOLBAR));
+	toolbar->AddTool(wxID_FORWARD,  "Next cursor position",     artp.GetBitmap(wxART_GO_FORWARD, wxART_TOOLBAR));
 	#endif
 	
 	toolbar->Realize();
@@ -700,6 +715,18 @@ void REHex::MainWindow::OnCloseOthers(wxCommandEvent &event)
 void REHex::MainWindow::OnExit(wxCommandEvent &event)
 {
 	Close();
+}
+
+void REHex::MainWindow::OnCursorPrev(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	tab->doc_ctrl->goto_prev_cursor_position();
+}
+
+void REHex::MainWindow::OnCursorNext(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	tab->doc_ctrl->goto_next_cursor_position();
 }
 
 void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
@@ -1219,6 +1246,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	_update_status_mode(tab->doc_ctrl);
 	_update_undo(tab->doc);
 	_update_dirty(tab->doc);
+	_update_cpos_buttons(tab->doc_ctrl);
 	
 	/* Show any search dialogs attached to this tab. */
 	tab->unhide_child_windows();
@@ -1323,6 +1351,11 @@ void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 		 * active document.
 		*/
 		_update_status_offset(active_tab);
+	}
+	
+	if(event_src == active_tab->doc || event_src == active_tab->doc_ctrl)
+	{
+		_update_cpos_buttons(active_tab->doc_ctrl);
 	}
 	
 	event.Skip();
@@ -1529,6 +1562,14 @@ void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 	toolbar->EnableTool(wxID_SAVE,   enable_save);
 	
 	notebook->SetPageBitmap(notebook->GetSelection(), (dirty ? notebook_dirty_bitmap : wxNullBitmap));
+}
+
+void REHex::MainWindow::_update_cpos_buttons(DocumentCtrl *doc_ctrl)
+{
+	wxToolBar *toolbar = GetToolBar();
+	
+	toolbar->EnableTool(wxID_BACKWARD, doc_ctrl->has_prev_cursor_position());
+	toolbar->EnableTool(wxID_FORWARD,  doc_ctrl->has_next_cursor_position());
 }
 
 bool REHex::MainWindow::unsaved_confirm()

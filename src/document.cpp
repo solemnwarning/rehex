@@ -55,7 +55,7 @@ wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
-	current_seq(1),
+	current_seq(0),
 	saved_seq(0),
 	cursor_state(CSTATE_HEX)
 {

@@ -2804,7 +2804,7 @@ TEST_F(DocumentTest, RollbackTransaction)
 
 TEST_F(DocumentTest, DirtyState)
 {
-	EXPECT_TRUE(doc->is_dirty()) << "New Document is initially dirty";
+	EXPECT_FALSE(doc->is_dirty()) << "New Document is initially clean";
 	
 	/* Insert into empty document... */
 	const char *DATA1 = "smoothorangemixed";

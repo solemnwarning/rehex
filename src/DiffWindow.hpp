@@ -25,6 +25,7 @@
 #include <wx/panel.h>
 #include <wx/splitter.h>
 
+#include "ByteRangeSet.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
@@ -97,6 +98,13 @@ namespace REHex {
 			
 			std::list<Range> ranges;
 			
+			static const size_t MAX_COMPARE_DATA = 16384;
+			
+			ByteRangeSet offsets_pending;    /**< Bytes which need to be processed (relative to Range base). */
+			ByteRangeSet offsets_different;  /**< Bytes which have been processed and have differences (relative to Range base). */
+			
+			off_t relative_cursor_pos;  /**< Current cursor position (relative to Range base). */
+			
 			static DiffWindow *instance;
 			
 			std::list<Range>::iterator remove_range(std::list<Range>::iterator range, bool called_from_page_closed_handler);
@@ -104,6 +112,7 @@ namespace REHex {
 			void doc_update(Range *range);
 			std::string range_title(Range *range);
 			void resize_splitters();
+			void set_relative_cursor_pos(off_t relative_cursor_pos);
 			
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);

@@ -25,6 +25,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 
+#include "App.hpp"
 #include "ArtProvider.hpp"
 #include "DiffWindow.hpp"
 #include "Palette.hpp"
@@ -56,7 +57,8 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
-	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
+	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
+	relative_cursor_pos(0)
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
@@ -214,6 +216,9 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 	}
 	
 	resize_splitters();
+	
+	offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+	offsets_different.clear_all();
 	
 	return new_range;
 }
@@ -392,6 +397,18 @@ void REHex::DiffWindow::resize_splitters()
 	}
 }
 
+void REHex::DiffWindow::set_relative_cursor_pos(off_t relative_cursor_pos)
+{
+	assert(relative_cursor_pos >= 0);
+	
+	this->relative_cursor_pos = relative_cursor_pos;
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_cursor_position(r->offset + relative_cursor_pos);
+	}
+}
+
 void REHex::DiffWindow::OnSize(wxSizeEvent &event)
 {
 	resize_splitters();
@@ -412,6 +429,82 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 			++i;
 		}
 	}
+	
+	size_t allowed_remaining = MAX_COMPARE_DATA;
+	bool refresh = false;
+	
+	while(!offsets_pending.empty() && allowed_remaining > 0)
+	{
+		off_t rel_offset = offsets_pending.begin()->offset;
+		off_t length = std::min<off_t>(offsets_pending.begin()->length, allowed_remaining);
+		
+		assert(length > 0);
+		
+		try {
+			std::vector<unsigned char> base_data;
+			bool base_data_ready = false;
+			
+			for(auto r = ranges.begin(); r != ranges.end(); ++r)
+			{
+				if(r->length <= rel_offset)
+				{
+					length = offsets_pending.begin()->length;
+					offsets_different.set_range(rel_offset, length);
+					refresh = true;
+					
+					break;
+				}
+				else if(r->length < (rel_offset + length))
+				{
+					length = r->length - rel_offset;
+				}
+				
+				if(!base_data_ready)
+				{
+					base_data = r->doc->read_data(r->offset + rel_offset, length);
+					assert((off_t)(base_data.size()) >= length);
+					
+					base_data_ready = true;
+				}
+				else{
+					std::vector<unsigned char> r_data = r->doc->read_data(r->offset + rel_offset, length);
+					assert((off_t)(r_data.size()) >= length);
+					
+					for(off_t i = 0; i < length; ++i)
+					{
+						if(r_data[i] != base_data[i])
+						{
+							offsets_different.set_range(rel_offset + i, 1);
+							refresh = true;
+						}
+					}
+				}
+			}
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Exception in REHex::DiffWindow::OnIdle: %s\n", e.what());
+			return;
+		}
+		
+		assert(length > 0);
+		
+		offsets_pending.clear_range(rel_offset, length);
+		allowed_remaining -= length;
+	}
+	
+	if(!offsets_pending.empty())
+	{
+		event.RequestMore();
+	}
+	
+	if(refresh)
+	{
+		for(auto r = ranges.begin(); r != ranges.end(); ++r)
+		{
+			r->doc_ctrl->Refresh();
+		}
+	}
 }
 
 void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
@@ -428,6 +521,47 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 				break;
 			}
 		}
+	}
+	else if(event.GetModifiers() == wxMOD_NONE && event.GetKeyCode() == WXK_F6)
+	{
+		/* Find the first difference either encompassing or following the cursor... */
+		auto next_diff = offsets_different.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+		
+		/* ...skip it if we're inside it... */
+		if(next_diff != offsets_different.end() && next_diff->offset <= relative_cursor_pos)
+		{
+			++next_diff;
+		}
+		
+		if(next_diff != offsets_different.end())
+		{
+			/* ...and jump to it. */
+			set_relative_cursor_pos(next_diff->offset);
+		}
+		else{
+			/* No more differences. */
+			wxBell();
+		}
+	}
+	else if(event.GetModifiers() == wxMOD_SHIFT && event.GetKeyCode() == WXK_F6)
+	{
+		/* Find the first difference either encompassing or following the cursor... */
+		auto prev_diff = offsets_different.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+		
+		if(prev_diff != offsets_different.end())
+		{
+			/* ...and step back to get the immediately preceeding one. */
+			if(prev_diff != offsets_different.begin())
+			{
+				--prev_diff;
+				set_relative_cursor_pos(prev_diff->offset);
+				
+				return;
+			}
+		}
+		
+		/* No more differences. */
+		wxBell();
 	}
 	else{
 		event.Skip();
@@ -463,6 +597,12 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				off_t shift  = std::min(event.length, (r->offset - event.offset));
 				off_t shrink = std::min((event.length - shift), r->length);
 				
+				if(shrink > 0)
+				{
+					offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+					offsets_different.clear_all();
+				}
+				
 				r->offset -= shift;
 				assert(r->offset >= 0);
 				
@@ -481,6 +621,12 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 			else if(event.offset < (r->offset + r->length))
 			{
 				off_t shrink = std::min(event.length, (r->length - (event.offset - r->offset)));
+				
+				if(shrink > 0)
+				{
+					offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+					offsets_different.clear_all();
+				}
 				
 				r->length -= shrink;
 				assert(r->length >= 0);
@@ -559,6 +705,9 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 			{
 				r->length += event.length;
 				doc_update(&*r);
+				
+				offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+				offsets_different.clear_all();
 			}
 			
 			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
@@ -614,6 +763,15 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 				r->doc_ctrl->clear_selection();
 			}
 			
+			off_t overlap_base = std::max(event.offset, r->offset);
+			off_t overlap_end = std::min((event.offset + event.length), (r->offset + r->length));
+			
+			if(overlap_end > overlap_base)
+			{
+				offsets_pending.set_range((overlap_base - r->offset), (overlap_end - overlap_base));
+				offsets_different.clear_range((overlap_base - r->offset), (overlap_end - overlap_base));
+			}
+			
 			r->doc_ctrl->Refresh();
 		}
 	}
@@ -658,7 +816,8 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
 	assert(source_range != ranges.end());
 	
-	off_t pos_from_source_range = event.cursor_pos - source_range->offset;
+	relative_cursor_pos = event.cursor_pos - source_range->offset;
+	// assert(relative_cursor_pos >= 0);
 	
 	/* Update the cursors in every other tab to match. */
 	
@@ -666,8 +825,7 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 	{
 		if(r != source_range)
 		{
-			off_t pos_from_r = r->offset + std::min(pos_from_source_range, (r->length - 1));
-			r->doc_ctrl->set_cursor_position(pos_from_r, event.cursor_state);
+			r->doc_ctrl->set_cursor_position(r->offset + relative_cursor_pos, event.cursor_state);
 		}
 	}
 }
@@ -757,44 +915,17 @@ int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(off_t off) const
 {
-	try {
-		std::vector<unsigned char> my_data = range->doc->read_data(off, 1);
-		
-		assert(off >= range->offset);
-		off_t off_from_range_begin = off - range->offset;
-		
-		const std::list<Range> &ranges = diff_window->get_ranges();
-		
-		for(auto r = ranges.begin(); r != ranges.end(); ++r)
-		{
-			if(&*r == range)
-			{
-				/* This one is me. */
-				continue;
-			}
-			
-			std::vector<unsigned char> their_data = r->doc->read_data(r->offset + off_from_range_begin, 1);
-			
-			if(off_from_range_begin >= r->length || their_data != my_data)
-			{
-				return Highlight(
-					Palette::PAL_DIRTY_TEXT_FG,
-					Palette::PAL_DIRTY_TEXT_BG,
-					true);
-			}
-		}
-		
-		return NoHighlight();
-	}
-	catch(const std::exception &e)
+	assert(off >= range->offset);
+	off_t relative_off = off - range->offset;
+	
+	if(diff_window->offsets_different.isset(relative_off))
 	{
-		/* Highlight byte if an exception was thrown - most likely a file I/O error. */
-		
-		fprintf(stderr, "Exception in REHex::DiffWindow::DiffDataRegion::highlight_at_off: %s\n", e.what());
-		
 		return Highlight(
 			Palette::PAL_DIRTY_TEXT_FG,
 			Palette::PAL_DIRTY_TEXT_BG,
 			true);
+	}
+	else{
+		return NoHighlight();
 	}
 }

@@ -600,6 +600,11 @@ REHex::OrderedByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
 {
 	OrderedByteRangeSet selected_ranges;
 	
+	if(!has_selection())
+	{
+		return selected_ranges;
+	}
+	
 	auto region = _data_region_by_offset(selection_begin);
 	off_t region_select_begin = selection_begin;
 	

@@ -85,6 +85,31 @@ bool REHex::ByteRangeSet::isset_any(off_t offset, off_t length) const
 	return !i.empty();
 }
 
+REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_first_in(off_t offset, off_t length) const
+{
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), Range(offset, 0));
+	
+	if(i != ranges.begin())
+	{
+		--i;
+	}
+	
+	off_t end = offset + length;
+	
+	for(; i != ranges.end() && (i->offset < end || end < offset); ++i)
+	{
+		off_t i_end = i->offset + i->length;
+		
+		if((i->offset < end || end < offset) && offset < i_end)
+		{
+			return i;
+		}
+	}
+	
+	/* No match. */
+	return ranges.end();
+}
+
 off_t REHex::ByteRangeSet::total_bytes() const
 {
 	off_t total_bytes = std::accumulate(ranges.begin(), ranges.end(),
@@ -98,12 +123,12 @@ const std::vector<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges()
 	return ranges;
 }
 
-std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::begin() const
+REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::begin() const
 {
 	return ranges.begin();
 }
 
-std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::ByteRangeSet::end() const
+REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::end() const
 {
 	return ranges.end();
 }

@@ -58,6 +58,8 @@ END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
+	statbar(NULL),
+	sb_gauge(NULL),
 	update_regions_pending(false),
 	relative_cursor_pos(0),
 	longest_range(0)
@@ -563,10 +565,13 @@ void REHex::DiffWindow::OnSize(wxSizeEvent &event)
 {
 	resize_splitters();
 	
-	wxRect gauge_rect;
-	statbar->GetFieldRect(1, gauge_rect);
-	
-	sb_gauge->SetSize(gauge_rect);
+	if(statbar != NULL && sb_gauge != NULL)
+	{
+		wxRect gauge_rect;
+		statbar->GetFieldRect(1, gauge_rect);
+		
+		sb_gauge->SetSize(gauge_rect);
+	}
 	
 	event.Skip();
 }

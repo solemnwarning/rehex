@@ -330,7 +330,74 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 void REHex::DiffWindow::doc_update(Range *range)
 {
 	std::vector<DocumentCtrl::Region*> regions;
-	regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+	
+	off_t CONTEXT_BYTES = 64;
+	
+	if(true) /* TODO: Add a folding option. */
+	{
+		ByteRangeSet display_data;
+		
+		for(auto i = offsets_different.begin(); i != offsets_different.end(); ++i)
+		{
+			if(i->offset >= range->length)
+			{
+				/* We're beyond the end of this range. Stop adding Regions. */
+				continue;
+			}
+			
+			off_t dd_begin = std::max(
+				range->offset,
+				(range->offset + i->offset - CONTEXT_BYTES));
+			
+			off_t dd_end = std::min(
+				(range->offset + i->offset + i->length + CONTEXT_BYTES),
+				(range->offset + range->length));
+			
+			assert(dd_end > dd_begin);
+			
+			display_data.set_range(dd_begin, (dd_end - dd_begin));
+		}
+		
+		if(display_data.empty())
+		{
+			regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+		}
+		else{
+			off_t base = range->offset;
+			
+			for(auto i = display_data.begin(); i != display_data.end(); ++i)
+			{
+				if(i->offset > base)
+				{
+					char buf[128];
+					snprintf(buf, sizeof(buf), "[ %zd bytes of identical data ]", (i->offset - base));
+					
+					/* TODO: Don't leak this. Make a new Region type. */
+					wxString *s = new wxString(buf);
+					
+					regions.push_back(new DocumentCtrl::CommentRegion(-1, 0, *s, false, base, 0));
+				}
+				
+				regions.push_back(new DiffDataRegion(i->offset, i->length, this, range));
+				
+				base = i->offset + i->length;
+			}
+			
+			if((range->offset + range->length) > base)
+			{
+				char buf[128];
+				snprintf(buf, sizeof(buf), "[ %zd bytes of identical data ]", ((range->offset + range->length) - base));
+				
+				/* TODO: Don't leak this. Make a new Region type. */
+				wxString *s = new wxString(buf);
+				
+				regions.push_back(new DocumentCtrl::CommentRegion(-1, 0, *s, false, base, 0));
+			}
+		}
+	}
+	else{
+		regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+	}
 	
 	range->doc_ctrl->replace_all_regions(regions);
 }
@@ -375,7 +442,10 @@ void REHex::DiffWindow::resize_splitters()
 		for(auto rr = dc_regions.begin(); rr != dc_regions.end(); ++rr)
 		{
 			const DiffDataRegion *ddr = dynamic_cast<const DiffDataRegion*>(*rr);
-			assert(ddr != NULL);
+			if(ddr == NULL)
+			{
+				continue;
+			}
 			
 			int ddr_max_bytes_per_line = 1;
 			while(ddr->calc_width_for_bytes(*(r->doc_ctrl), (ddr_max_bytes_per_line + 1)) <= dc_client_size.GetWidth())
@@ -502,7 +572,8 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	{
 		for(auto r = ranges.begin(); r != ranges.end(); ++r)
 		{
-			r->doc_ctrl->Refresh();
+			//r->doc_ctrl->Refresh();
+			doc_update(&(*r));
 		}
 	}
 }

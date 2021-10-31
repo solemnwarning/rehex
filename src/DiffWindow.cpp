@@ -58,7 +58,9 @@ END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
-	relative_cursor_pos(0)
+	update_regions_pending(false),
+	relative_cursor_pos(0),
+	longest_range(0)
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
@@ -98,6 +100,9 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	}
 	
 	SetIcons(icons);
+	
+	statbar = CreateStatusBar(2);
+	sb_gauge = new wxGauge(statbar, wxID_ANY, 100);
 }
 
 REHex::DiffWindow::~DiffWindow()
@@ -134,6 +139,8 @@ const std::list<REHex::DiffWindow::Range> &REHex::DiffWindow::get_ranges() const
 std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const Range &range)
 {
 	auto new_range = ranges.insert(ranges.end(), range);
+	
+	update_longest_range();
 	
 	if(ranges.size() == 1)
 	{
@@ -217,7 +224,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 	
 	resize_splitters();
 	
-	offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+	offsets_pending.set_range(0, longest_range);
 	offsets_different.clear_all();
 	
 	return new_range;
@@ -479,9 +486,88 @@ void REHex::DiffWindow::set_relative_cursor_pos(off_t relative_cursor_pos)
 	}
 }
 
+off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
+{
+	try {
+		std::vector<unsigned char> base_data;
+		bool base_data_ready = false;
+		
+		for(auto r = ranges.begin(); r != ranges.end(); ++r)
+		{
+			if(r->length <= rel_offset)
+			{
+				length = offsets_pending.begin()->length;
+				offsets_different.set_range(rel_offset, length);
+				
+				break;
+			}
+			else if(r->length < (rel_offset + length))
+			{
+				length = r->length - rel_offset;
+			}
+			
+			if(!base_data_ready)
+			{
+				base_data = r->doc->read_data(r->offset + rel_offset, length);
+				assert((off_t)(base_data.size()) >= length);
+				
+				base_data_ready = true;
+			}
+			else{
+				std::vector<unsigned char> r_data = r->doc->read_data(r->offset + rel_offset, length);
+				assert((off_t)(r_data.size()) >= length);
+				
+				for(off_t i = 0; i < length; ++i)
+				{
+					if(r_data[i] != base_data[i])
+					{
+						offsets_different.set_range(rel_offset + i, 1);
+					}
+				}
+			}
+		}
+	}
+	catch(const std::exception &e)
+	{
+		wxGetApp().printf_error("Exception in REHex::DiffWindow::process_now: %s\n", e.what());
+		return -1;
+	}
+	
+	assert(length > 0);
+	
+	offsets_pending.clear_range(rel_offset, length);
+	update_regions_pending = true;
+	
+	return length;
+}
+
+void REHex::DiffWindow::update_longest_range()
+{
+	if(ranges.empty())
+	{
+		longest_range = 0;
+		
+		offsets_pending.clear_all();
+		offsets_different.clear_all();
+	}
+	else{
+		longest_range = std::max_element(ranges.begin(), ranges.end(),
+			[](const Range &lhs, const Range &rhs) { return lhs.length < rhs.length; })->length;
+		
+		offsets_pending.clear_range(longest_range, std::numeric_limits<off_t>::max());
+		offsets_different.clear_range(longest_range, std::numeric_limits<off_t>::max());
+	}
+}
+
 void REHex::DiffWindow::OnSize(wxSizeEvent &event)
 {
 	resize_splitters();
+	
+	wxRect gauge_rect;
+	statbar->GetFieldRect(1, gauge_rect);
+	
+	sb_gauge->SetSize(gauge_rect);
+	
 	event.Skip();
 }
 
@@ -501,7 +587,6 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	}
 	
 	size_t allowed_remaining = MAX_COMPARE_DATA;
-	bool refresh = false;
 	
 	while(!offsets_pending.empty() && allowed_remaining > 0)
 	{
@@ -510,71 +595,44 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 		
 		assert(length > 0);
 		
-		try {
-			std::vector<unsigned char> base_data;
-			bool base_data_ready = false;
-			
-			for(auto r = ranges.begin(); r != ranges.end(); ++r)
-			{
-				if(r->length <= rel_offset)
-				{
-					length = offsets_pending.begin()->length;
-					offsets_different.set_range(rel_offset, length);
-					refresh = true;
-					
-					break;
-				}
-				else if(r->length < (rel_offset + length))
-				{
-					length = r->length - rel_offset;
-				}
-				
-				if(!base_data_ready)
-				{
-					base_data = r->doc->read_data(r->offset + rel_offset, length);
-					assert((off_t)(base_data.size()) >= length);
-					
-					base_data_ready = true;
-				}
-				else{
-					std::vector<unsigned char> r_data = r->doc->read_data(r->offset + rel_offset, length);
-					assert((off_t)(r_data.size()) >= length);
-					
-					for(off_t i = 0; i < length; ++i)
-					{
-						if(r_data[i] != base_data[i])
-						{
-							offsets_different.set_range(rel_offset + i, 1);
-							refresh = true;
-						}
-					}
-				}
-			}
-		}
-		catch(const std::exception &e)
+		off_t processed = process_now(rel_offset, length);
+		if(processed < 0)
 		{
-			wxGetApp().printf_error("Exception in REHex::DiffWindow::OnIdle: %s\n", e.what());
-			return;
+			break;
 		}
 		
-		assert(length > 0);
-		
-		offsets_pending.clear_range(rel_offset, length);
-		allowed_remaining -= length;
+		allowed_remaining -= processed;
 	}
 	
 	if(!offsets_pending.empty())
 	{
+		SetStatusText("Processing...");
+		
+		off_t remaining_bytes = offsets_pending.total_bytes();
+		
+		int processed_percent = 100.0 - (((double)(remaining_bytes) / (double)(longest_range)) * 100.0);
+		processed_percent = std::max(processed_percent, 0);
+		processed_percent = std::min(processed_percent, 100);
+		
+		sb_gauge->Show();
+		sb_gauge->SetValue(processed_percent);
+		
 		event.RequestMore();
 	}
+	else{
+		SetStatusText("");
+		sb_gauge->Hide();
+	}
 	
-	if(refresh)
+	if(update_regions_pending)
 	{
 		for(auto r = ranges.begin(); r != ranges.end(); ++r)
 		{
 			//r->doc_ctrl->Refresh();
 			doc_update(&(*r));
 		}
+		
+		update_regions_pending = false;
 	}
 }
 
@@ -670,7 +728,7 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				
 				if(shrink > 0)
 				{
-					offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+					offsets_pending.set_range(0, longest_range);
 					offsets_different.clear_all();
 				}
 				
@@ -679,6 +737,8 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				
 				r->length -= shrink;
 				assert(r->length >= 0);
+				
+				update_longest_range();
 				
 				if(r->length == 0)
 				{
@@ -695,12 +755,14 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				
 				if(shrink > 0)
 				{
-					offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+					offsets_pending.set_range(0, longest_range);
 					offsets_different.clear_all();
 				}
 				
 				r->length -= shrink;
 				assert(r->length >= 0);
+				
+				update_longest_range();
 				
 				if(r->length == 0)
 				{
@@ -775,9 +837,11 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 			else if(event.offset < (r->offset + r->length))
 			{
 				r->length += event.length;
+				
+				update_longest_range();
 				doc_update(&*r);
 				
-				offsets_pending.set_range(0, std::numeric_limits<off_t>::max());
+				offsets_pending.set_range(0, longest_range);
 				offsets_different.clear_all();
 			}
 			
@@ -988,6 +1052,11 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::hi
 {
 	assert(off >= range->offset);
 	off_t relative_off = off - range->offset;
+	
+	if(diff_window->offsets_pending.isset(off))
+	{
+		diff_window->process_now(off, 2048 /* Probably enough to process screen in one go. */);
+	}
 	
 	if(diff_window->offsets_different.isset(relative_off))
 	{

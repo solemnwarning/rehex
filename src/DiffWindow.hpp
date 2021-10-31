@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,8 +22,10 @@
 #include <string>
 #include <wx/aui/auibook.h>
 #include <wx/frame.h>
+#include <wx/gauge.h>
 #include <wx/panel.h>
 #include <wx/splitter.h>
+#include <wx/statusbr.h>
 
 #include "ByteRangeSet.hpp"
 #include "document.hpp"
@@ -96,14 +98,19 @@ namespace REHex {
 			wxToolBarToolBase *show_offsets_button;
 			wxToolBarToolBase *show_ascii_button;
 			
+			wxStatusBar *statbar;
+			wxGauge *sb_gauge;
+			
 			std::list<Range> ranges;
 			
-			static const size_t MAX_COMPARE_DATA = 16384;
+			static const size_t MAX_COMPARE_DATA = 16384; /**< Maximum amount of data to process in a single idle event. */
 			
 			ByteRangeSet offsets_pending;    /**< Bytes which need to be processed (relative to Range base). */
 			ByteRangeSet offsets_different;  /**< Bytes which have been processed and have differences (relative to Range base). */
+			bool update_regions_pending;
 			
 			off_t relative_cursor_pos;  /**< Current cursor position (relative to Range base). */
+			off_t longest_range;        /**< Length of the longest Range. */
 			
 			static DiffWindow *instance;
 			
@@ -113,6 +120,8 @@ namespace REHex {
 			std::string range_title(Range *range);
 			void resize_splitters();
 			void set_relative_cursor_pos(off_t relative_cursor_pos);
+			off_t process_now(off_t rel_offset, off_t length);
+			void update_longest_range();
 			
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);

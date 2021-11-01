@@ -24,6 +24,7 @@
 #include <wx/frame.h>
 #include <wx/gauge.h>
 #include <wx/panel.h>
+#include <wx/progdlg.h>
 #include <wx/splitter.h>
 #include <wx/statusbr.h>
 
@@ -111,6 +112,11 @@ namespace REHex {
 			
 			off_t relative_cursor_pos;  /**< Current cursor position (relative to Range base). */
 			off_t longest_range;        /**< Length of the longest Range. */
+			
+			bool searching_backwards;
+			bool searching_forwards;
+			wxProgressDialog *search_modal;
+			bool search_modal_updating;
 			
 			static DiffWindow *instance;
 			

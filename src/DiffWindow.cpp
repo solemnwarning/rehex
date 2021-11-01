@@ -62,7 +62,11 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	sb_gauge(NULL),
 	update_regions_pending(false),
 	relative_cursor_pos(0),
-	longest_range(0)
+	longest_range(0),
+	searching_backwards(false),
+	searching_forwards(false),
+	search_modal(NULL),
+	search_modal_updating(false)
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
@@ -593,20 +597,83 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	
 	size_t allowed_remaining = MAX_COMPARE_DATA;
 	
-	while(!offsets_pending.empty() && allowed_remaining > 0)
+	if(searching_backwards)
 	{
-		off_t rel_offset = offsets_pending.begin()->offset;
-		off_t length = std::min<off_t>(offsets_pending.begin()->length, allowed_remaining);
 		
-		assert(length > 0);
-		
-		off_t processed = process_now(rel_offset, length);
-		if(processed < 0)
+	}
+	else if(searching_forwards)
+	{
+		while(allowed_remaining > 0)
 		{
-			break;
+			auto process_next = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+			
+			if(process_next == offsets_pending.end())
+			{
+				searching_forwards = false;
+				
+				search_modal->EndModal(0);
+				wxBell();
+				
+				break;
+			}
+			
+			off_t rel_offset = std::max(relative_cursor_pos, process_next->offset);
+			off_t remain_in_pn = process_next->length - (relative_cursor_pos - process_next->offset);
+			off_t length = std::min<off_t>(allowed_remaining, remain_in_pn);
+			
+			assert(length > 0);
+			
+			off_t processed = process_now(rel_offset, length);
+			if(processed < 0)
+			{
+				break;
+			}
+			
+			allowed_remaining -= processed;
 		}
 		
-		allowed_remaining -= processed;
+		if(!search_modal_updating)
+		{
+			search_modal_updating = true;
+			
+			ByteRangeSet forward_offsets;
+			forward_offsets.set_range(relative_cursor_pos, longest_range);
+			
+			ByteRangeSet pending_forward = ByteRangeSet::intersection(forward_offsets, offsets_pending);
+			
+			int sm_range = search_modal->GetRange();
+			
+			int sm_value = (double)(sm_range) - (((double)(pending_forward.total_bytes()) / (double)(forward_offsets.total_bytes())) * (double)(sm_range));
+			sm_value = std::max(sm_value, 0);
+			sm_value = std::min(sm_value, sm_range);
+			
+			search_modal->Update(sm_value);
+			
+			search_modal_updating = false;
+		}
+		
+		if(searching_forwards && search_modal->WasCancelled())
+		{
+			searching_forwards = false;
+			search_modal->EndModal(0);
+		}
+	}
+	else{
+		while(!offsets_pending.empty() && allowed_remaining > 0)
+		{
+			off_t rel_offset = offsets_pending.begin()->offset;
+			off_t length = std::min<off_t>(offsets_pending.begin()->length, allowed_remaining);
+			
+			assert(length > 0);
+			
+			off_t processed = process_now(rel_offset, length);
+			if(processed < 0)
+			{
+				break;
+			}
+			
+			allowed_remaining -= processed;
+		}
 	}
 	
 	if(!offsets_pending.empty())
@@ -673,8 +740,22 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 			set_relative_cursor_pos(next_diff->offset);
 		}
 		else{
-			/* No more differences. */
-			wxBell();
+			auto next_to_process = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+			
+			if(next_to_process == offsets_pending.end())
+			{
+				/* No more differences. */
+				wxBell();
+			}
+			else{
+				wxProgressDialog pd("Searching", "Searching for differences...", 10000, this, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
+				search_modal = &pd;
+				
+				searching_forwards = true;
+				search_modal->ShowModal();
+				
+				search_modal = NULL;
+			}
 		}
 	}
 	else if(event.GetModifiers() == wxMOD_SHIFT && event.GetKeyCode() == WXK_F6)

@@ -36,6 +36,10 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
+#ifdef DIFFWINDOW_PROFILING
+#include "timespec.c"
+#endif
+
 enum {
 	ID_SHOW_OFFSETS = 1,
 	ID_SHOW_ASCII,
@@ -67,6 +71,14 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	searching_forwards(false),
 	search_modal(NULL),
 	search_modal_updating(false)
+	
+	#ifdef DIFFWINDOW_PROFILING
+	,
+	idle_ticks(0),
+	idle_secs(0),
+	idle_bytes(0),
+	odsr_calls(0)
+	#endif
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
@@ -147,6 +159,13 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 	auto new_range = ranges.insert(ranges.end(), range);
 	
 	update_longest_range();
+	
+	#ifdef DIFFWINDOW_PROFILING
+	idle_ticks = 0;
+	idle_secs  = 0;
+	idle_bytes = 0;
+	odsr_calls = 0;
+	#endif
 	
 	if(ranges.size() == 1)
 	{
@@ -504,6 +523,7 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 			{
 				length = offsets_pending.begin()->length;
 				offsets_different.set_range(rel_offset, length);
+				++odsr_calls;
 				
 				break;
 			}
@@ -523,12 +543,34 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 				std::vector<unsigned char> r_data = r->doc->read_data(r->offset + rel_offset, length);
 				assert((off_t)(r_data.size()) >= length);
 				
+				off_t diff_base = -1;
+				off_t diff_end  = -1;
+				
 				for(off_t i = 0; i < length; ++i)
 				{
 					if(r_data[i] != base_data[i])
 					{
-						offsets_different.set_range(rel_offset + i, 1);
+						if(diff_end != i)
+						{
+							if(diff_end > diff_base)
+							{
+								offsets_different.set_range((rel_offset + diff_base), (diff_end - diff_base));
+								++odsr_calls;
+							}
+							
+							diff_base = i;
+							diff_end  = i + 1;
+						}
+						else{
+							++diff_end;
+						}
 					}
+				}
+				
+				if(diff_end > diff_base)
+				{
+					offsets_different.set_range((rel_offset + diff_base), (diff_end - diff_base));
+					++odsr_calls;
 				}
 			}
 		}
@@ -594,6 +636,13 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 			++i;
 		}
 	}
+	
+	#ifdef DIFFWINDOW_PROFILING
+	bool had_work = !offsets_pending.empty();
+	
+	struct timespec a;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
+	#endif
 	
 	size_t allowed_remaining = MAX_COMPARE_DATA;
 	
@@ -676,6 +725,29 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 		}
 	}
 	
+	#ifdef DIFFWINDOW_PROFILING
+	if(had_work)
+	{
+		struct timespec b;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &b);
+		
+		idle_ticks += 1;
+		idle_secs  += timespec_to_double(timespec_sub(b, a));
+		idle_bytes += MAX_COMPARE_DATA - allowed_remaining;
+		
+		if(offsets_pending.empty())
+		{
+			wxGetApp().printf_debug("Processed %zd bytes in %f seconds over %u idle ticks (%fus avg) (%u offsets_different insertions)\n",
+				idle_bytes, idle_secs, idle_ticks, ((idle_secs / (double)(idle_ticks)) * 1000000), odsr_calls);
+			
+			idle_ticks = 0;
+			idle_secs  = 0;
+			idle_bytes = 0;
+			odsr_calls = 0;
+		}
+	}
+	#endif
+	
 	if(!offsets_pending.empty())
 	{
 		SetStatusText("Processing...");
@@ -748,7 +820,7 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 				wxBell();
 			}
 			else{
-				wxProgressDialog pd("Searching", "Searching for differences...", 10000, this, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
+				wxProgressDialog pd("Searching", "Searching for differences...", 1000000, this, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
 				search_modal = &pd;
 				
 				searching_forwards = true;

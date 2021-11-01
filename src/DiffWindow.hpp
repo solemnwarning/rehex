@@ -35,6 +35,8 @@
 #include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 
+#define DIFFWINDOW_PROFILING
+
 namespace REHex {
 	class DiffWindow: public wxFrame
 	{
@@ -119,6 +121,13 @@ namespace REHex {
 			bool search_modal_updating;
 			
 			static DiffWindow *instance;
+			
+			#ifdef DIFFWINDOW_PROFILING
+			unsigned idle_ticks;
+			double idle_secs;
+			off_t idle_bytes;
+			unsigned odsr_calls;
+			#endif
 			
 			std::list<Range>::iterator remove_range(std::list<Range>::iterator range, bool called_from_page_closed_handler);
 			

@@ -358,7 +358,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 				itm->Check(true);
 			}
 			
-			Bind(wxEVT_MENU, [this, font_name, itm](wxCommandEvent &event)
+			Bind(wxEVT_MENU, [font_name, itm](wxCommandEvent &event)
 			{
 				wxGetApp().set_font_name(font_name);
 				itm->Check(true);

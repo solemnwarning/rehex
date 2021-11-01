@@ -42,12 +42,6 @@
 static_assert(std::numeric_limits<json_int_t>::max() >= std::numeric_limits<off_t>::max(),
 	"json_int_t must be large enough to store any offset in an off_t");
 
-/* Is the given byte a printable 7-bit ASCII character? */
-static bool isasciiprint(int c)
-{
-	return (c >= ' ' && c <= '~');
-}
-
 enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SELECT_TIMER,
@@ -2804,7 +2798,6 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 
 void REHex::DocumentCtrl::Region::draw_full_height_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int64_t y)
 {
-	int cw = doc_ctrl->hf_char_width();
 	int ch = doc_ctrl->hf_height;
 	
 	int64_t skip_lines = (y < 0 ? (-y / ch) : 0);
@@ -3629,8 +3622,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		unsigned char byte = (data != NULL) ? data[i] : '?';
 		
 		auto highlight = highlight_at_off(cur_off);
-		
-		char ascii_byte = byte;
 		
 		if(ascii_active)
 		{

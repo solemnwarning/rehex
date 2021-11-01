@@ -36,7 +36,7 @@
 #include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 
-#define DIFFWINDOW_PROFILING
+// #define DIFFWINDOW_PROFILING
 
 namespace REHex {
 	class DiffWindow: public wxFrame

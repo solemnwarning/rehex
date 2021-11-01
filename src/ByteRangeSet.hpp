@@ -312,6 +312,12 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 	size_t min_size_hint = ranges.size() + std::distance(begin, end);
 	if(ranges.capacity() < min_size_hint)
 	{
+		/* Round up to the nearest page size (assuming 4KiB pages and 64-bit off_t) */
+		if((min_size_hint % 256) != 0)
+		{
+			min_size_hint += 256 - (min_size_hint % 256);
+		}
+		
 		ranges.reserve(std::max(min_size_hint, size_hint));
 	}
 	

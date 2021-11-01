@@ -27,6 +27,7 @@
 #include <wx/progdlg.h>
 #include <wx/splitter.h>
 #include <wx/statusbr.h>
+#include <wx/timer.h>
 
 #include "ByteRangeSet.hpp"
 #include "document.hpp"
@@ -111,6 +112,7 @@ namespace REHex {
 			ByteRangeSet offsets_pending;    /**< Bytes which need to be processed (relative to Range base). */
 			ByteRangeSet offsets_different;  /**< Bytes which have been processed and have differences (relative to Range base). */
 			bool update_regions_pending;
+			wxTimer *update_regions_timer;
 			
 			off_t relative_cursor_pos;  /**< Current cursor position (relative to Range base). */
 			off_t longest_range;        /**< Length of the longest Range. */
@@ -151,6 +153,7 @@ namespace REHex {
 			void OnDataRightClick(wxCommandEvent &event);
 			void OnToggleOffsets(wxCommandEvent &event);
 			void OnToggleASCII(wxCommandEvent &event);
+			void OnUpdateRegionsTimer(wxTimerEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

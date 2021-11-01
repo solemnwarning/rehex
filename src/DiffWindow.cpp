@@ -43,6 +43,7 @@
 enum {
 	ID_SHOW_OFFSETS = 1,
 	ID_SHOW_ASCII,
+	ID_UPDATE_REGIONS_TIMER,
 };
 
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
@@ -58,13 +59,14 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::DiffWindow::OnToggleOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::DiffWindow::OnToggleASCII)
+	
+	EVT_TIMER(ID_UPDATE_REGIONS_TIMER, REHex::DiffWindow::OnUpdateRegionsTimer)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
 	statbar(NULL),
 	sb_gauge(NULL),
-	update_regions_pending(false),
 	relative_cursor_pos(0),
 	longest_range(0),
 	searching_backwards(false),
@@ -121,6 +123,8 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	
 	statbar = CreateStatusBar(2);
 	sb_gauge = new wxGauge(statbar, wxID_ANY, 100);
+	
+	update_regions_timer = new wxTimer(this, ID_UPDATE_REGIONS_TIMER);
 }
 
 REHex::DiffWindow::~DiffWindow()
@@ -584,7 +588,11 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 	assert(length > 0);
 	
 	offsets_pending.clear_range(rel_offset, length);
-	update_regions_pending = true;
+	
+	if(!update_regions_timer->IsRunning())
+	{
+		update_regions_timer->StartOnce(100);
+	}
 	
 	return length;
 }
@@ -766,17 +774,6 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	else{
 		SetStatusText("");
 		sb_gauge->Hide();
-	}
-	
-	if(update_regions_pending)
-	{
-		for(auto r = ranges.begin(); r != ranges.end(); ++r)
-		{
-			//r->doc_ctrl->Refresh();
-			doc_update(&(*r));
-		}
-		
-		update_regions_pending = false;
 	}
 }
 
@@ -1191,6 +1188,14 @@ void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
 	}
 	
 	resize_splitters();
+}
+
+void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)
+{
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):

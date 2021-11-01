@@ -546,7 +546,7 @@ namespace REHex {
 			/**
 			 * @brief Set the vertical scroll position, in lines.
 			*/
-			void set_scroll_yoff(int64_t scroll_yoff);
+			void set_scroll_yoff(int64_t scroll_yoff, bool update_linked_scroll_others = true);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent& event);

@@ -1201,9 +1201,22 @@ void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
 
 void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)
 {
+	std::list<int64_t> restore_scroll_ypos;
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		restore_scroll_ypos.push_back(r->doc_ctrl->get_scroll_yoff());
+	}
+	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
 		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(restore_scroll_ypos.front(), false);
+		restore_scroll_ypos.pop_front();
 	}
 }
 

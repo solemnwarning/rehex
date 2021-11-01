@@ -951,6 +951,19 @@ void REHex::DocumentCtrl::_update_vscroll()
 		
 		scroll_yoff_max = 0;
 	}
+	
+	linked_scroll_visit_others([this](DocumentCtrl *other)
+	{
+		other->scroll_yoff = scroll_yoff;
+		if(other->scroll_yoff > other->scroll_yoff_max)
+		{
+			other->scroll_yoff = other->scroll_yoff_max;
+		}
+		
+		other->_update_vscroll_pos(false);
+		other->save_scroll_position();
+		other->Refresh();
+	});
 }
 
 void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
@@ -996,6 +1009,7 @@ void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
 			}
 			
 			other->_update_vscroll_pos(false);
+			other->save_scroll_position();
 			other->Refresh();
 		});
 	}
@@ -2694,11 +2708,11 @@ int64_t REHex::DocumentCtrl::get_scroll_yoff() const
 	return scroll_yoff;
 }
 
-void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff)
+void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff, bool update_linked_scroll_others)
 {
 	set_scroll_yoff_clamped(scroll_yoff);
 	
-	_update_vscroll_pos();
+	_update_vscroll_pos(update_linked_scroll_others);
 	save_scroll_position();
 	Refresh();
 }

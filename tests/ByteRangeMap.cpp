@@ -18,6 +18,7 @@
 #include "../src/platform.hpp"
 #include <gtest/gtest.h>
 #include <limits>
+#include <stdint.h>
 #include <stdio.h>
 #include <string>
 
@@ -35,7 +36,7 @@ using namespace REHex;
 std::ostream& operator<<(std::ostream& os, const ByteRangeMap<std::string>::Range &range)
 {
 	char buf[128];
-	snprintf(buf, sizeof(buf), "{ offset = %zd, length = %zd }", range.offset, range.length);
+	snprintf(buf, sizeof(buf), "{ offset = %jd, length = %jd }", (intmax_t)(range.offset), (intmax_t)(range.length));
 	
 	return os << buf;
 }

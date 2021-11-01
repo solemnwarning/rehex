@@ -18,6 +18,7 @@
 #include "platform.hpp"
 #include <algorithm>
 #include <set>
+#include <stdint.h>
 #include <stdio.h>
 #include <tuple>
 #include <wx/artprov.h>
@@ -406,7 +407,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 				if(i->offset > base)
 				{
 					char buf[128];
-					snprintf(buf, sizeof(buf), "[ %zd bytes of identical data ]", (i->offset - base));
+					snprintf(buf, sizeof(buf), "[ %jd bytes of identical data ]", (intmax_t)(i->offset - base));
 					
 					/* TODO: Don't leak this. Make a new Region type. */
 					wxString *s = new wxString(buf);
@@ -422,7 +423,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 			if((range->offset + range->length) > base)
 			{
 				char buf[128];
-				snprintf(buf, sizeof(buf), "[ %zd bytes of identical data ]", ((range->offset + range->length) - base));
+				snprintf(buf, sizeof(buf), "[ %jd bytes of identical data ]", (intmax_t)((range->offset + range->length) - base));
 				
 				/* TODO: Don't leak this. Make a new Region type. */
 				wxString *s = new wxString(buf);
@@ -754,8 +755,8 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 		
 		if(offsets_pending.empty())
 		{
-			wxGetApp().printf_debug("Processed %zd bytes in %f seconds over %u idle ticks (%fus avg) (%u offsets_different insertions)\n",
-				idle_bytes, idle_secs, idle_ticks, ((idle_secs / (double)(idle_ticks)) * 1000000), odsr_calls);
+			wxGetApp().printf_debug("Processed %jd bytes in %f seconds over %u idle ticks (%fus avg) (%u offsets_different insertions)\n",
+				(intmax_t)(idle_bytes), idle_secs, idle_ticks, ((idle_secs / (double)(idle_ticks)) * 1000000), odsr_calls);
 			
 			idle_ticks = 0;
 			idle_secs  = 0;

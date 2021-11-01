@@ -527,7 +527,10 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 			{
 				length = offsets_pending.begin()->length;
 				offsets_different.set_range(rel_offset, length);
+				
+				#ifdef DIFFWINDOW_PROFILING
 				++odsr_calls;
+				#endif
 				
 				break;
 			}
@@ -559,7 +562,10 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 							if(diff_end > diff_base)
 							{
 								offsets_different.set_range((rel_offset + diff_base), (diff_end - diff_base));
+								
+								#ifdef DIFFWINDOW_PROFILING
 								++odsr_calls;
+								#endif
 							}
 							
 							diff_base = i;
@@ -574,7 +580,10 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 				if(diff_end > diff_base)
 				{
 					offsets_different.set_range((rel_offset + diff_base), (diff_end - diff_base));
+					
+					#ifdef DIFFWINDOW_PROFILING
 					++odsr_calls;
+					#endif
 				}
 			}
 		}

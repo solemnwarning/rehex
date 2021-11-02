@@ -99,6 +99,19 @@ namespace REHex {
 					virtual Highlight highlight_at_off(off_t off) const override;
 			};
 			
+			class SkipDataRegion: public DocumentCtrl::Region
+			{
+				private:
+					off_t data_length;
+					
+				public:
+					SkipDataRegion(off_t indent_offset, off_t data_length);
+					
+				protected:
+					virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override;
+					virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
+			};
+			
 			wxToolBarToolBase *show_offsets_button;
 			wxToolBarToolBase *show_ascii_button;
 			

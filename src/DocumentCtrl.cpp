@@ -2510,6 +2510,11 @@ int REHex::DocumentCtrl::get_offset_column_width()
 	return offset_column_width;
 }
 
+int REHex::DocumentCtrl::get_virtual_width()
+{
+	return virtual_width;
+}
+
 bool REHex::DocumentCtrl::get_cursor_visible()
 {
 	return cursor_visible;

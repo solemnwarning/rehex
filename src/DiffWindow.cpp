@@ -406,13 +406,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 			{
 				if(i->offset > base)
 				{
-					char buf[128];
-					snprintf(buf, sizeof(buf), "[ %jd bytes of identical data ]", (intmax_t)(i->offset - base));
-					
-					/* TODO: Don't leak this. Make a new Region type. */
-					wxString *s = new wxString(buf);
-					
-					regions.push_back(new DocumentCtrl::CommentRegion(-1, 0, *s, false, base, 0));
+					regions.push_back(new SkipDataRegion(base, (i->offset - base)));
 				}
 				
 				regions.push_back(new DiffDataRegion(i->offset, i->length, this, range));
@@ -422,13 +416,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 			
 			if((range->offset + range->length) > base)
 			{
-				char buf[128];
-				snprintf(buf, sizeof(buf), "[ %jd bytes of identical data ]", (intmax_t)((range->offset + range->length) - base));
-				
-				/* TODO: Don't leak this. Make a new Region type. */
-				wxString *s = new wxString(buf);
-				
-				regions.push_back(new DocumentCtrl::CommentRegion(-1, 0, *s, false, base, 0));
+				regions.push_back(new SkipDataRegion(base, ((range->offset + range->length) - base)));
 			}
 		}
 	}
@@ -1254,4 +1242,36 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::hi
 	else{
 		return NoHighlight();
 	}
+}
+
+REHex::DiffWindow::SkipDataRegion::SkipDataRegion(off_t indent_offset, off_t data_length):
+	Region(indent_offset, 0),
+	data_length(data_length) {}
+
+void REHex::DiffWindow::SkipDataRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+{
+	y_lines = 2 + indent_final;
+}
+
+void REHex::DiffWindow::SkipDataRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
+{
+	dc.SetFont(doc_ctrl.get_font());
+	
+	dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+	dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
+	dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
+	
+	char text[64];
+	int text_len = snprintf(text, sizeof(text), "[ %jd identical bytes ]", (intmax_t)(data_length));
+	
+	int virtual_width = doc_ctrl.get_virtual_width();
+	int text_width    = doc_ctrl.hf_string_width(text_len);
+	int text_height   = doc_ctrl.hf_char_height();
+	
+	int text_x = (virtual_width / 2) - (text_width / 2);
+	
+	dc.DrawLine(0, y,                         virtual_width, y);
+	dc.DrawLine(0, y + (text_height * 2) - 1, virtual_width, y + (text_height * 2) - 1);
+	
+	dc.DrawText(text, x + text_x, y + (text_height / 2));
 }

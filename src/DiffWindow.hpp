@@ -124,6 +124,8 @@ namespace REHex {
 			
 			static const size_t MAX_COMPARE_DATA = 16384; /**< Maximum amount of data to process in a single idle event. */
 			
+			bool recalc_bytes_per_line_pending;
+			
 			ByteRangeSet offsets_pending;    /**< Bytes which need to be processed (relative to Range base). */
 			ByteRangeSet offsets_different;  /**< Bytes which have been processed and have differences (relative to Range base). */
 			wxTimer *update_regions_timer;
@@ -150,6 +152,7 @@ namespace REHex {
 			void doc_update(Range *range);
 			std::string range_title(Range *range);
 			void resize_splitters();
+			void recalc_bytes_per_line();
 			void set_relative_cursor_pos(off_t relative_cursor_pos);
 			off_t process_now(off_t rel_offset, off_t length);
 			void update_longest_range();

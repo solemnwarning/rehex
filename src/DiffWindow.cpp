@@ -71,6 +71,7 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	statbar(NULL),
 	sb_gauge(NULL),
 	enable_folding(true),
+	recalc_bytes_per_line_pending(false),
 	relative_cursor_pos(0),
 	longest_range(0),
 	searching_backwards(false),
@@ -457,6 +458,11 @@ void REHex::DiffWindow::resize_splitters()
 		r->splitter->SetSashPosition(pane_size);
 	}
 	
+	recalc_bytes_per_line_pending = true;
+}
+
+void REHex::DiffWindow::recalc_bytes_per_line()
+{
 	/* Calculate the number of bytes that can be displayed on a line in each DocumentCtrl and
 	 * limit all DocumentCtrls to that value to ensure bytes line up. Each one should have the
 	 * same width at this point, but check all to allow for rounding errors or weird UI crap.
@@ -777,6 +783,12 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	else{
 		SetStatusText("");
 		sb_gauge->Hide();
+	}
+	
+	if(recalc_bytes_per_line_pending)
+	{
+		recalc_bytes_per_line_pending = false;
+		recalc_bytes_per_line();
 	}
 }
 

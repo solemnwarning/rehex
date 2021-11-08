@@ -114,17 +114,18 @@ namespace REHex {
 			
 			wxToolBarToolBase *show_offsets_button;
 			wxToolBarToolBase *show_ascii_button;
+			wxToolBarToolBase *fold_button;
 			
 			wxStatusBar *statbar;
 			wxGauge *sb_gauge;
 			
 			std::list<Range> ranges;
+			bool enable_folding;
 			
 			static const size_t MAX_COMPARE_DATA = 16384; /**< Maximum amount of data to process in a single idle event. */
 			
 			ByteRangeSet offsets_pending;    /**< Bytes which need to be processed (relative to Range base). */
 			ByteRangeSet offsets_different;  /**< Bytes which have been processed and have differences (relative to Range base). */
-			bool update_regions_pending;
 			wxTimer *update_regions_timer;
 			
 			off_t relative_cursor_pos;  /**< Current cursor position (relative to Range base). */
@@ -166,6 +167,7 @@ namespace REHex {
 			void OnDataRightClick(wxCommandEvent &event);
 			void OnToggleOffsets(wxCommandEvent &event);
 			void OnToggleASCII(wxCommandEvent &event);
+			void OnToggleFold(wxCommandEvent &event);
 			void OnUpdateRegionsTimer(wxTimerEvent &event);
 			
 		DECLARE_EVENT_TABLE()

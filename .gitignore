@@ -16,6 +16,15 @@
 /res/ascii48.c
 /res/ascii48.h
 
+/res/diff_fold16.c
+/res/diff_fold16.h
+/res/diff_fold24.c
+/res/diff_fold24.h
+/res/diff_fold32.c
+/res/diff_fold32.h
+/res/diff_fold48.c
+/res/diff_fold48.h
+
 /res/document_new32.c
 /res/document_new32.h
 

@@ -23,13 +23,19 @@
 #include "res/ascii32.h"
 #include "res/ascii48.h"
 
+#include "res/diff_fold16.h"
+#include "res/diff_fold24.h"
+#include "res/diff_fold32.h"
+#include "res/diff_fold48.h"
+
 #include "res/offsets16.h"
 #include "res/offsets24.h"
 #include "res/offsets32.h"
 #include "res/offsets48.h"
 
-const wxArtID REHex::ART_ASCII_ICON  ("rehex-ascii");
-const wxArtID REHex::ART_OFFSETS_ICON("rehex-offsets");
+const wxArtID REHex::ART_ASCII_ICON      ("rehex-ascii");
+const wxArtID REHex::ART_DIFF_FOLD_ICON  ("rehex-diff-fold");
+const wxArtID REHex::ART_OFFSETS_ICON    ("rehex-offsets");
 
 void REHex::ArtProvider::init()
 {
@@ -78,6 +84,24 @@ wxBitmap REHex::ArtProvider::CreateBitmap(const wxArtID &id, const wxArtClient &
 		}
 		else{
 			image = wxBITMAP_PNG_FROM_DATA(offsets48).ConvertToImage();
+		}
+	}
+	else if(id == ART_DIFF_FOLD_ICON)
+	{
+		if(size.x <= 16 && size.y <= 16)
+		{
+			image = wxBITMAP_PNG_FROM_DATA(diff_fold16).ConvertToImage();
+		}
+		else if(size.x <= 24 && size.y <= 24)
+		{
+			image = wxBITMAP_PNG_FROM_DATA(diff_fold24).ConvertToImage();
+		}
+		else if(size.x <= 32 && size.y <= 32)
+		{
+			image = wxBITMAP_PNG_FROM_DATA(diff_fold32).ConvertToImage();
+		}
+		else{
+			image = wxBITMAP_PNG_FROM_DATA(diff_fold48).ConvertToImage();
 		}
 	}
 	else{

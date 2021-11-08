@@ -44,6 +44,7 @@
 enum {
 	ID_SHOW_OFFSETS = 1,
 	ID_SHOW_ASCII,
+	ID_FOLD,
 	ID_UPDATE_REGIONS_TIMER,
 };
 
@@ -60,6 +61,7 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::DiffWindow::OnToggleOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::DiffWindow::OnToggleASCII)
+	EVT_MENU(ID_FOLD,         REHex::DiffWindow::OnToggleFold)
 	
 	EVT_TIMER(ID_UPDATE_REGIONS_TIMER, REHex::DiffWindow::OnUpdateRegionsTimer)
 END_EVENT_TABLE()
@@ -68,6 +70,7 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
 	statbar(NULL),
 	sb_gauge(NULL),
+	enable_folding(true),
 	relative_cursor_pos(0),
 	longest_range(0),
 	searching_backwards(false),
@@ -85,12 +88,14 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
-	show_offsets_button = toolbar->AddCheckTool(ID_SHOW_OFFSETS, "Show offsets", wxArtProvider::GetBitmap(ART_OFFSETS_ICON, wxART_TOOLBAR), wxNullBitmap, "Show offsets");
-	show_ascii_button   = toolbar->AddCheckTool(ID_SHOW_ASCII,   "Show ASCII",   wxArtProvider::GetBitmap(ART_ASCII_ICON,   wxART_TOOLBAR), wxNullBitmap, "Show ASCII");
+	show_offsets_button = toolbar->AddCheckTool(ID_SHOW_OFFSETS, "Show offsets",      wxArtProvider::GetBitmap(ART_OFFSETS_ICON,    wxART_TOOLBAR), wxNullBitmap, "Show offsets");
+	show_ascii_button   = toolbar->AddCheckTool(ID_SHOW_ASCII,   "Show ASCII",        wxArtProvider::GetBitmap(ART_ASCII_ICON,      wxART_TOOLBAR), wxNullBitmap, "Show ASCII");
+	fold_button         = toolbar->AddCheckTool(ID_FOLD,         "Collapse matches",  wxArtProvider::GetBitmap(ART_DIFF_FOLD_ICON,  wxART_TOOLBAR), wxNullBitmap, "Collapse long sequences of matching data");
 	
 	/* Enable offset and ASCII columns by default. */
 	show_offsets_button->Toggle(true);
 	show_ascii_button  ->Toggle(true);
+	fold_button        ->Toggle(true);
 	
 	toolbar->Realize();
 	
@@ -370,7 +375,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 	
 	off_t CONTEXT_BYTES = 64;
 	
-	if(true) /* TODO: Add a folding option. */
+	if(enable_folding)
 	{
 		ByteRangeSet display_data;
 		
@@ -1186,6 +1191,21 @@ void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
 	}
 	
 	resize_splitters();
+}
+
+void REHex::DiffWindow::OnToggleFold(wxCommandEvent &event)
+{
+	enable_folding = event.IsChecked();
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(0);
+	}
 }
 
 void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)

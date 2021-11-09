@@ -156,6 +156,8 @@ namespace REHex {
 			void set_relative_cursor_pos(off_t relative_cursor_pos);
 			off_t process_now(off_t rel_offset, off_t length);
 			void update_longest_range();
+			void goto_prev_difference();
+			void goto_next_difference();
 			
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);
@@ -171,6 +173,8 @@ namespace REHex {
 			void OnToggleOffsets(wxCommandEvent &event);
 			void OnToggleASCII(wxCommandEvent &event);
 			void OnToggleFold(wxCommandEvent &event);
+			void OnPrevDifference(wxCommandEvent &event);
+			void OnNextDifference(wxCommandEvent &event);
 			void OnUpdateRegionsTimer(wxTimerEvent &event);
 			
 		DECLARE_EVENT_TABLE()

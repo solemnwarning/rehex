@@ -37,6 +37,11 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
+#ifdef __APPLE__
+#include "../res/down32.h"
+#include "../res/up32.h"
+#endif
+
 #ifdef DIFFWINDOW_PROFILING
 #include "timespec.c"
 #endif
@@ -62,6 +67,8 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::DiffWindow::OnToggleOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::DiffWindow::OnToggleASCII)
 	EVT_MENU(ID_FOLD,         REHex::DiffWindow::OnToggleFold)
+	EVT_MENU(wxID_UP,         REHex::DiffWindow::OnPrevDifference)
+	EVT_MENU(wxID_DOWN,       REHex::DiffWindow::OnNextDifference)
 	
 	EVT_TIMER(ID_UPDATE_REGIONS_TIMER, REHex::DiffWindow::OnUpdateRegionsTimer)
 END_EVENT_TABLE()
@@ -92,6 +99,16 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	show_offsets_button = toolbar->AddCheckTool(ID_SHOW_OFFSETS, "Show offsets",      wxArtProvider::GetBitmap(ART_OFFSETS_ICON,    wxART_TOOLBAR), wxNullBitmap, "Show offsets");
 	show_ascii_button   = toolbar->AddCheckTool(ID_SHOW_ASCII,   "Show ASCII",        wxArtProvider::GetBitmap(ART_ASCII_ICON,      wxART_TOOLBAR), wxNullBitmap, "Show ASCII");
 	fold_button         = toolbar->AddCheckTool(ID_FOLD,         "Collapse matches",  wxArtProvider::GetBitmap(ART_DIFF_FOLD_ICON,  wxART_TOOLBAR), wxNullBitmap, "Collapse long sequences of matching data");
+	
+	toolbar->AddSeparator();
+	
+	#ifdef __APPLE__
+	toolbar->AddTool(wxID_UP,   "Previous difference", wxBITMAP_PNG_FROM_DATA(up32),   "Jump to previous difference (Shift+F6)");
+	toolbar->AddTool(wxID_DOWN, "Next difference",     wxBITMAP_PNG_FROM_DATA(down32), "Jump to next difference (F6)");
+	#else
+	toolbar->AddTool(wxID_UP,   "Previous difference", wxArtProvider::GetBitmap(wxART_GO_UP,   wxART_TOOLBAR), "Jump to previous difference (Shift+F6)");
+	toolbar->AddTool(wxID_DOWN, "Next difference",     wxArtProvider::GetBitmap(wxART_GO_DOWN, wxART_TOOLBAR), "Jump to next difference (F6)");
+	#endif
 	
 	/* Enable offset and ASCII columns by default. */
 	show_offsets_button->Toggle(true);
@@ -624,6 +641,90 @@ void REHex::DiffWindow::update_longest_range()
 	}
 }
 
+void REHex::DiffWindow::goto_prev_difference()
+{
+	/* Find the first difference preceeding the cursor... */
+	auto prev_diff = offsets_different.find_last_in(0, relative_cursor_pos);
+	
+	/* ...skip it if we're inside it... */
+	if(prev_diff != offsets_different.end() && (prev_diff->offset + prev_diff->length) > relative_cursor_pos)
+	{
+		if(prev_diff != offsets_different.begin())
+		{
+			--prev_diff;
+		}
+		else{
+			prev_diff = offsets_different.end();
+		}
+	}
+	
+	auto prev_to_process = offsets_pending.find_last_in(0, relative_cursor_pos);
+	
+	if(prev_diff != offsets_different.end() && (prev_to_process == offsets_pending.end() || prev_diff->offset > prev_to_process->offset))
+	{
+		/* ...and jump to it. */
+		set_relative_cursor_pos(prev_diff->offset);
+	}
+	else{
+		if(prev_to_process == offsets_pending.end())
+		{
+			/* No more differences. */
+			wxBell();
+		}
+		else{
+			assert(!searching_backwards);
+			assert(!searching_forwards);
+			
+			wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
+			search_modal = &pd;
+			
+			searching_backwards = true;
+			search_modal->ShowModal();
+			
+			search_modal = NULL;
+		}
+	}
+}
+
+void REHex::DiffWindow::goto_next_difference()
+{
+	/* Find the first difference either encompassing or following the cursor... */
+	auto next_diff = offsets_different.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+	
+	/* ...skip it if we're inside it... */
+	if(next_diff != offsets_different.end() && next_diff->offset <= relative_cursor_pos)
+	{
+		++next_diff;
+	}
+	
+	auto next_to_process = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+	
+	if(next_diff != offsets_different.end() && (next_to_process == offsets_pending.end() || next_diff->offset < next_to_process->offset))
+	{
+		/* ...and jump to it. */
+		set_relative_cursor_pos(next_diff->offset);
+	}
+	else{
+		if(next_to_process == offsets_pending.end())
+		{
+			/* No more differences. */
+			wxBell();
+		}
+		else{
+			assert(!searching_backwards);
+			assert(!searching_forwards);
+			
+			wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
+			search_modal = &pd;
+			
+			searching_forwards = true;
+			search_modal->ShowModal();
+			
+			search_modal = NULL;
+		}
+	}
+}
+
 void REHex::DiffWindow::OnSize(wxSizeEvent &event)
 {
 	resize_splitters();
@@ -884,85 +985,11 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 	}
 	else if(event.GetModifiers() == wxMOD_NONE && event.GetKeyCode() == WXK_F6)
 	{
-		/* Find the first difference either encompassing or following the cursor... */
-		auto next_diff = offsets_different.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
-		
-		/* ...skip it if we're inside it... */
-		if(next_diff != offsets_different.end() && next_diff->offset <= relative_cursor_pos)
-		{
-			++next_diff;
-		}
-		
-		auto next_to_process = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
-		
-		if(next_diff != offsets_different.end() && (next_to_process == offsets_pending.end() || next_diff->offset < next_to_process->offset))
-		{
-			/* ...and jump to it. */
-			set_relative_cursor_pos(next_diff->offset);
-		}
-		else{
-			if(next_to_process == offsets_pending.end())
-			{
-				/* No more differences. */
-				wxBell();
-			}
-			else{
-				assert(!searching_backwards);
-				assert(!searching_forwards);
-				
-				wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
-				search_modal = &pd;
-				
-				searching_forwards = true;
-				search_modal->ShowModal();
-				
-				search_modal = NULL;
-			}
-		}
+		goto_next_difference();
 	}
 	else if(event.GetModifiers() == wxMOD_SHIFT && event.GetKeyCode() == WXK_F6)
 	{
-		/* Find the first difference preceeding the cursor... */
-		auto prev_diff = offsets_different.find_last_in(0, relative_cursor_pos);
-		
-		/* ...skip it if we're inside it... */
-		if(prev_diff != offsets_different.end() && (prev_diff->offset + prev_diff->length) > relative_cursor_pos)
-		{
-			if(prev_diff != offsets_different.begin())
-			{
-				--prev_diff;
-			}
-			else{
-				prev_diff = offsets_different.end();
-			}
-		}
-		
-		auto prev_to_process = offsets_pending.find_last_in(0, relative_cursor_pos);
-		
-		if(prev_diff != offsets_different.end() && (prev_to_process == offsets_pending.end() || prev_diff->offset > prev_to_process->offset))
-		{
-			/* ...and jump to it. */
-			set_relative_cursor_pos(prev_diff->offset);
-		}
-		else{
-			if(prev_to_process == offsets_pending.end())
-			{
-				/* No more differences. */
-				wxBell();
-			}
-			else{
-				assert(!searching_backwards);
-				assert(!searching_forwards);
-				
-				wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
-				search_modal = &pd;
-				
-				searching_backwards = true;
-				search_modal->ShowModal();
-				
-				search_modal = NULL;
-			}
-		}
+		goto_prev_difference();
 	}
 	else{
 		event.Skip();
@@ -1320,6 +1347,16 @@ void REHex::DiffWindow::OnToggleFold(wxCommandEvent &event)
 	{
 		r->doc_ctrl->set_scroll_yoff(0);
 	}
+}
+
+void REHex::DiffWindow::OnPrevDifference(wxCommandEvent &event)
+{
+	goto_prev_difference();
+}
+
+void REHex::DiffWindow::OnNextDifference(wxCommandEvent &event)
+{
+	goto_next_difference();
 }
 
 void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)

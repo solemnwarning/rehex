@@ -695,6 +695,17 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 				break;
 			}
 			
+			auto first_diff_found = offsets_different.find_first_in(rel_offset, processed);
+			if(first_diff_found != offsets_different.end())
+			{
+				set_relative_cursor_pos(first_diff_found->offset);
+				
+				searching_forwards = false;
+				search_modal->EndModal(0);
+				
+				break;
+			}
+			
 			allowed_remaining -= processed;
 		}
 		
@@ -818,21 +829,21 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 			++next_diff;
 		}
 		
-		if(next_diff != offsets_different.end())
+		auto next_to_process = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+		
+		if(next_diff != offsets_different.end() && (next_to_process == offsets_pending.end() || next_diff->offset < next_to_process->offset))
 		{
 			/* ...and jump to it. */
 			set_relative_cursor_pos(next_diff->offset);
 		}
 		else{
-			auto next_to_process = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
-			
 			if(next_to_process == offsets_pending.end())
 			{
 				/* No more differences. */
 				wxBell();
 			}
 			else{
-				wxProgressDialog pd("Searching", "Searching for differences...", 1000000, this, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
+				wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
 				search_modal = &pd;
 				
 				searching_forwards = true;

@@ -84,6 +84,8 @@ namespace REHex {
 			const std::list<Range> &get_ranges() const;
 			std::list<Range>::iterator add_range(const Range &range);
 			
+			void set_folding(bool enable_folding);
+			
 		private:
 			class DiffDataRegion: public DocumentCtrl::DataRegion
 			{

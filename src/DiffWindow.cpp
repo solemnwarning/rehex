@@ -387,6 +387,12 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	return next;
 }
 
+void REHex::DiffWindow::set_folding(bool enable_folding)
+{
+	this->enable_folding = enable_folding;
+	fold_button->Toggle(enable_folding);
+}
+
 void REHex::DiffWindow::doc_update(Range *range)
 {
 	std::vector<DocumentCtrl::Region*> regions;

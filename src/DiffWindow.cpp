@@ -420,7 +420,13 @@ void REHex::DiffWindow::doc_update(Range *range)
 		
 		if(display_data.empty())
 		{
-			regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+			if(offsets_pending.empty())
+			{
+				/* No differences found. */
+				regions.push_back(new SkipDataRegion(range->offset, range->length));
+			}
+			
+			regions.push_back(new DiffDataRegion((range->offset + range->length), 0, this, range));
 		}
 		else{
 			off_t base = range->offset;

@@ -160,6 +160,12 @@ namespace REHex
 			const_iterator find_first_in(off_t offset, off_t length) const;
 			
 			/**
+			 * @brief Find the last Range that intersects the given range.
+			 * @return An iterator into the internal vector, or end.
+			*/
+			const_iterator find_last_in(off_t offset, off_t length) const;
+			
+			/**
 			 * @brief Get the total number of bytes encompassed by the set.
 			*/
 			off_t total_bytes() const;

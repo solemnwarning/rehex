@@ -110,6 +110,32 @@ REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_first_in(off_t off
 	return ranges.end();
 }
 
+REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_last_in(off_t offset, off_t length) const
+{
+	auto i = find_first_in((offset + length), std::numeric_limits<off_t>::max());
+	
+	if(i != ranges.end() && i->offset < (offset + length))
+	{
+		/* This is a Range spanning the end of the search range, match. */
+		return i;
+	}
+	
+	if(i != ranges.begin())
+	{
+		/* Step back from the end or first Range following the search range... */
+		--i;
+		
+		if((i->offset + i->length) > offset)
+		{
+			/* ...the preceeding one ends somewhere in the search range, match. */
+			return i;
+		}
+	}
+	
+	/* No match. */
+	return ranges.end();
+}
+
 off_t REHex::ByteRangeSet::total_bytes() const
 {
 	off_t total_bytes = std::accumulate(ranges.begin(), ranges.end(),

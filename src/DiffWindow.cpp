@@ -665,7 +665,71 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 	
 	if(searching_backwards)
 	{
+		while(allowed_remaining > 0)
+		{
+			auto process_prev = offsets_pending.find_last_in(0, relative_cursor_pos);
+			
+			if(process_prev == offsets_pending.end())
+			{
+				searching_backwards = false;
+				
+				search_modal->EndModal(0);
+				wxBell();
+				
+				break;
+			}
+			
+			off_t process_end = std::min((process_prev->offset + process_prev->length), relative_cursor_pos);
+			off_t process_begin = std::max(process_prev->offset, (process_end - (off_t)(allowed_remaining)));
+			off_t process_length = process_end - process_begin;
+			
+			assert(process_length > 0);
+			
+			off_t processed = process_now(process_begin, process_length);
+			if(processed < 0)
+			{
+				break;
+			}
+			
+			auto last_diff_found = offsets_different.find_last_in(process_begin, processed);
+			if(last_diff_found != offsets_different.end())
+			{
+				set_relative_cursor_pos(last_diff_found->offset);
+				
+				searching_backwards = false;
+				search_modal->EndModal(0);
+				
+				break;
+			}
+			
+			allowed_remaining -= processed;
+		}
 		
+		if(!search_modal_updating)
+		{
+			search_modal_updating = true;
+			
+			ByteRangeSet backward_offsets;
+			backward_offsets.set_range(0, relative_cursor_pos);
+			
+			ByteRangeSet pending_backward = ByteRangeSet::intersection(backward_offsets, offsets_pending);
+			
+			int sm_range = search_modal->GetRange();
+			
+			int sm_value = (double)(sm_range) - (((double)(pending_backward.total_bytes()) / (double)(backward_offsets.total_bytes())) * (double)(sm_range));
+			sm_value = std::max(sm_value, 0);
+			sm_value = std::min(sm_value, sm_range);
+			
+			search_modal->Update(sm_value);
+			
+			search_modal_updating = false;
+		}
+		
+		if(searching_backwards && search_modal->WasCancelled())
+		{
+			searching_backwards = false;
+			search_modal->EndModal(0);
+		}
 	}
 	else if(searching_forwards)
 	{
@@ -843,6 +907,9 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 				wxBell();
 			}
 			else{
+				assert(!searching_backwards);
+				assert(!searching_forwards);
+				
 				wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
 				search_modal = &pd;
 				
@@ -855,23 +922,47 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 	}
 	else if(event.GetModifiers() == wxMOD_SHIFT && event.GetKeyCode() == WXK_F6)
 	{
-		/* Find the first difference either encompassing or following the cursor... */
-		auto prev_diff = offsets_different.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+		/* Find the first difference preceeding the cursor... */
+		auto prev_diff = offsets_different.find_last_in(0, relative_cursor_pos);
 		
-		if(prev_diff != offsets_different.end())
+		/* ...skip it if we're inside it... */
+		if(prev_diff != offsets_different.end() && (prev_diff->offset + prev_diff->length) > relative_cursor_pos)
 		{
-			/* ...and step back to get the immediately preceeding one. */
 			if(prev_diff != offsets_different.begin())
 			{
 				--prev_diff;
-				set_relative_cursor_pos(prev_diff->offset);
-				
-				return;
+			}
+			else{
+				prev_diff = offsets_different.end();
 			}
 		}
 		
-		/* No more differences. */
-		wxBell();
+		auto prev_to_process = offsets_pending.find_last_in(0, relative_cursor_pos);
+		
+		if(prev_diff != offsets_different.end() && (prev_to_process == offsets_pending.end() || prev_diff->offset > prev_to_process->offset))
+		{
+			/* ...and jump to it. */
+			set_relative_cursor_pos(prev_diff->offset);
+		}
+		else{
+			if(prev_to_process == offsets_pending.end())
+			{
+				/* No more differences. */
+				wxBell();
+			}
+			else{
+				assert(!searching_backwards);
+				assert(!searching_forwards);
+				
+				wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
+				search_modal = &pd;
+				
+				searching_backwards = true;
+				search_modal->ShowModal();
+				
+				search_modal = NULL;
+			}
+		}
 	}
 	else{
 		event.Skip();

@@ -29,6 +29,7 @@
 #include "App.hpp"
 #include "ArtProvider.hpp"
 #include "DiffWindow.hpp"
+#include "mainwindow.hpp"
 #include "Palette.hpp"
 #include "util.hpp"
 
@@ -1322,6 +1323,34 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
 	}, offset_copy_dec->GetId(), offset_copy_dec->GetId());
+	
+	menu.AppendSeparator();
+	
+	wxMenuItem *offset_goto = menu.Append(wxID_ANY, "Jump to offset in main window");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		/* Find MainWindow containing the document. */
+		MainWindow *window = NULL;
+		for(wxWindow *parent = source_range->main_doc_ctrl->GetParent();
+			(window = dynamic_cast<MainWindow*>(parent)) == NULL;
+			parent = parent->GetParent()) {}
+		
+		assert(window != NULL);
+		
+		if(source_range->main_doc_ctrl->data_region_by_offset(cursor_pos))
+		{
+			window->switch_tab(source_range->main_doc_ctrl);
+			
+			source_range->doc->set_cursor_position(cursor_pos);
+			source_range->main_doc_ctrl->SetFocus();
+			
+			window->Raise();
+		}
+		else{
+			/* Offset isn't currently available in main DocumentCtrl. */
+			wxBell();
+		}
+	}, offset_goto->GetId(), offset_goto->GetId());
 	
 	PopupMenu(&menu);
 }

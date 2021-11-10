@@ -65,6 +65,11 @@ namespace REHex {
 			*/
 			Document *active_document();
 			
+			/**
+			 * @brief Switch the active Tab.
+			*/
+			void switch_tab(DocumentCtrl *doc_ctrl);
+			
 			void OnWindowClose(wxCloseEvent& event);
 			
 			void OnNew(wxCommandEvent &event);

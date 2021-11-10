@@ -1469,6 +1469,25 @@ REHex::Document *REHex::MainWindow::active_document()
 	return active_tab()->doc;
 }
 
+void REHex::MainWindow::switch_tab(DocumentCtrl *doc_ctrl)
+{
+	size_t num_tabs = notebook->GetPageCount();
+	
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		
+		auto tab = dynamic_cast<Tab*>(page);
+		assert(tab != NULL);
+		
+		if(tab->doc_ctrl == doc_ctrl)
+		{
+			notebook->SetSelection(i);
+			break;
+		}
+	}
+}
+
 void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
 	off_t off = tab->doc->get_cursor_position();

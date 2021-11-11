@@ -230,9 +230,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 		wxBoxSizer *h_sizer = new wxBoxSizer(wxHORIZONTAL);
 		v_sizer->Add(h_sizer, 1, wxALIGN_CENTER_HORIZONTAL);
 		
-		static const char *HELP_TEXT =
-			"Make another selection and choose \"Compare...\"\n"
-			"to compare this against another sequence of bytes";
+		static const char *HELP_TEXT = "Choose another file or selection to compare against";
 		
 		wxStaticText *help_text = new wxStaticText(new_range->help_panel, wxID_ANY, HELP_TEXT);
 		h_sizer->Add(help_text, 1, wxALIGN_CENTER_VERTICAL);

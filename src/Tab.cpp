@@ -487,6 +487,60 @@ void REHex::Tab::paste_text(const std::string &text)
 	}
 }
 
+void REHex::Tab::compare_whole_file()
+{
+	compare_range(0, doc->buffer_length());
+}
+
+void REHex::Tab::compare_selection()
+{
+	off_t selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+	
+	if(selection_length > 0)
+	{
+		compare_range(selection_off, selection_length);
+	}
+	else{
+		wxBell();
+	}
+}
+
+void REHex::Tab::compare_range(off_t offset, off_t length)
+{
+	static DiffWindow *diff_window = NULL;
+	if(diff_window == NULL)
+	{
+		/* Parent DiffWindow to our parent so it can outlive us but not the MainWindow. */
+		diff_window = new DiffWindow(GetParent());
+		
+		diff_window->Bind(wxEVT_DESTROY, [](wxWindowDestroyEvent &event)
+		{
+			if(event.GetWindow() == diff_window)
+			{
+				diff_window = NULL;
+			}
+		});
+		
+		diff_window->Show(true);
+	}
+	
+	diff_window->add_range(DiffWindow::Range(doc, doc_ctrl, offset, length));
+	
+	/* Raise the DiffWindow to the top of the Z order sometime after the
+	 * current event has been processed, else the menu/mouse event handling
+	 * will interfere and move the MainWindow back to the top.
+	*/
+	CallAfter([]()
+	{
+		if(diff_window != NULL)
+		{
+			diff_window->Iconize(false);
+			diff_window->Raise();
+		}
+	});
+}
+
 REHex::InlineCommentMode REHex::Tab::get_inline_comment_mode() const
 {
 	return inline_comment_mode;
@@ -1142,44 +1196,15 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		}, vm_itm->GetId(), vm_itm->GetId());
 	}
 	
-	if(selection_length > 0)
+	menu.AppendSeparator();
+	
 	{
-		menu.AppendSeparator();
-		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare...");
+		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare selection...\tCtrl-Shift-K");
+		itm->Enable(selection_length > 0);
 		
-		menu.Bind(wxEVT_MENU, [this, selection_off, selection_length](wxCommandEvent &event)
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			static DiffWindow *diff_window = NULL;
-			if(diff_window == NULL)
-			{
-				/* Parent DiffWindow to our parent so it can outlive us but not the MainWindow. */
-				diff_window = new DiffWindow(GetParent());
-				
-				diff_window->Bind(wxEVT_DESTROY, [](wxWindowDestroyEvent &event)
-				{
-					if(event.GetWindow() == diff_window)
-					{
-						diff_window = NULL;
-					}
-				});
-				
-				diff_window->Show(true);
-			}
-			
-			diff_window->add_range(DiffWindow::Range(doc, doc_ctrl, selection_off, selection_length));
-			
-			/* Raise the DiffWindow to the top of the Z order sometime after the
-			 * current event has been processed, else the menu/mouse event handling
-			 * will interfere and move the MainWindow back to the top.
-			*/
-			CallAfter([]()
-			{
-				if(diff_window != NULL)
-				{
-					diff_window->Iconize(false);
-					diff_window->Raise();
-				}
-			});
+			compare_range(selection_off, selection_length);
 		}, itm->GetId(), itm->GetId());
 	}
 	

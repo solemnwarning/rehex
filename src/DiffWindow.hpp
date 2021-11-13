@@ -101,17 +101,30 @@ namespace REHex {
 					virtual Highlight highlight_at_off(off_t off) const override;
 			};
 			
-			class SkipDataRegion: public DocumentCtrl::Region
+			class MessageRegion: public DocumentCtrl::Region
 			{
 				private:
-					off_t data_length;
+					Document *document;
+					
+					off_t data_offset;
+					std::string message;
 					
 				public:
-					SkipDataRegion(off_t indent_offset, off_t data_length);
+					MessageRegion(Document *document, off_t data_offset, const std::string &message);
 					
 				protected:
+					virtual int calc_width(REHex::DocumentCtrl &doc_ctrl) override;
 					virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override;
 					virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
+			};
+			
+			class InvisibleDataRegion: public DocumentCtrl::DataRegion
+			{
+				public:
+					InvisibleDataRegion(off_t d_offset, off_t d_length);
+					
+				protected:
+					virtual void draw(REHex::DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
 			};
 			
 			wxToolBarToolBase *show_offsets_button;

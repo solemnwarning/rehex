@@ -75,7 +75,7 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
-	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
+	wxFrame(parent, wxID_ANY, "Compare data - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
 	statbar(NULL),
 	sb_gauge(NULL),
 	enable_folding(true),
@@ -276,8 +276,23 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 	
 	resize_splitters();
 	
-	offsets_pending.set_range(0, longest_range);
+	offsets_pending.clear_all();
 	offsets_different.clear_all();
+	
+	if(ranges.size() > 1)
+	{
+		offsets_pending.set_range(0, longest_range);
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(0);
+	}
 	
 	return new_range;
 }
@@ -380,8 +395,22 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	update_longest_range();
 	
 	offsets_pending.clear_all();
-	offsets_pending.set_range(0, longest_range);
 	offsets_different.clear_all();
+	
+	if(ranges.size() > 1)
+	{
+		offsets_pending.set_range(0, longest_range);
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(0);
+	}
 	
 	if(ranges.empty())
 	{
@@ -406,58 +435,73 @@ void REHex::DiffWindow::doc_update(Range *range)
 	
 	if(enable_folding)
 	{
-		ByteRangeSet display_data;
+		off_t base = 0;
+		bool has_data_region = false;
 		
-		for(auto i = offsets_different.begin(); i != offsets_different.end(); ++i)
+		while(base < range->length)
 		{
-			if(i->offset >= range->length)
+			off_t end = range->length;
+			
+			auto pending_i   = offsets_pending.find_first_in(base, std::numeric_limits<off_t>::max());
+			auto different_i = offsets_different.find_first_in(base, std::numeric_limits<off_t>::max());
+			
+			bool is_pending = false;
+			bool is_different = false;
+			
+			if(pending_i != offsets_pending.end())
 			{
-				/* We're beyond the end of this range. Stop adding Regions. */
-				continue;
-			}
-			
-			off_t dd_begin = std::max(
-				range->offset,
-				(range->offset + i->offset - CONTEXT_BYTES));
-			
-			off_t dd_end = std::min(
-				(range->offset + i->offset + i->length + CONTEXT_BYTES),
-				(range->offset + range->length));
-			
-			assert(dd_end > dd_begin);
-			
-			display_data.set_range(dd_begin, (dd_end - dd_begin));
-		}
-		
-		if(display_data.empty())
-		{
-			if(offsets_pending.empty())
-			{
-				/* No differences found. */
-				regions.push_back(new SkipDataRegion(range->offset, range->length));
-			}
-			
-			regions.push_back(new DiffDataRegion((range->offset + range->length), 0, this, range));
-		}
-		else{
-			off_t base = range->offset;
-			
-			for(auto i = display_data.begin(); i != display_data.end(); ++i)
-			{
-				if(i->offset > base)
+				if(pending_i->offset <= base)
 				{
-					regions.push_back(new SkipDataRegion(base, (i->offset - base)));
+					end = std::min(end, (pending_i->offset + pending_i->length));
+					is_pending = true;
 				}
-				
-				regions.push_back(new DiffDataRegion(i->offset, i->length, this, range));
-				
-				base = i->offset + i->length;
+				else{
+					end = std::min(end, pending_i->offset);
+				}
 			}
 			
-			if((range->offset + range->length) > base)
+			if(!is_pending && different_i != offsets_different.end())
 			{
-				regions.push_back(new SkipDataRegion(base, ((range->offset + range->length) - base)));
+				if(different_i->offset <= (base + CONTEXT_BYTES))
+				{
+					end = std::min(end, (different_i->offset + different_i->length + CONTEXT_BYTES));
+					is_different = true;
+				}
+				else{
+					end = std::min(end, (different_i->offset - CONTEXT_BYTES));
+				}
 			}
+			
+			off_t length = end - base;
+			
+			if(is_pending)
+			{
+				regions.push_back(new MessageRegion(range->doc, base, "Processing..."));
+			}
+			else if(is_different)
+			{
+				regions.push_back(new DiffDataRegion(base, length, this, range));
+				has_data_region = true;
+			}
+			else{
+				char text[64];
+				snprintf(text, sizeof(text), "[ %jd identical bytes ]", (intmax_t)(length));
+				
+				regions.push_back(new MessageRegion(range->doc, base, text));
+			}
+			
+			base += length;
+			
+		}
+		
+		if(!has_data_region)
+		{
+			/* DocumentCtrl always needs at least one data region, so if we aren't
+			 * showing any data, we stick a zero-length, invisible region at the end
+			 * to stop bad things from happening.
+			*/
+			
+			regions.push_back(new InvisibleDataRegion((range->offset + range->length), 0));
 		}
 	}
 	else{
@@ -511,7 +555,7 @@ void REHex::DiffWindow::recalc_bytes_per_line()
 		
 		for(auto rr = dc_regions.begin(); rr != dc_regions.end(); ++rr)
 		{
-			const DiffDataRegion *ddr = dynamic_cast<const DiffDataRegion*>(*rr);
+			const DocumentCtrl::DataRegion *ddr = dynamic_cast<const DocumentCtrl::DataRegion*>(*rr);
 			if(ddr == NULL)
 			{
 				continue;
@@ -545,7 +589,12 @@ void REHex::DiffWindow::set_relative_cursor_pos(off_t relative_cursor_pos)
 	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		r->doc_ctrl->set_cursor_position(r->offset + relative_cursor_pos);
+		off_t abs_cursor_pos = r->offset + relative_cursor_pos;
+		
+		if(r->doc_ctrl->data_region_by_offset(abs_cursor_pos))
+		{
+			r->doc_ctrl->set_cursor_position(abs_cursor_pos);
+		}
 	}
 }
 
@@ -1274,9 +1323,11 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		if(r != source_range)
+		off_t abs_cursor_pos = r->offset + relative_cursor_pos;
+		
+		if(r != source_range && r->doc_ctrl->data_region_by_offset(abs_cursor_pos) != NULL)
 		{
-			r->doc_ctrl->set_cursor_position(r->offset + relative_cursor_pos, event.cursor_state);
+			r->doc_ctrl->set_cursor_position(abs_cursor_pos, event.cursor_state);
 		}
 	}
 }
@@ -1460,16 +1511,29 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::hi
 	}
 }
 
-REHex::DiffWindow::SkipDataRegion::SkipDataRegion(off_t indent_offset, off_t data_length):
-	Region(indent_offset, 0),
-	data_length(data_length) {}
+REHex::DiffWindow::MessageRegion::MessageRegion(Document *document, off_t data_offset, const std::string &message):
+	Region(data_offset, 0),
+	document(document),
+	data_offset(data_offset),
+	message(message) {}
 
-void REHex::DiffWindow::SkipDataRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+int REHex::DiffWindow::MessageRegion::calc_width(REHex::DocumentCtrl &doc_ctrl)
 {
-	y_lines = 2 + indent_final;
+	int offset_column_width = doc_ctrl.get_show_offsets()
+		? doc_ctrl.get_offset_column_width()
+		: 0;
+	
+	int message_width = doc_ctrl.hf_string_width(message.length());
+	
+	return offset_column_width + message_width;
 }
 
-void REHex::DiffWindow::SkipDataRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
+void REHex::DiffWindow::MessageRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+{
+	y_lines = 2;
+}
+
+void REHex::DiffWindow::MessageRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
 {
 	dc.SetFont(doc_ctrl.get_font());
 	
@@ -1477,17 +1541,34 @@ void REHex::DiffWindow::SkipDataRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, i
 	dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
 	dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
 	
-	char text[64];
-	int text_len = snprintf(text, sizeof(text), "[ %jd identical bytes ]", (intmax_t)(data_length));
+	bool show_offset = doc_ctrl.get_show_offsets();
+	int offset_column_width = doc_ctrl.get_offset_column_width();
 	
 	int virtual_width = doc_ctrl.get_virtual_width();
-	int text_width    = doc_ctrl.hf_string_width(text_len);
+	int text_width    = doc_ctrl.hf_string_width(message.length());
 	int text_height   = doc_ctrl.hf_char_height();
+	int char_width    = doc_ctrl.hf_char_width();
 	
-	int text_x = (virtual_width / 2) - (text_width / 2);
+	int text_x = offset_column_width + ((virtual_width - offset_column_width) / 2) - (text_width / 2);
 	
 	dc.DrawLine(0, y,                         virtual_width, y);
 	dc.DrawLine(0, y + (text_height * 2) - 1, virtual_width, y + (text_height * 2) - 1);
 	
-	dc.DrawText(text, x + text_x, y + (text_height / 2));
+	if(show_offset)
+	{
+		/* Draw the offsets to the left */
+		
+		std::string offset_str = format_offset(data_offset, doc_ctrl.get_offset_display_base(), document->buffer_length());
+		dc.DrawText(offset_str.c_str(), x, y + (text_height / 2));
+		
+		int offset_vl_x = (x + offset_column_width) - (char_width / 2);
+		dc.DrawLine(offset_vl_x, y, offset_vl_x, y + (2 * text_height));
+	}
+	
+	dc.DrawText(message, x + text_x, y + (text_height / 2));
 }
+
+REHex::DiffWindow::InvisibleDataRegion::InvisibleDataRegion(off_t d_offset, off_t d_length):
+	DataRegion(d_offset, d_length, d_offset) {}
+
+void REHex::DiffWindow::InvisibleDataRegion::draw(REHex::DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) {}

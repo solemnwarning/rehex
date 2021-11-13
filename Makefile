@@ -115,6 +115,10 @@ clean:
 	      res/ascii24.c   res/ascii24.h \
 	      res/ascii32.c   res/ascii32.h \
 	      res/ascii48.c   res/ascii48.h \
+	      res/diff_fold16.c res/diff_fold16.h \
+	      res/diff_fold24.c res/diff_fold24.h \
+	      res/diff_fold32.c res/diff_fold32.h \
+	      res/diff_fold48.c res/diff_fold48.h \
 	      res/icon16.c    res/icon16.h \
 	      res/icon32.c    res/icon32.h \
 	      res/icon48.c    res/icon48.h \
@@ -188,6 +192,10 @@ APP_OBJS := \
 	res/ascii24.o \
 	res/ascii32.o \
 	res/ascii48.o \
+	res/diff_fold16.o \
+	res/diff_fold24.o \
+	res/diff_fold32.o \
+	res/diff_fold48.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
@@ -252,6 +260,10 @@ TEST_OBJS := \
 	res/ascii24.o \
 	res/ascii32.o \
 	res/ascii48.o \
+	res/diff_fold16.o \
+	res/diff_fold24.o \
+	res/diff_fold32.o \
+	res/diff_fold48.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
@@ -332,7 +344,10 @@ $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 src/AboutDialog.o: res/icon128.h
-src/ArtProvider.o: res/ascii16.h res/ascii24.h res/ascii32.h res/ascii48.h res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
+src/ArtProvider.o: \
+	res/ascii16.h res/ascii24.h res/ascii32.h res/ascii48.h \
+	res/diff_fold16.h res/diff_fold24.h res/diff_fold32.h res/diff_fold48.h \
+	res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
 src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/LuaPluginLoader.o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h

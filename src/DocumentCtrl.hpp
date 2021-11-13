@@ -546,7 +546,7 @@ namespace REHex {
 			/**
 			 * @brief Set the vertical scroll position, in lines.
 			*/
-			void set_scroll_yoff(int64_t scroll_yoff);
+			void set_scroll_yoff(int64_t scroll_yoff, bool update_linked_scroll_others = true);
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent& event);
@@ -720,6 +720,7 @@ namespace REHex {
 			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
 			int indent_width(int depth);
 			int get_offset_column_width();
+			int get_virtual_width();
 			bool get_cursor_visible();
 			
 			int hf_char_width();

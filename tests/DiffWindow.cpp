@@ -76,6 +76,7 @@ class DiffWindowTest: public ::testing::Test
 			main_doc_ctrl2 = new DocumentCtrl(&frame, doc2);
 			
 			diff_window = new DiffWindow(&frame);
+			diff_window->set_folding(false);
 		}
 };
 

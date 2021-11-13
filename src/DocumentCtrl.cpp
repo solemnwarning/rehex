@@ -42,12 +42,6 @@
 static_assert(std::numeric_limits<json_int_t>::max() >= std::numeric_limits<off_t>::max(),
 	"json_int_t must be large enough to store any offset in an off_t");
 
-/* Is the given byte a printable 7-bit ASCII character? */
-static bool isasciiprint(int c)
-{
-	return (c >= ' ' && c <= '~');
-}
-
 enum {
 	ID_REDRAW_CURSOR = 1,
 	ID_SELECT_TIMER,
@@ -600,6 +594,11 @@ REHex::OrderedByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
 {
 	OrderedByteRangeSet selected_ranges;
 	
+	if(!has_selection())
+	{
+		return selected_ranges;
+	}
+	
 	auto region = _data_region_by_offset(selection_begin);
 	off_t region_select_begin = selection_begin;
 	
@@ -946,6 +945,19 @@ void REHex::DocumentCtrl::_update_vscroll()
 		
 		scroll_yoff_max = 0;
 	}
+	
+	linked_scroll_visit_others([this](DocumentCtrl *other)
+	{
+		other->scroll_yoff = scroll_yoff;
+		if(other->scroll_yoff > other->scroll_yoff_max)
+		{
+			other->scroll_yoff = other->scroll_yoff_max;
+		}
+		
+		other->_update_vscroll_pos(false);
+		other->save_scroll_position();
+		other->Refresh();
+	});
 }
 
 void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
@@ -991,6 +1003,7 @@ void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
 			}
 			
 			other->_update_vscroll_pos(false);
+			other->save_scroll_position();
 			other->Refresh();
 		});
 	}
@@ -2497,6 +2510,11 @@ int REHex::DocumentCtrl::get_offset_column_width()
 	return offset_column_width;
 }
 
+int REHex::DocumentCtrl::get_virtual_width()
+{
+	return virtual_width;
+}
+
 bool REHex::DocumentCtrl::get_cursor_visible()
 {
 	return cursor_visible;
@@ -2689,11 +2707,11 @@ int64_t REHex::DocumentCtrl::get_scroll_yoff() const
 	return scroll_yoff;
 }
 
-void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff)
+void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff, bool update_linked_scroll_others)
 {
 	set_scroll_yoff_clamped(scroll_yoff);
 	
-	_update_vscroll_pos();
+	_update_vscroll_pos(update_linked_scroll_others);
 	save_scroll_position();
 	Refresh();
 }
@@ -2785,7 +2803,6 @@ void REHex::DocumentCtrl::Region::draw_container(REHex::DocumentCtrl &doc, wxDC 
 
 void REHex::DocumentCtrl::Region::draw_full_height_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int64_t y)
 {
-	int cw = doc_ctrl->hf_char_width();
 	int ch = doc_ctrl->hf_height;
 	
 	int64_t skip_lines = (y < 0 ? (-y / ch) : 0);
@@ -3610,8 +3627,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		unsigned char byte = (data != NULL) ? data[i] : '?';
 		
 		auto highlight = highlight_at_off(cur_off);
-		
-		char ascii_byte = byte;
 		
 		if(ascii_active)
 		{

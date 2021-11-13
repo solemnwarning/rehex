@@ -17,6 +17,7 @@
 
 #include "../src/platform.hpp"
 #include <gtest/gtest.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "../src/ByteRangeSet.hpp"
@@ -33,7 +34,7 @@ using namespace REHex;
 std::ostream& operator<<(std::ostream& os, const ByteRangeSet::Range& range)
 {
 	char buf[128];
-	snprintf(buf, sizeof(buf), "{ offset = %zd, length = %zd }", range.offset, range.length);
+	snprintf(buf, sizeof(buf), "{ offset = %jd, length = %jd }", (intmax_t)(range.offset), (intmax_t)(range.length));
 	
 	return os << buf;
 }
@@ -1221,6 +1222,60 @@ TEST(ByteRangeSet, IntersectionEmptySet)
 	EXPECT_EQ(ByteRangeSet::intersection( NON_EMPTY_SET, EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
 	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     NON_EMPTY_SET ).get_ranges(), EMPTY_RANGE);
 	EXPECT_EQ(ByteRangeSet::intersection( EMPTY_SET,     EMPTY_SET     ).get_ranges(), EMPTY_RANGE);
+}
+
+TEST(ByteRangeSet, FindFirstIn)
+{
+	const std::vector<ByteRangeSet::Range> RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(50, 30),
+	};
+	
+	const ByteRangeSet SET(RANGES.begin(), RANGES.end());
+	
+	EXPECT_EQ(SET.find_first_in( 0,   0), SET.end());
+	EXPECT_EQ(SET.find_first_in( 0,  10), SET.end());
+	EXPECT_EQ(SET.find_first_in( 0,  11), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in( 0,  20), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in( 0,  30), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in( 0, 100), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in(10,   0), SET.end());
+	EXPECT_EQ(SET.find_first_in(10,  10), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in(10,  20), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in(19,   1), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_first_in(20,  30), SET.end());
+	EXPECT_EQ(SET.find_first_in(20,  31), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_first_in(20, 100), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_first_in(79, 100), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_first_in(80, 100), SET.end());
+}
+
+TEST(ByteRangeSet, FindLastIn)
+{
+	const std::vector<ByteRangeSet::Range> RANGES = {
+		ByteRangeSet::Range(10, 10),
+		ByteRangeSet::Range(50, 30),
+	};
+	
+	const ByteRangeSet SET(RANGES.begin(), RANGES.end());
+	
+	EXPECT_EQ(SET.find_last_in( 0,   0), SET.end());
+	EXPECT_EQ(SET.find_last_in( 0,  10), SET.end());
+	EXPECT_EQ(SET.find_last_in( 0,  11), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in( 0,  20), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in( 0,  30), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in( 0, 100), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_last_in(10,   0), SET.end());
+	EXPECT_EQ(SET.find_last_in(10,  10), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in(10,  20), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in(19,   1), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in(19,  31), std::next(SET.begin(), 0));
+	EXPECT_EQ(SET.find_last_in(19,  32), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_last_in(20,  30), SET.end());
+	EXPECT_EQ(SET.find_last_in(20,  31), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_last_in(20, 100), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_last_in(79, 100), std::next(SET.begin(), 1));
+	EXPECT_EQ(SET.find_last_in(80, 100), SET.end());
 }
 
 TEST(OrderedByteRangeSet, EmptySet)

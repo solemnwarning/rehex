@@ -18,6 +18,7 @@
 #include "platform.hpp"
 #include <algorithm>
 #include <set>
+#include <stdint.h>
 #include <stdio.h>
 #include <tuple>
 #include <wx/artprov.h>
@@ -25,8 +26,10 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 
+#include "App.hpp"
 #include "ArtProvider.hpp"
 #include "DiffWindow.hpp"
+#include "mainwindow.hpp"
 #include "Palette.hpp"
 #include "util.hpp"
 
@@ -35,9 +38,20 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
+#ifdef __APPLE__
+#include "../res/down32.h"
+#include "../res/up32.h"
+#endif
+
+#ifdef DIFFWINDOW_PROFILING
+#include "timespec.c"
+#endif
+
 enum {
 	ID_SHOW_OFFSETS = 1,
 	ID_SHOW_ASCII,
+	ID_FOLD,
+	ID_UPDATE_REGIONS_TIMER,
 };
 
 BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
@@ -53,19 +67,54 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	
 	EVT_MENU(ID_SHOW_OFFSETS, REHex::DiffWindow::OnToggleOffsets)
 	EVT_MENU(ID_SHOW_ASCII,   REHex::DiffWindow::OnToggleASCII)
+	EVT_MENU(ID_FOLD,         REHex::DiffWindow::OnToggleFold)
+	EVT_MENU(wxID_UP,         REHex::DiffWindow::OnPrevDifference)
+	EVT_MENU(wxID_DOWN,       REHex::DiffWindow::OnNextDifference)
+	
+	EVT_TIMER(ID_UPDATE_REGIONS_TIMER, REHex::DiffWindow::OnUpdateRegionsTimer)
 END_EVENT_TABLE()
 
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
-	wxFrame(parent, wxID_ANY, "Show differences - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540))
+	wxFrame(parent, wxID_ANY, "Compare data - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
+	statbar(NULL),
+	sb_gauge(NULL),
+	enable_folding(true),
+	recalc_bytes_per_line_pending(false),
+	relative_cursor_pos(0),
+	longest_range(0),
+	searching_backwards(false),
+	searching_forwards(false),
+	search_modal(NULL),
+	search_modal_updating(false)
+	
+	#ifdef DIFFWINDOW_PROFILING
+	,
+	idle_ticks(0),
+	idle_secs(0),
+	idle_bytes(0),
+	odsr_calls(0)
+	#endif
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
-	show_offsets_button = toolbar->AddCheckTool(ID_SHOW_OFFSETS, "Show offsets", wxArtProvider::GetBitmap(ART_OFFSETS_ICON, wxART_TOOLBAR), wxNullBitmap, "Show offsets");
-	show_ascii_button   = toolbar->AddCheckTool(ID_SHOW_ASCII,   "Show ASCII",   wxArtProvider::GetBitmap(ART_ASCII_ICON,   wxART_TOOLBAR), wxNullBitmap, "Show ASCII");
+	show_offsets_button = toolbar->AddCheckTool(ID_SHOW_OFFSETS, "Show offsets",      wxArtProvider::GetBitmap(ART_OFFSETS_ICON,    wxART_TOOLBAR), wxNullBitmap, "Show offsets");
+	show_ascii_button   = toolbar->AddCheckTool(ID_SHOW_ASCII,   "Show ASCII",        wxArtProvider::GetBitmap(ART_ASCII_ICON,      wxART_TOOLBAR), wxNullBitmap, "Show ASCII");
+	fold_button         = toolbar->AddCheckTool(ID_FOLD,         "Collapse matches",  wxArtProvider::GetBitmap(ART_DIFF_FOLD_ICON,  wxART_TOOLBAR), wxNullBitmap, "Collapse long sequences of matching data");
+	
+	toolbar->AddSeparator();
+	
+	#ifdef __APPLE__
+	toolbar->AddTool(wxID_UP,   "Previous difference", wxBITMAP_PNG_FROM_DATA(up32),   "Jump to previous difference (Shift+F6)");
+	toolbar->AddTool(wxID_DOWN, "Next difference",     wxBITMAP_PNG_FROM_DATA(down32), "Jump to next difference (F6)");
+	#else
+	toolbar->AddTool(wxID_UP,   "Previous difference", wxArtProvider::GetBitmap(wxART_GO_UP,   wxART_TOOLBAR), "Jump to previous difference (Shift+F6)");
+	toolbar->AddTool(wxID_DOWN, "Next difference",     wxArtProvider::GetBitmap(wxART_GO_DOWN, wxART_TOOLBAR), "Jump to next difference (F6)");
+	#endif
 	
 	/* Enable offset and ASCII columns by default. */
 	show_offsets_button->Toggle(true);
 	show_ascii_button  ->Toggle(true);
+	fold_button        ->Toggle(true);
 	
 	toolbar->Realize();
 	
@@ -96,6 +145,11 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	}
 	
 	SetIcons(icons);
+	
+	statbar = CreateStatusBar(2);
+	sb_gauge = new wxGauge(statbar, wxID_ANY, 100);
+	
+	update_regions_timer = new wxTimer(this, ID_UPDATE_REGIONS_TIMER);
 }
 
 REHex::DiffWindow::~DiffWindow()
@@ -133,6 +187,15 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 {
 	auto new_range = ranges.insert(ranges.end(), range);
 	
+	update_longest_range();
+	
+	#ifdef DIFFWINDOW_PROFILING
+	idle_ticks = 0;
+	idle_secs  = 0;
+	idle_bytes = 0;
+	odsr_calls = 0;
+	#endif
+	
 	if(ranges.size() == 1)
 	{
 		new_range->splitter = new wxSplitterWindow(
@@ -167,9 +230,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 		wxBoxSizer *h_sizer = new wxBoxSizer(wxHORIZONTAL);
 		v_sizer->Add(h_sizer, 1, wxALIGN_CENTER_HORIZONTAL);
 		
-		static const char *HELP_TEXT =
-			"Make another selection and choose \"Compare...\"\n"
-			"to compare this against another sequence of bytes";
+		static const char *HELP_TEXT = "Choose another file or selection to compare against";
 		
 		wxStaticText *help_text = new wxStaticText(new_range->help_panel, wxID_ANY, HELP_TEXT);
 		h_sizer->Add(help_text, 1, wxALIGN_CENTER_VERTICAL);
@@ -214,6 +275,24 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 	}
 	
 	resize_splitters();
+	
+	offsets_pending.clear_all();
+	offsets_different.clear_all();
+	
+	if(ranges.size() > 1)
+	{
+		offsets_pending.set_range(0, longest_range);
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(0);
+	}
 	
 	return new_range;
 }
@@ -313,6 +392,26 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	
 	resize_splitters();
 	
+	update_longest_range();
+	
+	offsets_pending.clear_all();
+	offsets_different.clear_all();
+	
+	if(ranges.size() > 1)
+	{
+		offsets_pending.set_range(0, longest_range);
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(0);
+	}
+	
 	if(ranges.empty())
 	{
 		/* Last tab was closed. Destroy this DiffWindow. */
@@ -322,10 +421,92 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 	return next;
 }
 
+void REHex::DiffWindow::set_folding(bool enable_folding)
+{
+	this->enable_folding = enable_folding;
+	fold_button->Toggle(enable_folding);
+}
+
 void REHex::DiffWindow::doc_update(Range *range)
 {
 	std::vector<DocumentCtrl::Region*> regions;
-	regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+	
+	off_t CONTEXT_BYTES = 64;
+	
+	if(enable_folding)
+	{
+		off_t base = 0;
+		bool has_data_region = false;
+		
+		while(base < range->length)
+		{
+			off_t end = range->length;
+			
+			auto pending_i   = offsets_pending.find_first_in(base, std::numeric_limits<off_t>::max());
+			auto different_i = offsets_different.find_first_in(base, std::numeric_limits<off_t>::max());
+			
+			bool is_pending = false;
+			bool is_different = false;
+			
+			if(pending_i != offsets_pending.end())
+			{
+				if(pending_i->offset <= base)
+				{
+					end = std::min(end, (pending_i->offset + pending_i->length));
+					is_pending = true;
+				}
+				else{
+					end = std::min(end, pending_i->offset);
+				}
+			}
+			
+			if(!is_pending && different_i != offsets_different.end())
+			{
+				if(different_i->offset <= (base + CONTEXT_BYTES))
+				{
+					end = std::min(end, (different_i->offset + different_i->length + CONTEXT_BYTES));
+					is_different = true;
+				}
+				else{
+					end = std::min(end, (different_i->offset - CONTEXT_BYTES));
+				}
+			}
+			
+			off_t length = end - base;
+			
+			if(is_pending)
+			{
+				regions.push_back(new MessageRegion(range->doc, base, "Processing..."));
+			}
+			else if(is_different)
+			{
+				regions.push_back(new DiffDataRegion(base, length, this, range));
+				has_data_region = true;
+			}
+			else{
+				char text[64];
+				snprintf(text, sizeof(text), "[ %jd identical bytes ]", (intmax_t)(length));
+				
+				regions.push_back(new MessageRegion(range->doc, base, text));
+			}
+			
+			base += length;
+			
+		}
+		
+		if(!has_data_region)
+		{
+			/* DocumentCtrl always needs at least one data region, so if we aren't
+			 * showing any data, we stick a zero-length, invisible region at the end
+			 * to stop bad things from happening.
+			*/
+			
+			regions.push_back(new InvisibleDataRegion((range->offset + range->length), 0));
+		}
+	}
+	else{
+		regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+	}
 	
 	range->doc_ctrl->replace_all_regions(regions);
 }
@@ -355,6 +536,11 @@ void REHex::DiffWindow::resize_splitters()
 		r->splitter->SetSashPosition(pane_size);
 	}
 	
+	recalc_bytes_per_line_pending = true;
+}
+
+void REHex::DiffWindow::recalc_bytes_per_line()
+{
 	/* Calculate the number of bytes that can be displayed on a line in each DocumentCtrl and
 	 * limit all DocumentCtrls to that value to ensure bytes line up. Each one should have the
 	 * same width at this point, but check all to allow for rounding errors or weird UI crap.
@@ -369,8 +555,11 @@ void REHex::DiffWindow::resize_splitters()
 		
 		for(auto rr = dc_regions.begin(); rr != dc_regions.end(); ++rr)
 		{
-			const DiffDataRegion *ddr = dynamic_cast<const DiffDataRegion*>(*rr);
-			assert(ddr != NULL);
+			const DocumentCtrl::DataRegion *ddr = dynamic_cast<const DocumentCtrl::DataRegion*>(*rr);
+			if(ddr == NULL)
+			{
+				continue;
+			}
 			
 			int ddr_max_bytes_per_line = 1;
 			while(ddr->calc_width_for_bytes(*(r->doc_ctrl), (ddr_max_bytes_per_line + 1)) <= dc_client_size.GetWidth())
@@ -392,9 +581,228 @@ void REHex::DiffWindow::resize_splitters()
 	}
 }
 
+void REHex::DiffWindow::set_relative_cursor_pos(off_t relative_cursor_pos)
+{
+	assert(relative_cursor_pos >= 0);
+	
+	this->relative_cursor_pos = relative_cursor_pos;
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		off_t abs_cursor_pos = r->offset + relative_cursor_pos;
+		
+		if(r->doc_ctrl->data_region_by_offset(abs_cursor_pos))
+		{
+			r->doc_ctrl->set_cursor_position(abs_cursor_pos);
+		}
+	}
+}
+
+off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
+{
+	try {
+		std::vector<unsigned char> base_data;
+		bool base_data_ready = false;
+		
+		for(auto r = ranges.begin(); r != ranges.end(); ++r)
+		{
+			if(r->length <= rel_offset)
+			{
+				length = offsets_pending.begin()->length;
+				offsets_different.set_range(rel_offset, length);
+				
+				#ifdef DIFFWINDOW_PROFILING
+				++odsr_calls;
+				#endif
+				
+				break;
+			}
+			else if(r->length < (rel_offset + length))
+			{
+				length = r->length - rel_offset;
+			}
+			
+			if(!base_data_ready)
+			{
+				base_data = r->doc->read_data(r->offset + rel_offset, length);
+				assert((off_t)(base_data.size()) >= length);
+				
+				base_data_ready = true;
+			}
+			else{
+				std::vector<unsigned char> r_data = r->doc->read_data(r->offset + rel_offset, length);
+				assert((off_t)(r_data.size()) >= length);
+				
+				off_t diff_base = -1;
+				off_t diff_end  = -1;
+				
+				for(off_t i = 0; i < length; ++i)
+				{
+					if(r_data[i] != base_data[i])
+					{
+						if(diff_end != i)
+						{
+							if(diff_end > diff_base)
+							{
+								offsets_different.set_range((rel_offset + diff_base), (diff_end - diff_base));
+								
+								#ifdef DIFFWINDOW_PROFILING
+								++odsr_calls;
+								#endif
+							}
+							
+							diff_base = i;
+							diff_end  = i + 1;
+						}
+						else{
+							++diff_end;
+						}
+					}
+				}
+				
+				if(diff_end > diff_base)
+				{
+					offsets_different.set_range((rel_offset + diff_base), (diff_end - diff_base));
+					
+					#ifdef DIFFWINDOW_PROFILING
+					++odsr_calls;
+					#endif
+				}
+			}
+		}
+	}
+	catch(const std::exception &e)
+	{
+		wxGetApp().printf_error("Exception in REHex::DiffWindow::process_now: %s\n", e.what());
+		return -1;
+	}
+	
+	assert(length > 0);
+	
+	offsets_pending.clear_range(rel_offset, length);
+	
+	if(!update_regions_timer->IsRunning())
+	{
+		update_regions_timer->StartOnce(100);
+	}
+	
+	return length;
+}
+
+void REHex::DiffWindow::update_longest_range()
+{
+	if(ranges.empty())
+	{
+		longest_range = 0;
+		
+		offsets_pending.clear_all();
+		offsets_different.clear_all();
+	}
+	else{
+		longest_range = std::max_element(ranges.begin(), ranges.end(),
+			[](const Range &lhs, const Range &rhs) { return lhs.length < rhs.length; })->length;
+		
+		offsets_pending.clear_range(longest_range, std::numeric_limits<off_t>::max());
+		offsets_different.clear_range(longest_range, std::numeric_limits<off_t>::max());
+	}
+}
+
+void REHex::DiffWindow::goto_prev_difference()
+{
+	/* Find the first difference preceeding the cursor... */
+	auto prev_diff = offsets_different.find_last_in(0, relative_cursor_pos);
+	
+	/* ...skip it if we're inside it... */
+	if(prev_diff != offsets_different.end() && (prev_diff->offset + prev_diff->length) > relative_cursor_pos)
+	{
+		if(prev_diff != offsets_different.begin())
+		{
+			--prev_diff;
+		}
+		else{
+			prev_diff = offsets_different.end();
+		}
+	}
+	
+	auto prev_to_process = offsets_pending.find_last_in(0, relative_cursor_pos);
+	
+	if(prev_diff != offsets_different.end() && (prev_to_process == offsets_pending.end() || prev_diff->offset > prev_to_process->offset))
+	{
+		/* ...and jump to it. */
+		set_relative_cursor_pos(prev_diff->offset);
+	}
+	else{
+		if(prev_to_process == offsets_pending.end())
+		{
+			/* No more differences. */
+			wxBell();
+		}
+		else{
+			assert(!searching_backwards);
+			assert(!searching_forwards);
+			
+			wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
+			search_modal = &pd;
+			
+			searching_backwards = true;
+			search_modal->ShowModal();
+			
+			search_modal = NULL;
+		}
+	}
+}
+
+void REHex::DiffWindow::goto_next_difference()
+{
+	/* Find the first difference either encompassing or following the cursor... */
+	auto next_diff = offsets_different.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+	
+	/* ...skip it if we're inside it... */
+	if(next_diff != offsets_different.end() && next_diff->offset <= relative_cursor_pos)
+	{
+		++next_diff;
+	}
+	
+	auto next_to_process = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+	
+	if(next_diff != offsets_different.end() && (next_to_process == offsets_pending.end() || next_diff->offset < next_to_process->offset))
+	{
+		/* ...and jump to it. */
+		set_relative_cursor_pos(next_diff->offset);
+	}
+	else{
+		if(next_to_process == offsets_pending.end())
+		{
+			/* No more differences. */
+			wxBell();
+		}
+		else{
+			assert(!searching_backwards);
+			assert(!searching_forwards);
+			
+			wxProgressDialog pd("Searching", "Searching for differences...", 1000, this, wxPD_CAN_ABORT);
+			search_modal = &pd;
+			
+			searching_forwards = true;
+			search_modal->ShowModal();
+			
+			search_modal = NULL;
+		}
+	}
+}
+
 void REHex::DiffWindow::OnSize(wxSizeEvent &event)
 {
 	resize_splitters();
+	
+	if(statbar != NULL && sb_gauge != NULL)
+	{
+		wxRect gauge_rect;
+		statbar->GetFieldRect(1, gauge_rect);
+		
+		sb_gauge->SetSize(gauge_rect);
+	}
+	
 	event.Skip();
 }
 
@@ -412,6 +820,218 @@ void REHex::DiffWindow::OnIdle(wxIdleEvent &event)
 			++i;
 		}
 	}
+	
+	#ifdef DIFFWINDOW_PROFILING
+	bool had_work = !offsets_pending.empty();
+	
+	struct timespec a;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &a);
+	#endif
+	
+	size_t allowed_remaining = MAX_COMPARE_DATA;
+	
+	if(searching_backwards)
+	{
+		while(allowed_remaining > 0)
+		{
+			auto process_prev = offsets_pending.find_last_in(0, relative_cursor_pos);
+			
+			if(process_prev == offsets_pending.end())
+			{
+				searching_backwards = false;
+				
+				search_modal->EndModal(0);
+				wxBell();
+				
+				break;
+			}
+			
+			off_t process_end = std::min((process_prev->offset + process_prev->length), relative_cursor_pos);
+			off_t process_begin = std::max(process_prev->offset, (process_end - (off_t)(allowed_remaining)));
+			off_t process_length = process_end - process_begin;
+			
+			assert(process_length > 0);
+			
+			off_t processed = process_now(process_begin, process_length);
+			if(processed < 0)
+			{
+				break;
+			}
+			
+			auto last_diff_found = offsets_different.find_last_in(process_begin, processed);
+			if(last_diff_found != offsets_different.end())
+			{
+				set_relative_cursor_pos(last_diff_found->offset);
+				
+				searching_backwards = false;
+				search_modal->EndModal(0);
+				
+				break;
+			}
+			
+			allowed_remaining -= processed;
+		}
+		
+		if(!search_modal_updating)
+		{
+			search_modal_updating = true;
+			
+			ByteRangeSet backward_offsets;
+			backward_offsets.set_range(0, relative_cursor_pos);
+			
+			ByteRangeSet pending_backward = ByteRangeSet::intersection(backward_offsets, offsets_pending);
+			
+			int sm_range = search_modal->GetRange();
+			
+			int sm_value = (double)(sm_range) - (((double)(pending_backward.total_bytes()) / (double)(backward_offsets.total_bytes())) * (double)(sm_range));
+			sm_value = std::max(sm_value, 0);
+			sm_value = std::min(sm_value, sm_range);
+			
+			search_modal->Update(sm_value);
+			
+			search_modal_updating = false;
+		}
+		
+		if(searching_backwards && search_modal->WasCancelled())
+		{
+			searching_backwards = false;
+			search_modal->EndModal(0);
+		}
+	}
+	else if(searching_forwards)
+	{
+		while(allowed_remaining > 0)
+		{
+			auto process_next = offsets_pending.find_first_in(relative_cursor_pos, std::numeric_limits<off_t>::max());
+			
+			if(process_next == offsets_pending.end())
+			{
+				searching_forwards = false;
+				
+				search_modal->EndModal(0);
+				wxBell();
+				
+				break;
+			}
+			
+			off_t rel_offset = std::max(relative_cursor_pos, process_next->offset);
+			off_t remain_in_pn = process_next->length - (relative_cursor_pos - process_next->offset);
+			off_t length = std::min<off_t>(allowed_remaining, remain_in_pn);
+			
+			assert(length > 0);
+			
+			off_t processed = process_now(rel_offset, length);
+			if(processed < 0)
+			{
+				break;
+			}
+			
+			auto first_diff_found = offsets_different.find_first_in(rel_offset, processed);
+			if(first_diff_found != offsets_different.end())
+			{
+				set_relative_cursor_pos(first_diff_found->offset);
+				
+				searching_forwards = false;
+				search_modal->EndModal(0);
+				
+				break;
+			}
+			
+			allowed_remaining -= processed;
+		}
+		
+		if(!search_modal_updating)
+		{
+			search_modal_updating = true;
+			
+			ByteRangeSet forward_offsets;
+			forward_offsets.set_range(relative_cursor_pos, longest_range);
+			
+			ByteRangeSet pending_forward = ByteRangeSet::intersection(forward_offsets, offsets_pending);
+			
+			int sm_range = search_modal->GetRange();
+			
+			int sm_value = (double)(sm_range) - (((double)(pending_forward.total_bytes()) / (double)(forward_offsets.total_bytes())) * (double)(sm_range));
+			sm_value = std::max(sm_value, 0);
+			sm_value = std::min(sm_value, sm_range);
+			
+			search_modal->Update(sm_value);
+			
+			search_modal_updating = false;
+		}
+		
+		if(searching_forwards && search_modal->WasCancelled())
+		{
+			searching_forwards = false;
+			search_modal->EndModal(0);
+		}
+	}
+	else{
+		while(!offsets_pending.empty() && allowed_remaining > 0)
+		{
+			off_t rel_offset = offsets_pending.begin()->offset;
+			off_t length = std::min<off_t>(offsets_pending.begin()->length, allowed_remaining);
+			
+			assert(length > 0);
+			
+			off_t processed = process_now(rel_offset, length);
+			if(processed < 0)
+			{
+				break;
+			}
+			
+			allowed_remaining -= processed;
+		}
+	}
+	
+	#ifdef DIFFWINDOW_PROFILING
+	if(had_work)
+	{
+		struct timespec b;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &b);
+		
+		idle_ticks += 1;
+		idle_secs  += timespec_to_double(timespec_sub(b, a));
+		idle_bytes += MAX_COMPARE_DATA - allowed_remaining;
+		
+		if(offsets_pending.empty())
+		{
+			wxGetApp().printf_debug("Processed %jd bytes in %f seconds over %u idle ticks (%fus avg) (%u offsets_different insertions)\n",
+				(intmax_t)(idle_bytes), idle_secs, idle_ticks, ((idle_secs / (double)(idle_ticks)) * 1000000), odsr_calls);
+			
+			idle_ticks = 0;
+			idle_secs  = 0;
+			idle_bytes = 0;
+			odsr_calls = 0;
+		}
+	}
+	#endif
+	
+	if(!offsets_pending.empty())
+	{
+		SetStatusText("Processing...");
+		
+		off_t remaining_bytes = offsets_pending.total_bytes();
+		
+		int processed_percent = 100.0 - (((double)(remaining_bytes) / (double)(longest_range)) * 100.0);
+		processed_percent = std::max(processed_percent, 0);
+		processed_percent = std::min(processed_percent, 100);
+		
+		sb_gauge->Show();
+		sb_gauge->SetValue(processed_percent);
+		
+		event.RequestMore();
+	}
+	else{
+		SetStatusText("");
+		sb_gauge->Hide();
+	}
+	
+	if(recalc_bytes_per_line_pending)
+	{
+		recalc_bytes_per_line_pending = false;
+		recalc_bytes_per_line();
+	}
 }
 
 void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
@@ -428,6 +1048,14 @@ void REHex::DiffWindow::OnCharHook(wxKeyEvent &event)
 				break;
 			}
 		}
+	}
+	else if(event.GetModifiers() == wxMOD_NONE && event.GetKeyCode() == WXK_F6)
+	{
+		goto_next_difference();
+	}
+	else if(event.GetModifiers() == wxMOD_SHIFT && event.GetKeyCode() == WXK_F6)
+	{
+		goto_prev_difference();
 	}
 	else{
 		event.Skip();
@@ -463,11 +1091,19 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				off_t shift  = std::min(event.length, (r->offset - event.offset));
 				off_t shrink = std::min((event.length - shift), r->length);
 				
+				if(shrink > 0)
+				{
+					offsets_pending.set_range(0, longest_range);
+					offsets_different.clear_all();
+				}
+				
 				r->offset -= shift;
 				assert(r->offset >= 0);
 				
 				r->length -= shrink;
 				assert(r->length >= 0);
+				
+				update_longest_range();
 				
 				if(r->length == 0)
 				{
@@ -482,8 +1118,16 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 			{
 				off_t shrink = std::min(event.length, (r->length - (event.offset - r->offset)));
 				
+				if(shrink > 0)
+				{
+					offsets_pending.set_range(0, longest_range);
+					offsets_different.clear_all();
+				}
+				
 				r->length -= shrink;
 				assert(r->length >= 0);
+				
+				update_longest_range();
 				
 				if(r->length == 0)
 				{
@@ -558,7 +1202,12 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 			else if(event.offset < (r->offset + r->length))
 			{
 				r->length += event.length;
+				
+				update_longest_range();
 				doc_update(&*r);
+				
+				offsets_pending.set_range(0, longest_range);
+				offsets_different.clear_all();
 			}
 			
 			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
@@ -614,6 +1263,15 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 				r->doc_ctrl->clear_selection();
 			}
 			
+			off_t overlap_base = std::max(event.offset, r->offset);
+			off_t overlap_end = std::min((event.offset + event.length), (r->offset + r->length));
+			
+			if(overlap_end > overlap_base)
+			{
+				offsets_pending.set_range((overlap_base - r->offset), (overlap_end - overlap_base));
+				offsets_different.clear_range((overlap_base - r->offset), (overlap_end - overlap_base));
+			}
+			
 			r->doc_ctrl->Refresh();
 		}
 	}
@@ -658,16 +1316,18 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
 	assert(source_range != ranges.end());
 	
-	off_t pos_from_source_range = event.cursor_pos - source_range->offset;
+	relative_cursor_pos = event.cursor_pos - source_range->offset;
+	// assert(relative_cursor_pos >= 0);
 	
 	/* Update the cursors in every other tab to match. */
 	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		if(r != source_range)
+		off_t abs_cursor_pos = r->offset + relative_cursor_pos;
+		
+		if(r != source_range && r->doc_ctrl->data_region_by_offset(abs_cursor_pos) != NULL)
 		{
-			off_t pos_from_r = r->offset + std::min(pos_from_source_range, (r->length - 1));
-			r->doc_ctrl->set_cursor_position(pos_from_r, event.cursor_state);
+			r->doc_ctrl->set_cursor_position(abs_cursor_pos, event.cursor_state);
 		}
 	}
 }
@@ -719,6 +1379,34 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 		}
 	}, offset_copy_dec->GetId(), offset_copy_dec->GetId());
 	
+	menu.AppendSeparator();
+	
+	wxMenuItem *offset_goto = menu.Append(wxID_ANY, "Jump to offset in main window");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		/* Find MainWindow containing the document. */
+		MainWindow *window = NULL;
+		for(wxWindow *parent = source_range->main_doc_ctrl->GetParent();
+			(window = dynamic_cast<MainWindow*>(parent)) == NULL;
+			parent = parent->GetParent()) {}
+		
+		assert(window != NULL);
+		
+		if(source_range->main_doc_ctrl->data_region_by_offset(cursor_pos))
+		{
+			window->switch_tab(source_range->main_doc_ctrl);
+			
+			source_range->doc->set_cursor_position(cursor_pos);
+			source_range->main_doc_ctrl->SetFocus();
+			
+			window->Raise();
+		}
+		else{
+			/* Offset isn't currently available in main DocumentCtrl. */
+			wxBell();
+		}
+	}, offset_goto->GetId(), offset_goto->GetId());
+	
 	PopupMenu(&menu);
 }
 
@@ -742,6 +1430,52 @@ void REHex::DiffWindow::OnToggleASCII(wxCommandEvent &event)
 	resize_splitters();
 }
 
+void REHex::DiffWindow::OnToggleFold(wxCommandEvent &event)
+{
+	enable_folding = event.IsChecked();
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(0);
+	}
+}
+
+void REHex::DiffWindow::OnPrevDifference(wxCommandEvent &event)
+{
+	goto_prev_difference();
+}
+
+void REHex::DiffWindow::OnNextDifference(wxCommandEvent &event)
+{
+	goto_next_difference();
+}
+
+void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)
+{
+	std::list<int64_t> restore_scroll_ypos;
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		restore_scroll_ypos.push_back(r->doc_ctrl->get_scroll_yoff());
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		doc_update(&(*r));
+	}
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		r->doc_ctrl->set_scroll_yoff(restore_scroll_ypos.front(), false);
+		restore_scroll_ypos.pop_front();
+	}
+}
+
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):
 	DataRegion(d_offset, d_length, d_offset), diff_window(diff_window), range(range) {}
 
@@ -757,44 +1491,84 @@ int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(off_t off) const
 {
-	try {
-		std::vector<unsigned char> my_data = range->doc->read_data(off, 1);
-		
-		assert(off >= range->offset);
-		off_t off_from_range_begin = off - range->offset;
-		
-		const std::list<Range> &ranges = diff_window->get_ranges();
-		
-		for(auto r = ranges.begin(); r != ranges.end(); ++r)
-		{
-			if(&*r == range)
-			{
-				/* This one is me. */
-				continue;
-			}
-			
-			std::vector<unsigned char> their_data = r->doc->read_data(r->offset + off_from_range_begin, 1);
-			
-			if(off_from_range_begin >= r->length || their_data != my_data)
-			{
-				return Highlight(
-					Palette::PAL_DIRTY_TEXT_FG,
-					Palette::PAL_DIRTY_TEXT_BG,
-					true);
-			}
-		}
-		
-		return NoHighlight();
-	}
-	catch(const std::exception &e)
+	assert(off >= range->offset);
+	off_t relative_off = off - range->offset;
+	
+	if(diff_window->offsets_pending.isset(off))
 	{
-		/* Highlight byte if an exception was thrown - most likely a file I/O error. */
-		
-		fprintf(stderr, "Exception in REHex::DiffWindow::DiffDataRegion::highlight_at_off: %s\n", e.what());
-		
+		diff_window->process_now(off, 2048 /* Probably enough to process screen in one go. */);
+	}
+	
+	if(diff_window->offsets_different.isset(relative_off))
+	{
 		return Highlight(
 			Palette::PAL_DIRTY_TEXT_FG,
 			Palette::PAL_DIRTY_TEXT_BG,
 			true);
 	}
+	else{
+		return NoHighlight();
+	}
 }
+
+REHex::DiffWindow::MessageRegion::MessageRegion(Document *document, off_t data_offset, const std::string &message):
+	Region(data_offset, 0),
+	document(document),
+	data_offset(data_offset),
+	message(message) {}
+
+int REHex::DiffWindow::MessageRegion::calc_width(REHex::DocumentCtrl &doc_ctrl)
+{
+	int offset_column_width = doc_ctrl.get_show_offsets()
+		? doc_ctrl.get_offset_column_width()
+		: 0;
+	
+	int message_width = doc_ctrl.hf_string_width(message.length());
+	
+	return offset_column_width + message_width;
+}
+
+void REHex::DiffWindow::MessageRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+{
+	y_lines = 2;
+}
+
+void REHex::DiffWindow::MessageRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
+{
+	dc.SetFont(doc_ctrl.get_font());
+	
+	dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+	dc.SetTextForeground((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]);
+	dc.SetPen(wxPen((*active_palette)[Palette::PAL_NORMAL_TEXT_FG]));
+	
+	bool show_offset = doc_ctrl.get_show_offsets();
+	int offset_column_width = doc_ctrl.get_offset_column_width();
+	
+	int virtual_width = doc_ctrl.get_virtual_width();
+	int text_width    = doc_ctrl.hf_string_width(message.length());
+	int text_height   = doc_ctrl.hf_char_height();
+	int char_width    = doc_ctrl.hf_char_width();
+	
+	int text_x = offset_column_width + ((virtual_width - offset_column_width) / 2) - (text_width / 2);
+	
+	dc.DrawLine(0, y,                         virtual_width, y);
+	dc.DrawLine(0, y + (text_height * 2) - 1, virtual_width, y + (text_height * 2) - 1);
+	
+	if(show_offset)
+	{
+		/* Draw the offsets to the left */
+		
+		std::string offset_str = format_offset(data_offset, doc_ctrl.get_offset_display_base(), document->buffer_length());
+		dc.DrawText(offset_str.c_str(), x, y + (text_height / 2));
+		
+		int offset_vl_x = (x + offset_column_width) - (char_width / 2);
+		dc.DrawLine(offset_vl_x, y, offset_vl_x, y + (2 * text_height));
+	}
+	
+	dc.DrawText(message, x + text_x, y + (text_height / 2));
+}
+
+REHex::DiffWindow::InvisibleDataRegion::InvisibleDataRegion(off_t d_offset, off_t d_length):
+	DataRegion(d_offset, d_length, d_offset) {}
+
+void REHex::DiffWindow::InvisibleDataRegion::draw(REHex::DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) {}

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -78,6 +78,8 @@ namespace REHex
 			
 			void handle_copy(bool cut);
 			void paste_text(const std::string &text);
+			void compare_whole_file();
+			void compare_selection();
 			
 			InlineCommentMode get_inline_comment_mode() const;
 			void set_inline_comment_mode(InlineCommentMode inline_comment_mode);
@@ -156,6 +158,8 @@ namespace REHex
 			
 			void init_default_doc_view();
 			void init_default_tools();
+			
+			void compare_range(off_t offset, off_t length);
 			
 		DECLARE_EVENT_TABLE()
 	};

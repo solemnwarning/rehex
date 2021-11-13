@@ -24,6 +24,7 @@
 namespace REHex
 {
 	extern const wxArtID ART_ASCII_ICON;
+	extern const wxArtID ART_DIFF_FOLD_ICON;
 	extern const wxArtID ART_OFFSETS_ICON;
 	
 	class ArtProvider: public wxArtProvider

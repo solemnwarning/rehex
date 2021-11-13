@@ -684,7 +684,7 @@ namespace REHex
 				return NULL;
 			}
 			
-			virtual bool OnPaste(DocumentCtrl *doc_ctrl)
+			virtual bool OnPaste(DocumentCtrl *doc_ctrl) override
 			{
 				off_t selection_first, selection_last;
 				std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();

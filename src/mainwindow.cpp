@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -63,6 +63,7 @@ enum {
 	ID_SEARCH_TEXT,
 	ID_SEARCH_BSEQ,
 	ID_SEARCH_VALUE,
+	ID_COMPARE_FILE,
 	ID_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
 	ID_SAVE_VIEW,
@@ -90,6 +91,7 @@ enum {
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_CLOSE(REHex::MainWindow::OnWindowClose)
+	EVT_CHAR_HOOK(REHex::MainWindow::OnCharHook)
 	
 	EVT_MENU(wxID_NEW,        REHex::MainWindow::OnNew)
 	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
@@ -125,6 +127,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
 	EVT_MENU(ID_SEARCH_VALUE,  REHex::MainWindow::OnSearchValue)
+	
+	EVT_MENU(ID_COMPARE_FILE,  REHex::MainWindow::OnCompareFile)
 	
 	EVT_MENU(ID_GOTO_OFFSET, REHex::MainWindow::OnGotoOffset)
 	
@@ -252,7 +256,11 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		edit_menu->Append(ID_SEARCH_BSEQ,  "Search for byte sequence...");
 		edit_menu->Append(ID_SEARCH_VALUE, "Search for value...");
 		
-		edit_menu->AppendSeparator();
+		edit_menu->AppendSeparator(); /* ---- */
+		
+		edit_menu->Append(ID_COMPARE_FILE, "Compare whole file...\tCtrl-K");
+		
+		edit_menu->AppendSeparator(); /* ---- */
 		
 		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...\tCtrl-G");
 		
@@ -358,7 +366,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 				itm->Check(true);
 			}
 			
-			Bind(wxEVT_MENU, [this, font_name, itm](wxCommandEvent &event)
+			Bind(wxEVT_MENU, [font_name, itm](wxCommandEvent &event)
 			{
 				wxGetApp().set_font_name(font_name);
 				itm->Check(true);
@@ -565,6 +573,21 @@ void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 	event.Skip();
 }
 
+void REHex::MainWindow::OnCharHook(wxKeyEvent &event)
+{
+	int modifiers = event.GetModifiers();
+	int key = event.GetKeyCode();
+	
+	if(modifiers == (wxMOD_CMD | wxMOD_SHIFT) && key == 'K')
+	{
+		Tab *tab = active_tab();
+		tab->compare_selection();
+	}
+	else{
+		event.Skip();
+	}
+}
+
 void REHex::MainWindow::OnNew(wxCommandEvent &event)
 {
 	new_file();
@@ -769,6 +792,12 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	sd->Show(true);
 	
 	tab->search_dialog_register(sd);
+}
+
+void REHex::MainWindow::OnCompareFile(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	tab->compare_whole_file();
 }
 
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
@@ -1467,6 +1496,25 @@ REHex::Tab *REHex::MainWindow::active_tab()
 REHex::Document *REHex::MainWindow::active_document()
 {
 	return active_tab()->doc;
+}
+
+void REHex::MainWindow::switch_tab(DocumentCtrl *doc_ctrl)
+{
+	size_t num_tabs = notebook->GetPageCount();
+	
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		
+		auto tab = dynamic_cast<Tab*>(page);
+		assert(tab != NULL);
+		
+		if(tab->doc_ctrl == doc_ctrl)
+		{
+			notebook->SetSelection(i);
+			break;
+		}
+	}
 }
 
 void REHex::MainWindow::_update_status_offset(Tab *tab)

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -65,7 +65,13 @@ namespace REHex {
 			*/
 			Document *active_document();
 			
+			/**
+			 * @brief Switch the active Tab.
+			*/
+			void switch_tab(DocumentCtrl *doc_ctrl);
+			
 			void OnWindowClose(wxCloseEvent& event);
+			void OnCharHook(wxKeyEvent &event);
 			
 			void OnNew(wxCommandEvent &event);
 			void OnOpen(wxCommandEvent &event);
@@ -83,6 +89,7 @@ namespace REHex {
 			void OnSearchText(wxCommandEvent &event);
 			void OnSearchBSeq(wxCommandEvent &event);
 			void OnSearchValue(wxCommandEvent &event);
+			void OnCompareFile(wxCommandEvent &event);
 			void OnGotoOffset(wxCommandEvent &event);
 			void OnCut(wxCommandEvent &event);
 			void OnCopy(wxCommandEvent &event);

@@ -63,6 +63,9 @@ namespace REHex
 				}
 			};
 			
+			typedef std::vector<Range>::iterator iterator;
+			typedef std::vector<Range>::const_iterator const_iterator;
+			
 		private:
 			std::vector<Range> ranges;
 			
@@ -151,6 +154,18 @@ namespace REHex
 			bool isset_any(off_t offset, off_t length) const;
 			
 			/**
+			 * @brief Find the first Range that intersects the given range.
+			 * @return An iterator into the internal vector, or end.
+			*/
+			const_iterator find_first_in(off_t offset, off_t length) const;
+			
+			/**
+			 * @brief Find the last Range that intersects the given range.
+			 * @return An iterator into the internal vector, or end.
+			*/
+			const_iterator find_last_in(off_t offset, off_t length) const;
+			
+			/**
 			 * @brief Get the total number of bytes encompassed by the set.
 			*/
 			off_t total_bytes() const;
@@ -163,12 +178,12 @@ namespace REHex
 			/**
 			 * @brief Returns a const_iterator to the first Range in the set.
 			*/
-			std::vector<Range>::const_iterator begin() const;
+			const_iterator begin() const;
 			
 			/**
 			 * @brief Returns a const_iterator to the end of the set.
 			*/
-			std::vector<Range>::const_iterator end() const;
+			const_iterator end() const;
 			
 			/**
 			 * @brief Access the n-th range in the set.
@@ -303,6 +318,12 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 	size_t min_size_hint = ranges.size() + std::distance(begin, end);
 	if(ranges.capacity() < min_size_hint)
 	{
+		/* Round up to the nearest page size (assuming 4KiB pages and 64-bit off_t) */
+		if((min_size_hint % 256) != 0)
+		{
+			min_size_hint += 256 - (min_size_hint % 256);
+		}
+		
 		ranges.reserve(std::max(min_size_hint, size_hint));
 	}
 	

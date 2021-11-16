@@ -24,6 +24,7 @@
 #include <mutex>
 #include <stddef.h>
 #include <thread>
+#include <wx/choice.h>
 #include <wx/listctrl.h>
 #include <wx/panel.h>
 #include <wx/stattext.h>
@@ -31,6 +32,7 @@
 #include <wx/wx.h>
 
 #include "ByteRangeSet.hpp"
+#include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "Events.hpp"
 #include "SafeWindowPointer.hpp"
@@ -77,6 +79,9 @@ namespace REHex {
 			StringPanelListCtrl *list_ctrl;
 			wxStaticText *status_text;
 			
+			wxChoice *encoding_choice;
+			const CharacterEncoding *selected_encoding;
+			
 			std::mutex strings_lock;
 			ByteRangeSet strings;
 			bool update_needed;
@@ -96,6 +101,7 @@ namespace REHex {
 			ByteRangeSet working;               /* Ranges currently being processed. */
 			
 			void mark_dirty(off_t offset, off_t length);
+			void mark_dirty_pad(off_t offset, off_t length);
 			void mark_work_done(off_t offset, off_t length);
 			off_t sum_dirty_bytes();
 			off_t sum_clean_bytes();
@@ -114,6 +120,7 @@ namespace REHex {
 			void OnDataOverwrite(OffsetLengthEvent &event);
 			void OnItemActivate(wxListEvent &event);
 			void OnTimerTick(wxTimerEvent &event);
+			void OnEncodingChanged(wxCommandEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 		

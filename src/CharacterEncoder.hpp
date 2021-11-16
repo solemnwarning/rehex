@@ -20,9 +20,11 @@
 
 #include <iconv.h>
 #include <map>
+#include <mutex>
 #include <stdexcept>
 #include <stdlib.h>
 #include <string>
+#include <vector>
 
 namespace REHex
 {
@@ -78,6 +80,46 @@ namespace REHex
 	};
 	
 	/**
+	 * @brief A text encoding.
+	 *
+	 * Constructing an instance of this class registers a new text encoding with an associated
+	 * CharacterEncoder instance.
+	*/
+	class CharacterEncoding
+	{
+		public:
+			std::string key;
+			
+			std::vector<std::string> groups;
+			std::string label;
+			
+			const CharacterEncoder *encoder;
+			
+			CharacterEncoding(const std::string &key, const std::string &label, const CharacterEncoder *encoder, const std::vector<std::string> &groups = {});
+			~CharacterEncoding();
+			
+			CharacterEncoding(const CharacterEncoding &src) = delete;
+			
+			/**
+			 * @brief Get the encoding with the requested key.
+			*/
+			static const CharacterEncoding *encoding_by_key(const std::string &key);
+			
+			/**
+			 * @brief Get a (sorted) vector containing all registered encodings.
+			*/
+			static std::vector<const CharacterEncoding*> all_encodings();
+			
+		private:
+			/* The registrations map is created by the first registration and destroyed
+			 * when the last one is removed. This is to avoid depending on global
+			 * variable initialisation order.
+			*/
+			
+			static std::map<std::string, const CharacterEncoding*> *registrations;
+	};
+	
+	/**
 	 * @brief ASCII (7-bit) CharacterEncoder implementation.
 	 *
 	 * Simply passes through any bytes in the range 0-127 unmodified, throwing an
@@ -118,11 +160,16 @@ namespace REHex
 			std::string encoding;
 			
 			iconv_t to_utf8;
+			mutable std::mutex to_utf8_lock;
+			
 			iconv_t from_utf8;
+			mutable std::mutex from_utf8_lock;
 			
 		public:
 			CharacterEncoderIconv(const char *encoding, size_t word_size);
 			~CharacterEncoderIconv();
+			
+			CharacterEncoderIconv(const CharacterEncoderIconv&) = delete;
 			
 			virtual EncodedCharacter decode(const void *data, size_t len) const override;
 			virtual EncodedCharacter encode(const std::string &utf8_char) const override;

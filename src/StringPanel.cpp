@@ -20,8 +20,11 @@
 #include <assert.h>
 #include <ctype.h>
 #include <numeric>
+#include <unictype.h>
+#include <unistr.h>
 #include <wx/numformatter.h>
 
+#include "CharacterEncoder.hpp"
 #include "StringPanel.hpp"
 
 static const off_t MIN_STRING_LENGTH = 4;
@@ -38,9 +41,14 @@ static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocu
 
 static REHex::ToolPanelRegistration tpr("StringPanel", "Strings", REHex::ToolPanel::TPS_TALL, &StringPanel_factory);
 
+enum {
+	ID_ENCODING_CHOICE = 1,
+};
+
 BEGIN_EVENT_TABLE(REHex::StringPanel, wxPanel)
 	EVT_TIMER(wxID_ANY, REHex::StringPanel::OnTimerTick)
 	EVT_LIST_ITEM_ACTIVATED(wxID_ANY, REHex::StringPanel::OnItemActivate)
+	EVT_CHOICE(ID_ENCODING_CHOICE, REHex::StringPanel::OnEncodingChanged)
 END_EVENT_TABLE()
 
 REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
@@ -60,7 +68,20 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	
 	status_text = new wxStaticText(this, wxID_ANY, "");
 	
+	encoding_choice = new wxChoice(this, ID_ENCODING_CHOICE);
+	
+	std::vector<const CharacterEncoding*> all_encodings = CharacterEncoding::all_encodings();
+	for(auto i = all_encodings.begin(); i != all_encodings.end(); ++i)
+	{
+		const CharacterEncoding *ce = *i;
+		encoding_choice->Append(ce->label, (void*)(ce));
+	}
+	
+	encoding_choice->SetSelection(0);
+	selected_encoding = all_encodings.front();
+	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+	sizer->Add(encoding_choice, 0);
 	sizer->Add(status_text, 0);
 	sizer->Add(list_ctrl, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
@@ -153,6 +174,20 @@ void REHex::StringPanel::mark_dirty(off_t offset, off_t length)
 		/* Notify any sleeping workers that there is now work to be done. */
 		resume_cv.notify_all();
 	}
+}
+
+void REHex::StringPanel::mark_dirty_pad(off_t offset, off_t length)
+{
+	const off_t ideal_pad = MIN_STRING_LENGTH * MAX_CHAR_SIZE;
+	
+	off_t pre_pad = std::min(ideal_pad, offset);
+	offset -= pre_pad;
+	length += pre_pad;
+	
+	off_t post_pad = std::min(ideal_pad, (document->buffer_length() - offset));
+	length += post_pad;
+	
+	mark_dirty(offset, length);
 }
 
 void REHex::StringPanel::mark_work_done(off_t offset, off_t length)
@@ -263,10 +298,10 @@ void REHex::StringPanel::thread_main()
 		 * expanded window will be merged later.
 		*/
 		
-		off_t window_pre = std::min<off_t>(window_base, MIN_STRING_LENGTH);
+		off_t window_pre = std::min<off_t>(window_base, (MIN_STRING_LENGTH * MAX_CHAR_SIZE));
 		
 		off_t  window_base_adj   = window_base   - window_pre;
-		size_t window_length_adj = window_length + window_pre + MIN_STRING_LENGTH;
+		size_t window_length_adj = window_length + window_pre + (MIN_STRING_LENGTH * MAX_CHAR_SIZE);
 		
 		/* Read the data from our window and search for strings in it. */
 		
@@ -292,19 +327,51 @@ void REHex::StringPanel::thread_main()
 			continue;
 		}
 		
-		const char *data_p = (const char*)(data.data());
-		
 		for(size_t i = 0; i < data.size();)
 		{
 			off_t string_base = window_base_adj + i;
 			off_t string_end  = string_base;
 			
-			bool is_really_string = isascii(data_p[i]) && isprint(data_p[i]);
+			/* TODO: Align with encoding word size. */
 			
-			do {
-				++string_end;
-				++i;
-			} while(!threads_pause && i < data.size() && (isascii(data_p[i]) && isprint(data_p[i])) == is_really_string);
+			bool is_really_string;
+			
+			auto is_i_string = [&](bool force_advance)
+			{
+				try {
+					EncodedCharacter ec = selected_encoding->encoder->decode(data.data() + i, data.size() - i);
+					
+					ucs4_t c;
+					u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char.data()), ec.utf8_char.size());
+					
+					bool is_valid = c >= 0x20
+						&& c != 0xFFFD
+						&& !uc_is_property_unassigned_code_value(c)
+						&& !uc_is_property_not_a_character(c);
+					
+					if(force_advance || is_valid == is_really_string)
+					{
+						string_end += ec.encoded_char.size();
+						i          += ec.encoded_char.size();
+					}
+					
+					return is_valid;
+				}
+				catch(const CharacterEncoder::InvalidCharacter &e)
+				{
+					if(force_advance || !is_really_string)
+					{
+						++string_end;
+						++i;
+					}
+					
+					return false;
+				}
+			};
+			
+			is_really_string = is_i_string(true);
+			
+			while(!threads_pause && i < data.size() && is_i_string(false) == is_really_string) {}
 			
 			if(threads_pause)
 			{
@@ -551,16 +618,13 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 	}
 	
 	{
-		off_t dirtify_off = std::max((event.offset - MIN_STRING_LENGTH), (off_t)(0));
-		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
-		
 		std::lock_guard<std::mutex> pl(pause_lock);
 		
 		dirty.data_erased(event.offset, event.length);
 		pending.data_erased(event.offset, event.length);
 		assert(working.empty());
 		
-		mark_dirty(dirtify_off, dirtify_len);
+		mark_dirty_pad(event.offset, 0);
 	}
 	
 	start_threads();
@@ -577,16 +641,13 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 	}
 	
 	{
-		off_t dirtify_off = std::max((event.offset - MIN_STRING_LENGTH), (off_t)(0));
-		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
-		
 		std::lock_guard<std::mutex> pl(pause_lock);
 		
 		dirty.data_inserted(event.offset, event.length);
 		pending.data_inserted(event.offset, event.length);
 		assert(working.empty());
 		
-		mark_dirty(dirtify_off, dirtify_len);
+		mark_dirty_pad(event.offset, event.length);
 	}
 	
 	start_threads();
@@ -598,11 +659,8 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 {
 	{
-		off_t dirtify_off = std::max((event.offset - MIN_STRING_LENGTH), (off_t)(0));
-		off_t dirtify_len = std::min((event.length + (MIN_STRING_LENGTH * 2)), (document->buffer_length() - dirtify_off));
-		
 		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty(dirtify_off, dirtify_len);
+		mark_dirty_pad(event.offset, event.length);
 	}
 	
 	start_threads();
@@ -648,6 +706,26 @@ void REHex::StringPanel::OnTimerTick(wxTimerEvent &event)
 	update();
 }
 
+void REHex::StringPanel::OnEncodingChanged(wxCommandEvent &event)
+{
+	pause_threads();
+	
+	int encoding_idx = event.GetSelection();
+	selected_encoding = (const CharacterEncoding*)(encoding_choice->GetClientData(encoding_idx));
+	
+	{
+		std::lock_guard<std::mutex> pl(pause_lock);
+		mark_dirty(0, document->buffer_length());
+	}
+	
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		strings.clear_all();
+	}
+	
+	start_threads();
+}
+
 REHex::StringPanel::StringPanelListCtrl::StringPanelListCtrl(StringPanel *parent):
 	wxListCtrl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxLC_REPORT | wxLC_VIRTUAL)) {}
 
@@ -685,9 +763,17 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 			
 			try {
 				std::vector<unsigned char> string_data = parent->document->read_data(si.offset, si.length);
-				std::string string((const char*)(string_data.data()), string_data.size());
+				std::string string;
 				
-				return string;
+				for(size_t i = 0; i < string_data.size();)
+				{
+					EncodedCharacter ec = parent->selected_encoding->encoder->decode(string_data.data() + i, string_data.size() - i);
+					
+					string += ec.utf8_char;
+					i += ec.encoded_char.size();
+				}
+				
+				return wxString::FromUTF8(string.data(), string.size());
 			}
 			catch(const std::exception &e)
 			{

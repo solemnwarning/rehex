@@ -27,12 +27,82 @@
 #include "CharacterEncoder.hpp"
 #include "DataType.hpp"
 
-// static REHex::CharacterEncoderASCII ascii_encoder;
-// static REHex::CharacterEncodingRegistration ascii_reg("ASCII", "US-ASCII (7-bit)", &ascii_encoder, 1);
-
 REHex::EncodedCharacter::EncodedCharacter(const std::string &encoded_char, const std::string &utf8_char):
 	encoded_char(encoded_char),
 	utf8_char(utf8_char) {}
+
+std::map<std::string, const REHex::CharacterEncoding*> *REHex::CharacterEncoding::registrations = NULL;
+
+REHex::CharacterEncoding::CharacterEncoding(const std::string &key, const std::string &label, const CharacterEncoder *encoder, const std::vector<std::string> &groups):
+	key(key),
+	groups(groups),
+	label(label),
+	encoder(encoder)
+{
+	if(registrations != NULL && registrations->find(key) != registrations->end())
+	{
+		throw std::runtime_error(std::string("A character encoding with key '") + key + "' is already registered");
+	}
+	
+	if(registrations == NULL)
+	{
+		registrations = new std::map<std::string, const CharacterEncoding*>();
+	}
+	
+	registrations->emplace(key, this);
+}
+
+REHex::CharacterEncoding::~CharacterEncoding()
+{
+	registrations->erase(key);
+	
+	if(registrations->empty())
+	{
+		delete registrations;
+		registrations = NULL;
+	}
+}
+
+const REHex::CharacterEncoding *REHex::CharacterEncoding::encoding_by_key(const std::string &key)
+{
+	if(registrations == NULL)
+	{
+		return NULL;
+	}
+	
+	auto it = registrations->find(key);
+	return it != registrations->end() ? it->second : NULL;
+}
+
+std::vector<const REHex::CharacterEncoding*> REHex::CharacterEncoding::all_encodings()
+{
+	if(registrations == NULL)
+	{
+		return std::vector<const CharacterEncoding*>(); /* Empty vector. */
+	}
+	
+	std::vector<const CharacterEncoding*> sorted_registrations;
+	sorted_registrations.reserve(registrations->size());
+	
+	for(auto r = registrations->begin(); r != registrations->end(); ++r)
+	{
+		sorted_registrations.push_back(r->second);
+	}
+	
+	std::sort(sorted_registrations.begin(), sorted_registrations.end(),
+		[](const CharacterEncoding *a, const CharacterEncoding *b)
+		{
+			if(a->groups != b->groups)
+			{
+				return a->groups < b->groups;
+			}
+			else{
+				return a->label < b->label;
+			}
+		});
+	
+	return sorted_registrations;
+}
 
 REHex::EncodedCharacter REHex::CharacterEncoderASCII::decode(const void *data, size_t len) const
 {
@@ -173,6 +243,8 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::decode(const void *data, s
 		char *outbuf = utf8;
 		size_t outbytesleft = sizeof(utf8);
 		
+		std::lock_guard<std::mutex> lock_guard(to_utf8_lock);
+		
 		if(iconv(to_utf8, &inbuf, &inbytesleft, &outbuf, &outbytesleft) != (size_t)(-1))
 		{
 			return EncodedCharacter(std::string(data_copy, (inbuf - data_copy)), std::string(utf8, (outbuf - utf8)));
@@ -201,6 +273,8 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::encode(const std::string &
 		char *outbuf = encoded;
 		size_t outbytesleft = sizeof(encoded);
 		
+		std::lock_guard<std::mutex> lock_guard(from_utf8_lock);
+		
 		if(iconv(from_utf8, &inbuf, &inbytesleft, &outbuf, &outbytesleft) != (size_t)(-1))
 		{
 			return EncodedCharacter(std::string(encoded, (outbuf - encoded)), std::string(utf8_copy, (inbuf - utf8_copy)));
@@ -226,7 +300,8 @@ class IconvCharacterEncodingRegistrationHelper
 {
 	private:
 		std::unique_ptr<REHex::CharacterEncoder> encoder;
-		std::unique_ptr<REHex::DataTypeRegistration> registration;
+		std::unique_ptr<REHex::DataTypeRegistration> dt_registration;
+		std::unique_ptr<REHex::CharacterEncoding> ce_registration;
 		
 		REHex::App::SetupHookRegistration setup_hook;
 		void deferred_init(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label);
@@ -242,7 +317,8 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 {
 	try {
 		encoder.reset(new REHex::CharacterEncoderIconv(encoding, word_size));
-		registration.reset(new REHex::DataTypeRegistration(key, label, std::vector<std::string>({"Text", text_group}), encoder.get()));
+		dt_registration.reset(new REHex::DataTypeRegistration(std::string("text:") + key, label, std::vector<std::string>({"Text", text_group}), encoder.get()));
+		ce_registration.reset(new REHex::CharacterEncoding(key, label, encoder.get(), std::vector<std::string>({ text_group })));
 	}
 	catch(const std::exception &e)
 	{
@@ -251,23 +327,26 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 	}
 }
 
-static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, "8-bit code pages", "text:ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
-static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, "8-bit code pages", "text:ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");
-static IconvCharacterEncodingRegistrationHelper iso8859_3_r ("ISO-8859-3",  1, "8-bit code pages", "text:ISO-8859-3",  "Latin-3 (ISO-8859-3: South European and Esperanto)");
-static IconvCharacterEncodingRegistrationHelper iso8859_4_r ("ISO-8859-4",  1, "8-bit code pages", "text:ISO-8859-4",  "Latin-4 (ISO-8859-4: Baltic, old)");
-static IconvCharacterEncodingRegistrationHelper iso8859_5_r ("ISO-8859-5",  1, "8-bit code pages", "text:ISO-8859-5",  "Cyrillic (ISO-8859-5)");
-static IconvCharacterEncodingRegistrationHelper iso8859_6_r ("ISO-8859-6",  1, "8-bit code pages", "text:ISO-8859-6",  "Arabic (ISO-8859-6)");
-static IconvCharacterEncodingRegistrationHelper iso8859_7_r ("ISO-8859-7",  1, "8-bit code pages", "text:ISO-8859-7",  "Greek (ISO-8859-7)");
-static IconvCharacterEncodingRegistrationHelper iso8859_8_r ("ISO-8859-8",  1, "8-bit code pages", "text:ISO-8859-8",  "Hebrew (ISO-8859-8)");
-static IconvCharacterEncodingRegistrationHelper iso8859_9_r ("ISO-8859-9",  1, "8-bit code pages", "text:ISO-8859-9",  "Latin-5 (ISO-8859-9: Turkish)");
-static IconvCharacterEncodingRegistrationHelper iso8859_10_r("ISO-8859-10", 1, "8-bit code pages", "text:ISO-8859-10", "Latin-6 (ISO-8859-10: Nordic)");
-static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, "8-bit code pages", "text:ISO-8859-11", "Thai (ISO-8859-11, unofficial)");
-static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, "8-bit code pages", "text:ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
-static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, "8-bit code pages", "text:ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
-static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, "8-bit code pages", "text:ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
+static const REHex::CharacterEncoderASCII ascii_encoder;
+static REHex::CharacterEncoding ascii_encoding("ASCII", "US-ASCII (7-bit)", &ascii_encoder);
 
-static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1, "Unicode", "text:UTF-8",    "UTF-8");
-static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, "Unicode", "text:UTF-16LE", "UTF-16LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, "Unicode", "text:UTF-16BE", "UTF-16BE (Big Endian)");
-static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4, "Unicode", "text:UTF-32LE", "UTF-32LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4, "Unicode", "text:UTF-32BE", "UTF-32BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, "8-bit code pages", "ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, "8-bit code pages", "ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_3_r ("ISO-8859-3",  1, "8-bit code pages", "ISO-8859-3",  "Latin-3 (ISO-8859-3: South European and Esperanto)");
+static IconvCharacterEncodingRegistrationHelper iso8859_4_r ("ISO-8859-4",  1, "8-bit code pages", "ISO-8859-4",  "Latin-4 (ISO-8859-4: Baltic, old)");
+static IconvCharacterEncodingRegistrationHelper iso8859_5_r ("ISO-8859-5",  1, "8-bit code pages", "ISO-8859-5",  "Cyrillic (ISO-8859-5)");
+static IconvCharacterEncodingRegistrationHelper iso8859_6_r ("ISO-8859-6",  1, "8-bit code pages", "ISO-8859-6",  "Arabic (ISO-8859-6)");
+static IconvCharacterEncodingRegistrationHelper iso8859_7_r ("ISO-8859-7",  1, "8-bit code pages", "ISO-8859-7",  "Greek (ISO-8859-7)");
+static IconvCharacterEncodingRegistrationHelper iso8859_8_r ("ISO-8859-8",  1, "8-bit code pages", "ISO-8859-8",  "Hebrew (ISO-8859-8)");
+static IconvCharacterEncodingRegistrationHelper iso8859_9_r ("ISO-8859-9",  1, "8-bit code pages", "ISO-8859-9",  "Latin-5 (ISO-8859-9: Turkish)");
+static IconvCharacterEncodingRegistrationHelper iso8859_10_r("ISO-8859-10", 1, "8-bit code pages", "ISO-8859-10", "Latin-6 (ISO-8859-10: Nordic)");
+static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, "8-bit code pages", "ISO-8859-11", "Thai (ISO-8859-11, unofficial)");
+static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, "8-bit code pages", "ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
+static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, "8-bit code pages", "ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
+static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, "8-bit code pages", "ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
+
+static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1, "Unicode", "UTF-8",    "UTF-8");
+static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, "Unicode", "UTF-16LE", "UTF-16LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, "Unicode", "UTF-16BE", "UTF-16BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4, "Unicode", "UTF-32LE", "UTF-32LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4, "Unicode", "UTF-32BE", "UTF-32BE (Big Endian)");

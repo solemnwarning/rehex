@@ -54,7 +54,7 @@ ifeq ($(uname_S),OpenBSD)
 	LDLIBS += -liconv
 endif
 
-LDLIBS := $(WX_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
+LDLIBS := -lunistring $(WX_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 ifeq ($(DEBUG),)
 	DEBUG=0

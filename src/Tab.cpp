@@ -762,14 +762,15 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 			encoder = &ascii_encoder;
 		}
 		
-		try {
-			/* Encode the typed character. */
-			
-			wxCharBuffer utf8_buf = wxString(wxUniChar(ukey)).utf8_str();
-			
-			EncodedCharacter ec = encoder->encode(std::string(utf8_buf.data(), utf8_buf.length()));
-			const void *ec_data = ec.encoded_char.data();
-			size_t ec_size = ec.encoded_char.size();
+		/* Encode the typed character. */
+		
+		wxCharBuffer utf8_buf = wxString(wxUniChar(ukey)).utf8_str();
+		EncodedCharacter ec = encoder->encode(std::string(utf8_buf.data(), utf8_buf.length()));
+		
+		if(ec.valid)
+		{
+			const void *ec_data = ec.encoded_char().data();
+			size_t ec_size = ec.encoded_char().size();
 			
 			/* In case we are inserting new data or writing at the end of a text data
 			 * type, we set the data type of the whole new character to be that of the
@@ -784,8 +785,8 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 			}
 			else if((cursor_pos + (off_t)(ec_size)) <= doc->buffer_length())
 			{
-				std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, ec.encoded_char.size());
-				assert(cur_data.size() == ec.encoded_char.size());
+				std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, ec.encoded_char().size());
+				assert(cur_data.size() == ec.encoded_char().size());
 				
 				doc->overwrite_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
 			}
@@ -796,8 +797,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 			
 			doc_ctrl->clear_selection();
 		}
-		catch(const CharacterEncoder::InvalidCharacter &e)
-		{
+		else{
 			/* Ignore unencodable characters. */
 		}
 		

@@ -338,11 +338,12 @@ void REHex::StringPanel::thread_main()
 			
 			auto is_i_string = [&](bool force_advance)
 			{
-				try {
-					EncodedCharacter ec = selected_encoding->encoder->decode(data.data() + i, data.size() - i);
-					
+				EncodedCharacter ec = selected_encoding->encoder->decode(data.data() + i, data.size() - i);
+				
+				if(ec.valid)
+				{
 					ucs4_t c;
-					u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char.data()), ec.utf8_char.size());
+					u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char().data()), ec.utf8_char().size());
 					
 					bool is_valid = c >= 0x20
 						&& c != 0x7F
@@ -352,14 +353,13 @@ void REHex::StringPanel::thread_main()
 					
 					if(force_advance || is_valid == is_really_string)
 					{
-						string_end += ec.encoded_char.size();
-						i          += ec.encoded_char.size();
+						string_end += ec.encoded_char().size();
+						i          += ec.encoded_char().size();
 					}
 					
 					return is_valid;
 				}
-				catch(const CharacterEncoder::InvalidCharacter &e)
-				{
+				else{
 					if(force_advance || !is_really_string)
 					{
 						++string_end;
@@ -770,8 +770,8 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 				{
 					EncodedCharacter ec = parent->selected_encoding->encoder->decode(string_data.data() + i, string_data.size() - i);
 					
-					string += ec.utf8_char;
-					i += ec.encoded_char.size();
+					string += ec.utf8_char();
+					i += ec.encoded_char().size();
 				}
 				
 				return wxString::FromUTF8(string.data(), string.size());

@@ -27,10 +27,6 @@
 #include "CharacterEncoder.hpp"
 #include "DataType.hpp"
 
-REHex::EncodedCharacter::EncodedCharacter(const std::string &encoded_char, const std::string &utf8_char):
-	encoded_char(encoded_char),
-	utf8_char(utf8_char) {}
-
 std::map<std::string, const REHex::CharacterEncoding*> *REHex::CharacterEncoding::registrations = NULL;
 
 REHex::CharacterEncoding::CharacterEncoding(const std::string &key, const std::string &label, const CharacterEncoder *encoder, const std::vector<std::string> &groups):
@@ -108,7 +104,8 @@ REHex::EncodedCharacter REHex::CharacterEncoderASCII::decode(const void *data, s
 {
 	if(len == 0)
 	{
-		throw InvalidCharacter("Attempted to decode an empty buffer");
+		/* Attempted to decode an empty buffer. */
+		return EncodedCharacter();
 	}
 	
 	unsigned char raw_char = *(const unsigned char*)(data);
@@ -118,10 +115,8 @@ REHex::EncodedCharacter REHex::CharacterEncoderASCII::decode(const void *data, s
 		return EncodedCharacter(std::string(1, raw_char), std::string(1, raw_char));
 	}
 	else{
-		char err[64];
-		snprintf(err, sizeof(err), "Attempted to decode invalid ASCII character 0x%02X", (unsigned int)(raw_char));
-		
-		throw InvalidCharacter(err);
+		/* 8-bit character. */
+		return EncodedCharacter();
 	}
 }
 
@@ -133,10 +128,7 @@ REHex::EncodedCharacter REHex::CharacterEncoderASCII::encode(const std::string &
 		return EncodedCharacter(first_byte, first_byte);
 	}
 	else{
-		char err[64];
-		snprintf(err, sizeof(err), "Attempted to encode unrepresentable UTF-8 character %s", utf8_char.c_str());
-		
-		throw InvalidCharacter(err);
+		return EncodedCharacter();
 	}
 }
 
@@ -226,7 +218,7 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::decode(const void *data, s
 {
 	if(len == 0)
 	{
-		throw InvalidCharacter("Attempted to decode an empty buffer");
+		return EncodedCharacter();
 	}
 	
 	len = std::min<size_t>(len, MAX_CHAR_SIZE);
@@ -251,10 +243,7 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::decode(const void *data, s
 		}
 	}
 	
-	char err[128];
-	snprintf(err, sizeof(err), "Cannot decode %s character (%s)", encoding.c_str(), strerror(errno));
-	
-	throw InvalidCharacter(err);
+	return EncodedCharacter();
 }
 
 REHex::EncodedCharacter REHex::CharacterEncoderIconv::encode(const std::string &utf8_char) const
@@ -281,12 +270,7 @@ REHex::EncodedCharacter REHex::CharacterEncoderIconv::encode(const std::string &
 		}
 	}
 	
-	const char *iconv_err = strerror(errno);
-	
-	char err[128];
-	snprintf(err, sizeof(err), "Cannot encode UTF-8 character '%s' as %s (%s)", utf8_char.c_str(), encoding.c_str(), iconv_err);
-	
-	throw InvalidCharacter(err);
+	return EncodedCharacter();
 }
 
 /* CharacterEncoderIconv depends on the system iconv working and accepting whatever encoding it

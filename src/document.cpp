@@ -439,32 +439,33 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 		const CharacterEncoder *encoder = get_text_encoder(write_pos);
 		assert(encoder != NULL);
 		
-		try {
-			EncodedCharacter ec = encoder->encode(utf8_text.substr(utf8_off, MAX_CHAR_SIZE));
-			
-			if((write_pos + (off_t)(ec.encoded_char.size())) > buffer_length)
+		EncodedCharacter ec = encoder->encode(utf8_text.substr(utf8_off, MAX_CHAR_SIZE));
+		
+		if(ec.valid)
+		{
+			if((write_pos + (off_t)(ec.encoded_char().size())) > buffer_length)
 			{
 				/* Won't fit without extending document. */
 				ret_flags |= WRITE_TEXT_TRUNCATED;
 				break;
 			}
 			
-			encoded_text.append(ec.encoded_char);
-			write_pos += ec.encoded_char.size();
+			encoded_text.append(ec.encoded_char());
+			write_pos += ec.encoded_char().size();
 			
-			utf8_off += ec.utf8_char.size();
+			utf8_off += ec.utf8_char().size();
 		}
-		catch(const CharacterEncoder::InvalidCharacter &e)
-		{
+		else{
 			/* Character cannot be represented in destination encoding. Skip it. */
 			
-			try {
-				/* Decode the input as a UTF-8 character to find the length. */
-				EncodedCharacter ec = utf8_encoder.decode((utf8_text.data() + utf8_off), (utf8_text.size() - utf8_off));
-				utf8_off += ec.utf8_char.size();
-			}
-			catch(const CharacterEncoder::InvalidCharacter &e)
+			/* Decode the input as a UTF-8 character to find the length. */
+			EncodedCharacter ec = utf8_encoder.decode((utf8_text.data() + utf8_off), (utf8_text.size() - utf8_off));
+			
+			if(ec.valid)
 			{
+				utf8_off += ec.utf8_char().size();
+			}
+			else{
 				/* Unable to parse input character... skip a byte and hope for the best. */
 				++utf8_off;
 			}
@@ -508,24 +509,25 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	
 	for(off_t utf8_off = 0; utf8_off < (off_t)(utf8_text.size());)
 	{
-		try {
-			EncodedCharacter ec = encoder->encode(utf8_text.substr(utf8_off, MAX_CHAR_SIZE));
-			
-			encoded_text.append(ec.encoded_char);
-			
-			utf8_off += ec.utf8_char.size();
-		}
-		catch(const CharacterEncoder::InvalidCharacter &e)
+		EncodedCharacter ec = encoder->encode(utf8_text.substr(utf8_off, MAX_CHAR_SIZE));
+		
+		if(ec.valid)
 		{
+			encoded_text.append(ec.encoded_char());
+			
+			utf8_off += ec.utf8_char().size();
+		}
+		else{
 			/* Character cannot be represented in destination encoding. Skip it. */
 			
-			try {
-				/* Decode the input as a UTF-8 character to find the length. */
-				EncodedCharacter ec = utf8_encoder.decode((utf8_text.data() + utf8_off), (utf8_text.size() - utf8_off));
-				utf8_off += ec.utf8_char.size();
-			}
-			catch(const CharacterEncoder::InvalidCharacter &e)
+			/* Decode the input as a UTF-8 character to find the length. */
+			EncodedCharacter ec = utf8_encoder.decode((utf8_text.data() + utf8_off), (utf8_text.size() - utf8_off));
+			
+			if(ec.valid)
 			{
+				utf8_off += ec.utf8_char().size();
+			}
+			else{
 				/* Unable to parse input character... skip a byte and hope for the best. */
 				++utf8_off;
 			}
@@ -575,24 +577,25 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 	
 	for(off_t utf8_off = 0; utf8_off < (off_t)(utf8_text.size());)
 	{
-		try {
-			EncodedCharacter ec = encoder->encode(utf8_text.substr(utf8_off, MAX_CHAR_SIZE));
-			
-			encoded_text.append(ec.encoded_char);
-			
-			utf8_off += ec.utf8_char.size();
-		}
-		catch(const CharacterEncoder::InvalidCharacter &e)
+		EncodedCharacter ec = encoder->encode(utf8_text.substr(utf8_off, MAX_CHAR_SIZE));
+		
+		if(ec.valid)
 		{
+			encoded_text.append(ec.encoded_char());
+			
+			utf8_off += ec.utf8_char().size();
+		}
+		else{
 			/* Character cannot be represented in destination encoding. Skip it. */
 			
-			try {
-				/* Decode the input as a UTF-8 character to find the length. */
-				EncodedCharacter ec = utf8_encoder.decode((utf8_text.data() + utf8_off), (utf8_text.size() - utf8_off));
-				utf8_off += ec.utf8_char.size();
-			}
-			catch(const CharacterEncoder::InvalidCharacter &e)
+			/* Decode the input as a UTF-8 character to find the length. */
+			EncodedCharacter ec = utf8_encoder.decode((utf8_text.data() + utf8_off), (utf8_text.size() - utf8_off));
+			
+			if(ec.valid)
 			{
+				utf8_off += ec.utf8_char().size();
+			}
+			else{
 				/* Unable to parse input character... skip a byte and hope for the best. */
 				++utf8_off;
 			}

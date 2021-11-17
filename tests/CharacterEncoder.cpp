@@ -18,6 +18,7 @@
 #include "../src/platform.hpp"
 
 #include <gtest/gtest.h>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -37,21 +38,20 @@ using namespace REHex;
 	EXPECT_NO_THROW({ \
 		EncodedCharacter ec = encoder.decode(data, sizeof(data)); \
 		\
-		EXPECT_EQ(ec.encoded_char, std::string((const char*)(expect_encoded_char_d), sizeof(expect_encoded_char_d))) << desc; \
-		EXPECT_EQ(ec.utf8_char, std::string((const char*)(expect_utf8_char_d), sizeof(expect_utf8_char_d))) << desc; \
+		EXPECT_EQ(ec.encoded_char(), std::string((const char*)(expect_encoded_char_d), sizeof(expect_encoded_char_d))) << desc; \
+		EXPECT_EQ(ec.utf8_char(), std::string((const char*)(expect_utf8_char_d), sizeof(expect_utf8_char_d))) << desc; \
 	}) << desc; \
 }
 
 #define TEST_INVALID_DECODE(input_data, desc) \
 { \
 	unsigned char data[] = input_data; \
+	EncodedCharacter ec = encoder.decode(data, sizeof(data)); \
 	\
-	EXPECT_THROW({ \
-		EncodedCharacter ec = encoder.decode(data, sizeof(data)); \
-		\
-		EXPECT_EQ(ec.encoded_char, std::string()) << desc; \
-		EXPECT_EQ(ec.utf8_char, std::string()) << desc; \
-	}, CharacterEncoder::InvalidCharacter) << desc; \
+	EXPECT_FALSE(ec.valid) << desc; \
+	\
+	[&](){ EXPECT_THROW(ec.encoded_char(), std::logic_error) << desc; }(); \
+	[&](){ EXPECT_THROW(ec.utf8_char(),    std::logic_error) << desc; }(); \
 }
 
 #define TEST_VALID_ENCODE(input_data, expect_encoded_char, expect_utf8_char, desc)\
@@ -64,21 +64,20 @@ using namespace REHex;
 	EXPECT_NO_THROW({ \
 		EncodedCharacter ec = encoder.encode(std::string((const char*)(data), sizeof(data))); \
 		\
-		EXPECT_EQ(ec.encoded_char, std::string((const char*)(expect_encoded_char_d), sizeof(expect_encoded_char_d))) << desc; \
-		EXPECT_EQ(ec.utf8_char, std::string((const char*)(expect_utf8_char_d), sizeof(expect_utf8_char_d))) << desc; \
+		EXPECT_EQ(ec.encoded_char(), std::string((const char*)(expect_encoded_char_d), sizeof(expect_encoded_char_d))) << desc; \
+		EXPECT_EQ(ec.utf8_char(), std::string((const char*)(expect_utf8_char_d), sizeof(expect_utf8_char_d))) << desc; \
 	}) << desc; \
 }
 
 #define TEST_INVALID_ENCODE(input_data, desc) \
 { \
 	unsigned char data[] = input_data; \
+	EncodedCharacter ec = encoder.encode(std::string((const char*)(data), sizeof(data))); \
 	\
-	EXPECT_THROW({ \
-		EncodedCharacter ec = encoder.encode(std::string((const char*)(data), sizeof(data))); \
-		\
-		EXPECT_EQ(ec.encoded_char, std::string()) << desc; \
-		EXPECT_EQ(ec.utf8_char, std::string()) << desc; \
-	}, CharacterEncoder::InvalidCharacter) << desc; \
+	EXPECT_FALSE(ec.valid); \
+	\
+	[&](){ EXPECT_THROW(ec.encoded_char(), std::logic_error) << desc; }(); \
+	[&](){ EXPECT_THROW(ec.utf8_char(),    std::logic_error) << desc; }(); \
 }
 
 TEST(CharacterEncoderASCII, Decode)

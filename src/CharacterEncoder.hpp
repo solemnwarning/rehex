@@ -32,12 +32,46 @@ namespace REHex
 	static const size_t MAX_CHAR_SIZE = 8;
 	static const char * const DEFAULT_ENCODING = "ASCII";
 	
-	struct EncodedCharacter
+	class EncodedCharacter
 	{
-		std::string encoded_char;  /**< Character encoded in chosen encoding (ISO-8859-1, Shift JIS, etc) */
-		std::string utf8_char;     /**< Character encoded in UTF-8 */
-		
-		EncodedCharacter(const std::string &encoded_char, const std::string &utf8_char);
+		private:
+			const std::string _encoded_char;
+			const std::string _utf8_char;
+			
+		public:
+			const bool valid;  /**< Character was encoded/decoded successfully. */
+			
+			/** Character encoded in chosen encoding (ISO-8859-1, Shift JIS, etc) */
+			const std::string &encoded_char()
+			{
+				if(valid)
+				{
+					return _encoded_char;
+				}
+				else{
+					throw std::logic_error("Attempted to read invalid EncodedCharacter::encoded_char");
+				}
+			}
+			
+			/** Character encoded in UTF-8 */
+			const std::string &utf8_char()
+			{
+				if(valid)
+				{
+					return _utf8_char;
+				}
+				else{
+					throw std::logic_error("Attempted to read invalid EncodedCharacter::utf8_char");
+				}
+			}
+			
+			EncodedCharacter(const std::string &encoded_char, const std::string &utf8_char):
+				_encoded_char(encoded_char),
+				_utf8_char(utf8_char),
+				valid(true) {}
+			
+			EncodedCharacter():
+				valid(false) {}
 	};
 	
 	/**
@@ -46,12 +80,6 @@ namespace REHex
 	class CharacterEncoder
 	{
 		public:
-			class InvalidCharacter: public std::runtime_error
-			{
-				public:
-					InvalidCharacter(const std::string &what): runtime_error(what) {}
-			};
-			
 			const size_t word_size;
 			
 			/**
@@ -61,7 +89,7 @@ namespace REHex
 			 * character doesn't occupy the entire buffer, its size can be determined
 			 * from encoded_char.size() in the returned EncodedCharacter object.
 			 *
-			 * Throws an exception of type InvalidCharacter on error.
+			 * Returns an EncodedCharacter with valid=false on error.
 			*/
 			virtual EncodedCharacter decode(const void *data, size_t len) const = 0;
 			
@@ -71,7 +99,7 @@ namespace REHex
 			 * Encodes a single provided UTF-8 character and returns the encoded form
 			 * as an EncodedCharacter object.
 			 *
-			 * Throws an exception of type InvalidCharacter on error.
+			 * Returns an EncodedCharacter with valid=false on error.
 			*/
 			virtual EncodedCharacter encode(const std::string &utf8_char) const = 0;
 			
@@ -122,8 +150,8 @@ namespace REHex
 	/**
 	 * @brief ASCII (7-bit) CharacterEncoder implementation.
 	 *
-	 * Simply passes through any bytes in the range 0-127 unmodified, throwing an
-	 * InvalidCharacter exception if the high bit is set.
+	 * Simply passes through any bytes in the range 0-127 unmodified, failing if the high bit
+	 * is set.
 	*/
 	class CharacterEncoderASCII: public CharacterEncoder
 	{

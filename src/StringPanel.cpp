@@ -345,6 +345,7 @@ void REHex::StringPanel::thread_main()
 					u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char.data()), ec.utf8_char.size());
 					
 					bool is_valid = c >= 0x20
+						&& c != 0x7F
 						&& c != 0xFFFD
 						&& !uc_is_property_unassigned_code_value(c)
 						&& !uc_is_property_not_a_character(c);

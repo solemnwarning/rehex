@@ -13,6 +13,7 @@ Source0:  rehex-%{git_commit_sha}.tar.gz
 BuildRequires: capstone-devel
 BuildRequires: gcc-c++
 BuildRequires: jansson-devel
+BuildRequires: libunistring-devel
 BuildRequires: lua
 BuildRequires: lua-devel
 BuildRequires: make

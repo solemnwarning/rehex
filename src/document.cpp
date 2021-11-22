@@ -490,7 +490,7 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 {
 	off_t buffer_length = buffer->length();
 	
-	if(offset < 0 || offset >= buffer_length)
+	if(offset < 0 || offset > buffer_length)
 	{
 		return WRITE_TEXT_BAD_OFFSET;
 	}
@@ -502,10 +502,23 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	
 	CharacterEncoderIconv utf8_encoder("UTF-8", 1);
 	
-	const CharacterEncoder *encoder = get_text_encoder(offset);
-	assert(encoder != NULL);
+	std::string data_type;
+	const CharacterEncoder *encoder;
 	
-	std::string data_type = types.get_range(offset)->second;
+	if(buffer_length > 0)
+	{
+		off_t ref_offset = std::min(offset, (buffer_length - 1)); /* Offset to copy encoding from. */
+		
+		auto type = types.get_range(ref_offset);
+		assert(type != types.end());
+		
+		data_type = type->second;
+		encoder = get_text_encoder(ref_offset);
+	}
+	else{
+		data_type = "";
+		encoder = &ascii_encoder;
+	}
 	
 	for(off_t utf8_off = 0; utf8_off < (off_t)(utf8_text.size());)
 	{

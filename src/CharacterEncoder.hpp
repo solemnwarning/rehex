@@ -202,6 +202,8 @@ namespace REHex
 			virtual EncodedCharacter decode(const void *data, size_t len) const override;
 			virtual EncodedCharacter encode(const std::string &utf8_char) const override;
 	};
+	
+	extern const CharacterEncoderASCII ascii_encoder;
 }
 
 #endif /* !REHEX_CHARACTERENCODER_HPP */

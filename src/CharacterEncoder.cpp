@@ -311,8 +311,8 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 	}
 }
 
-static const REHex::CharacterEncoderASCII ascii_encoder;
-static REHex::CharacterEncoding ascii_encoding("ASCII", "US-ASCII (7-bit)", &ascii_encoder);
+const REHex::CharacterEncoderASCII REHex::ascii_encoder;
+static REHex::CharacterEncoding ascii_encoding("ASCII", "US-ASCII (7-bit)", &REHex::ascii_encoder);
 
 static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, "8-bit code pages", "ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
 static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, "8-bit code pages", "ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");

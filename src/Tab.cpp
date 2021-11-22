@@ -742,63 +742,15 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	}
 	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && ukey != WXK_NONE)
 	{
-		/* Find the CharacterEncoder to use at the cursor position. */
-		
-		const ByteRangeMap<std::string> &types = doc->get_data_types();
-		
-		auto type_at_off = types.get_range(cursor_pos);
-		assert(type_at_off != types.end());
-		
-		const CharacterEncoder *encoder;
-		if(type_at_off->second != "")
-		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
-			assert(dt_reg != NULL);
-			
-			encoder = dt_reg->encoder;
-		}
-		else{
-			static REHex::CharacterEncoderASCII ascii_encoder;
-			encoder = &ascii_encoder;
-		}
-		
-		/* Encode the typed character. */
-		
 		wxCharBuffer utf8_buf = wxString(wxUniChar(ukey)).utf8_str();
-		EncodedCharacter ec = encoder->encode(std::string(utf8_buf.data(), utf8_buf.length()));
+		std::string utf8_key(utf8_buf.data(), utf8_buf.length());
 		
-		if(ec.valid)
+		if(insert_mode)
 		{
-			const void *ec_data = ec.encoded_char().data();
-			size_t ec_size = ec.encoded_char().size();
-			
-			/* In case we are inserting new data or writing at the end of a text data
-			 * type, we set the data type of the whole new character to be that of the
-			 * first byte.
-			*/
-			
-			ScopedTransaction t(doc, "change data");
-			
-			if(insert_mode)
-			{
-				doc->insert_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
-			}
-			else if((cursor_pos + (off_t)(ec_size)) <= doc->buffer_length())
-			{
-				std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, ec.encoded_char().size());
-				assert(cur_data.size() == ec.encoded_char().size());
-				
-				doc->overwrite_data(cursor_pos, ec_data, ec_size, cursor_pos + ec_size, Document::CSTATE_ASCII);
-			}
-			
-			doc->set_data_type(cursor_pos, ec_size, type_at_off->second);
-			
-			t.commit();
-			
-			doc_ctrl->clear_selection();
+			doc->insert_text(cursor_pos, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
 		}
 		else{
-			/* Ignore unencodable characters. */
+			doc->overwrite_text(cursor_pos, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
 		}
 		
 		return;

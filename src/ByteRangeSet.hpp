@@ -191,6 +191,16 @@ namespace REHex
 			const Range &operator[](size_t idx) const;
 			
 			/**
+			 * @brief Access the first range in the set.
+			*/
+			const Range &first() const { return ranges.front(); }
+			
+			/**
+			 * @brief Access the last range in the set.
+			*/
+			const Range &last() const { return ranges.back(); }
+			
+			/**
 			 * @brief Returns the number of ranges in the set.
 			*/
 			size_t size() const;

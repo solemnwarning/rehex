@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -90,6 +90,7 @@ class StringPanelTest: public ::testing::Test
 TEST_F(StringPanelTest, EmptyFile)
 {
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel doesn't spawn workers for an empty file";
@@ -108,6 +109,7 @@ TEST_F(StringPanelTest, TextOnlyFile)
 	doc->insert_data(0, DATA.data(), DATA.size());
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
@@ -133,6 +135,7 @@ TEST_F(StringPanelTest, BinaryOnlyFile)
 	doc->insert_data(0, DATA.data(), DATA.size());
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	EXPECT_TRUE(string_panel->get_num_threads() > 0U) << "StringPanel spawns workers for non-empty file";
@@ -162,6 +165,7 @@ TEST_F(StringPanelTest, MixedFile)
 	doc->insert_data(0, data.data(), data.size());
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
@@ -194,6 +198,7 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	doc->overwrite_data(256, "crazy nutty grass", 17);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -245,6 +250,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	doc->overwrite_data(256, "broad slope peep", 16);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -297,6 +303,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	doc->overwrite_data(256, "broad slope peep", 16);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -347,6 +354,7 @@ TEST_F(StringPanelTest, OverwriteDataCompletesString)
 	doc->overwrite_data(128, "abc", 3);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -396,6 +404,7 @@ TEST_F(StringPanelTest, InsertData)
 	doc->overwrite_data(512, "knowledge spotty identify", 25);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -451,6 +460,7 @@ TEST_F(StringPanelTest, InsertDataCompletesString)
 	doc->overwrite_data(128, "abc", 3);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -501,6 +511,7 @@ TEST_F(StringPanelTest, EraseData)
 	doc->overwrite_data(512, "pumped stick feeble",   19);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -554,6 +565,7 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	doc->overwrite_data(256, "sturdy books scrape", 19);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -604,6 +616,7 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	doc->overwrite_data(256, "kettle kneel supply", 19);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -654,6 +667,7 @@ TEST_F(StringPanelTest, EraseDataCompletesString)
 	doc->overwrite_data(132, "d", 1);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(1000);
@@ -702,6 +716,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	doc->insert_data(0, BIN_DATA.data(), 16 * MiB);
 	
 	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
 	wait_for_idle(5000);
@@ -731,7 +746,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	
 	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawned worker threads";
 	
-	wait_for_idle(5000);
+	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (off_t)(49 * MiB + 320 * kiB)) << "StringPanel processed all data in file";
 	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";

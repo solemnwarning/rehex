@@ -128,7 +128,8 @@ clean:
 	      res/offsets16.c res/offsets16.h \
 	      res/offsets24.c res/offsets24.h \
 	      res/offsets32.c res/offsets32.h \
-	      res/offsets48.c res/offsets48.h
+	      res/offsets48.c res/offsets48.h \
+	      res/spinner24.c   res/spinner24.h
 	
 	rm -f $(APP_OBJS)
 	rm -f $(EXE)
@@ -206,6 +207,7 @@ APP_OBJS := \
 	res/offsets24.o \
 	res/offsets32.o \
 	res/offsets48.o \
+	res/spinner24.o \
 	src/AboutDialog.o \
 	src/AppMain.o \
 	src/AppTestable.o \
@@ -274,6 +276,7 @@ TEST_OBJS := \
 	res/offsets24.o \
 	res/offsets32.o \
 	res/offsets48.o \
+	res/spinner24.o \
 	src/AboutDialog.o \
 	src/AppTestable.o \
 	src/ArtProvider.o \
@@ -352,6 +355,7 @@ src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/LuaPluginLoader.o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h
 src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
+src/StringPanel.o: res/spinner24.h
 
 res/license.done: LICENSE.txt $(EMBED_EXE)
 	$(EMBED_EXE) $< LICENSE_TXT res/license.c res/license.h
@@ -361,6 +365,9 @@ res/license.c res/license.h: res/license.done ;
 
 res/%.c res/%.h: res/%.png $(EMBED_EXE)
 	$(EMBED_EXE) $< $*_png res/$*.c res/$*.h
+
+res/%.c res/%.h: res/%.gif $(EMBED_EXE)
+	$(EMBED_EXE) $< $*_gif res/$*.c res/$*.h
 
 src/lua-bindings/rehex_bind.done: src/lua-bindings/rehex.i src/lua-bindings/rehex_override.hpp src/lua-bindings/rehex_rules.lua $(WXLUA_BINDINGS)
 	$(LUA) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua

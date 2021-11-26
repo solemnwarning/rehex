@@ -63,6 +63,7 @@ namespace REHex {
 			ByteRangeSet get_strings();
 			off_t get_clean_bytes();
 			size_t get_num_threads();
+			void set_encoding(const std::string &encoding_key);
 			void set_min_string_length(int min_string_length);
 			
 		private:

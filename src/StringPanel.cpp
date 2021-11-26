@@ -328,6 +328,51 @@ size_t REHex::StringPanel::get_num_threads()
 	return threads.size();
 }
 
+void REHex::StringPanel::set_encoding(const std::string &encoding_key)
+{
+	pause_threads();
+	
+	int num_encodings = encoding_choice->GetCount();
+	
+	int encoding_idx = -1;
+	const CharacterEncoding *encoding = NULL;
+	
+	for(int i = 0; i < num_encodings; ++i)
+	{
+		const CharacterEncoding *ce = (const CharacterEncoding*)(encoding_choice->GetClientData(i));
+		
+		if(ce->key == encoding_key)
+		{
+			encoding_idx = i;
+			encoding = ce;
+			
+			break;
+		}
+	}
+	
+	if(encoding_idx < 0)
+	{
+		return;
+	}
+	
+	encoding_choice->SetSelection(encoding_idx);
+	this->selected_encoding = encoding;
+	
+	{
+		std::lock_guard<std::mutex> pl(pause_lock);
+		mark_dirty(0, document->buffer_length());
+	}
+	
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		strings.clear_all();
+	}
+	
+	start_threads();
+	
+	update_needed = true;
+}
+
 void REHex::StringPanel::set_min_string_length(int min_string_length)
 {
 	pause_threads();

@@ -766,3 +766,110 @@ TEST_F(StringPanelTest, BackToBackModifications)
 		EXPECT_EQ(got_strings, EXPECT_STRINGS) << "StringPanel finds strings in result of combined operations";
 	}
 }
+
+TEST_F(StringPanelTest, UTF8)
+{
+	const unsigned char DATA[] = {
+		/* Padding */
+		/* 0x00 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* Short ASCII-only string */
+		/* 0x08 */ 'A', 'B', 'C', 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* ASCII-only string */
+		/* 0x10 */ 'A', 'B', 'C', 'D', 'E', 'F', 0x00, 0x00,
+		
+		/* Short (enough bytes, but not enough code points) UTF-8 string */
+		/* 0x18 */ 0xC2, 0xA3, 0xE2, 0x98, 0xAD, 0xE2, 0x98, 0x83,
+		
+		/* Padding */
+		/* 0x20 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* UTF-8 string */
+		/* 0x28 */ 0xC3, 0xA8, 0xC3, 0xB4, 0xC3, 0xBC, 0xC3, 0xA1,
+		
+		/* Padding */
+		/* 0x30 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* Mixed ASCII/UTF-8 string */
+		/* 0x38 */ 'A', 'B', 0xC3, 0xB4, 0xC3, 0xBC, 0x00, 0x00,
+		
+		/* "Hello" in UTF-16LE */
+		/* 0x40 */ 'H', 0x00,  'e', 0x00,  'l', 0x00,  'l', 0x00,
+		/* 0x48 */ 'o', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+	};
+	
+	doc->insert_data(0, DATA, sizeof(DATA));
+	
+	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_encoding("UTF-8");
+	string_panel->set_min_string_length(4);
+	string_panel->set_visible(true);
+	
+	wait_for_idle(1000);
+	
+	ASSERT_EQ(string_panel->get_clean_bytes(), 0x50U);
+	ASSERT_EQ(string_panel->get_num_threads(), 0U);
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {
+			ByteRangeSet::Range(0x10, 6),
+			ByteRangeSet::Range(0x28, 8),
+			ByteRangeSet::Range(0x38, 6),
+		};
+		
+		EXPECT_EQ(got_strings, EXPECT_STRINGS);
+	}
+}
+
+TEST_F(StringPanelTest, UTF16)
+{
+	const unsigned char DATA[] = {
+		/* Padding */
+		/* 0x00 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* Short ASCII-only string */
+		/* 0x08 */ 'A', 'B', 'C', 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* ASCII-only string */
+		/* 0x10 */ 'A', 'B', 'C', 'D', 'E', 'F', 0x00, 0x00,
+		
+		/* Padding */
+		/* 0x18 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+		/* Mixed ASCII/UTF-8 string */
+		/* 0x20 */ 'A', 'B', 0xC3, 0xB4, 0xC3, 0xBC, 0x00, 0x00,
+		
+		/* "Hello" in UTF-16LE */
+		/* 0x28 */ 'H', 0x00,  'e', 0x00,  'l', 0x00,  'l', 0x00,
+		/* 0x30 */ 'o', 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		
+	};
+	
+	doc->insert_data(0, DATA, sizeof(DATA));
+	
+	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel->set_encoding("UTF-16LE");
+	string_panel->set_min_string_length(4);
+	string_panel->set_visible(true);
+	
+	wait_for_idle(1000);
+	
+	ASSERT_EQ(string_panel->get_clean_bytes(), 0x38);
+	ASSERT_EQ(string_panel->get_num_threads(), 0U);
+	
+	{
+		ByteRangeSet strings = string_panel->get_strings();
+		std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
+		
+		const std::vector<ByteRangeSet::Range> EXPECT_STRINGS = {
+			ByteRangeSet::Range(0x28, 10),
+		};
+		
+		EXPECT_EQ(got_strings, EXPECT_STRINGS);
+	}
+}

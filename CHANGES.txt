@@ -1,3 +1,27 @@
+Version TBC
+
+ * Add data types for common text encodings (Unicode, ISO-8859) - text
+   displayed or typed into the text view on the right will be decoded or
+   encoded appropriately (#10).
+
+ * Treat pasted text as text rather than a string of raw bytes.
+
+ * Add 8-bit integer data types.
+
+ * Don't mark new files as unsaved.
+
+ * Store cursor position history and allow jumping backwards/forwards (#81).
+
+ * Allow jumping to previous/next difference in data compare window (#131).
+
+ * Collapse long ranges of identical data in data compare window (#85).
+
+ * Added "Jump to offset in main window" to data compare window context menu.
+
+ * Added shortcuts for comparing data (#103).
+
+ * Add support for other encodings to strings tool (#106).
+
 Version 0.3.92 (2021-08-24)
 
  * Reduce persistent memory usage (#52).

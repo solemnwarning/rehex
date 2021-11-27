@@ -42,6 +42,16 @@
       CAPSTONE_BUILD_CORE_ONLY=yes
       sudo make install
 
+### libunistring
+
+    $ tar xf libunistring-0.9.10.tar
+    $ cd libunistring-0.9.10/
+    
+    $ ./configure --prefix=/usr/local/ --enable-shared=no --enable-static=yes \
+                  CFLAGS="-mmacosx-version-min=10.10"
+    $ make
+    $ sudo make install
+
 ## Building the editor
 
     $ WX_CONFIG=/opt/wxWidgets-3.0.4-debug/bin/wx-config \

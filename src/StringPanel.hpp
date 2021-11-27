@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,13 +24,19 @@
 #include <mutex>
 #include <stddef.h>
 #include <thread>
+#include <wx/animate.h>
+#include <wx/bmpbuttn.h>
+#include <wx/checkbox.h>
+#include <wx/choice.h>
 #include <wx/listctrl.h>
 #include <wx/panel.h>
+#include <wx/spinctrl.h>
 #include <wx/stattext.h>
 #include <wx/timer.h>
 #include <wx/wx.h>
 
 #include "ByteRangeSet.hpp"
+#include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "Events.hpp"
 #include "SafeWindowPointer.hpp"
@@ -57,6 +63,8 @@ namespace REHex {
 			ByteRangeSet get_strings();
 			off_t get_clean_bytes();
 			size_t get_num_threads();
+			void set_encoding(const std::string &encoding_key);
+			void set_min_string_length(int min_string_length);
 			
 		private:
 			class StringPanelListCtrl: public wxListCtrl
@@ -77,6 +85,19 @@ namespace REHex {
 			StringPanelListCtrl *list_ctrl;
 			wxStaticText *status_text;
 			
+			wxChoice *encoding_choice;
+			const CharacterEncoding *selected_encoding;
+			
+			wxSpinCtrl *min_string_length_ctrl;
+			int min_string_length;
+			
+			wxCheckBox *ignore_cjk_check;
+			bool ignore_cjk;
+			
+			wxBitmapButton *reset_button;
+			wxBitmapButton *continue_button;
+			wxAnimationCtrl *spinner;
+			
 			std::mutex strings_lock;
 			ByteRangeSet strings;
 			bool update_needed;
@@ -94,8 +115,10 @@ namespace REHex {
 			ByteRangeSet dirty;                 /* Ranges which are dirty, but not yet ready to be processed. */
 			ByteRangeSet pending;               /* Ranges waiting to be processed. */
 			ByteRangeSet working;               /* Ranges currently being processed. */
+			off_t search_base;
 			
 			void mark_dirty(off_t offset, off_t length);
+			void mark_dirty_pad(off_t offset, off_t length);
 			void mark_work_done(off_t offset, off_t length);
 			off_t sum_dirty_bytes();
 			off_t sum_clean_bytes();
@@ -114,6 +137,11 @@ namespace REHex {
 			void OnDataOverwrite(OffsetLengthEvent &event);
 			void OnItemActivate(wxListEvent &event);
 			void OnTimerTick(wxTimerEvent &event);
+			void OnEncodingChanged(wxCommandEvent &event);
+			void OnReset(wxCommandEvent &event);
+			void OnContinue(wxCommandEvent &event);
+			void OnMinStringLength(wxSpinEvent &event);
+			void OnCJKToggle(wxCommandEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 		

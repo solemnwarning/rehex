@@ -276,15 +276,15 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 							encoder = &ascii_encoder;
 						}
 						
-						try {
-							/* TODO: Should we restrict to printable characters here? */
-							EncodedCharacter ec = encoder->decode((selection_data.data() + sd_off), (selection_data.size() - sd_off));
-							data_string.append(wxString::FromUTF8(ec.utf8_char.c_str()));
-							
-							sd_off += ec.encoded_char.size();
-						}
-						catch(const CharacterEncoder::InvalidCharacter &e)
+						/* TODO: Should we restrict to printable characters here? */
+						EncodedCharacter ec = encoder->decode((selection_data.data() + sd_off), (selection_data.size() - sd_off));
+						
+						if(ec.valid)
 						{
+							data_string.append(wxString::FromUTF8(ec.utf8_char().c_str()));
+							sd_off += ec.encoded_char().size();
+						}
+						else{
 							/* Ignore invalid characters. */
 							++sd_off;
 						}

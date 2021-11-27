@@ -3478,17 +3478,16 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		
 		while(step_back < data_extra_pre && at_offset >= encoding_base)
 		{
-			try {
-				EncodedCharacter ec = encoder->decode((data - step_back), (data_len + step_back + data_extra_post));
-				
-				if(step_back > 0 && ec.encoded_char.size() > step_back)
+			EncodedCharacter ec = encoder->decode((data - step_back), (data_len + step_back + data_extra_post));
+			if(ec.valid)
+			{
+				if(step_back > 0 && ec.encoded_char().size() > step_back)
 				{
-					consume_chars = ec.encoded_char.size() - step_back;
+					consume_chars = ec.encoded_char().size() - step_back;
 				}
 				
 				break;
 			}
-			catch(const std::exception&) {}
 			
 			step_back += encoder->word_size;
 			at_offset -= encoder->word_size;
@@ -3554,24 +3553,24 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			encoder = &ascii_encoder;
 		}
 		
-		try {
-			EncodedCharacter ec = encoder->decode(data, data_len + data_extra_post);
-			
+		EncodedCharacter ec = encoder->decode(data, data_len + data_extra_post);
+		if(ec.valid)
+		{
 			wxSize decoded_char_size;
 			
-			const wxSize *s = doc_ctrl->hf_gte_cache.get(ec.utf8_char);
+			const wxSize *s = doc_ctrl->hf_gte_cache.get(ec.utf8_char());
 			if(s)
 			{
 				decoded_char_size = *s;
 			}
 			else{
-				decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char.c_str()));
-				doc_ctrl->hf_gte_cache.set(ec.utf8_char, decoded_char_size);
+				decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char().c_str()));
+				doc_ctrl->hf_gte_cache.set(ec.utf8_char(), decoded_char_size);
 			}
 			
 			if(decoded_char_size.GetWidth() == doc_ctrl->hf_char_width())
 			{
-				v.first.append(ec.utf8_char);
+				v.first.append(ec.utf8_char());
 				++(v.second);
 			}
 			else{
@@ -3587,10 +3586,9 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				++(v.second);
 			}
 			
-			consume_chars = ec.encoded_char.size() - 1;
+			consume_chars = ec.encoded_char().size() - 1;
 		}
-		catch(const std::exception &e)
-		{
+		else{
 			/* Couldn't decode the character in the selected encoding.
 			 * TODO: Highlight this in the interface?
 			*/

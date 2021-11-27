@@ -96,6 +96,15 @@ namespace REHex
 				ranges(src.ranges),
 				last_get_iter(ranges.end()) {}
 			
+			ByteRangeMap &operator=(const ByteRangeMap &rhs)
+			{
+				default_value = rhs.default_value;
+				ranges = rhs.ranges;
+				last_get_iter = ranges.end();
+				
+				return *this;
+			}
+			
 			bool operator==(const ByteRangeMap<T> &rhs) const
 			{
 				return ranges == rhs.ranges;

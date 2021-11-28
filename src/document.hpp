@@ -152,6 +152,11 @@ namespace REHex {
 			*/
 			bool is_byte_dirty(off_t offset) const;
 			
+			/**
+			 * @brief Check if the BUFFER has any pending changes to be saved.
+			*/
+			bool is_buffer_dirty() const;
+			
 			off_t get_cursor_position() const;
 			CursorState get_cursor_state() const;
 			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
@@ -321,8 +326,10 @@ namespace REHex {
 			
 			Buffer *buffer;
 			std::string filename;
+			bool write_protect;
 			
 			unsigned int current_seq;
+			unsigned int buffer_seq;
 			ByteRangeMap<unsigned int> data_seq;
 			unsigned int saved_seq;
 			
@@ -397,6 +404,19 @@ namespace REHex {
 			 * @brief Return the current length of the file in bytes.
 			*/
 			off_t buffer_length() const;
+			
+			/**
+			 * @brief Set write protect flag on the file.
+			 *
+			 * If the write protect flag is set, any attempts to modify the file (buffer) DATA
+			 * will be no-ops. Changes to metadata (comments, etc) are still permitted.
+			*/
+			void set_write_protect(bool write_protect);
+			
+			/**
+			 * @get Get the write protect flag state.
+			*/
+			bool get_write_protect() const;
 			
 			/**
 			 * @brief Overwrite a range of bytes in the file.

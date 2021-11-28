@@ -66,6 +66,7 @@ enum {
 	ID_COMPARE_FILE,
 	ID_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
+	ID_WRITE_PROTECT,
 	ID_SAVE_VIEW,
 	ID_INLINE_COMMENTS_HIDDEN,
 	ID_INLINE_COMMENTS_FULL,
@@ -123,6 +124,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(ID_FILL_RANGE, REHex::MainWindow::OnFillRange)
 	EVT_MENU(ID_OVERWRITE_MODE, REHex::MainWindow::OnOverwriteMode)
+	EVT_MENU(ID_WRITE_PROTECT, REHex::MainWindow::OnWriteProtect)
 	
 	EVT_MENU(ID_SEARCH_TEXT, REHex::MainWindow::OnSearchText)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
@@ -249,6 +251,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		#else
 		edit_menu->AppendCheckItem(ID_OVERWRITE_MODE, "Overwrite mode\tIns");
 		#endif
+		
+		edit_menu->AppendCheckItem(ID_WRITE_PROTECT, "Write protect file data");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
@@ -963,6 +967,27 @@ void REHex::MainWindow::OnOverwriteMode(wxCommandEvent &event)
 	tab->doc_ctrl->set_insert_mode(!event.IsChecked());
 }
 
+void REHex::MainWindow::OnWriteProtect(wxCommandEvent &event)
+{
+	Document *doc = active_document();
+	
+	if(event.IsChecked() && doc->is_buffer_dirty())
+	{
+		std::string msg
+			= "The content of " + doc->get_title() + " has already been modified.\n"
+			+ "Enable write protect to prevent FURTHER changes?";
+		
+		int res = wxMessageBox(msg, "File data modified", (wxYES_NO | wxICON_EXCLAMATION), this);
+		if(res == wxNO)
+		{
+			edit_menu->Check(ID_WRITE_PROTECT, false);
+			return;
+		}
+	}
+	
+	doc->set_write_protect(event.IsChecked());
+}
+
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1208,6 +1233,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	Tab *tab = active_tab();
 	
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc_ctrl->get_insert_mode());
+	edit_menu->Check(ID_WRITE_PROTECT, tab->doc->get_write_protect());
 	view_menu->Check(ID_SHOW_OFFSETS, tab->doc_ctrl->get_show_offsets());
 	view_menu->Check(ID_SHOW_ASCII,   tab->doc_ctrl->get_show_ascii());
 	

@@ -2806,6 +2806,7 @@ TEST_F(DocumentTest, RollbackTransaction)
 TEST_F(DocumentTest, DirtyState)
 {
 	EXPECT_FALSE(doc->is_dirty()) << "New Document is initially clean";
+	EXPECT_FALSE(doc->is_buffer_dirty());
 	
 	/* Insert into empty document... */
 	const char *DATA1 = "smoothorangemixed";
@@ -2827,6 +2828,7 @@ TEST_F(DocumentTest, DirtyState)
 	events.clear();
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty before saving";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty before saving";
 	EXPECT_RANGE_DIRTY(0, 16, "Document is dirty before saving");
 	
 	/* Save the file. */
@@ -2837,7 +2839,8 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_EVENTS();
 	
 	EXPECT_FALSE(doc->is_dirty()) << "Document is clean after saving";
-	EXPECT_RANGE_CLEAN(0, 16, "Document is dirty before saving");
+	EXPECT_FALSE(doc->is_buffer_dirty()) << "Document is clean after saving";
+	EXPECT_RANGE_CLEAN(0, 16, "Document is clean after saving");
 	
 	/* Make some more changes. */
 	
@@ -2859,6 +2862,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("STRIPorangeRINGSCABLEflapbone");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after making changes";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after making changes";
 	EXPECT_RANGE_DIRTY( 0,  5, "Modified range dirty after making changes");
 	EXPECT_RANGE_CLEAN( 5, 11, "Unmodified range clean after making changes");
 	EXPECT_RANGE_DIRTY(16, 13, "Modified range dirty after making changes");
@@ -2871,6 +2875,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICorangeRINGSfixedflapbone");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing some changes";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing some changes";
 	EXPECT_RANGE_CLEAN( 0, 16, "Unmodified range clean after undoing changes");
 	EXPECT_RANGE_DIRTY(16, 13, "Modified range dirty after undoing changes");
 	
@@ -2880,6 +2885,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICorangeRINGS");
 	
 	EXPECT_FALSE(doc->is_dirty()) << "Document is clean after undoing all changes";
+	EXPECT_FALSE(doc->is_buffer_dirty()) << "Document is clean after undoing all changes";
 	EXPECT_RANGE_CLEAN(0, 16, "Unmodified range clean after undoing changes");
 	
 	/* Redo it all... */
@@ -2891,6 +2897,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("STRIPorangeRINGSCABLEflapbone");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after redoing changes";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after redoing changes";
 	EXPECT_RANGE_DIRTY( 0,  5, "Modified range dirty after redoing changes");
 	EXPECT_RANGE_CLEAN( 5, 11, "Unmodified range clean after redoing changes");
 	EXPECT_RANGE_DIRTY(16, 13, "Modified range dirty after redoing changes");
@@ -2904,6 +2911,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICorangeRINGS");
 	
 	EXPECT_FALSE(doc->is_dirty()) << "Document is clean after undoing all changes";
+	EXPECT_FALSE(doc->is_buffer_dirty()) << "Document is clean after undoing all changes";
 	EXPECT_RANGE_CLEAN(0, 16, "Unmodified range clean after undoing changes");
 	
 	/* Undo changes prior to save... */
@@ -2912,6 +2920,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICorangemixed");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing change made prior to save";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after ungoing change made prior to save";
 	EXPECT_RANGE_CLEAN( 0, 11, "Unmodified range clean after undoing change made prior to save");
 	EXPECT_RANGE_DIRTY(11,  5, "Modified range dirty after undoing change made prior to save");
 	
@@ -2922,6 +2931,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("smoothorangemixed");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing changes made prior to save";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save";
 	EXPECT_RANGE_DIRTY( 0,  6, "Modified range dirty after undoing changes made prior to save");
 	EXPECT_RANGE_CLEAN( 6,  6, "Unmodified range clean after undoing changes made prior to save");
 	EXPECT_RANGE_DIRTY(12,  5, "Modified range dirty after undoing changes made prior to save");
@@ -2934,6 +2944,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICorangeRINGS");
 	
 	EXPECT_FALSE(doc->is_dirty()) << "Document is clean after redoing all changes";
+	EXPECT_FALSE(doc->is_buffer_dirty()) << "Document is clean after redoing all changes";
 	EXPECT_RANGE_CLEAN(0, 16, "Unmodified range clean after redoing all changes");
 	
 	/* Undo a couple again... */
@@ -2943,6 +2954,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICsmoothorangemixed");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing changes made prior to save";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save");
 	EXPECT_RANGE_DIRTY( 5,  6, "Modified range dirty after undoing changes made prior to save");
 	EXPECT_RANGE_CLEAN(11,  6, "Unmodified range clean after undoing changes made prior to save");
@@ -2959,6 +2971,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICsmoothfollowmixedfarm");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save and then making new changes");
 	EXPECT_RANGE_DIRTY( 5, 21, "Modified range dirty after undoing changes made prior to save and then making new changes");
 	
@@ -2970,6 +2983,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICsmoothorangemixed");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing changes made prior to save";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save");
 	EXPECT_RANGE_DIRTY( 5,  6, "Modified range dirty after undoing changes made prior to save");
 	EXPECT_RANGE_CLEAN(11,  6, "Unmodified range clean after undoing changes made prior to save");
@@ -2983,6 +2997,7 @@ TEST_F(DocumentTest, DirtyState)
 	ASSERT_DATA("MAGICsmoothfollowmixedfarm");
 	
 	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save and then making new changes");
 	EXPECT_RANGE_DIRTY( 5, 21, "Modified range dirty after undoing changes made prior to save and then making new changes");
 }

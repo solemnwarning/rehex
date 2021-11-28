@@ -55,7 +55,9 @@ wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
 REHex::Document::Document():
+	write_protect(false),
 	current_seq(0),
+	buffer_seq(0),
 	saved_seq(0),
 	cursor_state(CSTATE_HEX)
 {
@@ -65,7 +67,9 @@ REHex::Document::Document():
 
 REHex::Document::Document(const std::string &filename):
 	filename(filename),
+	write_protect(false),
 	current_seq(0),
+	buffer_seq(0),
 	saved_seq(0),
 	cursor_state(CSTATE_HEX)
 {
@@ -97,6 +101,7 @@ void REHex::Document::save()
 	if(current_seq != saved_seq)
 	{
 		saved_seq = current_seq;
+		buffer_seq = saved_seq;
 		data_seq.set_range(0, buffer->length(), saved_seq);
 		
 		_raise_clean();
@@ -116,6 +121,7 @@ void REHex::Document::save(const std::string &filename)
 	if(current_seq != saved_seq)
 	{
 		saved_seq = current_seq;
+		buffer_seq = saved_seq;
 		data_seq.set_range(0, buffer->length(), saved_seq);
 		
 		_raise_clean();
@@ -144,6 +150,11 @@ bool REHex::Document::is_byte_dirty(off_t offset) const
 {
 	auto i = data_seq.get_range(offset);
 	return i != data_seq.end() && i->second != saved_seq;
+}
+
+bool REHex::Document::is_buffer_dirty() const
+{
+	return buffer_seq != saved_seq;
 }
 
 off_t REHex::Document::get_cursor_position() const
@@ -196,6 +207,12 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 
 void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
+	if(write_protect)
+	{
+		wxGetApp().printf_error("Cannot modify file - write protect is enabled\n");
+		return;
+	}
+	
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
@@ -209,6 +226,8 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 			.transform([](const unsigned int &value) { return value + 1; });
 		
 		_UNTRACKED_overwrite_data(offset, (const unsigned char*)(data), length, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
@@ -229,6 +248,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, s
 			.transform([](const unsigned int &value) { return value - 1; });
 		
 		_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size(), new_data_seq_slice);
+		buffer_seq = current_seq;
 		
 		return _op_overwrite_redo(offset, new_data, new_cursor_pos, new_cursor_state);
 	});
@@ -246,6 +266,8 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, s
 			.transform([](const unsigned int &value) { return value + 1; });
 		
 		_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size(), new_data_seq_slice);
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
@@ -254,6 +276,12 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, s
 
 void REHex::Document::insert_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
+	if(write_protect)
+	{
+		wxGetApp().printf_error("Cannot modify file - write protect is enabled\n");
+		return;
+	}
+	
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
@@ -263,6 +291,8 @@ void REHex::Document::insert_data(off_t offset, const void *data, off_t length, 
 		new_data_seq_slice.set_range(offset, length, current_seq);
 		
 		_UNTRACKED_insert_data(offset, (const unsigned char*)(data), length, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_insert_undo(offset, length, new_cursor_pos, new_cursor_state);
@@ -281,6 +311,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_
 		ByteRangeMap<unsigned int> redo_data_seq_slice = data_seq.get_slice(offset, data->size());
 		
 		_UNTRACKED_erase_data(offset, data->size());
+		buffer_seq = current_seq;
 		
 		return _op_insert_redo(offset, data, new_cursor_pos, new_cursor_state, redo_data_seq_slice);
 	});
@@ -291,6 +322,8 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std:
 	return TransOpFunc([this, offset, data, new_cursor_pos, new_cursor_state, redo_data_seq_slice]()
 	{
 		_UNTRACKED_insert_data(offset, data->data(), data->size(), redo_data_seq_slice);
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_insert_undo(offset, data->size(), new_cursor_pos, new_cursor_state);
@@ -299,6 +332,12 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std:
 
 void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
+	if(write_protect)
+	{
+		wxGetApp().printf_error("Cannot modify file - write protect is enabled\n");
+		return;
+	}
+	
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
@@ -310,6 +349,8 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
 		
 		_UNTRACKED_erase_data(offset, old_data->size());
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice);
@@ -323,6 +364,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::
 	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
 		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size(), undo_data_seq_slice);
+		buffer_seq = current_seq;
 		
 		return _op_erase_redo(offset, old_data->size(), new_cursor_pos, new_cursor_state);
 	});
@@ -338,6 +380,8 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t
 		ByteRangeMap<unsigned int> undo_data_seq_slice = data_seq.get_slice(offset, old_data->size());
 		
 		_UNTRACKED_erase_data(offset, old_data->size());
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_erase_undo(offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice);
@@ -346,6 +390,12 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t
 
 void REHex::Document::replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
+	if(write_protect)
+	{
+		wxGetApp().printf_error("Cannot modify file - write protect is enabled\n");
+		return;
+	}
+	
 	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
@@ -369,6 +419,8 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const vo
 		
 		_UNTRACKED_erase_data(offset, old_data->size());
 		_UNTRACKED_insert_data(offset, (const unsigned char*)(new_data), new_data_length, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_replace_undo(offset, old_data, new_data_length, new_cursor_pos, new_cursor_state, undo_data_seq_slice);
@@ -386,6 +438,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std
 		
 		_UNTRACKED_erase_data(offset, new_data_length);
 		_UNTRACKED_insert_data(offset, old_data->data(), old_data->size(), undo_data_seq_slice);
+		buffer_seq = current_seq;
 		
 		return _op_replace_redo(offset, old_data->size(), new_data, new_cursor_pos, new_cursor_state);
 	});
@@ -405,6 +458,8 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 		
 		_UNTRACKED_erase_data(offset, old_data_length);
 		_UNTRACKED_insert_data(offset, new_data->data(), new_data->size(), new_data_seq_slice);
+		buffer_seq = current_seq;
+		
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_replace_undo(offset, old_data, new_data->size(), new_cursor_pos, new_cursor_state, undo_data_seq_slice);
@@ -638,6 +693,16 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 off_t REHex::Document::buffer_length() const
 {
 	return buffer->length();
+}
+
+void REHex::Document::set_write_protect(bool write_protect)
+{
+	this->write_protect = write_protect;
+}
+
+bool REHex::Document::get_write_protect() const
+{
+	return write_protect;
 }
 
 const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &REHex::Document::get_comments() const

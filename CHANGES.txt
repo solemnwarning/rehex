@@ -22,6 +22,9 @@ Version TBC
 
  * Add support for other encodings to strings tool (#106).
 
+ * Add write protect flag to prevent accidental changes to file data during
+   analysis (#130).
+
 Version 0.3.92 (2021-08-24)
 
  * Reduce persistent memory usage (#52).

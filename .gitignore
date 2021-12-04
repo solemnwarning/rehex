@@ -78,6 +78,8 @@
 /tests/document.t
 /tools/embed
 /tools/embed.exe
+/tools/gtk-config
+/tools/gtk-config.exe
 msvc/.vs/
 msvc/Debug/
 msvc/embed/Debug/

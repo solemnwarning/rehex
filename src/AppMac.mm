@@ -50,7 +50,7 @@ int REHex::App::get_caret_on_time_ms()
 	if (value > 0)
 		return value / 2;
 	
-	return -1;
+	return FALLBACK_CARET_BLINK;
 }
 
 int REHex::App::get_caret_off_time_ms()
@@ -63,6 +63,6 @@ int REHex::App::get_caret_off_time_ms()
 	if (value > 0)
 		return value / 2;
 	
-	return -1;
+	return FALLBACK_CARET_BLINK;
 }
 #endif

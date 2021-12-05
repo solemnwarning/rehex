@@ -86,7 +86,7 @@ Finally, you can install the package:
 
 ## Building
 
-If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets, Capstone, Lua and libunistring installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libjansson-dev`, `libcapstone-dev`, `liblua5.3-dev`, `lua5.3` and `libunistring-dev` on Ubuntu).
+If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets, GTK+, Capstone, Lua and libunistring installed, along with their development packages (Install `build-essential`, `git`, `libwxgtk3.0-dev`, `libgtk-3-dev`, `libjansson-dev`, `libcapstone-dev`, `liblua5.3-dev`, `lua5.3` and `libunistring-dev` on Ubuntu).
 
 The resulting build can be installed using `make install`, which accepts all the standard environment variables.
 

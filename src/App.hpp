@@ -179,6 +179,9 @@ namespace REHex {
 					SetupHookRegistration &operator=(const SetupHookRegistration &rhs) = delete;
 			};
 			
+			int get_caret_on_time_ms();
+			int get_caret_off_time_ms();
+			
 			virtual bool OnInit();
 			virtual int OnExit();
 			

@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2019-2021 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -25,7 +25,8 @@ EXTRA_APP_OBJS := \
 	res/document_save_as32.o \
 	res/down32.o \
 	res/forward32.o \
-	res/up32.o
+	res/up32.o \
+	src/AppMac.o
 
 EXTRA_TEST_OBJS := \
 	res/backward32.o \
@@ -35,7 +36,8 @@ EXTRA_TEST_OBJS := \
 	res/document_save_as32.o \
 	res/down32.o \
 	res/forward32.o \
-	res/up32.o
+	res/up32.o \
+	src/AppMac.o
 
 # Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
 CAPSTONE_CFLAGS ?=
@@ -99,3 +101,8 @@ REHex.dmg: REHex.app
 	mkdir -p $(DMGTMP)
 	cp -a REHex.app $(DMGTMP)/REHex.app
 	hdiutil create $@ -ov -volname "REHex" -format UDZO -srcfolder $(DMGTMP)
+
+%.o: %.mm
+	$(DEPPRE)
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)

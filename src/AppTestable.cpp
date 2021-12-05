@@ -23,6 +23,7 @@
 #include <wx/filename.h>
 #include <wx/font.h>
 #include <wx/stdpaths.h>
+#include <wx/version.h>
 
 #include "App.hpp"
 #include "Events.hpp"
@@ -241,3 +242,93 @@ REHex::App::SetupHookRegistration::~SetupHookRegistration()
 {
 	App::unregister_setup_hook(phase, &func);
 }
+
+static const int FALLBACK_CARET_BLINK = 500;
+
+#if wxCHECK_VERSION(3,1,3)
+int REHex::App::get_caret_on_time_ms()
+{
+	int value = wxSystemSettings::GetMetric(wxSYS_CARET_ON_MSEC);
+	if(value >= 0)
+	{
+		return value;
+	}
+	else{
+		return FALLBACK_CARET_BLINK;
+	}
+}
+
+int REHex::App::get_caret_off_time_ms()
+{
+	int value = wxSystemSettings::GetMetric(wxSYS_CARET_OFF_MSEC);
+	if(value >= 0)
+	{
+		return value;
+	}
+	else{
+		return FALLBACK_CARET_BLINK;
+	}
+}
+#elif defined(_WIN32)
+int REHex::App::get_caret_on_time_ms()
+{
+	const UINT blinkTime = ::GetCaretBlinkTime();
+	
+	if ( blinkTime == 0 ) // error
+	{
+		return FALLBACK_CARET_BLINK;
+	}
+	else if ( blinkTime == INFINITE ) // caret does not blink
+	{
+		return 0;
+	}
+	else{
+		return blinkTime;
+	}
+}
+
+int REHex::App::get_caret_off_time_ms()
+{
+	return get_caret_on_time_ms();
+}
+#elif defined(__WXGTK__)
+#include <gtk/gtk.h>
+
+int REHex::App::get_caret_on_time_ms()
+{
+	gboolean should_blink = true;
+	gint blink_time = -1;
+	g_object_get(gtk_settings_get_default(),
+		"gtk-cursor-blink", &should_blink,
+		"gtk-cursor-blink-time", &blink_time,
+		NULL);
+	
+	if(!should_blink)
+	{
+		return 0;
+	}
+	else if (blink_time > 0)
+	{
+		return blink_time / 2;
+	}
+	else{
+		return FALLBACK_CARET_BLINK;
+	}
+}
+
+int REHex::App::get_caret_off_time_ms()
+{
+	return get_caret_on_time_ms();
+}
+#elif defined(__APPLE__) /* Implemented in AppMac.mm */
+#else
+int REHex::App::get_caret_on_time_ms()
+{
+	return FALLBACK_CARET_BLINK;
+}
+
+int REHex::App::get_caret_off_time_ms()
+{
+	return FALLBACK_CARET_BLINK;
+}
+#endif

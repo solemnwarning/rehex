@@ -16,6 +16,7 @@
 
 EXE            := rehex.exe
 EMBED_EXE      := tools/embed.exe
+GTKCONFIG_EXE  := tools/gtk-config.exe
 EXTRA_APP_OBJS := res/winres.o
 
 WX_CONFIG ?= wx-config --static

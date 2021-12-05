@@ -126,7 +126,11 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 		}
 	}
 	
-	redraw_cursor_timer.Start(750, wxTIMER_CONTINUOUS);
+	int caret_on_time = wxGetApp().get_caret_on_time_ms();
+	if(caret_on_time > 0)
+	{
+		redraw_cursor_timer.Start(caret_on_time, wxTIMER_ONE_SHOT);
+	}
 	
 	/* SetDoubleBuffered() isn't implemented on all platforms. */
 	#if defined(__WXMSW__) || defined(__WXGTK__)
@@ -341,7 +345,12 @@ void REHex::DocumentCtrl::set_cursor_position(off_t position, Document::CursorSt
 	
 	/* Blink cursor to visibility and reset timer */
 	cursor_visible = true;
-	redraw_cursor_timer.Start();
+	
+	int caret_on_time = wxGetApp().get_caret_on_time_ms();
+	if(caret_on_time > 0)
+	{
+		redraw_cursor_timer.Start(caret_on_time, wxTIMER_ONE_SHOT);
+	}
 	
 	if(cpos_off != position)
 	{
@@ -2064,6 +2073,15 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 void REHex::DocumentCtrl::OnRedrawCursor(wxTimerEvent &event)
 {
 	cursor_visible = !cursor_visible;
+	
+	int time_until_flip = cursor_visible
+		? wxGetApp().get_caret_on_time_ms()
+		: wxGetApp().get_caret_off_time_ms();
+	
+	if(time_until_flip > 0)
+	{
+		redraw_cursor_timer.Start(time_until_flip, wxTIMER_ONE_SHOT);
+	}
 	
 	/* TODO: Limit paint to cursor area */
 	Refresh();

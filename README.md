@@ -16,8 +16,19 @@ I use `rpmbuild` to produce an initial SRPM and `mock` to produce the final pack
 
 ## Building release versions
 
-TODO.
+Releases are built and distributed on [Copr](https://copr.fedorainfracloud.org/).
+
+  # First, prepare a dist tarball from the release sources.
+  
+  $ make dist
+  $ cp rehex-${VERSION}.dist ~/rpmbuild/SOURCES/
+  
+  # Then build an SRPM using a .spec file from this branch.
+  
+  $ rpmbuild -bs rehex-${VERSION}.spec
+  
+  # Now just upload the SRPM to Copr and let it do its thing.
 
 ## Version Numbers
 
-See the `README.md` under the `debian/` directory of any of the Debian/Ubuntu packaging branches. rpm follows the same rules as dpkg and the same logic is applied.
+See the `README.md` in the [rehex-debian](https://github.com/solemnwarning/rehex-debian) repository. rpm follows the same rules as dpkg and the same logic is applied.

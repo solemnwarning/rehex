@@ -1,0 +1,4 @@
+local int i = 0;
+local int j = 0;
+
+hello();

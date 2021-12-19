@@ -1,0 +1,21 @@
+#define FOO
+
+#ifdef FOO
+should-see-this
+#endif
+
+#ifndef FOO
+shouldn't-see-this
+#endif
+
+#ifdef FOO
+should-see-this
+#else
+shouldn't-see-this
+#endif
+
+#ifndef FOO
+shouldn't-see-this
+#else
+should-see-this
+#endif

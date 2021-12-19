@@ -29,6 +29,8 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 		set_comment = function(offset, length, text)
 			doc:set_comment(offset, length, rehex.Comment.new(text))
 		end,
+		
+		print = function(s) print(s) end
 	}
 	
 	executor.execute(interface, parser.parse_text(preprocessor.preprocess_file("test.bt")))

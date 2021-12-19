@@ -53,6 +53,10 @@ local function _make_named_type(name, type)
 	return new_type
 end
 
+local function _get_type_name(type)
+	return type and type.name or "void"
+end
+
 -- Placeholder for ... in builtin function parameters. Not a valid type in most contexts but the
 -- _eval_call() function handles this specific object specially.
 local _variadic_placeholder = {}
@@ -134,7 +138,7 @@ local function _builtin_function_Printf(context, argv)
 		print_args[i] = argv[i][2]
 	end
 	
-	print(string.format(table.unpack(print_args)))
+	context.interface.print(string.format(table.unpack(print_args)))
 end
 
 -- Table of builtin functions - gets copied into new interpreter contexts
@@ -165,36 +169,36 @@ _find_type = function(context, type_name)
 end
 
 _eval_number = function(context, statement)
-	return { _builtin_types.int, statement[4] }
+	return _builtin_types.int, statement[4]
 end
 
 _eval_string = function(context, statement)
-	return { _builtin_types.string, statement[4] }
+	return _builtin_types.string, statement[4]
 end
 
 _eval_add = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
-	local v1 = _eval_statement(context, statement[4])
-	local v2 = _eval_statement(context, statement[5])
+	local v1_t, v1_v = _eval_statement(context, statement[4])
+	local v2_t, v2_v = _eval_statement(context, statement[5])
 	
-	if v1 == nil or v2 == nil or v1[1].base ~= v2[1].base
+	if v1_t == nil or v2_t == nil or v1_t.base ~= v2_t.base
 	then
-		local v1_type = v1 and v1[1].name or "void"
-		local v2_type = v2 and v2[1].name or "void"
+		local v1_type = v1 and v1_t.name or "void"
+		local v2_type = v2 and v2_t.name or "void"
 		
 		error("Invalid operands to '+' operator - '" .. v1_type .. "' and '" .. v2_type .. "' at " .. filename .. ":" .. line_num)
 	end
 	
-	if v1[1].base == "number"
+	if v1_t.base == "number"
 	then
-		return { v1[1], v1[2] + v2[2] }
+		return v1_t, v1_v + v2_v
 	elseif v1[1].base == "string"
 	then
-		return { v1[1], v1[2] .. v2[2] }
+		return v1_t, v1_v .. v2_v
 	else
-		error("Internal error: unknown base type '" .. v1[1].base "' at " .. filename .. ":" .. line_num)
+		error("Internal error: unknown base type '" .. v1_t.base "' at " .. filename .. ":" .. line_num)
 	end
 end
 
@@ -203,18 +207,18 @@ _numeric_op_func = function(func, sym)
 		local filename = statement[1]
 		local line_num = statement[2]
 		
-		local v1 = _eval_statement(context, statement[4])
-		local v2 = _eval_statement(context, statement[5])
+		local v1_t, v1_v = _eval_statement(context, statement[4])
+		local v2_t, v2_v = _eval_statement(context, statement[5])
 		
-		if (v1 and v1[1].base) ~= "number" or (v2 and v2[1].base) ~= "number"
+		if (v1 and v1_t.base) ~= "number" or (v2 and v2_t.base) ~= "number"
 		then
-			local v1_type = v1 and v1[1].name or "void"
-			local v2_type = v2 and v2[1].name or "void"
+			local v1_type = v1 and v1_t.name or "void"
+			local v2_type = v2 and v2_t.name or "void"
 			
 			error("Invalid operands to '" .. sym .. "' operator - '" .. v1_type .. "' and '" .. v2_type .. "' at " .. filename .. ":" .. line_num)
 		end
 		
-		return { v1[1], func(v1[2], v2[2]) }
+		return v1_t, func(v1_v, v2_v)
 	end
 end
 
@@ -242,12 +246,12 @@ _eval_variable = function(context, statement)
 		context.next_variable = context.next_variable + type_info.length
 	else
 		local array_length_type, array_length_val = _eval_statement(context, v_length)
-		if array_length_type ~= "int"
+		if array_length_type == nil or array_length_type.base ~= "number"
 		then
-			error("Expected 'int' type for array size, got '" .. array_length_type .. "' at " .. filename .. ":" .. line_num)
+			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
 		end
 		
-		for i = 0, array_length_val
+		for i = 0, array_length_val - 1
 		do
 			context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
 			context.interface.set_comment(context.next_variable, type_info.length, v_name .. "[" .. i .. "]")
@@ -274,7 +278,7 @@ _eval_call = function(context, statement)
 	
 	for i = 1, #func_args
 	do
-		func_arg_values[i] = _eval_statement(context, func_args[i])
+		func_arg_values[i] = { _eval_statement(context, func_args[i]) }
 		-- TODO: Check for type compatibility
 	end
 	
@@ -295,10 +299,13 @@ _eval_func_defn = function(context, statement)
 		error("Attempt to redefine function '" .. func_name .. "' at " .. filename .. ":" .. line_num)
 	end
 	
-	local ret_type = _find_type(context, func_ret_type)
-	if ret_type == nil
+	if func_ret_type ~= "void"
 	then
-		error("Attempt to define function '" .. func_name .. "' with undefined return type '" .. func_ret_type .. "' at " .. filename .. ":" .. line_num)
+		local ret_type = _find_type(context, func_ret_type)
+		if ret_type == nil
+		then
+			error("Attempt to define function '" .. func_name .. "' with undefined return type '" .. func_ret_type .. "' at " .. filename .. ":" .. line_num)
+		end
 	end
 	
 	local arg_types = {}

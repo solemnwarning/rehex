@@ -210,12 +210,9 @@ _numeric_op_func = function(func, sym)
 		local v1_t, v1_v = _eval_statement(context, statement[4])
 		local v2_t, v2_v = _eval_statement(context, statement[5])
 		
-		if (v1 and v1_t.base) ~= "number" or (v2 and v2_t.base) ~= "number"
+		if (v1_t and v1_t.base) ~= "number" or (v2_t and v2_t.base) ~= "number"
 		then
-			local v1_type = v1 and v1_t.name or "void"
-			local v2_type = v2 and v2_t.name or "void"
-			
-			error("Invalid operands to '" .. sym .. "' operator - '" .. v1_type .. "' and '" .. v2_type .. "' at " .. filename .. ":" .. line_num)
+			error("Invalid operands to '" .. sym .. "' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
 		end
 		
 		return v1_t, func(v1_v, v2_v)

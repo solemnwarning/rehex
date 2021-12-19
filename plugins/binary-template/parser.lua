@@ -56,10 +56,12 @@ local function _parser_fallback(text, pos)
 	-- Getting here means we're trying to parse something and none of the real captures have
 	-- matched, so any actual text is a parse error.
 	
+	pos = pos - 1
+	
 	if pos < text:len()
 	then
 		local pos_filename, pos_line_num = input_pos_to_file_and_line_num(text, pos)
-		error("Parse error at " .. pos_filename .. ":" .. pos_line_num)
+		error("Parse error at " .. pos_filename .. ":" .. pos_line_num .. " (at '" .. text:sub(pos, pos + 10) .. "')")
 	end
 	
 	return nil
@@ -96,7 +98,8 @@ local value = P(_capture_position) * (value_num + value_ref)
 
 local _parser = spc * P{
 	"TEMPLATE";
-	TEMPLATE = Ct( V("STMT") ^ 0 ),
+	TEMPLATE =
+		Ct( (V("STMT") + P(1) * P(_parser_fallback)) ^ 0),
 	
 	STMT =
 		P(1) * P(_consume_directive) +
@@ -108,8 +111,7 @@ local _parser = spc * P{
 		V("FUNC_DEFN") +
 		V("LOCAL_VAR_DEFN") +
 		V("VAR_DEFN") +
-		V("EXPR") * P(";") * spc +
-		P(1) * P(_parser_fallback),
+		V("EXPR") * P(";") * spc,
 	
 	BLOCK = P("{") * spc * ( V("STMT") ^ 0 ) * spc * P("}"),
 	

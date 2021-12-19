@@ -21,6 +21,7 @@ local _find_type;
 local _numeric_op_func;
 local _eval_variable;
 local _eval_call;
+local _eval_func_defn;
 local _eval_statement;
 local _exec_statements;
 
@@ -206,9 +207,64 @@ _eval_call = function(context, statement)
 	return func_defn.impl(context, func_arg_values)
 end
 
+_eval_func_defn = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local func_ret_type   = statement[4]
+	local func_name       = statement[5]
+	local func_arg_types  = statement[6]
+	local func_statements = statement[7]
+	
+	if context.functions[func_name] ~= nil
+	then
+		error("Attempt to redefine function '" .. func_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	local ret_type = _find_type(context, func_ret_type)
+	if ret_type == nil
+	then
+		error("Attempt to define function '" .. func_name .. "' with undefined return type '" .. func_ret_type .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	local arg_types = {}
+	for i = 1, #func_arg_types
+	do
+		local type_info = _find_type(context, func_arg_types[i])
+		if type_info == nil
+		then
+			error("Attempt to define function '" .. func_name .. "' with undefined argument type '" .. func_arg_values[i] .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		table.insert(arg_types, type_info)
+	end
+	
+	local impl_func = function(context, arguments)
+		local frame = {
+			frame_type = "call",
+			var_types = {},
+		}
+		
+		table.insert(context.stack, frame)
+		
+		-- TODO: Handle early return, return value
+		
+		_exec_statements(context, func_statements)
+		
+		table.remove(context.stack)
+	end
+	
+	context.functions[func_name] = {
+		arguments = arg_types,
+		impl      = impl_func,
+	}
+end
+
 _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
+	
+	-- TODO: Call yield() periodically
 	
 	local op = statement[3]
 	
@@ -231,13 +287,32 @@ end
 _ops = {
 	num = _x,
 	
-	variable = _eval_variable,
-	call     = _eval_call,
+	variable     = _eval_variable,
+	call         = _eval_call,
+	["function"] = _eval_func_defn,
 	
 	subtract = _numeric_op_func(function(v1, v2) return v1 + v2 end),
 	multiply = _numeric_op_func(function(v1, v2) return v1 * v2 end),
 	divide   = _numeric_op_func(function(v1, v2) return v1 / v2 end),
 }
+
+--- External entry point into the interpreter
+-- @function execute
+--
+-- @param interface Table of interface functions to be used by the interpreter.
+-- @param statements AST table as returned by the parser.
+--
+-- The interface table must have the following functions:
+--
+-- interface.set_data_type(offset, length, data_type)
+-- interface.set_comment(offset, length, comment_text)
+--
+-- Thin wrappers around the REHex APIs, to allow for testing.
+--
+-- interface.yield()
+--
+-- Periodically called by the executor to allow processing UI events.
+-- An error() may be raised within to abort the interpreter.
 
 local function execute(interface, statements)
 	local context = {

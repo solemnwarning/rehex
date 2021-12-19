@@ -20,6 +20,7 @@ local _find_type;
 
 local _numeric_op_func;
 local _eval_variable;
+local _eval_call;
 local _eval_statement;
 local _exec_statements;
 
@@ -109,6 +110,26 @@ local _builtin_types = {
 	DOUBLE = _builtin_type_float64,
 }
 
+local function _builtin_function_BigEndian(context, argv)
+	context.big_endian = true
+end
+
+local function _builtin_function_LittleEndian(context, argv)
+	context.big_endian = false
+end
+
+-- Table of builtin functions - gets copied into new interpreter contexts
+--
+-- Each key is a function name, the value is a table with the following values:
+--
+-- Table of argument types (arguments)
+-- Function implementation (impl)
+
+local _builtin_functions = {
+	BigEndian    = { arguments = {}, impl = _builtin_function_BigEndian },
+	LittleEndian = { arguments = {}, impl = _builtin_function_LittleEndian },
+}
+
 _find_type = function(context, type_name)
 	for i = #context.stack, 1, -1
 	do
@@ -136,10 +157,11 @@ _eval_variable = function(context, statement)
 		error("Unknown variable type '" .. v_type .. "' at " .. filename .. ":" .. line_num)
 	end
 	
+	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
+	
 	if v_length == nil
 	then
-		-- TODO: Support BE
-		context.interface.set_data_type(context.next_variable, type_info.length, type_info.rehex_type_le)
+		context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
 		context.interface.set_comment(context.next_variable, type_info.length, v_name)
 		
 		context.next_variable = context.next_variable + type_info.length
@@ -152,13 +174,36 @@ _eval_variable = function(context, statement)
 		
 		for i = 0, array_length_val
 		do
-			-- TODO: Support BE
-			context.interface.set_data_type(context.next_variable, type_info.length, type_info.rehex_type_le)
+			context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
 			context.interface.set_comment(context.next_variable, type_info.length, v_name .. "[" .. i .. "]")
 			
 			context.next_variable = context.next_variable + type_info.length
 		end
 	end
+end
+
+_eval_call = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local func_name = statement[4]
+	local func_args = statement[5]
+	
+	local func_defn = context.functions[func_name]
+	if func_defn == nil
+	then
+		error("Attempt to call undefined function '" .. func_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	local func_arg_values = {}
+	
+	for i = 1, #func_args
+	do
+		func_arg_values[i] = _eval_statement(context, func_args[i])
+		-- TODO: Check for type compatibility
+	end
+	
+	return func_defn.impl(context, func_arg_values)
 end
 
 _eval_statement = function(context, statement)
@@ -187,6 +232,7 @@ _ops = {
 	num = _x,
 	
 	variable = _eval_variable,
+	call     = _eval_call,
 	
 	subtract = _numeric_op_func(function(v1, v2) return v1 + v2 end),
 	multiply = _numeric_op_func(function(v1, v2) return v1 * v2 end),
@@ -197,10 +243,20 @@ local function execute(interface, statements)
 	local context = {
 		interface = interface,
 		
+		functions = {},
 		stack = {},
 		
 		next_variable = 0,
+		
+		-- Are we currently accessing variables from the file as big endian? Toggled by
+		-- the built-in BigEndian() and LittleEndian() functions.
+		big_endian = false,
 	}
+	
+	for k, v in pairs(_builtin_functions)
+	do
+		context.functions[k] = v
+	end
 	
 	local base_types = {};
 	for k, v in pairs(_builtin_types)

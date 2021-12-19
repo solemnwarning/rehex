@@ -18,6 +18,8 @@ local M = {}
 
 local _find_type;
 
+local _eval_number;
+local _eval_add;
 local _numeric_op_func;
 local _eval_variable;
 local _eval_call;
@@ -25,90 +27,93 @@ local _eval_func_defn;
 local _eval_statement;
 local _exec_statements;
 
-local function _x(context, statement)
-	return "int", statement[4]
-end
-
-_numeric_op_func = function(func)
-	return function(context, statement)
-		local filename = statement[1]
-		local line_num = statement[2]
-		
-		local v1 = _eval_statement(context, statement[4])
-		local v2 = _eval_statement(context, statement[5])
-		
-		return func(v1, v2)
-	end
-end
-
 local _ops
 
-local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1 }
-local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1 }
-local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2 }
-local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2 }
-local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4 }
-local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4 }
-local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8 }
-local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8 }
-local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4 }
-local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8 }
+local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number" }
+local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number" }
+local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number" }
+local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number" }
+local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number" }
+local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number" }
+local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number" }
+local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number" }
+local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number" }
+local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number" }
+
+local function _make_named_type(name, type)
+	local new_type = {};
+	
+	for k,v in pairs(type)
+	do
+		new_type[k] = v
+	end
+	
+	new_type.name = name
+	
+	return new_type
+end
+
+-- Placeholder for ... in builtin function parameters. Not a valid type in most contexts but the
+-- _eval_call() function handles this specific object specially.
+local _variadic_placeholder = {}
 
 local _builtin_types = {
-	char = _builtin_type_int8,
-	byte = _builtin_type_int8,
-	CHAR = _builtin_type_int8,
-	BYTE = _builtin_type_int8,
+	char = _make_named_type("char", _builtin_type_int8),
+	byte = _make_named_type("byte", _builtin_type_int8),
+	CHAR = _make_named_type("CHAR", _builtin_type_int8),
+	BYTE = _make_named_type("BYTE", _builtin_type_int8),
 	
-	uchar = _builtin_type_uint8,
-	ubyte = _builtin_type_uint8,
-	UCHAR = _builtin_type_uint8,
-	UBYTE = _builtin_type_uint8,
+	uchar = _make_named_type("uchar", _builtin_type_uint8),
+	ubyte = _make_named_type("ubyte", _builtin_type_uint8),
+	UCHAR = _make_named_type("UCHAR", _builtin_type_uint8),
+	UBYTE = _make_named_type("UBYTE", _builtin_type_uint8),
 	
-	short = _builtin_type_int16,
-	int16 = _builtin_type_int16,
-	SHORT = _builtin_type_int16,
-	INT16 = _builtin_type_int16,
+	short = _make_named_type("short", _builtin_type_int16),
+	int16 = _make_named_type("int16", _builtin_type_int16),
+	SHORT = _make_named_type("SHORT", _builtin_type_int16),
+	INT16 = _make_named_type("INT16", _builtin_type_int16),
 	
-	ushort = _builtin_type_uint16,
-	uint16 = _builtin_type_uint16,
-	USHORT = _builtin_type_uint16,
-	UINT16 = _builtin_type_uint16,
-	WORD   = _builtin_type_uint16,
+	ushort = _make_named_type("ushort", _builtin_type_uint16),
+	uint16 = _make_named_type("uint16", _builtin_type_uint16),
+	USHORT = _make_named_type("USHORT", _builtin_type_uint16),
+	UINT16 = _make_named_type("UINT16", _builtin_type_uint16),
+	WORD   = _make_named_type("WORD",   _builtin_type_uint16),
 	
-	int   = _builtin_type_int32,
-	int32 = _builtin_type_int32,
-	long  = _builtin_type_int32,
-	INT   = _builtin_type_int32,
-	INT32 = _builtin_type_int32,
-	LONG  = _builtin_type_int32,
+	int   = _make_named_type("int",   _builtin_type_int32),
+	int32 = _make_named_type("int32", _builtin_type_int32),
+	long  = _make_named_type("long",  _builtin_type_int32),
+	INT   = _make_named_type("INT",   _builtin_type_int32),
+	INT32 = _make_named_type("INT32", _builtin_type_int32),
+	LONG  = _make_named_type("LONG",  _builtin_type_int32),
 	
-	uint   = _builtin_type_uint32,
-	uint32 = _builtin_type_uint32,
-	ulong  = _builtin_type_uint32,
-	UINT   = _builtin_type_uint32,
-	UINT32 = _builtin_type_uint32,
-	ULONG  = _builtin_type_uint32,
-	DWORD  = _builtin_type_uint32,
+	uint   = _make_named_type("uint",   _builtin_type_uint32),
+	uint32 = _make_named_type("uint32", _builtin_type_uint32),
+	ulong  = _make_named_type("ulong",  _builtin_type_uint32),
+	UINT   = _make_named_type("UINT",   _builtin_type_uint32),
+	UINT32 = _make_named_type("UINT32", _builtin_type_uint32),
+	ULONG  = _make_named_type("ULONG",  _builtin_type_uint32),
+	DWORD  = _make_named_type("DWORD",  _builtin_type_uint32),
 	
-	int64   = _builtin_type_int64,
-	quad    = _builtin_type_int64,
-	QUAD    = _builtin_type_int64,
-	INT64   = _builtin_type_int64,
-	__int64 = _builtin_type_int64,
+	int64   = _make_named_type("int64",   _builtin_type_int64),
+	quad    = _make_named_type("quad",    _builtin_type_int64),
+	QUAD    = _make_named_type("QUAD",    _builtin_type_int64),
+	INT64   = _make_named_type("INT64",   _builtin_type_int64),
+	__int64 = _make_named_type("__int64", _builtin_type_int64),
 	
-	uint64   = _builtin_type_uint64,
-	uquad    = _builtin_type_uint64,
-	UQUAD    = _builtin_type_uint64,
-	UINT64   = _builtin_type_uint64,
-	QWORD    = _builtin_type_uint64,
-	__uint64 = _builtin_type_uint64,
+	uint64   = _make_named_type("uint64",   _builtin_type_uint64),
+	uquad    = _make_named_type("uquad",    _builtin_type_uint64),
+	UQUAD    = _make_named_type("UQUAD",    _builtin_type_uint64),
+	UINT64   = _make_named_type("UINT64",   _builtin_type_uint64),
+	QWORD    = _make_named_type("QWORD",    _builtin_type_uint64),
+	__uint64 = _make_named_type("__uint64", _builtin_type_uint64),
 	
-	float = _builtin_type_float32,
-	FLOAT = _builtin_type_float32,
+	float = _make_named_type("float", _builtin_type_float32),
+	FLOAT = _make_named_type("FLOAT", _builtin_type_float32),
 	
-	double = _builtin_type_float64,
-	DOUBLE = _builtin_type_float64,
+	double = _make_named_type("double", _builtin_type_float64),
+	DOUBLE = _make_named_type("DOUBLE", _builtin_type_float64),
+	
+	string = { name = "string", base = "string" },
 }
 
 local function _builtin_function_BigEndian(context, argv)
@@ -117,6 +122,19 @@ end
 
 local function _builtin_function_LittleEndian(context, argv)
 	context.big_endian = false
+end
+
+local function _builtin_function_Printf(context, argv)
+	-- Copy format unchanged
+	local print_args = { argv[1][2] }
+	
+	-- Pass value part of other arguments - should all be lua numbers or strings
+	for i = 2, #argv
+	do
+		print_args[i] = argv[i][2]
+	end
+	
+	print(string.format(table.unpack(print_args)))
 end
 
 -- Table of builtin functions - gets copied into new interpreter contexts
@@ -129,6 +147,8 @@ end
 local _builtin_functions = {
 	BigEndian    = { arguments = {}, impl = _builtin_function_BigEndian },
 	LittleEndian = { arguments = {}, impl = _builtin_function_LittleEndian },
+	
+	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, impl = _builtin_function_Printf },
 }
 
 _find_type = function(context, type_name)
@@ -141,6 +161,60 @@ _find_type = function(context, type_name)
 				return v
 			end
 		end
+	end
+end
+
+_eval_number = function(context, statement)
+	return { _builtin_types.int, statement[4] }
+end
+
+_eval_string = function(context, statement)
+	return { _builtin_types.string, statement[4] }
+end
+
+_eval_add = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local v1 = _eval_statement(context, statement[4])
+	local v2 = _eval_statement(context, statement[5])
+	
+	if v1 == nil or v2 == nil or v1[1].base ~= v2[1].base
+	then
+		local v1_type = v1 and v1[1].name or "void"
+		local v2_type = v2 and v2[1].name or "void"
+		
+		error("Invalid operands to '+' operator - '" .. v1_type .. "' and '" .. v2_type .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if v1[1].base == "number"
+	then
+		return { v1[1], v1[2] + v2[2] }
+	elseif v1[1].base == "string"
+	then
+		return { v1[1], v1[2] .. v2[2] }
+	else
+		error("Internal error: unknown base type '" .. v1[1].base "' at " .. filename .. ":" .. line_num)
+	end
+end
+
+_numeric_op_func = function(func, sym)
+	return function(context, statement)
+		local filename = statement[1]
+		local line_num = statement[2]
+		
+		local v1 = _eval_statement(context, statement[4])
+		local v2 = _eval_statement(context, statement[5])
+		
+		if (v1 and v1[1].base) ~= "number" or (v2 and v2[1].base) ~= "number"
+		then
+			local v1_type = v1 and v1[1].name or "void"
+			local v2_type = v2 and v2[1].name or "void"
+			
+			error("Invalid operands to '" .. sym .. "' operator - '" .. v1_type .. "' and '" .. v2_type .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		return { v1[1], func(v1[2], v2[2]) }
 	end
 end
 
@@ -285,15 +359,17 @@ _exec_statements = function(context, statements)
 end
 
 _ops = {
-	num = _x,
+	num = _eval_number,
+	str = _eval_string,
 	
 	variable     = _eval_variable,
 	call         = _eval_call,
 	["function"] = _eval_func_defn,
 	
-	subtract = _numeric_op_func(function(v1, v2) return v1 + v2 end),
-	multiply = _numeric_op_func(function(v1, v2) return v1 * v2 end),
-	divide   = _numeric_op_func(function(v1, v2) return v1 / v2 end),
+	add      = _eval_add,
+	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),
+	multiply = _numeric_op_func(function(v1, v2) return v1 * v2 end, "*"),
+	divide   = _numeric_op_func(function(v1, v2) return v1 / v2 end, "/"),
 }
 
 --- External entry point into the interpreter

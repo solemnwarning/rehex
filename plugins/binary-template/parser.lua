@@ -85,6 +85,28 @@ local function _capture_position(text, pos)
 	return pos, filename, line_num
 end
 
+local function _capture_string(text, pos)
+	local s = ""
+	
+	for i = pos, text:len()
+	do
+		local c = text:sub(i, i)
+		
+		if c == "\\"
+		then
+			-- TODO
+		elseif c == '"'
+		then
+			return i + 1, s
+		else
+			s = s .. c
+		end
+	end
+	
+	local filename, line_num = input_pos_to_file_and_line_num(text, pos - 1)
+	error("Unmatched \" at " .. filename .. ":" .. line_num)
+end
+
 local spc = S(" \t\r\n")^0
 local digit = R('09')
 local number = C( P('-')^-1 * digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
@@ -93,8 +115,9 @@ local name = C( letter * (digit+letter+"_")^0 ) * spc
 local comma  = P(",") * spc
 
 local value_num = Cc("num") * number
+local value_str = Cc("str") * P('"') * P(_capture_string) * spc
 local value_ref = Cc("ref") * name
-local value = P(_capture_position) * (value_num + value_ref)
+local value = P(_capture_position) * (value_num + value_str + value_ref)
 
 local _parser = spc * P{
 	"TEMPLATE";

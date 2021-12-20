@@ -16,7 +16,8 @@
 
 local M = {}
 
-local lpeg = require 'lpeg'
+--local lpeg = require 'lpeg'
+local lpeg = require 'lulpeg.lulpeg'
 setmetatable(_ENV, { __index=lpeg })
 
 local function comment(openp,endp)

@@ -16,9 +16,16 @@
 
 local M = {}
 
+local FRAME_TYPE_BASE     = "base"
+local FRAME_TYPE_STRUCT   = "struct"
+local FRAME_TYPE_FUNCTION = "function"
+local FRAME_TYPE_SCOPE    = "scope"
+
 local _find_type;
 
 local _eval_number;
+local _eval_string;
+local _eval_ref;
 local _eval_add;
 local _numeric_op_func;
 local _eval_variable;
@@ -29,16 +36,21 @@ local _exec_statements;
 
 local _ops
 
-local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number" }
-local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number" }
-local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number" }
-local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number" }
-local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number" }
-local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number" }
-local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number" }
-local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number" }
-local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number" }
-local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number" }
+local function _topmost_frame_of_type(context, type)
+	for i = #context.stack, 1, -1
+	do
+		if context.stack[i].frame_type == type
+		then
+			return context.stack[i]
+		end
+	end
+	
+	return nil
+end
+
+--
+-- Type system
+--
 
 local function _make_named_type(name, type)
 	local new_type = {};
@@ -56,6 +68,63 @@ end
 local function _get_type_name(type)
 	return type and type.name or "void"
 end
+
+local function _make_plain_value(value)
+	return {
+		value = value,
+		
+		get = function(self)
+			return self.value
+		end,
+		
+		set = function(self, value)
+			self.value = value
+		end,
+	}
+end
+
+local function _make_const_plain_value(value)
+	return {
+		value = value,
+		
+		get = function(self)
+			return self.value
+		end,
+		
+		set = function(self, value)
+			error("Attempt to set constant") -- TODO: Include template file/line
+		end,
+	}
+end
+
+local function _make_file_value(context, offset, length, fmt)
+	return {
+		get = function(self)
+			local data = context.interface.read_data(offset, length)
+			if data:len() < length
+			then
+				return nil
+			end
+			
+			return string.unpack(fmt, data)
+		end,
+		
+		set = function(self, value)
+			error("Attempt to write to file variable") -- TODO: Include template file/line
+		end,
+	}
+end
+
+local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1" }
+local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1" }
+local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2" }
+local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2" }
+local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4" }
+local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4" }
+local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8" }
+local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8" }
+local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number", string_fmt = "f" }
+local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number", string_fmt = "d" }
 
 -- Placeholder for ... in builtin function parameters. Not a valid type in most contexts but the
 -- _eval_call() function handles this specific object specially.
@@ -130,12 +199,12 @@ end
 
 local function _builtin_function_Printf(context, argv)
 	-- Copy format unchanged
-	local print_args = { argv[1][2] }
+	local print_args = { argv[1][2]:get() }
 	
 	-- Pass value part of other arguments - should all be lua numbers or strings
 	for i = 2, #argv
 	do
-		print_args[i] = argv[i][2]
+		print_args[i] = argv[i][2]:get()
 	end
 	
 	context.interface.print(string.format(table.unpack(print_args)))
@@ -168,12 +237,60 @@ _find_type = function(context, type_name)
 	end
 end
 
+--
+-- The _eval_XXX functions are what actually take the individual statements
+-- from the AST and execute them.
+--
+-- All _eval_XXX functions take the context and a single statement and return
+-- the type and value of their result (or nothing if void).
+--
+-- Most _eval_XXX functions are called indirectly via the _eval_statement()
+-- function and the _ops table.
+---
+
 _eval_number = function(context, statement)
-	return _builtin_types.int, statement[4]
+	return _builtin_types.int, _make_const_plain_value(statement[4])
 end
 
 _eval_string = function(context, statement)
-	return _builtin_types.string, statement[4]
+	return _builtin_types.string, _make_const_plain_value(statement[4])
+end
+
+_eval_ref = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local name = statement[4]
+	
+	local _do_eval = function(rvalue)
+		local rv_type = rvalue[1]
+		local rv_val  = rvalue[2]
+		
+		return rv_type, rv_val
+	end
+	
+	for frame_idx = #context.stack, 1, -1
+	do
+		local frame = context.stack[frame_idx]
+		
+		if frame.vars[name] ~= nil
+		then
+			return _do_eval(frame.vars[name])
+		end
+		
+		if frame.frame_type == FRAME_TYPE_FUNCTION
+		then
+			-- Don't look for variables in parent functions
+			break
+		end
+	end
+	
+	if context.global_vars[name] ~= nil
+	then
+		return _do_eval(context.global_vars[name])
+	end
+	
+	error("Internal error: undefined variable '" .. name .. "' at " .. filename .. ":" .. line_num)
 end
 
 _eval_add = function(context, statement)
@@ -193,10 +310,10 @@ _eval_add = function(context, statement)
 	
 	if v1_t.base == "number"
 	then
-		return v1_t, v1_v + v2_v
+		return v1_t, _make_const_plain_value(v1_v:get() + v2_v:get())
 	elseif v1[1].base == "string"
 	then
-		return v1_t, v1_v .. v2_v
+		return v1_t, _make_const_plain_value(v1_v:get() .. v2_v:get())
 	else
 		error("Internal error: unknown base type '" .. v1_t.base "' at " .. filename .. ":" .. line_num)
 	end
@@ -215,7 +332,7 @@ _numeric_op_func = function(func, sym)
 			error("Invalid operands to '" .. sym .. "' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
 		end
 		
-		return v1_t, func(v1_v, v2_v)
+		return v1_t, _make_const_plain_value(func(v1_v:get(), v2_v:get()))
 	end
 end
 
@@ -233,10 +350,31 @@ _eval_variable = function(context, statement)
 		error("Unknown variable type '" .. v_type .. "' at " .. filename .. ":" .. line_num)
 	end
 	
+	-- TODO: Make sure we're not in a function... or handle it if we are
+	
 	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
+	local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
+	
+	local func_frame = _topmost_frame_of_type(context, FRAME_TYPE_FUNCTION)
+	if func_frame ~= nil
+	then
+		error("Attempt to defined global variable '" .. v_name .. "' inside function at " .. filename .. ":" .. line_num)
+	end
+	
+	-- TODO: Support struct members, arrays
+	
+	if context.global_vars[v_name] ~= nil
+	then
+		error("Attempt to redefine global variable '" .. v_name .. "' at " .. filename .. ":" .. line_num)
+	end
 	
 	if v_length == nil
 	then
+		context.global_vars[v_name] = {
+			type_info,
+			_make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
+		}
+		
 		context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
 		context.interface.set_comment(context.next_variable, type_info.length, v_name)
 		
@@ -248,7 +386,9 @@ _eval_variable = function(context, statement)
 			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
 		end
 		
-		for i = 0, array_length_val - 1
+		-- TODO: Set up variable in globals
+		
+		for i = 0, array_length_val:get() - 1
 		do
 			context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
 			context.interface.set_comment(context.next_variable, type_info.length, v_name .. "[" .. i .. "]")
@@ -319,8 +459,9 @@ _eval_func_defn = function(context, statement)
 	
 	local impl_func = function(context, arguments)
 		local frame = {
-			frame_type = "call",
+			frame_type = FRAME_TYPE_FUNCTION,
 			var_types = {},
+			vars = {},
 		}
 		
 		table.insert(context.stack, frame)
@@ -365,6 +506,7 @@ end
 _ops = {
 	num = _eval_number,
 	str = _eval_string,
+	ref = _eval_ref,
 	
 	variable     = _eval_variable,
 	call         = _eval_call,
@@ -401,6 +543,18 @@ local function execute(interface, statements)
 		functions = {},
 		stack = {},
 		
+		-- This table holds the top-level "global" (i.e. not "local") variables by name.
+		-- Each element points to a tuple of { type, value } like other rvalues.
+		global_vars = {},
+		
+		-- This table holds our current position in global_vars - under which new variables
+		-- be added and relative to which any lookups should be performed.
+		--
+		-- Each key will either be a tuple of { key, table }, where the key is a string
+		-- when we are descending into a struct member or a number where we are in an array
+		-- and the table is a reference to the element in global_vars at this point.
+		global_stack = {},
+		
 		next_variable = 0,
 		
 		-- Are we currently accessing variables from the file as big endian? Toggled by
@@ -420,9 +574,10 @@ local function execute(interface, statements)
 	end
 	
 	table.insert(context.stack, {
-		frame_type = "base",
+		frame_type = FRAME_TYPE_BASE,
 		
 		var_types = base_types,
+		vars = {},
 	})
 	
 	_exec_statements(context, statements)

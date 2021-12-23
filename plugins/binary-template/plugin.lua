@@ -30,6 +30,10 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 			doc:set_comment(offset, length, rehex.Comment.new(text))
 		end,
 		
+		read_data = function(offset, length)
+			return doc:read_data(offset, length)
+		end,
+		
 		print = function(s) print(s) end
 	}
 	

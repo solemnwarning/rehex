@@ -16,7 +16,7 @@
 
 local executor = require 'executor'
 
-local function test_interface()
+local function test_interface(data)
 	local log = {}
 	
 	local interface = {
@@ -34,6 +34,12 @@ local function test_interface()
 		
 		print = function(s)
 			table.insert(log, "print(" .. s .. ")")
+		end,
+		
+		_data = data,
+		
+		read_data = function(offset, length)
+			return data:sub(offset + 1, offset + length)
 		end,
 	}
 	
@@ -128,6 +134,282 @@ describe("executor", function()
 			"print(foo called)",
 			"print(foo called)",
 			"print(bar called)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads int8 values from file", function()
+		local interface, log = test_interface(string.char(
+			0x00,
+			0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "char", "a", {}, },
+			{ "test.bt", 1, "variable", "char", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %d" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %d" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 1, s8)",
+			"set_comment(0, 1, a)",
+			
+			"set_data_type(1, 1, s8)",
+			"set_comment(1, 1, b)",
+			
+			"print(a = 0)",
+			"print(b = -1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads uint8 values from file", function()
+		local interface, log = test_interface(string.char(
+			0x00,
+			0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "uchar", "a", {}, },
+			{ "test.bt", 1, "variable", "uchar", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %d" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %d" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 1, u8)",
+			"set_comment(0, 1, a)",
+			
+			"set_data_type(1, 1, u8)",
+			"set_comment(1, 1, b)",
+			
+			"print(a = 0)",
+			"print(b = 255)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads int16 (little-endian) values from file", function()
+		local interface, log = test_interface(string.char(
+			0xFF, 0x20,
+			0xFF, 0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "variable", "int16", "a", {}, },
+			{ "test.bt", 1, "variable", "int16", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %d" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %d" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 2, s16le)",
+			"set_comment(0, 2, a)",
+			
+			"set_data_type(2, 2, s16le)",
+			"set_comment(2, 2, b)",
+			
+			"print(a = 8447)",
+			"print(b = -1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads int16 (big-endian) values from file", function()
+		local interface, log = test_interface(string.char(
+			0x20, 0xFF,
+			0xFF, 0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "BigEndian", {} },
+			
+			{ "test.bt", 1, "variable", "int16", "a", {}, },
+			{ "test.bt", 1, "variable", "int16", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %d" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %d" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 2, s16be)",
+			"set_comment(0, 2, a)",
+			
+			"set_data_type(2, 2, s16be)",
+			"set_comment(2, 2, b)",
+			
+			"print(a = 8447)",
+			"print(b = -1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads uint16 (little-endian) values from file", function()
+		local interface, log = test_interface(string.char(
+			0xFF, 0x20,
+			0xFF, 0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "variable", "uint16", "a", {}, },
+			{ "test.bt", 1, "variable", "uint16", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %d" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %d" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 2, u16le)",
+			"set_comment(0, 2, a)",
+			
+			"set_data_type(2, 2, u16le)",
+			"set_comment(2, 2, b)",
+			
+			"print(a = 8447)",
+			"print(b = 65535)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads uint16 (big-endian) values from file", function()
+		local interface, log = test_interface(string.char(
+			0x20, 0xFF,
+			0xFF, 0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "BigEndian", {} },
+			
+			{ "test.bt", 1, "variable", "uint16", "a", {}, },
+			{ "test.bt", 1, "variable", "uint16", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %u" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %u" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 2, u16be)",
+			"set_comment(0, 2, a)",
+			
+			"set_data_type(2, 2, u16be)",
+			"set_comment(2, 2, b)",
+			
+			"print(a = 8447)",
+			"print(b = 65535)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads int32 (little-endian) values from file", function()
+		local interface, log = test_interface(string.char(
+			0xAA, 0xBB, 0xCC, 0x00,
+			0xFF, 0xFF, 0xFF, 0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "variable", "int32", "a", {}, },
+			{ "test.bt", 1, "variable", "int32", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %d" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %d" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, a)",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, b)",
+			
+			"print(a = 13417386)",
+			"print(b = -1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads uint64 (little-endian) values from file", function()
+		local interface, log = test_interface(string.char(
+			0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x00, 0x00, 0x00,
+			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "variable", "uint64", "a", {}, },
+			{ "test.bt", 1, "variable", "uint64", "b", {}, },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a = %u" },
+				{ "test.bt", 1, "ref", "a" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "b = %u" },
+				{ "test.bt", 1, "ref", "b" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 8, u64le)",
+			"set_comment(0, 8, a)",
+			
+			"set_data_type(8, 8, u64le)",
+			"set_comment(8, 8, b)",
+			
+			"print(a = 1025923398570)",
+			"print(b = 18446744073709551615)",
 		}
 		
 		assert.are.same(expect_log, log)

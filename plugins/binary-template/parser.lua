@@ -113,17 +113,23 @@ local digit = R('09')
 local number = C( P('-')^-1 * digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
 local letter = R('AZ','az')
 local name = C( letter * (digit+letter+"_")^0 ) * spc
+local name_nospc = C( letter * (digit+letter+"_")^0 )
 local comma  = P(",") * spc
-
-local value_num = Cc("num") * number
-local value_str = Cc("str") * P('"') * P(_capture_string) * spc
-local value_ref = Cc("ref") * name
-local value = P(_capture_position) * (value_num + value_str + value_ref)
 
 local _parser = spc * P{
 	"TEMPLATE";
 	TEMPLATE =
 		Ct( (V("STMT") + P(1) * P(_parser_fallback)) ^ 0),
+	
+	VALUE_NUM = Cc("num") * number,
+	VALUE_STR = Cc("str") * P('"') * P(_capture_string) * spc,
+	
+	VALUE_REF = Cc("ref") * Ct(
+		name_nospc * (P("[") * V("EXPR") * P("]"))^-1 *
+		(P(".") * name_nospc * (P("[") * V("EXPR") * P("]"))^-1)^0
+		) * spc,
+	
+	VALUE = P(_capture_position) * (V("VALUE_NUM") + V("VALUE_STR") + V("VALUE_REF")),
 	
 	STMT =
 		P(1) * P(_consume_directive) +
@@ -165,7 +171,7 @@ local _parser = spc * P{
 	
 	EXPR_PARENS =
 		P("(") * V("EXPR") ^ 1 * P(")") * spc +
-		Ct( value ),
+		Ct( V("VALUE") ),
 	
 	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
 	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),

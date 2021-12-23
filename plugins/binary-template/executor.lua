@@ -65,6 +65,19 @@ local function _make_named_type(name, type)
 	return new_type
 end
 
+local function _make_aray_type(type)
+	local new_type = {};
+	
+	for k,v in pairs(type)
+	do
+		new_type[k] = v
+	end
+	
+	new_type.is_array = true
+	
+	return new_type
+end
+
 local function _get_type_name(type)
 	return type and type.name or "void"
 end
@@ -256,26 +269,67 @@ _eval_string = function(context, statement)
 	return _builtin_types.string, _make_const_plain_value(statement[4])
 end
 
+-- Resolves a variable reference to an actual value.
 _eval_ref = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
-	local name = statement[4]
+	local path = statement[4]
 	
-	local _do_eval = function(rvalue)
+	-- This function walks along from the second element of path, resolving any array and/or
+	-- struct dereferences before returning the final type+value pair.
+	
+	local _walk_path = function(rvalue)
 		local rv_type = rvalue[1]
 		local rv_val  = rvalue[2]
 		
+		for i = 2, #path
+		do
+			if type(path[i]) == "table"
+			then
+				-- This is a statement to be evalulated and used as an array index.
+				
+				local array_idx_t, array_idx_v = _eval_statement(context, path[i])
+				
+				if array_idx_t == nil or array_idx_t.base ~= "number"
+				then
+					error("Invalid '" .. _get_type_name(array_idx_t) .. "' operand to '[]' operator - expected a number at " .. filename .. ":" .. line_num)
+				end
+				
+				if rv_type.is_array
+				then
+					local array_idx = array_idx_v:get();
+					
+					if array_idx < 0 or array_idx >= #rv_val
+					then
+						error("Attempt to access out-of-range array index " .. array_idx .. " at " .. filename .. ":" .. line_num)
+					else
+						rv_val = rv_val[array_idx_v:get() + 1]
+					end
+				else
+					error("Attempt to access non-array variable as array at " .. filename .. ":" .. line_num)
+				end
+			else
+				-- This is a string to be used as a struct member
+				
+				local struct_key = path[i]
+				
+				error("not implemented")
+			end
+		end
+		
 		return rv_type, rv_val
 	end
+	
+	-- Walk through symbol tables looking for the first element in path
 	
 	for frame_idx = #context.stack, 1, -1
 	do
 		local frame = context.stack[frame_idx]
 		
-		if frame.vars[name] ~= nil
+		if frame.vars[ path[1] ] ~= nil
 		then
-			return _do_eval(frame.vars[name])
+			return _walk_path(frame.vars[ path[1] ])
 		end
 		
 		if frame.frame_type == FRAME_TYPE_FUNCTION
@@ -285,12 +339,12 @@ _eval_ref = function(context, statement)
 		end
 	end
 	
-	if context.global_vars[name] ~= nil
+	if context.global_vars[ path[1] ] ~= nil
 	then
-		return _do_eval(context.global_vars[name])
+		return _walk_path(context.global_vars[ path[1] ])
 	end
 	
-	error("Internal error: undefined variable '" .. name .. "' at " .. filename .. ":" .. line_num)
+	error("Internal error: undefined variable '" .. path[1] .. "' at " .. filename .. ":" .. line_num)
 end
 
 _eval_add = function(context, statement)
@@ -386,10 +440,19 @@ _eval_variable = function(context, statement)
 			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
 		end
 		
+		local g_values = {}
+		
+		context.global_vars[v_name] = {
+			_make_aray_type(type_info),
+			g_values
+		}
+		
 		-- TODO: Set up variable in globals
 		
 		for i = 0, array_length_val:get() - 1
 		do
+			table.insert(g_values, _make_file_value(context, context.next_variable, type_info.length, data_type_fmt))
+			
 			context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
 			context.interface.set_comment(context.next_variable, type_info.length, v_name .. "[" .. i .. "]")
 			

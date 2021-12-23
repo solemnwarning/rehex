@@ -151,11 +151,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %d" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -184,11 +184,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %d" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -219,11 +219,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %d" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -254,11 +254,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %d" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -289,11 +289,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %d" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -324,11 +324,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %u" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %u" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -359,11 +359,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %d" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -394,11 +394,11 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %u" },
-				{ "test.bt", 1, "ref", "a" } } },
+				{ "test.bt", 1, "ref", { "a" } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "b = %u" },
-				{ "test.bt", 1, "ref", "b" } } },
+				{ "test.bt", 1, "ref", { "b" } } } },
 		})
 		
 		local expect_log = {
@@ -413,5 +413,121 @@ describe("executor", function()
 		}
 		
 		assert.are.same(expect_log, log)
+	end)
+	
+	it("reads array values", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "variable", "int32", "a", {
+				{ "test.bt", 1, "num", 4 }, } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a[0] = %d" },
+				{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 0 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a[1] = %d" },
+				{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 1 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a[2] = %d" },
+				{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 2 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "a[3] = %d" },
+				{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 3 } } } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, a[0])",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, a[1])",
+			
+			"set_data_type(8, 4, s32le)",
+			"set_comment(8, 4, a[2])",
+			
+			"set_data_type(12, 4, s32le)",
+			"set_comment(12, 4, a[3])",
+			
+			"print(a[0] = 1)",
+			"print(a[1] = 2)",
+			"print(a[2] = 3)",
+			"print(a[3] = 4)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on invalid array index operands", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "LittleEndian", {} },
+					
+					{ "test.bt", 1, "variable", "int32", "a", {
+						{ "test.bt", 1, "num", 4 }, } },
+					
+					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "str", "hello" } } },
+				})
+			end, "Invalid 'string' operand to '[]' operator - expected a number at test.bt:1")
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "LittleEndian", {} },
+					
+					{ "test.bt", 1, "variable", "int32", "a", {
+						{ "test.bt", 1, "num", 4 }, } },
+					
+					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", -1 } } },
+				})
+			end, "Attempt to access out-of-range array index -1 at test.bt:1")
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "LittleEndian", {} },
+					
+					{ "test.bt", 1, "variable", "int32", "a", {
+						{ "test.bt", 1, "num", 4 }, } },
+					
+					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 4 } } },
+				})
+			end, "Attempt to access out-of-range array index 4 at test.bt:1")
+	end)
+	
+	it("errors on array access of non-array variable", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "LittleEndian", {} },
+					{ "test.bt", 1, "variable", "int32", "a", {} },
+					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 0 } } },
+				})
+			end, "Attempt to access non-array variable as array at test.bt:1")
 	end)
 end)

@@ -27,7 +27,93 @@ describe("parser", function()
 	it("parses a function call", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", {} } }, parser.parse_text("testfunc();"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", { { "UNKNOWN FILE", 1, "num", 1 } } } }, parser.parse_text("testfunc(1);"));
-		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", { { "UNKNOWN FILE", 1, "ref", "i" } } } }, parser.parse_text("testfunc(i);"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", { { "UNKNOWN FILE", 1, "ref", { "i" } } } } }, parser.parse_text("testfunc(i);"));
+	end);
+	
+	it("parses variable refs", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("foo;")
+		expect = { { "UNKNOWN FILE", 1, "ref", { "foo" } } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[0];")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "num", 0 },
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo.bar;")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			"bar",
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[0].bar;")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "num", 0 },
+			"bar",
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[0].bar[10];")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "num", 0 },
+			"bar",
+			{ "UNKNOWN FILE", 1, "num", 10 },
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[0].bar[10].baz;")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "num", 0 },
+			"bar",
+			{ "UNKNOWN FILE", 1, "num", 10 },
+			"baz",
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[0].bar[baz];")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "num", 0 },
+			"bar",
+			{ "UNKNOWN FILE", 1, "ref", { "baz" } },
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[1+1];")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "add",
+				{ "UNKNOWN FILE", 1, "num", 1 },
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		} } }
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("foo[bar.baz];")
+		expect = { { "UNKNOWN FILE", 1, "ref", {
+			"foo",
+			{ "UNKNOWN FILE", 1, "ref", {
+				"bar",
+				"baz" } },
+		} } }
+		
+		assert.are.same(expect, got)
 	end);
 	
 	it("parses arithmetic expressions", function()

@@ -530,4 +530,207 @@ describe("executor", function()
 				})
 			end, "Attempt to access non-array variable as array at test.bt:1")
 	end)
+	
+	it("handles global structs", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "int", "y", {} },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "x = %d" },
+					{ "test.bt", 1, "ref", { "x" } } } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "y = %d" },
+					{ "test.bt", 1, "ref", { "y" } } } },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "a", {} },
+			{ "test.bt", 1, "variable", "struct mystruct", "b", {} },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, x)",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, y)",
+			
+			"print(x = 1)",
+			"print(y = 2)",
+			
+			"set_comment(0, 8, a)",
+			
+			"set_data_type(8, 4, s32le)",
+			"set_comment(8, 4, x)",
+			
+			"set_data_type(12, 4, s32le)",
+			"set_comment(12, 4, y)",
+			
+			"print(x = 3)",
+			"print(y = 4)",
+			
+			"set_comment(8, 8, b)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles global arrays of structs", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "int", "y", {} },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "x = %d" },
+					{ "test.bt", 1, "ref", { "x" } } } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "y = %d" },
+					{ "test.bt", 1, "ref", { "y" } } } },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "a", {
+				{ "test.bt", 1, "num", 2 } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, x)",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, y)",
+			
+			"print(x = 1)",
+				"print(y = 2)",
+			
+			"set_comment(0, 8, a[0])",
+			
+			"set_data_type(8, 4, s32le)",
+			"set_comment(8, 4, x)",
+			
+			"set_data_type(12, 4, s32le)",
+			"set_comment(12, 4, y)",
+			
+			"print(x = 3)",
+			"print(y = 4)",
+			
+			"set_comment(8, 8, a[1])",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles nested structs", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "struct", "bstruct", {},
+				{
+					{ "test.bt", 1, "variable", "int", "x", {} },
+					{ "test.bt", 1, "variable", "int", "y", {} },
+					
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "bstruct x = %d" },
+						{ "test.bt", 1, "ref", { "x" } } } },
+				} },
+				
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "struct bstruct", "y", {} },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "mystruct x = %d" },
+					{ "test.bt", 1, "ref", { "x" } } } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "mystruct y.x = %d" },
+					{ "test.bt", 1, "ref", { "y", "x" } } } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "mystruct y.y = %d" },
+					{ "test.bt", 1, "ref", { "y", "y" } } } },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "a", {} },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, x)",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, x)",
+			
+			"set_data_type(8, 4, s32le)",
+			"set_comment(8, 4, y)",
+			
+			"print(bstruct x = 2)",
+			
+			"set_comment(4, 8, y)",
+			
+			"print(mystruct x = 1)",
+			"print(mystruct y.x = 2)",
+			"print(mystruct y.y = 3)",
+			
+			"set_comment(0, 12, a)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on struct member redefinition", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "LittleEndian", {} },
+					
+					{ "test.bt", 1, "struct", "mystruct", {},
+					{
+						{ "test.bt", 1, "variable", "int", "x", {} },
+						{ "test.bt", 1, "variable", "int", "x", {} },
+					} },
+					
+					{ "test.bt", 1, "variable", "struct mystruct", "a", {} },
+					{ "test.bt", 1, "variable", "struct mystruct", "b", {} },
+				})
+			end, "Attempt to redefine struct member 'x' at test.bt:1")
+	end)
 end)

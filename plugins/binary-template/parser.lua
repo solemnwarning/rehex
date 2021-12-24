@@ -108,6 +108,24 @@ local function _capture_string(text, pos)
 	error("Unmatched \" at " .. filename .. ":" .. line_num)
 end
 
+local function _capture_type(text, pos)
+	local _, match_end, struct_name = text:find("^struct%s+([%a_][%d%a_]*)%s*", pos)
+	
+	if struct_name ~= nil
+	then
+		return match_end + 1, "struct " .. struct_name
+	else
+		_, match_end, type_name = text:find("^([%a_][%d%a_]*)%s*", pos)
+		
+		if type_name ~= nil
+		then
+			return match_end + 1, type_name
+		else
+			return pos
+		end
+	end
+end
+
 local spc = S(" \t\r\n")^0
 local digit = R('09')
 local number = C( P('-')^-1 * digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
@@ -173,10 +191,10 @@ local _parser = spc * P{
 		P("(") * V("EXPR") ^ 1 * P(")") * spc +
 		Ct( V("VALUE") ),
 	
-	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
+	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * P(_capture_type) * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
 	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),
 	
-	ARG = Ct( name * name ),
+	ARG = Ct( P(_capture_type) * name ),
 	
 	--  {
 	--      "struct",
@@ -185,7 +203,7 @@ local _parser = spc * P{
 	--      { <statements> },
 	--  }
 	STRUCT_ARG_LIST = Ct( (S("(") * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")")) ^ -1 ),
-	STRUCT_DEFN = Ct( P(_capture_position) * Cc("struct") * P("struct") * spc * name * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * P(";") ),
+	STRUCT_DEFN = Ct( P(_capture_position) * Cc("struct") * P("struct") * spc * name * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * P(";") * spc ),
 	
 	--  {
 	--      "function",

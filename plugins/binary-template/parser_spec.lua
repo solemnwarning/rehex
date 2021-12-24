@@ -190,6 +190,9 @@ describe("parser", function()
 	it("parses variable definitions", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "var", {} } }, parser.parse_text("int var;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", { { "UNKNOWN FILE", 1, "num", 10 } } } }, parser.parse_text("int array[10];"));
+		
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct foo", "bar", {} } }, parser.parse_text("struct foo bar;"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct baz", "qux", { { "UNKNOWN FILE", 1, "num", 10 } } } }, parser.parse_text("struct baz qux[10];"));
 	end);
 	
 	it("parses local variable definitions", function()

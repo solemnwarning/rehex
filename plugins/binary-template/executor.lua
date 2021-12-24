@@ -31,6 +31,7 @@ local _numeric_op_func;
 local _eval_variable;
 local _eval_call;
 local _eval_func_defn;
+local _eval_struct_defn
 local _eval_statement;
 local _exec_statements;
 
@@ -79,7 +80,50 @@ local function _make_aray_type(type)
 end
 
 local function _get_type_name(type)
-	return type and type.name or "void"
+	if type and type.is_array
+	then
+		return type.name .. "[]"
+	elseif type
+	then
+		return type.name
+	else
+		return "void"
+	end
+end
+
+local function _get_value_size(type, value)
+	local x = function(v)
+		if type.base == "struct"
+		then
+			local size = 0
+			
+			for k,v in pairs(v)
+			do
+				local member_type = v[1]
+				local member_val  = v[2]
+				
+				size = size + _get_value_size(member_type, member_val)
+			end
+			
+			return size
+		else
+			return type.length
+		end
+	end
+	
+	if type.is_array
+	then
+		local array_size = 0
+		
+		for _,v in ipairs(value)
+		do
+			array_size = array_size + x(v)
+		end
+		
+		return array_size
+	else
+		return x(value)
+	end
 end
 
 local function _make_plain_value(value)
@@ -312,9 +356,20 @@ _eval_ref = function(context, statement)
 			else
 				-- This is a string to be used as a struct member
 				
-				local struct_key = path[i]
+				local member = path[i]
 				
-				error("not implemented")
+				if rv_type.base ~= "struct"
+				then
+					error("Attempt to access '" .. _get_type_name(rv_type) .. "' as a struct at " .. filename .. ":" .. line_num)
+				end
+				
+				if rv_val[member] == nil
+				then
+					error("Attempt to access undefined struct member '" .. member .. "' at " .. filename .. ":" .. line_num)
+				end
+				
+				rv_type = rv_val[member][1]
+				rv_val  = rv_val[member][2]
 			end
 		end
 		
@@ -407,32 +462,78 @@ _eval_variable = function(context, statement)
 	-- TODO: Make sure we're not in a function... or handle it if we are
 	
 	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
-	local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
 	
 	local func_frame = _topmost_frame_of_type(context, FRAME_TYPE_FUNCTION)
 	if func_frame ~= nil
 	then
-		error("Attempt to defined global variable '" .. v_name .. "' inside function at " .. filename .. ":" .. line_num)
+		error("Attempt to define global variable '" .. v_name .. "' inside function at " .. filename .. ":" .. line_num)
 	end
 	
-	-- TODO: Support struct members, arrays
+	local dest_tables
 	
-	if context.global_vars[v_name] ~= nil
+	local struct_frame = _topmost_frame_of_type(context, FRAME_TYPE_STRUCT)
+	if struct_frame ~= nil
 	then
-		error("Attempt to redefine global variable '" .. v_name .. "' at " .. filename .. ":" .. line_num)
+		dest_tables = { struct_frame.vars, struct_frame.struct_members }
+		
+		if struct_frame.vars[v_name] ~= nil
+		then
+			error("Attempt to redefine struct member '" .. v_name .. "' at " .. filename .. ":" .. line_num)
+		end
+	else
+		dest_tables = { context.global_vars }
+		
+		if context.global_vars[v_name] ~= nil
+		then
+			error("Attempt to redefine global variable '" .. v_name .. "' at " .. filename .. ":" .. line_num)
+		end
+	end
+	
+	local expand_value = function()
+		if type_info.base == "struct"
+		then
+			-- TODO: Support struct arguments
+			
+			local members = {}
+			
+			local frame = {
+				frame_type = FRAME_TYPE_STRUCT,
+				var_types = {},
+				vars = {},
+				struct_members = members,
+			}
+			
+			table.insert(context.stack, frame)
+			_exec_statements(context, type_info.code)
+			table.remove(context.stack)
+			
+			return members
+		else
+			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
+			return _make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
+		end
 	end
 	
 	if v_length == nil
 	then
-		context.global_vars[v_name] = {
-			type_info,
-			_make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
-		}
+		local base_off = context.next_variable
 		
-		context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
-		context.interface.set_comment(context.next_variable, type_info.length, v_name)
+		local value = expand_value()
+		local length = _get_value_size(type_info, value)
 		
-		context.next_variable = context.next_variable + type_info.length
+		for _,t in ipairs(dest_tables)
+		do
+			t[v_name] = { type_info, value }
+		end
+		
+		if data_type_key ~= nil
+		then
+			context.interface.set_data_type(base_off, length, data_type_key)
+		end
+		
+		context.interface.set_comment(base_off, length, v_name)
+		
+		context.next_variable = base_off + length
 	else
 		local array_length_type, array_length_val = _eval_statement(context, v_length)
 		if array_length_type == nil or array_length_type.base ~= "number"
@@ -442,21 +543,31 @@ _eval_variable = function(context, statement)
 		
 		local g_values = {}
 		
-		context.global_vars[v_name] = {
-			_make_aray_type(type_info),
-			g_values
-		}
-		
-		-- TODO: Set up variable in globals
+		for _,t in ipairs(dest_tables)
+		do
+			t[v_name] = {
+				_make_aray_type(type_info),
+				g_values
+			}
+		end
 		
 		for i = 0, array_length_val:get() - 1
 		do
-			table.insert(g_values, _make_file_value(context, context.next_variable, type_info.length, data_type_fmt))
+			local base_off = context.next_variable
 			
-			context.interface.set_data_type(context.next_variable, type_info.length, data_type_key)
-			context.interface.set_comment(context.next_variable, type_info.length, v_name .. "[" .. i .. "]")
+			local value = expand_value()
+			local length = _get_value_size(type_info, value)
 			
-			context.next_variable = context.next_variable + type_info.length
+			table.insert(g_values, value)
+			
+			if data_type_key ~= nil
+			then
+				context.interface.set_data_type(base_off, length, data_type_key)
+			end
+			
+			context.interface.set_comment(base_off, length, v_name .. "[" .. i .. "]")
+			
+			context.next_variable = base_off + length
 		end
 	end
 end
@@ -542,6 +653,44 @@ _eval_func_defn = function(context, statement)
 	}
 end
 
+_eval_struct_defn = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local struct_name       = statement[4]
+	local struct_arg_types  = statement[5]
+	local struct_statements = statement[6]
+	
+	if _find_type(context, "struct " .. struct_name) ~= nil
+	then
+		error("Attempt to redefine type 'struct " .. struct_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	local arg_types = {}
+	for i = 1, #struct_arg_types
+	do
+		local type_info = _find_type(context, struct_arg_types[i])
+		if type_info == nil
+		then
+			error("Attempt to define 'struct " .. struct_name .. "' with undefined argument type '" .. struct_arg_values[i] .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		table.insert(arg_types, type_info)
+	end
+	
+	context.stack[#context.stack].var_types["struct " .. struct_name] = {
+		base      = "struct",
+		name      = "struct " .. struct_name,
+		arguments = arg_types,
+		code      = struct_statements
+		
+		-- rehex_type_le = "s8",
+		-- rehex_type_be = "s8",
+		-- length = 1,
+		-- string_fmt = "i1"
+	}
+end
+
 _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -574,6 +723,7 @@ _ops = {
 	variable     = _eval_variable,
 	call         = _eval_call,
 	["function"] = _eval_func_defn,
+	["struct"]   = _eval_struct_defn,
 	
 	add      = _eval_add,
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),

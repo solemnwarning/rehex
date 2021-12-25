@@ -846,4 +846,214 @@ describe("executor", function()
 			})
 		end, "return operand type 'int' not compatible with function return type 'void' at test.bt:1")
 	end)
+	
+	it("implements > operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 > 0 = %d" },
+				{ "test.bt", 1, "greater-than",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 0 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 > 1 = %d" },
+				{ "test.bt", 1, "greater-than",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 > 2 = %d" },
+				{ "test.bt", 1, "greater-than",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 2 }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(1 > 0 = 1)",
+			"print(1 > 1 = 0)",
+			"print(1 > 2 = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements >= operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 >= 0 = %d" },
+				{ "test.bt", 1, "greater-than-or-equal",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 0 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 >= 1 = %d" },
+				{ "test.bt", 1, "greater-than-or-equal",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 >= 2 = %d" },
+				{ "test.bt", 1, "greater-than-or-equal",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 2 }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(1 >= 0 = 1)",
+			"print(1 >= 1 = 1)",
+			"print(1 >= 2 = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+        it("implements < operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "0 < 1 = %d" },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "num", 0 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 < 1 = %d" },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "2 < 1 = %d" },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "num", 2 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(0 < 1 = 1)",
+			"print(1 < 1 = 0)",
+			"print(2 < 1 = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements <= operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "0 <= 1 = %d" },
+				{ "test.bt", 1, "less-than-or-equal",
+					{ "test.bt", 1, "num", 0 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 <= 1 = %d" },
+				{ "test.bt", 1, "less-than-or-equal",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "2 <= 1 = %d" },
+				{ "test.bt", 1, "less-than-or-equal",
+					{ "test.bt", 1, "num", 2 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(0 <= 1 = 1)",
+			"print(1 <= 1 = 1)",
+			"print(2 <= 1 = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements == operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "0 == 1 = %d" },
+				{ "test.bt", 1, "equal",
+					{ "test.bt", 1, "num", 0 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 == 1 = %d" },
+				{ "test.bt", 1, "equal",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "-1 == 1 = %d" },
+				{ "test.bt", 1, "equal",
+					{ "test.bt", 1, "num", -1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(0 == 1 = 0)",
+			"print(1 == 1 = 1)",
+			"print(-1 == 1 = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements != operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "0 != 1 = %d" },
+				{ "test.bt", 1, "not-equal",
+					{ "test.bt", 1, "num", 0 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "1 != 1 = %d" },
+				{ "test.bt", 1, "not-equal",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "-1 != 1 = %d" },
+				{ "test.bt", 1, "not-equal",
+					{ "test.bt", 1, "num", -1 },
+					{ "test.bt", 1, "num", 1 }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(0 != 1 = 1)",
+			"print(1 != 1 = 0)",
+			"print(-1 != 1 = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

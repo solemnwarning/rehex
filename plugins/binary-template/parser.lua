@@ -294,12 +294,37 @@ local function _compile_expr(expr)
 	expand_binops({
 		["*"] = "multiply",
 		["/"] = "divide",
+		["%"] = "mod",
 	})
 	
 	expand_binops({
 		["+"] = "add",
 		["-"] = "subtract",
 	})
+	
+	expand_binops({
+		["<<"] = "left-shift",
+		[">>"] = "right-shift",
+	})
+	
+	expand_binops({
+		["<"]  = "less-than",
+		["<="] = "less-than-or-equal",
+		[">"]  = "greater-than",
+		[">="] = "greater-than-or-equal",
+	})
+	
+	expand_binops({
+		["=="] = "equal",
+		["!="] = "not-equal",
+	})
+	
+	expand_binops({ ["&"] = "bitwise-and" })
+	expand_binops({ ["^"] = "bitwise-xor" })
+	expand_binops({ ["|"] = "bitwise-or" })
+	
+	expand_binops({ ["&&"] = "logical-and" })
+	expand_binops({ ["||"] = "logical-or" })
 	
 	if #expr_parts ~= 1
 	then

@@ -832,6 +832,25 @@ _ops = {
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),
 	multiply = _numeric_op_func(function(v1, v2) return v1 * v2 end, "*"),
 	divide   = _numeric_op_func(function(v1, v2) return v1 / v2 end, "/"),
+	mod      = _numeric_op_func(function(v1, v2) return v1 % v2 end, "%"),
+	
+	["left-shift"]  = _numeric_op_func(function(v1, v2) return v1 << v2 end, "<<"),
+	["right-shift"] = _numeric_op_func(function(v1, v2) return v1 >> v2 end, ">>"),
+	
+	["bitwise-and"] = _numeric_op_func(function(v1, v2) return v1 & v2 end, "&"),
+	["bitwise-xor"] = _numeric_op_func(function(v1, v2) return v1 ^ v2 end, "^"),
+	["bitwise-or"]  = _numeric_op_func(function(v1, v2) return v1 | v2 end, "|"),
+	
+	["less-than"]             = _numeric_op_func(function(v1, v2) return v1 <  v2 and 1 or 0 end, "<"),
+	["less-than-or-equal"]    = _numeric_op_func(function(v1, v2) return v1 <= v2 and 1 or 0 end, "<="),
+	["greater-than"]          = _numeric_op_func(function(v1, v2) return v1 >  v2 and 1 or 0 end, ">"),
+	["greater-than-or-equal"] = _numeric_op_func(function(v1, v2) return v1 >= v2 and 1 or 0 end, ">="),
+	
+	["equal"]     = _numeric_op_func(function(v1, v2) return v1 == v2 and 1 or 0 end, "=="),
+	["not-equal"] = _numeric_op_func(function(v1, v2) return v1 ~= v2 and 1 or 0 end, "!="),
+	
+	["logical-and"] = _numeric_op_func(function(v1, v2) return (v1 and v2) and 1 or 0 end, "&&"),
+	["logical-or"]  = _numeric_op_func(function(v1, v2) return (v1 or  v2) and 1 or 0 end, "||"),
 }
 
 --- External entry point into the interpreter

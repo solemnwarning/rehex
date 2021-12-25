@@ -166,30 +166,15 @@ local _parser = spc * P{
 	COMMENT = spc * comment("//", "\n") * spc
 		+ spc * comment("/*", "*/") * spc,
 	
-	EXPR = V("EXPR_1"),
+	EXPR =
+		Ct( P(_capture_position) * Cc("_expr") * Ct( V("EXPR2") ^ 1 ) ),
 	
-	EXPR_1 =
-		Ct( P(_capture_position) * Cc("add")      * V("EXPR_2") * S("+") * spc * V("EXPR_1") ) +
-		Ct( P(_capture_position) * Cc("subtract") * V("EXPR_2") * S("-") * spc * V("EXPR_1") ) +
-		V("EXPR_2"),
-	
-	EXPR_2 =
-		Ct( P(_capture_position) * Cc("multiply") * V("EXPR_CALL") * S("*") * spc * V("EXPR_2") ) +
-		Ct( P(_capture_position) * Cc("divide")   * V("EXPR_CALL") * S("/") * spc * V("EXPR_2") ) +
-		V("EXPR_CALL"),
-	
-	--  {
-	--      "call",
-	--      "name",
-	--      { <arguments> }
-	--  }
-	EXPR_CALL =
+	EXPR2 =
+		P("(") * V("EXPR") * P(")") * spc +
 		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
-		V("EXPR_PARENS"),
-	
-	EXPR_PARENS =
-		P("(") * V("EXPR") ^ 1 * P(")") * spc +
-		Ct( V("VALUE") ),
+		Ct( V("VALUE") ) +
+		Ct( P(_capture_position) * Cc("_token") *
+			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|") ) * spc),
 	
 	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * P(_capture_type) * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
 	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),
@@ -236,8 +221,139 @@ local _parser = spc * P{
 	),
 }
 
-function parse_text(text)
-	return _parser:match(text)
+local function _compile_expr(expr)
+	local expr_parts = expr[4]
+	
+	if expr[3] ~= "_expr"
+	then
+		error("Internal error - _compile_expr() called with an '" .. expr[3] .. "' node")
+	end
+	
+	local expand_binops = function(ops)
+		local idx = 1
+		
+		while (idx + 2) <= #expr_parts
+		do
+			local matched = false
+			
+			for op, ast_op in pairs(ops)
+			do
+				if
+					expr_parts[idx + 1][3] == "_token" and expr_parts[idx + 1][4] == op and
+					expr_parts[idx][3]:sub(1, 1) ~= "_" and
+					expr_parts[idx + 2][3]:sub(1, 1) ~= "_"
+				then
+					expr_parts[idx] = { expr_parts[idx + 1][1], expr_parts[idx + 1][2], ast_op, expr_parts[idx], expr_parts[idx + 2] }
+					table.remove(expr_parts, idx + 1)
+					table.remove(expr_parts, idx + 1)
+					
+					matched = true
+					break
+				end
+			end
+			
+			if not matched
+			then
+				idx = idx + 1
+			end
+		end
+	end
+	
+	for i = 1, #expr_parts
+	do
+		if expr_parts[i][3] == "_expr"
+		then
+			_compile_expr(expr_parts[i])
+		end
+		
+		if expr_parts[i][3] == "ref"
+		then
+			local path = expr_parts[i][4]
+			
+			for i = 1, #path
+			do
+				if type(path[i]) == "table"
+				then
+					_compile_expr(path[i])
+				end
+			end
+		elseif expr_parts[i][3] == "call"
+		then
+			local args = expr_parts[i][5]
+			
+			for i = 1, #args
+			do
+				_compile_expr(args[i])
+			end
+		end
+	end
+	
+	expand_binops({
+		["*"] = "multiply",
+		["/"] = "divide",
+	})
+	
+	expand_binops({
+		["+"] = "add",
+		["-"] = "subtract",
+	})
+	
+	if #expr_parts ~= 1
+	then
+		error("Unable to compile expression starting at " .. expr[1] .. ":" .. expr[2])
+	end
+	
+	-- Replace expr's content with the compiled expression in expr_parts[1]
+	
+	while #expr > 0
+	do
+		table.remove(expr, #expr)
+	end
+	
+	for _,v in ipairs(expr_parts[1])
+	do
+		table.insert(expr, v)
+	end
+end
+
+local function _compile_statement(s)
+	local op = s[3]
+	
+	if op == "_expr"
+	then
+		_compile_expr(s)
+	elseif op == "function"
+	then
+		local body = s[7]
+		
+		for i = 1, #body
+		do
+			_compile_statement(body[i])
+		end
+	elseif op == "local-variable"
+	then
+		local array_size = s[6][1]
+		local init_val = s[7][1]
+		
+		if array_size then _compile_expr(array_size) end
+		if init_val   then _compile_expr(init_val)   end
+	elseif op == "variable"
+	then
+		local array_size = s[6][1]
+		
+		if array_size then _compile_expr(array_size) end
+	end
+end
+
+local function parse_text(text)
+	local ast = _parser:match(text)
+	
+	for i,v in ipairs(ast)
+	do
+		_compile_statement(v)
+	end
+	
+	return ast
 end
 
 M.parse_text = parse_text;

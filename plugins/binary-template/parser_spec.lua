@@ -117,54 +117,36 @@ describe("parser", function()
 	end);
 	
 	it("parses arithmetic expressions", function()
-		local got;
-		local expect;
+		local got
+		local expect
 		
-		got = parser.parse_text("1 + 2 * 3 - 4 / 5 + 6;");
+		got = parser.parse_text("1 + 2 * 3 - 4 / 5 + 6;")
+		
+		-- (((1 + (2 * 3)) - (4 / 5)) + 6)
 		expect = {
 			{ "UNKNOWN FILE", 1, "add",
-				{ "UNKNOWN FILE", 1, "num", 1 },
 				{ "UNKNOWN FILE", 1, "subtract",
-					{ "UNKNOWN FILE", 1, "multiply",
-						{ "UNKNOWN FILE", 1, "num", 2 },
-						{ "UNKNOWN FILE", 1, "num", 3 },
-					},
 					{ "UNKNOWN FILE", 1, "add",
-						{ "UNKNOWN FILE", 1, "divide",
-							{ "UNKNOWN FILE", 1, "num", 4 },
-							{ "UNKNOWN FILE", 1, "num", 5 },
+						{ "UNKNOWN FILE", 1, "num", 1 },
+						{ "UNKNOWN FILE", 1, "multiply",
+							{ "UNKNOWN FILE", 1, "num", 2 },
+							{ "UNKNOWN FILE", 1, "num", 3 },
 						},
-						{ "UNKNOWN FILE", 1, "num", 6 },
 					},
-				},
-			},
-		};
-		
-		assert.are.same(expect, got);
-		
-		got = parser.parse_text("(1 + 2) * (3 - 4) / (5 + 6);");
-		expect = {
-			{ "UNKNOWN FILE", 1, "multiply",
-				{ "UNKNOWN FILE", 1, "add",
-					{ "UNKNOWN FILE", 1, "num", 1 },
-					{ "UNKNOWN FILE", 1, "num", 2 },
-				},
-				{ "UNKNOWN FILE", 1, "divide",
-					{ "UNKNOWN FILE", 1, "subtract",
-						{ "UNKNOWN FILE", 1, "num", 3 },
+					{ "UNKNOWN FILE", 1, "divide",
 						{ "UNKNOWN FILE", 1, "num", 4 },
-					},
-					{ "UNKNOWN FILE", 1, "add",
 						{ "UNKNOWN FILE", 1, "num", 5 },
-						{ "UNKNOWN FILE", 1, "num", 6 },
 					},
 				},
+				{ "UNKNOWN FILE", 1, "num", 6 }
 			},
-		};
+		}
 		
-		assert.are.same(expect, got);
+		assert.are.same(expect, got)
 		
-		got = parser.parse_text("((1 + 2) * (3 - 4)) / (5 + 6);");
+		got = parser.parse_text("(1 + 2) * (3 - 4) / (5 + 6);")
+		
+		-- (((1 + 2) * (3 - 4)) / (5 + 6))
 		expect = {
 			{ "UNKNOWN FILE", 1, "divide",
 				{ "UNKNOWN FILE", 1, "multiply",
@@ -184,7 +166,29 @@ describe("parser", function()
 			},
 		};
 		
-		assert.are.same(expect, got);
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("((1 + 2) * ((3 - 4) / (5 + 6)));");
+		expect = {
+			{ "UNKNOWN FILE", 1, "multiply",
+				{ "UNKNOWN FILE", 1, "add",
+					{ "UNKNOWN FILE", 1, "num", 1 },
+					{ "UNKNOWN FILE", 1, "num", 2 },
+				},
+				{ "UNKNOWN FILE", 1, "divide",
+					{ "UNKNOWN FILE", 1, "subtract",
+						{ "UNKNOWN FILE", 1, "num", 3 },
+						{ "UNKNOWN FILE", 1, "num", 4 },
+					},
+					{ "UNKNOWN FILE", 1, "add",
+						{ "UNKNOWN FILE", 1, "num", 5 },
+						{ "UNKNOWN FILE", 1, "num", 6 },
+					},
+				},
+			},
+		}
+		
+		assert.are.same(expect, got)
 	end);
 	
 	it("parses variable definitions", function()

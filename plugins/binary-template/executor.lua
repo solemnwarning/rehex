@@ -21,6 +21,10 @@ local FRAME_TYPE_STRUCT   = "struct"
 local FRAME_TYPE_FUNCTION = "function"
 local FRAME_TYPE_SCOPE    = "scope"
 
+local FLOWCTRL_TYPE_RETURN   = 1
+local FLOWCTRL_TYPE_BREAK    = 2
+local FLOWCTRL_TYPE_CONTINUE = 4
+
 local _find_type;
 
 local _eval_number;
@@ -30,6 +34,7 @@ local _eval_add;
 local _numeric_op_func;
 local _eval_variable;
 local _eval_call;
+local _eval_return
 local _eval_func_defn;
 local _eval_struct_defn
 local _eval_statement;
@@ -47,6 +52,25 @@ local function _topmost_frame_of_type(context, type)
 	end
 	
 	return nil
+end
+
+local function _can_do_flowctrl_here(context, flowctrl_type)
+	for i = #context.stack, 1, -1
+	do
+		local frame = context.stack[i]
+		
+		if (frame.handles_flowctrl_types & flowctrl_type) == flowctrl_type
+		then
+			return true
+		end
+		
+		if (frame.blocks_flowctrl_types & flowctrl_type) == flowctrl_type
+		then
+			return false
+		end
+	end
+	
+	return false
 end
 
 --
@@ -124,6 +148,16 @@ local function _get_value_size(type, value)
 	else
 		return x(value)
 	end
+end
+
+local function _type_assignable(dst_t, src_t)
+	
+	return (dst_t == nil and src_t == nil) or (
+		
+		dst_t ~= nil and src_t ~= nil and
+		dst_t.base ~= "struct" and
+		dst_t.base == src_t.base and
+		dst_t.is_array == src_t.is_array)
 end
 
 local function _make_plain_value(value)
@@ -501,6 +535,8 @@ _eval_variable = function(context, statement)
 				var_types = {},
 				vars = {},
 				struct_members = members,
+				
+				blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
 			}
 			
 			table.insert(context.stack, frame)
@@ -596,6 +632,42 @@ _eval_call = function(context, statement)
 	return func_defn.impl(context, func_arg_values)
 end
 
+_eval_return = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local retval = statement[4]
+	
+	if not _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
+	then
+		error("'return' statement not allowed here at " .. filename .. ":" .. line_num)
+	end
+	
+	local func_frame = _topmost_frame_of_type(context, FRAME_TYPE_FUNCTION)
+	
+	if retval
+	then
+		local retval_t, retval_v = _eval_statement(context, retval)
+		
+		if not _type_assignable(func_frame.return_type, retval_t)
+		then
+			error("return operand type '" .. _get_type_name(retval_t) .. "' not compatible with function return type '" .. _get_type_name(func_frame.return_type) .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		if retval_t
+		then
+			retval = { retval_t, retval_v }
+		else
+			retval = nil
+		end
+	elseif func_frame.return_type ~= nil
+	then
+		error("return without an operand in function that returns type '" .. _get_type_name(func_frame.return_type) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	return { flowctrl = FLOWCTRL_TYPE_RETURN }, retval
+end
+
 _eval_func_defn = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -610,9 +682,10 @@ _eval_func_defn = function(context, statement)
 		error("Attempt to redefine function '" .. func_name .. "' at " .. filename .. ":" .. line_num)
 	end
 	
+	local ret_type
 	if func_ret_type ~= "void"
 	then
-		local ret_type = _find_type(context, func_ret_type)
+		ret_type = _find_type(context, func_ret_type)
 		if ret_type == nil
 		then
 			error("Attempt to define function '" .. func_name .. "' with undefined return type '" .. func_ret_type .. "' at " .. filename .. ":" .. line_num)
@@ -636,15 +709,44 @@ _eval_func_defn = function(context, statement)
 			frame_type = FRAME_TYPE_FUNCTION,
 			var_types = {},
 			vars = {},
+			
+			handles_flowctrl_types = FLOWCTRL_TYPE_RETURN,
+			blocks_flowctrl_types  = (FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
+			
+			return_type = ret_type,
 		}
 		
 		table.insert(context.stack, frame)
 		
-		-- TODO: Handle early return, return value
+		local retval
 		
-		_exec_statements(context, func_statements)
+		for _, statement in ipairs(func_statements)
+		do
+			local sr_t, sr_v = _eval_statement(context, statement)
+			
+			if sr_t and sr_t.flowctrl ~= nil
+			then
+				if sr_t.flowctrl == FLOWCTRL_TYPE_RETURN
+				then
+					retval = sr_v
+					break
+				else
+					error("Internal error: unexpected flowctrl type '" .. sr_t.flowctrl .. "'")
+				end
+			end
+		end
 		
 		table.remove(context.stack)
+		
+		if retval == nil and ret_type ~= nil
+		then
+			error("No return statement in function returning non-void at " .. filename .. ":" .. line_num)
+		end
+		
+		if retval ~= nil
+		then
+			return table.unpack(retval)
+		end
 	end
 	
 	context.functions[func_name] = {
@@ -722,6 +824,7 @@ _ops = {
 	
 	variable     = _eval_variable,
 	call         = _eval_call,
+	["return"]   = _eval_return,
 	["function"] = _eval_func_defn,
 	["struct"]   = _eval_struct_defn,
 	

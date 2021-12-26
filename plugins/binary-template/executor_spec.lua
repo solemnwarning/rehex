@@ -733,4 +733,117 @@ describe("executor", function()
 				})
 			end, "Attempt to redefine struct member 'x' at test.bt:1")
 	end)
+	
+	it("returns return values from functions", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "int", "func1", {},
+			{
+				{ "test.bt", 1, "return",
+					{ "test.bt", 1, "num", 1 } },
+			} },
+			
+			{ "test.bt", 1, "function", "int", "func2", {},
+			{
+				{ "test.bt", 1, "return",
+					{ "test.bt", 1, "num", 2 } },
+			} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "func1() = %d" },
+				{ "test.bt", 1, "call", "func1", {} },
+			} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "func2() = %d" },
+				{ "test.bt", 1, "call", "func2", {} },
+			} },
+		})
+		
+		local expect_log = {
+			"print(func1() = 1)",
+			"print(func2() = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows early return from functions", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "int", "ifunc", {},
+			{
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "foo" } } },
+				
+				{ "test.bt", 1, "return",
+					{ "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "bar" } } },
+			} },
+			
+			{ "test.bt", 1, "function", "void", "vfunc", {},
+			{
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "baz" } } },
+				
+				{ "test.bt", 1, "return" },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "quz" } } },
+			} },
+			
+			{ "test.bt", 1, "call", "ifunc", {} },
+			{ "test.bt", 1, "call", "vfunc", {} },
+		})
+		
+		local expect_log = {
+			"print(foo)",
+			"print(baz)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on incorrect return types", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "int", "ifunc", {},
+				{
+					{ "test.bt", 1, "return",
+						{ "test.bt", 1, "str", "hello" } },
+				} },
+				
+				{ "test.bt", 1, "call", "ifunc", {} },
+			})
+		end, "return operand type 'string' not compatible with function return type 'int' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "int", "ifunc", {},
+				{
+					{ "test.bt", 1, "return" },
+				} },
+				
+				{ "test.bt", 1, "call", "ifunc", {} },
+			})
+		end, "return without an operand in function that returns type 'int' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "vfunc", {},
+				{
+					{ "test.bt", 1, "return",
+						{ "test.bt", 1, "num", 0 } },
+				} },
+				
+				{ "test.bt", 1, "call", "vfunc", {} },
+			})
+		end, "return operand type 'int' not compatible with function return type 'void' at test.bt:1")
+	end)
 end)

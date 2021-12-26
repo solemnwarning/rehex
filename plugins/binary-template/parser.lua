@@ -159,6 +159,7 @@ local _parser = spc * P{
 		V("FUNC_DEFN") +
 		V("LOCAL_VAR_DEFN") +
 		V("VAR_DEFN") +
+		V("RETURN") +
 		V("EXPR") * P(";") * spc,
 	
 	BLOCK = P("{") * spc * ( V("STMT") ^ 0 ) * spc * P("}"),
@@ -178,6 +179,8 @@ local _parser = spc * P{
 	
 	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * P(_capture_type) * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
 	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),
+	
+	RETURN = Ct( P(_capture_position) * Cc("return") * P("return") * spc * V("EXPR") * P(";") * spc),
 	
 	ARG = Ct( P(_capture_type) * name ),
 	

@@ -37,6 +37,7 @@ local _eval_call;
 local _eval_return
 local _eval_func_defn;
 local _eval_struct_defn
+local _eval_if
 local _eval_statement;
 local _exec_statements;
 
@@ -793,6 +794,30 @@ _eval_struct_defn = function(context, statement)
 	}
 end
 
+_eval_if = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	for i = 4, #statement
+	do
+		local cond = statement[i][2] and statement[i][1] or { "BUILTIN", 0, "num", 1 }
+		local code = statement[i][2] or statement[i][1]
+		
+		local cond_t, cond_v = _eval_statement(context, cond)
+		
+		if (cond_t and cond_t.base) ~= "number"
+		then
+			error("Expected numeric expression to if/else if at " .. cond[1] .. ":" .. cond[2])
+		end
+		
+		if cond_v:get() ~= 0
+		then
+			_exec_statements(context, code)
+			break
+		end
+	end
+end
+
 _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -827,6 +852,7 @@ _ops = {
 	["return"]   = _eval_return,
 	["function"] = _eval_func_defn,
 	["struct"]   = _eval_struct_defn,
+	["if"]       = _eval_if,
 	
 	add      = _eval_add,
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),

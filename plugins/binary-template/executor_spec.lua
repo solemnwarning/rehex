@@ -1056,4 +1056,55 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+        
+        it("executes statements from first true branch in if statement", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "if",
+				{ { "test.bt", 1, "num", 1 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "true branch executed (1)" } } },
+				} },
+				{ { "test.bt", 1, "num", 1 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "second true branch executed (2)" } } },
+				} } },
+			{ "test.bt", 1, "if",
+				{ { "test.bt", 1, "num", 0 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "false branch executed (3)" } } },
+				} },
+				{ { "test.bt", 1, "num", 1 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "true branch executed (4)" } } },
+				} } },
+			{ "test.bt", 1, "if",
+				{ { "test.bt", 1, "num", 0 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "false branch executed (5)" } } },
+				} },
+				{ { "test.bt", 1, "num", 0 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "false branch executed (6)" } } },
+				} } },
+			{ "test.bt", 1, "if",
+				{ { "test.bt", 1, "num", 0 }, {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "false branch executed (7)" } } },
+				} },
+				{ {
+					{ "test.bt", 1, "call", "Printf",
+						{ { "test.bt", 1, "str", "fallback branch executed (8)" } } },
+				} } },
+		})
+		
+		local expect_log = {
+			"print(true branch executed (1))",
+			"print(true branch executed (4))",
+			"print(fallback branch executed (8))",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

@@ -332,4 +332,87 @@ describe("parser", function()
 		
 		assert.are.same(expect, got);
 	end);
+	
+	it("parses && and || operators", function()
+		local got
+		local expect
+		
+		-- 1 && 2 && 3
+		
+		got = parser.parse_text("1 && 2 && 3;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-and",
+				{ "UNKNOWN FILE", 1, "logical-and",
+					{ "UNKNOWN FILE", 1, "num", 1 },
+					{ "UNKNOWN FILE", 1, "num", 2 } },
+				{ "UNKNOWN FILE", 1, "num", 3 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		-- 1 || 2 || 3
+		
+		got = parser.parse_text("1 || 2 || 3;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-or",
+				{ "UNKNOWN FILE", 1, "logical-or",
+					{ "UNKNOWN FILE", 1, "num", 1 },
+					{ "UNKNOWN FILE", 1, "num", 2 } },
+				{ "UNKNOWN FILE", 1, "num", 3 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		-- 1 && 2 || 3
+		
+		got = parser.parse_text("1 && 2 || 3;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-or",
+				{ "UNKNOWN FILE", 1, "logical-and",
+					{ "UNKNOWN FILE", 1, "num", 1 },
+					{ "UNKNOWN FILE", 1, "num", 2 } },
+				{ "UNKNOWN FILE", 1, "num", 3 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		-- 1 || 2 && 3
+		
+		got = parser.parse_text("1 || 2 && 3;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-or",
+				{ "UNKNOWN FILE", 1, "num", 1 },
+				{ "UNKNOWN FILE", 1, "logical-and",
+					{ "UNKNOWN FILE", 1, "num", 2 },
+					{ "UNKNOWN FILE", 1, "num", 3 } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		-- 1 && (2 || 3)
+		
+		got = parser.parse_text("1 && (2 || 3);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-and",
+				{ "UNKNOWN FILE", 1, "num", 1 },
+				{ "UNKNOWN FILE", 1, "logical-or",
+					{ "UNKNOWN FILE", 1, "num", 2 },
+					{ "UNKNOWN FILE", 1, "num", 3 } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		-- (1 || 2) && 3
+		
+		got = parser.parse_text("(1 || 2) && 3;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-and",
+				{ "UNKNOWN FILE", 1, "logical-or",
+					{ "UNKNOWN FILE", 1, "num", 1 },
+					{ "UNKNOWN FILE", 1, "num", 2 } },
+				{ "UNKNOWN FILE", 1, "num", 3 } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

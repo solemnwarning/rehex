@@ -1107,4 +1107,248 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("implements && operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- TRUE && TRUE
+			
+			{ "test.bt", 1, "function", "int", "true_before_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_before_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "function", "int", "true_after_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_after_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "true_before_true() && true_after_true() = %d" },
+				{ "test.bt", 1, "logical-and",
+					{ "test.bt", 1, "call", "true_before_true", {} },
+					{ "test.bt", 1, "call", "true_after_true", {} } },
+			} },
+			
+			-- FALSE && TRUE
+			
+			{ "test.bt", 1, "function", "int", "false_before_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_before_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "function", "int", "true_after_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_after_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "false_before_true() && true_after_false() = %d" },
+				{ "test.bt", 1, "logical-and",
+					{ "test.bt", 1, "call", "false_before_true", {} },
+					{ "test.bt", 1, "call", "true_after_false", {} } },
+			} },
+			
+			-- TRUE && FALSE
+			
+			{ "test.bt", 1, "function", "int", "true_before_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_before_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "function", "int", "false_after_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_after_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "true_before_false() && false_after_true() = %d" },
+				{ "test.bt", 1, "logical-and",
+					{ "test.bt", 1, "call", "true_before_false", {} },
+					{ "test.bt", 1, "call", "false_after_true", {} } },
+			} },
+			
+			-- FALSE && FALSE
+			
+			{ "test.bt", 1, "function", "int", "false_before_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_before_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "function", "int", "false_after_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_after_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "false_before_false() && false_after_false() = %d" },
+				{ "test.bt", 1, "logical-and",
+					{ "test.bt", 1, "call", "false_before_false", {} },
+					{ "test.bt", 1, "call", "false_after_false", {} } },
+			} },
+		})
+		
+		local expect_log = {
+			"print(true_before_true() called)",
+			"print(true_after_true() called)",
+			"print(true_before_true() && true_after_true() = 1)",
+			
+			"print(false_before_true() called)",
+			"print(false_before_true() && true_after_false() = 0)",
+			
+			"print(true_before_false() called)",
+			"print(false_after_true() called)",
+			"print(true_before_false() && false_after_true() = 0)",
+			
+			"print(false_before_false() called)",
+			"print(false_before_false() && false_after_false() = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on incorrect types to && operator", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "logical-and",
+					{ "test.bt", 1, "str", "hello" },
+					{ "test.bt", 1, "num", 1 } },
+			})
+		end, "Invalid left operand to '&&' operator - expected numeric, got 'string' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "voidfunc", {}, {} },
+				
+				{ "test.bt", 1, "logical-and",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "call", "voidfunc", {} } },
+			})
+		end, "Invalid right operand to '&&' operator - expected numeric, got 'void' at test.bt:1")
+	end)
+	
+	it("implements || operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- TRUE || TRUE
+			
+			{ "test.bt", 1, "function", "int", "true_before_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_before_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "function", "int", "true_after_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_after_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "true_before_true() || true_after_true() = %d" },
+				{ "test.bt", 1, "logical-or",
+					{ "test.bt", 1, "call", "true_before_true", {} },
+					{ "test.bt", 1, "call", "true_after_true", {} } },
+			} },
+			
+			-- FALSE || TRUE
+			
+			{ "test.bt", 1, "function", "int", "false_before_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_before_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "function", "int", "true_after_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_after_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "false_before_true() || true_after_false() = %d" },
+				{ "test.bt", 1, "logical-or",
+					{ "test.bt", 1, "call", "false_before_true", {} },
+					{ "test.bt", 1, "call", "true_after_false", {} } },
+			} },
+			
+			-- TRUE || FALSE
+			
+			{ "test.bt", 1, "function", "int", "true_before_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "true_before_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 1 } },
+			} },
+			{ "test.bt", 1, "function", "int", "false_after_true", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_after_true() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "true_before_false() || false_after_true() = %d" },
+				{ "test.bt", 1, "logical-or",
+					{ "test.bt", 1, "call", "true_before_false", {} },
+					{ "test.bt", 1, "call", "false_after_true", {} } },
+			} },
+			
+			-- FALSE || FALSE
+			
+			{ "test.bt", 1, "function", "int", "false_before_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_before_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "function", "int", "false_after_false", {}, {
+				{ "test.bt", 1, "call", "Printf",
+					{ { "test.bt", 1, "str", "false_after_false() called" } } },
+				{ "test.bt", 1, "return", { "test.bt", 1, "num", 0 } },
+			} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "false_before_false() || false_after_false() = %d" },
+				{ "test.bt", 1, "logical-or",
+					{ "test.bt", 1, "call", "false_before_false", {} },
+					{ "test.bt", 1, "call", "false_after_false", {} } },
+			} },
+		})
+		
+		local expect_log = {
+			"print(true_before_true() called)",
+			"print(true_before_true() || true_after_true() = 1)",
+			
+			"print(false_before_true() called)",
+			"print(true_after_false() called)",
+			"print(false_before_true() || true_after_false() = 1)",
+			
+			"print(true_before_false() called)",
+			"print(true_before_false() || false_after_true() = 1)",
+			
+			"print(false_before_false() called)",
+			"print(false_after_false() called)",
+			"print(false_before_false() || false_after_false() = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on incorrect types to || operator", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "voidfunc", {}, {} },
+				
+				{ "test.bt", 1, "logical-or",
+					{ "test.bt", 1, "call", "voidfunc", {} },
+					{ "test.bt", 1, "num", 1 } },
+			})
+		end, "Invalid left operand to '||' operator - expected numeric, got 'void' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "logical-or",
+					{ "test.bt", 1, "num", 0 },
+					{ "test.bt", 1, "str", "hello" } },
+			})
+		end, "Invalid right operand to '||' operator - expected numeric, got 'string' at test.bt:1")
+	end)
 end)

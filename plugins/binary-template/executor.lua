@@ -32,6 +32,8 @@ local _eval_string;
 local _eval_ref;
 local _eval_add;
 local _numeric_op_func;
+local _eval_logical_and;
+local _eval_logical_or;
 local _eval_variable;
 local _eval_call;
 local _eval_return
@@ -480,6 +482,68 @@ _numeric_op_func = function(func, sym)
 	end
 end
 
+_eval_logical_and = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local v1_t, v1_v = _eval_statement(context, statement[4])
+	
+	if v1_t == nil or v1_t.base ~= "number"
+	then
+		error("Invalid left operand to '&&' operator - expected numeric, got '" .. _get_type_name(v1_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if v1_v:get() == 0
+	then
+		return _builtin_types.int, _make_const_plain_value(0)
+	end
+	
+	local v2_t, v2_v = _eval_statement(context, statement[5])
+	
+	if v2_t == nil or v2_t.base ~= "number"
+	then
+		error("Invalid right operand to '&&' operator - expected numeric, got '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if v2_v:get() == 0
+	then
+		return _builtin_types.int, _make_const_plain_value(0)
+	end
+	
+	return _builtin_types.int, _make_const_plain_value(1)
+end
+
+_eval_logical_or = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local v1_t, v1_v = _eval_statement(context, statement[4])
+	
+	if v1_t == nil or v1_t.base ~= "number"
+	then
+		error("Invalid left operand to '||' operator - expected numeric, got '" .. _get_type_name(v1_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if v1_v:get() ~= 0
+	then
+		return _builtin_types.int, _make_const_plain_value(1)
+	end
+	
+	local v2_t, v2_v = _eval_statement(context, statement[5])
+	
+	if v2_t == nil or v2_t.base ~= "number"
+	then
+		error("Invalid right operand to '||' operator - expected numeric, got '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if v2_v:get() ~= 0
+	then
+		return _builtin_types.int, _make_const_plain_value(1)
+	end
+	
+	return _builtin_types.int, _make_const_plain_value(0)
+end
+
 _eval_variable = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -875,8 +939,8 @@ _ops = {
 	["equal"]     = _numeric_op_func(function(v1, v2) return v1 == v2 and 1 or 0 end, "=="),
 	["not-equal"] = _numeric_op_func(function(v1, v2) return v1 ~= v2 and 1 or 0 end, "!="),
 	
-	["logical-and"] = _numeric_op_func(function(v1, v2) return (v1 and v2) and 1 or 0 end, "&&"),
-	["logical-or"]  = _numeric_op_func(function(v1, v2) return (v1 or  v2) and 1 or 0 end, "||"),
+	["logical-and"] = _eval_logical_and,
+	["logical-or"]  = _eval_logical_or,
 }
 
 --- External entry point into the interpreter

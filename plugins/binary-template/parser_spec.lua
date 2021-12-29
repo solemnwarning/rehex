@@ -415,4 +415,22 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses assignment operator", function()
+		local got
+		local expect
+		
+		-- a = b = 1
+		
+		got = parser.parse_text("a = b = 1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "a" } },
+				{ "UNKNOWN FILE", 1, "assign",
+					{ "UNKNOWN FILE", 1, "ref", { "b" } },
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

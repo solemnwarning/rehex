@@ -1351,4 +1351,89 @@ describe("executor", function()
 			})
 		end, "Invalid right operand to '||' operator - expected numeric, got 'string' at test.bt:1")
 	end)
+	
+	it("allows defining local variables", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "foo", {}, {} },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "foo = %d" },
+				{ "test.bt", 1, "ref", { "foo" } } } },
+		})
+		
+		local expect_log = {
+			"print(foo = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows defining and initialising local variables", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "foo", {}, { { "test.bt", 1, "num", 1234 } } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "foo = %d" },
+				{ "test.bt", 1, "ref", { "foo" } } } },
+		})
+		
+		local expect_log = {
+			"print(foo = 1234)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows assigning local variables", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "foo", {}, {} },
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "foo" } },
+				{ "test.bt", 1, "num", 5678 } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "foo = %d" },
+				{ "test.bt", 1, "ref", { "foo" } } } },
+		})
+		
+		local expect_log = {
+			"print(foo = 5678)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows using local array variables", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "foo", { { "test.bt", 1, "num", 3} }, {} },
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "foo", { "test.bt", 1, "num", 0 } } },
+				{ "test.bt", 1, "num", 1234 } },
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "foo", { "test.bt", 1, "num", 1 } } },
+				{ "test.bt", 1, "num", 5678 } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "foo[0] = %d" },
+				{ "test.bt", 1, "ref", { "foo", { "test.bt", 1, "num", 0 } } } } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "foo[1] = %d" },
+				{ "test.bt", 1, "ref", { "foo", { "test.bt", 1, "num", 1 } } } } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "foo[2] = %d" },
+				{ "test.bt", 1, "ref", { "foo", { "test.bt", 1, "num", 2 } } } } },
+		})
+		
+		local expect_log = {
+			"print(foo[0] = 1234)",
+			"print(foo[1] = 5678)",
+			"print(foo[2] = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

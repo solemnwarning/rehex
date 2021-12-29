@@ -35,6 +35,8 @@ local _numeric_op_func;
 local _eval_logical_and;
 local _eval_logical_or;
 local _eval_variable;
+local _eval_local_variable
+local _eval_assign
 local _eval_call;
 local _eval_return
 local _eval_func_defn;
@@ -62,12 +64,12 @@ local function _can_do_flowctrl_here(context, flowctrl_type)
 	do
 		local frame = context.stack[i]
 		
-		if (frame.handles_flowctrl_types & flowctrl_type) == flowctrl_type
+		if frame.handles_flowctrl_types ~= nil and (frame.handles_flowctrl_types & flowctrl_type) == flowctrl_type
 		then
 			return true
 		end
 		
-		if (frame.blocks_flowctrl_types & flowctrl_type) == flowctrl_type
+		if frame.blocks_flowctrl_types ~= nil and (frame.blocks_flowctrl_types & flowctrl_type) == flowctrl_type
 		then
 			return false
 		end
@@ -102,6 +104,19 @@ local function _make_aray_type(type)
 	end
 	
 	new_type.is_array = true
+	
+	return new_type
+end
+
+local function _make_nonarray_type(type)
+	local new_type = {};
+	
+	for k,v in pairs(type)
+	do
+		new_type[k] = v
+	end
+	
+	new_type.is_array = false
 	
 	return new_type
 end
@@ -154,13 +169,74 @@ local function _get_value_size(type, value)
 end
 
 local function _type_assignable(dst_t, src_t)
+	if dst_t == nil or src_t == nil
+	then
+		-- "void" can't be assigned anywhere
+		return false
+	end
 	
-	return (dst_t == nil and src_t == nil) or (
+	if (not not dst_t.is_array) ~= (not not src_t.is_array)
+	then
+		-- can't assign array to non-array or vice-versa
+		return false
+	end
+	
+	if dst_t.name == src_t.name
+	then
+		-- can assign the same types no problem
+		return true
+	end
+	
+	if dst_t.base == src_t.base
+	then
+		-- can assign the same base types (numeric to numeric and string to string)
+		return true
+	end
+	
+	-- unsupported conversion
+	return false
+end
+
+local function _assign_value(dst_type, dst_val, src_type, src_val)
+	if dst_type == nil or src_type == nil
+	then
+		error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+	end
+	
+	if (not not dst_type.is_array) ~= (not not src_type.is_array)
+	then
+		error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+	end
+	
+	local do_assignment = function(dst_val, src_val)
+		if dst_type.base == "struct" and dst_type.name == src_type.name
+		then
+			for name,src_member in pairs(src_val)
+			do
+				_assign_value(dst_val[name], src_member)
+			end
+		elseif dst_type.base == src_type.base
+		then
+			dst_val:set(src_val:get())
+		else
+			error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+		end
+	end
+	
+	if dst_type.is_array
+	then
+		if #dst_val ~= #src_val
+		then
+			
+		end
 		
-		dst_t ~= nil and src_t ~= nil and
-		dst_t.base ~= "struct" and
-		dst_t.base == src_t.base and
-		dst_t.is_array == src_t.is_array)
+		for i = 1, #dst_val
+		do
+			do_assignment(dst_val[i], src_val[i])
+		end
+	else
+		do_assignment(dst_val, src_val)
+	end
 end
 
 local function _make_plain_value(value)
@@ -173,6 +249,10 @@ local function _make_plain_value(value)
 		
 		set = function(self, value)
 			self.value = value
+		end,
+		
+		copy = function(self)
+			return _make_plain_value(self.value)
 		end,
 	}
 end
@@ -187,6 +267,10 @@ local function _make_const_plain_value(value)
 		
 		set = function(self, value)
 			error("Attempt to set constant") -- TODO: Include template file/line
+		end,
+		
+		copy = function(self)
+			return _make_const_plain_value(self.value)
 		end,
 	}
 end
@@ -205,6 +289,10 @@ local function _make_file_value(context, offset, length, fmt)
 		
 		set = function(self, value)
 			error("Attempt to write to file variable") -- TODO: Include template file/line
+		end,
+		
+		copy = function(self)
+			return _make_file_value(context, offset, length, fmt)
 		end,
 	}
 end
@@ -385,6 +473,7 @@ _eval_ref = function(context, statement)
 					then
 						error("Attempt to access out-of-range array index " .. array_idx .. " at " .. filename .. ":" .. line_num)
 					else
+						rv_type = _make_nonarray_type(rv_type)
 						rv_val = rv_val[array_idx_v:get() + 1]
 					end
 				else
@@ -544,48 +633,50 @@ _eval_logical_or = function(context, statement)
 	return _builtin_types.int, _make_const_plain_value(0)
 end
 
-_eval_variable = function(context, statement)
+local function _decl_variable(context, statement, var_type, var_name, array_size, initial_value, is_local)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
-	local v_type = statement[4]
-	local v_name = statement[5]
-	local v_length = statement[6][1]
-	
-	local type_info = _find_type(context, v_type)
-	if type_info == nil
+	local iv_type, iv_value
+	if initial_value ~= nil
 	then
-		error("Unknown variable type '" .. v_type .. "' at " .. filename .. ":" .. line_num)
+		iv_type, iv_value = _eval_statement(context, initial_value)
 	end
 	
-	-- TODO: Make sure we're not in a function... or handle it if we are
+	local type_info = _find_type(context, var_type)
+	if type_info == nil
+	then
+		error("Unknown variable type '" .. var_type .. "' at " .. filename .. ":" .. line_num)
+	end
 	
 	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
 	
-	local func_frame = _topmost_frame_of_type(context, FRAME_TYPE_FUNCTION)
-	if func_frame ~= nil
-	then
-		error("Attempt to define global variable '" .. v_name .. "' inside function at " .. filename .. ":" .. line_num)
-	end
-	
 	local dest_tables
 	
+	if not is_local and _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
+	then
+		error("Attempt to declare non-local variable inside function at " .. filename .. ":" .. line_num)
+	end
+	
 	local struct_frame = _topmost_frame_of_type(context, FRAME_TYPE_STRUCT)
-	if struct_frame ~= nil
+	if struct_frame ~= nil and not is_local
 	then
 		dest_tables = { struct_frame.vars, struct_frame.struct_members }
 		
-		if struct_frame.vars[v_name] ~= nil
+		if struct_frame.vars[var_name] ~= nil
 		then
-			error("Attempt to redefine struct member '" .. v_name .. "' at " .. filename .. ":" .. line_num)
+			error("Attempt to redefine struct member '" .. var_name .. "' at " .. filename .. ":" .. line_num)
 		end
+	elseif is_local
+	then
+		dest_tables = { context.stack[#context.stack].vars }
 	else
 		dest_tables = { context.global_vars }
-		
-		if context.global_vars[v_name] ~= nil
-		then
-			error("Attempt to redefine global variable '" .. v_name .. "' at " .. filename .. ":" .. line_num)
-		end
+	end
+	
+	if dest_tables[1][var_name] ~= nil
+	then
+		error("Attempt to redefine variable '" .. var_name .. "' at " .. filename .. ":" .. line_num)
 	end
 	
 	local expand_value = function()
@@ -610,45 +701,63 @@ _eval_variable = function(context, statement)
 			
 			return members
 		else
-			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-			return _make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
+			if context.declaring_local_var
+			then
+				if type_info.base == "number"
+				then
+					return _make_plain_value(0)
+				elseif type_info.base == "string"
+				then
+					return _make_plain_value("")
+				else
+					error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
+				end
+			else
+				local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
+				return _make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
+			end
 		end
 	end
 	
-	if v_length == nil
+	local root_value
+	
+	if array_size == nil
 	then
 		local base_off = context.next_variable
 		
-		local value = expand_value()
-		local length = _get_value_size(type_info, value)
+		root_value = expand_value()
+		local length = _get_value_size(type_info, root_value)
 		
 		for _,t in ipairs(dest_tables)
 		do
-			t[v_name] = { type_info, value }
+			t[var_name] = { type_info, root_value }
 		end
 		
-		if data_type_key ~= nil
+		if not context.declaring_local_var
 		then
-			context.interface.set_data_type(base_off, length, data_type_key)
+			if data_type_key ~= nil
+			then
+				context.interface.set_data_type(base_off, length, data_type_key)
+			end
+			
+			context.interface.set_comment(base_off, length, var_name)
+			
+			context.next_variable = base_off + length
 		end
-		
-		context.interface.set_comment(base_off, length, v_name)
-		
-		context.next_variable = base_off + length
 	else
-		local array_length_type, array_length_val = _eval_statement(context, v_length)
+		local array_length_type, array_length_val = _eval_statement(context, array_size)
 		if array_length_type == nil or array_length_type.base ~= "number"
 		then
 			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
 		end
 		
-		local g_values = {}
+		root_value = {}
 		
 		for _,t in ipairs(dest_tables)
 		do
-			t[v_name] = {
+			t[var_name] = {
 				_make_aray_type(type_info),
-				g_values
+				root_value
 			}
 		end
 		
@@ -659,18 +768,69 @@ _eval_variable = function(context, statement)
 			local value = expand_value()
 			local length = _get_value_size(type_info, value)
 			
-			table.insert(g_values, value)
+			table.insert(root_value, value)
 			
-			if data_type_key ~= nil
+			if not context.declaring_local_var
 			then
-				context.interface.set_data_type(base_off, length, data_type_key)
+				if data_type_key ~= nil
+				then
+					context.interface.set_data_type(base_off, length, data_type_key)
+				end
+				
+				context.interface.set_comment(base_off, length, var_name .. "[" .. i .. "]")
+				
+				context.next_variable = base_off + length
 			end
-			
-			context.interface.set_comment(base_off, length, v_name .. "[" .. i .. "]")
-			
-			context.next_variable = base_off + length
 		end
 	end
+	
+	if initial_value ~= nil
+	then
+		_assign_value(type_info, root_value, iv_type, iv_value)
+	end
+end
+
+_eval_variable = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local var_type = statement[4]
+	local var_name = statement[5]
+	local array_size = statement[6][1]
+	
+	_decl_variable(context, statement, var_type, var_name, array_size, nil, false)
+end
+
+_eval_local_variable = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local var_type = statement[4]
+	local var_name = statement[5]
+	local array_size = statement[6][1]
+	local initial_value = statement[7][1]
+	
+	local was_declaring_local_var = context.declaring_local_var
+	context.declaring_local_var = true
+	
+	_decl_variable(context, statement, var_type, var_name, array_size, initial_value, true)
+	
+	context.declaring_local_var = was_declaring_local_var
+end
+
+_eval_assign = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local dst_expr = statement[4]
+	local src_expr = statement[5]
+	
+	local dst_type, dst_val = _eval_statement(context, dst_expr)
+	local src_type, src_val = _eval_statement(context, src_expr)
+	
+	_assign_value(dst_type, dst_val, src_type, src_val)
+	
+	return dst_type, dst_val
 end
 
 _eval_call = function(context, statement)
@@ -911,12 +1071,14 @@ _ops = {
 	str = _eval_string,
 	ref = _eval_ref,
 	
-	variable     = _eval_variable,
-	call         = _eval_call,
-	["return"]   = _eval_return,
-	["function"] = _eval_func_defn,
-	["struct"]   = _eval_struct_defn,
-	["if"]       = _eval_if,
+	["variable"]       = _eval_variable,
+	["local-variable"] = _eval_local_variable,
+	["assign"]         = _eval_assign,
+	["call"]           = _eval_call,
+	["return"]         = _eval_return,
+	["function"]       = _eval_func_defn,
+	["struct"]         = _eval_struct_defn,
+	["if"]             = _eval_if,
 	
 	add      = _eval_add,
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),
@@ -985,6 +1147,8 @@ local function execute(interface, statements)
 		-- Are we currently accessing variables from the file as big endian? Toggled by
 		-- the built-in BigEndian() and LittleEndian() functions.
 		big_endian = false,
+		
+		declaring_local_var = false,
 	}
 	
 	for k, v in pairs(_builtin_functions)

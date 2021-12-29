@@ -175,7 +175,7 @@ local _parser = spc * P{
 		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
 		Ct( V("VALUE") ) +
 		Ct( P(_capture_position) * Cc("_token") *
-			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|") ) * spc),
+			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|=") ) * spc),
 	
 	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * P(_capture_type) * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
 	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),
@@ -232,10 +232,13 @@ local function _compile_expr(expr)
 		error("Internal error - _compile_expr() called with an '" .. expr[3] .. "' node")
 	end
 	
-	local expand_binops = function(ops)
-		local idx = 1
+	local left_to_right = { start = function() return 1 end, step = 1 }
+	local right_to_left = { start = function() return #expr_parts - 2 end, step = -1 }
+	
+	local expand_binops = function(dir, ops)
+		local idx = dir.start()
 		
-		while (idx + 2) <= #expr_parts
+		while idx >= 1 and (idx + 2) <= #expr_parts
 		do
 			local matched = false
 			
@@ -257,7 +260,10 @@ local function _compile_expr(expr)
 			
 			if not matched
 			then
-				idx = idx + 1
+				idx = idx + dir.step
+			elseif idx == #expr_parts
+			then
+				idx = idx + 2 * dir.step
 			end
 		end
 	end
@@ -291,40 +297,42 @@ local function _compile_expr(expr)
 		end
 	end
 	
-	expand_binops({
+	expand_binops(left_to_right, {
 		["*"] = "multiply",
 		["/"] = "divide",
 		["%"] = "mod",
 	})
 	
-	expand_binops({
+	expand_binops(left_to_right, {
 		["+"] = "add",
 		["-"] = "subtract",
 	})
 	
-	expand_binops({
+	expand_binops(left_to_right, {
 		["<<"] = "left-shift",
 		[">>"] = "right-shift",
 	})
 	
-	expand_binops({
+	expand_binops(left_to_right, {
 		["<"]  = "less-than",
 		["<="] = "less-than-or-equal",
 		[">"]  = "greater-than",
 		[">="] = "greater-than-or-equal",
 	})
 	
-	expand_binops({
+	expand_binops(left_to_right, {
 		["=="] = "equal",
 		["!="] = "not-equal",
 	})
 	
-	expand_binops({ ["&"] = "bitwise-and" })
-	expand_binops({ ["^"] = "bitwise-xor" })
-	expand_binops({ ["|"] = "bitwise-or" })
+	expand_binops(left_to_right, { ["&"] = "bitwise-and" })
+	expand_binops(left_to_right, { ["^"] = "bitwise-xor" })
+	expand_binops(left_to_right, { ["|"] = "bitwise-or" })
 	
-	expand_binops({ ["&&"] = "logical-and" })
-	expand_binops({ ["||"] = "logical-or" })
+	expand_binops(left_to_right, { ["&&"] = "logical-and" })
+	expand_binops(left_to_right, { ["||"] = "logical-or" })
+	
+	expand_binops(right_to_left, { ["="] = "assign" })
 	
 	if #expr_parts ~= 1
 	then

@@ -1,62 +1,28 @@
 # Building for OS X
 
-## Building libraries
+You will need the XCode build tools and the following additional libraries to build rehex on Mac:
 
-### wxWidgets
+- Capstone
+- Jansson
+- libunistring
+- Lua (5.3+)
+- wxWidgets
 
-    $ tar xf wxWidgets-3.0.4.tar.bz2
-    $ cd wxWidgets-3.0.4/
-    
-    $ mkdir build-debug
-    $ cd build-debug/
-    
-    $ ../configure --disable-shared --enable-debug --enable-unicode \
-                   -enable-cxx11 --prefix="/opt/wxWidgets-3.0.4-debug/" \
-                   -with-macosx-version-min=10.10 \
-                   CXXFLAGS="-stdlib=libc++" CPPFLAGS="-stdlib=libc++" \
-                   LIBS=-lc++
-    $ make
-    $ sudo make install
+You can install them yourself, or source the included script in your shell to download and build private copies of them specifically for building rehex against:
 
-### Jansson
+    $ . tools/mac-build-dependencies.sh
 
-    $ tar xf jansson-2.11.tar
-    $ cd jansson-2.11/
-    
-    $ ./configure --prefix=/usr/local/ --enable-shared=no --enable-static=yes \
-                  CFLAGS="-mmacosx-version-min=10.10"
-    $ make
-    $ sudo make install
+Once the script finishes, you will be able to build rehex in the shell that ran it. The builds will be cached so the next time you open a shell and need to run it, it should complete immediately. Lots of environment variables are set in the shell so you probably shouldn't use it to build other software afterwards.
 
-### Capstone
+The following environment variables can be set before sourcing `mac-build-dependencies.sh`:
 
-    $ tar xf capstone-4.0.2.tar.xz
-    $ cd capstone-4.0.2/
-    
-    $ mkdir build-release
-    $ cd build-release/
-    
-    $ PREFIX=/usr/local/ \
-      CAPSTONE_STATIC=yes \
-      CAPSTONE_SHARED=no \
-      CAPSTONE_BUILD_CORE_ONLY=yes
-      sudo make install
+    REHEX_DEP_BUILD_DIR - Directory to build libraries under (defaults to <cwd>/mac-dependencies-build/)
+    REHEX_DEP_TARGET_DIR - Directory to install libraries under (defauls to <cwd>/mac-dependencies/)
 
-### libunistring
+To build the application:
 
-    $ tar xf libunistring-0.9.10.tar
-    $ cd libunistring-0.9.10/
-    
-    $ ./configure --prefix=/usr/local/ --enable-shared=no --enable-static=yes \
-                  CFLAGS="-mmacosx-version-min=10.10"
-    $ make
-    $ sudo make install
+    $ make -f Makefile.osx
 
-## Building the editor
+To build a dmg containing the application:
 
-    $ WX_CONFIG=/opt/wxWidgets-3.0.4-debug/bin/wx-config \
-        make -f Makefile.osx
-
-To build a dmg, run:
-
-    make -f Makefile.osx REHex.dmg
+    $ make -f Makefile.osx REHex.dmg

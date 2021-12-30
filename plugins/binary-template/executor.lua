@@ -41,6 +41,7 @@ local _eval_call;
 local _eval_return
 local _eval_func_defn;
 local _eval_struct_defn
+local _eval_typedef
 local _eval_if
 local _eval_statement;
 local _exec_statements;
@@ -181,10 +182,10 @@ local function _type_assignable(dst_t, src_t)
 		return false
 	end
 	
-	if dst_t.name == src_t.name
+	if dst_t.base == "struct" and src_t.base == "struct"
 	then
-		-- can assign the same types no problem
-		return true
+		-- can assign structs if the same root type
+		return dst_t.struct_key == src_t.struct_key
 	end
 	
 	if dst_t.base == src_t.base
@@ -209,13 +210,17 @@ local function _assign_value(dst_type, dst_val, src_type, src_val)
 	end
 	
 	local do_assignment = function(dst_val, src_val)
-		if dst_type.base == "struct" and dst_type.name == src_type.name
+		if dst_type.base == "struct" and src_type.base == "struct" and dst_type.struct_key == src_type.struct_key
 		then
-			for name,src_member in pairs(src_val)
+			for name,src_pair in pairs(src_val)
 			do
-				_assign_value(dst_val[name], src_member)
+				local member_type = src_pair[1]
+				local src_member = src_pair[2]
+				local dst_member = dst_val[name][2]
+				
+				_assign_value(member_type, dst_member, member_type, src_member)
 			end
-		elseif dst_type.base == src_type.base
+		elseif dst_type.base ~= "struct" and dst_type.base == src_type.base
 		then
 			dst_val:set(src_val:get())
 		else
@@ -1084,10 +1089,18 @@ _eval_struct_defn = function(context, statement)
 	local struct_name       = statement[4]
 	local struct_arg_types  = statement[5]
 	local struct_statements = statement[6]
+	local typedef_name      = statement[7]
 	
-	if _find_type(context, "struct " .. struct_name) ~= nil
+	local struct_typename = struct_name ~= nil and "struct " .. struct_name or nil
+	
+	if struct_typename ~= nil and _find_type(context, struct_typename) ~= nil
 	then
-		error("Attempt to redefine type 'struct " .. struct_name .. "' at " .. filename .. ":" .. line_num)
+		error("Attempt to redefine type '" .. struct_typename .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if typedef_name ~= nil and _find_type(context, typedef_name) ~= nil
+	then
+		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
 	end
 	
 	local arg_types = {}
@@ -1102,17 +1115,51 @@ _eval_struct_defn = function(context, statement)
 		table.insert(arg_types, type_info)
 	end
 	
-	context.stack[#context.stack].var_types["struct " .. struct_name] = {
+	local type_info = {
 		base      = "struct",
-		name      = "struct " .. struct_name,
 		arguments = arg_types,
-		code      = struct_statements
+		code      = struct_statements,
+		
+		struct_name = struct_name,
+		struct_key  = {}, -- Uniquely-identifiable table reference used to check if struct
+		                  -- types are derived from the same root (and thus compatible)
 		
 		-- rehex_type_le = "s8",
 		-- rehex_type_be = "s8",
 		-- length = 1,
 		-- string_fmt = "i1"
 	}
+	
+	if struct_typename ~= nil
+	then
+		context.stack[#context.stack].var_types[struct_typename] = _make_named_type(struct_typename, type_info)
+	end
+	
+	if typedef_name ~= nil
+	then
+		context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)
+	end
+end
+
+_eval_typedef = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local type_name    = statement[4]
+	local typedef_name = statement[5]
+	
+	local type_info = _find_type(context, type_name)
+	if type_info == nil
+	then
+		error("Use of undefined type '" .. type_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if _find_type(context, typedef_name) ~= nil
+	then
+		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)
 end
 
 _eval_if = function(context, statement)
@@ -1175,6 +1222,7 @@ _ops = {
 	["return"]         = _eval_return,
 	["function"]       = _eval_func_defn,
 	["struct"]         = _eval_struct_defn,
+	["typedef"]        = _eval_typedef,
 	["if"]             = _eval_if,
 	
 	add      = _eval_add,

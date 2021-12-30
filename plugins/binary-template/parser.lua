@@ -156,6 +156,7 @@ local _parser = spc * P{
 		V("IF") +
 		V("WHILE") +
 		V("STRUCT_DEFN") +
+		V("TYPEDEF") +
 		V("FUNC_DEFN") +
 		V("LOCAL_VAR_DEFN") +
 		V("VAR_DEFN") +
@@ -186,12 +187,24 @@ local _parser = spc * P{
 	
 	--  {
 	--      "struct",
-	--      "name",
+	--      "name" or nil
 	--      { <arguments> },
 	--      { <statements> },
+	--      "typedef name" or nil
 	--  }
 	STRUCT_ARG_LIST = Ct( (S("(") * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")")) ^ -1 ),
-	STRUCT_DEFN = Ct( P(_capture_position) * Cc("struct") * P("struct") * spc * name * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * P(";") * spc ),
+	STRUCT_DEFN =
+		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name    * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name    * P(";") * spc ),
+	
+	--  {
+	--      "file.bt", <line>,
+	--      "typedef",
+	--      "struct foobar",
+	--      "foobar_t",
+	--  }
+	TYPEDEF = Ct( P(_capture_position) * Cc("typedef") * P("typedef") * spc * P(_capture_type) * name * P(";") * spc ),
 	
 	--  {
 	--      "function",

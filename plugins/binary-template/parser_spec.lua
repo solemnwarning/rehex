@@ -226,45 +226,45 @@ describe("parser", function()
 	end);
 	
 	it("parses an empty struct", function()
-		local got = parser.parse_text("struct mystruct{};");
+		local got = parser.parse_text("struct mystruct{};")
 		
 		local expect = {
-			{ "UNKNOWN FILE", 1, "struct", "mystruct", {}, {} },
-		};
+			{ "UNKNOWN FILE", 1, "struct", "mystruct", {}, {}, nil },
+		}
 		
-		assert.are.same(expect, got);
-	end);
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses a struct with some members", function()
-		local got = parser.parse_text("struct mystruct {\nint x;\nint y;\n};");
+		local got = parser.parse_text("struct mystruct {\nint x;\nint y;\n};")
 		
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
 			{
 				{ "UNKNOWN FILE", 2, "variable", "int", "x", {} },
 				{ "UNKNOWN FILE", 3, "variable", "int", "y", {} },
-			} },
-		};
+			}, nil },
+		}
 		
-		assert.are.same(expect, got);
-	end);
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses a struct with an empty argument list", function()
-		local got = parser.parse_text("struct mystruct() {\nint x;\nint y;\n};");
+		local got = parser.parse_text("struct mystruct() {\nint x;\nint y;\n};")
 		
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
 			{
 				{ "UNKNOWN FILE", 2, "variable", "int", "x", {} },
 				{ "UNKNOWN FILE", 3, "variable", "int", "y", {} },
-			} },
-		};
+			}, nil },
+		}
 		
-		assert.are.same(expect, got);
-	end);
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses a struct with an argument list", function()
-		local got = parser.parse_text("struct mystruct(int a, int b) {\nint x;\nint y;\n};");
+		local got = parser.parse_text("struct mystruct(int a, int b) {\nint x;\nint y;\n};")
 		
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct",
@@ -275,11 +275,50 @@ describe("parser", function()
 			{
 				{ "UNKNOWN FILE", 2, "variable", "int", "x", {} },
 				{ "UNKNOWN FILE", 3, "variable", "int", "y", {} },
-			} },
+			}, nil },
 		};
 		
-		assert.are.same(expect, got);
-	end);
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses a combined typedef and struct definition", function()
+		local got = parser.parse_text("typedef struct mystruct {\nint x;\nint y;\n} mystruct_t;")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", {} },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", {} },
+			}, "mystruct_t" },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses a combined typedef and anonymous struct definition", function()
+		local got = parser.parse_text("typedef struct {\nint x;\nint y;\n} mystruct_t;")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", nil, {},
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", {} },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", {} },
+			}, "mystruct_t" },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses typedefs", function()
+		local got = parser.parse_text("typedef struct mystruct mystruct_t;\ntypedef int int_t;")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "typedef", "struct mystruct", "mystruct_t" },
+			{ "UNKNOWN FILE", 2, "typedef", "int", "int_t" },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses a function with no arguments or body", function()
 		local got = parser.parse_text("int myfunc(){}");

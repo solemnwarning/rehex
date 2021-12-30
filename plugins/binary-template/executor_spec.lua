@@ -1771,4 +1771,175 @@ describe("executor", function()
 				})
 			end, "Attempt to read past end of file in ReadUInt function")
 	end)
+	
+	it("allows declaring a struct with a typedef", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {}, {
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "int", "y", {} },
+			}, "mystruct_t" },
+			
+			{ "test.bt", 1, "local-variable", "mystruct_t", "s", {}, {} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "s.x = %d" },
+				{ "test.bt", 1, "ref", { "s", "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(s.x = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows declaring an anonymous struct with a typedef", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", nil, {}, {
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "int", "y", {} },
+			}, "mystruct_t" },
+			
+			{ "test.bt", 1, "local-variable", "mystruct_t", "s", {}, {} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "s.x = %d" },
+				{ "test.bt", 1, "ref", { "s", "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(s.x = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows assignment between struct type and typedef", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {}, {
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "int", "y", {} },
+			}, "mystruct_t" },
+			
+			{ "test.bt", 1, "local-variable", "struct mystruct", "bvar", {}, {} },
+			{ "test.bt", 1, "local-variable", "mystruct_t", "tvar", {}, {} },
+			
+			-- Write into base struct and assign base to typedef
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "bvar", "x" } },
+				{ "test.bt", 1, "num", 1234 } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "tvar" } },
+				{ "test.bt", 1, "ref", { "bvar" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "tvar.x = %d" },
+				{ "test.bt", 1, "ref", { "tvar", "x" } } } },
+			
+			-- Write into typedef struct and assign to base
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "tvar", "y" } },
+				{ "test.bt", 1, "num", 5678 } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "bvar" } },
+				{ "test.bt", 1, "ref", { "tvar" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "bvar.y = %d" },
+				{ "test.bt", 1, "ref", { "bvar", "y" } } } },
+		})
+		
+		local expect_log = {
+			"print(tvar.x = 1234)",
+			"print(bvar.y = 5678)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows assignment between different typedefs of the same struct", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {}, {
+				{ "test.bt", 1, "variable", "int", "x", {} },
+				{ "test.bt", 1, "variable", "int", "y", {} },
+			}, "mystruct_t" },
+			
+			{ "test.bt", 1, "typedef", "struct mystruct", "mystruct_u" },
+			
+			{ "test.bt", 1, "local-variable", "mystruct_u", "bvar", {}, {} },
+			{ "test.bt", 1, "local-variable", "mystruct_t", "tvar", {}, {} },
+			
+			-- Write into mystruct_u and assign to mystruct_t
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "bvar", "x" } },
+				{ "test.bt", 1, "num", 1234 } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "tvar" } },
+				{ "test.bt", 1, "ref", { "bvar" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "tvar.x = %d" },
+				{ "test.bt", 1, "ref", { "tvar", "x" } } } },
+			
+			-- Write into mystruct_t and assign to mystruct_u
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "tvar", "y" } },
+				{ "test.bt", 1, "num", 5678 } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "bvar" } },
+				{ "test.bt", 1, "ref", { "tvar" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "bvar.y = %d" },
+				{ "test.bt", 1, "ref", { "bvar", "y" } } } },
+		})
+		
+		local expect_log = {
+			"print(tvar.x = 1234)",
+			"print(bvar.y = 5678)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on attempt to assign between distinct struct definitions", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct1", {}, {
+					{ "test.bt", 1, "variable", "int", "x", {} },
+					{ "test.bt", 1, "variable", "int", "y", {} },
+				}, nil },
+				
+				{ "test.bt", 1, "struct", "mystruct2", {}, {
+					{ "test.bt", 1, "variable", "int", "x", {} },
+					{ "test.bt", 1, "variable", "int", "y", {} },
+				}, nil },
+				
+				{ "test.bt", 1, "local-variable", "struct mystruct1", "s1", {}, {} },
+				{ "test.bt", 1, "local-variable", "struct mystruct2", "s2", {}, {} },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "s1" } },
+					{ "test.bt", 1, "ref", { "s2" } } },
+			})
+		end, "can't assign 'struct mystruct2' to type 'struct mystruct1'")
+	end)
 end)

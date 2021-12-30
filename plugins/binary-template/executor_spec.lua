@@ -41,6 +41,10 @@ local function test_interface(data)
 		read_data = function(offset, length)
 			return data:sub(offset + 1, offset + length)
 		end,
+		
+		file_length = function()
+			return data:len()
+		end,
 	}
 	
 	return interface, log
@@ -1435,5 +1439,336 @@ describe("executor", function()
 		}
 		
 		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements endianness functions", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- Default state
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "IsBigEndian() = %d" },
+				{ "test.bt", 1, "call", "IsBigEndian", {} } } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "IsLittleEndian() = %d" },
+				{ "test.bt", 1, "call", "IsLittleEndian", {} } } },
+			
+			-- After call to BigEndian()
+			
+			{ "test.bt", 1, "call", "BigEndian", {} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "IsBigEndian() = %d" },
+				{ "test.bt", 1, "call", "IsBigEndian", {} } } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "IsLittleEndian() = %d" },
+				{ "test.bt", 1, "call", "IsLittleEndian", {} } } },
+			
+			-- After call to LittleEndian()
+			
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "IsBigEndian() = %d" },
+				{ "test.bt", 1, "call", "IsBigEndian", {} } } },
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "IsLittleEndian() = %d" },
+				{ "test.bt", 1, "call", "IsLittleEndian", {} } } },
+		})
+		
+		local expect_log = {
+			"print(IsBigEndian() = 0)",
+			"print(IsLittleEndian() = 1)",
+			
+			"print(IsBigEndian() = 1)",
+			"print(IsLittleEndian() = 0)",
+			
+			"print(IsBigEndian() = 0)",
+			"print(IsLittleEndian() = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements file position functions", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		local printf_FileSize = function()
+			return { "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FileSize() = %d" },
+				{ "test.bt", 1, "call", "FileSize", {} } } }
+		end
+		
+		local printf_FEof = function()
+			return { "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FEof() = %d" },
+				{ "test.bt", 1, "call", "FEof", {} } } }
+		end
+		
+		local printf_FTell = function()
+			return { "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FTell() = %d" },
+				{ "test.bt", 1, "call", "FTell", {} } } }
+		end
+		
+		local FSeek = function(pos)
+			return { "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FSeek(" .. pos .. ") = %d" },
+				{ "test.bt", 1, "call", "FSeek", {
+					{ "test.bt", 1, "num", pos } } } } }
+		end
+		
+		local FSkip = function(pos)
+			return { "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FSkip(" .. pos .. ") = %d" },
+				{ "test.bt", 1, "call", "FSkip", {
+					{ "test.bt", 1, "num", pos } } } } }
+		end
+		
+		executor.execute(interface, {
+			-- Default state
+			
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Try seeking to invalid offsets
+			
+			FSeek(-1),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			FSeek(17),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Seek to a valid offset within the file
+			
+			FSeek(4),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Seek to the end of the file
+			
+			FSeek(16),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Skip back to the start of the file
+			
+			FSkip(-16),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Skip to a position within the file
+			
+			FSkip(12),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Skip to current position
+			
+			FSkip(0),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Try skipping before start of file
+			
+			FSkip(-13),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Try skipping past end of file
+			
+			FSkip(5),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+			
+			-- Skip to end of file
+			
+			FSkip(4),
+			printf_FileSize(),
+			printf_FEof(),
+			printf_FTell(),
+		})
+		
+		local expect_log = {
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 0)",
+			
+			"print(FSeek(-1) = -1)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 0)",
+			
+			"print(FSeek(17) = -1)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 0)",
+			
+			"print(FSeek(4) = 0)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 4)",
+			
+			"print(FSeek(16) = 0)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 1)",
+			"print(FTell() = 16)",
+			
+			"print(FSkip(-16) = 0)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 0)",
+			
+			"print(FSkip(12) = 0)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 12)",
+			
+			"print(FSkip(0) = 0)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 12)",
+			
+			"print(FSkip(-13) = -1)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 12)",
+			
+			"print(FSkip(5) = -1)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 0)",
+			"print(FTell() = 12)",
+			
+			"print(FSkip(4) = 0)",
+			"print(FileSize() = 16)",
+			"print(FEof() = 1)",
+			"print(FTell() = 16)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements ReadByte() function", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0xFF, 0xFE, 0x04
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadByte() = %d" },
+				{ "test.bt", 1, "call", "ReadByte", {} } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadByte() = %d" },
+				{ "test.bt", 1, "call", "ReadByte", {} } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadByte(1) = %d" },
+				{ "test.bt", 1, "call", "ReadByte", {
+					{ "test.bt", 1, "num", 1 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadByte(2) = %d" },
+				{ "test.bt", 1, "call", "ReadByte", {
+					{ "test.bt", 1, "num", 2 } } } } },
+		})
+		
+		local expect_log = {
+			"print(ReadByte() = 1)",
+			"print(ReadByte() = 1)",
+			"print(ReadByte(1) = -1)",
+			"print(ReadByte(2) = -2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when ReadByte() is called at end of file", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0xFF, 0xFE, 0x04
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "FSeek", {
+						{ "test.bt", 1, "num", 4, {} } } },
+					
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "ReadByte() = %d" },
+						{ "test.bt", 1, "call", "ReadByte", {} } } },
+				})
+			end, "Attempt to read past end of file in ReadByte function")
+	end)
+	
+	it("implements ReadUInt() function", function()
+		local interface, log = test_interface(string.char(
+			0x00, 0x01, 0x00, 0x00,
+			0xFF, 0xFF, 0xFF, 0xFF,
+			0x00, 0x02, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadUInt() = %d" },
+				{ "test.bt", 1, "call", "ReadUInt", {} } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadUInt() = %d" },
+				{ "test.bt", 1, "call", "ReadUInt", {} } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadUInt(4) = %d" },
+				{ "test.bt", 1, "call", "ReadUInt", {
+					{ "test.bt", 1, "num", 4 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "ReadUInt(8) = %d" },
+				{ "test.bt", 1, "call", "ReadUInt", {
+					{ "test.bt", 1, "num", 8 } } } } },
+		})
+		
+		local expect_log = {
+			"print(ReadUInt() = 256)",
+			"print(ReadUInt() = 256)",
+			"print(ReadUInt(4) = 4294967295)",
+			"print(ReadUInt(8) = 512)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when ReadUInt() is called at end of file", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0xFF, 0xFE, 0x04
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "ReadUInt() = %d" },
+						{ "test.bt", 1, "call", "ReadUInt", {
+							{ "test.bt", 1, "num", 1, {} } } } } },
+				})
+			end, "Attempt to read past end of file in ReadUInt function")
 	end)
 end)

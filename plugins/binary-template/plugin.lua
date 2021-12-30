@@ -101,6 +101,10 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 				return doc:read_data(offset, length)
 			end,
 			
+			file_length = function()
+				return doc:buffer_length()
+			end,
+			
 			print = function(s) print(s) end
 		}
 		

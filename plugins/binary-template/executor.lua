@@ -379,6 +379,50 @@ local function _builtin_function_LittleEndian(context, argv)
 	context.big_endian = false
 end
 
+local function _builtin_function_IsBigEndian(context, argv)
+	return _builtin_types.int, _make_const_plain_value(context.big_endian and 1 or 0)
+end
+
+local function _builtin_function_IsLittleEndian(context, argv)
+	return _builtin_types.int, _make_const_plain_value(context.big_endian and 0 or 1)
+end
+
+local function _builtin_function_FEof(context, argv)
+	return _builtin_types.int, _make_const_plain_value(context.next_variable >= context.interface.file_length() and 1 or 0)
+end
+
+local function _builtin_function_FileSize(context, argv)
+	return _builtin_types.int64, _make_const_plain_value(context.interface.file_length())
+end
+
+local function _builtin_function_FSeek(context, argv)
+	local seek_to = argv[1][2]:get()
+	
+	if seek_to < 0 or seek_to > context.interface.file_length()
+	then
+		return _builtin_types.int, _make_const_plain_value(-1)
+	end
+	
+	context.next_variable = seek_to
+	return _builtin_types.int, _make_const_plain_value(0)
+end
+
+local function _builtin_function_FSkip(context, argv)
+	local seek_to = context.next_variable + argv[1][2]:get()
+	
+	if seek_to < 0 or seek_to > context.interface.file_length()
+	then
+		return _builtin_types.int, _make_const_plain_value(-1)
+	end
+	
+	context.next_variable = seek_to
+	return _builtin_types.int, _make_const_plain_value(0)
+end
+
+local function _builtin_function_FTell(context, argv)
+	return _builtin_types.int64, _make_const_plain_value(context.next_variable)
+end
+
 local function _builtin_function_Printf(context, argv)
 	-- Copy format unchanged
 	local print_args = { argv[1][2]:get() }
@@ -392,18 +436,64 @@ local function _builtin_function_Printf(context, argv)
 	context.interface.print(string.format(table.unpack(print_args)))
 end
 
+local function _builtin_function_defn_ReadXXX(type_info, name)
+	local impl = function(context, argv)
+		local pos = argv[1][2]:get()
+		
+		if pos < 0 or (pos + type_info.length) > context.interface.file_length()
+		then
+			error("Attempt to read past end of file in " .. name .. " function") -- TODO: Include file/line
+		end
+		
+		local fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
+		return type_info, _make_file_value(context, pos, type_info.length, fmt)
+	end
+	
+	return {
+		arguments = { _builtin_types.int64 },
+		defaults  = {
+			-- FTell()
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "call", "FTell", {} }
+		},
+		impl = impl,
+	}
+end
+
 -- Table of builtin functions - gets copied into new interpreter contexts
 --
 -- Each key is a function name, the value is a table with the following values:
 --
 -- Table of argument types (arguments)
+-- Table of default argument expressions (defaults)
 -- Function implementation (impl)
 
 local _builtin_functions = {
-	BigEndian    = { arguments = {}, impl = _builtin_function_BigEndian },
-	LittleEndian = { arguments = {}, impl = _builtin_function_LittleEndian },
+	BigEndian      = { arguments = {}, defaults = {}, impl = _builtin_function_BigEndian },
+	LittleEndian   = { arguments = {}, defaults = {}, impl = _builtin_function_LittleEndian },
+	IsBigEndian    = { arguments = {}, defaults = {}, impl = _builtin_function_IsBigEndian },
+	IsLittleEndian = { arguments = {}, defaults = {}, impl = _builtin_function_IsLittleEndian },
 	
-	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, impl = _builtin_function_Printf },
+	FEof     = { arguments = {},                       defaults = {}, impl = _builtin_function_FEof },
+	FileSize = { arguments = {},                       defaults = {}, impl = _builtin_function_FileSize },
+	FSeek    = { arguments = { _builtin_types.int64 }, defaults = {}, impl = _builtin_function_FSeek },
+	FSkip    = { arguments = { _builtin_types.int64 }, defaults = {}, impl = _builtin_function_FSkip },
+	FTell    = { arguments = {},                       defaults = {}, impl = _builtin_function_FTell },
+	
+	ReadByte   = _builtin_function_defn_ReadXXX(_builtin_types.char,   "ReadByte"),
+	ReadDouble = _builtin_function_defn_ReadXXX(_builtin_types.double, "ReadDouble"),
+	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "ReadFloat"),
+	-- ReadHFloat = _builtin_function_defn_ReadXXX(_builtin_types.hfloat, "ReadHFloat"),
+	ReadInt    = _builtin_function_defn_ReadXXX(_builtin_types.int,    "ReadInt"),
+	ReadInt64  = _builtin_function_defn_ReadXXX(_builtin_types.int64,  "ReadInt64"),
+	ReadQuad   = _builtin_function_defn_ReadXXX(_builtin_types.int64,  "ReadQuad"),
+	ReadShort  = _builtin_function_defn_ReadXXX(_builtin_types.short,  "ReadShort"),
+	ReadUByte  = _builtin_function_defn_ReadXXX(_builtin_types.uchar,  "ReadUByte"),
+	ReadUInt   = _builtin_function_defn_ReadXXX(_builtin_types.uint,   "ReadUInt"),
+	ReadUint64 = _builtin_function_defn_ReadXXX(_builtin_types.uint64, "ReadUInt64"),
+	ReadUQuad  = _builtin_function_defn_ReadXXX(_builtin_types.uint64, "ReadUQuad"),
+	ReadUShort = _builtin_function_defn_ReadXXX(_builtin_types.ushort, "ReadUShort"),
+	
+	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
 }
 
 _find_type = function(context, type_name)
@@ -854,6 +944,12 @@ _eval_call = function(context, statement)
 		-- TODO: Check for type compatibility
 	end
 	
+	for i = #func_arg_values + 1, #func_defn.defaults
+	do
+		func_arg_values[i] = { _eval_statement(context, func_defn.defaults[i]) }
+		-- TODO: Check for type compatibility
+	end
+	
 	return func_defn.impl(context, func_arg_values)
 end
 
@@ -976,6 +1072,7 @@ _eval_func_defn = function(context, statement)
 	
 	context.functions[func_name] = {
 		arguments = arg_types,
+		defaults  = {},
 		impl      = impl_func,
 	}
 end

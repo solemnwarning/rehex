@@ -46,12 +46,28 @@ libdir      ?= $(exec_prefix)/lib
 PLUGIN_NAME := binary-template
 PLUGINS_INST_DIR ?= $(DESTDIR)$(libdir)/rehex
 
+ifeq ($(BUSTED),)
+	# LuaRocks under MinGW doesn't install busted under a bin/ directory - it sticks it
+	# elsewhere and puts a .bat that runs it under the right Lua environment for Reasons.
+	
+	BUSTED := $(shell which busted 2> /dev/null)
+	ifneq ($(BUSTED),)
+		BUSTED := $(LUA) $(BUSTED)
+	else
+		BUSTED := $(shell busted.bat --version > /dev/null 2>&1 && echo busted.bat)
+	endif
+	
+	ifeq ($(BUSTED),)
+		X := $(error Neither busted or busted.bat found in PATH)
+	endif
+endif
+
 .PHONY: all
 all:
 
 .PHONY: check
 check:
-	$(LUA) $$(which busted) ./
+	$(BUSTED) ./
 
 .PHONY: install
 install:

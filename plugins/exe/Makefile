@@ -1,4 +1,4 @@
-# Binary Template plugin for REHex
+# PE EXE/DLL parsing plugin for REHex
 # Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -15,27 +15,16 @@
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 INSTALL_FILES := \
-	executor.lua \
-	parser.lua \
+	bitops52.lua \
+	class.lua \
+	document_stream.lua \
+	enum.lua \
+	kaitaistruct.lua \
+	microsoft_pe.lua \
 	plugin.lua \
-	preprocessor.lua \
-	lulpeg/analyzer.lua \
-	lulpeg/API.lua \
-	lulpeg/charsets.lua \
-	lulpeg/compat.lua \
-	lulpeg/compiler.lua \
-	lulpeg/constructors.lua \
-	lulpeg/datastructures.lua \
-	lulpeg/evaluator.lua \
-	lulpeg/factorizer.lua \
-	lulpeg/init.lua \
-	lulpeg/locale.lua \
-	lulpeg/lulpeg.lua \
-	lulpeg/match.lua \
-	lulpeg/optimizer.lua \
-	lulpeg/printers.lua \
-	lulpeg/re.lua \
-	lulpeg/util.lua
+	string_decode.lua \
+	string_stream.lua \
+	utils.lua
 
 prefix      ?= /usr/local
 exec_prefix ?= $(prefix)
@@ -43,7 +32,7 @@ bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
 libdir      ?= $(exec_prefix)/lib
 
-PLUGIN_NAME := binary-template
+PLUGIN_NAME := exe
 PLUGINS_INST_DIR ?= $(DESTDIR)$(libdir)/rehex
 
 .PHONY: all
@@ -51,7 +40,6 @@ all:
 
 .PHONY: check
 check:
-	$(LUA) $$(which busted) ./
 
 .PHONY: install
 install:
@@ -63,7 +51,4 @@ install:
 .PHONY: uninstall
 uninstall:
 	rm -f $(addprefix $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/,$(INSTALL_FILES))
-	
-	rm -df $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/templates/
-	rm -df $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/lulpeg/
 	rm -df $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/

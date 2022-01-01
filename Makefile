@@ -111,6 +111,11 @@ all: $(EXE)
 .PHONY: check
 check: tests/all-tests
 	./tests/all-tests
+	
+	for p in $(PLUGINS); \
+	do \
+		$(MAKE) -C plugins/$${p} LUA=$(LUA) check || exit $$?; \
+	done
 
 .PHONY: clean
 clean:
@@ -426,17 +431,9 @@ bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
 libdir      ?= $(exec_prefix)/lib
 
-PLUGINS_INSTALL := \
-	exe/bitops52.lua \
-	exe/class.lua \
-	exe/document_stream.lua \
-	exe/enum.lua \
-	exe/kaitaistruct.lua \
-	exe/microsoft_pe.lua \
-	exe/plugin.lua \
-	exe/string_decode.lua \
-	exe/string_stream.lua \
-	exe/utils.lua
+PLUGINS := \
+	binary-template \
+	exe
 
 .PHONY: install
 install: $(EXE)
@@ -449,9 +446,9 @@ install: $(EXE)
 	
 	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
-	for f in $(PLUGINS_INSTALL); \
+	for p in $(PLUGINS); \
 	do \
-		install -D -m 0644 plugins/$${f} $(DESTDIR)$(libdir)/rehex/$${f}; \
+		$(MAKE) -C plugins/$${p} install || exit $$?; \
 	done
 
 .PHONY: uninstall
@@ -464,13 +461,10 @@ uninstall:
 		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
 	done
 	
-	for f in $(PLUGINS_INSTALL); \
+	for p in $(PLUGINS); \
 	do \
-		rm -f $(DESTDIR)$(libdir)/rehex/$${f}; \
+		$(MAKE) -C plugins/$${p} uninstall || exit $$?; \
 	done
-	
-	# Delete any empty directories, preserving plugins we didn't install
-	find $(DESTDIR)$(libdir)/rehex/ -type d -empty -delete
 
 .PHONY: dist
 dist:

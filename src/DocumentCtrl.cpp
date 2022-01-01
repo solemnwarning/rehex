@@ -26,6 +26,8 @@
 #include <map>
 #include <stack>
 #include <string>
+#include <unictype.h>
+#include <unistr.h>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
@@ -3574,20 +3576,65 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		EncodedCharacter ec = encoder->decode(data, data_len + data_extra_post);
 		if(ec.valid)
 		{
-			wxSize decoded_char_size;
+			ucs4_t c;
+			u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char().data()), ec.utf8_char().size());
 			
-			const wxSize *s = doc_ctrl->hf_gte_cache.get(ec.utf8_char());
-			if(s)
+			/* If the character is a control character, or the on-screen size reported
+			 * by the font doesn't match that of "normal" characters, then we don't try
+			 * drawing it.
+			*/
+			
+			bool skip = uc_is_property_iso_control(c)
+				|| uc_is_property_ignorable_control(c)
+				|| uc_is_property_unassigned_code_value(c)
+				|| uc_is_property_not_a_character(c);
+			
+			if(!skip)
 			{
-				decoded_char_size = *s;
-			}
-			else{
-				decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char().c_str()));
-				doc_ctrl->hf_gte_cache.set(ec.utf8_char(), decoded_char_size);
+				wxSize decoded_char_size;
+				
+				const wxSize *s = doc_ctrl->hf_gte_cache.get(ec.utf8_char());
+				if(s)
+				{
+					decoded_char_size = *s;
+				}
+				else{
+					decoded_char_size = dc.GetTextExtent(wxString::FromUTF8(ec.utf8_char().c_str()));
+					doc_ctrl->hf_gte_cache.set(ec.utf8_char(), decoded_char_size);
+				}
+				
+				if(decoded_char_size.GetWidth() != doc_ctrl->hf_char_width())
+				{
+					skip = true;
+				}
 			}
 			
-			if(decoded_char_size.GetWidth() == doc_ctrl->hf_char_width())
+			if(!skip)
 			{
+				if(c > 0x7F)
+				{
+					/* If the character isn't in ASCII, fall back to drawing it
+					 * by itself rather than part of a line - we can't trust
+					 * the font not to lie about its width and render the whole
+					 * line wonkily if we start putting any "weird" characters
+					 * in it and I don't know of a better heuristic.
+					*/
+					
+					base_x += doc_ctrl->hf_string_width(col);
+					col = 0;
+					
+					std::pair<int, Palette::ColourIndex> k2(base_x, colour_idx);
+					std::pair<std::string, int> &v2 = deferred_drawtext[k2];
+					
+					assert(v2.first.empty());
+					assert(v2.second == 0);
+					
+					v2.first.append(ec.utf8_char());
+					++(v2.second);
+					
+					return;
+				}
+				
 				v.first.append(ec.utf8_char());
 				++(v.second);
 			}

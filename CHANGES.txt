@@ -1,4 +1,4 @@
-Version TBC
+Version 0.4.0 (2021-12-20)
 
  * Add data types for common text encodings (Unicode, ISO-8859) - text
    displayed or typed into the text view on the right will be decoded or

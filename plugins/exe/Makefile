@@ -45,7 +45,8 @@ check:
 install:
 	for f in $(INSTALL_FILES); \
 	do \
-		install -D -m 0644 $${f} $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/$${f}; \
+		mkdir -p $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/`dirname $${f}`; \
+		install -m 0644 $${f} $(PLUGINS_INST_DIR)/$(PLUGIN_NAME)/$${f}; \
 	done
 
 .PHONY: uninstall

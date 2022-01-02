@@ -46,6 +46,7 @@ BuildRequires: pkgconf
 luarocks --tree="$(pwd)/lua-libs" install busted
 export BUSTED="$(pwd)/lua-libs/bin/busted"
 
+cat > "$(pwd)/lua-libs.env" <<EOF
 %if 0%{?el8}
 export LUA_PATH="$(pwd)/lua-libs/share/lua/5.3/?.lua;$(pwd)/lua-libs/share/lua/5.3/?/init.lua;;"
 export LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.3/?.so"
@@ -53,14 +54,29 @@ export LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.3/?.so"
 export LUA_PATH="$(pwd)/lua-libs/share/lua/5.4/?.lua;$(pwd)/lua-libs/share/lua/5.4/?/init.lua;;"
 export LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.4/?.so"
 %endif
+EOF
+
+. "$(pwd)/lua-libs.env"
 %endif
 
 make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
 
 %check
+%if 0%{?el7}
+# No need to install busted on EL7
+%else
+. "$(pwd)/lua-libs.env"
+%endif
+
 xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
 
 %install
+%if 0%{?el7}
+# No need to install busted on EL7
+%else
+. "$(pwd)/lua-libs.env"
+%endif
+
 rm -rf %{buildroot}
 make %{base_make_flags} %{?extra_make_flags} DESTDIR=%{buildroot} install
 

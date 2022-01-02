@@ -42,7 +42,6 @@ BuildRequires: pkgconf
 
 %if 0%{?el7}
 # No need to install busted on EL7
-%define lua_env_vars
 %else
 luarocks --tree="$(pwd)/lua-libs" install busted
 
@@ -53,14 +52,14 @@ luarocks --tree="$(pwd)/lua-libs" install busted
 %endif
 %endif
 
-%{lua_env_vars} make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
+%{?lua_env_vars} make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
 
 %check
-%{lua_env_vars} xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
+%{?lua_env_vars} xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
 
 %install
 rm -rf %{buildroot}
-%{lua_env_vars} make %{base_make_flags} %{?extra_make_flags} DESTDIR=%{buildroot} install
+%{?lua_env_vars} make %{base_make_flags} %{?extra_make_flags} DESTDIR=%{buildroot} install
 
 %clean
 rm -rf %{buildroot}

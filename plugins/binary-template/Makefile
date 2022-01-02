@@ -50,9 +50,9 @@ ifeq ($(BUSTED),)
 	# LuaRocks under MinGW doesn't install busted under a bin/ directory - it sticks it
 	# elsewhere and puts a .bat that runs it under the right Lua environment for Reasons.
 	
-	BUSTED := $(shell busted --version > /dev/null 2>&1 && echo busted)
+	BUSTED := $(shell busted --version > /dev/null 2>&1 && echo busted --lua=$(LUA))
 	ifeq ($(BUSTED),)
-		BUSTED := $(shell busted.bat --version > /dev/null 2>&1 && echo busted.bat)
+		BUSTED := $(shell busted.bat --version > /dev/null 2>&1 && echo busted.bat --lua=$(LUA))
 	endif
 	
 	ifeq ($(BUSTED),)

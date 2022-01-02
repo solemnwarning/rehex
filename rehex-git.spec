@@ -47,15 +47,9 @@ BuildRequires: pkgconf
 luarocks --tree="$(pwd)/lua-libs" install busted
 
 %if 0%{?el8}
-%define lua_env_vars \
-	BUSTED="$(pwd)/lua-libs/bin/busted" \
-	LUA_PATH="$(pwd)/lua-libs/share/lua/5.3/?.lua;$(pwd)/lua-libs/share/lua/5.3/?/init.lua;;" \
-	LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.3/?.so"
+%define lua_env_vars BUSTED="$(pwd)/lua-libs/bin/busted" LUA_PATH="$(pwd)/lua-libs/share/lua/5.3/?.lua;$(pwd)/lua-libs/share/lua/5.3/?/init.lua;;" LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.3/?.so"
 %else
-%define lua_env_vars \
-	BUSTED="$(pwd)/lua-libs/bin/busted" \
-	LUA_PATH="$(pwd)/lua-libs/share/lua/5.4/?.lua;$(pwd)/lua-libs/share/lua/5.4/?/init.lua;;" \
-	LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.4/?.so"
+%define lua_env_vars BUSTED="$(pwd)/lua-libs/bin/busted" LUA_PATH="$(pwd)/lua-libs/share/lua/5.4/?.lua;$(pwd)/lua-libs/share/lua/5.4/?/init.lua;;" LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.4/?.so"
 %endif
 %endif
 

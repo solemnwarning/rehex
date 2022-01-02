@@ -26,9 +26,10 @@ Requires: wxGTK3
 %define base_make_flags DEBUG_CFLAGS="-DNDEBUG -ggdb" LUA_PKG=lua bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
 
 %if 0%{?el7}
-%define extra_make_flags WX_CONFIG=wx-config-3.0
+%define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe
 BuildRequires: pkgconfig
 %else
+BuildRequires: luarocks
 BuildRequires: pkgconf
 %endif
 
@@ -38,6 +39,22 @@ BuildRequires: pkgconf
 %setup -q -n rehex-%{git_commit_sha}
 
 %build
+
+%if 0%{?el7}
+# No need to install busted on EL7
+%else
+luarocks --tree="$(pwd)/lua-libs" install busted
+export BUSTED="$(pwd)/lua-libs/bin/busted"
+
+%if 0%{?el8}
+export LUA_PATH="$(pwd)/lua-libs/share/lua/5.3/?.lua;$(pwd)/lua-libs/share/lua/5.3/?/init.lua;;"
+export LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.3/?.so"
+%else
+export LUA_PATH="$(pwd)/lua-libs/share/lua/5.4/?.lua;$(pwd)/lua-libs/share/lua/5.4/?/init.lua;;"
+export LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.4/?.so"
+%endif
+%endif
+
 make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
 
 %check

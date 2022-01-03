@@ -3589,7 +3589,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				|| uc_is_property_unassigned_code_value(c)
 				|| uc_is_property_not_a_character(c);
 			
-			if(!skip)
+			if(!skip && c >= 0x7F /* Assume anything in ASCII is really a fixed-width character in the fixed-width font */)
 			{
 				wxSize decoded_char_size;
 				

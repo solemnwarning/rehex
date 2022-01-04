@@ -472,4 +472,84 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses enum definition", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("enum myenum { FOO, BAR, BAZ };")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses enum definition with data type", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("enum <short> myenum { FOO, BAR, BAZ };")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "short", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses enum definition with typedef", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("typedef enum myenum { FOO, BAR, BAZ } myenum_t;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, "myenum_t" },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses anonymous enum definition with typedef", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("typedef enum { FOO, BAR, BAZ } myenum_t;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", nil, {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, "myenum_t" },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses enum definition with explicit values", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("enum myenum { FOO = 1, BAR = 2, BAZ };")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", "myenum", {
+				{ "FOO", { "UNKNOWN FILE", 1, "num", 1 } },
+				{ "BAR", { "UNKNOWN FILE", 1, "num", 2 } },
+				{ "BAZ" },
+			}, nil },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

@@ -109,21 +109,29 @@ local function _capture_string(text, pos)
 end
 
 local function _capture_type(text, pos)
-	local _, match_end, struct_name = text:find("^struct%s+([%a_][%d%a_]*)%s*", pos)
+	local patterns = {
+		"^(enum)%s+([%a_][%d%a_]*)%s*",
+		"^(struct)%s+([%a_][%d%a_]*)%s*",
+		"^([%a_][%d%a_]*)%s*",
+	}
 	
-	if struct_name ~= nil
-	then
-		return match_end + 1, "struct " .. struct_name
-	else
-		_, match_end, type_name = text:find("^([%a_][%d%a_]*)%s*", pos)
+	for _, pattern in ipairs(patterns)
+	do
+		local captures = table.pack(text:find(pattern, pos))
 		
-		if type_name ~= nil
+		local match_begin = captures[1]
+		table.remove(captures, 1)
+		
+		local match_end = captures[1]
+		table.remove(captures, 1)
+		
+		if match_begin ~= nil
 		then
-			return match_end + 1, type_name
-		else
-			return pos
+			return match_end + 1, table.concat(captures, " ")
 		end
 	end
+	
+	return pos
 end
 
 local spc = S(" \t\r\n")^0
@@ -156,6 +164,7 @@ local _parser = spc * P{
 		V("IF") +
 		V("WHILE") +
 		V("STRUCT_DEFN") +
+		V("ENUM_DEFN") +
 		V("TYPEDEF") +
 		V("FUNC_DEFN") +
 		V("LOCAL_VAR_DEFN") +
@@ -205,6 +214,24 @@ local _parser = spc * P{
 	--      "foobar_t",
 	--  }
 	TYPEDEF = Ct( P(_capture_position) * Cc("typedef") * P("typedef") * spc * P(_capture_type) * name * P(";") * spc ),
+	
+	--  {
+	--      "file.bt", <line>,
+	--      "enum",
+	--      "value type - int/word/etc",,
+	--      "enum name" or nil,
+	--      {
+	--          { "member name" } or { "member name", <value expr> },
+	--      },
+	--      "typedef name" or nil,
+	--  }
+	ENUM_TYPE        = (P("<") * P(_capture_type) * P(">") * spc) + Cc("int"),
+	ENUM_MEMBER      = Ct( name * (P("=") * spc * V("EXPR")) ^ -1 ),
+	ENUM_MEMBER_LIST = Ct( V("ENUM_MEMBER") * (comma * V("ENUM_MEMBER")) ^ 0 ),
+	ENUM_DEFN =
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * P(";") * spc ),
 	
 	--  {
 	--      "function",
@@ -378,6 +405,19 @@ local function _compile_statement(s)
 		for i = 1, #body
 		do
 			_compile_statement(body[i])
+		end
+	elseif op == "enum"
+	then
+		local members = s[6]
+		
+		for i = 1, #members
+		do
+			local value_expr = members[i][2]
+			
+			if value_expr ~= nil
+			then
+				_compile_expr(value_expr)
+			end
 		end
 	elseif op == "local-variable"
 	then

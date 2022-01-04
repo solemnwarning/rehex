@@ -42,6 +42,7 @@ local _eval_return
 local _eval_func_defn;
 local _eval_struct_defn
 local _eval_typedef
+local _eval_enum
 local _eval_if
 local _eval_statement;
 local _exec_statements;
@@ -1162,6 +1163,78 @@ _eval_typedef = function(context, statement)
 	context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)
 end
 
+_eval_enum = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local type_name    = statement[4]
+	local enum_name    = statement[5]
+	local members      = statement[6]
+	local typedef_name = statement[7]
+	
+	local enum_typename = enum_name ~= nil and "enum " .. enum_name or nil
+	
+	-- Check type names are valid
+	
+	local type_info = _find_type(context, type_name)
+	if type_info == nil
+	then
+		error("Use of undefined type '" .. type_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if enum_typename ~= nil and _find_type(context, enum_typename) ~= nil
+	then
+		error("Attempt to redefine type '" .. enum_typename .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if typedef_name ~= nil and _find_type(context, typedef_name) ~= nil
+	then
+		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	-- Define each member as a const variable of the base type in the current scope.
+	
+	local next_member_val = 0
+	local scope_vars = context.stack[#context.stack].vars
+	
+	for _, member_pair in pairs(members)
+	do
+		local member_name, member_expr = table.unpack(member_pair)
+		
+		if scope_vars[member_name] ~= nil
+		then
+			error("Attempt to redefine name '" .. member_name .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		if member_expr ~= nil
+		then
+			local member_t, member_v = _eval_statement(context, member_expr)
+			
+			if member_t == nil or member_t.base ~= "number"
+			then
+				error("Invalid type '" .. _get_type_name(member_t) .. "' for enum member '" .. member_name .. "' at " .. member_expr[1] .. ":" .. member_expr[2])
+			end
+			
+			next_member_val = member_v:get()
+		end
+		
+		scope_vars[member_name] = { type_info, _make_const_plain_value(next_member_val) }
+		next_member_val = next_member_val + 1
+	end
+	
+	-- Define the enum type as a copy of its base type
+	
+	if enum_typename ~= nil
+	then
+		context.stack[#context.stack].var_types[enum_typename] = _make_named_type(enum_typename, type_info)
+	end
+	
+	if typedef_name ~= nil
+	then
+		context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)
+	end
+end
+
 _eval_if = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -1223,6 +1296,7 @@ _ops = {
 	["function"]       = _eval_func_defn,
 	["struct"]         = _eval_struct_defn,
 	["typedef"]        = _eval_typedef,
+	["enum"]           = _eval_enum,
 	["if"]             = _eval_if,
 	
 	add      = _eval_add,

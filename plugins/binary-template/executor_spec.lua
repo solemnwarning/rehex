@@ -1942,4 +1942,231 @@ describe("executor", function()
 			})
 		end, "can't assign 'struct mystruct2' to type 'struct mystruct1'")
 	end)
+	
+	it("allows defining enums", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+				{ "B_FOO", { "UNKNOWN FILE", 1, "num", 1 } },
+				{ "B_BAR", { "UNKNOWN FILE", 1, "num", 3 } },
+				{ "B_BAZ" },
+			}, nil },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FOO = %d" },
+				{ "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAR = %d" },
+				{ "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAZ = %d" },
+				{ "test.bt", 1, "ref", { "BAZ" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "B_FOO = %d" },
+				{ "test.bt", 1, "ref", { "B_FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "B_BAR = %d" },
+				{ "test.bt", 1, "ref", { "B_BAR" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "B_BAZ = %d" },
+				{ "test.bt", 1, "ref", { "B_BAZ" } } } },
+			
+			{ "test.bt", 1, "local-variable",
+				"enum myenum", "e", {}, { { "test.bt", 1, "ref", { "B_BAZ" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e = %d" },
+				{ "test.bt", 1, "ref", { "e" } } } },
+		})
+		
+		local expect_log = {
+			"print(FOO = 0)",
+			"print(BAR = 1)",
+			"print(BAZ = 2)",
+			"print(B_FOO = 1)",
+			"print(B_BAR = 3)",
+			"print(B_BAZ = 4)",
+			"print(e = 4)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows defining enums with a typedef", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "enum", "int", "myenum", {
+				{ "FOO", { "UNKNOWN FILE", 1, "num", 1234 } },
+				{ "BAR" },
+			}, "myenum_t" },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FOO = %d" },
+				{ "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAR = %d" },
+				{ "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "local-variable",
+				"enum myenum", "e1", {}, { { "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "local-variable",
+				"myenum_t", "e2", {}, { { "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e1 = %d" },
+				{ "test.bt", 1, "ref", { "e1" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e2 = %d" },
+				{ "test.bt", 1, "ref", { "e2" } } } },
+		})
+		
+		local expect_log = {
+			"print(FOO = 1234)",
+			"print(BAR = 1235)",
+			"print(e1 = 1234)",
+			"print(e2 = 1235)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows defining anonymous enums with a typedef", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "enum", "int", nil, {
+				{ "FOO", { "UNKNOWN FILE", 1, "num", 1234 } },
+				{ "BAR" },
+			}, "myenum_t" },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FOO = %d" },
+				{ "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAR = %d" },
+				{ "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "local-variable",
+				"myenum_t", "e", {}, { { "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e = %d" },
+				{ "test.bt", 1, "ref", { "e" } } } },
+		})
+		
+		local expect_log = {
+			"print(FOO = 1234)",
+			"print(BAR = 1235)",
+			"print(e = 1234)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when defining an enum with an undefined type", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "enum", "nosuch_t", "myenum", {
+					{ "FOO" },
+				}, nil },
+			})
+			end, "Use of undefined type 'nosuch_t' at test.bt:1")
+	end)
+	
+	it("errors when defining the same multiple times in an enum", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "enum", "int", "myenum", {
+					{ "FOO" },
+					{ "FOO" },
+				}, nil },
+			})
+			end, "Attempt to redefine name 'FOO' at test.bt:1")
+	end)
+	
+	it("errors when reusing an existing variable name as an enum member", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "int", "FOO", {}, {} },
+				
+				{ "test.bt", 2, "enum", "int", "myenum", {
+					{ "FOO" },
+				}, nil },
+			})
+			end, "Attempt to redefine name 'FOO' at test.bt:2")
+	end)
+	
+	it("errors when redefining an enum type", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "enum", "int", "myenum", {
+					{ "FOO" },
+				}, nil },
+				
+				{ "test.bt", 2, "enum", "int", "myenum", {
+					{ "FOO" },
+				}, nil },
+			})
+			end, "Attempt to redefine type 'enum myenum' at test.bt:2")
+	end)
+	
+	it("errors when redefining a type using typedef enum", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "enum", "int", "myenum", {
+					{ "FOO" },
+				}, "int" },
+			})
+			end, "Attempt to redefine type 'int' at test.bt:1")
+	end)
+	
+	it("errors when defining an enum member as a string", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "enum", "int", "myenum", {
+					{ "FOO", { "test.bt", 1, "str", "" } },
+				}, nil },
+			})
+			end, "Invalid type 'string' for enum member 'FOO' at test.bt:1")
+	end)
+	
+	it("errors when defining an enum member as a void", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				
+				{ "test.bt", 1, "enum", "int", "myenum", {
+					{ "FOO", { "test.bt", 1, "call", "vfunc", {} } },
+				}, nil },
+			})
+			end, "Invalid type 'void' for enum member 'FOO' at test.bt:1")
+	end)
 end)

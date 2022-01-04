@@ -43,6 +43,8 @@ bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
 libdir      ?= $(exec_prefix)/lib
 
+LUA ?= lua
+
 PLUGIN_NAME := binary-template
 PLUGINS_INST_DIR ?= $(DESTDIR)$(libdir)/rehex
 

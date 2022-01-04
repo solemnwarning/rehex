@@ -552,4 +552,137 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses for loop", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(;;) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for", nil, nil, nil, {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses for loop with init expression", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(i = 0 ;;) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				{ "UNKNOWN FILE", 1, "assign", { "UNKNOWN FILE", 1, "ref", { "i" } }, { "UNKNOWN FILE", 1, "num", 0 } },
+				nil, nil, {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses for loop with condition", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(; i < 10;) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil,
+				{ "UNKNOWN FILE", 1, "less-than", { "UNKNOWN FILE", 1, "ref", { "i" } }, { "UNKNOWN FILE", 1, "num", 10 } },
+				nil, {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses for loop with iteration expression", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(;; do_thing()) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil, nil,
+				{ "UNKNOWN FILE", 1, "call", "do_thing", {} },
+				{} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses for loop with multiple statements in block", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(;;) {\nthing1();\nthing2();\n}\nthing_not_in_loop();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil, nil, nil,
+				{
+					{ "UNKNOWN FILE", 2, "call", "thing1", {} },
+					{ "UNKNOWN FILE", 3, "call", "thing2", {} },
+				} },
+			{ "UNKNOWN FILE", 5, "call", "thing_not_in_loop", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses for loop with a statement not in a block", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(;;) thing_in_loop();\nthing_not_in_loop();\n}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil, nil, nil,
+				{
+					{ "UNKNOWN FILE", 1, "call", "thing_in_loop", {} },
+				} },
+			{ "UNKNOWN FILE", 2, "call", "thing_not_in_loop", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("errors on for loop with no trailing statements", function()
+		assert.has_error(
+			function()
+				parser.parse_text("for(;;)")
+			end, "Parse error at UNKNOWN FILE:1 (at 'for(;;)')")
+	end)
+	
+	it("parses for loop with a trailing semicolon", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(;;);\nthing_not_in_loop();\n}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for", nil, nil, nil, {} },
+			{ "UNKNOWN FILE", 2, "call", "thing_not_in_loop", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses for loop local variable definition in initialiser", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("for(local int x = 0;;) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				{ "UNKNOWN FILE", 1, "local-variable", "int", "x", {},
+					{ { "UNKNOWN FILE", 1, "num", 0 } } },
+				nil, nil, {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("errors on for loop with no non-local variable definition ini initialiser", function()
+		assert.has_error(
+			function()
+				parser.parse_text("for(int x;;)")
+			end, "Parse error at UNKNOWN FILE:1 (at 'for(int x;;')")
+	end)
 end);

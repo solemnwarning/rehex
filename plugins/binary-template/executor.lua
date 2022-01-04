@@ -44,6 +44,9 @@ local _eval_struct_defn
 local _eval_typedef
 local _eval_enum
 local _eval_if
+local _eval_for
+local _eval_break
+local _eval_continue
 local _eval_statement;
 local _exec_statements;
 
@@ -621,7 +624,7 @@ _eval_ref = function(context, statement)
 		return _walk_path(context.global_vars[ path[1] ])
 	end
 	
-	error("Internal error: undefined variable '" .. path[1] .. "' at " .. filename .. ":" .. line_num)
+	error("Attempt to use undefined variable '" .. path[1] .. "' at " .. filename .. ":" .. line_num)
 end
 
 _eval_add = function(context, statement)
@@ -1259,11 +1262,124 @@ _eval_if = function(context, statement)
 	end
 end
 
+_eval_for = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local init_expr = statement[4]
+	local cond_expr = statement[5]
+	local iter_expr = statement[6]
+	local body      = statement[7]
+	
+	local frame = {
+		frame_type = FRAME_TYPE_SCOPE,
+		var_types = {},
+		vars = {},
+		
+		handles_flowctrl_types = (FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
+	}
+	
+	table.insert(context.stack, frame)
+	
+	if init_expr
+	then
+		_eval_statement(context, init_expr)
+	end
+	
+	while true
+	do
+		if cond_expr
+		then
+			local cond_t, cond_v = _eval_statement(context, cond_expr)
+			
+			if (cond_t and cond_t.base) ~= "number"
+			then
+				error("Unexpected type '" .. _get_type_name(cond_t) .. "' used as for loop condition at " .. cond_expr[1] .. ":" .. cond_expr[2])
+			end
+			
+			if cond_v:get() == 0
+			then
+				break
+			end
+		else
+			-- TODO: Don't do this on every single statement - less frequency?
+			context.interface.yield()
+		end
+		
+		-- Define another scope inside the loop's outer scope so any variables defined
+		-- inside the loop are cleaned up on each iteration.
+		
+		local frame = {
+			frame_type = FRAME_TYPE_SCOPE,
+			var_types = {},
+			vars = {},
+		}
+		
+		table.insert(context.stack, frame)
+		
+		for _, statement in ipairs(body)
+		do
+			local sr_t, sr_v = _eval_statement(context, statement)
+			
+			if sr_t and sr_t.flowctrl ~= nil
+			then
+				if sr_t.flowctrl == FLOWCTRL_TYPE_BREAK
+				then
+					table.remove(context.stack)
+					table.remove(context.stack)
+					return
+				elseif sr_t.flowctrl == FLOWCTRL_TYPE_CONTINUE
+				then
+					break
+				else
+					table.remove(context.stack)
+					table.remove(context.stack)
+					return sr_t, sr_v
+				end
+			end
+		end
+		
+		table.remove(context.stack)
+		
+		if iter_expr
+		then
+			_eval_statement(context, iter_expr)
+		end
+	end
+	
+	table.remove(context.stack)
+end
+
+_eval_break = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	if not _can_do_flowctrl_here(context, FLOWCTRL_TYPE_BREAK)
+	then
+		error("'break' statement not allowed here at " .. filename .. ":" .. line_num)
+	end
+	
+	return { flowctrl = FLOWCTRL_TYPE_BREAK }, retval
+end
+
+_eval_continue = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	if not _can_do_flowctrl_here(context, FLOWCTRL_TYPE_CONTINUE)
+	then
+		error("'continue' statement not allowed here at " .. filename .. ":" .. line_num)
+	end
+	
+	return { flowctrl = FLOWCTRL_TYPE_CONTINUE }, retval
+end
+
 _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
-	-- TODO: Call yield() periodically
+	-- TODO: Don't do this on every single statement - less frequency?
+	context.interface.yield()
 	
 	local op = statement[3]
 	
@@ -1298,6 +1414,9 @@ _ops = {
 	["typedef"]        = _eval_typedef,
 	["enum"]           = _eval_enum,
 	["if"]             = _eval_if,
+	["for"]            = _eval_for,
+	["break"]          = _eval_break,
+	["continue"]       = _eval_continue,
 	
 	add      = _eval_add,
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),

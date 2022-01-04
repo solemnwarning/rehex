@@ -19,6 +19,8 @@ local executor = require 'executor'
 local function test_interface(data)
 	local log = {}
 	
+	local timeout = os.time() + 5
+	
 	local interface = {
 		set_data_type = function(offset, length, data_type)
 			table.insert(log, "set_data_type(" .. offset .. ", " .. length .. ", " .. data_type .. ")")
@@ -29,7 +31,10 @@ local function test_interface(data)
 		end,
 		
 		yield = function()
-			table.insert(log, "yield()")
+			if os.time() >= timeout
+			then
+				error("Test timeout")
+			end
 		end,
 		
 		print = function(s)
@@ -2168,5 +2173,289 @@ describe("executor", function()
 				}, nil },
 			})
 			end, "Invalid type 'void' for enum member 'FOO' at test.bt:1")
+	end)
+	
+	it("implements basic for loop behaviour", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "for",
+				{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "num", 5 } },
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "add",
+						{ "test.bt", 1, "ref", { "i" } },
+						{ "test.bt", 1, "num", 1 } } },
+				
+				{
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "i = %d" },
+						{ "test.bt", 1, "ref", { "i" } } } },
+				} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "end" } } },
+		})
+		
+		local expect_log = {
+			"print(i = 0)",
+			"print(i = 1)",
+			"print(i = 2)",
+			"print(i = 3)",
+			"print(i = 4)",
+			"print(end)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows breaking out of a for loop", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "for",
+				{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "num", 5 } },
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "add",
+						{ "test.bt", 1, "ref", { "i" } },
+						{ "test.bt", 1, "num", 1 } } },
+				
+				{
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "i = %d" },
+						{ "test.bt", 1, "ref", { "i" } } } },
+					
+					{ "test.bt", 1, "break" },
+				} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "end" } } },
+		})
+		
+		local expect_log = {
+			"print(i = 0)",
+			"print(end)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows continuing to next iteration of a for loop", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "for",
+				{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "num", 5 } },
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "add",
+						{ "test.bt", 1, "ref", { "i" } },
+						{ "test.bt", 1, "num", 1 } } },
+				
+				{
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "i = %d" },
+						{ "test.bt", 1, "ref", { "i" } } } },
+					
+					{ "test.bt", 1, "continue" },
+					
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "i = %d (2)" },
+						{ "test.bt", 1, "ref", { "i" } } } },
+				} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "end" } } },
+		})
+		
+		local expect_log = {
+			"print(i = 0)",
+			"print(i = 1)",
+			"print(i = 2)",
+			"print(i = 3)",
+			"print(i = 4)",
+			"print(end)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("can be broken out of an infinite for loop via yield", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "for", nil, nil, nil, {} },
+				})
+			end, "Test timeout")
+	end)
+	
+	it("scopes variables defined in for loop initialiser to the loop", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "for",
+						{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+						{ "test.bt", 1, "less-than",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "num", 5 } },
+						{ "test.bt", 1, "assign",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "add",
+								{ "test.bt", 1, "ref", { "i" } },
+								{ "test.bt", 1, "num", 1 } } },
+						
+						{} },
+					
+					{ "test.bt", 2, "ref", { "i" } }
+				})
+			end, "Attempt to use undefined variable 'i' at test.bt:2")
+	end)
+	
+	it("scopes variables defined in for loop to the loop", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "for",
+						{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+						{ "test.bt", 1, "less-than",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "num", 5 } },
+						{ "test.bt", 1, "assign",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "add",
+								{ "test.bt", 1, "ref", { "i" } },
+								{ "test.bt", 1, "num", 1 } } },
+						
+						{
+							{ "test.bt", 1, "local-variable", "int", "j", {}, {} },
+						} },
+					
+					{ "test.bt", 2, "ref", { "j" } }
+				})
+			end, "Attempt to use undefined variable 'j' at test.bt:2")
+	end)
+	
+	it("allows returning from a loop inside a function", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "int", "myfunc", {}, {
+				{ "test.bt", 1, "for",
+					{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+					{ "test.bt", 1, "less-than",
+						{ "test.bt", 1, "ref", { "i" } },
+						{ "test.bt", 1, "num", 5 } },
+					{ "test.bt", 1, "assign",
+						{ "test.bt", 1, "ref", { "i" } },
+						{ "test.bt", 1, "add",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "num", 1 } } },
+					
+					{
+						{ "test.bt", 1, "return", { "test.bt", 1, "num", 1234 } },
+					},
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "%d" },
+				{ "test.bt", 1, "call", "myfunc", {} } } },
+		})
+		
+		local expect_log = {
+			"print(1234)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("doesn't allow return from a loop not in a function", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "for",
+						{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+						{ "test.bt", 1, "less-than",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "num", 5 } },
+						{ "test.bt", 1, "assign",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "add",
+								{ "test.bt", 1, "ref", { "i" } },
+								{ "test.bt", 1, "num", 1 } } },
+						
+						{
+							{ "test.bt", 2, "return", { "test.bt", 1, "num", 1234 } },
+						},
+					},
+				})
+			end, "'return' statement not allowed here at test.bt:2")
+	end)
+	
+	it("doesn't allow break outside of a loop", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "break" },
+				})
+			end, "'break' statement not allowed here at test.bt:1")
+	end)
+	
+	it("doesn't allow continue outside of a loop", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "break" },
+				})
+			end, "'break' statement not allowed here at test.bt:1")
+	end)
+	
+	it("doesn't allow break inside a function call inside a loop", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "function", "int", "breakfunc", {}, {
+						{ "test.bt", 2, "break" } } },
+					
+					{ "test.bt", 1, "for",
+						{ "test.bt", 1, "local-variable", "int", "i", {}, { { "test.bt", 1, "num", 0 } } },
+						{ "test.bt", 1, "less-than",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "num", 5 } },
+						{ "test.bt", 1, "assign",
+							{ "test.bt", 1, "ref", { "i" } },
+							{ "test.bt", 1, "add",
+								{ "test.bt", 1, "ref", { "i" } },
+								{ "test.bt", 1, "num", 1 } } },
+						
+						{
+							{ "test.bt", 1, "call", "breakfunc", {} },
+						},
+					},
+				})
+			end, "'break' statement not allowed here at test.bt:2")
 	end)
 end)

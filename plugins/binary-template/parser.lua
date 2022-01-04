@@ -162,6 +162,7 @@ local _parser = spc * P{
 		V("BLOCK") +
 		V("COMMENT") +
 		V("IF") +
+		V("FOR") +
 		V("WHILE") +
 		V("STRUCT_DEFN") +
 		V("ENUM_DEFN") +
@@ -170,7 +171,10 @@ local _parser = spc * P{
 		V("LOCAL_VAR_DEFN") +
 		V("VAR_DEFN") +
 		V("RETURN") +
-		V("EXPR") * P(";") * spc,
+		V("BREAK") +
+		V("CONTINUE") +
+		V("EXPR") * P(";") * spc +
+		P(";") * spc,
 	
 	BLOCK = P("{") * spc * ( V("STMT") ^ 0 ) * spc * P("}"),
 	
@@ -186,6 +190,8 @@ local _parser = spc * P{
 		Ct( V("VALUE") ) +
 		Ct( P(_capture_position) * Cc("_token") *
 			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|=") ) * spc),
+	
+	EXPR_OR_NIL = V("EXPR") + Cc(nil) * spc,
 	
 	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * P(_capture_type) * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
 	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),
@@ -257,11 +263,39 @@ local _parser = spc * P{
 	),
 	
 	--  {
+	--      "file.bt", <line>,
+	--      "for",
+	--      { <init expr> } OR nil,
+	--      { <cond expr> } OR nil,
+	--      { <iter expr> } OR nil,
+	--      { <statements> },
+	--  }
+	FOR = Ct( P(_capture_position) * Cc("for") *
+		P("for") * spc * P("(") *
+			(V("LOCAL_VAR_DEFN") + (V("EXPR_OR_NIL") * P(";") * spc)) *
+			V("EXPR_OR_NIL") * P(";") * spc *
+			V("EXPR_OR_NIL") * P(")") * spc *
+			Ct( V("STMT") ) * spc
+	),
+	
+	--  {
 	--      "while", <condition>, { <statements> }
 	--  }
 	WHILE = Ct( P(_capture_position) * Cc("while") *
 		P("while") * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) * spc
 	),
+	
+	--  {
+	--      "file.bt", <line>,
+	--      "break",
+	--  }
+	BREAK = Ct( P(_capture_position) * Cc("break") * P("break") * spc ),
+	
+	--  {
+	--      "file.bt", <line>,
+	--      "continue",
+	--  }
+	CONTINUE = Ct( P(_capture_position) * Cc("continue") * P("continue") * spc ),
 }
 
 local function _compile_expr(expr)
@@ -431,6 +465,21 @@ local function _compile_statement(s)
 		local array_size = s[6][1]
 		
 		if array_size then _compile_expr(array_size) end
+	elseif op == "for"
+	then
+		local init_expr = s[4]
+		local cond_expr = s[5]
+		local iter_expr = s[6]
+		local body      = s[7]
+		
+		if init_expr then _compile_statement(init_expr) end
+		if cond_expr then _compile_expr(cond_expr) end
+		if iter_expr then _compile_expr(iter_expr) end
+		
+		for i = 1, #body
+		do
+			_compile_statement(body[i])
+		end
 	end
 end
 

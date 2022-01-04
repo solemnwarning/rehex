@@ -52,6 +52,17 @@ local _exec_statements;
 
 local _ops
 
+local function _map(src_table, func)
+	local dst_table = {}
+	
+	for k,v in pairs(src_table)
+	do
+		dst_table[k] = func(src_table[k])
+	end
+	
+	return dst_table
+end
+
 local function _topmost_frame_of_type(context, type)
 	for i = #context.stack, 1, -1
 	do
@@ -86,6 +97,10 @@ end
 --
 -- Type system
 --
+
+-- Placeholder for ... in builtin function parameters. Not a valid type in most contexts but the
+-- _eval_call() function handles this specific object specially.
+local _variadic_placeholder = {}
 
 local function _make_named_type(name, type)
 	local new_type = {};
@@ -127,6 +142,11 @@ local function _make_nonarray_type(type)
 end
 
 local function _get_type_name(type)
+	if type == _variadic_placeholder
+	then
+		return "..."
+	end
+	
 	if type and type.is_array
 	then
 		return type.name .. "[]"
@@ -316,10 +336,6 @@ local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be"
 local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8" }
 local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number", string_fmt = "f" }
 local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number", string_fmt = "d" }
-
--- Placeholder for ... in builtin function parameters. Not a valid type in most contexts but the
--- _eval_call() function handles this specific object specially.
-local _variadic_placeholder = {}
 
 local _builtin_types = {
 	char = _make_named_type("char", _builtin_type_int8),
@@ -946,17 +962,38 @@ _eval_call = function(context, statement)
 	end
 	
 	local func_arg_values = {}
+	local args_ok = true
 	
 	for i = 1, #func_args
 	do
 		func_arg_values[i] = { _eval_statement(context, func_args[i]) }
-		-- TODO: Check for type compatibility
 	end
 	
 	for i = #func_arg_values + 1, #func_defn.defaults
 	do
 		func_arg_values[i] = { _eval_statement(context, func_defn.defaults[i]) }
-		-- TODO: Check for type compatibility
+	end
+	
+	for i = 1, math.max(#func_arg_values, #func_defn.arguments)
+	do
+		if func_defn.arguments[i] == _variadic_placeholder
+		then
+			break
+		end
+		
+		if i > #func_arg_values or i > #func_defn.arguments or
+			not _type_assignable(func_defn.arguments[i], func_arg_values[i][1])
+		then
+			args_ok = false
+		end
+	end
+	
+	if not args_ok
+	then
+		local got_types = table.concat(_map(func_arg_values, function(v) return _get_type_name(v[1]) end), ", ")
+		local expected_types = table.concat(_map(func_defn.arguments, function(v) return _get_type_name(v) end), ", ")
+		
+		error("Attempt to call function " .. func_name .. "(" .. expected_types .. ") with incompatible argument types (" .. got_types .. ") at " .. filename .. ":" .. line_num)
 	end
 	
 	return func_defn.impl(context, func_arg_values)
@@ -1004,7 +1041,7 @@ _eval_func_defn = function(context, statement)
 	
 	local func_ret_type   = statement[4]
 	local func_name       = statement[5]
-	local func_arg_types  = statement[6]
+	local func_args       = statement[6]
 	local func_statements = statement[7]
 	
 	if context.functions[func_name] ~= nil
@@ -1023,12 +1060,14 @@ _eval_func_defn = function(context, statement)
 	end
 	
 	local arg_types = {}
-	for i = 1, #func_arg_types
+	for i = 1, #func_args
 	do
-		local type_info = _find_type(context, func_arg_types[i])
+		local arg_type_name = func_args[i][1]
+		
+		local type_info = _find_type(context, arg_type_name)
 		if type_info == nil
 		then
-			error("Attempt to define function '" .. func_name .. "' with undefined argument type '" .. func_arg_values[i] .. "' at " .. filename .. ":" .. line_num)
+			error("Attempt to define function '" .. func_name .. "' with undefined argument type '" .. arg_type_name .. "' at " .. filename .. ":" .. line_num)
 		end
 		
 		table.insert(arg_types, type_info)
@@ -1045,6 +1084,24 @@ _eval_func_defn = function(context, statement)
 			
 			return_type = ret_type,
 		}
+		
+		if #arguments ~= #func_args
+		then
+			error("Internal error: wrong number of function arguments")
+		end
+		
+		for i = 1, #arguments
+		do
+			local arg_type = arg_types[i]
+			local arg_name = func_args[i][2]
+			
+			if not _type_assignable(arg_type, arguments[i][1])
+			then
+				error("Internal error: incompatible function arguments")
+			end
+			
+			frame.vars[arg_name] = arguments[i]
+		end
 		
 		table.insert(context.stack, frame)
 		

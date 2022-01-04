@@ -148,6 +148,85 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("handles custom functions with arguments", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "void", "foo", { { "int", "a" }, { "int", "b" }, { "string", "c" } }, {
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "%d, %d, %s" },
+					{ "test.bt", 1, "ref", { "a" } },
+					{ "test.bt", 1, "ref", { "b" } },
+					{ "test.bt", 1, "ref", { "c" } } } } } },
+			
+			{ "test.bt", 1, "call", "foo", {
+				{ "test.bt", 1, "num", 1234 },
+				{ "test.bt", 1, "num", 5678 },
+				{ "test.bt", 1, "str", "hello" } } },
+		})
+		
+		local expect_log = {
+			"print(1234, 5678, hello)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when attempting to call a function with too few arguments", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "int", "a" }, { "int", "b" }, { "string", "c" } }, {} },
+				
+				{ "test.bt", 2, "call", "func", {
+					{ "test.bt", 3, "num", 1 },
+					{ "test.bt", 3, "num", 2 } } },
+			})
+			end, "Attempt to call function func(int, int, string) with incompatible argument types (int, int) at test.bt:2")
+	end)
+	
+	it("errors when attempting to call a function with too many arguments", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "int", "a" }, { "int", "b" }, { "string", "c" } }, {} },
+				
+				{ "test.bt", 2, "call", "func", {
+					{ "test.bt", 3, "num", 1 },
+					{ "test.bt", 3, "num", 2 },
+					{ "test.bt", 3, "str", "x" },
+					{ "test.bt", 3, "str", "y" } } },
+			})
+			end, "Attempt to call function func(int, int, string) with incompatible argument types (int, int, string, string) at test.bt:2")
+	end)
+	
+	it("errors when attempting to call a function with incompatible argument types", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "int", "a" }, { "int", "b" }, { "string", "c" } }, {} },
+				
+				{ "test.bt", 2, "call", "func", {
+					{ "test.bt", 3, "num", 1 },
+					{ "test.bt", 3, "str", "x" },
+					{ "test.bt", 3, "str", "y" } } },
+			})
+			end, "Attempt to call function func(int, int, string) with incompatible argument types (int, string, string) at test.bt:2")
+	end)
+	
+	it("errors when attempting to call a variadic function with too few arguments", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "call", "Printf", {} },
+			})
+			end, "Attempt to call function Printf(string, ...) with incompatible argument types () at test.bt:1")
+	end)
+	
 	it("reads int8 values from file", function()
 		local interface, log = test_interface(string.char(
 			0x00,

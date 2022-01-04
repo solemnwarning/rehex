@@ -278,11 +278,9 @@ local _parser = spc * P{
 			Ct( V("STMT") ) * spc
 	),
 	
-	--  {
-	--      "while", <condition>, { <statements> }
-	--  }
-	WHILE = Ct( P(_capture_position) * Cc("while") *
-		P("while") * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) * spc
+	-- while gets compiled to be a for loop with just a condition (see above)
+	WHILE = Ct( P(_capture_position) * Cc("for") *
+		P("while") * spc * P("(") * Cc(nil) * V("EXPR") * Cc(nil) * P(")") * spc * Ct( V("STMT") ) * spc
 	),
 	
 	--  {

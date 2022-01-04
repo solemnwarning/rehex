@@ -685,4 +685,74 @@ describe("parser", function()
 				parser.parse_text("for(int x;;)")
 			end, "Parse error at UNKNOWN FILE:1 (at 'for(int x;;')")
 	end)
+	
+	it("parses while loop", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("while(i < 10) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil,
+				{ "UNKNOWN FILE", 1, "less-than", { "UNKNOWN FILE", 1, "ref", { "i" } }, { "UNKNOWN FILE", 1, "num", 10 } },
+				nil, {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses while loop with multiple statements in block", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("while(1) {\nthing1();\nthing2();\n}\nthing_not_in_loop();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil, { "UNKNOWN FILE", 1, "num", 1 }, nil,
+				{
+					{ "UNKNOWN FILE", 2, "call", "thing1", {} },
+					{ "UNKNOWN FILE", 3, "call", "thing2", {} },
+				} },
+			{ "UNKNOWN FILE", 5, "call", "thing_not_in_loop", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses while loop with a statement not in a block", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("while(1) thing_in_loop();\nthing_not_in_loop();\n}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for",
+				nil, { "UNKNOWN FILE", 1, "num", 1 }, nil,
+				{
+					{ "UNKNOWN FILE", 1, "call", "thing_in_loop", {} },
+				} },
+			{ "UNKNOWN FILE", 2, "call", "thing_not_in_loop", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("errors on while loop with no trailing statements", function()
+		assert.has_error(
+			function()
+				parser.parse_text("while(1)")
+			end, "Parse error at UNKNOWN FILE:1 (at 'while(1)')")
+	end)
+	
+	it("parses while loop with a trailing semicolon", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("while(1);\nthing_not_in_loop();\n}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "for", nil, { "UNKNOWN FILE", 1, "num", 1 }, nil, {} },
+			{ "UNKNOWN FILE", 2, "call", "thing_not_in_loop", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

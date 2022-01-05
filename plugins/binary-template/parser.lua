@@ -192,31 +192,36 @@ local _parser = spc * P{
 			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|=") ) * spc),
 	
 	EXPR_OR_NIL = V("EXPR") + Cc(nil) * spc,
+	ZERO_OR_MORE_EXPRS = (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1,
 	
 	--  {
 	--      "file.bt", <line>,
 	--      "variable",
 	--      <variable type>,
 	--      <variable name>,
+	--      { <struct parameters> } OR nil,
 	--      <array size expr> OR nil,
 	--  }
 	VAR_DEFN = Ct(
 		P(_capture_position) * Cc("variable") *
 		P(_capture_type) * name *
-		(P("[") * V("EXPR") * P("]") * spc + Cc(nil)) * P(";") * spc ),
+		(P("(") * spc * Ct( V("ZERO_OR_MORE_EXPRS") ) * P(")") * spc + Cc(nil)) *
+		(P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) * P(";") * spc ),
 	
 	--  {
 	--      "file.bt", <line>,
 	--      "local-variable",
 	--      <variable type>,
 	--      <variable name>,
+	--      { <struct parameters> } OR nil,
 	--      <array size expr> OR nil,
 	--      <initial value expr> OR nil,
 	--  }
 	LOCAL_VAR_DEFN = Ct(
 		P(_capture_position) * Cc("local-variable") *
-		P("local") * spc * name * name *
-		(P("[") * V("EXPR") * P("]") * spc + Cc(nil)) *
+		P("local") * spc * P(_capture_type) * name *
+		(P("(") * spc * Ct( V("ZERO_OR_MORE_EXPRS") ) * P(")") * spc + Cc(nil)) *
+		(P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) *
 		(P("=") * spc * V("EXPR") * spc + Cc(nil)) * P(";") * spc ),
 	
 	RETURN = Ct( P(_capture_position) * Cc("return") * P("return") * spc * V("EXPR") * P(";") * spc),
@@ -476,14 +481,32 @@ local function _compile_statement(s)
 		end
 	elseif op == "local-variable"
 	then
-		local array_size = s[6]
-		local init_val = s[7]
+		local arguments = s[6]
+		local array_size = s[7]
+		local init_val = s[8]
+		
+		if arguments ~= nil
+		then
+			for i = 1, #arguments
+			do
+				_compile_expr(arguments[i])
+			end
+		end
 		
 		if array_size then _compile_expr(array_size) end
 		if init_val   then _compile_expr(init_val)   end
 	elseif op == "variable"
 	then
-		local array_size = s[6]
+		local arguments = s[6]
+		local array_size = s[7]
+		
+		if arguments ~= nil
+		then
+			for i = 1, #arguments
+			do
+				_compile_expr(arguments[i])
+			end
+		end
 		
 		if array_size then _compile_expr(array_size) end
 	elseif op == "for"

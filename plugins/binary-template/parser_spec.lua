@@ -192,12 +192,31 @@ describe("parser", function()
 	end);
 	
 	it("parses variable definitions", function()
-		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "var", nil } }, parser.parse_text("int var;"));
-		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("int array[10];"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "var", nil, nil } }, parser.parse_text("int var;"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("int array[10];"));
 		
-		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct foo", "bar", nil } }, parser.parse_text("struct foo bar;"));
-		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct baz", "qux", { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("struct baz qux[10];"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct foo", "bar", nil, nil } }, parser.parse_text("struct foo bar;"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct baz", "qux", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("struct baz qux[10];"));
 	end);
+	
+	it("parses struct variable definitions with parameters", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("struct foo bar(1);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "variable", "struct foo", "bar", { { "UNKNOWN FILE", 1, "num", 1 } }, nil, nil },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("struct foo bar(1, 2, 3);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "variable", "struct foo", "bar", { { "UNKNOWN FILE", 1, "num", 1 }, { "UNKNOWN FILE", 1, "num", 2 }, { "UNKNOWN FILE", 1, "num", 3 } }, nil, nil },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses local variable definitions", function()
 		local got;
@@ -205,25 +224,51 @@ describe("parser", function()
 		
 		got = parser.parse_text("local int var;");
 		expect = {
-			{ "UNKNOWN FILE", 1, "local-variable", "int", "var", nil, nil },
+			{ "UNKNOWN FILE", 1, "local-variable", "int", "var", nil, nil, nil },
 		};
 		
 		assert.are.same(expect, got);
 		
 		got = parser.parse_text("local int array[10];");
 		expect = {
-			{ "UNKNOWN FILE", 1, "local-variable", "int", "array", { "UNKNOWN FILE", 1, "num", 10 }, nil },
+			{ "UNKNOWN FILE", 1, "local-variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 }, nil },
 		};
 		
 		assert.are.same(expect, got);
 		
 		got = parser.parse_text("local int foo = 0;");
 		expect = {
-			{ "UNKNOWN FILE", 1, "local-variable", "int", "foo", nil, { "UNKNOWN FILE", 1, "num", 0 } },
+			{ "UNKNOWN FILE", 1, "local-variable", "int", "foo", nil, nil, { "UNKNOWN FILE", 1, "num", 0 } },
 		};
 		
 		assert.are.same(expect, got);
 	end);
+	
+	it("parses local struct variable definitions with parameters", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("local struct foo bar(1);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "local-variable", "struct foo", "bar", { { "UNKNOWN FILE", 1, "num", 1 } }, nil, nil },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("local struct foo bar(1, 2, 3);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "local-variable", "struct foo", "bar", { { "UNKNOWN FILE", 1, "num", 1 }, { "UNKNOWN FILE", 1, "num", 2 }, { "UNKNOWN FILE", 1, "num", 3 } }, nil, nil },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("local struct foo bar(1) = 1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "local-variable", "struct foo", "bar", { { "UNKNOWN FILE", 1, "num", 1 } }, nil, { "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses an empty struct", function()
 		local got = parser.parse_text("struct mystruct{};")
@@ -241,8 +286,8 @@ describe("parser", function()
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
 			{
-				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil },
-				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil },
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
 			}, nil },
 		}
 		
@@ -255,8 +300,8 @@ describe("parser", function()
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
 			{
-				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil },
-				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil },
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
 			}, nil },
 		}
 		
@@ -273,8 +318,8 @@ describe("parser", function()
 				{ "int", "b" },
 			},
 			{
-				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil },
-				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil },
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
 			}, nil },
 		};
 		
@@ -287,8 +332,8 @@ describe("parser", function()
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
 			{
-				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil },
-				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil },
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
 			}, "mystruct_t" },
 		}
 		
@@ -301,8 +346,8 @@ describe("parser", function()
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", nil, {},
 			{
-				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil },
-				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil },
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
 			}, "mystruct_t" },
 		}
 		
@@ -336,7 +381,7 @@ describe("parser", function()
 		local expect = {
 			{ "UNKNOWN FILE", 1, "function", "void", "myfunc", {},
 			{
-				{ "UNKNOWN FILE", 2, "local-variable", "int", "i", nil, { "UNKNOWN FILE", 2, "num", 0 } },
+				{ "UNKNOWN FILE", 2, "local-variable", "int", "i", nil, nil, { "UNKNOWN FILE", 2, "num", 0 } },
 				{ "UNKNOWN FILE", 3, "call", "otherfunc", { { "UNKNOWN FILE", 3, "num", 1234 } } },
 			} },
 		};
@@ -364,9 +409,9 @@ describe("parser", function()
 		local got = parser.parse_text("#file foo.bt 10\nint x;\nint y;\n#file bar.bt 1\nint z;\n");
 		
 		local expect = {
-			{ "foo.bt", 10, "variable", "int", "x", nil },
-			{ "foo.bt", 11, "variable", "int", "y", nil },
-			{ "bar.bt",  1, "variable", "int", "z", nil },
+			{ "foo.bt", 10, "variable", "int", "x", nil, nil },
+			{ "foo.bt", 11, "variable", "int", "y", nil, nil },
+			{ "bar.bt",  1, "variable", "int", "z", nil, nil },
 		};
 		
 		assert.are.same(expect, got);
@@ -671,7 +716,7 @@ describe("parser", function()
 		got = parser.parse_text("for(local int x = 0;;) {}")
 		expect = {
 			{ "UNKNOWN FILE", 1, "for",
-				{ "UNKNOWN FILE", 1, "local-variable", "int", "x", nil, { "UNKNOWN FILE", 1, "num", 0 } },
+				{ "UNKNOWN FILE", 1, "local-variable", "int", "x", nil, nil, { "UNKNOWN FILE", 1, "num", 0 } },
 				nil, nil, {} },
 		}
 		

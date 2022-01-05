@@ -68,8 +68,8 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "variable", "int", "foo", nil },
-			{ "test.bt", 1, "variable", "int", "bar", { "test.bt", 1, "num", 4 } },
+			{ "test.bt", 1, "variable", "int", "foo", nil, nil },
+			{ "test.bt", 1, "variable", "int", "bar", nil, { "test.bt", 1, "num", 4 } },
 		})
 		
 		local expect_log = {
@@ -234,8 +234,8 @@ describe("executor", function()
 		))
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "variable", "char", "a", nil },
-			{ "test.bt", 1, "variable", "char", "b", nil },
+			{ "test.bt", 1, "variable", "char", "a", nil, nil },
+			{ "test.bt", 1, "variable", "char", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -267,8 +267,8 @@ describe("executor", function()
 		))
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "variable", "uchar", "a", nil },
-			{ "test.bt", 1, "variable", "uchar", "b", nil },
+			{ "test.bt", 1, "variable", "uchar", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uchar", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -302,8 +302,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int16", "a", nil },
-			{ "test.bt", 1, "variable", "int16", "b", nil },
+			{ "test.bt", 1, "variable", "int16", "a", nil, nil },
+			{ "test.bt", 1, "variable", "int16", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -337,8 +337,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "BigEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int16", "a", nil },
-			{ "test.bt", 1, "variable", "int16", "b", nil },
+			{ "test.bt", 1, "variable", "int16", "a", nil, nil },
+			{ "test.bt", 1, "variable", "int16", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -372,8 +372,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "uint16", "a", nil },
-			{ "test.bt", 1, "variable", "uint16", "b", nil },
+			{ "test.bt", 1, "variable", "uint16", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uint16", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -407,8 +407,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "BigEndian", {} },
 			
-			{ "test.bt", 1, "variable", "uint16", "a", nil },
-			{ "test.bt", 1, "variable", "uint16", "b", nil },
+			{ "test.bt", 1, "variable", "uint16", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uint16", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %u" },
@@ -442,8 +442,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int32", "a", nil },
-			{ "test.bt", 1, "variable", "int32", "b", nil },
+			{ "test.bt", 1, "variable", "int32", "a", nil, nil },
+			{ "test.bt", 1, "variable", "int32", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -477,8 +477,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "uint64", "a", nil },
-			{ "test.bt", 1, "variable", "uint64", "b", nil },
+			{ "test.bt", 1, "variable", "uint64", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uint64", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %u" },
@@ -514,7 +514,7 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int32", "a", { "test.bt", 1, "num", 4 } },
+			{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a[0] = %d" },
@@ -568,7 +568,7 @@ describe("executor", function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
 					
-					{ "test.bt", 1, "variable", "int32", "a", { "test.bt", 1, "num", 4 } },
+					{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "str", "hello" } } },
 				})
@@ -579,7 +579,7 @@ describe("executor", function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
 					
-					{ "test.bt", 1, "variable", "int32", "a", { "test.bt", 1, "num", 4 } },
+					{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", -1 } } },
 				})
@@ -590,7 +590,7 @@ describe("executor", function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
 					
-					{ "test.bt", 1, "variable", "int32", "a", { "test.bt", 1, "num", 4 } },
+					{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 4 } } },
 				})
@@ -609,7 +609,7 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
-					{ "test.bt", 1, "variable", "int32", "a", nil },
+					{ "test.bt", 1, "variable", "int32", "a", nil, nil },
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 0 } } },
 				})
 			end, "Attempt to access non-array variable as array at test.bt:1")
@@ -628,8 +628,8 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "struct", "mystruct", {},
 			{
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "int", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
 				
 				{ "test.bt", 1, "call", "Printf", {
 					{ "test.bt", 1, "str", "x = %d" },
@@ -640,8 +640,8 @@ describe("executor", function()
 					{ "test.bt", 1, "ref", { "y" } } } },
 			} },
 			
-			{ "test.bt", 1, "variable", "struct mystruct", "a", nil },
-			{ "test.bt", 1, "variable", "struct mystruct", "b", nil },
+			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
+			{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
 		})
 		
 		local expect_log = {
@@ -684,8 +684,8 @@ describe("executor", function()
 			
 			{ "test.bt", 1, "struct", "mystruct", {},
 			{
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "int", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
 				
 				{ "test.bt", 1, "call", "Printf", {
 					{ "test.bt", 1, "str", "x = %d" },
@@ -696,7 +696,7 @@ describe("executor", function()
 					{ "test.bt", 1, "ref", { "y" } } } },
 			} },
 			
-			{ "test.bt", 1, "variable", "struct mystruct", "a", { "test.bt", 1, "num", 2 } },
+			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, { "test.bt", 1, "num", 2 } },
 		})
 		
 		local expect_log = {
@@ -741,16 +741,16 @@ describe("executor", function()
 			{
 				{ "test.bt", 1, "struct", "bstruct", {},
 				{
-					{ "test.bt", 1, "variable", "int", "x", nil },
-					{ "test.bt", 1, "variable", "int", "y", nil },
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					{ "test.bt", 1, "variable", "int", "y", nil, nil },
 					
 					{ "test.bt", 1, "call", "Printf", {
 						{ "test.bt", 1, "str", "bstruct x = %d" },
 						{ "test.bt", 1, "ref", { "x" } } } },
 				} },
 				
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "struct bstruct", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "struct bstruct", "y", nil, nil },
 				
 				{ "test.bt", 1, "call", "Printf", {
 					{ "test.bt", 1, "str", "mystruct x = %d" },
@@ -765,7 +765,7 @@ describe("executor", function()
 					{ "test.bt", 1, "ref", { "y", "y" } } } },
 			} },
 			
-			{ "test.bt", 1, "variable", "struct mystruct", "a", nil },
+			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
 		})
 		
 		local expect_log = {
@@ -807,12 +807,12 @@ describe("executor", function()
 					
 					{ "test.bt", 1, "struct", "mystruct", {},
 					{
-						{ "test.bt", 1, "variable", "int", "x", nil },
-						{ "test.bt", 1, "variable", "int", "x", nil },
+						{ "test.bt", 1, "variable", "int", "x", nil, nil },
+						{ "test.bt", 1, "variable", "int", "x", nil, nil },
 					} },
 					
-					{ "test.bt", 1, "variable", "struct mystruct", "a", nil },
-					{ "test.bt", 1, "variable", "struct mystruct", "b", nil },
+					{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
+					{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
 				})
 			end, "Attempt to redefine struct member 'x' at test.bt:1")
 	end)
@@ -1439,7 +1439,7 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "local-variable", "int", "foo", nil, nil },
+			{ "test.bt", 1, "local-variable", "int", "foo", nil, nil, nil },
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "foo = %d" },
 				{ "test.bt", 1, "ref", { "foo" } } } },
@@ -1456,7 +1456,7 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "local-variable", "int", "foo", nil, { "test.bt", 1, "num", 1234 } },
+			{ "test.bt", 1, "local-variable", "int", "foo", nil, nil, { "test.bt", 1, "num", 1234 } },
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "foo = %d" },
 				{ "test.bt", 1, "ref", { "foo" } } } },
@@ -1473,7 +1473,7 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "local-variable", "int", "foo", nil, nil },
+			{ "test.bt", 1, "local-variable", "int", "foo", nil, nil, nil },
 			{ "test.bt", 1, "assign",
 				{ "test.bt", 1, "ref", { "foo" } },
 				{ "test.bt", 1, "num", 5678 } },
@@ -1493,7 +1493,7 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "local-variable", "int", "foo", { "test.bt", 1, "num", 3 }, nil },
+			{ "test.bt", 1, "local-variable", "int", "foo", nil, { "test.bt", 1, "num", 3 }, nil },
 			{ "test.bt", 1, "assign",
 				{ "test.bt", 1, "ref", { "foo", { "test.bt", 1, "num", 0 } } },
 				{ "test.bt", 1, "num", 1234 } },
@@ -1856,11 +1856,11 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "struct", "mystruct", {}, {
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "int", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
 			}, "mystruct_t" },
 			
-			{ "test.bt", 1, "local-variable", "mystruct_t", "s", nil, nil },
+			{ "test.bt", 1, "local-variable", "mystruct_t", "s", nil, nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "s.x = %d" },
@@ -1879,11 +1879,11 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "struct", nil, {}, {
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "int", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
 			}, "mystruct_t" },
 			
-			{ "test.bt", 1, "local-variable", "mystruct_t", "s", nil, nil },
+			{ "test.bt", 1, "local-variable", "mystruct_t", "s", nil, nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "s.x = %d" },
@@ -1902,12 +1902,12 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "struct", "mystruct", {}, {
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "int", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
 			}, "mystruct_t" },
 			
-			{ "test.bt", 1, "local-variable", "struct mystruct", "bvar", nil, nil },
-			{ "test.bt", 1, "local-variable", "mystruct_t", "tvar", nil, nil },
+			{ "test.bt", 1, "local-variable", "struct mystruct", "bvar", nil, nil, nil },
+			{ "test.bt", 1, "local-variable", "mystruct_t", "tvar", nil, nil, nil },
 			
 			-- Write into base struct and assign base to typedef
 			
@@ -1951,14 +1951,14 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "struct", "mystruct", {}, {
-				{ "test.bt", 1, "variable", "int", "x", nil },
-				{ "test.bt", 1, "variable", "int", "y", nil },
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
 			}, "mystruct_t" },
 			
 			{ "test.bt", 1, "typedef", "struct mystruct", "mystruct_u" },
 			
-			{ "test.bt", 1, "local-variable", "mystruct_u", "bvar", nil, nil },
-			{ "test.bt", 1, "local-variable", "mystruct_t", "tvar", nil, nil },
+			{ "test.bt", 1, "local-variable", "mystruct_u", "bvar", nil, nil, nil },
+			{ "test.bt", 1, "local-variable", "mystruct_t", "tvar", nil, nil, nil },
 			
 			-- Write into mystruct_u and assign to mystruct_t
 			
@@ -2003,17 +2003,17 @@ describe("executor", function()
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "struct", "mystruct1", {}, {
-					{ "test.bt", 1, "variable", "int", "x", nil },
-					{ "test.bt", 1, "variable", "int", "y", nil },
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					{ "test.bt", 1, "variable", "int", "y", nil, nil },
 				}, nil },
 				
 				{ "test.bt", 1, "struct", "mystruct2", {}, {
-					{ "test.bt", 1, "variable", "int", "x", nil },
-					{ "test.bt", 1, "variable", "int", "y", nil },
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					{ "test.bt", 1, "variable", "int", "y", nil, nil },
 				}, nil },
 				
-				{ "test.bt", 1, "local-variable", "struct mystruct1", "s1", nil, nil },
-				{ "test.bt", 1, "local-variable", "struct mystruct2", "s2", nil, nil },
+				{ "test.bt", 1, "local-variable", "struct mystruct1", "s1", nil, nil, nil },
+				{ "test.bt", 1, "local-variable", "struct mystruct2", "s2", nil, nil, nil },
 				
 				{ "test.bt", 1, "assign",
 					{ "test.bt", 1, "ref", { "s1" } },
@@ -2060,7 +2060,7 @@ describe("executor", function()
 				{ "test.bt", 1, "ref", { "B_BAZ" } } } },
 			
 			{ "test.bt", 1, "local-variable",
-				"enum myenum", "e", nil, { "test.bt", 1, "ref", { "B_BAZ" } } },
+				"enum myenum", "e", nil, nil, { "test.bt", 1, "ref", { "B_BAZ" } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "e = %d" },
@@ -2098,10 +2098,10 @@ describe("executor", function()
 				{ "test.bt", 1, "ref", { "BAR" } } } },
 			
 			{ "test.bt", 1, "local-variable",
-				"enum myenum", "e1", nil, { "test.bt", 1, "ref", { "FOO" } } },
+				"enum myenum", "e1", nil, nil, { "test.bt", 1, "ref", { "FOO" } } },
 			
 			{ "test.bt", 1, "local-variable",
-				"myenum_t", "e2", nil, { "test.bt", 1, "ref", { "BAR" } } },
+				"myenum_t", "e2", nil, nil, { "test.bt", 1, "ref", { "BAR" } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "e1 = %d" },
@@ -2140,7 +2140,7 @@ describe("executor", function()
 				{ "test.bt", 1, "ref", { "BAR" } } } },
 			
 			{ "test.bt", 1, "local-variable",
-				"myenum_t", "e", nil, { "test.bt", 1, "ref", { "FOO" } } },
+				"myenum_t", "e", nil, nil, { "test.bt", 1, "ref", { "FOO" } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "e = %d" },
@@ -2186,7 +2186,7 @@ describe("executor", function()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "int", "FOO", nil, nil },
+				{ "test.bt", 1, "local-variable", "int", "FOO", nil, nil, nil },
 				
 				{ "test.bt", 2, "enum", "int", "myenum", {
 					{ "FOO" },
@@ -2254,7 +2254,7 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "for",
-				{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 				{ "test.bt", 1, "less-than",
 					{ "test.bt", 1, "ref", { "i" } },
 					{ "test.bt", 1, "num", 5 } },
@@ -2291,7 +2291,7 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "for",
-				{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 				{ "test.bt", 1, "less-than",
 					{ "test.bt", 1, "ref", { "i" } },
 					{ "test.bt", 1, "num", 5 } },
@@ -2326,7 +2326,7 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "for",
-				{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 				{ "test.bt", 1, "less-than",
 					{ "test.bt", 1, "ref", { "i" } },
 					{ "test.bt", 1, "num", 5 } },
@@ -2382,7 +2382,7 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "for",
-						{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+						{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 						{ "test.bt", 1, "less-than",
 							{ "test.bt", 1, "ref", { "i" } },
 							{ "test.bt", 1, "num", 5 } },
@@ -2406,7 +2406,7 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "for",
-						{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+						{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 						{ "test.bt", 1, "less-than",
 							{ "test.bt", 1, "ref", { "i" } },
 							{ "test.bt", 1, "num", 5 } },
@@ -2417,7 +2417,7 @@ describe("executor", function()
 								{ "test.bt", 1, "num", 1 } } },
 						
 						{
-							{ "test.bt", 1, "local-variable", "int", "j", nil, nil },
+							{ "test.bt", 1, "local-variable", "int", "j", nil, nil, nil },
 						} },
 					
 					{ "test.bt", 2, "ref", { "j" } }
@@ -2431,7 +2431,7 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "function", "int", "myfunc", {}, {
 				{ "test.bt", 1, "for",
-					{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+					{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 					{ "test.bt", 1, "less-than",
 						{ "test.bt", 1, "ref", { "i" } },
 						{ "test.bt", 1, "num", 5 } },
@@ -2465,7 +2465,7 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "for",
-						{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+						{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 						{ "test.bt", 1, "less-than",
 							{ "test.bt", 1, "ref", { "i" } },
 							{ "test.bt", 1, "num", 5 } },
@@ -2515,7 +2515,7 @@ describe("executor", function()
 						{ "test.bt", 2, "break" } } },
 					
 					{ "test.bt", 1, "for",
-						{ "test.bt", 1, "local-variable", "int", "i", nil, { "test.bt", 1, "num", 0 } },
+						{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
 						{ "test.bt", 1, "less-than",
 							{ "test.bt", 1, "ref", { "i" } },
 							{ "test.bt", 1, "num", 5 } },

@@ -911,7 +911,7 @@ _eval_variable = function(context, statement)
 	
 	local var_type = statement[4]
 	local var_name = statement[5]
-	local array_size = statement[6][1]
+	local array_size = statement[6]
 	
 	_decl_variable(context, statement, var_type, var_name, array_size, nil, false)
 end
@@ -922,8 +922,8 @@ _eval_local_variable = function(context, statement)
 	
 	local var_type = statement[4]
 	local var_name = statement[5]
-	local array_size = statement[6][1]
-	local initial_value = statement[7][1]
+	local array_size = statement[6]
+	local initial_value = statement[7]
 	
 	local was_declaring_local_var = context.declaring_local_var
 	context.declaring_local_var = true

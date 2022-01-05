@@ -193,8 +193,31 @@ local _parser = spc * P{
 	
 	EXPR_OR_NIL = V("EXPR") + Cc(nil) * spc,
 	
-	VAR_DEFN = Ct( P(_capture_position) * Cc("variable") * P(_capture_type) * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * P(";") * spc ),
-	LOCAL_VAR_DEFN = Ct( P(_capture_position) * Cc("local-variable") * P("local") * spc * name * name * Ct( (P("[") * V("EXPR") * P("]")) ^ -1 ) * spc * Ct( (P("=") * spc * V("EXPR") * spc) ^ -1 ) * P(";") * spc ),
+	--  {
+	--      "file.bt", <line>,
+	--      "variable",
+	--      <variable type>,
+	--      <variable name>,
+	--      <array size expr> OR nil,
+	--  }
+	VAR_DEFN = Ct(
+		P(_capture_position) * Cc("variable") *
+		P(_capture_type) * name *
+		(P("[") * V("EXPR") * P("]") * spc + Cc(nil)) * P(";") * spc ),
+	
+	--  {
+	--      "file.bt", <line>,
+	--      "local-variable",
+	--      <variable type>,
+	--      <variable name>,
+	--      <array size expr> OR nil,
+	--      <initial value expr> OR nil,
+	--  }
+	LOCAL_VAR_DEFN = Ct(
+		P(_capture_position) * Cc("local-variable") *
+		P("local") * spc * name * name *
+		(P("[") * V("EXPR") * P("]") * spc + Cc(nil)) *
+		(P("=") * spc * V("EXPR") * spc + Cc(nil)) * P(";") * spc ),
 	
 	RETURN = Ct( P(_capture_position) * Cc("return") * P("return") * spc * V("EXPR") * P(";") * spc),
 	
@@ -453,14 +476,14 @@ local function _compile_statement(s)
 		end
 	elseif op == "local-variable"
 	then
-		local array_size = s[6][1]
-		local init_val = s[7][1]
+		local array_size = s[6]
+		local init_val = s[7]
 		
 		if array_size then _compile_expr(array_size) end
 		if init_val   then _compile_expr(init_val)   end
 	elseif op == "variable"
 	then
-		local array_size = s[6][1]
+		local array_size = s[6]
 		
 		if array_size then _compile_expr(array_size) end
 	elseif op == "for"

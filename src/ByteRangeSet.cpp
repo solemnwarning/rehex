@@ -177,6 +177,8 @@ bool REHex::ByteRangeSet::empty() const
 
 void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 {
+	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
+	
 	std::mutex lock;
 	std::vector<Range> insert_elem;
 	size_t insert_idx;
@@ -256,13 +258,17 @@ void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 		assert(insert_elem.size() == 1);
 		ranges.insert(std::next(ranges.begin(), insert_idx), insert_elem[0]);
 	}
+	
+	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
 void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 {
+	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
+	
 	/* Find the range of elements overlapping the range to be erased. */
 	
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length), 0));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length + 1), 0));
 	
 	std::vector<Range>::iterator erase_begin = next;
 	std::vector<Range>::iterator erase_end   = next;
@@ -271,7 +277,7 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 	{
 		auto sb_prev = std::prev(erase_begin);
 		
-		if((sb_prev->offset + sb_prev->length) > offset)
+		if((sb_prev->offset + sb_prev->length) >= offset)
 		{
 			erase_begin = sb_prev;
 		}
@@ -314,6 +320,8 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 		erase_end->offset -= length;
 		++erase_end;
 	}
+	
+	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
 REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, const ByteRangeSet &b)
@@ -364,6 +372,8 @@ REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, con
 			}
 		}
 	}
+	
+	REHEX_BYTERANGESET_CHECK(intersection.begin(), intersection.end());
 	
 	return intersection;
 }

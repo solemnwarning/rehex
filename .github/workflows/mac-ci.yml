@@ -3,6 +3,7 @@ name: macOS CI build
 on:
   push:
     branches:
+      - "*"
     tags:
       - "!*"
 

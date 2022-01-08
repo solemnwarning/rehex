@@ -105,7 +105,9 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 				return doc:buffer_length()
 			end,
 			
-			print = function(s) print(s) end
+			print = function(s) print(s) end,
+			
+			yield = function() end,
 		}
 		
 		executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))

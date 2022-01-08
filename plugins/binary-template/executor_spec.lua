@@ -2672,4 +2672,67 @@ describe("executor", function()
 				})
 			end, "'break' statement not allowed here at test.bt:2")
 	end)
+	
+	it("allows defining typedefs", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "typedef", "int", "myint_t", nil },
+			{ "test.bt", 1, "local-variable", "myint_t", "myvar", nil, nil },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "%d" },
+				{ "test.bt", 1, "ref", { "myvar" } } } },
+		})
+		
+		local expect_log = {
+			"print(0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows defining array typedefs", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "typedef", "int", "myarr_t", { "test.bt", 1, "num", 4 } },
+			{ "test.bt", 1, "local-variable", "myarr_t", "myarr", nil, nil },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "%d, %d, %d, %d" },
+				{ "test.bt", 1, "ref", { "myarr", { "test.bt", 1, "num", 0 } } },
+				{ "test.bt", 1, "ref", { "myarr", { "test.bt", 1, "num", 1 } } },
+				{ "test.bt", 1, "ref", { "myarr", { "test.bt", 1, "num", 2 } } },
+				{ "test.bt", 1, "ref", { "myarr", { "test.bt", 1, "num", 3 } } } } },
+		})
+		
+		local expect_log = {
+			"print(0, 0, 0, 0)"
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when defining an array typedef of an array type", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "typedef", "int", "myarr_t", { "test.bt", 1, "num", 4 } },
+				{ "test.bt", 2, "typedef", "myarr_t", "myarrarr_t", { "test.bt", 2, "num", 4 } },
+			})
+			end, "Multidimensional arrays are not supported at test.bt:2")
+	end)
+	
+	it("errors when declaring an array variable of an array type", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "typedef", "int", "myarr_t", { "test.bt", 1, "num", 4 } },
+				{ "test.bt", 2, "local-variable", "myarr_t", "myarrarr", nil, { "test.bt", 2, "num", 4 } },
+			})
+			end, "Multidimensional arrays are not supported at test.bt:2")
+	end)
 end)

@@ -356,11 +356,12 @@ describe("parser", function()
 	end)
 	
 	it("parses typedefs", function()
-		local got = parser.parse_text("typedef struct mystruct mystruct_t;\ntypedef int int_t;")
+		local got = parser.parse_text("typedef struct mystruct mystruct_t;\ntypedef int int_t;\ntypedef int aint_t[4];")
 		
 		local expect = {
-			{ "UNKNOWN FILE", 1, "typedef", "struct mystruct", "mystruct_t" },
-			{ "UNKNOWN FILE", 2, "typedef", "int", "int_t" },
+			{ "UNKNOWN FILE", 1, "typedef", "struct mystruct", "mystruct_t", nil },
+			{ "UNKNOWN FILE", 2, "typedef", "int", "int_t", nil },
+			{ "UNKNOWN FILE", 3, "typedef", "int", "aint_t", { "UNKNOWN FILE", 3, "num", 4 } },
 		}
 		
 		assert.are.same(expect, got)

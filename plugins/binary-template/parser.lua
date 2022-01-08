@@ -271,8 +271,9 @@ local _parser = spc * P{
 	--      "typedef",
 	--      "struct foobar",
 	--      "foobar_t",
+	--      <array size expr> OR nil,
 	--  }
-	TYPEDEF = Ct( P(_capture_position) * Cc("typedef") * P("typedef") * spc * P(_capture_type) * name * P(";") * spc ),
+	TYPEDEF = Ct( P(_capture_position) * Cc("typedef") * P("typedef") * spc * P(_capture_type) * name * (P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) * P(";") * spc ),
 	
 	--  {
 	--      "file.bt", <line>,
@@ -541,6 +542,10 @@ local function _compile_statement(s)
 			end
 		end
 		
+		if array_size then _compile_expr(array_size) end
+	elseif op == "typedef"
+	then
+		local array_size = s[6]
 		if array_size then _compile_expr(array_size) end
 	elseif op == "for"
 	then

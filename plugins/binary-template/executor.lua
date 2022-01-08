@@ -769,6 +769,17 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		error("Variable declaration with parameters for non-struct type '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
 	end
 	
+	if type_info.array_size ~= nil
+	then
+		if array_size ~= nil
+		then
+			error("Multidimensional arrays are not supported at " .. filename .. ":" .. line_num)
+		end
+		
+		-- Filthy filthy filthy...
+		array_size = { debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", type_info.array_size }
+	end
+	
 	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
 	
 	local dest_tables
@@ -1247,6 +1258,7 @@ _eval_typedef = function(context, statement)
 	
 	local type_name    = statement[4]
 	local typedef_name = statement[5]
+	local array_size   = statement[6]
 	
 	local type_info = _find_type(context, type_name)
 	if type_info == nil
@@ -1257,6 +1269,23 @@ _eval_typedef = function(context, statement)
 	if _find_type(context, typedef_name) ~= nil
 	then
 		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if array_size ~= nil
+	then
+		if type_info.array_size ~= nil
+		then
+			error("Multidimensional arrays are not supported at " .. filename .. ":" .. line_num)
+		end
+		
+		local array_length_type, array_length_val = _eval_statement(context, array_size)
+		if array_length_type == nil or array_length_type.base ~= "number"
+		then
+			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		type_info = _make_aray_type(type_info)
+		type_info.array_size = array_length_val:get()
 	end
 	
 	context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)

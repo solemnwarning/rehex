@@ -748,7 +748,7 @@ _eval_logical_or = function(context, statement)
 	return _builtin_types.int, _make_const_plain_value(0)
 end
 
-local function _decl_variable(context, statement, var_type, var_name, array_size, initial_value, is_local)
+local function _decl_variable(context, statement, var_type, var_name, struct_args, array_size, initial_value, is_local)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
@@ -762,6 +762,11 @@ local function _decl_variable(context, statement, var_type, var_name, array_size
 	if type_info == nil
 	then
 		error("Unknown variable type '" .. var_type .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if struct_args ~= nil and type_info.base ~= "struct"
+	then
+		error("Variable declaration with parameters for non-struct type '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
 	end
 	
 	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
@@ -797,7 +802,33 @@ local function _decl_variable(context, statement, var_type, var_name, array_size
 	local expand_value = function()
 		if type_info.base == "struct"
 		then
-			-- TODO: Support struct arguments
+			local struct_arg_values = {}
+			local args_ok = true
+			
+			if struct_args ~= nil
+			then
+				for i = 1, #struct_args
+				do
+					struct_arg_values[i] = { _eval_statement(context, struct_args[i]) }
+				end
+			end
+			
+			for i = 1, math.max(#struct_arg_values, #type_info.arguments)
+			do
+				if i > #struct_arg_values or i > #type_info.arguments or
+					not _type_assignable(type_info.arguments[i][2], struct_arg_values[i][1])
+				then
+					args_ok = false
+				end
+			end
+			
+			if not args_ok
+			then
+				local got_types = table.concat(_map(struct_arg_values, function(v) return _get_type_name(v[1]) end), ", ")
+				local expected_types = table.concat(_map(type_info.arguments, function(v) return _get_type_name(v[2]) end), ", ")
+				
+				error("Attempt to declare struct type '" .. _get_type_name(type_info) .. "' with incompatible argument types (" .. got_types .. ") - expected (" .. expected_types .. ") at " .. filename .. ":" .. line_num)
+			end
 			
 			local members = {}
 			
@@ -809,6 +840,12 @@ local function _decl_variable(context, statement, var_type, var_name, array_size
 				
 				blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
 			}
+			
+			for idx, arg in ipairs(type_info.arguments)
+			do
+				local arg_name = arg[1]
+				frame.vars[arg_name] = struct_arg_values[idx]
+			end
 			
 			table.insert(context.stack, frame)
 			_exec_statements(context, type_info.code)
@@ -914,7 +951,7 @@ _eval_variable = function(context, statement)
 	local struct_args = statement[6]
 	local array_size = statement[7]
 	
-	_decl_variable(context, statement, var_type, var_name, array_size, nil, false)
+	_decl_variable(context, statement, var_type, var_name, struct_args, array_size, nil, false)
 end
 
 _eval_local_variable = function(context, statement)
@@ -930,7 +967,7 @@ _eval_local_variable = function(context, statement)
 	local was_declaring_local_var = context.declaring_local_var
 	context.declaring_local_var = true
 	
-	_decl_variable(context, statement, var_type, var_name, array_size, initial_value, true)
+	_decl_variable(context, statement, var_type, var_name, struct_args, array_size, initial_value, true)
 	
 	context.declaring_local_var = was_declaring_local_var
 end
@@ -1150,7 +1187,7 @@ _eval_struct_defn = function(context, statement)
 	local line_num = statement[2]
 	
 	local struct_name       = statement[4]
-	local struct_arg_types  = statement[5]
+	local struct_args       = statement[5]
 	local struct_statements = statement[6]
 	local typedef_name      = statement[7]
 	
@@ -1166,21 +1203,21 @@ _eval_struct_defn = function(context, statement)
 		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
 	end
 	
-	local arg_types = {}
-	for i = 1, #struct_arg_types
+	local args = {}
+	for i = 1, #struct_args
 	do
-		local type_info = _find_type(context, struct_arg_types[i])
+		local type_info = _find_type(context, struct_args[i][1])
 		if type_info == nil
 		then
-			error("Attempt to define 'struct " .. struct_name .. "' with undefined argument type '" .. struct_arg_values[i] .. "' at " .. filename .. ":" .. line_num)
+			error("Attempt to define 'struct " .. struct_name .. "' with undefined argument type '" .. struct_args[i][1] .. "' at " .. filename .. ":" .. line_num)
 		end
 		
-		table.insert(arg_types, type_info)
+		table.insert(args, { struct_args[i][2], type_info })
 	end
 	
 	local type_info = {
 		base      = "struct",
-		arguments = arg_types,
+		arguments = args,
 		code      = struct_statements,
 		
 		struct_name = struct_name,

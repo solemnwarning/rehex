@@ -817,6 +817,146 @@ describe("executor", function()
 			end, "Attempt to redefine struct member 'x' at test.bt:1")
 	end)
 	
+	it("allows passing arguments to a global struct variable definition", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "struct", "mystruct", { { "int", "a" }, { "int", "b" }, { "string", "c" } },
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "a = %d, b = %d, c = %s" },
+					{ "test.bt", 1, "ref", { "a" } },
+					{ "test.bt", 1, "ref", { "b" } },
+					{ "test.bt", 1, "ref", { "c" } } } },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "a", {
+				{ "test.bt", 1, "num", 1234 },
+				{ "test.bt", 1, "num", 5678 },
+				{ "test.bt", 1, "str", "hello" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, x)",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, y)",
+			
+			"print(a = 1234, b = 5678, c = hello)",
+			
+			"set_comment(0, 8, a)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when declaring a struct variable with too few arguments", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "call", "LittleEndian", {} },
+				
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "a" }, { "int", "b" }, { "string", "c" } },
+				{
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					{ "test.bt", 1, "variable", "int", "y", nil, nil },
+					
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "a = %d, b = %d, c = %s" },
+						{ "test.bt", 1, "ref", { "a" } },
+						{ "test.bt", 1, "ref", { "b" } },
+						{ "test.bt", 1, "ref", { "c" } } } },
+				} },
+				
+				{ "test.bt", 1, "variable", "struct mystruct", "a", {
+					{ "test.bt", 1, "num", 1234 },
+					{ "test.bt", 1, "num", 5678 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (int, int) - expected (int, int, string) at test.bt:1")
+	end)
+	
+	it("errors when attempting to declare a struct variable with too many arguments", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "call", "LittleEndian", {} },
+				
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "a" }, { "int", "b" }, { "string", "c" } },
+				{
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					{ "test.bt", 1, "variable", "int", "y", nil, nil },
+					
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "a = %d, b = %d, c = %s" },
+						{ "test.bt", 1, "ref", { "a" } },
+						{ "test.bt", 1, "ref", { "b" } },
+						{ "test.bt", 1, "ref", { "c" } } } },
+				} },
+				
+				{ "test.bt", 1, "variable", "struct mystruct", "a", {
+					{ "test.bt", 1, "num", 1234 },
+					{ "test.bt", 1, "num", 5678 },
+					{ "test.bt", 1, "str", "hello" },
+					{ "test.bt", 1, "str", "hello" } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (int, int, string, string) - expected (int, int, string) at test.bt:1")
+	end)
+	
+	it("errors when attempting to declare a struct variable with incompatible argument types", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "call", "LittleEndian", {} },
+				
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "a" }, { "int", "b" }, { "string", "c" } },
+				{
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					{ "test.bt", 1, "variable", "int", "y", nil, nil },
+					
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "a = %d, b = %d, c = %s" },
+						{ "test.bt", 1, "ref", { "a" } },
+						{ "test.bt", 1, "ref", { "b" } },
+						{ "test.bt", 1, "ref", { "c" } } } },
+				} },
+				
+				{ "test.bt", 1, "variable", "struct mystruct", "a", {
+					{ "test.bt", 1, "num", 1234 },
+					{ "test.bt", 1, "str", "hello" },
+					{ "test.bt", 1, "str", "hello" } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (int, string, string) - expected (int, int, string) at test.bt:1")
+	end)
+	
 	it("returns return values from functions", function()
 		local interface, log = test_interface()
 		

@@ -799,4 +799,249 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses an if statement with an empty block", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) {}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {} },
+			},
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an if statement with a single statement", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) sometimes_thing(); always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "sometimes_thing", {} }, } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an if statement with a multiple statements", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) { sometimes_thing(); other_thing(); } always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "sometimes_thing", {} },
+					{ "UNKNOWN FILE", 1, "call", "other_thing", {} } } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an if statement with a trailing semicolon", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1); always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {} },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("errors on an if with no trailing statements", function()
+		assert.has_error(
+			function()
+				parser.parse_text("if(1)")
+			end, "Parse error at UNKNOWN FILE:1 (at 'if(1)')")
+	end)
+	
+	it("parses an if/else statement with a single statement", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) sometimes_thing(); else alternate_thing(); always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "sometimes_thing", {} }, } },
+				{ {
+					{ "UNKNOWN FILE", 1, "call", "alternate_thing", {} }, } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an if/else statement with multiple statements", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) { sometimes_thing(); other_thing(); } else { alternate_thing(); other_alternate_thing(); } always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "sometimes_thing", {} },
+					{ "UNKNOWN FILE", 1, "call", "other_thing", {} } } },
+				{ {
+					{ "UNKNOWN FILE", 1, "call", "alternate_thing", {} },
+					{ "UNKNOWN FILE", 1, "call", "other_alternate_thing", {} } } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an if/else statement with a trailing semicolon", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1); else; always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {} },
+				{ {} },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("errors on an if/else with no trailing statements", function()
+		assert.has_error(
+			function()
+				parser.parse_text("if(1) do_thing(); else")
+			end, "Parse error at UNKNOWN FILE:1 (at 'else')")
+	end)
+	
+	it("parses an if/else if statement with a single statement", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) one_thing(); else if(2) two_thing(); always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "one_thing", {} }, } },
+				{ { "UNKNOWN FILE", 1, "num", 2 }, {
+					{ "UNKNOWN FILE", 1, "call", "two_thing", {} }, } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an if/else if statement with multiple statements", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) { one_thing(); one_thing(); } else if(2) { two_thing(); two_thing(); } always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "one_thing", {} },
+					{ "UNKNOWN FILE", 1, "call", "one_thing", {} } } },
+				{ { "UNKNOWN FILE", 1, "num", 2 }, {
+					{ "UNKNOWN FILE", 1, "call", "two_thing", {} },
+					{ "UNKNOWN FILE", 1, "call", "two_thing", {} } } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("errors on an if/else if with no trailing statements", function()
+		assert.has_error(
+			function()
+				parser.parse_text("if(1) do_thing(); else if(2)")
+			end, "Parse error at UNKNOWN FILE:1 (at 'else if(2)')")
+	end)
+	
+	it("parses an if/else if/else if/else structure", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) one_thing(); else if(2) two_thing(); else if(3) three_thing(); else alternate_thing(); always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "call", "one_thing", {} } } },
+				{ { "UNKNOWN FILE", 1, "num", 2 }, {
+					{ "UNKNOWN FILE", 1, "call", "two_thing", {} } } },
+				{ { "UNKNOWN FILE", 1, "num", 3 }, {
+					{ "UNKNOWN FILE", 1, "call", "three_thing", {} } } },
+				{ {
+					{ "UNKNOWN FILE", 1, "call", "alternate_thing", {} } } },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses nested ifs", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("if(1) if(2) two_thing(); else if(3) three_thing(); else alternate_thing(); always_thing();")
+		expect = {
+			{ "UNKNOWN FILE", 1, "if",
+				{ { "UNKNOWN FILE", 1, "num", 1 }, {
+					{ "UNKNOWN FILE", 1, "if",
+						{ { "UNKNOWN FILE", 1, "num", 2 }, {
+							{ "UNKNOWN FILE", 1, "call", "two_thing", {} } } },
+						{ { "UNKNOWN FILE", 1, "num", 3 }, {
+							{ "UNKNOWN FILE", 1, "call", "three_thing", {} } } },
+						{ {
+							{ "UNKNOWN FILE", 1, "call", "alternate_thing", {} } } },
+					},
+				} },
+			},
+			
+			{ "UNKNOWN FILE", 1, "call", "always_thing", {} },
+		}
+		
+		assert.are.same(expect[1][4][2][1][4], got[1][4][2][1][4])
+	end)
+	
+	it("errors else if with no preceeding if", function()
+		assert.has_error(
+			function()
+				parser.parse_text("else if(1) do_thing(); if(2);")
+			end, "Parse error at UNKNOWN FILE:1 (at 'else if(1) ')")
+	end)
+	
+	it("errors else with no preceeding if", function()
+		assert.has_error(
+			function()
+				parser.parse_text("else do_thing(); if(2);")
+			end, "Parse error at UNKNOWN FILE:1 (at 'else do_thi')")
+	end)
 end);

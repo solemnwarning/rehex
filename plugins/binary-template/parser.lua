@@ -20,6 +20,18 @@ local M = {}
 local lpeg = require 'lulpeg.lulpeg'
 setmetatable(_ENV, { __index=lpeg })
 
+local RESERVED_WORDS = {
+	["if"]        = true,
+	["else"]      = true,
+	["struct"]    = true,
+	["typedef"]   = true,
+	["while"]     = true,
+	["for"]       = true,
+	["break"]     = true,
+	["continue"]  = true,
+	["return"]    = true,
+}
+
 local function comment(openp,endp)
     openp = P(openp)
     endp = P(endp)
@@ -125,21 +137,34 @@ local function _capture_type(text, pos)
 		local match_end = captures[1]
 		table.remove(captures, 1)
 		
-		if match_begin ~= nil
+		if match_begin ~= nil and not RESERVED_WORDS[ captures[#captures] ]
 		then
 			return match_end + 1, table.concat(captures, " ")
 		end
 	end
-	
-	return pos
+end
+
+local function _capture_name(text, pos)
+	local match_begin, match_end = text:find("^[%a_][%w_]*", pos)
+	if match_begin ~= nil
+	then
+		local word = text:sub(match_begin, match_end)
+		
+		if RESERVED_WORDS[word] ~= nil
+		then
+			-- This is a reserved word, don't match
+			return
+		end
+		
+		return match_end + 1, word
+	end
 end
 
 local spc = S(" \t\r\n")^0
 local digit = R('09')
 local number = C( P('-')^-1 * digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
-local letter = R('AZ','az')
-local name = C( letter * (digit+letter+"_")^0 ) * spc
-local name_nospc = C( letter * (digit+letter+"_")^0 )
+local name = P(_capture_name) * spc
+local name_nospc = P(_capture_name)
 local comma  = P(",") * spc
 
 local _parser = spc * P{
@@ -285,9 +310,9 @@ local _parser = spc * P{
 	--      {              { <statements> } },  <-- else
 	--  }
 	IF = Ct( P(_capture_position) * Cc("if") *
-		Ct( P("if")      * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) )     * spc *
-		Ct( P("else if") * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) ) ^ 0 * spc *
-		Ct( P("else")                                        * spc * Ct( V("STMT") ) ) ^ -1
+		Ct( P("if")      * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) )      * spc *
+		Ct( P("else if") * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) ) ^ 0  * spc *
+		Ct( P("else")                                        * spc * Ct( V("STMT") ) ) ^ -1 * spc
 	),
 	
 	--  {
@@ -523,6 +548,25 @@ local function _compile_statement(s)
 		for i = 1, #body
 		do
 			_compile_statement(body[i])
+		end
+	elseif op == "if"
+	then
+		for i = 4, #s
+		do
+			local branch = s[i]
+			
+			local condition  = #branch > 1 and branch[1] or nil
+			local statements = #branch > 1 and branch[2] or branch[1]
+			
+			if condition ~= nil
+			then
+				_compile_expr(condition)
+			end
+			
+			for _, s in pairs(statements)
+			do
+				_compile_statement(s)
+			end
 		end
 	end
 end

@@ -23,6 +23,68 @@
 #include <sys/types.h>
 #include <vector>
 
+#ifdef NDEBUG
+#define REHEX_BYTERANGESET_CHECK_PRE(begin, end) {}
+#define REHEX_BYTERANGESET_CHECK_POST(begin, end) {}
+#define REHEX_BYTERANGESET_CHECK(begin, end) {}
+#else
+template<typename T> static void _rehex_byterangeset_dump(T begin, T end)
+{
+	for(auto r = begin; r != end; ++r)
+	{
+		fprintf(stderr, "{ offset = %lld, length = %lld }\n", (long long)(r->offset), (long long)(r->length));
+	}
+}
+
+template<typename T> static bool _rehex_byterangeset_ok(T begin, T end)
+{
+	for(auto r = begin; r != end; ++r)
+	{
+		if(r != begin && (std::prev(r)->offset + std::prev(r)->length) >= r->offset)
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+#define REHEX_BYTERANGESET_CHECK_PRE(begin, end) \
+	std::vector<ByteRangeSet::Range> _pre_check_ranges(begin, end);
+
+#define REHEX_BYTERANGESET_CHECK_POST(begin_i, end_i) \
+{ \
+	if(!_rehex_byterangeset_ok(begin_i, end_i)) \
+	{ \
+		fprintf(stderr, "ByteRangeSet inconsistency detected at %s:%d\n\n", __FILE__, __LINE__); \
+		\
+		fprintf(stderr, "Dumping previous (good) state:\n"); \
+		_rehex_byterangeset_dump(_pre_check_ranges.begin(), _pre_check_ranges.end()); \
+		fprintf(stderr, "\n"); \
+		\
+		fprintf(stderr, "Dumping current (bad) state:\n"); \
+		_rehex_byterangeset_dump(begin_i, end_i); \
+		fprintf(stderr, "\n"); \
+		\
+		assert(false && _rehex_byterangeset_ok(begin_i, end_i)); \
+	} \
+}
+
+#define REHEX_BYTERANGESET_CHECK(begin, end) \
+{ \
+	if(!_rehex_byterangeset_ok(begin, end)) \
+	{ \
+		fprintf(stderr, "ByteRangeSet inconsistency detected at %s:%d\n\n", __FILE__, __LINE__); \
+		\
+		fprintf(stderr, "Dumping values:\n"); \
+		_rehex_byterangeset_dump(begin, end); \
+		fprintf(stderr, "\n"); \
+		\
+		assert(false && _rehex_byterangeset_ok(begin, end)); \
+	} \
+}
+#endif
+
 namespace REHex
 {
 	/**
@@ -325,6 +387,8 @@ namespace REHex
 
 template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T end, size_t size_hint)
 {
+	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
+	
 	size_t min_size_hint = ranges.size() + std::distance(begin, end);
 	if(ranges.capacity() < min_size_hint)
 	{
@@ -449,10 +513,14 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 		next = ranges.erase(group_erase_begin, group_erase_end);
 		ranges.insert(next, group_ranges.begin(), group_ranges.end());
 	}
+	
+	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
 template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const T end)
 {
+	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
+	
 	auto next = ranges.begin();
 	
 	/* Existing elements which intersect the ones we are clearing are erased and any adjacent
@@ -580,6 +648,8 @@ template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const
 	
 	next = ranges.erase(group_erase_begin, group_erase_end);
 	ranges.insert(next, group_replacements.begin(), group_replacements.end());
+	
+	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
 #endif /* !REHEX_BYTERANGESET_HPP */

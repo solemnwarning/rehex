@@ -165,6 +165,20 @@ TEST(ByteRangeSet, SetRangeOverlappingStartOfRange)
 	);
 }
 
+TEST(ByteRangeSet, SetRangeOverlappingStartOfRangeAdjacentToPrevious)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(1,  1);
+	brs.set_range(10, 20);
+	
+	brs.set_range(2,  14);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(1, 29),
+	);
+}
+
 TEST(ByteRangeSet, SetRangeOverlappingEndOfRange)
 {
 	ByteRangeSet brs;
@@ -177,6 +191,20 @@ TEST(ByteRangeSet, SetRangeOverlappingEndOfRange)
 	EXPECT_RANGES(
 		ByteRangeSet::Range(10, 25),
 		ByteRangeSet::Range(50, 20),
+	);
+}
+
+TEST(ByteRangeSet, SetRangeOverlappingEndOfRangeAdjacentToNext)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(50, 20);
+	
+	brs.set_range(25, 25);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 60),
 	);
 }
 
@@ -943,6 +971,22 @@ TEST(ByteRangeSet, DataErasedAfterRanges)
 	);
 }
 
+TEST(ByteRangeSet, DataErasedBetweenRanges)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(30, 10);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 30),
+		ByteRangeSet::Range(50, 10),
+	);
+}
+
 TEST(ByteRangeSet, DataErasedMatchingRange)
 {
 	ByteRangeSet brs;
@@ -976,6 +1020,22 @@ TEST(ByteRangeSet, DataErasedOverlappingStartOfRange)
 	);
 }
 
+TEST(ByteRangeSet, DataErasedOverlappingStartOfRangeAdjacentToPrevious)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(30, 15);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 25),
+		ByteRangeSet::Range(45, 10),
+	);
+}
+
 TEST(ByteRangeSet, DataErasedOverlappingEndOfRange)
 {
 	ByteRangeSet brs;
@@ -990,6 +1050,22 @@ TEST(ByteRangeSet, DataErasedOverlappingEndOfRange)
 		ByteRangeSet::Range(10, 20),
 		ByteRangeSet::Range(40,  5),
 		ByteRangeSet::Range(50, 10),
+	);
+}
+
+TEST(ByteRangeSet, DataErasedOverlappingEndOfRangeAdjacentToStartOfAnother)
+{
+	ByteRangeSet brs;
+	
+	brs.set_range(10, 20);
+	brs.set_range(40, 10);
+	brs.set_range(60, 10);
+	
+	brs.data_erased(45, 15);
+	
+	EXPECT_RANGES(
+		ByteRangeSet::Range(10, 20),
+		ByteRangeSet::Range(40,  15),
 	);
 }
 

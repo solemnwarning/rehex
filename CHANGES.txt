@@ -1,3 +1,8 @@
+Version 0.4.1 (2022-01-03)
+
+ * Fixed font-dependent rendering glitches when control characters or other
+   Unicode oddities were present in the text view.
+
 Version 0.4.0 (2021-12-20)
 
  * Add data types for common text encodings (Unicode, ISO-8859) - text

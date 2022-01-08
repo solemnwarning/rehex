@@ -145,16 +145,38 @@ local function _get_type_name(type)
 	if type == _variadic_placeholder
 	then
 		return "..."
+	elseif type == nil
+	then
+		return "void"
 	end
 	
-	if type and type.is_array
+	local type_name
+	
+	if type.name ~= nil
 	then
-		return type.name .. "[]"
-	elseif type
+		type_name = type.name
+	elseif type.base == "struct"
 	then
-		return type.name
+		if type.struct_name ~= nil
+		then
+			type_name = "struct " .. type.struct_name
+		else
+			type_name = "<anonymous struct>"
+		end
 	else
-		return "void"
+		error("Internal error: unknown type in _get_type_name()")
+	end
+	
+	if type.is_array
+	then
+		if type.array_size ~= nil
+		then
+			return type_name .. "[" .. type.array_size .. "]"
+		else
+			return type_name .. "[]"
+		end
+	else
+		return type_name
 	end
 end
 
@@ -758,10 +780,16 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		iv_type, iv_value = _eval_statement(context, initial_value)
 	end
 	
-	local type_info = _find_type(context, var_type)
-	if type_info == nil
+	local type_info
+	if type(var_type) == "table"
 	then
-		error("Unknown variable type '" .. var_type .. "' at " .. filename .. ":" .. line_num)
+		type_info = var_type
+	else
+		type_info = _find_type(context, var_type)
+		if type_info == nil
+		then
+			error("Unknown variable type '" .. var_type .. "' at " .. filename .. ":" .. line_num)
+		end
 	end
 	
 	if struct_args ~= nil and type_info.base ~= "struct"
@@ -1201,6 +1229,7 @@ _eval_struct_defn = function(context, statement)
 	local struct_args       = statement[5]
 	local struct_statements = statement[6]
 	local typedef_name      = statement[7]
+	local var_decl          = statement[8]
 	
 	local struct_typename = struct_name ~= nil and "struct " .. struct_name or nil
 	
@@ -1249,6 +1278,15 @@ _eval_struct_defn = function(context, statement)
 	if typedef_name ~= nil
 	then
 		context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)
+	end
+	
+	if var_decl ~= nil
+	then
+		local var_name   = var_decl[1]
+		local var_args   = var_decl[2]
+		local array_size = var_decl[3]
+		
+		_decl_variable(context, statement, type_info, var_name, var_args, array_size, nil, false)
 	end
 end
 

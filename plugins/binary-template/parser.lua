@@ -258,13 +258,16 @@ local _parser = spc * P{
 	--      "name" or nil
 	--      { <arguments> },
 	--      { <statements> },
-	--      "typedef name" or nil
+	--      "typedef name" or nil,
+	--      { <variable name>, { <parameters> }, <array size expr> OR nil } OR nil,
 	--  }
 	STRUCT_ARG_LIST = Ct( (S("(") * spc * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")")) ^ -1 ),
+	STRUCT_VAR_DECL = Ct( name * Ct( (P("(") * spc * V("ZERO_OR_MORE_EXPRS") * P(")") * spc) ^ -1) * (P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) ),
 	STRUCT_DEFN =
-		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name    * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name    * P(";") * spc ),
+		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * (V("STRUCT_VAR_DECL") + Cc(nil)) * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * (V("STRUCT_VAR_DECL") + Cc(nil)) * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name                                       * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name                                       * P(";") * spc ),
 	
 	--  {
 	--      "file.bt", <line>,
@@ -495,10 +498,24 @@ local function _compile_statement(s)
 	elseif op == "struct"
 	then
 		local body = s[6]
+		local var_decl = s[8]
 		
 		for i = 1, #body
 		do
 			_compile_statement(body[i])
+		end
+		
+		if var_decl ~= nil
+		then
+			local var_params = var_decl[2]
+			local var_array_size = var_decl[3]
+			
+			for _, vp in ipairs(var_params)
+			do
+				_compile_expr(vp)
+			end
+			
+			if var_array_size ~= nil then _compile_expr(var_array_size) end
 		end
 	elseif op == "enum"
 	then

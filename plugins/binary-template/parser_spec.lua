@@ -1046,4 +1046,74 @@ describe("parser", function()
 				parser.parse_text("else do_thing(); if(2);")
 			end, "Parse error at UNKNOWN FILE:1 (at 'else do_thi')")
 	end)
+	
+	it("parses a struct definition with variable definition", function()
+		local got = parser.parse_text("struct mystruct {\nint x;\nint y;\n} myvar;")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
+			}, nil, { "myvar", {}, nil } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an anonymous struct definition with variable definition", function()
+		local got = parser.parse_text("struct {\nint x;\nint y;\n} myvar;")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", nil, {},
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
+			}, nil, { "myvar", {}, nil } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses a struct definition with array variable definition", function()
+		local got = parser.parse_text("struct mystruct {\nint x;\nint y;\n} myvar[10];")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
+			}, nil, { "myvar", {}, { "UNKNOWN FILE", 4, "num", 10 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses a struct definition with variable definition using parameters", function()
+		local got = parser.parse_text("struct mystruct(int a, int b) {\nint x;\nint y;\n} myvar(1234, 5678);")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", "mystruct", { { "int", "a" }, { "int", "b" } },
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
+			}, nil, { "myvar", { { "UNKNOWN FILE", 4, "num", 1234 }, { "UNKNOWN FILE", 4, "num", 5678 } }, nil } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses an anonymous struct definition with variable definition using parameters", function()
+		local got = parser.parse_text("struct(int a, int b) {\nint x;\nint y;\n} myvar(1234, 5678);")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "struct", nil, { { "int", "a" }, { "int", "b" } },
+			{
+				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
+				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
+			}, nil, { "myvar", { { "UNKNOWN FILE", 4, "num", 1234 }, { "UNKNOWN FILE", 4, "num", 5678 } }, nil } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

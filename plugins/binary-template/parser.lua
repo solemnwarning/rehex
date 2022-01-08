@@ -183,7 +183,7 @@ local _parser = spc * P{
 	VALUE = P(_capture_position) * (V("VALUE_NUM") + V("VALUE_STR") + V("VALUE_REF")),
 	
 	STMT =
-		P(1) * P(_consume_directive) +
+		P(1) * P(_consume_directive) * spc +
 		V("BLOCK") +
 		V("COMMENT") +
 		V("IF") +
@@ -210,8 +210,8 @@ local _parser = spc * P{
 		Ct( P(_capture_position) * Cc("_expr") * Ct( V("EXPR2") ^ 1 ) ),
 	
 	EXPR2 =
-		P("(") * V("EXPR") * P(")") * spc +
-		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
+		P("(") * spc * V("EXPR") * P(")") * spc +
+		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
 		Ct( V("VALUE") ) +
 		Ct( P(_capture_position) * Cc("_token") *
 			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|=") ) * spc),
@@ -260,7 +260,7 @@ local _parser = spc * P{
 	--      { <statements> },
 	--      "typedef name" or nil
 	--  }
-	STRUCT_ARG_LIST = Ct( (S("(") * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")")) ^ -1 ),
+	STRUCT_ARG_LIST = Ct( (S("(") * spc * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")")) ^ -1 ),
 	STRUCT_DEFN =
 		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * P(";") * spc ) +
 		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name    * P(";") * spc ) +
@@ -300,7 +300,7 @@ local _parser = spc * P{
 	--      { <arguments> },
 	--      { <statements> },
 	--  }
-	FUNC_ARG_LIST = Ct( S("(") * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")") ) * spc,
+	FUNC_ARG_LIST = Ct( S("(") * spc * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")") ) * spc,
 	FUNC_DEFN = Ct( P(_capture_position) * Cc("function") * name * name * V("FUNC_ARG_LIST") * P("{") * spc * Ct( (V("STMT") * spc) ^ 0 ) * P("}") * spc ),
 	
 	--  {
@@ -311,8 +311,8 @@ local _parser = spc * P{
 	--      {              { <statements> } },  <-- else
 	--  }
 	IF = Ct( P(_capture_position) * Cc("if") *
-		Ct( P("if")      * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) )      * spc *
-		Ct( P("else if") * spc * P("(") * V("EXPR") * P(")") * spc * Ct( V("STMT") ) ) ^ 0  * spc *
+		Ct( P("if")      * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct( V("STMT") ) )      * spc *
+		Ct( P("else if") * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct( V("STMT") ) ) ^ 0  * spc *
 		Ct( P("else")                                        * spc * Ct( V("STMT") ) ) ^ -1 * spc
 	),
 	
@@ -325,7 +325,7 @@ local _parser = spc * P{
 	--      { <statements> },
 	--  }
 	FOR = Ct( P(_capture_position) * Cc("for") *
-		P("for") * spc * P("(") *
+		P("for") * spc * P("(") * spc *
 			(V("LOCAL_VAR_DEFN") + (V("EXPR_OR_NIL") * P(";") * spc)) *
 			V("EXPR_OR_NIL") * P(";") * spc *
 			V("EXPR_OR_NIL") * P(")") * spc *
@@ -334,7 +334,7 @@ local _parser = spc * P{
 	
 	-- while gets compiled to be a for loop with just a condition (see above)
 	WHILE = Ct( P(_capture_position) * Cc("for") *
-		P("while") * spc * P("(") * Cc(nil) * V("EXPR") * Cc(nil) * P(")") * spc * Ct( V("STMT") ) * spc
+		P("while") * spc * P("(") * spc * Cc(nil) * V("EXPR") * Cc(nil) * P(")") * spc * Ct( V("STMT") ) * spc
 	),
 	
 	--  {

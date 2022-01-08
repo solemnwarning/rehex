@@ -491,6 +491,14 @@ local function _compile_statement(s)
 		do
 			_compile_statement(body[i])
 		end
+	elseif op == "struct"
+	then
+		local body = s[6]
+		
+		for i = 1, #body
+		do
+			_compile_statement(body[i])
+		end
 	elseif op == "enum"
 	then
 		local members = s[6]

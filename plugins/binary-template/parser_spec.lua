@@ -281,13 +281,14 @@ describe("parser", function()
 	end)
 	
 	it("parses a struct with some members", function()
-		local got = parser.parse_text("struct mystruct {\nint x;\nint y;\n};")
+		local got = parser.parse_text("struct mystruct {\nint x;\nint y;\nint xyz[3];\n};")
 		
 		local expect = {
 			{ "UNKNOWN FILE", 1, "struct", "mystruct", {},
 			{
 				{ "UNKNOWN FILE", 2, "variable", "int", "x", nil, nil },
 				{ "UNKNOWN FILE", 3, "variable", "int", "y", nil, nil },
+				{ "UNKNOWN FILE", 4, "variable", "int", "xyz", nil, { "UNKNOWN FILE", 4, "num", 3 } },
 			}, nil },
 		}
 		

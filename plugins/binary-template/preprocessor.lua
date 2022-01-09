@@ -92,7 +92,9 @@ local function _preprocess_file(filename, context)
 	do
 		line_num = line_num + 1
 		
-		if in_comment and line:match("\\*/")
+		line = string.gsub(line, "\r$", "")
+		
+		if in_comment and line:match("%*/")
 		then
 			line = string.gsub(line, "^.*\\*/", "", 1)
 			in_comment = false
@@ -104,7 +106,7 @@ local function _preprocess_file(filename, context)
 		line = string.gsub(line, "//.*$", "")
 		
 		local entering_comment = false
-		if line:match("/\\*")
+		if line:match("/%*")
 		then
 			line = string.gsub(line, "/%*.*$", "")
 			entering_comment = true

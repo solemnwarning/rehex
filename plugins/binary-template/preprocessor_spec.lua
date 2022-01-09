@@ -125,4 +125,75 @@ describe("preprocessor", function()
 			function() preprocessor.preprocess_file("preprocessor-tests/unmatched-else-test.bt", error) end,
 			"'#else' with no matching '#ifdef' or '#ifndef' at preprocessor-tests/unmatched-else-test.bt:1")
 	end)
+	
+	it("strips out single-line comments", function()
+		local expect =
+			"#file preprocessor-tests/single-line-comment.bt 1\n" ..
+			"foo();\n" ..
+			"\n" ..
+			"  \n" ..
+			"bar(); \n" ..
+			"\n" ..
+			"#file preprocessor-tests/single-line-comment.bt 9\n" ..
+			"should_be_seen();\n" ..
+			"#file preprocessor-tests/single-line-comment.bt 11\n"
+		
+		local got = preprocessor.preprocess_file("preprocessor-tests/single-line-comment.bt", error)
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("strips out multi-line comments", function()
+		local expect =
+			"#file preprocessor-tests/multi-line-comment.bt 1\n" ..
+			"foo();\n" ..
+			"\n" ..
+			"  \n" ..
+			"\n" ..
+			"bar();baz();\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"hello();\n" ..
+			"\n" ..
+			"goodbye();\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"\n" ..
+			"#file preprocessor-tests/multi-line-comment.bt 22\n" ..
+			"should_be_seen();\n" ..
+			"#file preprocessor-tests/multi-line-comment.bt 26\n" ..
+			"\n" ..
+			"\n" ..
+			" <-- with an (invalid) embedded comment\n" ..
+			"*/ <-- this isn't part of the comment\n" ..
+			"\n" ..
+			"\n" ..
+ 			" <-- with a single-line comment marker before the terminator\n"
+		
+		local got = preprocessor.preprocess_file("preprocessor-tests/multi-line-comment.bt", error)
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("strips carridge returns from a file with CRLF line endings", function()
+		local expect =
+			"#file preprocessor-tests/crlf-line-endings.bt 1\n" ..
+			"This file uses Windows line endings.\n" ..
+			"How terrible.\n" ..
+			"\n" ..
+			"#file preprocessor-tests/crlf-line-endings.bt 5\n" ..
+			"This should be visible\n" ..
+			"#file preprocessor-tests/crlf-line-endings.bt 9\n"
+		
+		local got = preprocessor.preprocess_file("preprocessor-tests/crlf-line-endings.bt", error)
+		
+		assert.are.same(expect, got)
+	end)
 end)

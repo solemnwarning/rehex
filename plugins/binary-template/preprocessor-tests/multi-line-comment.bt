@@ -1,0 +1,32 @@
+foo();
+/* comment */
+  /* indented comment */
+
+bar();/* comment between code */baz();
+
+/* comment
+ * spanning
+ * multiple
+ * lines
+*/
+
+hello();/* comment between code
+       * also spanning
+       * multiples lines */goodbye();
+
+/* preprocessor directive in comment
+#error This shouldn't be hit
+*/
+
+#ifndef THING /* comment after #ifndef */
+should_be_seen();
+#else /* comment after #else */
+shouldnt_be_seen();
+#endif /* comment after #endif */
+
+/* multiline comment
+ * /* foo */ <-- with an (invalid) embedded comment
+*/ <-- this isn't part of the comment
+
+/* multiline comment
+ * // */ <-- with a single-line comment marker before the terminator

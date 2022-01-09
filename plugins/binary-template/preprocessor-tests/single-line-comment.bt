@@ -1,0 +1,10 @@
+foo();
+// comment
+  // indented comment
+bar(); // comment after code
+
+#ifdef THING // comment after #ifdef
+shouldnt_be_seen();
+#else // comment after #else
+should_be_seen();
+#endif // comment after #endif

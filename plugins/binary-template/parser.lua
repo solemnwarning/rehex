@@ -253,10 +253,12 @@ local _parser = spc * P{
 		+ spc * comment("/*", "*/") * spc,
 	
 	EXPR =
-		-- TODO: Capture casts rather than discarding them
 		Ct( P(_capture_position) * Cc("_expr") * Ct(
-			P("(") * spc * P(_skip_type) * P(")") * V("EXPR") ^ 1 +
-			V("EXPR2") ^ 1
+			(
+				-- TODO: Capture casts rather than discarding them
+				P("(") * spc * P(_skip_type) * P(")") * V("EXPR") +
+				V("EXPR2")
+			) ^ 1
 		) ),
 	
 	EXPR2 =

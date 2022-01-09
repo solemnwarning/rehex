@@ -47,6 +47,7 @@ local _eval_typedef
 local _eval_enum
 local _eval_if
 local _eval_for
+local _eval_switch
 local _eval_break
 local _eval_continue
 local _eval_statement;
@@ -1543,6 +1544,106 @@ _eval_for = function(context, statement)
 	table.remove(context.stack)
 end
 
+_eval_switch = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local expr = statement[4]
+	local cases = statement[5]
+	
+	local expr_t, expr_v = _eval_statement(context, expr)
+	
+	if expr_t == nil or (expr_t.base ~= "number" and expr_t.base ~= "string")
+	then
+		error("Unexpected type '" .. _get_type_name(expr_t) .. "' passed to 'switch' statement (expected number or string) at " .. filename .. ":" .. line_num)
+	end
+	
+	local found_match = false
+	
+	for _, case in ipairs(cases)
+	do
+		local case_expr = case[1]
+		local case_body = case[2]
+		
+		if case_expr ~= nil
+		then
+			local case_expr_t, case_expr_v = _eval_statement(context, case_expr)
+			
+			if case_expr_t == nil or case_expr_t.base ~= expr_t.base
+			then
+				error("Unexpected type '" .. _get_type_name(case_expr_t) .. "' passed to 'case' statement (expected '" .. _get_type_name(expr_t) .. "') at " .. case_expr[1] .. ":" .. case_expr[2])
+			end
+			
+			if expr_v:get() == case_expr_v:get()
+			then
+				case[1] = true
+				found_match = true
+			else
+				case[1] = false
+			end
+		end
+	end
+	
+	if not found_match
+	then
+		for _, case in ipairs(cases)
+		do
+			local case_expr = case[1]
+			local case_body = case[2]
+			
+			if case_expr == nil
+			then
+				case[1] = true
+			end
+		end
+	end
+	
+	local frame = {
+		frame_type = FRAME_TYPE_SCOPE,
+		var_types = {},
+		vars = {},
+		
+		handles_flowctrl_types = FLOWCTRL_TYPE_BREAK,
+	}
+	
+	table.insert(context.stack, frame)
+	
+	found_match = false
+	
+	for _, case in ipairs(cases)
+	do
+		local case_matched = case[1]
+		local case_body = case[2]
+		
+		if not found_match and case_matched
+		then
+			found_match = true
+		end
+		
+		if found_match
+		then
+			for _, statement in ipairs(case_body)
+			do
+				local sr_t, sr_v = _eval_statement(context, statement)
+				
+				if sr_t and sr_t.flowctrl ~= nil
+				then
+					if sr_t.flowctrl == FLOWCTRL_TYPE_BREAK
+					then
+						table.remove(context.stack)
+						return
+					else
+						table.remove(context.stack)
+						return sr_t, sr_v
+					end
+				end
+			end
+		end
+	end
+	
+	table.remove(context.stack)
+end
+
 _eval_break = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -1608,6 +1709,7 @@ _ops = {
 	["enum"]           = _eval_enum,
 	["if"]             = _eval_if,
 	["for"]            = _eval_for,
+	["switch"]         = _eval_switch,
 	["break"]          = _eval_break,
 	["continue"]       = _eval_continue,
 	

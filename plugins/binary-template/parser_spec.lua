@@ -1146,4 +1146,38 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses a switch statement", function()
+		local got = parser.parse_text(
+			"switch(x) {\n" ..
+			"	case 1:\n" ..
+			"	case 2:\n" ..
+			"		foo();\n" ..
+			"		break;\n" ..
+			"	default:\n" ..
+			"		bar();\n" ..
+			"	case 3:\n" ..
+			"		baz();\n" ..
+			"}")
+		
+		local expect = {
+			{ "UNKNOWN FILE", 1, "switch", { "UNKNOWN FILE", 1, "ref", { "x" } }, {
+				{ { "UNKNOWN FILE", 2, "num", 1 }, {} },
+				{ { "UNKNOWN FILE", 3, "num", 2 }, {
+					{ "UNKNOWN FILE", 4, "call", "foo", {} },
+					{ "UNKNOWN FILE", 5, "break" },
+				} },
+				
+				{ nil, {
+					{ "UNKNOWN FILE", 7, "call", "bar", {} },
+				} },
+				
+				{ { "UNKNOWN FILE", 8, "num", 3 }, {
+					{ "UNKNOWN FILE", 9, "call", "baz", {} },
+				} },
+			} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

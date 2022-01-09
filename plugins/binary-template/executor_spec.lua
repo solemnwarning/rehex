@@ -2918,4 +2918,170 @@ describe("executor", function()
 			})
 			end, "Multidimensional arrays are not supported at test.bt:2")
 	end)
+	
+	it("executes from matching case in a switch statement", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "switch", { "test.bt", 1, "num", 2 }, {
+				{ nil,                        { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "default" } } } } },
+				{ { "test.bt", 1, "num", 1 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "1" }       } } } },
+				{ { "test.bt", 1, "num", 2 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "2" }       } } } },
+				{ { "test.bt", 1, "num", 3 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "3" }       } } } },
+			} },
+		})
+		
+		local expect_log = {
+			"print(2)",
+			"print(3)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("executes from default case if none match in a switch statement", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "switch", { "test.bt", 1, "num", 4 }, {
+				{ nil,                        { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "default" } } } } },
+				{ { "test.bt", 1, "num", 1 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "1" }       } } } },
+				{ { "test.bt", 1, "num", 2 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "2" }       } } } },
+				{ { "test.bt", 1, "num", 3 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "3" }       } } } },
+			} },
+		})
+		
+		local expect_log = {
+			"print(default)",
+			"print(1)",
+			"print(2)",
+			"print(3)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("breaks out of a switch statement when a break is encountered", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "switch", { "test.bt", 1, "num", 2 }, {
+				{ nil,                        { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "default" } } } } },
+				{ { "test.bt", 1, "num", 1 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "1" }       } } } },
+				{ { "test.bt", 1, "num", 2 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "2" }       } }, { "test.bt", 1, "break" } } },
+				{ { "test.bt", 1, "num", 3 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "3" }       } } } },
+			} },
+			
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "end" } } },
+		})
+		
+		local expect_log = {
+			"print(2)",
+			"print(end)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("supports using a switch statement with a string", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "switch", { "test.bt", 1, "str", "0" }, {
+				{ { "test.bt", 1, "str", "00"  }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "00"  }       } } } },
+				{ { "test.bt", 1, "str", "0"   }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "0"   }       } } } },
+				{ { "test.bt", 1, "str", "000" }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "000" }       } } } },
+			} },
+		})
+		
+		local expect_log = {
+			"print(0)",
+			"print(000)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when using an unsupported type with a switch statement", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				
+				{ "test.bt", 2, "switch", { "test.bt", 2, "call", "vfunc", {} }, {
+					{ nil,                        { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "default" } } } } },
+					{ { "test.bt", 1, "num", 1 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "1" }       } } } },
+					{ { "test.bt", 1, "num", 2 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "2" }       } }, { "test.bt", 1, "break" } } },
+					{ { "test.bt", 1, "num", 3 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "3" }       } } } },
+				} },
+			})
+			end, "Unexpected type 'void' passed to 'switch' statement (expected number or string) at test.bt:2")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", {},
+				{
+					{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				} },
+				
+				{ "test.bt", 1, "local-variable", "struct mystruct", "a", nil, nil, nil },
+				
+				{ "test.bt", 2, "switch", { "test.bt", 2, "ref", { "a" } }, {
+					{ nil,                        { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "default" } } } } },
+					{ { "test.bt", 1, "num", 1 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "1" }       } } } },
+					{ { "test.bt", 1, "num", 2 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "2" }       } }, { "test.bt", 1, "break" } } },
+					{ { "test.bt", 1, "num", 3 }, { { "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "3" }       } } } },
+				} },
+			})
+			end, "Unexpected type 'struct mystruct' passed to 'switch' statement (expected number or string) at test.bt:2")
+	end)
+	
+	it("errors when using a different type in a switch/case statement", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				
+				{ "test.bt", 2, "switch", { "test.bt", 2, "num", 0, {} }, {
+					{ { "test.bt", 3, "call", "vfunc", {} }, {} },
+					{ { "test.bt", 1, "num", 2 }, {} },
+					{ { "test.bt", 1, "num", 3 }, {} },
+				} },
+			})
+			end, "Unexpected type 'void' passed to 'case' statement (expected 'int') at test.bt:3")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 2, "switch", { "test.bt", 2, "num", 0, {} }, {
+					{ { "test.bt", 3, "str", "hello" }, {} },
+					{ { "test.bt", 1, "num", 2 }, {} },
+					{ { "test.bt", 1, "num", 3 }, {} },
+				} },
+			})
+			end, "Unexpected type 'string' passed to 'case' statement (expected 'int') at test.bt:3")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				
+				{ "test.bt", 2, "switch", { "test.bt", 2, "str", "hello", {} }, {
+					{ { "test.bt", 3, "call", "vfunc", {} }, {} },
+					{ { "test.bt", 1, "num", 2 }, {} },
+					{ { "test.bt", 1, "num", 3 }, {} },
+				} },
+			})
+			end, "Unexpected type 'void' passed to 'case' statement (expected 'string') at test.bt:3")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 2, "switch", { "test.bt", 2, "str", "hello", {} }, {
+					{ { "test.bt", 3, "num", 1 }, {} },
+					{ { "test.bt", 1, "num", 2 }, {} },
+					{ { "test.bt", 1, "num", 3 }, {} },
+				} },
+			})
+			end, "Unexpected type 'int' passed to 'case' statement (expected 'string') at test.bt:3")
+	end)
 end)

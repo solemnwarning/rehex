@@ -168,6 +168,7 @@ local function _capture_name(text, pos)
 end
 
 local spc = S(" \t\r\n")^0
+local spc_req = S(" \t\r\n")^1
 local digit = R('09')
 local number = C( P('-')^-1 * digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
 local name = P(_capture_name) * spc
@@ -196,6 +197,7 @@ local _parser = spc * P{
 		V("IF") +
 		V("FOR") +
 		V("WHILE") +
+		V("SWITCH") +
 		V("STRUCT_DEFN") +
 		V("ENUM_DEFN") +
 		V("TYPEDEF") +
@@ -349,6 +351,22 @@ local _parser = spc * P{
 	-- while gets compiled to be a for loop with just a condition (see above)
 	WHILE = Ct( P(_capture_position) * Cc("for") *
 		P("while") * spc * P("(") * spc * Cc(nil) * V("EXPR") * Cc(nil) * P(")") * spc * Ct( V("STMT") ) * spc
+	),
+	
+	--  {
+	--      "file.bt", <line>,
+	--      "switch",
+	--      <expr>,
+	--      {
+	--          { <case expr> (nil for "default"), { <case statements> } },
+	--          ...
+	--      }
+	--  }
+	SWITCH = Ct(P(_capture_position) * Cc("switch") *
+		P("switch") * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct( P("{") * spc *
+			(Ct( P("case")    * spc_req * V("EXPR") * P(":") * spc * Ct( V("STMT") ^ 0 ) ) * spc +
+			 Ct( P("default") * spc     * Cc(nil)   * P(":") * spc * Ct( V("STMT") ^ 0 ) ) * spc) ^ 1 *
+		P("}") ) * spc
 	),
 	
 	--  {
@@ -625,6 +643,25 @@ local function _compile_statement(s)
 		for i = 1, #body
 		do
 			_compile_statement(body[i])
+		end
+	elseif op == "switch"
+	then
+		local expr  = s[4]
+		local cases = s[5]
+		
+		_compile_expr(expr)
+		
+		for _, case in ipairs(cases)
+		do
+			local case_expr = case[1]
+			local case_body = case[2]
+			
+			if case_expr ~= nil then _compile_expr(case_expr) end
+			
+			for _, statement in ipairs(case_body)
+			do
+				_compile_statement(statement)
+			end
 		end
 	elseif op == "if"
 	then

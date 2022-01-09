@@ -30,6 +30,7 @@ local RESERVED_WORDS = {
 	["break"]     = true,
 	["continue"]  = true,
 	["return"]    = true,
+	["unsigned"]  = true,
 }
 
 local function comment(openp,endp)
@@ -124,6 +125,7 @@ local function _capture_type(text, pos)
 	local patterns = {
 		"^(enum)%s+([%a_][%d%a_]*)%s*",
 		"^(struct)%s+([%a_][%d%a_]*)%s*",
+		"^(unsigned)%s+([%a_][%d%a_]*)%s*",
 		"^([%a_][%d%a_]*)%s*",
 	}
 	

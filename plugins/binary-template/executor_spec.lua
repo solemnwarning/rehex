@@ -1712,6 +1712,52 @@ describe("executor", function()
 		end, "Invalid right operand to '||' operator - expected numeric, got 'string' at test.bt:1")
 	end)
 	
+	it("implements ! operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "!0 = %d" },
+				{ "test.bt", 1, "logical-not", { "test.bt", 1, "num", 0 } }
+			} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "!1 = %d" },
+				{ "test.bt", 1, "logical-not", { "test.bt", 1, "num", 1 } }
+			} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "!2 = %d" },
+				{ "test.bt", 1, "logical-not", { "test.bt", 1, "num", 2 } }
+			} },
+		})
+		
+		local expect_log = {
+			"print(!0 = 1)",
+			"print(!1 = 0)",
+			"print(!2 = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on incorrect type to ! operator", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "voidfunc", {}, {} },
+				{ "test.bt", 1, "logical-not", { "test.bt", 1, "call", "voidfunc", {} } },
+			})
+		end, "Invalid operand to '!' operator - expected numeric, got 'void' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "logical-not", { "test.bt", 1, "str", "hello" } },
+			})
+		end, "Invalid operand to '!' operator - expected numeric, got 'string' at test.bt:1")
+	end)
+	
 	it("allows defining local variables", function()
 		local interface, log = test_interface()
 		

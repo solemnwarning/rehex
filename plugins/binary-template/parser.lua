@@ -362,10 +362,10 @@ local function _compile_expr(expr)
 	end
 	
 	local left_to_right = { start = function() return 1 end, step = 1 }
-	local right_to_left = { start = function() return #expr_parts - 2 end, step = -1 }
+	local right_to_left = { start = function(e) return #expr_parts - e end, step = -1 }
 	
 	local expand_binops = function(dir, ops)
-		local idx = dir.start()
+		local idx = dir.start(2)
 		
 		while idx >= 1 and (idx + 2) <= #expr_parts
 		do
@@ -393,6 +393,37 @@ local function _compile_expr(expr)
 			elseif idx == #expr_parts
 			then
 				idx = idx + 2 * dir.step
+			end
+		end
+	end
+	
+	local expand_unary_ops = function(dir, ops)
+		local idx = dir.start(1)
+		
+		while idx >= 1 and (idx + 1) <= #expr_parts
+		do
+			local matched = false
+			
+			for op, ast_op in pairs(ops)
+			do
+				if
+					expr_parts[idx][3] == "_token" and expr_parts[idx][4] == op and
+					expr_parts[idx + 1][3]:sub(1, 1) ~= "_"
+				then
+					expr_parts[idx] = { expr_parts[idx][1], expr_parts[idx][2], ast_op, expr_parts[idx + 1] }
+					table.remove(expr_parts, idx + 1)
+					
+					matched = true
+					break
+				end
+			end
+			
+			if not matched
+			then
+				idx = idx + dir.step
+			elseif idx == #expr_parts
+			then
+				idx = idx + 1 * dir.step
 			end
 		end
 	end
@@ -425,6 +456,11 @@ local function _compile_expr(expr)
 			end
 		end
 	end
+	
+	expand_unary_ops(right_to_left, {
+		["!"] = "logical-not",
+		["~"] = "bitwise-not",
+	})
 	
 	expand_binops(left_to_right, {
 		["*"] = "multiply",

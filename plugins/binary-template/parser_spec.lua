@@ -502,6 +502,36 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("parses ! operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("!x;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-not",
+				{ "UNKNOWN FILE", 1, "ref", { "x" } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("!(x);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-not",
+				{ "UNKNOWN FILE", 1, "ref", { "x" } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("!!x;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-not",
+				{ "UNKNOWN FILE", 1, "logical-not",
+					{ "UNKNOWN FILE", 1, "ref", { "x" } } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
 	it("parses assignment operator", function()
 		local got
 		local expect

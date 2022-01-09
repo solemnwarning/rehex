@@ -32,6 +32,8 @@ local _eval_string;
 local _eval_ref;
 local _eval_add;
 local _numeric_op_func;
+local _eval_bitwise_not
+local _eval_logical_not
 local _eval_logical_and;
 local _eval_logical_or;
 local _eval_variable;
@@ -706,6 +708,34 @@ _numeric_op_func = function(func, sym)
 		
 		return v1_t, _make_const_plain_value(func(v1_v:get(), v2_v:get()))
 	end
+end
+
+_eval_bitwise_not = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local operand_t, operand_v = _eval_statement(context, statement[4])
+	
+	if operand_t == nil or operand_t.base ~= "number"
+	then
+		error("Invalid operand to '~' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	return operand_t, _make_const_plain_value(~operand_v:get())
+end
+
+_eval_logical_not = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local operand_t, operand_v = _eval_statement(context, statement[4])
+	
+	if operand_t == nil or operand_t.base ~= "number"
+	then
+		error("Invalid operand to '!' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	return _builtin_types.int, _make_const_plain_value(operand_v:get() == 0 and 1 or 0)
 end
 
 _eval_logical_and = function(context, statement)
@@ -1590,6 +1620,7 @@ _ops = {
 	["left-shift"]  = _numeric_op_func(function(v1, v2) return v1 << v2 end, "<<"),
 	["right-shift"] = _numeric_op_func(function(v1, v2) return v1 >> v2 end, ">>"),
 	
+	["bitwise-not"] = _eval_bitwise_not,
 	["bitwise-and"] = _numeric_op_func(function(v1, v2) return v1 & v2 end, "&"),
 	["bitwise-xor"] = _numeric_op_func(function(v1, v2) return v1 ^ v2 end, "^"),
 	["bitwise-or"]  = _numeric_op_func(function(v1, v2) return v1 | v2 end, "|"),
@@ -1602,6 +1633,7 @@ _ops = {
 	["equal"]     = _numeric_op_func(function(v1, v2) return v1 == v2 and 1 or 0 end, "=="),
 	["not-equal"] = _numeric_op_func(function(v1, v2) return v1 ~= v2 and 1 or 0 end, "!="),
 	
+	["logical-not"] = _eval_logical_not,
 	["logical-and"] = _eval_logical_and,
 	["logical-or"]  = _eval_logical_or,
 }

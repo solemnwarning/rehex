@@ -44,6 +44,21 @@ describe("preprocessor", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("expands multi-line macro definitions", function()
+		local expect =
+			"#file preprocessor-tests/macro-test-2.bt 1\n" ..
+			"#file preprocessor-tests/macro-test-2.bt 5\n" ..
+			"\n" ..
+			"#file preprocessor-tests/macro-test-2.bt 8\n" ..
+			"\n" ..
+			"This macro spans multiple lines\n" ..
+			"This macro also spans multiple lines\n"
+		
+		local got = preprocessor.preprocess_file("preprocessor-tests/macro-test-2.bt", error)
+		
+		assert.are.same(expect, got)
+	end)
+	
 	it("errors on cyclic macros", function()
 		assert.has_error(
 			function() preprocessor.preprocess_file("preprocessor-tests/cyclic-macro-test.bt", error) end,

@@ -122,11 +122,20 @@ local function _preprocess_file(filename, context)
 		if defining_macro_name ~= nil
 		then
 			-- Strip trailing slash (if present)
-			define_p2 = string.gsub(define_p2, "\\$", 1)
+			line = string.gsub(line, "\\$", "")
+			
+			-- Strip any trailing/leading whitespace
+			line = string.gsub(line, "^%s+", "")
+			line = string.gsub(line, "%s+$", "")
 			
 			if not in_comment
 			then
-				defining_macro_val = defining_macro_val .. " " .. line
+				if defining_macro_val ~= ""
+				then
+					defining_macro_val = defining_macro_val .. " " .. line
+				else
+					defining_macro_val = line
+				end
 			end
 			
 			if not trailing_slash
@@ -196,7 +205,10 @@ local function _preprocess_file(filename, context)
 			-- #define (define_p1) (define_p2)
 			
 			-- Strip trailing slash (if present)
-			define_p2 = string.gsub(define_p2, "\\$", 1)
+			define_p2 = string.gsub(define_p2, "\\$", "")
+			
+			-- Strip any trailing whitespace
+			define_p2 = string.gsub(define_p2, "%s+$", "")
 			
 			if trailing_slash
 			then

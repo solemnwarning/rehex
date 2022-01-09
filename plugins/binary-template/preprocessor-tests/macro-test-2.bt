@@ -1,0 +1,10 @@
+#define FOO \
+	This macro \
+	spans multiple \
+	lines
+
+#define BAR This macro \
+	also spans multiple lines
+
+FOO
+BAR

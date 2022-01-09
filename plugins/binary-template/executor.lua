@@ -421,6 +421,11 @@ local _builtin_types = {
 	string = { name = "string", base = "string" },
 }
 
+local _builtin_variables = {
+	["true"]  = { _builtin_types.int, _make_const_plain_value(1) },
+	["false"] = { _builtin_types.int, _make_const_plain_value(0) },
+}
+
 local function _builtin_function_BigEndian(context, argv)
 	context.big_endian = true
 end
@@ -1797,11 +1802,17 @@ local function execute(interface, statements)
 		base_types[k] = v
 	end
 	
+	local base_vars = {}
+	for k, v in pairs(_builtin_variables)
+	do
+		base_vars[k] = v
+	end
+	
 	table.insert(context.stack, {
 		frame_type = FRAME_TYPE_BASE,
 		
 		var_types = base_types,
-		vars = {},
+		vars = base_vars,
 	})
 	
 	_exec_statements(context, statements)

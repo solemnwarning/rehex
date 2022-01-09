@@ -144,6 +144,11 @@ local function _capture_type(text, pos)
 	end
 end
 
+local function _skip_type(text, pos)
+	local ret = _capture_type(text, pos)
+	return ret
+end
+
 local function _capture_name(text, pos)
 	local match_begin, match_end = text:find("^[%a_][%w_]*", pos)
 	if match_begin ~= nil
@@ -207,7 +212,11 @@ local _parser = spc * P{
 		+ spc * comment("/*", "*/") * spc,
 	
 	EXPR =
-		Ct( P(_capture_position) * Cc("_expr") * Ct( V("EXPR2") ^ 1 ) ),
+		-- TODO: Capture casts rather than discarding them
+		Ct( P(_capture_position) * Cc("_expr") * Ct(
+			P("(") * spc * P(_skip_type) * P(")") * V("EXPR") ^ 1 +
+			V("EXPR2") ^ 1
+		) ),
 	
 	EXPR2 =
 		P("(") * spc * V("EXPR") * P(")") * spc +

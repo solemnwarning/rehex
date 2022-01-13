@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -174,6 +174,8 @@ REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &documen
 	
 	this->document_ctrl.auto_cleanup_bind(EV_DISP_SETTING_CHANGED, &REHex::Disassemble::OnBaseChanged, this);
 	
+	wxGetApp().settings->Bind(PREFERRED_ASM_SYNTAX_CHANGED, &REHex::Disassemble::OnAsmSyntaxChanged, this);
+	
 	reinit_disassembler();
 	update();
 }
@@ -336,6 +338,22 @@ void REHex::Disassemble::reinit_disassembler()
 		/* TODO: Report error */
 		return;
 	}
+	
+	if(desc.arch == CS_ARCH_X86)
+	{
+		AsmSyntax preferred_asm_syntax = wxGetApp().settings->get_preferred_asm_syntax();
+		
+		switch(preferred_asm_syntax)
+		{
+			case AsmSyntax::INTEL:
+				cs_option(disassembler, CS_OPT_SYNTAX, CS_OPT_SYNTAX_INTEL);
+				break;
+				
+			case AsmSyntax::ATT:
+				cs_option(disassembler, CS_OPT_SYNTAX, CS_OPT_SYNTAX_ATT);
+				break;
+		}
+	}
 }
 
 std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble(off_t offset, const void *code, size_t size)
@@ -392,4 +410,15 @@ void REHex::Disassemble::OnBaseChanged(wxCommandEvent &event)
 	
 	/* Continue propogation. */
 	event.Skip();
+}
+
+void REHex::Disassemble::OnAsmSyntaxChanged(wxCommandEvent &event)
+{
+	const CSArchitecture& arch_desc = arch_list[ arch->GetSelection() ];
+	
+	if(arch_desc.arch == CS_ARCH_X86)
+	{
+		reinit_disassembler();
+		update();
+	}
 }

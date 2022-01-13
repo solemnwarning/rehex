@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -71,6 +71,7 @@ namespace REHex {
 			void OnArch(wxCommandEvent &event);
 			void OnDataModified(OffsetLengthEvent &event);
 			void OnBaseChanged(wxCommandEvent &event);
+			void OnAsmSyntaxChanged(wxCommandEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

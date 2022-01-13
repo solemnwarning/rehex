@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -46,8 +46,10 @@ bool REHex::App::OnInit()
 	ArtProvider::init();
 	
 	config = new wxConfig("REHex");
-	
 	config->SetPath("/");
+	
+	settings = new AppSettings(config);
+	
 	last_directory = config->Read("last-directory", "");
 	font_size_adjustment = config->ReadLong("font-size-adjustment", 0);
 	
@@ -138,6 +140,7 @@ int REHex::App::OnExit()
 	
 	delete active_palette;
 	delete recent_files;
+	delete settings;
 	delete config;
 	
 	#ifdef _WIN32

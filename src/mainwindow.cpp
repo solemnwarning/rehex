@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -72,6 +72,8 @@ enum {
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
+	ID_ASM_SYNTAX_INTEL,
+	ID_ASM_SYNTAX_ATT,
 	ID_HIGHLIGHT_SELECTION_MATCH,
 	ID_HEX_OFFSETS,
 	ID_DEC_OFFSETS,
@@ -148,6 +150,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
+	
+	EVT_MENU(ID_ASM_SYNTAX_INTEL, REHex::MainWindow::OnAsmSyntax)
+	EVT_MENU(ID_ASM_SYNTAX_ATT,   REHex::MainWindow::OnAsmSyntax)
 	
 	EVT_MENU(ID_HIGHLIGHT_SELECTION_MATCH, REHex::MainWindow::OnHighlightSelectionMatch)
 	
@@ -318,6 +323,23 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 			}, itm->GetId(), itm->GetId());
 			
 			tool_panel_name_to_tpm_id[tpr->name] = itm->GetId();
+		}
+		
+		asm_syntax_menu = new wxMenu;
+		view_menu->AppendSubMenu(asm_syntax_menu, "x86 disassembly syntax");
+		
+		asm_syntax_menu->AppendRadioItem(ID_ASM_SYNTAX_INTEL, "Intel");
+		asm_syntax_menu->AppendRadioItem(ID_ASM_SYNTAX_ATT,   "AT&T");
+		
+		switch(wxGetApp().settings->get_preferred_asm_syntax())
+		{
+			case AsmSyntax::INTEL:
+				asm_syntax_menu->Check(ID_ASM_SYNTAX_INTEL, true);
+				break;
+				
+			case AsmSyntax::ATT:
+				asm_syntax_menu->Check(ID_ASM_SYNTAX_ATT, true);
+				break;
 		}
 		
 		view_menu->AppendSeparator(); /* ---- */
@@ -1068,6 +1090,22 @@ void REHex::MainWindow::OnInlineCommentsMode(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnAsmSyntax(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	if(asm_syntax_menu->IsChecked(ID_ASM_SYNTAX_INTEL))
+	{
+		wxGetApp().settings->set_preferred_asm_syntax(AsmSyntax::INTEL);
+		tab->doc_ctrl->Refresh();
+	}
+	else if(asm_syntax_menu->IsChecked(ID_ASM_SYNTAX_ATT))
+	{
+		wxGetApp().settings->set_preferred_asm_syntax(AsmSyntax::ATT);
+		tab->doc_ctrl->Refresh();
+	}
+}
+
 void REHex::MainWindow::OnDocumentDisplayMode(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1180,6 +1218,7 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	config->Write("theme", wxString(active_palette->get_name()));
 	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
 	config->Write("font-name", wxString(wxGetApp().get_font_name()));
+	wxGetApp().settings->write(config);
 	
 	// Clean out all previous settings
 	config->DeleteGroup("/default-view/");

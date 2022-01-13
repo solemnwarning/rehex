@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,6 +26,7 @@
 #include <vector>
 #include <wx/wx.h>
 
+#include "AppSettings.hpp"
 #include "ByteRangeSet.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
@@ -62,6 +63,7 @@ namespace REHex
 			SharedDocumentPointer doc;
 			off_t virt_offset;
 			
+			cs_arch arch;
 			size_t disassembler;
 			
 			int offset_text_x;  /**< X co-ordinate of left edge of offsets. */
@@ -75,6 +77,8 @@ namespace REHex
 			
 			off_t longest_instruction;
 			size_t longest_disasm;
+			
+			AsmSyntax preferred_asm_syntax;
 			
 			void disasm_instruction(const uint8_t **code, size_t *size, uint64_t *address, cs_insn *insn);
 			

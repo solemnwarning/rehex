@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,6 +18,7 @@
 #ifndef REHEX_APP_HPP
 #define REHEX_APP_HPP
 
+#include "AppSettings.hpp"
 #include "ConsoleBuffer.hpp"
 
 #include <functional>
@@ -34,6 +35,8 @@ namespace REHex {
 	{
 		public:
 			wxConfig *config;
+			AppSettings *settings;
+			
 			wxFileHistory *recent_files;
 			wxLocale *locale;
 			

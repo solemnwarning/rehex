@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -107,6 +107,7 @@ namespace REHex {
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
 			void OnInlineCommentsMode(wxCommandEvent &event);
+			void OnAsmSyntax(wxCommandEvent &event);
 			void OnDocumentDisplayMode(wxCommandEvent &event);
 			void OnHighlightSelectionMatch(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
@@ -243,6 +244,7 @@ namespace REHex {
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
 			
 			wxMenu *inline_comments_menu;
+			wxMenu *asm_syntax_menu;
 			
 			void _update_status_offset(Tab *tab);
 			void _update_status_selection(REHex::DocumentCtrl *doc_ctrl);

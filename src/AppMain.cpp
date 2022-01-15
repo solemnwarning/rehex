@@ -103,7 +103,7 @@ bool REHex::App::OnInit()
 	config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
 	#endif
 	
-	REHex::MainWindow *window = new REHex::MainWindow(windowSize);
+	window = new REHex::MainWindow(windowSize);
 	
 	#ifndef __APPLE__
 	bool maximise = config->ReadBool("/default-view/window-maximised", false);

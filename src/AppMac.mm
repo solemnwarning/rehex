@@ -22,6 +22,10 @@
 #undef INTEL /* Sure thing Apple, go ahead and define that macro. */
 #endif
 
+#ifdef isset
+#undef isset /* I guess they took the comment above to heart. */
+#endif
+
 #include "App.hpp"
 
 #if !wxCHECK_VERSION(3,1,3)

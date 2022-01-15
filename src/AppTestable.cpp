@@ -332,3 +332,15 @@ int REHex::App::get_caret_off_time_ms()
 	return FALLBACK_CARET_BLINK;
 }
 #endif
+
+#ifdef __APPLE__
+void REHex::App::MacOpenFiles(const wxArrayString &filenames)
+{
+	size_t n_files = filenames.GetCount();
+	
+	for(size_t i = 0; i < n_files; ++i)
+	{
+		window->open_file(filenames[i].ToStdString());
+	}
+}
+#endif

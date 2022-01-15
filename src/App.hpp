@@ -20,6 +20,7 @@
 
 #include "AppSettings.hpp"
 #include "ConsoleBuffer.hpp"
+#include "mainwindow.hpp"
 
 #include <functional>
 #include <map>
@@ -188,10 +189,16 @@ namespace REHex {
 			virtual bool OnInit();
 			virtual int OnExit();
 			
+			#ifdef __APPLE__
+			virtual void MacOpenFiles(const wxArrayString &fileNames) override;
+			#endif
+			
 		private:
 			std::string last_directory;
 			int font_size_adjustment;
 			std::string font_name;
+			
+			MainWindow *window;
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);

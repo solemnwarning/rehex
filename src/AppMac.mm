@@ -18,6 +18,10 @@
 #import <Foundation/Foundation.h>
 #include <wx/version.h>
 
+#ifdef INTEL
+#undef INTEL /* Sure thing Apple, go ahead and define that macro. */
+#endif
+
 #include "App.hpp"
 
 #if !wxCHECK_VERSION(3,1,3)

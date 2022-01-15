@@ -282,6 +282,7 @@ EOF
 	
 	export WX_CONFIG="${_rehex_wxwidgets_target_dir}/bin/wx-config"
 	
+	export CXXFLAGS="-I${_rehex_libunistring_target_dir}/include/"
 	export LDLIBS="-L${_rehex_libunistring_target_dir}/lib/ -lunistring"
 fi
 

@@ -32,20 +32,36 @@ shell-or-die = $\
 		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)),$\
 		$(error $(1) exited with status $(lastword $(sod_out))))
 
-WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
-WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
+# Check if we are building target(s) that don't need to compile anything and
+# skip fetching compiler flags from wx-config/pkg-config/etc if so, this avoids
+# having to have our dependencies on build hosts that are going to use a chroot
+# or other container for doing the actual build.
 
-CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
-CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
+NONCOMPILE_TARGETS=clean distclean dist
 
-JANSSON_CFLAGS ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --cflags)
-JANSSON_LIBS   ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --libs)
+need_compiler_flags=1
+ifneq ($(MAKECMDGOALS),)
+	ifeq ($(filter-out $(NONCOMPILE_TARGETS),$(MAKECMDGOALS)),)
+		need_compiler_flags=0
+	endif
+endif
 
-LUA_CFLAGS ?= $(call shell-or-die,pkg-config $(LUA_PKG) --cflags)
-LUA_LIBS   ?= $(call shell-or-die,pkg-config $(LUA_PKG) --libs)
-
-GTK_CFLAGS = $$($(GTKCONFIG_EXE) --cflags)
-GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
+ifeq ($(need_compiler_flags),1)
+	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
+	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
+	
+	CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
+	CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
+	
+	JANSSON_CFLAGS ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --cflags)
+	JANSSON_LIBS   ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --libs)
+	
+	LUA_CFLAGS ?= $(call shell-or-die,pkg-config $(LUA_PKG) --cflags)
+	LUA_LIBS   ?= $(call shell-or-die,pkg-config $(LUA_PKG) --libs)
+	
+	GTK_CFLAGS = $$($(GTKCONFIG_EXE) --cflags)
+	GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
+endif
 
 ifeq ($(DEBUG),)
 	DEBUG=0

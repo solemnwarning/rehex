@@ -50,6 +50,7 @@ local _eval_for
 local _eval_switch
 local _eval_break
 local _eval_continue
+local _eval_cast
 local _eval_statement;
 local _exec_statements;
 
@@ -105,43 +106,32 @@ end
 -- _eval_call() function handles this specific object specially.
 local _variadic_placeholder = {}
 
-local function _make_named_type(name, type)
+local function _make_overlay_type(base_type, child_type)
 	local new_type = {};
 	
-	for k,v in pairs(type)
+	for k,v in pairs(base_type)
 	do
 		new_type[k] = v
 	end
 	
-	new_type.name = name
+	for k,v in pairs(child_type)
+	do
+		new_type[k] = v
+	end
 	
 	return new_type
 end
 
-local function _make_aray_type(type)
-	local new_type = {};
-	
-	for k,v in pairs(type)
-	do
-		new_type[k] = v
-	end
-	
-	new_type.is_array = true
-	
-	return new_type
+local function _make_named_type(name, type_info)
+	return _make_overlay_type(type_info, { name = name })
 end
 
-local function _make_nonarray_type(type)
-	local new_type = {};
-	
-	for k,v in pairs(type)
-	do
-		new_type[k] = v
-	end
-	
-	new_type.is_array = false
-	
-	return new_type
+local function _make_aray_type(type_info)
+	return _make_overlay_type(type_info, { is_array = true })
+end
+
+local function _make_nonarray_type(type_info)
+	return _make_overlay_type(type_info, { is_array = false })
 end
 
 local function _get_type_name(type)
@@ -180,6 +170,34 @@ local function _get_type_name(type)
 		end
 	else
 		return type_name
+	end
+end
+
+local function _make_signed_type(type_info)
+	if type_info.signed_overlay ~= nil
+	then
+		local new_type = _make_overlay_type(type_info, type_info.signed_overlay)
+		
+		new_type.name = "signed " .. new_type.name:gsub("^signed ", ""):gsub("^unsigned ", "")
+		
+		return new_type
+	else
+		-- TODO: File/line number
+		error("Attempt to create invalid 'signed' version of type '" .. _get_type_name(type_info) .. "'")
+	end
+end
+
+local function _make_unsigned_type(type_info)
+	if type_info.unsigned_overlay ~= nil
+	then
+		local new_type = _make_overlay_type(type_info, type_info.unsigned_overlay)
+		
+		new_type.name = "unsigned " .. new_type.name:gsub("^signed ", ""):gsub("^unsigned ", "")
+		
+		return new_type
+	else
+		-- TODO: File/line number
+		error("Attempt to create invalid 'unsigned' version of type '" .. _get_type_name(type_info) .. "'")
 	end
 end
 
@@ -351,16 +369,36 @@ local function _make_file_value(context, offset, length, fmt)
 	}
 end
 
-local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1" }
-local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1" }
-local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2" }
-local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2" }
-local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4" }
-local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4" }
-local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8" }
-local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8" }
+local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1", int_mask = 0xFF }
+local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1", int_mask = 0xFF }
+local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2", int_mask = 0xFFFF }
+local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2", int_mask = 0xFFFF }
+local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4", int_mask = 0xFFFFFFFF }
+local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4", int_mask = 0xFFFFFFFF }
+local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8", int_mask = 0xFFFFFFFFFFFFFFFF }
+local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8", int_mask = 0xFFFFFFFFFFFFFFFF }
 local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number", string_fmt = "f" }
 local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number", string_fmt = "d" }
+
+_builtin_type_int8  .signed_overlay   = _builtin_type_int8
+_builtin_type_int8  .unsigned_overlay = _builtin_type_uint8
+_builtin_type_uint8 .signed_overlay   = _builtin_type_int8
+_builtin_type_uint8 .unsigned_overlay = _builtin_type_uint8
+
+_builtin_type_int16  .signed_overlay   = _builtin_type_int16
+_builtin_type_int16  .unsigned_overlay = _builtin_type_uint16
+_builtin_type_uint16 .signed_overlay   = _builtin_type_int16
+_builtin_type_uint16 .unsigned_overlay = _builtin_type_uint16
+
+_builtin_type_int32  .signed_overlay   = _builtin_type_int32
+_builtin_type_int32  .unsigned_overlay = _builtin_type_uint32
+_builtin_type_uint32 .signed_overlay   = _builtin_type_int32
+_builtin_type_uint32 .unsigned_overlay = _builtin_type_uint32
+
+_builtin_type_int64  .signed_overlay   = _builtin_type_int64
+_builtin_type_int64  .unsigned_overlay = _builtin_type_uint64
+_builtin_type_uint64 .signed_overlay   = _builtin_type_int64
+_builtin_type_uint64 .unsigned_overlay = _builtin_type_uint64
 
 local _builtin_types = {
 	char = _make_named_type("char", _builtin_type_int8),
@@ -552,16 +590,49 @@ local _builtin_functions = {
 }
 
 _find_type = function(context, type_name)
+	local convert = nil
+	
+	if type_name:find("^unsigned ") ~= nil
+	then
+		convert = "unsigned"
+		type_name = type_name:gsub("^unsigned ", "")
+	elseif type_name:find("^signed ") ~= nil
+	then
+		convert = "signed"
+		type_name = type_name:gsub("^signed ", "")
+	end
+	
+	local type_info = nil
+	
 	for i = #context.stack, 1, -1
 	do
 		for k, v in pairs(context.stack[i].var_types)
 		do
 			if k == type_name
 			then
-				return v
+				type_info = v
+				break
 			end
 		end
+		
+		if type_info
+		then
+			break
+		end
 	end
+	
+	if type_info and convert
+	then
+		if convert == "unsigned"
+		then
+			type_info = _make_unsigned_type(type_info)
+		elseif convert == "signed"
+		then
+			type_info = _make_signed_type(type_info)
+		end
+	end
+	
+	return type_info
 end
 
 --
@@ -1673,6 +1744,35 @@ _eval_continue = function(context, statement)
 	return { flowctrl = FLOWCTRL_TYPE_CONTINUE }, retval
 end
 
+_eval_cast = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local type_name = statement[4]
+	local value_expr = statement[5]
+	
+	local type_info = _find_type(context, type_name)
+	if type_info == nil
+	then
+		error("Unknown type '" .. type_name .. "' used in cast at " .. filename .. ":" .. line_num)
+	end
+	
+	local value_t, value_v = _eval_statement(context, value_expr)
+	if not _type_assignable(type_info, value_t)
+	then
+		error("Invalid conversion from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if type_info.int_mask ~= nil
+	then
+		value_v = _make_const_plain_value(value_v:get() & type_info.int_mask)
+	else
+		error("Internal error: Unhandled cast from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	return type_info, value_v
+end
+
 _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -1717,6 +1817,7 @@ _ops = {
 	["switch"]         = _eval_switch,
 	["break"]          = _eval_break,
 	["continue"]       = _eval_continue,
+	["cast"]           = _eval_cast,
 	
 	add      = _eval_add,
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),

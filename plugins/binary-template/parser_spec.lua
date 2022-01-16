@@ -1180,4 +1180,48 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses casts", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("(int)x;")
+		
+		expect = {
+			{ "UNKNOWN FILE", 1, "cast", "int",
+				{ "UNKNOWN FILE", 1, "ref", { "x" } } }
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("(int)(x);")
+		
+		expect = {
+			{ "UNKNOWN FILE", 1, "cast", "int",
+				{ "UNKNOWN FILE", 1, "ref", { "x" } } }
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("(int)func(x);")
+		
+		expect = {
+			{ "UNKNOWN FILE", 1, "cast", "int",
+				{ "UNKNOWN FILE", 1, "call", "func", {
+					{ "UNKNOWN FILE", 1, "ref", { "x" } } } } }
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("(unsigned char)(int)func(x);")
+		
+		expect = {
+			{ "UNKNOWN FILE", 1, "cast", "unsigned char",
+				{ "UNKNOWN FILE", 1, "cast", "int",
+					{ "UNKNOWN FILE", 1, "call", "func", {
+						{ "UNKNOWN FILE", 1, "ref", { "x" } } } } } }
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

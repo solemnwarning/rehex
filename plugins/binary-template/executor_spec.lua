@@ -3084,4 +3084,71 @@ describe("executor", function()
 			})
 			end, "Unexpected type 'int' passed to 'case' statement (expected 'string') at test.bt:3")
 	end)
+	
+	it("allows casting between different integer types", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 100 } },
+			{ "test.bt", 1, "local-variable", "int", "c", nil, nil, { "test.bt", 1, "num", 100 } },
+			
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(char)(i) = %d" },           { "test.bt", 1, "cast", "char",          { "test.bt", 1, "ref", { "i" }  } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(i) = %d" },  { "test.bt", 1, "cast", "unsigned char", { "test.bt", 1, "ref", { "i" }  } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(signed char)(i) = %d" },    { "test.bt", 1, "cast", "signed char",   { "test.bt", 1, "ref", { "i" }  } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(int)(c) = %d"    },         { "test.bt", 1, "cast", "int",           { "test.bt", 1, "ref", { "c" }  } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned int)(c) = %d"  },  { "test.bt", 1, "cast", "unsigned int",  { "test.bt", 1, "ref", { "c" }  } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(signed int)(c) = %d"  },    { "test.bt", 1, "cast", "signed int",    { "test.bt", 1, "ref", { "c" }  } } } },
+		})
+		
+		local expect_log = {
+			"print((char)(i) = 100)",
+			"print((unsigned char)(i) = 100)",
+			"print((signed char)(i) = 100)",
+			"print((int)(c) = 100)",
+			"print((unsigned int)(c) = 100)",
+			"print((signed int)(c) = 100)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles overflow when casting to unsigned types", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(522) = %d" },     { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", 522 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(ushort)(66536) = %d" },  { "test.bt", 1, "cast", "ushort", { "test.bt", 1, "num", 66536 } } } },
+		})
+		
+		local expect_log = {
+			"print((uchar)(522) = 10)",
+			"print((ushort)(66536) = 1000)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles underflow when casting to unsigned types", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-1) = %d" },   { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -1 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-128) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -128 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-129) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -129 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-255) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -255 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-256) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -256 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-257) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -257 } } } },
+		})
+		
+		local expect_log = {
+			"print((uchar)(-1) = 255)",
+			"print((uchar)(-128) = 128)",
+			"print((uchar)(-129) = 127)",
+			"print((uchar)(-255) = 1)",
+			"print((uchar)(-256) = 0)",
+			"print((uchar)(-257) = 255)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

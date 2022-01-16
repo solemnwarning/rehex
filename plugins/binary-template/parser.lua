@@ -163,6 +163,7 @@ local function _capture_type(text, pos)
 		"^(enum)%s+([%a_][%d%a_]*)%s*",
 		"^(struct)%s+([%a_][%d%a_]*)%s*",
 		"^(unsigned)%s+([%a_][%d%a_]*)%s*",
+		"^(signed)%s+([%a_][%d%a_]*)%s*",
 		"^([%a_][%d%a_]*)%s*",
 	}
 	
@@ -255,8 +256,7 @@ local _parser = spc * P{
 	EXPR =
 		Ct( P(_capture_position) * Cc("_expr") * Ct(
 			(
-				-- TODO: Capture casts rather than discarding them
-				P("(") * spc * P(_skip_type) * P(")") * V("EXPR") +
+				Ct( P(_capture_position) * Cc("cast") * P("(") * spc * P(_capture_type) * P(")") * V("EXPR") ) +
 				V("EXPR2")
 			) ^ 1
 		) ),
@@ -535,6 +535,10 @@ local function _compile_expr(expr)
 			do
 				_compile_expr(args[i])
 			end
+		elseif expr_parts[i][3] == "cast"
+		then
+			local sub_expr = expr_parts[i][5]
+			_compile_expr(sub_expr)
 		end
 	end
 	

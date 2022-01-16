@@ -77,16 +77,11 @@ describe("executor", function()
 			"set_comment(0, 4, foo)",
 			
 			"set_data_type(4, 4, s32le)",
-			"set_comment(4, 4, bar[0])",
-			
 			"set_data_type(8, 4, s32le)",
-			"set_comment(8, 4, bar[1])",
-			
 			"set_data_type(12, 4, s32le)",
-			"set_comment(12, 4, bar[2])",
-			
 			"set_data_type(16, 4, s32le)",
-			"set_comment(16, 4, bar[3])",
+			
+			"set_comment(4, 16, bar)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -535,16 +530,10 @@ describe("executor", function()
 		
 		local expect_log = {
 			"set_data_type(0, 4, s32le)",
-			"set_comment(0, 4, a[0])",
-			
 			"set_data_type(4, 4, s32le)",
-			"set_comment(4, 4, a[1])",
-			
 			"set_data_type(8, 4, s32le)",
-			"set_comment(8, 4, a[2])",
-			
 			"set_data_type(12, 4, s32le)",
-			"set_comment(12, 4, a[3])",
+			"set_comment(0, 16, a)",
 			
 			"print(a[0] = 1)",
 			"print(a[1] = 2)",

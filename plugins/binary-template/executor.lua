@@ -1059,6 +1059,8 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			}
 		end
 		
+		local array_base_off = context.next_variable
+		
 		for i = 0, array_length_val:get() - 1
 		do
 			local base_off = context.next_variable
@@ -1075,10 +1077,18 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 					context.interface.set_data_type(base_off, length, data_type_key)
 				end
 				
-				context.interface.set_comment(base_off, length, var_name .. "[" .. i .. "]")
+				if type_info.base == "struct"
+				then
+					context.interface.set_comment(base_off, length, var_name .. "[" .. i .. "]")
+				end
 				
 				context.next_variable = base_off + length
 			end
+		end
+		
+		if not context.declaring_local_var and type_info.base ~= "struct"
+		then
+			context.interface.set_comment(array_base_off, (context.next_variable - array_base_off), var_name)
 		end
 	end
 	

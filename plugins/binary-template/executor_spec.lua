@@ -1231,6 +1231,121 @@ describe("executor", function()
 		end, "return operand type 'int' not compatible with function return type 'void' at test.bt:1")
 	end)
 	
+	it("allows addition of integers with '+' operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "10 + 20 = %s" },
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "num", 10 },
+					{ "test.bt", 1, "num", 20 } } } },
+		})
+		
+		local expect_log = {
+			"print(10 + 20 = 30)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows addition of real numbers with '+' operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "10.2 + 20.4 = %s" },
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "num", 10.2 },
+					{ "test.bt", 1, "num", 20.4 } } } },
+		})
+		
+		local expect_log = {
+			"print(10.2 + 20.4 = 30.6)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows concatenation of strings with '+' operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "abc + def = %s" },
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "str", "def" } } } },
+		})
+		
+		local expect_log = {
+			"print(abc + def = abcdef)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows concatenation of char arrays with '+' operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "char", "char_array1", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "abc" } },
+			{ "test.bt", 1, "local-variable", "char", "char_array2", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "def" } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "char_array1 + char_array2 = %s" },
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "ref", { "char_array1" } },
+					{ "test.bt", 1, "ref", { "char_array2" } } } } },
+		})
+		
+		local expect_log = {
+			"print(char_array1 + char_array2 = abcdef)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows concatenation of strings and char arrays with '+' operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "char", "char_array2", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "def" } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "abc + char_array2 = %s" },
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "ref", { "char_array2" } } } } },
+		})
+		
+		local expect_log = {
+			"print(abc + char_array2 = abcdef)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on addition of strings and numbers with '+' operator", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "num", 123 } },
+			})
+			end, "Invalid operands to '+' operator - 'string' and 'int' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "add",
+					{ "test.bt", 1, "num", 123 },
+					{ "test.bt", 1, "str", "abc" } },
+			})
+			end, "Invalid operands to '+' operator - 'int' and 'string' at test.bt:1")
+	end)
+	
 	it("implements > operator", function()
 		local interface, log = test_interface()
 		

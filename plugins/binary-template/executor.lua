@@ -238,11 +238,47 @@ local function _get_value_size(type, value)
 end
 
 local function _type_is_string(type_info)
-	return not type_info.is_array and type_info.base == "string"
+	return type_info ~= nil and not type_info.is_array and type_info.base == "string"
 end
 
 local function _type_is_char_array(type_info)
-	return type_info.is_array and type_info.type_key == _builtin_types.char.type_key
+	return type_info ~= nil and type_info.is_array and type_info.type_key == _builtin_types.char.type_key
+end
+
+local function _type_is_number(type_info)
+	return type_info ~= nil and not type_info.is_array and type_info.base == "number"
+end
+
+local function _type_is_stringish(type_info)
+	return _type_is_string(type_info) or _type_is_char_array(type_info)
+end
+
+local function _stringify_value(type_info, value)
+	if _type_is_string(type_info)
+	then
+		return value:get()
+	elseif _type_is_char_array(type_info)
+	then
+		local bytes = {}
+		
+		for i = 1, #value
+		do
+			local byte = value[i]:get()
+			if byte == 0
+			then
+				break
+			end
+			
+			table.insert(bytes, byte)
+		end
+		
+		return string.char(table.unpack(bytes))
+	elseif _type_is_number(type_info)
+	then
+		return value:get() .. ""
+	else
+		error("Internal error: Unexpected type '" .. _get_type_name(type_info) .. "' passed to _stringify_value()")
+	end
 end
 
 local function _type_assignable(dst_t, src_t)
@@ -289,21 +325,7 @@ local function _assign_value(dst_type, dst_val, src_type, src_val)
 	if _type_is_string(dst_type) and _type_is_char_array(src_type)
 	then
 		-- Assignment from char[] to string - set the string to the chars from the array
-		
-		local bytes = {}
-		
-		for i = 1, #src_val
-		do
-			local byte = src_val[i]:get()
-			if byte == 0
-			then
-				break
-			end
-			
-			table.insert(bytes, byte)
-		end
-		
-		dst_val:set(string.char(table.unpack(bytes)))
+		dst_val:set(_stringify_value(src_type, src_val))
 		
 		return
 	elseif _type_is_char_array(dst_type) and _type_is_string(src_type)
@@ -811,22 +833,17 @@ _eval_add = function(context, statement)
 	local v1_t, v1_v = _eval_statement(context, statement[4])
 	local v2_t, v2_v = _eval_statement(context, statement[5])
 	
-	if v1_t == nil or v2_t == nil or v1_t.base ~= v2_t.base
-	then
-		local v1_type = v1 and v1_t.name or "void"
-		local v2_type = v2 and v2_t.name or "void"
-		
-		error("Invalid operands to '+' operator - '" .. v1_type .. "' and '" .. v2_type .. "' at " .. filename .. ":" .. line_num)
-	end
-	
-	if v1_t.base == "number"
+	if _type_is_number(v1_t) and _type_is_number(v2_t)
 	then
 		return v1_t, _make_const_plain_value(v1_v:get() + v2_v:get())
-	elseif v1[1].base == "string"
+	elseif _type_is_stringish(v1_t) and _type_is_stringish(v2_t)
 	then
-		return v1_t, _make_const_plain_value(v1_v:get() .. v2_v:get())
+		local v1_s = _stringify_value(v1_t, v1_v)
+		local v2_s = _stringify_value(v2_t, v2_v)
+		
+		return _builtin_types.string, _make_const_plain_value(v1_s .. v2_s)
 	else
-		error("Internal error: unknown base type '" .. v1_t.base "' at " .. filename .. ":" .. line_num)
+		error("Invalid operands to '+' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
 	end
 end
 

@@ -1,0 +1,11 @@
+[% WRAPPER page.tt
+   title = "Index"
+%]
+
+<h2>Index</h2>
+
+<p>
+Hello world
+</p>
+
+[% END %]

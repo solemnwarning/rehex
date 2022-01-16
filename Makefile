@@ -436,6 +436,18 @@ googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
 wxLua/%.cpp: $(WXLUA_BINDINGS)
 	@true
 
+.PHONY: help/rehex.chm
+help/rehex.chm:
+	$(MAKE) -C help/ rehex.chm
+
+.PHONY: help/rehex.htb
+help/rehex.htb:
+	$(MAKE) -C help/ rehex.htb
+
+.PHONY: online-help
+online-help:
+	$(MAKE) -C help/ online-help
+
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)
 
 prefix      ?= /usr/local

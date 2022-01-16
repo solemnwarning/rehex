@@ -15,6 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <wx/filesys.h>
+#include <wx/fs_zip.h>
+
 #include "platform.hpp"
 
 #include "App.hpp"
@@ -42,6 +45,7 @@ bool REHex::App::OnInit()
 	#endif
 	
 	wxImage::AddHandler(new wxPNGHandler);
+	wxFileSystem::AddHandler(new wxZipFSHandler);
 	
 	ArtProvider::init();
 	

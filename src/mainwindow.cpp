@@ -25,6 +25,7 @@
 #include <wx/event.h>
 #include <wx/filename.h>
 #include <wx/fontenum.h>
+#include <wx/html/helpctrl.h>
 #include <wx/msgdlg.h>
 #include <wx/aui/auibook.h>
 #include <wx/numdlg.h>
@@ -90,6 +91,7 @@ enum {
 	ID_CLOSE_OTHERS,
 	ID_GITHUB,
 	ID_DONATE,
+	ID_HELP,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -171,6 +173,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(ID_GITHUB,  REHex::MainWindow::OnGithub)
 	EVT_MENU(ID_DONATE,  REHex::MainWindow::OnDonate)
+	EVT_MENU(ID_HELP,    REHex::MainWindow::OnHelp)
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(  wxID_ANY, REHex::MainWindow::OnDocumentChange)
@@ -445,6 +448,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		help_menu->Append(ID_GITHUB, "Visit &Github page");
 		help_menu->Append(ID_DONATE, "Donate with &Paypal");
 		help_menu->Append(wxID_ABOUT, "&About");
+		help_menu->Append(ID_HELP, "&Help");
 		
 		call_setup_hooks(SetupPhase::HELP_MENU_BOTTOM);
 		
@@ -1245,6 +1249,13 @@ void REHex::MainWindow::OnGithub(wxCommandEvent &event)
 void REHex::MainWindow::OnDonate(wxCommandEvent &event)
 {
 	wxLaunchDefaultBrowser("https://www.solemnwarning.net/rehex/donate");
+}
+
+void REHex::MainWindow::OnHelp(wxCommandEvent &event)
+{
+	wxHtmlHelpController *hhc = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, this);
+	hhc->AddBook(wxFileName("help/rehex.htb"), true);
+	hhc->DisplayContents();
 }
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)

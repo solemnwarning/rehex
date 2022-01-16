@@ -1,0 +1,13 @@
+<html>
+
+<head>
+<title>[% title %]</title>
+</head>
+
+<body TOPMARGIN=4 BGCOLOR=#FFFFFF TEXT=#000000 VLINK=#000000 LINK=#000000 ALINK=#000000>
+<font FACE="Arial, Lucida, Helvetica">
+[% content %]
+</font>
+</body>
+
+</html>

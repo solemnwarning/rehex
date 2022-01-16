@@ -1,0 +1,28 @@
+<html>
+
+<head>
+<title>[% title %]</title>
+</head>
+
+<body>
+[% BLOCK page_list %]
+	<ul>
+	[% FOREACH page IN contents %]
+		<li>
+		[% IF page.page == template_name %]
+			<b>[% page.title | html %]</b>
+		[% ELSE %]
+			<a href="[% page.page | html %].html">[% page.title | html %]</a>
+		[% END %]
+		[% IF !page.children.empty; INCLUDE page_list contents = page.children; END %]
+		</li>
+	[% END %]
+	</ul>
+[% END %]
+
+[% INCLUDE page_list %]
+
+[% content %]
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+[% WRAPPER page.tt
+   title = "Page 2"
+%]
+
+<h2>Page 2</h2>
+
+<p>
+Hello world
+</p>
+
+[% END %]

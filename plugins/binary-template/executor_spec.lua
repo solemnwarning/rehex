@@ -87,6 +87,41 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("doesn't set data type on char[] variables", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "char", "single_char", nil, nil },
+			{ "test.bt", 1, "variable", "uchar", "single_uchar", nil, nil },
+			{ "test.bt", 1, "variable", "char", "char_array", nil, { "test.bt", 1, "num", 10 } },
+			{ "test.bt", 1, "variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 } },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 1, s8)",
+			"set_comment(0, 1, single_char)",
+			
+			"set_data_type(1, 1, u8)",
+			"set_comment(1, 1, single_uchar)",
+			
+			"set_comment(2, 10, char_array)",
+			
+			"set_data_type(12, 1, u8)",
+			"set_data_type(13, 1, u8)",
+			"set_data_type(14, 1, u8)",
+			"set_data_type(15, 1, u8)",
+			"set_data_type(16, 1, u8)",
+			"set_data_type(17, 1, u8)",
+			"set_data_type(18, 1, u8)",
+			"set_data_type(19, 1, u8)",
+			"set_data_type(20, 1, u8)",
+			"set_data_type(21, 1, u8)",
+			"set_comment(12, 10, uchar_array)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
 	it("handles builtin function calls", function()
 		local interface, log = test_interface()
 		

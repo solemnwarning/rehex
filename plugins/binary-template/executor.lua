@@ -369,16 +369,16 @@ local function _make_file_value(context, offset, length, fmt)
 	}
 end
 
-local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1", int_mask = 0xFF }
-local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1", int_mask = 0xFF }
-local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2", int_mask = 0xFFFF }
-local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2", int_mask = 0xFFFF }
-local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4", int_mask = 0xFFFFFFFF }
-local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4", int_mask = 0xFFFFFFFF }
-local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8", int_mask = 0xFFFFFFFFFFFFFFFF }
-local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8", int_mask = 0xFFFFFFFFFFFFFFFF }
-local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number", string_fmt = "f" }
-local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number", string_fmt = "d" }
+local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1", type_key = {}, int_mask = 0xFF }
+local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1", type_key = {}, int_mask = 0xFF }
+local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2", type_key = {}, int_mask = 0xFFFF }
+local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2", type_key = {}, int_mask = 0xFFFF }
+local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4", type_key = {}, int_mask = 0xFFFFFFFF }
+local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4", type_key = {}, int_mask = 0xFFFFFFFF }
+local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8", type_key = {}, int_mask = 0xFFFFFFFFFFFFFFFF }
+local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8", type_key = {}, int_mask = 0xFFFFFFFFFFFFFFFF }
+local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number", string_fmt = "f",  type_key = {} }
+local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number", string_fmt = "d",  type_key = {} }
 
 _builtin_type_int8  .signed_overlay   = _builtin_type_int8
 _builtin_type_int8  .unsigned_overlay = _builtin_type_uint8
@@ -1057,6 +1057,14 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				_make_aray_type(type_info),
 				root_value
 			}
+		end
+		
+		-- If this is a char array we assume it is a string and don't set the s8 data type
+		-- for the range, else it would be displayed as a list of integers rather than a
+		-- contiguous byte sequence.
+		if type_info.type_key == _builtin_types.char.type_key
+		then
+			data_type_key = nil
 		end
 		
 		local array_base_off = context.next_variable

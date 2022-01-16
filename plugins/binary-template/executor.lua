@@ -26,6 +26,7 @@ local FLOWCTRL_TYPE_BREAK    = 2
 local FLOWCTRL_TYPE_CONTINUE = 4
 
 local _find_type;
+local _builtin_types
 
 local _eval_number;
 local _eval_string;
@@ -236,11 +237,25 @@ local function _get_value_size(type, value)
 	end
 end
 
+local function _type_is_string(type_info)
+	return not type_info.is_array and type_info.base == "string"
+end
+
+local function _type_is_char_array(type_info)
+	return type_info.is_array and type_info.type_key == _builtin_types.char.type_key
+end
+
 local function _type_assignable(dst_t, src_t)
 	if dst_t == nil or src_t == nil
 	then
 		-- "void" can't be assigned anywhere
 		return false
+	end
+	
+	if (_type_is_string(dst_t) and _type_is_char_array(src_t)) or (_type_is_char_array(dst_t) and _type_is_string(src_t))
+	then
+		-- can assign between char[] and string
+		return true
 	end
 	
 	if (not not dst_t.is_array) ~= (not not src_t.is_array)
@@ -269,6 +284,51 @@ local function _assign_value(dst_type, dst_val, src_type, src_val)
 	if dst_type == nil or src_type == nil
 	then
 		error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+	end
+	
+	if _type_is_string(dst_type) and _type_is_char_array(src_type)
+	then
+		-- Assignment from char[] to string - set the string to the chars from the array
+		
+		local bytes = {}
+		
+		for i = 1, #src_val
+		do
+			local byte = src_val[i]:get()
+			if byte == 0
+			then
+				break
+			end
+			
+			table.insert(bytes, byte)
+		end
+		
+		dst_val:set(string.char(table.unpack(bytes)))
+		
+		return
+	elseif _type_is_char_array(dst_type) and _type_is_string(src_type)
+	then
+		-- Assignment from string to char[] - copy characters into the string up to the
+		-- end of the array/string and fill any remaining space with zeros.
+		
+		local src_str = src_val:get()
+		local src_len = src_str:len()
+		
+		local i = 1
+		
+		while i <= #dst_val and i <= src_len
+		do
+			dst_val[i]:set(src_str:byte(i))
+			i = i + 1
+		end
+		
+		while i <= #dst_val
+		do
+			dst_val[i]:set(0)
+			i = i + 1
+		end
+		
+		return
 	end
 	
 	if (not not dst_type.is_array) ~= (not not src_type.is_array)
@@ -400,7 +460,7 @@ _builtin_type_int64  .unsigned_overlay = _builtin_type_uint64
 _builtin_type_uint64 .signed_overlay   = _builtin_type_int64
 _builtin_type_uint64 .unsigned_overlay = _builtin_type_uint64
 
-local _builtin_types = {
+_builtin_types = {
 	char = _make_named_type("char", _builtin_type_int8),
 	byte = _make_named_type("byte", _builtin_type_int8),
 	CHAR = _make_named_type("CHAR", _builtin_type_int8),
@@ -1051,10 +1111,12 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		
 		root_value = {}
 		
+		local array_type_info = _make_aray_type(type_info)
+		
 		for _,t in ipairs(dest_tables)
 		do
 			t[var_name] = {
-				_make_aray_type(type_info),
+				array_type_info,
 				root_value
 			}
 		end
@@ -1098,6 +1160,8 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		then
 			context.interface.set_comment(array_base_off, (context.next_variable - array_base_off), var_name)
 		end
+		
+		type_info = array_type_info
 	end
 	
 	if initial_value ~= nil

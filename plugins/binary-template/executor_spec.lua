@@ -1836,6 +1836,170 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("allows initialising a char array with a string", function()
+		local interface, log = test_interface()
+		
+		local print_elem = function(i)
+			return { "test.bt", 10 + i, "call", "Printf", {
+				{ "test.bt", 10 + i, "str", "char_array[" .. i .. "] = %d" },
+				{ "test.bt", 10 + i, "ref", { "char_array", { "test.bt", 10 + i, "num", i } } } } }
+		end
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "char", "char_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+			
+			print_elem(0),
+			print_elem(1),
+			print_elem(2),
+			print_elem(3),
+			print_elem(4),
+			print_elem(5),
+			print_elem(6),
+			print_elem(7),
+			print_elem(8),
+			print_elem(9),
+		})
+		
+		local expect_log = {
+			"print(char_array[0] = 104)",
+			"print(char_array[1] = 101)",
+			"print(char_array[2] = 108)",
+			"print(char_array[3] = 108)",
+			"print(char_array[4] = 111)",
+			"print(char_array[5] = 0)",
+			"print(char_array[6] = 0)",
+			"print(char_array[7] = 0)",
+			"print(char_array[8] = 0)",
+			"print(char_array[9] = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows assigning a string value to a char array", function()
+		local interface, log = test_interface()
+		
+		local print_elem = function(i)
+			return { "test.bt", 10 + i, "call", "Printf", {
+				{ "test.bt", 10 + i, "str", "char_array[" .. i .. "] = %d" },
+				{ "test.bt", 10 + i, "ref", { "char_array", { "test.bt", 10 + i, "num", i } } } } }
+		end
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "char", "char_array", nil, { "test.bt", 1, "num", 10 }, nil },
+			{ "test.bt", 2, "assign", { "test.bt", 1, "ref", { "char_array" } }, { "test.bt", 1, "str", "hello" } },
+			
+			print_elem(0),
+			print_elem(1),
+			print_elem(2),
+			print_elem(3),
+			print_elem(4),
+			print_elem(5),
+			print_elem(6),
+			print_elem(7),
+			print_elem(8),
+			print_elem(9),
+		})
+		
+		local expect_log = {
+			"print(char_array[0] = 104)",
+			"print(char_array[1] = 101)",
+			"print(char_array[2] = 108)",
+			"print(char_array[3] = 108)",
+			"print(char_array[4] = 111)",
+			"print(char_array[5] = 0)",
+			"print(char_array[6] = 0)",
+			"print(char_array[7] = 0)",
+			"print(char_array[8] = 0)",
+			"print(char_array[9] = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows initialising a string with a char array", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "char", "char_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+			{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, { "test.bt", 2, "ref", { "char_array" } } },
+			
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "string_var = %s" },
+				{ "test.bt", 10, "ref", { "string_var" } } } },
+		})
+		
+		local expect_log = {
+			"print(string_var = hello)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows assigning a char array to a string", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "char", "char_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+			{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, nil },
+			{ "test.bt", 3, "assign", { "test.bt", 3, "ref", { "string_var" } }, { "test.bt", 3, "ref", { "char_array" } } },
+			
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "string_var = %s" },
+				{ "test.bt", 10, "ref", { "string_var" } } } },
+		})
+		
+		local expect_log = {
+			"print(string_var = hello)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on initialisation of uchar array from a string", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+			})
+			end, "can't assign 'string' to type 'uchar[]'")
+	end)
+	
+	it("errors on assignment of string value to uchar array", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
+				{ "test.bt", 2, "assign", { "test.bt", 1, "ref", { "uchar_array" } }, { "test.bt", 1, "str", "hello" } },
+			})
+			end, "can't assign 'string' to type 'uchar[]'")
+	end)
+	
+	it("errors on initialisation of string from uchar array", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
+				{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, { "test.bt", 2, "ref", { "uchar_array" } } },
+			})
+			end, "can't assign 'uchar[]' to type 'string'")
+	end)
+	
+	it("errors on assignment of uchar array to string", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
+				{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, nil },
+				{ "test.bt", 3, "assign", { "test.bt", 3, "ref", { "string_var" } }, { "test.bt", 3, "ref", { "uchar_array" } } },
+			})
+			end, "can't assign 'uchar[]' to type 'string'")
+	end)
+	
 	it("allows using local array variables", function()
 		local interface, log = test_interface()
 		

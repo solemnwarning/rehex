@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -1521,6 +1521,55 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("allows comparing strings with == operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "abc == abcd = %d" },
+				{ "test.bt", 1, "equal",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "str", "abcd" }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "abc == abc = %d" },
+				{ "test.bt", 1, "equal",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "str", "abc" }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(abc == abcd = 0)",
+			"print(abc == abc = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on comparison of strings and numbers with == operator", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+					{ "test.bt", 1, "equal",
+						{ "test.bt", 1, "str", "abc" },
+						{ "test.bt", 1, "num", 123 }
+					},
+			})
+			end, "Invalid operands to '==' operator - 'string' and 'int' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+					{ "test.bt", 1, "equal",
+						{ "test.bt", 1, "num", 123 },
+						{ "test.bt", 1, "str", "abc" }
+					},
+			})
+			end, "Invalid operands to '==' operator - 'int' and 'string' at test.bt:1")
+	end)
+	
 	it("implements != operator", function()
 		local interface, log = test_interface()
 		
@@ -1555,8 +1604,57 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
-        
-        it("executes statements from first true branch in if statement", function()
+	
+	it("allows comparing strings with != operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "abc != abcd = %d" },
+				{ "test.bt", 1, "not-equal",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "str", "abcd" }
+				} } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "abc != abc = %d" },
+				{ "test.bt", 1, "not-equal",
+					{ "test.bt", 1, "str", "abc" },
+					{ "test.bt", 1, "str", "abc" }
+				} } },
+		})
+		
+		local expect_log = {
+			"print(abc != abcd = 1)",
+			"print(abc != abc = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on comparison of strings and numbers with != operator", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+					{ "test.bt", 1, "not-equal",
+						{ "test.bt", 1, "str", "abc" },
+						{ "test.bt", 1, "num", 123 }
+					},
+			})
+			end, "Invalid operands to '!=' operator - 'string' and 'int' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+					{ "test.bt", 1, "not-equal",
+						{ "test.bt", 1, "num", 123 },
+						{ "test.bt", 1, "str", "abc" }
+					},
+			})
+			end, "Invalid operands to '!=' operator - 'int' and 'string' at test.bt:1")
+	end)
+	
+	it("executes statements from first true branch in if statement", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {

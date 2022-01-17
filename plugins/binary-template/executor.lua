@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -33,6 +33,8 @@ local _eval_string;
 local _eval_ref;
 local _eval_add;
 local _numeric_op_func;
+local _eval_equal
+local _eval_not_equal
 local _eval_bitwise_not
 local _eval_logical_not
 local _eval_logical_and;
@@ -861,6 +863,54 @@ _numeric_op_func = function(func, sym)
 		end
 		
 		return v1_t, _make_const_plain_value(func(v1_v:get(), v2_v:get()))
+	end
+end
+
+_eval_equal = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local v1_t, v1_v = _eval_statement(context, statement[4])
+	local v2_t, v2_v = _eval_statement(context, statement[5])
+	
+	if _type_is_number(v1_t) and _type_is_number(v2_t)
+	then
+		local v1_n = v1_v:get()
+		local v2_n = v2_v:get()
+		
+		return _builtin_types.int, _make_const_plain_value(v1_n == v2_n and 1 or 0)
+	elseif _type_is_stringish(v1_t) and _type_is_stringish(v2_t)
+	then
+		local v1_s = _stringify_value(v1_t, v1_v)
+		local v2_s = _stringify_value(v2_t, v2_v)
+		
+		return _builtin_types.int, _make_const_plain_value(v1_s == v2_s and 1 or 0)
+	else
+		error("Invalid operands to '==' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+end
+
+_eval_not_equal = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local v1_t, v1_v = _eval_statement(context, statement[4])
+	local v2_t, v2_v = _eval_statement(context, statement[5])
+	
+	if _type_is_number(v1_t) and _type_is_number(v2_t)
+	then
+		local v1_n = v1_v:get()
+		local v2_n = v2_v:get()
+		
+		return _builtin_types.int, _make_const_plain_value(v1_n ~= v2_n and 1 or 0)
+	elseif _type_is_stringish(v1_t) and _type_is_stringish(v2_t)
+	then
+		local v1_s = _stringify_value(v1_t, v1_v)
+		local v2_s = _stringify_value(v2_t, v2_v)
+		
+		return _builtin_types.int, _make_const_plain_value(v1_s ~= v2_s and 1 or 0)
+	else
+		error("Invalid operands to '!=' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
 	end
 end
 
@@ -1937,8 +1987,8 @@ _ops = {
 	["greater-than"]          = _numeric_op_func(function(v1, v2) return v1 >  v2 and 1 or 0 end, ">"),
 	["greater-than-or-equal"] = _numeric_op_func(function(v1, v2) return v1 >= v2 and 1 or 0 end, ">="),
 	
-	["equal"]     = _numeric_op_func(function(v1, v2) return v1 == v2 and 1 or 0 end, "=="),
-	["not-equal"] = _numeric_op_func(function(v1, v2) return v1 ~= v2 and 1 or 0 end, "!="),
+	["equal"]     = _eval_equal,
+	["not-equal"] = _eval_not_equal,
 	
 	["logical-not"] = _eval_logical_not,
 	["logical-and"] = _eval_logical_and,

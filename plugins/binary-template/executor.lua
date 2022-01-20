@@ -1721,7 +1721,6 @@ _eval_for = function(context, statement)
 				break
 			end
 		else
-			-- TODO: Don't do this on every single statement - less frequency?
 			context.interface.yield()
 		end
 		
@@ -1926,7 +1925,6 @@ _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
-	-- TODO: Don't do this on every single statement - less frequency?
 	context.interface.yield()
 	
 	local op = statement[3]

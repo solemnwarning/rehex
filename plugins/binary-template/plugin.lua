@@ -115,6 +115,8 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 		local progress_dialog = wx.wxProgressDialog("Processing template", "Hello", 100, window, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME)
 		progress_dialog:Show()
 		
+		local yield_counter = 0
+		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
 				doc:set_data_type(offset, length, data_type)
@@ -135,6 +137,23 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 			print = function(s) print(s) end,
 			
 			yield = function()
+				-- The yield method gets called at least once for every statement
+				-- as it gets executed, don't pump the event loop every time or we
+				-- wind up spending all our time doing that.
+				--
+				-- There isn't any (portable) time counter I can check in Lua, so
+				-- the interval is an arbitrarily chosen number that seems to give
+				-- (more than) good responsiveness on my PC and speeds up execution
+				-- of an idle loop by ~10x ish.
+				
+				if yield_counter < 8000
+				then
+					yield_counter = yield_counter + 1
+					return
+				end
+				
+				yield_counter = 0
+				
 				progress_dialog:Pulse()
 				wx.wxGetApp():ProcessPendingEvents()
 				

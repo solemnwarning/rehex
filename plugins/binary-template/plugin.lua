@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -52,6 +52,8 @@ local function _find_templates(path)
 	return templates
 end
 
+local ID_BROWSE = 1
+
 rehex.AddToToolsMenu("Binary Template test", function(window)
 	local doc = window:active_document()
 	
@@ -68,15 +70,37 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 	
 	template_choice:SetSelection(0)
 	
+	local browse_btn = wx.wxButton(my_window, ID_BROWSE, "Browse...")
+	my_window:Connect(ID_BROWSE, wx.wxEVT_BUTTON, function(event)
+		local browse_dialog = wx.wxFileDialog(my_window, "test", "", "", "Binary Template files (*.bt)|*.bt", wx.wxFD_OPEN | wx.wxFD_FILE_MUST_EXIST)
+		local result = browse_dialog:ShowModal()
+		
+		if result == wx.wxID_OK
+		then
+			local name = browse_dialog:GetFilename()
+			local path = browse_dialog:GetPath()
+			
+			template_choice:Append(name)
+			template_choice:SetSelection(#templates)
+			
+			table.insert(templates, { name, path })
+		end
+	end)
+	
 	local ok_btn = wx.wxButton(my_window, wx.wxID_OK, "OK")
 	local cancel_btn = wx.wxButton(my_window, wx.wxID_CANCEL, "Cancel")
+	
+	local template_choice_sizer = wx.wxBoxSizer(wx.wxHORIZONTAL)
+	template_choice_sizer:Add(wx.wxStaticText(my_window, wx.wxID_ANY, "Template"))
+	template_choice_sizer:Add(template_choice)
+	template_choice_sizer:Add(browse_btn)
 	
 	local btn_sizer = wx.wxBoxSizer(wx.wxHORIZONTAL)
 	btn_sizer:Add(ok_btn)
 	btn_sizer:Add(cancel_btn, 0, wx.wxLEFT, 5)
 	
 	local main_sizer = wx.wxBoxSizer(wx.wxVERTICAL)
-	main_sizer:Add(template_choice)
+	main_sizer:Add(template_choice_sizer)
 	main_sizer:Add(btn_sizer, 0, wx.wxALIGN_RIGHT | wx.wxALL, 5)
 	
 	my_window:SetSizerAndFit(main_sizer)
@@ -87,6 +111,9 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 	then
 		local template_idx = template_choice:GetSelection() + 1
 		local template_path = templates[template_idx][2]
+		
+		local progress_dialog = wx.wxProgressDialog("Processing template", "Hello", 100, window, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME)
+		progress_dialog:Show()
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
@@ -107,9 +134,26 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 			
 			print = function(s) print(s) end,
 			
-			yield = function() end,
+			yield = function()
+				progress_dialog:Pulse()
+				wx.wxGetApp():ProcessPendingEvents()
+				
+				if progress_dialog:WasCancelled()
+				then
+					error("Template execution aborted", 0)
+				end
+			end,
 		}
 		
-		executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
+		local ok, err = pcall(function()
+			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
+		end)
+		
+		progress_dialog:Destroy()
+		
+		if not ok
+		then
+			wx.wxMessageBox(err, "Error")
+		end
 	end
 end);

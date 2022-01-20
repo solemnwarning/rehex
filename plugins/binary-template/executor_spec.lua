@@ -1231,6 +1231,51 @@ describe("executor", function()
 		end, "return operand type 'int' not compatible with function return type 'void' at test.bt:1")
 	end)
 	
+	it("allows return from if statements within functions", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "int", "ifunc", {},
+			{
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "foo" } } },
+				
+				{ "test.bt", 1, "if",
+					{ { "test.bt", 1, "num", 1 }, {
+						{ "test.bt", 1, "return",
+							{ "test.bt", 1, "num", 1 } },
+					} } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "bar" } } },
+			} },
+			
+			{ "test.bt", 1, "function", "void", "vfunc", {},
+			{
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "baz" } } },
+				
+				{ "test.bt", 1, "if",
+					{ { "test.bt", 1, "num", 1 }, {
+						{ "test.bt", 1, "return" },
+					} } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "quz" } } },
+			} },
+			
+			{ "test.bt", 1, "call", "ifunc", {} },
+			{ "test.bt", 1, "call", "vfunc", {} },
+		})
+		
+		local expect_log = {
+			"print(foo)",
+			"print(baz)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
 	it("allows addition of integers with '+' operator", function()
 		local interface, log = test_interface()
 		

@@ -1675,7 +1675,27 @@ _eval_if = function(context, statement)
 		
 		if cond_v:get() ~= 0
 		then
-			_exec_statements(context, code)
+			local frame = {
+				frame_type = FRAME_TYPE_SCOPE,
+				var_types = {},
+				vars = {},
+			}
+			
+			table.insert(context.stack, frame)
+			
+			for _, statement in ipairs(code)
+			do
+				local sr_t, sr_v = _eval_statement(context, statement)
+				
+				if sr_t and sr_t.flowctrl ~= nil
+				then
+					table.remove(context.stack)
+					return sr_t, sr_v
+				end
+			end
+			
+			table.remove(context.stack)
+			
 			break
 		end
 	end

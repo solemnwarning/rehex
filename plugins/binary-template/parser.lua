@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -301,7 +301,7 @@ local _parser = spc * P{
 		(P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) *
 		(P("=") * spc * V("EXPR") * spc + Cc(nil)) * P(";") * spc ),
 	
-	RETURN = Ct( P(_capture_position) * Cc("return") * P("return") * spc * V("EXPR") * P(";") * spc),
+	RETURN = Ct( P(_capture_position) * Cc("return") * P("return") * spc * (V("EXPR") + Cc(nil)) * P(";") * spc),
 	
 	ARG = Ct( P(_capture_type) * name ),
 	
@@ -743,6 +743,10 @@ local function _compile_statement(s)
 				_compile_statement(s)
 			end
 		end
+	elseif op == "return"
+	then
+		local result = s[4]
+		if result ~= nil then _compile_expr(result) end
 	end
 end
 

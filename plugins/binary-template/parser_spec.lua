@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -1220,6 +1220,25 @@ describe("parser", function()
 				{ "UNKNOWN FILE", 1, "cast", "int",
 					{ "UNKNOWN FILE", 1, "call", "func", {
 						{ "UNKNOWN FILE", 1, "ref", { "x" } } } } } }
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses return statements", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("return;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "return", nil },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("return 1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "return", { "UNKNOWN FILE", 1, "num", 1 } },
 		}
 		
 		assert.are.same(expect, got)

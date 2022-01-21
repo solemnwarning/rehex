@@ -17,6 +17,7 @@ BuildRequires: libunistring-devel
 BuildRequires: lua
 BuildRequires: lua-devel
 BuildRequires: make
+BuildRequires: perl-Template-Toolkit
 BuildRequires: wxGTK3-devel
 BuildRequires: xorg-x11-server-Xvfb
 

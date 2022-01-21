@@ -16,6 +16,7 @@
 */
 
 #include <wx/filesys.h>
+#include <wx/fontutil.h>
 #include <wx/fs_zip.h>
 #include <wx/stdpaths.h>
 
@@ -61,7 +62,15 @@ bool REHex::App::OnInit()
 	
 	{
 		wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+		
+		#ifdef __APPLE__
+		/* wxWidgets 3.1 on Mac returns an empty string from wxFont::GetFaceName() at this
+		 * point for whatever reason, but it works fine later on....
+		*/
+		font_name = default_font.GetNativeFontInfo()->GetFaceName();
+		#else
 		font_name = default_font.GetFaceName();
+		#endif
 		
 		set_font_name(config->Read("font-name", font_name).ToStdString());
 	}

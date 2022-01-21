@@ -30,7 +30,7 @@ _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
 _rehex_lua_build_ident="${_rehex_lua_version}-1"
 
-_rehex_wxwidgets_version="3.0.5"
+_rehex_wxwidgets_version="3.1.5"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
 _rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
 

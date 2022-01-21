@@ -1253,7 +1253,7 @@ void REHex::MainWindow::OnDonate(wxCommandEvent &event)
 
 void REHex::MainWindow::OnHelp(wxCommandEvent &event)
 {
-	wxGetApp().help->DisplayContents();
+	wxGetApp().show_help_contents(this);
 }
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)

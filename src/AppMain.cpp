@@ -37,6 +37,9 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	help_controller = NULL;
+	help_loaded = false;
+	
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
 	
@@ -120,30 +123,6 @@ bool REHex::App::OnInit()
 	
 	window = new REHex::MainWindow(windowSize);
 	
-	std::string help_path;
-	
-	#if defined(_WIN32)
-	help_path = wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm";
-	#elif defined(__APPLE__)
-	help_path = wxStandardPaths::Get().GetResourcesDir() + "/rehex.htb";
-	#elif defined(REHEX_APPIMAGE)
-	const char *APPDIR = getenv("APPDIR");
-	if(APPDIR != NULL)
-	{
-		help_path = std::string(APPDIR) + "/" + REHEX_DATADIR + "/rehex/rehex.htb";
-	}
-	#else
-	help_path = std::string(REHEX_DATADIR) + "/rehex/rehex.htb";
-	#endif
-	
-	#ifdef _WIN32
-	help = new wxHtmlHelpController;
-	help->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
-	#else
-	help = new wxHtmlHelpController;
-	help->AddBook(help_path, false);
-	#endif
-	
 	#ifndef __APPLE__
 	bool maximise = config->ReadBool("/default-view/window-maximised", false);
 	window->Maximize(maximise);
@@ -178,7 +157,7 @@ int REHex::App::OnExit()
 	config->Write("last-directory", wxString(last_directory));
 	
 	delete active_palette;
-	delete help;
+	delete help_controller;
 	delete recent_files;
 	delete settings;
 	delete config;

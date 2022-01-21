@@ -440,6 +440,9 @@ wxLua/%.cpp: $(WXLUA_BINDINGS)
 help/rehex.chm:
 	$(MAKE) -C help/ rehex.chm
 
+rehex.chm: help/rehex.chm
+	cp $< $@
+
 .PHONY: help/rehex.htb
 help/rehex.htb:
 	$(MAKE) -C help/ rehex.htb

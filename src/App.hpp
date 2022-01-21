@@ -41,7 +41,12 @@ namespace REHex {
 			
 			wxFileHistory *recent_files;
 			wxLocale *locale;
+			
+			#ifdef _WIN32
+			wxCHMHelpController *help;
+			#else
 			wxHtmlHelpController *help;
+			#endif
 			
 			ConsoleBuffer *console;
 			

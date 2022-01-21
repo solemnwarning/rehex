@@ -17,6 +17,7 @@
 
 #include <wx/filesys.h>
 #include <wx/fs_zip.h>
+#include <wx/stdpaths.h>
 
 #include "platform.hpp"
 
@@ -111,8 +112,8 @@ bool REHex::App::OnInit()
 	window = new REHex::MainWindow(windowSize);
 
 	#if defined(_WIN32)
-	help = new wxCHMHelpController(wxHF_DEFAULT_STYLE, NULL);
-	help->AddBook((wxStandardPaths::GetResourcesDir() + "/rehex.chm"), false);
+	help = new wxCHMHelpController;
+	help->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
 	#elif defined(__APPLE__)
 	help = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, NULL);
 	help->AddBook((wxStandardPaths::GetResourcesDir().ToStdString() + "/rehex.htb"), false);

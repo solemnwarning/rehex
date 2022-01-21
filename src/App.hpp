@@ -28,6 +28,7 @@
 #include <vector>
 #include <wx/config.h>
 #include <wx/filehistory.h>
+#include <wx/help.h>
 #include <wx/intl.h>
 #include <wx/wx.h>
 
@@ -40,6 +41,7 @@ namespace REHex {
 			
 			wxFileHistory *recent_files;
 			wxLocale *locale;
+			wxHtmlHelpController *help;
 			
 			ConsoleBuffer *console;
 			

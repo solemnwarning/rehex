@@ -47,8 +47,8 @@ ifneq ($(MAKECMDGOALS),)
 endif
 
 ifeq ($(need_compiler_flags),1)
-	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
-	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
+	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv html)
+	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv html)
 	
 	CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
 	CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
@@ -274,7 +274,7 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
@@ -362,7 +362,7 @@ TEST_OBJS := \
 	$(EXTRA_TEST_OBJS)
 
 tests/all-tests: $(TEST_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 $(EMBED_EXE): tools/embed.cpp
@@ -454,6 +454,7 @@ prefix      ?= /usr/local
 exec_prefix ?= $(prefix)
 bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
+datadir     ?= $(datarootdir)
 libdir      ?= $(exec_prefix)/lib
 
 PLUGINS_INSTALL := \
@@ -469,7 +470,7 @@ PLUGINS_INSTALL := \
 	exe/utils.lua
 
 .PHONY: install
-install: $(EXE)
+install: $(EXE) help/rehex.htb
 	install -D -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
 	
 	for s in 16 32 48 64 128 256 512; \
@@ -479,6 +480,8 @@ install: $(EXE)
 	
 	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
+	install -D -m 0644 help/rehex.htb $(DESTDIR)$(datadir)/rehex/rehex.htb
+	
 	for f in $(PLUGINS_INSTALL); \
 	do \
 		install -D -m 0644 plugins/$${f} $(DESTDIR)$(libdir)/rehex/$${f}; \
@@ -487,6 +490,8 @@ install: $(EXE)
 .PHONY: uninstall
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/$(EXE)
+	rm -f $(DESTDIR)$(datadir)/rehex/rehex.htb
+	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(datadir)/rehex/
 	rm -f $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
 	for s in 16 32 48 64 128 256 512; \

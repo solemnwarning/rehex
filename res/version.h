@@ -27,6 +27,7 @@ extern const char *REHEX_BUILD_DATE;
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 extern const char *REHEX_LIBDIR;
+extern const char *REHEX_DATADIR;
 #endif
 
 #ifdef __cplusplus

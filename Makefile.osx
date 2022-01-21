@@ -58,7 +58,7 @@ ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns
 DMGTMP  := tmp/dmg
 
-REHex.app: res/Info.plist $(EXE) $(ICNS)
+REHex.app: res/Info.plist $(EXE) $(ICNS) help/rehex.htb
 	mkdir -p                  $@/
 	mkdir -p                  $@/Contents/
 	cp        res/Info.plist  $@/Contents/Info.plist
@@ -66,6 +66,7 @@ REHex.app: res/Info.plist $(EXE) $(ICNS)
 	cp        $(EXE)          $@/Contents/MacOS/REHex
 	mkdir -p                  $@/Contents/Resources/
 	cp        $(ICNS)         $@/Contents/Resources/REHex.icns
+	cp        rehex.htb       $@/Contents/Resources/
 	
 	rm -rf $@/Contents/PlugIns/
 	for f in $(PLUGINS_INSTALL); \

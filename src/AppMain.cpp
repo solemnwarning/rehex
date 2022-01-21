@@ -24,6 +24,7 @@
 #include "ArtProvider.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "../res/version.h"
 
 /* These MUST come after any wxWidgets headers. */
 #ifdef _WIN32
@@ -108,6 +109,17 @@ bool REHex::App::OnInit()
 	#endif
 	
 	window = new REHex::MainWindow(windowSize);
+
+	#if defined(_WIN32)
+	help = new wxCHMHelpController(wxHF_DEFAULT_STYLE, NULL);
+	help->AddBook((wxStandardPaths::GetResourcesDir() + "/rehex.chm"), false);
+	#elif defined(__APPLE__)
+	help = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, NULL);
+	help->AddBook((wxStandardPaths::GetResourcesDir().ToStdString() + "/rehex.htb"), false);
+	#else
+	help = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, NULL);
+	help->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb", false);
+	#endif
 	
 	#ifndef __APPLE__
 	bool maximise = config->ReadBool("/default-view/window-maximised", false);
@@ -143,6 +155,7 @@ int REHex::App::OnExit()
 	config->Write("last-directory", wxString(last_directory));
 	
 	delete active_palette;
+	delete help;
 	delete recent_files;
 	delete settings;
 	delete config;

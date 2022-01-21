@@ -1253,9 +1253,7 @@ void REHex::MainWindow::OnDonate(wxCommandEvent &event)
 
 void REHex::MainWindow::OnHelp(wxCommandEvent &event)
 {
-	wxHtmlHelpController *hhc = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, this);
-	hhc->AddBook(wxFileName("help/rehex.htb"), true);
-	hhc->DisplayContents();
+	wxGetApp().help->DisplayContents();
 }
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)

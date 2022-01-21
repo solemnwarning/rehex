@@ -15,6 +15,7 @@
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 HHC ?= "C:\Program Files (x86)\HTML Help Workshop\hhc.exe"
+PERL ?= perl
 
 PAGES := \
 	index \
@@ -50,14 +51,14 @@ rehex.chm: $(CHM_TARGETS)
 	cp chm/output/rehex.chm $@
 
 chm/output/rehex.hhc: chm/templates/hhc.tt
-	perl template.pl hhc $(CHM_TEMPLATE_PATH) > chm/output/rehex.hhc
+	$(PERL) template.pl hhc $(CHM_TEMPLATE_PATH) > chm/output/rehex.hhc
 
 chm/output/rehex.hhk: chm/templates/hhk.tt
-	perl template.pl hhk $(CHM_TEMPLATE_PATH) > chm/output/rehex.hhk
+	$(PERL) template.pl hhk $(CHM_TEMPLATE_PATH) > chm/output/rehex.hhk
 
 chm/output/%.html: pages/%.tt
 	@mkdir -p chm/output/
-	perl template.pl $* $(CHM_TEMPLATE_PATH) > $@
+	$(PERL) template.pl $* $(CHM_TEMPLATE_PATH) > $@
 
 WX_TARGETS := \
 	$(addsuffix .html,$(addprefix wx/output/,$(PAGES))) \
@@ -71,14 +72,14 @@ rehex.htb: $(WX_TARGETS)
 	zip -rj rehex.htb wx/output/
 
 wx/output/rehex.hhc: wx/templates/hhc.tt
-	perl template.pl hhc $(WX_TEMPLATE_PATH) > wx/output/rehex.hhc
+	$(PERL) template.pl hhc $(WX_TEMPLATE_PATH) > wx/output/rehex.hhc
 
 wx/output/rehex.hhk: wx/templates/hhk.tt
-	perl template.pl hhk $(WX_TEMPLATE_PATH) > wx/output/rehex.hhk
+	$(PERL) template.pl hhk $(WX_TEMPLATE_PATH) > wx/output/rehex.hhk
 
 wx/output/%.html: pages/%.tt
 	@mkdir -p wx/output/
-	perl template.pl $* $(WX_TEMPLATE_PATH) > $@
+	$(PERL) template.pl $* $(WX_TEMPLATE_PATH) > $@
 
 ONLINE_TARGETS := \
 	$(addsuffix .html,$(addprefix online/output/,$(PAGES)))
@@ -90,4 +91,4 @@ online-help: $(ONLINE_TARGETS)
 
 online/output/%.html: pages/%.tt
 	@mkdir -p online/output/
-	perl template.pl $* $(ONLINE_TEMPLATE_PATH) > $@
+	$(PERL) template.pl $* $(ONLINE_TEMPLATE_PATH) > $@

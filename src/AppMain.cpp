@@ -115,8 +115,8 @@ bool REHex::App::OnInit()
 	help = new wxCHMHelpController;
 	help->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
 	#elif defined(__APPLE__)
-	help = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, NULL);
-	help->AddBook((wxStandardPaths::GetResourcesDir().ToStdString() + "/rehex.htb"), false);
+	help = new wxHtmlHelpController;
+	help->AddBook(wxStandardPaths::Get().GetResourcesDir() + "/rehex.htb", false);
 	#else
 	help = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, NULL);
 	help->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb", false);

@@ -119,16 +119,29 @@ bool REHex::App::OnInit()
 	#endif
 	
 	window = new REHex::MainWindow(windowSize);
-
+	
+	std::string help_path;
+	
 	#if defined(_WIN32)
-	help = new wxCHMHelpController;
-	help->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
+	help_path = wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm";
 	#elif defined(__APPLE__)
-	help = new wxHtmlHelpController;
-	help->AddBook(wxStandardPaths::Get().GetResourcesDir() + "/rehex.htb", false);
+	help_path = wxStandardPaths::Get().GetResourcesDir() + "/rehex.htb";
+	#elif defined(REHEX_APPIMAGE)
+	const char *APPDIR = getenv("APPDIR");
+	if(APPDIR != NULL)
+	{
+		help_path = std::string(APPDIR) + "/" + REHEX_DATADIR + "/rehex/rehex.htb";
+	}
 	#else
-	help = new wxHtmlHelpController(wxHF_DEFAULT_STYLE, NULL);
-	help->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb", false);
+	help_path = std::string(REHEX_DATADIR) + "/rehex/rehex.htb";
+	#endif
+	
+	#ifdef _WIN32
+	help = new wxHtmlHelpController;
+	help->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
+	#else
+	help = new wxHtmlHelpController;
+	help->AddBook(help_path, false);
 	#endif
 	
 	#ifndef __APPLE__

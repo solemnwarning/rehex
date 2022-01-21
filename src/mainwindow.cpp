@@ -445,10 +445,10 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		call_setup_hooks(SetupPhase::HELP_MENU_TOP);
 		
+		help_menu->Append(ID_HELP, "View &help\tF1");
 		help_menu->Append(ID_GITHUB, "Visit &Github page");
 		help_menu->Append(ID_DONATE, "Donate with &Paypal");
 		help_menu->Append(wxID_ABOUT, "&About");
-		help_menu->Append(ID_HELP, "&Help");
 		
 		call_setup_hooks(SetupPhase::HELP_MENU_BOTTOM);
 		

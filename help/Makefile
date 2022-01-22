@@ -87,6 +87,7 @@ ONLINE_TEMPLATE_PATH := online/templates/:pages/
 
 .PHONY: online-help
 online-help: $(ONLINE_TARGETS)
+	cp content/* online/content/* online/output/
 
 online/output/%.html: pages/%.tt
 	@mkdir -p online/output/

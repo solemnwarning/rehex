@@ -17,7 +17,11 @@ To create a mapping, select a range of bytes in the main view and choose <i>Set 
 </p>
 
 <p>
-Once at least one mapping has been created, you can select <i>Display virtual sections</i> in the <i>View menu</i> to work with the file sections in the virtual address space rather than the real file offsets. The currently defined mappings can be seen in real or virtual sections view using the <i>Virtual sections</i> tool (<i>View menu -> Tool panels -> Virtual sections</i>).
+Once at least one mapping has been created, you can select <i>Display virtual sections</i> in the <i>View menu</i> to work with the file sections in the virtual address space rather than the real file offsets. The currently defined mappings can be seen in real or virtual sections view using the <i>Virtual sections</i> tool (<i>View</i> menu &gt; <i>Tool panels</i> &gt; <i>Virtual sections</i>).
+</p>
+
+<p>
+Virtual mappings are saved alongside the original file in a <i>.rehex-meta</i> file along with other metadata.
 </p>
 
 <p>

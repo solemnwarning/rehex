@@ -18,7 +18,11 @@ HHC ?= "C:\Program Files (x86)\HTML Help Workshop\hhc.exe"
 PERL ?= perl
 
 PAGES := \
+	comments \
+	diff \
 	index \
+	plugins \
+	types \
 	virt-mapping
 
 .PHONY: all

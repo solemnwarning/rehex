@@ -19,8 +19,7 @@ PERL ?= perl
 
 PAGES := \
 	index \
-	page1 \
-	page2
+	virt-mapping
 
 .PHONY: all
 all:

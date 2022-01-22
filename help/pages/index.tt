@@ -2,10 +2,12 @@
    title = "Index"
 %]
 
-<h2>Index</h2>
+<center><img src="icon128.png"></center>
+
+<h2>Welcome</h2>
 
 <p>
-Hello world
+Thank you for installing rehex - the cross-platform hex editor for reverse engineering, and everything else.
 </p>
 
 [% END %]

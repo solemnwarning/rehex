@@ -76,4 +76,5 @@ rm -rf %{buildroot}
 %{_datadir}/icons/hicolor/128x128/apps/rehex.png
 %{_datadir}/icons/hicolor/256x256/apps/rehex.png
 %{_datadir}/icons/hicolor/512x512/apps/rehex.png
+%{_datadir}/rehex/
 %{_libdir}/rehex/

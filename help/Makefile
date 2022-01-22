@@ -43,7 +43,7 @@ CHM_TARGETS := \
 CHM_TEMPLATE_PATH := chm/templates/:pages/
 
 rehex.chm: $(CHM_TARGETS)
-	cp content/* chm/rehex.hhp chm/output/
+	cp content/* chm/content/* chm/output/
 	# hhc.exe returns 0 on failure and 1 on success... good job Microsoft.
 	# https://stackoverflow.com/a/39040033
 	! $(HHC) chm/output/rehex.hhp
@@ -67,7 +67,7 @@ WX_TARGETS := \
 WX_TEMPLATE_PATH := wx/templates/:pages/
 
 rehex.htb: $(WX_TARGETS)
-	cp content/* wx/rehex.hhp wx/output/
+	cp content/* wx/content/* wx/output/
 	zip -rj rehex.htb wx/output/
 
 wx/output/rehex.hhc: wx/templates/hhc.tt

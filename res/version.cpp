@@ -26,5 +26,6 @@ extern "C" {
 	
 	#if !defined(_WIN32) && !defined(__APPLE__)
 	const char *REHEX_LIBDIR = LIBDIR;
+	const char *REHEX_DATADIR = DATADIR;
 	#endif
 }

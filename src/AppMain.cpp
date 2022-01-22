@@ -15,12 +15,18 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <wx/filesys.h>
+#include <wx/fontutil.h>
+#include <wx/fs_zip.h>
+#include <wx/stdpaths.h>
+
 #include "platform.hpp"
 
 #include "App.hpp"
 #include "ArtProvider.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "../res/version.h"
 
 /* These MUST come after any wxWidgets headers. */
 #ifdef _WIN32
@@ -31,6 +37,9 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	help_controller = NULL;
+	help_loaded = false;
+	
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
 	
@@ -42,6 +51,7 @@ bool REHex::App::OnInit()
 	#endif
 	
 	wxImage::AddHandler(new wxPNGHandler);
+	wxFileSystem::AddHandler(new wxZipFSHandler);
 	
 	ArtProvider::init();
 	
@@ -55,7 +65,15 @@ bool REHex::App::OnInit()
 	
 	{
 		wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+		
+		#ifdef __APPLE__
+		/* wxWidgets 3.1 on Mac returns an empty string from wxFont::GetFaceName() at this
+		 * point for whatever reason, but it works fine later on....
+		*/
+		font_name = default_font.GetNativeFontInfo()->GetFaceName();
+		#else
 		font_name = default_font.GetFaceName();
+		#endif
 		
 		set_font_name(config->Read("font-name", font_name).ToStdString());
 	}
@@ -139,6 +157,7 @@ int REHex::App::OnExit()
 	config->Write("last-directory", wxString(last_directory));
 	
 	delete active_palette;
+	delete help_controller;
 	delete recent_files;
 	delete settings;
 	delete config;

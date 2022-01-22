@@ -1,0 +1,35 @@
+[% WRAPPER page.tt
+   title = "Virtual Address Mapping"
+%]
+
+<h2>Virtual Address Mapping</h2>
+
+<p>
+The virtual address mapping function allows you to map sections of a file into a virtual address space, for example to map code or data sections in an executable to the memory addresses they would normally be loaded into.
+</p>
+
+<p>
+To create a mapping, select a range of bytes in the main view and choose <i>Set virtual address mapping...</i> from the context menu (right click) to access the virtual mapping dialog:
+</p>
+
+<p>
+<img src="virt-mapping-dialog.png" alt="Virtual mapping dialog">
+</p>
+
+<p>
+Once at least one mapping has been created, you can select <i>Display virtual sections</i> in the <i>View menu</i> to work with the file sections in the virtual address space rather than the real file offsets. The currently defined mappings can be seen in real or virtual sections view using the <i>Virtual sections</i> tool (<i>View</i> menu &gt; <i>Tool panels</i> &gt; <i>Virtual sections</i>).
+</p>
+
+<p>
+Virtual mappings are saved alongside the original file in a <i>.rehex-meta</i> file along with other metadata.
+</p>
+
+<p>
+The screenshot below shows a file with virtual sections and comments set up by the PE EXE/DLL analysis plugin:
+</p>
+
+<p>
+<img src="virt-mapping-exe1.png" alt="exe file with sections mapped">
+</p>
+
+[% END %]

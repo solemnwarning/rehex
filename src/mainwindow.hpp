@@ -120,6 +120,7 @@ namespace REHex {
 			
 			void OnGithub(wxCommandEvent &event);
 			void OnDonate(wxCommandEvent &event);
+			void OnHelp(wxCommandEvent &event);
 			void OnAbout(wxCommandEvent &event);
 			
 			void OnDocumentChange(wxAuiNotebookEvent &event);

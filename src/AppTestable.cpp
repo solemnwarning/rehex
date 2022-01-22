@@ -231,6 +231,51 @@ void REHex::App::call_setup_hooks(SetupPhase phase)
 	}
 }
 
+REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
+{
+	if(help_controller == NULL)
+	{
+		help_controller = new HelpController;
+	}
+	
+	if(help_controller != NULL && !help_loaded)
+	{
+		#if defined(_WIN32)
+		help_loaded = help_controller->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
+		
+		#elif defined(__APPLE__)
+		help_loaded = help_controller->AddBook(wxStandardPaths::Get().GetResourcesDir() + "/rehex.htb", false);
+		
+		#elif defined(REHEX_APPIMAGE)
+		const char *APPDIR = getenv("APPDIR");
+		if(APPDIR != NULL)
+		{
+			help_loaded = help_controller->AddBook(std::string(APPDIR) + "/" + REHEX_DATADIR + "/rehex/rehex.htb");
+		}
+		
+		#else /* Linux/UNIX */
+		help_loaded = help_controller->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb");
+		#endif
+	}
+	
+	if(!help_loaded)
+	{
+		wxMessageBox("Unable to load help file", "Error", wxOK | wxICON_ERROR, error_parent);
+		return NULL;
+	}
+	
+	return help_controller;
+}
+
+void REHex::App::show_help_contents(wxWindow *error_parent)
+{
+	HelpController *help = get_help_controller(error_parent);
+	if(help)
+	{
+		help->DisplayContents();
+	}
+}
+
 REHex::App::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):
 	phase(phase),
 	func(func)

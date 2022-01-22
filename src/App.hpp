@@ -28,10 +28,17 @@
 #include <vector>
 #include <wx/config.h>
 #include <wx/filehistory.h>
+#include <wx/help.h>
 #include <wx/intl.h>
 #include <wx/wx.h>
 
 namespace REHex {
+	#ifdef _WIN32
+	typedef wxCHMHelpController HelpController;
+	#else
+	typedef wxHtmlHelpController HelpController;
+	#endif
+	
 	class App: public wxApp
 	{
 		public:
@@ -186,6 +193,9 @@ namespace REHex {
 			int get_caret_on_time_ms();
 			int get_caret_off_time_ms();
 			
+			HelpController *get_help_controller(wxWindow *error_parent);
+			void show_help_contents(wxWindow *error_parent);
+			
 			virtual bool OnInit();
 			virtual int OnExit();
 			
@@ -199,6 +209,9 @@ namespace REHex {
 			std::string font_name;
 			
 			MainWindow *window;
+			
+			HelpController *help_controller;
+			bool help_loaded;
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);

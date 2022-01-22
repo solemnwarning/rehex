@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -30,9 +30,13 @@ _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
 _rehex_lua_build_ident="${_rehex_lua_version}-1"
 
-_rehex_wxwidgets_version="3.0.5"
+_rehex_wxwidgets_version="3.1.5"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
 _rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
+
+_rehex_cpanm_version="1.7044"
+_rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
+_rehex_perl_libs_build_ident="1"
 
 _rehex_macos_version_min=10.10
 
@@ -83,6 +87,7 @@ _rehex_jansson_target_dir="${_rehex_dep_target_dir}/jansson-${_rehex_jansson_bui
 _rehex_libunistring_target_dir="${_rehex_dep_target_dir}/libunistring-${_rehex_libunistring_build_ident}"
 _rehex_lua_target_dir="${_rehex_dep_target_dir}/lua-${_rehex_lua_build_ident}"
 _rehex_wxwidgets_target_dir="${_rehex_dep_target_dir}/wxwidgets-${_rehex_wxwidgets_build_ident}"
+_rehex_perl_libs_target_dir="${_rehex_dep_target_dir}/perl-libs-${_rehex_perl_libs_build_ident}"
 
 if [ "$_rehex_ok" = 1 ] && [ ! -e "$_rehex_capstone_target_dir" ]
 then
@@ -258,6 +263,41 @@ then
 	[ $? -ne 0 ] && _rehex_ok=0
 fi
 
+if [ "$_rehex_ok" = 1 ] && [ ! -e "$_rehex_perl_libs_target_dir" ]
+then
+	echo "== Preparing Template Toolkit (for manual generation)"
+	
+	(
+		set -e
+		
+		cd "${_rehex_dep_build_dir}"
+		
+		_rehex_cpanm_tar="$(basename "${_rehex_cpanm_url}")"
+		
+		if [ ! -e "${_rehex_dep_build_dir}/${_rehex_cpanm_tar}" ]
+		then
+			echo "Downloading ${_rehex_cpanm_url}"
+			curl -Lo "${_rehex_cpanm_tar}" "${_rehex_cpanm_url}"
+		fi
+		
+		mkdir -p "cpanm-${_rehex_cpanm_build_ident}"
+		
+		tar -xf "${_rehex_cpanm_tar}" -C "cpanm-${_rehex_cpanm_build_ident}"
+		
+		CPANM="$(echo "cpanm-${_rehex_cpanm_build_ident}/"*"/bin/cpanm")"
+		
+		if [ ! -e "$CPANM" ]
+		then
+			echo "ERROR: cpanm not found!" 2>&1
+			exit 1
+		fi
+		
+		perl "$CPANM" -l "$_rehex_perl_libs_target_dir" Template
+	)
+	
+	[ $? -ne 0 ] && _rehex_ok=0
+fi
+
 if [ "$_rehex_ok" = 1 ]
 then
 	cat <<EOF
@@ -284,8 +324,11 @@ EOF
 	
 	export CXXFLAGS="-I${_rehex_libunistring_target_dir}/include/"
 	export LDLIBS="-L${_rehex_libunistring_target_dir}/lib/ -lunistring"
+	
+	export PERL="perl -I\"$(dirname "$(find "${_rehex_perl_libs_target_dir}" -name Template.pm)")\""
 fi
 
+unset _rehex_perl_libs_target_dir
 unset _rehex_wxwidgets_target_dir
 unset _rehex_lua_target_dir
 unset _rehex_libunistring_target_dir
@@ -296,6 +339,10 @@ unset _rehex_dep_target_dir
 unset _rehex_dep_build_dir
 unset _rehex_ok
 unset _rehex_macos_version_min
+
+unset _rehex_perl_libs_build_ident
+unset _rehex_cpanm_url
+unset _rehex_cpanm_version
 
 unset _rehex_wxwidgets_build_ident
 unset _rehex_wxwidgets_url

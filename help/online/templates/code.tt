@@ -1,0 +1,5 @@
+<blockquote style="background-color:#D9D7F1;">
+<pre>
+[% content %]
+</pre>
+</blockquote>

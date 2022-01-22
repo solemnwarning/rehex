@@ -1,0 +1,42 @@
+<html>
+
+<head>
+<title>[% title %]</title>
+<link rel="StyleSheet" type="text/css" href="style.css">
+</head>
+
+<body>
+<div id="nav">
+[% BLOCK page_list %]
+	<ul>
+	[% FOREACH page IN contents %]
+		<li [% IF !page.children.empty %]class="book"[% END %]>
+		[% IF page.page == template_name %]
+			<b>[% page.title | html %]</b>
+		[% ELSE %]
+			<a href="[% page.page | html %].html">[% page.title | html %]</a>
+		[% END %]
+		[% IF !page.children.empty; INCLUDE page_list contents = page.children; END %]
+		</li>
+	[% END %]
+	</ul>
+[% END %]
+
+[% INCLUDE page_list %]
+</div>
+
+<div id="content">
+[% content %]
+</div>
+
+<div id="footer">
+<table>
+<tr>
+<td>Reverse Engineers' Hex Editor</td>
+<td>Copyright &copy; Daniel Collins (2017-2022)</td>
+</tr>
+</table>
+</div>
+
+</body>
+</html>

@@ -1,3 +1,10 @@
+Version TBA
+
+ * Added "x86 disassembly syntax" to "View" menu to allow selecting between
+   Intel or AT&T notation for x86 disassembly.
+
+ * Handle file open message used for "Open With" on macOS (#144).
+
 Version 0.4.1 (2022-01-03)
 
  * Fixed font-dependent rendering glitches when control characters or other

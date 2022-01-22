@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -32,20 +32,36 @@ shell-or-die = $\
 		$(wordlist 1, $(shell echo $$(($(words $(sod_out)) - 1))), $(sod_out)),$\
 		$(error $(1) exited with status $(lastword $(sod_out))))
 
-WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv)
-WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv)
+# Check if we are building target(s) that don't need to compile anything and
+# skip fetching compiler flags from wx-config/pkg-config/etc if so, this avoids
+# having to have our dependencies on build hosts that are going to use a chroot
+# or other container for doing the actual build.
 
-CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
-CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
+NONCOMPILE_TARGETS=clean distclean dist
 
-JANSSON_CFLAGS ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --cflags)
-JANSSON_LIBS   ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --libs)
+need_compiler_flags=1
+ifneq ($(MAKECMDGOALS),)
+	ifeq ($(filter-out $(NONCOMPILE_TARGETS),$(MAKECMDGOALS)),)
+		need_compiler_flags=0
+	endif
+endif
 
-LUA_CFLAGS ?= $(call shell-or-die,pkg-config $(LUA_PKG) --cflags)
-LUA_LIBS   ?= $(call shell-or-die,pkg-config $(LUA_PKG) --libs)
-
-GTK_CFLAGS = $$($(GTKCONFIG_EXE) --cflags)
-GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
+ifeq ($(need_compiler_flags),1)
+	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv html)
+	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv html)
+	
+	CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
+	CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
+	
+	JANSSON_CFLAGS ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --cflags)
+	JANSSON_LIBS   ?= $(call shell-or-die,pkg-config $(JANSSON_PKG) --libs)
+	
+	LUA_CFLAGS ?= $(call shell-or-die,pkg-config $(LUA_PKG) --cflags)
+	LUA_LIBS   ?= $(call shell-or-die,pkg-config $(LUA_PKG) --libs)
+	
+	GTK_CFLAGS = $$($(GTKCONFIG_EXE) --cflags)
+	GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
+endif
 
 ifeq ($(DEBUG),)
 	DEBUG=0
@@ -219,6 +235,7 @@ APP_OBJS := \
 	res/spinner24.o \
 	src/AboutDialog.o \
 	src/AppMain.o \
+	src/AppSettings.o \
 	src/AppTestable.o \
 	src/ArtProvider.o \
 	src/BasicDataTypes.o \
@@ -262,7 +279,7 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
@@ -287,6 +304,7 @@ TEST_OBJS := \
 	res/offsets48.o \
 	res/spinner24.o \
 	src/AboutDialog.o \
+	src/AppSettings.o \
 	src/AppTestable.o \
 	src/ArtProvider.o \
 	src/BasicDataTypes.o \
@@ -349,7 +367,7 @@ TEST_OBJS := \
 	$(EXTRA_TEST_OBJS)
 
 tests/all-tests: $(TEST_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 $(EMBED_EXE): tools/embed.cpp
@@ -423,12 +441,28 @@ googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
 wxLua/%.cpp: $(WXLUA_BINDINGS)
 	@true
 
+.PHONY: help/rehex.chm
+help/rehex.chm:
+	$(MAKE) -C help/ rehex.chm
+
+rehex.chm: help/rehex.chm
+	cp $< $@
+
+.PHONY: help/rehex.htb
+help/rehex.htb:
+	$(MAKE) -C help/ rehex.htb
+
+.PHONY: online-help
+online-help:
+	$(MAKE) -C help/ online-help
+
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)
 
 prefix      ?= /usr/local
 exec_prefix ?= $(prefix)
 bindir      ?= $(exec_prefix)/bin
 datarootdir ?= $(prefix)/share
+datadir     ?= $(datarootdir)
 libdir      ?= $(exec_prefix)/lib
 
 PLUGINS := \
@@ -436,7 +470,7 @@ PLUGINS := \
 	exe
 
 .PHONY: install
-install: $(EXE)
+install: $(EXE) help/rehex.htb
 	install -D -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
 	
 	for s in 16 32 48 64 128 256 512; \
@@ -446,6 +480,8 @@ install: $(EXE)
 	
 	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
+	install -D -m 0644 help/rehex.htb $(DESTDIR)$(datadir)/rehex/rehex.htb
+	
 	for p in $(PLUGINS); \
 	do \
 		$(MAKE) -C plugins/$${p} install || exit $$?; \
@@ -454,6 +490,8 @@ install: $(EXE)
 .PHONY: uninstall
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/$(EXE)
+	rm -f $(DESTDIR)$(datadir)/rehex/rehex.htb
+	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(datadir)/rehex/
 	rm -f $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
 	for s in 16 32 48 64 128 256 512; \

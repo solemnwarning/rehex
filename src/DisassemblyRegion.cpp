@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,6 +25,7 @@
 #include <tuple>
 #include <vector>
 
+#include "App.hpp"
 #include "DisassemblyRegion.hpp"
 #include "Events.hpp"
 #include "util.hpp"
@@ -35,7 +36,9 @@ static const size_t INSTRUCTION_CACHE_LIMIT = 250000;
 REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, cs_arch arch, cs_mode mode):
 	GenericDataRegion(offset, length, virt_offset),
 	doc(doc),
-	virt_offset(virt_offset)
+	virt_offset(virt_offset),
+	arch(arch),
+	preferred_asm_syntax(AsmSyntax::INTEL)
 {
 	cs_err error = cs_open(arch, mode, &disassembler);
 	if(error != CS_ERR_OK)
@@ -138,6 +141,34 @@ void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
 
 void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
 {
+	if(arch == CS_ARCH_X86)
+	{
+		AsmSyntax new_preferred_asm_syntax = wxGetApp().settings->get_preferred_asm_syntax();
+		if(preferred_asm_syntax != new_preferred_asm_syntax)
+		{
+			preferred_asm_syntax = new_preferred_asm_syntax;
+			
+			switch(preferred_asm_syntax)
+			{
+				case AsmSyntax::INTEL:
+					cs_option(disassembler, CS_OPT_SYNTAX, CS_OPT_SYNTAX_INTEL);
+					break;
+					
+				case AsmSyntax::ATT:
+					cs_option(disassembler, CS_OPT_SYNTAX, CS_OPT_SYNTAX_ATT);
+					break;
+			}
+			
+			longest_disasm = 0;
+			longest_instruction = 0;
+			
+			dirty.set_range(d_offset, d_length);
+			
+			processed.clear();
+			instructions.clear();
+		}
+	}
+	
 	draw_container(doc_ctrl, dc, x, y);
 	
 	int hf_char_height = doc_ctrl.hf_char_height();

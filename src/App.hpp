@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,7 +18,9 @@
 #ifndef REHEX_APP_HPP
 #define REHEX_APP_HPP
 
+#include "AppSettings.hpp"
 #include "ConsoleBuffer.hpp"
+#include "mainwindow.hpp"
 
 #include <functional>
 #include <map>
@@ -26,14 +28,23 @@
 #include <vector>
 #include <wx/config.h>
 #include <wx/filehistory.h>
+#include <wx/help.h>
 #include <wx/intl.h>
 #include <wx/wx.h>
 
 namespace REHex {
+	#ifdef _WIN32
+	typedef wxCHMHelpController HelpController;
+	#else
+	typedef wxHtmlHelpController HelpController;
+	#endif
+	
 	class App: public wxApp
 	{
 		public:
 			wxConfig *config;
+			AppSettings *settings;
+			
 			wxFileHistory *recent_files;
 			wxLocale *locale;
 			
@@ -182,13 +193,25 @@ namespace REHex {
 			int get_caret_on_time_ms();
 			int get_caret_off_time_ms();
 			
+			HelpController *get_help_controller(wxWindow *error_parent);
+			void show_help_contents(wxWindow *error_parent);
+			
 			virtual bool OnInit();
 			virtual int OnExit();
+			
+			#ifdef __APPLE__
+			virtual void MacOpenFiles(const wxArrayString &fileNames) override;
+			#endif
 			
 		private:
 			std::string last_directory;
 			int font_size_adjustment;
 			std::string font_name;
+			
+			MainWindow *window;
+			
+			HelpController *help_controller;
+			bool help_loaded;
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);

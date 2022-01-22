@@ -1,0 +1,31 @@
+[% WRAPPER page.tt
+   title = "Comparing Files"
+%]
+
+<h2>Comparing Files</h2>
+
+<p>
+The <i>Compare data</i> function allows you to two or more files, or sections of files to see where they differ, as shown by the screenshot comparing the start of two ELF executables below:
+</p>
+
+<p>
+<img src="diff-elf.png">
+</p>
+
+<p>
+The bytes highlighted in red differ between the files, the rest are identical.
+</p>
+
+<p>
+The buttons in the toolbar allow showing/hiding the offset/text columns, selecting whether long sections of identical bytes will be hidden (as shown in the screenshot) and jumping between differences.
+</p>
+
+<p>
+To open the compare view, select <i>Compare whole file...</i> from the <i>Edit</i> menu (or press <i>Ctrl+K</i>) in the main window, or select a range of bytes to compare and use <i>Compare selection...</i> from the context menu (or press <i>Ctrl+Shift+K</i>). Do this multiple times to add more files/ranges to the comparison.
+</p>
+
+<p>
+Unlike the UNIX <code>diff</code> utility, this tool only operates on fixed-length binary files - the common points of variable-length binary formats will not be detected.
+</p>
+
+[% END %]

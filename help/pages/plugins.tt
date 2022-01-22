@@ -1,0 +1,38 @@
+[% WRAPPER page.tt
+   title = "Writing Plugins"
+%]
+
+<h2>Writing Plugins</h2>
+
+<p>
+REHex's functionality can be extended by writing plugins in Lua - for example the included <code>exe</code> plugin which can annotate the sections of a PE EXE/DLL file.
+</p>
+
+<p>
+Plugins are loaded from the following places on different platforms:
+
+<ul>
+<li>Windows<ul>
+	<li>The <code>Plugins</code> folder alongside rehex.exe</li>
+	</ul></li>
+
+<li>Linux<ul>
+	<li><code>${XDG_DATA_HOME}/rehex/plugins/</code> (usually <code>~/.local/share/rehex/plugins/</code>)</li>
+	<li><code>${LIBDIR}/rehex/</code> (usually <code>/usr/lib/rehex/</code></li>
+	</ul></li>
+
+<li>macOS<ul>
+	<li>The <code>Contents/PlugIns</code> directory in the application bundle.</li>
+	</ul></li>
+</ul>
+</p>
+
+<p>
+Each plugin should either be a single <code>.lua</code> file in the top-level plugins directory, or a subdirectory containing a <code>plugin.lua</code> file and any resources/assets needed by the plugin.
+</p>
+
+<p>
+For more information see the <a href="https://github.com/solemnwarning/rehex/tree/master/plugins/examples">example plugins</a> and the <a href="https://www.solemnwarning.net/rehex-luadoc/">plugin API reference</a>.
+</p>
+
+[% END %]

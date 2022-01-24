@@ -76,6 +76,7 @@ REHex.app: res/Info.plist $(EXE) $(ICNS) help/rehex.htb
 	done
 
 $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
+ifneq ($(ICONUTIL),)
 	rm -rf $(ICONSET)
 	mkdir $(ICONSET)
 	cp res/icon16.png   $(ICONSET)/icon_16x16.png
@@ -88,11 +89,9 @@ $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
 	cp res/icon512.png  $(ICONSET)/icon_256x256@2x.png
 	cp res/icon512.png  $(ICONSET)/icon_512x512.png
 	cp res/icon1024.png $(ICONSET)/icon_512x512@2x.png
-	
-ifneq ($(ICONUTIL),)
 	$(ICONUTIL) -c icns -o $@ $(ICONSET)
 else ifneq ($(PNG2ICNS),)
-	$(PNG2ICNS) $@ $(filter-out %@2x.png,$(wildcard $(ICONSET)/*.png))
+	$(PNG2ICNS) $@ res/icon{16,32,128,256,512}.png
 else
 	$(error Neither iconutil nor png2icns found in PATH. Install one or set ICONUTIL/PNG2ICNS as necessary)
 endif

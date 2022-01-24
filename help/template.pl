@@ -18,21 +18,39 @@ use strict;
 use warnings;
 
 use Template;
+use Template::Provider;
 use FindBin;
+use Getopt::Long;
 
-my ($template_name, $include_path) = @ARGV;
+my @include_paths = ();
+my $dep_file;
+my $dep_target;
+
+GetOptions(
+	"include=s"    => \@include_paths,
+	"dep-file=s"   => \$dep_file,
+	"dep-target=s" => \$dep_target,
+);
+
+my ($template_name) = @ARGV;
 
 my @contents = load_contents();
 
 my $tt = Template->new({
-	INCLUDE_PATH => $include_path,
-	RECURSION    => 1 }
+	RECURSION => 1,
+	LOAD_TEMPLATES => [
+		TemplateLoadLogger->new(\@include_paths),
+		Template::Provider->new({ INCLUDE_PATH => \@include_paths }),
+	]},
 ) or die $Template::ERROR;
 
 $tt->process("$template_name.tt", {
 	contents      => \@contents,
 	template_name => $template_name }
 ) or die $tt->error();
+
+open(my $dep_out, ">", $dep_file) or die "$dep_file: $!\n";
+print {$dep_out} "$dep_target: ", join(" ", keys(%TemplateLoadLogger::LOADED_TEMPLATES)), "\n";
 
 sub load_contents
 {
@@ -72,4 +90,38 @@ sub load_contents
 	}
 	
 	return @pages;
+}
+
+package TemplateLoadLogger;
+
+use Template::Constants;
+
+our %LOADED_TEMPLATES = ();
+
+sub new
+{
+	my ($class, $include_paths) = @_;
+	return bless([ @$include_paths ], $class);
+}
+
+sub fetch
+{
+	my ($self, $name) = @_;
+	
+	foreach my $path(@$self)
+	{
+		if(-e "$path/$name")
+		{
+			$LOADED_TEMPLATES{"$path/$name"} = 1;
+			last;
+		}
+	}
+	
+	return (undef, Template::Constants::STATUS_DECLINED);
+}
+
+sub load
+{
+	my ($self, $name) = @_;
+	return $self->fetch($name);
 }

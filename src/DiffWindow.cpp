@@ -74,6 +74,8 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_TIMER(ID_UPDATE_REGIONS_TIMER, REHex::DiffWindow::OnUpdateRegionsTimer)
 END_EVENT_TABLE()
 
+REHex::DiffWindow *REHex::DiffWindow::instance = NULL;
+
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	wxFrame(parent, wxID_ANY, "Compare data - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
 	statbar(NULL),
@@ -175,6 +177,11 @@ REHex::DiffWindow::~DiffWindow()
 		d->first->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
 		
 		d->first->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
+	}
+	
+	if(instance == this)
+	{
+		instance = NULL;
 	}
 }
 

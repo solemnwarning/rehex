@@ -86,6 +86,8 @@ namespace REHex {
 			
 			void set_folding(bool enable_folding);
 			
+			static DiffWindow *instance;
+			
 		private:
 			class DiffDataRegion: public DocumentCtrl::DataRegion
 			{
@@ -152,8 +154,6 @@ namespace REHex {
 			bool searching_forwards;
 			wxProgressDialog *search_modal;
 			bool search_modal_updating;
-			
-			static DiffWindow *instance;
 			
 			#ifdef DIFFWINDOW_PROFILING
 			unsigned idle_ticks;

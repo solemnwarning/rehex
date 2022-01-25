@@ -216,6 +216,9 @@ namespace REHex {
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);
 			
+			void OnMainWindowShow(wxShowEvent &event);
+			void OnDiffWindowClose(wxCloseEvent &event);
+			
 		public:
 			void _test_setup_hooks(SetupPhase phase);
 	};

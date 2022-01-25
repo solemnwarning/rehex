@@ -46,7 +46,7 @@ namespace REHex {
 			/**
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
-			void open_file(const std::string &filename);
+			Tab *open_file(const std::string &filename);
 			
 			wxMenuBar *get_menu_bar() const;
 			wxMenu *get_file_menu() const;

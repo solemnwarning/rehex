@@ -550,7 +550,7 @@ void REHex::MainWindow::new_file()
 	wxPostEvent(this, event);
 }
 
-void REHex::MainWindow::open_file(const std::string &filename)
+REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 {
 	Tab *tab;
 	try {
@@ -561,7 +561,7 @@ void REHex::MainWindow::open_file(const std::string &filename)
 		wxMessageBox(
 			std::string("Error opening ") + filename + ":\n" + e.what(),
 			"Error", wxICON_ERROR, this);
-		return;
+		return NULL;
 	}
 	
 	/* Discard default "Untitled" tab if not modified. */
@@ -588,6 +588,8 @@ void REHex::MainWindow::open_file(const std::string &filename)
 	
 	TabCreatedEvent event(this, tab);
 	wxPostEvent(this, event);
+	
+	return tab;
 }
 
 void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)

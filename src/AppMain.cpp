@@ -189,6 +189,8 @@ bool REHex::App::OnInit()
 		window->Show();
 	}
 	
+	bool opened_a_file = false;
+	
 	for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
 	{
 		Tab *tab = window->open_file(*filename);
@@ -203,6 +205,16 @@ bool REHex::App::OnInit()
 				return false;
 			}
 		}
+		
+		if(tab != NULL)
+		{
+			opened_a_file = true;
+		}
+	}
+	
+	if(!opened_a_file)
+	{
+		window->new_file();
 	}
 	
 	call_setup_hooks(SetupPhase::DONE);

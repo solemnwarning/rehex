@@ -1405,6 +1405,7 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 			source_range->doc->set_cursor_position(cursor_pos);
 			source_range->main_doc_ctrl->SetFocus();
 			
+			window->Show();
 			window->Raise();
 		}
 		else{

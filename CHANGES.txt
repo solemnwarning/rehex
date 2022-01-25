@@ -7,6 +7,9 @@ Version TBA
 
  * Added --compare switch to jump straight into comparing two files (#141).
 
+ * Fix timer leak that can cause a crash when closing the compare window or
+   strings panel.
+
 Version 0.4.1 (2022-01-03)
 
  * Fixed font-dependent rendering glitches when control characters or other

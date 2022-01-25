@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -104,7 +104,7 @@ namespace REHex {
 			
 			std::list<std::thread> threads;  /* List of threads created and not yet reaped. */
 			std::atomic<bool> threads_exit;  /* Threads should exit. */
-			wxTimer *timer;
+			wxTimer timer;
 			
 			std::mutex pause_lock;              /* Mutex protecting access to this block of members: */
 			std::atomic<bool> threads_pause;    /* Running threads should enter paused state. */

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -82,6 +82,7 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	sb_gauge(NULL),
 	enable_folding(true),
 	recalc_bytes_per_line_pending(false),
+	update_regions_timer(this, ID_UPDATE_REGIONS_TIMER),
 	relative_cursor_pos(0),
 	longest_range(0),
 	searching_backwards(false),
@@ -150,8 +151,6 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	
 	statbar = CreateStatusBar(2);
 	sb_gauge = new wxGauge(statbar, wxID_ANY, 100);
-	
-	update_regions_timer = new wxTimer(this, ID_UPDATE_REGIONS_TIMER);
 }
 
 REHex::DiffWindow::~DiffWindow()
@@ -688,9 +687,9 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 	
 	offsets_pending.clear_range(rel_offset, length);
 	
-	if(!update_regions_timer->IsRunning())
+	if(!update_regions_timer.IsRunning())
 	{
-		update_regions_timer->StartOnce(100);
+		update_regions_timer.StartOnce(100);
 	}
 	
 	return length;

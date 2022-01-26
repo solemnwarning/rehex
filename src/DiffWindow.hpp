@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -86,6 +86,8 @@ namespace REHex {
 			
 			void set_folding(bool enable_folding);
 			
+			static DiffWindow *instance;
+			
 		private:
 			class DiffDataRegion: public DocumentCtrl::DataRegion
 			{
@@ -143,7 +145,7 @@ namespace REHex {
 			
 			ByteRangeSet offsets_pending;    /**< Bytes which need to be processed (relative to Range base). */
 			ByteRangeSet offsets_different;  /**< Bytes which have been processed and have differences (relative to Range base). */
-			wxTimer *update_regions_timer;
+			wxTimer update_regions_timer;
 			
 			off_t relative_cursor_pos;  /**< Current cursor position (relative to Range base). */
 			off_t longest_range;        /**< Length of the longest Range. */
@@ -152,8 +154,6 @@ namespace REHex {
 			bool searching_forwards;
 			wxProgressDialog *search_modal;
 			bool search_modal_updating;
-			
-			static DiffWindow *instance;
 			
 			#ifdef DIFFWINDOW_PROFILING
 			unsigned idle_ticks;

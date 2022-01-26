@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -44,12 +44,14 @@ class StringPanelTest: public ::testing::Test
 		
 		StringPanel *string_panel;
 		
-		wxTimer *check_timer;
-		wxTimer *timeout_timer;
+		wxTimer check_timer;
+		wxTimer timeout_timer;
 		
 		StringPanelTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
-			doc(SharedDocumentPointer::make())
+			doc(SharedDocumentPointer::make()),
+			check_timer(&frame, ID_CHECK_TIMER),
+			timeout_timer(&frame, ID_TIMEOUT_TIMER)
 		{
 			main_doc_ctrl = new DocumentCtrl(&frame, doc);
 			
@@ -57,9 +59,6 @@ class StringPanelTest: public ::testing::Test
 			std::vector<DocumentCtrl::Region*> regions;
 			regions.push_back(new DocumentCtrl::DataRegion(0, 0, 0));
 			main_doc_ctrl->replace_all_regions(regions);
-			
-			check_timer = new wxTimer(&frame, ID_CHECK_TIMER);
-			timeout_timer = new wxTimer(&frame, ID_TIMEOUT_TIMER);
 			
 			frame.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 			{
@@ -77,13 +76,13 @@ class StringPanelTest: public ::testing::Test
 		
 		void wait_for_idle(unsigned int timeout_ms)
 		{
-			check_timer->Start(100, wxTIMER_CONTINUOUS);
-			timeout_timer->Start(timeout_ms, wxTIMER_ONE_SHOT);
+			check_timer.Start(100, wxTIMER_CONTINUOUS);
+			timeout_timer.Start(timeout_ms, wxTIMER_ONE_SHOT);
 			
 			wxTheApp->OnRun();
 			
-			timeout_timer->Stop();
-			check_timer->Stop();
+			timeout_timer.Stop();
+			check_timer.Stop();
 		}
 };
 

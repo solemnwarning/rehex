@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,7 +29,7 @@ using namespace REHex;
 static void pump_events()
 {
 	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	wxTimer *timer = new wxTimer(&frame, wxID_ANY);
+	wxTimer timer(&frame, wxID_ANY);
 	
 	frame.Bind(wxEVT_IDLE, [](wxIdleEvent &event)
 	{
@@ -41,11 +41,11 @@ static void pump_events()
 		wxTheApp->ExitMainLoop();
 	});
 	
-	timer->Start(1000, wxTIMER_ONE_SHOT);
+	timer.Start(1000, wxTIMER_ONE_SHOT);
 	
 	wxTheApp->OnRun();
 	
-	timer->Stop();
+	timer.Stop();
 }
 
 TEST(LuaPluginLoader, LoadPlugin)

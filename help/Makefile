@@ -44,8 +44,6 @@ CHM_TARGETS := \
 	chm/output/rehex.hhc \
 	chm/output/rehex.hhk
 
-CHM_TEMPLATE_PATH := chm/templates/:pages/
-
 rehex.chm: $(CHM_TARGETS)
 	cp content/* chm/content/* chm/output/
 	# hhc.exe returns 0 on failure and 1 on success... good job Microsoft.
@@ -53,46 +51,40 @@ rehex.chm: $(CHM_TARGETS)
 	! $(HHC) chm/output/rehex.hhp
 	cp chm/output/rehex.chm $@
 
-chm/output/rehex.hhc: chm/templates/hhc.tt
-	$(PERL) template.pl hhc $(CHM_TEMPLATE_PATH) > chm/output/rehex.hhc
-
-chm/output/rehex.hhk: chm/templates/hhk.tt
-	$(PERL) template.pl hhk $(CHM_TEMPLATE_PATH) > chm/output/rehex.hhk
+chm/output/rehex.%: chm/templates/%.tt contents.txt
+	@mkdir -p chm/output/ $(shell dirname .d/$@.d)
+	$(PERL) template.pl --include chm/templates --dep-file .d/$@.d --dep-target $@ $* > $@
 
 chm/output/%.html: pages/%.tt
-	@mkdir -p chm/output/
-	$(PERL) template.pl $* $(CHM_TEMPLATE_PATH) > $@
+	@mkdir -p chm/output/ $(shell dirname .d/$@.d)
+	$(PERL) template.pl --include chm/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
 
 WX_TARGETS := \
 	$(addsuffix .html,$(addprefix wx/output/,$(PAGES))) \
 	wx/output/rehex.hhc \
 	wx/output/rehex.hhk
 
-WX_TEMPLATE_PATH := wx/templates/:pages/
-
 rehex.htb: $(WX_TARGETS)
 	cp content/* wx/content/* wx/output/
 	zip -rj rehex.htb wx/output/
 
-wx/output/rehex.hhc: wx/templates/hhc.tt
-	$(PERL) template.pl hhc $(WX_TEMPLATE_PATH) > wx/output/rehex.hhc
-
-wx/output/rehex.hhk: wx/templates/hhk.tt
-	$(PERL) template.pl hhk $(WX_TEMPLATE_PATH) > wx/output/rehex.hhk
+wx/output/rehex.%: wx/templates/%.tt contents.txt
+	@mkdir -p wx/output/ $(shell dirname .d/$@.d)
+	$(PERL) template.pl --include wx/templates --dep-file .d/$@.d --dep-target $@ $* > $@
 
 wx/output/%.html: pages/%.tt
-	@mkdir -p wx/output/
-	$(PERL) template.pl $* $(WX_TEMPLATE_PATH) > $@
+	@mkdir -p wx/output/ $(shell dirname .d/$@.d)
+	$(PERL) template.pl --include wx/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
 
 ONLINE_TARGETS := \
 	$(addsuffix .html,$(addprefix online/output/,$(PAGES)))
-
-ONLINE_TEMPLATE_PATH := online/templates/:pages/
 
 .PHONY: online-help
 online-help: $(ONLINE_TARGETS)
 	cp content/* online/content/* online/output/
 
-online/output/%.html: pages/%.tt
-	@mkdir -p online/output/
-	$(PERL) template.pl $* $(ONLINE_TEMPLATE_PATH) > $@
+online/output/%.html: pages/%.tt contents.txt
+	@mkdir -p online/output/ $(shell dirname .d/$@.d)
+	$(PERL) template.pl --include online/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+
+include $(shell test -d .d/ && find .d/ -name '*.d' -type f)

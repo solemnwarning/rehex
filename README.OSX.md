@@ -6,6 +6,7 @@ You will need the XCode build tools and the following additional libraries to bu
 - Jansson
 - libunistring
 - Lua (5.3+)
+- Template Toolkit
 - wxWidgets
 
 You can install them yourself, or source the included script in your shell to download and build private copies of them specifically for building rehex against:

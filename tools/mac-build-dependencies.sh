@@ -32,7 +32,7 @@ _rehex_lua_build_ident="${_rehex_lua_version}-1"
 
 _rehex_wxwidgets_version="3.1.5"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
@@ -250,6 +250,10 @@ then
 			--prefix="${_rehex_wxwidgets_target_dir}" \
 			--disable-shared \
 			--enable-unicode \
+			--with-libjpeg=no \
+			--with-libpng=builtin \
+			--with-libtiff=no \
+			--with-regex=builtin \
 			-enable-cxx11 \
 			-with-macosx-version-min="${_rehex_macos_version_min}" \
 			CXXFLAGS="-stdlib=libc++" \

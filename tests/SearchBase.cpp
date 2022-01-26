@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -108,19 +108,18 @@ class SearchBaseTest: public ::testing::Test {
 		SharedDocumentPointer doc;
 		SearchBaseDummy s;
 		
-		wxTimer *check_timer;
-		wxTimer *timeout_timer;
+		wxTimer check_timer;
+		wxTimer timeout_timer;
 		
 		SearchBaseTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
 			doc(SharedDocumentPointer::make()),
-			s(&frame, doc)
+			s(&frame, doc),
+			check_timer(&frame, ID_CHECK_TIMER),
+			timeout_timer(&frame, ID_TIMEOUT_TIMER)
 		{
 			const std::vector<unsigned char> DATA(0x8192, 0x00);
 			doc->insert_data(0, DATA.data(), DATA.size());
-			
-			check_timer = new wxTimer(&frame, ID_CHECK_TIMER);
-			timeout_timer = new wxTimer(&frame, ID_TIMEOUT_TIMER);
 			
 			frame.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 			{
@@ -138,13 +137,13 @@ class SearchBaseTest: public ::testing::Test {
 		
 		void wait_for_search()
 		{
-			check_timer->Start(100, wxTIMER_CONTINUOUS);
-			timeout_timer->Start(5000, wxTIMER_ONE_SHOT);
+			check_timer.Start(100, wxTIMER_CONTINUOUS);
+			timeout_timer.Start(5000, wxTIMER_ONE_SHOT);
 			
 			wxTheApp->OnRun();
 			
-			timeout_timer->Stop();
-			check_timer->Stop();
+			timeout_timer.Stop();
+			check_timer.Stop();
 		}
 		
 		void search_for_match(off_t sub_range_begin, off_t sub_range_end, Search::SearchDirection direction, off_t expect_match_at, off_t window_size = 128)

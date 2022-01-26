@@ -15,6 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <string>
+#include <vector>
+#include <wx/event.h>
 #include <wx/filesys.h>
 #include <wx/fontutil.h>
 #include <wx/fs_zip.h>
@@ -24,6 +27,7 @@
 
 #include "App.hpp"
 #include "ArtProvider.hpp"
+#include "DiffWindow.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 #include "../res/version.h"
@@ -42,6 +46,48 @@ bool REHex::App::OnInit()
 	
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
+	
+	bool process_switches = true;
+	bool compare_mode = false;
+	
+	std::vector<std::string> open_filenames;
+	
+	for(int i = 1; i < argc; ++i)
+	{
+		if(process_switches)
+		{
+			if(argv[i] == "--")
+			{
+				process_switches = false;
+				continue;
+			}
+			else if(argv[i] == "--compare")
+			{
+				if(compare_mode)
+				{
+					fprintf(stderr, "WARNING: Ignoring duplicate '--compare' switch\n");
+				}
+				
+				compare_mode = true;
+				continue;
+			}
+			else if(argv[i][0] == '-')
+			{
+				fprintf(stderr, "Unknown command line switch: %s\n", argv[i].ToStdString().c_str());
+				fprintf(stderr, "Usage: %s [--compare] [--] [<filename(s)>]\n", argv[0].ToStdString().c_str());
+				return false;
+			}
+		}
+		
+		open_filenames.push_back(argv[i].ToStdString());
+	}
+	
+	if(compare_mode && open_filenames.size() < 2)
+	{
+		fprintf(stderr, "At least two filenames must be given with --compare switch\n");
+		fprintf(stderr, "Usage: %s [--compare] [--] [<filename(s)>]\n", argv[0].ToStdString().c_str());
+		return false;
+	}
 	
 	call_setup_hooks(SetupPhase::EARLY);
 	
@@ -128,16 +174,46 @@ bool REHex::App::OnInit()
 	window->Maximize(maximise);
 	#endif
 	
-	window->Show(true);
-	
-	if(argc > 1)
+	if(compare_mode)
 	{
-		for(int i = 1; i < argc; ++i)
-		{
-			window->open_file(argv[i].ToStdString());
-		}
+		DiffWindow::instance = new DiffWindow(NULL);
+		DiffWindow::instance->Show(true);
+		
+		/* Special hacky handlers to deal with DiffWindow being the only visible window...
+		 * see the comments in them.
+		*/
+		window->Bind(wxEVT_SHOW, &REHex::App::OnMainWindowShow, this);
+		DiffWindow::instance->Bind(wxEVT_CLOSE_WINDOW, &REHex::App::OnDiffWindowClose, this);
 	}
 	else{
+		window->Show();
+	}
+	
+	bool opened_a_file = false;
+	
+	for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+	{
+		Tab *tab = window->open_file(*filename);
+		if(compare_mode)
+		{
+			if(tab != NULL)
+			{
+				DiffWindow::instance->add_range(DiffWindow::Range(tab->doc, tab->doc_ctrl, 0, tab->doc->buffer_length()));
+			}
+			else{
+				/* Failed to open a file with --compare specified. */
+				return false;
+			}
+		}
+		
+		if(tab != NULL)
+		{
+			opened_a_file = true;
+		}
+	}
+	
+	if(!opened_a_file)
+	{
 		window->new_file();
 	}
 	
@@ -175,4 +251,35 @@ int REHex::App::OnExit()
 	locale = NULL;
 	
 	return 0;
+}
+
+void REHex::App::OnMainWindowShow(wxShowEvent &event)
+{
+	/* This handler gets called if the MainWindow is shown because of an action in the
+	 * DiffWindow when the --compare switch was used.
+	 *
+	 * We remove our hacky handlers and let things go as normal now.
+	*/
+	
+	if(event.IsShown())
+	{
+		DiffWindow::instance->Unbind(wxEVT_CLOSE_WINDOW, &REHex::App::OnDiffWindowClose, this);
+		window->Unbind(wxEVT_SHOW, &REHex::App::OnMainWindowShow, this);
+	}
+	
+	event.Skip();
+}
+
+void REHex::App::OnDiffWindowClose(wxCloseEvent &event)
+{
+	/* This handler gets called if the DiffWindow created as the sole visible top-level window
+	 * when using the --compare switch was closed. We destroy the (invisible) MainWindow so the
+	 * program will exit.
+	*/
+	
+	if(event.GetEventObject() == DiffWindow::instance)
+	{
+		window->Destroy();
+		event.Skip();
+	}
 }

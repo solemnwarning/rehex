@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -72,6 +72,7 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	ignore_cjk(false),
 	update_needed(false),
 	threads_exit(true),
+	timer(this, wxID_ANY),
 	threads_pause(false),
 	spawned_threads(0),
 	running_threads(0),
@@ -152,8 +153,6 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::StringPanel::OnDataModifyAborted,    this);
 	
 	mark_dirty(0, document->buffer_length());
-	
-	timer = new wxTimer(this, wxID_ANY);
 	
 	start_threads();
 }
@@ -700,9 +699,9 @@ void REHex::StringPanel::start_threads()
 				++running_threads;
 			}
 			
-			if(!timer->IsRunning())
+			if(!timer.IsRunning())
 			{
-				timer->Start(100, wxTIMER_CONTINUOUS);
+				timer.Start(100, wxTIMER_CONTINUOUS);
 			}
 		#if 0
 		}
@@ -727,7 +726,7 @@ void REHex::StringPanel::stop_threads()
 	spinner->Stop();
 	spinner->Hide();
 	
-	timer->Stop();
+	timer.Stop();
 	
 	{
 		std::lock_guard<std::mutex> pl(pause_lock);

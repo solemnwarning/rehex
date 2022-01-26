@@ -508,24 +508,14 @@ void REHex::Tab::compare_selection()
 
 void REHex::Tab::compare_range(off_t offset, off_t length)
 {
-	static DiffWindow *diff_window = NULL;
-	if(diff_window == NULL)
+	if(DiffWindow::instance == NULL)
 	{
 		/* Parent DiffWindow to our parent so it can outlive us but not the MainWindow. */
-		diff_window = new DiffWindow(GetParent());
-		
-		diff_window->Bind(wxEVT_DESTROY, [](wxWindowDestroyEvent &event)
-		{
-			if(event.GetWindow() == diff_window)
-			{
-				diff_window = NULL;
-			}
-		});
-		
-		diff_window->Show(true);
+		DiffWindow::instance = new DiffWindow(GetParent());
+		DiffWindow::instance->Show(true);
 	}
 	
-	diff_window->add_range(DiffWindow::Range(doc, doc_ctrl, offset, length));
+	DiffWindow::instance->add_range(DiffWindow::Range(doc, doc_ctrl, offset, length));
 	
 	/* Raise the DiffWindow to the top of the Z order sometime after the
 	 * current event has been processed, else the menu/mouse event handling
@@ -533,10 +523,10 @@ void REHex::Tab::compare_range(off_t offset, off_t length)
 	*/
 	CallAfter([]()
 	{
-		if(diff_window != NULL)
+		if(DiffWindow::instance != NULL)
 		{
-			diff_window->Iconize(false);
-			diff_window->Raise();
+			DiffWindow::instance->Iconize(false);
+			DiffWindow::instance->Raise();
 		}
 	});
 }

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,6 +31,7 @@
 #include "DiffWindow.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "SafeWindowPointer.hpp"
 #include "util.hpp"
 
 #include "../res/icon16.h"
@@ -74,12 +75,15 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_TIMER(ID_UPDATE_REGIONS_TIMER, REHex::DiffWindow::OnUpdateRegionsTimer)
 END_EVENT_TABLE()
 
+REHex::DiffWindow *REHex::DiffWindow::instance = NULL;
+
 REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	wxFrame(parent, wxID_ANY, "Compare data - Reverse Engineers' Hex Editor", wxDefaultPosition, wxSize(740, 540)),
 	statbar(NULL),
 	sb_gauge(NULL),
 	enable_folding(true),
 	recalc_bytes_per_line_pending(false),
+	update_regions_timer(this, ID_UPDATE_REGIONS_TIMER),
 	relative_cursor_pos(0),
 	longest_range(0),
 	searching_backwards(false),
@@ -148,8 +152,6 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	
 	statbar = CreateStatusBar(2);
 	sb_gauge = new wxGauge(statbar, wxID_ANY, 100);
-	
-	update_regions_timer = new wxTimer(this, ID_UPDATE_REGIONS_TIMER);
 }
 
 REHex::DiffWindow::~DiffWindow()
@@ -175,6 +177,11 @@ REHex::DiffWindow::~DiffWindow()
 		d->first->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
 		
 		d->first->Unbind(DOCUMENT_TITLE_CHANGED, &REHex::DiffWindow::OnDocumentTitleChange, this);
+	}
+	
+	if(instance == this)
+	{
+		instance = NULL;
 	}
 }
 
@@ -681,9 +688,9 @@ off_t REHex::DiffWindow::process_now(off_t rel_offset, off_t length)
 	
 	offsets_pending.clear_range(rel_offset, length);
 	
-	if(!update_regions_timer->IsRunning())
+	if(!update_regions_timer.IsRunning())
 	{
-		update_regions_timer->StartOnce(100);
+		update_regions_timer.StartOnce(100);
 	}
 	
 	return length;
@@ -1399,7 +1406,19 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 			source_range->doc->set_cursor_position(cursor_pos);
 			source_range->main_doc_ctrl->SetFocus();
 			
-			window->Raise();
+			/* Wait until the menu is gone before bringing the MainWindow to the top
+			 * or else we fight with it for focus.
+			*/
+			
+			SafeWindowPointer<MainWindow> w(window);
+			CallAfter([w]()
+			{
+				if(w)
+				{
+					w->Show();
+					w->Raise();
+				}
+			});
 		}
 		else{
 			/* Offset isn't currently available in main DocumentCtrl. */

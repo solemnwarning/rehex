@@ -31,6 +31,7 @@
 #include "DiffWindow.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "SafeWindowPointer.hpp"
 #include "util.hpp"
 
 #include "../res/icon16.h"
@@ -1405,8 +1406,19 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 			source_range->doc->set_cursor_position(cursor_pos);
 			source_range->main_doc_ctrl->SetFocus();
 			
-			window->Show();
-			window->Raise();
+			/* Wait until the menu is gone before bringing the MainWindow to the top
+			 * or else we fight with it for focus.
+			*/
+			
+			SafeWindowPointer<MainWindow> w(window);
+			CallAfter([w]()
+			{
+				if(w)
+				{
+					w->Show();
+					w->Raise();
+				}
+			});
 		}
 		else{
 			/* Offset isn't currently available in main DocumentCtrl. */

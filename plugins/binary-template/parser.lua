@@ -266,7 +266,7 @@ local _parser = spc * P{
 		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
 		Ct( V("VALUE") ) +
 		Ct( P(_capture_position) * Cc("_token") *
-			C( P("<<") + P(">>") + P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + S("!~*/%+-<>&^|=") ) * spc),
+			C( P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + P("+=") + P("-=") + P("*=") + P("/=") + P("%=") + P("<<=") + P(">>=") + P("&=") + P("^=") + P("|=") + P("<<") + P(">>") + S("!~*/%+-<>&^|=") ) * spc),
 	
 	EXPR_OR_NIL = V("EXPR") + Cc(nil) * spc,
 	ZERO_OR_MORE_EXPRS = (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1,
@@ -440,6 +440,41 @@ local function _compile_expr(expr)
 		error("Internal error - _compile_expr() called with an '" .. expr[3] .. "' node")
 	end
 	
+	-- Placeholders for operands and file/line in ops below
+	local _1 = {}
+	local _2 = {}
+	local _F = {}
+	local _L = {}
+	
+	local expand_op
+	expand_op = function(filename, line_num, op, operand_1, operand_2)
+		local ret = {}
+		
+		for i,v in ipairs(op)
+		do
+			if v == _1
+			then
+				ret[i] = operand_1
+			elseif v == _2
+			then
+				ret[i] = operand_2
+			elseif v == _F
+			then
+				ret[i] = filename
+			elseif v == _L
+			then
+				ret[i] = line_num
+			elseif type(v) == "table"
+			then
+				ret[i] = expand_op(filename, line_num, v, operand_1, operand_2)
+			else
+				ret[i] = v
+			end
+		end
+		
+		return ret
+	end
+	
 	local left_to_right = { start = function() return 1 end, step = 1 }
 	local right_to_left = { start = function(e) return #expr_parts - e end, step = -1 }
 	
@@ -457,7 +492,7 @@ local function _compile_expr(expr)
 					expr_parts[idx][3]:sub(1, 1) ~= "_" and
 					expr_parts[idx + 2][3]:sub(1, 1) ~= "_"
 				then
-					expr_parts[idx] = { expr_parts[idx + 1][1], expr_parts[idx + 1][2], ast_op, expr_parts[idx], expr_parts[idx + 2] }
+					expr_parts[idx] = expand_op(expr_parts[idx + 1][1], expr_parts[idx + 1][2], ast_op, expr_parts[idx], expr_parts[idx + 2])
 					table.remove(expr_parts, idx + 1)
 					table.remove(expr_parts, idx + 1)
 					
@@ -489,7 +524,7 @@ local function _compile_expr(expr)
 					expr_parts[idx][3] == "_token" and expr_parts[idx][4] == op and
 					expr_parts[idx + 1][3]:sub(1, 1) ~= "_"
 				then
-					expr_parts[idx] = { expr_parts[idx][1], expr_parts[idx][2], ast_op, expr_parts[idx + 1] }
+					expr_parts[idx] = expand_op(expr_parts[idx][1], expr_parts[idx][2], ast_op, expr_parts[idx + 1])
 					table.remove(expr_parts, idx + 1)
 					
 					matched = true
@@ -543,46 +578,59 @@ local function _compile_expr(expr)
 	end
 	
 	expand_unary_ops(right_to_left, {
-		["!"] = "logical-not",
-		["~"] = "bitwise-not",
+		["!"] = { _F, _L, "logical-not", _1 },
+		["~"] = { _F, _L, "bitwise-not", _1 },
 	})
 	
 	expand_binops(left_to_right, {
-		["*"] = "multiply",
-		["/"] = "divide",
-		["%"] = "mod",
+		["*"] = { _F, _L, "multiply", _1, _2 },
+		["/"] = { _F, _L, "divide", _1, _2 },
+		["%"] = { _F, _L, "mod", _1, _2 },
 	})
 	
 	expand_binops(left_to_right, {
-		["+"] = "add",
-		["-"] = "subtract",
+		["+"] = { _F, _L, "add", _1, _2 },
+		["-"] = { _F, _L, "subtract", _1, _2 },
 	})
 	
 	expand_binops(left_to_right, {
-		["<<"] = "left-shift",
-		[">>"] = "right-shift",
+		["<<"] = { _F, _L, "left-shift", _1, _2 },
+		[">>"] = { _F, _L, "right-shift", _1, _2 },
 	})
 	
 	expand_binops(left_to_right, {
-		["<"]  = "less-than",
-		["<="] = "less-than-or-equal",
-		[">"]  = "greater-than",
-		[">="] = "greater-than-or-equal",
+		["<"]  = { _F, _L, "less-than", _1, _2 },
+		["<="] = { _F, _L, "less-than-or-equal", _1, _2 },
+		[">"]  = { _F, _L, "greater-than", _1, _2 },
+		[">="] = { _F, _L, "greater-than-or-equal", _1, _2 },
 	})
 	
 	expand_binops(left_to_right, {
-		["=="] = "equal",
-		["!="] = "not-equal",
+		["=="] = { _F, _L, "equal", _1, _2 },
+		["!="] = { _F, _L, "not-equal", _1, _2 },
 	})
 	
-	expand_binops(left_to_right, { ["&"] = "bitwise-and" })
-	expand_binops(left_to_right, { ["^"] = "bitwise-xor" })
-	expand_binops(left_to_right, { ["|"] = "bitwise-or" })
+	expand_binops(left_to_right, { ["&"] = { _F, _L, "bitwise-and", _1, _2 } })
+	expand_binops(left_to_right, { ["^"] = { _F, _L, "bitwise-xor", _1, _2 } })
+	expand_binops(left_to_right, { ["|"] = { _F, _L, "bitwise-or", _1, _2 } })
 	
-	expand_binops(left_to_right, { ["&&"] = "logical-and" })
-	expand_binops(left_to_right, { ["||"] = "logical-or" })
+	expand_binops(left_to_right, { ["&&"] = { _F, _L, "logical-and", _1, _2 } })
+	expand_binops(left_to_right, { ["||"] = { _F, _L, "logical-or", _1, _2 } })
 	
-	expand_binops(right_to_left, { ["="] = "assign" })
+	expand_binops(right_to_left, {
+		["="] = { _F, _L, "assign", _1, _2 },
+		
+		["+="]  = { _F, _L, "assign", _1, { _F, _L, "add",         _1, _2 } },
+		["-="]  = { _F, _L, "assign", _1, { _F, _L, "subtract",    _1, _2 } },
+		["*="]  = { _F, _L, "assign", _1, { _F, _L, "multiply",    _1, _2 } },
+		["/="]  = { _F, _L, "assign", _1, { _F, _L, "divide",      _1, _2 } },
+		["%="]  = { _F, _L, "assign", _1, { _F, _L, "mod",         _1, _2 } },
+		["<<="] = { _F, _L, "assign", _1, { _F, _L, "left-shift",  _1, _2 } },
+		[">>="] = { _F, _L, "assign", _1, { _F, _L, "right-shift", _1, _2 } },
+		["&="]  = { _F, _L, "assign", _1, { _F, _L, "bitwise-and", _1, _2 } },
+		["^="]  = { _F, _L, "assign", _1, { _F, _L, "bitwise-xor", _1, _2 } },
+		["|="]  = { _F, _L, "assign", _1, { _F, _L, "bitwise-or",  _1, _2 } },
+	})
 	
 	if #expr_parts ~= 1
 	then

@@ -550,6 +550,70 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("parses += operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("a += b;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "a" } },
+				{ "UNKNOWN FILE", 1, "add",
+					{ "UNKNOWN FILE", 1, "ref", { "a" } },
+					{ "UNKNOWN FILE", 1, "ref", { "b" } } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses -= operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("a -= 10;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "a" } },
+				{ "UNKNOWN FILE", 1, "subtract",
+					{ "UNKNOWN FILE", 1, "ref", { "a" } },
+					{ "UNKNOWN FILE", 1, "num", 10 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses *= operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("a.b[0] *= (10);")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "a", "b", { "UNKNOWN FILE", 1, "num", 0 } } },
+				{ "UNKNOWN FILE", 1, "multiply",
+					{ "UNKNOWN FILE", 1, "ref", { "a", "b", { "UNKNOWN FILE", 1, "num", 0 } } },
+					{ "UNKNOWN FILE", 1, "num", 10 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses <<= operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("a <<= 4;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "a" } },
+				{ "UNKNOWN FILE", 1, "left-shift",
+					{ "UNKNOWN FILE", 1, "ref", { "a" } },
+					{ "UNKNOWN FILE", 1, "num", 4 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
 	it("parses enum definition", function()
 		local got
 		local expect

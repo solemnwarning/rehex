@@ -303,7 +303,7 @@ local _parser = spc * P{
 		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
 		Ct( V("VALUE") ) +
 		Ct( P(_capture_position) * Cc("_token") *
-			C( P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + P("+=") + P("-=") + P("*=") + P("/=") + P("%=") + P("<<=") + P(">>=") + P("&=") + P("^=") + P("|=") + P("<<") + P(">>") + S("!~*/%+-<>&^|=") ) * spc),
+			C( P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + P("+=") + P("-=") + P("*=") + P("/=") + P("%=") + P("<<=") + P(">>=") + P("&=") + P("^=") + P("|=") + P("<<") + P(">>") + P("++") + P("--") + S("!~*/%+-<>&^|=") ) * spc),
 	
 	EXPR_OR_NIL = V("EXPR") + Cc(nil) * spc,
 	ZERO_OR_MORE_EXPRS = (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1,
@@ -615,6 +615,10 @@ local function _compile_expr(expr)
 	end
 	
 	expand_unary_ops(right_to_left, {
+		-- Convert prefix increment/decrement to assignment
+		["++"] = { _F, _L, "assign", _1, { _F, _L, "add",      _1, { _F, _L, "num", 1 } } },
+		["--"] = { _F, _L, "assign", _1, { _F, _L, "subtract", _1, { _F, _L, "num", 1 } } },
+		
 		["!"] = { _F, _L, "logical-not", _1 },
 		["~"] = { _F, _L, "bitwise-not", _1 },
 	})

@@ -212,6 +212,38 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end);
 	
+	it("parses prefix increment", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("++i;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "add",
+					{ "UNKNOWN FILE", 1, "ref", { "i" } },
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses prefix decrement", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("--i;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "subtract",
+					{ "UNKNOWN FILE", 1, "ref", { "i" } },
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
 	it("parses variable definitions", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "var", nil, nil } }, parser.parse_text("int var;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("int array[10];"));

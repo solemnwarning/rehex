@@ -136,21 +136,58 @@ local function _capture_position(text, pos)
 	return pos, "_input_stream_pos", pos
 end
 
+local BACKSLASH_ESCAPES = {
+	-- https://en.wikipedia.org/wiki/Escape_sequences_in_C
+	["a"]  = "\a",
+	["b"]  = "\b",
+	["e"]  = string.char(0x1B),
+	["f"]  = "\f",
+	["n"]  = "\n",
+	["r"]  = "\r",
+	["t"]  = "\t",
+	["v"]  = "\v",
+	["\""] = "\"",
+	["\\"] = "\\",
+	["'"]  = "'",
+	["?"]  = "?",
+}
+
 local function _capture_string(text, pos)
 	local s = ""
+	local i = pos
+	local len = text:len()
 	
-	for i = pos, text:len()
+	while pos <= len
 	do
 		local c = text:sub(i, i)
 		
 		if c == "\\"
 		then
-			-- TODO
+			local ob,oe,oc = text:find("^\\([0-7][0-7]?[0-7]?)", i)
+			local hb,he,hc = text:find("^\\x([0-9A-Fa-f][0-9A-Fa-f])", i)
+			local cb,ce,cc = text:find("^\\(.)", i)
+			
+			if ob ~= nil
+			then
+				s = s .. string.char(tonumber(oc, 8))
+				i = oe + 1
+			elseif hb ~= nil
+			then
+				s = s .. string.char(tonumber(hc, 16))
+				i = he + 1
+			elseif cb ~= nil and BACKSLASH_ESCAPES[cc] ~= nil
+			then
+				s = s .. BACKSLASH_ESCAPES[cc]
+				i = ce + 1
+			else
+				error("aaa")
+			end
 		elseif c == '"'
 		then
 			return i + 1, s
 		else
 			s = s .. c
+			i = i + 1
 		end
 	end
 	

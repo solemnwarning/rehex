@@ -24,6 +24,27 @@ describe("parser", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", -1 } }, parser.parse_text("-1;"));
 	end);
 	
+	it("parses strings", function()
+		local got
+		local expect
+		
+		got = parser.parse_text('"foo";')
+		expect = { { "UNKNOWN FILE", 1, "str", "foo" } }
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("\"string \\r\\n with \\\\ escape \\\"\\\' characters\\0\";")
+		expect = { { "UNKNOWN FILE", 1, "str", "string \r\n with \\ escape \"\' characters\0" } }
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text('"\\1111 <-- octal sequence";')
+		expect = { { "UNKNOWN FILE", 1, "str", string.char(0x49) .. "1 <-- octal sequence" } }
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text('"\\x00\\x01\\xFF0 <-- hex sequence";')
+		expect = { { "UNKNOWN FILE", 1, "str", string.char(0x00) .. string.char(0x01) .. string.char(0xFF) .. "0 <-- hex sequence" } }
+		assert.are.same(expect, got)
+	end)
+	
 	it("parses a function call", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", {} } }, parser.parse_text("testfunc();"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", { { "UNKNOWN FILE", 1, "num", 1 } } } }, parser.parse_text("testfunc(1);"));

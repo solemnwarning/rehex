@@ -244,6 +244,32 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("parses postfix increment", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("i++;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "postfix-increment",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses postfix decrement", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("i--;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "postfix-decrement",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
 	it("parses variable definitions", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "var", nil, nil } }, parser.parse_text("int var;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("int array[10];"));

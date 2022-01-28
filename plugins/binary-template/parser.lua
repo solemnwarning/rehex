@@ -301,6 +301,8 @@ local _parser = spc * P{
 	EXPR2 =
 		P("(") * spc * V("EXPR") * P(")") * spc +
 		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
+		Ct( P(_capture_position) * Cc("postfix-increment") * Ct( V("VALUE") ) * P("++") * spc) +
+		Ct( P(_capture_position) * Cc("postfix-decrement") * Ct( V("VALUE") ) * P("--") * spc) +
 		Ct( V("VALUE") ) +
 		Ct( P(_capture_position) * Cc("_token") *
 			C( P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + P("+=") + P("-=") + P("*=") + P("/=") + P("%=") + P("<<=") + P(">>=") + P("&=") + P("^=") + P("|=") + P("<<") + P(">>") + P("++") + P("--") + S("!~*/%+-<>&^|=") ) * spc),
@@ -611,6 +613,14 @@ local function _compile_expr(expr)
 		then
 			local sub_expr = expr_parts[i][5]
 			_compile_expr(sub_expr)
+		elseif expr_parts[i][3] == "postfix-increment"
+		then
+			local sub_expr = expr_parts[i][4]
+			_resolve_pos(sub_expr)
+		elseif expr_parts[i][3] == "postfix-decrement"
+		then
+			local sub_expr = expr_parts[i][4]
+			_resolve_pos(sub_expr)
 		end
 	end
 	

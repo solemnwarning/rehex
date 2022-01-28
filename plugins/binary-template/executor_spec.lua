@@ -3597,4 +3597,60 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("implements postfix increment operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(i++ = 1)",
+			"print(i = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("implements postfix decrement operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i-- = %d" },
+				{ "test.bt", 1, "postfix-decrement", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(i-- = 1)",
+			"print(i = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

@@ -39,6 +39,8 @@ local _eval_bitwise_not
 local _eval_logical_not
 local _eval_logical_and;
 local _eval_logical_or;
+local _eval_postfix_increment
+local _eval_postfix_decrement
 local _eval_variable;
 local _eval_local_variable
 local _eval_assign
@@ -1002,6 +1004,48 @@ _eval_logical_or = function(context, statement)
 	end
 	
 	return _builtin_types.int, _make_const_plain_value(0)
+end
+
+_eval_postfix_increment = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local value = statement[4]
+	
+	local value_t, value_v = _eval_statement(context, value)
+	if value_t == nil or value_t.base ~= "number"
+	then
+		error("Invalid operand to postfix '++' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	local old_value = value_v:get()
+	
+	local new_value = old_value + 1
+	-- TODO: Clamp new_value
+	
+	value_v:set(new_value)
+	return value_t, _make_const_plain_value(old_value)
+end
+
+_eval_postfix_decrement = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local value = statement[4]
+	
+	local value_t, value_v = _eval_statement(context, value)
+	if value_t == nil or value_t.base ~= "number"
+	then
+		error("Invalid operand to postfix '--' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	local old_value = value_v:get()
+	
+	local new_value = old_value - 1
+	-- TODO: Clamp new_value
+	
+	value_v:set(new_value)
+	return value_t, _make_const_plain_value(old_value)
 end
 
 local function _decl_variable(context, statement, var_type, var_name, struct_args, array_size, initial_value, is_local)
@@ -2011,6 +2055,9 @@ _ops = {
 	["logical-not"] = _eval_logical_not,
 	["logical-and"] = _eval_logical_and,
 	["logical-or"]  = _eval_logical_or,
+	
+	["postfix-increment"] = _eval_postfix_increment,
+	["postfix-decrement"] = _eval_postfix_decrement,
 }
 
 --- External entry point into the interpreter

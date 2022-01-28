@@ -1606,6 +1606,11 @@ _eval_func_defn = function(context, statement)
 	local func_args       = statement[6]
 	local func_statements = statement[7]
 	
+	if #context.stack > 1
+	then
+		error("Attempt to define function inside another block at " .. filename .. ":" .. line_num)
+	end
+	
 	if context.functions[func_name] ~= nil
 	then
 		error("Attempt to redefine function '" .. func_name .. "' at " .. filename .. ":" .. line_num)

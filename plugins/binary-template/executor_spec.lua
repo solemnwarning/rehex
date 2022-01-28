@@ -3997,4 +3997,44 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("errors on function definitions inside blocks", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "block", {
+					{ "test.bt", 1, "function", "void", "func", { { "int &", "param" } }, {} },
+				} },
+			})
+			end, "Attempt to define function inside another block at test.bt:1")
+	end)
+	
+	it("errors on function definitions inside an if statement", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "if",
+					{ { "test.bt", 1, "num", 1 }, {
+						{ "test.bt", 1, "function", "void", "func", { { "int &", "param" } }, {} },
+					} },
+				},
+			})
+			end, "Attempt to define function inside another block at test.bt:1")
+	end)
+	
+	it("errors on function definitions inside another function", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func1", {}, {
+					{ "test.bt", 1, "function", "void", "func2", {}, {} },
+				} },
+				
+				{ "test.bt", 1, "call", "func1", {} },
+			})
+			end, "Attempt to define function inside another block at test.bt:1")
+	end)
 end)

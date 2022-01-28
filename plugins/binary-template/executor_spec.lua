@@ -3956,4 +3956,45 @@ describe("executor", function()
 			})
 			end, "Attempt to call function func(int&) with incompatible argument types (const int) at test.bt:1")
 	end)
+	
+	it("scopes variables to containing blocks", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d (1)" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "block", {
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 2 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "i = %d (2)" },
+					{ "test.bt", 1, "ref", { "i" } } } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "num", 3 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "i = %d (3)" },
+					{ "test.bt", 1, "ref", { "i" } } } },
+			} },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d (4)" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1 (1))",
+			"print(i = 2 (2))",
+			"print(i = 3 (3))",
+			"print(i = 1 (4))",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

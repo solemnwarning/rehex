@@ -320,7 +320,7 @@ local _parser = spc * P{
 		V("EXPR") * P(";") * spc +
 		P(";") * spc,
 	
-	BLOCK = P("{") * spc * ( V("STMT") ^ 0 ) * spc * P("}"),
+	BLOCK = Ct( P(_capture_position) * Cc("block") * P("{") * spc * Ct( V("STMT") ^ 0 ) * spc * P("}") * spc ),
 	
 	COMMENT = spc * comment("//", "\n") * spc
 		+ spc * comment("/*", "*/") * spc,
@@ -439,10 +439,11 @@ local _parser = spc * P{
 	--      { <condition>, { <statements> } },  <-- else if
 	--      {              { <statements> } },  <-- else
 	--  }
+	IF_BODY = Ct( P("{") * spc * V("STMT") ^ 0 * spc * P("}") + V("STMT") ),
 	IF = Ct( P(_capture_position) * Cc("if") *
-		Ct( P("if")      * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct( V("STMT") ) )      * spc *
-		Ct( P("else if") * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct( V("STMT") ) ) ^ 0  * spc *
-		Ct( P("else")                                        * spc * Ct( V("STMT") ) ) ^ -1 * spc
+		Ct( P("if")      * spc * P("(") * spc * V("EXPR") * P(")") * spc * V("IF_BODY") )      * spc *
+		Ct( P("else if") * spc * P("(") * spc * V("EXPR") * P(")") * spc * V("IF_BODY") ) ^ 0  * spc *
+		Ct( P("else")                                              * spc * V("IF_BODY") ) ^ -1 * spc
 	),
 	
 	--  {
@@ -458,12 +459,12 @@ local _parser = spc * P{
 			(V("LOCAL_VAR_DEFN") + (V("EXPR_OR_NIL") * P(";") * spc)) *
 			V("EXPR_OR_NIL") * P(";") * spc *
 			V("EXPR_OR_NIL") * P(")") * spc *
-			Ct( V("STMT") ) * spc
+			V("IF_BODY") * spc
 	),
 	
 	-- while gets compiled to be a for loop with just a condition (see above)
 	WHILE = Ct( P(_capture_position) * Cc("for") *
-		P("while") * spc * P("(") * spc * Cc(nil) * V("EXPR") * Cc(nil) * P(")") * spc * Ct( V("STMT") ) * spc
+		P("while") * spc * P("(") * spc * Cc(nil) * V("EXPR") * Cc(nil) * P(")") * spc * V("IF_BODY") * spc
 	),
 	
 	--  {
@@ -881,6 +882,14 @@ local function _compile_statement(s)
 	then
 		local result = s[4]
 		if result ~= nil then _compile_expr(result) end
+	elseif op == "block"
+	then
+		local body = s[4]
+		
+		for _, s in pairs(body)
+		do
+			_compile_statement(s)
+		end
 	end
 end
 

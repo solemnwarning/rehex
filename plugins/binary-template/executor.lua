@@ -53,6 +53,7 @@ local _eval_enum
 local _eval_if
 local _eval_for
 local _eval_switch
+local _eval_block
 local _eval_break
 local _eval_continue
 local _eval_cast
@@ -2115,6 +2116,34 @@ _eval_switch = function(context, statement)
 	table.remove(context.stack)
 end
 
+_eval_block = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local body = statement[4]
+	
+	local frame = {
+		frame_type = FRAME_TYPE_SCOPE,
+		var_types = {},
+		vars = {},
+	}
+	
+	table.insert(context.stack, frame)
+	
+	for _, statement in ipairs(body)
+	do
+		local sr_t, sr_v = _eval_statement(context, statement)
+		
+		if sr_t and sr_t.flowctrl ~= nil
+		then
+			table.remove(context.stack)
+			return sr_t, sr_v
+		end
+	end
+	
+	table.remove(context.stack)
+end
+
 _eval_break = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -2209,6 +2238,7 @@ _ops = {
 	["if"]             = _eval_if,
 	["for"]            = _eval_for,
 	["switch"]         = _eval_switch,
+	["block"]          = _eval_block,
 	["break"]          = _eval_break,
 	["continue"]       = _eval_continue,
 	["cast"]           = _eval_cast,

@@ -1400,4 +1400,56 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses empty blocks", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("{}")
+		expect = {
+			{ "UNKNOWN FILE", 1, "block", {} },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text(" { } ")
+		expect = {
+			{ "UNKNOWN FILE", 1, "block", {} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses nested blocks", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("{ {} }")
+		expect = {
+			{ "UNKNOWN FILE", 1, "block", {
+				{ "UNKNOWN FILE", 1, "block", {} },
+			} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses blocks", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("{ foo(); bar(); {baz();} qux(); }")
+		expect = {
+			{ "UNKNOWN FILE", 1, "block", {
+				{ "UNKNOWN FILE", 1, "call", "foo", {} },
+				{ "UNKNOWN FILE", 1, "call", "bar", {} },
+				{ "UNKNOWN FILE", 1, "block", {
+					{ "UNKNOWN FILE", 1, "call", "baz", {} },
+				} },
+				{ "UNKNOWN FILE", 1, "call", "qux", {} },
+			} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

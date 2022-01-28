@@ -196,29 +196,64 @@ local function _capture_string(text, pos)
 end
 
 local function _capture_type(text, pos)
-	local patterns = {
-		"^(enum)%s+([%a_][%d%a_]*)%s*",
-		"^(struct)%s+([%a_][%d%a_]*)%s*",
-		"^(unsigned)%s+([%a_][%d%a_]*)%s*",
-		"^(signed)%s+([%a_][%d%a_]*)%s*",
-		"^([%a_][%d%a_]*)%s*",
+	local prefix_patterns = {
+		{ "^signed%s+",    "signed"   },
+		{ "^unsigned%s+",  "unsigned" },
+		{ "^const%s+",     "const"    },
 	}
 	
-	for _, pattern in ipairs(patterns)
-	do
-		local captures = table.pack(text:find(pattern, pos))
-		
-		local match_begin = captures[1]
-		table.remove(captures, 1)
-		
-		local match_end = captures[1]
-		table.remove(captures, 1)
-		
-		if match_begin ~= nil and not RESERVED_WORDS[ captures[#captures] ]
-		then
-			return match_end + 1, table.concat(captures, " ")
+	local main_patterns = {
+		{ "^(enum)%s+([%a_][%d%a_]*)%s*" },
+		{ "^(struct)%s+([%a_][%d%a_]*)%s*" },
+		{ "^([%a_][%d%a_]*)%s*" },
+	}
+	
+	local postfix_patterns = {
+		{ "^%&%s*",       "&"  },
+		-- { "^%[%s*%]%s*",  "[]" },
+	}
+	
+	local matched_words = {}
+	
+	local match_patterns = function(patterns)
+		for _, pattern in ipairs(patterns)
+		do
+			local captures = table.pack(text:find(pattern[1], pos))
+			
+			local match_begin = captures[1]
+			table.remove(captures, 1)
+			
+			local match_end = captures[1]
+			table.remove(captures, 1)
+			
+			if match_begin ~= nil
+			then
+				if pattern[2] ~= nil
+				then
+					pos = match_end + 1
+					table.insert(matched_words, pattern[2])
+				elseif not RESERVED_WORDS[ captures[#captures] ]
+				then
+					pos = match_end + 1
+					
+					for _, word in ipairs(captures)
+					do
+						table.insert(matched_words, word)
+					end
+				end
+				
+				return true
+			end
 		end
+		
+		return false
 	end
+	
+	while match_patterns(prefix_patterns) do end
+	if not match_patterns(main_patterns) then return nil end
+	while match_patterns(postfix_patterns) do end
+	
+	return pos, table.concat(matched_words, " ")
 end
 
 local function _skip_type(text, pos)

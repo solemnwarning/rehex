@@ -321,6 +321,20 @@ describe("parser", function()
 		};
 		
 		assert.are.same(expect, got);
+		
+		got = parser.parse_text("local int &foo = bar;");
+		expect = {
+			{ "UNKNOWN FILE", 1, "local-variable", "int &", "foo", nil, nil, { "UNKNOWN FILE", 1, "ref", { "bar" } } },
+		};
+		
+		assert.are.same(expect, got);
+		
+		got = parser.parse_text("local const   int& foo = bar;");
+		expect = {
+			{ "UNKNOWN FILE", 1, "local-variable", "const int &", "foo", nil, nil, { "UNKNOWN FILE", 1, "ref", { "bar" } } },
+		};
+		
+		assert.are.same(expect, got);
 	end);
 	
 	it("parses local struct variable definitions with parameters", function()

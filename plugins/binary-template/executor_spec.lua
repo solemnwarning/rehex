@@ -213,7 +213,7 @@ describe("executor", function()
 					{ "test.bt", 3, "num", 1 },
 					{ "test.bt", 3, "num", 2 } } },
 			})
-			end, "Attempt to call function func(int, int, string) with incompatible argument types (int, int) at test.bt:2")
+			end, "Attempt to call function func(int, int, string) with incompatible argument types (const int, const int) at test.bt:2")
 	end)
 	
 	it("errors when attempting to call a function with too many arguments", function()
@@ -229,7 +229,7 @@ describe("executor", function()
 					{ "test.bt", 3, "str", "x" },
 					{ "test.bt", 3, "str", "y" } } },
 			})
-			end, "Attempt to call function func(int, int, string) with incompatible argument types (int, int, string, string) at test.bt:2")
+			end, "Attempt to call function func(int, int, string) with incompatible argument types (const int, const int, const string, const string) at test.bt:2")
 	end)
 	
 	it("errors when attempting to call a function with incompatible argument types", function()
@@ -244,7 +244,7 @@ describe("executor", function()
 					{ "test.bt", 3, "str", "x" },
 					{ "test.bt", 3, "str", "y" } } },
 			})
-			end, "Attempt to call function func(int, int, string) with incompatible argument types (int, string, string) at test.bt:2")
+			end, "Attempt to call function func(int, int, string) with incompatible argument types (const int, const string, const string) at test.bt:2")
 	end)
 	
 	it("errors when attempting to call a variadic function with too few arguments", function()
@@ -596,7 +596,7 @@ describe("executor", function()
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "str", "hello" } } },
 				})
-			end, "Invalid 'string' operand to '[]' operator - expected a number at test.bt:1")
+			end, "Invalid 'const string' operand to '[]' operator - expected a number at test.bt:1")
 		
 		assert.has_error(
 			function()
@@ -1050,7 +1050,7 @@ describe("executor", function()
 					{ "test.bt", 1, "num", 1234 },
 					{ "test.bt", 1, "num", 5678 } } },
 			})
-			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (int, int) - expected (int, int, string) at test.bt:1")
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const int) - expected (int, int, string) at test.bt:1")
 	end)
 	
 	it("errors when attempting to declare a struct variable with too many arguments", function()
@@ -1083,7 +1083,7 @@ describe("executor", function()
 					{ "test.bt", 1, "str", "hello" },
 					{ "test.bt", 1, "str", "hello" } } },
 			})
-			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (int, int, string, string) - expected (int, int, string) at test.bt:1")
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const int, const string, const string) - expected (int, int, string) at test.bt:1")
 	end)
 	
 	it("errors when attempting to declare a struct variable with incompatible argument types", function()
@@ -1115,7 +1115,7 @@ describe("executor", function()
 					{ "test.bt", 1, "str", "hello" },
 					{ "test.bt", 1, "str", "hello" } } },
 			})
-			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (int, string, string) - expected (int, int, string) at test.bt:1")
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const string, const string) - expected (int, int, string) at test.bt:1")
 	end)
 	
 	it("returns return values from functions", function()
@@ -1205,7 +1205,7 @@ describe("executor", function()
 				
 				{ "test.bt", 1, "call", "ifunc", {} },
 			})
-		end, "return operand type 'string' not compatible with function return type 'int' at test.bt:1")
+		end, "return operand type 'const string' not compatible with function return type 'int' at test.bt:1")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -1228,7 +1228,7 @@ describe("executor", function()
 				
 				{ "test.bt", 1, "call", "vfunc", {} },
 			})
-		end, "return operand type 'int' not compatible with function return type 'void' at test.bt:1")
+		end, "return operand type 'const int' not compatible with function return type 'void' at test.bt:1")
 	end)
 	
 	it("allows return from if statements within functions", function()
@@ -1380,7 +1380,7 @@ describe("executor", function()
 					{ "test.bt", 1, "str", "abc" },
 					{ "test.bt", 1, "num", 123 } },
 			})
-			end, "Invalid operands to '+' operator - 'string' and 'int' at test.bt:1")
+			end, "Invalid operands to '+' operator - 'const string' and 'const int' at test.bt:1")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -1388,7 +1388,7 @@ describe("executor", function()
 					{ "test.bt", 1, "num", 123 },
 					{ "test.bt", 1, "str", "abc" } },
 			})
-			end, "Invalid operands to '+' operator - 'int' and 'string' at test.bt:1")
+			end, "Invalid operands to '+' operator - 'const int' and 'const string' at test.bt:1")
 	end)
 	
 	it("implements > operator", function()
@@ -1603,7 +1603,7 @@ describe("executor", function()
 						{ "test.bt", 1, "num", 123 }
 					},
 			})
-			end, "Invalid operands to '==' operator - 'string' and 'int' at test.bt:1")
+			end, "Invalid operands to '==' operator - 'const string' and 'const int' at test.bt:1")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -1612,7 +1612,7 @@ describe("executor", function()
 						{ "test.bt", 1, "str", "abc" }
 					},
 			})
-			end, "Invalid operands to '==' operator - 'int' and 'string' at test.bt:1")
+			end, "Invalid operands to '==' operator - 'const int' and 'const string' at test.bt:1")
 	end)
 	
 	it("implements != operator", function()
@@ -1687,7 +1687,7 @@ describe("executor", function()
 						{ "test.bt", 1, "num", 123 }
 					},
 			})
-			end, "Invalid operands to '!=' operator - 'string' and 'int' at test.bt:1")
+			end, "Invalid operands to '!=' operator - 'const string' and 'const int' at test.bt:1")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -1696,7 +1696,7 @@ describe("executor", function()
 						{ "test.bt", 1, "str", "abc" }
 					},
 			})
-			end, "Invalid operands to '!=' operator - 'int' and 'string' at test.bt:1")
+			end, "Invalid operands to '!=' operator - 'const int' and 'const string' at test.bt:1")
 	end)
 	
 	it("executes statements from first true branch in if statement", function()
@@ -1859,7 +1859,7 @@ describe("executor", function()
 					{ "test.bt", 1, "str", "hello" },
 					{ "test.bt", 1, "num", 1 } },
 			})
-		end, "Invalid left operand to '&&' operator - expected numeric, got 'string' at test.bt:1")
+		end, "Invalid left operand to '&&' operator - expected numeric, got 'const string' at test.bt:1")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -1991,7 +1991,7 @@ describe("executor", function()
 					{ "test.bt", 1, "num", 0 },
 					{ "test.bt", 1, "str", "hello" } },
 			})
-		end, "Invalid right operand to '||' operator - expected numeric, got 'string' at test.bt:1")
+		end, "Invalid right operand to '||' operator - expected numeric, got 'const string' at test.bt:1")
 	end)
 	
 	it("implements ! operator", function()
@@ -2037,7 +2037,7 @@ describe("executor", function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "logical-not", { "test.bt", 1, "str", "hello" } },
 			})
-		end, "Invalid operand to '!' operator - expected numeric, got 'string' at test.bt:1")
+		end, "Invalid operand to '!' operator - expected numeric, got 'const string' at test.bt:1")
 	end)
 	
 	it("allows defining local variables", function()
@@ -2221,7 +2221,7 @@ describe("executor", function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
 			})
-			end, "can't assign 'string' to type 'uchar[]'")
+			end, "can't assign 'const string' to type 'uchar[]'")
 	end)
 	
 	it("errors on assignment of string value to uchar array", function()
@@ -2232,7 +2232,7 @@ describe("executor", function()
 				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
 				{ "test.bt", 2, "assign", { "test.bt", 1, "ref", { "uchar_array" } }, { "test.bt", 1, "str", "hello" } },
 			})
-			end, "can't assign 'string' to type 'uchar[]'")
+			end, "can't assign 'const string' to type 'uchar[]'")
 	end)
 	
 	it("errors on initialisation of string from uchar array", function()
@@ -3001,7 +3001,7 @@ describe("executor", function()
 					{ "FOO", { "test.bt", 1, "str", "" } },
 				}, nil },
 			})
-			end, "Invalid type 'string' for enum member 'FOO' at test.bt:1")
+			end, "Invalid type 'const string' for enum member 'FOO' at test.bt:1")
 	end)
 	
 	it("errors when defining an enum member as a void", function()
@@ -3496,7 +3496,7 @@ describe("executor", function()
 					{ { "test.bt", 1, "num", 3 }, {} },
 				} },
 			})
-			end, "Unexpected type 'void' passed to 'case' statement (expected 'int') at test.bt:3")
+			end, "Unexpected type 'void' passed to 'case' statement (expected 'const int') at test.bt:3")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -3506,7 +3506,7 @@ describe("executor", function()
 					{ { "test.bt", 1, "num", 3 }, {} },
 				} },
 			})
-			end, "Unexpected type 'string' passed to 'case' statement (expected 'int') at test.bt:3")
+			end, "Unexpected type 'const string' passed to 'case' statement (expected 'const int') at test.bt:3")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -3518,7 +3518,7 @@ describe("executor", function()
 					{ { "test.bt", 1, "num", 3 }, {} },
 				} },
 			})
-			end, "Unexpected type 'void' passed to 'case' statement (expected 'string') at test.bt:3")
+			end, "Unexpected type 'void' passed to 'case' statement (expected 'const string') at test.bt:3")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -3528,7 +3528,7 @@ describe("executor", function()
 					{ { "test.bt", 1, "num", 3 }, {} },
 				} },
 			})
-			end, "Unexpected type 'int' passed to 'case' statement (expected 'string') at test.bt:3")
+			end, "Unexpected type 'const int' passed to 'case' statement (expected 'const string') at test.bt:3")
 	end)
 	
 	it("allows casting between different integer types", function()
@@ -3652,5 +3652,308 @@ describe("executor", function()
 		}
 		
 		assert.are.same(expect_log, log)
+	end)
+	
+	it("doesn't modify the original variable when a copy is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+			{ "test.bt", 1, "local-variable", "int", "i2", nil, nil, { "test.bt", 1, "ref", { "i1" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "i2" } },
+				{ "test.bt", 1, "num", 2 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+		})
+		
+		local expect_log = {
+			"print(i1 = 1, i2 = 1)",
+			"print(i1 = 1, i2 = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("doesn't modify copies when a variable is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+			{ "test.bt", 1, "local-variable", "int", "i2", nil, nil, { "test.bt", 1, "ref", { "i1" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "num", 2 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+		})
+		
+		local expect_log = {
+			"print(i1 = 1, i2 = 1)",
+			"print(i1 = 2, i2 = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("modifies the original variable when a reference is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+			{ "test.bt", 1, "local-variable", "int &", "i2", nil, nil, { "test.bt", 1, "ref", { "i1" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "i2" } },
+				{ "test.bt", 1, "num", 2 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+		})
+		
+		local expect_log = {
+			"print(i1 = 1, i2 = 1)",
+			"print(i1 = 2, i2 = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("modifies references when the original variable is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+			{ "test.bt", 1, "local-variable", "const int &", "i2", nil, nil, { "test.bt", 1, "ref", { "i1" } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+			
+			{ "test.bt", 1, "assign",
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "num", 2 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i1 = %d, i2 = %d" },
+				{ "test.bt", 1, "ref", { "i1" } },
+				{ "test.bt", 1, "ref", { "i2" } } } },
+		})
+		
+		local expect_log = {
+			"print(i1 = 1, i2 = 1)",
+			"print(i1 = 2, i2 = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on assignment to a const variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "const int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i1" } },
+					{ "test.bt", 1, "num", 2 } },
+			})
+			end, "Attempted modification of const type 'const int' at test.bt:1")
+	end)
+	
+	it("errors on assignment to a const reference to a non-const variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+				{ "test.bt", 1, "local-variable", "const int &", "i2", nil, nil, { "test.bt", 1, "ref", { "i1" } } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i2" } },
+					{ "test.bt", 1, "num", 2 } },
+			})
+			end, "Attempted modification of const type 'const int&' at test.bt:1")
+	end)
+	
+	it("errors on making a non-const reference to a const variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "const int", "i1", nil, nil, { "test.bt", 1, "num", 1 } },
+				{ "test.bt", 1, "local-variable", "int &", "i2", nil, nil, { "test.bt", 1, "ref", { "i1" } } },
+			})
+			end, "can't assign 'const int' to type 'int&' at test.bt:1")
+	end)
+	
+	it("doesn't modify the original variable when a pass-by-copy function parameter is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "void", "func", { { "int", "param" } }, {
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "param" } },
+					{ "test.bt", 1, "num", 2 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+			} },
+			
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "func", { { "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(param = 1)",
+			"print(param = 2)",  
+			"print(i = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("modifies the original variable when a pass-by-reference function parameter is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "function", "void", "func", { { "int &", "param" } }, {
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "param" } },
+					{ "test.bt", 1, "num", 2 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+			} },
+			
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "func", { { "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(param = 1)",
+			"print(param = 2)",  
+			"print(i = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on assignment to a const pass-by-copy function parameter", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "const int", "param" } }, {
+					{ "test.bt", 1, "assign",
+						{ "test.bt", 1, "ref", { "param" } },
+						{ "test.bt", 1, "num", 2 } },
+				} },
+				
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "call", "func", { { "test.bt", 1, "ref", { "i" } } } },
+			})
+			end, "Attempted modification of const type 'const int' at test.bt:1")
+	end)
+	
+	it("errors on assignment to a const pass-by-reference function parameter", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "const int &", "param" } }, {
+					{ "test.bt", 1, "assign",
+						{ "test.bt", 1, "ref", { "param" } },
+						{ "test.bt", 1, "num", 2 } },
+				} },
+				
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "call", "func", { { "test.bt", 1, "ref", { "i" } } } },
+			})
+			end, "Attempted modification of const type 'const int&' at test.bt:1")
+	end)
+	
+	it("errors when passing a const variable to a function that takes a non-const reference", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "int &", "param" } }, {} },
+				
+				{ "test.bt", 1, "local-variable", "const int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "call", "func", { { "test.bt", 1, "ref", { "i" } } } },
+			})
+			end, "Attempt to call function func(int&) with incompatible argument types (const int) at test.bt:1")
+	end)
+	
+	it("errors when passing an immediate value to a function that takes a non-const reference", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "func", { { "int &", "param" } }, {} },
+				{ "test.bt", 1, "call", "func", { { "test.bt", 1, "num", 1 } } },
+			})
+			end, "Attempt to call function func(int&) with incompatible argument types (const int) at test.bt:1")
 	end)
 end)

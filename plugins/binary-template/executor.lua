@@ -139,6 +139,14 @@ local function _make_nonarray_type(type_info)
 	return _make_overlay_type(type_info, { is_array = false })
 end
 
+local function _make_ref_type(type_info)
+	return _make_overlay_type(type_info, { is_ref = true })
+end
+
+local function _make_const_type(type_info)
+	return _make_overlay_type(type_info, { is_const = true })
+end
+
 local function _get_type_name(type)
 	if type == _variadic_placeholder
 	then
@@ -165,17 +173,27 @@ local function _get_type_name(type)
 		error("Internal error: unknown type in _get_type_name()")
 	end
 	
+	if type.is_const
+	then
+		type_name = "const " .. type_name
+	end
+	
 	if type.is_array
 	then
 		if type.array_size ~= nil
 		then
-			return type_name .. "[" .. type.array_size .. "]"
+			type_name = type_name .. "[" .. type.array_size .. "]"
 		else
-			return type_name .. "[]"
+			type_name = type_name .. "[]"
 		end
-	else
-		return type_name
 	end
+	
+	if type.is_ref
+	then
+		type_name = type_name .. "&"
+	end
+	
+	return type_name
 end
 
 local function _make_signed_type(type_info)
@@ -292,6 +310,14 @@ local function _type_assignable(dst_t, src_t)
 		return false
 	end
 	
+	if dst_t.is_ref
+	then
+		-- References can only be made when src/dst are EXACTLY the same type
+		-- (typedef aliases match too)
+		
+		return dst_t.type_key == src_t.type_key
+	end
+	
 	if (_type_is_string(dst_t) and _type_is_char_array(src_t)) or (_type_is_char_array(dst_t) and _type_is_string(src_t))
 	then
 		-- can assign between char[] and string
@@ -307,7 +333,7 @@ local function _type_assignable(dst_t, src_t)
 	if dst_t.base == "struct" and src_t.base == "struct"
 	then
 		-- can assign structs if the same root type
-		return dst_t.struct_key == src_t.struct_key
+		return dst_t.type_key == src_t.type_key
 	end
 	
 	if dst_t.base == src_t.base
@@ -363,7 +389,7 @@ local function _assign_value(dst_type, dst_val, src_type, src_val)
 	end
 	
 	local do_assignment = function(dst_val, src_val)
-		if dst_type.base == "struct" and src_type.base == "struct" and dst_type.struct_key == src_type.struct_key
+		if dst_type.base == "struct" and src_type.base == "struct" and dst_type.type_key == src_type.type_key
 		then
 			for name,src_pair in pairs(src_val)
 			do
@@ -453,6 +479,63 @@ local function _make_file_value(context, offset, length, fmt)
 			return _make_file_value(context, offset, length, fmt)
 		end,
 	}
+end
+
+local function _make_value_from_value(dst_type, src_type, src_val, move_if_possible)
+	if (not dst_type.is_array) ~= (not src_type.is_array)
+		or dst_type.base ~= src_type.base
+		or (dst_type.base == "struct" and dst_type.type_key ~= src_type.type_key)
+	then
+		-- TODO: file/line num
+		error("can't convert '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+	end
+	
+	-- TODO: string to/from char[] conversion
+	
+	if src_type.is_array
+	then
+		local dst_elem_type = _make_nonarray_type(dst_type)
+		local src_elem_type = _make_nonarray_type(src_type)
+		
+		local dst_val = {}
+		
+		for i = 1, #src_val
+		do
+			dst_val[i] = _make_value_from_value(dst_elem_type, src_elem_type, src_val[i], move_if_possible)
+		end
+		
+		return dst_val
+	end
+	
+	if src_type.base == "struct"
+	then
+		local dst_val = {}
+		
+		for k,src_pair in pairs(src_val)
+		do
+			local src_elem_type, src_elem = table.unpack(src_pair)
+			local dst_elem_type = src_elem_type
+			
+			dst_val[k] = {
+				dst_elem_type,
+				_make_value_from_value(dst_elem_type, src_elem_type, src_elem, move_if_possible)
+			}
+		end
+		
+		return dst_val
+	end
+	
+	if dst_type.int_mask ~= nil and (src_type.int_mask == nil or src_type.int_mask ~= dst_type.int_mask)
+	then
+		return _make_plain_value(src_val:get() & dst_type.int_mask)
+	end
+	
+	if move_if_possible
+	then
+		return src_val
+	else
+		return _make_plain_value(src_val:get())
+	end
 end
 
 local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1", type_key = {}, int_mask = 0xFF }
@@ -678,15 +761,43 @@ local _builtin_functions = {
 _find_type = function(context, type_name)
 	local convert = nil
 	
-	if type_name:find("^unsigned ") ~= nil
+	type_name = " " .. type_name .. " "
+	
+	local make_unsigned = false
+	local make_signed = false
+	local make_ref = false
+	local make_const = false
+	local make_array = false
+	
+	if type_name:find(" unsigned ") ~= nil
 	then
-		convert = "unsigned"
-		type_name = type_name:gsub("^unsigned ", "")
-	elseif type_name:find("^signed ") ~= nil
+		make_unsigned = true
+		type_name = type_name:gsub(" unsigned ", " ", 1)
+	elseif type_name:find(" signed ") ~= nil
 	then
-		convert = "signed"
-		type_name = type_name:gsub("^signed ", "")
+		make_signed = true
+		type_name = type_name:gsub(" signed ", " ", 1)
 	end
+	
+	if type_name:find(" & ") ~= nil
+	then
+		make_ref = true
+		type_name = type_name:gsub(" & ", " ", 1)
+	end
+	
+	if type_name:find(" const ") ~= nil
+	then
+		make_const = true
+		type_name = type_name:gsub(" const ", " ", 1)
+	end
+	
+	if type_name:find(" %[%] ") ~= nil
+	then
+		make_array = true
+		type_name = type_name:gsub(" %[%] ", " ", 1)
+	end
+	
+	type_name = type_name:sub(2, -2)
 	
 	local type_info = nil
 	
@@ -707,15 +818,13 @@ _find_type = function(context, type_name)
 		end
 	end
 	
-	if type_info and convert
+	if type_info ~= nil
 	then
-		if convert == "unsigned"
-		then
-			type_info = _make_unsigned_type(type_info)
-		elseif convert == "signed"
-		then
-			type_info = _make_signed_type(type_info)
-		end
+		if make_unsigned then type_info = _make_unsigned_type(type_info) end
+		if make_signed   then type_info = _make_signed_type(type_info)   end
+		if make_ref      then type_info = _make_ref_type(type_info)      end
+		if make_const    then type_info = _make_const_type(type_info)    end
+		if make_array    then type_info = _make_aray_type(type_info)     end
 	end
 	
 	return type_info
@@ -733,11 +842,11 @@ end
 ---
 
 _eval_number = function(context, statement)
-	return _builtin_types.int, _make_const_plain_value(statement[4])
+	return _make_const_type(_builtin_types.int), _make_const_plain_value(statement[4])
 end
 
 _eval_string = function(context, statement)
-	return _builtin_types.string, _make_const_plain_value(statement[4])
+	return _make_const_type(_builtin_types.string), _make_const_plain_value(statement[4])
 end
 
 -- Resolves a variable reference to an actual value.
@@ -753,6 +862,8 @@ _eval_ref = function(context, statement)
 	local _walk_path = function(rvalue)
 		local rv_type = rvalue[1]
 		local rv_val  = rvalue[2]
+		
+		local force_const = rv_type.is_const
 		
 		for i = 2, #path
 		do
@@ -799,6 +910,13 @@ _eval_ref = function(context, statement)
 				rv_type = rv_val[member][1]
 				rv_val  = rv_val[member][2]
 			end
+			
+			force_const = force_const or rv_type.is_const
+		end
+		
+		if force_const
+		then
+			rv_type = _make_const_type(rv_type)
 		end
 		
 		return rv_type, rv_val
@@ -1116,6 +1234,33 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		error("Attempt to redefine variable '" .. var_name .. "' at " .. filename .. ":" .. line_num)
 	end
 	
+	if type_info.is_ref
+	then
+		if not is_local
+		then
+			error("Attempt to define non-local reference '" .. var_name .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		if initial_value == nil
+		then
+			error("Attempt to define uninitialised reference '" .. var_name .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		if iv_type == nil
+			or type_info.type_key ~= iv_type.type_key
+			or ((not type_info.is_const) and iv_type.is_const)
+		then
+			error("can't assign '" .. _get_type_name(iv_type) .. "' to type '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+		end
+		
+		for _,t in ipairs(dest_tables)
+		do
+			t[var_name] = { type_info, iv_value }
+		end
+		
+		return
+	end
+	
 	local expand_value = function()
 		if type_info.base == "struct"
 		then
@@ -1321,6 +1466,11 @@ _eval_assign = function(context, statement)
 	local dst_type, dst_val = _eval_statement(context, dst_expr)
 	local src_type, src_val = _eval_statement(context, src_expr)
 	
+	if dst_type.is_const
+	then
+		error("Attempted modification of const type '" .. _get_type_name(dst_type) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
 	_assign_value(dst_type, dst_val, src_type, src_val)
 	
 	return dst_type, dst_val
@@ -1359,10 +1509,26 @@ _eval_call = function(context, statement)
 			break
 		end
 		
-		if i > #func_arg_values or i > #func_defn.arguments or
-			not _type_assignable(func_defn.arguments[i], func_arg_values[i][1])
+		if i > #func_arg_values or i > #func_defn.arguments
 		then
 			args_ok = false
+		else
+			local dst_type = func_defn.arguments[i]
+			local got_type = func_arg_values[i][1]
+			
+			if dst_type.is_ref
+			then
+				if dst_type.type_key ~= got_type.type_key
+					or (got_type.is_const and not dst_type.is_const)
+				then
+					args_ok = false
+				end
+			else
+				if not _type_assignable(dst_type, func_arg_values[i][1])
+				then
+					args_ok = false
+				end
+			end
 		end
 	end
 	
@@ -1372,6 +1538,23 @@ _eval_call = function(context, statement)
 		local expected_types = table.concat(_map(func_defn.arguments, function(v) return _get_type_name(v) end), ", ")
 		
 		error("Attempt to call function " .. func_name .. "(" .. expected_types .. ") with incompatible argument types (" .. got_types .. ") at " .. filename .. ":" .. line_num)
+	end
+	
+	for i = 1, #func_arg_values
+	do
+		local dst_type = func_defn.arguments[i]
+		
+		if dst_type == _variadic_placeholder
+		then
+			break
+		end
+		
+		if dst_type.is_ref
+		then
+			func_arg_values[i] = { dst_type, func_arg_values[i][2] }
+		else
+			func_arg_values[i] = { dst_type, _make_value_from_value(dst_type, func_arg_values[i][1], func_arg_values[i][2], false) }
+		end
 	end
 	
 	return func_defn.impl(context, func_arg_values)
@@ -1561,7 +1744,7 @@ _eval_struct_defn = function(context, statement)
 		code      = struct_statements,
 		
 		struct_name = struct_name,
-		struct_key  = {}, -- Uniquely-identifiable table reference used to check if struct
+		type_key  = {}, -- Uniquely-identifiable table reference used to check if struct
 		                  -- types are derived from the same root (and thus compatible)
 		
 		-- rehex_type_le = "s8",

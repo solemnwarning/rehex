@@ -1,0 +1,112 @@
+[% WRAPPER page.tt
+   title = "General Syntax"
+%]
+
+<H2>General Syntax</H2>
+
+<P>
+A template is a script with a C-like syntax which can read and process data from the open file and annotate it by setting data types, adding comments, etc. Unlike a C program, templates do not have an entry point (i.e. a <code>main</code> function) - they are executed from top to bottom like a shell script.
+</P>
+
+<P>
+The most simple template is one that just defines some variables, which will set comments and data types in the file, for example:
+</P>
+
+[% WRAPPER code.tt -%]
+int magic;
+int values[4];
+[%- END %]
+
+<P>
+Would produce a file like the following:<BR>
+<BR>
+<IMG SRC="template-example-var1.png" BORDER="0">
+</P>
+
+<HR>
+
+<P>
+The variables you define can also be read in the template, for example to determine the length of an array from data in the file:
+</P>
+
+[% WRAPPER code.tt -%]
+int magic;
+short size;
+int values[size];
+[%- END %]
+
+<P>
+<IMG SRC="template-example-var2.png" BORDER="0">
+</P>
+
+<P>
+That example is like the first, except the number of elements in the "values" array comes from another variable read from the file rather than being hardcoded.
+</P>
+
+<H2>Local variables</H2>
+
+<P>
+Local variables are variables that are scoped to the block they are defined in. Unlike normal variables, declaring a local variable will not annotate the file or advance the file position.
+<BR>
+<BR>
+Local variables are used for temporary storage within scripts - for example loop counters, values read from the file using the File Read APIs, etc.
+</P>
+
+[% WRAPPER code.tt -%]
+local int x = 0;
+[%- END %]
+
+<H2>Structures</H2>
+
+<P>
+Structures like their C counterparts exist too. You can use a structure to logically group or reuse things such as headers.
+</P>
+
+[% WRAPPER code.tt -%]
+struct posix_tar_header
+{                               /* byte offset */
+	char name[100];         /*   0 */
+	char mode[8];           /* 100 */
+	char uid[8];            /* 108 */
+	char gid[8];            /* 116 */
+	char size[12];          /* 124 */
+	
+	/* And so on... I think you get the idea. */
+};
+
+struct posix_tar_header header;
+[%- END %]
+
+<P>
+<img src="template-example-struct1.png">
+</P>
+
+<HR>
+
+<P>
+Unlike C structures, structures in a template can contain arbitrary code, for example to conditionally declare certain members based on preceding members and can even take arguments like a function.
+</P>
+
+[% WRAPPER code.tt -%]
+struct complex_thing(string debug_msg)
+{
+	unsigned int flags;
+	
+	if(flags & 1) {
+		int member1; /* Only declared if "flags" member has the 1 bit set. */
+	}
+	
+	int member2;
+	
+	Printf("debug_msg = %s, flags = %d\n", debug_msg, flags);
+};
+
+struct complex_thing ct1("foo");
+struct complex_thing ct2("bar");
+[%- END %]
+
+<P>
+<IMG SRC="template-example-struct2.png" BORDER="0">
+</P>
+
+[% END %]

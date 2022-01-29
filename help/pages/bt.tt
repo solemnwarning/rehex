@@ -1,0 +1,27 @@
+[% WRAPPER page.tt
+   title = "Binary Templates"
+%]
+
+<h2>Binary Templates</h2>
+
+<p>
+Binary Templates allow you process and annotate data using a C-like language based on 010 Editor's Binary Templates.
+</p>
+
+<p>
+To execute a binary template, use the <i>Execute binary template / script</i> command under the <i>Tools</i> menu to open the following dialog:
+</p>
+
+<p>
+<img src="template-dialog.png">
+</p>
+
+<p>
+The dropdown allows choosing from templates in the <CODE>Plugins/binary-template/templates/</CODE> directory, or the <i>Browse...</i> button allows choosing templates from elsewhere on the filesystem.
+</p>
+
+<p>
+If you have a contiguous range of bytes selected in the main file view, then the <i>Apply template to selection only</i> will execute the template scoped to that range of the file.
+</p>
+
+[% END %]

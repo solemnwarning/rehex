@@ -4,3 +4,6 @@ types           Setting Data Types
 diff            Comparing Files
 virt-mapping    Virtual Address Mapping
 plugins         Writing Plugins
+
+bt             Binary Templates
+  bt-syntax    General Syntax

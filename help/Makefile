@@ -18,6 +18,8 @@ HHC ?= "C:\Program Files (x86)\HTML Help Workshop\hhc.exe"
 PERL ?= perl
 
 PAGES := \
+	bt \
+	bt-syntax \
 	comments \
 	diff \
 	index \

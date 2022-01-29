@@ -1278,10 +1278,27 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			
 			for i = 1, math.max(#struct_arg_values, #type_info.arguments)
 			do
-				if i > #struct_arg_values or i > #type_info.arguments or
-					not _type_assignable(type_info.arguments[i][2], struct_arg_values[i][1])
+				if i > #struct_arg_values or i > #type_info.arguments
 				then
 					args_ok = false
+				else
+					local dst_type = type_info.arguments[i][2]
+					local got_type = struct_arg_values[i][1]
+					
+					if dst_type.is_ref
+					then
+						if dst_type.type_key ~= got_type.type_key
+							or ((not got_type.is_array) ~= (not dst_type.is_array))
+							or (got_type.is_const and not dst_type.is_const)
+						then
+							args_ok = false
+						end
+					else
+						if not _type_assignable(dst_type, struct_arg_values[i][1])
+						then
+							args_ok = false
+						end
+					end
 				end
 			end
 			
@@ -1291,6 +1308,18 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				local expected_types = table.concat(_map(type_info.arguments, function(v) return _get_type_name(v[2]) end), ", ")
 				
 				error("Attempt to declare struct type '" .. _get_type_name(type_info) .. "' with incompatible argument types (" .. got_types .. ") - expected (" .. expected_types .. ") at " .. filename .. ":" .. line_num)
+			end
+			
+			for i = 1, #struct_arg_values
+			do
+				local dst_type = type_info.arguments[i][2]
+				
+				if dst_type.is_ref
+				then
+					struct_arg_values[i] = { dst_type, struct_arg_values[i][2] }
+				else
+					struct_arg_values[i] = { dst_type, _make_value_from_value(dst_type, struct_arg_values[i][1], struct_arg_values[i][2], false) }
+				end
 			end
 			
 			local members = {}

@@ -4375,4 +4375,320 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("doesn't modify the original variable when a pass-by-copy struct parameter is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", { { "int", "param" } },
+			{
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "param" } },
+					{ "test.bt", 1, "num", 2 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+			} },
+			
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(param = 1)",
+			"print(param = 2)",
+			"print(i = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("modifies the original variable when a pass-by-reference function parameter is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", { { "int &", "param" } },
+			{
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+				
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "param" } },
+					{ "test.bt", 1, "num", 2 } },
+				
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "param = %d" },
+					{ "test.bt", 1, "ref", { "param" } } } },
+			} },
+			
+			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(param = 1)",
+			"print(param = 2)",
+			"print(i = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on assignment to a const pass-by-copy struct parameter", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", { { "const int", "param" } },
+				{
+					{ "test.bt", 1, "assign",
+						{ "test.bt", 1, "ref", { "param" } },
+						{ "test.bt", 1, "num", 2 } },
+				} },
+				
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+					{ "test.bt", 1, "ref", { "i" } } } },
+			})
+			end, "Attempted modification of const type 'const int' at test.bt:1")
+	end)
+	
+	it("errors on assignment to a const pass-by-reference function parameter", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", { { "const int &", "param" } },
+				{
+					{ "test.bt", 1, "assign",
+						{ "test.bt", 1, "ref", { "param" } },
+						{ "test.bt", 1, "num", 2 } },
+				} },
+				
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+					{ "test.bt", 1, "ref", { "i" } } } },
+			})
+			end, "Attempted modification of const type 'const int&' at test.bt:1")
+	end)
+	
+	it("errors when passing a const variable to a struct that takes a non-const reference", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", { { "int &", "param" } }, {} },
+				
+				{ "test.bt", 1, "local-variable", "const int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+				
+				{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+					{ "test.bt", 1, "ref", { "i" } } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int) - expected (int&) at test.bt:1")
+	end)
+	
+	it("errors when passing an immediate value to a struct that takes a non-const reference", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", { { "int &", "param" } }, {} },
+				{ "test.bt", 1, "local-variable", "struct mystruct", "a", { { "test.bt", 1, "num", 1 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int) - expected (int&) at test.bt:1")
+	end)
+	
+	it("doesn't modify the original when an array passed by copy into a struct is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "a1", nil, { "test.bt", 1, "num", 4 }, nil },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 0 } } },
+				{ "test.bt", 2, "num", 5 } },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 1 } } },
+				{ "test.bt", 2, "num", 6 } },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 2 } } },
+				{ "test.bt", 2, "num", 7 } },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 3 } } },
+				{ "test.bt", 2, "num", 8 } },
+			
+			{ "test.bt", 1, "struct", "mystruct", { { "int []", "param" } }, {
+				{ "test.bt", 4, "call", "Printf", {
+					{ "test.bt", 4, "str", "param = { %d, %d, %d, %d }" },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 0 } } },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 1 } } },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 2 } } },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 3 } } } } },
+				
+				{ "test.bt", 5, "assign",
+					{ "test.bt", 5, "ref", { "param", { "test.bt", 5, "num", 0 } } },
+					{ "test.bt", 5, "num", 1 } },
+				
+				{ "test.bt", 6, "assign",
+					{ "test.bt", 6, "ref", { "param", { "test.bt", 6, "num", 1 } } },
+					{ "test.bt", 6, "num", 2 } },
+				
+				{ "test.bt", 7, "assign",
+					{ "test.bt", 7, "ref", { "param", { "test.bt", 7, "num", 2 } } },
+					{ "test.bt", 7, "num", 3 } },
+				
+				{ "test.bt", 8, "assign",
+					{ "test.bt", 8, "ref", { "param", { "test.bt", 8, "num", 3 } } },
+					{ "test.bt", 8, "num", 4 } },
+				
+				{ "test.bt", 9, "call", "Printf", {
+					{ "test.bt", 9, "str", "param = { %d, %d, %d, %d }" },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 0 } } },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 1 } } },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 2 } } },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 3 } } } } },
+			} },
+			
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "a1 = { %d, %d, %d, %d }" },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 0 } } },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 1 } } },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 2 } } },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 3 } } } } },
+			
+			{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+				{ "test.bt", 11, "ref", { "a1" } } } },
+			
+			{ "test.bt", 12, "call", "Printf", {
+				{ "test.bt", 12, "str", "a1 = { %d, %d, %d, %d }" },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 0 } } },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 1 } } },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 2 } } },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 3 } } } } },
+		})
+		
+		local expect_log = {
+			"print(a1 = { 5, 6, 7, 8 })",
+			"print(param = { 5, 6, 7, 8 })",
+			"print(param = { 1, 2, 3, 4 })",
+			"print(a1 = { 5, 6, 7, 8 })",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("modifies the original when an array passed by reference into a struct is modified", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "int", "a1", nil, { "test.bt", 1, "num", 4 }, nil },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 0 } } },
+				{ "test.bt", 2, "num", 5 } },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 1 } } },
+				{ "test.bt", 2, "num", 6 } },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 2 } } },
+				{ "test.bt", 2, "num", 7 } },
+			
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "a1", { "test.bt", 2, "num", 3 } } },
+				{ "test.bt", 2, "num", 8 } },
+			
+			{ "test.bt", 1, "struct", "mystruct", { { "int & []", "param" } }, {
+				{ "test.bt", 4, "call", "Printf", {
+					{ "test.bt", 4, "str", "param = { %d, %d, %d, %d }" },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 0 } } },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 1 } } },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 2 } } },
+					{ "test.bt", 4, "ref", { "param", { "test.bt", 4, "num", 3 } } } } },
+				
+				{ "test.bt", 5, "assign",
+					{ "test.bt", 5, "ref", { "param", { "test.bt", 5, "num", 0 } } },
+					{ "test.bt", 5, "num", 1 } },
+				
+				{ "test.bt", 6, "assign",
+					{ "test.bt", 6, "ref", { "param", { "test.bt", 6, "num", 1 } } },
+					{ "test.bt", 6, "num", 2 } },
+				
+				{ "test.bt", 7, "assign",
+					{ "test.bt", 7, "ref", { "param", { "test.bt", 7, "num", 2 } } },
+					{ "test.bt", 7, "num", 3 } },
+				
+				{ "test.bt", 8, "assign",
+					{ "test.bt", 8, "ref", { "param", { "test.bt", 8, "num", 3 } } },
+					{ "test.bt", 8, "num", 4 } },
+				
+				{ "test.bt", 9, "call", "Printf", {
+					{ "test.bt", 9, "str", "param = { %d, %d, %d, %d }" },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 0 } } },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 1 } } },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 2 } } },
+					{ "test.bt", 9, "ref", { "param", { "test.bt", 9, "num", 3 } } } } },
+			} },
+			
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "a1 = { %d, %d, %d, %d }" },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 0 } } },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 1 } } },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 2 } } },
+				{ "test.bt", 10, "ref", { "a1", { "test.bt", 10, "num", 3 } } } } },
+			
+			{ "test.bt", 1, "local-variable", "struct mystruct", "a", {
+				{ "test.bt", 11, "ref", { "a1" } } } },
+			
+			{ "test.bt", 12, "call", "Printf", {
+				{ "test.bt", 12, "str", "a1 = { %d, %d, %d, %d }" },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 0 } } },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 1 } } },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 2 } } },
+				{ "test.bt", 12, "ref", { "a1", { "test.bt", 12, "num", 3 } } } } },
+		})
+		
+		local expect_log = {
+			"print(a1 = { 5, 6, 7, 8 })",
+			"print(param = { 5, 6, 7, 8 })",
+			"print(param = { 1, 2, 3, 4 })",
+			"print(a1 = { 1, 2, 3, 4 })",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

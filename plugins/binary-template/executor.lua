@@ -1328,6 +1328,11 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 					error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
 				end
 			else
+				if (context.next_variable + type_info.length) > context.interface:file_length()
+				then
+					error("Hit end of file when declaring variable at " .. filename .. ":" .. line_num, 0)
+				end
+				
 				local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
 				return _make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
 			end

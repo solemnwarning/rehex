@@ -1525,6 +1525,7 @@ _eval_call = function(context, statement)
 			if dst_type.is_ref
 			then
 				if dst_type.type_key ~= got_type.type_key
+					or ((not got_type.is_array) ~= (not dst_type.is_array))
 					or (got_type.is_const and not dst_type.is_const)
 				then
 					args_ok = false

@@ -484,10 +484,12 @@ describe("parser", function()
 		assert.are.same(expect, got);
 	end);
 	
-	it("parses a function with arguments", function()
-		local got = parser.parse_text("void myfunc(int x, int y, int z) {}\n");
+	it("parses function definitions with arguments", function()
+		local got
+		local expect
 		
-		local expect = {
+		got = parser.parse_text("void myfunc(int x, int y, int z) {}\n")
+		expect = {
 			{ "UNKNOWN FILE", 1, "function", "void", "myfunc",
 			{
 				{ "int", "x" },
@@ -495,10 +497,48 @@ describe("parser", function()
 				{ "int", "z" }
 			},
 			{} },
-		};
+		}
 		
-		assert.are.same(expect, got);
-	end);
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("void myfunc(int &x, int& y, int & z) {}\n")
+		expect = {
+			{ "UNKNOWN FILE", 1, "function", "void", "myfunc",
+			{
+				{ "int &", "x" },
+				{ "int &", "y" },
+				{ "int &", "z" }
+			},
+			{} },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("void myfunc(int []x, int[] y, int [] z) {}\n")
+		expect = {
+			{ "UNKNOWN FILE", 1, "function", "void", "myfunc",
+			{
+				{ "int []", "x" },
+				{ "int []", "y" },
+				{ "int []", "z" }
+			},
+			{} },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("void myfunc(const  int &x, int[] &y) {}\n")
+		expect = {
+			{ "UNKNOWN FILE", 1, "function", "void", "myfunc",
+			{
+				{ "const int &", "x" },
+				{ "int [] &", "y" },
+			},
+			{} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 	
 	it("parses #file directives", function()
 		local got = parser.parse_text("#file foo.bt 10\nint x;\nint y;\n#file bar.bt 1\nint z;\n");

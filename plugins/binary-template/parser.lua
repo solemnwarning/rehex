@@ -210,7 +210,7 @@ local function _capture_type(text, pos)
 	
 	local postfix_patterns = {
 		{ "^%&%s*",       "&"  },
-		-- { "^%[%s*%]%s*",  "[]" },
+		{ "^%[%s*%]%s*",  "[]" },
 	}
 	
 	local matched_words = {}

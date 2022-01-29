@@ -164,14 +164,19 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 			end,
 		}
 		
+		doc:transact_begin("Binary template")
+		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
 		end)
 		
 		progress_dialog:Destroy()
 		
-		if not ok
+		if ok
 		then
+			doc:transact_commit()
+		else
+			doc:transact_rollback()
 			wx.wxMessageBox(err, "Error")
 		end
 	end

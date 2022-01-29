@@ -129,3 +129,15 @@ static int LUACALL wxLua_REHex_Document_set_data_type(lua_State *L)
 	return 1;
 }
 %end
+
+%override wxLua_REHex_Document_transact_begin
+static int LUACALL wxLua_REHex_Document_transact_begin(lua_State *L)
+{
+	const wxString desc = wxlua_getwxStringtype(L, 2);
+	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+	
+	self->transact_begin(desc.ToStdString());
+	
+	return 0;
+}
+%end

@@ -86,6 +86,10 @@ class REHex::Document: public wxEvtHandler
 	
 	off_t real_to_virt_offset(off_t real_offset) const;
 	off_t virt_to_real_offset(off_t virt_offset) const;
+	
+	void transact_begin(const wxString &desc);
+	void transact_commit();
+	void transact_rollback();
 };
 
 class REHex::Tab: public wxPanel

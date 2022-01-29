@@ -58,6 +58,7 @@ class REHex::MainWindow: public wxFrame
 	wxMenu *get_help_menu() const;
 	
 	REHex::Document *active_document();
+	REHex::Tab *active_tab();
 };
 
 struct %delete REHex::Document::Comment
@@ -95,6 +96,8 @@ class REHex::Document: public wxEvtHandler
 class REHex::Tab: public wxPanel
 {
 	const REHex::Document *doc;
+	
+	void get_selection_linear();
 };
 
 class REHex::TabCreatedEvent: public wxEvent

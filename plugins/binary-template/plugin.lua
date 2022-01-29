@@ -49,30 +49,42 @@ local function _find_templates(path)
 -- 		ok, name = dir:GetNext()
 -- 	end
 	
+	-- Sort templates by name
+	table.sort(templates, function(a, b) return a[1]:upper() < b[1]:upper() end)
+	
 	return templates
 end
 
 local ID_BROWSE = 1
+local ID_RANGE_FILE = 2
+local ID_RANGE_SEL = 3
 
-rehex.AddToToolsMenu("Binary Template test", function(window)
+rehex.AddToToolsMenu("Execute binary template / script...", function(window)
+	local tab = window:active_tab()
 	local doc = window:active_document()
 	
 	local templates = _find_templates(rehex.PLUGIN_DIR .. "/" .. "templates")
 	
-	local my_window = wx.wxDialog(window, wx.wxID_ANY, "hello")
+	local my_window = wx.wxDialog(window, wx.wxID_ANY, "Execute binary template")
 	
-	local template_choice = wx.wxChoice(my_window, wx.wxID_ANY)
+	local template_sizer = wx.wxStaticBoxSizer(wx.wxHORIZONTAL, my_window, "Template")
+	local template_box = template_sizer:GetStaticBox()
+	
+	local template_choice = wx.wxChoice(template_box, wx.wxID_ANY)
+	template_sizer:Add(template_choice, 1, wx.wxALL, 5)
 	
 	for _, v in ipairs(templates)
 	do
-		template_choice:Append(v[1] .. " [" .. v[2] .. "]")
+		template_choice:Append(v[1])
 	end
 	
 	template_choice:SetSelection(0)
 	
-	local browse_btn = wx.wxButton(my_window, ID_BROWSE, "Browse...")
+	local browse_btn = wx.wxButton(template_box, ID_BROWSE, "Browse...")
+	template_sizer:Add(browse_btn, 0, wx.wxLEFT | wx.wxRIGHT | wx.wxTOP, 5)
+	
 	my_window:Connect(ID_BROWSE, wx.wxEVT_BUTTON, function(event)
-		local browse_dialog = wx.wxFileDialog(my_window, "test", "", "", "Binary Template files (*.bt)|*.bt", wx.wxFD_OPEN | wx.wxFD_FILE_MUST_EXIST)
+		local browse_dialog = wx.wxFileDialog(my_window, "Select template file", "", "", "Binary Template files (*.bt)|*.bt", wx.wxFD_OPEN | wx.wxFD_FILE_MUST_EXIST)
 		local result = browse_dialog:ShowModal()
 		
 		if result == wx.wxID_OK
@@ -87,20 +99,34 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 		end
 	end)
 	
+	local range_sizer = wx.wxStaticBoxSizer(wx.wxVERTICAL, my_window, "Range")
+	local range_box = range_sizer:GetStaticBox()
+	
+	local range_file = wx.wxRadioButton(range_box, ID_RANGE_FILE, "Apply template to whole file")
+	range_sizer:Add(range_file)
+	
+	local range_sel  = wx.wxRadioButton(range_box, ID_RANGE_SEL,  "Apply template to selection only")
+	range_sizer:Add(range_sel)
+	
+	local selection_off, selection_length = tab:get_selection_linear()
+	if selection_off ~= nil
+	then
+		range_sel:SetValue(true)
+	else
+		range_sel:Disable()
+		range_file:SetValue(true)
+	end
+	
 	local ok_btn = wx.wxButton(my_window, wx.wxID_OK, "OK")
 	local cancel_btn = wx.wxButton(my_window, wx.wxID_CANCEL, "Cancel")
-	
-	local template_choice_sizer = wx.wxBoxSizer(wx.wxHORIZONTAL)
-	template_choice_sizer:Add(wx.wxStaticText(my_window, wx.wxID_ANY, "Template"))
-	template_choice_sizer:Add(template_choice)
-	template_choice_sizer:Add(browse_btn)
 	
 	local btn_sizer = wx.wxBoxSizer(wx.wxHORIZONTAL)
 	btn_sizer:Add(ok_btn)
 	btn_sizer:Add(cancel_btn, 0, wx.wxLEFT, 5)
 	
 	local main_sizer = wx.wxBoxSizer(wx.wxVERTICAL)
-	main_sizer:Add(template_choice_sizer)
+	main_sizer:Add(template_sizer, 0, wx.wxTOP | wx.wxLEFT | wx.wxRIGHT, 5)
+	main_sizer:Add(range_sizer, 0, wx.wxEXPAND | wx.wxTOP | wx.wxLEFT | wx.wxRIGHT, 5)
 	main_sizer:Add(btn_sizer, 0, wx.wxALIGN_RIGHT | wx.wxALL, 5)
 	
 	my_window:SetSizerAndFit(main_sizer)
@@ -115,23 +141,29 @@ rehex.AddToToolsMenu("Binary Template test", function(window)
 		local progress_dialog = wx.wxProgressDialog("Processing template", "Hello", 100, window, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME)
 		progress_dialog:Show()
 		
+		if range_file:GetValue()
+		then
+			selection_off = 0
+			selection_length = doc:buffer_length()
+		end
+		
 		local yield_counter = 0
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
-				doc:set_data_type(offset, length, data_type)
+				doc:set_data_type(selection_off + offset, length, data_type)
 			end,
 			
 			set_comment = function(offset, length, text)
-				doc:set_comment(offset, length, rehex.Comment.new(text))
+				doc:set_comment(selection_off + offset, length, rehex.Comment.new(text))
 			end,
 			
 			read_data = function(offset, length)
-				return doc:read_data(offset, length)
+				return doc:read_data(selection_off + offset, length)
 			end,
 			
 			file_length = function()
-				return doc:buffer_length()
+				return selection_length
 			end,
 			
 			print = function(s) print(s) end,

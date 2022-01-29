@@ -141,3 +141,22 @@ static int LUACALL wxLua_REHex_Document_transact_begin(lua_State *L)
 	return 0;
 }
 %end
+
+%override wxLua_REHex_Tab_get_selection_linear
+static int LUACALL wxLua_REHex_Tab_get_selection_linear(lua_State *L)
+{
+	REHex::Tab * self = (REHex::Tab *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Tab);
+	
+	std::pair<off_t,off_t> selection = self->doc_ctrl->get_selection_linear();
+	if(selection.second > 0)
+	{
+		lua_pushinteger(L, selection.first);
+		lua_pushinteger(L, selection.second);
+		
+		return 2;
+	}
+	else{
+		return 0;
+	}
+}
+%end

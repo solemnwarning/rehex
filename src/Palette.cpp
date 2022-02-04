@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <assert.h>
 #include <wx/colour.h>
 #include <wx/settings.h>
@@ -84,6 +85,17 @@ REHex::Palette::ColourIndex REHex::Palette::get_highlight_fg_idx(int index)
 	return (ColourIndex)(PAL_HIGHLIGHT_TEXT_MIN_FG + (index * 2));
 }
 
+wxColour REHex::Palette::get_average_colour(int colour_a_idx, int colour_b_idx) const
+{
+	const wxColour &colour_a = (*this)[colour_a_idx];
+	const wxColour &colour_b = (*this)[colour_b_idx];
+	
+	return wxColour(
+		(((int)(colour_a.Red())   + (int)(colour_b.Red()))   / 2),
+		(((int)(colour_a.Green()) + (int)(colour_b.Green())) / 2),
+		(((int)(colour_a.Blue())  + (int)(colour_b.Blue()))  / 2));
+}
+
 REHex::Palette *REHex::Palette::create_system_palette()
 {
 	const wxColour WINDOW        = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
@@ -112,6 +124,9 @@ REHex::Palette *REHex::Palette::create_system_palette()
 		(is_light(HIGHLIGHTTEXT)
 			? HIGHLIGHTTEXT.ChangeLightness(70)
 			: HIGHLIGHTTEXT.ChangeLightness(130)),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
+		
+		WINDOW,                      /* PAL_DIRTY_TEXT_BG */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		
 		/* TODO: Algorithmically choose highlight colours that complement system colour scheme. */
 		
@@ -163,6 +178,8 @@ REHex::Palette *REHex::Palette::create_light_palette()
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
 		wxColour(0x00, 0x00, 0x7F),  /* PAL_SECONDARY_SELECTED_TEXT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
+		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_DIRTY_TEXT_BG */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		
 		/* White on Red */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */
@@ -209,6 +226,8 @@ REHex::Palette *REHex::Palette::create_dark_palette()
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SELECTED_TEXT_FG */
 		wxColour(0x00, 0x00, 0x7F),  /* PAL_SECONDARY_SELECTED_TEXT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
+		wxColour(0x00, 0x00, 0x00),  /* PAL_DIRTY_TEXT_BG */
+		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		
 		/* White on Red */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_HIGHLIGHT_TEXT_MIN_BG */

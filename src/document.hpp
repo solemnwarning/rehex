@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,25 +28,41 @@
 #include <wx/wx.h>
 
 #include "buffer.hpp"
+#include "ByteRangeMap.hpp"
+#include "ByteRangeSet.hpp"
+#include "CharacterEncoder.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
 
 namespace REHex {
-	wxDECLARE_EVENT(EV_CURSOR_MOVED,      wxCommandEvent);
-	wxDECLARE_EVENT(EV_INSERT_TOGGLED,    wxCommandEvent);
-	wxDECLARE_EVENT(EV_SELECTION_CHANGED, wxCommandEvent);
-	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,  wxCommandEvent);
-	wxDECLARE_EVENT(EV_DATA_MODIFIED,     wxCommandEvent);
-	wxDECLARE_EVENT(EV_UNDO_UPDATE,       wxCommandEvent);
-	wxDECLARE_EVENT(EV_BECAME_CLEAN,      wxCommandEvent);
-	wxDECLARE_EVENT(EV_BECAME_DIRTY,      wxCommandEvent);
-	wxDECLARE_EVENT(EV_BASE_CHANGED,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_INSERT_TOGGLED,      wxCommandEvent);
+	wxDECLARE_EVENT(EV_SELECTION_CHANGED,   wxCommandEvent);
+	wxDECLARE_EVENT(EV_COMMENT_MODIFIED,    wxCommandEvent);
+	wxDECLARE_EVENT(EV_UNDO_UPDATE,         wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_CLEAN,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_BECAME_DIRTY,        wxCommandEvent);
+	wxDECLARE_EVENT(EV_DISP_SETTING_CHANGED,wxCommandEvent);
+	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
+	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
+	wxDECLARE_EVENT(EV_MAPPINGS_CHANGED,    wxCommandEvent);
 	
-	class Document: public wxControl {
+	/**
+	 * @brief Data and metadata of an open file.
+	 *
+	 * This class holds a Buffer of data in the file, metadata (comments, highlights, etc) and
+	 * manages access and operations on them.
+	*/
+	class Document: public wxEvtHandler {
 		public:
+			/**
+			 * @brief A comment in a Document.
+			*/
 			struct Comment
 			{
-				/* We use a shared_ptr here so that unmodified comment text isn't
+				/**
+				 * @brief The comment text.
+				 *
+				 * We use a shared_ptr here so that unmodified comment text isn't
 				 * duplicated throughout undo_stack and redo_stack. This might be
 				 * made obsolete in the future if we apply a similar technique to
 				 * the comments/highlights copies as a whole.
@@ -54,9 +70,13 @@ namespace REHex {
 				 * wxString is used rather than std::string as it is unicode-aware
 				 * and will keep everything in order in memory and on-screen.
 				*/
-				
 				std::shared_ptr<const wxString> text;
 				
+				/**
+				 * @brief Create a new comment.
+				 *
+				 * @param text Comment text.
+				*/
 				Comment(const wxString &text);
 				
 				bool operator==(const Comment &rhs) const
@@ -64,336 +84,411 @@ namespace REHex {
 					return *text == *(rhs.text);
 				}
 				
+				/**
+				 * @brief Get a short preview of the comment, suitable for use as a wxMenuItem label.
+				*/
 				wxString menu_preview() const;
 			};
 			
-			enum InlineCommentMode {
-				ICM_HIDDEN       = 0,
-				ICM_FULL         = 1,
-				ICM_SHORT        = 2,
-				ICM_FULL_INDENT  = 3,
-				ICM_SHORT_INDENT = 4,
-				ICM_MAX          = 4,
-			};
-			
-			Document(wxWindow *parent);
-			Document(wxWindow *parent, const std::string &filename);
-			~Document();
-			
-			void save();
-			void save(const std::string &filename);
-			
-			std::string get_title();
-			std::string get_filename();
-			bool is_dirty();
-			
-			unsigned int get_bytes_per_line();
-			void set_bytes_per_line(unsigned int bytes_per_line);
-			
-			unsigned int get_bytes_per_group();
-			void set_bytes_per_group(unsigned int bytes_per_group);
-			
-			bool get_show_offsets();
-			void set_show_offsets(bool show_offsets);
-			
-			OffsetBase get_offset_display_base() const;
-			void set_offset_display_base(OffsetBase offset_display_base);
-			
-			bool get_show_ascii();
-			void set_show_ascii(bool show_ascii);
-			
-			InlineCommentMode get_inline_comment_mode();
-			void set_inline_comment_mode(InlineCommentMode mode);
-			
-			bool get_highlight_selection_match();
-			void set_highlight_selection_match(bool highlight_selection_match);
-			
-			off_t get_cursor_position() const;
-			void set_cursor_position(off_t off);
-			bool get_insert_mode();
-			void set_insert_mode(bool enabled);
-			
-			void set_selection(off_t off, off_t length);
-			void clear_selection();
-			std::pair<off_t, off_t> get_selection();
-			
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
-			void overwrite_data(off_t offset, const void *data, off_t length);
-			void insert_data(off_t offset, const unsigned char *data, off_t length);
-			void erase_data(off_t offset, off_t length);
-			off_t buffer_length();
-			
-			const NestedOffsetLengthMap<Comment> &get_comments() const;
-			bool set_comment(off_t offset, off_t length, const Comment &comment);
-			bool erase_comment(off_t offset, off_t length);
-			void edit_comment_popup(off_t offset, off_t length);
-			
-			void handle_paste(const std::string &clipboard_text);
-			std::string handle_copy(bool cut);
-			size_t copy_upper_limit();
-			
-			void handle_paste(const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
-			
-			void undo();
-			const char *undo_desc();
-			void redo();
-			const char *redo_desc();
-			
-			void OnPaint(wxPaintEvent &event);
-			void OnSize(wxSizeEvent &event);
-			void OnScroll(wxScrollWinEvent &event);
-			void OnWheel(wxMouseEvent &event);
-			void OnChar(wxKeyEvent &event);
-			void OnLeftDown(wxMouseEvent &event);
-			void OnLeftUp(wxMouseEvent &event);
-			void OnRightDown(wxMouseEvent &event);
-			void OnMotion(wxMouseEvent &event);
-			void OnSelectTick(wxTimerEvent &event);
-			void OnMotionTick(int mouse_x, int mouse_y);
-			void OnRedrawCursor(wxTimerEvent &event);
-			void OnClearHighlight(wxCommandEvent &event);
-			
-		#ifndef UNIT_TEST
-		private:
-		#endif
 			enum CursorState {
 				CSTATE_HEX,
 				CSTATE_HEX_MID,
 				CSTATE_ASCII,
+				CSTATE_SPECIAL,
 				
 				/* Only valid as parameter to _set_cursor_position(), will go
 				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.
 				*/
 				CSTATE_GOTO,
-			};
-			
-			struct Region
-			{
-				int64_t y_offset; /* First on-screen line in region */
-				int64_t y_lines;  /* Number of on-screen lines in region */
 				
-				int indent_depth;  /* Indentation depth */
-				int indent_final;  /* Number of inner indentation levels we are the final region in */
-				
-				Region();
-				
-				virtual ~Region();
-				
-				virtual void update_lines(REHex::Document &doc, wxDC &dc) = 0;
-				
-				/* Draw this region on the screen.
-				 * 
-				 * doc - The parent Document object
-				 * dc  - The wxDC to draw in
-				 * x,y - The top-left co-ordinates of this Region in the DC (MAY BE NEGATIVE)
-				 *
-				 * The implementation MAY skip rendering outside of the client area
-				 * of the DC to improve performance.
+				/* Only valid as parameter to data manipulation methods to use
+				 * current value of cursor_state.
 				*/
-				virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) = 0;
-				
-				virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px);
-				
-				void draw_container(REHex::Document &doc, wxDC &dc, int x, int64_t y);
-				
-				struct Data;
-				struct Comment;
+				CSTATE_CURRENT,
 			};
 			
-			struct TrackedChange
+			/**
+			 * @brief Create a Document for a new file.
+			*/
+			Document();
+			
+			/**
+			 * @brief Create a Document for an existing file on disk.
+			*/
+			Document(const std::string &filename);
+			
+			~Document();
+			
+			/**
+			 * @brief Save any changes to the file and its metadata.
+			*/
+			void save();
+			
+			/**
+			 * @brief Save the file to a new path.
+			*/
+			void save(const std::string &filename);
+			
+			/**
+			 * @brief Get the user-visible title of the document.
+			 *
+			 * This will usually be the name of the file, or a locale-appropriate
+			 * label like "Untitled" for new files.
+			*/
+			std::string get_title();
+			
+			/**
+			 * @brief Get the filename of the document, or an empty string if there is no backing file.
+			*/
+			std::string get_filename();
+			
+			/**
+			 * @brief Check if the document has any pending changes to be saved.
+			*/
+			bool is_dirty();
+			
+			/**
+			 * @brief Check if the given byte in the backing file has been modified since the last save.
+			*/
+			bool is_byte_dirty(off_t offset) const;
+			
+			/**
+			 * @brief Check if the BUFFER has any pending changes to be saved.
+			*/
+			bool is_buffer_dirty() const;
+			
+			off_t get_cursor_position() const;
+			CursorState get_cursor_state() const;
+			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
+			
+			/**
+			 * @brief Get the comments in the file.
+			*/
+			const NestedOffsetLengthMap<Comment> &get_comments() const;
+			
+			/**
+			 * @brief Set a comment in the file.
+			 *
+			 * @param offset   Offset of byte range.
+			 * @param length   Length of byte range.
+			 * @param comment  Comment to set.
+			 *
+			 * Returns true on success, false if off and/or length is beyond the
+			 * current size of the file, or the range is straddling the end of another
+			 * existing comment.
+			 *
+			 * Comments can have a length of zero, in which case they are displayed at
+			 * the given offset, but do not encompass a range of bytes.
+			*/
+			bool set_comment(off_t offset, off_t length, const Comment &comment);
+			
+			/**
+			 * @brief Erase a comment in the file.
+			 *
+			 * @param offset  Offset of comment to erase.
+			 * @param length  Length of comment to erase.
+			 *
+			 * Returns true on success, false if the comment was not found.
+			*/
+			bool erase_comment(off_t offset, off_t length);
+			
+			/**
+			 * @brief Get the highlighted byte ranges in the file.
+			*/
+			const NestedOffsetLengthMap<int> &get_highlights() const;
+			
+			/**
+			 * @brief Set a highlight on a range of bytes in the file.
+			 *
+			 * @param off                   Offset of byte range.
+			 * @param length                Length of byte range.
+			 * @param highlight_colour_idx  Highlight colour index (0 .. Palette::NUM_HIGHLIGHT_COLOURS - 1).
+			 *
+			 * Returns true on success, false if off and/or length is beyond the
+			 * current size of the file, or the range is straddling the end of another
+			 * existing highlight.
+			*/
+			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
+			
+			/**
+			 * @brief Remove a highlight from the file.
+			 *
+			 * @param off     Offset of byte range.
+			 * @param length  Length of byte range.
+			 *
+			 * The off and length parameters must exactly match the highlight to be
+			 * removed. This constraint will be removed in the future and it will be
+			 * possible to remove a portion of a highlight.
+			 *
+			 * Returns true on success, false if the highlight wasn't found.
+			*/
+			bool erase_highlight(off_t off, off_t length);
+			
+			/**
+			 * @brief Get the mapping of byte ranges to data types in the file.
+			*/
+			const ByteRangeMap<std::string> &get_data_types() const;
+			
+			/**
+			 * @brief Set a data type mapping in the file.
+			 *
+			 * @param offset Offset of data.
+			 * @param length Length of data, in bytes.
+			 * @param type   Type of data.
+			 *
+			 * Sets the type of a range of bytes in the file, the type should be an
+			 * empty string for untyped data, or a type known to the DataTypeRegistry.
+			 *
+			 * Returns true on success, false if the offset and/or length is beyond the
+			 * current size of the file.
+			*/
+			bool set_data_type(off_t offset, off_t length, const std::string &type);
+			
+			const CharacterEncoder *get_text_encoder(off_t offset) const;
+			
+			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
+			void clear_virt_mapping_r(off_t real_offset, off_t length);
+			void clear_virt_mapping_v(off_t virt_offset, off_t length);
+			
+			const ByteRangeMap<off_t> &get_real_to_virt_segs() const;
+			const ByteRangeMap<off_t> &get_virt_to_real_segs() const;
+			
+			off_t real_to_virt_offset(off_t real_offset) const;
+			off_t virt_to_real_offset(off_t virt_offset) const;
+			
+			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
+			
+			/**
+			 * @brief Undo the last change to the document.
+			*/
+			void undo();
+			
+			/**
+			 * @brief Get a description of the last change to the document.
+			*/
+			const char *undo_desc();
+			
+			/**
+			 * @brief Replay a change undone with the undo() method.
+			*/
+			void redo();
+			
+			/**
+			 * @brief Get a description of the next change to be replayed.
+			*/
+			const char *redo_desc();
+			
+		#ifndef UNIT_TEST
+		private:
+		#endif
+			struct TransOpFunc
 			{
-				const char *desc;
+				const std::function<TransOpFunc()> func;
 				
-				std::function< void() > undo;
-				std::function< void() > redo;
+				TransOpFunc(const std::function<TransOpFunc()> &func);
+				TransOpFunc(const TransOpFunc &src);
+				TransOpFunc(TransOpFunc &&src);
+				
+				TransOpFunc operator()() const;
+			};
+			
+			struct Transaction
+			{
+				const std::string desc;
+				
+				bool complete;
+				
+				std::list<TransOpFunc> ops;
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
 				NestedOffsetLengthMap<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
+				ByteRangeMap<std::string> old_types;
+				
+				ByteRangeMap<off_t> old_real_to_virt_segs;
+				ByteRangeMap<off_t> old_virt_to_real_segs;
+				
+				Transaction(const std::string &desc, Document *doc):
+					desc(desc),
+					complete(false),
+					
+					old_cpos_off(doc->get_cursor_position()),
+					old_cursor_state(doc->get_cursor_state()),
+					old_comments(doc->get_comments()),
+					old_highlights(doc->get_highlights()),
+					old_types(doc->get_data_types()),
+					old_real_to_virt_segs(doc->get_real_to_virt_segs()),
+					old_virt_to_real_segs(doc->get_virt_to_real_segs()) {}
 			};
 			
-			friend Region::Data;
-			friend Region::Comment;
+			void transact_step(const TransOpFunc &op, const std::string &desc);
 			
 			Buffer *buffer;
 			std::string filename;
+			bool write_protect;
 			
-			bool dirty;
-			void set_dirty(bool dirty);
+			unsigned int current_seq;
+			unsigned int buffer_seq;
+			ByteRangeMap<unsigned int> data_seq;
+			unsigned int saved_seq;
 			
 			NestedOffsetLengthMap<Comment> comments;
-			NestedOffsetLengthMap<int> highlights;
+			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
+			ByteRangeMap<std::string> types;
+			
+			ByteRangeMap<off_t> real_to_virt_segs;
+			ByteRangeMap<off_t> virt_to_real_segs;
 			
 			std::string title;
-			
-			std::list<Region*> regions;
-			size_t data_regions_count;
-			
-			/* Fixed-width font used for drawing hex data. */
-			wxFont *hex_font;
-			
-			/* Size of a character in hex_font. */
-			unsigned char hf_height;
-			
-			/* Size of the client area in pixels. */
-			int client_width;
-			int client_height;
-			
-			/* Height of client area in lines. */
-			unsigned int visible_lines;
-			
-			/* Width of the scrollable area. */
-			int virtual_width;
-			
-			/* Display options */
-			unsigned int bytes_per_line;
-			unsigned int bytes_per_group;
-			
-			bool offset_column{true};
-			int offset_column_width;
-			OffsetBase offset_display_base;
-			
-			bool show_ascii;
-			
-			InlineCommentMode inline_comment_mode;
-			
-			bool highlight_selection_match;
-			
-			int     scroll_xoff;
-			int64_t scroll_yoff;
-			int64_t scroll_yoff_max;
-			int64_t scroll_ydiv;
-			
-			int wheel_vert_accum;
-			int wheel_horiz_accum;
 			
 			off_t cpos_off{0};
 			bool insert_mode{false};
 			
-			off_t selection_off;
-			off_t selection_length;
-			
-			bool cursor_visible;
-			wxTimer redraw_cursor_timer;
-			
-			static const int MOUSE_SELECT_INTERVAL = 100;
-			
-			bool mouse_down_in_hex, mouse_down_in_ascii;
-			off_t mouse_down_at_offset;
-			int mouse_down_at_x;
-			wxTimer mouse_select_timer;
-			off_t mouse_shift_initial;
-			
 			enum CursorState cursor_state;
 			
 			static const int UNDO_MAX = 64;
-			std::list<REHex::Document::TrackedChange> undo_stack;
-			std::list<REHex::Document::TrackedChange> redo_stack;
-			
-			void _ctor_pre(wxWindow *parent);
-			void _ctor_post();
-			
-			void _reinit_regions();
-			void _recalc_regions(wxDC &dc);
+			std::list<Transaction> undo_stack;
+			std::list<Transaction> redo_stack;
 			
 			void _set_cursor_position(off_t position, enum CursorState cursor_state);
 			
-			void _UNTRACKED_overwrite_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
-			void _UNTRACKED_insert_data(wxDC &dc, off_t offset, const unsigned char *data, off_t length);
-			void _UNTRACKED_erase_data(wxDC &dc, off_t offset, off_t length);
+			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
 			
-			void _tracked_overwrite_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
-			void _tracked_insert_data(const char *change_desc, off_t offset, const unsigned char *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
-			void _tracked_erase_data(const char *change_desc, off_t offset, off_t length);
-			void _tracked_replace_data(const char *change_desc, off_t offset, off_t old_data_length, const unsigned char *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state);
-			void _tracked_change(const char *desc, std::function< void() > do_func, std::function< void() > undo_func);
+			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
+			void _update_mappings_data_inserted(off_t offset, off_t length);
 			
-			void _set_comment_text(wxDC &dc, off_t offset, off_t length, const wxString &text);
-			void _delete_comment(wxDC &dc, off_t offset, off_t length);
+			void _UNTRACKED_erase_data(off_t offset, off_t length);
+			bool _virt_to_real_segs_data_erased(off_t offset, off_t length);
 			
-			json_t *_dump_metadata();
+			TransOpFunc _op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			
+			TransOpFunc _op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice);
+			
+			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
+			TransOpFunc _op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
+			
+			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
+			TransOpFunc _op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			
+			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
+			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
+			
+			json_t *_dump_metadata(bool& has_data);
 			void _save_metadata(const std::string &filename);
 			
 			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
+			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
-			REHex::Document::Region::Data *_data_region_by_offset(off_t offset);
-			
-			void _make_line_visible(int64_t line);
-			void _make_x_visible(int x_px, int width_px);
-			
-			void _make_byte_visible(off_t offset);
-			
-			void _handle_width_change();
-			void _handle_height_change();
-			void _update_vscroll();
-			void _update_vscroll_pos();
-			
-			static std::list<wxString> _format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
-			int _indent_width(int depth);
-			
-			void _raise_moved();
 			void _raise_comment_modified();
-			void _raise_data_modified();
 			void _raise_undo_update();
 			void _raise_dirty();
 			void _raise_clean();
+			void _raise_highlights_changed();
+			void _raise_types_changed();
+			void _raise_mappings_changed();
 			
-			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
-			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
+		public:
+			/**
+			 * @brief Read some data from the file.
+			 * @see Buffer::read_data()
+			*/
+			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
 			
-			int hf_char_width();
-			int hf_string_width(int length);
-			int hf_char_at_x(int x_px);
+			/**
+			 * @brief Return the current length of the file in bytes.
+			*/
+			off_t buffer_length() const;
 			
-			/* Stays at the bottom because it changes the protection... */
-			DECLARE_EVENT_TABLE()
+			/**
+			 * @brief Set write protect flag on the file.
+			 *
+			 * If the write protect flag is set, any attempts to modify the file (buffer) DATA
+			 * will be no-ops. Changes to metadata (comments, etc) are still permitted.
+			*/
+			void set_write_protect(bool write_protect);
+			
+			/**
+			 * @get Get the write protect flag state.
+			*/
+			bool get_write_protect() const;
+			
+			/**
+			 * @brief Overwrite a range of bytes in the file.
+			 *
+			 * @param offset            File offset to write data at.
+			 * @param data              Pointer to data buffer.
+			 * @param length            Length of data to write.
+			 * @param new_cursor_pos    New cursor position. Pass a negative value to not change cursor position.
+			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
+			 * @param change_desc       Description of change for undo history.
+			*/
+			void overwrite_data(off_t offset, const void *data, off_t length,                                            off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+			/**
+			 * @brief Insert a range of bytes into the file.
+			 *
+			 * @param offset            File offset to insert data at.
+			 * @param data              Pointer to data buffer.
+			 * @param length            Length of data to write.
+			 * @param new_cursor_pos    New cursor position. Pass a negative value to not change cursor position.
+			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
+			 * @param change_desc       Description of change for undo history.
+			*/
+			void insert_data(off_t offset, const void *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+			/**
+			 * @brief Erase a range of bytes in the file.
+			 *
+			 * @param offset            File offset to erase data from.
+			 * @param length            Length of data to erase.
+			 * @param new_cursor_pos    New cursor position. Pass a negative value to not change cursor position.
+			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
+			 * @param change_desc       Description of change for undo history.
+			*/
+			void erase_data(off_t offset, off_t length,                                                                  off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+			/**
+			 * @brief Replace a range of bytes in the file.
+			 *
+			 * @param offset            File offset to replace data at.
+			 * @param old_data_length   Length of data to be replaced.
+			 * @param new_data          Pointer to data buffer.
+			 * @param new_data_length   Length of new data.
+			 * @param new_cursor_pos    New cursor position. Pass a negative value to not change cursor position.
+			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
+			 * @param change_desc       Description of change for undo history.
+			*/
+			void replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+			static const off_t WRITE_TEXT_KEEP_POSITION = -1;  /**< Don't move the cursor after writing. */
+			static const off_t WRITE_TEXT_GOTO_NEXT = -2;      /**< Jump to byte following written data. */
+			
+			static const int WRITE_TEXT_OK = 0;
+			static const int WRITE_TEXT_BAD_OFFSET = 1;
+			static const int WRITE_TEXT_SKIPPED = 2;
+			static const int WRITE_TEXT_TRUNCATED = 4;
+			
+			int overwrite_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			int insert_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			int replace_text(off_t offset, off_t old_data_length, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+			void transact_begin(const std::string &desc);
+			void transact_commit();
+			void transact_rollback();
 	};
 	
-	struct Document::Region::Data: public REHex::Document::Region
-	{
-		off_t d_offset;
-		off_t d_length;
-		
-		int offset_text_x;  /* Virtual X coord of left edge of offsets. */
-		int hex_text_x;     /* Virtual X coord of left edge of hex data. */
-		int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
-		
-		unsigned int bytes_per_line_actual;  /* Number of bytes being displayed per line. */
-		
-		Data(off_t d_offset, off_t d_length, int i_depth = 0);
-		
-		virtual void update_lines(REHex::Document &doc, wxDC &dc) override;
-		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) override;
-		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
-		
-		off_t offset_at_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
-		off_t offset_at_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
-		
-		off_t offset_near_xy_hex  (REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
-		off_t offset_near_xy_ascii(REHex::Document &doc, int mouse_x_px, uint64_t mouse_y_lines);
-	};
-	
-	struct Document::Region::Comment: public REHex::Document::Region
-	{
-		off_t c_offset, c_length;
-		const wxString &c_text;
-		
-		REHex::Document::Region *final_descendant;
-		
-		Comment(off_t c_offset, off_t c_length, const wxString &c_text, int i_depth);
-		
-		/* Kludge for unit tests which really need to be redesigned... */
-		Comment(off_t c_offset, const wxString &c_text):
-			Comment(c_offset, 0, c_text, 0) {}
-		
-		virtual void update_lines(REHex::Document &doc, wxDC &dc) override;
-		virtual void draw(REHex::Document &doc, wxDC &dc, int x, int64_t y) override;
-		virtual wxCursor cursor_for_point(REHex::Document &doc, int x, int64_t y_lines, int y_px) override;
-	};
-	
+	/**
+	 * @brief Data object that stores a list of comments.
+	 *
+	 * This class provides wxDataObject-compatible serialisation of one or more comments so
+	 * that they can be copied via the clipboard.
+	*/
 	class CommentsDataObject: public wxCustomDataObject
 	{
 		private:
@@ -406,13 +501,77 @@ namespace REHex {
 			};
 			
 		public:
+			/**
+			 * @brief wxDataFormat used for comments in the clipboard.
+			*/
 			static const wxDataFormat format;
 			
+			/**
+			 * @brief Construct an empty CommentsDataObject.
+			*/
 			CommentsDataObject();
+			
+			/**
+			 * @brief Construct a CommentsDataObject from a list of comments.
+			 *
+			 * @param comments  List of iterators to comments to be serialised.
+			 * @param base      Base offset to be subtracted from the offset of each comment.
+			*/
 			CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
 			
+			/**
+			 * @brief Deserialise the CommentsDataObject and return the stored comments.
+			*/
 			NestedOffsetLengthMap<Document::Comment> get_comments() const;
+			
+			/**
+			 * @brief Replace the serialised list of stored comments.
+			 *
+			 * @param comments  List of iterators to comments to be serialised.
+			 * @param base      Base offset to be subtracted from the offset of each comment.
+			*/
 			void set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
+	};
+	
+	/**
+	 * @brief RAII-style Document transaction wrapper.
+	*/
+	class ScopedTransaction
+	{
+		private:
+			Document *doc;
+			bool committed;
+			
+		public:
+			/**
+			 * @brief Opens a new transaction.
+			*/
+			ScopedTransaction(Document *doc, const std::string &desc):
+				doc(doc),
+				committed(false)
+			{
+				doc->transact_begin(desc);
+			}
+			
+			/**
+			 * @brief Rolls back the transaction if not already committed.
+			*/
+			~ScopedTransaction()
+			{
+				if(!committed)
+				{
+					doc->transact_rollback();
+				}
+			}
+			
+			/**
+			 * @brief Complete the transaction.
+			*/
+			void commit()
+			{
+				doc->transact_commit();
+				committed = true;
+			}
 	};
 }
 

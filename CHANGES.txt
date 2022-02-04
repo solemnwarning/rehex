@@ -1,5 +1,155 @@
 Version TBA
 
+ * Added "x86 disassembly syntax" to "View" menu to allow selecting between
+   Intel or AT&T notation for x86 disassembly.
+
+ * Handle file open message used for "Open With" on macOS (#144).
+
+ * Added --compare switch to jump straight into comparing two files (#141).
+
+ * Fix timer leak that can cause a crash when closing the compare window or
+   strings panel.
+
+Version 0.4.1 (2022-01-03)
+
+ * Fixed font-dependent rendering glitches when control characters or other
+   Unicode oddities were present in the text view.
+
+Version 0.4.0 (2021-12-20)
+
+ * Add data types for common text encodings (Unicode, ISO-8859) - text
+   displayed or typed into the text view on the right will be decoded or
+   encoded appropriately (#10).
+
+ * Treat pasted text as text rather than a string of raw bytes.
+
+ * Add 8-bit integer data types.
+
+ * Don't mark new files as unsaved.
+
+ * Store cursor position history and allow jumping backwards/forwards (#81).
+
+ * Allow jumping to previous/next difference in data compare window (#131).
+
+ * Collapse long ranges of identical data in data compare window (#85).
+
+ * Added "Jump to offset in main window" to data compare window context menu.
+
+ * Added shortcuts for comparing data (#103).
+
+ * Add support for other encodings to strings tool (#106).
+
+ * Add write protect flag to prevent accidental changes to file data during
+   analysis (#130).
+
+ * Respect system cursor blink speed setting (#112).
+
+Version 0.3.92 (2021-08-24)
+
+ * Reduce persistent memory usage (#52).
+
+ * Fully undo virtual mapping changes in one step (#126).
+
+ * Fix build dependency errors (#129).
+
+ * Add "Find previous" button to search dialogs (#111).
+
+ * Fix hard-to-see colours in "Decode values" panel on some systems (#127).
+
+ * Fix build errors on FreeBSD (#133).
+
+ * Prevent document from jumping around when the window is resized or
+   disassembly is in progress (#132).
+
+ * Fix build errors when using wxWidgets 3.1.5 and newer.
+
+ * Refactor selection handling to make sense in virtual section view (#125).
+
+ * Add font face setting to "View" menu (#128).
+
+ * Correctly track whether files have been modified since saving (#122).
+
+Version 0.3.91 (2021-05-03)
+
+ * Fix loading of plugins bundled as part of an AppImage.
+
+Version 0.3.90 (2021-05-02)
+
+ * Show disassembly of machine code in the main document view (#94).
+
+ * Add font size settings to "View" menu (#97).
+
+ * Add float/double types to "Set data type" menu (#104).
+
+ * Fix selection by holding shift and clicking (#109).
+
+ * Initial support for Lua plugins.
+
+ * Process sections from PE EXE/DLL headers (#86).
+
+ * [Mark Jansen] Save size of main window and tool panels (#88).
+
+ * Don't resize tool panels unnecessarily.
+
+ * Fix invalid cursor state when moving between regions.
+
+ * Fix crash when deleting data (#113, #123).
+
+ * Fix opening files with 8-bit filenames, and other encoding issues (#117).
+
+ * Virtual segment mapping and display (#7).
+
+ * Display inline comments by default (didn't always work).
+
+Version 0.3.1 (2020-11-13)
+
+ * Correctly display signed 16-bit values in "Decode values" panel.
+
+ * Fix status bar offset going out of sync.
+
+ * Move cursor when a row in the "Comments" panel is double clicked.
+
+ * Focus document after updating position/selection via "Comments" panel.
+
+Version 0.3.0 (2020-11-10)
+
+ * [Mark Jansen] Use byte grouping setting from main window in diff window.
+
+ * [Mark Jansen] Use Capstone disassembler rather than LLVM.
+
+ * [Mark Jansen] Support disassembling 16-bit x86 machine code.
+
+ * [Mark Jansen] Don't update tools which aren't visible.
+
+ * [Vincent Bermel] Unhardcode linux launcher icon file type.
+
+ * Fix an uncommon use-after-free crash when closing tabs in diff window.
+
+ * Support for disassembling 6800/68000 and MOS6502 instruction sets
+   (requires recent Capstone version).
+
+ * [Mark Jansen] Close document when tab is clicked with middle mouse button.
+
+ * [Mark Jansen] Don't create .rehex-meta files when there is nothing to save.
+
+ * Implement Strings tool to find and list ASCII strings in the file.
+
+ * Add option to calculate automatic bytes per line in whole byte groups.
+
+ * Add "Fill range" tool for overwriting ranges of bytes with a pattern.
+
+ * Preserve column alignment after comments.
+
+ * [Mark Jansen] Mark a document dirty if highlighting is changed.
+
+ * Add data type annotations.
+
+ * Show ranges marked as integers in their decoded form in the hex view.
+
+ * Performance improvements for documents with large numbers of comments.
+
+Version 0.2.0 (2020-06-02)
+
  * Allow copying comments from a document and pasting them elsewhere in the
    same document or into another one.
 
@@ -18,6 +168,17 @@ Version TBA
    size is under 4GiB.
 
  * Add per-document option for dec/hex offset display.
+
+ * When first byte after a comment is deleted, show that the comment was
+   deleted rather than leaving phantom comment on screen until regions are
+   repopulated.
+
+ * Add side-by-side comparison of chunks of data from files. Select data and
+   choose "Compare..." from context menu to open diff window.
+
+ * Clean up search threads when a tab is closed while a search is running.
+
+ * Display bytes which have been modified since the file was saved in red.
 
 Version 0.1.0 (2020-03-12)
 

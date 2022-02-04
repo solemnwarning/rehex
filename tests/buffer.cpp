@@ -16,6 +16,7 @@
 */
 
 #undef NDEBUG
+#include "../src/platform.hpp"
 #include <assert.h>
 
 #include <errno.h>
@@ -25,7 +26,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #define UNIT_TEST
 #include "../src/buffer.hpp"
@@ -33,13 +36,13 @@
 #define TMPFILE  "tests/.tmpfile"
 #define TMPFILE2 "tests/.tmpfile2"
 
-static void write_file(const char *filename, const void *data, size_t length)
+static void write_file(const char *filename, const std::vector<unsigned char>& data)
 {
 	FILE *fh = fopen(filename, "wb");
-	assert(fh);
+	assert(fh);	// Ensure the 'tests' directory can be accessed when hitting this
 	
-	if(length > 0)
-		assert(fwrite(data, length, 1, fh) == 1);
+	if(data.size() > 0)
+		assert(fwrite(data.data(), data.size(), 1, fh) == 1);
 	
 	fclose(fh);
 }
@@ -67,72 +70,65 @@ static std::vector<unsigned char> read_file(const char *filename)
 
 #define TEST_BUFFER_MANIP(buffer_manip_code) \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
 	std::vector<unsigned char> got_data = b.read_data(0, 1024); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "Buffer::read_data() returns correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
 	b.write_inplace(); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "write_inplace() produces file with correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "write_inplace() produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
 	b.write_copy(TMPFILE2); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "write_copy() produces file with correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "write_copy() produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
 	b.write_inplace(TMPFILE); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "write_inplace(<same file>) produces file with correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<same file>) produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
 	assert(unlink(TMPFILE2) == 0 || errno == ENOENT);\
 	b.write_inplace(TMPFILE2); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "write_inplace(<new file>) produces file with correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<new file>) produces file with correct data"; \
 } \
-if(sizeof(END_DATA) > 0) \
+if(END_DATA.size() > 0) \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
-	std::vector<unsigned char> tf2data((sizeof(END_DATA) - 1), 0xFF); \
-	write_file(TMPFILE2, tf2data.data(), tf2data.size()); \
+	std::vector<unsigned char> tf2data((END_DATA.size() - 1), 0xFF); \
+	write_file(TMPFILE2, tf2data); \
 	b.write_inplace(TMPFILE2); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "write_inplace(<smaller file>) produces file with correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<smaller file>) produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA, sizeof(BEGIN_DATA)); \
+	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
-	std::vector<unsigned char> tf2data((sizeof(END_DATA) + 1), 0xFF); \
-	write_file(TMPFILE2, tf2data.data(), tf2data.size()); \
+	std::vector<unsigned char> tf2data((END_DATA.size() + 1), 0xFF); \
+	write_file(TMPFILE2, tf2data); \
 	b.write_inplace(TMPFILE2); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
-	std::vector<unsigned char> expect_data(END_DATA, END_DATA + sizeof(END_DATA)); \
-	EXPECT_EQ(got_data, expect_data) << "write_inplace(<larger file>) produces file with correct data"; \
+	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<larger file>) produces file with correct data"; \
 }
 
 #define TEST_BLOCKS(blocks_code) \
@@ -157,14 +153,14 @@ if(sizeof(END_DATA) > 0) \
 	EXPECT_EQ(expect_length, b.length()) << "Buffer::length() returns correct length"; \
 }
 
-#define TEST_OVERWRITE_OK(offset, data) \
+#define TEST_OVERWRITE_OK(offset, data_vec) \
 { \
-	EXPECT_TRUE(b.overwrite_data(offset, data, sizeof(data))) << "Buffer::overwrite_data() returns true"; \
+	EXPECT_TRUE(b.overwrite_data(offset, data_vec.data(), data_vec.size())) << "Buffer::overwrite_data() returns true"; \
 }
 
-#define TEST_OVERWRITE_FAIL(offset, data) \
+#define TEST_OVERWRITE_FAIL(offset, data_vec) \
 { \
-	EXPECT_FALSE(b.overwrite_data(offset, data, sizeof(data))) << "Buffer::overwrite_data() returns false"; \
+	EXPECT_FALSE(b.overwrite_data(offset, data_vec.data(), data_vec.size())) << "Buffer::overwrite_data() returns false"; \
 }
 
 #define TEST_ERASE_OK(offset, length) \
@@ -177,14 +173,14 @@ if(sizeof(END_DATA) > 0) \
 	EXPECT_FALSE(b.erase_data(offset, length)) << "Buffer::erase_data() returns false"; \
 }
 
-#define TEST_INSERT_OK(offset, data) \
+#define TEST_INSERT_OK(offset, data_vec) \
 { \
-	EXPECT_TRUE(b.insert_data(offset, data, sizeof(data))) << "Buffer::insert_data() returns true"; \
+	EXPECT_TRUE(b.insert_data(offset, data_vec.data(), data_vec.size())) << "Buffer::insert_data() returns true"; \
 }
 
-#define TEST_INSERT_FAIL(offset, data) \
+#define TEST_INSERT_FAIL(offset, data_vec) \
 { \
-	EXPECT_FALSE(b.insert_data(offset, data, sizeof(data))) << "Buffer::insert_data() returns false"; \
+	EXPECT_FALSE(b.insert_data(offset, data_vec.data(), data_vec.size())) << "Buffer::insert_data() returns false"; \
 }
 
 TEST(Buffer, DefaultConstructor)
@@ -205,13 +201,13 @@ TEST(Buffer, DefaultConstructor)
 
 TEST(Buffer, LoadConstructorNonEmptyFile)
 {
-	const unsigned char file_data[] = {
+	const std::vector<unsigned char> file_data = {
 		0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01,
 		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8,
 		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
 	};
 	
-	write_file(TMPFILE, file_data, sizeof(file_data));
+	write_file(TMPFILE, file_data);
 	
 	REHex::Buffer b(TMPFILE, 8);
 	
@@ -237,7 +233,8 @@ TEST(Buffer, LoadConstructorNonEmptyFile)
 
 TEST(Buffer, LoadConstructorEmptyFile)
 {
-	write_file(TMPFILE, NULL, 0);
+	const std::vector<unsigned char> file_data;
+	write_file(TMPFILE, file_data);
 	
 	REHex::Buffer b(TMPFILE, 8);
 	
@@ -254,12 +251,12 @@ TEST(Buffer, LoadConstructorEmptyFile)
 }
 
 #define READ_DATA_PREPARE() \
-	const unsigned char file_data[] = { \
+	const std::vector<unsigned char> file_data = { \
 		0x60, 0x96, 0x45, 0x74, 0x7B, 0xDA, 0x7B, 0x01, \
 		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, \
 		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, \
 	}; \
-	write_file(TMPFILE, file_data, sizeof(file_data)); \
+	write_file(TMPFILE, file_data); \
 	\
 	REHex::Buffer b(TMPFILE, 8);
 
@@ -280,7 +277,7 @@ TEST(Buffer, ReadFirstBlock)
 	READ_DATA_PREPARE();
 	
 	std::vector<unsigned char> got_data = b.read_data(0, 8);
-	std::vector<unsigned char> expect_data(file_data, file_data + 8);
+	std::vector<unsigned char> expect_data(file_data.data(), file_data.data() + 8);
 	
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 	
@@ -294,7 +291,7 @@ TEST(Buffer, ReadFirstBlockPartial)
 	READ_DATA_PREPARE();
 	
 	std::vector<unsigned char> got_data = b.read_data(2, 5);
-	std::vector<unsigned char> expect_data(file_data + 2, file_data + 2 + 5);
+	std::vector<unsigned char> expect_data(file_data.data() + 2, file_data.data() + 2 + 5);
 	
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 	
@@ -308,7 +305,7 @@ TEST(Buffer, ReadSecondBlock)
 	READ_DATA_PREPARE();
 	
 	std::vector<unsigned char> got_data = b.read_data(8, 8);
-	std::vector<unsigned char> expect_data(file_data + 8, file_data + 8 + 8);
+	std::vector<unsigned char> expect_data(file_data.data() + 8, file_data.data() + 8 + 8);
 	
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 	
@@ -322,7 +319,7 @@ TEST(Buffer, ReadAcrossBlocks)
 	READ_DATA_PREPARE();
 	
 	std::vector<unsigned char> got_data = b.read_data(2, 10);
-	std::vector<unsigned char> expect_data(file_data + 2, file_data + 2 + 10);
+	std::vector<unsigned char> expect_data(file_data.data() + 2, file_data.data() + 2 + 10);
 	
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 	
@@ -336,7 +333,7 @@ TEST(Buffer, ReadWholeFile)
 	READ_DATA_PREPARE();
 	
 	std::vector<unsigned char> got_data = b.read_data(0, 23);
-	std::vector<unsigned char> expect_data(file_data, file_data + 23);
+	std::vector<unsigned char> expect_data(file_data.data(), file_data.data() + 23);
 	
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 	
@@ -350,7 +347,7 @@ TEST(Buffer, ReadMoreThanFile)
 	READ_DATA_PREPARE();
 	
 	std::vector<unsigned char> got_data = b.read_data(0, 50);
-	std::vector<unsigned char> expect_data(file_data, file_data + 23);
+	std::vector<unsigned char> expect_data(file_data.data(), file_data.data() + 23);
 	
 	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 	
@@ -389,17 +386,17 @@ TEST(Buffer, ReadFromBeyondEnd)
 
 TEST(Buffer, OverwriteTinyFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF0, 0x0D, 0x77, 0xA4, 0xE2,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(0, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 5);
@@ -412,17 +409,17 @@ TEST(Buffer, OverwriteTinyFileStart)
 
 TEST(Buffer, OverwriteTinyFileEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1, 0x77, 0xF0, 0x0D,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(3, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(3, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 5);
@@ -435,17 +432,17 @@ TEST(Buffer, OverwriteTinyFileEnd)
 
 TEST(Buffer, OverwriteTinyFileAll)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x65, 0x87, 0x49, 0x7A, 0x06,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0x65, 0x87, 0x49, 0x7A, 0x06, }));
+			TEST_OVERWRITE_OK(0, (std::vector<unsigned char>{ 0x65, 0x87, 0x49, 0x7A, 0x06, }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 5);
@@ -458,17 +455,17 @@ TEST(Buffer, OverwriteTinyFileAll)
 
 TEST(Buffer, OverwriteTinyFileAllAndThenSome)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(0, ((const unsigned char[]){ 0x65, 0x87, 0x49, 0x7A, 0x06, 0xAA }));
+			TEST_OVERWRITE_FAIL(0, (std::vector<unsigned char>{ 0x65, 0x87, 0x49, 0x7A, 0x06, 0xAA }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 5);
@@ -481,17 +478,17 @@ TEST(Buffer, OverwriteTinyFileAllAndThenSome)
 
 TEST(Buffer, OverwriteTinyFileFromEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(5, ((const unsigned char[]){ 0x65 }));
+			TEST_OVERWRITE_FAIL(5, (std::vector<unsigned char>{ 0x65 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 5);
@@ -504,17 +501,17 @@ TEST(Buffer, OverwriteTinyFileFromEnd)
 
 TEST(Buffer, OverwriteSingleBlockFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF0, 0x0D, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(0, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 8);
@@ -527,17 +524,17 @@ TEST(Buffer, OverwriteSingleBlockFileStart)
 
 TEST(Buffer, OverwriteSingleBlockFileEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0xF0, 0x0D,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(6, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(6, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 8);
@@ -550,17 +547,17 @@ TEST(Buffer, OverwriteSingleBlockFileEnd)
 
 TEST(Buffer, OverwriteSingleBlockFileAll)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0, }));
+			TEST_OVERWRITE_OK(0, (std::vector<unsigned char>{ 0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0, }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 8);
@@ -573,17 +570,17 @@ TEST(Buffer, OverwriteSingleBlockFileAll)
 
 TEST(Buffer, OverwriteSingleBlockFileAllAndThenSome)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(0, ((const unsigned char[]){ 0x87, 0x6A, 0x6E, 0xCB, 0xB3, 0x99, 0xF4, 0xE7, 0xAA }));
+			TEST_OVERWRITE_FAIL(0, (std::vector<unsigned char>{ 0x87, 0x6A, 0x6E, 0xCB, 0xB3, 0x99, 0xF4, 0xE7, 0xAA }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 8);
@@ -596,17 +593,17 @@ TEST(Buffer, OverwriteSingleBlockFileAllAndThenSome)
 
 TEST(Buffer, OverwriteSingleBlockFileFromEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(8, ((const unsigned char[]){ 0x65 }));
+			TEST_OVERWRITE_FAIL(8, (std::vector<unsigned char>{ 0x65 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 8);
@@ -619,14 +616,14 @@ TEST(Buffer, OverwriteSingleBlockFileFromEnd)
 
 TEST(Buffer, OverwriteMultiBlockFileFirstBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF0, 0x0D, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -635,7 +632,7 @@ TEST(Buffer, OverwriteMultiBlockFileFirstBlockStart)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(0, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(0, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY,    0,  8);
@@ -651,14 +648,14 @@ TEST(Buffer, OverwriteMultiBlockFileFirstBlockStart)
 
 TEST(Buffer, OverwriteMultiBlockFileFirstBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0xF0, 0x0D,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -667,7 +664,7 @@ TEST(Buffer, OverwriteMultiBlockFileFirstBlockEnd)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(6, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(6, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY,    0,  8);
@@ -683,14 +680,14 @@ TEST(Buffer, OverwriteMultiBlockFileFirstBlockEnd)
 
 TEST(Buffer, OverwriteMultiBlockFileSecondBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xF0, 0x0D, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -699,7 +696,7 @@ TEST(Buffer, OverwriteMultiBlockFileSecondBlockStart)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(8, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(8, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -715,14 +712,14 @@ TEST(Buffer, OverwriteMultiBlockFileSecondBlockStart)
 
 TEST(Buffer, OverwriteMultiBlockFileSecondBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0xF0, 0x0D,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -731,7 +728,7 @@ TEST(Buffer, OverwriteMultiBlockFileSecondBlockEnd)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(14, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(14, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -747,14 +744,14 @@ TEST(Buffer, OverwriteMultiBlockFileSecondBlockEnd)
 
 TEST(Buffer, OverwriteMultiBlockFileLastBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -763,7 +760,7 @@ TEST(Buffer, OverwriteMultiBlockFileLastBlockStart)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(24, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(24, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -779,14 +776,14 @@ TEST(Buffer, OverwriteMultiBlockFileLastBlockStart)
 
 TEST(Buffer, OverwriteMultiBlockFileLastBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -795,7 +792,7 @@ TEST(Buffer, OverwriteMultiBlockFileLastBlockEnd)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(28, ((const unsigned char[]){ 0xF0, 0x0D }));
+			TEST_OVERWRITE_OK(28, (std::vector<unsigned char>{ 0xF0, 0x0D }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -811,14 +808,14 @@ TEST(Buffer, OverwriteMultiBlockFileLastBlockEnd)
 
 TEST(Buffer, OverwriteMultiBlockFileAcrossBlocks)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0xF0, 0x0D,
 		0xB4, 0x70, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -827,7 +824,7 @@ TEST(Buffer, OverwriteMultiBlockFileAcrossBlocks)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_OK(6, ((const unsigned char[]){ 0xF0, 0x0D, 0xB4, 0x70 }));
+			TEST_OVERWRITE_OK(6, (std::vector<unsigned char>{ 0xF0, 0x0D, 0xB4, 0x70 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY,    0,  8);
@@ -843,14 +840,14 @@ TEST(Buffer, OverwriteMultiBlockFileAcrossBlocks)
 
 TEST(Buffer, OverwriteMultiBlockFileAll)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x6A, 0xD1, 0xBE, 0x3A, 0x09, 0x75, 0xD8, 0x7E,
 		0x27, 0x4F, 0xEF, 0xAF, 0xE2, 0x4E, 0x04, 0xAA,
 		0x35, 0x0C, 0xFD, 0xCF, 0x07, 0xDD, 0xE4, 0x7F,
@@ -875,21 +872,21 @@ TEST(Buffer, OverwriteMultiBlockFileAll)
 
 TEST(Buffer, OverwriteMultiBlockFileAllAndThenSome)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char TOOMUCH[] = {
+	const std::vector<unsigned char> TOOMUCH = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -914,14 +911,14 @@ TEST(Buffer, OverwriteMultiBlockFileAllAndThenSome)
 
 TEST(Buffer, OverwriteMultiBlockFileFromEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -930,7 +927,7 @@ TEST(Buffer, OverwriteMultiBlockFileFromEnd)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(30, ((const unsigned char[]){ 0x65 }));
+			TEST_OVERWRITE_FAIL(30, (std::vector<unsigned char>{ 0x65 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -946,12 +943,12 @@ TEST(Buffer, OverwriteMultiBlockFileFromEnd)
 
 TEST(Buffer, OverwriteEmptyFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {};
-	const unsigned char END_DATA[]   = {};
+	const std::vector<unsigned char> BEGIN_DATA = {};
+	const std::vector<unsigned char> END_DATA   = {};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(0, ((const unsigned char[]){ 0x65 }));
+			TEST_OVERWRITE_FAIL(0, (std::vector<unsigned char>{ 0x65 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 0);
@@ -964,12 +961,12 @@ TEST(Buffer, OverwriteEmptyFileStart)
 
 TEST(Buffer, OverwriteEmptyFileBeyondEnd)
 {
-	const unsigned char BEGIN_DATA[] = {};
-	const unsigned char END_DATA[]   = {};
+	const std::vector<unsigned char> BEGIN_DATA = {};
+	const std::vector<unsigned char> END_DATA   = {};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_OVERWRITE_FAIL(2, ((const unsigned char[]){ 0x65 }));
+			TEST_OVERWRITE_FAIL(2, (std::vector<unsigned char>{ 0x65 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 0);
@@ -982,11 +979,11 @@ TEST(Buffer, OverwriteEmptyFileBeyondEnd)
 
 TEST(Buffer, EraseTinyFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x77, 0xA4, 0xE2,
 	};
 	
@@ -1005,11 +1002,11 @@ TEST(Buffer, EraseTinyFileStart)
 
 TEST(Buffer, EraseTinyFileEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1,
 	};
 	
@@ -1028,11 +1025,11 @@ TEST(Buffer, EraseTinyFileEnd)
 
 TEST(Buffer, EraseTinyFileMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1, 0xE2,
 	};
 	
@@ -1051,11 +1048,11 @@ TEST(Buffer, EraseTinyFileMiddle)
 
 TEST(Buffer, EraseTinyFileAll)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {};
+	const std::vector<unsigned char> END_DATA = {};
 	
 	TEST_BUFFER_MANIP(
 		{
@@ -1072,11 +1069,11 @@ TEST(Buffer, EraseTinyFileAll)
 
 TEST(Buffer, EraseTinyFileAllAndThemSome)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
@@ -1095,11 +1092,11 @@ TEST(Buffer, EraseTinyFileAllAndThemSome)
 
 TEST(Buffer, EraseTinyFileFromEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xF8, 0xD1, 0x77, 0xA4, 0xE2,
 	};
 	
@@ -1118,11 +1115,11 @@ TEST(Buffer, EraseTinyFileFromEnd)
 
 TEST(Buffer, EraseSingleBlockFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		/* 0xF0, 0x0D, */ 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
@@ -1141,11 +1138,11 @@ TEST(Buffer, EraseSingleBlockFileStart)
 
 TEST(Buffer, EraseSingleBlockFileEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, /* 0x74, 0x50, 0xD2, */
 	};
 	
@@ -1164,11 +1161,11 @@ TEST(Buffer, EraseSingleBlockFileEnd)
 
 TEST(Buffer, EraseSingleBlockFileMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, /* 0x9B, 0x25, 0xCB, 0x74, */ 0x50, 0xD2,
 	};
 	
@@ -1187,11 +1184,11 @@ TEST(Buffer, EraseSingleBlockFileMiddle)
 
 TEST(Buffer, EraseSingleBlockFileAll)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		/* 0x34, 0x89, 0x3D, 0x7B, 0x6F, 0xBF, 0x13, 0xC0, */
 	};
 	
@@ -1210,11 +1207,11 @@ TEST(Buffer, EraseSingleBlockFileAll)
 
 TEST(Buffer, EraseSingleBlockFileAllAndThenSome)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
@@ -1233,11 +1230,11 @@ TEST(Buffer, EraseSingleBlockFileAllAndThenSome)
 
 TEST(Buffer, EraseSingleBlockFileFromEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x09, 0x7E, 0x9B, 0x25, 0xCB, 0x74, 0x50, 0xD2,
 	};
 	
@@ -1256,14 +1253,14 @@ TEST(Buffer, EraseSingleBlockFileFromEnd)
 
 TEST(Buffer, EraseMultiBlockFileFirstBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		/* 0x06, 0x96, */ 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1288,14 +1285,14 @@ TEST(Buffer, EraseMultiBlockFileFirstBlockStart)
 
 TEST(Buffer, EraseMultiBlockFileFirstBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, /* 0xB5, 0x99, 0x4E, */
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1320,14 +1317,14 @@ TEST(Buffer, EraseMultiBlockFileFirstBlockEnd)
 
 TEST(Buffer, EraseMultiBlockFileSecondBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		/* 0xE7, 0xA8, 0x06, */ 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1352,14 +1349,14 @@ TEST(Buffer, EraseMultiBlockFileSecondBlockStart)
 
 TEST(Buffer, EraseMultiBlockFileSecondBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, /* 0x8C, 0xD1, */
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1384,14 +1381,14 @@ TEST(Buffer, EraseMultiBlockFileSecondBlockEnd)
 
 TEST(Buffer, EraseMultiBlockFileLastBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1416,14 +1413,14 @@ TEST(Buffer, EraseMultiBlockFileLastBlockStart)
 
 TEST(Buffer, EraseMultiBlockFileLastBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1448,14 +1445,14 @@ TEST(Buffer, EraseMultiBlockFileLastBlockEnd)
 
 TEST(Buffer, EraseMultiBlockFilePartialBlocks)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, /* 0x99, 0x4E,
 		0xE7, 0xA8, */ 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1480,14 +1477,14 @@ TEST(Buffer, EraseMultiBlockFilePartialBlocks)
 
 TEST(Buffer, EraseMultiBlockFilePartialBlocksMore)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, /* 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1512,14 +1509,14 @@ TEST(Buffer, EraseMultiBlockFilePartialBlocksMore)
 
 TEST(Buffer, EraseMultiBlockFileAll)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {};
+	const std::vector<unsigned char> END_DATA = {};
 	
 	TEST_BUFFER_MANIP(
 		{
@@ -1539,14 +1536,14 @@ TEST(Buffer, EraseMultiBlockFileAll)
 
 TEST(Buffer, EraseMultiBlockFileAllAndThemSome)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1571,14 +1568,14 @@ TEST(Buffer, EraseMultiBlockFileAllAndThemSome)
 
 TEST(Buffer, EraseMultiBlockFileFromEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1603,8 +1600,8 @@ TEST(Buffer, EraseMultiBlockFileFromEnd)
 
 TEST(Buffer, EraseEmptyFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {};
-	const unsigned char END_DATA[]   = {};
+	const std::vector<unsigned char> BEGIN_DATA = {};
+	const std::vector<unsigned char> END_DATA   = {};
 	
 	TEST_BUFFER_MANIP(
 		{
@@ -1621,11 +1618,11 @@ TEST(Buffer, EraseEmptyFileStart)
 
 TEST(Buffer, EraseZeroBytes)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 	};
 	
@@ -1648,14 +1645,14 @@ TEST(Buffer, EraseSequence1)
 	 * zero-length blocks and blocks with the same offset correctly.
 	*/
 	
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		/* 0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E, */
 		/* 0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1, */
 		/* 0xE0, 0x3B, 0x0F, 0x7C, */ 0xAD, 0x80, 0xB3, 0xB4,
@@ -1706,14 +1703,14 @@ TEST(Buffer, EraseSequence2)
 	 * zero-length blocks and blocks with the same offset correctly.
 	*/
 	
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
 		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
 		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		/* 0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E, */
 		/* 0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1, */
 		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
@@ -1760,12 +1757,12 @@ TEST(Buffer, EraseSequence2)
 
 TEST(Buffer, InsertEmptyFile)
 {
-	const unsigned char BEGIN_DATA[] = {};
-	const unsigned char END_DATA[]   = { 0xAA, 0xBB, 0xCC, 0xDD };
+	const std::vector<unsigned char> BEGIN_DATA = {};
+	const std::vector<unsigned char> END_DATA   = { 0xAA, 0xBB, 0xCC, 0xDD };
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 4);
@@ -1778,14 +1775,14 @@ TEST(Buffer, InsertEmptyFile)
 
 TEST(Buffer, InsertEmptyFileMulti)
 {
-	const unsigned char BEGIN_DATA[] = {};
-	const unsigned char END_DATA[]   = { 0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xEE, 0xFF, 0xDD };
+	const std::vector<unsigned char> BEGIN_DATA = {};
+	const std::vector<unsigned char> END_DATA   = { 0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xEE, 0xFF, 0xDD };
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
-			TEST_INSERT_OK(3, ((const unsigned char[]){ 0xEE, 0xFF }));
-			TEST_INSERT_OK(1, ((const unsigned char[]){ 0x00, 0x11 }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(3, (std::vector<unsigned char>{ 0xEE, 0xFF }));
+			TEST_INSERT_OK(1, (std::vector<unsigned char>{ 0x00, 0x11 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 8);
@@ -1798,12 +1795,12 @@ TEST(Buffer, InsertEmptyFileMulti)
 
 TEST(Buffer, InsertEmptyFileBeyondEnd)
 {
-	const unsigned char BEGIN_DATA[] = {};
-	const unsigned char END_DATA[]   = {};
+	const std::vector<unsigned char> BEGIN_DATA = {};
+	const std::vector<unsigned char> END_DATA   = {};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_FAIL(1, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_FAIL(1, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 0);
@@ -1816,18 +1813,18 @@ TEST(Buffer, InsertEmptyFileBeyondEnd)
 
 TEST(Buffer, InsertTinyFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xAA, 0xBB, 0xCC, 0xDD,
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 10);
@@ -1840,11 +1837,11 @@ TEST(Buffer, InsertTinyFileStart)
 
 TEST(Buffer, InsertTinyFileMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x68, 0xAB,
 		0xAA, 0xBB, 0xCC, 0xDD,
 		0x8A, 0xEF, 0x5F, 0xCA,
@@ -1852,7 +1849,7 @@ TEST(Buffer, InsertTinyFileMiddle)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(2, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(2, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 10);
@@ -1865,18 +1862,18 @@ TEST(Buffer, InsertTinyFileMiddle)
 
 TEST(Buffer, InsertTinyFileEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 		0xAA, 0xBB, 0xCC, 0xDD,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(6, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(6, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 10);
@@ -1889,11 +1886,11 @@ TEST(Buffer, InsertTinyFileEnd)
 
 TEST(Buffer, InsertTinyFileMulti)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		/* > */ 0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xDD, /* < */
 		0x68, 0xAB, /* > */ 0xEE, 0xFF, /* < */ 0x8A, 0xEF, 0x5F, 0xCA,
 		
@@ -1901,19 +1898,19 @@ TEST(Buffer, InsertTinyFileMulti)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 10);
 			});
 			
-			TEST_INSERT_OK(6, ((const unsigned char[]){ 0xEE, 0xFF }));
+			TEST_INSERT_OK(6, (std::vector<unsigned char>{ 0xEE, 0xFF }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 12);
 			});
 			
-			TEST_INSERT_OK(1, ((const unsigned char[]){ 0x00, 0x11 }));
+			TEST_INSERT_OK(1, (std::vector<unsigned char>{ 0x00, 0x11 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 14);
@@ -1926,17 +1923,17 @@ TEST(Buffer, InsertTinyFileMulti)
 
 TEST(Buffer, InsertTinyFileBeyondEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_FAIL(7, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_FAIL(7, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 6);
@@ -1949,18 +1946,18 @@ TEST(Buffer, InsertTinyFileBeyondEnd)
 
 TEST(Buffer, InsertSingleBlockFileStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xAA, 0xBB, 0xCC, 0xDD,
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 12);
@@ -1973,11 +1970,11 @@ TEST(Buffer, InsertSingleBlockFileStart)
 
 TEST(Buffer, InsertSingleBlockFileMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x68, 0xAB,
 		0xAA, 0xBB, 0xCC, 0xDD,
 		0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
@@ -1985,7 +1982,7 @@ TEST(Buffer, InsertSingleBlockFileMiddle)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(2, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(2, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 12);
@@ -1998,18 +1995,18 @@ TEST(Buffer, InsertSingleBlockFileMiddle)
 
 TEST(Buffer, InsertSingleBlockFileEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 		0xAA, 0xBB, 0xCC, 0xDD,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(8, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(8, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 12);
@@ -2022,30 +2019,30 @@ TEST(Buffer, InsertSingleBlockFileEnd)
 
 TEST(Buffer, InsertSingleBlockFileMulti)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xAA, 0x00, 0x11, 0xBB, 0xCC, 0xDD,
 		0x68, 0xAB, 0xEE, 0xFF, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 12);
 			});
 			
-			TEST_INSERT_OK(6, ((const unsigned char[]){ 0xEE, 0xFF }));
+			TEST_INSERT_OK(6, (std::vector<unsigned char>{ 0xEE, 0xFF }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 14);
 			});
 			
-			TEST_INSERT_OK(1, ((const unsigned char[]){ 0x00, 0x11 }));
+			TEST_INSERT_OK(1, (std::vector<unsigned char>{ 0x00, 0x11 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY, 0, 16);
@@ -2058,17 +2055,17 @@ TEST(Buffer, InsertSingleBlockFileMulti)
 
 TEST(Buffer, InsertSingleBlockFileBeyondEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x68, 0xAB, 0x8A, 0xEF, 0x5F, 0xCA, 0x1E, 0xDD,
 	};
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_FAIL(9, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_FAIL(9, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0, 8);
@@ -2081,14 +2078,14 @@ TEST(Buffer, InsertSingleBlockFileBeyondEnd)
 
 TEST(Buffer, InsertMultiBlockFileFirstBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0xAA, 0xBB, 0xCC, 0xDD,
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
@@ -2098,7 +2095,7 @@ TEST(Buffer, InsertMultiBlockFileFirstBlockStart)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(0, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(0, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY,    0,  12);
@@ -2114,14 +2111,14 @@ TEST(Buffer, InsertMultiBlockFileFirstBlockStart)
 
 TEST(Buffer, InsertMultiBlockFileFirstBlockMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8,
 						0xAA, 0xBB, 0xCC, 0xDD,
 						0x60, 0x78, 0x6A,
@@ -2132,7 +2129,7 @@ TEST(Buffer, InsertMultiBlockFileFirstBlockMiddle)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(5, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(5, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY,    0,  12);
@@ -2148,14 +2145,14 @@ TEST(Buffer, InsertMultiBlockFileFirstBlockMiddle)
 
 TEST(Buffer, InsertMultiBlockFileThirdBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xAA, 0xBB, 0xCC, 0xDD,
@@ -2165,7 +2162,7 @@ TEST(Buffer, InsertMultiBlockFileThirdBlockStart)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(16, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(16, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -2181,14 +2178,14 @@ TEST(Buffer, InsertMultiBlockFileThirdBlockStart)
 
 TEST(Buffer, InsertMultiBlockFileThirdBlockMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0,
@@ -2199,7 +2196,7 @@ TEST(Buffer, InsertMultiBlockFileThirdBlockMiddle)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(17, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(17, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -2215,14 +2212,14 @@ TEST(Buffer, InsertMultiBlockFileThirdBlockMiddle)
 
 TEST(Buffer, InsertMultiBlockFileLastBlockStart)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
@@ -2232,7 +2229,7 @@ TEST(Buffer, InsertMultiBlockFileLastBlockStart)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(24, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(24, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -2248,14 +2245,14 @@ TEST(Buffer, InsertMultiBlockFileLastBlockStart)
 
 TEST(Buffer, InsertMultiBlockFileLastBlockMiddle)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
@@ -2266,7 +2263,7 @@ TEST(Buffer, InsertMultiBlockFileLastBlockMiddle)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(26, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(26, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -2282,14 +2279,14 @@ TEST(Buffer, InsertMultiBlockFileLastBlockMiddle)
 
 TEST(Buffer, InsertMultiBlockFileLastBlockEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
@@ -2299,7 +2296,7 @@ TEST(Buffer, InsertMultiBlockFileLastBlockEnd)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(29, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(29, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -2315,14 +2312,14 @@ TEST(Buffer, InsertMultiBlockFileLastBlockEnd)
 
 TEST(Buffer, InsertMultiBlockFileMulti)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, /* > */ 0xAA, 0xBB, 0xCC, 0xDD, /* < */ 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, /* > */ 0x00, 0x11, /* < */ 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, /* > */ 0xEE, 0xFF, /* < */ 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
@@ -2331,9 +2328,9 @@ TEST(Buffer, InsertMultiBlockFileMulti)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_OK(4,  ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
-			TEST_INSERT_OK(22, ((const unsigned char[]){ 0xEE, 0xFF }));
-			TEST_INSERT_OK(16, ((const unsigned char[]){ 0x00, 0x11 }));
+			TEST_INSERT_OK(4,  (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_OK(22, (std::vector<unsigned char>{ 0xEE, 0xFF }));
+			TEST_INSERT_OK(16, (std::vector<unsigned char>{ 0x00, 0x11 }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(DIRTY,    0,  12);
@@ -2349,14 +2346,14 @@ TEST(Buffer, InsertMultiBlockFileMulti)
 
 TEST(Buffer, InsertMultiBlockFileBeyondEnd)
 {
-	const unsigned char BEGIN_DATA[] = {
+	const std::vector<unsigned char> BEGIN_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
 		0x7D, 0x24, 0x3C, 0x43, 0xE1,
 	};
 	
-	const unsigned char END_DATA[] = {
+	const std::vector<unsigned char> END_DATA = {
 		0x3E, 0x0E, 0x87, 0x93, 0xA8, 0x60, 0x78, 0x6A,
 		0x27, 0x17, 0xB0, 0x2E, 0x96, 0xD7, 0xA7, 0xC2,
 		0xE0, 0x11, 0x94, 0xE3, 0x60, 0x18, 0x31, 0xC5,
@@ -2365,7 +2362,7 @@ TEST(Buffer, InsertMultiBlockFileBeyondEnd)
 	
 	TEST_BUFFER_MANIP(
 		{
-			TEST_INSERT_FAIL(30, ((const unsigned char[]){ 0xAA, 0xBB, 0xCC, 0xDD }));
+			TEST_INSERT_FAIL(30, (std::vector<unsigned char>{ 0xAA, 0xBB, 0xCC, 0xDD }));
 			
 			TEST_BLOCKS({
 				TEST_BLOCK_DEF(UNLOADED, 0,  8);
@@ -2384,8 +2381,8 @@ TEST(Buffer, InsertMultiBlockFileBeyondEnd)
 */
 TEST(Buffer, ReadWriteAnyBytes)
 {
-	unsigned char BEGIN_DATA[512];
-	unsigned char END_DATA[512];
+	std::vector<unsigned char> BEGIN_DATA(512, 0);
+	std::vector<unsigned char> END_DATA(512, 0);
 	
 	for(int i = 0; i < 512; ++i)
 	{

@@ -1,0 +1,42 @@
+name: macOS CI build
+
+on:
+  push:
+    branches:
+      - "*"
+    tags:
+      - "!*"
+
+jobs:
+  build:
+    name: macOS CI build
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Cache Dependencies
+      id: cache-dependencies
+      uses: actions/cache@v2
+      with:
+        path: mac-dependencies
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ github.workspace }}/mac-dependencies-${{ hashFiles('tools/mac-build-dependencies.sh') }}
+
+    - name: Refresh Dependencies
+      run: . tools/mac-build-dependencies.sh
+
+    - name: Build image
+      run: |
+          . tools/mac-build-dependencies.sh
+          make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) REHex.dmg
+
+    - name: Run tests
+      run: |
+          . tools/mac-build-dependencies.sh
+          make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) check
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: rehex-mac.dmg
+        path: REHex.dmg
+        if-no-files-found: error

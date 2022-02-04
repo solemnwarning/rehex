@@ -1,0 +1,17 @@
+[% WRAPPER page.tt
+   title = "Index"
+%]
+
+<center><img src="icon128.png"></center>
+
+<h2>Welcome</h2>
+
+<p>
+Thank you for installing rehex - the cross-platform hex editor for reverse engineering, and everything else.
+</p>
+
+<p>
+Please choose from the help topics to the left.
+</p>
+
+[% END %]

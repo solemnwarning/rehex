@@ -26,6 +26,10 @@ namespace REHex {
 	 * wxStaticText under wxGTK propogates up to the parent window, so we have to wrap it in
 	 * a wxPanel to work around that.
 	*/
+	
+	/**
+	 * @brief Hyperlink look-alike control that raises a wxEVT_BUTTON event when clicked.
+	*/
 	class ClickText: public wxPanel
 	{
 		public:

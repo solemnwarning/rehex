@@ -1,55 +1,29 @@
 # Building for OS X
 
-## Building libraries
+You will need the XCode build tools and the following additional libraries to build rehex on Mac:
 
-### wxWidgets
+- Capstone
+- Jansson
+- libunistring
+- Lua (5.3+)
+- Template Toolkit
+- wxWidgets
 
-    $ tar xf wxWidgets-3.0.4.tar.bz2
-    $ cd wxWidgets-3.0.4/
-    
-    $ mkdir build-debug
-    $ cd build-debug/
-    
-    $ ../configure --disable-shared --enable-debug --enable-unicode \
-                   -enable-cxx11 --prefix="/opt/wxWidgets-3.0.4-debug/" \
-                   -with-macosx-version-min=10.10 \
-                   CXXFLAGS="-stdlib=libc++" CPPFLAGS="-stdlib=libc++" \
-                   LIBS=-lc++
-    $ make
-    $ sudo make install
+You can install them yourself, or source the included script in your shell to download and build private copies of them specifically for building rehex against:
 
-### Jansson
+    $ . tools/mac-build-dependencies.sh
 
-    $ tar xf jansson-2.11.tar
-    $ cd jansson-2.11/
-    
-    $ ./configure --prefix=/usr/local/ --enable-shared=no --enable-static=yes \
-                  CFLAGS="-mmacosx-version-min=10.10"
-    $ make
-    $ sudo make install
+Once the script finishes, you will be able to build rehex in the shell that ran it. The builds will be cached so the next time you open a shell and need to run it, it should complete immediately. Lots of environment variables are set in the shell so you probably shouldn't use it to build other software afterwards.
 
-### LLVM
+The following environment variables can be set before sourcing `mac-build-dependencies.sh`:
 
-    $ tar xf llvm-7.0.0.src.tar.xz
-    $ cd llvm-7.0.0.src/
-    
-    $ mkdir build-release
-    $ cd build-release/
-    
-    $ cmake .. -DCMAKE_BUILD_TYPE=Release \
-               -DCMAKE_INSTALL_PREFIX=/opt/llvm-7.0.0-release-static/ \
-               -DLLVM_BUILD_LLVM_DYLIB=OFF \
-               -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++" \
-               -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10
-    $ cmake --build .
-    $ sudo cmake --build . --target install
+    REHEX_DEP_BUILD_DIR - Directory to build libraries under (defaults to <cwd>/mac-dependencies-build/)
+    REHEX_DEP_TARGET_DIR - Directory to install libraries under (defauls to <cwd>/mac-dependencies/)
 
-## Building the editor
+To build the application:
 
-    $ WX_CONFIG=/opt/wxWidgets-3.0.4-debug/bin/wx-config \
-        LLVM_CONFIG=/opt/llvm-7.0.0-release-static/bin/llvm-config \
-        make -f Makefile.osx
+    $ make -f Makefile.osx
 
-To build a dmg, run:
+To build a dmg containing the application:
 
-    make -f Makefile.osx REHex.dmg
+    $ make -f Makefile.osx REHex.dmg

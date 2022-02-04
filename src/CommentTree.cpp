@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,16 +15,18 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <stack>
 #include <utility>
 #include <wx/clipbrd.h>
 
 #include "CommentTree.hpp"
+#include "EditCommentDialog.hpp"
 #include "util.hpp"
 
-static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::Document *document)
+static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new REHex::CommentTree(parent, document);
+	return new REHex::CommentTree(parent, document, document_ctrl);
 }
 
 static REHex::ToolPanelRegistration tpr("CommentTree", "Comments", REHex::ToolPanel::TPS_TALL, &CommentTree_factory);
@@ -38,40 +40,37 @@ enum {
 
 BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
+	EVT_DATAVIEW_ITEM_ACTIVATED(wxID_ANY, REHex::CommentTree::OnActivated)
 END_EVENT_TABLE()
 
-REHex::CommentTree::CommentTree(wxWindow *parent, REHex::Document *document):
+REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
-	events_bound(false)
+	document_ctrl(document_ctrl)
 {
 	model = new CommentTreeModel(this->document); /* Reference /class/ document pointer! */
 	
 	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_NO_HEADER);
 	
-	wxDataViewColumn *col = dvc->AppendTextColumn("Comment", 0);
-	col->SetSortable(true);
+	dvc_col = dvc->AppendTextColumn("Comment", 0);
+	dvc_col->SetSortable(true);
 	
 	dvc->AssociateModel(model);
 	
 	/* NOTE: This has to come after AssociateModel, or it will segfault. */
-	col->SetSortOrder(true);
+	dvc_col->SetSortOrder(true);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	document->Bind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
-	document->Bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
-	
-	events_bound = true;
+	this->document.auto_cleanup_bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
 	
 	refresh_comments();
 }
 
 REHex::CommentTree::~CommentTree()
 {
-	unbind_events();
 	model->DecRef();
 }
 
@@ -90,39 +89,22 @@ void REHex::CommentTree::load_state(wxConfig *config)
 	/* No state to load. */
 }
 
+void REHex::CommentTree::update()
+{
+	/* Nothing to update */
+}
+
 wxSize REHex::CommentTree::DoGetBestClientSize() const
 {
 	/* TODO: Calculate a reasonable best size. */
 	return wxSize(200, -1);
 }
 
-void REHex::CommentTree::unbind_events()
-{
-	if(events_bound)
-	{
-		document->Unbind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
-		document->Unbind(wxEVT_DESTROY, &REHex::CommentTree::OnDocumentDestroy, this);
-		
-		events_bound = false;
-	}
-}
-
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
+	dvc_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	dvc->Refresh();
-}
-
-void REHex::CommentTree::OnDocumentDestroy(wxWindowDestroyEvent &event)
-{
-	if(event.GetWindow() == document)
-	{
-		unbind_events();
-		document = NULL;
-	}
-	
-	/* Continue propogation. */
-	event.Skip();
 }
 
 void REHex::CommentTree::OnCommentModified(wxCommandEvent &event)
@@ -160,15 +142,29 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 		{
 			case ID_GOTO:
 				document->set_cursor_position(key->offset);
+				
+				CallAfter([this]()
+				{
+					document_ctrl->SetFocus();
+					document_ctrl->Refresh(); /* TODO: Refresh in DocumentCtrl when it gains focus. */
+				});
+				
 				break;
 				
 			case ID_SELECT:
 				document->set_cursor_position(key->offset);
-				document->set_selection(key->offset, key->length);
+				document_ctrl->set_selection_raw(key->offset, (key->offset + key->length - 1));
+				
+				CallAfter([this]()
+				{
+					document_ctrl->SetFocus();
+					document_ctrl->Refresh(); /* TODO: Refresh in DocumentCtrl when it gains focus. */
+				});
+				
 				break;
 				
 			case ID_EDIT_COMMENT:
-				document->edit_comment_popup(key->offset, key->length);
+				EditCommentDialog::run_modal(this, document, key->offset, key->length);
 				break;
 				
 			case ID_COPY_COMMENT:
@@ -195,7 +191,23 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 	PopupMenu(&menu);
 }
 
-REHex::CommentTreeModel::CommentTreeModel(REHex::Document * const &document):
+void REHex::CommentTree::OnActivated(wxDataViewEvent &event)
+{
+	assert(document != NULL);
+	
+	const NestedOffsetLengthMapKey *key = CommentTreeModel::dv_item_to_key(event.GetItem());
+	assert(key != NULL);
+	
+	document->set_cursor_position(key->offset);
+	
+	CallAfter([this]()
+	{
+		document_ctrl->SetFocus();
+		document_ctrl->Refresh(); /* TODO: Refresh in DocumentCtrl when it gains focus. */
+	});
+}
+
+REHex::CommentTreeModel::CommentTreeModel(REHex::Document *document):
 	document(document) {}
 
 void REHex::CommentTreeModel::refresh_comments()

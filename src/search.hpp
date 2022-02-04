@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,10 +31,13 @@
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
+#include "SharedDocumentPointer.hpp"
 
 namespace REHex {
 	class Search: public wxDialog {
 		public:
+			enum class SearchDirection { FORWARDS = 1, BACKWARDS = -1 };
+			
 			class Text;
 			class ByteSequence;
 			class Value;
@@ -42,12 +45,11 @@ namespace REHex {
 			static const size_t DEFAULT_WINDOW_SIZE = 2134016; /* 2MiB */
 			
 		protected:
-			REHex::Document &doc;
+			SharedDocumentPointer doc;
 			
 			off_t range_begin, range_end;
 			off_t align_to, align_from;
 			
-		private:
 			wxCheckBox *range_cb;
 			wxTextCtrl *range_begin_tc, *range_end_tc;
 			
@@ -67,22 +69,27 @@ namespace REHex {
 			off_t search_base;
 			off_t search_end;
 			
+			SearchDirection search_direction;
+			
 			wxProgressDialog *progress;
 			wxTimer timer;
 			
 		protected:
-			Search(wxWindow *parent, REHex::Document &doc, const char *title);
+			Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title);
 			
 			void setup_window();
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) = 0;
 			virtual bool read_window_controls() = 0;
+			
+			virtual bool wrap_query(const char *message);
+			virtual void not_found_notification();
 			
 		public:
 			void limit_range(off_t range_begin, off_t range_end);
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
 			
 			off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
-			void begin_search(off_t from_offset, off_t range_end, size_t window_size = DEFAULT_WINDOW_SIZE);
+			void begin_search(off_t range_begin, off_t range_end, SearchDirection direction, size_t window_size = DEFAULT_WINDOW_SIZE);
 			void end_search();
 			
 			virtual bool test(const void *data, size_t data_size) = 0;
@@ -90,6 +97,7 @@ namespace REHex {
 			
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
+			void OnFindPrev(wxCommandEvent &event);
 			void OnCancel(wxCommandEvent &event);
 			void OnTimer(wxTimerEvent &event);
 			void OnClose(wxCloseEvent &event);
@@ -113,7 +121,8 @@ namespace REHex {
 			wxCheckBox *case_sensitive_cb;
 			
 		public:
-			Text(wxWindow *parent, REHex::Document &doc, const std::string &search_for = "", bool case_sensitive = true);
+			Text(wxWindow *parent, SharedDocumentPointer &doc, const std::string &search_for = "", bool case_sensitive = true);
+			virtual ~Text();
 			
 			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
@@ -131,7 +140,8 @@ namespace REHex {
 			wxTextCtrl *search_for_tc;
 			
 		public:
-			ByteSequence(wxWindow *parent, REHex::Document &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
+			ByteSequence(wxWindow *parent, SharedDocumentPointer &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
+			virtual ~ByteSequence();
 			
 			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
@@ -151,7 +161,8 @@ namespace REHex {
 			wxRadioButton *e_little, *e_big, *e_either;
 		
 		public:
-			Value(wxWindow *parent, REHex::Document &doc);
+			Value(wxWindow *parent, SharedDocumentPointer &doc);
+			virtual ~Value();
 			
 			static const unsigned FMT_LE  = (1 << 0);
 			static const unsigned FMT_BE  = (1 << 1);

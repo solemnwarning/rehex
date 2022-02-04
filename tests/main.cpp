@@ -15,20 +15,73 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "../src/platform.hpp"
 #include <gtest/gtest.h>
 #include <wx/app.h>
 #include <wx/init.h>
 
-wxApp &wxGetApp()
+#include "../src/App.hpp"
+#include "../src/ArtProvider.hpp"
+#include "../src/Palette.hpp"
+
+REHex::App &wxGetApp()
 {
-       return *wxTheApp;
+	return *(REHex::App*)(wxTheApp);
 }
+
+void REHex::App::_test_setup_hooks(SetupPhase phase)
+{
+	call_setup_hooks(phase);
+}
+
+struct Cleanup
+{
+	~Cleanup()
+	{
+		delete REHex::active_palette;
+		delete wxGetApp().recent_files;
+		delete wxGetApp().settings;
+		delete wxGetApp().config;
+		delete wxGetApp().console;
+	}
+};
 
 int main(int argc, char **argv)
 {
-	wxApp::SetInstance(new wxApp());
+	REHex::App *app = new REHex::App();
+	
+	wxApp::SetInstance(app);
 	wxInitializer wxinit;
 	
+	wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	app->set_font_name(default_font.GetFaceName().ToStdString());
+	
+	app->console = new REHex::ConsoleBuffer();
+	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
+	app->settings = new REHex::AppSettings();
+	app->recent_files = new wxFileHistory();
+	
+	app->_test_setup_hooks(REHex::App::SetupPhase::EARLY);
+	
+	wxImage::AddHandler(new wxPNGHandler);
+	REHex::ArtProvider::init();
+	
+	REHex::active_palette = REHex::Palette::create_system_palette();
+	Cleanup cleanup;
+	
 	testing::InitGoogleTest(&argc, argv);
+	
+	app->_test_setup_hooks(REHex::App::SetupPhase::SHUTDOWN_LATE);
+	
 	return RUN_ALL_TESTS();
+}
+
+bool REHex::App::OnInit()
+{
+	return true;
+}
+
+int REHex::App::OnExit()
+{
+	return 0;
 }

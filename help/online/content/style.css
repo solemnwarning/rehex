@@ -1,0 +1,41 @@
+body
+{
+	font-family: "Arial", "Lucida", "Helvetica";
+}
+
+#nav
+{
+	width: 200px;
+	float: left;
+}
+
+#nav li
+{
+	list-style-image: url('htmpage.png');
+}
+
+#nav li.book
+{
+	list-style-image: url('htmbook.png');
+}
+
+#content
+{
+	margin-left: 200px;
+}
+
+#footer
+{
+	clear: left;
+	border-top: 1px solid black;
+}
+
+#footer table
+{
+	width: 100%;
+}
+
+#footer td:last-child
+{
+	text-align: right;
+}

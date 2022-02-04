@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <ctype.h>
 #include <inttypes.h>
 #include <string>
@@ -23,6 +24,10 @@
 #include <wx/filename.h>
 #include <wx/utils.h>
 
+#include "CharacterEncoder.hpp"
+#include "DataType.hpp"
+#include "document.hpp"
+#include "DocumentCtrl.hpp"
 #include "util.hpp"
 
 /* These MUST come after any wxWidgets headers. */
@@ -177,4 +182,168 @@ std::string REHex::format_offset(off_t offset, OffsetBase base, off_t upper_boun
 	}
 	
 	return fmt_out;
+}
+
+void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut)
+{
+	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
+	
+	OrderedByteRangeSet selection = doc_ctrl->get_selection_ranges();
+	
+	if(selection.empty())
+	{
+		/* Nothing selected - nothing to copy. */
+		wxBell();
+		return;
+	}
+	
+	wxDataObject *copy_data = NULL;
+	
+	/* If the selection is contained within a single Region, give it the chance to do something
+	 * special rather than just copying out the hex/ASCII for the selection.
+	 *
+	 * TODO: Check how much space will be needed and warn the user like below...
+	*/
+	
+	if(selection.size() == 1)
+	{
+		REHex::DocumentCtrl::GenericDataRegion *selection_region = doc_ctrl->data_region_by_offset(selection[0].offset);
+		assert(selection_region != NULL);
+		
+		assert(selection_region->d_offset <= selection[0].offset);
+		
+		if((selection_region->d_offset + selection_region->d_length) >= (selection[0].offset + selection[0].length))
+		{
+			copy_data = selection_region->OnCopy(*doc_ctrl);
+		}
+	}
+	
+	/* Warn the user this might be a bad idea before dumping silly amounts
+	 * of data (>16MiB) into the clipboard.
+	*/
+	
+	static size_t COPY_MAX_SOFT = 16777216;
+	
+	size_t upper_limit = cursor_state == Document::CSTATE_ASCII
+		? selection.total_bytes()
+		: (selection.total_bytes() * 2);
+	
+	if(copy_data == NULL && upper_limit > COPY_MAX_SOFT)
+	{
+		char msg[128];
+		snprintf(msg, sizeof(msg),
+			"You are about to copy %uMB into the clipboard.\n"
+			"This may take a long time and/or crash some applications.",
+			(unsigned)(upper_limit / 1000000));
+		
+		int result = wxMessageBox(msg, "Warning", (wxOK | wxCANCEL | wxICON_EXCLAMATION), dialog_parent);
+		if(result != wxOK)
+		{
+			return;
+		}
+	}
+	
+	if(copy_data == NULL)
+	{
+		try {
+			wxString data_string;
+			data_string.reserve(upper_limit);
+			
+			const ByteRangeMap<std::string> &types = doc->get_data_types();
+			
+			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
+			{
+				std::vector<unsigned char> selection_data = doc->read_data(sr->offset, sr->length);
+				assert((off_t)(selection_data.size()) == sr->length);
+				
+				if(cursor_state == Document::CSTATE_ASCII)
+				{
+					for(size_t sd_off = 0; sd_off < selection_data.size();)
+					{
+						auto type_at_off = types.get_range(sr->offset + (off_t)(sd_off));
+						assert(type_at_off != types.end());
+						
+						const CharacterEncoder *encoder;
+						if(type_at_off->second != "")
+						{
+							const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+							assert(dt_reg != NULL);
+							
+							encoder = dt_reg->encoder;
+						}
+						else{
+							static REHex::CharacterEncoderASCII ascii_encoder;
+							encoder = &ascii_encoder;
+						}
+						
+						/* TODO: Should we restrict to printable characters here? */
+						EncodedCharacter ec = encoder->decode((selection_data.data() + sd_off), (selection_data.size() - sd_off));
+						
+						if(ec.valid)
+						{
+							data_string.append(wxString::FromUTF8(ec.utf8_char().c_str()));
+							sd_off += ec.encoded_char().size();
+						}
+						else{
+							/* Ignore invalid characters. */
+							++sd_off;
+						}
+					}
+				}
+				else{
+					for(auto c = selection_data.begin(); c != selection_data.end(); ++c)
+					{
+						const char *nibble_to_hex = "0123456789ABCDEF";
+						
+						unsigned char high_nibble = (*c & 0xF0) >> 4;
+						unsigned char low_nibble  = (*c & 0x0F);
+						
+						data_string.append(&(nibble_to_hex[high_nibble]), 1);
+						data_string.append(&(nibble_to_hex[low_nibble]), 1);
+					}
+				}
+			}
+			
+			if(!data_string.empty())
+			{
+				copy_data = new wxTextDataObject(data_string);
+			}
+		}
+		catch(const std::bad_alloc &)
+		{
+			wxMessageBox(
+				"Memory allocation failed while preparing clipboard buffer.",
+				"Error", (wxOK | wxICON_ERROR), dialog_parent);
+			return;
+		}
+		catch(const std::exception &e)
+		{
+			wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), dialog_parent);
+			return;
+		}
+	}
+	
+	if(copy_data != NULL)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			wxTheClipboard->SetData(copy_data);
+			
+			if(cut)
+			{
+				ScopedTransaction t(doc, "cut selection");
+				
+				for(auto sr = selection.begin(); sr != selection.end(); ++sr)
+				{
+					doc->erase_data(sr->offset, sr->length);
+				}
+				
+				t.commit();
+			}
+		}
+		else{
+			delete copy_data;
+		}
+	}
 }

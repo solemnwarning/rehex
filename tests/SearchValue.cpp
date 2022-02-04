@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2020 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -16,6 +16,7 @@
 */
 
 #undef NDEBUG
+#include "../src/platform.hpp"
 #include <assert.h>
 
 #include <gtest/gtest.h>
@@ -23,6 +24,7 @@
 
 #include "../src/document.hpp"
 #include "../src/search.hpp"
+#include "../src/SharedDocumentPointer.hpp"
 
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
@@ -42,9 +44,9 @@ static int64_t htobe64s(int64_t h) { return htobe64(h); }
 TEST(SearchValue, SearchForU8)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("100", REHex::Search::Value::FMT_I8);
 	
 	{
@@ -71,9 +73,9 @@ TEST(SearchValue, SearchForU8)
 TEST(SearchValue, SearchForS8)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-100", REHex::Search::Value::FMT_I8);
 	
 	{
@@ -100,9 +102,9 @@ TEST(SearchValue, SearchForS8)
 TEST(SearchValue, SearchForU16LE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("50000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -141,9 +143,9 @@ TEST(SearchValue, SearchForU16LE)
 TEST(SearchValue, SearchForS16LE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-2000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -182,9 +184,9 @@ TEST(SearchValue, SearchForS16LE)
 TEST(SearchValue, SearchForU16BE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("50000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -233,9 +235,9 @@ TEST(SearchValue, SearchForU16BE)
 TEST(SearchValue, SearchForS16BE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-2000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -284,9 +286,9 @@ TEST(SearchValue, SearchForS16BE)
 TEST(SearchValue, SearchForU16EE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("1234", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -303,9 +305,9 @@ TEST(SearchValue, SearchForU16EE)
 TEST(SearchValue, SearchForU32LE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("4000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -349,9 +351,9 @@ TEST(SearchValue, SearchForU32LE)
 TEST(SearchValue, SearchForS32LE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-1000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -395,9 +397,9 @@ TEST(SearchValue, SearchForS32LE)
 TEST(SearchValue, SearchForU32BE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("4000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -446,9 +448,9 @@ TEST(SearchValue, SearchForU32BE)
 TEST(SearchValue, SearchForS32BE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-1000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -497,9 +499,9 @@ TEST(SearchValue, SearchForS32BE)
 TEST(SearchValue, SearchForU32EE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("1234", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -516,9 +518,9 @@ TEST(SearchValue, SearchForU32EE)
 TEST(SearchValue, SearchForU64LE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -567,9 +569,9 @@ TEST(SearchValue, SearchForU64LE)
 TEST(SearchValue, SearchForS64LE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -618,9 +620,9 @@ TEST(SearchValue, SearchForS64LE)
 TEST(SearchValue, SearchForU64BE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -669,9 +671,9 @@ TEST(SearchValue, SearchForU64BE)
 TEST(SearchValue, SearchForS64BE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("-8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -720,9 +722,9 @@ TEST(SearchValue, SearchForS64BE)
 TEST(SearchValue, SearchForU64EE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("1234", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -739,9 +741,9 @@ TEST(SearchValue, SearchForU64EE)
 TEST(SearchValue, SearchFor1664EE)
 {
 	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-	REHex::Document *doc = new REHex::Document(&frame);
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
 	
-	REHex::Search::Value s(&frame, *doc);
+	REHex::Search::Value s(&frame, doc);
 	s.configure("123",
 		REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_I64 |
 		REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);

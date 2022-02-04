@@ -24,13 +24,15 @@
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
+#include "SafeWindowPointer.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
 	class CommentTreeModel: public wxDataViewModel
 	{
 		public:
-			CommentTreeModel(REHex::Document * const &document);
+			CommentTreeModel(REHex::Document *document);
 			
 			void refresh_comments();
 			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
@@ -45,7 +47,7 @@ namespace REHex {
 			virtual bool SetValue(const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
 			
 		private:
-			REHex::Document * const &document;
+			REHex::Document *document;
 			
 			struct CommentData;
 			typedef std::pair<const NestedOffsetLengthMapKey, CommentData> values_elem_t;
@@ -67,7 +69,7 @@ namespace REHex {
 	class CommentTree: public ToolPanel
 	{
 		public:
-			CommentTree(wxWindow *parent, REHex::Document *document);
+			CommentTree(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			virtual ~CommentTree();
 			
 			virtual std::string name() const override;
@@ -76,24 +78,24 @@ namespace REHex {
 			
 			virtual void save_state(wxConfig *config) const override;
 			virtual void load_state(wxConfig *config) override;
+			virtual void update() override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			
 		private:
-			REHex::Document *document;
+			SharedDocumentPointer document;
+			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			wxDataViewCtrl *dvc;
+			wxDataViewColumn *dvc_col;
 			CommentTreeModel *model;
-			
-			bool events_bound;
-			void unbind_events();
 			
 			void refresh_comments();
 			
-			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCommentModified(wxCommandEvent &event);
 			
 			void OnContextMenu(wxDataViewEvent &event);
+			void OnActivated(wxDataViewEvent &event);
 			
 		/* Keep at end. */
 		DECLARE_EVENT_TABLE()

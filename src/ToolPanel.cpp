@@ -15,14 +15,27 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <utility>
 
 #include "ToolPanel.hpp"
 
 REHex::ToolPanel::ToolPanel(wxWindow *parent):
-	wxPanel(parent) {}
+	wxPanel(parent),
+	is_visible(false)
+{
+}
 
 REHex::ToolPanel::~ToolPanel() {}
+
+void REHex::ToolPanel::set_visible(bool visible)
+{
+	is_visible = visible;
+	if (is_visible)
+	{
+		update();
+	}
+}
 
 std::map<std::string, const REHex::ToolPanelRegistration*> *REHex::ToolPanelRegistry::registrations = NULL;
 const std::map<std::string, const REHex::ToolPanelRegistration*> REHex::ToolPanelRegistry::no_registrations;

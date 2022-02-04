@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -14,23 +14,51 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+ICONUTIL ?= $(shell which iconutil > /dev/null && echo iconutil)
+PNG2ICNS ?= $(shell which png2icns > /dev/null && echo png2icns)
+
 EXTRA_APP_OBJS := \
+	res/backward32.o \
 	res/document_new32.o \
 	res/document_open32.o \
 	res/document_save32.o \
-	res/document_save_as32.o
+	res/document_save_as32.o \
+	res/down32.o \
+	res/forward32.o \
+	res/up32.o \
+	src/AppMac.o
+
+EXTRA_TEST_OBJS := \
+	res/backward32.o \
+	res/document_new32.o \
+	res/document_open32.o \
+	res/document_save32.o \
+	res/document_save_as32.o \
+	res/down32.o \
+	res/forward32.o \
+	res/up32.o \
+	src/AppMac.o
+
+# Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
+CAPSTONE_CFLAGS ?=
+CAPSTONE_LIBS   ?= -lcapstone
+JANSSON_CFLAGS  ?=
+JANSSON_LIBS    ?= -ljansson
+LUA_CFLAGS      ?=
+LUA_LIBS        ?= -llua
 
 all: REHex.app
 
 include Makefile
 
-src/mainwindow.o: res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h
+src/mainwindow.o: res/backward32.h res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h res/forward32.h
+src/DiffWindow.o: res/down32.h res/up32.h
 
 ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns
 DMGTMP  := tmp/dmg
 
-REHex.app: res/Info.plist $(EXE) $(ICNS)
+REHex.app: res/Info.plist $(EXE) $(ICNS) help/rehex.htb
 	mkdir -p                  $@/
 	mkdir -p                  $@/Contents/
 	cp        res/Info.plist  $@/Contents/Info.plist
@@ -38,8 +66,17 @@ REHex.app: res/Info.plist $(EXE) $(ICNS)
 	cp        $(EXE)          $@/Contents/MacOS/REHex
 	mkdir -p                  $@/Contents/Resources/
 	cp        $(ICNS)         $@/Contents/Resources/REHex.icns
+	cp        help/rehex.htb  $@/Contents/Resources/
+	
+	rm -rf $@/Contents/PlugIns/
+	for f in $(PLUGINS_INSTALL); \
+	do \
+		mkdir -p $@/Contents/PlugIns/`dirname $${f}`; \
+		install -m 0644 plugins/$${f} $@/Contents/PlugIns/$${f}; \
+	done
 
 $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
+ifneq ($(ICONUTIL),)
 	rm -rf $(ICONSET)
 	mkdir $(ICONSET)
 	cp res/icon16.png   $(ICONSET)/icon_16x16.png
@@ -52,10 +89,20 @@ $(ICNS): res/icon16.png res/icon32.png res/icon256.png res/icon512.png
 	cp res/icon512.png  $(ICONSET)/icon_256x256@2x.png
 	cp res/icon512.png  $(ICONSET)/icon_512x512.png
 	cp res/icon1024.png $(ICONSET)/icon_512x512@2x.png
-	iconutil -c icns -o $@ $(ICONSET)
+	$(ICONUTIL) -c icns -o $@ $(ICONSET)
+else ifneq ($(PNG2ICNS),)
+	$(PNG2ICNS) $@ res/icon{16,32,128,256,512}.png
+else
+	$(error Neither iconutil nor png2icns found in PATH. Install one or set ICONUTIL/PNG2ICNS as necessary)
+endif
 
 REHex.dmg: REHex.app
 	rm -rf $(DMGTMP)
 	mkdir -p $(DMGTMP)
 	cp -a REHex.app $(DMGTMP)/REHex.app
 	hdiutil create $@ -ov -volname "REHex" -format UDZO -srcfolder $(DMGTMP)
+
+%.o: %.mm
+	$(DEPPRE)
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)

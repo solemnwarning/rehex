@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,27 +19,59 @@
 #define REHEX_MAINWINDOW_HPP
 
 #include <map>
-#include <set>
 #include <vector>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
-#include <wx/splitter.h>
 #include <wx/wx.h>
 
-#include "document.hpp"
+#include "Events.hpp"
+#include "Tab.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
+	/**
+	 * @brief The main application window.
+	*/
 	class MainWindow: public wxFrame
 	{
 		public:
-			MainWindow();
+			MainWindow(const wxSize& size);
 			virtual ~MainWindow();
 			
+			/**
+			 * @brief Create a new tab with an empty file.
+			*/
 			void new_file();
-			void open_file(const std::string &filename);
+			
+			/**
+			 * @brief Create a new tab with a file loaded from disk.
+			*/
+			Tab *open_file(const std::string &filename);
+			
+			wxMenuBar *get_menu_bar() const;
+			wxMenu *get_file_menu() const;
+			wxMenu *get_edit_menu() const;
+			wxMenu *get_view_menu() const;
+			wxMenu *get_tools_menu() const;
+			wxMenu *get_help_menu() const;
+			
+			/**
+			 * @brief Gets the currently visible Tab.
+			*/
+			Tab *active_tab();
+			
+			/**
+			 * @brief Gets the Document in the currently visible Tab.
+			*/
+			Document *active_document();
+			
+			/**
+			 * @brief Switch the active Tab.
+			*/
+			void switch_tab(DocumentCtrl *doc_ctrl);
 			
 			void OnWindowClose(wxCloseEvent& event);
+			void OnCharHook(wxKeyEvent &event);
 			
 			void OnNew(wxCommandEvent &event);
 			void OnOpen(wxCommandEvent &event);
@@ -51,9 +83,13 @@ namespace REHex {
 			void OnCloseOthers(wxCommandEvent &event);
 			void OnExit(wxCommandEvent &event);
 			
+			void OnCursorPrev(wxCommandEvent &event);
+			void OnCursorNext(wxCommandEvent &event);
+			
 			void OnSearchText(wxCommandEvent &event);
 			void OnSearchBSeq(wxCommandEvent &event);
 			void OnSearchValue(wxCommandEvent &event);
+			void OnCompareFile(wxCommandEvent &event);
 			void OnGotoOffset(wxCommandEvent &event);
 			void OnCut(wxCommandEvent &event);
 			void OnCopy(wxCommandEvent &event);
@@ -62,93 +98,126 @@ namespace REHex {
 			void OnRedo(wxCommandEvent &event);
 			void OnSelectAll(wxCommandEvent &event);
 			void OnSelectRange(wxCommandEvent &event);
+			void OnFillRange(wxCommandEvent &event);
 			void OnOverwriteMode(wxCommandEvent &event);
+			void OnWriteProtect(wxCommandEvent &event);
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);
 			void OnSetBytesPerGroup(wxCommandEvent &event);
 			void OnShowOffsets(wxCommandEvent &event);
 			void OnShowASCII(wxCommandEvent &event);
 			void OnInlineCommentsMode(wxCommandEvent &event);
+			void OnAsmSyntax(wxCommandEvent &event);
+			void OnDocumentDisplayMode(wxCommandEvent &event);
 			void OnHighlightSelectionMatch(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
 			void OnPalette(wxCommandEvent &event);
+			void OnFSAIncrease(wxCommandEvent &event);
+			void OnFSADecrease(wxCommandEvent &event);
 			void OnHexOffsets(wxCommandEvent &event);
 			void OnDecOffsets(wxCommandEvent &event);
 			void OnSaveView(wxCommandEvent &event);
 			
 			void OnGithub(wxCommandEvent &event);
 			void OnDonate(wxCommandEvent &event);
+			void OnHelp(wxCommandEvent &event);
 			void OnAbout(wxCommandEvent &event);
 			
 			void OnDocumentChange(wxAuiNotebookEvent &event);
 			void OnDocumentClose(wxAuiNotebookEvent &event);
 			void OnDocumentClosed(wxAuiNotebookEvent &event);
 			void OnDocumentMenu(wxAuiNotebookEvent &event);
+			void OnDocumentMiddleMouse(wxAuiNotebookEvent& event);
 			
-			void OnCursorMove(wxCommandEvent &event);
+			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnSelectionChange(wxCommandEvent &event);
 			void OnInsertToggle(wxCommandEvent &event);
 			void OnUndoUpdate(wxCommandEvent &event);
 			void OnBecameDirty(wxCommandEvent &event);
 			void OnBecameClean(wxCommandEvent &event);
 			
-		private:
-			class Tab: public wxPanel
+			/**
+			 * @brief MainWindow setup phases, in order of execution.
+			*/
+			enum class SetupPhase
 			{
-				public:
-					Tab(wxWindow *parent);
-					Tab(wxWindow *parent, const std::string &filename);
-					
-					virtual ~Tab();
-					
-					REHex::Document    *doc;
-					wxSplitterWindow   *v_splitter;
-					wxSplitterWindow   *h_splitter;
-					wxNotebook         *v_tools;
-					wxNotebook         *h_tools;
-					
-					std::map<std::string, ToolPanel*> tools;
-					std::set<wxDialog*> search_dialogs;
-					
-					bool tool_active(const std::string &name);
-					void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL, bool adjust = true);
-					void tool_destroy(const std::string &name);
-					
-					void search_dialog_register(wxDialog *search_dialog);
-					
-					void save_view(wxConfig *config);
-					
-					void OnSize(wxSizeEvent &size);
-					void OnHToolChange(wxBookCtrlEvent &event);
-					void OnVToolChange(wxBookCtrlEvent &event);
-					void OnHSplitterSashPosChanging(wxSplitterEvent &event);
-					void OnVSplitterSashPosChanging(wxSplitterEvent &event);
-					void OnSearchDialogDestroy(wxWindowDestroyEvent &event);
-					
-					void vtools_adjust();
-					void htools_adjust();
-					void vtools_adjust_on_idle();
-					void vtools_adjust_now_idle(wxIdleEvent &event);
-					void htools_adjust_on_idle();
-					void htools_adjust_now_idle(wxIdleEvent &event);
-					
-				private:
-					enum {
-						ID_HTOOLS = 1,
-						ID_VTOOLS,
-						ID_HSPLITTER,
-						ID_VSPLITTER,
-					};
-					
-					int hsplit_clamp_sash(int sash_position);
-					int vsplit_clamp_sash(int sash_position);
-					
-					void init_default_doc_view();
-					void init_default_tools();
-					
-					DECLARE_EVENT_TABLE()
+				FILE_MENU_PRE,     /**< About to create file menu - use for adding menus left of it. */
+				FILE_MENU_TOP,     /**< About to populate file menu - use for adding items to the top. */
+				FILE_MENU_BOTTOM,  /**< Finished populating file menu - use for adding items to the bottom. */
+				FILE_MENU_POST,    /**< Added file menu - use for adding menus right of it. */
+				
+				EDIT_MENU_PRE,     /**< About to create edit menu - use for adding menus left of it. */
+				EDIT_MENU_TOP,     /**< About to populate edit menu - use for adding items to the top. */
+				EDIT_MENU_BOTTOM,  /**< Finished populating edit menu - use for adding items to the bottom. */
+				EDIT_MENU_POST,    /**< Added edit menu - use for adding menus right of it. */
+				
+				VIEW_MENU_PRE,     /**< About to create view menu - use for adding menus left of it. */
+				VIEW_MENU_TOP,     /**< About to populate view menu - use for adding items to the top. */
+				VIEW_MENU_BOTTOM,  /**< Finished populating view menu - use for adding items to the bottom. */
+				VIEW_MENU_POST,    /**< Added view menu - use for adding menus right of it. */
+				
+				TOOLS_MENU_PRE,     /**< About to create tools menu - use for adding menus left of it. */
+				TOOLS_MENU_TOP,     /**< About to populate tools menu - use for adding items to the top. */
+				TOOLS_MENU_BOTTOM,  /**< Finished populating tools menu - use for adding items to the bottom. */
+				TOOLS_MENU_POST,    /**< Added tools menu - use for adding menus right of it. */
+				
+				HELP_MENU_PRE,     /**< About to create help menu - use for adding menus left of it. */
+				HELP_MENU_TOP,     /**< About to populate help menu - use for adding items to the top. */
+				HELP_MENU_BOTTOM,  /**< Finished populating help menu - use for adding items to the bottom. */
+				HELP_MENU_POST,    /**< Added help menu - use for adding menus right of it. */
+				
+				DONE,              /**< MainWindow constructor is about to return. */
 			};
 			
+			typedef std::function<void(MainWindow*)> SetupHookFunction;
+			
+			/**
+			 * @brief Register a hook function to be called during a setup phase.
+			 *
+			 * @param phase  Setup phase to call the hook during.
+			 * @param func   Pointer to a std::function to invoke.
+			 *
+			 * You should probably use SetupHookRegistration rather than calling this
+			 * function directly.
+			 *
+			 * NOTE: The std::function pointed to by func MUST remain valid until
+			 * unregister_setup_hook() is used - it will be used to call the function
+			 * and identifies the unique binding until is is unregistered.
+			*/
+			static void register_setup_hook(SetupPhase phase, const SetupHookFunction *func);
+			
+			/**
+			 * @brief Unregister a setup hook.
+			*/
+			static void unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func);
+			
+			/**
+			 * @brief Performs RAII-style MainWindow setup hook registration.
+			*/
+			class SetupHookRegistration
+			{
+				public:
+					SetupPhase phase;        /**< @brief MainWindow setup phase to call function during. */
+					SetupHookFunction func;  /**< @brief Hook function to be called. */
+					
+					/**
+					 * @brief Register the setup hook.
+					 *
+					 * @param phase  MainWindow setup phase to call function during.
+					 * @param func   Hook function to be called.
+					*/
+					SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func);
+					
+					/**
+					 * @brief Unregister the setup hook.
+					*/
+					~SetupHookRegistration();
+					
+					SetupHookRegistration(const SetupHookRegistration &src) = delete;
+					SetupHookRegistration &operator=(const SetupHookRegistration &rhs) = delete;
+			};
+			
+		private:
 			class DropTarget: public wxFileDropTarget
 			{
 				private:
@@ -161,10 +230,13 @@ namespace REHex {
 					virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString &filenames) override;
 			};
 			
+			wxMenuBar *menu_bar;
 			wxMenu *file_menu;
 			wxMenu *recent_files_menu;
 			wxMenu *edit_menu;
 			wxMenu *view_menu;
+			wxMenu *tools_menu;
+			wxMenu *help_menu;
 			
 			wxAuiNotebook *notebook;
 			wxBitmap notebook_dirty_bitmap;
@@ -173,17 +245,14 @@ namespace REHex {
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
 			
 			wxMenu *inline_comments_menu;
+			wxMenu *asm_syntax_menu;
 			
-			Tab *active_tab();
-			Document *active_document();
-			
-			void _update_status_offset(REHex::Document *doc);
-			void _update_status_selection(REHex::Document *doc);
-			void _update_status_mode(REHex::Document *doc);
+			void _update_status_offset(Tab *tab);
+			void _update_status_selection(REHex::DocumentCtrl *doc_ctrl);
+			void _update_status_mode(REHex::DocumentCtrl *doc_ctrl);
 			void _update_undo(REHex::Document *doc);
 			void _update_dirty(REHex::Document *doc);
-			
-			void _clipboard_copy(bool cut);
+			void _update_cpos_buttons(DocumentCtrl *doc_ctrl);
 			
 			bool unsaved_confirm();
 			bool unsaved_confirm(const std::vector<wxString> &files);
@@ -192,8 +261,26 @@ namespace REHex {
 			void close_all_tabs();
 			void close_other_tabs(Tab *tab);
 			
+			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
+			void call_setup_hooks(SetupPhase phase);
+			
 			DECLARE_EVENT_TABLE()
 	};
+	
+	/**
+	 * @brief Event raised by MainWindow when a document is created or opened.
+	*/
+	class TabCreatedEvent: public wxEvent
+	{
+		public:
+			Tab *tab; /**< @brief The new tab. */
+			
+			TabCreatedEvent(MainWindow *source, Tab *tab);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
+	wxDECLARE_EVENT(TAB_CREATED, TabCreatedEvent);
 }
 
 #endif /* !REHEX_MAINWINDOW_HPP */

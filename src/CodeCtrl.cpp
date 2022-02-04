@@ -15,10 +15,12 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
 #include <assert.h>
 #include <wx/clipbrd.h>
 #include <wx/dcbuffer.h>
 
+#include "App.hpp"
 #include "CodeCtrl.hpp"
 
 enum {
@@ -27,6 +29,7 @@ enum {
 
 BEGIN_EVENT_TABLE(REHex::CodeCtrl, wxControl)
 	EVT_PAINT(REHex::CodeCtrl::OnPaint)
+	EVT_ERASE_BACKGROUND(REHex::CodeCtrl::OnErase)
 	EVT_SIZE(REHex::CodeCtrl::OnSize)
 	EVT_SCROLLWIN(REHex::CodeCtrl::OnScroll)
 	EVT_MOUSEWHEEL(REHex::CodeCtrl::OnWheel)
@@ -42,6 +45,7 @@ END_EVENT_TABLE()
 
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
+	font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
 	max_line_width(0),
 	offset_display_base(OFFSET_BASE_HEX),
 	offset_display_upper_bound(0xFFFFFFFF),
@@ -54,14 +58,19 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	selection_begin(-1, -1),
 	selection_end(-1, -1)
 {
-	wxFontInfo finfo;
-	finfo.Family(wxFONTFAMILY_MODERN);
+	App &app = wxGetApp();
 	
-	font = new wxFont(finfo);
-	assert(font->IsFixedWidth());
+	app.Bind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::CodeCtrl::OnFontSizeAdjustmentChanged, this);
+	
+	int font_size_adjustment = app.get_font_size_adjustment();
+	
+	while(font_size_adjustment > 0) { font.MakeLarger(); --font_size_adjustment; }
+	while(font_size_adjustment < 0) { font.MakeSmaller(); ++font_size_adjustment; }
+	
+	assert(font.IsFixedWidth());
 	
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	wxSize char_extent = dc.GetTextExtent("X");
 	font_width  = char_extent.GetWidth();
@@ -71,10 +80,15 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
 }
 
+REHex::CodeCtrl::~CodeCtrl()
+{
+	wxGetApp().Unbind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::CodeCtrl::OnFontSizeAdjustmentChanged, this);
+}
+
 void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool active)
 {
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	/* GetTextExtent() doesn't seem to handle tabs correctly, so we expand
 	 * them into spaces.
@@ -174,6 +188,26 @@ void REHex::CodeCtrl::update_scrollbars()
 	}
 }
 
+void REHex::CodeCtrl::update_widths()
+{
+	wxClientDC dc(this);
+	dc.SetFont(font);
+	
+	std::string offset_str = format_offset(0, offset_display_base, offset_display_upper_bound);
+	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
+	
+	max_line_width = 0;
+	
+	for(auto l = lines.begin(); l != lines.end(); ++l)
+	{
+		int line_width = code_xoff + dc.GetTextExtent(l->text).GetWidth();
+		if(max_line_width < line_width)
+		{
+			max_line_width = line_width;
+		}
+	}
+}
+
 REHex::CodeCtrl::CodeCharRef REHex::CodeCtrl::char_near_abs_xy(int abs_x, int abs_y)
 {
 	if(lines.empty())
@@ -187,7 +221,7 @@ REHex::CodeCtrl::CodeCharRef REHex::CodeCtrl::char_near_abs_xy(int abs_x, int ab
 	int col = 0;
 	
 	wxClientDC dc(this);
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	
 	while((code_xoff + dc.GetTextExtent(std::string((col + 1), 'X')).GetWidth()) < abs_x && col < (int)(line.text.length()))
 	{
@@ -252,23 +286,7 @@ void REHex::CodeCtrl::set_offset_display(REHex::OffsetBase offset_display_base, 
 	this->offset_display_base        = offset_display_base;
 	this->offset_display_upper_bound = offset_display_upper_bound;
 	
-	wxClientDC dc(this);
-	dc.SetFont(*font);
-	
-	std::string offset_str = format_offset(0, offset_display_base, offset_display_upper_bound);
-	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
-	
-	max_line_width = 0;
-	
-	for(auto l = lines.begin(); l != lines.end(); ++l)
-	{
-		int line_width = code_xoff + dc.GetTextExtent(l->text).GetWidth();
-		if(max_line_width < line_width)
-		{
-			max_line_width = line_width;
-		}
-	}
-	
+	update_widths();
 	update_scrollbars();
 	Refresh();
 }
@@ -279,7 +297,7 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 	
 	wxBufferedPaintDC dc(this);
 	
-	dc.SetFont(*font);
+	dc.SetFont(font);
 	dc.SetBackground(*wxWHITE_BRUSH);
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
@@ -358,9 +376,37 @@ void REHex::CodeCtrl::OnPaint(wxPaintEvent &event)
 	}
 }
 
+void REHex::CodeCtrl::OnErase(wxEraseEvent& event)
+{
+	// Left blank to disable erase
+}
+
 void REHex::CodeCtrl::OnSize(wxSizeEvent &event)
 {
 	update_scrollbars();
+}
+
+void REHex::CodeCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event)
+{
+	font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
+	
+	for(int i = 0; i < event.font_size_adjustment; ++i) { font.MakeLarger(); }
+	for(int i = 0; i > event.font_size_adjustment; --i) { font.MakeSmaller(); }
+	
+	assert(font.IsFixedWidth());
+	
+	wxClientDC dc(this);
+	dc.SetFont(font);
+	
+	wxSize char_extent = dc.GetTextExtent("X");
+	font_width  = char_extent.GetWidth();
+	font_height = char_extent.GetHeight();
+	
+	update_widths();
+	update_scrollbars();
+	Refresh();
+	
+	event.Skip();
 }
 
 void REHex::CodeCtrl::OnScroll(wxScrollWinEvent &event)

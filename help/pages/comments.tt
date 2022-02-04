@@ -1,0 +1,27 @@
+[% WRAPPER page.tt
+   title = "Setting Comments"
+%]
+
+<h2>Setting Comments</h2>
+
+<p>
+Comments can be used for storing notes within a binary file, or annotating specific ranges of bytes. Comments can be inserted manually and by plugins. The screenshot below shows how comments are displayed with the default settings:
+</p>
+
+<p>
+<img src="comments-view.png">
+</p>
+
+<p>
+To set a comment at the cursor position, simply right click and choose <i>Insert comment here...</i> (or press the <code>/</code> key). To set a comment encapsulating a range of bytes, select the range and choose <i>Set comment on x bytes</i> from the context menu.
+</p>
+
+<p>
+Comments can be shown/hidden or their display method changed with the <i>Inline comments</i> menu under the <i>View</i> menu. They are also shown in the <i>Comments</i> panel (<i>View menu</i> &gt; <i>Tool panels</i> &gt; <i>Comments</i>) which allows jumping between them like bookmarks.
+</p>
+
+<p>
+Comments are saved alongside the original file in a <i>.rehex-meta</i> file along with other metadata.
+</p>
+
+[% END %]

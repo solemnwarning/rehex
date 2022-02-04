@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
+
 #ifdef _WIN32
 #include <io.h>
 #endif
@@ -29,12 +31,14 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef _MSC_VER
 #include <unistd.h>
-#include <vector>
-
+#endif
 #ifdef _WIN32
 #define O_NOCTTY 0
 #endif
+#include <vector>
+#include <algorithm>
 
 #include "buffer.hpp"
 #include "win32lib.hpp"
@@ -668,6 +672,8 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 			block->virt_length -= to_erase;
 		}
 		
+		block->trim();
+		
 		block->state = Block::DIRTY;
 		_last_access_remove(block);
 		
@@ -720,4 +726,15 @@ void REHex::Buffer::Block::grow(size_t min_size)
 	}
 	
 	data.resize(min_size);
+}
+
+void REHex::Buffer::Block::trim()
+{
+	off_t data_size = data.size();
+	
+	if(data_size >= BLOCK_TRIM_THRESH && (data_size - BLOCK_TRIM_THRESH) >= virt_length)
+	{
+		data.resize(virt_length);
+		data.shrink_to_fit();
+	}
 }

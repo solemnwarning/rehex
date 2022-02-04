@@ -74,7 +74,13 @@ int main(int argc, char **argv)
 	fprintf(out_c, "\n");
 	fprintf(out_c, "};\n");
 	
+	fprintf(out_h, "#ifdef __cplusplus\n");
+	fprintf(out_h, "extern \"C\" {\n");
+	fprintf(out_h, "#endif\n");
 	fprintf(out_h, "extern unsigned char %s[%u];\n", variable, input_size);
+	fprintf(out_h, "#ifdef __cplusplus\n");
+	fprintf(out_h, "}\n");
+	fprintf(out_h, "#endif\n");
 	
 	fclose(out_h);
 	fclose(out_c);

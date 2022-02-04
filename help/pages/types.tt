@@ -1,0 +1,30 @@
+[% WRAPPER page.tt
+   title = "Setting Data Types"
+%]
+
+<h2>Setting Data Types</h2>
+
+<p>
+By default all data in a file is merely "data" - the hex values of the bytes and their ASCII character representations will be shown. You can set more specific data types by selecting a range of bytes and choosing types from the <i>Set data type</i> menu under the context (right click) menu.
+</p>
+
+<p>
+Types are grouped into the following categories:
+
+<ul>
+<li><b>Machine code</b><br>
+Disassembles the code for the chosen architecture (ARM, MIPS, x86, etc) and displays the disassembly in the main view along with the hex and ASCII character representations.</li>
+
+<li><b>Number</b><br>
+Displays the numeric value of the chosen type.</li>
+
+<li><b>Text</b><br>
+Displays the hex values like normal, but text will be decoded from the chosen encoding (UTF-8, UTF-16, ISO-8859-1, etc).</li>
+</ul>
+</p>
+
+<p>
+Type annotations are saved alongside the original file in a <i>.rehex-meta</i> file along with other metadata.
+</p>
+
+[% END %]

@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "../src/platform.hpp"
 #include <gtest/gtest.h>
 #include <iterator>
 
@@ -102,8 +103,8 @@ TEST(CommentsDataObject, ShiftOffset)
 TEST(CommentsDataObject, HighBitCharacters)
 {
 	NestedOffsetLengthMap<Document::Comment> expect_comments;
-	NestedOffsetLengthMap_set(expect_comments, 1234567890, 0, Document::Comment(wxString::FromUTF8("\u0111\u00F0\u201D\u0127\u0167\u00DF\u201D\u014B\u00BB\u00B6\u2190\u00A2\u00FE\u03A9"))); /* đð”ħŧß”ŋ»¶←¢þΩ */
-	NestedOffsetLengthMap_set(expect_comments, 1234567891, 0, Document::Comment(wxString::FromUTF8("\u2500\u00B2\u00F0\u00A2\u201C\u00AB\u262D\u00A7\u00D0\u00AA\u014A\u2019\u2018\u00A1"))); /* ─²ð¢“«☭§ÐªŊ’‘¡ */
+	NestedOffsetLengthMap_set(expect_comments, 1234567890, 0, Document::Comment(wxString::FromUTF8(u8"\u0111\u00F0\u201D\u0127\u0167\u00DF\u201D\u014B\u00BB\u00B6\u2190\u00A2\u00FE\u03A9"))); /* đð”ħŧß”ŋ»¶←¢þΩ */
+	NestedOffsetLengthMap_set(expect_comments, 1234567891, 0, Document::Comment(wxString::FromUTF8(u8"\u2500\u00B2\u00F0\u00A2\u201C\u00AB\u262D\u00A7\u00D0\u00AA\u014A\u2019\u2018\u00A1"))); /* ─²ð¢“«☭§ÐªŊ’‘¡ */
 	
 	std::list<NestedOffsetLengthMap<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(expect_comments.begin(), 0));

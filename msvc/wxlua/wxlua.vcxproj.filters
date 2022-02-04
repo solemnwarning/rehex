@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Bindings">
+      <UniqueIdentifier>{c70c2dda-26cd-4070-a202-00769e7ecea1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{c57fedb2-f859-4484-a512-38463eabad66}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxadv_rules.lua">
+      <Filter>Bindings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxaui_rules.lua">
+      <Filter>Bindings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxbase_rules.lua">
+      <Filter>Bindings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxcore_rules.lua">
+      <Filter>Bindings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxpropgrid_rules.lua">
+      <Filter>Bindings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\wxLua\bindings\wxlua\wxlua_rules.lua" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxadv_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxadv_wxladv.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxaui_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_base.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_datetime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxbase_file.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_appframe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_clipdrag.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_controls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_defsutils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_dialogs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_event.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_gdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_geometry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_graphics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_help.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_mdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_menutool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_picker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_print.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_sizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_windows.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxcore_wxlcore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlbind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlcallb.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxllua.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlobject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlstate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\wxlua_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\bit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxlua\lbitlib.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,19 +17,22 @@
 
 #define __STDC_FORMAT_MACROS
 
+#include "platform.hpp"
 #include <assert.h>
 #include <inttypes.h>
 
+#include "App.hpp"
 #include "decodepanel.hpp"
+#include "Events.hpp"
 
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
 */
 #include <portable_endian.h>
 
-static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::Document *document)
+static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new REHex::DecodePanel(parent, document);
+	return new REHex::DecodePanel(parent, document, document_ctrl);
 }
 
 static REHex::ToolPanelRegistration tpr("DecodePanel", "Decode values", REHex::ToolPanel::TPS_TALL, &DecodePanel_factory);
@@ -94,9 +97,10 @@ BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
 	EVT_SIZE(REHex::DecodePanel::OnSize)
 END_EVENT_TABLE()
 
-REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
+REHex::DecodePanel::DecodePanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
-	document(document)
+	document(document),
+	document_ctrl(document_ctrl)
 {
 	endian = new wxChoice(this, wxID_ANY);
 	
@@ -106,6 +110,9 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
 	
 	pgrid = new wxPropertyGrid(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		wxPG_STATIC_SPLITTER);
+	
+	wxGetApp().Bind(PALETTE_CHANGED, [this](wxCommandEvent &event) { set_pgrid_colours(); });
+	set_pgrid_colours();
 	
 	pgrid->Append(c8 = new wxPropertyCategory("8 bit integer"));
 	pgrid->AppendIn(c8, (s8 = new wxStringProperty("S Dec", "s8", "0000000000000000")));
@@ -170,19 +177,13 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, REHex::Document *document):
 	
 	pgrid->SetSplitterLeft();
 	
-	document->Bind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
-	document->Bind(EV_CURSOR_MOVED, &REHex::DecodePanel::OnCursorMove, this);
-	document->Bind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);
+	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::DecodePanel::OnCursorUpdate,    this);
+	
+	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::DecodePanel::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::DecodePanel::OnDataModified, this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
 	
 	update();
-}
-
-REHex::DecodePanel::~DecodePanel()
-{
-	if(document != NULL)
-	{
-		document_unbind();
-	}
 }
 
 std::string REHex::DecodePanel::name() const
@@ -210,11 +211,18 @@ void REHex::DecodePanel::load_state(wxConfig *config)
 	update();
 }
 
-void REHex::DecodePanel::document_unbind()
+void REHex::DecodePanel::set_pgrid_colours()
 {
-	document->Unbind(EV_DATA_MODIFIED, &REHex::DecodePanel::OnDataModified, this);
-	document->Unbind(EV_CURSOR_MOVED, &REHex::DecodePanel::OnCursorMove, this);
-	document->Unbind(wxEVT_DESTROY, &REHex::DecodePanel::OnDocumentDestroy, this);
+	pgrid->SetCaptionBackgroundColour(    (*active_palette)[Palette::PAL_COMMENT_BG]         );
+	pgrid->SetCaptionTextColour(          (*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]  );
+	pgrid->SetCellBackgroundColour(       (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]     );
+	pgrid->SetCellDisabledTextColour(     (*active_palette)[Palette::PAL_ALTERNATE_TEXT_FG]  );
+	pgrid->SetCellTextColour(             (*active_palette)[Palette::PAL_NORMAL_TEXT_FG]     );
+	pgrid->SetEmptySpaceColour(           (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]     );
+	pgrid->SetLineColour(                 (*active_palette)[Palette::PAL_COMMENT_BG]         );
+	pgrid->SetMarginColour(               (*active_palette)[Palette::PAL_COMMENT_BG]         );
+	pgrid->SetSelectionBackgroundColour(  (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]   );
+	pgrid->SetSelectionTextColour(        (*active_palette)[Palette::PAL_SELECTED_TEXT_FG]   );
 }
 
 wxSize REHex::DecodePanel::DoGetBestClientSize() const
@@ -252,6 +260,11 @@ wxSize REHex::DecodePanel::DoGetBestClientSize() const
 
 void REHex::DecodePanel::update()
 {
+	if (!is_visible)
+	{
+		/* There is no sense in updating this if we are not visible */
+		return;
+	}
 	assert(document != NULL);
 	
 	std::vector<unsigned char> data_at_cur;
@@ -283,20 +296,20 @@ void REHex::DecodePanel::update()
 	{
 		/* Big endian */
 		
-		TC_UPDATE(s16, int16_t, "%" PRId16, be16toh(*(int16_t*)(data)));
-		TC_UPDATE(u16, int16_t, "%" PRIu16, be16toh(*(uint16_t*)(data)));
-		TC_UPDATE(h16, int16_t, "%" PRIx16, be16toh(*(uint16_t*)(data)));
-		TC_UPDATE(o16, int16_t, "%" PRIo16, be16toh(*(uint16_t*)(data)));
+		TC_UPDATE(s16, int16_t, "%" PRId16, (int16_t)(be16toh(*(int16_t*)(data))));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, (uint16_t)(be16toh(*(uint16_t*)(data))));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, (uint16_t)(be16toh(*(uint16_t*)(data))));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, (uint16_t)(be16toh(*(uint16_t*)(data))));
 		
-		TC_UPDATE(s32, int32_t, "%" PRId32, be32toh(*(int32_t*)(data)));
-		TC_UPDATE(u32, int32_t, "%" PRIu32, be32toh(*(uint32_t*)(data)));
-		TC_UPDATE(h32, int32_t, "%" PRIx32, be32toh(*(uint32_t*)(data)));
-		TC_UPDATE(o32, int32_t, "%" PRIo32, be32toh(*(uint32_t*)(data)));
+		TC_UPDATE(s32, int32_t, "%" PRId32, (int32_t)(be32toh(*(int32_t*)(data))));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, (uint32_t)(be32toh(*(uint32_t*)(data))));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, (uint32_t)(be32toh(*(uint32_t*)(data))));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, (uint32_t)(be32toh(*(uint32_t*)(data))));
 		
-		TC_UPDATE(s64, int64_t, "%" PRId64, be64toh(*(int64_t*)(data)));
-		TC_UPDATE(u64, int64_t, "%" PRIu64, be64toh(*(uint64_t*)(data)));
-		TC_UPDATE(h64, int64_t, "%" PRIx64, be64toh(*(uint64_t*)(data)));
-		TC_UPDATE(o64, int64_t, "%" PRIo64, be64toh(*(uint64_t*)(data)));
+		TC_UPDATE(s64, int64_t, "%" PRId64, (int64_t)(be64toh(*(int64_t*)(data))));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, (uint64_t)(be64toh(*(uint64_t*)(data))));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, (uint64_t)(be64toh(*(uint64_t*)(data))));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, (uint64_t)(be64toh(*(uint64_t*)(data))));
 		
 		TC_UPDATE(f32, float,  "%.9g", beftoh(*(float*)(data)));
 		TC_UPDATE(f64, double, "%.9g", bedtoh(*(double*)(data)));
@@ -304,20 +317,20 @@ void REHex::DecodePanel::update()
 	else{
 		/* Little endian */
 		
-		TC_UPDATE(s16, int16_t, "%" PRId16, le16toh(*(int16_t*)(data)));
-		TC_UPDATE(u16, int16_t, "%" PRIu16, le16toh(*(uint16_t*)(data)));
-		TC_UPDATE(h16, int16_t, "%" PRIx16, le16toh(*(uint16_t*)(data)));
-		TC_UPDATE(o16, int16_t, "%" PRIo16, le16toh(*(uint16_t*)(data)));
+		TC_UPDATE(s16, int16_t, "%" PRId16, (int16_t)(le16toh(*(int16_t*)(data))));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, (uint16_t)(le16toh(*(uint16_t*)(data))));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, (uint16_t)(le16toh(*(uint16_t*)(data))));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, (uint16_t)(le16toh(*(uint16_t*)(data))));
 		
-		TC_UPDATE(s32, int32_t, "%" PRId32, le32toh(*(int32_t*)(data)));
-		TC_UPDATE(u32, int32_t, "%" PRIu32, le32toh(*(uint32_t*)(data)));
-		TC_UPDATE(h32, int32_t, "%" PRIx32, le32toh(*(uint32_t*)(data)));
-		TC_UPDATE(o32, int32_t, "%" PRIo32, le32toh(*(uint32_t*)(data)));
+		TC_UPDATE(s32, int32_t, "%" PRId32, (int32_t)(le32toh(*(int32_t*)(data))));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, (uint32_t)(le32toh(*(uint32_t*)(data))));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, (uint32_t)(le32toh(*(uint32_t*)(data))));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, (uint32_t)(le32toh(*(uint32_t*)(data))));
 		
-		TC_UPDATE(s64, int64_t, "%" PRId64, le64toh(*(int64_t*)(data)));
-		TC_UPDATE(u64, int64_t, "%" PRIu64, le64toh(*(uint64_t*)(data)));
-		TC_UPDATE(h64, int64_t, "%" PRIx64, le64toh(*(uint64_t*)(data)));
-		TC_UPDATE(o64, int64_t, "%" PRIo64, le64toh(*(uint64_t*)(data)));
+		TC_UPDATE(s64, int64_t, "%" PRId64, (int64_t)(le64toh(*(int64_t*)(data))));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, (uint64_t)(le64toh(*(uint64_t*)(data))));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, (uint64_t)(le64toh(*(uint64_t*)(data))));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, (uint64_t)(le64toh(*(uint64_t*)(data))));
 		
 		TC_UPDATE(f32, float,  "%.9g", leftoh(*(float*)(data)));
 		TC_UPDATE(f64, double, "%.9g", ledtoh(*(double*)(data)));
@@ -327,19 +340,7 @@ void REHex::DecodePanel::update()
 	memmove(last_data.data(), data, size);
 }
 
-void REHex::DecodePanel::OnDocumentDestroy(wxWindowDestroyEvent &event)
-{
-	if(event.GetWindow() == document)
-	{
-		document_unbind();
-		document = NULL;
-	}
-	
-	/* Continue propogation. */
-	event.Skip();
-}
-
-void REHex::DecodePanel::OnCursorMove(wxCommandEvent &event)
+void REHex::DecodePanel::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	update();
 	
@@ -347,7 +348,7 @@ void REHex::DecodePanel::OnCursorMove(wxCommandEvent &event)
 	event.Skip();
 }
 
-void REHex::DecodePanel::OnDataModified(wxCommandEvent &event)
+void REHex::DecodePanel::OnDataModified(OffsetLengthEvent &event)
 {
 	update();
 	
@@ -439,9 +440,10 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 		size = sizeof(double);
 	}
 	
-	if(size > 0 && document != NULL)
+	if(size > 0 && document_ctrl != NULL)
 	{
-		document->set_selection(document->get_cursor_position(), size);
+		off_t cursor_position = document->get_cursor_position();
+		document_ctrl->set_selection_raw(cursor_position, (cursor_position + size - 1));
 	}
 }
 

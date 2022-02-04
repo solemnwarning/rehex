@@ -15,13 +15,21 @@
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 EXE            := rehex.exe
-EXTRA_APP_OBJS := res/winres.o
-LIBS           += -Wl,-Bstatic -lstdc++ -lwinpthread -Wl,-Bdynamic -static-libgcc -static-libstdc++
 EMBED_EXE      := tools/embed.exe
+GTKCONFIG_EXE  := tools/gtk-config.exe
+EXTRA_APP_OBJS := res/winres.o
+
+WX_CONFIG ?= wx-config --static
+LDFLAGS   ?= -Wl,-Bstatic
+LDLIBS    += -lstdc++ -lwinpthread -liconv -Wl,-Bdynamic -static-libgcc -static-libstdc++ -lole32
 
 # Needed for PRIxNN macros from inttypes.h under MinGW
 CFLAGS   += -D__STDC_FORMAT_MACROS
 CXXFLAGS += -D__STDC_FORMAT_MACROS
+
+# Include compatibility headers
+CFLAGS   += -Iinclude/gcc-win-include/
+CXXFLAGS += -Iinclude/gcc-win-include/
 
 include Makefile
 

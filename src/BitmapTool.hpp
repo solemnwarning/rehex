@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,13 +24,14 @@
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
 namespace REHex {
 	class BitmapTool: public ToolPanel
 	{
 		public:
-			BitmapTool(wxWindow *parent, REHex::Document *document);
+			BitmapTool(wxWindow *parent, SharedDocumentPointer &document);
 			virtual ~BitmapTool();
 			
 			virtual std::string name() const override;
@@ -43,7 +44,7 @@ namespace REHex {
 			virtual wxSize DoGetBestClientSize() const override;
 			
 		private:
-			REHex::Document *document;
+			SharedDocumentPointer document;
 			
 			NumericTextCtrl *offset_textctrl;
 			NumericTextCtrl *width_textctrl;
@@ -66,7 +67,7 @@ namespace REHex {
 			wxImage render_image();
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
-			void OnCursorMove(wxCommandEvent &event);
+			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnDepth(wxCommandEvent &event);
 			void OnFormat(wxCommandEvent &event);
 			void OnXXX(wxCommandEvent &event);

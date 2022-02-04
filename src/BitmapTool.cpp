@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,7 +26,7 @@
 #include "BitmapTool.hpp"
 #include "NumericTextCtrl.hpp"
 
-static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::Document *document)
+static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::BitmapTool(parent, document);
 }
@@ -73,7 +73,7 @@ enum {
 	COLOUR_DEPTH_32BPP_RGBA8888 = 0,
 };
 
-REHex::BitmapTool::BitmapTool(wxWindow *parent, REHex::Document *document):
+REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent), document(document)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
@@ -123,20 +123,12 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, REHex::Document *document):
 	
 	SetSizerAndFit(sizer);
 	
-	document->Bind(wxEVT_DESTROY, &REHex::BitmapTool::OnDocumentDestroy, this);
-	document->Bind(EV_CURSOR_MOVED, &REHex::BitmapTool::OnCursorMove, this);
+	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::BitmapTool::OnCursorUpdate,    this);
 	
 	update();
 }
 
-REHex::BitmapTool::~BitmapTool()
-{
-	if(document != NULL)
-	{
-		document_unbind();
-		document = NULL;
-	}
-}
+REHex::BitmapTool::~BitmapTool() {}
 
 std::string REHex::BitmapTool::name() const
 {
@@ -151,12 +143,6 @@ void REHex::BitmapTool::save_state(wxConfig *config) const
 void REHex::BitmapTool::load_state(wxConfig *config)
 {
 	// TODO
-}
-
-void REHex::BitmapTool::document_unbind()
-{
-	document->Unbind(EV_CURSOR_MOVED, &REHex::BitmapTool::OnCursorMove, this);
-	document->Unbind(wxEVT_DESTROY, &REHex::BitmapTool::OnDocumentDestroy, this);
 }
 
 wxSize REHex::BitmapTool::DoGetBestClientSize() const
@@ -633,19 +619,7 @@ wxImage REHex::BitmapTool::render_image()
 	return image;
 }
 
-void REHex::BitmapTool::OnDocumentDestroy(wxWindowDestroyEvent &event)
-{
-	if(event.GetWindow() == document)
-	{
-		document_unbind();
-		document = NULL;
-	}
-	
-	/* Continue propogation. */
-	event.Skip();
-}
-
-void REHex::BitmapTool::OnCursorMove(wxCommandEvent &event)
+void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	// TODO
 	

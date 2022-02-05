@@ -362,16 +362,38 @@ wxImage REHex::BitmapTool::render_image()
 		case COLOUR_DEPTH_1BPP:
 			pixel_fmt_div  = 8;
 			pixel_fmt_bits = 1;
+			
+			colour_fmt_conv = [](uint32_t in)
+			{
+				in *= 255;
+				return wxColour(in, in, in);
+			};
+			
 			break;
 			
 		case COLOUR_DEPTH_2BPP:
 			pixel_fmt_div  = 4;
 			pixel_fmt_bits = 3;
+			
+			colour_fmt_conv = [](uint32_t in)
+			{
+				in = in | in << 2;
+				in = in | in << 4;
+				return wxColour(in, in, in);
+			};
+			
 			break;
 			
 		case COLOUR_DEPTH_4BPP:
 			pixel_fmt_div  = 2;
 			pixel_fmt_bits = 15;
+			
+			colour_fmt_conv = [](uint32_t in)
+			{
+				in = in | in << 4;
+				return wxColour(in, in, in);
+			};
+			
 			break;
 			
 		case COLOUR_DEPTH_8BPP:
@@ -555,7 +577,7 @@ wxImage REHex::BitmapTool::render_image()
 	
 	std::vector<unsigned char> data = document->read_data(offset, ((width * height * pixel_fmt_multi) / pixel_fmt_div));
 	
-	int mask = pixel_fmt_bits, shift = 8 - (8 / pixel_fmt_div);
+	int mask = pixel_fmt_bits, shift = 0;
 	size_t data_pos = 0;
 	
 	for(int x = 0, y = 0; y < height && (data_pos + pixel_fmt_multi) <= data.size();)
@@ -566,19 +588,19 @@ wxImage REHex::BitmapTool::render_image()
 		{
 			assert(mask <= 255);
 			
-			rgb |= ((data[data_pos] & mask) << shift) << (8 * i);
+			rgb |= ((data[data_pos] & mask) >> shift) << (8 * i);
 			
 			if(pixel_fmt_div > 1)
 			{
 				mask <<= (8 / pixel_fmt_div);
-				shift -= (8 - (8 / pixel_fmt_div));
+				shift += 8 / pixel_fmt_div;
 				
 				if(mask > 255)
 				{
 					assert((mask & 255) == 0);
 					
 					mask  = pixel_fmt_bits;
-					shift = 8 - (8 / pixel_fmt_div);
+					shift = 0;
 					
 					++data_pos;
 				}

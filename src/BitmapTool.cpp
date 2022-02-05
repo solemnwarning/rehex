@@ -18,6 +18,7 @@
 #include <functional>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
+#include <wx/rawbmp.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
 #include <wx/statbmp.h>
@@ -59,6 +60,7 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_CHECKBOX(ID_SCALE,    REHex::BitmapTool::OnXXX)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
+	EVT_IDLE(REHex::BitmapTool::OnIdle)
 END_EVENT_TABLE()
 
 enum {
@@ -86,8 +88,12 @@ enum {
 	COLOUR_DEPTH_32BPP_RGBA8888 = 0,
 };
 
+static int LINES_PER_IDLE = 200;
+
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
-	ToolPanel(parent), document(document)
+	ToolPanel(parent),
+	document(document),
+	bitmap_update_line(-1)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -137,7 +143,27 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	bitmap_scrollwin->SetScrollRate(10, 10);
 	
 	bitmap = new wxBitmap(16, 16);
-	s_bitmap = new wxStaticBitmap(bitmap_scrollwin, wxID_ANY, *bitmap);
+	
+	wxNativePixelData bmp_data(*bitmap);
+	assert(bmp_data);
+	
+	wxNativePixelData::Iterator output_ptr(bmp_data);
+	
+	for(int output_y = 0; output_y < 16; ++output_y)
+	{
+		wxNativePixelData::Iterator output_col_ptr = output_ptr;
+		
+		for(int output_x = 0; output_x < 16; ++output_x, ++output_col_ptr)
+		{
+			output_col_ptr.Red() = 0;
+			output_col_ptr.Green() = 0;
+			output_col_ptr.Blue() = 0;
+		}
+		
+		output_ptr.OffsetY(bmp_data, 1);
+	}
+	
+	s_bitmap = new wxGenericStaticBitmap(bitmap_scrollwin, wxID_ANY, *bitmap);
 	
 	SetSizerAndFit(sizer);
 	
@@ -214,7 +240,25 @@ void REHex::BitmapTool::update_colour_format_choices()
 
 void REHex::BitmapTool::update()
 {
-	wxImage image = render_image();
+	bitmap_update_line = -1;
+	
+	try {
+		image_offset = offset_textctrl->GetValue<off_t>(0);
+		
+		image_width  = width_textctrl ->GetValue<int>(1);
+		image_height = height_textctrl->GetValue<int>(1);
+	}
+	catch(const NumericTextCtrl::InputError &e)
+	{
+		/* TODO: Placeholder */
+		return;
+	}
+	
+	assert(image_width > 0);
+	assert(image_height > 0);
+	
+	bitmap_width = image_width;
+	bitmap_height = image_height;
 	
 	if(scale_cb->GetValue())
 	{
@@ -235,32 +279,35 @@ void REHex::BitmapTool::update()
 		
 		/* Scale the image to fit the available width/height, while preserving aspect ratio. */
 		
-		double aspect_ratio = (double)(image.GetWidth()) / (double)(image.GetHeight());
+		double aspect_ratio = (double)(image_width) / (double)(image_height);
 		
-		int scale_w, scale_h;
 		if((max_h * aspect_ratio) > max_w)
 		{
-			scale_w = max_w;
-			scale_h = (double)(max_w) / aspect_ratio;
+			bitmap_width = max_w;
+			bitmap_height = (double)(max_w) / aspect_ratio;
 		}
 		else{
-			scale_w = (double)(max_h) * aspect_ratio;
-			scale_h = max_h;
+			bitmap_width = (double)(max_h) * aspect_ratio;
+			bitmap_height = max_h;
 		}
 		
 		/* Clamp to >=1px in case of a ridiculously tall or wide image. */
-		scale_w = std::max(scale_w, 1);
-		scale_h = std::max(scale_h, 1);
-		
-		image.Rescale(scale_w, scale_h);
+		bitmap_width = std::max(bitmap_width, 1);
+		bitmap_height = std::max(bitmap_height, 1);
 	}
 	
-	wxBitmap *new_bitmap = new wxBitmap(image);
-	
+	wxBitmap *new_bitmap = new wxBitmap(bitmap_width, bitmap_height);
 	s_bitmap->SetBitmap(*new_bitmap);
 	
 	delete bitmap;
 	bitmap = new_bitmap;
+	
+	render_region(0, LINES_PER_IDLE, image_offset, image_width, image_height);
+	
+	if(LINES_PER_IDLE < bitmap_height)
+	{
+		bitmap_update_line = LINES_PER_IDLE;
+	}
 	
 	bitmap_scrollwin->SetVirtualSize(s_bitmap->GetSize());
 }
@@ -346,25 +393,10 @@ static inline uint8_t extract_8(uint32_t in, int shift)
 	return out;
 }
 
-wxImage REHex::BitmapTool::render_image()
+void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, int width, int height)
 {
-	off_t offset;
-	int width, height;
-	
-	try {
-		offset = offset_textctrl->GetValue<off_t>(0);
-		
-		width  = width_textctrl ->GetValue<int>(1);
-		height = height_textctrl->GetValue<int>(1);
-	}
-	catch(const NumericTextCtrl::InputError &e)
-	{
-		/* TODO: Placeholder */
-		return wxImage(1, 1);
-	}
-	
-	assert(width > 0);
-	assert(height > 0);
+	int output_width = bitmap->GetWidth();
+	int output_height = bitmap->GetHeight();
 	
 	int pixel_fmt_idx = pixel_fmt_choice->GetCurrentSelection();
 	int colour_fmt_idx = colour_fmt_choice->GetCurrentSelection();
@@ -573,94 +605,156 @@ wxImage REHex::BitmapTool::render_image()
 	bool flip_x = flip_x_cb->GetValue();
 	bool flip_y = flip_y_cb->GetValue();
 	
-	wxImage image(width, height);
+	/* Read in the image data, convert the source pixel format and write it to the wxBitmap. */
 	
-	/* Initialise the wxImage to a chequerboard pattern for any area not covered by the input
-	 * image (i.e. because it runs off the end of the file).
-	*/
+	wxNativePixelData bmp_data(*bitmap);
+	assert(bmp_data);
 	
-	for(int x = 0, y = 0; y < height;)
-	{
-		bool x_even = (x % 20) >= 10;
-		bool y_even = (y % 20) >= 10;
-		
-		int colour = (x_even ^ y_even) ? 0x66 : 0x99;
-		
-		image.SetRGB(x, y, colour, colour, colour);
-		
-		if(++x == width)
-		{
-			++y;
-			x = 0;
-		}
-	}
-	
-	/* Read in the image data, convert the source pixel format and write it to the wxImage. */
-	
-	std::vector<unsigned char> data = document->read_data(offset, ((width * height * pixel_fmt_multi) / pixel_fmt_div));
+	std::vector<unsigned char> data;
+	off_t data_begin = 0, data_end = 0;
 	
 	int mask = pixel_fmt_bits, shift = 0;
-	size_t data_pos = 0;
 	
-	for(int x = 0, y = 0; y < height && (data_pos + pixel_fmt_multi) <= data.size();)
+	wxNativePixelData::Iterator output_ptr(bmp_data);
+	output_ptr.OffsetY(bmp_data, region_y);
+	
+	for(int output_y = region_y; output_y < output_height && output_y < region_y + region_h; ++output_y)
 	{
-		uint32_t rgb = 0;
+		int input_y = output_y;
 		
-		for(int i = 0; i < pixel_fmt_multi; ++i)
+		if(height != output_height)
 		{
-			assert(mask <= 255);
+			input_y = (double)(input_y) * ((double)(height) / (double)(output_height));
 			
-			rgb |= ((data[data_pos] & mask) >> shift) << (8 * i);
+			input_y = std::max(input_y, 0);
+			input_y = std::min(input_y, height - 1);
+		}
+		
+		if(flip_y)
+		{
+			input_y = ((height - 1) - input_y);
+		}
+		
+		off_t line_len = (width * pixel_fmt_multi) / pixel_fmt_div;
+		off_t line_off = offset + input_y * line_len;
+		
+		if(line_off < data_begin || (line_off + line_len) > data_end)
+		{
+			off_t data_read_base = line_off;
+			off_t data_read_max = line_len * 32;
 			
-			if(pixel_fmt_div > 1)
+// 			if(flip_y)
+// 			{
+// 				/* Read current input line and PRECEEDING ones if the Y axis is
+// 				 * flipped since we'll be stepping backwards.
+// 				*/
+// 				
+// 				data_read_base -= line_len * 31;
+// 				data_read_base = std::max(data_read_base, offset);
+// 			}
+			
+			data = document->read_data(data_read_base, data_read_max);
+			
+			data_begin = line_off;
+			data_end = data_begin + data.size();
+		}
+		
+		const unsigned char *line_ptr = data.data() + (line_off - data_begin);
+		
+		wxNativePixelData::Iterator output_col_ptr = output_ptr;
+		
+		for(int output_x = 0; output_x < output_width; ++output_x, ++output_col_ptr)
+		{
+			int input_x = output_x;
+			
+			if(width != output_width)
 			{
-				mask <<= (8 / pixel_fmt_div);
-				shift += 8 / pixel_fmt_div;
+				input_x = (double)(input_x) * ((double)(width) / (double)(output_width));
 				
-				if(mask > 255)
+				input_x = std::max(input_x, 0);
+				input_x = std::min(input_x, width - 1);
+			}
+			
+			if(flip_x)
+			{
+				input_x = ((width - 1) - input_x);
+			}
+			
+			const unsigned char *input_ptr = line_ptr + (input_x * pixel_fmt_multi) / pixel_fmt_div;
+			
+			/* Initialise output to chequerboard pattern. */
+			
+			bool x_even = (output_x % 20) >= 10;
+			bool y_even = (output_y % 20) >= 10;
+			
+			int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
+			
+			output_col_ptr.Red()   = chequerboard_colour;
+			output_col_ptr.Green() = chequerboard_colour;
+			output_col_ptr.Blue()  = chequerboard_colour;
+			
+			if((input_ptr + pixel_fmt_multi) > (data.data() + data.size()))
+			{
+				/* Ran out of image data in input file. Carry on looping to fill
+				 * the remaining bitmap with the chequerboard pattern.
+				*/
+				
+				continue;
+			}
+			
+			uint32_t rgb = 0;
+			
+			for(int i = 0; i < pixel_fmt_multi; ++i)
+			{
+				assert(mask <= 255);
+				
+				assert(input_ptr >= data.data());
+				
+				rgb |= ((*input_ptr & mask) >> shift) << (8 * i);
+				
+				if(pixel_fmt_div > 1)
 				{
-					assert((mask & 255) == 0);
+					mask <<= (8 / pixel_fmt_div);
+					shift += 8 / pixel_fmt_div;
 					
-					mask  = pixel_fmt_bits;
-					shift = 0;
-					
-					++data_pos;
+					if(mask > 255)
+					{
+						assert((mask & 255) == 0);
+						
+						mask  = pixel_fmt_bits;
+						shift = 0;
+						
+						++input_ptr;
+					}
+				}
+				else{
+					++input_ptr;
 				}
 			}
-			else{
-				++data_pos;
+			
+			wxColour colour = colour_fmt_conv(rgb);
+			
+			if(colour.Alpha() != wxALPHA_OPAQUE)
+			{
+				/* Blend colours with an alpha channel into the chequerboard. */
+				
+				double alpha = (double)(colour.Alpha()) / 255.0;
+				
+				int red   = ((double)(colour.Red())   * alpha) + ((double)(output_col_ptr.Red())   * (1.0 - alpha));
+				int green = ((double)(colour.Green()) * alpha) + ((double)(output_col_ptr.Green()) * (1.0 - alpha));
+				int blue  = ((double)(colour.Blue())  * alpha) + ((double)(output_col_ptr.Blue())  * (1.0 - alpha));
+				
+				colour.Set(red, green, blue);
+				
 			}
+			
+			output_col_ptr.Red()   = colour.Red();
+			output_col_ptr.Green() = colour.Green();
+			output_col_ptr.Blue()  = colour.Blue();
 		}
 		
-		int adjusted_x = flip_x ? ((width  - 1) - x) : x;
-		int adjusted_y = flip_y ? ((height - 1) - y) : y;
-		
-		wxColour colour = colour_fmt_conv(rgb);
-		
-		if(colour.Alpha() != wxALPHA_OPAQUE)
-		{
-			/* Blend colours with an alpha channel into the chequerboard. */
-			
-			double alpha = (double)(colour.Alpha()) / 255.0;
-			
-			int red   = ((double)(colour.Red())   * alpha) + ((double)(image.GetRed(  adjusted_x, adjusted_y)) * (1.0 - alpha));
-			int green = ((double)(colour.Green()) * alpha) + ((double)(image.GetGreen(adjusted_x, adjusted_y)) * (1.0 - alpha));
-			int blue  = ((double)(colour.Blue())  * alpha) + ((double)(image.GetBlue( adjusted_x, adjusted_y)) * (1.0 - alpha));
-			
-			colour.Set(red, green, blue);
-			
-		}
-		
-		image.SetRGB(adjusted_x, adjusted_y, colour.Red(), colour.Green(), colour.Blue());
-		
-		if(++x == width)
-		{
-			++y;
-			x = 0;
-		}
+		output_ptr.OffsetY(bmp_data, 1);
 	}
-	
-	return image;
 }
 
 void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
@@ -717,4 +811,23 @@ void REHex::BitmapTool::OnSize(wxSizeEvent &event)
 	
 	/* Continue propogation. */
 	event.Skip();
+}
+
+void REHex::BitmapTool::OnIdle(wxIdleEvent &event)
+{
+	if(bitmap_update_line >= 0)
+	{
+		render_region(bitmap_update_line, LINES_PER_IDLE, image_offset, image_width, image_height);
+		bitmap_update_line += LINES_PER_IDLE;
+		
+		s_bitmap->Refresh();
+		
+		if(bitmap_update_line >= bitmap_height)
+		{
+			bitmap_update_line = -1;
+		}
+		else{
+			event.RequestMore();
+		}
+	}
 }

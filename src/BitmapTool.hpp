@@ -20,7 +20,8 @@
 
 #include <wx/checkbox.h>
 #include <wx/choice.h>
-#include <wx/statbmp.h>
+//#include <wx/statbmp.h>
+#include <wx/generic/statbmpg.h>
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
@@ -58,14 +59,20 @@ namespace REHex {
 			
 			wxBitmap *bitmap;
 			wxScrolledWindow *bitmap_scrollwin;
-			wxStaticBitmap *s_bitmap;
+			wxGenericStaticBitmap *s_bitmap;
+			
+			off_t image_offset;
+			int image_width, image_height;
+			
+			int bitmap_width, bitmap_height;
+			int bitmap_update_line;
 			
 			void document_unbind();
 			
 			void update_colour_format_choices();
 			
 			void update();
-			wxImage render_image();
+			void render_region(int region_y, int region_h, off_t offset, int width, int height);
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCursorUpdate(CursorUpdateEvent &event);
@@ -74,6 +81,7 @@ namespace REHex {
 			void OnFollowCursor(wxCommandEvent &event);
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
+			void OnIdle(wxIdleEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

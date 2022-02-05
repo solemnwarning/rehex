@@ -36,14 +36,27 @@ static REHex::ToolPanelRegistration tpr("BitmapTool", "Bitmap visualisation", RE
 enum {
 	ID_COLOUR_DEPTH = 1,
 	ID_COLOUR_FORMAT,
+	ID_IMAGE_OFFSET,
+	ID_FOLLOW_CURSOR,
+	ID_IMAGE_WIDTH,
+	ID_IMAGE_HEIGHT,
+	ID_FLIP_X,
+	ID_FLIP_Y,
+	ID_SCALE,
 };
 
 BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_CHOICE(ID_COLOUR_DEPTH,  REHex::BitmapTool::OnDepth)
 	EVT_CHOICE(ID_COLOUR_FORMAT, REHex::BitmapTool::OnFormat)
 	
-	EVT_TEXT(    wxID_ANY, REHex::BitmapTool::OnXXX)
-	EVT_CHECKBOX(wxID_ANY, REHex::BitmapTool::OnXXX)
+	EVT_TEXT(ID_IMAGE_OFFSET,      REHex::BitmapTool::OnXXX)
+	EVT_CHECKBOX(ID_FOLLOW_CURSOR, REHex::BitmapTool::OnFollowCursor)
+	
+	EVT_TEXT(ID_IMAGE_WIDTH,  REHex::BitmapTool::OnXXX)
+	EVT_TEXT(ID_IMAGE_HEIGHT, REHex::BitmapTool::OnXXX)
+	EVT_CHECKBOX(ID_FLIP_X,   REHex::BitmapTool::OnXXX)
+	EVT_CHECKBOX(ID_FLIP_Y,   REHex::BitmapTool::OnXXX)
+	EVT_CHECKBOX(ID_SCALE,    REHex::BitmapTool::OnXXX)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
 END_EVENT_TABLE()
@@ -87,9 +100,14 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 		grid_sizer->Add(window, 0, wxALIGN_CENTER_VERTICAL);
 	};
 	
-	sizer_add_pair("Image offset:", (offset_textctrl = new NumericTextCtrl(this, wxID_ANY)));
-	sizer_add_pair("Image width:",  (width_textctrl  = new NumericTextCtrl(this, wxID_ANY)));
-	sizer_add_pair("Image height:", (height_textctrl = new NumericTextCtrl(this, wxID_ANY)));
+	sizer_add_pair("Image offset:", (offset_textctrl = new NumericTextCtrl(this, ID_IMAGE_OFFSET)));
+	sizer_add_pair("",              (offset_follow_cb = new wxCheckBox(this, ID_FOLLOW_CURSOR, "Follow cursor")));
+	
+	offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position()));
+	offset_follow_cb->SetValue(true);
+	
+	sizer_add_pair("Image width:",  (width_textctrl  = new NumericTextCtrl(this, ID_IMAGE_WIDTH)));
+	sizer_add_pair("Image height:", (height_textctrl = new NumericTextCtrl(this, ID_IMAGE_HEIGHT)));
 	
 	sizer_add_pair("Colour depth:", (pixel_fmt_choice = new wxChoice(this, ID_COLOUR_DEPTH)));
 	
@@ -107,10 +125,10 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	
 	update_colour_format_choices();
 	
-	grid_sizer->Add((flip_x_cb = new wxCheckBox(this, wxID_ANY, "Flip X")));
-	grid_sizer->Add((flip_y_cb = new wxCheckBox(this, wxID_ANY, "Flip Y")));
+	grid_sizer->Add((flip_x_cb = new wxCheckBox(this, ID_FLIP_X, "Flip X")));
+	grid_sizer->Add((flip_y_cb = new wxCheckBox(this, ID_FLIP_Y, "Flip Y")));
 	
-	grid_sizer->Add((scale_cb = new wxCheckBox(this, wxID_ANY, "Scale")));
+	grid_sizer->Add((scale_cb = new wxCheckBox(this, ID_SCALE, "Scale")));
 	scale_cb->SetValue(true); /* Enable scaling by default */
 	
 	bitmap_scrollwin = new wxScrolledWindow(this, wxID_ANY);
@@ -647,7 +665,11 @@ wxImage REHex::BitmapTool::render_image()
 
 void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
 {
-	// TODO
+	if(offset_follow_cb->GetValue())
+	{
+		offset_textctrl->ChangeValue(std::to_string(event.cursor_pos));
+		update();
+	}
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -664,8 +686,28 @@ void REHex::BitmapTool::OnFormat(wxCommandEvent &event)
 	update();
 }
 
+void REHex::BitmapTool::OnFollowCursor(wxCommandEvent &event)
+{
+	if(offset_follow_cb->GetValue())
+	{
+		offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position()));
+		update();
+	}
+	else{
+		/* Don't need to update anything if option was toggled off. */
+	}
+}
+
 void REHex::BitmapTool::OnXXX(wxCommandEvent &event)
 {
+	if(event.GetEventObject() == offset_textctrl)
+	{
+		/* Turn off the "Follow cursor offset" option if the offset is modified by the
+		 * user.
+		*/
+		
+		offset_follow_cb->SetValue(false);
+	}
 	update();
 }
 

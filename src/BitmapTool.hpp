@@ -47,6 +47,7 @@ namespace REHex {
 			SharedDocumentPointer document;
 			
 			NumericTextCtrl *offset_textctrl;
+			wxCheckBox *offset_follow_cb;
 			NumericTextCtrl *width_textctrl;
 			NumericTextCtrl *height_textctrl;
 			wxChoice *pixel_fmt_choice;
@@ -70,6 +71,7 @@ namespace REHex {
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnDepth(wxCommandEvent &event);
 			void OnFormat(wxCommandEvent &event);
+			void OnFollowCursor(wxCommandEvent &event);
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			

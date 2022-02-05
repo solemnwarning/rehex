@@ -230,6 +230,10 @@ void REHex::BitmapTool::update()
 			scale_h = max_h;
 		}
 		
+		/* Clamp to >=1px in case of a ridiculously tall or wide image. */
+		scale_w = std::max(scale_w, 1);
+		scale_h = std::max(scale_h, 1);
+		
 		image.Rescale(scale_w, scale_h);
 	}
 	

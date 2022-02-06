@@ -270,7 +270,6 @@ APP_OBJS := \
 	src/VirtualMappingDialog.o \
 	src/VirtualMappingList.o \
 	src/win32lib.o \
-	src/timespec.o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(EXTRA_APP_OBJS)

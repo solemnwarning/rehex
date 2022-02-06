@@ -88,8 +88,6 @@ enum {
 	COLOUR_DEPTH_32BPP_RGBA8888 = 0,
 };
 
-static int LINES_PER_IDLE = 200;
-
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent),
 	document(document),
@@ -296,17 +294,19 @@ void REHex::BitmapTool::update()
 		bitmap_height = std::max(bitmap_height, 1);
 	}
 	
+	bitmap_lines_per_idle = (bitmap_width > 1024) ? 20 : 200;
+	
 	wxBitmap *new_bitmap = new wxBitmap(bitmap_width, bitmap_height);
 	s_bitmap->SetBitmap(*new_bitmap);
 	
 	delete bitmap;
 	bitmap = new_bitmap;
 	
-	render_region(0, LINES_PER_IDLE, image_offset, image_width, image_height);
+	render_region(0, bitmap_lines_per_idle, image_offset, image_width, image_height);
 	
-	if(LINES_PER_IDLE < bitmap_height)
+	if(bitmap_lines_per_idle < bitmap_height)
 	{
-		bitmap_update_line = LINES_PER_IDLE;
+		bitmap_update_line = bitmap_lines_per_idle;
 	}
 	
 	bitmap_scrollwin->SetVirtualSize(s_bitmap->GetSize());
@@ -641,7 +641,7 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 		if(line_off < data_begin || (line_off + line_len) > data_end)
 		{
 			off_t data_read_base = line_off;
-			off_t data_read_max = line_len * 32;
+			off_t data_read_max = line_len * 200;
 			
 // 			if(flip_y)
 // 			{
@@ -817,8 +817,8 @@ void REHex::BitmapTool::OnIdle(wxIdleEvent &event)
 {
 	if(bitmap_update_line >= 0)
 	{
-		render_region(bitmap_update_line, LINES_PER_IDLE, image_offset, image_width, image_height);
-		bitmap_update_line += LINES_PER_IDLE;
+		render_region(bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height);
+		bitmap_update_line += bitmap_lines_per_idle;
 		
 		s_bitmap->Refresh();
 		

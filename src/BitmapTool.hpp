@@ -65,6 +65,8 @@ namespace REHex {
 			int image_width, image_height;
 			
 			int bitmap_width, bitmap_height;
+			
+			int bitmap_lines_per_idle;
 			int bitmap_update_line;
 			
 			void document_unbind();

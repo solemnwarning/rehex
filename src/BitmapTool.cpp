@@ -18,6 +18,8 @@
 #include <functional>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
+#include <wx/clipbrd.h>
+#include <wx/dataobj.h>
 #include <wx/rawbmp.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
@@ -26,6 +28,7 @@
 
 #include "BitmapTool.hpp"
 #include "NumericTextCtrl.hpp"
+#include "util.hpp"
 
 static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -162,6 +165,8 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	}
 	
 	s_bitmap = new wxGenericStaticBitmap(bitmap_scrollwin, wxID_ANY, *bitmap);
+	
+	s_bitmap->Bind(wxEVT_RIGHT_DOWN, &REHex::BitmapTool::OnBitmapRightDown, this);
 	
 	SetSizerAndFit(sizer);
 	
@@ -830,4 +835,80 @@ void REHex::BitmapTool::OnIdle(wxIdleEvent &event)
 			event.RequestMore();
 		}
 	}
+}
+
+void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
+{
+	wxMenu menu;
+	
+	wxMenuItem *copy = menu.Append(wxID_ANY, "&Copy preview image");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		ClipboardGuard cg;
+		if(cg)
+		{
+			wxTheClipboard->SetData(new wxBitmapDataObject(*bitmap));
+		}
+	}, copy->GetId(), copy->GetId());
+	
+	wxMenuItem *save = menu.Append(wxID_ANY, "&Save preview image");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		CallAfter([&]()
+		{
+			wxFileDialog save_dialog(this, "Save As", wxEmptyString, wxEmptyString, "BMP files (*.bmp)|*.bmp|PNG files (*.png)|*.png", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+			save_dialog.SetFilterIndex(1);
+			
+			if(save_dialog.ShowModal() == wxID_CANCEL)
+				return;
+			
+			wxFileName save_fn(save_dialog.GetPath());
+			wxBitmapType type;
+			
+			if(save_fn.HasExt())
+			{
+				wxString ext = save_fn.GetExt().Lower();
+				if(ext == "bmp")
+				{
+					type = wxBITMAP_TYPE_BMP;
+				}
+				else if(ext == "png")
+				{
+					type = wxBITMAP_TYPE_PNG;
+				}
+				else{
+					wxMessageBox((std::string("Unsupported file extension: ") + ext), "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
+					return;
+				}
+			}
+			else if(save_dialog.GetFilterIndex() == 0)
+			{
+				save_fn.SetExt("bmp");
+				type = wxBITMAP_TYPE_BMP;
+			}
+			else if(save_dialog.GetFilterIndex() == 1)
+			{
+				save_fn.SetExt("png");
+				type = wxBITMAP_TYPE_PNG;
+			}
+			else{
+				/* Unreachable. */
+				abort();
+			}
+			
+			bool save_ok = bitmap->SaveFile(save_fn.GetFullPath(), type);
+			if(!save_ok)
+			{
+				wxMessageBox("Unable to save image", "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
+			}
+		});
+	}, save->GetId(), save->GetId());
+	
+	if(bitmap_update_line >= 0)
+	{
+		copy->Enable(false);
+		save->Enable(false);
+	}
+	
+	PopupMenu(&menu);
 }

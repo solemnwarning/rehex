@@ -84,6 +84,7 @@ namespace REHex {
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);
+			void OnBitmapRightDown(wxMouseEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

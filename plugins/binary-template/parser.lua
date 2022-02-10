@@ -280,7 +280,12 @@ end
 local spc = S(" \t\r\n")^0
 local spc_req = S(" \t\r\n")^1
 local digit = R('09')
-local number = C( digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
+local xdigit = R('09') + R('AF') + R('af')
+local odigit = R('07')
+local number_hex = ( P("0x") * C( xdigit^1                          ) / function(c) return tonumber(c, 16) end )
+local number_oct = (           C( P("0") * odigit^1                 ) / function(c) return tonumber(c,  8) end )
+local number_dec = (           C( digit^1 * ( P('.') * digit^1 )^-1 ) / function(c) return tonumber(c)     end )
+local number = (number_hex + number_oct + number_dec) * spc
 local name = P(_capture_name) * spc
 local name_nospc = P(_capture_name)
 local comma  = P(",") * spc

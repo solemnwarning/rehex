@@ -21,9 +21,21 @@ describe("parser", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1 } }, parser.parse_text("1;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1 } }, parser.parse_text("1.0;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1.5 } }, parser.parse_text("1.5;"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "num", 377 } }, parser.parse_text("377;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "minus", { "UNKNOWN FILE", 1, "num", 1 } } }, parser.parse_text("-1;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "plus", { "UNKNOWN FILE", 1, "num", 1 } } }, parser.parse_text("+1;"));
 	end);
+	
+	it("parses hex numbers", function()
+		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1 } }, parser.parse_text("0x1;"))
+		assert.are.same({ { "UNKNOWN FILE", 1, "num", 255 } }, parser.parse_text("0xFF;"))
+	end)
+	
+	it("parses octal numbers", function()
+		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1 } }, parser.parse_text("01;"))
+		assert.are.same({ { "UNKNOWN FILE", 1, "num", 8 } }, parser.parse_text("010;"))
+		assert.are.same({ { "UNKNOWN FILE", 1, "num", 255 } }, parser.parse_text("0377;"))
+	end)
 	
 	it("parses strings", function()
 		local got

@@ -1625,4 +1625,143 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end)
+	
+	it("parses simple ternary expressions", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("cond ? if_true : if_false;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "ternary",
+				{ "UNKNOWN FILE", 1, "ref", { "cond" } },
+				{ "UNKNOWN FILE", 1, "ref", { "if_true" } },
+				{ "UNKNOWN FILE", 1, "ref", { "if_false" } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses ternary expression with sub-expression as condition", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("cond_a + cond_b ? if_true : if_false;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "ternary",
+				{ "UNKNOWN FILE", 1, "add",
+					{ "UNKNOWN FILE", 1, "ref", { "cond_a" } },
+					{ "UNKNOWN FILE", 1, "ref", { "cond_b" } } },
+				{ "UNKNOWN FILE", 1, "ref", { "if_true" } },
+				{ "UNKNOWN FILE", 1, "ref", { "if_false" } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses ternary expression with sub-expression as true branch", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("cond ? true_a + true_b : if_false;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "ternary",
+				{ "UNKNOWN FILE", 1, "ref", { "cond" } },
+				{ "UNKNOWN FILE", 1, "add",
+					{ "UNKNOWN FILE", 1, "ref", { "true_a" } },
+					{ "UNKNOWN FILE", 1, "ref", { "true_b" } } },
+				{ "UNKNOWN FILE", 1, "ref", { "if_false" } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses ternary expression with sub-expression as false branch", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("cond ? if_true : false_a + false_b;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "ternary",
+				{ "UNKNOWN FILE", 1, "ref", { "cond" } },
+				{ "UNKNOWN FILE", 1, "ref", { "if_true" } },
+				{ "UNKNOWN FILE", 1, "add",
+					{ "UNKNOWN FILE", 1, "ref", { "false_a" } },
+					{ "UNKNOWN FILE", 1, "ref", { "false_b" } } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses nested ternary expressions", function()
+		local got
+		local expect
+		
+		got = parser.parse_text(
+			"cond1\n" ..
+			"  ? cond2\n" ..
+			"    ? truth2\n" ..
+			"    : false2\n" ..
+			"  : cond3\n" ..
+			"    ? truth3\n" ..
+			"    : false3;")
+		
+		expect = {
+			{ "UNKNOWN FILE", 2, "ternary",
+				{ "UNKNOWN FILE", 1, "ref", { "cond1" } },
+				{ "UNKNOWN FILE", 3, "ternary",
+					{ "UNKNOWN FILE", 2, "ref", { "cond2" } },
+					{ "UNKNOWN FILE", 3, "ref", { "truth2" } },
+					{ "UNKNOWN FILE", 4, "ref", { "false2" } } },
+				{ "UNKNOWN FILE", 6, "ternary",
+					{ "UNKNOWN FILE", 5, "ref", { "cond3" } },
+					{ "UNKNOWN FILE", 6, "ref", { "truth3" } },
+					{ "UNKNOWN FILE", 7, "ref", { "false3" } } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses assignment from ternary expression", function()
+		local got
+		local expect
+		
+		got = parser.parse_text(
+			"x = cond\n" ..
+			"  ? true_val\n" ..
+			"  : false_val;")
+		
+		expect = {
+			{ "UNKNOWN FILE", 1, "assign",
+				{ "UNKNOWN FILE", 1, "ref", { "x" } },
+				{ "UNKNOWN FILE", 2, "ternary",
+					{ "UNKNOWN FILE", 1, "ref", { "cond" } },
+					{ "UNKNOWN FILE", 2, "ref", { "true_val" } },
+					{ "UNKNOWN FILE", 3, "ref", { "false_val" } } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses assignment within ternary expression", function()
+		local got
+		local expect
+		
+		got = parser.parse_text(
+			"cond\n" ..
+			"  ? a = true_val\n" ..
+			"  : b = false_val;")
+		
+		expect = {
+			{ "UNKNOWN FILE", 2, "ternary",
+				{ "UNKNOWN FILE", 1, "ref", { "cond" } },
+				{ "UNKNOWN FILE", 2, "assign",
+					{ "UNKNOWN FILE", 2, "ref", { "a" } },
+					{ "UNKNOWN FILE", 2, "ref", { "true_val" } } },
+				{ "UNKNOWN FILE", 3, "assign",
+					{ "UNKNOWN FILE", 3, "ref", { "b" } },
+					{ "UNKNOWN FILE", 3, "ref", { "false_val" } } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

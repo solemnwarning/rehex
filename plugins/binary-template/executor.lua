@@ -59,6 +59,7 @@ local _eval_block
 local _eval_break
 local _eval_continue
 local _eval_cast
+local _eval_ternary
 local _eval_statement;
 local _exec_statements;
 
@@ -2269,6 +2270,30 @@ _eval_cast = function(context, statement)
 	return type_info, value_v
 end
 
+_eval_ternary = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local cond_expr     = statement[4]
+	local if_true_expr  = statement[5]
+	local if_false_expr = statement[6]
+	
+	local cond_t, cond_v = _eval_statement(context, cond_expr)
+	if cond_t == nil or cond_t.base ~= "number"
+	then
+		error("Invalid condition operand to ternary operator - expected numeric, got '" .. _get_type_name(cond_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	if cond_v:get() ~= 0
+	then
+		-- Condition is true
+		return _eval_statement(context, if_true_expr)
+	else
+		-- Condition is false
+		return _eval_statement(context, if_false_expr)
+	end
+end
+
 _eval_statement = function(context, statement)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -2314,6 +2339,7 @@ _ops = {
 	["break"]          = _eval_break,
 	["continue"]       = _eval_continue,
 	["cast"]           = _eval_cast,
+	["ternary"]        = _eval_ternary,
 	
 	add      = _eval_add,
 	subtract = _numeric_op_func(function(v1, v2) return v1 - v2 end, "-"),

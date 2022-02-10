@@ -340,6 +340,7 @@ local _parser = spc * P{
 	
 	EXPR2 =
 		P("(") * spc * V("EXPR") * P(")") * spc +
+		Ct( P(_capture_position) * Cc("_ternary_t") * P("?") * spc * V("EXPR") * P(":") * spc) +
 		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
 		Ct( P(_capture_position) * Cc("postfix-increment") * Ct( V("VALUE") ) * P("++") * spc) +
 		Ct( P(_capture_position) * Cc("postfix-decrement") * Ct( V("VALUE") ) * P("--") * spc) +
@@ -663,6 +664,10 @@ local function _compile_expr(expr)
 		then
 			local sub_expr = expr_parts[i][4]
 			_resolve_pos(sub_expr)
+		elseif expr_parts[i][3] == "_ternary_t"
+		then
+			local truth_expr = expr_parts[i][4]
+			_compile_expr(truth_expr)
 		end
 	end
 	
@@ -713,6 +718,17 @@ local function _compile_expr(expr)
 	expand_binops(left_to_right, { ["&&"] = { _F, _L, "logical-and", _1, _2 } })
 	expand_binops(left_to_right, { ["||"] = { _F, _L, "logical-or", _1, _2 } })
 	
+	for tn_idx = #expr_parts - 1, 1, -1
+	do
+		if expr_parts[tn_idx + 1][3] == "_ternary_t" and expr_parts[tn_idx][3]:sub(1, 1) ~= "_"
+		then
+			local ternary_op = { expr_parts[tn_idx + 1][1], expr_parts[tn_idx + 1][2], "ternary", expr_parts[tn_idx], expr_parts[tn_idx + 1][4] }
+			
+			expr_parts[tn_idx] = ternary_op
+			expr_parts[tn_idx + 1] = { "x", -1, "_ternary_ref", ternary_op }
+		end
+	end
+	
 	expand_binops(right_to_left, {
 		["="] = { _F, _L, "assign", _1, _2 },
 		
@@ -727,6 +743,16 @@ local function _compile_expr(expr)
 		["^="]  = { _F, _L, "assign", _1, { _F, _L, "bitwise-xor", _1, _2 } },
 		["|="]  = { _F, _L, "assign", _1, { _F, _L, "bitwise-or",  _1, _2 } },
 	})
+	
+	for tn_idx = #expr_parts - 2, 1, -1
+	do
+		if expr_parts[tn_idx + 1][3] == "_ternary_ref" and expr_parts[tn_idx + 2][3]:sub(1, 1) ~= "_"
+		then
+			table.insert(expr_parts[tn_idx + 1][4], expr_parts[tn_idx + 2]);
+			table.remove(expr_parts, tn_idx + 1)
+			table.remove(expr_parts, tn_idx + 1)
+		end
+	end
 	
 	if #expr_parts ~= 1
 	then

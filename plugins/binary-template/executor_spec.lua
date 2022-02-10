@@ -4779,4 +4779,65 @@ describe("executor", function()
 			})
 			end, "Invalid operand to unary '-' operator - expected numeric, got 'const string' at test.bt:1")
 	end)
+	
+	it("yields truth branch from ternary when condition is true", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "%d" },
+				{ "test.bt", 1, "ternary",
+					{ "test.bt", 1, "num", 1 },
+					{ "test.bt", 1, "num", 2 },
+					{ "test.bt", 1, "num", 3 } } } },
+		})
+		
+		local expect_log = {
+			"print(2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("yields false branch from ternary when condition is true", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "%d" },
+				{ "test.bt", 1, "ternary",
+					{ "test.bt", 1, "num", 0 },
+					{ "test.bt", 1, "num", 2 },
+					{ "test.bt", 1, "num", 3 } } } },
+		})
+		
+		local expect_log = {
+			"print(3)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors if expressions of incorrect type are used as ternary condition", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				{ "test.bt", 1, "ternary",
+					{ "test.bt", 1, "call", "vfunc", {} },
+					{ "test.bt", 1, "num", 2 },
+					{ "test.bt", 1, "num", 3 } }
+			})
+			end, "Invalid condition operand to ternary operator - expected numeric, got 'void' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "ternary",
+					{ "test.bt", 1, "str", "hello" },
+					{ "test.bt", 1, "num", 2 },
+					{ "test.bt", 1, "num", 3 } }
+			})
+			end, "Invalid condition operand to ternary operator - expected numeric, got 'const string' at test.bt:1")
+	end)
 end)

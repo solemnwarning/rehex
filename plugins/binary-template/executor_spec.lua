@@ -4691,4 +4691,92 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("passes numeric values through unary '+' without modification", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "+1 = %d" },
+				{ "test.bt", 1, "plus", { "test.bt", 1, "num", 1 } } } },
+			
+			{ "test.bt", 2, "call", "Printf", {
+				{ "test.bt", 2, "str", "+1.0 = %.1f" },
+				{ "test.bt", 2, "plus", { "test.bt", 2, "num", 1.0 } } } },
+			
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "+1.5 = %.1f" },
+				{ "test.bt", 3, "plus", { "test.bt", 3, "num", 1.5 } } } },
+			
+			{ "test.bt", 4, "local-variable", "int", "i", nil, nil,
+				{ "test.bt", 4, "num", 1 } },
+			
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "+i = %d" },
+				{ "test.bt", 5, "plus", { "test.bt", 5, "ref", { "i" } } } } },
+		})
+		
+		local expect_log = {
+			"print(+1 = 1)",
+			"print(+1.0 = 1.0)",
+			"print(+1.5 = 1.5)",
+			"print(+i = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors if unary '+' is used on a string value", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "plus", { "test.bt", 1, "str", "hello" } },
+			})
+			end, "Invalid operand to unary '+' operator - expected numeric, got 'const string' at test.bt:1")
+	end)
+	
+	it("negates numeric values with unary '-' operator", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "-1 = %d" },
+				{ "test.bt", 1, "minus", { "test.bt", 1, "num", 1 } } } },
+			
+			{ "test.bt", 2, "call", "Printf", {
+				{ "test.bt", 2, "str", "-1.0 = %.1f" },
+				{ "test.bt", 2, "minus", { "test.bt", 2, "num", 1.0 } } } },
+			
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "-1.5 = %.1f" },
+				{ "test.bt", 3, "minus", { "test.bt", 3, "num", 1.5 } } } },
+			
+			{ "test.bt", 4, "local-variable", "int", "i", nil, nil,
+				{ "test.bt", 4, "num", 1 } },
+			
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "-i = %d" },
+				{ "test.bt", 5, "minus", { "test.bt", 5, "ref", { "i" } } } } },
+		})
+		
+		local expect_log = {
+			"print(-1 = -1)",
+			"print(-1.0 = -1.0)",
+			"print(-1.5 = -1.5)",
+			"print(-i = -1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors if unary '-' is used on a string value", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "minus", { "test.bt", 1, "str", "hello" } },
+			})
+			end, "Invalid operand to unary '-' operator - expected numeric, got 'const string' at test.bt:1")
+	end)
 end)

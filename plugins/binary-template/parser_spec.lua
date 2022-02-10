@@ -21,7 +21,8 @@ describe("parser", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1 } }, parser.parse_text("1;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1 } }, parser.parse_text("1.0;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "num", 1.5 } }, parser.parse_text("1.5;"));
-		assert.are.same({ { "UNKNOWN FILE", 1, "num", -1 } }, parser.parse_text("-1;"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "minus", { "UNKNOWN FILE", 1, "num", 1 } } }, parser.parse_text("-1;"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "plus", { "UNKNOWN FILE", 1, "num", 1 } } }, parser.parse_text("+1;"));
 	end);
 	
 	it("parses strings", function()
@@ -1488,6 +1489,126 @@ describe("parser", function()
 				} },
 				{ "UNKNOWN FILE", 1, "call", "qux", {} },
 			} },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses unary minus as an operand to another operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("-1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "minus",
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i - 1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "subtract",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i-1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "subtract",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i - -1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "subtract",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "minus",
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i - -j;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "subtract",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "minus",
+					{ "UNKNOWN FILE", 1, "ref", { "j" } } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("!-1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-not",
+				{ "UNKNOWN FILE", 1, "minus",
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses unary minus as an operand to another operator", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("+1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "plus",
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i + 1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "add",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i+1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "add",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "num", 1 } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i - +1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "subtract",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "plus",
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("i - +j;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "subtract",
+				{ "UNKNOWN FILE", 1, "ref", { "i" } },
+				{ "UNKNOWN FILE", 1, "plus",
+					{ "UNKNOWN FILE", 1, "ref", { "j" } } } },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("!+1;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "logical-not",
+				{ "UNKNOWN FILE", 1, "plus",
+					{ "UNKNOWN FILE", 1, "num", 1 } } },
 		}
 		
 		assert.are.same(expect, got)

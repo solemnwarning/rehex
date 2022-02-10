@@ -280,7 +280,7 @@ end
 local spc = S(" \t\r\n")^0
 local spc_req = S(" \t\r\n")^1
 local digit = R('09')
-local number = C( P('-')^-1 * digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
+local number = C( digit^1 * ( P('.') * digit^1 )^-1 ) / tonumber * spc
 local name = P(_capture_name) * spc
 local name_nospc = P(_capture_name)
 local comma  = P(",") * spc
@@ -596,6 +596,7 @@ local function _compile_expr(expr)
 			for op, ast_op in pairs(ops)
 			do
 				if
+					(idx == 1 or expr_parts[idx - 1][3] == "_token") and
 					expr_parts[idx][3] == "_token" and expr_parts[idx][4] == op and
 					expr_parts[idx + 1][3]:sub(1, 1) ~= "_"
 				then
@@ -667,6 +668,9 @@ local function _compile_expr(expr)
 		
 		["!"] = { _F, _L, "logical-not", _1 },
 		["~"] = { _F, _L, "bitwise-not", _1 },
+		
+		["+"] = { _F, _L, "plus",  _1 },
+		["-"] = { _F, _L, "minus", _1 },
 	})
 	
 	expand_binops(left_to_right, {

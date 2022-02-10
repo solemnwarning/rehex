@@ -41,6 +41,8 @@ local _eval_logical_and;
 local _eval_logical_or;
 local _eval_postfix_increment
 local _eval_postfix_decrement
+local _eval_unary_plus
+local _eval_unary_minus
 local _eval_variable;
 local _eval_local_variable
 local _eval_assign
@@ -1165,6 +1167,36 @@ _eval_postfix_decrement = function(context, statement)
 	
 	value_v:set(new_value)
 	return value_t, _make_const_plain_value(old_value)
+end
+
+_eval_unary_plus = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local value = statement[4]
+	
+	local value_t, value_v = _eval_statement(context, value)
+	if value_t == nil or value_t.base ~= "number"
+	then
+		error("Invalid operand to unary '+' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	return value_t, _make_const_plain_value(value_v:get())
+end
+
+_eval_unary_minus = function(context, statement)
+	local filename = statement[1]
+	local line_num = statement[2]
+	
+	local value = statement[4]
+	
+	local value_t, value_v = _eval_statement(context, value)
+	if value_t == nil or value_t.base ~= "number"
+	then
+		error("Invalid operand to unary '-' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+	end
+	
+	return value_t, _make_const_plain_value(-1 * value_v:get())
 end
 
 local function _decl_variable(context, statement, var_type, var_name, struct_args, array_size, initial_value, is_local)
@@ -2311,6 +2343,9 @@ _ops = {
 	
 	["postfix-increment"] = _eval_postfix_increment,
 	["postfix-decrement"] = _eval_postfix_decrement,
+	
+	["plus"]  = _eval_unary_plus,
+	["minus"] = _eval_unary_minus,
 }
 
 --- External entry point into the interpreter

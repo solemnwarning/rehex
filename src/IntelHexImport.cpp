@@ -90,6 +90,7 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 					if(feof(fh))
 					{
 						/* Unexpected EOF. */
+						parse_error();
 					}
 					else{
 						soft_eof = true;
@@ -270,7 +271,7 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 		throw std::runtime_error(strerror(errno));
 	}
 	
-	if(seg_length > 0)
+	if(seg_length > 0 && (virt_base > 0 || !doc->get_virt_to_real_segs().empty()))
 	{
 		doc->set_virt_mapping(real_base, virt_base, seg_length);
 	}

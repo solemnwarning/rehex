@@ -253,6 +253,7 @@ APP_OBJS := \
 	src/EditCommentDialog.o \
 	src/Events.o \
 	src/FillRangeDialog.o \
+	src/IntelHexImport.o \
 	src/LicenseDialog.o \
 	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \

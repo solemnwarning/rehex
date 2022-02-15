@@ -34,11 +34,13 @@
 #include "App.hpp"
 #include "BytesPerLineDialog.hpp"
 #include "FillRangeDialog.hpp"
+#include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
 #include "Palette.hpp"
 #include "search.hpp"
 #include "SelectRangeDialog.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
 
@@ -92,6 +94,7 @@ enum {
 	ID_GITHUB,
 	ID_DONATE,
 	ID_HELP,
+	ID_IMPORT_HEX,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -102,6 +105,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
 	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
+	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
 	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
 	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
 	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
@@ -217,6 +221,10 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
 		file_menu->Append(wxID_SAVEAS, "&Save As");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(ID_IMPORT_HEX, "&Import Intel Hex File");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -554,7 +562,51 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 {
 	Tab *tab;
 	try {
-		tab = new Tab(notebook, filename);
+		SharedDocumentPointer doc(SharedDocumentPointer::make(filename));
+		tab = new Tab(notebook, doc);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + filename + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return NULL;
+	}
+	
+	/* Discard default "Untitled" tab if not modified. */
+	if(notebook->GetPageCount() == 1)
+	{
+		wxWindow *page = notebook->GetPage(0);
+		assert(page != NULL);
+		
+		auto page_tab = dynamic_cast<Tab*>(page);
+		assert(page_tab != NULL);
+		
+		if(page_tab->doc->get_filename() == "" && !page_tab->doc->is_dirty())
+		{
+			notebook->DeletePage(0);
+		}
+	}
+	
+	wxFileName wxfn(filename);
+	wxfn.MakeAbsolute();
+	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
+	
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
+	
+	return tab;
+}
+
+REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
+{
+	Tab *tab;
+	try {
+		SharedDocumentPointer doc(load_hex_file(filename.c_str()));
+		tab = new Tab(notebook, doc);
 	}
 	catch(const std::exception &e)
 	{
@@ -738,6 +790,38 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
+}
+
+void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
+{
+	std::string dir;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir = wxfn.GetPath();
+	}
+	else{
+		dir = wxGetApp().get_last_directory();
+	}
+	
+	wxFileDialog openFileDialog(this, "Import Hex File", dir, "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = openFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	import_hex_file(filename);
 }
 
 void REHex::MainWindow::OnClose(wxCommandEvent &event)

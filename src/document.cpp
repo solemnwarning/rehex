@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -134,6 +134,14 @@ void REHex::Document::save(const std::string &filename)
 std::string REHex::Document::get_title()
 {
 	return title;
+}
+
+void REHex::Document::set_title(const std::string &title)
+{
+	this->title = title;
+	
+	DocumentTitleEvent document_title_event(this, title);
+	ProcessEvent(document_title_event);
 }
 
 std::string REHex::Document::get_filename()
@@ -1204,6 +1212,18 @@ const char *REHex::Document::redo_desc()
 	else{
 		return NULL;
 	}
+}
+
+void REHex::Document::reset_to_clean()
+{
+	current_seq = 0;
+	buffer_seq = 0;
+	saved_seq = 0;
+	data_seq.set_range(0, buffer->length(), 0);
+	
+	undo_stack.clear();
+	redo_stack.clear();
+	_raise_undo_update();
 }
 
 void REHex::Document::transact_begin(const std::string &desc)

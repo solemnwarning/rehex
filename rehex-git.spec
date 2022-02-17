@@ -56,7 +56,8 @@ luarocks --tree="$(pwd)/lua-libs" install busted
 %{?lua_env_vars} make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
 
 %check
-%{?lua_env_vars} xvfb-run -a -e /dev/stdout make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
+%{?lua_env_vars} xvfb-run -a -e xvfb-run.err make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
+cat xvfb-run.err
 
 %install
 rm -rf %{buildroot}

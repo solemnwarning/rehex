@@ -34,6 +34,7 @@
 #include "App.hpp"
 #include "BytesPerLineDialog.hpp"
 #include "FillRangeDialog.hpp"
+#include "IntelHexExport.hpp"
 #include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
@@ -95,6 +96,7 @@ enum {
 	ID_DONATE,
 	ID_HELP,
 	ID_IMPORT_HEX,
+	ID_EXPORT_HEX,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -106,6 +108,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
 	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
+	EVT_MENU(ID_EXPORT_HEX,   REHex::MainWindow::OnExportHex)
 	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
 	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
 	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
@@ -225,6 +228,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		file_menu->AppendSeparator(); /* ---- */
 		
 		file_menu->Append(ID_IMPORT_HEX, "&Import Intel Hex File");
+		file_menu->Append(ID_EXPORT_HEX, "E&xport Intel Hex File");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -822,6 +826,51 @@ void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
 	}
 	
 	import_hex_file(filename);
+}
+
+void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
+{
+	std::string dir, name;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+		name = wxfn.GetFullName();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+		name = "";
+	}
+	
+	wxFileDialog saveFileDialog(this, "Export Hex File", dir, name, "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = saveFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	Tab *tab = active_tab();
+	
+	try {
+		write_hex_file(filename, tab->doc, true, IntelHexAddressingMode::IHA_LINEAR);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error exporting ") + tab->doc->get_title() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
 }
 
 void REHex::MainWindow::OnClose(wxCommandEvent &event)

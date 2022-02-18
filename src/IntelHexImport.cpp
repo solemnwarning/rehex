@@ -65,6 +65,13 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 	size_t virt_base = 0;
 	off_t seg_length = 0;
 	
+	bool uses_segment_addressing = false;
+	bool has_segment_start_address = false;
+	uint32_t segment_start_address;
+	bool uses_linear_addressing = false;
+	bool has_linear_start_address = false;
+	uint32_t linear_start_address;
+	
 	while((read_len = fread((buf + len), 1, (sizeof(buf) - len), fh)) > 0)
 	{
 		len += read_len;
@@ -184,6 +191,7 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 					}
 					
 					base_address = (((uint32_t)(data[0]) << 8) | (uint32_t)(data[1])) * 16;
+					uses_segment_addressing = true;
 					break;
 				}
 				
@@ -195,14 +203,8 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 						parse_error();
 					}
 					
-					char comment[64];
-					snprintf(comment, 64, "Start Segment Address = %02X%02X%02X%02X",
-						(unsigned)(data[0]),
-						(unsigned)(data[1]),
-						(unsigned)(data[2]),
-						(unsigned)(data[3]));
-					
-					doc->set_comment(0, 0, REHex::Document::Comment(comment));
+					has_segment_start_address = true;
+					segment_start_address = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
 					
 					break;
 				}
@@ -216,6 +218,7 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 					}
 					
 					base_address = (((uint32_t)(data[0]) << 8) | (uint32_t)(data[1])) << 16;
+					uses_linear_addressing = true;
 					break;
 				}
 				
@@ -227,14 +230,8 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 						parse_error();
 					}
 					
-					char comment[64];
-					snprintf(comment, 64, "Start Linear Address = %02X%02X%02X%02X",
-						(unsigned)(data[0]),
-						(unsigned)(data[1]),
-						(unsigned)(data[2]),
-						(unsigned)(data[3]));
-					
-					doc->set_comment(0, 0, REHex::Document::Comment(comment));
+					has_linear_start_address = true;
+					linear_start_address = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
 					
 					break;
 				}
@@ -279,6 +276,46 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 	if(!found_eof)
 	{
 		throw std::runtime_error("No end of file marker found");
+	}
+	
+	std::string header_comment;
+	auto header_comment_push = [&](const std::string &text)
+	{
+		if(!header_comment.empty())
+		{
+			header_comment += "\n";
+		}
+		
+		header_comment += text;
+	};
+	
+	if(uses_segment_addressing)
+	{
+		header_comment_push("Extended Segment Addressing");
+	}
+	
+	if(uses_linear_addressing)
+	{
+		header_comment_push("Extended Linear Addressing");
+	}
+	
+	if(has_segment_start_address)
+	{
+		char line[64];
+		snprintf(line, 64, "Start Segment Address = 0x%08X", (unsigned)(segment_start_address));
+		header_comment_push(line);
+	}
+	
+	if(has_linear_start_address)
+	{
+		char line[64];
+		snprintf(line, 64, "Start Linear Address = 0x%08X", (unsigned)(linear_start_address));
+		header_comment_push(line);
+	}
+	
+	if(!header_comment.empty())
+	{
+		doc->set_comment(0, 0, REHex::Document::Comment(header_comment));
 	}
 	
 	size_t last_slash = filename.find_last_of("/\\");

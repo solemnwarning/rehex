@@ -41,7 +41,7 @@ namespace REHex
 		IRT_START_LINEAR_ADDRESS = 5,
 	};
 	
-	void write_hex_file(const std::string &filename, const Document *doc, bool use_segments, IntelHexAddressingMode address_mode);
+	void write_hex_file(const std::string &filename, const Document *doc, bool use_segments, IntelHexAddressingMode address_mode, const uint32_t *start_segment_address, const uint32_t *start_linear_address);
 }
 
 #endif /* !REHEX_INTELHEXEXPORT_HPP */

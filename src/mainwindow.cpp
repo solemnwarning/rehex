@@ -935,28 +935,120 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 	
 	conf_dialog.SetSizerAndFit(conf_sizer);
 	
-	if(conf_dialog.ShowModal() == wxID_CANCEL)
+	auto &comments = tab->doc->get_comments();
+	auto comment = comments.find(NestedOffsetLengthMapKey(0, 0));
+	if(comment != comments.end())
 	{
-		return;
+		const wxString &comment_text = *(comment->second.text);
+		
+		if(comment_text.find("Extended Segment Addressing") != wxString::npos)
+		{
+			address_mode_segmented->SetValue(true);
+		}
+		else{
+			address_mode_linear->SetValue(true);
+		}
+		
+		size_t ssa_begin = comment_text.find("Start Segment Address = ");
+		if(ssa_begin != wxString::npos)
+		{
+			ssa_begin += strlen("Start Segment Address = ");
+			
+			size_t ssa_end = comment_text.find_first_of("\n", ssa_begin);
+			if(ssa_end == wxString::npos)
+			{
+				ssa_end = comment_text.length();
+			}
+			
+			start_segment_address->SetValue(comment_text.substr(ssa_begin, (ssa_end - ssa_begin)));
+		}
+		
+		size_t sla_begin = comment_text.find("Start Linear Address = ");
+		if(sla_begin != wxString::npos)
+		{
+			sla_begin += strlen("Start Linear Address = ");
+			
+			size_t sla_end = comment_text.find_first_not_of("\n", sla_begin);
+			if(sla_end == wxString::npos)
+			{
+				sla_end = comment_text.length();
+			}
+			
+			start_linear_address->SetValue(comment_text.substr(sla_begin, (sla_end - sla_begin)));
+		}
 	}
 	
-	bool use_segments = export_mode_virt->GetValue();
-	
+	bool use_segments;
 	IntelHexAddressingMode address_mode;
-	if(address_mode_16bit->GetValue())
+	uint32_t start_linear_address_buf;
+	uint32_t *start_linear_address_ptr;
+	uint32_t start_segment_address_buf;
+	uint32_t *start_segment_address_ptr;
+	
+	while(true)
 	{
-		address_mode = IntelHexAddressingMode::IHA_16BIT;
-	}
-	else if(address_mode_segmented)
-	{
-		address_mode = IntelHexAddressingMode::IHA_SEGMENTED;
-	}
-	else{
-		address_mode = IntelHexAddressingMode::IHA_LINEAR;
+		if(conf_dialog.ShowModal() == wxID_CANCEL)
+		{
+			return;
+		}
+		
+		use_segments = export_mode_virt->GetValue();
+		
+		if(address_mode_16bit->GetValue())
+		{
+			address_mode = IntelHexAddressingMode::IHA_16BIT;
+		}
+		else if(address_mode_segmented)
+		{
+			address_mode = IntelHexAddressingMode::IHA_SEGMENTED;
+		}
+		else{
+			address_mode = IntelHexAddressingMode::IHA_LINEAR;
+		}
+		
+		if(((wxTextCtrl*)(start_segment_address))->GetValue() != "")
+		{
+			try {
+				start_segment_address_buf = start_segment_address->GetValue<uint32_t>();
+			}
+			catch(const NumericTextCtrl::InputError &e)
+			{
+				wxMessageBox(
+					std::string("Invalid Start Segment Address (") + + e.what() + ")",
+					"Error", wxICON_ERROR, this);
+				continue;
+			}
+			
+			start_segment_address_ptr = &start_segment_address_buf;
+		}
+		else{
+			start_segment_address_ptr = NULL;
+		}
+		
+		if(((wxTextCtrl*)(start_linear_address))->GetValue() != "")
+		{
+			try {
+				start_linear_address_buf = start_linear_address->GetValue<uint32_t>();
+			}
+			catch(const NumericTextCtrl::InputError &e)
+			{
+				wxMessageBox(
+					std::string("Invalid Start Linear Address (") + + e.what() + ")",
+					"Error", wxICON_ERROR, this);
+				continue;
+			}
+			
+			start_linear_address_ptr = &start_linear_address_buf;
+		}
+		else{
+			start_linear_address_ptr = NULL;
+		}
+		
+		break;
 	}
 	
 	try {
-		write_hex_file(filename, tab->doc, use_segments, address_mode);
+		write_hex_file(filename, tab->doc, use_segments, address_mode, start_segment_address_ptr, start_linear_address_ptr);
 	}
 	catch(const std::exception &e)
 	{

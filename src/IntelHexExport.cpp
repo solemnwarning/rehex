@@ -127,7 +127,7 @@ void IntelHexFileWriter::finish()
 	}
 }
 
-void REHex::write_hex_file(const std::string &filename, const Document *doc, bool use_segments, IntelHexAddressingMode address_mode)
+void REHex::write_hex_file(const std::string &filename, const Document *doc, bool use_segments, IntelHexAddressingMode address_mode, const uint32_t *start_segment_address, const uint32_t *start_linear_address)
 {
 	IntelHexFileWriter writer(filename);
 	
@@ -227,6 +227,30 @@ void REHex::write_hex_file(const std::string &filename, const Document *doc, boo
 			at += bytes_to_write;
 		}
 	};
+	
+	if(start_segment_address != NULL)
+	{
+		unsigned char buf[] = {
+			(*start_segment_address & 0xFF000000) >> 24,
+			(*start_segment_address & 0x00FF0000) >> 16,
+			(*start_segment_address & 0x0000FF00) >> 8,
+			(*start_segment_address & 0x000000FF),
+		};
+		
+		writer.write_record(IntelHexRecordType::IRT_START_SEGMENT_ADDRESS, 0x0000, buf, 4);
+	}
+	
+	if(start_linear_address != NULL)
+	{
+		unsigned char buf[] = {
+			(*start_linear_address & 0xFF000000) >> 24,
+			(*start_linear_address & 0x00FF0000) >> 16,
+			(*start_linear_address & 0x0000FF00) >> 8,
+			(*start_linear_address & 0x000000FF),
+		};
+		
+		writer.write_record(IntelHexRecordType::IRT_START_LINEAR_ADDRESS, 0x0000, buf, 4);
+	}
 	
 	if(use_segments)
 	{

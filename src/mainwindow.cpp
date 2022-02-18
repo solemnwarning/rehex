@@ -38,6 +38,7 @@
 #include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
+#include "NumericTextCtrl.hpp"
 #include "Palette.hpp"
 #include "search.hpp"
 #include "SelectRangeDialog.hpp"
@@ -830,6 +831,10 @@ void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
 
 void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 {
+	Tab *tab = active_tab();
+	
+	/* === Get export filename === */
+	
 	std::string dir, name;
 	std::string doc_filename = active_document()->get_filename();
 	
@@ -859,10 +864,99 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
 	
-	Tab *tab = active_tab();
+	/* === Get export settings === */
+	
+	wxDialog conf_dialog(this, wxID_ANY, "Export Hex File");
+	wxBoxSizer *conf_sizer = new wxBoxSizer(wxVERTICAL);
+	
+	wxStaticBoxSizer *export_mode_sizer = new wxStaticBoxSizer(wxVERTICAL, &conf_dialog, "Export mode");
+	conf_sizer->Add(export_mode_sizer, 0, wxEXPAND);
+	
+	wxRadioButton *export_mode_raw = new wxRadioButton(export_mode_sizer->GetStaticBox(), wxID_ANY, "Export raw file contents");
+	export_mode_sizer->Add(export_mode_raw, 0, wxALL, 4);
+	
+	wxRadioButton *export_mode_virt = new wxRadioButton(export_mode_sizer->GetStaticBox(), wxID_ANY, "Export virtual segments");
+	export_mode_sizer->Add(export_mode_virt, 0, (wxALL & ~wxTOP), 4);
+	
+	if(tab->doc->get_real_to_virt_segs().empty())
+	{
+		export_mode_raw->SetValue(true);
+		export_mode_virt->Disable();
+	}
+	else{
+		export_mode_virt->SetValue(true);
+	}
+	
+	wxStaticBoxSizer *address_mode_sizer = new wxStaticBoxSizer(wxVERTICAL, &conf_dialog, "Addressing");
+	conf_sizer->Add(address_mode_sizer, 0, wxEXPAND);
+	
+	wxRadioButton *address_mode_16bit = new wxRadioButton(address_mode_sizer->GetStaticBox(), wxID_ANY, "No extended addressing (\"I8HEX\") - up to 64KiB");
+	address_mode_sizer->Add(address_mode_16bit, 0, wxALL, 4);
+	
+	wxRadioButton *address_mode_segmented = new wxRadioButton(address_mode_sizer->GetStaticBox(), wxID_ANY, "Segmented addressing (\"I16HEX\") - up to 1MiB");
+	address_mode_sizer->Add(address_mode_segmented, 0, (wxALL & ~wxTOP), 4);
+	
+	wxRadioButton *address_mode_linear = new wxRadioButton(address_mode_sizer->GetStaticBox(), wxID_ANY, "Linear addressing (\"I32HEX\") - up to 4GiB");
+	address_mode_sizer->Add(address_mode_linear, 0, (wxALL & ~wxTOP), 4);
+	
+	wxStaticBoxSizer *other_box_sizer_outer = new wxStaticBoxSizer(wxVERTICAL, &conf_dialog, "");
+	conf_sizer->Add(other_box_sizer_outer, 0, wxEXPAND);
+	
+	wxStaticBox *other_box = other_box_sizer_outer->GetStaticBox();
+	
+	wxBoxSizer *other_box_sizer_wrapper = new wxBoxSizer(wxVERTICAL);
+	other_box_sizer_outer->Add(other_box_sizer_wrapper, 0, wxEXPAND | wxLEFT | wxRIGHT, 6);
+	
+	wxGridSizer *other_box_sizer = new wxGridSizer(2, 2, 2);
+	other_box_sizer_wrapper->Add(other_box_sizer, 0, wxEXPAND | wxBOTTOM, 8);
+	
+	other_box_sizer->Add(
+		new wxStaticText(other_box, wxID_ANY, "Start segment address"),
+		0, wxALIGN_CENTER_VERTICAL);
+	
+	NumericTextCtrl *start_segment_address = new NumericTextCtrl(other_box, wxID_ANY);
+	other_box_sizer->Add(start_segment_address, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND);
+	
+	other_box_sizer->Add(
+		new wxStaticText(other_box, wxID_ANY, "Start linear address"),
+		0, wxALIGN_CENTER_VERTICAL);
+	
+	NumericTextCtrl *start_linear_address = new NumericTextCtrl(other_box, wxID_ANY);
+	other_box_sizer->Add(start_linear_address, 1, wxALIGN_CENTER_VERTICAL | wxEXPAND);
+	
+	wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
+	conf_sizer->Add(button_sizer, 0, wxALIGN_RIGHT);
+	
+	wxButton *ok = new wxButton(&conf_dialog, wxID_OK, "OK");
+	button_sizer->Add(ok, 0, wxALL, 6);
+	
+	wxButton *cancel = new wxButton(&conf_dialog, wxID_CANCEL, "Cancel");
+	button_sizer->Add(cancel, 0, wxALL, 6);
+	
+	conf_dialog.SetSizerAndFit(conf_sizer);
+	
+	if(conf_dialog.ShowModal() == wxID_CANCEL)
+	{
+		return;
+	}
+	
+	bool use_segments = export_mode_virt->GetValue();
+	
+	IntelHexAddressingMode address_mode;
+	if(address_mode_16bit->GetValue())
+	{
+		address_mode = IntelHexAddressingMode::IHA_16BIT;
+	}
+	else if(address_mode_segmented)
+	{
+		address_mode = IntelHexAddressingMode::IHA_SEGMENTED;
+	}
+	else{
+		address_mode = IntelHexAddressingMode::IHA_LINEAR;
+	}
 	
 	try {
-		write_hex_file(filename, tab->doc, true, IntelHexAddressingMode::IHA_LINEAR);
+		write_hex_file(filename, tab->doc, use_segments, address_mode);
 	}
 	catch(const std::exception &e)
 	{

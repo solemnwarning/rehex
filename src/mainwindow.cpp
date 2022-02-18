@@ -587,7 +587,7 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 		auto page_tab = dynamic_cast<Tab*>(page);
 		assert(page_tab != NULL);
 		
-		if(page_tab->doc->get_filename() == "" && !page_tab->doc->is_dirty())
+		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
 		{
 			notebook->DeletePage(0);
 		}
@@ -630,15 +630,11 @@ REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
 		auto page_tab = dynamic_cast<Tab*>(page);
 		assert(page_tab != NULL);
 		
-		if(page_tab->doc->get_filename() == "" && !page_tab->doc->is_dirty())
+		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
 		{
 			notebook->DeletePage(0);
 		}
 	}
-	
-	wxFileName wxfn(filename);
-	wxfn.MakeAbsolute();
-	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();

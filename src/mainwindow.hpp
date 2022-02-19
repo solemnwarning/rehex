@@ -48,6 +48,8 @@ namespace REHex {
 			*/
 			Tab *open_file(const std::string &filename);
 			
+			Tab *import_hex_file(const std::string &filename);
+			
 			wxMenuBar *get_menu_bar() const;
 			wxMenu *get_file_menu() const;
 			wxMenu *get_edit_menu() const;
@@ -78,6 +80,8 @@ namespace REHex {
 			void OnRecentOpen(wxCommandEvent &event);
 			void OnSave(wxCommandEvent &event);
 			void OnSaveAs(wxCommandEvent &event);
+			void OnImportHex(wxCommandEvent &event);
+			void OnExportHex(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);
 			void OnCloseAll(wxCommandEvent &event);
 			void OnCloseOthers(wxCommandEvent &event);

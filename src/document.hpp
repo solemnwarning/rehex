@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -136,6 +136,11 @@ namespace REHex {
 			 * label like "Untitled" for new files.
 			*/
 			std::string get_title();
+			
+			/**
+			 * @brief Set the user-visible title of the document.
+			*/
+			void set_title(const std::string &title);
 			
 			/**
 			 * @brief Get the filename of the document, or an empty string if there is no backing file.
@@ -277,6 +282,11 @@ namespace REHex {
 			 * @brief Get a description of the next change to be replayed.
 			*/
 			const char *redo_desc();
+			
+			/**
+			 * @brief Clear the undo/redo history and mark the document as clean.
+			*/
+			void reset_to_clean();
 			
 		#ifndef UNIT_TEST
 		private:

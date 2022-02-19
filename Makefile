@@ -348,6 +348,7 @@ TEST_OBJS := \
 	tests/DisassemblyRegion.o \
 	tests/Document.o \
 	tests/DocumentCtrl.o \
+	tests/IntelHexExport.o \
 	tests/IntelHexImport.o \
 	tests/LuaPluginLoader.o \
 	tests/main.o \

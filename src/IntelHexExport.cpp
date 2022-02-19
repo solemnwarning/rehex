@@ -170,7 +170,7 @@ void REHex::write_hex_file(const std::string &filename, const Document *doc, boo
 					case IntelHexAddressingMode::IHA_SEGMENTED:
 					{
 						seg_base = virt_at & ~0xFFFF;
-						seg_end  = seg_base + 0xFFFF;
+						seg_end  = seg_base + 0x10000;
 						
 						assert(seg_base >= 0);
 						assert(seg_base <= 0xFFFF0);
@@ -188,7 +188,7 @@ void REHex::write_hex_file(const std::string &filename, const Document *doc, boo
 					case IntelHexAddressingMode::IHA_LINEAR:
 					{
 						seg_base = virt_at & 0xFFFF0000;
-						seg_end  = seg_base + 0xFFFF;
+						seg_end  = seg_base + 0x10000;
 						
 						unsigned char data[] = {
 							(unsigned char)((seg_base & 0xFF000000) >> 24),

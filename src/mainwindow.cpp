@@ -642,6 +642,12 @@ REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
 	TabCreatedEvent event(this, tab);
 	wxPostEvent(this, event);
 	
+	if(!tab->doc->get_real_to_virt_segs().empty())
+	{
+		tab->set_document_display_mode(DDM_VIRTUAL);
+		view_menu->Check(ID_DDM_VIRTUAL, true);
+	}
+	
 	return tab;
 }
 

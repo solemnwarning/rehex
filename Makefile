@@ -258,6 +258,8 @@ APP_OBJS := \
 	src/EditCommentDialog.o \
 	src/Events.o \
 	src/FillRangeDialog.o \
+	src/IntelHexExport.o \
+	src/IntelHexImport.o \
 	src/LicenseDialog.o \
 	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \
@@ -323,6 +325,8 @@ TEST_OBJS := \
 	src/EditCommentDialog.o \
 	src/Events.o \
 	src/FillRangeDialog.o \
+	src/IntelHexExport.o \
+	src/IntelHexImport.o \
 	src/LicenseDialog.o \
 	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \
@@ -349,6 +353,8 @@ TEST_OBJS := \
 	tests/DisassemblyRegion.o \
 	tests/Document.o \
 	tests/DocumentCtrl.o \
+	tests/IntelHexExport.o \
+	tests/IntelHexImport.o \
 	tests/LuaPluginLoader.o \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \

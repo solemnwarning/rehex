@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -132,9 +132,9 @@ REHex::Tab::Tab(wxWindow *parent):
 	});
 }
 
-REHex::Tab::Tab(wxWindow *parent, const std::string &filename):
+REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	wxPanel(parent),
-	doc(SharedDocumentPointer::make(filename)),
+	doc(document),
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
 	vtools_adjust_pending(false),

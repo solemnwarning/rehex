@@ -257,6 +257,11 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 
 template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::ByteRangeMap<T>::get_range_in(off_t offset, off_t length) const
 {
+	if(length <= 0)
+	{
+		return ranges.end();
+	}
+	
 	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), default_value));
 	
 	if(i != ranges.begin())
@@ -264,9 +269,11 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 		--i;
 	}
 	
-	off_t end = offset + length;
+	off_t end = (std::numeric_limits<off_t>::max() - length) < offset
+		? std::numeric_limits<off_t>::max()
+		: offset + length;
 	
-	for(; i != ranges.end() && (i->first.offset < end || end < offset); ++i)
+	for(; i != ranges.end() && i->first.offset < end; ++i)
 	{
 		off_t i_end = i->first.offset + i->first.length;
 		

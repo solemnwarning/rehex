@@ -44,6 +44,8 @@ enum {
 	ID_FOLLOW_CURSOR,
 	ID_IMAGE_WIDTH,
 	ID_IMAGE_HEIGHT,
+	ID_ROWS_PACKED,
+	ID_ROW_LENGTH,
 	ID_FLIP_X,
 	ID_FLIP_Y,
 	ID_SCALE,
@@ -56,8 +58,12 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_TEXT(ID_IMAGE_OFFSET,      REHex::BitmapTool::OnXXX)
 	EVT_CHECKBOX(ID_FOLLOW_CURSOR, REHex::BitmapTool::OnFollowCursor)
 	
-	EVT_TEXT(ID_IMAGE_WIDTH,  REHex::BitmapTool::OnXXX)
-	EVT_TEXT(ID_IMAGE_HEIGHT, REHex::BitmapTool::OnXXX)
+	EVT_SPINCTRL(ID_IMAGE_WIDTH,  REHex::BitmapTool::OnImageWidth)
+	EVT_SPINCTRL(ID_IMAGE_HEIGHT, REHex::BitmapTool::OnImageHeight)
+	
+	EVT_CHECKBOX(ID_ROWS_PACKED, REHex::BitmapTool::OnRowsPacked)
+	EVT_SPINCTRL(ID_ROW_LENGTH,  REHex::BitmapTool::OnRowLength)
+	
 	EVT_CHECKBOX(ID_FLIP_X,   REHex::BitmapTool::OnXXX)
 	EVT_CHECKBOX(ID_FLIP_Y,   REHex::BitmapTool::OnXXX)
 	EVT_CHECKBOX(ID_SCALE,    REHex::BitmapTool::OnXXX)
@@ -94,6 +100,7 @@ enum {
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent),
 	document(document),
+	row_length(-1),
 	bitmap_update_line(-1)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
@@ -113,8 +120,21 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position()));
 	offset_follow_cb->SetValue(true);
 	
-	sizer_add_pair("Image width:",  (width_textctrl  = new NumericTextCtrl(this, ID_IMAGE_WIDTH)));
-	sizer_add_pair("Image height:", (height_textctrl = new NumericTextCtrl(this, ID_IMAGE_HEIGHT)));
+	sizer_add_pair("Image width:",  (width_textctrl = new wxSpinCtrl(this, ID_IMAGE_WIDTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, 256)));
+	
+	{
+		wxSize size = width_textctrl->GetSizeFromTextSize(width_textctrl->GetTextExtent("99999"));
+		width_textctrl->SetMinSize(size);
+		width_textctrl->SetSize(size);
+	}
+	
+	sizer_add_pair("Image height:", (height_textctrl = new wxSpinCtrl(this, ID_IMAGE_HEIGHT, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, 256)));
+	
+	{
+		wxSize size = height_textctrl->GetSizeFromTextSize(height_textctrl->GetTextExtent("99999"));
+		height_textctrl->SetMinSize(size);
+		height_textctrl->SetSize(size);
+	}
 	
 	sizer_add_pair("Colour depth:", (pixel_fmt_choice = new wxChoice(this, ID_COLOUR_DEPTH)));
 	
@@ -131,6 +151,21 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	sizer_add_pair("Colour format:", (colour_fmt_choice = new wxChoice(this, ID_COLOUR_FORMAT)));
 	
 	update_colour_format_choices();
+	update_pixel_fmt();
+	
+	sizer_add_pair("Row length:", (row_packed_cb = new wxCheckBox(this, ID_ROWS_PACKED, "Packed") ));
+	sizer_add_pair("", (row_length_spinner = new wxSpinCtrl(this, ID_ROW_LENGTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 32768, 256) ));
+	
+	{
+		wxSize size = row_length_spinner->GetSizeFromTextSize(row_length_spinner->GetTextExtent("9"));
+		row_length_spinner->SetMinSize(size);
+		row_length_spinner->SetSize(size);
+	}
+	
+	row_packed_cb->SetValue(true);
+	row_length_spinner->Enable(false);
+	
+	reset_row_length_spinner();
 	
 	grid_sizer->Add((flip_x_cb = new wxCheckBox(this, ID_FLIP_X, "Flip X")));
 	grid_sizer->Add((flip_y_cb = new wxCheckBox(this, ID_FLIP_Y, "Flip Y")));
@@ -241,15 +276,33 @@ void REHex::BitmapTool::update_colour_format_choices()
 	colour_fmt_choice->SetSelection(0);
 }
 
+void REHex::BitmapTool::reset_row_length_spinner()
+{
+	int row_length = image_width;
+	
+	if(pixel_fmt_div > 1)
+	{
+		row_length = image_width / pixel_fmt_div;
+		
+		if((image_width % pixel_fmt_div) != 0)
+		{
+			/* Round up in case of partial bytes. */
+			++row_length;
+		}
+	}
+	else{
+		row_length = image_width * pixel_fmt_multi;
+	}
+	
+	row_length_spinner->SetValue(row_length);
+}
+
 void REHex::BitmapTool::update()
 {
 	bitmap_update_line = -1;
 	
 	try {
 		image_offset = offset_textctrl->GetValue<off_t>(0);
-		
-		image_width  = width_textctrl ->GetValue<int>(1);
-		image_height = height_textctrl->GetValue<int>(1);
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -257,8 +310,16 @@ void REHex::BitmapTool::update()
 		return;
 	}
 	
+	image_width  = width_textctrl->GetValue();
+	image_height = height_textctrl->GetValue();
+	
 	assert(image_width > 0);
 	assert(image_height > 0);
+	
+	bool row_packed = row_packed_cb->GetValue();
+	
+	row_length_spinner->Enable(!row_packed);
+	row_length = row_packed ? -1 : row_length_spinner->GetValue();
 	
 	bitmap_width = image_width;
 	bitmap_height = image_height;
@@ -398,19 +459,16 @@ static inline uint8_t extract_8(uint32_t in, int shift)
 	return out;
 }
 
-void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, int width, int height)
+void REHex::BitmapTool::update_pixel_fmt()
 {
-	int output_width = bitmap->GetWidth();
-	int output_height = bitmap->GetHeight();
-	
 	int pixel_fmt_idx = pixel_fmt_choice->GetCurrentSelection();
 	int colour_fmt_idx = colour_fmt_choice->GetCurrentSelection();
 	
-	int pixel_fmt_div   = 1;    /* Number of (possibly partial) pixels per byte */
-	int pixel_fmt_multi = 1;    /* Number of bytes to consume per pixel */
-	int pixel_fmt_bits  = 255;  /* Mask of bits to consume for first pixel in byte */
+	pixel_fmt_div   = 1;
+	pixel_fmt_multi = 1;
+	pixel_fmt_bits  = 255;
 	
-	std::function<wxColour(uint32_t)> colour_fmt_conv = [](uint32_t in)
+	colour_fmt_conv = [](uint32_t in)
 	{
 		in %= 256;
 		return wxColour(in, in, in);
@@ -606,6 +664,12 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 			
 			break;
 	}
+}
+
+void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, int width, int height)
+{
+	int output_width = bitmap->GetWidth();
+	int output_height = bitmap->GetHeight();
 	
 	bool flip_x = flip_x_cb->GetValue();
 	bool flip_y = flip_y_cb->GetValue();
@@ -640,7 +704,10 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 			input_y = ((height - 1) - input_y);
 		}
 		
-		off_t line_len = (width * pixel_fmt_multi) / pixel_fmt_div;
+		off_t line_len = row_length > 0
+			? row_length
+			: (width * pixel_fmt_multi) / pixel_fmt_div;
+		
 		off_t line_off = offset + input_y * line_len;
 		
 		if(line_off < data_begin || (line_off + line_len) > data_end)
@@ -777,11 +844,14 @@ void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
 void REHex::BitmapTool::OnDepth(wxCommandEvent &event)
 {
 	update_colour_format_choices();
+	update_pixel_fmt();
+	reset_row_length_spinner();
 	update();
 }
 
 void REHex::BitmapTool::OnFormat(wxCommandEvent &event)
 {
+	update_pixel_fmt();
 	update();
 }
 
@@ -797,6 +867,31 @@ void REHex::BitmapTool::OnFollowCursor(wxCommandEvent &event)
 	}
 }
 
+void REHex::BitmapTool::OnImageWidth(wxSpinEvent &event)
+{
+	image_width = width_textctrl->GetValue();
+	
+	reset_row_length_spinner();
+	update();
+}
+
+void REHex::BitmapTool::OnImageHeight(wxSpinEvent &event)
+{
+	image_height = height_textctrl->GetValue();
+	
+	update();
+}
+
+void REHex::BitmapTool::OnRowsPacked(wxCommandEvent &event)
+{
+	update();
+}
+
+void REHex::BitmapTool::OnRowLength(wxSpinEvent &event)
+{
+	update();
+}
+
 void REHex::BitmapTool::OnXXX(wxCommandEvent &event)
 {
 	if(event.GetEventObject() == offset_textctrl)
@@ -807,6 +902,7 @@ void REHex::BitmapTool::OnXXX(wxCommandEvent &event)
 		
 		offset_follow_cb->SetValue(false);
 	}
+	
 	update();
 }
 

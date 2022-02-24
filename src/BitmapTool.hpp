@@ -22,6 +22,7 @@
 #include <wx/choice.h>
 //#include <wx/statbmp.h>
 #include <wx/generic/statbmpg.h>
+#include <wx/spinctrl.h>
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
@@ -49,10 +50,12 @@ namespace REHex {
 			
 			NumericTextCtrl *offset_textctrl;
 			wxCheckBox *offset_follow_cb;
-			NumericTextCtrl *width_textctrl;
-			NumericTextCtrl *height_textctrl;
+			wxSpinCtrl *width_textctrl;
+			wxSpinCtrl *height_textctrl;
 			wxChoice *pixel_fmt_choice;
 			wxChoice *colour_fmt_choice;
+			wxCheckBox *row_packed_cb;
+			wxSpinCtrl *row_length_spinner;
 			wxCheckBox *flip_x_cb;
 			wxCheckBox *flip_y_cb;
 			wxCheckBox *scale_cb;
@@ -63,6 +66,13 @@ namespace REHex {
 			
 			off_t image_offset;
 			int image_width, image_height;
+			int row_length;
+			
+			int pixel_fmt_div;      /* Number of (possibly partial) pixels per byte */
+			int pixel_fmt_multi;    /* Number of bytes to consume per pixel */
+			int pixel_fmt_bits;     /* Mask of bits to consume for first pixel in byte */
+			
+			std::function<wxColour(uint32_t)> colour_fmt_conv;
 			
 			int bitmap_width, bitmap_height;
 			
@@ -72,6 +82,8 @@ namespace REHex {
 			void document_unbind();
 			
 			void update_colour_format_choices();
+			void update_pixel_fmt();
+			void reset_row_length_spinner();
 			
 			void update();
 			void render_region(int region_y, int region_h, off_t offset, int width, int height);
@@ -81,6 +93,10 @@ namespace REHex {
 			void OnDepth(wxCommandEvent &event);
 			void OnFormat(wxCommandEvent &event);
 			void OnFollowCursor(wxCommandEvent &event);
+			void OnImageWidth(wxSpinEvent &event);
+			void OnImageHeight(wxSpinEvent &event);
+			void OnRowsPacked(wxCommandEvent &event);
+			void OnRowLength(wxSpinEvent &event);
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);

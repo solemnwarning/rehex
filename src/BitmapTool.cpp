@@ -20,6 +20,7 @@
 #include <wx/choice.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/filename.h>
 #include <wx/rawbmp.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>

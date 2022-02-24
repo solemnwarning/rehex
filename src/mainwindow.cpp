@@ -34,11 +34,15 @@
 #include "App.hpp"
 #include "BytesPerLineDialog.hpp"
 #include "FillRangeDialog.hpp"
+#include "IntelHexExport.hpp"
+#include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
 #include "NumericEntryDialog.hpp"
+#include "NumericTextCtrl.hpp"
 #include "Palette.hpp"
 #include "search.hpp"
 #include "SelectRangeDialog.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
 
@@ -92,6 +96,8 @@ enum {
 	ID_GITHUB,
 	ID_DONATE,
 	ID_HELP,
+	ID_IMPORT_HEX,
+	ID_EXPORT_HEX,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -102,6 +108,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
 	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
+	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
+	EVT_MENU(ID_EXPORT_HEX,   REHex::MainWindow::OnExportHex)
 	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
 	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
 	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
@@ -217,6 +225,11 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
 		file_menu->Append(wxID_SAVEAS, "&Save As");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(ID_IMPORT_HEX, "&Import Intel Hex File");
+		file_menu->Append(ID_EXPORT_HEX, "E&xport Intel Hex File");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -554,7 +567,8 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 {
 	Tab *tab;
 	try {
-		tab = new Tab(notebook, filename);
+		SharedDocumentPointer doc(SharedDocumentPointer::make(filename));
+		tab = new Tab(notebook, doc);
 	}
 	catch(const std::exception &e)
 	{
@@ -573,7 +587,7 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 		auto page_tab = dynamic_cast<Tab*>(page);
 		assert(page_tab != NULL);
 		
-		if(page_tab->doc->get_filename() == "" && !page_tab->doc->is_dirty())
+		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
 		{
 			notebook->DeletePage(0);
 		}
@@ -588,6 +602,51 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	
 	TabCreatedEvent event(this, tab);
 	wxPostEvent(this, event);
+	
+	return tab;
+}
+
+REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
+{
+	Tab *tab;
+	try {
+		SharedDocumentPointer doc(load_hex_file(filename.c_str()));
+		tab = new Tab(notebook, doc);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + filename + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return NULL;
+	}
+	
+	/* Discard default "Untitled" tab if not modified. */
+	if(notebook->GetPageCount() == 1)
+	{
+		wxWindow *page = notebook->GetPage(0);
+		assert(page != NULL);
+		
+		auto page_tab = dynamic_cast<Tab*>(page);
+		assert(page_tab != NULL);
+		
+		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
+		{
+			notebook->DeletePage(0);
+		}
+	}
+	
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
+	
+	if(!tab->doc->get_real_to_virt_segs().empty())
+	{
+		tab->set_document_display_mode(DDM_VIRTUAL);
+		view_menu->Check(ID_DDM_VIRTUAL, true);
+	}
 	
 	return tab;
 }
@@ -738,6 +797,268 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
+}
+
+void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
+{
+	std::string dir;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir = wxfn.GetPath();
+	}
+	else{
+		dir = wxGetApp().get_last_directory();
+	}
+	
+	wxFileDialog openFileDialog(this, "Import Hex File", dir, "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = openFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	import_hex_file(filename);
+}
+
+void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	/* === Get export filename === */
+	
+	std::string dir, name;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+		name = wxfn.GetFullName();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+		name = "";
+	}
+	
+	wxFileDialog saveFileDialog(this, "Export Hex File", dir, name, "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = saveFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	/* === Get export settings === */
+	
+	wxDialog conf_dialog(this, wxID_ANY, "Export Hex File");
+	wxBoxSizer *conf_sizer = new wxBoxSizer(wxVERTICAL);
+	
+	wxStaticBoxSizer *export_mode_sizer = new wxStaticBoxSizer(wxVERTICAL, &conf_dialog, "Export mode");
+	conf_sizer->Add(export_mode_sizer, 0, wxEXPAND);
+	
+	wxRadioButton *export_mode_raw = new wxRadioButton(export_mode_sizer->GetStaticBox(), wxID_ANY, "Export raw file contents");
+	export_mode_sizer->Add(export_mode_raw, 0, wxALL, 4);
+	
+	wxRadioButton *export_mode_virt = new wxRadioButton(export_mode_sizer->GetStaticBox(), wxID_ANY, "Export virtual segments");
+	export_mode_sizer->Add(export_mode_virt, 0, (wxALL & ~wxTOP), 4);
+	
+	if(tab->doc->get_real_to_virt_segs().empty())
+	{
+		export_mode_raw->SetValue(true);
+		export_mode_virt->Disable();
+	}
+	else{
+		export_mode_virt->SetValue(true);
+	}
+	
+	wxStaticBoxSizer *address_mode_sizer = new wxStaticBoxSizer(wxVERTICAL, &conf_dialog, "Addressing");
+	conf_sizer->Add(address_mode_sizer, 0, wxEXPAND);
+	
+	wxRadioButton *address_mode_16bit = new wxRadioButton(address_mode_sizer->GetStaticBox(), wxID_ANY, "No extended addressing (\"I8HEX\") - up to 64KiB");
+	address_mode_sizer->Add(address_mode_16bit, 0, wxALL, 4);
+	
+	wxRadioButton *address_mode_segmented = new wxRadioButton(address_mode_sizer->GetStaticBox(), wxID_ANY, "Segmented addressing (\"I16HEX\") - up to 1MiB");
+	address_mode_sizer->Add(address_mode_segmented, 0, (wxALL & ~wxTOP), 4);
+	
+	wxRadioButton *address_mode_linear = new wxRadioButton(address_mode_sizer->GetStaticBox(), wxID_ANY, "Linear addressing (\"I32HEX\") - up to 4GiB");
+	address_mode_sizer->Add(address_mode_linear, 0, (wxALL & ~wxTOP), 4);
+	
+	wxStaticBoxSizer *other_box_sizer_outer = new wxStaticBoxSizer(wxVERTICAL, &conf_dialog, "");
+	conf_sizer->Add(other_box_sizer_outer, 0, wxEXPAND);
+	
+	wxStaticBox *other_box = other_box_sizer_outer->GetStaticBox();
+	
+	wxBoxSizer *other_box_sizer_wrapper = new wxBoxSizer(wxVERTICAL);
+	other_box_sizer_outer->Add(other_box_sizer_wrapper, 0, wxEXPAND | wxLEFT | wxRIGHT, 6);
+	
+	wxGridSizer *other_box_sizer = new wxGridSizer(2, 2, 2);
+	other_box_sizer_wrapper->Add(other_box_sizer, 0, wxEXPAND | wxBOTTOM, 8);
+	
+	other_box_sizer->Add(
+		new wxStaticText(other_box, wxID_ANY, "Start segment address"),
+		0, wxALIGN_CENTER_VERTICAL);
+	
+	NumericTextCtrl *start_segment_address = new NumericTextCtrl(other_box, wxID_ANY);
+	other_box_sizer->Add(start_segment_address, 0, wxALIGN_CENTER_VERTICAL | wxEXPAND);
+	
+	other_box_sizer->Add(
+		new wxStaticText(other_box, wxID_ANY, "Start linear address"),
+		0, wxALIGN_CENTER_VERTICAL);
+	
+	NumericTextCtrl *start_linear_address = new NumericTextCtrl(other_box, wxID_ANY);
+	other_box_sizer->Add(start_linear_address, 1, wxALIGN_CENTER_VERTICAL | wxEXPAND);
+	
+	wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
+	conf_sizer->Add(button_sizer, 0, wxALIGN_RIGHT);
+	
+	wxButton *ok = new wxButton(&conf_dialog, wxID_OK, "OK");
+	button_sizer->Add(ok, 0, wxALL, 6);
+	
+	wxButton *cancel = new wxButton(&conf_dialog, wxID_CANCEL, "Cancel");
+	button_sizer->Add(cancel, 0, wxALL, 6);
+	
+	conf_dialog.SetSizerAndFit(conf_sizer);
+	
+	auto &comments = tab->doc->get_comments();
+	auto comment = comments.find(NestedOffsetLengthMapKey(0, 0));
+	if(comment != comments.end())
+	{
+		const wxString &comment_text = *(comment->second.text);
+		
+		if(comment_text.find("Extended Segment Addressing") != wxString::npos)
+		{
+			address_mode_segmented->SetValue(true);
+		}
+		else{
+			address_mode_linear->SetValue(true);
+		}
+		
+		size_t ssa_begin = comment_text.find("Start Segment Address = ");
+		if(ssa_begin != wxString::npos)
+		{
+			ssa_begin += strlen("Start Segment Address = ");
+			
+			size_t ssa_end = comment_text.find_first_of("\n", ssa_begin);
+			if(ssa_end == wxString::npos)
+			{
+				ssa_end = comment_text.length();
+			}
+			
+			start_segment_address->SetValue(comment_text.substr(ssa_begin, (ssa_end - ssa_begin)));
+		}
+		
+		size_t sla_begin = comment_text.find("Start Linear Address = ");
+		if(sla_begin != wxString::npos)
+		{
+			sla_begin += strlen("Start Linear Address = ");
+			
+			size_t sla_end = comment_text.find_first_not_of("\n", sla_begin);
+			if(sla_end == wxString::npos)
+			{
+				sla_end = comment_text.length();
+			}
+			
+			start_linear_address->SetValue(comment_text.substr(sla_begin, (sla_end - sla_begin)));
+		}
+	}
+	
+	bool use_segments;
+	IntelHexAddressingMode address_mode;
+	uint32_t start_linear_address_buf;
+	uint32_t *start_linear_address_ptr;
+	uint32_t start_segment_address_buf;
+	uint32_t *start_segment_address_ptr;
+	
+	while(true)
+	{
+		if(conf_dialog.ShowModal() == wxID_CANCEL)
+		{
+			return;
+		}
+		
+		use_segments = export_mode_virt->GetValue();
+		
+		if(address_mode_16bit->GetValue())
+		{
+			address_mode = IntelHexAddressingMode::IHA_16BIT;
+		}
+		else if(address_mode_segmented)
+		{
+			address_mode = IntelHexAddressingMode::IHA_SEGMENTED;
+		}
+		else{
+			address_mode = IntelHexAddressingMode::IHA_LINEAR;
+		}
+		
+		if(((wxTextCtrl*)(start_segment_address))->GetValue() != "")
+		{
+			try {
+				start_segment_address_buf = start_segment_address->GetValue<uint32_t>();
+			}
+			catch(const NumericTextCtrl::InputError &e)
+			{
+				wxMessageBox(
+					std::string("Invalid Start Segment Address (") + + e.what() + ")",
+					"Error", wxICON_ERROR, this);
+				continue;
+			}
+			
+			start_segment_address_ptr = &start_segment_address_buf;
+		}
+		else{
+			start_segment_address_ptr = NULL;
+		}
+		
+		if(((wxTextCtrl*)(start_linear_address))->GetValue() != "")
+		{
+			try {
+				start_linear_address_buf = start_linear_address->GetValue<uint32_t>();
+			}
+			catch(const NumericTextCtrl::InputError &e)
+			{
+				wxMessageBox(
+					std::string("Invalid Start Linear Address (") + + e.what() + ")",
+					"Error", wxICON_ERROR, this);
+				continue;
+			}
+			
+			start_linear_address_ptr = &start_linear_address_buf;
+		}
+		else{
+			start_linear_address_ptr = NULL;
+		}
+		
+		break;
+	}
+	
+	try {
+		write_hex_file(filename, tab->doc, use_segments, address_mode, start_segment_address_ptr, start_linear_address_ptr);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error exporting ") + tab->doc->get_title() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
 }
 
 void REHex::MainWindow::OnClose(wxCommandEvent &event)

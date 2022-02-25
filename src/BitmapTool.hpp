@@ -23,6 +23,7 @@
 //#include <wx/statbmp.h>
 #include <wx/generic/statbmpg.h>
 #include <wx/spinctrl.h>
+#include <wx/toolbar.h>
 
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
@@ -56,9 +57,7 @@ namespace REHex {
 			wxChoice *colour_fmt_choice;
 			wxCheckBox *row_packed_cb;
 			wxSpinCtrl *row_length_spinner;
-			wxCheckBox *flip_x_cb;
-			wxCheckBox *flip_y_cb;
-			wxCheckBox *scale_cb;
+			wxToolBar *toolbar;
 			
 			wxBitmap *bitmap;
 			wxScrolledWindow *bitmap_scrollwin;

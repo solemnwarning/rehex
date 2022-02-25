@@ -31,6 +31,13 @@
 #include "NumericTextCtrl.hpp"
 #include "util.hpp"
 
+#include "../res/actual_size16.h"
+#include "../res/fit_to_screen16.h"
+#include "../res/swap_horiz16.h"
+#include "../res/swap_vert16.h"
+#include "../res/zoom_in16.h"
+#include "../res/zoom_out16.h"
+
 static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::BitmapTool(parent, document);
@@ -50,6 +57,9 @@ enum {
 	ID_FLIP_X,
 	ID_FLIP_Y,
 	ID_SCALE,
+	ID_ACTUAL_SIZE,
+	ID_ZOOM_IN,
+	ID_ZOOM_OUT,
 };
 
 BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
@@ -65,9 +75,9 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_CHECKBOX(ID_ROWS_PACKED, REHex::BitmapTool::OnRowsPacked)
 	EVT_SPINCTRL(ID_ROW_LENGTH,  REHex::BitmapTool::OnRowLength)
 	
-	EVT_CHECKBOX(ID_FLIP_X,   REHex::BitmapTool::OnXXX)
-	EVT_CHECKBOX(ID_FLIP_Y,   REHex::BitmapTool::OnXXX)
-	EVT_CHECKBOX(ID_SCALE,    REHex::BitmapTool::OnXXX)
+	EVT_TOOL(ID_FLIP_X,   REHex::BitmapTool::OnXXX)
+	EVT_TOOL(ID_FLIP_Y,   REHex::BitmapTool::OnXXX)
+	EVT_TOOL(ID_SCALE,    REHex::BitmapTool::OnXXX)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
 	EVT_IDLE(REHex::BitmapTool::OnIdle)
@@ -168,11 +178,22 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	
 	reset_row_length_spinner();
 	
-	grid_sizer->Add((flip_x_cb = new wxCheckBox(this, ID_FLIP_X, "Flip X")));
-	grid_sizer->Add((flip_y_cb = new wxCheckBox(this, ID_FLIP_Y, "Flip Y")));
+	toolbar = new wxToolBar(this, wxID_ANY);
+	sizer->Add(toolbar, 0, wxEXPAND | wxALIGN_LEFT);
 	
-	grid_sizer->Add((scale_cb = new wxCheckBox(this, ID_SCALE, "Scale")));
-	scale_cb->SetValue(true); /* Enable scaling by default */
+	toolbar->AddCheckTool(ID_FLIP_X, "Flip X", wxBITMAP_PNG_FROM_DATA(swap_horiz16), wxNullBitmap, "Flip X");
+	toolbar->AddCheckTool(ID_FLIP_Y, "Flip Y", wxBITMAP_PNG_FROM_DATA(swap_vert16),  wxNullBitmap, "Flip Y");
+	
+	toolbar->AddStretchableSpace();
+	
+	toolbar->AddTool(     ID_ZOOM_IN,     "Zoom in",       wxBITMAP_PNG_FROM_DATA(zoom_in16),                     "Zoom in");
+	toolbar->AddTool(     ID_ZOOM_OUT,    "Zoom out",      wxBITMAP_PNG_FROM_DATA(zoom_out16),                    "Zoom out");
+	toolbar->AddCheckTool(ID_SCALE,       "Fit to screen", wxBITMAP_PNG_FROM_DATA(fit_to_screen16), wxNullBitmap, "Fit to screen");
+	toolbar->AddCheckTool(ID_ACTUAL_SIZE, "Actual size",   wxBITMAP_PNG_FROM_DATA(actual_size16),   wxNullBitmap, "Actual size");
+	
+	toolbar->ToggleTool(ID_SCALE, true);
+	
+	toolbar->Realize();
 	
 	bitmap_scrollwin = new wxScrolledWindow(this, wxID_ANY);
 	sizer->Add(bitmap_scrollwin, 1, wxEXPAND | wxALIGN_TOP | wxALIGN_LEFT);
@@ -325,7 +346,7 @@ void REHex::BitmapTool::update()
 	bitmap_width = image_width;
 	bitmap_height = image_height;
 	
-	if(scale_cb->GetValue())
+	if(toolbar->GetToolState(ID_SCALE))
 	{
 		/* Figure out how much space is available for the wxStaticBitmap preview.
 		 *
@@ -672,8 +693,8 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 	int output_width = bitmap->GetWidth();
 	int output_height = bitmap->GetHeight();
 	
-	bool flip_x = flip_x_cb->GetValue();
-	bool flip_y = flip_y_cb->GetValue();
+	bool flip_x = toolbar->GetToolState(ID_FLIP_X);
+	bool flip_y = toolbar->GetToolState(ID_FLIP_Y);
 	
 	/* Read in the image data, convert the source pixel format and write it to the wxBitmap. */
 	

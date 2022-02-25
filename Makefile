@@ -209,6 +209,7 @@ WXBIND_OBJS := \
 	wxLua/modules/wxbind/src/wxpropgrid_bind.o
 
 APP_OBJS := \
+	res/actual_size16.o \
 	res/ascii16.o \
 	res/ascii24.o \
 	res/ascii32.o \
@@ -217,6 +218,7 @@ APP_OBJS := \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
 	res/diff_fold48.o \
+	res/fit_to_screen16.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
@@ -228,6 +230,10 @@ APP_OBJS := \
 	res/offsets32.o \
 	res/offsets48.o \
 	res/spinner24.o \
+	res/swap_horiz16.o \
+	res/swap_vert16.o \
+	res/zoom_in16.o \
+	res/zoom_out16.o \
 	src/AboutDialog.o \
 	src/AppMain.o \
 	src/AppSettings.o \
@@ -383,6 +389,9 @@ src/ArtProvider.o: \
 	res/ascii16.h res/ascii24.h res/ascii32.h res/ascii48.h \
 	res/diff_fold16.h res/diff_fold24.h res/diff_fold32.h res/diff_fold48.h \
 	res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
+src/BitmapTool.o: \
+	res/actual_size16.h res/fit_to_screen16.h res/swap_horiz16.h \
+	res/swap_vert16.h res/zoom_in16.h res/zoom_out16.h
 src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/LuaPluginLoader.o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h

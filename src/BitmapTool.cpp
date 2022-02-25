@@ -75,9 +75,12 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_CHECKBOX(ID_ROWS_PACKED, REHex::BitmapTool::OnRowsPacked)
 	EVT_SPINCTRL(ID_ROW_LENGTH,  REHex::BitmapTool::OnRowLength)
 	
-	EVT_TOOL(ID_FLIP_X,   REHex::BitmapTool::OnXXX)
-	EVT_TOOL(ID_FLIP_Y,   REHex::BitmapTool::OnXXX)
-	EVT_TOOL(ID_SCALE,    REHex::BitmapTool::OnXXX)
+	EVT_TOOL(ID_FLIP_X,       REHex::BitmapTool::OnXXX)
+	EVT_TOOL(ID_FLIP_Y,       REHex::BitmapTool::OnXXX)
+	EVT_TOOL(ID_SCALE,        REHex::BitmapTool::OnFit)
+	EVT_TOOL(ID_ACTUAL_SIZE,  REHex::BitmapTool::OnActualSize)
+	EVT_TOOL(ID_ZOOM_IN,      REHex::BitmapTool::OnZoomIn)
+	EVT_TOOL(ID_ZOOM_OUT,     REHex::BitmapTool::OnZoomOut)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
 	EVT_IDLE(REHex::BitmapTool::OnIdle)
@@ -108,10 +111,26 @@ enum {
 	COLOUR_DEPTH_32BPP_RGBA8888 = 0,
 };
 
+static const int ZOOM_LEVELS[] = {
+	10,
+	25,
+	50,
+	75,
+	100,
+	150,
+	200,
+	300,
+	400,
+};
+
+static const int LAST_ZOOM_LEVEL_IDX = sizeof(ZOOM_LEVELS) / sizeof(*ZOOM_LEVELS) - 1;
+
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent),
 	document(document),
 	row_length(-1),
+	fit_to_screen(true),
+	actual_size(false),
 	bitmap_update_line(-1)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
@@ -191,7 +210,8 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	toolbar->AddCheckTool(ID_SCALE,       "Fit to screen", wxBITMAP_PNG_FROM_DATA(fit_to_screen16), wxNullBitmap, "Fit to screen");
 	toolbar->AddCheckTool(ID_ACTUAL_SIZE, "Actual size",   wxBITMAP_PNG_FROM_DATA(actual_size16),   wxNullBitmap, "Actual size");
 	
-	toolbar->ToggleTool(ID_SCALE, true);
+	toolbar->ToggleTool(ID_SCALE, fit_to_screen);
+	toolbar->ToggleTool(ID_ACTUAL_SIZE, actual_size);
 	
 	toolbar->Realize();
 	
@@ -343,10 +363,17 @@ void REHex::BitmapTool::update()
 	row_length_spinner->Enable(!row_packed);
 	row_length = row_packed ? -1 : row_length_spinner->GetValue();
 	
-	bitmap_width = image_width;
-	bitmap_height = image_height;
+	fit_to_screen = toolbar->GetToolState(ID_SCALE);
+	actual_size = toolbar->GetToolState(ID_ACTUAL_SIZE);
 	
-	if(toolbar->GetToolState(ID_SCALE))
+	if(actual_size)
+	{
+		bitmap_width = image_width;
+		bitmap_height = image_height;
+		
+		zoom = 100;
+	}
+	else if(fit_to_screen)
 	{
 		/* Figure out how much space is available for the wxStaticBitmap preview.
 		 *
@@ -371,16 +398,33 @@ void REHex::BitmapTool::update()
 		{
 			bitmap_width = max_w;
 			bitmap_height = (double)(max_w) / aspect_ratio;
+			
+			zoom = ((double)(bitmap_width) / (double)(image_width)) * 100.0;
 		}
 		else{
 			bitmap_width = (double)(max_h) * aspect_ratio;
 			bitmap_height = max_h;
+			
+			zoom = ((double)(bitmap_height) / (double)(image_height)) * 100.0;
 		}
 		
 		/* Clamp to >=1px in case of a ridiculously tall or wide image. */
 		bitmap_width = std::max(bitmap_width, 1);
 		bitmap_height = std::max(bitmap_height, 1);
 	}
+	else{
+		double aspect_ratio = (double)(image_width) / (double)(image_height);
+		
+		bitmap_width = (double)(image_width) * ((double)(zoom) / 100.0);
+		bitmap_height = (double)(bitmap_width) / aspect_ratio;
+		
+		/* Clamp to >=1px in case of a ridiculously tall or wide image. */
+		bitmap_width = std::max(bitmap_width, 1);
+		bitmap_height = std::max(bitmap_height, 1);
+	}
+	
+	toolbar->EnableTool(ID_ZOOM_IN,  ZOOM_LEVELS[LAST_ZOOM_LEVEL_IDX] > zoom);
+	toolbar->EnableTool(ID_ZOOM_OUT, ZOOM_LEVELS[0] < zoom);
 	
 	bitmap_lines_per_idle = (bitmap_width > 1024) ? 20 : 200;
 	
@@ -912,6 +956,68 @@ void REHex::BitmapTool::OnRowsPacked(wxCommandEvent &event)
 void REHex::BitmapTool::OnRowLength(wxSpinEvent &event)
 {
 	update();
+}
+
+void REHex::BitmapTool::OnFit(wxCommandEvent &event)
+{
+	if(toolbar->GetToolState(ID_SCALE))
+	{
+		toolbar->ToggleTool(ID_ACTUAL_SIZE, false);
+		update();
+	}
+	else{
+		toolbar->ToggleTool(ID_SCALE, true); /* Negate the action. */
+	}
+}
+
+void REHex::BitmapTool::OnActualSize(wxCommandEvent &event)
+{
+	if(toolbar->GetToolState(ID_ACTUAL_SIZE))
+	{
+		toolbar->ToggleTool(ID_SCALE, false);
+		update();
+	}
+	else{
+		toolbar->ToggleTool(ID_ACTUAL_SIZE, true); /* Negate the action. */
+	}
+}
+
+void REHex::BitmapTool::OnZoomIn(wxCommandEvent &event)
+{
+	fit_to_screen = false;
+	toolbar->ToggleTool(ID_SCALE, false);
+	
+	actual_size = false;
+	toolbar->ToggleTool(ID_ACTUAL_SIZE, false);
+	
+	for(int i = 0; i <= LAST_ZOOM_LEVEL_IDX; ++i)
+	{
+		if(ZOOM_LEVELS[i] > zoom)
+		{
+			zoom = ZOOM_LEVELS[i];
+			update();
+			break;
+		}
+	}
+}
+
+void REHex::BitmapTool::OnZoomOut(wxCommandEvent &event)
+{
+	fit_to_screen = false;
+	toolbar->ToggleTool(ID_SCALE, false);
+	
+	actual_size = false;
+	toolbar->ToggleTool(ID_ACTUAL_SIZE, false);
+	
+	for(int i = LAST_ZOOM_LEVEL_IDX; i >= 0; --i)
+	{
+		if(ZOOM_LEVELS[i] < zoom)
+		{
+			zoom = ZOOM_LEVELS[i];
+			update();
+			break;
+		}
+	}
 }
 
 void REHex::BitmapTool::OnXXX(wxCommandEvent &event)

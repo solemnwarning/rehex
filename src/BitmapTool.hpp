@@ -73,6 +73,10 @@ namespace REHex {
 			
 			std::function<wxColour(uint32_t)> colour_fmt_conv;
 			
+			bool fit_to_screen;
+			bool actual_size;
+			int zoom;
+			
 			int bitmap_width, bitmap_height;
 			
 			int bitmap_lines_per_idle;
@@ -96,6 +100,10 @@ namespace REHex {
 			void OnImageHeight(wxSpinEvent &event);
 			void OnRowsPacked(wxCommandEvent &event);
 			void OnRowLength(wxSpinEvent &event);
+			void OnFit(wxCommandEvent &event);
+			void OnActualSize(wxCommandEvent &event);
+			void OnZoomIn(wxCommandEvent &event);
+			void OnZoomOut(wxCommandEvent &event);
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);

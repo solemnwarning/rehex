@@ -21,6 +21,6 @@
 #include <functional>
 
 void run_wx_for(unsigned int ms);
-bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms = 1000, unsigned int check_interval_ms = 100);
+bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms = 10000, unsigned int check_interval_ms = 100);
 
 #endif /* !REHEX_TESTUTIL_HPP */

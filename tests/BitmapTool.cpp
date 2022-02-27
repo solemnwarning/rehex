@@ -743,3 +743,34 @@ TEST_F(BitmapToolTest, Format8BPPGreyscalePacked)
 	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
+
+TEST_F(BitmapToolTest, Format24BPPRGBPackedBigImage)
+{
+	wxImage ref_img("res/icon1024.png", wxBITMAP_TYPE_ANY);
+	if(ref_img.HasAlpha())
+	{
+		ref_img.ClearAlpha();
+	}
+	
+	int ref_img_w = ref_img.GetWidth();
+	ASSERT_EQ(ref_img_w, 1024);
+	
+	int ref_img_h = ref_img.GetHeight();
+	ASSERT_EQ(ref_img_h, 1024);
+	
+	std::string EXPECT_PIXELS = bitmap_to_string(wxBitmap(ref_img));
+	
+	doc->insert_data(0, ref_img.GetData(), ref_img_w * ref_img_h * 3);
+	
+	bmtool->set_image_offset(0);
+	bmtool->set_image_size(ref_img.GetWidth(), ref_img.GetHeight());
+	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_24BPP_RGB888);
+	bmtool->force_bitmap_size(ref_img.GetWidth(), ref_img.GetHeight());
+	
+	run_wx_until([&]() { return !bmtool->is_processing(); });
+	
+	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+	
+	/* Too huge to display meaningful failures in the test log. */
+	EXPECT_TRUE(bitmap_pixels == EXPECT_PIXELS);
+}

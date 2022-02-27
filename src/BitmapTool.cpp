@@ -888,7 +888,7 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 				
 				assert(input_ptr >= data.data());
 				
-				rgb |= ((*input_ptr & mask) >> shift) << (8 * i);
+				rgb |= ((*input_ptr & mask) >> shift) << (8 * (pixel_fmt_multi - i - 1));
 				
 				if(pixel_fmt_div > 1)
 				{

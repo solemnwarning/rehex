@@ -128,6 +128,9 @@ static const int LAST_ZOOM_LEVEL_IDX = sizeof(ZOOM_LEVELS) / sizeof(*ZOOM_LEVELS
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent),
 	document(document),
+	image_offset(document->get_cursor_position()),
+	image_width(256),
+	image_height(256),
 	row_length(-1),
 	fit_to_screen(true),
 	actual_size(false),
@@ -149,10 +152,10 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	sizer_add_pair("Image offset:", (offset_textctrl = new NumericTextCtrl(this, ID_IMAGE_OFFSET)));
 	sizer_add_pair("",              (offset_follow_cb = new wxCheckBox(this, ID_FOLLOW_CURSOR, "Follow cursor")));
 	
-	offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position()));
+	offset_textctrl->ChangeValue(std::to_string(image_offset));
 	offset_follow_cb->SetValue(true);
 	
-	sizer_add_pair("Image width:",  (width_textctrl = new wxSpinCtrl(this, ID_IMAGE_WIDTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, 256)));
+	sizer_add_pair("Image width:",  (width_textctrl = new wxSpinCtrl(this, ID_IMAGE_WIDTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, image_width)));
 	
 	{
 		wxSize size = width_textctrl->GetSizeFromTextSize(width_textctrl->GetTextExtent("99999"));
@@ -160,7 +163,7 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 		width_textctrl->SetSize(size);
 	}
 	
-	sizer_add_pair("Image height:", (height_textctrl = new wxSpinCtrl(this, ID_IMAGE_HEIGHT, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, 256)));
+	sizer_add_pair("Image height:", (height_textctrl = new wxSpinCtrl(this, ID_IMAGE_HEIGHT, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, image_height)));
 	
 	{
 		wxSize size = height_textctrl->GetSizeFromTextSize(height_textctrl->GetTextExtent("99999"));

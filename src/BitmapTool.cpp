@@ -781,7 +781,9 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 			? row_length
 			: (width * pixel_fmt_multi) / pixel_fmt_div;
 		
-		off_t line_off = offset + input_y * line_len;
+		off_t line_off = row_length > 0
+			? offset + input_y * line_len
+			: offset + (width * input_y * pixel_fmt_multi) / pixel_fmt_div;
 		
 		if(line_off < data_begin || (line_off + line_len) > data_end)
 		{
@@ -825,7 +827,7 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 				input_x = ((width - 1) - input_x);
 			}
 			
-			const unsigned char *input_ptr = line_ptr + (input_x * pixel_fmt_multi) / pixel_fmt_div;
+			const unsigned char *input_ptr = line_ptr;
 			int mask = pixel_fmt_bits, shift = 8 - (8 / pixel_fmt_div);
 			
 			if(pixel_fmt_div > 1)
@@ -836,26 +838,26 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 				
 				bool row_packed = row_packed_cb->GetValue();
 				
-				int sub_byte_offset = row_packed
-					? ((width * input_y) + input_x) % pixel_fmt_div
-					: input_x % pixel_fmt_div;
+				int line_pixel_offset = row_packed
+					? ((width * input_y) % pixel_fmt_div) + input_x
+					: input_x;
 				
+				input_ptr += line_pixel_offset / pixel_fmt_div;
+				
+				int sub_byte_offset = line_pixel_offset % pixel_fmt_div;
 				for(int i = 0; i < sub_byte_offset; ++i)
 				{
 					mask >>= (8 / pixel_fmt_div);
 					shift -= 8 / pixel_fmt_div;
 					
-					if(shift < 0)
-					{
-						mask  = pixel_fmt_bits;
-						shift = 8 - (8 / pixel_fmt_div);
-						
-						++input_ptr;
-					}
+					assert(shift >= 0);
 					
 					assert(mask < 255);
 					assert(mask > 0);
 				}
+			}
+			else{
+				input_ptr += input_x * pixel_fmt_multi;
 			}
 			
 			/* Initialise output to chequerboard pattern. */
@@ -1264,4 +1266,10 @@ void REHex::BitmapTool::set_flip_x(bool flip_x)
 void REHex::BitmapTool::set_flip_y(bool flip_y)
 {
 	toolbar->ToggleTool(ID_FLIP_Y, flip_y);
+}
+
+void REHex::BitmapTool::set_row_length(int row_length)
+{
+	row_packed_cb->SetValue(false);
+	row_length_spinner->SetValue(row_length);
 }

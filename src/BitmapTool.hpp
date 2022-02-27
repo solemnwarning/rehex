@@ -73,6 +73,7 @@ namespace REHex {
 			void force_bitmap_size(int width, int height);
 			void set_flip_x(bool flip_x);
 			void set_flip_y(bool flip_y);
+			void set_row_length(int row_length);
 			
 			bool is_processing();
 			wxBitmap get_bitmap();

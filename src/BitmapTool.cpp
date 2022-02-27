@@ -218,14 +218,12 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	toolbar->ToggleTool(ID_SCALE, fit_to_screen);
 	toolbar->ToggleTool(ID_ACTUAL_SIZE, actual_size);
 	
-	toolbar->Realize();
-	
 	bitmap_scrollwin = new wxScrolledWindow(this, wxID_ANY);
 	sizer->Add(bitmap_scrollwin, 1, wxEXPAND | wxALIGN_TOP | wxALIGN_LEFT);
 	
 	bitmap_scrollwin->SetScrollRate(10, 10);
 	
-	bitmap = new wxBitmap(16, 16);
+	bitmap = new wxBitmap(16, 16, 24);
 	
 	wxNativePixelData bmp_data(*bitmap);
 	assert(bmp_data);
@@ -251,6 +249,7 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	s_bitmap->Bind(wxEVT_RIGHT_DOWN, &REHex::BitmapTool::OnBitmapRightDown, this);
 	
 	SetSizerAndFit(sizer);
+	toolbar->Realize();
 	
 	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::BitmapTool::OnCursorUpdate,    this);
 	
@@ -438,7 +437,7 @@ void REHex::BitmapTool::update()
 	
 	bitmap_lines_per_idle = (bitmap_width > 1024) ? 20 : 200;
 	
-	wxBitmap *new_bitmap = new wxBitmap(bitmap_width, bitmap_height);
+	wxBitmap *new_bitmap = new wxBitmap(bitmap_width, bitmap_height, 24);
 	s_bitmap->SetBitmap(*new_bitmap);
 	
 	delete bitmap;

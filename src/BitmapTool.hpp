@@ -34,6 +34,27 @@ namespace REHex {
 	class BitmapTool: public ToolPanel
 	{
 		public:
+			enum PixelFormat {
+				PIXEL_FMT_1BPP,
+				PIXEL_FMT_2BPP,
+				PIXEL_FMT_4BPP,
+				
+				PIXEL_FMT_8BPP_GREYSCALE,
+				PIXEL_FMT_8BPP_RGB332,
+				
+				PIXEL_FMT_16BPP_RGB565,
+				PIXEL_FMT_16BPP_RGB555,
+				PIXEL_FMT_16BPP_RGB444,
+				PIXEL_FMT_16BPP_ARGB1555,
+				PIXEL_FMT_16BPP_BGR565,
+				PIXEL_FMT_16BPP_BGR555,
+				PIXEL_FMT_16BPP_BGR444,
+				
+				PIXEL_FMT_24BPP_RGB888,
+				
+				PIXEL_FMT_32BPP_RGBA8888,
+			};
+			
 			BitmapTool(wxWindow *parent, SharedDocumentPointer &document);
 			virtual ~BitmapTool();
 			
@@ -45,6 +66,14 @@ namespace REHex {
 			virtual void load_state(wxConfig *config) override;
 			
 			virtual wxSize DoGetBestClientSize() const override;
+			
+			void set_image_offset(off_t offset);
+			void set_image_size(int width, int height);
+			void set_pixel_format(PixelFormat format);
+			void force_bitmap_size(int width, int height);
+			
+			bool is_processing();
+			wxBitmap get_bitmap();
 			
 		private:
 			SharedDocumentPointer document;
@@ -77,6 +106,7 @@ namespace REHex {
 			bool actual_size;
 			int zoom;
 			
+			int force_bitmap_width, force_bitmap_height;
 			int bitmap_width, bitmap_height;
 			
 			int bitmap_lines_per_idle;

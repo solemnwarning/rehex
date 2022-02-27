@@ -131,6 +131,8 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	row_length(-1),
 	fit_to_screen(true),
 	actual_size(false),
+	force_bitmap_width(-1),
+	force_bitmap_height(-1),
 	bitmap_update_line(-1)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
@@ -366,7 +368,12 @@ void REHex::BitmapTool::update()
 	fit_to_screen = toolbar->GetToolState(ID_SCALE);
 	actual_size = toolbar->GetToolState(ID_ACTUAL_SIZE);
 	
-	if(actual_size)
+	if(force_bitmap_width >= 0 && force_bitmap_height >= 0)
+	{
+		bitmap_width = force_bitmap_width;
+		bitmap_height = force_bitmap_height;
+	}
+	else if(actual_size)
 	{
 		bitmap_width = image_width;
 		bitmap_height = image_height;
@@ -544,7 +551,7 @@ void REHex::BitmapTool::update_pixel_fmt()
 	{
 		case COLOUR_DEPTH_1BPP:
 			pixel_fmt_div  = 8;
-			pixel_fmt_bits = 1;
+			pixel_fmt_bits = 128;
 			
 			colour_fmt_conv = [](uint32_t in)
 			{
@@ -556,7 +563,7 @@ void REHex::BitmapTool::update_pixel_fmt()
 			
 		case COLOUR_DEPTH_2BPP:
 			pixel_fmt_div  = 4;
-			pixel_fmt_bits = 3;
+			pixel_fmt_bits = 192;
 			
 			colour_fmt_conv = [](uint32_t in)
 			{
@@ -569,7 +576,7 @@ void REHex::BitmapTool::update_pixel_fmt()
 			
 		case COLOUR_DEPTH_4BPP:
 			pixel_fmt_div  = 2;
-			pixel_fmt_bits = 15;
+			pixel_fmt_bits = 240;
 			
 			colour_fmt_conv = [](uint32_t in)
 			{
@@ -748,8 +755,6 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 	std::vector<unsigned char> data;
 	off_t data_begin = 0, data_end = 0;
 	
-	int mask = pixel_fmt_bits, shift = 0;
-	
 	wxNativePixelData::Iterator output_ptr(bmp_data);
 	output_ptr.OffsetY(bmp_data, region_y);
 	
@@ -819,6 +824,37 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 			}
 			
 			const unsigned char *input_ptr = line_ptr + (input_x * pixel_fmt_multi) / pixel_fmt_div;
+			int mask = pixel_fmt_bits, shift = 8 - (8 / pixel_fmt_div);
+			
+			if(pixel_fmt_div > 1)
+			{
+				/* Advance to the correct starting bit for <8bpp colour depths. */
+				
+				assert(pixel_fmt_multi == 1);
+				
+				bool row_packed = row_packed_cb->GetValue();
+				
+				int sub_byte_offset = row_packed
+					? ((width * input_y) + input_x) % pixel_fmt_div
+					: input_x % pixel_fmt_div;
+				
+				for(int i = 0; i < sub_byte_offset; ++i)
+				{
+					mask >>= (8 / pixel_fmt_div);
+					shift -= 8 / pixel_fmt_div;
+					
+					if(shift < 0)
+					{
+						mask  = pixel_fmt_bits;
+						shift = 8 - (8 / pixel_fmt_div);
+						
+						++input_ptr;
+					}
+					
+					assert(mask < 255);
+					assert(mask > 0);
+				}
+			}
 			
 			/* Initialise output to chequerboard pattern. */
 			
@@ -852,15 +888,13 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 				
 				if(pixel_fmt_div > 1)
 				{
-					mask <<= (8 / pixel_fmt_div);
-					shift += 8 / pixel_fmt_div;
+					mask >>= (8 / pixel_fmt_div);
+					shift -= 8 / pixel_fmt_div;
 					
-					if(mask > 255)
+					if(shift < 0)
 					{
-						assert((mask & 255) == 0);
-						
 						mask  = pixel_fmt_bits;
-						shift = 0;
+						shift = 8 - (8 / pixel_fmt_div);
 						
 						++input_ptr;
 					}
@@ -1135,4 +1169,87 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 	}
 	
 	PopupMenu(&menu);
+}
+
+void REHex::BitmapTool::set_image_offset(off_t offset)
+{
+	offset_textctrl->SetValue(std::to_string(offset));
+	offset_follow_cb->SetValue(false);
+}
+
+void REHex::BitmapTool::set_image_size(int width, int height)
+{
+	width_textctrl->SetValue(width);
+	height_textctrl->SetValue(height);
+}
+
+void REHex::BitmapTool::set_pixel_format(PixelFormat format)
+{
+	switch(format)
+	{
+		case PIXEL_FMT_1BPP:
+		case PIXEL_FMT_2BPP:
+		case PIXEL_FMT_4BPP:
+			pixel_fmt_choice->SetSelection(COLOUR_DEPTH_1BPP + (format - PIXEL_FMT_1BPP));
+			update_colour_format_choices();
+			colour_fmt_choice->SetSelection(0);
+			
+			break;
+		
+		case PIXEL_FMT_8BPP_GREYSCALE:
+		case PIXEL_FMT_8BPP_RGB332:
+			pixel_fmt_choice->SetSelection(COLOUR_DEPTH_8BPP);
+			update_colour_format_choices();
+			colour_fmt_choice->SetSelection(COLOUR_DEPTH_8BPP_GREYSCALE + (format - PIXEL_FMT_8BPP_GREYSCALE));
+			
+			break;
+		
+		case PIXEL_FMT_16BPP_RGB565:
+		case PIXEL_FMT_16BPP_RGB555:
+		case PIXEL_FMT_16BPP_RGB444:
+		case PIXEL_FMT_16BPP_ARGB1555:
+		case PIXEL_FMT_16BPP_BGR565:
+		case PIXEL_FMT_16BPP_BGR555:
+		case PIXEL_FMT_16BPP_BGR444:
+			pixel_fmt_choice->SetSelection(COLOUR_DEPTH_16BPP);
+			update_colour_format_choices();
+			colour_fmt_choice->SetSelection(COLOUR_DEPTH_16BPP_RGB565 + (format - PIXEL_FMT_16BPP_RGB565));
+			
+			break;
+		
+		case PIXEL_FMT_24BPP_RGB888:
+			pixel_fmt_choice->SetSelection(COLOUR_DEPTH_24BPP);
+			update_colour_format_choices();
+			colour_fmt_choice->SetSelection(COLOUR_DEPTH_24BPP_RGB888);
+			
+			break;
+		
+		case PIXEL_FMT_32BPP_RGBA8888:
+			pixel_fmt_choice->SetSelection(COLOUR_DEPTH_32BPP);
+			update_colour_format_choices();
+			colour_fmt_choice->SetSelection(COLOUR_DEPTH_32BPP_RGBA8888);
+			
+			break;
+	}
+	
+	update_pixel_fmt();
+	update();
+}
+
+void REHex::BitmapTool::force_bitmap_size(int width, int height)
+{
+	force_bitmap_width = width;
+	force_bitmap_height = height;
+	
+	update();
+}
+
+bool REHex::BitmapTool::is_processing()
+{
+	return bitmap_update_line >= 0;
+}
+
+wxBitmap REHex::BitmapTool::get_bitmap()
+{
+	return *bitmap;
 }

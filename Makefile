@@ -288,6 +288,7 @@ $(EXE): $(APP_OBJS) $(GTKCONFIG_EXE)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
+	res/actual_size16.o \
 	res/ascii16.o \
 	res/ascii24.o \
 	res/ascii32.o \
@@ -296,6 +297,7 @@ TEST_OBJS := \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
 	res/diff_fold48.o \
+	res/fit_to_screen16.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
@@ -307,11 +309,16 @@ TEST_OBJS := \
 	res/offsets32.o \
 	res/offsets48.o \
 	res/spinner24.o \
+	res/swap_horiz16.o \
+	res/swap_vert16.o \
+	res/zoom_in16.o \
+	res/zoom_out16.o \
 	src/AboutDialog.o \
 	src/AppSettings.o \
 	src/AppTestable.o \
 	src/ArtProvider.o \
 	src/BasicDataTypes.o \
+	src/BitmapTool.o \
 	src/buffer.o \
 	src/ByteRangeSet.o \
 	src/BytesPerLineDialog.o \
@@ -344,6 +351,7 @@ TEST_OBJS := \
 	src/util.o \
 	src/VirtualMappingDialog.o \
 	src/win32lib.o \
+	tests/BitmapTool.o \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
@@ -369,6 +377,7 @@ TEST_OBJS := \
 	tests/SharedDocumentPointer.o \
 	tests/StringPanel.o \
 	tests/Tab.o \
+	tests/testutil.o \
 	tests/util.o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \

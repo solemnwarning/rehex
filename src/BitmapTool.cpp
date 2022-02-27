@@ -1255,3 +1255,13 @@ wxBitmap REHex::BitmapTool::get_bitmap()
 {
 	return *bitmap;
 }
+
+void REHex::BitmapTool::set_flip_x(bool flip_x)
+{
+	toolbar->ToggleTool(ID_FLIP_X, flip_x);
+}
+
+void REHex::BitmapTool::set_flip_y(bool flip_y)
+{
+	toolbar->ToggleTool(ID_FLIP_Y, flip_y);
+}

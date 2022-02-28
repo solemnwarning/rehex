@@ -752,6 +752,11 @@ TEST_F(BitmapToolTest, Format24BPPRGBPackedBigImage)
 		ref_img.ClearAlpha();
 	}
 	
+	/* Clean up the image to eliminate noise from stripping the alpha
+	 * channel (only required for older wxWidgets versions).
+	*/
+	ref_img = wxBitmap(ref_img).ConvertToImage();
+	
 	int ref_img_w = ref_img.GetWidth();
 	ASSERT_EQ(ref_img_w, 1024);
 	

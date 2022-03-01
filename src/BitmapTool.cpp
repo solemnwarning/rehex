@@ -60,7 +60,14 @@ enum {
 	ID_ACTUAL_SIZE,
 	ID_ZOOM_IN,
 	ID_ZOOM_OUT,
+	ID_UPDATE_TIMER,
 };
+
+/* The minimum interval between updates when rendering the preview bitmap.
+ * This only comes into play if the system is heavily loaded - normally we will
+ * render chunks at a time in idle events and reset the timer.
+*/
+static const int UPDATE_TIMER_MS = 250;
 
 BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_CHOICE(ID_COLOUR_DEPTH,  REHex::BitmapTool::OnDepth)
@@ -84,6 +91,7 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
 	EVT_IDLE(REHex::BitmapTool::OnIdle)
+	EVT_TIMER(ID_UPDATE_TIMER, REHex::BitmapTool::OnUpdateTimer)
 END_EVENT_TABLE()
 
 enum {
@@ -136,7 +144,8 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	actual_size(false),
 	force_bitmap_width(-1),
 	force_bitmap_height(-1),
-	bitmap_update_line(-1)
+	bitmap_update_line(-1),
+	update_timer(this, ID_UPDATE_TIMER)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -448,6 +457,10 @@ void REHex::BitmapTool::update()
 	if(bitmap_lines_per_idle < bitmap_height)
 	{
 		bitmap_update_line = bitmap_lines_per_idle;
+		update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
+	}
+	else{
+		update_timer.Stop();
 	}
 	
 	bitmap_scrollwin->SetVirtualSize(s_bitmap->GetSize());
@@ -1091,10 +1104,32 @@ void REHex::BitmapTool::OnIdle(wxIdleEvent &event)
 		
 		if(bitmap_update_line >= bitmap_height)
 		{
+			update_timer.Stop();
 			bitmap_update_line = -1;
 		}
 		else{
+			update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
 			event.RequestMore();
+		}
+	}
+}
+
+void REHex::BitmapTool::OnUpdateTimer(wxTimerEvent &event)
+{
+	if(bitmap_update_line >= 0)
+	{
+		render_region(bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height);
+		bitmap_update_line += bitmap_lines_per_idle;
+		
+		s_bitmap->Refresh();
+		
+		if(bitmap_update_line >= bitmap_height)
+		{
+			update_timer.Stop();
+			bitmap_update_line = -1;
+		}
+		else{
+			update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
 		}
 	}
 }

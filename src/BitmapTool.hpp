@@ -23,6 +23,7 @@
 //#include <wx/statbmp.h>
 #include <wx/generic/statbmpg.h>
 #include <wx/spinctrl.h>
+#include <wx/timer.h>
 #include <wx/toolbar.h>
 
 #include "document.hpp"
@@ -114,6 +115,7 @@ namespace REHex {
 			
 			int bitmap_lines_per_idle;
 			int bitmap_update_line;
+			wxTimer update_timer;
 			
 			void document_unbind();
 			
@@ -140,6 +142,7 @@ namespace REHex {
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);
+			void OnUpdateTimer(wxTimerEvent &event);
 			void OnBitmapRightDown(wxMouseEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */

@@ -201,7 +201,7 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	sizer_add_pair("", (row_length_spinner = new wxSpinCtrl(this, ID_ROW_LENGTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 32768, 256) ));
 	
 	{
-		wxSize size = row_length_spinner->GetSizeFromTextSize(row_length_spinner->GetTextExtent("9"));
+		wxSize size = row_length_spinner->GetSizeFromTextSize(row_length_spinner->GetTextExtent("99999"));
 		row_length_spinner->SetMinSize(size);
 		row_length_spinner->SetSize(size);
 	}

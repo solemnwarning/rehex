@@ -1,0 +1,23 @@
+[% WRAPPER page.tt
+   title = "Bitmap Visualisation"
+%]
+
+<h2>Bitmap Visualisation</h2>
+
+<p>
+The <i>Bitmap visualisation</i> tool (<i>View menu</i> &gt; <i>Tool panels</i> &gt; <i>Bitmap visualisation</i>) displays uncompressed image data stored in a file. Images up to 10,240 pixels by 10,240 pixels can be displayed, with depths of 1, 2, 4, 8, 16, 24 or 32 bits per pixel.
+</p>
+
+<p>
+The row length option allows overriding the length of each row of pixels in the file, in bytes. This is intended for formats where there is padding at the end of every row (e.g. bitmap images are padded to the nearest 4 bytes). By default the "Packed" option is checked, and each row starts immediately after the last.
+</p>
+
+<p>
+The preview image can be copied to the clipboard or saved out as a png/bmp by right clicking on the image.
+</p>
+
+<p>
+<img src="bitmap-demo.png">
+</p>
+
+[% END %]

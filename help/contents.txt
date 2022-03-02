@@ -2,5 +2,6 @@ index           Welcome
 comments        Setting Comments
 types           Setting Data Types
 diff            Comparing Files
+bitmap          Bitmap Visualisation
 virt-mapping    Virtual Address Mapping
 plugins         Writing Plugins

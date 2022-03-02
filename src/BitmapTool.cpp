@@ -253,7 +253,13 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 		output_ptr.OffsetY(bmp_data, 1);
 	}
 	
+	wxSizer *scrollwin_sizer = new wxBoxSizer(wxVERTICAL);
+	
 	s_bitmap = new wxGenericStaticBitmap(bitmap_scrollwin, wxID_ANY, *bitmap);
+	scrollwin_sizer->Add(s_bitmap);
+	
+	bitmap_scrollwin->SetSizer(scrollwin_sizer);
+	bitmap_scrollwin->FitInside();
 	
 	s_bitmap->Bind(wxEVT_RIGHT_DOWN, &REHex::BitmapTool::OnBitmapRightDown, this);
 	

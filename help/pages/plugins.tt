@@ -28,11 +28,15 @@ Plugins are loaded from the following places on different platforms:
 </p>
 
 <p>
+Additionally, the environment variable <code>REHEX_PLUGIN_DIR</code> can be set to a plugin directory.
+</p>
+
+<p>
 Each plugin should either be a single <code>.lua</code> file in the top-level plugins directory, or a subdirectory containing a <code>plugin.lua</code> file and any resources/assets needed by the plugin.
 </p>
 
 <p>
-For more information see the <a href="https://github.com/solemnwarning/rehex/tree/master/plugins/examples">example plugins</a> and the <a href="https://www.solemnwarning.net/rehex-luadoc/">plugin API reference</a>.
+For more information see the <a href="https://github.com/solemnwarning/rehex/tree/master/plugins/examples" target="_blank">example plugins</a> and the <a href="https://www.solemnwarning.net/rehex-luadoc/" target="_blank">plugin API reference</a>.
 </p>
 
 [% END %]

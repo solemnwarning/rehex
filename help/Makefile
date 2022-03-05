@@ -18,6 +18,7 @@ HHC ?= "C:\Program Files (x86)\HTML Help Workshop\hhc.exe"
 PERL ?= perl
 
 PAGES := \
+	bitmap \
 	bt \
 	bt-syntax \
 	comments \

@@ -9,6 +9,9 @@
 /AppDir/
 /rehex.AppImage
 
+/res/actual_size16.c
+/res/actual_size16.h
+
 /res/ascii16.c
 /res/ascii16.h
 /res/ascii24.c
@@ -39,6 +42,9 @@
 /res/document_save_as32.c
 /res/document_save_as32.h
 
+/res/fit_to_screen16.c
+/res/fit_to_screen16.h
+
 /res/icon16.c
 /res/icon16.h
 /res/icon32.c
@@ -65,6 +71,18 @@
 
 /res/spinner24.c
 /res/spinner24.h
+
+/res/swap_horiz16.c
+/res/swap_horiz16.h
+
+/res/swap_vert16.c
+/res/swap_vert16.h
+
+/res/zoom_in16.c
+/res/zoom_in16.h
+
+/res/zoom_out16.c
+/res/zoom_out16.h
 
 /src/lua-bindings/.done
 /src/lua-bindings/rehex_bind.cpp

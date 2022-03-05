@@ -36,7 +36,7 @@ Each plugin should either be a single <code>.lua</code> file in the top-level pl
 </p>
 
 <p>
-For more information see the <a href="https://github.com/solemnwarning/rehex/tree/master/plugins/examples">example plugins</a> and the <a href="https://www.solemnwarning.net/rehex-luadoc/">plugin API reference</a>.
+For more information see the <a href="https://github.com/solemnwarning/rehex/tree/master/plugins/examples" target="_blank">example plugins</a> and the <a href="https://www.solemnwarning.net/rehex-luadoc/" target="_blank">plugin API reference</a>.
 </p>
 
 [% END %]

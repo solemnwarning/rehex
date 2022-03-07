@@ -107,6 +107,15 @@ local function _can_do_flowctrl_here(context, flowctrl_type)
 	return false
 end
 
+local function _template_error(context, error_message, filename, line_num)
+	local statement = context.st_stack[#context.st_stack];
+	
+	if filename == nil then filename = statement[1] end
+	if line_num == nil then line_num = statement[2] end
+	
+	error(error_message .. " at " .. filename .. ":" .. line_num, 0)
+end
+
 --
 -- Type system
 --
@@ -200,7 +209,7 @@ local function _get_type_name(type)
 	return type_name
 end
 
-local function _make_signed_type(type_info)
+local function _make_signed_type(context, type_info)
 	if type_info.signed_overlay ~= nil
 	then
 		local new_type = _make_overlay_type(type_info, type_info.signed_overlay)
@@ -209,12 +218,11 @@ local function _make_signed_type(type_info)
 		
 		return new_type
 	else
-		-- TODO: File/line number
-		error("Attempt to create invalid 'signed' version of type '" .. _get_type_name(type_info) .. "'")
+		_template_error(context, "Attempt to create invalid 'signed' version of type '" .. _get_type_name(type_info) .. "'")
 	end
 end
 
-local function _make_unsigned_type(type_info)
+local function _make_unsigned_type(context, type_info)
 	if type_info.unsigned_overlay ~= nil
 	then
 		local new_type = _make_overlay_type(type_info, type_info.unsigned_overlay)
@@ -223,8 +231,7 @@ local function _make_unsigned_type(type_info)
 		
 		return new_type
 	else
-		-- TODO: File/line number
-		error("Attempt to create invalid 'unsigned' version of type '" .. _get_type_name(type_info) .. "'")
+		_template_error(context, "Attempt to create invalid 'unsigned' version of type '" .. _get_type_name(type_info) .. "'")
 	end
 end
 
@@ -350,10 +357,10 @@ local function _type_assignable(dst_t, src_t)
 	return false
 end
 
-local function _assign_value(dst_type, dst_val, src_type, src_val)
+local function _assign_value(context, dst_type, dst_val, src_type, src_val)
 	if dst_type == nil or src_type == nil
 	then
-		error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+		_template_error(context, "can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
 	end
 	
 	if _type_is_string(dst_type) and _type_is_char_array(src_type)
@@ -389,7 +396,7 @@ local function _assign_value(dst_type, dst_val, src_type, src_val)
 	
 	if (not not dst_type.is_array) ~= (not not src_type.is_array)
 	then
-		error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+		_template_error(context, "can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
 	end
 	
 	local do_assignment = function(dst_val, src_val)
@@ -401,13 +408,13 @@ local function _assign_value(dst_type, dst_val, src_type, src_val)
 				local src_member = src_pair[2]
 				local dst_member = dst_val[name][2]
 				
-				_assign_value(member_type, dst_member, member_type, src_member)
+				_assign_value(context, member_type, dst_member, member_type, src_member)
 			end
 		elseif dst_type.base ~= "struct" and dst_type.base == src_type.base
 		then
 			dst_val:set(src_val:get())
 		else
-			error("can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+			_template_error(context, "can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
 		end
 	end
 	
@@ -454,7 +461,7 @@ local function _make_const_plain_value(value)
 		end,
 		
 		set = function(self, value)
-			error("Attempt to set constant") -- TODO: Include template file/line
+			error("Internal error: attempt to set constant")
 		end,
 		
 		copy = function(self)
@@ -476,7 +483,7 @@ local function _make_file_value(context, offset, length, fmt)
 		end,
 		
 		set = function(self, value)
-			error("Attempt to write to file variable") -- TODO: Include template file/line
+			_template_error(context, "Attempt to write to file variable")
 		end,
 		
 		copy = function(self)
@@ -485,13 +492,12 @@ local function _make_file_value(context, offset, length, fmt)
 	}
 end
 
-local function _make_value_from_value(dst_type, src_type, src_val, move_if_possible)
+local function _make_value_from_value(context, dst_type, src_type, src_val, move_if_possible)
 	if (not dst_type.is_array) ~= (not src_type.is_array)
 		or dst_type.base ~= src_type.base
 		or (dst_type.base == "struct" and dst_type.type_key ~= src_type.type_key)
 	then
-		-- TODO: file/line num
-		error("can't convert '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
+		_template_error(context, "can't convert '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
 	end
 	
 	-- TODO: string to/from char[] conversion
@@ -505,7 +511,7 @@ local function _make_value_from_value(dst_type, src_type, src_val, move_if_possi
 		
 		for i = 1, #src_val
 		do
-			dst_val[i] = _make_value_from_value(dst_elem_type, src_elem_type, src_val[i], move_if_possible)
+			dst_val[i] = _make_value_from_value(context, dst_elem_type, src_elem_type, src_val[i], move_if_possible)
 		end
 		
 		return dst_val
@@ -522,7 +528,7 @@ local function _make_value_from_value(dst_type, src_type, src_val, move_if_possi
 			
 			dst_val[k] = {
 				dst_elem_type,
-				_make_value_from_value(dst_elem_type, src_elem_type, src_elem, move_if_possible)
+				_make_value_from_value(context, dst_elem_type, src_elem_type, src_elem, move_if_possible)
 			}
 		end
 		
@@ -708,7 +714,7 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 		
 		if pos < 0 or (pos + type_info.length) > context.interface.file_length()
 		then
-			error("Attempt to read past end of file in " .. name .. " function") -- TODO: Include file/line
+			_template_error(context, "Attempt to read past end of file in " .. name .. " function")
 		end
 		
 		local fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
@@ -824,8 +830,8 @@ _find_type = function(context, type_name)
 	
 	if type_info ~= nil
 	then
-		if make_unsigned then type_info = _make_unsigned_type(type_info) end
-		if make_signed   then type_info = _make_signed_type(type_info)   end
+		if make_unsigned then type_info = _make_unsigned_type(context, type_info) end
+		if make_signed   then type_info = _make_signed_type(context, type_info)   end
 		if make_ref      then type_info = _make_ref_type(type_info)      end
 		if make_const    then type_info = _make_const_type(type_info)    end
 		if make_array    then type_info = _make_aray_type(type_info)     end
@@ -855,9 +861,6 @@ end
 
 -- Resolves a variable reference to an actual value.
 _eval_ref = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local path = statement[4]
 	
 	-- This function walks along from the second element of path, resolving any array and/or
@@ -879,7 +882,7 @@ _eval_ref = function(context, statement)
 				
 				if array_idx_t == nil or array_idx_t.base ~= "number"
 				then
-					error("Invalid '" .. _get_type_name(array_idx_t) .. "' operand to '[]' operator - expected a number at " .. filename .. ":" .. line_num)
+					_template_error(context, "Invalid '" .. _get_type_name(array_idx_t) .. "' operand to '[]' operator - expected a number")
 				end
 				
 				if rv_type.is_array
@@ -888,13 +891,13 @@ _eval_ref = function(context, statement)
 					
 					if array_idx < 0 or array_idx >= #rv_val
 					then
-						error("Attempt to access out-of-range array index " .. array_idx .. " at " .. filename .. ":" .. line_num)
+						_template_error(context, "Attempt to access out-of-range array index " .. array_idx)
 					else
 						rv_type = _make_nonarray_type(rv_type)
 						rv_val = rv_val[array_idx_v:get() + 1]
 					end
 				else
-					error("Attempt to access non-array variable as array at " .. filename .. ":" .. line_num)
+					_template_error(context, "Attempt to access non-array variable as array")
 				end
 			else
 				-- This is a string to be used as a struct member
@@ -903,12 +906,12 @@ _eval_ref = function(context, statement)
 				
 				if rv_type.base ~= "struct"
 				then
-					error("Attempt to access '" .. _get_type_name(rv_type) .. "' as a struct at " .. filename .. ":" .. line_num)
+					_template_error(context, "Attempt to access '" .. _get_type_name(rv_type) .. "' as a struct")
 				end
 				
 				if rv_val[member] == nil
 				then
-					error("Attempt to access undefined struct member '" .. member .. "' at " .. filename .. ":" .. line_num)
+					_template_error(context, "Attempt to access undefined struct member '" .. member .. "'")
 				end
 				
 				rv_type = rv_val[member][1]
@@ -949,13 +952,10 @@ _eval_ref = function(context, statement)
 		return _walk_path(context.global_vars[ path[1] ])
 	end
 	
-	error("Attempt to use undefined variable '" .. path[1] .. "' at " .. filename .. ":" .. line_num)
+	_template_error(context, "Attempt to use undefined variable '" .. path[1] .. "'")
 end
 
 _eval_add = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local v1_t, v1_v = _eval_statement(context, statement[4])
 	local v2_t, v2_v = _eval_statement(context, statement[5])
 	
@@ -969,21 +969,18 @@ _eval_add = function(context, statement)
 		
 		return _builtin_types.string, _make_const_plain_value(v1_s .. v2_s)
 	else
-		error("Invalid operands to '+' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operands to '+' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 	end
 end
 
 _numeric_op_func = function(func, sym)
 	return function(context, statement)
-		local filename = statement[1]
-		local line_num = statement[2]
-		
 		local v1_t, v1_v = _eval_statement(context, statement[4])
 		local v2_t, v2_v = _eval_statement(context, statement[5])
 		
 		if (v1_t and v1_t.base) ~= "number" or (v2_t and v2_t.base) ~= "number"
 		then
-			error("Invalid operands to '" .. sym .. "' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Invalid operands to '" .. sym .. "' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 		end
 		
 		return v1_t, _make_const_plain_value(func(v1_v:get(), v2_v:get()))
@@ -991,9 +988,6 @@ _numeric_op_func = function(func, sym)
 end
 
 _eval_equal = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local v1_t, v1_v = _eval_statement(context, statement[4])
 	local v2_t, v2_v = _eval_statement(context, statement[5])
 	
@@ -1010,14 +1004,11 @@ _eval_equal = function(context, statement)
 		
 		return _builtin_types.int, _make_const_plain_value(v1_s == v2_s and 1 or 0)
 	else
-		error("Invalid operands to '==' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operands to '==' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 	end
 end
 
 _eval_not_equal = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local v1_t, v1_v = _eval_statement(context, statement[4])
 	local v2_t, v2_v = _eval_statement(context, statement[5])
 	
@@ -1034,47 +1025,38 @@ _eval_not_equal = function(context, statement)
 		
 		return _builtin_types.int, _make_const_plain_value(v1_s ~= v2_s and 1 or 0)
 	else
-		error("Invalid operands to '!=' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operands to '!=' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 	end
 end
 
 _eval_bitwise_not = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local operand_t, operand_v = _eval_statement(context, statement[4])
 	
 	if operand_t == nil or operand_t.base ~= "number"
 	then
-		error("Invalid operand to '~' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operand to '~' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "'")
 	end
 	
 	return operand_t, _make_const_plain_value(~operand_v:get())
 end
 
 _eval_logical_not = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local operand_t, operand_v = _eval_statement(context, statement[4])
 	
 	if operand_t == nil or operand_t.base ~= "number"
 	then
-		error("Invalid operand to '!' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operand to '!' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "'")
 	end
 	
 	return _builtin_types.int, _make_const_plain_value(operand_v:get() == 0 and 1 or 0)
 end
 
 _eval_logical_and = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local v1_t, v1_v = _eval_statement(context, statement[4])
 	
 	if v1_t == nil or v1_t.base ~= "number"
 	then
-		error("Invalid left operand to '&&' operator - expected numeric, got '" .. _get_type_name(v1_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid left operand to '&&' operator - expected numeric, got '" .. _get_type_name(v1_t) .. "'")
 	end
 	
 	if v1_v:get() == 0
@@ -1086,7 +1068,7 @@ _eval_logical_and = function(context, statement)
 	
 	if v2_t == nil or v2_t.base ~= "number"
 	then
-		error("Invalid right operand to '&&' operator - expected numeric, got '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid right operand to '&&' operator - expected numeric, got '" .. _get_type_name(v2_t) .. "'")
 	end
 	
 	if v2_v:get() == 0
@@ -1098,14 +1080,11 @@ _eval_logical_and = function(context, statement)
 end
 
 _eval_logical_or = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local v1_t, v1_v = _eval_statement(context, statement[4])
 	
 	if v1_t == nil or v1_t.base ~= "number"
 	then
-		error("Invalid left operand to '||' operator - expected numeric, got '" .. _get_type_name(v1_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid left operand to '||' operator - expected numeric, got '" .. _get_type_name(v1_t) .. "'")
 	end
 	
 	if v1_v:get() ~= 0
@@ -1117,7 +1096,7 @@ _eval_logical_or = function(context, statement)
 	
 	if v2_t == nil or v2_t.base ~= "number"
 	then
-		error("Invalid right operand to '||' operator - expected numeric, got '" .. _get_type_name(v2_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid right operand to '||' operator - expected numeric, got '" .. _get_type_name(v2_t) .. "'")
 	end
 	
 	if v2_v:get() ~= 0
@@ -1129,15 +1108,12 @@ _eval_logical_or = function(context, statement)
 end
 
 _eval_postfix_increment = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local value = statement[4]
 	
 	local value_t, value_v = _eval_statement(context, value)
 	if value_t == nil or value_t.base ~= "number"
 	then
-		error("Invalid operand to postfix '++' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operand to postfix '++' operator - expected numeric, got '" .. _get_type_name(value_t) .. "'")
 	end
 	
 	local old_value = value_v:get()
@@ -1150,15 +1126,12 @@ _eval_postfix_increment = function(context, statement)
 end
 
 _eval_postfix_decrement = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local value = statement[4]
 	
 	local value_t, value_v = _eval_statement(context, value)
 	if value_t == nil or value_t.base ~= "number"
 	then
-		error("Invalid operand to postfix '--' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operand to postfix '--' operator - expected numeric, got '" .. _get_type_name(value_t) .. "'")
 	end
 	
 	local old_value = value_v:get()
@@ -1171,30 +1144,24 @@ _eval_postfix_decrement = function(context, statement)
 end
 
 _eval_unary_plus = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local value = statement[4]
 	
 	local value_t, value_v = _eval_statement(context, value)
 	if value_t == nil or value_t.base ~= "number"
 	then
-		error("Invalid operand to unary '+' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operand to unary '+' operator - expected numeric, got '" .. _get_type_name(value_t) .. "'")
 	end
 	
 	return value_t, _make_const_plain_value(value_v:get())
 end
 
 _eval_unary_minus = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local value = statement[4]
 	
 	local value_t, value_v = _eval_statement(context, value)
 	if value_t == nil or value_t.base ~= "number"
 	then
-		error("Invalid operand to unary '-' operator - expected numeric, got '" .. _get_type_name(value_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid operand to unary '-' operator - expected numeric, got '" .. _get_type_name(value_t) .. "'")
 	end
 	
 	return value_t, _make_const_plain_value(-1 * value_v:get())
@@ -1218,20 +1185,20 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		type_info = _find_type(context, var_type)
 		if type_info == nil
 		then
-			error("Unknown variable type '" .. var_type .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Unknown variable type '" .. var_type .. "'")
 		end
 	end
 	
 	if struct_args ~= nil and type_info.base ~= "struct"
 	then
-		error("Variable declaration with parameters for non-struct type '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Variable declaration with parameters for non-struct type '" .. _get_type_name(type_info) .. "'")
 	end
 	
 	if type_info.array_size ~= nil
 	then
 		if array_size ~= nil
 		then
-			error("Multidimensional arrays are not supported at " .. filename .. ":" .. line_num)
+			_template_error(context, "Multidimensional arrays are not supported")
 		end
 		
 		-- Filthy filthy filthy...
@@ -1244,7 +1211,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	
 	if not is_local and _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
 	then
-		error("Attempt to declare non-local variable inside function at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to declare non-local variable inside function")
 	end
 	
 	local struct_frame = _topmost_frame_of_type(context, FRAME_TYPE_STRUCT)
@@ -1254,7 +1221,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		
 		if struct_frame.vars[var_name] ~= nil
 		then
-			error("Attempt to redefine struct member '" .. var_name .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to redefine struct member '" .. var_name .. "'")
 		end
 	elseif is_local
 	then
@@ -1265,26 +1232,26 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	
 	if dest_tables[1][var_name] ~= nil
 	then
-		error("Attempt to redefine variable '" .. var_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine variable '" .. var_name .. "'")
 	end
 	
 	if type_info.is_ref
 	then
 		if not is_local
 		then
-			error("Attempt to define non-local reference '" .. var_name .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to define non-local reference '" .. var_name .. "'")
 		end
 		
 		if initial_value == nil
 		then
-			error("Attempt to define uninitialised reference '" .. var_name .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to define uninitialised reference '" .. var_name .. "'")
 		end
 		
 		if iv_type == nil
 			or type_info.type_key ~= iv_type.type_key
 			or ((not type_info.is_const) and iv_type.is_const)
 		then
-			error("can't assign '" .. _get_type_name(iv_type) .. "' to type '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "can't assign '" .. _get_type_name(iv_type) .. "' to type '" .. _get_type_name(type_info) .. "'")
 		end
 		
 		for _,t in ipairs(dest_tables)
@@ -1340,7 +1307,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				local got_types = table.concat(_map(struct_arg_values, function(v) return _get_type_name(v[1]) end), ", ")
 				local expected_types = table.concat(_map(type_info.arguments, function(v) return _get_type_name(v[2]) end), ", ")
 				
-				error("Attempt to declare struct type '" .. _get_type_name(type_info) .. "' with incompatible argument types (" .. got_types .. ") - expected (" .. expected_types .. ") at " .. filename .. ":" .. line_num)
+				_template_error(context, "Attempt to declare struct type '" .. _get_type_name(type_info) .. "' with incompatible argument types (" .. got_types .. ") - expected (" .. expected_types .. ")")
 			end
 			
 			for i = 1, #struct_arg_values
@@ -1351,7 +1318,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				then
 					struct_arg_values[i] = { dst_type, struct_arg_values[i][2] }
 				else
-					struct_arg_values[i] = { dst_type, _make_value_from_value(dst_type, struct_arg_values[i][1], struct_arg_values[i][2], false) }
+					struct_arg_values[i] = { dst_type, _make_value_from_value(context, dst_type, struct_arg_values[i][1], struct_arg_values[i][2], false) }
 				end
 			end
 			
@@ -1392,7 +1359,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			else
 				if (context.next_variable + type_info.length) > context.interface:file_length()
 				then
-					error("Hit end of file when declaring variable at " .. filename .. ":" .. line_num, 0)
+					_template_error(context, "Hit end of file when declaring variable")
 				end
 				
 				local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
@@ -1430,7 +1397,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		local array_length_type, array_length_val = _eval_statement(context, array_size)
 		if array_length_type == nil or array_length_type.base ~= "number"
 		then
-			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "'")
 		end
 		
 		root_value = {}
@@ -1490,14 +1457,11 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	
 	if initial_value ~= nil
 	then
-		_assign_value(type_info, root_value, iv_type, iv_value)
+		_assign_value(context, type_info, root_value, iv_type, iv_value)
 	end
 end
 
 _eval_variable = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local var_type = statement[4]
 	local var_name = statement[5]
 	local struct_args = statement[6]
@@ -1507,9 +1471,6 @@ _eval_variable = function(context, statement)
 end
 
 _eval_local_variable = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local var_type = statement[4]
 	local var_name = statement[5]
 	local struct_args = statement[6]
@@ -1525,9 +1486,6 @@ _eval_local_variable = function(context, statement)
 end
 
 _eval_assign = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local dst_expr = statement[4]
 	local src_expr = statement[5]
 	
@@ -1536,25 +1494,22 @@ _eval_assign = function(context, statement)
 	
 	if dst_type.is_const
 	then
-		error("Attempted modification of const type '" .. _get_type_name(dst_type) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempted modification of const type '" .. _get_type_name(dst_type) .. "'")
 	end
 	
-	_assign_value(dst_type, dst_val, src_type, src_val)
+	_assign_value(context, dst_type, dst_val, src_type, src_val)
 	
 	return dst_type, dst_val
 end
 
 _eval_call = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local func_name = statement[4]
 	local func_args = statement[5]
 	
 	local func_defn = context.functions[func_name]
 	if func_defn == nil
 	then
-		error("Attempt to call undefined function '" .. func_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to call undefined function '" .. func_name .. "'")
 	end
 	
 	local func_arg_values = {}
@@ -1606,7 +1561,7 @@ _eval_call = function(context, statement)
 		local got_types = table.concat(_map(func_arg_values, function(v) return _get_type_name(v[1]) end), ", ")
 		local expected_types = table.concat(_map(func_defn.arguments, function(v) return _get_type_name(v) end), ", ")
 		
-		error("Attempt to call function " .. func_name .. "(" .. expected_types .. ") with incompatible argument types (" .. got_types .. ") at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to call function " .. func_name .. "(" .. expected_types .. ") with incompatible argument types (" .. got_types .. ")")
 	end
 	
 	for i = 1, #func_arg_values
@@ -1622,7 +1577,7 @@ _eval_call = function(context, statement)
 		then
 			func_arg_values[i] = { dst_type, func_arg_values[i][2] }
 		else
-			func_arg_values[i] = { dst_type, _make_value_from_value(dst_type, func_arg_values[i][1], func_arg_values[i][2], false) }
+			func_arg_values[i] = { dst_type, _make_value_from_value(context, dst_type, func_arg_values[i][1], func_arg_values[i][2], false) }
 		end
 	end
 	
@@ -1630,14 +1585,11 @@ _eval_call = function(context, statement)
 end
 
 _eval_return = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local retval = statement[4]
 	
 	if not _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
 	then
-		error("'return' statement not allowed here at " .. filename .. ":" .. line_num)
+		_template_error(context, "'return' statement not allowed here")
 	end
 	
 	local func_frame = _topmost_frame_of_type(context, FRAME_TYPE_FUNCTION)
@@ -1648,7 +1600,7 @@ _eval_return = function(context, statement)
 		
 		if not _type_assignable(func_frame.return_type, retval_t)
 		then
-			error("return operand type '" .. _get_type_name(retval_t) .. "' not compatible with function return type '" .. _get_type_name(func_frame.return_type) .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "return operand type '" .. _get_type_name(retval_t) .. "' not compatible with function return type '" .. _get_type_name(func_frame.return_type) .. "'")
 		end
 		
 		if retval_t
@@ -1659,16 +1611,13 @@ _eval_return = function(context, statement)
 		end
 	elseif func_frame.return_type ~= nil
 	then
-		error("return without an operand in function that returns type '" .. _get_type_name(func_frame.return_type) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "return without an operand in function that returns type '" .. _get_type_name(func_frame.return_type) .. "'")
 	end
 	
 	return { flowctrl = FLOWCTRL_TYPE_RETURN }, retval
 end
 
 _eval_func_defn = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local func_ret_type   = statement[4]
 	local func_name       = statement[5]
 	local func_args       = statement[6]
@@ -1676,12 +1625,12 @@ _eval_func_defn = function(context, statement)
 	
 	if #context.stack > 1
 	then
-		error("Attempt to define function inside another block at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to define function inside another block")
 	end
 	
 	if context.functions[func_name] ~= nil
 	then
-		error("Attempt to redefine function '" .. func_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine function '" .. func_name .. "'")
 	end
 	
 	local ret_type
@@ -1690,7 +1639,7 @@ _eval_func_defn = function(context, statement)
 		ret_type = _find_type(context, func_ret_type)
 		if ret_type == nil
 		then
-			error("Attempt to define function '" .. func_name .. "' with undefined return type '" .. func_ret_type .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to define function '" .. func_name .. "' with undefined return type '" .. func_ret_type .. "'")
 		end
 	end
 	
@@ -1702,7 +1651,7 @@ _eval_func_defn = function(context, statement)
 		local type_info = _find_type(context, arg_type_name)
 		if type_info == nil
 		then
-			error("Attempt to define function '" .. func_name .. "' with undefined argument type '" .. arg_type_name .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to define function '" .. func_name .. "' with undefined argument type '" .. arg_type_name .. "'")
 		end
 		
 		table.insert(arg_types, type_info)
@@ -1762,7 +1711,7 @@ _eval_func_defn = function(context, statement)
 		
 		if retval == nil and ret_type ~= nil
 		then
-			error("No return statement in function returning non-void at " .. filename .. ":" .. line_num)
+			_template_error(context, "No return statement in function returning non-void")
 		end
 		
 		if retval ~= nil
@@ -1779,9 +1728,6 @@ _eval_func_defn = function(context, statement)
 end
 
 _eval_struct_defn = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local struct_name       = statement[4]
 	local struct_args       = statement[5]
 	local struct_statements = statement[6]
@@ -1792,12 +1738,12 @@ _eval_struct_defn = function(context, statement)
 	
 	if struct_typename ~= nil and _find_type(context, struct_typename) ~= nil
 	then
-		error("Attempt to redefine type '" .. struct_typename .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine type '" .. struct_typename .. "'")
 	end
 	
 	if typedef_name ~= nil and _find_type(context, typedef_name) ~= nil
 	then
-		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine type '" .. typedef_name .. "'")
 	end
 	
 	local args = {}
@@ -1806,7 +1752,7 @@ _eval_struct_defn = function(context, statement)
 		local type_info = _find_type(context, struct_args[i][1])
 		if type_info == nil
 		then
-			error("Attempt to define 'struct " .. struct_name .. "' with undefined argument type '" .. struct_args[i][1] .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to define 'struct " .. struct_name .. "' with undefined argument type '" .. struct_args[i][1] .. "'")
 		end
 		
 		table.insert(args, { struct_args[i][2], type_info })
@@ -1848,9 +1794,6 @@ _eval_struct_defn = function(context, statement)
 end
 
 _eval_typedef = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local type_name    = statement[4]
 	local typedef_name = statement[5]
 	local array_size   = statement[6]
@@ -1858,25 +1801,25 @@ _eval_typedef = function(context, statement)
 	local type_info = _find_type(context, type_name)
 	if type_info == nil
 	then
-		error("Use of undefined type '" .. type_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Use of undefined type '" .. type_name .. "'")
 	end
 	
 	if _find_type(context, typedef_name) ~= nil
 	then
-		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine type '" .. typedef_name .. "'")
 	end
 	
 	if array_size ~= nil
 	then
 		if type_info.array_size ~= nil
 		then
-			error("Multidimensional arrays are not supported at " .. filename .. ":" .. line_num)
+			_template_error(context, "Multidimensional arrays are not supported")
 		end
 		
 		local array_length_type, array_length_val = _eval_statement(context, array_size)
 		if array_length_type == nil or array_length_type.base ~= "number"
 		then
-			error("Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "'")
 		end
 		
 		type_info = _make_aray_type(type_info)
@@ -1887,9 +1830,6 @@ _eval_typedef = function(context, statement)
 end
 
 _eval_enum = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local type_name    = statement[4]
 	local enum_name    = statement[5]
 	local members      = statement[6]
@@ -1902,17 +1842,17 @@ _eval_enum = function(context, statement)
 	local type_info = _find_type(context, type_name)
 	if type_info == nil
 	then
-		error("Use of undefined type '" .. type_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Use of undefined type '" .. type_name .. "'")
 	end
 	
 	if enum_typename ~= nil and _find_type(context, enum_typename) ~= nil
 	then
-		error("Attempt to redefine type '" .. enum_typename .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine type '" .. enum_typename .. "'")
 	end
 	
 	if typedef_name ~= nil and _find_type(context, typedef_name) ~= nil
 	then
-		error("Attempt to redefine type '" .. typedef_name .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Attempt to redefine type '" .. typedef_name .. "'")
 	end
 	
 	-- Define each member as a const variable of the base type in the current scope.
@@ -1926,7 +1866,7 @@ _eval_enum = function(context, statement)
 		
 		if scope_vars[member_name] ~= nil
 		then
-			error("Attempt to redefine name '" .. member_name .. "' at " .. filename .. ":" .. line_num)
+			_template_error(context, "Attempt to redefine name '" .. member_name .. "'")
 		end
 		
 		if member_expr ~= nil
@@ -1935,7 +1875,7 @@ _eval_enum = function(context, statement)
 			
 			if member_t == nil or member_t.base ~= "number"
 			then
-				error("Invalid type '" .. _get_type_name(member_t) .. "' for enum member '" .. member_name .. "' at " .. member_expr[1] .. ":" .. member_expr[2])
+				_template_error(context, "Invalid type '" .. _get_type_name(member_t) .. "' for enum member '" .. member_name .. "'", member_expr[1], member_expr[2])
 			end
 			
 			next_member_val = member_v:get()
@@ -1959,9 +1899,6 @@ _eval_enum = function(context, statement)
 end
 
 _eval_if = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	for i = 4, #statement
 	do
 		local cond = statement[i][2] and statement[i][1] or { "BUILTIN", 0, "num", 1 }
@@ -1971,7 +1908,7 @@ _eval_if = function(context, statement)
 		
 		if (cond_t and cond_t.base) ~= "number"
 		then
-			error("Expected numeric expression to if/else if at " .. cond[1] .. ":" .. cond[2])
+			_template_error(context, "Expected numeric expression to if/else if", cond[1], cond[2])
 		end
 		
 		if cond_v:get() ~= 0
@@ -2003,9 +1940,6 @@ _eval_if = function(context, statement)
 end
 
 _eval_for = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local init_expr = statement[4]
 	local cond_expr = statement[5]
 	local iter_expr = statement[6]
@@ -2034,7 +1968,7 @@ _eval_for = function(context, statement)
 			
 			if (cond_t and cond_t.base) ~= "number"
 			then
-				error("Unexpected type '" .. _get_type_name(cond_t) .. "' used as for loop condition at " .. cond_expr[1] .. ":" .. cond_expr[2])
+				_template_error(context, "Unexpected type '" .. _get_type_name(cond_t) .. "' used as for loop condition", cond_expr[1], cond_expr[2])
 			end
 			
 			if cond_v:get() == 0
@@ -2090,9 +2024,6 @@ _eval_for = function(context, statement)
 end
 
 _eval_switch = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local expr = statement[4]
 	local cases = statement[5]
 	
@@ -2100,7 +2031,7 @@ _eval_switch = function(context, statement)
 	
 	if expr_t == nil or (expr_t.base ~= "number" and expr_t.base ~= "string")
 	then
-		error("Unexpected type '" .. _get_type_name(expr_t) .. "' passed to 'switch' statement (expected number or string) at " .. filename .. ":" .. line_num)
+		_template_error(context, "Unexpected type '" .. _get_type_name(expr_t) .. "' passed to 'switch' statement (expected number or string)")
 	end
 	
 	local found_match = false
@@ -2116,7 +2047,7 @@ _eval_switch = function(context, statement)
 			
 			if case_expr_t == nil or case_expr_t.base ~= expr_t.base
 			then
-				error("Unexpected type '" .. _get_type_name(case_expr_t) .. "' passed to 'case' statement (expected '" .. _get_type_name(expr_t) .. "') at " .. case_expr[1] .. ":" .. case_expr[2])
+				_template_error(context, "Unexpected type '" .. _get_type_name(case_expr_t) .. "' passed to 'case' statement (expected '" .. _get_type_name(expr_t) .. "')", case_expr[1], case_expr[2])
 			end
 			
 			if expr_v:get() == case_expr_v:get()
@@ -2190,9 +2121,6 @@ _eval_switch = function(context, statement)
 end
 
 _eval_block = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local body = statement[4]
 	
 	local frame = {
@@ -2218,62 +2146,50 @@ _eval_block = function(context, statement)
 end
 
 _eval_break = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	if not _can_do_flowctrl_here(context, FLOWCTRL_TYPE_BREAK)
 	then
-		error("'break' statement not allowed here at " .. filename .. ":" .. line_num)
+		_template_error(context, "'break' statement not allowed here")
 	end
 	
 	return { flowctrl = FLOWCTRL_TYPE_BREAK }, retval
 end
 
 _eval_continue = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	if not _can_do_flowctrl_here(context, FLOWCTRL_TYPE_CONTINUE)
 	then
-		error("'continue' statement not allowed here at " .. filename .. ":" .. line_num)
+		_template_error(context, "'continue' statement not allowed here")
 	end
 	
 	return { flowctrl = FLOWCTRL_TYPE_CONTINUE }, retval
 end
 
 _eval_cast = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local type_name = statement[4]
 	local value_expr = statement[5]
 	
 	local type_info = _find_type(context, type_name)
 	if type_info == nil
 	then
-		error("Unknown type '" .. type_name .. "' used in cast at " .. filename .. ":" .. line_num)
+		_template_error(context, "Unknown type '" .. type_name .. "' used in cast")
 	end
 	
 	local value_t, value_v = _eval_statement(context, value_expr)
 	if not _type_assignable(type_info, value_t)
 	then
-		error("Invalid conversion from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid conversion from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "'")
 	end
 	
 	if type_info.int_mask ~= nil
 	then
 		value_v = _make_const_plain_value(value_v:get() & type_info.int_mask)
 	else
-		error("Internal error: Unhandled cast from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Internal error: Unhandled cast from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "'")
 	end
 	
 	return type_info, value_v
 end
 
 _eval_ternary = function(context, statement)
-	local filename = statement[1]
-	local line_num = statement[2]
-	
 	local cond_expr     = statement[4]
 	local if_true_expr  = statement[5]
 	local if_false_expr = statement[6]
@@ -2281,7 +2197,7 @@ _eval_ternary = function(context, statement)
 	local cond_t, cond_v = _eval_statement(context, cond_expr)
 	if cond_t == nil or cond_t.base ~= "number"
 	then
-		error("Invalid condition operand to ternary operator - expected numeric, got '" .. _get_type_name(cond_t) .. "' at " .. filename .. ":" .. line_num)
+		_template_error(context, "Invalid condition operand to ternary operator - expected numeric, got '" .. _get_type_name(cond_t) .. "'")
 	end
 	
 	if cond_v:get() ~= 0
@@ -2304,7 +2220,11 @@ _eval_statement = function(context, statement)
 	
 	if _ops[op] ~= nil
 	then
-		return _ops[op](context, statement)
+		table.insert(context.st_stack, statement)
+		local result = { _ops[op](context, statement) }
+		table.remove(context.st_stack)
+		
+		return table.unpack(result);
 	else
 		error("Internal error: unexpected op '" .. op .. "' at " .. filename .. ":" .. line_num)
 	end
@@ -2418,6 +2338,9 @@ local function execute(interface, statements)
 		big_endian = false,
 		
 		declaring_local_var = false,
+		
+		-- Stack of statements currently being executed, used for error reporting.
+		st_stack = {},
 	}
 	
 	for k, v in pairs(_builtin_functions)

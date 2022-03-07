@@ -2233,7 +2233,7 @@ describe("executor", function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
 			})
-			end, "can't assign 'const string' to type 'uchar[]'")
+			end, "can't assign 'const string' to type 'uchar[]' at test.bt:1")
 	end)
 	
 	it("errors on assignment of string value to uchar array", function()
@@ -2244,7 +2244,7 @@ describe("executor", function()
 				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
 				{ "test.bt", 2, "assign", { "test.bt", 1, "ref", { "uchar_array" } }, { "test.bt", 1, "str", "hello" } },
 			})
-			end, "can't assign 'const string' to type 'uchar[]'")
+			end, "can't assign 'const string' to type 'uchar[]' at test.bt:2")
 	end)
 	
 	it("errors on initialisation of string from uchar array", function()
@@ -2255,7 +2255,7 @@ describe("executor", function()
 				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
 				{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, { "test.bt", 2, "ref", { "uchar_array" } } },
 			})
-			end, "can't assign 'uchar[]' to type 'string'")
+			end, "can't assign 'uchar[]' to type 'string' at test.bt:2")
 	end)
 	
 	it("errors on assignment of uchar array to string", function()
@@ -2267,7 +2267,7 @@ describe("executor", function()
 				{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, nil },
 				{ "test.bt", 3, "assign", { "test.bt", 3, "ref", { "string_var" } }, { "test.bt", 3, "ref", { "uchar_array" } } },
 			})
-			end, "can't assign 'uchar[]' to type 'string'")
+			end, "can't assign 'uchar[]' to type 'string' at test.bt:3")
 	end)
 	
 	it("allows using local array variables", function()
@@ -2572,11 +2572,11 @@ describe("executor", function()
 					{ "test.bt", 1, "call", "FSeek", {
 						{ "test.bt", 1, "num", 4, {} } } },
 					
-					{ "test.bt", 1, "call", "Printf", {
-						{ "test.bt", 1, "str", "ReadByte() = %d" },
-						{ "test.bt", 1, "call", "ReadByte", {} } } },
+					{ "test.bt", 2, "call", "Printf", {
+						{ "test.bt", 2, "str", "ReadByte() = %d" },
+						{ "test.bt", 2, "call", "ReadByte", {} } } },
 				})
-			end, "Attempt to read past end of file in ReadByte function")
+			end, "Attempt to read past end of file in ReadByte function at test.bt:2")
 	end)
 	
 	it("implements ReadUInt() function", function()
@@ -2629,7 +2629,7 @@ describe("executor", function()
 						{ "test.bt", 1, "call", "ReadUInt", {
 							{ "test.bt", 1, "num", 1, {} } } } } },
 				})
-			end, "Attempt to read past end of file in ReadUInt function")
+			end, "Attempt to read past end of file in ReadUInt function at test.bt:1")
 	end)
 	
 	it("allows declaring a struct with a typedef", function()
@@ -2800,7 +2800,7 @@ describe("executor", function()
 					{ "test.bt", 1, "ref", { "s1" } },
 					{ "test.bt", 1, "ref", { "s2" } } },
 			})
-		end, "can't assign 'struct mystruct2' to type 'struct mystruct1'")
+		end, "can't assign 'struct mystruct2' to type 'struct mystruct1' at test.bt:1")
 	end)
 	
 	it("allows defining enums", function()

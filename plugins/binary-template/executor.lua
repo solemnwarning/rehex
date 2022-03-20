@@ -43,6 +43,7 @@ local _eval_postfix_increment
 local _eval_postfix_decrement
 local _eval_unary_plus
 local _eval_unary_minus
+local expand_value
 local _eval_variable;
 local _eval_local_variable
 local _eval_assign
@@ -74,6 +75,24 @@ local function _map(src_table, func)
 	end
 	
 	return dst_table
+end
+
+local function _sorted_pairs(t)
+	local keys_sorted = {}
+	
+	for k in pairs(t)
+	do
+		table.insert(keys_sorted, k)
+	end
+	
+	table.sort(keys_sorted)
+	
+	local i = 0
+	
+	return function()
+		i = i + 1
+		return keys_sorted[i], t[ keys_sorted[i] ]
+	end
 end
 
 local function _topmost_frame_of_type(context, type)
@@ -268,6 +287,65 @@ local function _get_value_size(type, value)
 	else
 		return x(value)
 	end
+end
+
+local function _get_value_range(type_info, value)
+	if type_info == nil
+	then
+		return nil, nil
+	end
+	
+	local data_start = nil
+	local data_end = nil
+	
+	local x = function(v)
+		if type_info.base == "struct"
+		then
+			for k,v in pairs(v)
+			do
+				local member_type = v[1]
+				local member_val  = v[2]
+				
+				local member_start, member_end = _get_value_range(member_type, member_val)
+				
+				if member_start ~= nil and (data_start == nil or member_start < data_start)
+				then
+					data_start = member_start
+				end
+				
+				if member_end ~= nil and (data_end == nil or member_end > data_end)
+				then
+					data_end = member_end
+				end
+			end
+		else
+			if v.offset ~= nil
+			then
+				if data_start == nil or v.offset < data_start
+				then
+					data_start = v.offset
+				end
+				
+				if data_end == nil or (v.offset + v.length) > data_end
+				then
+					data_end = v.offset + v.length
+				end
+			end
+		end
+	end
+	
+	if type_info.is_array
+	then
+		if #value > 0
+		then
+			x(value[1])
+			x(value[#value])
+		end
+	else
+		x(value)
+	end
+	
+	return data_start, data_end
 end
 
 local function _type_is_string(type_info)
@@ -472,9 +550,12 @@ end
 
 local function _make_file_value(context, offset, length, fmt)
 	return {
+		offset = offset,
+		length = length,
+		
 		get = function(self)
-			local data = context.interface.read_data(offset, length)
-			if data:len() < length
+			local data = context.interface.read_data(self.offset, self.length)
+			if data:len() < self.length
 			then
 				return nil
 			end
@@ -487,7 +568,7 @@ local function _make_file_value(context, offset, length, fmt)
 		end,
 		
 		copy = function(self)
-			return _make_file_value(context, offset, length, fmt)
+			return _make_file_value(context, self.offset, self.length, fmt)
 		end,
 	}
 end
@@ -731,6 +812,99 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 	}
 end
 
+local function _builtin_function_array_length(context, argv)
+	if #argv ~= 1 or argv[1][1] == nil or not argv[1][1].is_array
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function array_length(<any array type>) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	return _builtin_types.int, _make_const_plain_value(#(argv[1][2]))
+end
+
+local function _resize_array(context, array_type, array_value, new_length)
+	local data_start, data_end = _get_value_range(array_type, array_value)
+	if data_start ~= nil
+	then
+		if new_length < #array_value
+		then
+			_template_error(context, "Invalid attempt to shrink non-local array")
+		end
+		
+		if data_end ~= context.next_variable
+		then
+			_template_error(context, "Invalid attempt to grow non-local array after declaring other variables")
+		end
+	end
+	
+	if new_length < 0
+	then
+		_template_error(context, "Invalid array length (" .. new_length .. ")")
+	end
+	
+	local was_declaring_local_var = context.declaring_local_var
+	context.declaring_local_var = (data_start == nil)
+	
+	if #array_value < new_length
+	then
+		local element_type = _make_nonarray_type(array_type)
+		
+		for i = #array_value, new_length - 1
+		do
+			table.insert(array_value, expand_value(context, element_type, nil, true)) -- TODO: struct_args
+			context.interface.yield()
+		end
+	end
+	
+	for i = #array_value, new_length + 1, -1
+	do
+		table.remove(array_value)
+	end
+	
+	context.declaring_local_var = was_declaring_local_var
+end
+
+local function _builtin_function_array_resize(context, argv)
+	if #argv ~= 2 or argv[1][1] == nil or not argv[1][1].is_array or not _type_is_number(argv[2][1])
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	local array_type = argv[1][1]
+	local array_value = argv[1][2]
+	
+	local new_length = argv[2][2]:get()
+	
+	if array_type.is_const
+	then
+		_template_error(context, "Attempt to modify 'const' array")
+	end
+	
+	_resize_array(context, array_type, array_value, new_length)
+end
+
+local function _builtin_function_array_extend(context, argv)
+	if #argv < 1 or #argv > 2 or argv[1][1] == nil or not argv[1][1].is_array or (#argv >= 2 and not _type_is_number(argv[2][1]))
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	local array_type = argv[1][1]
+	local array_value = argv[1][2]
+	
+	local rel_length = #argv >= 2 and argv[2][2]:get() or 1
+	local new_length = #array_value + rel_length
+	
+	if array_type.is_const
+	then
+		_template_error(context, "Attempt to modify 'const' array")
+	end
+	
+	_resize_array(context, array_type, array_value, new_length)
+end
+
 -- Table of builtin functions - gets copied into new interpreter contexts
 --
 -- Each key is a function name, the value is a table with the following values:
@@ -766,6 +940,10 @@ local _builtin_functions = {
 	ReadUShort = _builtin_function_defn_ReadXXX(_builtin_types.ushort, "ReadUShort"),
 	
 	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
+	
+	array_length = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_array_length },
+	array_resize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_array_resize },
+	array_extend = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_array_extend },
 }
 
 _find_type = function(context, type_name)
@@ -1167,6 +1345,128 @@ _eval_unary_minus = function(context, statement)
 	return value_t, _make_const_plain_value(-1 * value_v:get())
 end
 
+expand_value = function(context, type_info, struct_args, is_array_element)
+	if type_info.base == "struct"
+	then
+		local struct_arg_values = {}
+		local args_ok = true
+		
+		if struct_args ~= nil
+		then
+			for i = 1, #struct_args
+			do
+				struct_arg_values[i] = { _eval_statement(context, struct_args[i]) }
+			end
+		end
+		
+		for i = 1, math.max(#struct_arg_values, #type_info.arguments)
+		do
+			if i > #struct_arg_values or i > #type_info.arguments
+			then
+				args_ok = false
+			else
+				local dst_type = type_info.arguments[i][2]
+				local got_type = struct_arg_values[i][1]
+				
+				if dst_type.is_ref
+				then
+					if dst_type.type_key ~= got_type.type_key
+						or ((not got_type.is_array) ~= (not dst_type.is_array))
+						or (got_type.is_const and not dst_type.is_const)
+					then
+						args_ok = false
+					end
+				else
+					if not _type_assignable(dst_type, struct_arg_values[i][1])
+					then
+						args_ok = false
+					end
+				end
+			end
+		end
+		
+		if not args_ok
+		then
+			local got_types = table.concat(_map(struct_arg_values, function(v) return _get_type_name(v[1]) end), ", ")
+			local expected_types = table.concat(_map(type_info.arguments, function(v) return _get_type_name(v[2]) end), ", ")
+			
+			_template_error(context, "Attempt to declare struct type '" .. _get_type_name(type_info) .. "' with incompatible argument types (" .. got_types .. ") - expected (" .. expected_types .. ")")
+		end
+		
+		for i = 1, #struct_arg_values
+		do
+			local dst_type = type_info.arguments[i][2]
+			
+			if dst_type.is_ref
+			then
+				struct_arg_values[i] = { dst_type, struct_arg_values[i][2] }
+			else
+				struct_arg_values[i] = { dst_type, _make_value_from_value(context, dst_type, struct_arg_values[i][1], struct_arg_values[i][2], false) }
+			end
+		end
+		
+		local members = {}
+		
+		local frame = {
+			frame_type = FRAME_TYPE_STRUCT,
+			var_types = {},
+			vars = {},
+			struct_members = members,
+			
+			blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
+		}
+		
+		for idx, arg in ipairs(type_info.arguments)
+		do
+			local arg_name = arg[1]
+			frame.vars[arg_name] = struct_arg_values[idx]
+		end
+		
+		table.insert(context.stack, frame)
+		_exec_statements(context, type_info.code)
+		table.remove(context.stack)
+		
+		return members
+	else
+		if context.declaring_local_var
+		then
+			if type_info.base == "number"
+			then
+				return _make_plain_value(0)
+			elseif type_info.base == "string"
+			then
+				return _make_plain_value("")
+			else
+				error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
+			end
+		else
+			if (context.next_variable + type_info.length) > context.interface:file_length()
+			then
+				_template_error(context, "Hit end of file when declaring variable")
+			end
+			
+			local base_off = context.next_variable
+			context.next_variable = base_off + type_info.length
+			
+			-- If this is a char array we assume it is a string and don't set the s8 data type
+			-- for the range, else it would be displayed as a list of integers rather than a
+			-- contiguous byte sequence.
+			if not (is_array_element and type_info.type_key == _builtin_types.char.type_key)
+			then
+				local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
+				
+				if data_type_key ~= nil
+				then
+					context.interface.set_data_type(base_off, type_info.length, data_type_key)
+				end
+			end
+			
+			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
+			return _make_file_value(context, base_off, type_info.length, data_type_fmt)
+		end
+	end
+end
+
 local function _decl_variable(context, statement, var_type, var_name, struct_args, array_size, initial_value, is_local)
 	local filename = statement[1]
 	local line_num = statement[2]
@@ -1204,8 +1504,6 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		-- Filthy filthy filthy...
 		array_size = { debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", type_info.array_size }
 	end
-	
-	local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
 	
 	local dest_tables
 	
@@ -1262,136 +1560,17 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		return
 	end
 	
-	local expand_value = function()
-		if type_info.base == "struct"
-		then
-			local struct_arg_values = {}
-			local args_ok = true
-			
-			if struct_args ~= nil
-			then
-				for i = 1, #struct_args
-				do
-					struct_arg_values[i] = { _eval_statement(context, struct_args[i]) }
-				end
-			end
-			
-			for i = 1, math.max(#struct_arg_values, #type_info.arguments)
-			do
-				if i > #struct_arg_values or i > #type_info.arguments
-				then
-					args_ok = false
-				else
-					local dst_type = type_info.arguments[i][2]
-					local got_type = struct_arg_values[i][1]
-					
-					if dst_type.is_ref
-					then
-						if dst_type.type_key ~= got_type.type_key
-							or ((not got_type.is_array) ~= (not dst_type.is_array))
-							or (got_type.is_const and not dst_type.is_const)
-						then
-							args_ok = false
-						end
-					else
-						if not _type_assignable(dst_type, struct_arg_values[i][1])
-						then
-							args_ok = false
-						end
-					end
-				end
-			end
-			
-			if not args_ok
-			then
-				local got_types = table.concat(_map(struct_arg_values, function(v) return _get_type_name(v[1]) end), ", ")
-				local expected_types = table.concat(_map(type_info.arguments, function(v) return _get_type_name(v[2]) end), ", ")
-				
-				_template_error(context, "Attempt to declare struct type '" .. _get_type_name(type_info) .. "' with incompatible argument types (" .. got_types .. ") - expected (" .. expected_types .. ")")
-			end
-			
-			for i = 1, #struct_arg_values
-			do
-				local dst_type = type_info.arguments[i][2]
-				
-				if dst_type.is_ref
-				then
-					struct_arg_values[i] = { dst_type, struct_arg_values[i][2] }
-				else
-					struct_arg_values[i] = { dst_type, _make_value_from_value(context, dst_type, struct_arg_values[i][1], struct_arg_values[i][2], false) }
-				end
-			end
-			
-			local members = {}
-			
-			local frame = {
-				frame_type = FRAME_TYPE_STRUCT,
-				var_types = {},
-				vars = {},
-				struct_members = members,
-				
-				blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
-			}
-			
-			for idx, arg in ipairs(type_info.arguments)
-			do
-				local arg_name = arg[1]
-				frame.vars[arg_name] = struct_arg_values[idx]
-			end
-			
-			table.insert(context.stack, frame)
-			_exec_statements(context, type_info.code)
-			table.remove(context.stack)
-			
-			return members
-		else
-			if context.declaring_local_var
-			then
-				if type_info.base == "number"
-				then
-					return _make_plain_value(0)
-				elseif type_info.base == "string"
-				then
-					return _make_plain_value("")
-				else
-					error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
-				end
-			else
-				if (context.next_variable + type_info.length) > context.interface:file_length()
-				then
-					_template_error(context, "Hit end of file when declaring variable")
-				end
-				
-				local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-				return _make_file_value(context, context.next_variable, type_info.length, data_type_fmt)
-			end
-		end
-	end
-	
 	local root_value
 	
 	if array_size == nil
 	then
 		local base_off = context.next_variable
 		
-		root_value = expand_value()
-		local length = _get_value_size(type_info, root_value)
+		root_value = expand_value(context, type_info, struct_args, false)
 		
 		for _,t in ipairs(dest_tables)
 		do
 			t[var_name] = { type_info, root_value }
-		end
-		
-		if not context.declaring_local_var
-		then
-			if data_type_key ~= nil
-			then
-				context.interface.set_data_type(base_off, length, data_type_key)
-			end
-			
-			context.interface.set_comment(base_off, length, var_name)
-			
-			context.next_variable = base_off + length
 		end
 	else
 		local array_length_type, array_length_val = _eval_statement(context, array_size)
@@ -1412,44 +1591,12 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			}
 		end
 		
-		-- If this is a char array we assume it is a string and don't set the s8 data type
-		-- for the range, else it would be displayed as a list of integers rather than a
-		-- contiguous byte sequence.
-		if type_info.type_key == _builtin_types.char.type_key
-		then
-			data_type_key = nil
-		end
-		
-		local array_base_off = context.next_variable
-		
 		for i = 0, array_length_val:get() - 1
 		do
-			local base_off = context.next_variable
-			
-			local value = expand_value()
-			local length = _get_value_size(type_info, value)
-			
+			local value = expand_value(context, type_info, struct_args, true)
 			table.insert(root_value, value)
 			
-			if not context.declaring_local_var
-			then
-				if data_type_key ~= nil
-				then
-					context.interface.set_data_type(base_off, length, data_type_key)
-				end
-				
-				if type_info.base == "struct"
-				then
-					context.interface.set_comment(base_off, length, var_name .. "[" .. i .. "]")
-				end
-				
-				context.next_variable = base_off + length
-			end
-		end
-		
-		if not context.declaring_local_var and type_info.base ~= "struct"
-		then
-			context.interface.set_comment(array_base_off, (context.next_variable - array_base_off), var_name)
+			context.interface.yield()
 		end
 		
 		type_info = array_type_info
@@ -2368,6 +2515,47 @@ local function execute(interface, statements)
 	})
 	
 	_exec_statements(context, statements)
+	
+	local set_comments = function(set_comments, name, type_info, value)
+		local do_struct = function(v)
+			for k,m in _sorted_pairs(v)
+			do
+				set_comments(set_comments, k, m[1], m[2])
+			end
+		end
+		
+		if type_info.is_array and type_info.base == "struct"
+		then
+			local elem_type = _make_nonarray_type(type_info)
+			
+			for i = 1, #value
+			do
+				do_struct(value[i])
+				
+				local data_start, data_end = _get_value_range(elem_type, value[i])
+				if data_start ~= nil
+				then
+					context.interface.set_comment(data_start, (data_end - data_start), name .. "[" .. (i - 1) .. "]")
+				end
+			end
+		else
+			if type_info.base == "struct"
+			then
+				do_struct(value)
+			end
+			
+			local data_start, data_end = _get_value_range(type_info, value)
+			if data_start ~= nil
+			then
+				context.interface.set_comment(data_start, (data_end - data_start), name)
+			end
+		end
+	end
+	
+	for k,v in _sorted_pairs(context.global_vars)
+	do
+		set_comments(set_comments, k, v[1], v[2])
+	end
 end
 
 M.execute = execute

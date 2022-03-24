@@ -14,6 +14,13 @@
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+local ArrayValue     = require 'executor.arrayvalue'
+local FileArrayValue = require 'executor.filearrayvalue'
+local FileValue      = require 'executor.filevalue'
+local ImmediateValue = require 'executor.immediatevalue'
+local PlainValue     = require 'executor.plainvalue'
+local StructValue    = require 'executor.structvalue'
+
 local M = {}
 
 local FRAME_TYPE_BASE     = "base"
@@ -289,65 +296,6 @@ local function _get_value_size(type, value)
 	end
 end
 
-local function _get_value_range(type_info, value)
-	if type_info == nil
-	then
-		return nil, nil
-	end
-	
-	local data_start = nil
-	local data_end = nil
-	
-	local x = function(v)
-		if type_info.base == "struct"
-		then
-			for k,v in pairs(v)
-			do
-				local member_type = v[1]
-				local member_val  = v[2]
-				
-				local member_start, member_end = _get_value_range(member_type, member_val)
-				
-				if member_start ~= nil and (data_start == nil or member_start < data_start)
-				then
-					data_start = member_start
-				end
-				
-				if member_end ~= nil and (data_end == nil or member_end > data_end)
-				then
-					data_end = member_end
-				end
-			end
-		else
-			if v.offset ~= nil
-			then
-				if data_start == nil or v.offset < data_start
-				then
-					data_start = v.offset
-				end
-				
-				if data_end == nil or (v.offset + v.length) > data_end
-				then
-					data_end = v.offset + v.length
-				end
-			end
-		end
-	end
-	
-	if type_info.is_array
-	then
-		if #value > 0
-		then
-			x(value[1])
-			x(value[#value])
-		end
-	else
-		x(value)
-	end
-	
-	return data_start, data_end
-end
-
 local function _type_is_string(type_info)
 	return type_info ~= nil and not type_info.is_array and type_info.base == "string"
 end
@@ -512,67 +460,6 @@ local function _assign_value(context, dst_type, dst_val, src_type, src_val)
 	end
 end
 
-local function _make_plain_value(value)
-	return {
-		value = value,
-		
-		get = function(self)
-			return self.value
-		end,
-		
-		set = function(self, value)
-			self.value = value
-		end,
-		
-		copy = function(self)
-			return _make_plain_value(self.value)
-		end,
-	}
-end
-
-local function _make_const_plain_value(value)
-	return {
-		value = value,
-		
-		get = function(self)
-			return self.value
-		end,
-		
-		set = function(self, value)
-			error("Internal error: attempt to set constant")
-		end,
-		
-		copy = function(self)
-			return _make_const_plain_value(self.value)
-		end,
-	}
-end
-
-local function _make_file_value(context, offset, length, fmt)
-	return {
-		offset = offset,
-		length = length,
-		
-		get = function(self)
-			local data = context.interface.read_data(self.offset, self.length)
-			if data:len() < self.length
-			then
-				return nil
-			end
-			
-			return string.unpack(fmt, data)
-		end,
-		
-		set = function(self, value)
-			_template_error(context, "Attempt to write to file variable")
-		end,
-		
-		copy = function(self)
-			return _make_file_value(context, self.offset, self.length, fmt)
-		end,
-	}
-end
-
 local function _make_value_from_value(context, dst_type, src_type, src_val, move_if_possible)
 	if (not dst_type.is_array) ~= (not src_type.is_array)
 		or dst_type.base ~= src_type.base
@@ -618,14 +505,14 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	
 	if dst_type.int_mask ~= nil and (src_type.int_mask == nil or src_type.int_mask ~= dst_type.int_mask)
 	then
-		return _make_plain_value(src_val:get() & dst_type.int_mask)
+		return PlainValue:new(src_val:get() & dst_type.int_mask)
 	end
 	
 	if move_if_possible
 	then
 		return src_val
 	else
-		return _make_plain_value(src_val:get())
+		return PlainValue:new(src_val:get())
 	end
 end
 
@@ -720,8 +607,8 @@ _builtin_types = {
 }
 
 local _builtin_variables = {
-	["true"]  = { _builtin_types.int, _make_const_plain_value(1) },
-	["false"] = { _builtin_types.int, _make_const_plain_value(0) },
+	["true"]  = { _builtin_types.int, ImmediateValue:new(1) },
+	["false"] = { _builtin_types.int, ImmediateValue:new(0) },
 }
 
 local function _builtin_function_BigEndian(context, argv)
@@ -733,19 +620,19 @@ local function _builtin_function_LittleEndian(context, argv)
 end
 
 local function _builtin_function_IsBigEndian(context, argv)
-	return _builtin_types.int, _make_const_plain_value(context.big_endian and 1 or 0)
+	return _builtin_types.int, ImmediateValue:new(context.big_endian and 1 or 0)
 end
 
 local function _builtin_function_IsLittleEndian(context, argv)
-	return _builtin_types.int, _make_const_plain_value(context.big_endian and 0 or 1)
+	return _builtin_types.int, ImmediateValue:new(context.big_endian and 0 or 1)
 end
 
 local function _builtin_function_FEof(context, argv)
-	return _builtin_types.int, _make_const_plain_value(context.next_variable >= context.interface.file_length() and 1 or 0)
+	return _builtin_types.int, ImmediateValue:new(context.next_variable >= context.interface.file_length() and 1 or 0)
 end
 
 local function _builtin_function_FileSize(context, argv)
-	return _builtin_types.int64, _make_const_plain_value(context.interface.file_length())
+	return _builtin_types.int64, ImmediateValue:new(context.interface.file_length())
 end
 
 local function _builtin_function_FSeek(context, argv)
@@ -753,11 +640,11 @@ local function _builtin_function_FSeek(context, argv)
 	
 	if seek_to < 0 or seek_to > context.interface.file_length()
 	then
-		return _builtin_types.int, _make_const_plain_value(-1)
+		return _builtin_types.int, ImmediateValue:new(-1)
 	end
 	
 	context.next_variable = seek_to
-	return _builtin_types.int, _make_const_plain_value(0)
+	return _builtin_types.int, ImmediateValue:new(0)
 end
 
 local function _builtin_function_FSkip(context, argv)
@@ -765,15 +652,15 @@ local function _builtin_function_FSkip(context, argv)
 	
 	if seek_to < 0 or seek_to > context.interface.file_length()
 	then
-		return _builtin_types.int, _make_const_plain_value(-1)
+		return _builtin_types.int, ImmediateValue:new(-1)
 	end
 	
 	context.next_variable = seek_to
-	return _builtin_types.int, _make_const_plain_value(0)
+	return _builtin_types.int, ImmediateValue:new(0)
 end
 
 local function _builtin_function_FTell(context, argv)
-	return _builtin_types.int64, _make_const_plain_value(context.next_variable)
+	return _builtin_types.int64, ImmediateValue:new(context.next_variable)
 end
 
 local function _builtin_function_Printf(context, argv)
@@ -799,7 +686,7 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 		end
 		
 		local fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-		return type_info, _make_file_value(context, pos, type_info.length, fmt)
+		return type_info, FileValue:new(context, pos, type_info.length, fmt)
 	end
 	
 	return {
@@ -819,11 +706,11 @@ local function _builtin_function_array_length(context, argv)
 		_template_error(context, "Attempt to call function array_length(<any array type>) with incompatible argument types (" .. got_types .. ")")
 	end
 	
-	return _builtin_types.int, _make_const_plain_value(#(argv[1][2]))
+	return _builtin_types.int, ImmediateValue:new(#(argv[1][2]))
 end
 
 local function _resize_array(context, array_type, array_value, new_length)
-	local data_start, data_end = _get_value_range(array_type, array_value)
+	local data_start, data_end = array_value:data_range()
 	if data_start ~= nil
 	then
 		if new_length < #array_value
@@ -842,26 +729,34 @@ local function _resize_array(context, array_type, array_value, new_length)
 		_template_error(context, "Invalid array length (" .. new_length .. ")")
 	end
 	
-	local was_declaring_local_var = context.declaring_local_var
-	context.declaring_local_var = (data_start == nil)
-	
-	if #array_value < new_length
+	if array_value.resize ~= nil
 	then
-		local element_type = _make_nonarray_type(array_type)
+		local old_length = #array_value
 		
-		for i = #array_value, new_length - 1
-		do
-			table.insert(array_value, expand_value(context, element_type, nil, true)) -- TODO: struct_args
-			context.interface.yield()
+		array_value:resize(new_length)
+		context.next_variable = data_start + (new_length * array_type.length)
+	else
+		local was_declaring_local_var = context.declaring_local_var
+		context.declaring_local_var = (data_start == nil)
+		
+		if #array_value < new_length
+		then
+			local element_type = _make_nonarray_type(array_type)
+			
+			for i = #array_value, new_length - 1
+			do
+				table.insert(array_value, expand_value(context, element_type, nil, true)) -- TODO: struct_args
+				context.interface.yield()
+			end
 		end
+		
+		for i = #array_value, new_length + 1, -1
+		do
+			table.remove(array_value)
+		end
+		
+		context.declaring_local_var = was_declaring_local_var
 	end
-	
-	for i = #array_value, new_length + 1, -1
-	do
-		table.remove(array_value)
-	end
-	
-	context.declaring_local_var = was_declaring_local_var
 end
 
 local function _builtin_function_array_resize(context, argv)
@@ -1030,11 +925,11 @@ end
 ---
 
 _eval_number = function(context, statement)
-	return _make_const_type(_builtin_types.int), _make_const_plain_value(statement[4])
+	return _make_const_type(_builtin_types.int), ImmediateValue:new(statement[4])
 end
 
 _eval_string = function(context, statement)
-	return _make_const_type(_builtin_types.string), _make_const_plain_value(statement[4])
+	return _make_const_type(_builtin_types.string), ImmediateValue:new(statement[4])
 end
 
 -- Resolves a variable reference to an actual value.
@@ -1139,13 +1034,13 @@ _eval_add = function(context, statement)
 	
 	if _type_is_number(v1_t) and _type_is_number(v2_t)
 	then
-		return v1_t, _make_const_plain_value(v1_v:get() + v2_v:get())
+		return v1_t, ImmediateValue:new(v1_v:get() + v2_v:get())
 	elseif _type_is_stringish(v1_t) and _type_is_stringish(v2_t)
 	then
 		local v1_s = _stringify_value(v1_t, v1_v)
 		local v2_s = _stringify_value(v2_t, v2_v)
 		
-		return _builtin_types.string, _make_const_plain_value(v1_s .. v2_s)
+		return _builtin_types.string, ImmediateValue:new(v1_s .. v2_s)
 	else
 		_template_error(context, "Invalid operands to '+' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 	end
@@ -1161,7 +1056,7 @@ _numeric_op_func = function(func, sym)
 			_template_error(context, "Invalid operands to '" .. sym .. "' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 		end
 		
-		return v1_t, _make_const_plain_value(func(v1_v:get(), v2_v:get()))
+		return v1_t, ImmediateValue:new(func(v1_v:get(), v2_v:get()))
 	end
 end
 
@@ -1174,13 +1069,13 @@ _eval_equal = function(context, statement)
 		local v1_n = v1_v:get()
 		local v2_n = v2_v:get()
 		
-		return _builtin_types.int, _make_const_plain_value(v1_n == v2_n and 1 or 0)
+		return _builtin_types.int, ImmediateValue:new(v1_n == v2_n and 1 or 0)
 	elseif _type_is_stringish(v1_t) and _type_is_stringish(v2_t)
 	then
 		local v1_s = _stringify_value(v1_t, v1_v)
 		local v2_s = _stringify_value(v2_t, v2_v)
 		
-		return _builtin_types.int, _make_const_plain_value(v1_s == v2_s and 1 or 0)
+		return _builtin_types.int, ImmediateValue:new(v1_s == v2_s and 1 or 0)
 	else
 		_template_error(context, "Invalid operands to '==' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 	end
@@ -1195,13 +1090,13 @@ _eval_not_equal = function(context, statement)
 		local v1_n = v1_v:get()
 		local v2_n = v2_v:get()
 		
-		return _builtin_types.int, _make_const_plain_value(v1_n ~= v2_n and 1 or 0)
+		return _builtin_types.int, ImmediateValue:new(v1_n ~= v2_n and 1 or 0)
 	elseif _type_is_stringish(v1_t) and _type_is_stringish(v2_t)
 	then
 		local v1_s = _stringify_value(v1_t, v1_v)
 		local v2_s = _stringify_value(v2_t, v2_v)
 		
-		return _builtin_types.int, _make_const_plain_value(v1_s ~= v2_s and 1 or 0)
+		return _builtin_types.int, ImmediateValue:new(v1_s ~= v2_s and 1 or 0)
 	else
 		_template_error(context, "Invalid operands to '!=' operator - '" .. _get_type_name(v1_t) .. "' and '" .. _get_type_name(v2_t) .. "'")
 	end
@@ -1215,7 +1110,7 @@ _eval_bitwise_not = function(context, statement)
 		_template_error(context, "Invalid operand to '~' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "'")
 	end
 	
-	return operand_t, _make_const_plain_value(~operand_v:get())
+	return operand_t, ImmediateValue:new(~operand_v:get())
 end
 
 _eval_logical_not = function(context, statement)
@@ -1226,7 +1121,7 @@ _eval_logical_not = function(context, statement)
 		_template_error(context, "Invalid operand to '!' operator - expected numeric, got '" .. _get_type_name(operand_t) .. "'")
 	end
 	
-	return _builtin_types.int, _make_const_plain_value(operand_v:get() == 0 and 1 or 0)
+	return _builtin_types.int, ImmediateValue:new(operand_v:get() == 0 and 1 or 0)
 end
 
 _eval_logical_and = function(context, statement)
@@ -1239,7 +1134,7 @@ _eval_logical_and = function(context, statement)
 	
 	if v1_v:get() == 0
 	then
-		return _builtin_types.int, _make_const_plain_value(0)
+		return _builtin_types.int, ImmediateValue:new(0)
 	end
 	
 	local v2_t, v2_v = _eval_statement(context, statement[5])
@@ -1251,10 +1146,10 @@ _eval_logical_and = function(context, statement)
 	
 	if v2_v:get() == 0
 	then
-		return _builtin_types.int, _make_const_plain_value(0)
+		return _builtin_types.int, ImmediateValue:new(0)
 	end
 	
-	return _builtin_types.int, _make_const_plain_value(1)
+	return _builtin_types.int, ImmediateValue:new(1)
 end
 
 _eval_logical_or = function(context, statement)
@@ -1267,7 +1162,7 @@ _eval_logical_or = function(context, statement)
 	
 	if v1_v:get() ~= 0
 	then
-		return _builtin_types.int, _make_const_plain_value(1)
+		return _builtin_types.int, ImmediateValue:new(1)
 	end
 	
 	local v2_t, v2_v = _eval_statement(context, statement[5])
@@ -1279,10 +1174,10 @@ _eval_logical_or = function(context, statement)
 	
 	if v2_v:get() ~= 0
 	then
-		return _builtin_types.int, _make_const_plain_value(1)
+		return _builtin_types.int, ImmediateValue:new(1)
 	end
 	
-	return _builtin_types.int, _make_const_plain_value(0)
+	return _builtin_types.int, ImmediateValue:new(0)
 end
 
 _eval_postfix_increment = function(context, statement)
@@ -1300,7 +1195,7 @@ _eval_postfix_increment = function(context, statement)
 	-- TODO: Clamp new_value
 	
 	value_v:set(new_value)
-	return value_t, _make_const_plain_value(old_value)
+	return value_t, ImmediateValue:new(old_value)
 end
 
 _eval_postfix_decrement = function(context, statement)
@@ -1318,7 +1213,7 @@ _eval_postfix_decrement = function(context, statement)
 	-- TODO: Clamp new_value
 	
 	value_v:set(new_value)
-	return value_t, _make_const_plain_value(old_value)
+	return value_t, ImmediateValue:new(old_value)
 end
 
 _eval_unary_plus = function(context, statement)
@@ -1330,7 +1225,7 @@ _eval_unary_plus = function(context, statement)
 		_template_error(context, "Invalid operand to unary '+' operator - expected numeric, got '" .. _get_type_name(value_t) .. "'")
 	end
 	
-	return value_t, _make_const_plain_value(value_v:get())
+	return value_t, ImmediateValue:new(value_v:get())
 end
 
 _eval_unary_minus = function(context, statement)
@@ -1342,7 +1237,7 @@ _eval_unary_minus = function(context, statement)
 		_template_error(context, "Invalid operand to unary '-' operator - expected numeric, got '" .. _get_type_name(value_t) .. "'")
 	end
 	
-	return value_t, _make_const_plain_value(-1 * value_v:get())
+	return value_t, ImmediateValue:new(-1 * value_v:get())
 end
 
 expand_value = function(context, type_info, struct_args, is_array_element)
@@ -1405,7 +1300,7 @@ expand_value = function(context, type_info, struct_args, is_array_element)
 			end
 		end
 		
-		local members = {}
+		local members = StructValue:new()
 		
 		local frame = {
 			frame_type = FRAME_TYPE_STRUCT,
@@ -1432,10 +1327,10 @@ expand_value = function(context, type_info, struct_args, is_array_element)
 		then
 			if type_info.base == "number"
 			then
-				return _make_plain_value(0)
+				return PlainValue:new(0)
 			elseif type_info.base == "string"
 			then
-				return _make_plain_value("")
+				return PlainValue:new("")
 			else
 				error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
 			end
@@ -1448,21 +1343,8 @@ expand_value = function(context, type_info, struct_args, is_array_element)
 			local base_off = context.next_variable
 			context.next_variable = base_off + type_info.length
 			
-			-- If this is a char array we assume it is a string and don't set the s8 data type
-			-- for the range, else it would be displayed as a list of integers rather than a
-			-- contiguous byte sequence.
-			if not (is_array_element and type_info.type_key == _builtin_types.char.type_key)
-			then
-				local data_type_key = context.big_endian and type_info.rehex_type_be or type_info.rehex_type_le
-				
-				if data_type_key ~= nil
-				then
-					context.interface.set_data_type(base_off, type_info.length, data_type_key)
-				end
-			end
-			
 			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-			return _make_file_value(context, base_off, type_info.length, data_type_fmt)
+			return FileValue:new(context, base_off, type_info.length, data_type_fmt)
 		end
 	end
 end
@@ -1560,6 +1442,13 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		return
 	end
 	
+	if context.big_endian
+	then
+		type_info = _make_overlay_type(type_info, { big_endian = true,  rehex_type = type_info.rehex_type_be })
+	else
+		type_info = _make_overlay_type(type_info, { big_endian = false, rehex_type = type_info.rehex_type_le })
+	end
+	
 	local root_value
 	
 	if array_size == nil
@@ -1579,24 +1468,40 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "'")
 		end
 		
-		root_value = {}
-		
 		local array_type_info = _make_aray_type(type_info)
 		
-		for _,t in ipairs(dest_tables)
-		do
-			t[var_name] = {
-				array_type_info,
-				root_value
-			}
-		end
-		
-		for i = 0, array_length_val:get() - 1
-		do
-			local value = expand_value(context, type_info, struct_args, true)
-			table.insert(root_value, value)
+		if type_info.base ~= "struct" and not context.declaring_local_var
+		then
+			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
+			root_value = FileArrayValue:new(context, context.next_variable, array_length_val:get(), type_info.length, data_type_fmt)
 			
-			context.interface.yield()
+			context.next_variable = context.next_variable + (array_length_val:get() * type_info.length)
+			
+			for _,t in ipairs(dest_tables)
+			do
+				t[var_name] = {
+					array_type_info,
+					root_value
+				}
+			end
+		else
+			root_value = ArrayValue:new()
+			
+			for _,t in ipairs(dest_tables)
+			do
+				t[var_name] = {
+					array_type_info,
+					root_value
+				}
+			end
+			
+			for i = 0, array_length_val:get() - 1
+			do
+				local value = expand_value(context, type_info, struct_args, true)
+				table.insert(root_value, value)
+				
+				context.interface.yield()
+			end
 		end
 		
 		type_info = array_type_info
@@ -2028,7 +1933,7 @@ _eval_enum = function(context, statement)
 			next_member_val = member_v:get()
 		end
 		
-		scope_vars[member_name] = { type_info, _make_const_plain_value(next_member_val) }
+		scope_vars[member_name] = { type_info, ImmediateValue:new(next_member_val) }
 		next_member_val = next_member_val + 1
 	end
 	
@@ -2328,7 +2233,7 @@ _eval_cast = function(context, statement)
 	
 	if type_info.int_mask ~= nil
 	then
-		value_v = _make_const_plain_value(value_v:get() & type_info.int_mask)
+		value_v = ImmediateValue:new(value_v:get() & type_info.int_mask)
 	else
 		_template_error(context, "Internal error: Unhandled cast from '" .. _get_type_name(value_t) .. "' to '" .. _get_type_name(type_info) .. "'")
 	end
@@ -2488,6 +2393,8 @@ local function execute(interface, statements)
 		
 		-- Stack of statements currently being executed, used for error reporting.
 		st_stack = {},
+		
+		template_error = _template_error,
 	}
 	
 	for k, v in pairs(_builtin_functions)
@@ -2532,7 +2439,7 @@ local function execute(interface, statements)
 			do
 				do_struct(value[i])
 				
-				local data_start, data_end = _get_value_range(elem_type, value[i])
+				local data_start, data_end = value[i]:data_range()
 				if data_start ~= nil
 				then
 					context.interface.set_comment(data_start, (data_end - data_start), name .. "[" .. (i - 1) .. "]")
@@ -2544,7 +2451,7 @@ local function execute(interface, statements)
 				do_struct(value)
 			end
 			
-			local data_start, data_end = _get_value_range(type_info, value)
+			local data_start, data_end = value:data_range()
 			if data_start ~= nil
 			then
 				context.interface.set_comment(data_start, (data_end - data_start), name)
@@ -2552,9 +2459,46 @@ local function execute(interface, statements)
 		end
 	end
 	
+	local set_types = function(set_types, name, type_info, value)
+		local do_struct = function(v)
+			for k,m in _sorted_pairs(v)
+			do
+				set_types(set_types, k, m[1], m[2])
+			end
+		end
+		
+		if type_info.is_array and type_info.base == "struct"
+		then
+			local elem_type = _make_nonarray_type(type_info)
+			
+			for i = 1, #value
+			do
+				do_struct(value[i])
+			end
+		elseif type_info.base == "struct"
+		then
+			do_struct(value)
+		elseif type_info.rehex_type ~= nil
+		then
+			-- If this is a char array we assume it is a string and don't set the s8 data type
+			-- for the range, else it would be displayed as a list of integers rather than a
+			-- contiguous byte sequence.
+			
+			if not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uchar.type_key))
+			then
+				local data_start, data_end = value:data_range()
+				if data_start ~= nil
+				then
+					context.interface.set_data_type(data_start, (data_end - data_start), type_info.rehex_type)
+				end
+			end
+		end
+	end
+	
 	for k,v in _sorted_pairs(context.global_vars)
 	do
 		set_comments(set_comments, k, v[1], v[2])
+		set_types(set_types, k, v[1], v[2])
 	end
 end
 

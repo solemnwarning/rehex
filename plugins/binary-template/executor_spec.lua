@@ -2509,42 +2509,42 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("implements ReadByte() function", function()
+	it("implements read_i8() function", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0xFF, 0xFE, 0x04
 		))
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadByte() = %d" },
-				{ "test.bt", 1, "call", "ReadByte", {} } } },
+				{ "test.bt", 1, "str", "read_i8() = %d" },
+				{ "test.bt", 1, "call", "read_i8", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadByte() = %d" },
-				{ "test.bt", 1, "call", "ReadByte", {} } } },
+				{ "test.bt", 1, "str", "read_i8() = %d" },
+				{ "test.bt", 1, "call", "read_i8", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadByte(1) = %d" },
-				{ "test.bt", 1, "call", "ReadByte", {
+				{ "test.bt", 1, "str", "read_i8(1) = %d" },
+				{ "test.bt", 1, "call", "read_i8", {
 					{ "test.bt", 1, "num", 1 } } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadByte(2) = %d" },
-				{ "test.bt", 1, "call", "ReadByte", {
+				{ "test.bt", 1, "str", "read_i8(2) = %d" },
+				{ "test.bt", 1, "call", "read_i8", {
 					{ "test.bt", 1, "num", 2 } } } } },
 		})
 		
 		local expect_log = {
-			"print(ReadByte() = 1)",
-			"print(ReadByte() = 1)",
-			"print(ReadByte(1) = -1)",
-			"print(ReadByte(2) = -2)",
+			"print(read_i8() = 1)",
+			"print(read_i8() = 1)",
+			"print(read_i8(1) = -1)",
+			"print(read_i8(2) = -2)",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors when ReadByte() is called at end of file", function()
+	it("errors when read_i8() is called at end of file", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0xFF, 0xFE, 0x04
 		))
@@ -2556,13 +2556,13 @@ describe("executor", function()
 						{ "test.bt", 1, "num", 4, {} } } },
 					
 					{ "test.bt", 2, "call", "Printf", {
-						{ "test.bt", 2, "str", "ReadByte() = %d" },
-						{ "test.bt", 2, "call", "ReadByte", {} } } },
+						{ "test.bt", 2, "str", "read_i8() = %d" },
+						{ "test.bt", 2, "call", "read_i8", {} } } },
 				})
-			end, "Attempt to read past end of file in ReadByte function at test.bt:2")
+			end, "Attempt to read past end of file in read_i8 function at test.bt:2")
 	end)
 	
-	it("implements ReadUInt() function", function()
+	it("implements read_u32() function", function()
 		local interface, log = test_interface(string.char(
 			0x00, 0x01, 0x00, 0x00,
 			0xFF, 0xFF, 0xFF, 0xFF,
@@ -2571,35 +2571,35 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadUInt() = %d" },
-				{ "test.bt", 1, "call", "ReadUInt", {} } } },
+				{ "test.bt", 1, "str", "read_u32() = %d" },
+				{ "test.bt", 1, "call", "read_u32", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadUInt() = %d" },
-				{ "test.bt", 1, "call", "ReadUInt", {} } } },
+				{ "test.bt", 1, "str", "read_u32() = %d" },
+				{ "test.bt", 1, "call", "read_u32", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadUInt(4) = %d" },
-				{ "test.bt", 1, "call", "ReadUInt", {
+				{ "test.bt", 1, "str", "read_u32(4) = %d" },
+				{ "test.bt", 1, "call", "read_u32", {
 					{ "test.bt", 1, "num", 4 } } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "ReadUInt(8) = %d" },
-				{ "test.bt", 1, "call", "ReadUInt", {
+				{ "test.bt", 1, "str", "read_u32(8) = %d" },
+				{ "test.bt", 1, "call", "read_u32", {
 					{ "test.bt", 1, "num", 8 } } } } },
 		})
 		
 		local expect_log = {
-			"print(ReadUInt() = 256)",
-			"print(ReadUInt() = 256)",
-			"print(ReadUInt(4) = 4294967295)",
-			"print(ReadUInt(8) = 512)",
+			"print(read_u32() = 256)",
+			"print(read_u32() = 256)",
+			"print(read_u32(4) = 4294967295)",
+			"print(read_u32(8) = 512)",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors when ReadUInt() is called at end of file", function()
+	it("errors when read_u32() is called at end of file", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0xFF, 0xFE, 0x04
 		))
@@ -2608,11 +2608,11 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "Printf", {
-						{ "test.bt", 1, "str", "ReadUInt() = %d" },
-						{ "test.bt", 1, "call", "ReadUInt", {
+						{ "test.bt", 1, "str", "read_u32() = %d" },
+						{ "test.bt", 1, "call", "read_u32", {
 							{ "test.bt", 1, "num", 1, {} } } } } },
 				})
-			end, "Attempt to read past end of file in ReadUInt function at test.bt:1")
+			end, "Attempt to read past end of file in read_u32 function at test.bt:1")
 	end)
 	
 	it("allows declaring a struct with a typedef", function()

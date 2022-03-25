@@ -100,9 +100,9 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "variable", "char", "single_char", nil, nil },
-			{ "test.bt", 1, "variable", "uchar", "single_uchar", nil, nil },
+			{ "test.bt", 1, "variable", "unsigned char", "single_uchar", nil, nil },
 			{ "test.bt", 1, "variable", "char", "char_array", nil, { "test.bt", 1, "num", 10 } },
-			{ "test.bt", 1, "variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 } },
+			{ "test.bt", 1, "variable", "unsigned char", "uchar_array", nil, { "test.bt", 1, "num", 10 } },
 		})
 		
 		local expect_log = {
@@ -295,8 +295,8 @@ describe("executor", function()
 		))
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "variable", "uchar", "a", nil, nil },
-			{ "test.bt", 1, "variable", "uchar", "b", nil, nil },
+			{ "test.bt", 1, "variable", "unsigned char", "a", nil, nil },
+			{ "test.bt", 1, "variable", "unsigned char", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -330,8 +330,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int16", "a", nil, nil },
-			{ "test.bt", 1, "variable", "int16", "b", nil, nil },
+			{ "test.bt", 1, "variable", "int16_t", "a", nil, nil },
+			{ "test.bt", 1, "variable", "int16_t", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -365,8 +365,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "BigEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int16", "a", nil, nil },
-			{ "test.bt", 1, "variable", "int16", "b", nil, nil },
+			{ "test.bt", 1, "variable", "int16_t", "a", nil, nil },
+			{ "test.bt", 1, "variable", "int16_t", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -400,8 +400,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "uint16", "a", nil, nil },
-			{ "test.bt", 1, "variable", "uint16", "b", nil, nil },
+			{ "test.bt", 1, "variable", "uint16_t", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uint16_t", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -435,8 +435,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "BigEndian", {} },
 			
-			{ "test.bt", 1, "variable", "uint16", "a", nil, nil },
-			{ "test.bt", 1, "variable", "uint16", "b", nil, nil },
+			{ "test.bt", 1, "variable", "uint16_t", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uint16_t", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %u" },
@@ -470,8 +470,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int32", "a", nil, nil },
-			{ "test.bt", 1, "variable", "int32", "b", nil, nil },
+			{ "test.bt", 1, "variable", "int32_t", "a", nil, nil },
+			{ "test.bt", 1, "variable", "int32_t", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %d" },
@@ -505,8 +505,8 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "uint64", "a", nil, nil },
-			{ "test.bt", 1, "variable", "uint64", "b", nil, nil },
+			{ "test.bt", 1, "variable", "uint64_t", "a", nil, nil },
+			{ "test.bt", 1, "variable", "uint64_t", "b", nil, nil },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a = %u" },
@@ -542,7 +542,7 @@ describe("executor", function()
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "LittleEndian", {} },
 			
-			{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
+			{ "test.bt", 1, "variable", "int32_t", "a", nil, { "test.bt", 1, "num", 4 } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "a[0] = %d" },
@@ -587,7 +587,7 @@ describe("executor", function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
 					
-					{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
+					{ "test.bt", 1, "variable", "int32_t", "a", nil, { "test.bt", 1, "num", 4 } },
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "str", "hello" } } },
 				})
@@ -598,7 +598,7 @@ describe("executor", function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
 					
-					{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
+					{ "test.bt", 1, "variable", "int32_t", "a", nil, { "test.bt", 1, "num", 4 } },
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", -1 } } },
 				})
@@ -609,7 +609,7 @@ describe("executor", function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
 					
-					{ "test.bt", 1, "variable", "int32", "a", nil, { "test.bt", 1, "num", 4 } },
+					{ "test.bt", 1, "variable", "int32_t", "a", nil, { "test.bt", 1, "num", 4 } },
 					
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 4 } } },
 				})
@@ -628,7 +628,7 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "LittleEndian", {} },
-					{ "test.bt", 1, "variable", "int32", "a", nil, nil },
+					{ "test.bt", 1, "variable", "int32_t", "a", nil, nil },
 					{ "test.bt", 1, "ref", { "a", { "test.bt", 1, "num", 0 } } },
 				})
 			end, "Attempt to access non-array variable as array at test.bt:1")
@@ -2214,9 +2214,9 @@ describe("executor", function()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+				{ "test.bt", 1, "local-variable", "unsigned char", "uchar_array", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
 			})
-			end, "can't assign 'const string' to type 'uchar[]' at test.bt:1")
+			end, "can't assign 'const string' to type 'unsigned char[]' at test.bt:1")
 	end)
 	
 	it("errors on assignment of string value to uchar array", function()
@@ -2224,10 +2224,10 @@ describe("executor", function()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
+				{ "test.bt", 1, "local-variable", "unsigned char", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
 				{ "test.bt", 2, "assign", { "test.bt", 1, "ref", { "uchar_array" } }, { "test.bt", 1, "str", "hello" } },
 			})
-			end, "can't assign 'const string' to type 'uchar[]' at test.bt:2")
+			end, "can't assign 'const string' to type 'unsigned char[]' at test.bt:2")
 	end)
 	
 	it("errors on initialisation of string from uchar array", function()
@@ -2235,22 +2235,22 @@ describe("executor", function()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
+				{ "test.bt", 1, "local-variable", "unsigned char", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
 				{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, { "test.bt", 2, "ref", { "uchar_array" } } },
 			})
-			end, "can't assign 'uchar[]' to type 'string' at test.bt:2")
+			end, "can't assign 'unsigned char[]' to type 'string' at test.bt:2")
 	end)
 	
-	it("errors on assignment of uchar array to string", function()
+	it("errors on assignment of unsigned char array to string", function()
 		local interface, log = test_interface()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "uchar", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
+				{ "test.bt", 1, "local-variable", "unsigned char", "uchar_array", nil, { "test.bt", 1, "num", 10 }, nil },
 				{ "test.bt", 2, "local-variable", "string", "string_var", nil, nil, nil },
 				{ "test.bt", 3, "assign", { "test.bt", 3, "ref", { "string_var" } }, { "test.bt", 3, "ref", { "uchar_array" } } },
 			})
-			end, "can't assign 'uchar[]' to type 'string' at test.bt:3")
+			end, "can't assign 'unsigned char[]' to type 'string' at test.bt:3")
 	end)
 	
 	it("allows using local array variables", function()
@@ -3557,13 +3557,13 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(522) = %d" },     { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", 522 } } } },
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(ushort)(66536) = %d" },  { "test.bt", 1, "cast", "ushort", { "test.bt", 1, "num", 66536 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(522) = %d" },     { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", 522 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uint16_t)(66536) = %d" },  { "test.bt", 1, "cast", "uint16_t", { "test.bt", 1, "num", 66536 } } } },
 		})
 		
 		local expect_log = {
-			"print((uchar)(522) = 10)",
-			"print((ushort)(66536) = 1000)",
+			"print((unsigned char)(522) = 10)",
+			"print((uint16_t)(66536) = 1000)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -3573,21 +3573,21 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-1) = %d" },   { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -1 } } } },
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-128) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -128 } } } },
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-129) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -129 } } } },
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-255) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -255 } } } },
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-256) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -256 } } } },
-			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(uchar)(-257) = %d" }, { "test.bt", 1, "cast", "uchar",  { "test.bt", 1, "num", -257 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(-1) = %d" },   { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", -1 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(-128) = %d" }, { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", -128 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(-129) = %d" }, { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", -129 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(-255) = %d" }, { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", -255 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(-256) = %d" }, { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", -256 } } } },
+			{ "test.bt", 1, "call", "Printf", { { "test.bt", 1, "str", "(unsigned char)(-257) = %d" }, { "test.bt", 1, "cast", "unsigned char",  { "test.bt", 1, "num", -257 } } } },
 		})
 		
 		local expect_log = {
-			"print((uchar)(-1) = 255)",
-			"print((uchar)(-128) = 128)",
-			"print((uchar)(-129) = 127)",
-			"print((uchar)(-255) = 1)",
-			"print((uchar)(-256) = 0)",
-			"print((uchar)(-257) = 255)",
+			"print((unsigned char)(-1) = 255)",
+			"print((unsigned char)(-128) = 128)",
+			"print((unsigned char)(-129) = 127)",
+			"print((unsigned char)(-255) = 1)",
+			"print((unsigned char)(-256) = 0)",
+			"print((unsigned char)(-257) = 255)",
 		}
 		
 		assert.are.same(expect_log, log)

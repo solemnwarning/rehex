@@ -548,60 +548,26 @@ _builtin_type_uint64 .signed_overlay   = _builtin_type_int64
 _builtin_type_uint64 .unsigned_overlay = _builtin_type_uint64
 
 _builtin_types = {
-	char = _make_named_type("char", _builtin_type_int8),
-	byte = _make_named_type("byte", _builtin_type_int8),
-	CHAR = _make_named_type("CHAR", _builtin_type_int8),
-	BYTE = _make_named_type("BYTE", _builtin_type_int8),
+	char   = _make_named_type("char",   _builtin_type_int8),
+	int8_t = _make_named_type("int8_t", _builtin_type_int8),
 	
-	uchar = _make_named_type("uchar", _builtin_type_uint8),
-	ubyte = _make_named_type("ubyte", _builtin_type_uint8),
-	UCHAR = _make_named_type("UCHAR", _builtin_type_uint8),
-	UBYTE = _make_named_type("UBYTE", _builtin_type_uint8),
+	uint8_t = _make_named_type("uint8_t", _builtin_type_uint8),
 	
-	short = _make_named_type("short", _builtin_type_int16),
-	int16 = _make_named_type("int16", _builtin_type_int16),
-	SHORT = _make_named_type("SHORT", _builtin_type_int16),
-	INT16 = _make_named_type("INT16", _builtin_type_int16),
+	int16_t  = _make_named_type("int16_t",  _builtin_type_int16),
+	uint16_t = _make_named_type("uint16_t", _builtin_type_uint16),
 	
-	ushort = _make_named_type("ushort", _builtin_type_uint16),
-	uint16 = _make_named_type("uint16", _builtin_type_uint16),
-	USHORT = _make_named_type("USHORT", _builtin_type_uint16),
-	UINT16 = _make_named_type("UINT16", _builtin_type_uint16),
-	WORD   = _make_named_type("WORD",   _builtin_type_uint16),
+	int     = _make_named_type("int",     _builtin_type_int32),
+	int32_t = _make_named_type("int32_t", _builtin_type_int32),
 	
-	int   = _make_named_type("int",   _builtin_type_int32),
-	int32 = _make_named_type("int32", _builtin_type_int32),
-	long  = _make_named_type("long",  _builtin_type_int32),
-	INT   = _make_named_type("INT",   _builtin_type_int32),
-	INT32 = _make_named_type("INT32", _builtin_type_int32),
-	LONG  = _make_named_type("LONG",  _builtin_type_int32),
+	uint32_t = _make_named_type("uint32_t", _builtin_type_uint32),
 	
-	uint   = _make_named_type("uint",   _builtin_type_uint32),
-	uint32 = _make_named_type("uint32", _builtin_type_uint32),
-	ulong  = _make_named_type("ulong",  _builtin_type_uint32),
-	UINT   = _make_named_type("UINT",   _builtin_type_uint32),
-	UINT32 = _make_named_type("UINT32", _builtin_type_uint32),
-	ULONG  = _make_named_type("ULONG",  _builtin_type_uint32),
-	DWORD  = _make_named_type("DWORD",  _builtin_type_uint32),
+	int64_t = _make_named_type("int64_t", _builtin_type_int64),
 	
-	int64   = _make_named_type("int64",   _builtin_type_int64),
-	quad    = _make_named_type("quad",    _builtin_type_int64),
-	QUAD    = _make_named_type("QUAD",    _builtin_type_int64),
-	INT64   = _make_named_type("INT64",   _builtin_type_int64),
-	__int64 = _make_named_type("__int64", _builtin_type_int64),
-	
-	uint64   = _make_named_type("uint64",   _builtin_type_uint64),
-	uquad    = _make_named_type("uquad",    _builtin_type_uint64),
-	UQUAD    = _make_named_type("UQUAD",    _builtin_type_uint64),
-	UINT64   = _make_named_type("UINT64",   _builtin_type_uint64),
-	QWORD    = _make_named_type("QWORD",    _builtin_type_uint64),
-	__uint64 = _make_named_type("__uint64", _builtin_type_uint64),
+	uint64_t = _make_named_type("uint64_t", _builtin_type_uint64),
 	
 	float = _make_named_type("float", _builtin_type_float32),
-	FLOAT = _make_named_type("FLOAT", _builtin_type_float32),
 	
 	double = _make_named_type("double", _builtin_type_float64),
-	DOUBLE = _make_named_type("DOUBLE", _builtin_type_float64),
 	
 	string = { name = "string", base = "string" },
 }
@@ -632,7 +598,7 @@ local function _builtin_function_FEof(context, argv)
 end
 
 local function _builtin_function_FileSize(context, argv)
-	return _builtin_types.int64, ImmediateValue:new(context.interface.file_length())
+	return _builtin_types.int64_t, ImmediateValue:new(context.interface.file_length())
 end
 
 local function _builtin_function_FSeek(context, argv)
@@ -660,7 +626,7 @@ local function _builtin_function_FSkip(context, argv)
 end
 
 local function _builtin_function_FTell(context, argv)
-	return _builtin_types.int64, ImmediateValue:new(context.next_variable)
+	return _builtin_types.int64_t, ImmediateValue:new(context.next_variable)
 end
 
 local function _builtin_function_Printf(context, argv)
@@ -690,7 +656,7 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 	end
 	
 	return {
-		arguments = { _builtin_types.int64 },
+		arguments = { _builtin_types.int64_t },
 		defaults  = {
 			-- FTell()
 			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "call", "FTell", {} }
@@ -816,23 +782,23 @@ local _builtin_functions = {
 	
 	FEof     = { arguments = {},                       defaults = {}, impl = _builtin_function_FEof },
 	FileSize = { arguments = {},                       defaults = {}, impl = _builtin_function_FileSize },
-	FSeek    = { arguments = { _builtin_types.int64 }, defaults = {}, impl = _builtin_function_FSeek },
-	FSkip    = { arguments = { _builtin_types.int64 }, defaults = {}, impl = _builtin_function_FSkip },
+	FSeek    = { arguments = { _builtin_types.int64_t }, defaults = {}, impl = _builtin_function_FSeek },
+	FSkip    = { arguments = { _builtin_types.int64_t }, defaults = {}, impl = _builtin_function_FSkip },
 	FTell    = { arguments = {},                       defaults = {}, impl = _builtin_function_FTell },
 	
-	ReadByte   = _builtin_function_defn_ReadXXX(_builtin_types.char,   "ReadByte"),
-	ReadDouble = _builtin_function_defn_ReadXXX(_builtin_types.double, "ReadDouble"),
-	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "ReadFloat"),
+	ReadByte   = _builtin_function_defn_ReadXXX(_builtin_types.char,     "ReadByte"),
+	ReadDouble = _builtin_function_defn_ReadXXX(_builtin_types.double,   "ReadDouble"),
+	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,    "ReadFloat"),
 	-- ReadHFloat = _builtin_function_defn_ReadXXX(_builtin_types.hfloat, "ReadHFloat"),
-	ReadInt    = _builtin_function_defn_ReadXXX(_builtin_types.int,    "ReadInt"),
-	ReadInt64  = _builtin_function_defn_ReadXXX(_builtin_types.int64,  "ReadInt64"),
-	ReadQuad   = _builtin_function_defn_ReadXXX(_builtin_types.int64,  "ReadQuad"),
-	ReadShort  = _builtin_function_defn_ReadXXX(_builtin_types.short,  "ReadShort"),
-	ReadUByte  = _builtin_function_defn_ReadXXX(_builtin_types.uchar,  "ReadUByte"),
-	ReadUInt   = _builtin_function_defn_ReadXXX(_builtin_types.uint,   "ReadUInt"),
-	ReadUint64 = _builtin_function_defn_ReadXXX(_builtin_types.uint64, "ReadUInt64"),
-	ReadUQuad  = _builtin_function_defn_ReadXXX(_builtin_types.uint64, "ReadUQuad"),
-	ReadUShort = _builtin_function_defn_ReadXXX(_builtin_types.ushort, "ReadUShort"),
+	ReadInt    = _builtin_function_defn_ReadXXX(_builtin_types.int,      "ReadInt"),
+	ReadInt64  = _builtin_function_defn_ReadXXX(_builtin_types.int64_t,  "ReadInt64"),
+	ReadQuad   = _builtin_function_defn_ReadXXX(_builtin_types.int64_t,  "ReadQuad"),
+	ReadShort  = _builtin_function_defn_ReadXXX(_builtin_types.int16_t,  "ReadShort"),
+	ReadUByte  = _builtin_function_defn_ReadXXX(_builtin_types.uint8_t,  "ReadUByte"),
+	ReadUInt   = _builtin_function_defn_ReadXXX(_builtin_types.uint32_t, "ReadUInt"),
+	ReadUint64 = _builtin_function_defn_ReadXXX(_builtin_types.uint64_t, "ReadUInt64"),
+	ReadUQuad  = _builtin_function_defn_ReadXXX(_builtin_types.uint64_t, "ReadUQuad"),
+	ReadUShort = _builtin_function_defn_ReadXXX(_builtin_types.uint16_t, "ReadUShort"),
 	
 	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
 	
@@ -2484,7 +2450,7 @@ local function execute(interface, statements)
 			-- for the range, else it would be displayed as a list of integers rather than a
 			-- contiguous byte sequence.
 			
-			if not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uchar.type_key))
+			if not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
 			then
 				local data_start, data_end = value:data_range()
 				if data_start ~= nil

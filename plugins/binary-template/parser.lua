@@ -261,21 +261,18 @@ local function _skip_type(text, pos)
 	return ret
 end
 
-local function _capture_name(text, pos)
-	local match_begin, match_end = text:find("^[%a_][%w_]*", pos)
-	if match_begin ~= nil
-	then
-		local word = text:sub(match_begin, match_end)
-		
-		if RESERVED_WORDS[word] ~= nil
+local _capture_name = Cmt(
+	(R("az", "AZ") + P("_")) * (R("az", "AZ", "09") + P("_")) ^ 0,
+	function(text, pos, name)
+		if RESERVED_WORDS[name] ~= nil
 		then
 			-- This is a reserved word, don't match
 			return
 		end
 		
-		return match_end + 1, word
+		return pos, name
 	end
-end
+)
 
 local spc = S(" \t\r\n")^0
 local spc_req = S(" \t\r\n")^1
@@ -286,8 +283,8 @@ local number_hex = ( P("0x") * C( xdigit^1                          ) / function
 local number_oct = (           C( P("0") * odigit^1                 ) / function(c) return tonumber(c,  8) end )
 local number_dec = (           C( digit^1 * ( P('.') * digit^1 )^-1 ) / function(c) return tonumber(c)     end )
 local number = (number_hex + number_oct + number_dec) * spc
-local name = P(_capture_name) * spc
-local name_nospc = P(_capture_name)
+local name = _capture_name * spc
+local name_nospc = _capture_name
 local comma  = P(",") * spc
 
 local _parser = spc * P{

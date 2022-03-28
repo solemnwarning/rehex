@@ -19,23 +19,7 @@ INSTALL_FILES := \
 	parser.lua \
 	plugin.lua \
 	preprocessor.lua \
-	lulpeg/analyzer.lua \
-	lulpeg/API.lua \
-	lulpeg/charsets.lua \
-	lulpeg/compat.lua \
-	lulpeg/compiler.lua \
-	lulpeg/constructors.lua \
-	lulpeg/datastructures.lua \
-	lulpeg/evaluator.lua \
-	lulpeg/factorizer.lua \
-	lulpeg/init.lua \
-	lulpeg/locale.lua \
-	lulpeg/lulpeg.lua \
-	lulpeg/match.lua \
-	lulpeg/optimizer.lua \
-	lulpeg/printers.lua \
-	lulpeg/re.lua \
-	lulpeg/util.lua
+	lulpeg/lulpeg.lua
 
 prefix      ?= /usr/local
 exec_prefix ?= $(prefix)

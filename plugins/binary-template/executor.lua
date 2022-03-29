@@ -1850,6 +1850,7 @@ _eval_enum = function(context, statement)
 	local enum_name    = statement[5]
 	local members      = statement[6]
 	local typedef_name = statement[7]
+	local var_decl     = statement[8]
 	
 	local enum_typename = enum_name ~= nil and "enum " .. enum_name or nil
 	
@@ -1905,12 +1906,21 @@ _eval_enum = function(context, statement)
 	
 	if enum_typename ~= nil
 	then
-		context.stack[#context.stack].var_types[enum_typename] = _make_named_type(enum_typename, type_info)
+		type_info = _make_named_type(enum_typename, type_info)
+		context.stack[#context.stack].var_types[enum_typename] = type_info
 	end
 	
 	if typedef_name ~= nil
 	then
 		context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)
+	end
+	
+	if var_decl ~= nil
+	then
+		local var_name   = var_decl[1]
+		local array_size = var_decl[3]
+		
+		_decl_variable(context, statement, type_info, var_name, nil, array_size, nil, false)
 	end
 end
 

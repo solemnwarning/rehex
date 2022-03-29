@@ -2920,6 +2920,148 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("allows defining an enum with a variable", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil, { "e", nil, nil } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FOO = %d" },
+				{ "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAR = %d" },
+				{ "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAZ = %d" },
+				{ "test.bt", 1, "ref", { "BAZ" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e = %d" },
+				{ "test.bt", 1, "ref", { "e" } } } },
+		})
+		
+		local expect_log = {
+			"print(FOO = 0)",
+			"print(BAR = 1)",
+			"print(BAZ = 2)",
+			"print(e = 1)",
+			"set_comment(0, 4, e)",
+			"set_data_type(0, 4, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows defining an anonymous enum variable", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "enum", "int", nil, {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil, { "e", nil, nil } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FOO = %d" },
+				{ "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAR = %d" },
+				{ "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAZ = %d" },
+				{ "test.bt", 1, "ref", { "BAZ" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e = %d" },
+				{ "test.bt", 1, "ref", { "e" } } } },
+		})
+		
+		local expect_log = {
+			"print(FOO = 0)",
+			"print(BAR = 1)",
+			"print(BAZ = 2)",
+			"print(e = 1)",
+			"set_comment(0, 4, e)",
+			"set_data_type(0, 4, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows defining an enum with an array variable", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil, { "e", nil, { "test.bt", 1, "num", 3 } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "FOO = %d" },
+				{ "test.bt", 1, "ref", { "FOO" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAR = %d" },
+				{ "test.bt", 1, "ref", { "BAR" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "BAZ = %d" },
+				{ "test.bt", 1, "ref", { "BAZ" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e[0] = %d" },
+				{ "test.bt", 1, "ref", { "e", { "test.bt", 1, "num", 0 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e[1] = %d" },
+				{ "test.bt", 1, "ref", { "e", { "test.bt", 1, "num", 1 } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "e[2] = %d" },
+				{ "test.bt", 1, "ref", { "e", { "test.bt", 1, "num", 2 } } } } },
+		})
+		
+		local expect_log = {
+			"print(FOO = 0)",
+			"print(BAR = 1)",
+			"print(BAZ = 2)",
+			"print(e[0] = 1)",
+			"print(e[1] = 2)",
+			"print(e[2] = 3)",
+			"set_comment(0, 12, e)",
+			"set_data_type(0, 12, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
 	it("errors when defining an enum with an undefined type", function()
 		local interface, log = test_interface()
 		

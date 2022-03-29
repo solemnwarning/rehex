@@ -840,6 +840,38 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("parses enum definition w/ variable declaration", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("enum myenum { FOO, BAR, BAZ } myvar;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil, { "myvar", nil, nil } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
+	it("parses anonymous enum definition w/ variable declaration", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("enum { FOO, BAR, BAZ } myvar;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", nil, {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil, { "myvar", nil, nil } },
+		}
+		
+		assert.are.same(expect, got)
+	end)
+	
 	it("parses for loop", function()
 		local got
 		local expect

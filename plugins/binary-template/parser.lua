@@ -405,14 +405,18 @@ local _parser = spc * P{
 	--          { "member name" } or { "member name", <value expr> },
 	--      },
 	--      "typedef name" or nil,
+	--      { <variable name>, nil, <array size expr> OR nil } OR nil,
 	--  }
 	ENUM_TYPE        = (P("<") * P(_capture_type) * P(">") * spc) + Cc("int"),
 	ENUM_MEMBER      = Ct( name * (P("=") * spc * V("EXPR")) ^ -1 ),
 	ENUM_MEMBER_LIST = Ct( V("ENUM_MEMBER") * (comma * V("ENUM_MEMBER")) ^ 0 ),
+	ENUM_VAR_DECL    = Ct( name * Cc(nil) * (P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) ),
 	ENUM_DEFN =
-		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * P(";") * spc ),
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * Cc(nil)            * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * V("ENUM_VAR_DECL") * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * V("ENUM_VAR_DECL") * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * Cc(nil)            * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * Cc(nil)            * P(";") * spc ),
 	
 	--  {
 	--      "function",

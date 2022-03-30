@@ -261,41 +261,6 @@ local function _make_unsigned_type(context, type_info)
 	end
 end
 
-local function _get_value_size(type, value)
-	local x = function(v)
-		if type.base == "struct"
-		then
-			local size = 0
-			
-			for k,v in pairs(v)
-			do
-				local member_type = v[1]
-				local member_val  = v[2]
-				
-				size = size + _get_value_size(member_type, member_val)
-			end
-			
-			return size
-		else
-			return type.length
-		end
-	end
-	
-	if type.is_array
-	then
-		local array_size = 0
-		
-		for _,v in ipairs(value)
-		do
-			array_size = array_size + x(v)
-		end
-		
-		return array_size
-	else
-		return x(value)
-	end
-end
-
 local function _type_is_string(type_info)
 	return type_info ~= nil and not type_info.is_array and type_info.base == "string"
 end

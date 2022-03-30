@@ -819,6 +819,52 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("errors on outer struct member access from nested structs", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- LittleEndian();
+				{ "test.bt", 1, "call", "LittleEndian", {} },
+				
+				-- struct mystruct {
+				--     struct bstruct {
+				--         int x;
+				--         int y;
+				--
+				--         Printf("bstruct foo = %d", foo);
+				--     };
+				--
+				--     int foo;
+				--     struct bstruct bar;
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", {},
+				{
+					{ "test.bt", 1, "struct", "bstruct", {},
+					{
+						{ "test.bt", 1, "variable", "int", "x", nil, nil },
+						{ "test.bt", 1, "variable", "int", "y", nil, nil },
+						
+						{ "test.bt", 1, "call", "Printf", {
+							{ "test.bt", 1, "str", "bstruct foo = %d" },
+							{ "test.bt", 1, "ref", { "foo" } } } },
+					} },
+					
+					{ "test.bt", 1, "variable", "int", "foo", nil, nil },
+					{ "test.bt", 1, "variable", "struct bstruct", "bar", nil, nil },
+				} },
+				
+				-- struct mystruct a;
+				{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
+			})
+			end, "Attempt to use undefined variable 'foo' at test.bt:1")
+	end)
+	
 	it("handles global structs with variable declarations", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,

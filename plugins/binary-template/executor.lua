@@ -942,7 +942,7 @@ _eval_ref = function(context, statement)
 			return _walk_path(frame.vars[ path[1] ])
 		end
 		
-		if frame.frame_type == FRAME_TYPE_FUNCTION
+		if frame.frame_type == FRAME_TYPE_FUNCTION or frame.frame_type == FRAME_TYPE_STRUCT
 		then
 			-- Don't look for variables in parent functions
 			break

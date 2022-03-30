@@ -5330,8 +5330,18 @@ describe("executor", function()
 		))
 		
 		executor.execute(interface, {
-			-- int a[2];
-			{ "test.bt", 1, "variable", "int", "a", nil, { "test.bt", 1, "num", 2 } },
+			-- int a[0];
+			{ "test.bt", 1, "variable", "int", "a", nil, { "test.bt", 1, "num", 0 } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 2, "call", "Printf", {
+				{ "test.bt", 2, "str", "array_length(a) = %d" },
+				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+			
+			-- array_resize(a, 2);
+			{ "test.bt", 7, "call", "array_resize", {
+				{ "test.bt", 7, "ref", { "a" } },
+				{ "test.bt", 7, "num", 2 } } },
 			
 			-- Printf("array_length(a) = %d", array_length(a));
 			{ "test.bt", 2, "call", "Printf", {
@@ -5400,6 +5410,7 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
+			"print(array_length(a) = 0)",
 			"print(array_length(a) = 2)",
 			"print(a = { 1, 2 })",
 			"print(array_length(a) = 3)",
@@ -5513,5 +5524,219 @@ describe("executor", function()
 				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 } } },
 			})
 			end, "Attempt to modify 'const' array at test.bt:2")
+	end)
+	
+	it("allows extending file struct arrays with array_extend()", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00,
+			0x05, 0x00, 0x00, 0x00,
+			0x06, 0x00, 0x00, 0x00,
+			0x07, 0x00, 0x00, 0x00,
+			0x08, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
+			} },
+			
+			-- struct mystruct a[0];
+			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, { "test.bt", 1, "num", 0 } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 2, "call", "Printf", {
+				{ "test.bt", 2, "str", "array_length(a) = %d" },
+				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+			
+			-- array_resize(a, 1);
+			{ "test.bt", 3, "call", "array_resize", {
+				{ "test.bt", 3, "ref", { "a" } },
+				{ "test.bt", 3, "num", 1 } } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 4, "call", "Printf", {
+				{ "test.bt", 4, "str", "array_length(a) = %d" },
+				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a" } } } } } },
+			
+			-- Printf("a = { { %d, %d } }", a[0].x, a[0].y);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "a = { { %d, %d } }" },
+				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "x" } },
+				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "y" } } } },
+			
+			-- array_extend(a);
+			{ "test.bt", 6, "call", "array_extend", {
+				{ "test.bt", 6, "ref", { "a" } } } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 7, "call", "Printf", {
+				{ "test.bt", 7, "str", "array_length(a) = %d" },
+				{ "test.bt", 7, "call", "array_length", { { "test.bt", 7, "ref", { "a" } } } } } },
+			
+			-- Printf("a = { { %d, %d }, { %d, %d } }", a[0].x, a[0].y, a[1].x, a[1].y);
+			{ "test.bt", 8, "call", "Printf", {
+				{ "test.bt", 8, "str", "a = { { %d, %d }, { %d, %d } }" },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 0 }, "x" } },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 0 }, "y" } },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "x" } },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "y" } } } },
+			
+			-- array_extend(a, 2);
+			{ "test.bt", 9, "call", "array_extend", {
+				{ "test.bt", 9, "ref", { "a" } },
+				{ "test.bt", 9, "num", 2 } } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "array_length(a) = %d" },
+				{ "test.bt", 10, "call", "array_length", { { "test.bt", 10, "ref", { "a" } } } } } },
+			
+			-- Printf("a = { { %d, %d }, { %d, %d }, { %d, %d }, { %d, %d } }",
+			--     a[0].x, a[0].y, a[1].x, a[1].y, a[2].x, a[2].y, a[3].x, a[3].y);
+			{ "test.bt", 11, "call", "Printf", {
+				{ "test.bt", 11, "str", "a = { { %d, %d }, { %d, %d }, { %d, %d }, { %d, %d } }" },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 0 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 0 }, "y" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 1 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 1 }, "y" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 2 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 2 }, "y" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 3 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 3 }, "y" } } } },
+		})
+		
+		local expect_log = {
+			"print(array_length(a) = 0)",
+			"print(array_length(a) = 1)",
+			"print(a = { { 1, 2 } })",
+			"print(array_length(a) = 2)",
+			"print(a = { { 1, 2 }, { 3, 4 } })",
+			"print(array_length(a) = 4)",
+			"print(a = { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 } })",
+			"set_comment(0, 4, x)",
+			"set_comment(4, 4, y)",
+			"set_comment(0, 8, a[0])",
+			"set_comment(8, 4, x)",
+			"set_comment(12, 4, y)",
+			"set_comment(8, 8, a[1])",
+			"set_comment(16, 4, x)",
+			"set_comment(20, 4, y)",
+			"set_comment(16, 8, a[2])",
+			"set_comment(24, 4, x)",
+			"set_comment(28, 4, y)",
+			"set_comment(24, 8, a[3])",
+			"set_data_type(0, 4, s32le)",
+			"set_data_type(4, 4, s32le)",
+			"set_data_type(8, 4, s32le)",
+			"set_data_type(12, 4, s32le)",
+			"set_data_type(16, 4, s32le)",
+			"set_data_type(20, 4, s32le)",
+			"set_data_type(24, 4, s32le)",
+			"set_data_type(28, 4, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows extending local struct arrays with array_extend()", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00,
+			0x05, 0x00, 0x00, 0x00,
+			0x06, 0x00, 0x00, 0x00,
+			0x07, 0x00, 0x00, 0x00,
+			0x08, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
+			} },
+			
+			-- local struct mystruct a[0];
+			{ "test.bt", 1, "local-variable", "struct mystruct", "a", nil, { "test.bt", 1, "num", 0 }, nil },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 2, "call", "Printf", {
+				{ "test.bt", 2, "str", "array_length(a) = %d" },
+				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+			
+			-- array_resize(a, 1);
+			{ "test.bt", 3, "call", "array_resize", {
+				{ "test.bt", 3, "ref", { "a" } },
+				{ "test.bt", 3, "num", 1 } } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 4, "call", "Printf", {
+				{ "test.bt", 4, "str", "array_length(a) = %d" },
+				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a" } } } } } },
+			
+			-- Printf("a = { { %d, %d } }", a[0].x, a[0].y);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "a = { { %d, %d } }" },
+				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "x" } },
+				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "y" } } } },
+			
+			-- array_extend(a);
+			{ "test.bt", 6, "call", "array_extend", {
+				{ "test.bt", 6, "ref", { "a" } } } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 7, "call", "Printf", {
+				{ "test.bt", 7, "str", "array_length(a) = %d" },
+				{ "test.bt", 7, "call", "array_length", { { "test.bt", 7, "ref", { "a" } } } } } },
+			
+			-- Printf("a = { { %d, %d }, { %d, %d } }", a[0].x, a[0].y, a[1].x, a[1].y);
+			{ "test.bt", 8, "call", "Printf", {
+				{ "test.bt", 8, "str", "a = { { %d, %d }, { %d, %d } }" },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 0 }, "x" } },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 0 }, "y" } },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "x" } },
+				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "y" } } } },
+			
+			-- array_extend(a, 2);
+			{ "test.bt", 9, "call", "array_extend", {
+				{ "test.bt", 9, "ref", { "a" } },
+				{ "test.bt", 9, "num", 2 } } },
+			
+			-- Printf("array_length(a) = %d", array_length(a));
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "array_length(a) = %d" },
+				{ "test.bt", 10, "call", "array_length", { { "test.bt", 10, "ref", { "a" } } } } } },
+			
+			-- Printf("a = { { %d, %d }, { %d, %d }, { %d, %d }, { %d, %d } }",
+			--     a[0].x, a[0].y, a[1].x, a[1].y, a[2].x, a[2].y, a[3].x, a[3].y);
+			{ "test.bt", 11, "call", "Printf", {
+				{ "test.bt", 11, "str", "a = { { %d, %d }, { %d, %d }, { %d, %d }, { %d, %d } }" },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 0 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 0 }, "y" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 1 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 1 }, "y" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 2 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 2 }, "y" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 3 }, "x" } },
+				{ "test.bt", 11, "ref", { "a", { "test.bt", 11, "num", 3 }, "y" } } } },
+		})
+		
+		local expect_log = {
+			"print(array_length(a) = 0)",
+			"print(array_length(a) = 1)",
+			"print(a = { { 0, 0 } })",
+			"print(array_length(a) = 2)",
+			"print(a = { { 0, 0 }, { 0, 0 } })",
+			"print(array_length(a) = 4)",
+			"print(a = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } })",
+		}
+		
+		assert.are.same(expect_log, log)
 	end)
 end)

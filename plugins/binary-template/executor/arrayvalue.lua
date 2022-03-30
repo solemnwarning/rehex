@@ -32,8 +32,8 @@ function ArrayValue:new()
 end
 
 function ArrayValue:data_range()
-	local data_start = nil
-	local data_end = nil
+	local data_start = self.offset
+	local data_end = self.offset
 	
 	local x = function(v)
 		local v_data_start, v_data_end = v:data_range()

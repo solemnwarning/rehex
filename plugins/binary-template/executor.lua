@@ -1451,6 +1451,11 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		else
 			root_value = ArrayValue:new()
 			
+			if not context.declaring_local_var
+			then
+				root_value.offset = context.next_variable
+			end
+			
 			for _,t in ipairs(dest_tables)
 			do
 				t[var_name] = {

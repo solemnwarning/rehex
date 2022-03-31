@@ -5785,4 +5785,62 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("converts string to char[] function argument", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local string s = "hello";
+			{ "test.bt", 1, "local-variable", "string", "s", nil, nil, { "test.bt", 1, "str", "hello" } },
+			
+			-- void foo(char[] a) { ... }
+			{ "test.bt", 2, "function", "void", "foo", { { "char []", "a" } }, {
+				-- Printf("%c%c%c%c%c", a[0], a[1], a[2], a[3], a[4]);
+				{ "test.bt", 3, "call", "Printf", {
+					{ "test.bt", 3, "str", "%c%c%c%c%c" },
+					{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 0 } } },
+					{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 1 } } },
+					{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 2 } } },
+					{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 3 } } },
+					{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 4 } } } } }
+			} },
+			
+			-- foo(s);
+			{ "test.bt", 5, "call", "foo", {
+				{ "test.bt", 5, "ref", { "s" } } } },
+		})
+		
+		local expect_log = {
+			"print(hello)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("converts char[] to string function argument", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local char s[10] = "hello";
+			{ "test.bt", 1, "local-variable", "char", "s", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+			
+			-- void foo(string a) { ... }
+			{ "test.bt", 2, "function", "void", "foo", { { "string", "a" } }, {
+				-- Printf("%s", a);
+				{ "test.bt", 3, "call", "Printf", {
+					{ "test.bt", 3, "str", "%s" },
+					{ "test.bt", 3, "ref", { "a" } } } }
+			} },
+			
+			-- foo(s);
+			{ "test.bt", 5, "call", "foo", {
+				{ "test.bt", 5, "ref", { "s" } } } },
+		})
+		
+		local expect_log = {
+			"print(hello)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

@@ -426,6 +426,28 @@ local function _assign_value(context, dst_type, dst_val, src_type, src_val)
 end
 
 local function _make_value_from_value(context, dst_type, src_type, src_val, move_if_possible)
+	if _type_is_string(dst_type) and _type_is_char_array(src_type)
+	then
+		-- Assignment from char[] to string - set the string to the chars from the array
+		return PlainValue:new(_stringify_value(src_type, src_val))
+	elseif _type_is_char_array(dst_type) and _type_is_string(src_type)
+	then
+		-- Assignment from string to char[] - copy characters into the string up to the
+		-- end of the array/string and fill any remaining space with zeros.
+		
+		local dst_val = ArrayValue:new()
+		
+		local src_str = src_val:get()
+		local src_len = src_str:len()
+		
+		for i = 1, src_len
+		do
+			dst_val[i] = PlainValue:new(src_str:byte(i))
+		end
+		
+		return dst_val
+	end
+	
 	if (not dst_type.is_array) ~= (not src_type.is_array)
 		or dst_type.base ~= src_type.base
 		or (dst_type.base == "struct" and dst_type.type_key ~= src_type.type_key)
@@ -433,14 +455,12 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 		_template_error(context, "can't convert '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
 	end
 	
-	-- TODO: string to/from char[] conversion
-	
 	if src_type.is_array
 	then
 		local dst_elem_type = _make_nonarray_type(dst_type)
 		local src_elem_type = _make_nonarray_type(src_type)
 		
-		local dst_val = {}
+		local dst_val = ArrayValue:new()
 		
 		for i = 1, #src_val
 		do
@@ -452,7 +472,7 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	
 	if src_type.base == "struct"
 	then
-		local dst_val = {}
+		local dst_val = StructValue:new()
 		
 		for k,src_pair in pairs(src_val)
 		do

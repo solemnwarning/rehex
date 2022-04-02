@@ -2,6 +2,10 @@
 #include "../document.hpp"
 #include "../mainwindow.hpp"
 
+void print_debug(const wxString &text);
+void print_info(const wxString &text);
+void print_error(const wxString &text);
+
 // TODO: Make this a proper enum class?
 enum REHex::App::SetupPhase
 {};

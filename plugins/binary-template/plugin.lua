@@ -138,7 +138,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		local template_idx = template_choice:GetSelection() + 1
 		local template_path = templates[template_idx][2]
 		
-		local progress_dialog = wx.wxProgressDialog("Processing template", "Hello", 100, window, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME)
+		local progress_dialog = wx.wxProgressDialog("Processing template", "Processing template...", 100, window, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME)
 		progress_dialog:Show()
 		
 		if range_file:GetValue()
@@ -166,7 +166,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 				return selection_length
 			end,
 			
-			print = function(s) print(s) end,
+			print = function(s) rehex.print_info(s) end,
 			
 			yield = function()
 				-- The yield method gets called at least once for every statement

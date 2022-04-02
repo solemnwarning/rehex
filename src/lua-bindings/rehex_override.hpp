@@ -5,6 +5,36 @@
 // same order as the listing of the functions in that file.
 // ----------------------------------------------------------------------------
 
+%override wxLua_function_print_debug
+static int LUACALL wxLua_function_print_debug(lua_State *L)
+{
+    const wxString text = wxlua_getwxStringtype(L, 1);
+    wxGetApp().print_debug(text.ToStdString());
+
+    return 0;
+}
+%end
+
+%override wxLua_function_print_info
+static int LUACALL wxLua_function_print_info(lua_State *L)
+{
+    const wxString text = wxlua_getwxStringtype(L, 1);
+    wxGetApp().print_info(text.ToStdString());
+
+    return 0;
+}
+%end
+
+%override wxLua_function_print_error
+static int LUACALL wxLua_function_print_error(lua_State *L)
+{
+    const wxString text = wxlua_getwxStringtype(L, 1);
+    wxGetApp().print_error(text.ToStdString());
+
+    return 0;
+}
+%end
+
 %override wxLua_REHex_App_SetupHookRegistration_constructor
 static int LUACALL wxLua_REHex_App_SetupHookRegistration_constructor(lua_State *L)
 {

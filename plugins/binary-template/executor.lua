@@ -1141,7 +1141,11 @@ _eval_postfix_increment = function(context, statement)
 	local old_value = value_v:get()
 	
 	local new_value = old_value + 1
-	-- TODO: Clamp new_value
+	
+	if value_t.int_mask ~= nil
+	then
+		new_value = new_value & value_t.int_mask
+	end
 	
 	value_v:set(new_value)
 	return value_t, ImmediateValue:new(old_value)
@@ -1159,7 +1163,11 @@ _eval_postfix_decrement = function(context, statement)
 	local old_value = value_v:get()
 	
 	local new_value = old_value - 1
-	-- TODO: Clamp new_value
+	
+	if value_t.int_mask ~= nil
+	then
+		new_value = new_value & value_t.int_mask
+	end
 	
 	value_v:set(new_value)
 	return value_t, ImmediateValue:new(old_value)

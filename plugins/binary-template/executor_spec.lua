@@ -3809,6 +3809,44 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("wraps values when postfix increment overflows", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "uint16_t", "i", nil, nil, { "test.bt", 1, "num", 65534 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 65534)",
+			"print(i++ = 65534)",
+			"print(i++ = 65535)",
+			"print(i++ = 0)",
+			"print(i = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
 	it("implements postfix decrement operator", function()
 		local interface, log = test_interface()
 		
@@ -3832,6 +3870,44 @@ describe("executor", function()
 			"print(i = 1)",
 			"print(i-- = 1)",
 			"print(i = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("wraps when postfix decrement overflows", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "local-variable", "uint16_t", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i-- = %d" },
+				{ "test.bt", 1, "postfix-decrement", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i-- = %d" },
+				{ "test.bt", 1, "postfix-decrement", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i-- = %d" },
+				{ "test.bt", 1, "postfix-decrement", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+		})
+		
+		local expect_log = {
+			"print(i = 1)",
+			"print(i-- = 1)",
+			"print(i-- = 0)",
+			"print(i-- = 65535)",
+			"print(i = 65534)",
 		}
 		
 		assert.are.same(expect_log, log)

@@ -33,5 +33,19 @@ CXXFLAGS += -Iinclude/gcc-win-include/
 
 include Makefile
 
+DISTDIR ?= rehex-$(VERSION)
+
+windist: $(EXE) rehex.chm
+	mkdir $(DISTDIR)
+	
+	cp $(EXE) $(DISTDIR)
+	cp rehex.chm $(DISTDIR)
+	
+	mkdir $(DISTDIR)/Plugins/
+	for p in $(PLUGINS); \
+	do \
+		$(MAKE) -C plugins/$${p} PLUGINS_INST_DIR=$$(realpath $(DISTDIR)/Plugins/) install || exit $$?; \
+	done
+
 res/winres.o: res/winres.rc res/winres.h
 	windres $< $@

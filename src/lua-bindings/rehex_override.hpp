@@ -5,6 +5,36 @@
 // same order as the listing of the functions in that file.
 // ----------------------------------------------------------------------------
 
+%override wxLua_function_print_debug
+static int LUACALL wxLua_function_print_debug(lua_State *L)
+{
+    const wxString text = wxlua_getwxStringtype(L, 1);
+    wxGetApp().print_debug(text.ToStdString());
+
+    return 0;
+}
+%end
+
+%override wxLua_function_print_info
+static int LUACALL wxLua_function_print_info(lua_State *L)
+{
+    const wxString text = wxlua_getwxStringtype(L, 1);
+    wxGetApp().print_info(text.ToStdString());
+
+    return 0;
+}
+%end
+
+%override wxLua_function_print_error
+static int LUACALL wxLua_function_print_error(lua_State *L)
+{
+    const wxString text = wxlua_getwxStringtype(L, 1);
+    wxGetApp().print_error(text.ToStdString());
+
+    return 0;
+}
+%end
+
 %override wxLua_REHex_App_SetupHookRegistration_constructor
 static int LUACALL wxLua_REHex_App_SetupHookRegistration_constructor(lua_State *L)
 {
@@ -127,5 +157,36 @@ static int LUACALL wxLua_REHex_Document_set_data_type(lua_State *L)
 	lua_pushboolean(L, returns);
 	
 	return 1;
+}
+%end
+
+%override wxLua_REHex_Document_transact_begin
+static int LUACALL wxLua_REHex_Document_transact_begin(lua_State *L)
+{
+	const wxString desc = wxlua_getwxStringtype(L, 2);
+	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+	
+	self->transact_begin(desc.ToStdString());
+	
+	return 0;
+}
+%end
+
+%override wxLua_REHex_Tab_get_selection_linear
+static int LUACALL wxLua_REHex_Tab_get_selection_linear(lua_State *L)
+{
+	REHex::Tab * self = (REHex::Tab *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Tab);
+	
+	std::pair<off_t,off_t> selection = self->doc_ctrl->get_selection_linear();
+	if(selection.second > 0)
+	{
+		lua_pushinteger(L, selection.first);
+		lua_pushinteger(L, selection.second);
+		
+		return 2;
+	}
+	else{
+		return 0;
+	}
 }
 %end

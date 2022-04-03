@@ -718,7 +718,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(5000);
+	wait_for_idle(20000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), (off_t)(16 * MiB));
 	ASSERT_EQ(string_panel->get_num_threads(), 0U);
@@ -745,7 +745,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	
 	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawned worker threads";
 	
-	wait_for_idle(10000);
+	wait_for_idle(20000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (off_t)(49 * MiB + 320 * kiB)) << "StringPanel processed all data in file";
 	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";

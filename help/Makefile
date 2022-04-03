@@ -19,6 +19,9 @@ PERL ?= perl
 
 PAGES := \
 	bitmap \
+	bt \
+	bt-funcs \
+	bt-syntax \
 	comments \
 	diff \
 	index \

@@ -1,0 +1,155 @@
+[% WRAPPER page.tt
+   title = "Function Reference"
+%]
+
+<h2>Function Reference</h2>
+
+<p>
+This page lists all the built-in functions available for templates.
+</p>
+
+<ul>
+<li><a href="#iofunc">I/O Functions</a></li>
+<li><a href="#arrayfunc">Array Functions</a></li>
+</ul>
+
+<a name="iofunc"><h3>I/O Functions</h3></a>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] BigEndian()
+[% WRAPPER "code-type.tt" %]void[% END %] LittleEndian()
+[%- END %]
+
+<p>
+Select big-endian or little-endian mode. You can switch back and forth within the same template to declare fields with different byte orders.
+</p>
+
+<p>
+Little-endian mode is selected by default.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]bool[% END %] IsBigEndian()
+[% WRAPPER "code-type.tt" %]bool[% END %] IsLittleEndian()
+[%- END %]
+
+<p>
+Check whether big-endian or little-endian mode is selected.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]bool[% END %] FEof()
+[%- END %]
+
+<p>
+Returns true if the read position is at the end of the file.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int64_t[% END %] FileSize()
+[%- END %]
+
+<p>
+Returns the length of the file in bytes.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] FSeek([% WRAPPER "code-type.tt" %]int64_t[% END %] offset)
+[%- END %]
+
+<p>
+Moves the read position relative to the start of the file.
+</p>
+
+<p>
+The read position is used for reading data and defining new variables.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] FSkip([% WRAPPER "code-type.tt" %]int64_t[% END %] offset)
+[%- END %]
+
+<p>
+Moves the read position relative to its current offset.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int64_t[% END %] FTell()
+[%- END %]
+
+<p>
+Returns the current read position in the file.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int8_t[% END %] ReadI8([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]uint8_t[% END %] ReadU8([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]int16_t[% END %] ReadI16([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]uint16_t[% END %] ReadU16([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]int32_t[% END %] ReadI32([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]uint32_t[% END %] ReadU32([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]int64_t[% END %] ReadI64([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]uint64_t[% END %] ReadU64([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]float[% END %] ReadFloat([% WRAPPER "code-type.tt" %]float[% END %] offset = FTell())
+[% WRAPPER "code-type.tt" %]double[% END %] ReadDouble([% WRAPPER "code-type.tt" %]double[% END %] offset = FTell())
+[%- END %]
+
+<p>
+The <code>ReadXXX()</code> functions read a value from the document and return it. The <code>offset</code> parameter is optional and defaults to the current read position.
+</p>
+
+<p>
+Calling any of these functions with an invalid offset will result in a template error.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] Printf(string format, ...)
+[%- END %]
+
+<p>
+Writes a message to the application console. The message will also be shown in the output window if the template encounters an error.
+</p>
+
+<a name="arrayfunc"><h3>Array Functions</h3></a>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int64_t[% END %] ArrayLength([% WRAPPER "code-type.tt" %]any array type[% END %] array)
+[%- END %]
+
+<p>
+Returns the number of elements in the given array.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] ArrayResize([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]int64_t[% END %] num_elements)
+[%- END %]
+
+<p>
+The <code>ArrayResize()</code> function changes the size of the given array. Any new elements will be initialised to their default values and any removed elements will be erased.
+</p>
+
+<p>
+This function can be called to incrementally increase the size of an array being read from the document, but <b>not</b> if any variables have been defined after the array.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] ArrayExtend([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]int64_t[% END %] num_elements = 1)
+[%- END %]
+
+<p>
+Equivalent to <code>ArrayResize(array, ArrayLength(array) + num_elements)</code>.
+</p>
+
+[% END %]

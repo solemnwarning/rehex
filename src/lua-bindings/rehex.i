@@ -2,6 +2,10 @@
 #include "../document.hpp"
 #include "../mainwindow.hpp"
 
+void print_debug(const wxString &text);
+void print_info(const wxString &text);
+void print_error(const wxString &text);
+
 // TODO: Make this a proper enum class?
 enum REHex::App::SetupPhase
 {};
@@ -58,6 +62,7 @@ class REHex::MainWindow: public wxFrame
 	wxMenu *get_help_menu() const;
 	
 	REHex::Document *active_document();
+	REHex::Tab *active_tab();
 };
 
 struct %delete REHex::Document::Comment
@@ -86,11 +91,17 @@ class REHex::Document: public wxEvtHandler
 	
 	off_t real_to_virt_offset(off_t real_offset) const;
 	off_t virt_to_real_offset(off_t virt_offset) const;
+	
+	void transact_begin(const wxString &desc);
+	void transact_commit();
+	void transact_rollback();
 };
 
 class REHex::Tab: public wxPanel
 {
 	const REHex::Document *doc;
+	
+	void get_selection_linear();
 };
 
 class REHex::TabCreatedEvent: public wxEvent

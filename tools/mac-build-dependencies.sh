@@ -28,7 +28,10 @@ _rehex_libunistring_build_ident="${_rehex_libunistring_version}-1"
 
 _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
-_rehex_lua_build_ident="${_rehex_lua_version}-1"
+_rehex_lua_build_ident="${_rehex_lua_version}-2"
+
+_rehex_luarocks_version="3.8.0"
+_rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 
 _rehex_wxwidgets_version="3.1.5"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
@@ -219,6 +222,33 @@ then
 		make -j$(sysctl -n hw.logicalcpu) macosx
 		make -j$(sysctl -n hw.logicalcpu) test
 		make -j$(sysctl -n hw.logicalcpu) install INSTALL_TOP="${_rehex_lua_target_dir}"
+		
+		cd "../../"
+		
+		echo "== Installing LuaRocks ${_rehex_luarocks_version}"
+		
+		_rehex_luarocks_tar="$(basename "${_rehex_luarocks_url}")"
+		
+		if [ ! -e "${_rehex_dep_build_dir}/${_rehex_luarocks_tar}" ]
+		then
+			echo "Downloading ${_rehex_luarocks_url}"
+			curl -Lo "${_rehex_luarocks_tar}" "${_rehex_luarocks_url}"
+		fi
+		
+		tar -xf "${_rehex_luarocks_tar}" -C "lua-${_rehex_lua_build_ident}"
+		cd "lua-${_rehex_lua_build_ident}/luarocks-${_rehex_luarocks_version}"
+		
+		./configure --prefix="${_rehex_lua_target_dir}" --with-lua="${_rehex_lua_target_dir}"
+		make
+		make install
+		
+		echo "== Installing Busted"
+		
+		"${_rehex_lua_target_dir}/bin/luarocks" \
+			--lua-dir="${_rehex_lua_target_dir}" \
+			--tree="${_rehex_lua_target_dir}" \
+			--global \
+			install busted
 	)
 	
 	[ $? -ne 0 ] && _rehex_ok=0
@@ -323,6 +353,7 @@ EOF
 	export LUA="${_rehex_lua_target_dir}/bin/lua"
 	export LUA_LIBS="-L${_rehex_lua_target_dir}/lib/ -llua"
 	export LUA_CFLAGS="-I${_rehex_lua_target_dir}/include/"
+	export BUSTED="${_rehex_lua_target_dir}/bin/busted"
 	
 	export WX_CONFIG="${_rehex_wxwidgets_target_dir}/bin/wx-config"
 	
@@ -351,6 +382,9 @@ unset _rehex_cpanm_version
 unset _rehex_wxwidgets_build_ident
 unset _rehex_wxwidgets_url
 unset _rehex_wxwidgets_version
+
+unset _rehex_luarocks_url
+unset _rehex_luarocks_version
 
 unset _rehex_lua_build_ident
 unset _rehex_lua_url

@@ -1,0 +1,8 @@
+This file uses Windows line endings.
+How terrible.
+
+#ifndef FOO
+This should be visible
+#else
+This should not be visible
+#endif

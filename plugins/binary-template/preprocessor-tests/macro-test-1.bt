@@ -1,0 +1,6 @@
+#define FOO FOOMACRO %1
+#define BAR BARMACRO %2 FOO
+
+FOO
+BAR
+FOO BAR BAR

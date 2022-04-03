@@ -650,11 +650,11 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 	}
 end
 
-local function _builtin_function_array_length(context, argv)
+local function _builtin_function_ArrayLength(context, argv)
 	if #argv ~= 1 or argv[1][1] == nil or not argv[1][1].is_array
 	then
 		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
-		_template_error(context, "Attempt to call function array_length(<any array type>) with incompatible argument types (" .. got_types .. ")")
+		_template_error(context, "Attempt to call function ArrayLength(<any array type>) with incompatible argument types (" .. got_types .. ")")
 	end
 	
 	return _builtin_types.int, ImmediateValue:new(#(argv[1][2]))
@@ -710,11 +710,11 @@ local function _resize_array(context, array_type, array_value, new_length)
 	end
 end
 
-local function _builtin_function_array_resize(context, argv)
+local function _builtin_function_ArrayResize(context, argv)
 	if #argv ~= 2 or argv[1][1] == nil or not argv[1][1].is_array or not _type_is_number(argv[2][1])
 	then
 		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
-		_template_error(context, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (" .. got_types .. ")")
+		_template_error(context, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (" .. got_types .. ")")
 	end
 	
 	local array_type = argv[1][1]
@@ -730,11 +730,11 @@ local function _builtin_function_array_resize(context, argv)
 	_resize_array(context, array_type, array_value, new_length)
 end
 
-local function _builtin_function_array_extend(context, argv)
+local function _builtin_function_ArrayExtend(context, argv)
 	if #argv < 1 or #argv > 2 or argv[1][1] == nil or not argv[1][1].is_array or (#argv >= 2 and not _type_is_number(argv[2][1]))
 	then
 		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
-		_template_error(context, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (" .. got_types .. ")")
+		_template_error(context, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (" .. got_types .. ")")
 	end
 	
 	local array_type = argv[1][1]
@@ -771,23 +771,23 @@ local _builtin_functions = {
 	FSkip    = { arguments = { _builtin_types.int64_t }, defaults = {}, impl = _builtin_function_FSkip },
 	FTell    = { arguments = {},                       defaults = {}, impl = _builtin_function_FTell },
 	
-	read_i8  = _builtin_function_defn_ReadXXX(_builtin_types.int8_t,   "read_i8"),
-	read_u8  = _builtin_function_defn_ReadXXX(_builtin_types.uint8_t,  "read_u8"),
-	read_i16 = _builtin_function_defn_ReadXXX(_builtin_types.int16_t,  "read_i16"),
-	read_u16 = _builtin_function_defn_ReadXXX(_builtin_types.uint16_t, "read_u16"),
-	read_i32 = _builtin_function_defn_ReadXXX(_builtin_types.int32_t,  "read_i32"),
-	read_u32 = _builtin_function_defn_ReadXXX(_builtin_types.uint32_t, "read_u32"),
-	read_i64 = _builtin_function_defn_ReadXXX(_builtin_types.int64_t,  "read_i64"),
-	read_u64 = _builtin_function_defn_ReadXXX(_builtin_types.uint64_t, "read_u64"),
+	ReadI8  = _builtin_function_defn_ReadXXX(_builtin_types.int8_t,   "ReadI8"),
+	ReadU8  = _builtin_function_defn_ReadXXX(_builtin_types.uint8_t,  "ReadU8"),
+	ReadI16 = _builtin_function_defn_ReadXXX(_builtin_types.int16_t,  "ReadI16"),
+	ReadU16 = _builtin_function_defn_ReadXXX(_builtin_types.uint16_t, "ReadU16"),
+	ReadI32 = _builtin_function_defn_ReadXXX(_builtin_types.int32_t,  "ReadI32"),
+	ReadU32 = _builtin_function_defn_ReadXXX(_builtin_types.uint32_t, "ReadU32"),
+	ReadI64 = _builtin_function_defn_ReadXXX(_builtin_types.int64_t,  "ReadI64"),
+	ReadU64 = _builtin_function_defn_ReadXXX(_builtin_types.uint64_t, "ReadU64"),
 	
-	read_double = _builtin_function_defn_ReadXXX(_builtin_types.double, "read_double"),
-	read_float  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "read_float"),
+	ReadDouble = _builtin_function_defn_ReadXXX(_builtin_types.double, "ReadDouble"),
+	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "ReadFloat"),
 	
 	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
 	
-	array_length = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_array_length },
-	array_resize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_array_resize },
-	array_extend = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_array_extend },
+	ArrayLength = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayLength },
+	ArrayResize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayResize },
+	ArrayExtend = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayExtend },
 }
 
 _find_type = function(context, type_name)
@@ -1419,10 +1419,10 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			t[var_name] = { type_info, root_value }
 		end
 	else
-		local array_length_type, array_length_val = _eval_statement(context, array_size)
-		if array_length_type == nil or array_length_type.base ~= "number"
+		local ArrayLength_type, ArrayLength_val = _eval_statement(context, array_size)
+		if ArrayLength_type == nil or ArrayLength_type.base ~= "number"
 		then
-			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "'")
+			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(ArrayLength_type) .. "'")
 		end
 		
 		local array_type_info = _make_aray_type(type_info)
@@ -1430,9 +1430,9 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		if type_info.base ~= "struct" and not context.declaring_local_var
 		then
 			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-			root_value = FileArrayValue:new(context, context.next_variable, array_length_val:get(), type_info.length, data_type_fmt)
+			root_value = FileArrayValue:new(context, context.next_variable, ArrayLength_val:get(), type_info.length, data_type_fmt)
 			
-			context.next_variable = context.next_variable + (array_length_val:get() * type_info.length)
+			context.next_variable = context.next_variable + (ArrayLength_val:get() * type_info.length)
 			
 			for _,t in ipairs(dest_tables)
 			do
@@ -1457,7 +1457,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				}
 			end
 			
-			for i = 0, array_length_val:get() - 1
+			for i = 0, ArrayLength_val:get() - 1
 			do
 				local value = expand_value(context, type_info, struct_args, true)
 				table.insert(root_value, value)
@@ -1830,14 +1830,14 @@ _eval_typedef = function(context, statement)
 			_template_error(context, "Multidimensional arrays are not supported")
 		end
 		
-		local array_length_type, array_length_val = _eval_statement(context, array_size)
-		if array_length_type == nil or array_length_type.base ~= "number"
+		local ArrayLength_type, ArrayLength_val = _eval_statement(context, array_size)
+		if ArrayLength_type == nil or ArrayLength_type.base ~= "number"
 		then
-			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(array_length_type) .. "'")
+			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(ArrayLength_type) .. "'")
 		end
 		
 		type_info = _make_aray_type(type_info)
-		type_info.array_size = array_length_val:get()
+		type_info.array_size = ArrayLength_val:get()
 	end
 	
 	context.stack[#context.stack].var_types[typedef_name] = _make_named_type(typedef_name, type_info)

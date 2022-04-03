@@ -2555,42 +2555,42 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("implements read_i8() function", function()
+	it("implements ReadI8() function", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0xFF, 0xFE, 0x04
 		))
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_i8() = %d" },
-				{ "test.bt", 1, "call", "read_i8", {} } } },
+				{ "test.bt", 1, "str", "ReadI8() = %d" },
+				{ "test.bt", 1, "call", "ReadI8", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_i8() = %d" },
-				{ "test.bt", 1, "call", "read_i8", {} } } },
+				{ "test.bt", 1, "str", "ReadI8() = %d" },
+				{ "test.bt", 1, "call", "ReadI8", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_i8(1) = %d" },
-				{ "test.bt", 1, "call", "read_i8", {
+				{ "test.bt", 1, "str", "ReadI8(1) = %d" },
+				{ "test.bt", 1, "call", "ReadI8", {
 					{ "test.bt", 1, "num", 1 } } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_i8(2) = %d" },
-				{ "test.bt", 1, "call", "read_i8", {
+				{ "test.bt", 1, "str", "ReadI8(2) = %d" },
+				{ "test.bt", 1, "call", "ReadI8", {
 					{ "test.bt", 1, "num", 2 } } } } },
 		})
 		
 		local expect_log = {
-			"print(read_i8() = 1)",
-			"print(read_i8() = 1)",
-			"print(read_i8(1) = -1)",
-			"print(read_i8(2) = -2)",
+			"print(ReadI8() = 1)",
+			"print(ReadI8() = 1)",
+			"print(ReadI8(1) = -1)",
+			"print(ReadI8(2) = -2)",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors when read_i8() is called at end of file", function()
+	it("errors when ReadI8() is called at end of file", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0xFF, 0xFE, 0x04
 		))
@@ -2602,13 +2602,13 @@ describe("executor", function()
 						{ "test.bt", 1, "num", 4, {} } } },
 					
 					{ "test.bt", 2, "call", "Printf", {
-						{ "test.bt", 2, "str", "read_i8() = %d" },
-						{ "test.bt", 2, "call", "read_i8", {} } } },
+						{ "test.bt", 2, "str", "ReadI8() = %d" },
+						{ "test.bt", 2, "call", "ReadI8", {} } } },
 				})
-			end, "Attempt to read past end of file in read_i8 function at test.bt:2")
+			end, "Attempt to read past end of file in ReadI8 function at test.bt:2")
 	end)
 	
-	it("implements read_u32() function", function()
+	it("implements ReadU32() function", function()
 		local interface, log = test_interface(string.char(
 			0x00, 0x01, 0x00, 0x00,
 			0xFF, 0xFF, 0xFF, 0xFF,
@@ -2617,35 +2617,35 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_u32() = %d" },
-				{ "test.bt", 1, "call", "read_u32", {} } } },
+				{ "test.bt", 1, "str", "ReadU32() = %d" },
+				{ "test.bt", 1, "call", "ReadU32", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_u32() = %d" },
-				{ "test.bt", 1, "call", "read_u32", {} } } },
+				{ "test.bt", 1, "str", "ReadU32() = %d" },
+				{ "test.bt", 1, "call", "ReadU32", {} } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_u32(4) = %d" },
-				{ "test.bt", 1, "call", "read_u32", {
+				{ "test.bt", 1, "str", "ReadU32(4) = %d" },
+				{ "test.bt", 1, "call", "ReadU32", {
 					{ "test.bt", 1, "num", 4 } } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "read_u32(8) = %d" },
-				{ "test.bt", 1, "call", "read_u32", {
+				{ "test.bt", 1, "str", "ReadU32(8) = %d" },
+				{ "test.bt", 1, "call", "ReadU32", {
 					{ "test.bt", 1, "num", 8 } } } } },
 		})
 		
 		local expect_log = {
-			"print(read_u32() = 256)",
-			"print(read_u32() = 256)",
-			"print(read_u32(4) = 4294967295)",
-			"print(read_u32(8) = 512)",
+			"print(ReadU32() = 256)",
+			"print(ReadU32() = 256)",
+			"print(ReadU32(4) = 4294967295)",
+			"print(ReadU32(8) = 512)",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors when read_u32() is called at end of file", function()
+	it("errors when ReadU32() is called at end of file", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0xFF, 0xFE, 0x04
 		))
@@ -2654,11 +2654,11 @@ describe("executor", function()
 			function()
 				executor.execute(interface, {
 					{ "test.bt", 1, "call", "Printf", {
-						{ "test.bt", 1, "str", "read_u32() = %d" },
-						{ "test.bt", 1, "call", "read_u32", {
+						{ "test.bt", 1, "str", "ReadU32() = %d" },
+						{ "test.bt", 1, "call", "ReadU32", {
 							{ "test.bt", 1, "num", 1, {} } } } } },
 				})
-			end, "Attempt to read past end of file in read_u32 function at test.bt:1")
+			end, "Attempt to read past end of file in ReadU32 function at test.bt:1")
 	end)
 	
 	it("allows declaring a struct with a typedef", function()
@@ -5088,7 +5088,7 @@ describe("executor", function()
 			end, "Invalid condition operand to ternary operator - expected numeric, got 'const string' at test.bt:1")
 	end)
 	
-	it("returns the size of arrays (in elements) from array_length()", function()
+	it("returns the size of arrays (in elements) from ArrayLength()", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,
 			0x02, 0x00, 0x00, 0x00,
@@ -5102,30 +5102,30 @@ describe("executor", function()
 			{ "test.bt", 3, "local-variable", "int",       "c", nil, { "test.bt", 1, "num", 0 }, nil },
 			
 			{ "test.bt", 4, "call", "Printf", {
-				{ "test.bt", 4, "str", "array_length(a) = %d" },
-				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a", } } } } } },
+				{ "test.bt", 4, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 4, "call", "ArrayLength", { { "test.bt", 4, "ref", { "a", } } } } } },
 			
 			{ "test.bt", 5, "call", "Printf", {
-				{ "test.bt", 5, "str", "array_length(b) = %d" },
-				{ "test.bt", 5, "call", "array_length", { { "test.bt", 5, "ref", { "b", } } } } } },
+				{ "test.bt", 5, "str", "ArrayLength(b) = %d" },
+				{ "test.bt", 5, "call", "ArrayLength", { { "test.bt", 5, "ref", { "b", } } } } } },
 			
 			{ "test.bt", 6, "call", "Printf", {
-				{ "test.bt", 6, "str", "array_length(c) = %d" },
-				{ "test.bt", 6, "call", "array_length", { { "test.bt", 6, "ref", { "c", } } } } } },
+				{ "test.bt", 6, "str", "ArrayLength(c) = %d" },
+				{ "test.bt", 6, "call", "ArrayLength", { { "test.bt", 6, "ref", { "c", } } } } } },
 			
 			{ "test.bt", 7, "variable", "int", "d", nil, { "test.bt", 7, "num", 2 } },
 			
 			{ "test.bt", 8, "call", "Printf", {
-				{ "test.bt", 8, "str", "array_length(d) = %d" },
-				{ "test.bt", 8, "call", "array_length", { { "test.bt", 8, "ref", { "d", } } } } } },
+				{ "test.bt", 8, "str", "ArrayLength(d) = %d" },
+				{ "test.bt", 8, "call", "ArrayLength", { { "test.bt", 8, "ref", { "d", } } } } } },
 		})
 		
 		local expect_log = {
-			"print(array_length(a) = 3)",
-			"print(array_length(b) = 3)",
-			"print(array_length(c) = 0)",
+			"print(ArrayLength(a) = 3)",
+			"print(ArrayLength(b) = 3)",
+			"print(ArrayLength(c) = 0)",
 			
-			"print(array_length(d) = 2)",
+			"print(ArrayLength(d) = 2)",
 			
 			"set_comment(0, 8, d)",
 			"set_data_type(0, 8, s32le)",
@@ -5134,58 +5134,58 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors if array_length() is called with the wrong arguments", function()
+	it("errors if ArrayLength() is called with the wrong arguments", function()
 		local interface, log = test_interface()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "call", "vfunc", {} } } },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function array_length(<any array type>) with incompatible argument types (void) at test.bt:2")
+			end, "Attempt to call function ArrayLength(<any array type>) with incompatible argument types (void) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "str", "hello" } } },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "str", "hello" } } },
 			})
-			end, "Attempt to call function array_length(<any array type>) with incompatible argument types (const string) at test.bt:2")
+			end, "Attempt to call function ArrayLength(<any array type>) with incompatible argument types (const string) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function array_length(<any array type>) with incompatible argument types (char[], void) at test.bt:2")
+			end, "Attempt to call function ArrayLength(<any array type>) with incompatible argument types (char[], void) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 2, "call", "array_length", {} },
+				{ "test.bt", 2, "call", "ArrayLength", {} },
 			})
-			end, "Attempt to call function array_length(<any array type>) with incompatible argument types () at test.bt:2")
+			end, "Attempt to call function ArrayLength(<any array type>) with incompatible argument types () at test.bt:2")
 	end)
 	
-	it("allows arbitrarily resizing local arrays with array_resize()", function()
+	it("allows arbitrarily resizing local arrays with ArrayResize()", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
 			-- local int a[0];
 			{ "test.bt", 1, "local-variable", "int", "a", nil, { "test.bt", 1, "num", 0 }, nil },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 2, "call", "Printf", {
-				{ "test.bt", 2, "str", "array_length(a) = %d" },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+				{ "test.bt", 2, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } } } } } },
 			
-			-- array_resize(a, 4);
-			{ "test.bt", 3, "call", "array_resize", {
+			-- ArrayResize(a, 4);
+			{ "test.bt", 3, "call", "ArrayResize", {
 				{ "test.bt", 3, "ref", { "a" } },
 				{ "test.bt", 3, "num", 4 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 4, "call", "Printf", {
-				{ "test.bt", 4, "str", "array_length(a) = %d" },
-				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a" } } } } } },
+				{ "test.bt", 4, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 4, "call", "ArrayLength", { { "test.bt", 4, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d, %d }", a[0], a[1], a[2], a[3]);
 			{ "test.bt", 5, "call", "Printf", {
@@ -5223,15 +5223,15 @@ describe("executor", function()
 				{ "test.bt", 10, "ref", { "a", { "test.bt", 10, "num", 2 } } },
 				{ "test.bt", 10, "ref", { "a", { "test.bt", 10, "num", 3 } } } } },
 			
-			-- array_resize(a, 3);
-			{ "test.bt", 11, "call", "array_resize", {
+			-- ArrayResize(a, 3);
+			{ "test.bt", 11, "call", "ArrayResize", {
 				{ "test.bt", 11, "ref", { "a" } },
 				{ "test.bt", 11, "num", 3 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 12, "call", "Printf", {
-				{ "test.bt", 12, "str", "array_length(a) = %d" },
-				{ "test.bt", 12, "call", "array_length", { { "test.bt", 12, "ref", { "a" } } } } } },
+				{ "test.bt", 12, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 12, "call", "ArrayLength", { { "test.bt", 12, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d }", a[0], a[1], a[2]);
 			{ "test.bt", 13, "call", "Printf", {
@@ -5240,15 +5240,15 @@ describe("executor", function()
 				{ "test.bt", 13, "ref", { "a", { "test.bt", 13, "num", 1 } } },
 				{ "test.bt", 13, "ref", { "a", { "test.bt", 13, "num", 2 } } } } },
 			
-			-- array_resize(a, 5);
-			{ "test.bt", 14, "call", "array_resize", {
+			-- ArrayResize(a, 5);
+			{ "test.bt", 14, "call", "ArrayResize", {
 				{ "test.bt", 14, "ref", { "a" } },
 				{ "test.bt", 14, "num", 5 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 15, "call", "Printf", {
-				{ "test.bt", 15, "str", "array_length(a) = %d" },
-				{ "test.bt", 15, "call", "array_length", { { "test.bt", 15, "ref", { "a" } } } } } },
+				{ "test.bt", 15, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 15, "call", "ArrayLength", { { "test.bt", 15, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d, %d, %d }", a[0], a[1], a[2], a[3], a[4]);
 			{ "test.bt", 16, "call", "Printf", {
@@ -5261,98 +5261,98 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"print(array_length(a) = 0)",
-			"print(array_length(a) = 4)",
+			"print(ArrayLength(a) = 0)",
+			"print(ArrayLength(a) = 4)",
 			"print(a = { 0, 0, 0, 0 })",
 			"print(a = { 100, 101, 102, 103 })",
-			"print(array_length(a) = 3)",
+			"print(ArrayLength(a) = 3)",
 			"print(a = { 100, 101, 102 })",
-			"print(array_length(a) = 5)",
+			"print(ArrayLength(a) = 5)",
 			"print(a = { 100, 101, 102, 0, 0 })",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors if array_resize() is called with the wrong arguments", function()
+	it("errors if ArrayResize() is called with the wrong arguments", function()
 		local interface, log = test_interface()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "call", "vfunc", {} }, { "test.bt", 2, "num", 4 } } },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "call", "vfunc", {} }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (void, const int) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (void, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "str", "hello" }, { "test.bt", 2, "num", 4 } } },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "str", "hello" }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (const string, const int) at test.bt:2")
-		
-		assert.has_error(function()
-			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "call", "vfunc", {} } } },
-			})
-			end, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (char[], const int, void) at test.bt:2")
-		
-		assert.has_error(function()
-			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "ref", { "a" } } } },
-			})
-			end, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (char[]) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (const string, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (char[], void) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[], const int, void) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "str", "4" } } },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } } } },
 			})
-			end, "Attempt to call function array_resize(<any array type>, <number>) with incompatible argument types (char[], const string) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[]) at test.bt:2")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
+			})
+			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[], void) at test.bt:2")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "str", "4" } } },
+			})
+			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[], const string) at test.bt:2")
 	end)
 	
-	it("errors if array_resize() is called on a const array", function()
+	it("errors if ArrayResize() is called on a const array", function()
 		local interface, log = test_interface()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "const char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 2, "call", "array_resize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 } } },
+				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 } } },
 			})
 			end, "Attempt to modify 'const' array at test.bt:2")
 	end)
 	
-	it("allows arbitrarily resizing local arrays with array_extend()", function()
+	it("allows arbitrarily resizing local arrays with ArrayExtend()", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
 			-- local int a[0];
 			{ "test.bt", 1, "local-variable", "int", "a", nil, { "test.bt", 1, "num", 0 }, nil },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 2, "call", "Printf", {
-				{ "test.bt", 2, "str", "array_length(a) = %d" },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+				{ "test.bt", 2, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } } } } } },
 			
-			-- array_extend(a, 4);
-			{ "test.bt", 3, "call", "array_extend", {
+			-- ArrayExtend(a, 4);
+			{ "test.bt", 3, "call", "ArrayExtend", {
 				{ "test.bt", 3, "ref", { "a" } },
 				{ "test.bt", 3, "num", 4 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 4, "call", "Printf", {
-				{ "test.bt", 4, "str", "array_length(a) = %d" },
-				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a" } } } } } },
+				{ "test.bt", 4, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 4, "call", "ArrayLength", { { "test.bt", 4, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d, %d }", a[0], a[1], a[2], a[3]);
 			{ "test.bt", 5, "call", "Printf", {
@@ -5390,15 +5390,15 @@ describe("executor", function()
 				{ "test.bt", 10, "ref", { "a", { "test.bt", 10, "num", 2 } } },
 				{ "test.bt", 10, "ref", { "a", { "test.bt", 10, "num", 3 } } } } },
 			
-			-- array_extend(a, -1);
-			{ "test.bt", 11, "call", "array_extend", {
+			-- ArrayExtend(a, -1);
+			{ "test.bt", 11, "call", "ArrayExtend", {
 				{ "test.bt", 11, "ref", { "a" } },
 				{ "test.bt", 11, "num", -1 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 12, "call", "Printf", {
-				{ "test.bt", 12, "str", "array_length(a) = %d" },
-				{ "test.bt", 12, "call", "array_length", { { "test.bt", 12, "ref", { "a" } } } } } },
+				{ "test.bt", 12, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 12, "call", "ArrayLength", { { "test.bt", 12, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d }", a[0], a[1], a[2]);
 			{ "test.bt", 13, "call", "Printf", {
@@ -5407,15 +5407,15 @@ describe("executor", function()
 				{ "test.bt", 13, "ref", { "a", { "test.bt", 13, "num", 1 } } },
 				{ "test.bt", 13, "ref", { "a", { "test.bt", 13, "num", 2 } } } } },
 			
-			-- array_extend(a, 2);
-			{ "test.bt", 14, "call", "array_extend", {
+			-- ArrayExtend(a, 2);
+			{ "test.bt", 14, "call", "ArrayExtend", {
 				{ "test.bt", 14, "ref", { "a" } },
 				{ "test.bt", 14, "num", 2 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 15, "call", "Printf", {
-				{ "test.bt", 15, "str", "array_length(a) = %d" },
-				{ "test.bt", 15, "call", "array_length", { { "test.bt", 15, "ref", { "a" } } } } } },
+				{ "test.bt", 15, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 15, "call", "ArrayLength", { { "test.bt", 15, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d, %d, %d }", a[0], a[1], a[2], a[3], a[4]);
 			{ "test.bt", 16, "call", "Printf", {
@@ -5428,20 +5428,20 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"print(array_length(a) = 0)",
-			"print(array_length(a) = 4)",
+			"print(ArrayLength(a) = 0)",
+			"print(ArrayLength(a) = 4)",
 			"print(a = { 0, 0, 0, 0 })",
 			"print(a = { 100, 101, 102, 103 })",
-			"print(array_length(a) = 3)",
+			"print(ArrayLength(a) = 3)",
 			"print(a = { 100, 101, 102 })",
-			"print(array_length(a) = 5)",
+			"print(ArrayLength(a) = 5)",
 			"print(a = { 100, 101, 102, 0, 0 })",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("allows extending file arrays with array_extend()", function()
+	it("allows extending file arrays with ArrayExtend()", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,
 			0x02, 0x00, 0x00, 0x00,
@@ -5455,20 +5455,20 @@ describe("executor", function()
 			-- int a[0];
 			{ "test.bt", 1, "variable", "int", "a", nil, { "test.bt", 1, "num", 0 } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 2, "call", "Printf", {
-				{ "test.bt", 2, "str", "array_length(a) = %d" },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+				{ "test.bt", 2, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } } } } } },
 			
-			-- array_resize(a, 2);
-			{ "test.bt", 7, "call", "array_resize", {
+			-- ArrayResize(a, 2);
+			{ "test.bt", 7, "call", "ArrayResize", {
 				{ "test.bt", 7, "ref", { "a" } },
 				{ "test.bt", 7, "num", 2 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 2, "call", "Printf", {
-				{ "test.bt", 2, "str", "array_length(a) = %d" },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+				{ "test.bt", 2, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d }", a[0], a[1]);
 			{ "test.bt", 3, "call", "Printf", {
@@ -5476,14 +5476,14 @@ describe("executor", function()
 				{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 0 } } },
 				{ "test.bt", 3, "ref", { "a", { "test.bt", 3, "num", 1 } } } } },
 			
-			-- array_extend(a);
-			{ "test.bt", 4, "call", "array_extend", {
+			-- ArrayExtend(a);
+			{ "test.bt", 4, "call", "ArrayExtend", {
 				{ "test.bt", 4, "ref", { "a" } } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 5, "call", "Printf", {
-				{ "test.bt", 5, "str", "array_length(a) = %d" },
-				{ "test.bt", 5, "call", "array_length", { { "test.bt", 5, "ref", { "a" } } } } } },
+				{ "test.bt", 5, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 5, "call", "ArrayLength", { { "test.bt", 5, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d }", a[0], a[1], a[2]);
 			{ "test.bt", 6, "call", "Printf", {
@@ -5492,15 +5492,15 @@ describe("executor", function()
 				{ "test.bt", 6, "ref", { "a", { "test.bt", 6, "num", 1 } } },
 				{ "test.bt", 6, "ref", { "a", { "test.bt", 6, "num", 2 } } } } },
 			
-			-- array_extend(a, 1);
-			{ "test.bt", 7, "call", "array_extend", {
+			-- ArrayExtend(a, 1);
+			{ "test.bt", 7, "call", "ArrayExtend", {
 				{ "test.bt", 7, "ref", { "a" } },
 				{ "test.bt", 7, "num", 1 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 8, "call", "Printf", {
-				{ "test.bt", 8, "str", "array_length(a) = %d" },
-				{ "test.bt", 8, "call", "array_length", { { "test.bt", 8, "ref", { "a" } } } } } },
+				{ "test.bt", 8, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 8, "call", "ArrayLength", { { "test.bt", 8, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d, %d }", a[0], a[1], a[2], a[3]);
 			{ "test.bt", 9, "call", "Printf", {
@@ -5510,15 +5510,15 @@ describe("executor", function()
 				{ "test.bt", 9, "ref", { "a", { "test.bt", 9, "num", 2 } } },
 				{ "test.bt", 9, "ref", { "a", { "test.bt", 9, "num", 3 } } } } },
 			
-			-- array_extend(a, 2);
-			{ "test.bt", 10, "call", "array_extend", {
+			-- ArrayExtend(a, 2);
+			{ "test.bt", 10, "call", "ArrayExtend", {
 				{ "test.bt", 10, "ref", { "a" } },
 				{ "test.bt", 10, "num", 2 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 11, "call", "Printf", {
-				{ "test.bt", 11, "str", "array_length(a) = %d" },
-				{ "test.bt", 11, "call", "array_length", { { "test.bt", 11, "ref", { "a" } } } } } },
+				{ "test.bt", 11, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 11, "call", "ArrayLength", { { "test.bt", 11, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { %d, %d, %d, %d, %d, %d }", a[0], a[1], a[2], a[3], a[4], a[5]);
 			{ "test.bt", 12, "call", "Printf", {
@@ -5532,14 +5532,14 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"print(array_length(a) = 0)",
-			"print(array_length(a) = 2)",
+			"print(ArrayLength(a) = 0)",
+			"print(ArrayLength(a) = 2)",
 			"print(a = { 1, 2 })",
-			"print(array_length(a) = 3)",
+			"print(ArrayLength(a) = 3)",
 			"print(a = { 1, 2, 3 })",
-			"print(array_length(a) = 4)",
+			"print(ArrayLength(a) = 4)",
 			"print(a = { 1, 2, 3, 4 })",
-			"print(array_length(a) = 6)",
+			"print(ArrayLength(a) = 6)",
 			"print(a = { 1, 2, 3, 4, 5, 6 })",
 			"set_comment(0, 24, a)",
 			"set_data_type(0, 24, s32le)",
@@ -5548,7 +5548,7 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("errors on shrinking a file array with array_resize()", function()
+	it("errors on shrinking a file array with ArrayResize()", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,
 			0x02, 0x00, 0x00, 0x00,
@@ -5563,8 +5563,8 @@ describe("executor", function()
 				-- int a[2];
 				{ "test.bt", 1, "variable", "int", "a", nil, { "test.bt", 1, "num", 2 } },
 				
-				-- array_resize(a, 1);
-				{ "test.bt", 7, "call", "array_resize", {
+				-- ArrayResize(a, 1);
+				{ "test.bt", 7, "call", "ArrayResize", {
 					{ "test.bt", 7, "ref", { "a" } },
 					{ "test.bt", 7, "num", 1 } } },
 			})
@@ -5589,66 +5589,66 @@ describe("executor", function()
 				-- int b;
 				{ "test.bt", 1, "variable", "int", "b", nil, nil },
 				
-				-- array_resize(a, 3);
-				{ "test.bt", 7, "call", "array_resize", {
+				-- ArrayResize(a, 3);
+				{ "test.bt", 7, "call", "ArrayResize", {
 					{ "test.bt", 7, "ref", { "a" } },
 					{ "test.bt", 7, "num", 3 } } },
 			})
 			end, "Invalid attempt to grow non-local array after declaring other variables at test.bt:7")
 	end)
 	
-	it("errors if array_extend() is called with the wrong arguments", function()
+	it("errors if ArrayExtend() is called with the wrong arguments", function()
 		local interface, log = test_interface()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "call", "vfunc", {} }, { "test.bt", 2, "num", 4 } } },
+				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "call", "vfunc", {} }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (void, const int) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (void, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
-				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "str", "hello" }, { "test.bt", 2, "num", 4 } } },
+				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "str", "hello" }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (const string, const int) at test.bt:2")
-		
-		assert.has_error(function()
-			executor.execute(interface, {
-				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "call", "vfunc", {} } } },
-			})
-			end, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (char[], const int, void) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (const string, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
-				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
+				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (char[], void) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (char[], const int, void) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "str", "4" } } },
+				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
+				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function array_extend(<any array type>, <number>) with incompatible argument types (char[], const string) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (char[], void) at test.bt:2")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
+				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "str", "4" } } },
+			})
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (char[], const string) at test.bt:2")
 	end)
 	
-	it("errors if array_extend() is called on a const array", function()
+	it("errors if ArrayExtend() is called on a const array", function()
 		local interface, log = test_interface()
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "const char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
-				{ "test.bt", 2, "call", "array_extend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 } } },
+				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 } } },
 			})
 			end, "Attempt to modify 'const' array at test.bt:2")
 	end)
 	
-	it("allows extending file struct arrays with array_extend()", function()
+	it("allows extending file struct arrays with ArrayExtend()", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,
 			0x02, 0x00, 0x00, 0x00,
@@ -5670,20 +5670,20 @@ describe("executor", function()
 			-- struct mystruct a[0];
 			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, { "test.bt", 1, "num", 0 } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 2, "call", "Printf", {
-				{ "test.bt", 2, "str", "array_length(a) = %d" },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+				{ "test.bt", 2, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } } } } } },
 			
-			-- array_resize(a, 1);
-			{ "test.bt", 3, "call", "array_resize", {
+			-- ArrayResize(a, 1);
+			{ "test.bt", 3, "call", "ArrayResize", {
 				{ "test.bt", 3, "ref", { "a" } },
 				{ "test.bt", 3, "num", 1 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 4, "call", "Printf", {
-				{ "test.bt", 4, "str", "array_length(a) = %d" },
-				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a" } } } } } },
+				{ "test.bt", 4, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 4, "call", "ArrayLength", { { "test.bt", 4, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { { %d, %d } }", a[0].x, a[0].y);
 			{ "test.bt", 5, "call", "Printf", {
@@ -5691,14 +5691,14 @@ describe("executor", function()
 				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "x" } },
 				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "y" } } } },
 			
-			-- array_extend(a);
-			{ "test.bt", 6, "call", "array_extend", {
+			-- ArrayExtend(a);
+			{ "test.bt", 6, "call", "ArrayExtend", {
 				{ "test.bt", 6, "ref", { "a" } } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 7, "call", "Printf", {
-				{ "test.bt", 7, "str", "array_length(a) = %d" },
-				{ "test.bt", 7, "call", "array_length", { { "test.bt", 7, "ref", { "a" } } } } } },
+				{ "test.bt", 7, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 7, "call", "ArrayLength", { { "test.bt", 7, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { { %d, %d }, { %d, %d } }", a[0].x, a[0].y, a[1].x, a[1].y);
 			{ "test.bt", 8, "call", "Printf", {
@@ -5708,15 +5708,15 @@ describe("executor", function()
 				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "x" } },
 				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "y" } } } },
 			
-			-- array_extend(a, 2);
-			{ "test.bt", 9, "call", "array_extend", {
+			-- ArrayExtend(a, 2);
+			{ "test.bt", 9, "call", "ArrayExtend", {
 				{ "test.bt", 9, "ref", { "a" } },
 				{ "test.bt", 9, "num", 2 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 10, "call", "Printf", {
-				{ "test.bt", 10, "str", "array_length(a) = %d" },
-				{ "test.bt", 10, "call", "array_length", { { "test.bt", 10, "ref", { "a" } } } } } },
+				{ "test.bt", 10, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 10, "call", "ArrayLength", { { "test.bt", 10, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { { %d, %d }, { %d, %d }, { %d, %d }, { %d, %d } }",
 			--     a[0].x, a[0].y, a[1].x, a[1].y, a[2].x, a[2].y, a[3].x, a[3].y);
@@ -5733,12 +5733,12 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"print(array_length(a) = 0)",
-			"print(array_length(a) = 1)",
+			"print(ArrayLength(a) = 0)",
+			"print(ArrayLength(a) = 1)",
 			"print(a = { { 1, 2 } })",
-			"print(array_length(a) = 2)",
+			"print(ArrayLength(a) = 2)",
 			"print(a = { { 1, 2 }, { 3, 4 } })",
-			"print(array_length(a) = 4)",
+			"print(ArrayLength(a) = 4)",
 			"print(a = { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 } })",
 			"set_comment(0, 4, x)",
 			"set_comment(4, 4, y)",
@@ -5765,7 +5765,7 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("allows extending local struct arrays with array_extend()", function()
+	it("allows extending local struct arrays with ArrayExtend()", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,
 			0x02, 0x00, 0x00, 0x00,
@@ -5787,20 +5787,20 @@ describe("executor", function()
 			-- local struct mystruct a[0];
 			{ "test.bt", 1, "local-variable", "struct mystruct", "a", nil, { "test.bt", 1, "num", 0 }, nil },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 2, "call", "Printf", {
-				{ "test.bt", 2, "str", "array_length(a) = %d" },
-				{ "test.bt", 2, "call", "array_length", { { "test.bt", 2, "ref", { "a" } } } } } },
+				{ "test.bt", 2, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 2, "call", "ArrayLength", { { "test.bt", 2, "ref", { "a" } } } } } },
 			
-			-- array_resize(a, 1);
-			{ "test.bt", 3, "call", "array_resize", {
+			-- ArrayResize(a, 1);
+			{ "test.bt", 3, "call", "ArrayResize", {
 				{ "test.bt", 3, "ref", { "a" } },
 				{ "test.bt", 3, "num", 1 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 4, "call", "Printf", {
-				{ "test.bt", 4, "str", "array_length(a) = %d" },
-				{ "test.bt", 4, "call", "array_length", { { "test.bt", 4, "ref", { "a" } } } } } },
+				{ "test.bt", 4, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 4, "call", "ArrayLength", { { "test.bt", 4, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { { %d, %d } }", a[0].x, a[0].y);
 			{ "test.bt", 5, "call", "Printf", {
@@ -5808,14 +5808,14 @@ describe("executor", function()
 				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "x" } },
 				{ "test.bt", 5, "ref", { "a", { "test.bt", 5, "num", 0 }, "y" } } } },
 			
-			-- array_extend(a);
-			{ "test.bt", 6, "call", "array_extend", {
+			-- ArrayExtend(a);
+			{ "test.bt", 6, "call", "ArrayExtend", {
 				{ "test.bt", 6, "ref", { "a" } } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 7, "call", "Printf", {
-				{ "test.bt", 7, "str", "array_length(a) = %d" },
-				{ "test.bt", 7, "call", "array_length", { { "test.bt", 7, "ref", { "a" } } } } } },
+				{ "test.bt", 7, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 7, "call", "ArrayLength", { { "test.bt", 7, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { { %d, %d }, { %d, %d } }", a[0].x, a[0].y, a[1].x, a[1].y);
 			{ "test.bt", 8, "call", "Printf", {
@@ -5825,15 +5825,15 @@ describe("executor", function()
 				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "x" } },
 				{ "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 1 }, "y" } } } },
 			
-			-- array_extend(a, 2);
-			{ "test.bt", 9, "call", "array_extend", {
+			-- ArrayExtend(a, 2);
+			{ "test.bt", 9, "call", "ArrayExtend", {
 				{ "test.bt", 9, "ref", { "a" } },
 				{ "test.bt", 9, "num", 2 } } },
 			
-			-- Printf("array_length(a) = %d", array_length(a));
+			-- Printf("ArrayLength(a) = %d", ArrayLength(a));
 			{ "test.bt", 10, "call", "Printf", {
-				{ "test.bt", 10, "str", "array_length(a) = %d" },
-				{ "test.bt", 10, "call", "array_length", { { "test.bt", 10, "ref", { "a" } } } } } },
+				{ "test.bt", 10, "str", "ArrayLength(a) = %d" },
+				{ "test.bt", 10, "call", "ArrayLength", { { "test.bt", 10, "ref", { "a" } } } } } },
 			
 			-- Printf("a = { { %d, %d }, { %d, %d }, { %d, %d }, { %d, %d } }",
 			--     a[0].x, a[0].y, a[1].x, a[1].y, a[2].x, a[2].y, a[3].x, a[3].y);
@@ -5850,12 +5850,12 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"print(array_length(a) = 0)",
-			"print(array_length(a) = 1)",
+			"print(ArrayLength(a) = 0)",
+			"print(ArrayLength(a) = 1)",
 			"print(a = { { 0, 0 } })",
-			"print(array_length(a) = 2)",
+			"print(ArrayLength(a) = 2)",
 			"print(a = { { 0, 0 }, { 0, 0 } })",
-			"print(array_length(a) = 4)",
+			"print(ArrayLength(a) = 4)",
 			"print(a = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } })",
 		}
 		

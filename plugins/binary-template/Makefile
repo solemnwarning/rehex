@@ -16,6 +16,12 @@
 
 INSTALL_FILES := \
 	executor.lua \
+	executor/arrayvalue.lua \
+	executor/filearrayvalue.lua \
+	executor/filevalue.lua \
+	executor/immediatevalue.lua \
+	executor/plainvalue.lua \
+	executor/structvalue.lua \
 	parser.lua \
 	plugin.lua \
 	preprocessor.lua \

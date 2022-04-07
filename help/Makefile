@@ -22,6 +22,7 @@ PAGES := \
 	bt \
 	bt-funcs \
 	bt-syntax \
+	bt-types \
 	comments \
 	diff \
 	index \

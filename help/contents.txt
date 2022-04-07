@@ -8,4 +8,5 @@ plugins         Writing Plugins
 
 bt             Binary Templates
   bt-syntax    General Syntax
+  bt-types     Types
   bt-funcs     Functions

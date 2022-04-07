@@ -1,0 +1,231 @@
+[% WRAPPER page.tt
+   title = "Types"
+%]
+
+<h2>Types</h2>
+
+<ul>
+<li><a href="#basic">Basic Types</a></li>
+<li><a href="#array">Arrays</a></li>
+<li><a href="#string">Strings</a></li>
+<li><a href="#struct">Structures</a></li>
+<li><a href="#enum">Enumerations</a></li>
+<li><a href="#typedef">Typedefs</a></li>
+<li><a href="#reference">References</a></li>
+</ul>
+
+<a name="basic"><h3>Basic Types</h3></a>
+
+<p>
+The types used in templates are based on C types. The following types are implemented and may be used to declare both data in a file as well as local variables.
+</p>
+
+<ul>
+<li>[% WRAPPER "inline-type.tt" %]char[% END %] / [% WRAPPER "inline-type.tt" %]int8_t[% END %] - Signed 8-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]uint8_t[% END %] - Unsigned 8-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]int16_t[% END %] - Signed 16-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]uint16_t[% END %] - Unsigned 16-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]int[% END %] / [% WRAPPER "inline-type.tt" %]int32_t[% END %] - Signed 32-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]uint32_t[% END %] - Unsigned 32-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]int64_t[% END %] - Signed 64-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]uint64_t[% END %] - Unsigned 64-bit integer</li>
+<li>[% WRAPPER "inline-type.tt" %]float[% END %] - 32-bit floating-point number</li>
+<li>[% WRAPPER "inline-type.tt" %]double[% END %] - 64-bit floating-point number</li>
+</ul>
+
+<p>
+The signed and unsigned keywords from C are present and can be used with any integer type to make a signed/unsigned version.
+</p>
+
+<a name="array"><h3>Arrays</h3></a>
+
+<p>
+Arrays are also present from C and can be used to declare file data or local variables.
+</p>
+
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]uint32_t[% END %] data_length;
+[% WRAPPER "code-type.tt" %]uint8_t[% END %] data[data_length];
+
+local [% WRAPPER "code-type.tt" %]uint8_t[% END %] data_copy[data_length] = data;
+[%- END %]
+
+<p>
+Unlike C arrays, arrays in templates have a known size and can be resized at runtime. Local arrays can be grown or shrunk arbitrarily while file arrays can only be grown, and not once further file variables have been defined after the array. See <a href="bt-funcs.html#arrayfunc">Array Functions</a> for more information.
+</p>
+
+<p>
+Multidimensional arrays are not currently supported.
+</p>
+
+<a name="string"><h3>Strings</h3></a>
+
+<p>
+Strings may be represented as [% WRAPPER "inline-type.tt" %]char[% END %] arrays like in C, or using the built-in variable-length [% WRAPPER "inline-type.tt" %]string[% END %] type.
+</p>
+
+<p>
+The [% WRAPPER "inline-type.tt" %]string[% END %] type can only be used for local variables as it has no format in a file, while [% WRAPPER "inline-type.tt" %]char[][% END %] can be used in both contexts.
+</p>
+
+<p>
+Implicit conversions between [% WRAPPER "inline-type.tt" %]string[% END %] and [% WRAPPER "inline-type.tt" %]char[][% END %] are allowed, as shown by the examples below:
+</p>
+
+[% WRAPPER "code.tt" -%]
+/* Creates 's' containing "Hello world" and 't' containing "Hello world"
+ * with nul bytes to pad the remaining space.
+*/
+
+[% WRAPPER "code-type.tt" %]string[% END %] s = "Hello world";
+[% WRAPPER "code-type.tt" %]char[% END %] t[32] = s;
+
+/* Passing a string to a function that takes a char[] */
+
+[% WRAPPER "code-type.tt" %]void[% END %] func1([% WRAPPER "code-type.tt" %]char[][% END %] p)
+{
+	/* p is a char[] array, containing "Hello world" with no padding. */
+}
+
+func1(s);
+
+/* Passing a char[] to a function that takes a string. */
+
+[% WRAPPER "code-type.tt" %]void[% END %] func2([% WRAPPER "code-type.tt" %]string[% END %] p)
+{
+	/* p is a string containing "Hello world" with no padding. */
+}
+
+func2(t);
+[%- END %]
+
+<a name="struct"><h3>Structures</h3></a>
+
+<p>
+Structures like their C counterparts exist too. You can use a structure to logically group or reuse things such as headers.
+</p>
+
+[% WRAPPER "code.tt" -%]
+struct posix_tar_header
+{                               /* byte offset */
+	[% WRAPPER "code-type.tt" %]char[% END %] name[100];         /*   0 */
+	[% WRAPPER "code-type.tt" %]char[% END %] mode[8];           /* 100 */
+	[% WRAPPER "code-type.tt" %]char[% END %] uid[8];            /* 108 */
+	[% WRAPPER "code-type.tt" %]char[% END %] gid[8];            /* 116 */
+	[% WRAPPER "code-type.tt" %]char[% END %] size[12];          /* 124 */
+	
+	/* And so on... I think you get the idea. */
+};
+
+struct posix_tar_header header;
+[%- END %]
+
+<p>
+<img src="template-example-struct1.png">
+</p>
+
+<hr>
+
+<p>
+Unlike C structures, structures in a template can contain arbitrary code, for example to conditionally declare certain members based on preceding members and can even take arguments like a function.
+</p>
+
+[% WRAPPER "code.tt" -%]
+struct complex_thing(string debug_msg)
+{
+	[% WRAPPER "code-type.tt" %]unsigned int[% END %] flags;
+	
+	if(flags & 1) {
+		[% WRAPPER "code-type.tt" %]int[% END %] member1; /* Only declared if "flags" member has the 1 bit set. */
+	}
+	
+	[% WRAPPER "code-type.tt" %]int[% END %] member2;
+	
+	Printf("debug_msg = %s, flags = %d\n", debug_msg, flags);
+};
+
+struct complex_thing ct1("foo");
+struct complex_thing ct2("bar");
+[%- END %]
+
+<p>
+<img src="template-example-struct2.png" border="0">
+</p>
+
+<a name="enum"><h3>Enumerations</h2></a>
+
+<p>
+Enumerations like C/C++ are present, but with some differences:
+</p>
+
+<ul>
+<li>The variable type is just an alias to an explicit storage type ("int" by default)</li>
+<li>There is no type safety - mix and match any enums and other numbers with no casting</li>
+</ul>
+
+[% WRAPPER "code.tt" -%]
+/* Declaring and using a plain enum. */
+
+enum simple_enum_type
+{
+	ENUM_ONE,
+	ENUM_TWO,
+	ENUM_THREE,
+};
+
+enum simple_enum_type v; /* Underlying type is "int" */
+
+/* Declaring an anonymous enum variable. */
+
+enum
+{
+	ANON_ONE,
+	ANON_FOUR = 4,
+	ANON_FIVE,
+} anonymous_enum_var;
+
+/* Declaring an enum with a specific type. */
+
+enum &lt;[% WRAPPER "code-type.tt" %]uint8_t[% END %]&gt; one_byte_enum
+{
+	SPEC_ONE,
+	SPEC_TWO,
+	SPEC_THREE,
+};
+
+enum one_byte_enum o; /* Underlying type is "uint8_t" */
+[%- END %]
+
+<a name="typedef"><h3>Typedefs</h3></a>
+
+<p>
+Typedefs exist and let you alias types just like in C, not a whole lot else to say really.
+</p>
+
+[% WRAPPER "code.tt" -%]
+typedef [% WRAPPER "code-type.tt" %]uint16_t[% END %] WORD;
+typedef [% WRAPPER "code-type.tt" %]unsigned int[% END %] DWORD;
+[%- END %]
+
+<a name="reference"><h3>References</h3></a>
+
+<p>
+References (like in C++) are available and mainly exist for passing values by reference into structs/functions to allow modifications by the function to be visible by the caller.
+</p>
+
+[% WRAPPER "code.tt" -%]
+local [% WRAPPER "code-type.tt" %]int[% END %] x = 1;
+
+void set_int_in_a_convoluted_manner([% WRAPPER "code-type.tt" %]int[% END %] &i, [% WRAPPER "code-type.tt" %]int[% END %] new_value)
+{
+	i = new_value;
+}
+
+set_int_in_a_convoluted_manner(x, 2); /* x is now 2 */
+[%- END %]
+
+<p>
+Raw pointers like in C are not supported.
+</p>
+
+[% END %]

@@ -12,9 +12,9 @@ A template is a script with a C-like syntax which can read and process data from
 The most simple template is one that just defines some variables, which will set comments and data types in the file, for example:
 </P>
 
-[% WRAPPER code.tt -%]
-int magic;
-int values[4];
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int[% END %] magic;
+[% WRAPPER "code-type.tt" %]int[% END %] values[4];
 [%- END %]
 
 <P>
@@ -29,10 +29,10 @@ Would produce a file like the following:<BR>
 The variables you define can also be read in the template, for example to determine the length of an array from data in the file:
 </P>
 
-[% WRAPPER code.tt -%]
-int magic;
-short size;
-int values[size];
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int[% END %] magic;
+[% WRAPPER "code-type.tt" %]short[% END %] size;
+[% WRAPPER "code-type.tt" %]int[% END %] values[size];
 [%- END %]
 
 <P>
@@ -52,8 +52,8 @@ Local variables are variables that are scoped to the block they are defined in. 
 Local variables are used for temporary storage within scripts - for example loop counters, values read from the file using the File Read APIs, etc.
 </P>
 
-[% WRAPPER code.tt -%]
-local int x = 0;
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-keyword.tt" %]local[% END %] [% WRAPPER "code-type.tt" %]int[% END %] x = 0;
 [%- END %]
 
 [% END %]

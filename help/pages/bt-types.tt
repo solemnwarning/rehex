@@ -47,7 +47,7 @@ Arrays are also present from C and can be used to declare file data or local var
 [% WRAPPER "code-type.tt" %]uint32_t[% END %] data_length;
 [% WRAPPER "code-type.tt" %]uint8_t[% END %] data[data_length];
 
-local [% WRAPPER "code-type.tt" %]uint8_t[% END %] data_copy[data_length] = data;
+[% WRAPPER "code-keyword.tt" %]local[% END %] [% WRAPPER "code-type.tt" %]uint8_t[% END %] data_copy[data_length] = data;
 [%- END %]
 
 <p>
@@ -106,7 +106,7 @@ Structures like their C counterparts exist too. You can use a structure to logic
 </p>
 
 [% WRAPPER "code.tt" -%]
-struct posix_tar_header
+[% WRAPPER "code-keyword.tt" %]struct[% END %] posix_tar_header
 {                               /* byte offset */
 	[% WRAPPER "code-type.tt" %]char[% END %] name[100];         /*   0 */
 	[% WRAPPER "code-type.tt" %]char[% END %] mode[8];           /* 100 */
@@ -117,7 +117,7 @@ struct posix_tar_header
 	/* And so on... I think you get the idea. */
 };
 
-struct posix_tar_header header;
+[% WRAPPER "code-keyword.tt" %]struct[% END %] posix_tar_header header;
 [%- END %]
 
 <p>
@@ -131,11 +131,11 @@ Unlike C structures, structures in a template can contain arbitrary code, for ex
 </p>
 
 [% WRAPPER "code.tt" -%]
-struct complex_thing(string debug_msg)
+[% WRAPPER "code-keyword.tt" %]struct[% END %] complex_thing([% WRAPPER "code-type.tt" %]string[% END %] debug_msg)
 {
 	[% WRAPPER "code-type.tt" %]unsigned int[% END %] flags;
 	
-	if(flags & 1) {
+	[% WRAPPER "code-keyword.tt" %]if[% END %](flags &amp; 1) {
 		[% WRAPPER "code-type.tt" %]int[% END %] member1; /* Only declared if "flags" member has the 1 bit set. */
 	}
 	
@@ -144,8 +144,8 @@ struct complex_thing(string debug_msg)
 	Printf("debug_msg = %s, flags = %d\n", debug_msg, flags);
 };
 
-struct complex_thing ct1("foo");
-struct complex_thing ct2("bar");
+[% WRAPPER "code-keyword.tt" %]struct[% END %] complex_thing ct1("foo");
+[% WRAPPER "code-keyword.tt" %]struct[% END %] complex_thing ct2("bar");
 [%- END %]
 
 <p>
@@ -166,18 +166,18 @@ Enumerations like C/C++ are present, but with some differences:
 [% WRAPPER "code.tt" -%]
 /* Declaring and using a plain enum. */
 
-enum simple_enum_type
+[% WRAPPER "code-keyword.tt" %]enum[% END %] simple_enum_type
 {
 	ENUM_ONE,
 	ENUM_TWO,
 	ENUM_THREE,
 };
 
-enum simple_enum_type v; /* Underlying type is "int" */
+[% WRAPPER "code-keyword.tt" %]enum[% END %] simple_enum_type v; /* Underlying type is "int" */
 
 /* Declaring an anonymous enum variable. */
 
-enum
+[% WRAPPER "code-keyword.tt" %]enum[% END %]
 {
 	ANON_ONE,
 	ANON_FOUR = 4,
@@ -193,7 +193,7 @@ enum &lt;[% WRAPPER "code-type.tt" %]uint8_t[% END %]&gt; one_byte_enum
 	SPEC_THREE,
 };
 
-enum one_byte_enum o; /* Underlying type is "uint8_t" */
+[% WRAPPER "code-keyword.tt" %]enum[% END %] one_byte_enum o; /* Underlying type is "uint8_t" */
 [%- END %]
 
 <a name="typedef"><h3>Typedefs</h3></a>
@@ -203,8 +203,8 @@ Typedefs exist and let you alias types just like in C, not a whole lot else to s
 </p>
 
 [% WRAPPER "code.tt" -%]
-typedef [% WRAPPER "code-type.tt" %]uint16_t[% END %] WORD;
-typedef [% WRAPPER "code-type.tt" %]unsigned int[% END %] DWORD;
+[% WRAPPER "code-keyword.tt" %]typedef[% END %] [% WRAPPER "code-type.tt" %]uint16_t[% END %] WORD;
+[% WRAPPER "code-keyword.tt" %]typedef[% END %] [% WRAPPER "code-type.tt" %]unsigned int[% END %] DWORD;
 [%- END %]
 
 <a name="reference"><h3>References</h3></a>
@@ -214,7 +214,7 @@ References (like in C++) are available and mainly exist for passing values by re
 </p>
 
 [% WRAPPER "code.tt" -%]
-local [% WRAPPER "code-type.tt" %]int[% END %] x = 1;
+[% WRAPPER "code-keyword.tt" %]local[% END %] [% WRAPPER "code-type.tt" %]int[% END %] x = 1;
 
 void set_int_in_a_convoluted_manner([% WRAPPER "code-type.tt" %]int[% END %] &i, [% WRAPPER "code-type.tt" %]int[% END %] new_value)
 {

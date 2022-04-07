@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -241,7 +241,20 @@ REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 	if(help_controller != NULL && !help_loaded)
 	{
 		#if defined(_WIN32)
-		help_loaded = help_controller->Initialize(wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm");
+		wxString chm_path = wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm";
+		
+		/* Delete the "Zone.Identifier" NTFS alternate stream if present on the help file.
+		 *
+		 * The Zone.Identifier stream is added for files that come from an untrusted
+		 * source (like the Internet) and causes Windows to restrict access to them. In
+		 * particular, the help viewer will display a blank page with no explanation as to
+		 * why if this isn't done.
+		 *
+		 * The "Unblock" tickbox under the file's Properties dialog does the same thing.
+		*/
+		DeleteFile((chm_path + ":Zone.Identifier").wc_str());
+		
+		help_loaded = help_controller->Initialize(chm_path);
 		
 		#elif defined(__APPLE__)
 		help_loaded = help_controller->AddBook(wxStandardPaths::Get().GetResourcesDir() + "/rehex.htb", false);

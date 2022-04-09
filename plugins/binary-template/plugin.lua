@@ -125,7 +125,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 	btn_sizer:Add(cancel_btn, 0, wx.wxLEFT, 5)
 	
 	local main_sizer = wx.wxBoxSizer(wx.wxVERTICAL)
-	main_sizer:Add(template_sizer, 0, wx.wxTOP | wx.wxLEFT | wx.wxRIGHT, 5)
+	main_sizer:Add(template_sizer, 0, wx.wxEXPAND | wx.wxTOP | wx.wxLEFT | wx.wxRIGHT, 5)
 	main_sizer:Add(range_sizer, 0, wx.wxEXPAND | wx.wxTOP | wx.wxLEFT | wx.wxRIGHT, 5)
 	main_sizer:Add(btn_sizer, 0, wx.wxALIGN_RIGHT | wx.wxALL, 5)
 	

@@ -1,7 +1,7 @@
 Version TBA
 
  * Added "x86 disassembly syntax" to "View" menu to allow selecting between
-   Intel or AT&T notation for x86 disassembly.
+   Intel or AT&T notation for x86 disassembly (#142).
 
  * Handle file open message used for "Open With" on macOS (#144).
 
@@ -10,7 +10,21 @@ Version TBA
  * Fix timer leak that can cause a crash when closing the compare window or
    strings panel.
 
- * Add import and export functions for Intel Hex files.
+ * Add import and export functions for Intel Hex files (#102).
+
+ * Add online help (#147).
+
+ * Add Bitmap Data Visualisation tool (#29).
+
+ * Add Binary Template support (#138).
+
+ * [Emily Ellis] Save new files without the execute bit set (#154).
+
+ * Include highlight colour names in context menu (#153).
+
+ * Save write protect setting in rehex-meta.json (#143).
+
+ * Fix several occasional crashes.
 
 Version 0.4.1 (2022-01-03)
 

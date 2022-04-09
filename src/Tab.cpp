@@ -993,7 +993,21 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
 		{
-			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, " ");
+			/* Hardcoded list of names for the highlight colours.
+			 * This will need to be done better soon... but for now all the highlight
+			 * colours used in each pallette are the same and we don't have any more
+			 * specific names for them (#60).
+			*/
+			static const char *highlight_strings[] = {
+				"Red",
+				"Orange",
+				"Yellow",
+				"Green",
+				"Violet",
+				"Grey",
+			};
+			
+			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, highlight_strings[i]);
 			
 			wxColour bg_colour = active_palette->get_highlight_bg(i);
 			

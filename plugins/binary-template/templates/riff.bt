@@ -1,0 +1,58 @@
+/* Resource Interchange File Format (RIFF) template for REHex
+ * By Daniel Collins (2022) - Released to public domain
+*/
+
+/* A single chunk in a RIFF file. */
+struct RiffChunk
+{
+	/* RIFF values are little endian. */
+	LittleEndian();
+	
+	/* Type of the chunk. */
+	char type[4];
+	
+	/* Length of data following the data_size field. */
+	uint32_t data_size;
+	
+	/* Local variable pointing to the end of the data section. */
+	local uint32_t data_end = FTell() + data_size;
+	
+	if(type == "RIFF" || type == "LIST")
+	{
+		/* "RIFF" and "LIST" chunks contain another type/format
+		 * specifier followed by sub-chunks for the remainder of their
+		 * data section.
+		*/
+		
+		char format[4];
+		
+		struct RiffChunk sub_chunks[0];
+		
+		while(FTell() < data_end)
+		{
+			ArrayExtend(sub_chunks);
+		}
+	}
+	else{
+		unsigned char data[data_size];
+	}
+	
+	/* Pad to 2 byte alignment. */
+	if((FTell() % 2) != 0)
+	{
+		unsigned char _pad[1];
+	}
+};
+
+/* Populate 'chunks' array until it hits the end of the file.
+ *
+ * Will trigger a template error if the records don't perfectly align with the
+ * end of the file.
+*/
+
+struct RiffChunk chunks[0];
+
+while(!FEof())
+{
+	ArrayExtend(chunks);
+}

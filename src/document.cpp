@@ -1565,6 +1565,17 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		return NULL;
 	}
 	
+	if(json_object_set_new(root, "write_protect", json_boolean(write_protect)) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
+	if(write_protect)
+	{
+		has_data = true;
+	}
+	
 	json_t *comments = json_array();
 	if(json_object_set_new(root, "comments", comments) == -1)
 	{
@@ -1803,6 +1814,9 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	highlights = _load_highlights(meta, buffer_length());
 	types = _load_types(meta, buffer_length());
 	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
+	
+	json_t *write_protect = json_object_get(meta, "write_protect");
+	set_write_protect(json_is_true(write_protect));
 	
 	json_decref(meta);
 }

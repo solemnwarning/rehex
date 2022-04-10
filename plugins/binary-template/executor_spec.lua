@@ -3785,7 +3785,31 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			{ "test.bt", 1, "local-variable", "char", "i", nil, nil, { "test.bt", 1, "num", -2 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i++ = %d" },
+				{ "test.bt", 1, "postfix-increment", { "test.bt", 1, "ref", { "i" } } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "i = %d" },
@@ -3801,6 +3825,12 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
+			"print(i = -2)",
+			"print(i++ = -2)",
+			"print(i = -1)",
+			"print(i++ = -1)",
+			"print(i = 0)",
+			"print(i++ = 0)",
 			"print(i = 1)",
 			"print(i++ = 1)",
 			"print(i = 2)",
@@ -3809,7 +3839,7 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("wraps values when postfix increment overflows", function()
+	it("wraps values when postfix increment of an unsigned integer overflows", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
@@ -3851,7 +3881,23 @@ describe("executor", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {
-			{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			{ "test.bt", 1, "local-variable", "char", "i", nil, nil, { "test.bt", 1, "num", 1 } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i-- = %d" },
+				{ "test.bt", 1, "postfix-decrement", { "test.bt", 1, "ref", { "i" } } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i = %d" },
+				{ "test.bt", 1, "ref", { "i" } } } },
+			
+			{ "test.bt", 1, "call", "Printf", {
+				{ "test.bt", 1, "str", "i-- = %d" },
+				{ "test.bt", 1, "postfix-decrement", { "test.bt", 1, "ref", { "i" } } } } },
 			
 			{ "test.bt", 1, "call", "Printf", {
 				{ "test.bt", 1, "str", "i = %d" },
@@ -3870,12 +3916,16 @@ describe("executor", function()
 			"print(i = 1)",
 			"print(i-- = 1)",
 			"print(i = 0)",
+			"print(i-- = 0)",
+			"print(i = -1)",
+			"print(i-- = -1)",
+			"print(i = -2)",
 		}
 		
 		assert.are.same(expect_log, log)
 	end)
 	
-	it("wraps when postfix decrement overflows", function()
+	it("wraps when postfix decrement of an unsigned integer overflows", function()
 		local interface, log = test_interface()
 		
 		executor.execute(interface, {

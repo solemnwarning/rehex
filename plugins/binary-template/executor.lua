@@ -501,14 +501,28 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	end
 end
 
-local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1", type_key = {}, int_mask = 0xFF }
-local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1", type_key = {}, int_mask = 0xFF }
-local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2", type_key = {}, int_mask = 0xFFFF }
-local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2", type_key = {}, int_mask = 0xFFFF }
-local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4", type_key = {}, int_mask = 0xFFFFFFFF }
-local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4", type_key = {}, int_mask = 0xFFFFFFFF }
-local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8", type_key = {}, int_mask = 0xFFFFFFFFFFFFFFFF }
-local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8", type_key = {}, int_mask = 0xFFFFFFFFFFFFFFFF }
+local INT8_MIN  = -128
+local INT8_MAX  = 127
+local INT16_MIN = -32768
+local INT16_MAX = 32767
+local INT32_MIN = -2147483648
+local INT32_MAX = 2147483647
+local INT64_MIN = -0x8000000000000000
+local INT64_MAX = 0x7FFFFFFFFFFFFFFF
+
+local UINT8_MAX  = 0xFF
+local UINT16_MAX = 0xFFFF
+local UINT32_MAX = 0xFFFFFFFF
+local UINT64_MAX = 0xFFFFFFFFFFFFFFFF
+
+local _builtin_type_int8    = { rehex_type_le = "s8",    rehex_type_be = "s8",    length = 1, base = "number", string_fmt = "i1", type_key = {}, int_mask = (INT8_MIN | INT8_MAX) }
+local _builtin_type_uint8   = { rehex_type_le = "u8",    rehex_type_be = "u8",    length = 1, base = "number", string_fmt = "I1", type_key = {}, int_mask = UINT8_MAX }
+local _builtin_type_int16   = { rehex_type_le = "s16le", rehex_type_be = "s16be", length = 2, base = "number", string_fmt = "i2", type_key = {}, int_mask = (INT16_MIN | INT16_MAX) }
+local _builtin_type_uint16  = { rehex_type_le = "u16le", rehex_type_be = "u16be", length = 2, base = "number", string_fmt = "I2", type_key = {}, int_mask = UINT16_MAX }
+local _builtin_type_int32   = { rehex_type_le = "s32le", rehex_type_be = "s32be", length = 4, base = "number", string_fmt = "i4", type_key = {}, int_mask = (INT32_MIN | INT32_MAX) }
+local _builtin_type_uint32  = { rehex_type_le = "u32le", rehex_type_be = "u32be", length = 4, base = "number", string_fmt = "I4", type_key = {}, int_mask = UINT32_MAX }
+local _builtin_type_int64   = { rehex_type_le = "s64le", rehex_type_be = "s64be", length = 8, base = "number", string_fmt = "i8", type_key = {}, int_mask = (INT64_MIN | INT64_MAX) }
+local _builtin_type_uint64  = { rehex_type_le = "u64le", rehex_type_be = "u64be", length = 8, base = "number", string_fmt = "I8", type_key = {}, int_mask = UINT64_MAX }
 local _builtin_type_float32 = { rehex_type_le = "f32le", rehex_type_be = "f32be", length = 4, base = "number", string_fmt = "f",  type_key = {} }
 local _builtin_type_float64 = { rehex_type_le = "f64le", rehex_type_be = "f64be", length = 8, base = "number", string_fmt = "d",  type_key = {} }
 

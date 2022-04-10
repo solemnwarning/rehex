@@ -56,6 +56,14 @@ describe("parser", function()
 		got = parser.parse_text('"\\x00\\x01\\xFF0 <-- hex sequence";')
 		expect = { { "UNKNOWN FILE", 1, "str", string.char(0x00) .. string.char(0x01) .. string.char(0xFF) .. "0 <-- hex sequence" } }
 		assert.are.same(expect, got)
+		
+		assert.has_error(function()
+			parser.parse_text('"foo')
+		end, "Unmatched \" at UNKNOWN FILE:1")
+		
+		assert.has_error(function()
+			parser.parse_text('"\\y')
+		end, "Unrecognised \\ escape at UNKNOWN FILE:1")
 	end)
 	
 	it("parses a function call", function()

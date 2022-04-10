@@ -150,7 +150,7 @@ local function _capture_string(text, pos)
 	local i = pos
 	local len = text:len()
 	
-	while pos <= len
+	while i <= len
 	do
 		local c = text:sub(i, i)
 		
@@ -173,7 +173,8 @@ local function _capture_string(text, pos)
 				s = s .. BACKSLASH_ESCAPES[cc]
 				i = ce + 1
 			else
-				error("aaa")
+				local filename, line_num = input_pos_to_file_and_line_num(i)
+				error("Unrecognised \\ escape at " .. filename .. ":" .. line_num)
 			end
 		elseif c == '"'
 		then

@@ -602,6 +602,26 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("reports parse errors within a function body", function()
+		assert.has_error(function()
+			parser.parse_text(
+				"void foo()\n" ..
+				"{\n" ..
+				"    bar();\n" ..
+				"    this is not a valid statement\n" ..
+				"}\n")
+			end, "Parse error at UNKNOWN FILE:4 (at 'this is not')")
+	end)
+	
+	it("reports an unterminated function body", function()
+		assert.has_error(function()
+			parser.parse_text(
+				"void foo()\n" ..
+				"{\n" ..
+				"    bar();\n")
+			end, "Unmatched '{' at UNKNOWN FILE:2 (at '{')")
+	end)
+	
 	it("parses #file directives", function()
 		local got = parser.parse_text("#file foo.bt 10\nint x;\nint y;\n#file bar.bt 1\nint z;\n");
 		
@@ -921,6 +941,46 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
+	it("reports a parse error within an enum body", function()
+		assert.has_error(function()
+			parser.parse_text(
+				"enum myenum {\n" ..
+				"	FOO =,\n" ..
+				"	BAR = 2,\n" ..
+				"	BAZ\n" ..
+				"};\n")
+			end, "Parse error at UNKNOWN FILE:2 (at ',')")
+		
+		assert.has_error(function()
+			parser.parse_text(
+				"enum myenum {\n" ..
+				"	FOO = 1,\n" ..
+				"	= 2,\n" ..
+				"	BAZ\n" ..
+				"};\n")
+			end, "Parse error at UNKNOWN FILE:3 (at '= 2,')")
+		
+		assert.has_error(function()
+			parser.parse_text(
+				"enum myenum {\n" ..
+				"	FOO = 1,\n" ..
+				"	BAR = 2,\n" ..
+				"	\n" ..
+				"};\n")
+			end, "Parse error at UNKNOWN FILE:5 (at '};')")
+	end)
+	
+	it("reports an unterminated enum body", function()
+		assert.has_error(function()
+			parser.parse_text(
+				"enum myenum {\n" ..
+				"	FOO = 1,\n" ..
+				"	BAR = 2,\n" ..
+				"	BAZ\n" ..
+				"\n")
+			end, "Unmatched '{' at UNKNOWN FILE:1 (at '{')")
+	end)
+	
 	it("parses for loop", function()
 		local got
 		local expect
@@ -999,7 +1059,7 @@ describe("parser", function()
 		local got
 		local expect
 		
-		got = parser.parse_text("for(;;) thing_in_loop();\nthing_not_in_loop();\n}")
+		got = parser.parse_text("for(;;) thing_in_loop();\nthing_not_in_loop();\n")
 		expect = {
 			{ "UNKNOWN FILE", 1, "for",
 				nil, nil, nil,
@@ -1023,7 +1083,7 @@ describe("parser", function()
 		local got
 		local expect
 		
-		got = parser.parse_text("for(;;);\nthing_not_in_loop();\n}")
+		got = parser.parse_text("for(;;);\nthing_not_in_loop();\n")
 		expect = {
 			{ "UNKNOWN FILE", 1, "for", nil, nil, nil, {} },
 			{ "UNKNOWN FILE", 2, "call", "thing_not_in_loop", {} },
@@ -1090,7 +1150,7 @@ describe("parser", function()
 		local got
 		local expect
 		
-		got = parser.parse_text("while(1) thing_in_loop();\nthing_not_in_loop();\n}")
+		got = parser.parse_text("while(1) thing_in_loop();\nthing_not_in_loop();\n")
 		expect = {
 			{ "UNKNOWN FILE", 1, "for",
 				nil, { "UNKNOWN FILE", 1, "num", 1 }, nil,
@@ -1114,7 +1174,7 @@ describe("parser", function()
 		local got
 		local expect
 		
-		got = parser.parse_text("while(1);\nthing_not_in_loop();\n}")
+		got = parser.parse_text("while(1);\nthing_not_in_loop();\n")
 		expect = {
 			{ "UNKNOWN FILE", 1, "for", nil, { "UNKNOWN FILE", 1, "num", 1 }, nil, {} },
 			{ "UNKNOWN FILE", 2, "call", "thing_not_in_loop", {} },
@@ -1470,6 +1530,39 @@ describe("parser", function()
 		}
 		
 		assert.are.same(expect, got)
+	end)
+	
+	it("reports a parse error within a switch body", function()
+		assert.has_error(function()
+			parser.parse_text(
+				"switch(x) {\n" ..
+				"	case 1:\n" ..
+				"	case 2:\n" ..
+				"		foo();\n" ..
+				"		break;\n" ..
+				"	default:\n" ..
+				"		bar();\n" ..
+				"	case 3:\n" ..
+				"		$ parse error $" ..
+				"		baz();\n" ..
+				"}")
+			end, "Parse error at UNKNOWN FILE:9 (at '$ parse err')")
+	end)
+	
+	it("reports an unterminated switch body", function()
+		assert.has_error(function()
+			parser.parse_text(
+				"switch(x) {\n" ..
+				"	case 1:\n" ..
+				"	case 2:\n" ..
+				"		foo();\n" ..
+				"		break;\n" ..
+				"	default:\n" ..
+				"		bar();\n" ..
+				"	case 3:\n" ..
+				"		baz();\n" ..
+				"")
+			end, "Unmatched '{' at UNKNOWN FILE:1 (at '{')")
 	end)
 	
 	it("parses casts", function()

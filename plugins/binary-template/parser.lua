@@ -97,19 +97,31 @@ local function input_pos_to_file_and_line_num(pos)
 	return "UNKNOWN FILE", 0
 end
 
-local function _parser_fallback(text, pos)
-	-- Getting here means we're trying to parse something and none of the real captures have
-	-- matched, so any actual text is a parse error.
-	
-	pos = pos - 1
-	
-	if pos < text:len()
+local function _PARSE_ERROR(message, pos_func)
+	if message == nil
 	then
-		local pos_filename, pos_line_num = input_pos_to_file_and_line_num(pos)
-		error("Parse error at " .. pos_filename .. ":" .. pos_line_num .. " (at '" .. text:sub(pos, pos + 10) .. "')")
+		message = "Parse error"
 	end
 	
-	return nil
+	return P(function(text, pos)
+		-- Getting here means we're trying to parse something and none of the real captures have
+		-- matched, so any actual text is a parse error.
+		
+		if pos_func ~= nil
+		then
+			pos = pos_func()
+		end
+		
+		if pos >= text:len()
+		then
+			pos = text:len()
+		end
+		
+		local pos_filename, pos_line_num = input_pos_to_file_and_line_num(pos)
+		local fragment = text:sub(pos, pos + 10):gsub("\n.*", "")
+		
+		error(message .. " at " .. pos_filename .. ":" .. pos_line_num .. " (at '" .. fragment .. "')")
+	end)
 end
 
 local function _consume_directive(text, pos)
@@ -327,10 +339,12 @@ local name = _capture_name * spc
 local name_nospc = _capture_name
 local comma  = P(",") * spc
 
+local _open_statements
+
 local _parser = spc * P{
 	"TEMPLATE";
 	TEMPLATE =
-		Ct( (V("STMT") + P(1) * P(_parser_fallback)) ^ 0),
+		Ct( (V("STMT") + #P(1) * _PARSE_ERROR()) ^ 0),
 	
 	VALUE_NUM = Cc("num") * number,
 	VALUE_STR = Cc("str") * P('"') * P(_capture_string) * spc,
@@ -362,7 +376,39 @@ local _parser = spc * P{
 		V("EXPR") * P(";") * spc +
 		P(";") * spc,
 	
-	BLOCK = Ct( P(_capture_position) * Cc("block") * P("{") * spc * Ct( V("STMT") ^ 0 ) * spc * P("}") * spc ),
+	BLOCK = Ct( P(_capture_position) * Cc("block") * Ct( V("STATEMENT_BODY") ) ),
+	
+	BRACE_BLOCK_OPEN =
+		-- From the "{" character...
+		P("{")
+		
+		-- ...store the position so we can report if there is no matching "}"...
+		* P(function(text, pos)
+			table.insert(_open_statements, pos - 1)
+			return pos
+		end)
+		* spc,
+	
+	BRACE_BLOCK_CONTINUE =
+		-- ...caller should use this to check if there is further input within the block
+		--    before falling through to BRACE_BLOCK_CLOSE...
+		#P(1) * -P("}"),
+	
+	BRACE_BLOCK_CLOSE =
+		-- ...where we hit the final mandatory "}"
+		(P("}") + _PARSE_ERROR("Unmatched '{'", function() return _open_statements[#_open_statements] end))
+		
+		-- We read in a full block, get rid of the start position we stashed earlier.
+		* P(function(text, pos)
+			table.remove(_open_statements)
+			return pos
+		end)
+		* spc,
+	
+	STATEMENT_BODY =
+		V("BRACE_BLOCK_OPEN")
+		* (V("BRACE_BLOCK_CONTINUE") * (V("STMT") * spc + _PARSE_ERROR())) ^ 0
+		* V("BRACE_BLOCK_CLOSE"),
 	
 	EXPR =
 		Ct( P(_capture_position) * Cc("_expr") * Ct(
@@ -430,10 +476,10 @@ local _parser = spc * P{
 	STRUCT_ARG_LIST = Ct( (S("(") * spc * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")")) ^ -1 ),
 	STRUCT_VAR_DECL = Ct( name * Ct( (P("(") * spc * V("ZERO_OR_MORE_EXPRS") * P(")") * spc) ^ -1) * (P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) ),
 	STRUCT_DEFN =
-		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * (V("STRUCT_VAR_DECL") + Cc(nil)) * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * Cc(nil) * (V("STRUCT_VAR_DECL") + Cc(nil)) * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name                                       * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * P("{") * spc * Ct( V("STMT") ^ 0 ) * P("}") * spc * name                                       * P(";") * spc ),
+		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * Ct( V("STATEMENT_BODY") ) * Cc(nil) * (V("STRUCT_VAR_DECL") + Cc(nil)) * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") *                      P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * Ct( V("STATEMENT_BODY") ) * Cc(nil) * (V("STRUCT_VAR_DECL") + Cc(nil)) * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * name    * V("STRUCT_ARG_LIST") * spc * Ct( V("STATEMENT_BODY") ) * name                                       * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("struct") * P("typedef") * spc * P("struct") * spc * Cc(nil) * V("STRUCT_ARG_LIST") * spc * Ct( V("STATEMENT_BODY") ) * name                                       * P(";") * spc ),
 	
 	--  {
 	--      "file.bt", <line>,
@@ -456,15 +502,20 @@ local _parser = spc * P{
 	--      { <variable name>, nil, <array size expr> OR nil } OR nil,
 	--  }
 	ENUM_TYPE        = (P("<") * P(_capture_type) * P(">") * spc) + Cc("int"),
-	ENUM_MEMBER      = Ct( name * (P("=") * spc * V("EXPR")) ^ -1 ),
-	ENUM_MEMBER_LIST = Ct( V("ENUM_MEMBER") * (comma * V("ENUM_MEMBER")) ^ 0 ),
+	ENUM_MEMBER      = Ct( name * (P("=") * spc * (V("EXPR") + _PARSE_ERROR())) ^ -1 ),
+	ENUM_BODY = Ct(
+		V("BRACE_BLOCK_OPEN") *
+		(V("ENUM_MEMBER") + _PARSE_ERROR()) *
+		(V("BRACE_BLOCK_CONTINUE") * comma * (V("ENUM_MEMBER") + _PARSE_ERROR())) ^ 0 *
+		V("BRACE_BLOCK_CLOSE")
+	),
 	ENUM_VAR_DECL    = Ct( name * Cc(nil) * (P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) ),
 	ENUM_DEFN =
-		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * Cc(nil)            * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * V("ENUM_VAR_DECL") * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * Cc(nil) * V("ENUM_VAR_DECL") * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * name    * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * Cc(nil)            * P(";") * spc ) +
-		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * P("{") * spc * V("ENUM_MEMBER_LIST") * P("}") * spc * name    * Cc(nil)            * P(";") * spc ),
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * V("ENUM_BODY") * Cc(nil) * Cc(nil)            * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * name    * V("ENUM_BODY") * Cc(nil) * V("ENUM_VAR_DECL") * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") *                      P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * V("ENUM_BODY") * Cc(nil) * V("ENUM_VAR_DECL") * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * name    * V("ENUM_BODY") * name    * Cc(nil)            * P(";") * spc ) +
+		Ct( P(_capture_position) * Cc("enum") * P("typedef") * spc * P("enum") * spc * V("ENUM_TYPE") * Cc(nil) * V("ENUM_BODY") * name    * Cc(nil)            * P(";") * spc ),
 	
 	--  {
 	--      "function",
@@ -474,7 +525,7 @@ local _parser = spc * P{
 	--      { <statements> },
 	--  }
 	FUNC_ARG_LIST = Ct( S("(") * spc * (V("ARG") * (comma * V("ARG")) ^ 0) ^ -1 * S(")") ) * spc,
-	FUNC_DEFN = Ct( P(_capture_position) * Cc("function") * name * name * V("FUNC_ARG_LIST") * P("{") * spc * Ct( (V("STMT") * spc) ^ 0 ) * P("}") * spc ),
+	FUNC_DEFN = Ct( P(_capture_position) * Cc("function") * name * name * V("FUNC_ARG_LIST") * Ct( V("STATEMENT_BODY") ) ),
 	
 	--  {
 	--      "if",
@@ -483,7 +534,7 @@ local _parser = spc * P{
 	--      { <condition>, { <statements> } },  <-- else if
 	--      {              { <statements> } },  <-- else
 	--  }
-	IF_BODY = Ct( P("{") * spc * V("STMT") ^ 0 * spc * P("}") + V("STMT") ),
+	IF_BODY = Ct( V("STATEMENT_BODY") + V("STMT") ),
 	IF = Ct( P(_capture_position) * Cc("if") *
 		Ct( P("if")      * spc * P("(") * spc * V("EXPR") * P(")") * spc * V("IF_BODY") )      * spc *
 		Ct( P("else if") * spc * P("(") * spc * V("EXPR") * P(")") * spc * V("IF_BODY") ) ^ 0  * spc *
@@ -520,11 +571,21 @@ local _parser = spc * P{
 	--          ...
 	--      }
 	--  }
+	NOT_CASE_OR_DEFAULT = #P(1) * -(P("case") + P("default")),
 	SWITCH = Ct(P(_capture_position) * Cc("switch") *
-		P("switch") * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct( P("{") * spc *
-			(Ct( P("case")    * spc_req * V("EXPR") * P(":") * spc * Ct( V("STMT") ^ 0 ) ) * spc +
-			 Ct( P("default") * spc     * Cc(nil)   * P(":") * spc * Ct( V("STMT") ^ 0 ) ) * spc) ^ 1 *
-		P("}") ) * spc
+		P("switch") * spc * P("(") * spc * V("EXPR") * P(")") * spc * Ct(
+			V("BRACE_BLOCK_OPEN") *
+			V("BRACE_BLOCK_CONTINUE") * (
+				(
+					Ct( P("case") * spc_req * V("EXPR") * P(":") * spc *
+						Ct( ( V("BRACE_BLOCK_CONTINUE") * V("NOT_CASE_OR_DEFAULT") * (V("STMT") + _PARSE_ERROR()) ) ^ 0 ) ) +
+					
+					Ct( P("default") * spc * Cc(nil) * P(":") * spc *
+						Ct( ( V("BRACE_BLOCK_CONTINUE") * V("NOT_CASE_OR_DEFAULT") * (V("STMT") + _PARSE_ERROR()) ) ^ 0 ) )
+				) ^ 1
+			) *
+			V("BRACE_BLOCK_CLOSE")
+		)
 	),
 	
 	--  {
@@ -968,6 +1029,7 @@ end
 
 local function parse_text(text)
 	build_lines_table(text)
+	_open_statements = {}
 	
 	local ast = _parser:match(text)
 	

@@ -5989,4 +5989,324 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("accomodates the full range of int8_t values", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local int8_t x = 0;
+			{ "test.bt", 1, "local-variable", "int8_t", "x", nil, nil, { "test.bt", 1, "num", 0 } },
+			
+			-- x = x - 100;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "subtract",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 100 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %d" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+			
+			-- x = x + -28;
+			{ "test.bt", 4, "assign",
+				{ "test.bt", 4, "ref", { "x" } },
+				{ "test.bt", 4, "add",
+					{ "test.bt", 4, "ref", { "x" } },
+					{ "test.bt", 4, "num", -28 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "x = %d" },
+				{ "test.bt", 5, "ref", { "x" } } } },
+			
+			-- x = x + 200;
+			{ "test.bt", 6, "assign",
+				{ "test.bt", 6, "ref", { "x" } },
+				{ "test.bt", 6, "add",
+					{ "test.bt", 6, "ref", { "x" } },
+					{ "test.bt", 6, "num", 200 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 7, "call", "Printf", {
+				{ "test.bt", 7, "str", "x = %d" },
+				{ "test.bt", 7, "ref", { "x" } } } },
+			
+			-- x = x - -55;
+			{ "test.bt", 8, "assign",
+				{ "test.bt", 8, "ref", { "x" } },
+				{ "test.bt", 8, "subtract",
+					{ "test.bt", 8, "ref", { "x" } },
+					{ "test.bt", 8, "num", -55 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 9, "call", "Printf", {
+				{ "test.bt", 9, "str", "x = %d" },
+				{ "test.bt", 9, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = -100)",
+			"print(x = -128)",
+			"print(x = 72)",
+			"print(x = 127)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("accomodates the full range of uint8_t values", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local uint8_t x = 0;
+			{ "test.bt", 1, "local-variable", "uint8_t", "x", nil, nil, { "test.bt", 1, "num", 0 } },
+			
+			-- x = x + 200;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "add",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 200 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %u" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+			
+			-- x = x + 55;
+			{ "test.bt", 4, "assign",
+				{ "test.bt", 4, "ref", { "x" } },
+				{ "test.bt", 4, "add",
+					{ "test.bt", 4, "ref", { "x" } },
+					{ "test.bt", 4, "num", 55 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "x = %u" },
+				{ "test.bt", 5, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = 200)",
+			"print(x = 255)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles uint8_t overflow on addition/assignment", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local uint8_t x = 254;
+			{ "test.bt", 1, "local-variable", "uint8_t", "x", nil, nil, { "test.bt", 1, "num", 254 } },
+			
+			-- x = x + 4;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "add",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 4 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %u" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles uint8_t underflow on subtraction/assignment", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local uint8_t x = 2;
+			{ "test.bt", 1, "local-variable", "uint8_t", "x", nil, nil, { "test.bt", 1, "num", 2 } },
+			
+			-- x = x - 10;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "subtract",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 10 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %u" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = 248)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("accomodates the full range of int32_t values", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local int32_t x = 0;
+			{ "test.bt", 1, "local-variable", "int32_t", "x", nil, nil, { "test.bt", 1, "num", 0 } },
+			
+			-- x = x - 2,000,000,000;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "subtract",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 2000000000 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %d" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+			
+			-- x = x - 147,483,648;
+			{ "test.bt", 4, "assign",
+				{ "test.bt", 4, "ref", { "x" } },
+				{ "test.bt", 4, "subtract",
+					{ "test.bt", 4, "ref", { "x" } },
+					{ "test.bt", 4, "num", 147483648 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "x = %d" },
+				{ "test.bt", 5, "ref", { "x" } } } },
+			
+			-- x = x + 4,000,000,000;
+			{ "test.bt", 6, "assign",
+				{ "test.bt", 6, "ref", { "x" } },
+				{ "test.bt", 6, "add",
+					{ "test.bt", 6, "ref", { "x" } },
+					{ "test.bt", 6, "num", 4000000000 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 7, "call", "Printf", {
+				{ "test.bt", 7, "str", "x = %d" },
+				{ "test.bt", 7, "ref", { "x" } } } },
+			
+			-- x = x + 294,967,295;
+			{ "test.bt", 8, "assign",
+				{ "test.bt", 8, "ref", { "x" } },
+				{ "test.bt", 8, "add",
+					{ "test.bt", 8, "ref", { "x" } },
+					{ "test.bt", 8, "num", 294967295 } } },
+			
+			-- Printf("x = %d", x);
+			{ "test.bt", 9, "call", "Printf", {
+				{ "test.bt", 9, "str", "x = %d" },
+				{ "test.bt", 9, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = -2000000000)",
+			"print(x = -2147483648)",
+			"print(x = 1852516352)",
+			"print(x = 2147483647)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("accomodates the full range of uint32_t values", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local uint32_t x = 0;
+			{ "test.bt", 1, "local-variable", "uint32_t", "x", nil, nil, { "test.bt", 1, "num", 0 } },
+			
+			-- x = x + 4,000,000,000;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "add",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 4000000000 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %u" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+			
+			-- x = x + 294,967,295;
+			{ "test.bt", 4, "assign",
+				{ "test.bt", 4, "ref", { "x" } },
+				{ "test.bt", 4, "add",
+					{ "test.bt", 4, "ref", { "x" } },
+					{ "test.bt", 4, "num", 294967295 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "x = %u" },
+				{ "test.bt", 5, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = 4000000000)",
+			"print(x = 4294967295)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles uint32_t overflow on addition/assignment", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local uint32_t x = 4294967294;
+			{ "test.bt", 1, "local-variable", "uint32_t", "x", nil, nil, { "test.bt", 1, "num", 4294967294 } },
+			
+			-- x = x + 4;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "add",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 4 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %u" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("handles uint32_t underflow on subtraction/assignment", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local uint32_t x = 4;
+			{ "test.bt", 1, "local-variable", "uint32_t", "x", nil, nil, { "test.bt", 1, "num", 4 } },
+			
+			-- x = x - 10;
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "x" } },
+				{ "test.bt", 2, "subtract",
+					{ "test.bt", 2, "ref", { "x" } },
+					{ "test.bt", 2, "num", 10 } } },
+			
+			-- Printf("x = %u", x);
+			{ "test.bt", 3, "call", "Printf", {
+				{ "test.bt", 3, "str", "x = %u" },
+				{ "test.bt", 3, "ref", { "x" } } } },
+		})
+		
+		local expect_log = {
+			"print(x = 4294967290)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

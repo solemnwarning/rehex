@@ -403,7 +403,14 @@ local function _assign_value(context, dst_type, dst_val, src_type, src_val)
 			end
 		elseif dst_type.base ~= "struct" and dst_type.base == src_type.base
 		then
-			dst_val:set(src_val:get())
+			local v = src_val:get()
+			
+			if dst_type.int_mask ~= nil
+			then
+				v = v & dst_type.int_mask
+			end
+			
+			dst_val:set(v)
 		else
 			_template_error(context, "can't assign '" .. _get_type_name(src_type) .. "' to type '" .. _get_type_name(dst_type) .. "'")
 		end

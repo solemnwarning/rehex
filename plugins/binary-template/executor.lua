@@ -615,16 +615,77 @@ local function _builtin_function_FTell(context, argv)
 end
 
 local function _builtin_function_Printf(context, argv)
-	-- Copy format unchanged
-	local print_args = { argv[1][2]:get() }
+	local fmt = argv[1][2]:get()
 	
-	-- Pass value part of other arguments - should all be lua numbers or strings
-	for i = 2, #argv
+	local format_params = { fmt }
+	local next_param = 2
+	
+	local flags = "" --"[ 0'+-]*"
+	local width = "" --"%d*"
+	local precision = "%.?%d*"
+	
+	local fmt_patterns = {
+		{ "%%%%", function(fmt_fragment) end },
+		
+		{ "%%" .. width .. "s", function(fmt_fragment)
+			if next_param > #argv
+			then
+				_template_error(context, "Too few parameters for format string '" .. fmt .. "'")
+			end
+			
+			if not _type_is_stringish(argv[next_param][1])
+			then
+				_template_error(context, "Expected a string for format '" .. fmt_fragment .. "' but passed a '" .. _get_type_name(argv[next_param][1]) .. "'")
+			end
+			
+			table.insert(format_params, _stringify_value(argv[next_param][1], argv[next_param][2]))
+			next_param = next_param + 1
+		end },
+		
+		{ "%%" .. flags .. width .. precision .. "[diufFeEgGxXoc]", function(fmt_fragment)
+			if next_param > #argv
+			then
+				_template_error(context, "Too few parameters for format string '" .. fmt .. "'")
+			end
+			
+			if not _type_is_number(argv[next_param][1])
+			then
+				_template_error(context, "Expected a number for format '" .. fmt_fragment .. "' but passed a '" .. _get_type_name(argv[next_param][1]) .. "'")
+			end
+			
+			local n = argv[next_param][2]:get()
+			table.insert(format_params, n)
+			next_param = next_param + 1
+		end },
+		
+		{ "[^%%]+", function(fmt_fragment) end },
+	}
+	
+	local i = 1
+	while i <= fmt:len()
 	do
-		print_args[i] = argv[i][2]:get()
+		local matched = false
+		
+		for j = 1, #fmt_patterns
+		do
+			local _, match_end, match = fmt:find("^(" .. fmt_patterns[j][1] .. ")", i)
+			
+			if match_end ~= nil
+			then
+				fmt_patterns[j][2](match)
+				matched = true
+				i = match_end + 1
+				break
+			end
+		end
+		
+		if not matched
+		then
+			_template_error(context, "Unable to parse format string '" .. fmt .. "' i = " .. i)
+		end
 	end
 	
-	context.interface.print(string.format(table.unpack(print_args)))
+	context.interface.print(string.format(table.unpack(format_params)))
 end
 
 local function _builtin_function_defn_ReadXXX(type_info, name)

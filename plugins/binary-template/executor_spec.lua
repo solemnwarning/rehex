@@ -1322,7 +1322,7 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "10 + 20 = %s" },
+				{ "test.bt", 1, "str", "10 + 20 = %d" },
 				{ "test.bt", 1, "add",
 					{ "test.bt", 1, "num", 10 },
 					{ "test.bt", 1, "num", 20 } } } },
@@ -1340,14 +1340,14 @@ describe("executor", function()
 		
 		executor.execute(interface, {
 			{ "test.bt", 1, "call", "Printf", {
-				{ "test.bt", 1, "str", "10.2 + 20.4 = %s" },
+				{ "test.bt", 1, "str", "10.2 + 20.4 = %.2f" },
 				{ "test.bt", 1, "add",
 					{ "test.bt", 1, "num", 10.2 },
 					{ "test.bt", 1, "num", 20.4 } } } },
 		})
 		
 		local expect_log = {
-			"print(10.2 + 20.4 = 30.6)",
+			"print(10.2 + 20.4 = 30.60)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -5915,6 +5915,26 @@ describe("executor", function()
 		
 		local expect_log = {
 			"print(hello)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows printing a char[] using the Printf '%s' format", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local char s[10] = "hello";
+			{ "test.bt", 1, "local-variable", "char", "s", nil, { "test.bt", 1, "num", 10 }, { "test.bt", 1, "str", "hello" } },
+			
+			-- Printf("s = '%s'", s);
+			{ "test.bt", 5, "call", "Printf", {
+				{ "test.bt", 5, "str", "s = '%s'" },
+				{ "test.bt", 5, "ref", { "s" } } } },
+		})
+		
+		local expect_log = {
+			"print(s = 'hello')",
 		}
 		
 		assert.are.same(expect_log, log)

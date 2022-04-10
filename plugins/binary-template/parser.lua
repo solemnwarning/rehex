@@ -189,6 +189,52 @@ local function _capture_string(text, pos)
 	error("Unmatched \" at " .. filename .. ":" .. line_num)
 end
 
+local function _capture_char_literal(text, pos)
+	local char_value = nil
+	
+	local ob,oe,oc = text:find("^\\([0-7][0-7]?[0-7]?)", pos)
+	local hb,he,hc = text:find("^\\x([0-9A-Fa-f][0-9A-Fa-f])", pos)
+	local cb,ce,cc = text:find("^\\(.)", pos)
+	local pb,pe,pc = text:find("^([^'])", pos)
+	
+	if ob ~= nil
+	then
+		char_value = tonumber(oc, 8)
+		pos = oe + 1
+	elseif hb ~= nil
+	then
+		char_value = tonumber(hc, 16)
+		pos = he + 1
+	elseif cb ~= nil
+	then
+		if BACKSLASH_ESCAPES[cc] ~= nil
+		then
+			char_value = string.byte(BACKSLASH_ESCAPES[cc])
+			pos = ce + 1
+		else
+			local filename, line_num = input_pos_to_file_and_line_num(pos)
+			error("Unrecognised \\ escape at " .. filename .. ":" .. line_num)
+		end
+	elseif pb ~= nil
+	then
+		char_value = string.byte(pc)
+		pos = pe + 1
+	else
+		local filename, line_num = input_pos_to_file_and_line_num(pos - 1)
+		error("Expected character after ' at " .. filename .. ":" .. line_num)
+	end
+	
+	local sq = text:find("^'", pos)
+	
+	if sq == nil
+	then
+		local filename, line_num = input_pos_to_file_and_line_num(pos - 1)
+		error("Unmatched ' at " .. filename .. ":" .. line_num)
+	end
+	
+	return sq + 1, char_value
+end
+
 local function _capture_type(text, pos)
 	local prefix_patterns = {
 		{ "^signed%s+",    "signed"   },
@@ -288,13 +334,14 @@ local _parser = spc * P{
 	
 	VALUE_NUM = Cc("num") * number,
 	VALUE_STR = Cc("str") * P('"') * P(_capture_string) * spc,
+	VALUE_CHAR = Cc("num") * P("'") * P(_capture_char_literal) * spc,
 	
 	VALUE_REF = Cc("ref") * Ct(
 		name_nospc * (P("[") * V("EXPR") * P("]"))^-1 *
 		(P(".") * name_nospc * (P("[") * V("EXPR") * P("]"))^-1)^0
 		) * spc,
 	
-	VALUE = P(_capture_position) * (V("VALUE_NUM") + V("VALUE_STR") + V("VALUE_REF")),
+	VALUE = P(_capture_position) * (V("VALUE_NUM") + V("VALUE_STR") + V("VALUE_CHAR") + V("VALUE_REF")),
 	
 	STMT =
 		P(1) * P(_consume_directive) * spc +

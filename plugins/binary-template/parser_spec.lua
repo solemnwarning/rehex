@@ -66,6 +66,47 @@ describe("parser", function()
 		end, "Unrecognised \\ escape at UNKNOWN FILE:1")
 	end)
 	
+	it("parses character literals", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("' ';")
+		expect = { { "UNKNOWN FILE", 1, "num", 0x20 } }
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("'\n';")
+		expect = { { "UNKNOWN FILE", 1, "num", 0x0A } }
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("'\\\\';")
+		expect = { { "UNKNOWN FILE", 1, "num", 0x5C } }
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("'\"';")
+		expect = { { "UNKNOWN FILE", 1, "num", 0x22 } }
+		assert.are.same(expect, got)
+		
+		assert.has_error(function()
+			parser.parse_text("'")
+		end, "Expected character after ' at UNKNOWN FILE:1")
+		
+		assert.has_error(function()
+			parser.parse_text("''")
+		end, "Expected character after ' at UNKNOWN FILE:1")
+		
+		assert.has_error(function()
+			parser.parse_text("'A")
+		end, "Unmatched ' at UNKNOWN FILE:1")
+		
+		assert.has_error(function()
+			parser.parse_text("'\n ")
+		end, "Unmatched ' at UNKNOWN FILE:1")
+		
+		assert.has_error(function()
+			parser.parse_text("'\\y ")
+		end, "Unrecognised \\ escape at UNKNOWN FILE:1")
+	end);
+	
 	it("parses a function call", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", {} } }, parser.parse_text("testfunc();"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "call", "testfunc", { { "UNKNOWN FILE", 1, "num", 1 } } } }, parser.parse_text("testfunc(1);"));

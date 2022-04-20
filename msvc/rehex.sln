@@ -7,6 +7,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rehex", "rehex.vcxproj", "{
 	ProjectSection(ProjectDependencies) = postProject
 		{B9C94766-AB26-4158-AF59-DB11E07D81CB} = {B9C94766-AB26-4158-AF59-DB11E07D81CB}
 		{518C9FD0-CC93-44D7-AE12-8974CE814FCF} = {518C9FD0-CC93-44D7-AE12-8974CE814FCF}
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8} = {73DF1FFB-1C5E-409E-A309-83934640CCB8}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{FFE8D1BB-DE95-46A4-B319-6217BCC1F309}"
@@ -14,10 +15,14 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "embed", "embed\embed.vcxproj", "{C94572D7-51FD-4A83-B948-7C6284C9F28F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "all-tests", "all-tests\all-tests.vcxproj", "{9E3A9219-9E63-4C16-B3A5-93FAC78086D4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8} = {73DF1FFB-1C5E-409E-A309-83934640CCB8}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "all-tests-appcode", "all-tests-appcode\all-tests-appcode.vcxproj", "{1930E595-706F-4CD9-B609-729FF1DFBD54}"
 	ProjectSection(ProjectDependencies) = postProject
 		{B9C94766-AB26-4158-AF59-DB11E07D81CB} = {B9C94766-AB26-4158-AF59-DB11E07D81CB}
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8} = {73DF1FFB-1C5E-409E-A309-83934640CCB8}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "resources", "resources\resources.vcxproj", "{B9C94766-AB26-4158-AF59-DB11E07D81CB}"
@@ -26,6 +31,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "resources", "resources\reso
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxlua", "wxlua\wxlua.vcxproj", "{518C9FD0-CC93-44D7-AE12-8974CE814FCF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8} = {73DF1FFB-1C5E-409E-A309-83934640CCB8}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vcpkg-deploy", "vcpkg-deploy\vcpkg-deploy.vcxproj", "{73DF1FFB-1C5E-409E-A309-83934640CCB8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -83,6 +93,14 @@ Global
 		{518C9FD0-CC93-44D7-AE12-8974CE814FCF}.Release|x64.Build.0 = Release|x64
 		{518C9FD0-CC93-44D7-AE12-8974CE814FCF}.Release|x86.ActiveCfg = Release|Win32
 		{518C9FD0-CC93-44D7-AE12-8974CE814FCF}.Release|x86.Build.0 = Release|Win32
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Debug|x64.ActiveCfg = Debug|x64
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Debug|x64.Build.0 = Debug|x64
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Debug|x86.ActiveCfg = Debug|Win32
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Debug|x86.Build.0 = Debug|Win32
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Release|x64.ActiveCfg = Release|x64
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Release|x64.Build.0 = Release|x64
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Release|x86.ActiveCfg = Release|Win32
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -93,6 +111,7 @@ Global
 		{1930E595-706F-4CD9-B609-729FF1DFBD54} = {FFE8D1BB-DE95-46A4-B319-6217BCC1F309}
 		{B9C94766-AB26-4158-AF59-DB11E07D81CB} = {FFE8D1BB-DE95-46A4-B319-6217BCC1F309}
 		{518C9FD0-CC93-44D7-AE12-8974CE814FCF} = {FFE8D1BB-DE95-46A4-B319-6217BCC1F309}
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8} = {FFE8D1BB-DE95-46A4-B319-6217BCC1F309}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {298770C0-CFB6-468D-BC84-AE7D2B230312}

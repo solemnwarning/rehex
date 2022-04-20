@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
+
 #include <string>
 #include <vector>
 #include <wx/event.h>
@@ -22,8 +24,6 @@
 #include <wx/fontutil.h>
 #include <wx/fs_zip.h>
 #include <wx/stdpaths.h>
-
-#include "platform.hpp"
 
 #include "App.hpp"
 #include "ArtProvider.hpp"

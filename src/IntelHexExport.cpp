@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
+
 #include <algorithm>
 #include <assert.h>
 #include <errno.h>

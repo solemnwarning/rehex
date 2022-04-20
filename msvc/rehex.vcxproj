@@ -58,22 +58,22 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\vcpkg\thirdparty.props" />
+    <Import Project="thirdparty.props" />
     <Import Project="rehex.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\vcpkg\thirdparty.props" />
+    <Import Project="thirdparty.props" />
     <Import Project="rehex.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\vcpkg\thirdparty.props" />
+    <Import Project="thirdparty.props" />
     <Import Project="rehex.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\vcpkg\thirdparty.props" />
+    <Import Project="thirdparty.props" />
     <Import Project="rehex.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -101,6 +101,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Debug\wxlua.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -150,6 +151,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Release\wxlua.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
   </ItemDefinitionGroup>
@@ -174,10 +176,16 @@
     <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\res\actual_size16.c" />
     <ClCompile Include="..\res\ascii16.c" />
     <ClCompile Include="..\res\ascii24.c" />
     <ClCompile Include="..\res\ascii32.c" />
     <ClCompile Include="..\res\ascii48.c" />
+    <ClCompile Include="..\res\diff_fold16.c" />
+    <ClCompile Include="..\res\diff_fold24.c" />
+    <ClCompile Include="..\res\diff_fold32.c" />
+    <ClCompile Include="..\res\diff_fold48.c" />
+    <ClCompile Include="..\res\fit_to_screen16.c" />
     <ClCompile Include="..\res\icon128.c" />
     <ClCompile Include="..\res\icon16.c" />
     <ClCompile Include="..\res\icon32.c" />
@@ -188,15 +196,23 @@
     <ClCompile Include="..\res\offsets24.c" />
     <ClCompile Include="..\res\offsets32.c" />
     <ClCompile Include="..\res\offsets48.c" />
+    <ClCompile Include="..\res\spinner24.c" />
+    <ClCompile Include="..\res\swap_horiz16.c" />
+    <ClCompile Include="..\res\swap_vert16.c" />
     <ClCompile Include="..\res\version.cpp" />
+    <ClCompile Include="..\res\zoom_in16.c" />
+    <ClCompile Include="..\res\zoom_out16.c" />
     <ClCompile Include="..\src\AboutDialog.cpp" />
     <ClCompile Include="..\src\AppMain.cpp" />
+    <ClCompile Include="..\src\AppSettings.cpp" />
     <ClCompile Include="..\src\AppTestable.cpp" />
     <ClCompile Include="..\src\ArtProvider.cpp" />
     <ClCompile Include="..\src\BasicDataTypes.cpp" />
+    <ClCompile Include="..\src\BitmapTool.cpp" />
     <ClCompile Include="..\src\buffer.cpp" />
     <ClCompile Include="..\src\BytesPerLineDialog.cpp" />
     <ClCompile Include="..\src\ByteRangeSet.cpp" />
+    <ClCompile Include="..\src\CharacterEncoder.cpp" />
     <ClCompile Include="..\src\ClickText.cpp" />
     <ClCompile Include="..\src\CodeCtrl.cpp" />
     <ClCompile Include="..\src\CommentTree.cpp" />
@@ -212,6 +228,8 @@
     <ClCompile Include="..\src\EditCommentDialog.cpp" />
     <ClCompile Include="..\src\Events.cpp" />
     <ClCompile Include="..\src\FillRangeDialog.cpp" />
+    <ClCompile Include="..\src\IntelHexExport.cpp" />
+    <ClCompile Include="..\src\IntelHexImport.cpp" />
     <ClCompile Include="..\src\LicenseDialog.cpp" />
     <ClCompile Include="..\src\lua-bindings\rehex_bind.cpp" />
     <ClCompile Include="..\src\lua-plugin-preload.c" />
@@ -225,13 +243,21 @@
     <ClCompile Include="..\src\textentrydialog.cpp" />
     <ClCompile Include="..\src\ToolPanel.cpp" />
     <ClCompile Include="..\src\util.cpp" />
+    <ClCompile Include="..\src\VirtualMappingDialog.cpp" />
+    <ClCompile Include="..\src\VirtualMappingList.cpp" />
     <ClCompile Include="..\src\win32lib.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\res\actual_size16.h" />
     <ClInclude Include="..\res\ascii16.h" />
     <ClInclude Include="..\res\ascii24.h" />
     <ClInclude Include="..\res\ascii32.h" />
     <ClInclude Include="..\res\ascii48.h" />
+    <ClInclude Include="..\res\diff_fold16.h" />
+    <ClInclude Include="..\res\diff_fold24.h" />
+    <ClInclude Include="..\res\diff_fold32.h" />
+    <ClInclude Include="..\res\diff_fold48.h" />
+    <ClInclude Include="..\res\fit_to_screen16.h" />
     <ClInclude Include="..\res\icon128.h" />
     <ClInclude Include="..\res\icon16.h" />
     <ClInclude Include="..\res\icon32.h" />
@@ -242,8 +268,13 @@
     <ClInclude Include="..\res\offsets24.h" />
     <ClInclude Include="..\res\offsets32.h" />
     <ClInclude Include="..\res\offsets48.h" />
+    <ClInclude Include="..\res\spinner24.h" />
+    <ClInclude Include="..\res\swap_horiz16.h" />
+    <ClInclude Include="..\res\swap_vert16.h" />
     <ClInclude Include="..\res\version.h" />
     <ClInclude Include="..\res\winres.h" />
+    <ClInclude Include="..\res\zoom_in16.h" />
+    <ClInclude Include="..\res\zoom_out16.h" />
     <ClInclude Include="..\src\AboutDialog.hpp" />
     <ClInclude Include="..\src\App.hpp" />
     <ClInclude Include="..\src\ArtProvider.hpp" />

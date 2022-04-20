@@ -49,4 +49,39 @@
     </CustomBuild>
     <CustomBuild Include="..\..\src\lua-plugin-preload.lua" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\res\diff_fold16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\diff_fold24.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\diff_fold32.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\diff_fold48.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\spinner24.gif">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\swap_horiz16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\swap_vert16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\actual_size16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\fit_to_screen16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\zoom_in16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\..\res\zoom_out16.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

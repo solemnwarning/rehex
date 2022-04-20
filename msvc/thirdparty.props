@@ -7,7 +7,8 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="UserMacros">
     <!-- Define the root directory where all vcpkg stuff is installed -->
-    <vcpkgInstallDir>$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static</vcpkgInstallDir>
+    <vcpkgInstallDir Condition="'$(Platform)'=='Win32'">$(MSBuildThisFileDirectory)vcpkg\installed\x86-windows-static</vcpkgInstallDir>
+    <vcpkgInstallDir Condition="'$(Platform)'=='x64'">$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static</vcpkgInstallDir>
 
     <!-- Define the root directory where all vcpkg stuff is installed -->
     <vcpkgDebugFolder Condition="'$(Configuration)'=='Debug'">\debug</vcpkgDebugFolder>
@@ -35,9 +36,9 @@
       <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_aui.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_propgrid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_adv.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>jpeg$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>jpeg.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>libpng16$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>lzma$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lzma.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>tiff$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>zlib$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <!-- Windows dependencies for wxWidgets -->
@@ -49,7 +50,13 @@
 
       <!-- Add capstone -->
       <AdditionalDependencies>capstone.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      
+      <!-- Add iconv -->
+      <AdditionalDependencies>iconv.lib;%(AdditionalDependencies)</AdditionalDependencies>
 
+      <!-- Add libunistring -->
+      <AdditionalDependencies>unistring.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      
       <!-- Add lua -->
       <AdditionalDependencies>lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

@@ -19,4 +19,4 @@ REHex is built on Windows using MinGW and libraries from the MSYS2 project.
 4) Build it
 
     $ cd /path/to/rehex/source/
-    $ make
+    $ make -f Makefile.win

@@ -490,6 +490,13 @@ datarootdir ?= $(prefix)/share
 datadir     ?= $(datarootdir)
 libdir      ?= $(exec_prefix)/lib
 
+export prefix
+export exec_prefix
+export bindir
+export datarootdir
+export datadir
+export libdir
+
 PLUGINS := \
 	binary-template \
 	exe

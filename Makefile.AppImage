@@ -28,5 +28,5 @@ all: $(APPIMAGE_NAME)
 include Makefile
 
 $(APPIMAGE_NAME): $(EXE)
-	$(MAKE) -f Makefile.AppImage DESTDIR=$(APPIMAGE_DIR) install
+	$(MAKE) -f Makefile.AppImage DESTDIR=$(shell realpath $(APPIMAGE_DIR)) install
 	OUTPUT=$(APPIMAGE_NAME) $(LINUXDEPLOY) --appdir $(APPIMAGE_DIR) --output appimage

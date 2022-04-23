@@ -1,4 +1,4 @@
-Version TBA
+Version 0.5.0 (2022-04-23)
 
  * Added "x86 disassembly syntax" to "View" menu to allow selecting between
    Intel or AT&T notation for x86 disassembly (#142).

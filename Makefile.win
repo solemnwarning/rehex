@@ -18,6 +18,7 @@ EXE            := rehex.exe
 EMBED_EXE      := tools/embed.exe
 GTKCONFIG_EXE  := tools/gtk-config.exe
 EXTRA_APP_OBJS := res/winres.o
+HELP_TARGET    := rehex.chm
 
 WX_CONFIG ?= wx-config --static
 LDFLAGS   ?= -Wl,-Bstatic
@@ -35,11 +36,14 @@ include Makefile
 
 DISTDIR ?= rehex-$(VERSION)
 
-windist: $(EXE) rehex.chm
+windist: $(EXE) $(HELP_TARGET)
 	mkdir $(DISTDIR)
 	
 	cp $(EXE) $(DISTDIR)
+	
+ifneq ($(BUILD_HELP),0)
 	cp rehex.chm $(DISTDIR)
+endif
 	
 	mkdir $(DISTDIR)/Plugins/
 	for p in $(PLUGINS); \

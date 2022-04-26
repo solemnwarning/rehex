@@ -181,7 +181,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	
 	EVT_MENU(ID_GITHUB,  REHex::MainWindow::OnGithub)
 	EVT_MENU(ID_DONATE,  REHex::MainWindow::OnDonate)
+	#ifdef BUILD_HELP
 	EVT_MENU(ID_HELP,    REHex::MainWindow::OnHelp)
+	#endif
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(  wxID_ANY, REHex::MainWindow::OnDocumentChange)
@@ -458,7 +460,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		call_setup_hooks(SetupPhase::HELP_MENU_TOP);
 		
+		#ifdef BUILD_HELP
 		help_menu->Append(ID_HELP, "View &help\tF1");
+		#endif
 		help_menu->Append(ID_GITHUB, "Visit &Github page");
 		help_menu->Append(ID_DONATE, "Donate with &Paypal");
 		help_menu->Append(wxID_ABOUT, "&About");
@@ -1574,10 +1578,12 @@ void REHex::MainWindow::OnDonate(wxCommandEvent &event)
 	wxLaunchDefaultBrowser("https://www.solemnwarning.net/rehex/donate");
 }
 
+#ifdef BUILD_HELP
 void REHex::MainWindow::OnHelp(wxCommandEvent &event)
 {
 	wxGetApp().show_help_contents(this);
 }
+#endif
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)
 {

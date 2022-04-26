@@ -231,6 +231,7 @@ void REHex::App::call_setup_hooks(SetupPhase phase)
 	}
 }
 
+#ifdef BUILD_HELP
 REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 {
 	if(help_controller == NULL)
@@ -315,6 +316,7 @@ void REHex::App::show_help_contents(wxWindow *error_parent)
 		#endif
 	}
 }
+#endif
 
 REHex::App::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):
 	phase(phase),

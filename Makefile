@@ -23,6 +23,7 @@ LUA_PKG      ?= $(shell pkg-config --exists lua5.3 && echo lua5.3 || echo lua)
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
 GTKCONFIG_EXE ?= ./tools/gtk-config
+HELP_TARGET ?= help/rehex.htb
 
 # Wrapper around the $(shell) function that aborts the build if the command
 # exits with a nonzero status.
@@ -46,9 +47,20 @@ ifneq ($(MAKECMDGOALS),)
 	endif
 endif
 
+ifeq ($(BUILD_HELP),)
+	BUILD_HELP=1
+endif
+
+ifeq ($(BUILD_HELP),0)
+	HELP_TARGET :=
+else
+	HELP_CFLAGS := -DBUILD_HELP
+	HELP_LIBS := html
+endif
+
 ifeq ($(need_compiler_flags),1)
-	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv html)
-	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv html)
+	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv $(HELP_LIBS))
+	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv $(HELP_LIBS))
 	
 	CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
 	CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
@@ -73,9 +85,9 @@ else
 	DEBUG_CFLAGS := -ggdb
 endif
 
-CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
-CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
+CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
+CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
 uname_S := $(shell uname -s 2>/dev/null)
 ifeq ($(uname_S),FreeBSD)
@@ -502,7 +514,7 @@ PLUGINS := \
 	exe
 
 .PHONY: install
-install: $(EXE) help/rehex.htb
+install: $(EXE) $(HELP_TARGET)
 	install -D -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
 	
 	for s in 16 32 48 64 128 256 512; \
@@ -512,7 +524,9 @@ install: $(EXE) help/rehex.htb
 	
 	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
+ifneq ($(BUILD_HELP),0)
 	install -D -m 0644 help/rehex.htb $(DESTDIR)$(datadir)/rehex/rehex.htb
+endif
 	
 	for p in $(PLUGINS); \
 	do \

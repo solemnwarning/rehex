@@ -33,10 +33,12 @@
 #include <wx/wx.h>
 
 namespace REHex {
+	#ifdef BUILD_HELP
 	#ifdef _WIN32
 	typedef wxCHMHelpController HelpController;
 	#else
 	typedef wxHtmlHelpController HelpController;
+	#endif
 	#endif
 	
 	class App: public wxApp
@@ -193,8 +195,10 @@ namespace REHex {
 			int get_caret_on_time_ms();
 			int get_caret_off_time_ms();
 			
+			#ifdef BUILD_HELP
 			HelpController *get_help_controller(wxWindow *error_parent);
 			void show_help_contents(wxWindow *error_parent);
+			#endif
 			
 			virtual bool OnInit();
 			virtual int OnExit();
@@ -210,8 +214,10 @@ namespace REHex {
 			
 			MainWindow *window;
 			
+			#ifdef BUILD_HELP
 			HelpController *help_controller;
 			bool help_loaded;
+			#endif
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);

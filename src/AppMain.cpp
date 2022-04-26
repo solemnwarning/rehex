@@ -41,8 +41,10 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	#ifdef BUILD_HELP
 	help_controller = NULL;
 	help_loaded = false;
+	#endif
 	
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
@@ -233,7 +235,9 @@ int REHex::App::OnExit()
 	config->Write("last-directory", wxString(last_directory));
 	
 	delete active_palette;
+	#ifdef BUILD_HELP
 	delete help_controller;
+	#endif
 	delete recent_files;
 	delete settings;
 	delete config;

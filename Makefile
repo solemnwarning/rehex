@@ -515,17 +515,21 @@ PLUGINS := \
 
 .PHONY: install
 install: $(EXE) $(HELP_TARGET)
-	install -D -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
+	mkdir -p $(DESTDIR)$(bindir)
+	install -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
 	
 	for s in 16 32 48 64 128 256 512; \
 	do \
-		install -D -m 0644 res/icon$${s}.png $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
+		mkdir -p $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps; \
+		install -m 0644 res/icon$${s}.png $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
 	done
 	
-	install -D -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+	mkdir -p $(DESTDIR)$(datarootdir)/applications
+	install -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
 ifneq ($(BUILD_HELP),0)
-	install -D -m 0644 help/rehex.htb $(DESTDIR)$(datadir)/rehex/rehex.htb
+	mkdir -p $(DESTDIR)$(datadir)/rehex
+	install -m 0644 help/rehex.htb $(DESTDIR)$(datadir)/rehex/rehex.htb
 endif
 	
 	for p in $(PLUGINS); \

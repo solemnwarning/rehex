@@ -43,6 +43,7 @@
 #include "search.hpp"
 #include "SelectRangeDialog.hpp"
 #include "SharedDocumentPointer.hpp"
+#include "TabDragFrame.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
 
@@ -513,6 +514,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	
 	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		(wxAUI_NB_TOP | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ALL_TABS));
+	
+	notebook->Bind(wxEVT_AUINOTEBOOK_BEGIN_DRAG, &REHex::MainWindow::OnTabDragBegin, this);
+	notebook->Bind(wxEVT_AUINOTEBOOK_DRAG_MOTION, &REHex::MainWindow::OnTabDragMotion, this);
 	
 	notebook_dirty_bitmap = artp.GetBitmap(wxART_FILE_SAVE, wxART_MENU);
 	assert(!notebook_dirty_bitmap.IsSameAs(wxNullBitmap));
@@ -1817,6 +1821,52 @@ void REHex::MainWindow::OnDocumentMiddleMouse(wxAuiNotebookEvent& event)
 	close_tab(tab);
 }
 
+static wxPoint drag_begin_pt;
+
+void REHex::MainWindow::OnTabDragBegin(wxAuiNotebookEvent& event)
+{
+	drag_begin_pt = ::wxGetMousePosition();
+	event.Skip();
+}
+
+void REHex::MainWindow::OnTabDragMotion(wxAuiNotebookEvent& event)
+{
+	wxAuiTabCtrl* tab_ctrl = dynamic_cast<wxAuiTabCtrl*>(event.GetEventObject());
+	assert(tab_ctrl != NULL);
+	
+	wxPoint screen_pt = wxGetMousePosition();
+	
+	if(abs(drag_begin_pt.x - screen_pt.x) > 200)
+	{
+		assert(tab_ctrl->HasCapture());
+		
+		if(tab_ctrl->HasCapture())
+		{
+			tab_ctrl->ReleaseMouse();
+			
+			wxMouseCaptureLostEvent e;
+			tab_ctrl->GetEventHandler()->ProcessEvent(e);
+		}
+		
+		wxWindow *page = notebook->GetPage(event.GetSelection());
+		notebook->RemovePage(event.GetSelection());
+		
+		Tab *page_tab = dynamic_cast<Tab*>(page);
+		assert(page_tab != NULL);
+		
+		TabDragFrame *tdf = new TabDragFrame(page_tab, GetSize());
+		
+		if(notebook->GetPageCount() == 0)
+		{
+			/* Detached the last tab - close the window. */
+			Destroy();
+		}
+	}
+	else{
+		event.Skip();
+	}
+}
+
 void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	Tab *active_tab = this->active_tab();
@@ -1964,6 +2014,17 @@ void REHex::MainWindow::switch_tab(DocumentCtrl *doc_ctrl)
 			break;
 		}
 	}
+}
+
+void REHex::MainWindow::insert_tab(Tab *tab, int position)
+{
+	if(position < 0)
+	{
+		position = notebook->GetPageCount();
+	}
+	
+	tab->Reparent(notebook);
+	notebook->InsertPage(position, tab, tab->doc->get_title(), true);
 }
 
 void REHex::MainWindow::_update_status_offset(Tab *tab)

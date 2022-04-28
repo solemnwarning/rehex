@@ -72,6 +72,8 @@ namespace REHex {
 			*/
 			void switch_tab(DocumentCtrl *doc_ctrl);
 			
+			void insert_tab(Tab *tab, int position);
+			
 			void OnWindowClose(wxCloseEvent& event);
 			void OnCharHook(wxKeyEvent &event);
 			
@@ -132,6 +134,9 @@ namespace REHex {
 			void OnDocumentClosed(wxAuiNotebookEvent &event);
 			void OnDocumentMenu(wxAuiNotebookEvent &event);
 			void OnDocumentMiddleMouse(wxAuiNotebookEvent& event);
+			
+			void OnTabDragBegin(wxAuiNotebookEvent& event);
+			void OnTabDragMotion(wxAuiNotebookEvent& event);
 			
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnSelectionChange(wxCommandEvent &event);

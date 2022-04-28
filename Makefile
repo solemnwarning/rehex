@@ -302,6 +302,7 @@ APP_OBJS := \
 	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
+	src/TabDragFrame.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \

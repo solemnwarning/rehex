@@ -303,6 +303,7 @@ then
 			--with-libpng=builtin \
 			--with-libtiff=no \
 			--with-regex=builtin \
+			--with-liblzma=no \
 			-enable-cxx11 \
 			-with-macosx-version-min="${_rehex_macos_version_min}" \
 			CXXFLAGS="-stdlib=libc++" \

@@ -16,32 +16,32 @@
 
 _rehex_capstone_version="4.0.2"
 _rehex_capstone_url="https://github.com/aquynh/capstone/archive/${_rehex_capstone_version}.tar.gz"
-_rehex_capstone_build_ident="${_rehex_capstone_version}-1"
+_rehex_capstone_build_ident="${_rehex_capstone_version}-2"
 
 _rehex_jansson_version="2.14"
 _rehex_jansson_url="https://github.com/akheron/jansson/releases/download/v${_rehex_jansson_version}/jansson-${_rehex_jansson_version}.tar.gz"
-_rehex_jansson_build_ident="${_rehex_jansson_version}-1"
+_rehex_jansson_build_ident="${_rehex_jansson_version}-2"
 
 _rehex_libunistring_version="0.9.10"
 _rehex_libunistring_url="https://ftp.gnu.org/gnu/libunistring/libunistring-${_rehex_libunistring_version}.tar.gz"
-_rehex_libunistring_build_ident="${_rehex_libunistring_version}-1"
+_rehex_libunistring_build_ident="${_rehex_libunistring_version}-2"
 
 _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
-_rehex_lua_build_ident="${_rehex_lua_version}-2"
+_rehex_lua_build_ident="${_rehex_lua_version}-3"
 
 _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 
 _rehex_wxwidgets_version="3.1.5"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-3"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
-_rehex_perl_libs_build_ident="1"
+_rehex_perl_libs_build_ident="2"
 
-_rehex_macos_version_min=10.10
+_rehex_macos_version_min=10.13
 
 _rehex_ok=1
 
@@ -219,7 +219,7 @@ then
 		tar -xf "${_rehex_lua_tar}" -C "lua-${_rehex_lua_build_ident}"
 		cd "lua-${_rehex_lua_build_ident}/lua-${_rehex_lua_version}"
 		
-		make -j$(sysctl -n hw.logicalcpu) macosx
+		make -j$(sysctl -n hw.logicalcpu) macosx MYCFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
 		make -j$(sysctl -n hw.logicalcpu) test
 		make -j$(sysctl -n hw.logicalcpu) install INSTALL_TOP="${_rehex_lua_target_dir}"
 		
@@ -357,7 +357,8 @@ EOF
 	
 	export WX_CONFIG="${_rehex_wxwidgets_target_dir}/bin/wx-config"
 	
-	export CXXFLAGS="-I${_rehex_libunistring_target_dir}/include/"
+	export CFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
+	export CXXFLAGS="-I${_rehex_libunistring_target_dir}/include/ -mmacosx-version-min=${_rehex_macos_version_min}"
 	export LDLIBS="-L${_rehex_libunistring_target_dir}/lib/ -lunistring"
 	
 	export PERL="perl -I\"$(dirname "$(find "${_rehex_perl_libs_target_dir}" -name Template.pm)")\""

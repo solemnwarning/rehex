@@ -516,7 +516,7 @@ PLUGINS := \
 .PHONY: install
 install: $(EXE) $(HELP_TARGET)
 	mkdir -p $(DESTDIR)$(bindir)
-	install -m 0755 $(EXE) $(DESTDIR)$(bindir)/$(EXE)
+	install -m 0755 $(INSTALL_STRIP) $(EXE) $(DESTDIR)$(bindir)/$(EXE)
 	
 	for s in 16 32 48 64 128 256 512; \
 	do \
@@ -536,6 +536,10 @@ endif
 	do \
 		$(MAKE) -C plugins/$${p} install || exit $$?; \
 	done
+
+.PHONY: install-strip
+install-strip:
+	$(MAKE) INSTALL_STRIP=-s install
 
 .PHONY: uninstall
 uninstall:

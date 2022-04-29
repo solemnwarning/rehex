@@ -1,3 +1,9 @@
+Version 0.5.1 (2022-04-29)
+
+ * Fix macOS build to run on 10.13 (High Sierra) or later.
+
+ * Fix 'install' target on BSD platforms.
+
 Version 0.5.0 (2022-04-23)
 
  * Added "x86 disassembly syntax" to "View" menu to allow selecting between

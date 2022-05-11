@@ -57,7 +57,9 @@ namespace REHex {
 				values_elem_t *parent;
 				std::set<values_elem_t*> children;
 				
-				CommentData(values_elem_t *parent): parent(parent) {}
+				std::shared_ptr<const wxString> text;
+				
+				CommentData(values_elem_t *parent, const std::shared_ptr<const wxString> &text): parent(parent), text(text) {}
 			};
 			
 			std::map<NestedOffsetLengthMapKey, CommentData> values;

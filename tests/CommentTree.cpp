@@ -157,7 +157,11 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	
 	virtual bool ItemChanged(const wxDataViewItem &item) override
 	{
-		events.push_back("ItemChanged(XXX)");
+		assert(item.IsOk());
+		assert(items.find(item.GetID()) != items.end());
+		
+		events.push_back(std::string("ItemChanged(\"") + items[item.GetID()] + "\")");
+		items[item.GetID()] = item_string(item);
 		return true;
 	}
 	
@@ -211,7 +215,7 @@ static void refresh_check_notifications(REHex::CommentTreeModel *model, const st
 	std::vector<std::string> expect;
 	
 	va_list argv;
-	va_start(argv, model);
+	va_start(argv, func);
 	for(const char *e; (e = va_arg(argv, const char*)) != NULL;)
 	{
 		expect.push_back(e);
@@ -586,6 +590,39 @@ TEST(CommentTree, AddContainingComment)
 		"5,25/10,10/14,6",
 		"5,25/10,10/14,6/15,2",
 		"5,25/20,10",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, ModifyComment)
+{
+	REHex::Document doc;
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
+	
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
+	model->refresh_comments();
+	
+	refresh_check_notifications(model,
+		[&]()
+		{
+			doc.set_comment(10, 10, REHex::Document::Comment("hello"));
+		},
+		
+		"ItemChanged(\"10,10\")",
+		NULL
+	);
+	
+	check_values(model,
+		"hello",
+		"20,10",
 		NULL
 	);
 	

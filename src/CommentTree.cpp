@@ -266,7 +266,7 @@ void REHex::CommentTreeModel::refresh_comments()
 			
 			values_elem_t *parent = parents.empty() ? NULL : parents.top();
 			
-			auto x = values.emplace(std::make_pair(c->first, CommentData(parent)));
+			auto x = values.emplace(std::make_pair(c->first, CommentData(parent, c->second.text)));
 			values_elem_t *value = &(*(x.first));
 			
 			if(value->second.parent != parent)
@@ -279,7 +279,7 @@ void REHex::CommentTreeModel::refresh_comments()
 				
 				erase_value(x.first);
 				
-				x = values.emplace(std::make_pair(c->first, CommentData(parent)));
+				x = values.emplace(std::make_pair(c->first, CommentData(parent, c->second.text)));
 				value = &(*(x.first));
 				
 				assert(x.second);
@@ -300,6 +300,13 @@ void REHex::CommentTreeModel::refresh_comments()
 				}
 				
 				ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+			}
+			else if(value->second.text.get() != c->second.text.get())
+			{
+				/* Text has changed. */
+				
+				value->second.text = c->second.text;
+				ItemChanged(wxDataViewItem((void*)(value)));
 			}
 		} while(c != offset_base);
 		

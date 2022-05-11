@@ -570,9 +570,9 @@ TEST(CommentTree, AddContainingComment)
 		},
 		
 		"ItemAdded(\"(null)\", \"5,25\")",
+		"ItemDeleted(\"10,10\", \"12,2\")",
 		"ItemDeleted(\"14,6\", \"15,2\")",
 		"ItemDeleted(\"10,10\", \"14,6\")",
-		"ItemDeleted(\"10,10\", \"12,2\")",
 		"ItemDeleted(\"(null)\", \"10,10\")",
 		"ItemAdded(\"5,25\", \"10,10\")",
 		"ItemAdded(\"10,10\", \"12,2\")",

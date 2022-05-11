@@ -324,7 +324,7 @@ std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>:
 	values_elem_t *value  = &(*value_i);
 	values_elem_t *parent = value->second.parent;
 	
-	for(std::set<values_elem_t*>::iterator c; (c = value->second.children.begin()) != value->second.children.end();)
+	for(std::set<values_elem_t*, ChildElemCompare>::iterator c; (c = value->second.children.begin()) != value->second.children.end();)
 	{
 		values_elem_t *child = *c;
 		erase_value(values.find(child->first));

@@ -19,7 +19,9 @@
 #include "../src/platform.hpp"
 #include <assert.h>
 
+#include <functional>
 #include <gtest/gtest.h>
+#include <map>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string>
@@ -91,6 +93,7 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 {
 	const REHex::CommentTreeModel *model;
 	std::vector<std::string> events;
+	std::map<void*,std::string> items;
 	
 	std::string item_string(const wxDataViewItem &item)
 	{
@@ -105,9 +108,32 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 		return value.GetString().ToStdString();
 	}
 	
+	void populate_items(wxDataViewItem parent)
+	{
+		wxDataViewItemArray items;
+		model->GetChildren(parent, items);
+		
+		for(unsigned int i = 0; i < items.GetCount(); ++i)
+		{
+			wxDataViewItem item = items[i];
+			
+			assert(item.IsOk());
+			
+			wxVariant value;
+			model->GetValue(value, item, 0);
+			
+			assert(this->items.find(item.GetID()) == this->items.end());
+			this->items.emplace(item.GetID(), value.GetString().ToStdString());
+			
+			populate_items(item);
+		}
+	}
+	
 	TestDataViewModelNotifier(REHex::CommentTreeModel *model):
 		model(model)
 	{
+		populate_items(wxDataViewItem(NULL));
+		
 		model->AddNotifier(this);
 	}
 	
@@ -121,6 +147,10 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	
 	virtual bool ItemAdded(const wxDataViewItem &parent, const wxDataViewItem &item) override
 	{
+		assert(item.IsOk());
+		assert(items.find(item.GetID()) == items.end());
+		
+		items.emplace(item.GetID(), item_string(item));
 		events.push_back(std::string("ItemAdded(\"") + item_string(parent) + "\", \"" + item_string(item) + "\")");
 		return true;
 	}
@@ -133,7 +163,16 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	
 	virtual bool ItemDeleted(const wxDataViewItem &parent, const wxDataViewItem &item) override
 	{
-		events.push_back("ItemDeleted(...)"); /* Values are not known at this point. */
+		if(parent.IsOk())
+		{
+			assert(items.find(parent.GetID()) != items.end());
+		}
+		
+		assert(item.IsOk());
+		assert(items.find(item.GetID()) != items.end());
+		
+		events.push_back(std::string("ItemDeleted(\"") + (parent.IsOk() ? items[parent.GetID()] : "(null)") + "\", \"" + items[item.GetID()] + "\")");
+		items.erase(item.GetID());
 		return true;
 	}
 	
@@ -167,7 +206,7 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	}
 };
 
-static void refresh_check_notifications(REHex::CommentTreeModel *model, ...)
+static void refresh_check_notifications(REHex::CommentTreeModel *model, const std::function<void()> &func, ...)
 {
 	std::vector<std::string> expect;
 	
@@ -180,6 +219,8 @@ static void refresh_check_notifications(REHex::CommentTreeModel *model, ...)
 	va_end(argv);
 	
 	TestDataViewModelNotifier *notifier = new TestDataViewModelNotifier(model);
+	
+	func();
 	model->refresh_comments();
 	
 	EXPECT_EQ(notifier->events, expect) << "refresh_comments() generated expected notifications";
@@ -198,7 +239,7 @@ TEST(CommentTree, NoComments)
 	
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
-	refresh_check_notifications(model, NULL);
+	refresh_check_notifications(model, [](){}, NULL);
 	
 	check_values(model, NULL);
 	
@@ -217,7 +258,7 @@ TEST(CommentTree, SingleComment)
 	
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
-	refresh_check_notifications(model,
+	refresh_check_notifications(model, [](){},
 		"ItemAdded(\"(null)\", \"test\")",
 		NULL
 	);
@@ -244,7 +285,7 @@ TEST(CommentTree, MultipleComments)
 	
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
-	refresh_check_notifications(model,
+		refresh_check_notifications(model, [](){},
 		"ItemAdded(\"(null)\", \"foo\")",
 		"ItemAdded(\"(null)\", \"bar\")",
 		"ItemAdded(\"(null)\", \"baz\")",
@@ -278,7 +319,7 @@ TEST(CommentTree, Heirarchy)
 	
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	
-	refresh_check_notifications(model,
+	refresh_check_notifications(model, [](){},
 		"ItemAdded(\"(null)\", \"10,10\")",
 		"ItemAdded(\"10,10\", \"10,4\")",
 		"ItemAdded(\"10,4\", \"10,0\")",
@@ -315,10 +356,13 @@ TEST(CommentTree, EraseRootCommentNoChildren)
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc.erase_comment(10, 10);
-	
 	refresh_check_notifications(model,
-		"ItemDeleted(...)",
+		[&]()
+		{
+			doc.erase_comment(10, 10);
+		},
+		
+		"ItemDeleted(\"(null)\", \"10,10\")",
 		NULL
 	);
 	
@@ -346,12 +390,15 @@ TEST(CommentTree, EraseRootCommentWithChildren)
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc.erase_comment(10, 10);
-	
 	refresh_check_notifications(model,
-		"ItemDeleted(...)",
-		"ItemDeleted(...)",
-		"ItemDeleted(...)",
+		[&]()
+		{
+			doc.erase_comment(10, 10);
+		},
+		
+		"ItemDeleted(\"12,6\", \"14,0\")",
+		"ItemDeleted(\"10,10\", \"12,6\")",
+		"ItemDeleted(\"(null)\", \"10,10\")",
 		"ItemAdded(\"(null)\", \"12,6\")",
 		"ItemAdded(\"12,6\", \"14,0\")",
 		NULL
@@ -441,9 +488,12 @@ TEST(CommentTree, AddCommentRoot)
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc.set_comment(30, 10, REHex::Document::Comment("30,10"));
-	
 	refresh_check_notifications(model,
+		[&]()
+		{
+			doc.set_comment(30, 10, REHex::Document::Comment("30,10"));
+		},
+		
 		"ItemAdded(\"(null)\", \"30,10\")",
 		NULL
 	);
@@ -472,9 +522,12 @@ TEST(CommentTree, AddNestedComment)
 	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
 	model->refresh_comments();
 	
-	doc.set_comment(22, 6, REHex::Document::Comment("22,6"));
-	
 	refresh_check_notifications(model,
+		[&]()
+		{
+			doc.set_comment(22, 6, REHex::Document::Comment("22,6"));
+		},
+		
 		"ItemAdded(\"20,10\", \"22,6\")",
 		NULL
 	);
@@ -483,6 +536,56 @@ TEST(CommentTree, AddNestedComment)
 		"10,10",
 		"20,10",
 		"20,10/22,6",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, AddContainingComment)
+{
+	REHex::Document doc;
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc.insert_data(0, z1k, 1024);
+	doc.set_comment(10, 10, REHex::Document::Comment("10,10"));
+	doc.set_comment(12,  2, REHex::Document::Comment("12,2"));
+	doc.set_comment(14,  6, REHex::Document::Comment("14,6"));
+	doc.set_comment(15,  2, REHex::Document::Comment("15,2"));
+	doc.set_comment(20, 10, REHex::Document::Comment("20,10"));
+	
+	REHex::CommentTreeModel *model = new REHex::CommentTreeModel(&doc);
+	model->refresh_comments();
+	
+	refresh_check_notifications(model,
+		[&]()
+		{
+			doc.set_comment(5, 25, REHex::Document::Comment("5,25"));
+		},
+		
+		"ItemAdded(\"(null)\", \"5,25\")",
+		"ItemDeleted(\"14,6\", \"15,2\")",
+		"ItemDeleted(\"10,10\", \"14,6\")",
+		"ItemDeleted(\"10,10\", \"12,2\")",
+		"ItemDeleted(\"(null)\", \"10,10\")",
+		"ItemAdded(\"5,25\", \"10,10\")",
+		"ItemAdded(\"10,10\", \"12,2\")",
+		"ItemAdded(\"10,10\", \"14,6\")",
+		"ItemAdded(\"14,6\", \"15,2\")",
+		"ItemDeleted(\"(null)\", \"20,10\")",
+		"ItemAdded(\"5,25\", \"20,10\")",
+		NULL
+	);
+	
+	check_values(model,
+		"5,25",
+		"5,25/10,10",
+		"5,25/10,10/12,2",
+		"5,25/10,10/14,6",
+		"5,25/10,10/14,6/15,2",
+		"5,25/20,10",
 		NULL
 	);
 	

@@ -269,6 +269,22 @@ void REHex::CommentTreeModel::refresh_comments()
 			auto x = values.emplace(std::make_pair(c->first, CommentData(parent)));
 			values_elem_t *value = &(*(x.first));
 			
+			if(value->second.parent != parent)
+			{
+				/* Remove the item so we can re-add it if a new parent has been
+				 * created around it.
+				*/
+				
+				assert(!x.second);
+				
+				erase_value(x.first);
+				
+				x = values.emplace(std::make_pair(c->first, CommentData(parent)));
+				value = &(*(x.first));
+				
+				assert(x.second);
+			}
+			
 			parents.push(value);
 			
 			if(x.second)

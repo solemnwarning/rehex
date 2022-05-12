@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -161,11 +161,13 @@ namespace REHex {
 			class GenericDataRegion: public Region
 			{
 				protected:
-					GenericDataRegion(off_t d_offset, off_t d_length, off_t indent_offset);
+					GenericDataRegion(off_t d_offset, off_t d_length, off_t virt_offset, off_t indent_offset);
 					
 				public:
 					const off_t d_offset;
 					const off_t d_length;
+					
+					const off_t virt_offset;
 					
 					/**
 					 * @brief Represents an on-screen area of the region.
@@ -314,8 +316,6 @@ namespace REHex {
 			class DataRegion: public GenericDataRegion
 			{
 				protected:
-					off_t virt_offset;
-					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
@@ -580,6 +580,9 @@ namespace REHex {
 			/** List of iterators into data_regions, sorted by d_offset. */
 			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted;
 			
+			/** Maximum virtual offset in data regions (plus one). */
+			off_t end_virt_offset;
+			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
 			
@@ -722,6 +725,7 @@ namespace REHex {
 			int get_offset_column_width();
 			int get_virtual_width();
 			bool get_cursor_visible();
+			off_t get_end_virt_offset() const;
 			
 			int hf_char_width();
 			int hf_char_height();

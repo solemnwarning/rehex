@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -110,7 +110,7 @@ class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
 		
 	public:
 		FixedHeightDataRegion(int64_t height, off_t d_offset, off_t d_length, off_t indent_offset):
-			GenericDataRegion(d_offset, d_length, indent_offset),
+			GenericDataRegion(d_offset, d_length, d_offset, indent_offset),
 			height(height) {}
 		
 		virtual void calc_height(DocumentCtrl &doc, wxDC &dc) override

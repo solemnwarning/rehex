@@ -61,7 +61,6 @@ namespace REHex
 			
 		private:
 			SharedDocumentPointer doc;
-			off_t virt_offset;
 			
 			cs_arch arch;
 			size_t disassembler;

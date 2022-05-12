@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -804,7 +804,7 @@ void REHex::DocumentCtrl::_handle_width_change()
 		 * size is calculated for n+1 characters.
 		*/
 		
-		if(doc->buffer_length() > 0xFFFFFFFF)
+		if(end_virt_offset > 0xFFFFFFFF)
 		{
 			if(offset_display_base == OFFSET_BASE_HEX)
 			{
@@ -2146,7 +2146,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	{
 		public:
 			StubRegion(off_t offset):
-				GenericDataRegion(offset, 0, 0) {}
+				GenericDataRegion(offset, 0, 0, 0) {}
 				
 				virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
 				virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
@@ -2540,6 +2540,11 @@ bool REHex::DocumentCtrl::get_cursor_visible()
 	return cursor_visible;
 }
 
+off_t REHex::DocumentCtrl::get_end_virt_offset() const
+{
+	return end_virt_offset;
+}
+
 /* Calculate the width of a character in hex_font. */
 int REHex::DocumentCtrl::hf_char_width()
 {
@@ -2653,6 +2658,7 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 	/* Clear and repopulate data_regions with the GenericDataRegion regions. */
 	
 	data_regions.clear();
+	end_virt_offset = -1;
 	
 	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
@@ -2660,6 +2666,12 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 		if(dr != NULL)
 		{
 			data_regions.push_back(dr);
+			
+			off_t dr_end_virt_offset = dr->virt_offset + dr->d_length;
+			if(dr_end_virt_offset > end_virt_offset)
+			{
+				end_virt_offset = dr_end_virt_offset;
+			}
 		}
 	}
 	
@@ -2836,10 +2848,11 @@ void REHex::DocumentCtrl::Region::draw_full_height_line(DocumentCtrl *doc_ctrl, 
 	dc.DrawLine(x, box_y, x, (box_y + box_hc));
 }
 
-REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length, off_t indent_offset):
+REHex::DocumentCtrl::GenericDataRegion::GenericDataRegion(off_t d_offset, off_t d_length, off_t virt_offset, off_t indent_offset):
 	Region(indent_offset, 0),
 	d_offset(d_offset),
-	d_length(d_length)
+	d_length(d_length),
+	virt_offset(virt_offset)
 {
 	assert(d_offset >= 0);
 	assert(d_length >= 0);
@@ -2861,8 +2874,7 @@ bool REHex::DocumentCtrl::GenericDataRegion::OnPaste(DocumentCtrl *doc_ctrl)
 }
 
 REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length, off_t virt_offset):
-	GenericDataRegion(d_offset, d_length, virt_offset),
-	virt_offset(virt_offset),
+	GenericDataRegion(d_offset, d_length, virt_offset, virt_offset),
 	bytes_per_line_actual(1) {}
 
 int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
@@ -3131,7 +3143,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			off_t offset_within_region = cur_off - d_offset;
 			off_t display_offset = virt_offset + offset_within_region;
 			
-			std::string offset_str = format_offset(display_offset, doc.offset_display_base, doc.doc->buffer_length());
+			std::string offset_str = format_offset(display_offset, doc.offset_display_base, doc.end_virt_offset);
 			
 			normal_text_colour();
 			dc.DrawText(offset_str.c_str(), (x + offset_text_x), y);

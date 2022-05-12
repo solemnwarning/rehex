@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -37,7 +37,6 @@ namespace REHex
 	{
 		protected:
 			SharedDocumentPointer doc;
-			off_t virt_offset;
 			
 		private:
 			std::string type_label;
@@ -81,9 +80,8 @@ namespace REHex
 			
 		protected:
 			NumericDataTypeRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, const std::string &type_label):
-				GenericDataRegion(offset, length, virt_offset),
+				GenericDataRegion(offset, length, virt_offset, virt_offset),
 				doc(doc),
-				virt_offset(virt_offset),
 				type_label(type_label),
 				offset_text_x(-1),
 				data_text_x(-1),
@@ -159,7 +157,7 @@ namespace REHex
 				{
 					/* Draw the offsets to the left */
 					
-					std::string offset_str = format_offset(virt_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+					std::string offset_str = format_offset(virt_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 					
 					normal_text();
 					dc.DrawText(offset_str, x, y);

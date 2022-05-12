@@ -34,9 +34,8 @@ static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
 static const size_t INSTRUCTION_CACHE_LIMIT = 250000;
 
 REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, cs_arch arch, cs_mode mode):
-	GenericDataRegion(offset, length, virt_offset),
+	GenericDataRegion(offset, length, virt_offset, virt_offset),
 	doc(doc),
-	virt_offset(virt_offset),
 	arch(arch),
 	preferred_asm_syntax(AsmSyntax::INTEL)
 {
@@ -288,7 +287,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			off_t offset_within_region = instr->offset - d_offset;
 			off_t display_offset = virt_offset + offset_within_region;
 			
-			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 			
 			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);
@@ -347,7 +346,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			off_t offset_within_region = up_off - d_offset;
 			off_t display_offset = virt_offset + offset_within_region;
 			
-			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc->buffer_length());
+			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 			
 			set_text_attribs(false, false);
 			dc.DrawText(offset_str, x + offset_text_x, y);

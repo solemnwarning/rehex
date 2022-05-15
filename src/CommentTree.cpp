@@ -109,6 +109,7 @@ wxSize REHex::CommentTree::DoGetBestClientSize() const
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
+	offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	dvc->Refresh();
 }

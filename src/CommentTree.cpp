@@ -38,6 +38,9 @@ enum {
 	ID_SELECT,
 };
 
+#define MODEL_OFFSET_COLUMN 0
+#define MODEL_TEXT_COLUMN 1
+
 BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
 	EVT_DATAVIEW_ITEM_ACTIVATED(wxID_ANY, REHex::CommentTree::OnActivated)
@@ -48,17 +51,20 @@ REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &documen
 	document(document),
 	document_ctrl(document_ctrl)
 {
-	model = new CommentTreeModel(this->document); /* Reference /class/ document pointer! */
+	model = new CommentTreeModel(this->document, document_ctrl); /* Reference /class/ document pointer! */
 	
-	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_NO_HEADER);
+	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
 	
-	dvc_col = dvc->AppendTextColumn("Comment", 0);
-	dvc_col->SetSortable(true);
+	offset_col = dvc->AppendTextColumn("Offset", MODEL_OFFSET_COLUMN);
+	offset_col->SetSortable(true);
+	
+	text_col = dvc->AppendTextColumn("Comment", MODEL_TEXT_COLUMN);
+	text_col->SetSortable(false);
 	
 	dvc->AssociateModel(model);
 	
 	/* NOTE: This has to come after AssociateModel, or it will segfault. */
-	dvc_col->SetSortOrder(true);
+	offset_col->SetSortOrder(true);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
@@ -103,7 +109,7 @@ wxSize REHex::CommentTree::DoGetBestClientSize() const
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
-	dvc_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	dvc->Refresh();
 }
 
@@ -207,16 +213,12 @@ void REHex::CommentTree::OnActivated(wxDataViewEvent &event)
 	});
 }
 
-REHex::CommentTreeModel::CommentTreeModel(REHex::Document *document):
-	document(document) {}
+REHex::CommentTreeModel::CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
+	document(document),
+	document_ctrl(document_ctrl) {}
 
 void REHex::CommentTreeModel::refresh_comments()
 {
-	if(document == NULL)
-	{
-		return;
-	}
-	
 	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document->get_comments();
 	
 	/* Erase any comments which no longer exist, or are children of such. */
@@ -347,7 +349,7 @@ std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>:
 
 int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
 {
-	assert(column == 0);
+	assert(column == MODEL_OFFSET_COLUMN);
 	
 	const NestedOffsetLengthMapKey *key1 = (const NestedOffsetLengthMapKey*)(item1.GetID());
 	const NestedOffsetLengthMapKey *key2 = (const NestedOffsetLengthMapKey*)(item2.GetID());
@@ -403,12 +405,12 @@ unsigned int REHex::CommentTreeModel::GetChildren(const wxDataViewItem &item, wx
 
 unsigned int REHex::CommentTreeModel::GetColumnCount() const
 {
-	return 1;
+	return 2;
 }
 
 wxString REHex::CommentTreeModel::GetColumnType(unsigned int col) const
 {
-	assert(col == 0);
+	assert(col == MODEL_OFFSET_COLUMN || col == MODEL_TEXT_COLUMN);
 	return "string";
 }
 
@@ -420,29 +422,30 @@ wxDataViewItem REHex::CommentTreeModel::GetParent(const wxDataViewItem &item) co
 
 void REHex::CommentTreeModel::GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const
 {
-	assert(col == 0);
-	
-	if(document == NULL)
-	{
-		variant = "BUG: Document destroyed";
-		return;
-	}
+	assert(col == MODEL_OFFSET_COLUMN || col == MODEL_TEXT_COLUMN);
 	
 	const NestedOffsetLengthMapKey *key = (const NestedOffsetLengthMapKey*)(item.GetID());
 	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document->get_comments();
 	
-	auto c = comments.find(*key);
-	if(c != comments.end())
+	if(col == MODEL_TEXT_COLUMN)
 	{
-		/* Only include up to the first line break in the comment text.
-		 * Note that wxString::find_first_of() returns the string length
-		 * if it doesn't find a match.
-		*/
-		size_t line_len = c->second.text->find_first_of("\r\n");
-		variant = c->second.text->substr(0, line_len);
+		auto c = comments.find(*key);
+		if(c != comments.end())
+		{
+			/* Only include up to the first line break in the comment text.
+			* Note that wxString::find_first_of() returns the string length
+			* if it doesn't find a match.
+			*/
+			size_t line_len = c->second.text->find_first_of("\r\n");
+			variant = c->second.text->substr(0, line_len);
+		}
+		else{
+			variant = "BUG: Unknown key in REHex::CommentTreeModel::GetValue";
+		}
 	}
-	else{
-		variant = "BUG: Unknown key in REHex::CommentTreeModel::GetValue";
+	else /* if(col == MODEL_OFFSET_COLUMN) */
+	{
+		variant = format_offset(key->offset, document_ctrl->get_offset_display_base(), document->buffer_length());
 	}
 }
 
@@ -455,4 +458,9 @@ bool REHex::CommentTreeModel::SetValue(const wxVariant &variant, const wxDataVie
 {
 	/* Base implementation is pure virtual, but I don't think we need this... */
 	abort();
+}
+
+bool REHex::CommentTreeModel::HasContainerColumns(const wxDataViewItem &item) const
+{
+	return true;
 }

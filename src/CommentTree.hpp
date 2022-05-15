@@ -32,7 +32,7 @@ namespace REHex {
 	class CommentTreeModel: public wxDataViewModel
 	{
 		public:
-			CommentTreeModel(REHex::Document *document);
+			CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			void refresh_comments();
 			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
@@ -45,9 +45,11 @@ namespace REHex {
 			virtual void GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const override;
 			virtual bool IsContainer(const wxDataViewItem &item) const override;
 			virtual bool SetValue(const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
+			virtual bool HasContainerColumns(const wxDataViewItem &item) const override;
 			
 		private:
-			REHex::Document *document;
+			SharedDocumentPointer document;
+			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			struct CommentData;
 			typedef std::pair<const NestedOffsetLengthMapKey, CommentData> values_elem_t;
@@ -97,7 +99,7 @@ namespace REHex {
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			wxDataViewCtrl *dvc;
-			wxDataViewColumn *dvc_col;
+			wxDataViewColumn *offset_col, *text_col;
 			CommentTreeModel *model;
 			
 			void refresh_comments();

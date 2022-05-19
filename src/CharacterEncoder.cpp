@@ -328,6 +328,12 @@ static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, "
 static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, "8-bit code pages", "ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
 static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, "8-bit code pages", "ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
 static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, "8-bit code pages", "ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
+static IconvCharacterEncodingRegistrationHelper cp437_r     ("CP437",       1, "8-bit code pages", "CP437",       "Code page 437 (IBM)");
+
+static IconvCharacterEncodingRegistrationHelper cp932_r ("MS932",   1, "Multibyte code pages", "MS932",   "Code page 932 (Windows, \"Shift JIS\")");
+static IconvCharacterEncodingRegistrationHelper cp936_r ("MS936",   1, "Multibyte code pages", "MS936",   "Code page 936 (Windows, \"GBK\")");
+static IconvCharacterEncodingRegistrationHelper cp949_r ("MSCP949", 1, "Multibyte code pages", "MSCP949", "Code page 949 (Windows, \"UHC\")");
+static IconvCharacterEncodingRegistrationHelper cp950_r ("CP950",   1, "Multibyte code pages", "CP950",   "Code page 950 (Windows)");
 
 static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1, "Unicode", "UTF-8",    "UTF-8");
 static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, "Unicode", "UTF-16LE", "UTF-16LE (Little Endian)");

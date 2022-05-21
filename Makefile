@@ -262,6 +262,7 @@ APP_OBJS := \
 	src/BytesPerLineDialog.o \
 	src/ByteRangeSet.o \
 	src/CharacterEncoder.o \
+	src/CharacterFinder.o \
 	src/ClickText.o \
 	src/CodeCtrl.o \
 	src/CommentTree.o \
@@ -340,6 +341,7 @@ TEST_OBJS := \
 	src/ByteRangeSet.o \
 	src/BytesPerLineDialog.o \
 	src/CharacterEncoder.o \
+	src/CharacterFinder.o \
 	src/ClickText.o \
 	src/CommentTree.o \
 	src/ConsoleBuffer.o \
@@ -373,6 +375,7 @@ TEST_OBJS := \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
 	tests/CharacterEncoder.o \
+	tests/CharacterFinder.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/ConsoleBuffer.o \

@@ -83,6 +83,21 @@ namespace REHex
 			const size_t word_size;
 			
 			/**
+			 * @brief Decoder is safe to call mid-way through a character.
+			 *
+			 * If this is true, it is safe to call the decode() method mid-way through
+			 * a potential character - this condition will be detected and the decode
+			 * will fail.
+			 *
+			 * If false, it is NOT safe to call decode() mid-way through a character
+			 * and a "valid" garbage character may be returned.
+			 *
+			 * NOTE: Even if true, the decoder must still be given data aligned to
+			 * word_size bytes in the string.
+			*/
+			const bool mid_char_safe;
+			
+			/**
 			 * @brief Decode a single character from a buffer to UTF-8.
 			 *
 			 * Decodes a single character, up to len bytes in length. If the input
@@ -104,7 +119,9 @@ namespace REHex
 			virtual EncodedCharacter encode(const std::string &utf8_char) const = 0;
 			
 		protected:
-			CharacterEncoder(size_t word_size): word_size(word_size) {}
+			CharacterEncoder(size_t word_size, bool mid_char_safe):
+				word_size(word_size),
+				mid_char_safe(mid_char_safe) {}
 	};
 	
 	/**
@@ -156,7 +173,7 @@ namespace REHex
 	class CharacterEncoderASCII: public CharacterEncoder
 	{
 		public:
-			CharacterEncoderASCII(): CharacterEncoder(1) {}
+			CharacterEncoderASCII(): CharacterEncoder(1, true) {}
 			
 			virtual EncodedCharacter decode(const void *data, size_t len) const override;
 			virtual EncodedCharacter encode(const std::string &utf8_char) const override;
@@ -194,7 +211,7 @@ namespace REHex
 			mutable std::mutex from_utf8_lock;
 			
 		public:
-			CharacterEncoderIconv(const char *encoding, size_t word_size);
+			CharacterEncoderIconv(const char *encoding, size_t word_size, bool mid_char_safe);
 			~CharacterEncoderIconv();
 			
 			CharacterEncoderIconv(const CharacterEncoderIconv&) = delete;

@@ -122,7 +122,7 @@ TEST(CharacterEncoderASCII, Encode)
 
 TEST(CharacterEncoder88591, Decode)
 {
-	CharacterEncoderIconv encoder("ISO-8859-1", 1);
+	CharacterEncoderIconv encoder("ISO-8859-1", 1, true);
 	
 	TEST_VALID_DECODE( X( '\0' ), X( '\0' ), X( '\0' ), "Control characters are decoded" );
 	TEST_VALID_DECODE( X( '\n' ), X( '\n' ), X( '\n' ), "Control characters are decoded" );
@@ -143,7 +143,7 @@ TEST(CharacterEncoder88591, Decode)
 
 TEST(CharacterEncoder88591, Encode)
 {
-	CharacterEncoderIconv encoder("ISO-8859-1", 1);
+	CharacterEncoderIconv encoder("ISO-8859-1", 1, true);
 	
 	TEST_VALID_ENCODE( X( '\0' ), X( '\0' ), X( '\0' ), "Control characters are encoded" );
 	TEST_VALID_ENCODE( X( '\n' ), X( '\n' ), X( '\n' ), "Control characters are encoded" );
@@ -164,7 +164,7 @@ TEST(CharacterEncoder88591, Encode)
 
 TEST(CharacterEncoderUTF8, Decode)
 {
-	CharacterEncoderIconv encoder("UTF-8", 1);
+	CharacterEncoderIconv encoder("UTF-8", 1, true);
 	
 	TEST_VALID_DECODE( X( '\0' ), X( '\0' ), X( '\0' ), "Control characters are decoded" );
 	TEST_VALID_DECODE( X( '\n' ), X( '\n' ), X( '\n' ), "Control characters are decoded" );
@@ -203,7 +203,7 @@ TEST(CharacterEncoderUTF8, Decode)
 
 TEST(CharacterEncoderUTF8, Encode)
 {
-	CharacterEncoderIconv encoder("UTF-8", 1);
+	CharacterEncoderIconv encoder("UTF-8", 1, true);
 	
 	TEST_VALID_ENCODE( X( '\0' ), X( '\0' ), X( '\0' ), "Control characters are encoded" );
 	TEST_VALID_ENCODE( X( '\n' ), X( '\n' ), X( '\n' ), "Control characters are encoded" );
@@ -242,7 +242,7 @@ TEST(CharacterEncoderUTF8, Encode)
 
 TEST(CharacterEncoderUTF16LE, Decode)
 {
-	CharacterEncoderIconv encoder("UTF-16LE", 2);
+	CharacterEncoderIconv encoder("UTF-16LE", 2, false);
 	
 	TEST_VALID_DECODE( X( '\0', 0x00 ), X( '\0', 0x00 ), X( '\0' ), "Control characters are decoded" );
 	TEST_VALID_DECODE( X( '\n', 0x00 ), X( '\n', 0x00 ), X( '\n' ), "Control characters are decoded" );
@@ -265,7 +265,7 @@ TEST(CharacterEncoderUTF16LE, Decode)
 
 TEST(CharacterEncoderUTF16LE, Encode)
 {
-	CharacterEncoderIconv encoder("UTF-16LE", 2);
+	CharacterEncoderIconv encoder("UTF-16LE", 2, false);
 	
 	TEST_VALID_ENCODE( X( '\0' ), X( '\0', 0x00 ), X( '\0' ), "Control characters are encoded" );
 	TEST_VALID_ENCODE( X( '\n' ), X( '\n', 0x00 ), X( '\n' ), "Control characters are encoded" );
@@ -288,7 +288,7 @@ TEST(CharacterEncoderUTF16LE, Encode)
 
 TEST(CharacterEncoderUTF32BE, Decode)
 {
-	CharacterEncoderIconv encoder("UTF-32BE", 4);
+	CharacterEncoderIconv encoder("UTF-32BE", 4, true);
 	
 	TEST_VALID_DECODE( X( 0x00, 0x00, 0x00, '\0' ), X( 0x00, 0x00, 0x00, '\0' ), X( '\0' ), "Control characters are decoded" );
 	TEST_VALID_DECODE( X( 0x00, 0x00, 0x00, '\n' ), X( 0x00, 0x00, 0x00, '\n' ), X( '\n' ), "Control characters are decoded" );
@@ -311,7 +311,7 @@ TEST(CharacterEncoderUTF32BE, Decode)
 
 TEST(CharacterEncoderUTF32BE, Encode)
 {
-	CharacterEncoderIconv encoder("UTF-32BE", 4);
+	CharacterEncoderIconv encoder("UTF-32BE", 4, true);
 	
 	TEST_VALID_ENCODE( X( '\0' ), X( 0x00, 0x00, 0x00, '\0' ), X( '\0' ), "Control characters are encoded" );
 	TEST_VALID_ENCODE( X( '\n' ), X( 0x00, 0x00, 0x00, '\n' ), X( '\n' ), "Control characters are encoded" );

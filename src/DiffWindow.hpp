@@ -123,7 +123,7 @@ namespace REHex {
 			class InvisibleDataRegion: public DocumentCtrl::DataRegion
 			{
 				public:
-					InvisibleDataRegion(off_t d_offset, off_t d_length);
+					InvisibleDataRegion(SharedDocumentPointer &doc, off_t d_offset, off_t d_length);
 					
 				protected:
 					virtual void draw(REHex::DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;

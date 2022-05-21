@@ -367,7 +367,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		*/
 
 		std::vector<DocumentCtrl::Region*> regions;
-		regions.push_back(new DocumentCtrl::DataRegion(0, 0, 0));
+		regions.push_back(new DocumentCtrl::DataRegion(range->doc, 0, 0, 0));
 
 		range->doc_ctrl->replace_all_regions(regions);
 	}
@@ -508,7 +508,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 			 * to stop bad things from happening.
 			*/
 			
-			regions.push_back(new InvisibleDataRegion((range->offset + range->length), 0));
+			regions.push_back(new InvisibleDataRegion(range->doc, (range->offset + range->length), 0));
 		}
 	}
 	else{
@@ -1496,7 +1496,7 @@ void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):
-	DataRegion(d_offset, d_length, d_offset), diff_window(diff_window), range(range) {}
+	DataRegion(range->doc, d_offset, d_length, d_offset), diff_window(diff_window), range(range) {}
 
 int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 {
@@ -1587,7 +1587,7 @@ void REHex::DiffWindow::MessageRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, in
 	dc.DrawText(message, x + text_x, y + (text_height / 2));
 }
 
-REHex::DiffWindow::InvisibleDataRegion::InvisibleDataRegion(off_t d_offset, off_t d_length):
-	DataRegion(d_offset, d_length, d_offset) {}
+REHex::DiffWindow::InvisibleDataRegion::InvisibleDataRegion(SharedDocumentPointer &document, off_t d_offset, off_t d_length):
+	DataRegion(document, d_offset, d_length, d_offset) {}
 
 void REHex::DiffWindow::InvisibleDataRegion::draw(REHex::DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) {}

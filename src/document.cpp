@@ -488,7 +488,7 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 	
 	int ret_flags = WRITE_TEXT_OK;
 	
-	CharacterEncoderIconv utf8_encoder("UTF-8", 1);
+	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
 	for(off_t utf8_off = 0, write_pos = offset; utf8_off < (off_t)(utf8_text.size());)
 	{
@@ -563,7 +563,7 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	
 	int ret_flags = WRITE_TEXT_OK;
 	
-	CharacterEncoderIconv utf8_encoder("UTF-8", 1);
+	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
 	std::string data_type;
 	const CharacterEncoder *encoder;
@@ -644,7 +644,7 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 	
 	int ret_flags = WRITE_TEXT_OK;
 	
-	CharacterEncoderIconv utf8_encoder("UTF-8", 1);
+	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
 	const CharacterEncoder *encoder = get_text_encoder(offset);
 	assert(encoder != NULL);

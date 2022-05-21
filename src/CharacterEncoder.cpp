@@ -183,8 +183,8 @@ REHex::EncodedCharacter REHex::CharacterEncoder8Bit::encode(const std::string &u
 }
 #endif
 
-REHex::CharacterEncoderIconv::CharacterEncoderIconv(const char *encoding, size_t word_size):
-	CharacterEncoder(word_size),
+REHex::CharacterEncoderIconv::CharacterEncoderIconv(const char *encoding, size_t word_size, bool mid_char_safe):
+	CharacterEncoder(word_size, mid_char_safe),
 	encoding(encoding)
 {
 	to_utf8 = iconv_open("UTF-8", encoding);
@@ -288,19 +288,19 @@ class IconvCharacterEncodingRegistrationHelper
 		std::unique_ptr<REHex::CharacterEncoding> ce_registration;
 		
 		REHex::App::SetupHookRegistration setup_hook;
-		void deferred_init(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label);
+		void deferred_init(const char *encoding, size_t word_size, bool mid_char_safe, const char *text_group, const char *key, const char *label);
 		
 	public:
-		IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label);
+		IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, bool mid_char_safe, const char *text_group, const char *key, const char *label);
 };
 
-IconvCharacterEncodingRegistrationHelper::IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label):
-	setup_hook(REHex::App::SetupPhase::EARLY, [=]() { deferred_init(encoding, word_size, text_group, key, label); }) {}
+IconvCharacterEncodingRegistrationHelper::IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, bool mid_char_safe, const char *text_group, const char *key, const char *label):
+	setup_hook(REHex::App::SetupPhase::EARLY, [=]() { deferred_init(encoding, word_size, mid_char_safe, text_group, key, label); }) {}
 
-void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encoding, size_t word_size, const char *text_group, const char *key, const char *label)
+void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encoding, size_t word_size, bool mid_char_safe, const char *text_group, const char *key, const char *label)
 {
 	try {
-		encoder.reset(new REHex::CharacterEncoderIconv(encoding, word_size));
+		encoder.reset(new REHex::CharacterEncoderIconv(encoding, word_size, mid_char_safe));
 		dt_registration.reset(new REHex::DataTypeRegistration(std::string("text:") + key, label, std::vector<std::string>({"Text", text_group}), encoder.get()));
 		ce_registration.reset(new REHex::CharacterEncoding(key, label, encoder.get(), std::vector<std::string>({ text_group })));
 	}
@@ -314,29 +314,29 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 const REHex::CharacterEncoderASCII REHex::ascii_encoder;
 static REHex::CharacterEncoding ascii_encoding("ASCII", "US-ASCII (7-bit)", &REHex::ascii_encoder);
 
-static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, "8-bit code pages", "ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
-static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, "8-bit code pages", "ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");
-static IconvCharacterEncodingRegistrationHelper iso8859_3_r ("ISO-8859-3",  1, "8-bit code pages", "ISO-8859-3",  "Latin-3 (ISO-8859-3: South European and Esperanto)");
-static IconvCharacterEncodingRegistrationHelper iso8859_4_r ("ISO-8859-4",  1, "8-bit code pages", "ISO-8859-4",  "Latin-4 (ISO-8859-4: Baltic, old)");
-static IconvCharacterEncodingRegistrationHelper iso8859_5_r ("ISO-8859-5",  1, "8-bit code pages", "ISO-8859-5",  "Cyrillic (ISO-8859-5)");
-static IconvCharacterEncodingRegistrationHelper iso8859_6_r ("ISO-8859-6",  1, "8-bit code pages", "ISO-8859-6",  "Arabic (ISO-8859-6)");
-static IconvCharacterEncodingRegistrationHelper iso8859_7_r ("ISO-8859-7",  1, "8-bit code pages", "ISO-8859-7",  "Greek (ISO-8859-7)");
-static IconvCharacterEncodingRegistrationHelper iso8859_8_r ("ISO-8859-8",  1, "8-bit code pages", "ISO-8859-8",  "Hebrew (ISO-8859-8)");
-static IconvCharacterEncodingRegistrationHelper iso8859_9_r ("ISO-8859-9",  1, "8-bit code pages", "ISO-8859-9",  "Latin-5 (ISO-8859-9: Turkish)");
-static IconvCharacterEncodingRegistrationHelper iso8859_10_r("ISO-8859-10", 1, "8-bit code pages", "ISO-8859-10", "Latin-6 (ISO-8859-10: Nordic)");
-static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, "8-bit code pages", "ISO-8859-11", "Thai (ISO-8859-11, unofficial)");
-static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, "8-bit code pages", "ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
-static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, "8-bit code pages", "ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
-static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, "8-bit code pages", "ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
-static IconvCharacterEncodingRegistrationHelper cp437_r     ("CP437",       1, "8-bit code pages", "CP437",       "Code page 437 (IBM)");
+static IconvCharacterEncodingRegistrationHelper iso8859_1_r ("ISO-8859-1",  1, true, "8-bit code pages", "ISO-8859-1",  "Latin-1 (ISO-8859-1: Western European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_2_r ("ISO-8859-2",  1, true, "8-bit code pages", "ISO-8859-2",  "Latin-2 (ISO-8859-2: Central European)");
+static IconvCharacterEncodingRegistrationHelper iso8859_3_r ("ISO-8859-3",  1, true, "8-bit code pages", "ISO-8859-3",  "Latin-3 (ISO-8859-3: South European and Esperanto)");
+static IconvCharacterEncodingRegistrationHelper iso8859_4_r ("ISO-8859-4",  1, true, "8-bit code pages", "ISO-8859-4",  "Latin-4 (ISO-8859-4: Baltic, old)");
+static IconvCharacterEncodingRegistrationHelper iso8859_5_r ("ISO-8859-5",  1, true, "8-bit code pages", "ISO-8859-5",  "Cyrillic (ISO-8859-5)");
+static IconvCharacterEncodingRegistrationHelper iso8859_6_r ("ISO-8859-6",  1, true, "8-bit code pages", "ISO-8859-6",  "Arabic (ISO-8859-6)");
+static IconvCharacterEncodingRegistrationHelper iso8859_7_r ("ISO-8859-7",  1, true, "8-bit code pages", "ISO-8859-7",  "Greek (ISO-8859-7)");
+static IconvCharacterEncodingRegistrationHelper iso8859_8_r ("ISO-8859-8",  1, true, "8-bit code pages", "ISO-8859-8",  "Hebrew (ISO-8859-8)");
+static IconvCharacterEncodingRegistrationHelper iso8859_9_r ("ISO-8859-9",  1, true, "8-bit code pages", "ISO-8859-9",  "Latin-5 (ISO-8859-9: Turkish)");
+static IconvCharacterEncodingRegistrationHelper iso8859_10_r("ISO-8859-10", 1, true, "8-bit code pages", "ISO-8859-10", "Latin-6 (ISO-8859-10: Nordic)");
+static IconvCharacterEncodingRegistrationHelper iso8859_11_r("ISO-8859-11", 1, true, "8-bit code pages", "ISO-8859-11", "Thai (ISO-8859-11, unofficial)");
+static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, true, "8-bit code pages", "ISO-8859-13", "Latin-7 (ISO-8859-13: Baltic, new)");
+static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, true, "8-bit code pages", "ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
+static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, true, "8-bit code pages", "ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
+static IconvCharacterEncodingRegistrationHelper cp437_r     ("CP437",       1, true, "8-bit code pages", "CP437",       "Code page 437 (IBM)");
 
-static IconvCharacterEncodingRegistrationHelper cp932_r ("MS932",   1, "Multibyte code pages", "MS932",   "Code page 932 (Windows, \"Shift JIS\")");
-static IconvCharacterEncodingRegistrationHelper cp936_r ("MS936",   1, "Multibyte code pages", "MS936",   "Code page 936 (Windows, \"GBK\")");
-static IconvCharacterEncodingRegistrationHelper cp949_r ("MSCP949", 1, "Multibyte code pages", "MSCP949", "Code page 949 (Windows, \"UHC\")");
-static IconvCharacterEncodingRegistrationHelper cp950_r ("CP950",   1, "Multibyte code pages", "CP950",   "Code page 950 (Windows)");
+static IconvCharacterEncodingRegistrationHelper cp932_r ("MS932",   1, false, "Multibyte code pages", "MS932",   "Code page 932 (Windows, \"Shift JIS\")");
+static IconvCharacterEncodingRegistrationHelper cp936_r ("MS936",   1, false, "Multibyte code pages", "MS936",   "Code page 936 (Windows, \"GBK\")");
+static IconvCharacterEncodingRegistrationHelper cp949_r ("MSCP949", 1, false, "Multibyte code pages", "MSCP949", "Code page 949 (Windows, \"UHC\")");
+static IconvCharacterEncodingRegistrationHelper cp950_r ("CP950",   1, false, "Multibyte code pages", "CP950",   "Code page 950 (Windows)");
 
-static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1, "Unicode", "UTF-8",    "UTF-8");
-static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, "Unicode", "UTF-16LE", "UTF-16LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, "Unicode", "UTF-16BE", "UTF-16BE (Big Endian)");
-static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4, "Unicode", "UTF-32LE", "UTF-32LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4, "Unicode", "UTF-32BE", "UTF-32BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1,  true, "Unicode", "UTF-8",    "UTF-8");
+static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, false, "Unicode", "UTF-16LE", "UTF-16LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, false, "Unicode", "UTF-16BE", "UTF-16BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4,  true, "Unicode", "UTF-32LE", "UTF-32LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4,  true, "Unicode", "UTF-32BE", "UTF-32BE (Big Endian)");

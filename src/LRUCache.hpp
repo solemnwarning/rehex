@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,6 +18,7 @@
 #ifndef REHEX_LRUCACHE_HPP
 #define REHEX_LRUCACHE_HPP
 
+#include <assert.h>
 #include <list>
 #include <map>
 

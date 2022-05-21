@@ -2873,8 +2873,9 @@ bool REHex::DocumentCtrl::GenericDataRegion::OnPaste(DocumentCtrl *doc_ctrl)
 	return false;
 }
 
-REHex::DocumentCtrl::DataRegion::DataRegion(off_t d_offset, off_t d_length, off_t virt_offset):
+REHex::DocumentCtrl::DataRegion::DataRegion(SharedDocumentPointer &document, off_t d_offset, off_t d_length, off_t virt_offset):
 	GenericDataRegion(d_offset, d_length, virt_offset, virt_offset),
+	document(document),
 	bytes_per_line_actual(1) {}
 
 int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
@@ -3167,7 +3168,14 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			size_t line_data_extra_pre = std::min<size_t>((data_p - data.data()), MAX_CHAR_SIZE);
 			size_t line_data_extra_post = data_remain - line_data_len;
 			
-			draw_ascii_line(&doc, dc, x + ascii_text_x, y, line_data, line_data_len, line_data_extra_pre, line_data_extra_post, d_offset, line_pad_bytes, cur_off, alternate_row, ascii_highlight_func);
+			off_t start_char_off, start_char_len;
+			std::tie(start_char_off, start_char_len) = get_char_at(cur_off);
+			
+			size_t trailing_bytes = (start_char_off >= 0)
+				? cur_off - start_char_off
+				: 0;
+			
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, d_offset, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_highlight_func);
 		}
 		
 		cur_off += line_data_len;
@@ -3464,67 +3472,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	const ByteRangeMap<std::string> &types = doc_ctrl->doc->get_data_types();
 	
-	/* If the start of this line isn't aligned to the bounds of a multibyte character, we can
-	 * walk backwards to find where the character began, and correctly initialise consume_chars
-	 * to skip over the trailing end of the multibyte character starting on the previous line.
-	*/
-	
 	size_t consume_chars = 0;
-	
-	{
-		auto type_at_base = types.get_range(base_off);
-		assert(type_at_base != types.end());
-		
-		off_t encoding_base = std::max(type_at_base->first.offset, alignment_hint);
-		assert(encoding_base <= base_off);
-		
-		const CharacterEncoder *encoder;
-		if(type_at_base->second != "")
-		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
-			assert(dt_reg != NULL);
-			
-			encoder = dt_reg->encoder;
-		}
-		else{
-			static REHex::CharacterEncoderASCII ascii_encoder;
-			encoder = &ascii_encoder;
-		}
-		
-		/* Step backwards until we are aligned with the encoding's word size. */
-		
-		size_t step_back = 0;
-		off_t at_offset = base_off;
-		
-		while(((at_offset - encoding_base) % encoder->word_size) != 0)
-		{
-			++step_back;
-			--at_offset;
-		}
-		
-		assert(at_offset >= encoding_base);
-		
-		/* Step backwards until we find the start of a character and set consume_chars if
-		 * we find one that is straddling base_off.
-		*/
-		
-		while(step_back < data_extra_pre && at_offset >= encoding_base)
-		{
-			EncodedCharacter ec = encoder->decode((data - step_back), (data_len + step_back + data_extra_post));
-			if(ec.valid)
-			{
-				if(step_back > 0 && ec.encoded_char().size() > step_back)
-				{
-					consume_chars = ec.encoded_char().size() - step_back;
-				}
-				
-				break;
-			}
-			
-			step_back += encoder->word_size;
-			at_offset -= encoder->word_size;
-		}
-	}
 	
 	/* Calling wxDC::DrawText() for each individual character on the screen is
 	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
@@ -3585,7 +3533,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			encoder = &ascii_encoder;
 		}
 		
-		EncodedCharacter ec = encoder->decode(data, data_len + data_extra_post);
+		EncodedCharacter ec = encoder->decode(data, data_len);
 		if(ec.valid)
 		{
 			ucs4_t c;
@@ -3699,7 +3647,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	for(size_t c = pad_bytes, i = 0; i < data_len; ++c, ++i)
 	{
-		unsigned char byte = (data != NULL) ? data[i] : '?';
+		const void *c_data = (data != NULL) ? (const void*)(data + i)          : (const void*)("?");
+		size_t c_data_len  = (data != NULL) ? (data_len - i) + data_extra_post : 1;
 		
 		auto highlight = highlight_at_off(cur_off);
 		
@@ -3708,25 +3657,25 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->cursor_visible)
 			{
 				fill_char_bg(ascii_x, Palette::PAL_INVERT_TEXT_BG, true);
-				draw_char_deferred(ascii_base_x, Palette::PAL_INVERT_TEXT_FG, ascii_x_char, data + i, data_len - i);
+				draw_char_deferred(ascii_base_x, Palette::PAL_INVERT_TEXT_FG, ascii_x_char, c_data, c_data_len);
 			}
 			else if(highlight.enable)
 			{
 				fill_char_bg(ascii_x, highlight.bg_colour_idx, highlight.strong);
-				draw_char_deferred(ascii_base_x, highlight.fg_colour_idx, ascii_x_char, data + i, data_len - i);
+				draw_char_deferred(ascii_base_x, highlight.fg_colour_idx, ascii_x_char, c_data, c_data_len);
 			}
 			else{
-				draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, data + i, data_len - i);
+				draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len);
 			}
 		}
 		else{
 			if(highlight.enable)
 			{
 				fill_char_bg(ascii_x, highlight.bg_colour_idx, highlight.strong);
-				draw_char_deferred(ascii_base_x, highlight.fg_colour_idx, ascii_x_char, data + i, data_len - i);
+				draw_char_deferred(ascii_base_x, highlight.fg_colour_idx, ascii_x_char, c_data, c_data_len);
 			}
 			else{
-				draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, data + i, data_len - i);
+				draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len);
 			}
 			
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode)
@@ -4249,12 +4198,12 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 	return NoHighlight();
 }
 
-REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(off_t d_offset, off_t d_length, off_t virt_offset, Document &doc):
-	DataRegion(d_offset, d_length, virt_offset), doc(doc) {}
+REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(SharedDocumentPointer &document, off_t d_offset, off_t d_length, off_t virt_offset):
+	DataRegion(document, d_offset, d_length, virt_offset) {}
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(off_t off) const
 {
-	const NestedOffsetLengthMap<int> &highlights = doc.get_highlights();
+	const NestedOffsetLengthMap<int> &highlights = document->get_highlights();
 	
 	auto highlight = NestedOffsetLengthMap_get(highlights, off);
 	if(highlight != highlights.end())
@@ -4264,7 +4213,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 			active_palette->get_highlight_bg_idx(highlight->second),
 			true);
 	}
-	else if(doc.is_byte_dirty(off))
+	else if(document->is_byte_dirty(off))
 	{
 		return Highlight(
 			Palette::PAL_DIRTY_TEXT_FG,
@@ -4381,5 +4330,70 @@ wxCursor REHex::DocumentCtrl::CommentRegion::cursor_for_point(REHex::DocumentCtr
 	}
 	else{
 		return wxNullCursor;
+	}
+}
+
+std::pair<off_t,off_t> REHex::DocumentCtrl::DataRegion::get_char_at(off_t offset)
+{
+	assert(offset >= d_offset && offset <= (d_offset + d_length));
+	
+	const ByteRangeMap<std::string> &types = document->get_data_types();
+	
+	/* If the offset isn't aligned to the bounds of a multibyte character and the decoder can
+	 * detect the start/end of characters, then we can walk backwards to find where the
+	 * character began, otherwise we have to use CharacterFinder to find the characters by
+	 * linearly scanning from the start of the region...
+	*/
+	
+	auto type_at_base = types.get_range(offset);
+	assert(type_at_base != types.end());
+	
+	off_t encoding_base = type_at_base->first.offset;
+	assert(encoding_base <= offset);
+	
+	const CharacterEncoder *encoder;
+	if(type_at_base->second != "")
+	{
+		const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
+		assert(dt_reg != NULL);
+		
+		encoder = dt_reg->encoder;
+	}
+	else{
+		static REHex::CharacterEncoderASCII ascii_encoder;
+		encoder = &ascii_encoder;
+	}
+	
+	if(encoder->mid_char_safe)
+	{
+		/* Step back if necessary to align to word size. */
+		off_t at_offset = offset - ((offset - encoding_base) % encoder->word_size);
+		
+		off_t min_offset = std::max((at_offset - (off_t)(MAX_CHAR_SIZE)), d_offset);
+		
+		std::vector<unsigned char> data = document->read_data(min_offset, (MAX_CHAR_SIZE * 2));
+		ssize_t data_offset = at_offset - min_offset;
+		
+		while(at_offset >= min_offset && data_offset < (ssize_t)(data.size()) && data_offset > 0)
+		{
+			EncodedCharacter ec = encoder->decode((data.data() + data_offset), (data.size() - data_offset));
+			if(ec.valid && (at_offset + ec.encoded_char().size()) > offset)
+			{
+				return std::make_pair(at_offset, ec.encoded_char().size());
+			}
+			
+			--data_offset;
+			--at_offset;
+		}
+		
+		return std::make_pair(-1, -1);
+	}
+	else{
+		if(!char_finder)
+		{
+			char_finder.reset(new CharacterFinder(document, d_offset, d_length));
+		}
+		
+		return char_finder->get_char_range(offset);
 	}
 }

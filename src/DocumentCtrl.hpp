@@ -30,6 +30,7 @@
 
 #include "buffer.hpp"
 #include "ByteRangeSet.hpp"
+#include "CharacterFinder.hpp"
 #include "document.hpp"
 #include "Events.hpp"
 #include "LRUCache.hpp"
@@ -316,6 +317,8 @@ namespace REHex {
 			class DataRegion: public GenericDataRegion
 			{
 				protected:
+					SharedDocumentPointer document;
+					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
 					int ascii_text_x;   /* Virtual X coord of left edge of ASCII data. */
@@ -324,7 +327,7 @@ namespace REHex {
 					unsigned int first_line_pad_bytes;   /* Number of bytes to pad first line with. */
 					
 				public:
-					DataRegion(off_t d_offset, off_t d_length, off_t virt_offset);
+					DataRegion(SharedDocumentPointer &document, off_t d_offset, off_t d_length, off_t virt_offset);
 					
 					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
 					
@@ -360,16 +363,17 @@ namespace REHex {
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					
+				private:
+					std::unique_ptr<CharacterFinder> char_finder;
+					std::pair<off_t,off_t> get_char_at(off_t offset);
+					
 				friend DocumentCtrl;
 			};
 			
 			class DataRegionDocHighlight: public DataRegion
 			{
-				private:
-					Document &doc;
-					
 				public:
-					DataRegionDocHighlight(off_t d_offset, off_t d_length, off_t virt_offset, Document &doc);
+					DataRegionDocHighlight(SharedDocumentPointer &document, off_t d_offset, off_t d_length, off_t virt_offset);
 					
 				protected:
 					virtual Highlight highlight_at_off(off_t off) const override;

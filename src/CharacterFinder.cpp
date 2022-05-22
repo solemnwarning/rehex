@@ -51,6 +51,8 @@ void REHex::CharacterFinder::start_worker()
 		{
 			t1_filling = false;
 			t1_done = true;
+			
+			return;
 		}
 		
 		t1_filling = true;
@@ -83,7 +85,9 @@ void REHex::CharacterFinder::start_worker()
 			
 			while(t1_filling && target_off < (base + length))
 			{
-				std::vector<unsigned char> data = document->read_data(base_off, (chunk_size + MAX_CHAR_SIZE));
+				assert(target_off >= base_off);
+				
+				std::vector<unsigned char> data = document->read_data(base_off, ((target_off - base_off) + MAX_CHAR_SIZE));
 				bool ok = false;
 				
 				for(
@@ -100,7 +104,7 @@ void REHex::CharacterFinder::start_worker()
 					at_offset += char_size;
 					data_off += char_size;
 					
-					if(at_offset >= target_off && (at_offset + (off_t)(char_size)) < (base + length))
+					if(at_offset >= target_off && (at_offset + (off_t)(char_size)) <= (base + length))
 					{
 						t1[idx] = at_offset;
 						

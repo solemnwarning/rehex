@@ -28,12 +28,12 @@ jobs:
     - name: Build image
       run: |
           . tools/mac-build-dependencies.sh
-          make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) REHex.dmg
+          make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) DEBUG=1 REHex.dmg
 
     - name: Run tests
       run: |
           . tools/mac-build-dependencies.sh
-          make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) check
+          make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) DEBUG=1 check
 
     - uses: actions/upload-artifact@v2
       with:

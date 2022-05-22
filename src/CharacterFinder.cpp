@@ -190,8 +190,12 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 			: base;
 	}
 	
+	off_t t2_end_offset = ((t1_idx + 1) < (ssize_t)(t1_size))
+		? t1[t1_idx + 1].load()
+		: base + length;
+	
 	const std::vector<size_t> *t2_elem = t2.get(t2_base_offset);
-	if(t2_elem == NULL)
+	if(t2_elem == NULL && t2_end_offset > t2_base_offset)
 	{
 		std::vector<size_t> new_t2_elem;
 		new_t2_elem.reserve(chunk_size);
@@ -217,9 +221,9 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 			encoder = &ascii_encoder;
 		}
 		
-		std::vector<unsigned char> data = document->read_data(t2_base_offset, (chunk_size + MAX_CHAR_SIZE));
+		std::vector<unsigned char> data = document->read_data(t2_base_offset, (t2_end_offset - t2_base_offset));
 		
-		for(off_t t2_off = t2_base_offset, data_off = 0; t2_off < (t2_base_offset + (off_t)(chunk_size)) && (size_t)(data_off) < data.size();)
+		for(off_t t2_off = t2_base_offset, data_off = 0; t2_off < t2_end_offset && (size_t)(data_off) < data.size();)
 		{
 			new_t2_elem.push_back(t2_off - t2_base_offset);
 			
@@ -252,20 +256,12 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 	{
 		return std::make_pair(abs_this_char_off, (*next_char_off - *this_char_off));
 	}
-	else if((t1_idx + 1) < (ssize_t)(t1_size))
+	else if(t2_end_offset > t2_base_offset)
 	{
-		t2_base_offset = t1[++t1_idx];
-		
-		if(t2_base_offset >= 0)
-		{
-			return std::make_pair(abs_this_char_off, (t1[t1_idx] - abs_this_char_off));
-		}
-		else{
-			return std::make_pair(-1, -1);
-		}
+		return std::make_pair(abs_this_char_off, (t2_end_offset - abs_this_char_off));
 	}
 	else{
-		return std::make_pair(abs_this_char_off, (length - (abs_this_char_off - base)));
+		return std::make_pair(-1, -1);
 	}
 }
 

@@ -18,6 +18,7 @@
 #include "../src/platform.hpp"
 #include <gtest/gtest.h>
 #include <wx/app.h>
+#include <wx/fontutil.h>
 #include <wx/init.h>
 
 #include "../src/App.hpp"
@@ -54,7 +55,15 @@ int main(int argc, char **argv)
 	wxInitializer wxinit;
 	
 	wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	
+	#ifdef __APPLE__
+	/* wxWidgets 3.1 on Mac returns an empty string from wxFont::GetFaceName() at this
+	 * point for whatever reason, but it works fine later on....
+	*/
+	app->set_font_name(default_font.GetNativeFontInfo()->GetFaceName().ToStdString());
+	#else
 	app->set_font_name(default_font.GetFaceName().ToStdString());
+	#endif
 	
 	app->console = new REHex::ConsoleBuffer();
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */

@@ -197,7 +197,7 @@ TEST(CharacterFinder, FindsShiftJISCharacters)
 	};
 	
 	doc->insert_data(0, SJIS_STRING, sizeof(SJIS_STRING));
-	doc->set_data_type(0, sizeof(SJIS_STRING), "text:MS932");
+	doc->set_data_type(0, sizeof(SJIS_STRING), "text:MSCP932");
 	
 	CharacterFinder cf(doc, 0, sizeof(SJIS_STRING));
 	
@@ -262,7 +262,7 @@ TEST(CharacterFinder, FindsShiftJISCharactersMultipleChunks)
 	for(int i = 0, off = 0; i < 32; ++i, off += sizeof(SJIS_STRING))
 	{
 		doc->insert_data(off, SJIS_STRING, sizeof(SJIS_STRING));
-		doc->set_data_type(off, sizeof(SJIS_STRING), "text:MS932");
+		doc->set_data_type(off, sizeof(SJIS_STRING), "text:MSCP932");
 	}
 	
 	CharacterFinder cf(doc, sizeof(SJIS_STRING), sizeof(SJIS_STRING) * 30, sizeof(SJIS_STRING) / 4 /* 85 */);

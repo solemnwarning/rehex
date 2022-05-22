@@ -81,7 +81,7 @@ namespace REHex
 			std::unique_ptr< std::atomic<off_t>[] > t1;
 			
 			volatile bool t1_filling;
-			bool t1_done;
+			volatile bool t1_done;
 			std::thread t1_worker;
 			
 			LRUCache< off_t, std::vector<size_t> > t2;

@@ -4337,6 +4337,11 @@ std::pair<off_t,off_t> REHex::DocumentCtrl::DataRegion::get_char_at(off_t offset
 {
 	assert(offset >= d_offset && offset <= (d_offset + d_length));
 	
+	if(offset == (d_offset + d_length))
+	{
+		return std::make_pair(-1, -1);
+	}
+	
 	const ByteRangeMap<std::string> &types = document->get_data_types();
 	
 	/* If the offset isn't aligned to the bounds of a multibyte character and the decoder can

@@ -194,8 +194,14 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 		? t1[t1_idx + 1].load()
 		: base + length;
 	
+	if(t2_end_offset < 0)
+	{
+		/* t1 slot not filled yet. */
+		return std::make_pair(-1, -1);
+	}
+	
 	const std::vector<size_t> *t2_elem = t2.get(t2_base_offset);
-	if(t2_elem == NULL && t2_end_offset > t2_base_offset)
+	if(t2_elem == NULL)
 	{
 		std::vector<size_t> new_t2_elem;
 		new_t2_elem.reserve(chunk_size);

@@ -4379,7 +4379,7 @@ std::pair<off_t,off_t> REHex::DocumentCtrl::DataRegion::get_char_at(off_t offset
 		std::vector<unsigned char> data = document->read_data(min_offset, (MAX_CHAR_SIZE * 2));
 		ssize_t data_offset = at_offset - min_offset;
 		
-		while(at_offset >= min_offset && data_offset < (ssize_t)(data.size()) && data_offset > 0)
+		while(at_offset >= min_offset && data_offset < (ssize_t)(data.size()) && data_offset >= 0)
 		{
 			EncodedCharacter ec = encoder->decode((data.data() + data_offset), (data.size() - data_offset));
 			if(ec.valid && (at_offset + ec.encoded_char().size()) > offset)
@@ -4391,7 +4391,7 @@ std::pair<off_t,off_t> REHex::DocumentCtrl::DataRegion::get_char_at(off_t offset
 			--at_offset;
 		}
 		
-		return std::make_pair(-1, -1);
+		return std::make_pair(offset, 1);
 	}
 	else{
 		if(!char_finder)

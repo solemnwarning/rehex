@@ -122,12 +122,12 @@ class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
 		
 		virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
 		virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
-		virtual off_t cursor_left_from(off_t pos) override { abort(); }
-		virtual off_t cursor_right_from(off_t pos) override { abort(); }
-		virtual off_t cursor_up_from(off_t pos) override { abort(); }
-		virtual off_t cursor_down_from(off_t pos) override { abort(); }
-		virtual off_t cursor_home_from(off_t pos) override { abort(); }
-		virtual off_t cursor_end_from(off_t pos) override { abort(); }
+		virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override { abort(); }
+		virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override { abort(); }
+		virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override { abort(); }
+		virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override { abort(); }
+		virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override { abort(); }
+		virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override { abort(); }
 		virtual int cursor_column(off_t pos) override { abort(); }
 		virtual off_t first_row_nearest_column(int column) override { abort(); }
 		virtual off_t last_row_nearest_column(int column) override { abort(); }

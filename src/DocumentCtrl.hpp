@@ -201,32 +201,32 @@ namespace REHex {
 					/**
 					 * @brief Returns the offset of the cursor position left of the given offset. May return CURSOR_PREV_REGION.
 					*/
-					virtual off_t cursor_left_from(off_t pos) = 0;
+					virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position right of the given offset. May return CURSOR_NEXT_REGION.
 					*/
-					virtual off_t cursor_right_from(off_t pos) = 0;
+					virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position up from the given offset. May return CURSOR_PREV_REGION.
 					*/
-					virtual off_t cursor_up_from(off_t pos) = 0;
+					virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position down from the given offset. May return CURSOR_NEXT_REGION.
 					*/
-					virtual off_t cursor_down_from(off_t pos) = 0;
+					virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position at the start of the line from the given offset.
 					*/
-					virtual off_t cursor_home_from(off_t pos) = 0;
+					virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position at the end of the line from the given offset.
 					*/
-					virtual off_t cursor_end_from(off_t pos) = 0;
+					virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the screen column index of the given offset within the region.
@@ -346,12 +346,12 @@ namespace REHex {
 					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
 					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 					
-					virtual off_t cursor_left_from(off_t pos) override;
-					virtual off_t cursor_right_from(off_t pos) override;
-					virtual off_t cursor_up_from(off_t pos) override;
-					virtual off_t cursor_down_from(off_t pos) override;
-					virtual off_t cursor_home_from(off_t pos) override;
-					virtual off_t cursor_end_from(off_t pos) override;
+					virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override;
+					virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override;
+					virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override;
+					virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override;
+					virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override;
+					virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override;
 					
 					virtual int cursor_column(off_t pos) override;
 					virtual off_t first_row_nearest_column(int column) override;
@@ -651,6 +651,8 @@ namespace REHex {
 			Document::CursorState cursor_state;
 			
 			void _set_cursor_position(off_t position, Document::CursorState cursor_state, bool preserve_cpos_hist = false);
+			
+			GenericDataRegion::ScreenArea _get_screen_area_for_cursor_state();
 			
 			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(off_t offset);
 			

@@ -378,7 +378,7 @@ namespace REHex
 				return std::make_pair(mouse_x_bytes, SA_SPECIAL);
 			}
 			
-			virtual off_t cursor_left_from(off_t pos) override
+			virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -386,7 +386,7 @@ namespace REHex
 				return CURSOR_PREV_REGION;
 			}
 			
-			virtual off_t cursor_right_from(off_t pos) override
+			virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -394,7 +394,7 @@ namespace REHex
 				return CURSOR_NEXT_REGION;
 			}
 			
-			virtual off_t cursor_up_from(off_t pos) override
+			virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -402,7 +402,7 @@ namespace REHex
 				return CURSOR_PREV_REGION;
 			}
 			
-			virtual off_t cursor_down_from(off_t pos) override
+			virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -410,7 +410,7 @@ namespace REHex
 				return CURSOR_NEXT_REGION;
 			}
 			
-			virtual off_t cursor_home_from(off_t pos) override
+			virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -418,7 +418,7 @@ namespace REHex
 				return d_offset;
 			}
 			
-			virtual off_t cursor_end_from(off_t pos) override
+			virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));

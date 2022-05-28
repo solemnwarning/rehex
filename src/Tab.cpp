@@ -730,7 +730,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		
 		return;
 	}
-	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && ukey != WXK_NONE)
+	else if(doc_ctrl->ascii_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && ukey != WXK_NONE && key != '\t')
 	{
 		wxCharBuffer utf8_buf = wxString(wxUniChar(ukey)).utf8_str();
 		std::string utf8_key(utf8_buf.data(), utf8_buf.length());

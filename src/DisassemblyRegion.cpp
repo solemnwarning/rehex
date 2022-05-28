@@ -725,7 +725,36 @@ off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_ty
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	if(pos > d_offset)
+	off_t up_off = unprocessed_offset();
+	
+	if(active_type == SA_SPECIAL && pos < up_off)
+	{
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t this_instr_off = instr.second->offset;
+		
+		if(this_instr_off == d_offset)
+		{
+			/* Already on first instruction in region. */
+			return CURSOR_PREV_REGION;
+		}
+		
+		auto prev_instr = instruction_by_offset(this_instr_off - 1);
+		if(prev_instr.second == prev_instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t prev_instr_off = prev_instr.second->offset;
+		return prev_instr_off;
+	}
+	else if(pos > d_offset)
 	{
 		return pos - 1;
 	}
@@ -739,7 +768,29 @@ off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos, ScreenArea active_a
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	if((pos + 1) < (d_offset + d_length))
+	off_t up_off = unprocessed_offset();
+	
+	if(active_area == SA_SPECIAL && pos < up_off)
+	{
+		auto instr = instruction_by_offset(pos);
+		if(instr.second == instr.first.end())
+		{
+			/* Couldn't get instruction. */
+			return pos;
+		}
+		
+		off_t this_instr_off = instr.second->offset;
+		off_t next_instr_off = this_instr_off + instr.second->length;
+		
+		if(this_instr_off >= (d_offset + d_length))
+		{
+			/* Already on last instruction in region. */
+			return CURSOR_NEXT_REGION;
+		}
+		
+		return next_instr_off;
+	}
+	else if((pos + 1) < (d_offset + d_length))
 	{
 		return pos + 1;
 	}
@@ -804,9 +855,15 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type
 				return pos;
 			}
 			
-			return std::min(
-				(instr.second->offset + (pos - up_off)),
-				(instr.second->offset + instr.second->length - 1));
+			if(active_type == SA_SPECIAL)
+			{
+				return instr.second->offset;
+			}
+			else{
+				return std::min(
+					(instr.second->offset + (pos - up_off)),
+					(instr.second->offset + instr.second->length - 1));
+			}
 		}
 	}
 	else{
@@ -864,9 +921,15 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_ty
 		off_t next_instr_off = next_instr.second->offset;
 		off_t next_instr_len = next_instr.second->length;
 		
-		return std::min(
-			(next_instr_off + (pos - this_instr_off)),
-			(next_instr_off + next_instr_len - 1));
+		if(active_type == SA_SPECIAL)
+		{
+			return next_instr_off;
+		}
+		else{
+			return std::min(
+				(next_instr_off + (pos - this_instr_off)),
+				(next_instr_off + next_instr_len - 1));
+		}
 	}
 	else{
 		/* Move down a line from within unprocessed data. */

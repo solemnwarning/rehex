@@ -19,6 +19,7 @@
 
 #include <algorithm>
 
+#include "App.hpp"
 #include "CharacterEncoder.hpp"
 #include "CharacterFinder.hpp"
 #include "DataType.hpp"
@@ -87,7 +88,16 @@ void REHex::CharacterFinder::start_worker()
 			{
 				assert(target_off >= base_off);
 				
-				std::vector<unsigned char> data = document->read_data(base_off, ((target_off - base_off) + MAX_CHAR_SIZE));
+				std::vector<unsigned char> data;
+				try {
+					data = document->read_data(base_off, ((target_off - base_off) + MAX_CHAR_SIZE));
+				}
+				catch(const std::exception &e)
+				{
+					wxGetApp().printf_error("Exception in REHex::CharacterFinder (worker thread): %s\n", e.what());
+					break;
+				}
+				
 				bool ok = false;
 				
 				for(
@@ -227,7 +237,15 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 			encoder = &ascii_encoder;
 		}
 		
-		std::vector<unsigned char> data = document->read_data(t2_base_offset, (t2_end_offset - t2_base_offset));
+		std::vector<unsigned char> data;
+		try {
+			data = document->read_data(t2_base_offset, (t2_end_offset - t2_base_offset));
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Exception in REHex::CharacterFinder::get_char_range: %s\n", e.what());
+			return std::make_pair(-1, -1);
+		}
 		
 		for(off_t t2_off = t2_base_offset, data_off = 0; t2_off < t2_end_offset && (size_t)(data_off) < data.size();)
 		{

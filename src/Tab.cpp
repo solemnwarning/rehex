@@ -693,8 +693,16 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 			 * inserting or overwriting at the next byte.
 			*/
 			
-			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
-			assert(cur_data.size() == 1);
+			std::vector<unsigned char> cur_data;
+			try {
+				cur_data = doc->read_data(cursor_pos, 1);
+				assert(cur_data.size() == 1);
+			}
+			catch(const std::exception &e)
+			{
+				wxGetApp().printf_error("Exception in REHex::Tab::OnDocumentCtrlChar: %s\n", e.what());
+				return;
+			}
 			
 			unsigned char old_byte = cur_data[0];
 			unsigned char new_byte = (old_byte & 0xF0) | nibble;
@@ -715,7 +723,15 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 			 * overwriting the least significant.
 			*/
 			
-			std::vector<unsigned char> cur_data = doc->read_data(cursor_pos, 1);
+			std::vector<unsigned char> cur_data;
+			try {
+				cur_data = doc->read_data(cursor_pos, 1);
+			}
+			catch(const std::exception &e)
+			{
+				wxGetApp().printf_error("Exception in REHex::Tab::OnDocumentCtrlChar: %s\n", e.what());
+				return;
+			}
 			
 			if(!cur_data.empty())
 			{

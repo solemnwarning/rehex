@@ -29,6 +29,14 @@ namespace REHex
 		ATT   = 2,
 	};
 	
+	enum class GotoOffsetBase
+	{
+		AUTO = 0,
+		OCT  = 8,
+		DEC  = 10,
+		HEX  = 16,
+	};
+	
 	class AppSettings: public wxEvtHandler
 	{
 		public:
@@ -40,8 +48,12 @@ namespace REHex
 			AsmSyntax get_preferred_asm_syntax() const;
 			void set_preferred_asm_syntax(AsmSyntax preferred_asm_syntax);
 			
+			GotoOffsetBase get_goto_offset_base() const;
+			void set_goto_offset_base(GotoOffsetBase goto_offset_base);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
+			GotoOffsetBase goto_offset_base;
 	};
 	
 	wxDECLARE_EVENT(PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);

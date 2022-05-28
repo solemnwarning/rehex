@@ -76,6 +76,7 @@ namespace REHex {
 			 * @param min       Minium permissable value.
 			 * @param max       Maximum permissable value.
 			 * @param rel_base  Value to be added to sval, before min/max check
+			 * @param base      Base to parse sval as (0 = any, 8 = oct, 10 = dec, 16 = hex)
 			 *
 			 * Parses a numeric string value and returns the result.
 			 *
@@ -83,7 +84,7 @@ namespace REHex {
 			*/
 			template<typename T>
 				typename std::enable_if<std::numeric_limits<T>::is_signed, T>::type
-				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
+				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
@@ -102,7 +103,7 @@ namespace REHex {
 				errno = 0;
 				char *endptr;
 				
-				long long int ival = strtoll(sval.c_str(), &endptr, 0);
+				long long int ival = strtoll(sval.c_str(), &endptr, base);
 				if(*endptr != '\0')
 				{
 					/* Invalid characters */
@@ -147,7 +148,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<!std::numeric_limits<T>::is_signed, T>::type
-				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
+				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
 				
@@ -188,7 +189,7 @@ namespace REHex {
 				errno = 0;
 				char *endptr;
 				
-				unsigned long long int ival = strtoull(sval.c_str(), &endptr, 0);
+				unsigned long long int ival = strtoull(sval.c_str(), &endptr, base);
 				if(*endptr != '\0')
 				{
 					/* Invalid characters */
@@ -238,14 +239,15 @@ namespace REHex {
 			 * @param min       Minium permissable value.
 			 * @param max       Maximum permissable value.
 			 * @param rel_base  Value to be added to sval, before min/max check
+			 * @param base      Base to parse input as (0 = any, 8 = oct, 10 = dec, 16 = hex)
 			 *
 			 * On error throws an exception of type NumericTextCtrl::InputError.
 			*/
 			template<typename T>
-				T GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0)
+				T GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
-				return ParseValue<T>(sval, min, max, rel_base);
+				return ParseValue<T>(sval, min, max, rel_base, base);
 			}
 	};
 }

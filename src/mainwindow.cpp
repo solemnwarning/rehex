@@ -1164,14 +1164,58 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 	off_t current_pos = tab->doc->get_cursor_position();
 	off_t max_pos     = tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode();
 	
+	NumericEntryDialog<off_t>::BaseHint base;
+	switch(wxGetApp().settings->get_goto_offset_base())
+	{
+		case GotoOffsetBase::AUTO:
+			base = NumericEntryDialog<off_t>::BaseHint::AUTO;
+			break;
+		
+		case GotoOffsetBase::OCT:
+			base = NumericEntryDialog<off_t>::BaseHint::OCT;
+			break;
+		
+		case GotoOffsetBase::DEC:
+			base = NumericEntryDialog<off_t>::BaseHint::DEC;
+			break;
+		
+		case GotoOffsetBase::HEX:
+			base = NumericEntryDialog<off_t>::BaseHint::HEX;
+			break;
+	}
+	
 	REHex::NumericEntryDialog<off_t> ni(this,
 		"Jump to offset",
 		"Prefix offset with -/+ to jump relative to current cursor position",
-		current_pos, 0, max_pos, current_pos);
+		current_pos, 0, max_pos, current_pos, base);
 	
 	int rc = ni.ShowModal();
 	if(rc == wxID_OK)
 	{
+		base = ni.GetBase();
+		switch(base)
+		{
+			case NumericEntryDialog<off_t>::BaseHint::AUTO:
+				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::AUTO);
+				break;
+				
+			case NumericEntryDialog<off_t>::BaseHint::OCT:
+				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::OCT);
+				break;
+				
+			case NumericEntryDialog<off_t>::BaseHint::DEC:
+				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::DEC);
+				break;
+				
+			case NumericEntryDialog<off_t>::BaseHint::HEX:
+				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::HEX);
+				break;
+				
+			default:
+				/* Unreachable. */
+				abort();
+		}
+		
 		tab->doc->set_cursor_position(ni.GetValue());
 	}
 }
@@ -1549,7 +1593,6 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	config->Write("theme", wxString(active_palette->get_name()));
 	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
 	config->Write("font-name", wxString(wxGetApp().get_font_name()));
-	wxGetApp().settings->write(config);
 	
 	// Clean out all previous settings
 	config->DeleteGroup("/default-view/");

@@ -37,11 +37,26 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 		default:
 			break;
 	}
+	
+	long goto_offset_base = config->ReadLong("goto-offset-base", -1);
+	switch(goto_offset_base)
+	{
+		case (long)(GotoOffsetBase::AUTO):
+		case (long)(GotoOffsetBase::OCT):
+		case (long)(GotoOffsetBase::DEC):
+		case (long)(GotoOffsetBase::HEX):
+			this->goto_offset_base = (GotoOffsetBase)(goto_offset_base);
+			break;
+			
+		default:
+			break;
+	}
 }
 
 void REHex::AppSettings::write(wxConfig *config)
 {
 	config->Write("preferred-asm-syntax", (long)(preferred_asm_syntax));
+	config->Write("goto-offset-base", (long)(goto_offset_base));
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -60,4 +75,14 @@ void REHex::AppSettings::set_preferred_asm_syntax(AsmSyntax preferred_asm_syntax
 		
 		wxPostEvent(this, event);
 	}
+}
+
+REHex::GotoOffsetBase REHex::AppSettings::get_goto_offset_base() const
+{
+	return goto_offset_base;
+}
+
+void REHex::AppSettings::set_goto_offset_base(GotoOffsetBase goto_offset_base)
+{
+	this->goto_offset_base = goto_offset_base;
 }

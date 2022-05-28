@@ -234,6 +234,8 @@ int REHex::App::OnExit()
 	config->SetPath("/");
 	config->Write("last-directory", wxString(last_directory));
 	
+	settings->write(config);
+	
 	delete active_palette;
 	#ifdef BUILD_HELP
 	delete help_controller;

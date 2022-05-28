@@ -1,3 +1,26 @@
+Version TBA
+
+ * Correctly nest comments when updating comments panel (#169).
+
+ * Update text in comments panel when a comment is modified.
+
+ * Fix display of >4GiB virtual offsets in files that are <=4GiB (#170).
+
+ * Add support for code page 437 (IBM) and 932/936/949/950 (Microsoft).
+
+ * Fix handling of multibyte character boundaries in document view.
+
+ * Draw wide characters in document view (#173).
+
+ * Move forwards/backwards and select whole instructions from disassembly
+   in document view.
+
+ * Don't capture tab key press in text area of document view.
+
+ * Add missing error checks.
+
+ * Add number base option to "Jump to offset" dialog.
+
 Version 0.5.1 (2022-04-29)
 
  * Fix macOS build to run on 10.13 (High Sierra) or later.

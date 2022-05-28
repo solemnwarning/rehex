@@ -139,12 +139,12 @@ namespace REHex
 			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override;
 			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 			
-			virtual off_t cursor_left_from(off_t pos) override;
-			virtual off_t cursor_right_from(off_t pos) override;
-			virtual off_t cursor_up_from(off_t pos) override;
-			virtual off_t cursor_down_from(off_t pos) override;
-			virtual off_t cursor_home_from(off_t pos) override;
-			virtual off_t cursor_end_from(off_t pos) override;
+			virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override;
+			virtual off_t cursor_right_from(off_t pos, ScreenArea active_area) override;
+			virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override;
+			virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override;
+			virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override;
+			virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override;
 			
 			virtual int cursor_column(off_t pos) override;
 			virtual off_t first_row_nearest_column(int column) override;

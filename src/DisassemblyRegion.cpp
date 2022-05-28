@@ -720,7 +720,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 }
 
-off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos)
+off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_type)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -734,7 +734,7 @@ off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos)
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos)
+off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos, ScreenArea active_area)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -748,7 +748,7 @@ off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos)
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos)
+off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -815,7 +815,7 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos)
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos)
+off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_type)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -891,7 +891,7 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos)
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos)
+off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos, ScreenArea active_type)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -920,7 +920,7 @@ off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos)
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos)
+off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos, ScreenArea active_type)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));

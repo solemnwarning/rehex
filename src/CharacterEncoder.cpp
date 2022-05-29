@@ -336,7 +336,7 @@ static IconvCharacterEncodingRegistrationHelper cp949_r ("CP949", 1, false, "Mul
 static IconvCharacterEncodingRegistrationHelper cp950_r ("CP950", 1, false, "Multibyte code pages", "MSCP950", "Code page 950 (Windows)");
 
 static IconvCharacterEncodingRegistrationHelper utf8_r   ("UTF-8",    1,  true, "Unicode", "UTF-8",    "UTF-8");
-static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2, false, "Unicode", "UTF-16LE", "UTF-16LE (Little Endian)");
-static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2, false, "Unicode", "UTF-16BE", "UTF-16BE (Big Endian)");
+static IconvCharacterEncodingRegistrationHelper utf16le_r("UTF-16LE", 2,  true, "Unicode", "UTF-16LE", "UTF-16LE (Little Endian)");
+static IconvCharacterEncodingRegistrationHelper utf16be_r("UTF-16BE", 2,  true, "Unicode", "UTF-16BE", "UTF-16BE (Big Endian)");
 static IconvCharacterEncodingRegistrationHelper utf32le_r("UTF-32LE", 4,  true, "Unicode", "UTF-32LE", "UTF-32LE (Little Endian)");
 static IconvCharacterEncodingRegistrationHelper utf32be_r("UTF-32BE", 4,  true, "Unicode", "UTF-32BE", "UTF-32BE (Big Endian)");

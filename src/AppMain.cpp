@@ -30,6 +30,7 @@
 #include "DiffWindow.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
+#include "profile.hpp"
 #include "../res/version.h"
 
 /* These MUST come after any wxWidgets headers. */
@@ -218,6 +219,11 @@ bool REHex::App::OnInit()
 	{
 		window->new_file();
 	}
+	
+	#ifdef REHEX_PROFILE
+	ProfilingWindow *pw = new ProfilingWindow(window);
+	pw->Show();
+	#endif
 	
 	call_setup_hooks(SetupPhase::DONE);
 	

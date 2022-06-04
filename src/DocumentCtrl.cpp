@@ -39,6 +39,7 @@
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
 #include "Palette.hpp"
+#include "profile.hpp"
 #include "textentrydialog.hpp"
 #include "util.hpp"
 
@@ -2992,6 +2993,8 @@ void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc, wxDC
 
 void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y)
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl::DataRegion::Draw");
+	
 	draw_container(doc, dc, x, y);
 	
 	/* If we are scrolled part-way into a data region, don't render data above the client area
@@ -3224,6 +3227,8 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 
 void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off)
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_hex_line");
+	
 	int hex_base_x = x;                                                          /* Base X co-ordinate to draw hex characters from */
 	int hex_x_char = (pad_bytes * 2) + (pad_bytes / doc_ctrl->bytes_per_group);  /* Column of current hex character */
 	int hex_x      = hex_base_x + doc_ctrl->hf_string_width(hex_x_char);         /* X co-ordinate of current hex character */
@@ -3451,6 +3456,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 
 void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off)
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_ascii_line");
+	
 	int ascii_base_x = x;                                                       /* Base X co-ordinate to draw ASCII characters from */
 	int ascii_x_char = pad_bytes;                                               /* Column of current ASCII character */
 	int ascii_x      = ascii_base_x + doc_ctrl->hf_string_width(ascii_x_char);  /* X co-ordinate of current ASCII character */

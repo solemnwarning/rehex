@@ -85,9 +85,19 @@ else
 	DEBUG_CFLAGS := -ggdb
 endif
 
-CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
-CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
+ifeq ($(PROFILE),)
+	PROFILE=0
+endif
+
+ifeq ($(PROFILE),0)
+	PROFILE_CFLAGS :=
+else
+	PROFILE_CFLAGS := -DREHEX_PROFILE
+endif
+
+CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
+CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
 uname_S := $(shell uname -s 2>/dev/null)
 ifeq ($(uname_S),FreeBSD)
@@ -286,6 +296,7 @@ APP_OBJS := \
 	src/LuaPluginLoader.o \
 	src/mainwindow.o \
 	src/Palette.o \
+	src/profile.o \
 	src/search.o \
 	src/SelectRangeDialog.o \
 	src/StringPanel.o \

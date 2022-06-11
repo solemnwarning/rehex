@@ -67,6 +67,11 @@ BEGIN_EVENT_TABLE(REHex::DocumentCtrl, wxControl)
 	EVT_IDLE(REHex::DocumentCtrl::OnIdle)
 END_EVENT_TABLE()
 
+static unsigned int pack_colour(const wxColour &colour)
+{
+	return (unsigned int)(colour.Red()) | ((unsigned int)(colour.Blue()) << 8) | ((unsigned int)(colour.Green()) << 16);
+}
+
 REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	wxControl(),
 	doc(doc),
@@ -78,6 +83,14 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER),
 	hf_gte_cache(GETTEXTEXTENT_CACHE_SIZE)
+
+#ifdef REHEX_CACHE_CHARACTER_BITMAPS
+	,hf_char_bitmap_cache(HF_CHAR_BITMAP_CACHE_SIZE)
+#endif
+
+#ifdef REHEX_CACHE_STRING_BITMAPS
+	,hf_string_bitmap_cache(HF_STRING_BITMAP_CACHE_SIZE)
+#endif
 {
 	App &app = wxGetApp();
 	
@@ -184,6 +197,14 @@ void REHex::DocumentCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &e
 	}
 	
 	hf_gte_cache.clear();
+
+#ifdef REHEX_CACHE_CHARACTER_BITMAPS
+	hf_char_bitmap_cache.clear();
+#endif
+
+#ifdef REHEX_CACHE_STRING_BITMAPS
+	hf_string_bitmap_cache.clear();
+#endif
 	
 	_handle_width_change();
 	
@@ -2627,6 +2648,105 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 	}
 }
 
+#ifdef REHEX_CACHE_CHARACTER_BITMAPS
+wxBitmap REHex::DocumentCtrl::hf_char_bitmap(const wxString &wx_char, ucs4_t unicode_char, const wxSize &char_size, const wxColour &foreground_colour, const wxColour &background_colour)
+{
+	auto cache_key = std::make_tuple(unicode_char, pack_colour(foreground_colour), pack_colour(background_colour));
+
+	const wxBitmap *cached_bitmap = hf_char_bitmap_cache.get(cache_key);
+	if(cached_bitmap == NULL)
+	{
+		/* I (briefly) tried getting this working with 1bpp bitmaps, but couldn't get the
+		 * background behaving correctly then found this tidbit on the web:
+		 *
+		 * > Support for monochrome bitmaps is very limited in wxWidgets. And
+		 * > wxNativePixelData is designed for 24bit RGB data, so i doubt it will give the
+		 * > expected results for monochrome bitmaps.
+		 * >
+		 * > Even if it's a waste of memory, i would suggest to work with 24bit RGB bitmaps
+		 * > and only at the very end convert it to a 1bit bitmap.
+		 * - https://forums.wxwidgets.org/viewtopic.php?p=185332#p185332
+		*/
+
+		wxBitmap char_bitmap(char_size, wxBITMAP_SCREEN_DEPTH);
+		wxMemoryDC mdc(char_bitmap);
+
+		mdc.SetFont(hex_font);
+
+		mdc.SetBackground(wxBrush(background_colour));
+		mdc.Clear();
+
+		mdc.SetTextForeground(foreground_colour);
+		mdc.SetBackgroundMode(wxTRANSPARENT);
+		mdc.DrawText(wx_char, 0, 0);
+
+		mdc.SelectObject(wxNullBitmap);
+
+		cached_bitmap = hf_char_bitmap_cache.set(cache_key, char_bitmap);
+	}
+
+	/* wxBitmap internally does refcounting and CoW, returning a thin wxBitmap copy rather than a
+	 * pointer into the cache stops the caller from having to worry about the returned wxColour
+	 * being invalidated in the future.
+	*/
+	return *cached_bitmap;
+}
+#endif
+
+#ifdef REHEX_CACHE_STRING_BITMAPS
+wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacter> &characters, const wxColour &foreground_colour, const wxColour &background_colour)
+{
+	StringBitmapCacheKey cache_key(characters, pack_colour(foreground_colour), pack_colour(background_colour));
+
+	const wxBitmap *cached_string = hf_string_bitmap_cache.get(cache_key);
+	if(cached_string == NULL)
+	{
+		std::vector<wxBitmap> char_bitmaps;
+		char_bitmaps.reserve(characters.size());
+
+		int string_h = -1;
+		const AlignedCharacter *max_col = NULL;
+
+		for(auto c = characters.begin(); c != characters.end(); ++c)
+		{
+			char_bitmaps.push_back(hf_char_bitmap(c->wx_char, c->unicode_char, c->char_size, foreground_colour, background_colour));
+			
+			if(c->char_size.GetHeight() > string_h)
+			{
+				string_h = c->char_size.GetHeight();
+			}
+
+			if(max_col == NULL || c->column > max_col->column)
+			{
+				max_col = &(*c);
+			}
+		}
+
+		int string_w = hf_string_width(max_col->column) + max_col->char_size.GetWidth();
+
+		wxBitmap string_bitmap(string_w, string_h, wxBITMAP_SCREEN_DEPTH);
+		wxMemoryDC mdc(string_bitmap);
+
+		mdc.SetBackground(wxBrush(background_colour));
+		mdc.Clear();
+
+		auto c_bitmap = char_bitmaps.begin();
+		for(auto c = characters.begin(); c != characters.end(); ++c, ++c_bitmap)
+		{
+			mdc.DrawBitmap(*c_bitmap, hf_string_width(c->column), 0, true);
+		}
+
+		mdc.SelectObject(wxNullBitmap);
+
+		string_bitmap.SetMask(new wxMask(string_bitmap, background_colour));
+
+		cached_string = hf_string_bitmap_cache.set(cache_key, string_bitmap);
+	}
+
+	return *cached_string;
+}
+#endif
+
 const std::vector<REHex::DocumentCtrl::Region*> &REHex::DocumentCtrl::get_regions() const
 {
 	return regions;
@@ -3517,68 +3637,39 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
 	 * area on a per-line basis.
 	 *
-	 * The key of the deferred_drawtext map is the X co-ordinate to render the string
-	 * at (hex_base_x or ascii_base_x plus an optional offset), whether it is a potentially
-	 * wide character (must be rendered alone) and the foreground colour to use.
+	 * The key of the deferred_drawtext maps is the X co-ordinate to render the string
+	 * at (hex_base_x or ascii_base_x plus an optional offset) and the foreground colour to
+	 * use.
 	 *
-	 * The value of the deferred_drawtext map is the string to be drawn, the number of
-	 * fixed-width CHARACTERS that have been added so far and (in the case of single
-	 * characters), the Unicode codepoint of the character and the background colour.
+	 * The value of the deferred_drawtext_fast map is the string to be drawn and the number
+	 * of fixed-width CHARACTERS that have been added so far.
 	 *
-	 * The draw_char_deferred() function adds a character to be drawn to the map, while
-	 * prefixing it with any spaces necessary to pad it to the correct column from the
-	 * base X co-ordinate.
+	 * Characters that aren't exactly one character wide (e.g. wide characters) are rendered
+	 * via the deferred_drawtext_slow mechanism instead - they are rendered alone using
+	 * individual DrawText() calls, with platform-dependant caching to reduce the overhead.
 	*/
 
-	struct DeferredDrawTextKey
-	{
-		int x;
-		bool single_char;
-		Palette::ColourIndex fg_colour_idx;
-
-		DeferredDrawTextKey(int x, bool single_char, Palette::ColourIndex fg_colour_idx) :
-			x(x), single_char(single_char), fg_colour_idx(fg_colour_idx) {}
-		
-		bool operator<(const DeferredDrawTextKey &rhs) const
-		{
-			if(x != rhs.x)
-			{
-				return x < rhs.x;
-			}
-			
-			if(single_char != rhs.single_char)
-			{
-				return single_char < rhs.single_char;
-			}
-
-			if(fg_colour_idx != rhs.fg_colour_idx)
-			{
-				return fg_colour_idx < rhs.fg_colour_idx;
-			}
-
-			return false;
-		}
-	};
-
-	struct DeferredDrawTextValue
+	struct DeferredDrawTextFastValue
 	{
 		wxString string;
 		int num_chars;
+	};
 
-		/* These members are only filled in for individual characters. */
-		ucs4_t unicode_char;
-		wxSize char_size;
+	struct DeferredDrawTextSlowValue
+	{
+		std::vector<AlignedCharacter> chars;
 		wxColour bg_colour;
 	};
-	
-	std::map<DeferredDrawTextKey, DeferredDrawTextValue> deferred_drawtext;
-	
+
+	std::map<std::pair<int, Palette::ColourIndex>, DeferredDrawTextFastValue> deferred_drawtext_fast;
+	std::map<std::pair<int, Palette::ColourIndex>, DeferredDrawTextSlowValue> deferred_drawtext_slow;
+
 	auto draw_char_deferred = [&](int base_x, Palette::ColourIndex colour_idx, int col, const void *data, size_t data_len, wxColour bg_colour)
 	{
 		auto defer_monospace_char = [&](const wxString &c)
 		{
-			DeferredDrawTextKey k(base_x, false, colour_idx);
-			DeferredDrawTextValue &v = deferred_drawtext[k];
+			auto k = std::make_pair(base_x, colour_idx);
+			DeferredDrawTextFastValue &v = deferred_drawtext_fast[k];
 
 			assert(v.num_chars <= col);
 
@@ -3592,20 +3683,10 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 
 		auto defer_variable_pitch_char = [&](const wxString &wx_char, ucs4_t unicode_char, wxSize char_size)
 		{
-			base_x += doc_ctrl->hf_string_width(col);
-			col = 0;
+			auto k = std::make_pair(base_x, colour_idx);
+			DeferredDrawTextSlowValue &v = deferred_drawtext_slow[k];
 
-			DeferredDrawTextKey k(base_x, true, colour_idx);
-			DeferredDrawTextValue &v = deferred_drawtext[k];
-
-			assert(v.string.empty());
-			assert(v.num_chars == 0);
-
-			v.string = wx_char;
-			v.num_chars = 1;
-
-			v.unicode_char = unicode_char;
-			v.char_size = char_size;
+			v.chars.push_back(AlignedCharacter(wx_char, unicode_char, char_size, col));
 			v.bg_colour = bg_colour;
 		};
 		
@@ -3644,7 +3725,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		EncodedCharacter ec = encoder->decode(data, data_len);
 		if(ec.valid)
 		{
-			wxString wx_char = wxString::FromUTF8(ec.utf8_char());
+			wxString wx_char = wxString::FromUTF8(ec.utf8_char().c_str());
 			if (wx_char != "")
 			{
 				ucs4_t c;
@@ -3816,79 +3897,68 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	}
 	
 	normal_text_colour();
-	
-	for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
+
+	/* Fast text rendering path - render fixed-width characters using a single wxDC.DrawText()
+	 * call per foreground colour, leaving gaps for characters drawn in other passes using
+	 * space characters.
+	*/
+
+	for(auto dd = deferred_drawtext_fast.begin(); dd != deferred_drawtext_fast.end(); ++dd)
 	{
-		wxColour fg_colour = (*active_palette)[dd->first.fg_colour_idx];
+		wxColour fg_colour = (*active_palette)[dd->first.second];
 
 		dc.SetTextForeground(fg_colour);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 
-#if 1
-		if (dd->first.single_char)
+		dc.DrawText(dd->second.string, dd->first.first, y);
+	}
+
+	/* Slow text rendering path - render variable-width characters using a single
+	 * wxDC.DrawText() call for each character so we can align them to the grid of normal
+	 * characters in the font.
+	 *
+	 * There are two (optional) optimisations here:
+	 *
+	 * REHEX_CACHE_CHARACTER_BITMAPS
+	 *
+	 *   Renders the characters into a secondary wxBitmap and caches it so future draws of the
+	 *   same character are just a bitmap blit rather than rendering text every time.
+	 *
+	 *   This offers a significant performance boost on Windows, macOS and Linux and is enabled
+	 *   on all platforms.
+	 *
+	 * REHEX_CACHE_STRING_BITMAPS
+	 *
+	 *   In addition to REHEX_CACHE_CHARACTER_BITMAPS, the individual character bitmaps in each
+	 *   deferred_drawtext_slow are copied into another secondary bitmap, which is again cached
+	 *   and blitted to the DC as a whole line in the future.
+	 *
+	 *   This adds another significant speed boost on Windows and macOS, where it is enabled.
+	 *   There is no significant improvement on Linux, so it isn't enabled there.
+	*/
+
+	for(auto dd = deferred_drawtext_slow.begin(); dd != deferred_drawtext_slow.end(); ++dd)
+	{
+		wxColour fg_colour = (*active_palette)[dd->first.second];
+		wxColour bg_colour = dd->second.bg_colour;
+
+		dc.SetTextForeground(fg_colour);
+		dc.SetBackgroundMode(wxTRANSPARENT);
+
+#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
+		wxBitmap string_bitmap = doc_ctrl->hf_string_bitmap(dd->second.chars, fg_colour, bg_colour);
+		dc.DrawBitmap(string_bitmap, dd->first.first, y, true);
+#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
+		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
 		{
-			/* As yet another horrible this-really-shouldn't-be-necessary level of
-			 * optimisation, if we are drawing a single (wide) character, rather than
-			 * simply using wxDC.DrawText() to put it on the screen, we instead draw
-			 * it into a wxBitmap, cache it and then use wxDC.DrawBitmap() to blit it
-			 * to the screen each time it needs to be drawn.
-			 *
-			 * Some quick benchmarking on Windows has this reducing the total draw
-			 * time for a maximised window of "UTF-16" garbage from ~400ms to ~100ms.
-			 *
-			 * TODO: Benchmark Linux/Mac with/without this hack.
-			*/
-
-			static LRUCache<std::tuple<ucs4_t, unsigned int, unsigned int>, wxBitmap> cache(8192);
-
-			unsigned int fg_packed = (unsigned int)(fg_colour.Red()) | ((unsigned int)(fg_colour.Blue()) << 8) | ((unsigned int)(fg_colour.Green()) << 16);
-			unsigned int bg_packed = (unsigned int)(dd->second.bg_colour.Red()) | ((unsigned int)(dd->second.bg_colour.Blue()) << 8) | ((unsigned int)(dd->second.bg_colour.Green()) << 16);
-
-			auto cache_key = std::make_tuple(dd->second.unicode_char, fg_packed, bg_packed);
-
-			const wxBitmap *cached_bitmap = cache.get(cache_key);
-			if (cached_bitmap == NULL)
-			{
-				PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_ascii_line (cache bitmap)");
-
-				/* I (briefly) tried getting this working with 1bpp bitmaps, but couldn't get the
-				 * background behaving correctly then found this tidbit on the web:
-				 *
-				 * > Support for monochrome bitmaps is very limited in wxWidgets. And
-				 * > wxNativePixelData is designed for 24bit RGB data, so i doubt it will give the
-				 * > expected results for monochrome bitmaps.
-				 * >
-				 * > Even if it's a waste of memory, i would suggest to work with 24bit RGB bitmaps
-				 * > and only at the very end convert it to a 1bit bitmap.
-				 * - https://forums.wxwidgets.org/viewtopic.php?p=185332#p185332
-				*/
-
-				wxBitmap char_bitmap(dd->second.char_size, wxBITMAP_SCREEN_DEPTH);
-				wxMemoryDC mdc(char_bitmap);
-
-				mdc.SetFont(doc_ctrl->get_font());
-
-				mdc.SetBackground(wxBrush(dd->second.bg_colour));
-				mdc.Clear();
-
-				mdc.SetTextForeground(fg_colour);
-				mdc.SetBackgroundMode(wxTRANSPARENT);
-				mdc.DrawText(dd->second.string, 0, 0);
-
-				mdc.SelectObject(wxNullBitmap);
-
-				//char_bitmap.SetMask(new wxMask(char_bitmap, bg_colour));
-
-				cached_bitmap = cache.set(cache_key, char_bitmap);
-			}
-
-			dc.DrawBitmap(*cached_bitmap, dd->first.x, y, true);
-		}
-		else {
-			dc.DrawText(dd->second.string, dd->first.x, y);
+			wxBitmap char_bitmap = doc_ctrl->hf_char_bitmap(c->wx_char, c->unicode_char, c->char_size, fg_colour, bg_colour);
+			dc.DrawBitmap(char_bitmap, (dd->first.first + doc_ctrl->hf_string_width(c->column)), y);
 		}
 #else
-		dc.DrawText(dd->second.string, dd->first.x, y);
+		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
+		{
+			dc.DrawText(c->wx_char, (dd->first.first + doc_ctrl->hf_string_width(c->column)), y);
+		}
 #endif
 	}
 }

@@ -47,6 +47,9 @@ JANSSON_LIBS    ?= -ljansson
 LUA_CFLAGS      ?=
 LUA_LIBS        ?= -llua
 
+CFLAGS   += -DREHEX_CACHE_STRING_BITMAPS
+CXXFLAGS += -DREHEX_CACHE_STRING_BITMAPS
+
 all: REHex.app
 
 include Makefile

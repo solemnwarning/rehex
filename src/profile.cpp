@@ -18,6 +18,7 @@
 #include "platform.hpp"
 
 #include <wx/button.h>
+#include <wx/radiobut.h>
 #include <wx/sizer.h>
 #include <wx/time.h>
 
@@ -49,13 +50,18 @@ void REHex::ProfilingCollector::reset_collectors()
 	}
 }
 
+uint64_t REHex::ProfilingCollector::get_monotonic_us()
+{
+	// TODO: Actually use a monotonic time source.
+	return wxGetUTCTimeUSec().GetValue();
+}
+
 REHex::ProfilingCollector::ProfilingCollector(const std::string &key):
 	key(key),
-	min_time(0),
-	max_time(0),
-	total_time(0),
-	num_samples(0)
+	head_time_bucket(0)
 {
+	reset();
+	
 	if(collectors == NULL)
 	{
 		collectors = new std::list<ProfilingCollector*>();
@@ -81,22 +87,74 @@ const std::string &REHex::ProfilingCollector::get_key() const
 	return key;
 }
 
-wxLongLong REHex::ProfilingCollector::get_min_time() const
+REHex::ProfilingCollector::Stats REHex::ProfilingCollector::accumulate_stats(unsigned int window_duration_ms) const
 {
-	return min_time;
+	Stats acc;
+	
+	const Stats *stats_begin = slots + 1;
+	const Stats *stats_end = std::min((stats_begin + (window_duration_ms / SLOT_DURATION_MS)), (slots + NUM_SLOTS));
+	
+	for(auto s = stats_begin; s != stats_end; ++s)
+	{
+		acc += *s;
+	}
+	
+	return acc;
 }
 
-wxLongLong REHex::ProfilingCollector::get_max_time() const
+void REHex::ProfilingCollector::record_time(uint64_t begin_time, uint64_t duration)
 {
-	return max_time;
+	uint64_t now_time_bucket = get_monotonic_us() / (SLOT_DURATION_MS * 1000);
+	
+	if(now_time_bucket != head_time_bucket)
+	{
+		assert(now_time_bucket > head_time_bucket);
+		uint64_t shift_by = now_time_bucket - head_time_bucket;
+		
+		size_t slots_to_keep = 0;
+		if(shift_by < NUM_SLOTS)
+		{
+			slots_to_keep = NUM_SLOTS - shift_by;
+			memmove(slots + shift_by, slots, sizeof(*slots) * slots_to_keep);
+		}
+		
+		reset(0, NUM_SLOTS - slots_to_keep);
+		
+		head_time_bucket = now_time_bucket;
+	}
+	
+	uint64_t begin_time_bucket = begin_time / (SLOT_DURATION_MS * 1000);
+	
+	if(begin_time_bucket <= head_time_bucket && (begin_time_bucket + NUM_SLOTS) > head_time_bucket)
+	{
+		size_t slot_idx = head_time_bucket - begin_time_bucket;
+		slots[slot_idx].record_time(duration);
+	}
 }
 
-wxLongLong REHex::ProfilingCollector::get_total_time() const
+void REHex::ProfilingCollector::reset(size_t begin_idx, size_t end_idx)
 {
-	return total_time;
+	for(size_t i = begin_idx; i < end_idx; ++i)
+	{
+		slots[i].reset();
+	}
 }
 
-wxLongLong REHex::ProfilingCollector::get_avg_time() const
+REHex::ProfilingCollector::Stats::Stats():
+	min_time(0),
+	max_time(0),
+	total_time(0),
+	num_samples(0) {}
+
+void REHex::ProfilingCollector::Stats::reset()
+{
+	min_time    = 0;
+	max_time    = 0;
+	total_time  = 0;
+	num_samples = 0;
+}
+
+uint64_t REHex::ProfilingCollector::Stats::get_avg_time() const
 {
 	if(num_samples > 0)
 	{
@@ -107,56 +165,64 @@ wxLongLong REHex::ProfilingCollector::get_avg_time() const
 	}
 }
 
-unsigned int REHex::ProfilingCollector::get_num_samples() const
-{
-	return num_samples;
-}
-
-void REHex::ProfilingCollector::record_time(wxLongLong t)
+void REHex::ProfilingCollector::Stats::record_time(uint64_t duration)
 {
 	if(num_samples == 0)
 	{
-		min_time   = t;
-		max_time   = t;
-		total_time = t;
+		min_time    = duration;
+		max_time    = duration;
+		total_time  = duration;
 	}
 	else{
-		if(min_time > t)
+		if(min_time > duration)
 		{
-			min_time = t;
+			min_time = duration;
 		}
 		
-		if(max_time < t)
+		if(max_time < duration)
 		{
-			max_time = t;
+			max_time = duration;
 		}
 		
-		total_time += t;
+		total_time += duration;
 	}
 	
 	++num_samples;
 }
 
-void REHex::ProfilingCollector::reset()
+REHex::ProfilingCollector::Stats &REHex::ProfilingCollector::Stats::operator+=(const Stats &rhs)
 {
-	min_time    = 0;
-	max_time    = 0;
-	total_time  = 0;
-	num_samples = 0;
+	if(rhs.num_samples > 0)
+	{
+		if(num_samples == 0 || min_time > rhs.min_time)
+		{
+			min_time = rhs.min_time;
+		}
+		
+		if(num_samples == 0 || max_time < rhs.max_time)
+		{
+			max_time = rhs.max_time;
+		}
+		
+		total_time += rhs.total_time;
+		num_samples += rhs.num_samples;
+	}
+	
+	return *this;
 }
 
 REHex::AutoBlockProfiler::AutoBlockProfiler(ProfilingCollector *collector):
 	collector(collector)
 {
-	start_time = wxGetUTCTimeUSec();
+	start_time = ProfilingCollector::get_monotonic_us();
 }
 
 REHex::AutoBlockProfiler::~AutoBlockProfiler()
 {
-	wxLongLong end_time = wxGetUTCTimeUSec();
-	wxLongLong this_time = end_time - start_time;
+	uint64_t end_time = ProfilingCollector::get_monotonic_us();
+	uint64_t duration = end_time - start_time;
 	
-	collector->record_time(this_time);
+	collector->record_time(start_time, duration);
 }
 
 enum {
@@ -215,10 +281,40 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 		model->update();
 	}, ID_UPDATE_TIMER, ID_UPDATE_TIMER);
 	
+	wxBoxSizer *duration_sizer = new wxBoxSizer(wxHORIZONTAL);
+	
+	auto add_duration_btn = [&](const char *label, unsigned int duration_ms, bool enable = false)
+	{
+		wxRadioButton *btn = new wxRadioButton(this, wxID_ANY, label);
+		btn->SetValue(enable);
+		
+		Bind(wxEVT_RADIOBUTTON, [=](wxCommandEvent &event)
+		{
+			model->update(duration_ms);
+		}, btn->GetId(), btn->GetId());
+		
+		duration_sizer->Add(btn);
+	};
+	
+	add_duration_btn( "5s",  5000, true);
+	add_duration_btn("15s", 15000);
+	add_duration_btn("30s", 30000);
+	add_duration_btn("1m",  60000);
+	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
 	sizer->Add(reset_btn);
+	sizer->Add(duration_sizer);
 	SetSizer(sizer);
+}
+
+REHex::ProfilingDataViewModel::ProfilingDataViewModel():
+	duration_ms(5000) {}
+
+void REHex::ProfilingDataViewModel::update(unsigned int duration_ms)
+{
+	this->duration_ms = duration_ms;
+	update();
 }
 
 void REHex::ProfilingDataViewModel::update()
@@ -227,20 +323,34 @@ void REHex::ProfilingDataViewModel::update()
 	
 	for(auto c = collectors.begin(); c != collectors.end(); ++c)
 	{
-		if(added.find(*c) == added.end())
+		ProfilingCollector *collector = *c;
+		
+		auto s = stats.find(collector);
+		if(s != stats.end())
 		{
-			added.insert(*c);
-			ItemAdded(wxDataViewItem(NULL), wxDataViewItem(*c));
+			/* Update for existing collector. */
+			
+			s->second = s->first->accumulate_stats(duration_ms);
+			
+			stats_elem_t *collector_stats = &(*s);
+			ItemChanged(wxDataViewItem(collector_stats));
 		}
 		else{
-			ItemChanged(wxDataViewItem(*c));
+			/* Add new collector and stats. */
+			
+			bool inserted;
+			std::tie(s, inserted) = stats.emplace(collector, collector->accumulate_stats(duration_ms));
+			assert(inserted);
+			
+			stats_elem_t *collector_stats = &(*s);
+			ItemAdded(wxDataViewItem(NULL), wxDataViewItem(collector_stats));
 		}
 	}
 }
 
-REHex::ProfilingCollector *REHex::ProfilingDataViewModel::dv_item_to_collector(const wxDataViewItem &item)
+REHex::ProfilingDataViewModel::stats_elem_t *REHex::ProfilingDataViewModel::dv_item_to_stats_elem(const wxDataViewItem &item)
 {
-	return (ProfilingCollector*)(item.GetID());
+	return (stats_elem_t*)(item.GetID());
 }
 
 template<typename T> int cmp_value(const T &a, const T &b)
@@ -260,25 +370,25 @@ template<typename T> int cmp_value(const T &a, const T &b)
 
 int REHex::ProfilingDataViewModel::Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
 {
-	ProfilingCollector *collector1 = dv_item_to_collector(item1);
-	ProfilingCollector *collector2 = dv_item_to_collector(item2);
+	stats_elem_t *collector_stats1 = dv_item_to_stats_elem(item1);
+	stats_elem_t *collector_stats2 = dv_item_to_stats_elem(item2);
 	
 	switch(column)
 	{
 		case COLLECTOR_MODEL_COLUMN_NAME:
-			return cmp_value(collector1->get_key(), collector2->get_key());
+			return cmp_value(collector_stats1->first->get_key(), collector_stats2->first->get_key());
 			
 		case COLLECTOR_MODEL_COLUMN_SAMPLES:
-			return cmp_value(collector1->get_num_samples(), collector2->get_num_samples());
+			return cmp_value(collector_stats1->second.num_samples, collector_stats2->second.num_samples);
 			
 		case COLLECTOR_MODEL_COLUMN_MIN:
-			return cmp_value(collector1->get_min_time(), collector2->get_min_time());
+			return cmp_value(collector_stats1->second.min_time, collector_stats2->second.min_time);
 			
 		case COLLECTOR_MODEL_COLUMN_MAX:
-			return cmp_value(collector1->get_max_time(), collector2->get_max_time());
+			return cmp_value(collector_stats1->second.max_time, collector_stats2->second.max_time);
 			
 		case COLLECTOR_MODEL_COLUMN_AVG:
-			return cmp_value(collector1->get_avg_time(), collector2->get_avg_time());
+			return cmp_value(collector_stats1->second.get_avg_time(), collector_stats2->second.get_avg_time());
 			
 		default:
 			abort();
@@ -287,15 +397,21 @@ int REHex::ProfilingDataViewModel::Compare(const wxDataViewItem &item1, const wx
 
 unsigned int REHex::ProfilingDataViewModel::GetChildren(const wxDataViewItem &item, wxDataViewItemArray &children) const
 {
-	auto collectors = ProfilingCollector::get_collectors();
-	children.Alloc(collectors.size());
-	
-	for(auto c = collectors.begin(); c != collectors.end(); ++c)
+	if(item.GetID() == NULL)
 	{
-		children.Add(wxDataViewItem(*c));
+		children.Alloc(stats.size());
+		
+		for(auto s = stats.begin(); s != stats.end(); ++s)
+		{
+			const stats_elem_t *collector_stats = &(*s);
+			children.Add(wxDataViewItem((void*)(collector_stats)));
+		}
+		
+		return stats.size();
 	}
-	
-	return collectors.size();
+	else{
+		return 0;
+	}
 }
 
 unsigned int REHex::ProfilingDataViewModel::GetColumnCount() const
@@ -315,28 +431,28 @@ wxDataViewItem REHex::ProfilingDataViewModel::GetParent(const wxDataViewItem &it
 
 void REHex::ProfilingDataViewModel::GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const
 {
-	ProfilingCollector *collector = dv_item_to_collector(item);
+	auto collector_stats = dv_item_to_stats_elem(item);
 	
 	switch(col)
 	{
 		case COLLECTOR_MODEL_COLUMN_NAME:
-			variant = collector->get_key();
+			variant = collector_stats->first->get_key();
 			break;
 			
 		case COLLECTOR_MODEL_COLUMN_SAMPLES:
-			variant = std::to_string(collector->get_num_samples());
+			variant = std::to_string(collector_stats->second.num_samples);
 			break;
 			
 		case COLLECTOR_MODEL_COLUMN_MIN:
-			variant = std::to_string(collector->get_min_time().GetValue());
+			variant = std::to_string(collector_stats->second.min_time);
 			break;
 			
 		case COLLECTOR_MODEL_COLUMN_MAX:
-			variant = std::to_string(collector->get_max_time().GetValue());
+			variant = std::to_string(collector_stats->second.max_time);
 			break;
 			
 		case COLLECTOR_MODEL_COLUMN_AVG:
-			variant = std::to_string(collector->get_avg_time().GetValue());
+			variant = std::to_string(collector_stats->second.get_avg_time());
 			break;
 			
 		default:

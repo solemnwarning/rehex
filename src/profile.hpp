@@ -21,7 +21,8 @@
 #ifdef REHEX_PROFILE
 
 #include <list>
-#include <set>
+#include <map>
+#include <stdint.h>
 #include <string>
 #include <wx/dataview.h>
 #include <wx/frame.h>
@@ -37,38 +38,58 @@ namespace REHex
 {
 	class ProfilingCollector
 	{
+		public:
+			struct Stats
+			{
+				uint64_t min_time, max_time, total_time;
+				unsigned int num_samples;
+				
+				Stats();
+				
+				uint64_t get_avg_time() const;
+				
+				void record_time(uint64_t duration);
+				void reset();
+				
+				Stats &operator+=(const Stats &rhs);
+			};
+			
 		private:
 			static std::list<ProfilingCollector*> *collectors;
 			
 			std::list<ProfilingCollector*>::iterator this_iter;
 			
 			std::string key;
-			wxLongLong min_time, max_time, total_time;
-			unsigned int num_samples;
+			
+			static const uint64_t SLOT_DURATION_MS = 1000;
+			static const size_t NUM_SLOTS = 60;
+			
+			Stats slots[NUM_SLOTS];
+			uint64_t head_time_bucket;
 			
 		public:
 			ProfilingCollector(const std::string &key);
 			~ProfilingCollector();
 			
 			const std::string &get_key() const;
-			wxLongLong get_min_time() const;
-			wxLongLong get_max_time() const;
-			wxLongLong get_total_time() const;
-			wxLongLong get_avg_time() const;
-			unsigned int get_num_samples() const;
 			
-			void record_time(wxLongLong t);
-			void reset();
+			Stats accumulate_stats(unsigned int window_duration_ms) const;
+			
+			void record_time(uint64_t begin_time, uint64_t duration);
+			
+			void reset(size_t begin_idx = 0, size_t end_idx = NUM_SLOTS);
 			
 			static std::list<ProfilingCollector*> get_collectors();
 			static void reset_collectors();
+			
+			static uint64_t get_monotonic_us();
 	};
 	
 	class AutoBlockProfiler
 	{
 		private:
 			ProfilingCollector *collector;
-			wxLongLong start_time;
+			uint64_t start_time;
 			
 		public:
 			AutoBlockProfiler(ProfilingCollector *collector);
@@ -78,12 +99,18 @@ namespace REHex
 	class ProfilingDataViewModel: public wxDataViewModel
 	{
 		private:
-			std::set<ProfilingCollector*> added;
+			typedef std::pair<ProfilingCollector* const, ProfilingCollector::Stats> stats_elem_t;
+			
+			std::map<ProfilingCollector*, ProfilingCollector::Stats> stats;
+			unsigned int duration_ms;
+			
+			static stats_elem_t *dv_item_to_stats_elem(const wxDataViewItem &item);
 			
 		public:
-			void update();
+			ProfilingDataViewModel();
 			
-			static ProfilingCollector *dv_item_to_collector(const wxDataViewItem &item);
+			void update(unsigned int duration_ms);
+			void update();
 			
 			virtual int Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
 			virtual unsigned int GetChildren(const wxDataViewItem &item, wxDataViewItemArray &children) const override;

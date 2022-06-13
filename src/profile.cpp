@@ -56,9 +56,10 @@ uint64_t REHex::ProfilingCollector::get_monotonic_us()
 	return wxGetUTCTimeUSec().GetValue();
 }
 
-REHex::ProfilingCollector::ProfilingCollector(const std::string &key):
+REHex::ProfilingCollector::ProfilingCollector(const std::string &key, ProfilingCollector *parent):
 	key(key),
-	head_time_bucket(0)
+	head_time_bucket(0),
+	parent(parent)
 {
 	reset();
 	
@@ -338,12 +339,26 @@ void REHex::ProfilingDataViewModel::update()
 		else{
 			/* Add new collector and stats. */
 			
+			stats_elem_t *parent_collector_stats = NULL;
+			
+			if(collector->parent != NULL)
+			{
+				auto ps = stats.find(collector->parent);
+				if(ps == stats.end())
+				{
+					/* Parent not added yet - skip for now. */
+					continue;
+				}
+				
+				parent_collector_stats = &(*ps);
+			}
+			
 			bool inserted;
 			std::tie(s, inserted) = stats.emplace(collector, collector->accumulate_stats(duration_ms));
 			assert(inserted);
 			
 			stats_elem_t *collector_stats = &(*s);
-			ItemAdded(wxDataViewItem(NULL), wxDataViewItem(collector_stats));
+			ItemAdded(wxDataViewItem(parent_collector_stats), wxDataViewItem(collector_stats));
 		}
 	}
 }
@@ -372,46 +387,71 @@ int REHex::ProfilingDataViewModel::Compare(const wxDataViewItem &item1, const wx
 {
 	stats_elem_t *collector_stats1 = dv_item_to_stats_elem(item1);
 	stats_elem_t *collector_stats2 = dv_item_to_stats_elem(item2);
+	int result;
 	
 	switch(column)
 	{
 		case COLLECTOR_MODEL_COLUMN_NAME:
-			return cmp_value(collector_stats1->first->get_key(), collector_stats2->first->get_key());
+			result = cmp_value(collector_stats1->first->get_key(), collector_stats2->first->get_key());
+			break;
 			
 		case COLLECTOR_MODEL_COLUMN_SAMPLES:
-			return cmp_value(collector_stats1->second.num_samples, collector_stats2->second.num_samples);
+			result = cmp_value(collector_stats1->second.num_samples, collector_stats2->second.num_samples);
+			break;
 			
 		case COLLECTOR_MODEL_COLUMN_MIN:
-			return cmp_value(collector_stats1->second.min_time, collector_stats2->second.min_time);
+			result = cmp_value(collector_stats1->second.min_time, collector_stats2->second.min_time);
+			break;
 			
 		case COLLECTOR_MODEL_COLUMN_MAX:
-			return cmp_value(collector_stats1->second.max_time, collector_stats2->second.max_time);
+			result = cmp_value(collector_stats1->second.max_time, collector_stats2->second.max_time);
+			break;
 			
 		case COLLECTOR_MODEL_COLUMN_AVG:
-			return cmp_value(collector_stats1->second.get_avg_time(), collector_stats2->second.get_avg_time());
+			result = cmp_value(collector_stats1->second.get_avg_time(), collector_stats2->second.get_avg_time());
+			break;
 			
 		default:
 			abort();
 	}
+	
+	if(result == 0)
+	{
+		/* Compare by address if values are equal.
+		 * Returning zero here can lead to corruption and crashing under wxGTK.
+		*/
+		result = cmp_value(collector_stats1, collector_stats2);
+	}
+	
+	if(!ascending)
+	{
+		result = -1 * result;
+	}
+	
+	return result;
 }
 
 unsigned int REHex::ProfilingDataViewModel::GetChildren(const wxDataViewItem &item, wxDataViewItemArray &children) const
 {
-	if(item.GetID() == NULL)
+	stats_elem_t *parent_collector_stats = dv_item_to_stats_elem(item);
+	ProfilingCollector *parent_collector = parent_collector_stats != NULL
+		? parent_collector_stats->first
+		: NULL;
+	
+	children.Alloc(stats.size());
+	unsigned int count = 0;
+	
+	for(auto s = stats.begin(); s != stats.end(); ++s)
 	{
-		children.Alloc(stats.size());
-		
-		for(auto s = stats.begin(); s != stats.end(); ++s)
+		if(s->first->parent == parent_collector)
 		{
 			const stats_elem_t *collector_stats = &(*s);
 			children.Add(wxDataViewItem((void*)(collector_stats)));
+			++count;
 		}
-		
-		return stats.size();
 	}
-	else{
-		return 0;
-	}
+	
+	return count;
 }
 
 unsigned int REHex::ProfilingDataViewModel::GetColumnCount() const
@@ -426,7 +466,19 @@ wxString REHex::ProfilingDataViewModel::GetColumnType(unsigned int col) const
 
 wxDataViewItem REHex::ProfilingDataViewModel::GetParent(const wxDataViewItem &item) const
 {
-	return wxDataViewItem(NULL);
+	stats_elem_t *collector_stats = dv_item_to_stats_elem(item);
+	ProfilingCollector *collector = collector_stats->first;
+	
+	if(collector->parent != NULL)
+	{
+		auto ps = stats.find(collector->parent);
+		const stats_elem_t *parent_collector_stats = &(*ps);
+		
+		return wxDataViewItem((void*)(parent_collector_stats));
+	}
+	else{
+		return wxDataViewItem(NULL);
+	}
 }
 
 void REHex::ProfilingDataViewModel::GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const
@@ -462,13 +514,18 @@ void REHex::ProfilingDataViewModel::GetValue(wxVariant &variant, const wxDataVie
 
 bool REHex::ProfilingDataViewModel::IsContainer(const wxDataViewItem &item) const
 {
-	return false;
+	return true;
 }
 
 bool REHex::ProfilingDataViewModel::SetValue(const wxVariant &variant, const wxDataViewItem &item, unsigned int col)
 {
 	/* Base implementation is pure virtual, but I don't think we need this... */
 	abort();
+}
+
+bool REHex::ProfilingDataViewModel::HasContainerColumns(const wxDataViewItem &item) const
+{
+	return true;
 }
 
 #endif /* !REHEX_PROFILE */

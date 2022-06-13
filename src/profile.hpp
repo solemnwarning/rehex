@@ -34,6 +34,11 @@
 	static ProfilingCollector block_collector(name); \
 	AutoBlockProfiler abp(&block_collector);
 
+#define PROFILE_INNER_BLOCK(name) \
+	static ProfilingCollector *block_collector_parent = &block_collector; \
+	static ProfilingCollector block_collector(name, block_collector_parent); \
+	AutoBlockProfiler abp(&block_collector);
+
 namespace REHex
 {
 	class ProfilingCollector
@@ -68,8 +73,10 @@ namespace REHex
 			uint64_t head_time_bucket;
 			
 		public:
-			ProfilingCollector(const std::string &key);
+			ProfilingCollector(const std::string &key, ProfilingCollector *parent = NULL);
 			~ProfilingCollector();
+			
+			ProfilingCollector* const parent;
 			
 			const std::string &get_key() const;
 			
@@ -120,6 +127,7 @@ namespace REHex
 			virtual void GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const override;
 			virtual bool IsContainer(const wxDataViewItem &item) const override;
 			virtual bool SetValue(const wxVariant &variant, const wxDataViewItem &item, unsigned int col) override;
+			virtual bool HasContainerColumns(const wxDataViewItem &item) const override;
 	};
 	
 	class ProfilingWindow: public wxFrame
@@ -136,6 +144,7 @@ namespace REHex
 
 /* Stub out profiling hook when profiling is disabled. */
 #define PROFILE_BLOCK(name)
+#define PROFILE_INNER_BLOCK(name)
 
 #endif /* !REHEX_PROFILE */
 

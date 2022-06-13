@@ -90,10 +90,15 @@ const std::string &REHex::ProfilingCollector::get_key() const
 
 REHex::ProfilingCollector::Stats REHex::ProfilingCollector::accumulate_stats(unsigned int window_duration_ms) const
 {
+	uint64_t now_time_bucket = get_monotonic_us() / (SLOT_DURATION_MS * 1000);
+	assert(now_time_bucket >= head_time_bucket);
+	
 	Stats acc;
 	
-	const Stats *stats_begin = slots + 1;
+	const Stats *stats_begin = slots + (now_time_bucket == head_time_bucket);
 	const Stats *stats_end = std::min((stats_begin + (window_duration_ms / SLOT_DURATION_MS)), (slots + NUM_SLOTS));
+	
+	stats_end -= std::min((uint64_t)(stats_end - stats_begin), (now_time_bucket - head_time_bucket));
 	
 	for(auto s = stats_begin; s != stats_end; ++s)
 	{

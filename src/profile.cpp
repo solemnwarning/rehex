@@ -18,6 +18,7 @@
 #include "platform.hpp"
 
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/radiobut.h>
 #include <wx/sizer.h>
 #include <wx/time.h>
@@ -233,6 +234,7 @@ REHex::AutoBlockProfiler::~AutoBlockProfiler()
 
 enum {
 	COLLECTOR_MODEL_COLUMN_NAME = 0,
+	COLLECTOR_MODEL_COLUMN_TOTAL,
 	COLLECTOR_MODEL_COLUMN_SAMPLES,
 	COLLECTOR_MODEL_COLUMN_MIN,
 	COLLECTOR_MODEL_COLUMN_MAX,
@@ -258,17 +260,20 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 	wxDataViewColumn *name_col = dvc->AppendTextColumn("Name", COLLECTOR_MODEL_COLUMN_NAME);
 	name_col->SetSortable(true);
 	
-	wxDataViewColumn *samples_col = dvc->AppendTextColumn("# samples", COLLECTOR_MODEL_COLUMN_SAMPLES);
+	wxDataViewColumn *total_col = dvc->AppendTextColumn(wxString::FromUTF8("total time (\xC2\xB5s)"), COLLECTOR_MODEL_COLUMN_TOTAL);
+	total_col->SetSortable(true);
+	
+	wxDataViewColumn *samples_col = dvc->AppendTextColumn("# calls", COLLECTOR_MODEL_COLUMN_SAMPLES);
 	samples_col->SetSortable(true);
 	
-	wxDataViewColumn *min_col = dvc->AppendTextColumn("min (µs)", COLLECTOR_MODEL_COLUMN_MIN);
+	wxDataViewColumn *avg_col = dvc->AppendTextColumn(wxString::FromUTF8("avg duration (\xC2\xB5s)"), COLLECTOR_MODEL_COLUMN_AVG);
+	avg_col->SetSortable(true);
+	
+	wxDataViewColumn *min_col = dvc->AppendTextColumn(wxString::FromUTF8("min duration (\xC2\xB5s)"), COLLECTOR_MODEL_COLUMN_MIN);
 	min_col->SetSortable(true);
 	
-	wxDataViewColumn *max_col = dvc->AppendTextColumn("max (µs)", COLLECTOR_MODEL_COLUMN_MAX);
+	wxDataViewColumn *max_col = dvc->AppendTextColumn(wxString::FromUTF8("max duration (\xC2\xB5s)"), COLLECTOR_MODEL_COLUMN_MAX);
 	max_col->SetSortable(true);
-	
-	wxDataViewColumn *avg_col = dvc->AppendTextColumn("avg (µs)", COLLECTOR_MODEL_COLUMN_AVG);
-	avg_col->SetSortable(true);
 	
 	dvc->AssociateModel(model);
 	model->update();
@@ -307,10 +312,25 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 	add_duration_btn("30s", 30000);
 	add_duration_btn("1m",  60000);
 	
+	wxCheckBox *pause_btn = new wxCheckBox(this, wxID_ANY, "Pause");
+	
+	Bind(wxEVT_CHECKBOX, [=](wxCommandEvent &event)
+	{
+		if(event.IsChecked())
+		{
+			update_timer.Stop();
+		}
+		else{
+			model->update();
+			update_timer.Start(-1, wxTIMER_CONTINUOUS);
+		}
+	}, pause_btn->GetId(), pause_btn->GetId());
+	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
 	sizer->Add(reset_btn);
 	sizer->Add(duration_sizer);
+	sizer->Add(pause_btn);
 	SetSizer(sizer);
 }
 
@@ -398,6 +418,10 @@ int REHex::ProfilingDataViewModel::Compare(const wxDataViewItem &item1, const wx
 	{
 		case COLLECTOR_MODEL_COLUMN_NAME:
 			result = cmp_value(collector_stats1->first->get_key(), collector_stats2->first->get_key());
+			break;
+			
+		case COLLECTOR_MODEL_COLUMN_TOTAL:
+			result = cmp_value(collector_stats1->second.total_time, collector_stats2->second.total_time);
 			break;
 			
 		case COLLECTOR_MODEL_COLUMN_SAMPLES:
@@ -494,6 +518,10 @@ void REHex::ProfilingDataViewModel::GetValue(wxVariant &variant, const wxDataVie
 	{
 		case COLLECTOR_MODEL_COLUMN_NAME:
 			variant = collector_stats->first->get_key();
+			break;
+			
+		case COLLECTOR_MODEL_COLUMN_TOTAL:
+			variant = std::to_string(collector_stats->second.total_time);
 			break;
 			
 		case COLLECTOR_MODEL_COLUMN_SAMPLES:

@@ -2694,9 +2694,9 @@ wxBitmap REHex::DocumentCtrl::hf_char_bitmap(const wxString &wx_char, ucs4_t uni
 #endif
 
 #ifdef REHEX_CACHE_STRING_BITMAPS
-wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacter> &characters, const wxColour &foreground_colour, const wxColour &background_colour)
+wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacter> &characters, int base_col, const wxColour &foreground_colour, const wxColour &background_colour)
 {
-	StringBitmapCacheKey cache_key(characters, pack_colour(foreground_colour), pack_colour(background_colour));
+	StringBitmapCacheKey cache_key(base_col, characters, pack_colour(foreground_colour), pack_colour(background_colour));
 
 	const wxBitmap *cached_string = hf_string_bitmap_cache.get(cache_key);
 	if(cached_string == NULL)
@@ -2722,7 +2722,8 @@ wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacte
 			}
 		}
 
-		int string_w = hf_string_width(max_col->column) + max_col->char_size.GetWidth();
+		int base_x = hf_string_width(base_col);
+		int string_w = (hf_string_width(max_col->column) - base_x) + max_col->char_size.GetWidth();
 
 		wxBitmap string_bitmap(string_w, string_h, wxBITMAP_SCREEN_DEPTH);
 		wxMemoryDC mdc(string_bitmap);
@@ -2733,7 +2734,7 @@ wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacte
 		auto c_bitmap = char_bitmaps.begin();
 		for(auto c = characters.begin(); c != characters.end(); ++c, ++c_bitmap)
 		{
-			mdc.DrawBitmap(*c_bitmap, hf_string_width(c->column), 0, true);
+			mdc.DrawBitmap(*c_bitmap, (hf_string_width(c->column) - base_x), 0, true);
 		}
 
 		mdc.SelectObject(wxNullBitmap);
@@ -3654,20 +3655,67 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		wxString string;
 		int num_chars;
 	};
+	
+	struct DeferredDrawTextSlowKey
+	{
+		int base_col;
+		Palette::ColourIndex fg_colour_idx;
+		wxColour bg_colour;
+		
+		DeferredDrawTextSlowKey(int base_col, Palette::ColourIndex fg_colour_idx, const wxColour &bg_colour):
+			base_col(base_col), fg_colour_idx(fg_colour_idx), bg_colour(bg_colour) {}
+		
+		bool operator<(const DeferredDrawTextSlowKey &rhs) const
+		{
+			if(base_col != rhs.base_col)
+			{
+				return base_col < rhs.base_col;
+			}
+			
+			if(fg_colour_idx != rhs.fg_colour_idx)
+			{
+				return fg_colour_idx < rhs.fg_colour_idx;
+			}
+			
+			if(bg_colour.Red() != rhs.bg_colour.Red())
+			{
+				return bg_colour.Red() < rhs.bg_colour.Red();
+			}
+			
+			if(bg_colour.Green() != rhs.bg_colour.Green())
+			{
+				return bg_colour.Green() < rhs.bg_colour.Green();
+			}
+			
+			if(bg_colour.Blue() != rhs.bg_colour.Blue())
+			{
+					return bg_colour.Blue() < rhs.bg_colour.Blue();
+			}
+			
+			return false;
+		}
+	};
 
 	struct DeferredDrawTextSlowValue
 	{
 		std::vector<AlignedCharacter> chars;
-		wxColour bg_colour;
 	};
 
 	std::map<std::pair<int, Palette::ColourIndex>, DeferredDrawTextFastValue> deferred_drawtext_fast;
-	std::map<std::pair<int, Palette::ColourIndex>, DeferredDrawTextSlowValue> deferred_drawtext_slow;
-
+	std::map<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue> deferred_drawtext_slow;
+	
+	#ifdef __APPLE__
+	const DeferredDrawTextSlowKey *deferred_drawtext_slow_last_key = NULL;
+	#endif
+	
 	auto draw_char_deferred = [&](int base_x, Palette::ColourIndex colour_idx, int col, const void *data, size_t data_len, wxColour bg_colour)
 	{
 		auto defer_monospace_char = [&](const wxString &c)
 		{
+			#ifdef __APPLE__
+			deferred_drawtext_slow_last_key = NULL;
+			#endif
+			
 			auto k = std::make_pair(base_x, colour_idx);
 			DeferredDrawTextFastValue &v = deferred_drawtext_fast[k];
 
@@ -3683,11 +3731,40 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 
 		auto defer_variable_pitch_char = [&](const wxString &wx_char, ucs4_t unicode_char, wxSize char_size)
 		{
-			auto k = std::make_pair(base_x, colour_idx);
+			DeferredDrawTextSlowKey k(0, colour_idx, bg_colour);
+			#ifdef 
+			/* Okay... wxBitmap masks/transparency don't work on macOS, so if we draw multiple
+			 * contiguous lines interleaved, relying on spaces in the string not being drawn
+			 * what we instead get is the background colour of the most recently drawn line
+			 * overwriting any behind it.
+			 *
+			 * So, on macOS we instead break up deferred_drawtext_slow into chunks of
+			 * contiguous characters, starting a new chunk after changing bg/fg colour or
+			 * drawing characters using the fast path.
+			 *
+			 * Wheeee.
+			*/
+			if(deferred_drawtext_slow_last_key != NULL
+				&& deferred_drawtext_slow_last_key->fg_colour_idx == colour_idx
+				&& deferred_drawtext_slow_last_key->bg_colour == bg_colour)
+			{
+				k.base_col = deferred_drawtext_slow_last_key->base_col;
+			}
+			else{
+				k.base_col = col;
+			}
+			
+			bool inserted;
+			std::map<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue>::iterator ki;
+			std::tie(ki, inserted) = deferred_drawtext_slow.emplace(k, DeferredDrawTextSlowValue());
+			
+			deferred_drawtext_slow_last_key = &(ki->first);
+			DeferredDrawTextSlowValue &v = ki->second;
+			#else
 			DeferredDrawTextSlowValue &v = deferred_drawtext_slow[k];
+			#endif
 
 			v.chars.push_back(AlignedCharacter(wx_char, unicode_char, char_size, col));
-			v.bg_colour = bg_colour;
 		};
 		
 		wxRect char_bbox(
@@ -3939,25 +4016,31 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 
 	for(auto dd = deferred_drawtext_slow.begin(); dd != deferred_drawtext_slow.end(); ++dd)
 	{
-		wxColour fg_colour = (*active_palette)[dd->first.second];
-		wxColour bg_colour = dd->second.bg_colour;
+		wxColour fg_colour = (*active_palette)[dd->first.fg_colour_idx];
+		wxColour bg_colour = dd->first.bg_colour;
 
 		dc.SetTextForeground(fg_colour);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 
 #if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-		wxBitmap string_bitmap = doc_ctrl->hf_string_bitmap(dd->second.chars, fg_colour, bg_colour);
-		dc.DrawBitmap(string_bitmap, dd->first.first, y, true);
+		wxBitmap string_bitmap = doc_ctrl->hf_string_bitmap(dd->second.chars, dd->first.base_col, fg_colour, bg_colour);
+		int string_x = ascii_base_x + doc_ctrl->hf_string_width(dd->first.base_col);
+		
+		dc.DrawBitmap(string_bitmap, string_x, y, true);
 #elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
 		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
 		{
 			wxBitmap char_bitmap = doc_ctrl->hf_char_bitmap(c->wx_char, c->unicode_char, c->char_size, fg_colour, bg_colour);
-			dc.DrawBitmap(char_bitmap, (dd->first.first + doc_ctrl->hf_string_width(c->column)), y);
+			int char_x = ascii_base_x + doc_ctrl->hf_string_width(dd->first.base_col + c->column);
+			
+			dc.DrawBitmap(char_bitmap, char_x, y);
 		}
 #else
 		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
 		{
-			dc.DrawText(c->wx_char, (dd->first.first + doc_ctrl->hf_string_width(c->column)), y);
+			int char_x = ascii_base_x + doc_ctrl->hf_string_width(dd->first.base_col + c->column);
+			
+			dc.DrawText(c->wx_char, char_x, y);
 		}
 #endif
 	}

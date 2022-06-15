@@ -745,15 +745,21 @@ namespace REHex {
 #ifdef REHEX_CACHE_STRING_BITMAPS
 			struct StringBitmapCacheKey
 			{
+				int base_col;
 				std::vector<AlignedCharacter> characters;
 				unsigned int packed_fg_colour;
 				unsigned int packed_bg_colour;
 
-				StringBitmapCacheKey(std::vector<AlignedCharacter> characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour):
-					characters(characters), packed_fg_colour(packed_fg_colour), packed_bg_colour(packed_bg_colour) {}
+				StringBitmapCacheKey(int base_col, std::vector<AlignedCharacter> characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour):
+					base_col(base_col), characters(characters), packed_fg_colour(packed_fg_colour), packed_bg_colour(packed_bg_colour) {}
 
 				bool operator<(const StringBitmapCacheKey &rhs) const
 				{
+					if(base_col != rhs.base_col)
+					{
+						return base_col < rhs.base_col;
+					}
+					
 					for(size_t i = 0;; ++i)
 					{
 						if(i < characters.size() && i < rhs.characters.size())
@@ -811,7 +817,7 @@ namespace REHex {
 #endif
 
 #ifdef REHEX_CACHE_STRING_BITMAPS
-			wxBitmap hf_string_bitmap(const std::vector<AlignedCharacter> &characters, const wxColour &foreground_colour, const wxColour &background_colour);
+			wxBitmap hf_string_bitmap(const std::vector<AlignedCharacter> &characters, int base_col, const wxColour &foreground_colour, const wxColour &background_colour);
 #endif
 			
 			/* Stays at the bottom because it changes the protection... */

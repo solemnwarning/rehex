@@ -3732,7 +3732,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		auto defer_variable_pitch_char = [&](const wxString &wx_char, ucs4_t unicode_char, wxSize char_size)
 		{
 			DeferredDrawTextSlowKey k(0, colour_idx, bg_colour);
-			#ifdef 
+			#ifdef __APPLE__
 			/* Okay... wxBitmap masks/transparency don't work on macOS, so if we draw multiple
 			 * contiguous lines interleaved, relying on spaces in the string not being drawn
 			 * what we instead get is the background colour of the most recently drawn line

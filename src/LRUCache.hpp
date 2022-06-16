@@ -93,7 +93,7 @@ template<typename K, typename V> const V *REHex::LRUCache<K,V>::set(const K &k, 
 	{
 		/* Replace the existing value. */
 		
-		assert(queue.front().first == k);
+		assert(!(queue.front().first < k || k < queue.front().first));
 
 		queue.pop_front();
 		

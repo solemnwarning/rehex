@@ -207,38 +207,48 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		if(highlight != highlights.end())
 		{
 			return Highlight(
-				active_palette->get_highlight_fg_idx(highlight->second),
-				active_palette->get_highlight_bg_idx(highlight->second),
-				true);
+				active_palette->get_highlight_fg(highlight->second),
+				active_palette->get_highlight_bg(highlight->second));
 		}
 		else if(doc->is_byte_dirty(offset))
 		{
 			return Highlight(
-				Palette::PAL_DIRTY_TEXT_FG,
-				Palette::PAL_DIRTY_TEXT_BG,
-				true);
+				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
+				(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
 		}
 		else{
 			return (Highlight)(NoHighlight());
 		}
 	};
 	
+	const Highlight hex_selection_highlight(
+		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
+		(doc_ctrl.hex_view_active()
+			? active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)
+			: (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]));
+	
 	auto hex_highlight_func = [&](off_t offset)
 	{
 		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
 		{
-			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, doc_ctrl.hex_view_active());
+			return hex_selection_highlight;
 		}
 		else{
 			return base_highlight_func(offset);
 		}
 	};
 	
+	const Highlight ascii_selection_highlight(
+		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
+		(doc_ctrl.ascii_view_active()
+			? active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)
+			: (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]));
+	
 	auto ascii_highlight_func = [&](off_t offset)
 	{
 		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
 		{
-			return Highlight(Palette::PAL_SELECTED_TEXT_FG, Palette::PAL_SELECTED_TEXT_BG, doc_ctrl.ascii_view_active());
+			return ascii_selection_highlight;
 		}
 		else{
 			return base_highlight_func(offset);

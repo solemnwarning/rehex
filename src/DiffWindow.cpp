@@ -1521,9 +1521,8 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::hi
 	if(diff_window->offsets_different.isset(relative_off))
 	{
 		return Highlight(
-			Palette::PAL_DIRTY_TEXT_FG,
-			Palette::PAL_DIRTY_TEXT_BG,
-			true);
+			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
+			(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
 	}
 	else{
 		return NoHighlight();

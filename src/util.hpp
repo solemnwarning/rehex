@@ -101,6 +101,49 @@ namespace REHex {
 	class DocumentCtrl;
 	
 	void copy_from_doc(Document *doc, DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut);
+	
+	/**
+	 * @brief A wxColour that can be used as a key in a map/etc.
+	*/
+	class ColourKey
+	{
+		private:
+			wxColour colour;
+			unsigned int key;
+			
+			static unsigned int pack_colour(const wxColour &colour)
+			{
+				return (unsigned int)(colour.Red())
+					| ((unsigned int)(colour.Blue())  <<  8)
+					| ((unsigned int)(colour.Green()) << 16)
+					| ((unsigned int)(colour.Alpha()) << 24);
+			}
+			
+		public:
+			ColourKey(const wxColour &colour):
+				colour(colour),
+				key(pack_colour(colour)) {}
+			
+			bool operator<(const ColourKey &rhs) const
+			{
+				return key < rhs.key;
+			}
+			
+			bool operator==(const ColourKey &rhs) const
+			{
+				return key == rhs.key;
+			}
+			
+			bool operator!=(const ColourKey &rhs) const
+			{
+				return key != rhs.key;
+			}
+			
+			operator wxColour() const
+			{
+				return colour;
+			}
+	};
 }
 
 #endif /* !REHEX_UTIL_HPP */

@@ -112,22 +112,17 @@ namespace REHex {
 						public:
 							const bool enable;
 							
-							const Palette::ColourIndex fg_colour_idx;
-							const Palette::ColourIndex bg_colour_idx;
-							const bool strong;
+							const wxColour fg_colour;
+							const wxColour bg_colour;
 							
-							Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
+							Highlight(const wxColour &fg_colour, const wxColour &bg_colour):
 								enable(true),
-								fg_colour_idx(fg_colour_idx),
-								bg_colour_idx(bg_colour_idx),
-								strong(strong) {}
+								fg_colour(fg_colour),
+								bg_colour(bg_colour) {}
 						
 						protected:
 							Highlight():
-								enable(false),
-								fg_colour_idx(Palette::PAL_INVALID),
-								bg_colour_idx(Palette::PAL_INVALID),
-								strong(false) {}
+								enable(false) {}
 					};
 					
 					struct NoHighlight: Highlight

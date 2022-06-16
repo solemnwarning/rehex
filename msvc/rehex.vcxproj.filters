@@ -228,6 +228,12 @@
     <ClCompile Include="..\res\zoom_out16.c">
       <Filter>res</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CharacterFinder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\profile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AboutDialog.hpp">

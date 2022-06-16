@@ -3429,6 +3429,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	
 	auto draw_char_deferred = [&](int base_x, const wxColour &fg_colour, int col, char ch)
 	{
+		PROFILE_INNER_BLOCK("draw_char_deferred");
+		
 		std::pair<int, ColourKey> k(base_x, fg_colour);
 		std::string &str = deferred_drawtext[k];
 		
@@ -3446,6 +3448,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	
 	auto fill_char_bg = [&](int char_x, const wxColour &bg_colour)
 	{
+		PROFILE_INNER_BLOCK("fill_char_bg");
+		
 		/* Abandoned dithering experiment. */
 		#if 0
 		wxBitmap bitmap(2, 2);
@@ -3576,6 +3580,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	
 	for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
 	{
+		PROFILE_INNER_BLOCK("drawing text");
+		
 		dc.SetTextForeground(dd->first.second);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 		
@@ -3710,8 +3716,12 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	auto draw_char_deferred = [&](int base_x, const wxColour &fg_colour, int col, const void *data, size_t data_len, wxColour bg_colour)
 	{
+		PROFILE_INNER_BLOCK("draw_char_deferred");
+		
 		auto defer_monospace_char = [&](const wxString &c)
 		{
+			PROFILE_INNER_BLOCK("defer_monospace_char");
+			
 			#ifdef __APPLE__
 			deferred_drawtext_slow_last_key = NULL;
 			#endif
@@ -3731,6 +3741,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 
 		auto defer_variable_pitch_char = [&](const wxString &wx_char, ucs4_t unicode_char, wxSize char_size)
 		{
+			PROFILE_INNER_BLOCK("defer_variable_pitch_char");
+			
 			DeferredDrawTextSlowKey k(0, fg_colour, bg_colour);
 			#ifdef __APPLE__
 			/* Okay... wxBitmap masks/transparency don't work on macOS, so if we draw multiple
@@ -3971,6 +3983,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 
 	for(auto dd = deferred_drawtext_fast.begin(); dd != deferred_drawtext_fast.end(); ++dd)
 	{
+		PROFILE_INNER_BLOCK("drawing text (fast path)");
+		
 		wxColour fg_colour = dd->first.second;
 
 		dc.SetTextForeground(fg_colour);
@@ -4002,9 +4016,11 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	 *   This adds another significant speed boost on Windows and macOS, where it is enabled.
 	 *   There is no significant improvement on Linux, so it isn't enabled there.
 	*/
-
+	
 	for(auto dd = deferred_drawtext_slow.begin(); dd != deferred_drawtext_slow.end(); ++dd)
 	{
+		PROFILE_INNER_BLOCK("drawing text (slow path)");
+		
 		wxColour fg_colour = dd->first.fg_colour;
 		wxColour bg_colour = dd->first.bg_colour;
 

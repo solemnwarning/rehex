@@ -224,8 +224,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const Highlight hex_selection_highlight(
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.hex_view_active()
-			? active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)
-			: (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]));
+			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
+			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	auto hex_highlight_func = [&](off_t offset)
 	{
@@ -241,8 +241,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const Highlight ascii_selection_highlight(
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.ascii_view_active()
-			? active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)
-			: (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]));
+			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
+			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	auto ascii_highlight_func = [&](off_t offset)
 	{

@@ -41,6 +41,7 @@
 #include "Palette.hpp"
 #include "profile.hpp"
 #include "textentrydialog.hpp"
+#include "UnsortedMapVector.hpp"
 #include "util.hpp"
 
 static_assert(std::numeric_limits<json_int_t>::max() >= std::numeric_limits<off_t>::max(),
@@ -3425,14 +3426,13 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	 * base X co-ordinate.
 	*/
 	
-	std::map<std::pair<int, ColourKey>, std::string> deferred_drawtext;
+	UnsortedMapVector<wxColour, std::string> deferred_drawtext;
 	
-	auto draw_char_deferred = [&](int base_x, const wxColour &fg_colour, int col, char ch)
+	auto draw_char_deferred = [&](const wxColour &fg_colour, int col, char ch)
 	{
 		PROFILE_INNER_BLOCK("draw_char_deferred");
 		
-		std::pair<int, ColourKey> k(base_x, fg_colour);
-		std::string &str = deferred_drawtext[k];
+		std::string &str = deferred_drawtext[fg_colour];
 		
 		assert(str.length() <= (size_t)(col));
 		
@@ -3510,15 +3510,15 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			if(invert && doc_ctrl->cursor_visible)
 			{
 				fill_char_bg(hex_x, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
-				draw_char_deferred(hex_base_x, (*active_palette)[Palette::PAL_INVERT_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
+				draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
 			}
 			else if(highlight.enable)
 			{
 				fill_char_bg(hex_x, highlight.bg_colour);
-				draw_char_deferred(hex_base_x, highlight.fg_colour, hex_x_char, nibble_to_hex[nibble]);
+				draw_char_deferred(highlight.fg_colour, hex_x_char, nibble_to_hex[nibble]);
 			}
 			else{
-				draw_char_deferred(hex_base_x, (*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
+				draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
 			}
 			
 			hex_x = hex_base_x + doc_ctrl->hf_string_width(++hex_x_char);
@@ -3582,10 +3582,10 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	{
 		PROFILE_INNER_BLOCK("drawing text");
 		
-		dc.SetTextForeground(dd->first.second);
+		dc.SetTextForeground(dd->first);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 		
-		dc.DrawText(dd->second, dd->first.first, y);
+		dc.DrawText(dd->second, hex_base_x, y);
 	}
 }
 
@@ -3673,32 +3673,19 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	struct DeferredDrawTextSlowKey
 	{
 		int base_col;
-		ColourKey fg_colour;
-		ColourKey bg_colour;
+		wxColour fg_colour;
+		wxColour bg_colour;
 		
 		DeferredDrawTextSlowKey(int base_col, const wxColour &fg_colour, const wxColour &bg_colour):
 			base_col(base_col),
 			fg_colour(fg_colour),
 			bg_colour(bg_colour) {}
 		
-		bool operator<(const DeferredDrawTextSlowKey &rhs) const
+		bool operator==(const DeferredDrawTextSlowKey &rhs) const
 		{
-			if(base_col != rhs.base_col)
-			{
-				return base_col < rhs.base_col;
-			}
-			
-			if(fg_colour != rhs.fg_colour)
-			{
-				return fg_colour < rhs.fg_colour;
-			}
-			
-			if(bg_colour != rhs.bg_colour)
-			{
-				return bg_colour < rhs.bg_colour;
-			}
-			
-			return false;
+			return base_col == rhs.base_col
+				&& fg_colour == rhs.fg_colour
+				&& bg_colour == rhs.bg_colour;
 		}
 	};
 
@@ -3706,15 +3693,15 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	{
 		std::vector<AlignedCharacter> chars;
 	};
-
-	std::map<std::pair<int, ColourKey>, DeferredDrawTextFastValue> deferred_drawtext_fast;
-	std::map<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue> deferred_drawtext_slow;
+	
+	UnsortedMapVector<wxColour, DeferredDrawTextFastValue> deferred_drawtext_fast;
+	UnsortedMapVector<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue> deferred_drawtext_slow;
 	
 	#ifdef __APPLE__
 	const DeferredDrawTextSlowKey *deferred_drawtext_slow_last_key = NULL;
 	#endif
 	
-	auto draw_char_deferred = [&](int base_x, const wxColour &fg_colour, int col, const void *data, size_t data_len, wxColour bg_colour)
+	auto draw_char_deferred = [&](const wxColour &fg_colour, int col, const void *data, size_t data_len, wxColour bg_colour)
 	{
 		PROFILE_INNER_BLOCK("draw_char_deferred");
 		
@@ -3726,8 +3713,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			deferred_drawtext_slow_last_key = NULL;
 			#endif
 			
-			auto k = std::make_pair(base_x, fg_colour);
-			DeferredDrawTextFastValue &v = deferred_drawtext_fast[k];
+			DeferredDrawTextFastValue &v = deferred_drawtext_fast[fg_colour];
 
 			assert(v.num_chars <= col);
 
@@ -3767,8 +3753,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			}
 			
 			bool inserted;
-			std::map<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue>::iterator ki;
-			std::tie(ki, inserted) = deferred_drawtext_slow.emplace(k, DeferredDrawTextSlowValue());
+			UnsortedMapVector<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue>::iterator ki;
+			std::tie(ki, inserted) = deferred_drawtext_slow.insert(std::make_pair(k, DeferredDrawTextSlowValue()));
 			
 			deferred_drawtext_slow_last_key = &(ki->first);
 			DeferredDrawTextSlowValue &v = ki->second;
@@ -3780,7 +3766,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		};
 		
 		wxRect char_bbox(
-			(base_x + doc_ctrl->hf_string_width(col)), y,
+			(ascii_base_x + doc_ctrl->hf_string_width(col)), y,
 			doc_ctrl->hf_char_width(), doc_ctrl->hf_char_height());
 		
 		if(consume_chars > 0)
@@ -3932,26 +3918,26 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		{
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->cursor_visible)
 			{
-				char_bbox = draw_char_deferred(ascii_base_x, Palette::PAL_INVERT_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
+				char_bbox = draw_char_deferred(Palette::PAL_INVERT_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 				fill_char_bg(char_bbox, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			}
 			else if(highlight.enable)
 			{
-				char_bbox = draw_char_deferred(ascii_base_x, highlight.fg_colour, ascii_x_char, c_data, c_data_len, highlight.bg_colour);
+				char_bbox = draw_char_deferred(highlight.fg_colour, ascii_x_char, c_data, c_data_len, highlight.bg_colour);
 				fill_char_bg(char_bbox, highlight.bg_colour);
 			}
 			else{
-				char_bbox = draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+				char_bbox = draw_char_deferred(alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 			}
 		}
 		else{
 			if(highlight.enable)
 			{
-				char_bbox = draw_char_deferred(ascii_base_x, highlight.fg_colour, ascii_x_char, c_data, c_data_len, highlight.bg_colour);
+				char_bbox = draw_char_deferred(highlight.fg_colour, ascii_x_char, c_data, c_data_len, highlight.bg_colour);
 				fill_char_bg(char_bbox, highlight.bg_colour);
 			}
 			else{
-				char_bbox = draw_char_deferred(ascii_base_x, alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+				char_bbox = draw_char_deferred(alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 			}
 			
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode)
@@ -3980,17 +3966,17 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	 * call per foreground colour, leaving gaps for characters drawn in other passes using
 	 * space characters.
 	*/
-
+	
 	for(auto dd = deferred_drawtext_fast.begin(); dd != deferred_drawtext_fast.end(); ++dd)
 	{
 		PROFILE_INNER_BLOCK("drawing text (fast path)");
 		
-		wxColour fg_colour = dd->first.second;
+		const wxColour &fg_colour = dd->first;
 
 		dc.SetTextForeground(fg_colour);
 		dc.SetBackgroundMode(wxTRANSPARENT);
 
-		dc.DrawText(dd->second.string, dd->first.first, y);
+		dc.DrawText(dd->second.string, ascii_base_x, y);
 	}
 
 	/* Slow text rendering path - render variable-width characters using a single

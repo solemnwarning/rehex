@@ -34,6 +34,12 @@ REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, off_t b
 	t2(lru_cache_size)
 {
 	t1_size = length / chunk_size;
+	if(length > 0 && (length % chunk_size) == 0)
+	{
+		/* If length is aligned to chunk_size, don't have an empty chunk at the end. */
+		--t1_size;
+	}
+	
 	t1.reset(new std::atomic<off_t>[t1_size]);
 	
 	reset_from(base);

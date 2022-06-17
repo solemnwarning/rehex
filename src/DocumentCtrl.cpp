@@ -2740,7 +2740,10 @@ wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacte
 
 		mdc.SelectObject(wxNullBitmap);
 
+		/* In addition to not working on macOS, creating a mask is expensive. */
+		#ifndef __APPLE__
 		string_bitmap.SetMask(new wxMask(string_bitmap, background_colour));
+		#endif
 
 		cached_string = hf_string_bitmap_cache.set(cache_key, string_bitmap);
 	}

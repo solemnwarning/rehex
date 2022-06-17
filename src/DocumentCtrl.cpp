@@ -2652,11 +2652,20 @@ int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 #ifdef REHEX_CACHE_CHARACTER_BITMAPS
 wxBitmap REHex::DocumentCtrl::hf_char_bitmap(const wxString &wx_char, ucs4_t unicode_char, const wxSize &char_size, const wxColour &foreground_colour, const wxColour &background_colour)
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl::hf_char_bitmap");
+	
 	auto cache_key = std::make_tuple(unicode_char, pack_colour(foreground_colour), pack_colour(background_colour));
-
-	const wxBitmap *cached_bitmap = hf_char_bitmap_cache.get(cache_key);
+	
+	const wxBitmap *cached_bitmap;
+	{
+		PROFILE_INNER_BLOCK("cache lookup");
+		cached_bitmap = hf_char_bitmap_cache.get(cache_key);
+	}
+	
 	if(cached_bitmap == NULL)
 	{
+		PROFILE_INNER_BLOCK("generate char bitmap");
+		
 		/* I (briefly) tried getting this working with 1bpp bitmaps, but couldn't get the
 		 * background behaving correctly then found this tidbit on the web:
 		 *
@@ -2697,11 +2706,20 @@ wxBitmap REHex::DocumentCtrl::hf_char_bitmap(const wxString &wx_char, ucs4_t uni
 #ifdef REHEX_CACHE_STRING_BITMAPS
 wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacter> &characters, int base_col, const wxColour &foreground_colour, const wxColour &background_colour)
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl::hf_string_bitmap");
+	
 	StringBitmapCacheKey cache_key(base_col, characters, pack_colour(foreground_colour), pack_colour(background_colour));
 
-	const wxBitmap *cached_string = hf_string_bitmap_cache.get(cache_key);
+	const wxBitmap *cached_string;
+	{
+		PROFILE_INNER_BLOCK("cache lookup");
+		cached_string = hf_string_bitmap_cache.get(cache_key);
+	}
+	
 	if(cached_string == NULL)
 	{
+		PROFILE_INNER_BLOCK("generate string bitmap");
+		
 		std::vector<wxBitmap> char_bitmaps;
 		char_bitmaps.reserve(characters.size());
 
@@ -2710,6 +2728,8 @@ wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacte
 
 		for(auto c = characters.begin(); c != characters.end(); ++c)
 		{
+			PROFILE_INNER_BLOCK("get char bitmap");
+			
 			char_bitmaps.push_back(hf_char_bitmap(c->wx_char, c->unicode_char, c->char_size, foreground_colour, background_colour));
 			
 			if(c->char_size.GetHeight() > string_h)
@@ -2735,6 +2755,7 @@ wxBitmap REHex::DocumentCtrl::hf_string_bitmap(const std::vector<AlignedCharacte
 		auto c_bitmap = char_bitmaps.begin();
 		for(auto c = characters.begin(); c != characters.end(); ++c, ++c_bitmap)
 		{
+			PROFILE_INNER_BLOCK("draw char bitmap");
 			mdc.DrawBitmap(*c_bitmap, (hf_string_width(c->column) - base_x), 0, true);
 		}
 

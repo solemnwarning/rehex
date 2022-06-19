@@ -38,6 +38,7 @@
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "FastRectangleFiller.hpp"
 #include "Palette.hpp"
 #include "profile.hpp"
 #include "textentrydialog.hpp"
@@ -3399,6 +3400,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
+	FastRectangleFiller frf(dc);
+	
 	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->hex_view_active();
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position();
@@ -3504,12 +3507,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		wxBrush bg_brush(bitmap);
 		#endif
 		
-		wxBrush bg_brush(bg_colour);
-		
-		dc.SetBrush(bg_brush);
-		dc.SetPen(*wxTRANSPARENT_PEN);
-		
-		dc.DrawRectangle(char_x, y, doc_ctrl->hf_char_width(), doc_ctrl->hf_height);
+		frf.fill_rectangle(char_x, y, doc_ctrl->hf_char_width(), doc_ctrl->hf_height, bg_colour);
 	};
 	
 	for(size_t c = pad_bytes, i = 0; i < data_len; ++c, ++i)
@@ -3600,6 +3598,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		++cur_off;
 	}
 	
+	frf.flush();
+	
 	normal_text_colour();
 	
 	for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
@@ -3626,6 +3626,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
+	
+	FastRectangleFiller frf(dc);
 	
 	off_t cur_off = base_off;
 	
@@ -3922,12 +3924,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	auto fill_char_bg = [&](wxRect char_bbox, const wxColour &bg_colour)
 	{
-		wxBrush bg_brush(bg_colour);
-		
-		dc.SetBrush(bg_brush);
-		dc.SetPen(*wxTRANSPARENT_PEN);
-		
-		dc.DrawRectangle(char_bbox);
+		frf.fill_rectangle(char_bbox, bg_colour);
 	};
 	
 	for(size_t c = pad_bytes, i = 0; i < data_len; ++c, ++i)
@@ -3983,6 +3980,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		
 		++cur_off;
 	}
+	
+	frf.flush();
 	
 	normal_text_colour();
 

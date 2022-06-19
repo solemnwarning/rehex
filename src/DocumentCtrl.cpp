@@ -3939,7 +3939,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		{
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->cursor_visible)
 			{
-				char_bbox = draw_char_deferred(Palette::PAL_INVERT_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
+				char_bbox = draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 				fill_char_bg(char_bbox, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			}
 			else if(highlight.enable)
@@ -3948,7 +3948,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				fill_char_bg(char_bbox, highlight.bg_colour);
 			}
 			else{
-				char_bbox = draw_char_deferred(alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+				char_bbox = draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 			}
 		}
 		else{
@@ -3958,7 +3958,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				fill_char_bg(char_bbox, highlight.bg_colour);
 			}
 			else{
-				char_bbox = draw_char_deferred(alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG, ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+				char_bbox = draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 			}
 			
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode)

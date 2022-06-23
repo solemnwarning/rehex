@@ -11,13 +11,13 @@
     <vcpkgInstallDir Condition="'$(Platform)'=='x64'">$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static</vcpkgInstallDir>
 
     <!-- Define the root directory where all vcpkg stuff is installed -->
-    <vcpkgDebugFolder Condition="'$(Configuration)'=='Debug'">\debug</vcpkgDebugFolder>
+    <vcpkgDebugFolder Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Profile (Debug)'">\debug</vcpkgDebugFolder>
 
     <!-- Debug versions of wxWidget libraries have a 'd' suffix -->
-    <wxDebugSuffix Condition="'$(Configuration)'=='Debug'">d</wxDebugSuffix>
+    <wxDebugSuffix Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Profile (Debug)'">d</wxDebugSuffix>
 
     <!-- And jansson decided that it needed to be unique -->
-    <janssonDebugSuffix Condition="'$(Configuration)'=='Debug'">_d</janssonDebugSuffix>
+    <janssonDebugSuffix Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Profile (Debug)'">_d</janssonDebugSuffix>
   </PropertyGroup>
 
   <ItemDefinitionGroup>

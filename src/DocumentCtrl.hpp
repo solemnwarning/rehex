@@ -23,6 +23,7 @@
 #include <list>
 #include <memory>
 #include <stdint.h>
+#include <unitypes.h>
 #include <utility>
 #include <vector>
 #include <wx/dataobj.h>
@@ -111,22 +112,17 @@ namespace REHex {
 						public:
 							const bool enable;
 							
-							const Palette::ColourIndex fg_colour_idx;
-							const Palette::ColourIndex bg_colour_idx;
-							const bool strong;
+							const wxColour fg_colour;
+							const wxColour bg_colour;
 							
-							Highlight(Palette::ColourIndex fg_colour_idx, Palette::ColourIndex bg_colour_idx, bool strong):
+							Highlight(const wxColour &fg_colour, const wxColour &bg_colour):
 								enable(true),
-								fg_colour_idx(fg_colour_idx),
-								bg_colour_idx(bg_colour_idx),
-								strong(strong) {}
+								fg_colour(fg_colour),
+								bg_colour(bg_colour) {}
 						
 						protected:
 							Highlight():
-								enable(false),
-								fg_colour_idx(Palette::PAL_INVALID),
-								bg_colour_idx(Palette::PAL_INVALID),
-								strong(false) {}
+								enable(false) {}
 					};
 					
 					struct NoHighlight: Highlight
@@ -395,6 +391,17 @@ namespace REHex {
 				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, off_t indent_offset, off_t indent_length);
 				
 				friend DocumentCtrl;
+			};
+
+			struct AlignedCharacter
+			{
+				wxString wx_char;
+				ucs4_t unicode_char;
+				wxSize char_size;
+				int column;
+
+				AlignedCharacter(wxString wx_char, ucs4_t unicode_char, wxSize char_size, int column) :
+					wx_char(wx_char), unicode_char(unicode_char), char_size(char_size), column(column) {}
 			};
 			
 			DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc);
@@ -723,7 +730,69 @@ namespace REHex {
 			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
 			
 			static const size_t GETTEXTEXTENT_CACHE_SIZE = 4096;
-			LRUCache<std::string, wxSize> hf_gte_cache;
+			LRUCache<ucs4_t, wxSize> hf_gte_cache;
+
+#ifdef REHEX_CACHE_CHARACTER_BITMAPS
+			static const size_t HF_CHAR_BITMAP_CACHE_SIZE = 8192;
+			LRUCache<std::tuple<ucs4_t, unsigned int, unsigned int>, wxBitmap> hf_char_bitmap_cache;
+#endif
+
+#ifdef REHEX_CACHE_STRING_BITMAPS
+			struct StringBitmapCacheKey
+			{
+				int base_col;
+				std::vector<AlignedCharacter> characters;
+				unsigned int packed_fg_colour;
+				unsigned int packed_bg_colour;
+
+				StringBitmapCacheKey(int base_col, std::vector<AlignedCharacter> characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour):
+					base_col(base_col), characters(characters), packed_fg_colour(packed_fg_colour), packed_bg_colour(packed_bg_colour) {}
+
+				bool operator<(const StringBitmapCacheKey &rhs) const
+				{
+					if(base_col != rhs.base_col)
+					{
+						return base_col < rhs.base_col;
+					}
+					
+					for(size_t i = 0;; ++i)
+					{
+						if(i < characters.size() && i < rhs.characters.size())
+						{
+							if(characters[i].unicode_char != rhs.characters[i].unicode_char)
+							{
+								return characters[i].unicode_char < rhs.characters[i].unicode_char;
+							}
+							else if(characters[i].column != rhs.characters[i].column)
+							{
+								return characters[i].column < rhs.characters[i].column;
+							}
+						}
+						else if(i < characters.size())
+						{
+							return false;
+						}
+						else if(i < rhs.characters.size())
+						{
+							return true;
+						}
+						else {
+							break;
+						}
+					}
+
+					if(packed_fg_colour != rhs.packed_fg_colour)
+					{
+						return packed_fg_colour < rhs.packed_fg_colour;
+					}
+
+					return packed_bg_colour < rhs.packed_bg_colour;
+				}
+			};
+
+			static const size_t HF_STRING_BITMAP_CACHE_SIZE = 256;
+			LRUCache<StringBitmapCacheKey, wxBitmap> hf_string_bitmap_cache;
+#endif
 			
 		public:
 			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
@@ -737,6 +806,14 @@ namespace REHex {
 			int hf_char_height();
 			int hf_string_width(int length);
 			int hf_char_at_x(int x_px);
+
+#ifdef REHEX_CACHE_CHARACTER_BITMAPS
+			wxBitmap hf_char_bitmap(const wxString &wx_char, ucs4_t unicode_char, const wxSize &char_size, const wxColour &foreground_colour, const wxColour &background_colour);
+#endif
+
+#ifdef REHEX_CACHE_STRING_BITMAPS
+			wxBitmap hf_string_bitmap(const std::vector<AlignedCharacter> &characters, int base_col, const wxColour &foreground_colour, const wxColour &background_colour);
+#endif
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

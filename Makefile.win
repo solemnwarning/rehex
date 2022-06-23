@@ -32,6 +32,9 @@ CXXFLAGS += -D__STDC_FORMAT_MACROS
 CFLAGS   += -Iinclude/gcc-win-include/
 CXXFLAGS += -Iinclude/gcc-win-include/
 
+CFLAGS   += -DREHEX_CACHE_STRING_BITMAPS
+CXXFLAGS += -DREHEX_CACHE_STRING_BITMAPS
+
 include Makefile
 
 DISTDIR ?= rehex-$(VERSION)

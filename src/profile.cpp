@@ -248,7 +248,7 @@ enum {
 };
 
 REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
-	wxFrame(parent, wxID_ANY, "Profiling counters", wxDefaultPosition, wxSize(600, 400)),
+	wxFrame(parent, wxID_ANY, "Profiling counters", wxDefaultPosition, wxSize(800, 400)),
 	update_timer(this, ID_UPDATE_TIMER)
 {
 	update_timer.Start(1000, wxTIMER_CONTINUOUS);

@@ -74,9 +74,6 @@ namespace REHex {
 					
 				protected:
 					virtual wxString OnGetItemText(long item, long column) const override;
-					
-				private:
-					StringPanel *instance;
 			};
 			
 			SharedDocumentPointer document;

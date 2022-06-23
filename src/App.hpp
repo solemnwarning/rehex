@@ -200,8 +200,8 @@ namespace REHex {
 			void show_help_contents(wxWindow *error_parent);
 			#endif
 			
-			virtual bool OnInit();
-			virtual int OnExit();
+			virtual bool OnInit() override;
+			virtual int OnExit() override;
 			
 			#ifdef __APPLE__
 			virtual void MacOpenFiles(const wxArrayString &fileNames) override;

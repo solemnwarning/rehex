@@ -843,7 +843,7 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 			_raise_types_changed();
 		},
 		
-		[this]()
+		[]()
 		{
 			/* Data type changes are undone implicitly. */
 		});
@@ -894,7 +894,7 @@ bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off
 			_raise_mappings_changed();
 		},
 		
-		[this]()
+		[]()
 		{
 			/* Address mapping changes are undone implicitly. */
 		});
@@ -952,7 +952,7 @@ void REHex::Document::clear_virt_mapping_r(off_t real_offset, off_t length)
 			_raise_mappings_changed();
 		},
 		
-		[this]()
+		[]()
 		{
 			/* Address mapping changes are undone implicitly. */
 		});
@@ -1008,7 +1008,7 @@ void REHex::Document::clear_virt_mapping_v(off_t virt_offset, off_t length)
 			_raise_mappings_changed();
 		},
 		
-		[this]()
+		[]()
 		{
 			/* Address mapping changes are undone implicitly. */
 		});

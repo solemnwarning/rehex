@@ -1702,6 +1702,9 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		case DDM_VIRTUAL:
 			view_menu->Check(ID_DDM_VIRTUAL, true);
 			break;
+			
+		default:
+			abort(); /* Unreachable */
 	}
 	
 	view_menu->Check(ID_HIGHLIGHT_SELECTION_MATCH, tab->doc_ctrl->get_highlight_selection_match());

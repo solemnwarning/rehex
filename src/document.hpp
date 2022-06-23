@@ -353,7 +353,6 @@ namespace REHex {
 			std::string title;
 			
 			off_t cpos_off{0};
-			bool insert_mode{false};
 			
 			enum CursorState cursor_state;
 			

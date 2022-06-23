@@ -480,6 +480,11 @@ tests/%.o: tests/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
+wxLua/%.o: wxLua/%.cpp $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CXX) $(CXXFLAGS) -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
 googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/ $(DEPFLAGS) -c -o $@ $<

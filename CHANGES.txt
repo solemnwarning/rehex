@@ -21,6 +21,8 @@ Version TBA
 
  * Add number base option to "Jump to offset" dialog.
 
+ * Drawing optimisations (improves responsiveness), particularly on macOS.
+
 Version 0.5.1 (2022-04-29)
 
  * Fix macOS build to run on 10.13 (High Sierra) or later.

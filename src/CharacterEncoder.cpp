@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -99,6 +99,8 @@ std::vector<const REHex::CharacterEncoding*> REHex::CharacterEncoding::all_encod
 	
 	return sorted_registrations;
 }
+
+REHex::CharacterEncoder::~CharacterEncoder() {}
 
 REHex::EncodedCharacter REHex::CharacterEncoderASCII::decode(const void *data, size_t len) const
 {

@@ -1,4 +1,4 @@
-Version TBA
+Version 0.5.2 (2022-06-24)
 
  * Correctly nest comments when updating comments panel (#169).
 

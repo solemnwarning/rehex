@@ -94,7 +94,9 @@ REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_first_in(off_t off
 		--i;
 	}
 	
-	off_t end = offset + length;
+	off_t end = (std::numeric_limits<off_t>::max() - length) < offset
+		? std::numeric_limits<off_t>::max()
+		: offset + length;
 	
 	for(; i != ranges.end() && (i->offset < end || end < offset); ++i)
 	{

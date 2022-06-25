@@ -134,3 +134,43 @@ TEST(Util, format_offset)
 	EXPECT_EQ(format_offset(4294967295LL, OFFSET_BASE_DEC,          0LL),          "4294967295");
 	EXPECT_EQ(format_offset(4294967296LL, OFFSET_BASE_DEC,          0LL), "0000000004294967296");
 }
+
+#define TEST_ADD_CLAMP_OVERFLOW(a, b, result, expect_overflow) \
+	EXPECT_EQ(add_clamp_overflow<int>(a, b), result); \
+	EXPECT_EQ(add_clamp_overflow<int>(a, b, &overflow_detected), result); \
+	EXPECT_EQ(overflow_detected, expect_overflow);\
+	\
+	EXPECT_EQ(add_clamp_overflow<int>(b, a), result); \
+	EXPECT_EQ(add_clamp_overflow<int>(b, a, &overflow_detected), result); \
+	EXPECT_EQ(overflow_detected, expect_overflow);
+
+TEST(Util, add_clamp_overflow)
+{
+	bool overflow_detected;
+	
+	TEST_ADD_CLAMP_OVERFLOW(      1,    1,       2, false);
+	TEST_ADD_CLAMP_OVERFLOW(     10,    1,      11, false);
+	TEST_ADD_CLAMP_OVERFLOW(1000000,    1, 1000001, false);
+	TEST_ADD_CLAMP_OVERFLOW(   -100,  200,     100, false);
+	TEST_ADD_CLAMP_OVERFLOW(   -100, -100,    -200, false);
+	TEST_ADD_CLAMP_OVERFLOW(   -100,    0,    -100, false);
+	TEST_ADD_CLAMP_OVERFLOW(      0,    0,       0, false);
+	
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,            0,  INT_MAX,      false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,            1,  INT_MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX - 1,        0,  INT_MAX - 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX - 1,        1,  INT_MAX,      false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX - 1,        2,  INT_MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,           -1,  INT_MAX - 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,      INT_MAX,  INT_MAX,      true);
+	
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,            0,  INT_MIN,      false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,           -1,  INT_MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN + 1,        0,  INT_MIN + 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN + 1,       -1,  INT_MIN,      false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN + 1,       -2,  INT_MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,            1,  INT_MIN + 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,      INT_MIN,  INT_MIN,      true);
+	
+	TEST_ADD_CLAMP_OVERFLOW(INT_MIN, INT_MAX, -1, false);
+}

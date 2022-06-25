@@ -627,18 +627,21 @@ void REHex::StringPanel::thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *cl
 	{
 		std::lock_guard<std::mutex> sl(strings_lock);
 		
-		off_t processed_total = sum_clean_bytes();
-		size_t size_hint = (double)(strings.size()) * ((double)(document->buffer_length()) / (double)(processed_total));
-		
-		if(size_hint > MAX_STRINGS)
+		if(!set_ranges->empty())
 		{
-			size_hint = MAX_STRINGS;
+			off_t processed_total = sum_clean_bytes();
+			size_t size_hint = (double)(strings.size()) * ((double)(document->buffer_length()) / (double)(processed_total));
+			
+			if(size_hint > MAX_STRINGS)
+			{
+				size_hint = MAX_STRINGS;
+			}
+			
+			strings.set_ranges(set_ranges->begin(), set_ranges->end(), size_hint);
+			set_ranges->clear_all();
+			
+			update_needed = true;
 		}
-		
-		strings.set_ranges(set_ranges->begin(), set_ranges->end(), size_hint);
-		set_ranges->clear_all();
-		
-		update_needed = true;
 		
 		if(strings.size() >= MAX_STRINGS)
 		{

@@ -23,6 +23,8 @@
 #include <sys/types.h>
 #include <vector>
 
+#include "util.hpp"
+
 #ifdef NDEBUG
 #define REHEX_BYTERANGESET_CHECK_PRE(begin, end) {}
 #define REHEX_BYTERANGESET_CHECK_POST(begin, end) {}
@@ -544,7 +546,7 @@ template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const
 		
 		/* Find the range of elements overlapping the range to be cleared. */
 		
-		next = std::lower_bound(next, ranges.end(), Range((offset + length), 0));
+		next = std::lower_bound(next, ranges.end(), Range(add_clamp_overflow(offset, length), 0));
 		
 		std::vector<Range>::iterator erase_begin = next;
 		std::vector<Range>::iterator erase_end   = next;
@@ -624,14 +626,14 @@ template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const
 			
 			auto erase_last = std::prev(erase_end);
 			
-			if((erase_last->offset + erase_last->length) > (offset + length))
+			if((erase_last->offset + erase_last->length) > add_clamp_overflow(offset, length))
 			{
 				/* Clear range falls short of the end of the range to be erased, so
 				 * create a range from the end of the clear range to the end of the
 				 * erase range.
 				*/
 				
-				off_t from = offset + length;
+				off_t from = add_clamp_overflow(offset, length);
 				off_t to   = erase_last->offset + erase_last->length;
 				
 				assert(to > from);

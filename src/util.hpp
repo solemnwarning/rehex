@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -144,6 +144,80 @@ namespace REHex {
 				return colour;
 			}
 	};
+	
+	/**
+	 * @brief Adds two integers together, clamping to the range of the type.
+	 *
+	 * This function adds two integer-type values together, if the result would overflow or
+	 * underflow, the result is clamped to the maximum or minimum value representable by the
+	 * type T.
+	 *
+	 * If the "overflow" parameter is non-NULL, whether or not an overflow (or overflow) was
+	 * detected is stored there.
+	*/
+	template<typename T> T add_clamp_overflow(T a, T b, bool *overflow = NULL)
+	{
+		const T T_min = std::numeric_limits<T>::min();
+		const T T_max = std::numeric_limits<T>::max();
+		
+		if((a < 0) != (b < 0))
+		{
+			/* a and b have differing signs - can't overflow */
+			if(overflow != NULL)
+			{
+				*overflow = false;
+			}
+			
+			return a + b;
+		}
+		else if(a < 0)
+		{
+			/* a and b are negative */
+			
+			if((T_min - b) <= a)
+			{
+				/* a + b >= T_min */
+				if(overflow != NULL)
+				{
+					*overflow = false;
+				}
+				
+				return a + b;
+			}
+			else{
+				/* a + b < T_min (underflow) */
+				if(overflow != NULL)
+				{
+					*overflow = true;
+				}
+				
+				return T_min;
+			}
+		}
+		else{
+			/* a and b are positive */
+			
+			if((T_max - b) >= a)
+			{
+				/* a + b <= T_max */
+				if(overflow != NULL)
+				{
+					*overflow = false;
+				}
+				
+				return a + b;
+			}
+			else{
+				/* a + b > T_max (overflow) */
+				if(overflow != NULL)
+				{
+					*overflow = true;
+				}
+				
+				return T_max;
+			}
+		}
+	}
 }
 
 #endif /* !REHEX_UTIL_HPP */

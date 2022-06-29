@@ -3,6 +3,8 @@ Version TBA
  * Allow passing arguments to structs created via ArrayResize() and
    ArrayExtend() template functions.
 
+ * Fix parsing of whitespace in template array dereference (#175).
+
 Version 0.5.3 (2022-06-25)
 
  * Fix some undefined behaviour issues.

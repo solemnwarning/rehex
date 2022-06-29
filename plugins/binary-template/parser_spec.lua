@@ -335,6 +335,7 @@ describe("parser", function()
 	it("parses variable definitions", function()
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "var", nil, nil } }, parser.parse_text("int var;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("int array[10];"));
+		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("int array[ 10 ];"));
 		
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct foo", "bar", nil, nil } }, parser.parse_text("struct foo bar;"));
 		assert.are.same({ { "UNKNOWN FILE", 1, "variable", "struct baz", "qux", nil, { "UNKNOWN FILE", 1, "num", 10 } } }, parser.parse_text("struct baz qux[10];"));

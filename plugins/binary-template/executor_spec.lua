@@ -5324,6 +5324,163 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("allows passing struct arguments through ArrayResize()", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- struct mystruct(int i, string s) {
+			--     int m[i];
+			--     Printf("mystruct(%d, %s)", i, s);
+			-- };
+			{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+			{
+				{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+				
+				{ "test.bt", 3, "call", "Printf", {
+					{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+					{ "test.bt", 3, "ref", { "i" } },
+					{ "test.bt", 3, "ref", { "s" } } } },
+			} },
+			
+			-- local struct mystruct a[0];
+			{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+			
+			-- ArrayResize(a, 2, 5, "foo");
+			{ "test.bt", 5, "call", "ArrayResize", {
+				{ "test.bt", 5, "ref", { "a" } },
+				{ "test.bt", 5, "num", 2 },
+				{ "test.bt", 5, "num", 5 },
+				{ "test.bt", 5, "str", "foo" } } },
+			
+			-- ArrayResize(a, 3, 1, "bar");
+			{ "test.bt", 6, "call", "ArrayResize", {
+				{ "test.bt", 6, "ref", { "a" } },
+				{ "test.bt", 6, "num", 3 },
+				{ "test.bt", 6, "num", 1 },
+				{ "test.bt", 6, "str", "bar" } } },
+			
+			-- ArrayResize(a, 3, 2, "baz");
+			{ "test.bt", 7, "call", "ArrayResize", {
+				{ "test.bt", 7, "ref", { "a" } },
+				{ "test.bt", 7, "num", 3 },
+				{ "test.bt", 7, "num", 2 },
+				{ "test.bt", 7, "str", "baz" } } },
+			
+			-- Printf("ArrayLength(a[0].m) = %d", ArrayLength(a[0].m));
+			{ "test.bt", 8, "call", "Printf", {
+				{ "test.bt", 8, "str", "ArrayLength(a[0].m) = %d" },
+				{ "test.bt", 8, "call", "ArrayLength", { { "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 0 }, "m" } } } } } },
+			
+			-- Printf("ArrayLength(a[1].m) = %d", ArrayLength(a[1].m));
+			{ "test.bt", 9, "call", "Printf", {
+				{ "test.bt", 9, "str", "ArrayLength(a[1].m) = %d" },
+				{ "test.bt", 9, "call", "ArrayLength", { { "test.bt", 9, "ref", { "a", { "test.bt", 9, "num", 1 }, "m" } } } } } },
+			
+			-- Printf("ArrayLength(a[2].m) = %d", ArrayLength(a[2].m));
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "ArrayLength(a[2].m) = %d" },
+				{ "test.bt", 10, "call", "ArrayLength", { { "test.bt", 10, "ref", { "a", { "test.bt", 10, "num", 2 }, "m" } } } } } },
+		})
+		
+		local expect_log = {
+			"print(mystruct(5, foo))",
+			"print(mystruct(5, foo))",
+			"print(mystruct(1, bar))",
+			"print(ArrayLength(a[0].m) = 5)",
+			"print(ArrayLength(a[1].m) = 5)",
+			"print(ArrayLength(a[2].m) = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors if ArrayResize() is called with the wrong arguments for a struct", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- struct mystruct(int i, string s) {
+				--     int m[i];
+				--     Printf("mystruct(%d, %s)", i, s);
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+				{
+					{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+					
+					{ "test.bt", 3, "call", "Printf", {
+						{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+						{ "test.bt", 3, "ref", { "i" } },
+						{ "test.bt", 3, "ref", { "s" } } } },
+				} },
+				
+				-- local struct mystruct a[0];
+				{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+				
+				-- ArrayResize(a, 2);
+				{ "test.bt", 5, "call", "ArrayResize", {
+					{ "test.bt", 5, "ref", { "a" } },
+					{ "test.bt", 5, "num", 2 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types () - expected (int, string) at test.bt:5")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- struct mystruct(int i, string s) {
+				--     int m[i];
+				--     Printf("mystruct(%d, %s)", i, s);
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+				{
+					{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+					
+					{ "test.bt", 3, "call", "Printf", {
+						{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+						{ "test.bt", 3, "ref", { "i" } },
+						{ "test.bt", 3, "ref", { "s" } } } },
+				} },
+				
+				-- local struct mystruct a[0];
+				{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+				
+				-- ArrayResize(a, 2, 2, 2);
+				{ "test.bt", 5, "call", "ArrayResize", {
+					{ "test.bt", 5, "ref", { "a" } },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "num", 2 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const int) - expected (int, string) at test.bt:5")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- struct mystruct(int i, string s) {
+				--     int m[i];
+				--     Printf("mystruct(%d, %s)", i, s);
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+				{
+					{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+					
+					{ "test.bt", 3, "call", "Printf", {
+						{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+						{ "test.bt", 3, "ref", { "i" } },
+						{ "test.bt", 3, "ref", { "s" } } } },
+				} },
+				
+				-- local struct mystruct a[0];
+				{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+				
+				-- ArrayResize(a, 2, 2, "hello", 2);
+				{ "test.bt", 5, "call", "ArrayResize", {
+					{ "test.bt", 5, "ref", { "a" } },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "str", "hello" },
+					{ "test.bt", 5, "num", 2 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const string, const int) - expected (int, string) at test.bt:5")
+	end)
+	
 	it("errors if ArrayResize() is called with the wrong arguments", function()
 		local interface, log = test_interface()
 		
@@ -5332,13 +5489,13 @@ describe("executor", function()
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
 				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "call", "vfunc", {} }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (void, const int) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>, ...) with incompatible argument types (void, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "str", "hello" }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (const string, const int) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>, ...) with incompatible argument types (const string, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -5346,14 +5503,14 @@ describe("executor", function()
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
 				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[], const int, void) at test.bt:2")
+			end, "Struct arguments passed to ArrayResize() for non-struct array element type 'char[]' at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
 				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } } } },
 			})
-			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[]) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>, ...) with incompatible argument types (char[]) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -5361,14 +5518,14 @@ describe("executor", function()
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
 				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[], void) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>, ...) with incompatible argument types (char[], void) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
 				{ "test.bt", 2, "call", "ArrayResize", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "str", "4" } } },
 			})
-			end, "Attempt to call function ArrayResize(<any array type>, <number>) with incompatible argument types (char[], const string) at test.bt:2")
+			end, "Attempt to call function ArrayResize(<any array type>, <number>, ...) with incompatible argument types (char[], const string) at test.bt:2")
 	end)
 	
 	it("errors if ArrayResize() is called on a const array", function()
@@ -5489,6 +5646,163 @@ describe("executor", function()
 		}
 		
 		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows passing struct arguments through ArrayExtend()", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- struct mystruct(int i, string s) {
+			--     int m[i];
+			--     Printf("mystruct(%d, %s)", i, s);
+			-- };
+			{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+			{
+				{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+				
+				{ "test.bt", 3, "call", "Printf", {
+					{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+					{ "test.bt", 3, "ref", { "i" } },
+					{ "test.bt", 3, "ref", { "s" } } } },
+			} },
+			
+			-- local struct mystruct a[0];
+			{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+			
+			-- ArrayExtend(a, 2, 5, "foo");
+			{ "test.bt", 5, "call", "ArrayExtend", {
+				{ "test.bt", 5, "ref", { "a" } },
+				{ "test.bt", 5, "num", 2 },
+				{ "test.bt", 5, "num", 5 },
+				{ "test.bt", 5, "str", "foo" } } },
+			
+			-- ArrayExtend(a, 1, 1, "bar");
+			{ "test.bt", 6, "call", "ArrayExtend", {
+				{ "test.bt", 6, "ref", { "a" } },
+				{ "test.bt", 6, "num", 1 },
+				{ "test.bt", 6, "num", 1 },
+				{ "test.bt", 6, "str", "bar" } } },
+			
+			-- ArrayExtend(a, 0, 2, "baz");
+			{ "test.bt", 7, "call", "ArrayExtend", {
+				{ "test.bt", 7, "ref", { "a" } },
+				{ "test.bt", 7, "num", 0 },
+				{ "test.bt", 7, "num", 2 },
+				{ "test.bt", 7, "str", "baz" } } },
+			
+			-- Printf("ArrayLength(a[0].m) = %d", ArrayLength(a[0].m));
+			{ "test.bt", 8, "call", "Printf", {
+				{ "test.bt", 8, "str", "ArrayLength(a[0].m) = %d" },
+				{ "test.bt", 8, "call", "ArrayLength", { { "test.bt", 8, "ref", { "a", { "test.bt", 8, "num", 0 }, "m" } } } } } },
+			
+			-- Printf("ArrayLength(a[1].m) = %d", ArrayLength(a[1].m));
+			{ "test.bt", 9, "call", "Printf", {
+				{ "test.bt", 9, "str", "ArrayLength(a[1].m) = %d" },
+				{ "test.bt", 9, "call", "ArrayLength", { { "test.bt", 9, "ref", { "a", { "test.bt", 9, "num", 1 }, "m" } } } } } },
+			
+			-- Printf("ArrayLength(a[2].m) = %d", ArrayLength(a[2].m));
+			{ "test.bt", 10, "call", "Printf", {
+				{ "test.bt", 10, "str", "ArrayLength(a[2].m) = %d" },
+				{ "test.bt", 10, "call", "ArrayLength", { { "test.bt", 10, "ref", { "a", { "test.bt", 10, "num", 2 }, "m" } } } } } },
+		})
+		
+		local expect_log = {
+			"print(mystruct(5, foo))",
+			"print(mystruct(5, foo))",
+			"print(mystruct(1, bar))",
+			"print(ArrayLength(a[0].m) = 5)",
+			"print(ArrayLength(a[1].m) = 5)",
+			"print(ArrayLength(a[2].m) = 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors if ArrayExtend() is called with the wrong arguments for a struct", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- struct mystruct(int i, string s) {
+				--     int m[i];
+				--     Printf("mystruct(%d, %s)", i, s);
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+				{
+					{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+					
+					{ "test.bt", 3, "call", "Printf", {
+						{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+						{ "test.bt", 3, "ref", { "i" } },
+						{ "test.bt", 3, "ref", { "s" } } } },
+				} },
+				
+				-- local struct mystruct a[0];
+				{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+				
+				-- ArrayExtend(a, 2);
+				{ "test.bt", 5, "call", "ArrayExtend", {
+					{ "test.bt", 5, "ref", { "a" } },
+					{ "test.bt", 5, "num", 2 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types () - expected (int, string) at test.bt:5")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- struct mystruct(int i, string s) {
+				--     int m[i];
+				--     Printf("mystruct(%d, %s)", i, s);
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+				{
+					{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+					
+					{ "test.bt", 3, "call", "Printf", {
+						{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+						{ "test.bt", 3, "ref", { "i" } },
+						{ "test.bt", 3, "ref", { "s" } } } },
+				} },
+				
+				-- local struct mystruct a[0];
+				{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+				
+				-- ArrayExtend(a, 2, 2, 2);
+				{ "test.bt", 5, "call", "ArrayExtend", {
+					{ "test.bt", 5, "ref", { "a" } },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "num", 2 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const int) - expected (int, string) at test.bt:5")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- struct mystruct(int i, string s) {
+				--     int m[i];
+				--     Printf("mystruct(%d, %s)", i, s);
+				-- };
+				{ "test.bt", 1, "struct", "mystruct", { { "int", "i" }, { "string", "s" } },
+				{
+					{ "test.bt", 2, "variable", "int", "m", nil, { "test.bt", 1, "ref", { "i" } } },
+					
+					{ "test.bt", 3, "call", "Printf", {
+						{ "test.bt", 3, "str", "mystruct(%d, %s)" },
+						{ "test.bt", 3, "ref", { "i" } },
+						{ "test.bt", 3, "ref", { "s" } } } },
+				} },
+				
+				-- local struct mystruct a[0];
+				{ "test.bt", 4, "local-variable", "struct mystruct", "a", nil, { "test.bt", 4, "num", 0 }, nil },
+				
+				-- ArrayExtend(a, 2, 2, "hello", 2);
+				{ "test.bt", 5, "call", "ArrayExtend", {
+					{ "test.bt", 5, "ref", { "a" } },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "num", 2 },
+					{ "test.bt", 5, "str", "hello" },
+					{ "test.bt", 5, "num", 2 } } },
+			})
+			end, "Attempt to declare struct type 'struct mystruct' with incompatible argument types (const int, const string, const int) - expected (int, string) at test.bt:5")
 	end)
 	
 	it("allows extending file arrays with ArrayExtend()", function()
@@ -5655,13 +5969,13 @@ describe("executor", function()
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
 				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "call", "vfunc", {} }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (void, const int) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>, ...) with incompatible argument types (void, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "str", "hello" }, { "test.bt", 2, "num", 4 } } },
 			})
-			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (const string, const int) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>, ...) with incompatible argument types (const string, const int) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -5669,7 +5983,7 @@ describe("executor", function()
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
 				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (char[], const int, void) at test.bt:2")
+			end, "Struct arguments passed to ArrayExtend() for non-struct array element type 'char[]' at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
@@ -5677,14 +5991,14 @@ describe("executor", function()
 				{ "test.bt", 1, "function", "void", "vfunc", {}, {} },
 				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "call", "vfunc", {} } } },
 			})
-			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (char[], void) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>, ...) with incompatible argument types (char[], void) at test.bt:2")
 		
 		assert.has_error(function()
 			executor.execute(interface, {
 				{ "test.bt", 1, "local-variable", "char", "a", nil, { "test.bt", 1, "num", 3 }, nil },
 				{ "test.bt", 2, "call", "ArrayExtend", { { "test.bt", 2, "ref", { "a" } }, { "test.bt", 2, "str", "4" } } },
 			})
-			end, "Attempt to call function ArrayExtend(<any array type>, <number>) with incompatible argument types (char[], const string) at test.bt:2")
+			end, "Attempt to call function ArrayExtend(<any array type>, <number>, ...) with incompatible argument types (char[], const string) at test.bt:2")
 	end)
 	
 	it("errors if ArrayExtend() is called on a const array", function()

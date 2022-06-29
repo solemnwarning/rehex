@@ -1,3 +1,8 @@
+Version TBA
+
+ * Allow passing arguments to structs created via ArrayResize() and
+   ArrayExtend() template functions.
+
 Version 0.5.3 (2022-06-25)
 
  * Fix some undefined behaviour issues.

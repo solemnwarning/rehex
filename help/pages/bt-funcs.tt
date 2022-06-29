@@ -132,11 +132,11 @@ Returns the number of elements in the given array.
 
 <hr>
 [% WRAPPER "code.tt" -%]
-[% WRAPPER "code-type.tt" %]void[% END %] ArrayResize([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]int64_t[% END %] num_elements)
+[% WRAPPER "code-type.tt" %]void[% END %] ArrayResize([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]int64_t[% END %] num_elements, &lt;struct arguments&gt;)
 [%- END %]
 
 <p>
-The <code>ArrayResize()</code> function changes the size of the given array. Any new elements will be initialised to their default values and any removed elements will be erased.
+The <code>ArrayResize()</code> function changes the size of the given array. Any new elements will be initialised to their default values and any removed elements will be erased. If the array elements are a struct type, <code>&lt;struct arguments&gt;</code> are passed through as the arguments to the new struct elements.
 </p>
 
 <p>
@@ -145,7 +145,7 @@ This function can be called to incrementally increase the size of an array being
 
 <hr>
 [% WRAPPER "code.tt" -%]
-[% WRAPPER "code-type.tt" %]void[% END %] ArrayExtend([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]int64_t[% END %] num_elements = 1)
+[% WRAPPER "code-type.tt" %]void[% END %] ArrayExtend([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]int64_t[% END %] num_elements = 1, &lt;struct arguments&gt;)
 [%- END %]
 
 <p>

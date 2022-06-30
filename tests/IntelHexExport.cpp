@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <stdio.h>
+#include <string.h>
 
 #include "../src/IntelHexExport.hpp"
 #include "../src/SharedDocumentPointer.hpp"
@@ -36,6 +37,21 @@ class TempFilename
 			{
 				throw std::runtime_error("Cannot generate temporary file name");
 			}
+			
+#ifdef _WIN32
+			/* > Note than when a file name is pre-pended with a backslash and no path
+			 * > information, such as \fname21, this indicates that the name is valid
+			 * > for the current working directory.
+			 * - MSDN
+			 *
+			 * Sure, that makes total sense.
+			*/
+			if(tmpfile[0] == '\\' && strchr((tmpfile + 1), '\\') == NULL)
+			{
+				/* Remove the leading slash. */
+				memmove(tmpfile, tmpfile + 1, strlen(tmpfile) - 1);
+			}
+#endif
 		}
 		
 		~TempFilename()

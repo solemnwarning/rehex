@@ -2834,6 +2834,22 @@ TEST_F(DocumentTest, DirtyState)
 	/* Save the file. */
 	char tmpfile[L_tmpnam];
 	tmpnam(tmpfile);
+	
+#ifdef _WIN32
+	/* > Note than when a file name is pre-pended with a backslash and no path
+	 * > information, such as \fname21, this indicates that the name is valid
+	 * > for the current working directory.
+	 * - MSDN
+	 *
+	 * Sure, that makes total sense.
+	*/
+	if(tmpfile[0] == '\\' && strchr((tmpfile + 1), '\\') == NULL)
+	{
+		/* Remove the leading slash. */
+		memmove(tmpfile, tmpfile + 1, strlen(tmpfile) - 1);
+	}
+#endif
+	
 	doc->save(tmpfile);
 	
 	EXPECT_EVENTS();

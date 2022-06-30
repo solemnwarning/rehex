@@ -264,7 +264,8 @@ public:
     void SetText( const wxString &text );
     wxString GetText() const;
     void SetIcon( const wxIcon &icon );
-    const wxIcon &GetIcon() const;
+    !%wxchkver_3_2_0 const wxIcon &GetIcon() const;
+    %wxchkver_3_2_0 wxIcon GetIcon() const;
     void SetData( wxClientData *data );
     wxClientData *GetData() const;
 
@@ -289,7 +290,8 @@ class %delete wxDataViewTreeStoreContainerNode : public wxDataViewTreeStoreNode
 //	wxDataViewTreeStoreNodes::iterator FindChild(wxDataViewTreeStoreNode* node);
 
     void SetExpandedIcon( const wxIcon &icon );
-    const wxIcon &GetExpandedIcon() const;
+    !%wxchkver_3_2_0 const wxIcon &GetExpandedIcon() const;
+    %wxchkver_3_2_0 wxIcon GetExpandedIcon() const;
 
     void SetExpanded( bool expanded = true );
     bool IsExpanded() const;
@@ -326,9 +328,11 @@ class %delete wxDataViewTreeStore : public wxDataViewModel
     void SetItemText( const wxDataViewItem& item, const wxString &text );
     wxString GetItemText( const wxDataViewItem& item ) const;
     void SetItemIcon( const wxDataViewItem& item, const wxIcon &icon );
-    const wxIcon &GetItemIcon( const wxDataViewItem& item ) const;
+    !%wxchkver_3_2_0 const wxIcon &GetItemIcon( const wxDataViewItem& item ) const;
+    %wxchkver_3_2_0 wxIcon GetItemIcon( const wxDataViewItem& item ) const;
     void SetItemExpandedIcon( const wxDataViewItem& item, const wxIcon &icon );
-    const wxIcon &GetItemExpandedIcon( const wxDataViewItem& item ) const;
+    !%wxchkver_3_2_0 const wxIcon &GetItemExpandedIcon( const wxDataViewItem& item ) const;
+    %wxchkver_3_2_0 wxIcon GetItemExpandedIcon( const wxDataViewItem& item ) const;
     void SetItemData( const wxDataViewItem& item, wxClientData *data );
     wxClientData *GetItemData( const wxDataViewItem& item ) const;
 

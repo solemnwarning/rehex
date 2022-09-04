@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,7 +31,7 @@
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
 */
-#include <portable_endian.h>
+#include "endian_conv.hpp"
 
 #define IMPLEMENT_NDTR_CLASS(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
 	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
@@ -101,43 +101,6 @@ static REHex::DataTypeRegistration u64be_dtr("u64be", "unsigned 64-bit (big endi
 static REHex::DataTypeRegistration s64le_dtr("s64le", "signed 64-bit (little endian)",   &s64le_factory, std::vector<std::string>({"Number"}), sizeof(int64_t));
 static REHex::DataTypeRegistration s64be_dtr("s64be", "signed 64-bit (big endian)",      &s64be_factory, std::vector<std::string>({"Number"}), sizeof(int64_t));
 
-/* Endian conversion for floats.
- * These won't work on crazy platforms where integers and floats have different
- * endianness.
-*/
-
-static_assert(sizeof(float) == sizeof(int32_t), "float must be the same size as int32_t");
-static_assert(sizeof(double) == sizeof(int64_t), "double must be the same size as int64_t");
-
-static float beftoh(float be_float)
-{
-	int32_t he_float = be32toh(*(int32_t*)(&be_float));
-	return *(float*)(&he_float);
-}
-
-static double bedtoh(double be_double)
-{
-	int64_t he_double = be64toh(*(int64_t*)(&be_double));
-	return *(double*)(&he_double);
-}
-
-static float leftoh(float le_float)
-{
-	int32_t he_float = le32toh(*(int32_t*)(&le_float));
-	return *(float*)(&he_float);
-}
-
-static double ledtoh(double le_double)
-{
-	int64_t he_double = le64toh(*(int64_t*)(&le_double));
-	return *(double*)(&he_double);
-}
-
-static float  htobef(float  he_float)  { return beftoh(he_float); }
-static double htobed(double he_double) { return bedtoh(he_double); }
-static float  htolef(float  he_float)  { return leftoh(he_float); }
-static double htoled(double he_double) { return ledtoh(he_double); }
-
 #define IMPLEMENT_NDTR_CLASS_FLOAT(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
 	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
@@ -145,7 +108,7 @@ static double htoled(double he_double) { return ledtoh(he_double); }
 	std::string REHex::NAME::to_string(const T *data) const \
 	{ \
 		char buf[128]; \
-		snprintf(buf, sizeof(buf), FMT, (T)(XTOH(*data))); \
+		snprintf(buf, sizeof(buf), FMT, XTOH<T>(*data)); \
 		\
 		return std::string(buf); \
 	} \
@@ -170,7 +133,7 @@ static double htoled(double he_double) { return ledtoh(he_double); }
 			return false; \
 		} \
 		\
-		buf = HTOX(buf); \
+		buf = HTOX<T>(buf); \
 		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
 		return true; \
 	} \
@@ -180,8 +143,8 @@ static double htoled(double he_double) { return ledtoh(he_double); }
 		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
 
-IMPLEMENT_NDTR_CLASS_FLOAT(F32LEDataRegion, float,  "f32le", "%.9g", leftoh, htolef, f32le_factory)
-IMPLEMENT_NDTR_CLASS_FLOAT(F32BEDataRegion, float,  "f32be", "%.9g", beftoh, htobef, f32be_factory)
+IMPLEMENT_NDTR_CLASS_FLOAT(F32LEDataRegion, float,  "f32le", "%.9g", leXXXtoh, htoleXXX, f32le_factory)
+IMPLEMENT_NDTR_CLASS_FLOAT(F32BEDataRegion, float,  "f32be", "%.9g", beXXXtoh, htobeXXX, f32be_factory)
 
 static REHex::DataTypeRegistration f32le_dtr("f32le", "32-bit float (little endian)", &f32le_factory, std::vector<std::string>({"Number"}), sizeof(float));
 static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)",    &f32be_factory, std::vector<std::string>({"Number"}), sizeof(float));
@@ -193,7 +156,7 @@ static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)
 	std::string REHex::NAME::to_string(const T *data) const \
 	{ \
 		char buf[128]; \
-		snprintf(buf, sizeof(buf), FMT, (T)(XTOH(*data))); \
+		snprintf(buf, sizeof(buf), FMT, XTOH<T>(*data)); \
 		\
 		return std::string(buf); \
 	} \
@@ -218,7 +181,7 @@ static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)
 			return false; \
 		} \
 		\
-		buf = HTOX(buf); \
+		buf = HTOX<T>(buf); \
 		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
 		return true; \
 	} \
@@ -228,8 +191,8 @@ static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)
 		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
 
-IMPLEMENT_NDTR_CLASS_DOUBLE(F64LEDataRegion, double, "f64le", "%.9g", ledtoh, htoled, f64le_factory)
-IMPLEMENT_NDTR_CLASS_DOUBLE(F64BEDataRegion, double, "f64be", "%.9g", bedtoh, htobed, f64be_factory)
+IMPLEMENT_NDTR_CLASS_DOUBLE(F64LEDataRegion, double, "f64le", "%.9g", leXXXtoh, htoleXXX, f64le_factory)
+IMPLEMENT_NDTR_CLASS_DOUBLE(F64BEDataRegion, double, "f64be", "%.9g", beXXXtoh, htobeXXX, f64be_factory)
 
 static REHex::DataTypeRegistration f64le_dtr("f64le", "64-bit float (double) (little endian)", &f64le_factory, std::vector<std::string>({"Number"}), sizeof(double));
 static REHex::DataTypeRegistration f64be_dtr("f64be", "64-bit float (double) (big endian)",    &f64be_factory, std::vector<std::string>({"Number"}), sizeof(double));

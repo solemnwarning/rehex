@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,7 +28,7 @@
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
 */
-#include <portable_endian.h>
+#include "endian_conv.hpp"
 
 static REHex::ToolPanel *DecodePanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -40,55 +40,6 @@ static REHex::ToolPanelRegistration tpr("DecodePanel", "Decode values", REHex::T
 /* Endianness conversion functions for use with the OnXXXValue() template methods. */
 static uint8_t  hto8_u   (uint8_t  host_8bits)  { return host_8bits; }
 static int8_t   hto8_s   (int8_t   host_8bits)  { return host_8bits; }
-static uint16_t htobe16_u(uint16_t host_16bits) { return htobe16(host_16bits); }
-static int16_t  htobe16_s( int16_t host_16bits) { return htobe16(host_16bits); }
-static uint16_t htole16_u(uint16_t host_16bits) { return htole16(host_16bits); }
-static int16_t  htole16_s( int16_t host_16bits) { return htole16(host_16bits); }
-static uint32_t htobe32_u(uint32_t host_32bits) { return htobe32(host_32bits); }
-static int32_t  htobe32_s( int32_t host_32bits) { return htobe32(host_32bits); }
-static uint32_t htole32_u(uint32_t host_32bits) { return htole32(host_32bits); }
-static int32_t  htole32_s( int32_t host_32bits) { return htole32(host_32bits); }
-static uint64_t htobe64_u(uint64_t host_64bits) { return htobe64(host_64bits); }
-static int64_t  htobe64_s( int64_t host_64bits) { return htobe64(host_64bits); }
-static uint64_t htole64_u(uint64_t host_64bits) { return htole64(host_64bits); }
-static int64_t  htole64_s( int64_t host_64bits) { return htole64(host_64bits); }
-
-/* Endian conversion for floats.
- * These won't work on crazy platforms where integers and floats have different
- * endianness.
-*/
-
-static_assert(sizeof(float) == sizeof(int32_t), "float must be the same size as int32_t");
-static_assert(sizeof(double) == sizeof(int64_t), "double must be the same size as int64_t");
-
-static float beftoh(float be_float)
-{
-	int32_t he_float = be32toh(*(int32_t*)(&be_float));
-	return *(float*)(&he_float);
-}
-
-static double bedtoh(double be_double)
-{
-	int64_t he_double = be64toh(*(int64_t*)(&be_double));
-	return *(double*)(&he_double);
-}
-
-static float leftoh(float le_float)
-{
-	int32_t he_float = le32toh(*(int32_t*)(&le_float));
-	return *(float*)(&he_float);
-}
-
-static double ledtoh(double le_double)
-{
-	int64_t he_double = le64toh(*(int64_t*)(&le_double));
-	return *(double*)(&he_double);
-}
-
-static float  htobef(float  he_float)  { return beftoh(he_float); }
-static double htobed(double he_double) { return bedtoh(he_double); }
-static float  htolef(float  he_float)  { return leftoh(he_float); }
-static double htoled(double he_double) { return ledtoh(he_double); }
 
 BEGIN_EVENT_TABLE(REHex::DecodePanel, wxPanel)
 	EVT_PG_CHANGED(wxID_ANY, REHex::DecodePanel::OnPropertyGridChanged)
@@ -296,44 +247,44 @@ void REHex::DecodePanel::update()
 	{
 		/* Big endian */
 		
-		TC_UPDATE(s16, int16_t, "%" PRId16, (int16_t)(be16toh(*(int16_t*)(data))));
-		TC_UPDATE(u16, int16_t, "%" PRIu16, (uint16_t)(be16toh(*(uint16_t*)(data))));
-		TC_UPDATE(h16, int16_t, "%" PRIx16, (uint16_t)(be16toh(*(uint16_t*)(data))));
-		TC_UPDATE(o16, int16_t, "%" PRIo16, (uint16_t)(be16toh(*(uint16_t*)(data))));
+		TC_UPDATE(s16, int16_t, "%" PRId16, beXXXtoh_p<int16_t>(data));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, beXXXtoh_p<uint16_t>(data));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, beXXXtoh_p<uint16_t>(data));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, beXXXtoh_p<uint16_t>(data));
 		
-		TC_UPDATE(s32, int32_t, "%" PRId32, (int32_t)(be32toh(*(int32_t*)(data))));
-		TC_UPDATE(u32, int32_t, "%" PRIu32, (uint32_t)(be32toh(*(uint32_t*)(data))));
-		TC_UPDATE(h32, int32_t, "%" PRIx32, (uint32_t)(be32toh(*(uint32_t*)(data))));
-		TC_UPDATE(o32, int32_t, "%" PRIo32, (uint32_t)(be32toh(*(uint32_t*)(data))));
+		TC_UPDATE(s32, int32_t, "%" PRId32, beXXXtoh_p<int32_t>(data));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, beXXXtoh_p<uint32_t>(data));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, beXXXtoh_p<uint32_t>(data));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, beXXXtoh_p<uint32_t>(data));
 		
-		TC_UPDATE(s64, int64_t, "%" PRId64, (int64_t)(be64toh(*(int64_t*)(data))));
-		TC_UPDATE(u64, int64_t, "%" PRIu64, (uint64_t)(be64toh(*(uint64_t*)(data))));
-		TC_UPDATE(h64, int64_t, "%" PRIx64, (uint64_t)(be64toh(*(uint64_t*)(data))));
-		TC_UPDATE(o64, int64_t, "%" PRIo64, (uint64_t)(be64toh(*(uint64_t*)(data))));
+		TC_UPDATE(s64, int64_t, "%" PRId64, beXXXtoh_p<int64_t>(data));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, beXXXtoh_p<uint64_t>(data));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, beXXXtoh_p<uint64_t>(data));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, beXXXtoh_p<uint64_t>(data));
 		
-		TC_UPDATE(f32, float,  "%.9g", beftoh(*(float*)(data)));
-		TC_UPDATE(f64, double, "%.9g", bedtoh(*(double*)(data)));
+		TC_UPDATE(f32, float,  "%.9g", beXXXtoh_p<float>(data));
+		TC_UPDATE(f64, double, "%.9g", beXXXtoh_p<double>(data));
 	}
 	else{
 		/* Little endian */
 		
-		TC_UPDATE(s16, int16_t, "%" PRId16, (int16_t)(le16toh(*(int16_t*)(data))));
-		TC_UPDATE(u16, int16_t, "%" PRIu16, (uint16_t)(le16toh(*(uint16_t*)(data))));
-		TC_UPDATE(h16, int16_t, "%" PRIx16, (uint16_t)(le16toh(*(uint16_t*)(data))));
-		TC_UPDATE(o16, int16_t, "%" PRIo16, (uint16_t)(le16toh(*(uint16_t*)(data))));
+		TC_UPDATE(s16, int16_t, "%" PRId16, leXXXtoh_p<int16_t>(data));
+		TC_UPDATE(u16, int16_t, "%" PRIu16, leXXXtoh_p<uint16_t>(data));
+		TC_UPDATE(h16, int16_t, "%" PRIx16, leXXXtoh_p<uint16_t>(data));
+		TC_UPDATE(o16, int16_t, "%" PRIo16, leXXXtoh_p<uint16_t>(data));
 		
-		TC_UPDATE(s32, int32_t, "%" PRId32, (int32_t)(le32toh(*(int32_t*)(data))));
-		TC_UPDATE(u32, int32_t, "%" PRIu32, (uint32_t)(le32toh(*(uint32_t*)(data))));
-		TC_UPDATE(h32, int32_t, "%" PRIx32, (uint32_t)(le32toh(*(uint32_t*)(data))));
-		TC_UPDATE(o32, int32_t, "%" PRIo32, (uint32_t)(le32toh(*(uint32_t*)(data))));
+		TC_UPDATE(s32, int32_t, "%" PRId32, leXXXtoh_p<int32_t>(data));
+		TC_UPDATE(u32, int32_t, "%" PRIu32, leXXXtoh_p<uint32_t>(data));
+		TC_UPDATE(h32, int32_t, "%" PRIx32, leXXXtoh_p<uint32_t>(data));
+		TC_UPDATE(o32, int32_t, "%" PRIo32, leXXXtoh_p<uint32_t>(data));
 		
-		TC_UPDATE(s64, int64_t, "%" PRId64, (int64_t)(le64toh(*(int64_t*)(data))));
-		TC_UPDATE(u64, int64_t, "%" PRIu64, (uint64_t)(le64toh(*(uint64_t*)(data))));
-		TC_UPDATE(h64, int64_t, "%" PRIx64, (uint64_t)(le64toh(*(uint64_t*)(data))));
-		TC_UPDATE(o64, int64_t, "%" PRIo64, (uint64_t)(le64toh(*(uint64_t*)(data))));
+		TC_UPDATE(s64, int64_t, "%" PRId64, leXXXtoh_p<int64_t>(data));
+		TC_UPDATE(u64, int64_t, "%" PRIu64, leXXXtoh_p<uint64_t>(data));
+		TC_UPDATE(h64, int64_t, "%" PRIx64, leXXXtoh_p<uint64_t>(data));
+		TC_UPDATE(o64, int64_t, "%" PRIo64, leXXXtoh_p<uint64_t>(data));
 		
-		TC_UPDATE(f32, float,  "%.9g", leftoh(*(float*)(data)));
-		TC_UPDATE(f64, double, "%.9g", ledtoh(*(double*)(data)));
+		TC_UPDATE(f32, float,  "%.9g", leXXXtoh_p<float>(data));
+		TC_UPDATE(f64, double, "%.9g", leXXXtoh_p<double>(data));
 	}
 	
 	last_data.resize(size);
@@ -369,44 +320,44 @@ void REHex::DecodePanel::OnPropertyGridChanged(wxPropertyGridEvent &event)
 	{
 		/* Big endian */
 		
-		     if(property == (wxPGProperty*)(s16)) { OnSignedValue  <int16_t,  10, &htobe16_s>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(u16)) { OnUnsignedValue<uint16_t, 10, &htobe16_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(h16)) { OnUnsignedValue<uint16_t, 16, &htobe16_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(o16)) { OnUnsignedValue<uint16_t,  8, &htobe16_u>((wxStringProperty*)(property)); }
+		     if(property == (wxPGProperty*)(s16)) { OnSignedValue  <int16_t,  10, &htobeXXX<int16_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u16)) { OnUnsignedValue<uint16_t, 10, &htobeXXX<uint16_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h16)) { OnUnsignedValue<uint16_t, 16, &htobeXXX<uint16_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o16)) { OnUnsignedValue<uint16_t,  8, &htobeXXX<uint16_t> >((wxStringProperty*)(property)); }
 		
-		else if(property == (wxPGProperty*)(s32)) { OnSignedValue  <int32_t,  10, &htobe32_s>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(u32)) { OnUnsignedValue<uint32_t, 10, &htobe32_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(h32)) { OnUnsignedValue<uint32_t, 16, &htobe32_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(o32)) { OnUnsignedValue<uint32_t,  8, &htobe32_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(s32)) { OnSignedValue  <int32_t,  10, &htobeXXX<int32_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u32)) { OnUnsignedValue<uint32_t, 10, &htobeXXX<uint32_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h32)) { OnUnsignedValue<uint32_t, 16, &htobeXXX<uint32_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o32)) { OnUnsignedValue<uint32_t,  8, &htobeXXX<uint32_t> >((wxStringProperty*)(property)); }
 		
-		else if(property == (wxPGProperty*)(s64)) { OnSignedValue  <int64_t,  10, &htobe64_s>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(u64)) { OnUnsignedValue<uint64_t, 10, &htobe64_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(h64)) { OnUnsignedValue<uint64_t, 16, &htobe64_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(o64)) { OnUnsignedValue<uint64_t,  8, &htobe64_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(s64)) { OnSignedValue  <int64_t,  10, &htobeXXX<int64_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u64)) { OnUnsignedValue<uint64_t, 10, &htobeXXX<uint64_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h64)) { OnUnsignedValue<uint64_t, 16, &htobeXXX<uint64_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o64)) { OnUnsignedValue<uint64_t,  8, &htobeXXX<uint64_t> >((wxStringProperty*)(property)); }
 		
-		else if(property == (wxPGProperty*)(f32)) { OnFloatValue<&htobef>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(f64)) { OnDoubleValue<&htobed>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(f32)) { OnFloatValue< &htobeXXX<float> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(f64)) { OnDoubleValue< &htobeXXX<double> >((wxStringProperty*)(property)); }
 	}
 	else{
 		/* Little endian */
 		
-		     if(property == (wxPGProperty*)(s16)) { OnSignedValue  <int16_t,  10, &htole16_s>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(u16)) { OnUnsignedValue<uint16_t, 10, &htole16_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(h16)) { OnUnsignedValue<uint16_t, 16, &htole16_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(o16)) { OnUnsignedValue<uint16_t,  8, &htole16_u>((wxStringProperty*)(property)); }
+		     if(property == (wxPGProperty*)(s16)) { OnSignedValue  <int16_t,  10, &htoleXXX<int16_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u16)) { OnUnsignedValue<uint16_t, 10, &htoleXXX<uint16_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h16)) { OnUnsignedValue<uint16_t, 16, &htoleXXX<uint16_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o16)) { OnUnsignedValue<uint16_t,  8, &htoleXXX<uint16_t> >((wxStringProperty*)(property)); }
 		
-		else if(property == (wxPGProperty*)(s32)) { OnSignedValue  <int32_t,  10, &htole32_s>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(u32)) { OnUnsignedValue<uint32_t, 10, &htole32_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(h32)) { OnUnsignedValue<uint32_t, 16, &htole32_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(o32)) { OnUnsignedValue<uint32_t,  8, &htole32_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(s32)) { OnSignedValue  <int32_t,  10, &htoleXXX<int32_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u32)) { OnUnsignedValue<uint32_t, 10, &htoleXXX<uint32_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h32)) { OnUnsignedValue<uint32_t, 16, &htoleXXX<uint32_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o32)) { OnUnsignedValue<uint32_t,  8, &htoleXXX<uint32_t> >((wxStringProperty*)(property)); }
 		
-		else if(property == (wxPGProperty*)(s64)) { OnSignedValue  <int64_t,  10, &htole64_s>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(u64)) { OnUnsignedValue<uint64_t, 10, &htole64_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(h64)) { OnUnsignedValue<uint64_t, 16, &htole64_u>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(o64)) { OnUnsignedValue<uint64_t,  8, &htole64_u>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(s64)) { OnSignedValue  <int64_t,  10, &htoleXXX<int64_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(u64)) { OnUnsignedValue<uint64_t, 10, &htoleXXX<uint64_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(h64)) { OnUnsignedValue<uint64_t, 16, &htoleXXX<uint64_t> >((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(o64)) { OnUnsignedValue<uint64_t,  8, &htoleXXX<uint64_t> >((wxStringProperty*)(property)); }
 		
-		else if(property == (wxPGProperty*)(f32)) { OnFloatValue<&htolef>((wxStringProperty*)(property)); }
-		else if(property == (wxPGProperty*)(f64)) { OnDoubleValue<&htoled>((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(f32)) { OnFloatValue< &htoleXXX<float> > ((wxStringProperty*)(property)); }
+		else if(property == (wxPGProperty*)(f64)) { OnDoubleValue< &htoleXXX<double> >((wxStringProperty*)(property)); }
 	}
 }
 

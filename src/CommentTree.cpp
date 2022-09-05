@@ -20,6 +20,10 @@
 #include <utility>
 #include <wx/clipbrd.h>
 
+#ifdef __WXGTK__
+#include <gtk/gtk.h>
+#endif
+
 #include "CommentTree.hpp"
 #include "EditCommentDialog.hpp"
 #include "util.hpp"
@@ -49,7 +53,8 @@ END_EVENT_TABLE()
 REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
-	document_ctrl(document_ctrl)
+	document_ctrl(document_ctrl),
+	historic_max_comment_depth(0)
 {
 	model = new CommentTreeModel(this->document, document_ctrl); /* Reference /class/ document pointer! */
 	
@@ -109,8 +114,56 @@ wxSize REHex::CommentTree::DoGetBestClientSize() const
 void REHex::CommentTree::refresh_comments()
 {
 	model->refresh_comments();
+	
+	#ifdef __WXGTK__
+	/* wxGTK doesn't account for the expander arrow when using wxCOL_WIDTH_AUTOSIZE, so we need
+	 * to calculate the width ourselves...
+	 *
+	 * We only resize the column when a new comment is added at a deeper level than any
+	 * previously existed at so as to not override if the user manually resizes the column.
+	*/
+	
+	int max_comment_depth = model->get_max_comment_depth();
+	if(max_comment_depth > historic_max_comment_depth)
+	{
+		historic_max_comment_depth = max_comment_depth;
+		
+		/* Get the width of the expander arrow in pixels. */
+		
+		GtkWidget *tree = dvc->GtkGetTreeView();
+		
+		int expander_size;
+		gtk_widget_style_get(tree, "expander-size", &expander_size, NULL);
+		// +1 to match GtkTreeView behavior
+		expander_size++;
+		
+		/* Get the width of the ADDITIONAL per-level indentation in pixels. */
+		
+		int extra_indent = dvc->GetIndent();
+		
+		/* Calculate the worst-case width for the actual offset text. */
+		
+		std::string offset_text = format_offset(0, document_ctrl->get_offset_display_base(), document->buffer_length());
+		
+		/* Change any alpha characters to 'X' - probably the widest in the font? */
+		for(auto it = offset_text.begin();
+			(it = std::find_if(it, offset_text.end(), [](char c) { return isalnum(c); })) != offset_text.end();
+			++it)
+		{
+			*it = 'X';
+		}
+		
+		wxSize offset_size = dvc->GetTextExtent(offset_text);
+		
+		offset_col->SetWidth(offset_size.GetWidth() + ((max_comment_depth + 1) * expander_size) + (max_comment_depth * extra_indent));
+	}
+	
+	#else
 	offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+	#endif
+	
 	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+	
 	dvc->Refresh();
 }
 
@@ -216,7 +269,8 @@ void REHex::CommentTree::OnActivated(wxDataViewEvent &event)
 
 REHex::CommentTreeModel::CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	document(document),
-	document_ctrl(document_ctrl) {}
+	document_ctrl(document_ctrl),
+	max_comment_depth(-1) {}
 
 void REHex::CommentTreeModel::refresh_comments()
 {
@@ -239,6 +293,8 @@ void REHex::CommentTreeModel::refresh_comments()
 	
 	/* Add any comments which we don't already have registered. */
 	
+	max_comment_depth = -1;
+	
 	/* Stack of comments the point we are processing is nested within. */
 	std::stack<values_elem_t*> parents;
 	
@@ -248,6 +304,11 @@ void REHex::CommentTreeModel::refresh_comments()
 		while(!parents.empty() && (parents.top()->first.offset + parents.top()->first.length) <= offset_base->first.offset)
 		{
 			parents.pop();
+		}
+		
+		if((int)(parents.size()) > max_comment_depth)
+		{
+			max_comment_depth = parents.size();
 		}
 		
 		/* We process any comments at the same offset from largest to smallest, ensuring
@@ -315,6 +376,11 @@ void REHex::CommentTreeModel::refresh_comments()
 		
 		offset_base = next_offset;
 	}
+}
+
+int REHex::CommentTreeModel::get_max_comment_depth() const
+{
+	return max_comment_depth;
 }
 
 const REHex::NestedOffsetLengthMapKey *REHex::CommentTreeModel::dv_item_to_key(const wxDataViewItem &item)

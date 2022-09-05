@@ -35,6 +35,7 @@ namespace REHex {
 			CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			void refresh_comments();
+			int get_max_comment_depth() const;
 			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
 			
 			virtual int Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
@@ -75,6 +76,8 @@ namespace REHex {
 			std::map<NestedOffsetLengthMapKey, CommentData> values;
 			std::set<values_elem_t*, ChildElemCompare> root;
 			
+			int max_comment_depth;
+			
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
 	};
 	
@@ -101,6 +104,8 @@ namespace REHex {
 			wxDataViewCtrl *dvc;
 			wxDataViewColumn *offset_col, *text_col;
 			CommentTreeModel *model;
+			
+			int historic_max_comment_depth;
 			
 			void refresh_comments();
 			

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -160,8 +160,12 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 		assert(item.IsOk());
 		assert(items.find(item.GetID()) == items.end());
 		
+		const char *iscontainer = model->IsContainer(item)
+			? " (container)"
+			: "";
+		
 		items.emplace(item.GetID(), item_string(item));
-		events.push_back(std::string("ItemAdded(\"") + item_string(parent) + "\", \"" + item_string(item) + "\")");
+		events.push_back(std::string("ItemAdded(\"") + item_string(parent) + "\", \"" + item_string(item) + "\"" + iscontainer + ")");
 		return true;
 	}
 	
@@ -347,10 +351,18 @@ TEST(CommentTree, Heirarchy)
 	
 	refresh_check_notifications(model, [](){},
 		"ItemAdded(\"(null)\", \"10,10\")",
+		"ItemDeleted(\"(null)\", \"10,10\")",
+		"ItemAdded(\"(null)\", \"10,10\" (container))",
 		"ItemAdded(\"10,10\", \"10,4\")",
+		"ItemAdded(\"10,10\", \"\")",
+		"ItemDeleted(\"10,10\", \"10,4\")",
+		"ItemAdded(\"10,10\", \"10,4\" (container))",
+		"ItemDeleted(\"10,10\", \"\")",
 		"ItemAdded(\"10,4\", \"10,0\")",
 		"ItemAdded(\"10,4\", \"13,0\")",
 		"ItemAdded(\"10,10\", \"16,4\")",
+		"ItemDeleted(\"10,10\", \"16,4\")",
+		"ItemAdded(\"10,10\", \"16,4\" (container))",
 		"ItemAdded(\"16,4\", \"19,0\")",
 		NULL
 	);
@@ -428,11 +440,29 @@ TEST(CommentTree, EraseRootCommentWithChildren)
 			doc->erase_comment(10, 10);
 		},
 		
+		/* Deleting 14,0, 12,6 is no longer a container... */
 		"ItemDeleted(\"12,6\", \"14,0\")",
+		"ItemAdded(\"10,10\", \"\")",
+		"ItemDeleted(\"10,10\", \"12,6\")",
+		"ItemAdded(\"10,10\", \"12,6\")",
+		"ItemDeleted(\"10,10\", \"\")",
+		
+		/* Deleting 12,6, 10,10 is no longer a container... */
 		"ItemDeleted(\"10,10\", \"12,6\")",
 		"ItemDeleted(\"(null)\", \"10,10\")",
+		"ItemAdded(\"(null)\", \"10,10\")",
+		
+		/* Now delete 10,10 for real... */
+		"ItemDeleted(\"(null)\", \"10,10\")",
+		
+		/* Add 12,6 back... */
 		"ItemAdded(\"(null)\", \"12,6\")",
+		
+		/* Add 14,0 back, 12,6 becomes a container again... */
+		"ItemDeleted(\"(null)\", \"12,6\")",
+		"ItemAdded(\"(null)\", \"12,6\" (container))",
 		"ItemAdded(\"12,6\", \"14,0\")",
+		
 		NULL
 	);
 	
@@ -572,6 +602,8 @@ TEST(CommentTree, AddNestedComment)
 			doc->set_comment(22, 6, REHex::Document::Comment("22,6"));
 		},
 		
+		"ItemDeleted(\"(null)\", \"20,10\")",
+		"ItemAdded(\"(null)\", \"20,10\" (container))",
 		"ItemAdded(\"20,10\", \"22,6\")",
 		NULL
 	);
@@ -612,17 +644,53 @@ TEST(CommentTree, AddContainingComment)
 			doc->set_comment(5, 25, REHex::Document::Comment("5,25"));
 		},
 		
+		/* Add 5,25... */
 		"ItemAdded(\"(null)\", \"5,25\")",
+		
+		/* Remove 12,2... */
 		"ItemDeleted(\"10,10\", \"12,2\")",
+		
+		/* Remove 15,2, 14,6 no longer a container... */
 		"ItemDeleted(\"14,6\", \"15,2\")",
+		"ItemAdded(\"10,10\", \"\")",
+		"ItemDeleted(\"10,10\", \"14,6\")",
+		"ItemAdded(\"10,10\", \"14,6\")",
+		"ItemDeleted(\"10,10\", \"\")",
+		
+		/* Remove 14,6, 10,10 no longer a container... */
 		"ItemDeleted(\"10,10\", \"14,6\")",
 		"ItemDeleted(\"(null)\", \"10,10\")",
+		"ItemAdded(\"(null)\", \"10,10\")",
+		
+		/* Remove 10,10... */
+		"ItemDeleted(\"(null)\", \"10,10\")",
+		
+		/* Add 10,10 back, 5,25 becomes a container... */
+		"ItemDeleted(\"(null)\", \"5,25\")",
+		"ItemAdded(\"(null)\", \"5,25\" (container))",
 		"ItemAdded(\"5,25\", \"10,10\")",
+		
+		/* Add 12,2 back, 10,10 becomes a container... */
+		"ItemAdded(\"5,25\", \"\")",
+		"ItemDeleted(\"5,25\", \"10,10\")",
+		"ItemAdded(\"5,25\", \"10,10\" (container))",
+		"ItemDeleted(\"5,25\", \"\")",
 		"ItemAdded(\"10,10\", \"12,2\")",
+		
+		/* Add 14,6... */
 		"ItemAdded(\"10,10\", \"14,6\")",
+		
+		/* Add 15,2, 14,6 becomes a container... */
+		"ItemDeleted(\"10,10\", \"14,6\")",
+		"ItemAdded(\"10,10\", \"14,6\" (container))",
 		"ItemAdded(\"14,6\", \"15,2\")",
+		
+		/* Remove 20,10... */
 		"ItemDeleted(\"(null)\", \"20,10\")",
+		
+		/* Add 20,10 back... */
 		"ItemAdded(\"5,25\", \"20,10\")",
+		
 		NULL
 	);
 	

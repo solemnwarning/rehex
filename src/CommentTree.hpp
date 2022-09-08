@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -79,6 +79,7 @@ namespace REHex {
 			int max_comment_depth;
 			
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
+			void re_add_item(values_elem_t *value);
 	};
 	
 	class CommentTree: public ToolPanel

@@ -5,6 +5,11 @@ Version TBA
 
  * Fix parsing of whitespace in template array dereference (#175).
 
+ * Display offsets in comments panel (#165).
+
+ * Don't show expand arrows next to comments without children in comments
+   panel on Windows/macOS.
+
 Version 0.5.3 (2022-06-25)
 
  * Fix some undefined behaviour issues.

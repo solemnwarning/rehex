@@ -67,10 +67,11 @@ namespace REHex {
 			{
 				values_elem_t *parent;
 				std::set<values_elem_t*, ChildElemCompare> children;
+				bool is_container;
 				
 				std::shared_ptr<const wxString> text;
 				
-				CommentData(values_elem_t *parent, const std::shared_ptr<const wxString> &text): parent(parent), text(text) {}
+				CommentData(values_elem_t *parent, const std::shared_ptr<const wxString> &text): parent(parent), is_container(false), text(text) {}
 			};
 			
 			std::map<NestedOffsetLengthMapKey, CommentData> values;
@@ -79,7 +80,7 @@ namespace REHex {
 			int max_comment_depth;
 			
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
-			void re_add_item(values_elem_t *value);
+			void re_add_item(values_elem_t *value, bool as_container);
 	};
 	
 	class CommentTree: public ToolPanel

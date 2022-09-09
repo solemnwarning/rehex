@@ -360,13 +360,13 @@ void REHex::CommentTreeModel::refresh_comments()
 					root.insert(value);
 				}
 				else{
-					parent->second.children.insert(value);
-					
-					if(parent->second.children.size() == 1U)
+					if(!parent->second.is_container)
 					{
 						/* Parent just became a container. Have to re-add it. */
-						re_add_item(parent);
+						re_add_item(parent, true);
 					}
+					
+					parent->second.children.insert(value);
 				}
 				
 				ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
@@ -422,13 +422,13 @@ std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>:
 	if(parent_became_empty)
 	{
 		/* Parent ceased to be a container. Have to re-add it. */
-		re_add_item(parent);
+		re_add_item(parent, false);
 	}
 	
 	return next_value_i;
 }
 
-void REHex::CommentTreeModel::re_add_item(values_elem_t *value)
+void REHex::CommentTreeModel::re_add_item(values_elem_t *value, bool as_container)
 {
 	values_elem_t *parent = value->second.parent;
 	
@@ -451,19 +451,41 @@ void REHex::CommentTreeModel::re_add_item(values_elem_t *value)
 		added_placeholder = true;
 	}
 	
+	if(parent != NULL)
+	{
+		parent->second.children.erase(value);
+	}
+	else{
+		root.erase(value);
+	}
+	
 	ItemDeleted(wxDataViewItem(parent), wxDataViewItem(value));
+	
+	value->second.is_container = as_container;
+	
+	if(parent != NULL)
+	{
+		parent->second.children.insert(value);
+	}
+	else{
+		root.insert(value);
+	}
+	
 	ItemAdded(wxDataViewItem(parent), wxDataViewItem(value));
 	
 	if(added_placeholder)
 	{
-		ItemDeleted(wxDataViewItem(parent), wxDataViewItem(&placeholder));
 		parent->second.children.erase(&placeholder);
+		ItemDeleted(wxDataViewItem(parent), wxDataViewItem(&placeholder));
 	}
 }
 
 int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const
 {
 	assert(column == MODEL_OFFSET_COLUMN);
+	
+	assert(item1.IsOk());
+	assert(item2.IsOk());
 	
 	const NestedOffsetLengthMapKey *key1 = (const NestedOffsetLengthMapKey*)(item1.GetID());
 	const NestedOffsetLengthMapKey *key2 = (const NestedOffsetLengthMapKey*)(item2.GetID());
@@ -530,6 +552,11 @@ wxString REHex::CommentTreeModel::GetColumnType(unsigned int col) const
 
 wxDataViewItem REHex::CommentTreeModel::GetParent(const wxDataViewItem &item) const
 {
+	if(!item.IsOk())
+	{
+		return wxDataViewItem(NULL);
+	}
+	
 	values_elem_t *value = (values_elem_t*)(item.GetID());
 	return wxDataViewItem(value->second.parent);
 }
@@ -537,6 +564,11 @@ wxDataViewItem REHex::CommentTreeModel::GetParent(const wxDataViewItem &item) co
 void REHex::CommentTreeModel::GetValue(wxVariant &variant, const wxDataViewItem &item, unsigned int col) const
 {
 	assert(col == MODEL_OFFSET_COLUMN || col == MODEL_TEXT_COLUMN);
+	
+	if(!item.IsOk())
+	{
+		return;
+	}
 	
 	values_elem_t *value = (values_elem_t*)(item.GetID());
 	
@@ -565,7 +597,7 @@ bool REHex::CommentTreeModel::IsContainer(const wxDataViewItem &item) const
 	}
 	
 	values_elem_t *value = (values_elem_t*)(item.GetID());
-	return !value->second.children.empty();
+	return value->second.is_container;
 }
 
 bool REHex::CommentTreeModel::SetValue(const wxVariant &variant, const wxDataViewItem &item, unsigned int col)

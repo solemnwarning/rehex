@@ -18,6 +18,7 @@
 #ifndef REHEX_MAINWINDOW_HPP
 #define REHEX_MAINWINDOW_HPP
 
+#include <list>
 #include <map>
 #include <vector>
 #include <wx/aui/auibook.h>
@@ -75,6 +76,7 @@ namespace REHex {
 			void insert_tab(Tab *tab, int position);
 			
 			void OnWindowClose(wxCloseEvent& event);
+			void OnWindowActivate(wxActivateEvent &event);
 			void OnCharHook(wxKeyEvent &event);
 			
 			void OnNew(wxCommandEvent &event);
@@ -201,6 +203,14 @@ namespace REHex {
 			static void unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func);
 			
 			/**
+			 * @brief Get a list of all MainWindow instances.
+			 *
+			 * Returns a reference to the internal instances list. Elements are ordered
+			 * from most recently activated (e.g. top of Z order) to least.
+			*/
+			static const std::list<MainWindow*> &get_instances();
+			
+			/**
 			 * @brief Performs RAII-style MainWindow setup hook registration.
 			*/
 			class SetupHookRegistration
@@ -272,6 +282,9 @@ namespace REHex {
 			
 			static std::multimap<SetupPhase, const SetupHookFunction*> *setup_hooks;
 			void call_setup_hooks(SetupPhase phase);
+			
+			static std::list<MainWindow*> instances;
+			std::list<MainWindow*>::iterator instances_iter;
 			
 			DECLARE_EVENT_TABLE()
 	};

@@ -54,33 +54,54 @@ REHex::TabDragFrame::~TabDragFrame()
 	instance = NULL;
 }
 
+static wxAuiTabCtrl *find_wxAuiTabCtrl(wxWindow *w)
+{
+	auto w_children = w->GetChildren();
+	
+	for(auto c = w_children.GetFirst(); c; c = c->GetNext())
+	{
+		wxWindow *cw = (wxWindow*)(c->GetData());
+		
+		wxAuiTabCtrl *tc = dynamic_cast<wxAuiTabCtrl*>(cw);
+		if(tc != NULL)
+		{
+			return tc;
+		}
+		
+		tc = find_wxAuiTabCtrl(cw);
+		if(tc != NULL)
+		{
+			return tc;
+		}
+	}
+	
+	return NULL;
+}
+
 void REHex::TabDragFrame::drop()
 {
 	wxPoint mouse_pos = wxGetMousePosition();
 	
-	/* We shift the mouse co-ords up/left so that wxFindWindowAtPoint() can return the window
-	 * behind us. This is likely to break in lots of situations and needs to be modified such
-	 * that we are transparent to the window finding code.
-	*/
-	wxWindow* drop_window = wxFindWindowAtPoint(wxPoint(mouse_pos.x - 1, mouse_pos.y - 1));
-	
-	wxAuiTabCtrl *tab_ctrl = NULL;
 	MainWindow *window = NULL;
 	
-	// make sure we are not over the hint window
-	if (!wxDynamicCast(drop_window, wxFrame))
+	const std::list<MainWindow*> &all_windows = MainWindow::get_instances();
+	for(auto w = all_windows.begin(); w != all_windows.end(); ++w)
 	{
-		for(
-			wxWindow *w = drop_window;
-			w != NULL && (tab_ctrl = dynamic_cast<wxAuiTabCtrl*>(w)) == NULL;
-			w = w->GetParent()) {}
+		if((*w)->IsIconized())
+		{
+			continue;
+		}
 		
-		// TODO: Check its the right kind of wxAuiNotebook
-		
-		for(
-			wxWindow *w = tab_ctrl;
-			w != NULL && (window = dynamic_cast<MainWindow*>(w)) == NULL;
-			w = w->GetParent()) {}
+		if((*w)->GetScreenRect().Contains(mouse_pos))
+		{
+			wxAuiTabCtrl *w_tc = find_wxAuiTabCtrl(*w);
+			if(w_tc->GetScreenRect().Contains(mouse_pos))
+			{
+				window = *w;
+			}
+			
+			break;
+		}
 	}
 	
 	if(window == NULL)

@@ -34,7 +34,12 @@ REHex::TabDragFrame::TabDragFrame(Tab *tab, wxSize original_window_size):
 	assert(instance == NULL);
 	instance = this;
 	
+	SetTransparent(127);
+	
 	tab->Reparent(this);
+	#ifdef __APPLE__
+	tab->Show();
+	#endif
 	Show();
 	
 	CallAfter([&]()
@@ -82,7 +87,6 @@ void REHex::TabDragFrame::drop()
 	{
 		window = new MainWindow(original_window_size);
 		window->insert_tab(tab, -1);
-		window->SetTransparent(127);
 		window->Show();
 	}
 	else{

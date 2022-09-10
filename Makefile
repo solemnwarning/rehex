@@ -377,6 +377,7 @@ TEST_OBJS := \
 	src/SelectRangeDialog.o \
 	src/StringPanel.o \
 	src/Tab.o \
+	src/TabDragFrame.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \

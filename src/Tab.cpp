@@ -73,7 +73,9 @@ REHex::Tab::Tab(wxWindow *parent):
 	vtools_initial_size(-1),
 	htools_adjust_pending(false),
 	htools_adjust_force(false),
-	htools_initial_size(-1)
+	htools_initial_size(-1),
+	repopulate_regions_frozen(false),
+	repopulate_regions_pending(false)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -126,6 +128,9 @@ REHex::Tab::Tab(wxWindow *parent):
 	
 	init_default_tools();
 	
+	wxGetApp().Bind(BULK_UPDATES_FROZEN, &REHex::Tab::OnBulkUpdatesFrozen, this);
+	wxGetApp().Bind(BULK_UPDATES_THAWED, &REHex::Tab::OnBulkUpdatesThawed, this);
+	
 	CallAfter([&]()
 	{
 		doc_ctrl->set_scroll_yoff(0);
@@ -142,7 +147,9 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	vtools_initial_size(-1),
 	htools_adjust_pending(false),
 	htools_adjust_force(false),
-	htools_initial_size(-1)
+	htools_initial_size(-1),
+	repopulate_regions_frozen(false),
+	repopulate_regions_pending(false)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -194,6 +201,9 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	
 	init_default_tools();
 	
+	wxGetApp().Bind(BULK_UPDATES_FROZEN, &REHex::Tab::OnBulkUpdatesFrozen, this);
+	wxGetApp().Bind(BULK_UPDATES_THAWED, &REHex::Tab::OnBulkUpdatesThawed, this);
+	
 	CallAfter([&]()
 	{
 		doc_ctrl->set_scroll_yoff(0);
@@ -202,6 +212,9 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 
 REHex::Tab::~Tab()
 {
+	wxGetApp().Unbind(BULK_UPDATES_THAWED, &REHex::Tab::OnBulkUpdatesThawed, this);
+	wxGetApp().Unbind(BULK_UPDATES_FROZEN, &REHex::Tab::OnBulkUpdatesFrozen, this);
+	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->Unbind(wxEVT_DESTROY, &REHex::Tab::OnSearchDialogDestroy, this);
@@ -1241,6 +1254,18 @@ void REHex::Tab::OnDocumentMappingsChanged(wxCommandEvent &event)
 	event.Skip();
 }
 
+void REHex::Tab::OnBulkUpdatesFrozen(wxCommandEvent &event)
+{
+	repopulate_regions_freeze();
+	event.Skip();
+}
+
+void REHex::Tab::OnBulkUpdatesThawed(wxCommandEvent &event)
+{
+	repopulate_regions_thaw();
+	event.Skip();
+}
+
 int REHex::Tab::hsplit_clamp_sash(int sash_position)
 {
 	/* Prevent the user resizing a tool panel beyond its min/max size.
@@ -1624,6 +1649,12 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
+	if(repopulate_regions_frozen)
+	{
+		repopulate_regions_pending = true;
+		return;
+	}
+	
 	std::vector<DocumentCtrl::Region*> regions;
 	
 	if(document_display_mode == DDM_VIRTUAL)
@@ -1678,6 +1709,22 @@ void REHex::Tab::repopulate_regions()
 	}
 	
 	doc_ctrl->replace_all_regions(regions);
+}
+
+void REHex::Tab::repopulate_regions_freeze()
+{
+	repopulate_regions_frozen = true;
+}
+
+void REHex::Tab::repopulate_regions_thaw()
+{
+	repopulate_regions_frozen = false;
+	
+	if(repopulate_regions_pending)
+	{
+		repopulate_regions();
+		repopulate_regions_pending = false;
+	}
 }
 
 std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode)

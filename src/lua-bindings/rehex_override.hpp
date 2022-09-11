@@ -35,6 +35,22 @@ static int LUACALL wxLua_function_print_error(lua_State *L)
 }
 %end
 
+%override wxLua_function_bulk_updates_freeze
+static int LUACALL wxLua_function_bulk_updates_freeze(lua_State *L)
+{
+	wxGetApp().bulk_updates_freeze();
+	return 0;
+}
+%end
+
+%override wxLua_function_bulk_updates_thaw
+static int LUACALL wxLua_function_bulk_updates_thaw(lua_State *L)
+{
+	wxGetApp().bulk_updates_thaw();
+	return 0;
+}
+%end
+
 %override wxLua_REHex_App_SetupHookRegistration_constructor
 static int LUACALL wxLua_REHex_App_SetupHookRegistration_constructor(lua_State *L)
 {

@@ -394,12 +394,38 @@ namespace REHex {
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
+			class CommandEventBuffer
+			{
+				public:
+					CommandEventBuffer(wxEvtHandler *handler, wxEventType type);
+					~CommandEventBuffer();
+					
+					void raise();
+					
+				private:
+					wxEvtHandler *handler;
+					wxEventType type;
+					
+					bool frozen, pending;
+					
+					void OnBulkUpdatesFrozen(wxCommandEvent &event);
+					void OnBulkUpdatesThawed(wxCommandEvent &event);
+			};
+			
+			CommandEventBuffer comment_modified_buffer;
 			void _raise_comment_modified();
+			
 			void _raise_undo_update();
 			void _raise_dirty();
 			void _raise_clean();
+			
+			CommandEventBuffer highlights_changed_buffer;
 			void _raise_highlights_changed();
+			
+			CommandEventBuffer types_changed_buffer;
 			void _raise_types_changed();
+			
+			CommandEventBuffer mappings_changed_buffer;
 			void _raise_mappings_changed();
 			
 		public:

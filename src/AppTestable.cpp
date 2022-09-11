@@ -431,3 +431,31 @@ void REHex::App::MacOpenFiles(const wxArrayString &filenames)
 	}
 }
 #endif
+
+void REHex::App::bulk_updates_freeze()
+{
+	++bulk_updates_freeze_count;
+	
+	if(bulk_updates_freeze_count == 1)
+	{
+		wxCommandEvent event(BULK_UPDATES_FROZEN);
+		ProcessEvent(event);
+	}
+}
+
+void REHex::App::bulk_updates_thaw()
+{
+	assert(bulk_updates_freeze_count > 0);
+	--bulk_updates_freeze_count;
+	
+	if(bulk_updates_freeze_count == 0)
+	{
+		wxCommandEvent event(BULK_UPDATES_THAWED);
+		ProcessEvent(event);
+	}
+}
+
+bool REHex::App::bulk_updates_frozen()
+{
+	return bulk_updates_freeze_count > 0;
+}

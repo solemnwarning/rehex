@@ -197,10 +197,13 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		}
 		
 		doc:transact_begin("Binary template")
+		rehex.bulk_updates_freeze()
 		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
 		end)
+		
+		rehex.bulk_updates_thaw()
 		
 		progress_dialog:Destroy()
 		

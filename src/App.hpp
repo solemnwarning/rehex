@@ -207,6 +207,12 @@ namespace REHex {
 			virtual void MacOpenFiles(const wxArrayString &fileNames) override;
 			#endif
 			
+			int bulk_updates_freeze_count;
+			
+			void bulk_updates_freeze();
+			void bulk_updates_thaw();
+			bool bulk_updates_frozen();
+			
 		private:
 			std::string last_directory;
 			int font_size_adjustment;

@@ -42,6 +42,8 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	bulk_updates_freeze_count = 0;
+	
 	#ifdef BUILD_HELP
 	help_controller = NULL;
 	help_loaded = false;

@@ -65,6 +65,7 @@ int main(int argc, char **argv)
 	app->set_font_name(default_font.GetFaceName().ToStdString());
 	#endif
 	
+	app->bulk_updates_freeze_count = 0;
 	app->console = new REHex::ConsoleBuffer();
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	app->settings = new REHex::AppSettings();

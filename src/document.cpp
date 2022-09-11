@@ -59,7 +59,11 @@ REHex::Document::Document():
 	current_seq(0),
 	buffer_seq(0),
 	saved_seq(0),
-	cursor_state(CSTATE_HEX)
+	cursor_state(CSTATE_HEX),
+	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
+	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
+	types_changed_buffer(this, EV_TYPES_CHANGED),
+	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
 {
 	buffer = new REHex::Buffer();
 	title  = "Untitled";
@@ -71,7 +75,11 @@ REHex::Document::Document(const std::string &filename):
 	current_seq(0),
 	buffer_seq(0),
 	saved_seq(0),
-	cursor_state(CSTATE_HEX)
+	cursor_state(CSTATE_HEX),
+	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
+	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
+	types_changed_buffer(this, EV_TYPES_CHANGED),
+	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
 {
 	buffer = new REHex::Buffer(filename);
 	
@@ -1823,10 +1831,7 @@ void REHex::Document::_load_metadata(const std::string &filename)
 
 void REHex::Document::_raise_comment_modified()
 {
-	wxCommandEvent event(REHex::EV_COMMENT_MODIFIED);
-	event.SetEventObject(this);
-	
-	wxPostEvent(this, event);
+	comment_modified_buffer.raise();
 }
 
 void REHex::Document::_raise_undo_update()
@@ -1855,26 +1860,17 @@ void REHex::Document::_raise_clean()
 
 void REHex::Document::_raise_highlights_changed()
 {
-	wxCommandEvent event(REHex::EV_HIGHLIGHTS_CHANGED);
-	event.SetEventObject(this);
-	
-	ProcessEvent(event);
+	highlights_changed_buffer.raise();
 }
 
 void REHex::Document::_raise_types_changed()
 {
-	wxCommandEvent event(REHex::EV_TYPES_CHANGED);
-	event.SetEventObject(this);
-	
-	ProcessEvent(event);
+	types_changed_buffer.raise();
 }
 
 void REHex::Document::_raise_mappings_changed()
 {
-	wxCommandEvent event(REHex::EV_MAPPINGS_CHANGED);
-	event.SetEventObject(this);
-	
-	ProcessEvent(event);
+	mappings_changed_buffer.raise();
 }
 
 REHex::Document::Comment::Comment(const wxString &text):
@@ -1998,4 +1994,53 @@ void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthM
 	assert(((char*)(data) + size) == outp);
 	
 	TakeData(size, data);
+}
+
+REHex::Document::CommandEventBuffer::CommandEventBuffer(wxEvtHandler *handler, wxEventType type):
+	handler(handler),
+	type(type),
+	frozen(false),
+	pending(false)
+{
+	wxGetApp().Bind(BULK_UPDATES_FROZEN, &REHex::Document::CommandEventBuffer::OnBulkUpdatesFrozen, this);
+	wxGetApp().Bind(BULK_UPDATES_THAWED, &REHex::Document::CommandEventBuffer::OnBulkUpdatesThawed, this);
+}
+
+REHex::Document::CommandEventBuffer::~CommandEventBuffer()
+{
+	wxGetApp().Unbind(BULK_UPDATES_THAWED, &REHex::Document::CommandEventBuffer::OnBulkUpdatesThawed, this);
+	wxGetApp().Unbind(BULK_UPDATES_FROZEN, &REHex::Document::CommandEventBuffer::OnBulkUpdatesFrozen, this);
+}
+
+void REHex::Document::CommandEventBuffer::raise()
+{
+	if(frozen)
+	{
+		pending = true;
+		return;
+	}
+	
+	wxCommandEvent event(type);
+	event.SetEventObject(handler);
+	
+	handler->ProcessEvent(event);
+}
+
+void REHex::Document::CommandEventBuffer::OnBulkUpdatesFrozen(wxCommandEvent &event)
+{
+	frozen = true;
+	event.Skip();
+}
+
+void REHex::Document::CommandEventBuffer::OnBulkUpdatesThawed(wxCommandEvent &event)
+{
+	frozen = false;
+	
+	if(pending)
+	{
+		pending = false;
+		raise();
+	}
+	
+	event.Skip();
 }

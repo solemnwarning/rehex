@@ -43,7 +43,6 @@
 #include "search.hpp"
 #include "SelectRangeDialog.hpp"
 #include "SharedDocumentPointer.hpp"
-#include "TabDragFrame.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
 

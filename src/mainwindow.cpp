@@ -1863,7 +1863,7 @@ void REHex::MainWindow::OnTabDragMotion(wxAuiNotebookEvent& event)
 	
 	wxPoint screen_pt = wxGetMousePosition();
 	
-	if(abs(drag_begin_pt.x - screen_pt.x) > 200)
+	if(!tab_ctrl->GetScreenRect().Contains(screen_pt))
 	{
 		if(TabDragFrame::get_instance() != NULL)
 		{

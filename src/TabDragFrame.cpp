@@ -123,6 +123,7 @@ void REHex::TabDragFrame::drop()
 	if(window == NULL)
 	{
 		window = new MainWindow(original_window_size);
+		window->SetPosition(GetPosition());
 		window->insert_tab(tab, -1);
 		window->Show();
 	}

@@ -161,6 +161,8 @@ bool REHex::App::OnInit()
 		active_palette = Palette::create_system_palette();
 	}
 	
+	Bind(EVT_PAGE_DROPPED, &REHex::App::OnTabDropped, this);
+	
 	call_setup_hooks(SetupPhase::READY);
 	
 	wxSize windowSize(740, 540);
@@ -294,4 +296,21 @@ void REHex::App::OnDiffWindowClose(wxCloseEvent &event)
 		window->Destroy();
 		event.Skip();
 	}
+}
+
+void REHex::App::OnTabDropped(DetachedPageEvent &event)
+{
+	/* We get triggered by DetachableNotebook when a document tab is detached from a
+	 * MainWindow and then dropped elsewhere, wherein we set up a new MainWindow to own it.
+	*/
+	
+	wxPoint mouse_position = wxGetMousePosition();
+	
+	Tab *tab = dynamic_cast<Tab*>(event.page);
+	assert(tab != NULL);
+	
+	MainWindow *window = new MainWindow(tab->GetSize());
+	window->SetPosition(mouse_position);
+	window->insert_tab(tab, -1);
+	window->Show();
 }

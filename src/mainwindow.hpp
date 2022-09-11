@@ -25,6 +25,7 @@
 #include <wx/dnd.h>
 #include <wx/wx.h>
 
+#include "DetachableNotebook.hpp"
 #include "Events.hpp"
 #include "Tab.hpp"
 #include "ToolPanel.hpp"
@@ -136,9 +137,7 @@ namespace REHex {
 			void OnDocumentClosed(wxAuiNotebookEvent &event);
 			void OnDocumentMenu(wxAuiNotebookEvent &event);
 			void OnDocumentMiddleMouse(wxAuiNotebookEvent& event);
-			
-			void OnTabDragBegin(wxAuiNotebookEvent& event);
-			void OnTabDragMotion(wxAuiNotebookEvent& event);
+			void OnDocumentDetached(DetachedPageEvent &event);
 			
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnSelectionChange(wxCommandEvent &event);
@@ -257,7 +256,7 @@ namespace REHex {
 			wxMenu *tools_menu;
 			wxMenu *help_menu;
 			
-			wxAuiNotebook *notebook;
+			DetachableNotebook *notebook;
 			wxBitmap notebook_dirty_bitmap;
 			
 			wxMenu *tool_panels_menu;

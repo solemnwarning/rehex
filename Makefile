@@ -280,6 +280,7 @@ APP_OBJS := \
 	src/ConsolePanel.o \
 	src/DataType.o \
 	src/decodepanel.o \
+	src/DetachableNotebook.o \
 	src/DiffWindow.o \
 	src/disassemble.o \
 	src/DisassemblyRegion.o \
@@ -302,7 +303,6 @@ APP_OBJS := \
 	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
-	src/TabDragFrame.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \
@@ -358,6 +358,7 @@ TEST_OBJS := \
 	src/CommentTree.o \
 	src/ConsoleBuffer.o \
 	src/DataType.o \
+	src/DetachableNotebook.o \
 	src/DiffWindow.o \
 	src/DisassemblyRegion.o \
 	src/document.o \
@@ -377,7 +378,6 @@ TEST_OBJS := \
 	src/SelectRangeDialog.o \
 	src/StringPanel.o \
 	src/Tab.o \
-	src/TabDragFrame.o \
 	src/textentrydialog.o \
 	src/ToolPanel.o \
 	src/util.o \

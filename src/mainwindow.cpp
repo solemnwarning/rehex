@@ -193,6 +193,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
 	EVT_AUINOTEBOOK_TAB_RIGHT_DOWN(wxID_ANY, REHex::MainWindow::OnDocumentMenu)
 	EVT_AUINOTEBOOK_TAB_MIDDLE_UP( wxID_ANY, REHex::MainWindow::OnDocumentMiddleMouse)
+	EVT_DETACHABLENOTEBOOK_PAGE_DETACHED(wxID_ANY, REHex::MainWindow::OnDocumentDetached)
 	
 	EVT_CURSORUPDATE(wxID_ANY, REHex::MainWindow::OnCursorUpdate)
 	
@@ -520,11 +521,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	
 	toolbar->Realize();
 	
-	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+	static int DOCUMENT_PAGE_GROUP;
+	notebook = new DetachableNotebook(this, wxID_ANY, &DOCUMENT_PAGE_GROUP, &(wxGetApp()), wxDefaultPosition, wxDefaultSize,
 		(wxAUI_NB_TOP | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ALL_TABS));
-	
-	notebook->Bind(wxEVT_AUINOTEBOOK_BEGIN_DRAG, &REHex::MainWindow::OnTabDragBegin, this);
-	notebook->Bind(wxEVT_AUINOTEBOOK_DRAG_MOTION, &REHex::MainWindow::OnTabDragMotion, this);
 	
 	notebook_dirty_bitmap = artp.GetBitmap(wxART_FILE_SAVE, wxART_MENU);
 	assert(!notebook_dirty_bitmap.IsSameAs(wxNullBitmap));
@@ -1846,60 +1845,12 @@ void REHex::MainWindow::OnDocumentMiddleMouse(wxAuiNotebookEvent& event)
 	close_tab(tab);
 }
 
-static wxPoint drag_begin_pt;
-static bool drag_in_progress = false;
-
-void REHex::MainWindow::OnTabDragBegin(wxAuiNotebookEvent& event)
+void REHex::MainWindow::OnDocumentDetached(DetachedPageEvent &event)
 {
-	drag_begin_pt = ::wxGetMousePosition();
-	drag_in_progress = true;
-	event.Skip();
-}
-
-void REHex::MainWindow::OnTabDragMotion(wxAuiNotebookEvent& event)
-{
-	wxAuiTabCtrl* tab_ctrl = dynamic_cast<wxAuiTabCtrl*>(event.GetEventObject());
-	assert(tab_ctrl != NULL);
-	
-	wxPoint screen_pt = wxGetMousePosition();
-	
-	if(!tab_ctrl->GetScreenRect().Contains(screen_pt))
+	if(notebook->GetPageCount() == 0)
 	{
-		if(TabDragFrame::get_instance() != NULL)
-		{
-			/* Sometimes (only seen on macOS) we get multiple wxEVT_AUINOTEBOOK_DRAG_MOTION
-			 * events, which can cause us to try setting up multiple drag operations at the
-			 * same time without this check.
-			*/
-			return;
-		}
-		
-		assert(tab_ctrl->HasCapture());
-		
-		if(tab_ctrl->HasCapture())
-		{
-			tab_ctrl->ReleaseMouse();
-			
-			wxMouseCaptureLostEvent e;
-			tab_ctrl->GetEventHandler()->ProcessEvent(e);
-		}
-		
-		wxWindow *page = notebook->GetPage(event.GetSelection());
-		notebook->RemovePage(event.GetSelection());
-		
-		Tab *page_tab = dynamic_cast<Tab*>(page);
-		assert(page_tab != NULL);
-		
-		TabDragFrame *tdf = new TabDragFrame(page_tab, GetSize());
-		
-		if(notebook->GetPageCount() == 0)
-		{
-			/* Detached the last tab - close the window. */
-			Destroy();
-		}
-	}
-	else{
-		event.Skip();
+		/* Detached the last tab - close the window. */
+		Destroy();
 	}
 }
 

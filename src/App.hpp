@@ -224,6 +224,7 @@ namespace REHex {
 			
 			void OnMainWindowShow(wxShowEvent &event);
 			void OnDiffWindowClose(wxCloseEvent &event);
+			void OnTabDropped(DetachedPageEvent &event);
 			
 		public:
 			void _test_setup_hooks(SetupPhase phase);

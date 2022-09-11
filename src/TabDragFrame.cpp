@@ -20,9 +20,13 @@
 REHex::TabDragFrame *REHex::TabDragFrame::instance = NULL;
 
 BEGIN_EVENT_TABLE(REHex::TabDragFrame, wxFrame)
+#ifdef REHEX_TABDRAGFRAME_FAKE_CAPTURE
+	EVT_TIMER(wxID_ANY, REHex::TabDragFrame::OnMousePoll)
+#else
 	EVT_MOTION(REHex::TabDragFrame::OnMotion)
 	EVT_MOUSE_CAPTURE_LOST(REHex::TabDragFrame::OnCaptureLost)
 	EVT_LEFT_UP(REHex::TabDragFrame::OnLeftUp)
+#endif
 END_EVENT_TABLE()
 
 REHex::TabDragFrame::TabDragFrame(Tab *tab, wxSize original_window_size):
@@ -30,6 +34,9 @@ REHex::TabDragFrame::TabDragFrame(Tab *tab, wxSize original_window_size):
 	tab(tab),
 	original_window_size(original_window_size),
 	dragging(true)
+#ifdef REHEX_TABDRAGFRAME_FAKE_CAPTURE
+	, mouse_poll_timer(this, wxID_ANY)
+#endif
 {
 	assert(instance == NULL);
 	instance = this;
@@ -42,10 +49,14 @@ REHex::TabDragFrame::TabDragFrame(Tab *tab, wxSize original_window_size):
 	#endif
 	Show();
 	
+#ifdef REHEX_TABDRAGFRAME_FAKE_CAPTURE
+	mouse_poll_timer.Start(50);
+#else
 	CallAfter([&]()
 	{
 		CaptureMouse();
 	});
+#endif
 }
 
 REHex::TabDragFrame::~TabDragFrame()
@@ -115,6 +126,29 @@ void REHex::TabDragFrame::drop()
 	}
 }
 
+#ifdef REHEX_TABDRAGFRAME_FAKE_CAPTURE
+void REHex::TabDragFrame::OnMousePoll(wxTimerEvent &event)
+{
+	if(dragging)
+	{
+		wxMouseState mouse_state = wxGetMouseState();
+		
+		if(mouse_state.LeftIsDown())
+		{
+			wxPoint mouse_pos = wxGetMousePosition();
+			SetPosition(mouse_pos);
+		}
+		else{
+			mouse_poll_timer.Stop();
+			
+			dragging = false;
+			drop();
+			
+			Destroy();
+		}
+	}
+}
+#else
 void REHex::TabDragFrame::OnMotion(wxMouseEvent &event)
 {
 	wxPoint mouse_pos = wxGetMousePosition();
@@ -143,3 +177,4 @@ void REHex::TabDragFrame::OnLeftUp(wxMouseEvent &event)
 	
 	Destroy();
 }
+#endif

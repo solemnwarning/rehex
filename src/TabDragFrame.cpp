@@ -65,6 +65,11 @@ REHex::TabDragFrame::~TabDragFrame()
 	instance = NULL;
 }
 
+REHex::TabDragFrame *REHex::TabDragFrame::get_instance()
+{
+	return instance;
+}
+
 static wxAuiTabCtrl *find_wxAuiTabCtrl(wxWindow *w)
 {
 	auto w_children = w->GetChildren();

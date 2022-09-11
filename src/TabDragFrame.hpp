@@ -51,6 +51,8 @@ namespace REHex
 			TabDragFrame(Tab *tab, wxSize original_window_size);
 			~TabDragFrame();
 			
+			static TabDragFrame *get_instance();
+			
 		private:
 			static TabDragFrame *instance;
 			

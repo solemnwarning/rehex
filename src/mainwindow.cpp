@@ -1847,10 +1847,12 @@ void REHex::MainWindow::OnDocumentMiddleMouse(wxAuiNotebookEvent& event)
 }
 
 static wxPoint drag_begin_pt;
+static bool drag_in_progress = false;
 
 void REHex::MainWindow::OnTabDragBegin(wxAuiNotebookEvent& event)
 {
 	drag_begin_pt = ::wxGetMousePosition();
+	drag_in_progress = true;
 	event.Skip();
 }
 
@@ -1863,6 +1865,15 @@ void REHex::MainWindow::OnTabDragMotion(wxAuiNotebookEvent& event)
 	
 	if(abs(drag_begin_pt.x - screen_pt.x) > 200)
 	{
+		if(TabDragFrame::get_instance() != NULL)
+		{
+			/* Sometimes (only seen on macOS) we get multiple wxEVT_AUINOTEBOOK_DRAG_MOTION
+			 * events, which can cause us to try setting up multiple drag operations at the
+			 * same time without this check.
+			*/
+			return;
+		}
+		
 		assert(tab_ctrl->HasCapture());
 		
 		if(tab_ctrl->HasCapture())

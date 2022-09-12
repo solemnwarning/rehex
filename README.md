@@ -11,7 +11,7 @@ An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manu
 * Inline disassembly of machine code
 * Highlighting and annotation of ranges of bytes
 * Side by side comparision of whole files or selections
-* Lua scripting support ([API reference](http://www.solemnwarning.net/rehex-luadoc/))
+* Lua scripting support ([API reference](http://www.solemnwarning.net/rehex/luadoc/))
 * Virtual address mapping support
 * Support for common text encodings (ASCII, Unicode, ISO-8859-X)
 * Import and export of Intel HEX files.

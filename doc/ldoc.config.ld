@@ -9,3 +9,4 @@ want with it, please open an issue on the [GitHub page](https://www.github.com/s
 "
 format = 'markdown'
 sort = true
+not_luadoc = true

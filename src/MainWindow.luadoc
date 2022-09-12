@@ -6,6 +6,10 @@
 -- @function active_document
 -- @return rehex.Document object
 
+--- Get the currently active tab.
+-- @function active_tab
+-- @return rehex.Tab object
+
 --- Get the wxMenuBar of the window.
 -- @function get_menu_bar
 -- @return wx.wxMenuBar object

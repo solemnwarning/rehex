@@ -1110,6 +1110,8 @@ void REHex::Document::undo()
 {
 	if(!undo_stack.empty())
 	{
+		wxGetApp().bulk_updates_freeze();
+		
 		auto &trans = undo_stack.back();
 		
 		--current_seq;
@@ -1163,6 +1165,8 @@ void REHex::Document::undo()
 		undo_stack.pop_back();
 		
 		_raise_undo_update();
+		
+		wxGetApp().bulk_updates_thaw();
 	}
 }
 
@@ -1181,6 +1185,8 @@ void REHex::Document::redo()
 {
 	if(!redo_stack.empty())
 	{
+		wxGetApp().bulk_updates_freeze();
+		
 		auto &trans = redo_stack.back();
 		
 		++current_seq;
@@ -1208,6 +1214,8 @@ void REHex::Document::redo()
 		redo_stack.pop_back();
 		
 		_raise_undo_update();
+		
+		wxGetApp().bulk_updates_thaw();
 	}
 }
 
@@ -1238,6 +1246,8 @@ void REHex::Document::transact_begin(const std::string &desc)
 {
 	if(undo_stack.empty() || undo_stack.back().complete)
 	{
+		wxGetApp().bulk_updates_freeze();
+		
 		++current_seq;
 		
 		if(current_seq == saved_seq)
@@ -1301,6 +1311,8 @@ void REHex::Document::transact_commit()
 	{
 		undo_stack.pop_front();
 	}
+	
+	wxGetApp().bulk_updates_thaw();
 }
 
 void REHex::Document::transact_rollback()
@@ -1314,6 +1326,8 @@ void REHex::Document::transact_rollback()
 	
 	redo_stack.clear();
 	_raise_undo_update();
+	
+	wxGetApp().bulk_updates_thaw();
 }
 
 void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice)

@@ -2,6 +2,8 @@
 
 A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and everything else.
 
+An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manual/](https://solemnwarning.net/rehex/manual/).
+
 ## Features
 
 * Large (1TB+) file support

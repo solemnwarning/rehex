@@ -297,6 +297,7 @@ APP_OBJS := \
 	src/mainwindow.o \
 	src/Palette.o \
 	src/profile.o \
+	src/RangeProcessor.o \
 	src/search.o \
 	src/SelectRangeDialog.o \
 	src/StringPanel.o \
@@ -372,6 +373,7 @@ TEST_OBJS := \
 	src/LuaPluginLoader.o \
 	src/mainwindow.o \
 	src/Palette.o \
+	src/RangeProcessor.o \
 	src/search.o \
 	src/SelectRangeDialog.o \
 	src/StringPanel.o \
@@ -402,6 +404,7 @@ TEST_OBJS := \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
+	tests/RangeProcessor.o \
 	tests/search-bseq.o \
 	tests/search-text.o \
 	tests/SearchBase.o \

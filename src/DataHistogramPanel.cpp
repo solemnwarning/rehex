@@ -506,7 +506,15 @@ void REHex::DataHistogramPanel::reset_chart()
 	if(chart_panel != NULL)
 	{
 		GetSizer()->Detach(chart_panel);
-		chart_panel->Destroy();
+		
+		/* Don't destroy the old wxChartPanel yet in case we are running inside one of its
+		 * event handlers.
+		*/
+		wxWindow *old_chart_panel = chart_panel;
+		CallAfter([old_chart_panel]()
+		{
+			old_chart_panel->Destroy();
+		});
 	}
 	
 	// Create a chart panel to display the chart.

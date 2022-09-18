@@ -95,9 +95,9 @@ else
 	PROFILE_CFLAGS := -DREHEX_PROFILE
 endif
 
-CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
-CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
+CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/                       -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
+CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
 uname_S := $(shell uname -s 2>/dev/null)
 ifeq ($(uname_S),FreeBSD)
@@ -235,6 +235,67 @@ WXBIND_OBJS := \
 	wxLua/modules/wxbind/src/wxcore_wxlcore.o \
 	wxLua/modules/wxbind/src/wxpropgrid_bind.o
 
+WXFREECHART_OBJS := \
+	wxFreeChart/src/areadraw.o \
+	wxFreeChart/src/art.o \
+	wxFreeChart/src/axis/axis.o \
+	wxFreeChart/src/axis/categoryaxis.o \
+	wxFreeChart/src/axis/compdateaxis.o \
+	wxFreeChart/src/axis/dateaxis.o \
+	wxFreeChart/src/axis/juliandateaxis.o \
+	wxFreeChart/src/axis/labelaxis.o \
+	wxFreeChart/src/axis/logarithmicnumberaxis.o \
+	wxFreeChart/src/axis/numberaxis.o \
+	wxFreeChart/src/axisplot.o \
+	wxFreeChart/src/bars/barplot.o \
+	wxFreeChart/src/bars/barrenderer.o \
+	wxFreeChart/src/category/categorydataset.o \
+	wxFreeChart/src/category/categoryrenderer.o \
+	wxFreeChart/src/category/categorysimpledataset.o \
+	wxFreeChart/src/chart.o \
+	wxFreeChart/src/chartpanel.o \
+	wxFreeChart/src/chartsplitpanel.o \
+	wxFreeChart/src/colorscheme.o \
+	wxFreeChart/src/crosshair.o \
+	wxFreeChart/src/dataset.o \
+	wxFreeChart/src/gantt/ganttdataset.o \
+	wxFreeChart/src/gantt/ganttplot.o \
+	wxFreeChart/src/gantt/ganttrenderer.o \
+	wxFreeChart/src/gantt/ganttsimpledataset.o \
+	wxFreeChart/src/legend.o \
+	wxFreeChart/src/marker.o \
+	wxFreeChart/src/multiplot.o \
+	wxFreeChart/src/ohlc/movingaverage.o \
+	wxFreeChart/src/ohlc/ohlcbarrenderer.o \
+	wxFreeChart/src/ohlc/ohlccandlestickrenderer.o \
+	wxFreeChart/src/ohlc/ohlcdataset.o \
+	wxFreeChart/src/ohlc/ohlcplot.o \
+	wxFreeChart/src/ohlc/ohlcrenderer.o \
+	wxFreeChart/src/ohlc/ohlcsimpledataset.o \
+	wxFreeChart/src/pie/pieplot.o \
+	wxFreeChart/src/plot.o \
+	wxFreeChart/src/renderer.o \
+	wxFreeChart/src/symbol.o \
+	wxFreeChart/src/title.o \
+	wxFreeChart/src/tooltips.o \
+	wxFreeChart/src/xy/functions/polynom.o \
+	wxFreeChart/src/xy/functions/sinefunction.o \
+	wxFreeChart/src/xy/juliantimeseriesdataset.o \
+	wxFreeChart/src/xy/timeseriesdataset.o \
+	wxFreeChart/src/xy/vectordataset.o \
+	wxFreeChart/src/xy/xyarearenderer.o \
+	wxFreeChart/src/xy/xydataset.o \
+	wxFreeChart/src/xy/xydynamicdataset.o \
+	wxFreeChart/src/xy/xyhistorenderer.o \
+	wxFreeChart/src/xy/xylinerenderer.o \
+	wxFreeChart/src/xy/xyplot.o \
+	wxFreeChart/src/xy/xyrenderer.o \
+	wxFreeChart/src/xy/xysimpledataset.o \
+	wxFreeChart/src/xyz/bubbleplot.o \
+	wxFreeChart/src/xyz/xyzdataset.o \
+	wxFreeChart/src/xyz/xyzrenderer.o \
+	wxFreeChart/src/zoompan.o
+
 APP_OBJS := \
 	res/actual_size16.o \
 	res/ascii16.o \
@@ -278,6 +339,7 @@ APP_OBJS := \
 	src/CommentTree.o \
 	src/ConsoleBuffer.o \
 	src/ConsolePanel.o \
+	src/DataHistogramPanel.o \
 	src/DataType.o \
 	src/decodepanel.o \
 	src/DiffWindow.o \
@@ -310,6 +372,7 @@ APP_OBJS := \
 	src/win32lib.o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
+	$(WXFREECHART_OBJS) \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS) $(GTKCONFIG_EXE)

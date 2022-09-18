@@ -42,6 +42,19 @@ namespace REHex
 		private:
 			DataHistogramAccumulator<uint8_t> *accumulator;
 	};
+	
+	class DataHistogramRenderer: public XYRenderer, public DrawObserver
+	{
+		public:
+			DataHistogramRenderer(DataHistogramAccumulator<uint8_t> *accumulator);
+			virtual ~DataHistogramRenderer();
+			
+			virtual void Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Axis *vertAxis, XYDataset *dataset) override;
+			virtual void NeedRedraw(DrawObject *obj) override;
+			
+			DataHistogramAccumulator<uint8_t> *accumulator;
+			wxChartPanel *panel;
+	};
 };
 
 REHex::DataHistogramDatasetAdapter::DataHistogramDatasetAdapter(DataHistogramAccumulator<uint8_t> *accumulator):
@@ -81,6 +94,75 @@ wxString REHex::DataHistogramDatasetAdapter::GetSerieName(size_t serie)
 	return "hello";
 }
 
+REHex::DataHistogramRenderer::DataHistogramRenderer(DataHistogramAccumulator<uint8_t> *accumulator):
+	accumulator(accumulator),
+	panel(NULL) {}
+
+REHex::DataHistogramRenderer::~DataHistogramRenderer() {}
+
+void REHex::DataHistogramRenderer::Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Axis *vertAxis, XYDataset *dataset)
+{
+	assert(dataset->GetSerieCount() == 1);
+	
+	wxPoint screen_mouse_pos = wxGetMousePosition();
+	wxPoint panel_mouse_pos = wxDefaultPosition;
+	
+	if(panel != NULL)
+	{
+		wxRect panel_screen_rect = panel->GetScreenRect();
+		if(panel_screen_rect.Contains(screen_mouse_pos))
+		{
+			panel_mouse_pos = panel->ScreenToClient(screen_mouse_pos);
+		}
+	}
+	
+	FOREACH_DATAITEM(n, 0, dataset)
+	{
+		double xVal = dataset->GetX(n, 0);
+		double yVal = dataset->GetY(n, 0);
+		
+		if (!horizAxis->IsVisible(xVal) || !vertAxis->IsVisible(yVal))
+		{
+			continue;
+		}
+		
+		wxCoord x = horizAxis->ToGraphics(dc, rc.x, rc.width, xVal);
+		wxCoord y = vertAxis->ToGraphics(dc, rc.y, rc.height, yVal);
+		
+		wxRect rcBar = {
+			x,
+			y,
+			rc.width / dataset->GetCount(0),
+			rc.height - y + rc.y,
+		};
+		
+		dc.SetPen(*wxBLACK_PEN);
+		
+		if(rcBar.Contains(panel_mouse_pos))
+		{
+			dc.SetBrush(*wxRED_BRUSH);
+			
+			auto bucket = accumulator->get_buckets()[n];
+			
+			std::string s =
+				"Value: " + std::to_string(bucket.min_value) + " " + std::to_string(bucket.max_value) + "\n" +
+				"Count: " + std::to_string(bucket.count);
+			
+			dc.DrawText(s, rc.x, rc.y);
+		}
+		else{
+			dc.SetBrush(*wxGREEN_BRUSH);
+		}
+		
+		dc.DrawRectangle(rcBar);
+	}
+}
+
+void REHex::DataHistogramRenderer::NeedRedraw(DrawObject *obj)
+{
+    FireNeedRedraw();
+}
+
 static REHex::ToolPanel *DataHistogramPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::DataHistogramPanel(parent, document, document_ctrl);
@@ -102,9 +184,9 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 		update();
 	});
 	
-	update_timer.Start(5000);
+	update_timer.Start(500);
 	
-	acc = new DataHistogramAccumulator<uint8_t>(document, 0, 1, document->buffer_length(), 16);
+	acc = new DataHistogramAccumulator<uint8_t>(document, 0, 1, document->buffer_length(), 256);
 }
 
 REHex::DataHistogramPanel::~DataHistogramPanel() {}
@@ -190,6 +272,7 @@ void REHex::DataHistogramPanel::update()
 	// Second step: create the dataset.
 	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(acc);
 	
+	#if 0
 	// create histogram renderer with bar width = 10 and vertical bars
 	XYHistoRenderer *histoRenderer = new XYHistoRenderer(-1, true);
 	
@@ -199,6 +282,10 @@ void REHex::DataHistogramPanel::update()
 	
 	// set renderer to dataset
 	dataset->SetRenderer(histoRenderer);
+	#endif
+	
+	DataHistogramRenderer *renderer = new DataHistogramRenderer(acc);
+	dataset->SetRenderer(renderer);
 	
 	// add our dataset to plot
 	plot->AddDataset(dataset);
@@ -229,6 +316,7 @@ void REHex::DataHistogramPanel::update()
 	
 	// Create a chart panel to display the chart.
 	chart_panel = new wxChartPanel(this, wxID_ANY, chart, wxDefaultPosition, GetClientSize());
+	renderer->panel = chart_panel;
 }
 
 // void REHex::DataHistogramPanel::OnDataModifying(OffsetLengthEvent &event)

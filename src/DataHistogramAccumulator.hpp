@@ -40,10 +40,12 @@ namespace REHex
 			virtual double get_bucket_max_value_as_double(size_t bucket_idx) const = 0;
 			virtual std::string get_bucket_max_value_as_string(size_t bucket_idx) const = 0;
 			
-			virtual double get_type_min_value_as_double() const = 0;
-			virtual double get_type_max_value_as_double() const = 0;
+			virtual double get_all_buckets_min_value_as_double() const = 0;
+			virtual double get_all_buckets_max_value_as_double() const = 0;
 			
 			virtual double get_progress() const = 0;
+			
+			virtual DataHistogramAccumulatorInterface *subdivide_bucket(size_t bucket_idx) const = 0;
 	};
 	
 	template<typename T> class DataHistogramAccumulator: public DataHistogramAccumulatorInterface
@@ -76,10 +78,12 @@ namespace REHex
 			virtual double get_bucket_max_value_as_double(size_t bucket_idx) const override;
 			virtual std::string get_bucket_max_value_as_string(size_t bucket_idx) const override;
 			
-			virtual double get_type_min_value_as_double() const override;
-			virtual double get_type_max_value_as_double() const override;
+			virtual double get_all_buckets_min_value_as_double() const override;
+			virtual double get_all_buckets_max_value_as_double() const override;
 			
 			virtual double get_progress() const override;
+			
+			virtual DataHistogramAccumulatorInterface *subdivide_bucket(size_t bucket_idx) const override;
 			
 		private:
 			SharedDocumentPointer document;
@@ -127,7 +131,7 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 	}
 	
 	// TODO: Align window size with word size
-	rp = std::unique_ptr<RangeProcessor>(new RangeProcessor([this](off_t window_base, off_t window_size) { process_range(window_base, window_size); }, (2 * 1024 * 1024)));
+	rp.reset(new RangeProcessor([this](off_t window_base, off_t window_size) { process_range(window_base, window_size); }, (2 * 1024 * 1024)));
 	rp->queue_range(offset, length);
 }
 
@@ -164,11 +168,14 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 	sub_value = bucket->min_value;
 	
 	// TODO: Align window size with word size
-	rp = std::unique_ptr<RangeProcessor>(new RangeProcessor([this](off_t window_base, off_t window_size) { process_range(window_base, window_size); }, (2 * 1024 * 1024)));
+	rp.reset(new RangeProcessor([this](off_t window_base, off_t window_size) { process_range(window_base, window_size); }, (2 * 1024 * 1024)));
 	rp->queue_range(offset, length);
 }
 
-template<typename T> REHex::DataHistogramAccumulator<T>::~DataHistogramAccumulator() {}
+template<typename T> REHex::DataHistogramAccumulator<T>::~DataHistogramAccumulator()
+{
+	rp.reset(NULL);
+}
 
 template<typename T> const std::vector< typename REHex::DataHistogramAccumulator<T>::Bucket > &REHex::DataHistogramAccumulator<T>::get_buckets() const
 {
@@ -258,14 +265,14 @@ template<typename T> std::string REHex::DataHistogramAccumulator<T>::get_bucket_
 	return std::to_string(buckets[bucket_idx].max_value);
 }
 
-template<typename T> double REHex::DataHistogramAccumulator<T>::get_type_min_value_as_double() const
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_all_buckets_min_value_as_double() const
 {
-	return std::numeric_limits<T>::min();
+	return buckets.front().min_value;
 }
 
-template<typename T> double REHex::DataHistogramAccumulator<T>::get_type_max_value_as_double() const
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_all_buckets_max_value_as_double() const
 {
-	return std::numeric_limits<T>::max();
+	return buckets.back().max_value;
 }
 
 template<typename T> double REHex::DataHistogramAccumulator<T>::get_progress() const
@@ -277,6 +284,19 @@ template<typename T> double REHex::DataHistogramAccumulator<T>::get_progress() c
 	}
 	
 	return (double)(length) / (double)(queue.total_bytes());
+}
+
+template<typename T> REHex::DataHistogramAccumulatorInterface *REHex::DataHistogramAccumulator<T>::subdivide_bucket(size_t bucket_idx) const
+{
+	assert(bucket_idx < buckets.size());
+	
+	if(buckets[bucket_idx].min_value == buckets[bucket_idx].max_value)
+	{
+		/* Can't subdivide a single value. */
+		return NULL;
+	}
+	
+	return new DataHistogramAccumulator<T>(this, &(buckets[bucket_idx]));
 }
 
 #endif /* !REHEX_DATAHISTOGRAMACCUMULATOR_HPP */

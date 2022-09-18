@@ -28,6 +28,8 @@
 
 namespace REHex
 {
+	wxDEFINE_EVENT(DATAHISTOGRAM_BUCKET_SELECTED, wxCommandEvent);
+	
 	class DataHistogramDatasetAdapter : public XYDataset
 	{
 		public:
@@ -63,9 +65,13 @@ namespace REHex
 			std::vector<wxRect> bucket_panel_rects;
 			int mouse_over_bucket_idx;
 			
+			wxPoint mouse_down_point;
+			
 			int screen_point_to_bucket_idx(wxPoint point);
 			
 			void OnMotion(wxMouseEvent &event);
+			void OnLeftDown(wxMouseEvent &event);
+			void OnLeftUp(wxMouseEvent &event);
 	};
 };
 
@@ -111,17 +117,28 @@ REHex::DataHistogramRenderer::DataHistogramRenderer(DataHistogramAccumulatorInte
 	panel(NULL),
 	mouse_over_bucket_idx(-1) {}
 
-REHex::DataHistogramRenderer::~DataHistogramRenderer() {}
+REHex::DataHistogramRenderer::~DataHistogramRenderer()
+{
+	set_chart_panel(NULL);
+}
 
 void REHex::DataHistogramRenderer::set_chart_panel(wxChartPanel *panel)
 {
 	if(this->panel != NULL)
 	{
+		this->panel->Unbind(wxEVT_LEFT_UP, &REHex::DataHistogramRenderer::OnLeftUp, this);
+		this->panel->Unbind(wxEVT_LEFT_DOWN, &REHex::DataHistogramRenderer::OnLeftDown, this);
 		this->panel->Unbind(wxEVT_MOTION, &REHex::DataHistogramRenderer::OnMotion, this);
 	}
 	
 	this->panel = panel;
-	panel->Bind(wxEVT_MOTION, &REHex::DataHistogramRenderer::OnMotion, this);
+	
+	if(this->panel != NULL)
+	{
+		panel->Bind(wxEVT_MOTION, &REHex::DataHistogramRenderer::OnMotion, this);
+		panel->Bind(wxEVT_LEFT_DOWN, &REHex::DataHistogramRenderer::OnLeftDown, this);
+		panel->Bind(wxEVT_LEFT_UP, &REHex::DataHistogramRenderer::OnLeftUp, this);
+	}
 }
 
 void REHex::DataHistogramRenderer::force_redraw()
@@ -153,7 +170,7 @@ void REHex::DataHistogramRenderer::Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Ax
 		double xVal = accumulator->get_bucket_min_value_as_double(n);
 		double xNext = (n + 1) < accumulator->get_num_buckets()
 			? accumulator->get_bucket_min_value_as_double(n + 1)
-			: accumulator->get_type_max_value_as_double();
+			: accumulator->get_all_buckets_max_value_as_double();
 		
 		double yVal = dataset->GetY(n, 0);
 		
@@ -240,6 +257,32 @@ void REHex::DataHistogramRenderer::OnMotion(wxMouseEvent &event)
 	event.Skip();
 }
 
+void REHex::DataHistogramRenderer::OnLeftDown(wxMouseEvent &event)
+{
+	mouse_down_point = wxGetMousePosition();
+	event.Skip();
+}
+
+void REHex::DataHistogramRenderer::OnLeftUp(wxMouseEvent &event)
+{
+	wxPoint mouse_point = wxGetMousePosition();
+	if(mouse_point == mouse_down_point)
+	{
+		int bucket_idx = screen_point_to_bucket_idx(mouse_point);
+		if(bucket_idx >= 0)
+		{
+			wxCommandEvent e(DATAHISTOGRAM_BUCKET_SELECTED);
+			e.SetEventObject(panel);
+			e.SetId(panel->GetId());
+			e.SetInt(bucket_idx);
+			
+			panel->ProcessWindowEvent(e);
+		}
+	}
+	
+	event.Skip();
+}
+
 static REHex::ToolPanel *DataHistogramPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::DataHistogramPanel(parent, document, document_ctrl);
@@ -266,13 +309,14 @@ BEGIN_EVENT_TABLE(REHex::DataHistogramPanel, wxPanel)
 	EVT_CHOICE(ID_BUCKET_COUNT_CHOICE, REHex::DataHistogramPanel::OnBucketCountChanged)
 	
 	EVT_TIMER(ID_REFRESH_TIMER, REHex::DataHistogramPanel::OnRefreshTimer)
+	
+	EVT_COMMAND(wxID_ANY, DATAHISTOGRAM_BUCKET_SELECTED, REHex::DataHistogramPanel::OnBucketSelected)
 END_EVENT_TABLE()
 
 REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
 	document_ctrl(document_ctrl),
-	accumulator(NULL),
 	dataset(NULL),
 	chart_panel(NULL),
 	refresh_timer(this, ID_REFRESH_TIMER)
@@ -296,7 +340,7 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	sizer->Add(bucket_count_choice, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
 	SetSizerAndFit(sizer);
 	
-	reset_chart();
+	reset_accumulator();
 }
 
 REHex::DataHistogramPanel::~DataHistogramPanel() {}
@@ -376,10 +420,10 @@ void REHex::DataHistogramPanel::update()
 	}
 	#endif
 	
-	reset_chart();
+	//reset_chart();
 }
 
-void REHex::DataHistogramPanel::reset_chart()
+void REHex::DataHistogramPanel::reset_accumulator()
 {
 	int bucket_count;
 	switch(bucket_count_choice->GetSelection())
@@ -400,19 +444,19 @@ void REHex::DataHistogramPanel::reset_chart()
 	switch(word_size_choice->GetSelection())
 	{
 		case WORD_SIZE_CHOICE_8BIT:
-			accumulator = new DataHistogramAccumulator<uint8_t>(document, 0, sizeof(uint8_t), document->buffer_length(), bucket_count);
+			accumulator.reset(new DataHistogramAccumulator<uint8_t>(document, 0, sizeof(uint8_t), document->buffer_length(), bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_16BIT:
-			accumulator = new DataHistogramAccumulator<uint16_t>(document, 0, sizeof(uint16_t), document->buffer_length(), bucket_count);
+			accumulator.reset(new DataHistogramAccumulator<uint16_t>(document, 0, sizeof(uint16_t), document->buffer_length(), bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_32BIT:
-			accumulator = new DataHistogramAccumulator<uint32_t>(document, 0, sizeof(uint32_t), document->buffer_length(), bucket_count);
+			accumulator.reset(new DataHistogramAccumulator<uint32_t>(document, 0, sizeof(uint32_t), document->buffer_length(), bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_64BIT:
-			accumulator = new DataHistogramAccumulator<uint64_t>(document, 0, sizeof(uint64_t), document->buffer_length(), bucket_count);
+			accumulator.reset(new DataHistogramAccumulator<uint64_t>(document, 0, sizeof(uint64_t), document->buffer_length(), bucket_count));
 			break;
 		
 		default:
@@ -420,14 +464,19 @@ void REHex::DataHistogramPanel::reset_chart()
 			return;
 	}
 	
+	reset_chart();
+}
+
+void REHex::DataHistogramPanel::reset_chart()
+{
 	// First step: create the plot.
 	XYPlot *plot = new XYPlot();
 	
 	// Second step: create the dataset.
-	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulator);
+	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulator.get());
 	this->dataset = dataset;
 	
-	DataHistogramRenderer *renderer = new DataHistogramRenderer(accumulator);
+	DataHistogramRenderer *renderer = new DataHistogramRenderer(accumulator.get());
 	dataset->SetRenderer(renderer);
 	
 	// add our dataset to plot
@@ -438,7 +487,7 @@ void REHex::DataHistogramPanel::reset_chart()
 	leftAxis->IntegerValues(true);
 	
 	NumberAxis *bottomAxis = new NumberAxis(AXIS_BOTTOM);
-	bottomAxis->SetFixedBounds(accumulator->get_type_min_value_as_double(), accumulator->get_type_max_value_as_double());
+	bottomAxis->SetFixedBounds(accumulator->get_all_buckets_min_value_as_double(), accumulator->get_all_buckets_max_value_as_double());
 	
 	// set bottom axis margins
 	bottomAxis->SetMargins(15, 15);
@@ -472,12 +521,12 @@ void REHex::DataHistogramPanel::reset_chart()
 
 void REHex::DataHistogramPanel::OnWordSizeChanged(wxCommandEvent &event)
 {
-	reset_chart();
+	reset_accumulator();
 }
 
 void REHex::DataHistogramPanel::OnBucketCountChanged(wxCommandEvent &event)
 {
-	reset_chart();
+	reset_accumulator();
 }
 
 void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
@@ -488,6 +537,18 @@ void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 	}
 	
 	dataset->DatasetChanged();
+}
+
+void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
+{
+	int bucket_idx = event.GetInt();
+	
+	DataHistogramAccumulatorInterface *new_accumulator = accumulator->subdivide_bucket(bucket_idx);
+	if(new_accumulator != NULL)
+	{
+		accumulator.reset(new_accumulator);
+		reset_chart();
+	}
 }
 
 // void REHex::DataHistogramPanel::OnDataModifying(OffsetLengthEvent &event)

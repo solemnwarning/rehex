@@ -18,6 +18,7 @@
 #ifndef REHEX_DATAHISTOGRAMPANEL_HPP
 #define REHEX_DATAHISTOGRAMPANEL_HPP
 
+#include <memory>
 #include <wx/chartpanel.h>
 #include <wx/choice.h>
 #include <wx/timer.h>
@@ -52,16 +53,18 @@ namespace REHex {
 			wxChoice *word_size_choice;
 			wxChoice *bucket_count_choice;
 			
-			DataHistogramAccumulatorInterface *accumulator;
+			std::unique_ptr<DataHistogramAccumulatorInterface> accumulator;
 			Dataset *dataset;
 			wxChartPanel* chart_panel;
 			wxTimer refresh_timer;
 			
+			void reset_accumulator();
 			void reset_chart();
 			
 			void OnWordSizeChanged(wxCommandEvent &event);
 			void OnBucketCountChanged(wxCommandEvent &event);
 			void OnRefreshTimer(wxTimerEvent &event);
+			void OnBucketSelected(wxCommandEvent &event);
 			
 // 			void OnDataModifying(OffsetLengthEvent &event);
 // 			void OnDataModifyAborted(OffsetLengthEvent &event);

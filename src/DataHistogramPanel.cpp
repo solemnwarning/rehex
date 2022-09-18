@@ -25,6 +25,62 @@
 
 #include "DataHistogramPanel.hpp"
 
+namespace REHex
+{
+	class DataHistogramDatasetAdapter : public XYDataset
+	{
+		public:
+			DataHistogramDatasetAdapter(DataHistogramAccumulator<uint8_t> *accumulator);
+			virtual ~DataHistogramDatasetAdapter();
+			
+			virtual double GetX(size_t index, size_t serie) override;
+			virtual double GetY(size_t index, size_t serie) override;
+			virtual size_t GetSerieCount() override;
+			virtual size_t GetCount(size_t serie) override;
+			virtual wxString GetSerieName(size_t serie) override;
+		
+		private:
+			DataHistogramAccumulator<uint8_t> *accumulator;
+	};
+};
+
+REHex::DataHistogramDatasetAdapter::DataHistogramDatasetAdapter(DataHistogramAccumulator<uint8_t> *accumulator):
+	accumulator(accumulator) {}
+
+REHex::DataHistogramDatasetAdapter::~DataHistogramDatasetAdapter() {}
+
+double REHex::DataHistogramDatasetAdapter::GetX(size_t index, size_t serie)
+{
+	wxCHECK(serie < 1, 0);
+	wxCHECK(index < accumulator->get_buckets().size(), 0);
+	
+	return accumulator->get_buckets()[index].min_value;
+}
+
+double REHex::DataHistogramDatasetAdapter::GetY(size_t index, size_t serie)
+{
+	wxCHECK(serie < 1, 0);
+	wxCHECK(index < accumulator->get_buckets().size(), 0);
+	
+	return accumulator->get_buckets()[index].count;
+}
+
+size_t REHex::DataHistogramDatasetAdapter::GetSerieCount()
+{
+	return 1;
+}
+
+size_t REHex::DataHistogramDatasetAdapter::GetCount(size_t serie)
+{
+	return accumulator->get_buckets().size();
+}
+
+wxString REHex::DataHistogramDatasetAdapter::GetSerieName(size_t serie)
+{
+	wxCHECK(serie < 1, wxEmptyString);
+	return "hello";
+}
+
 static REHex::ToolPanel *DataHistogramPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
 	return new REHex::DataHistogramPanel(parent, document, document_ctrl);
@@ -128,22 +184,11 @@ void REHex::DataHistogramPanel::update()
 	}
 	#endif
 	
-	wxVector<wxRealPoint> data;
-	
-	auto buckets = acc->get_buckets();
-	for(auto b = buckets.begin(); b != buckets.end(); ++b)
-	{
-		data.push_back(wxRealPoint(b->min_value, b->count));
-	}
-	
 	// First step: create the plot.
 	XYPlot *plot = new XYPlot();
 	
 	// Second step: create the dataset.
-	XYSimpleDataset *dataset = new XYSimpleDataset();
-	
-	// Third step: add the series to it.
-	dataset->AddSerie(new XYSerie(data));
+	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(acc);
 	
 	// create histogram renderer with bar width = 10 and vertical bars
 	XYHistoRenderer *histoRenderer = new XYHistoRenderer(-1, true);

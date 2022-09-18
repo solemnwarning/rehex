@@ -52,16 +52,16 @@ namespace REHex {
 			wxChoice *word_size_choice;
 			wxChoice *bucket_count_choice;
 			
-			wxChartPanel* chart_panel;
-			wxTimer update_timer;
-			
 			DataHistogramAccumulatorInterface *accumulator;
 			Dataset *dataset;
+			wxChartPanel* chart_panel;
+			wxTimer refresh_timer;
 			
 			void reset_chart();
 			
 			void OnWordSizeChanged(wxCommandEvent &event);
 			void OnBucketCountChanged(wxCommandEvent &event);
+			void OnRefreshTimer(wxTimerEvent &event);
 			
 // 			void OnDataModifying(OffsetLengthEvent &event);
 // 			void OnDataModifyAborted(OffsetLengthEvent &event);

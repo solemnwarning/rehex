@@ -42,6 +42,8 @@ namespace REHex
 			
 			virtual double get_type_min_value_as_double() const = 0;
 			virtual double get_type_max_value_as_double() const = 0;
+			
+			virtual double get_progress() const = 0;
 	};
 	
 	template<typename T> class DataHistogramAccumulator: public DataHistogramAccumulatorInterface
@@ -76,6 +78,8 @@ namespace REHex
 			
 			virtual double get_type_min_value_as_double() const override;
 			virtual double get_type_max_value_as_double() const override;
+			
+			virtual double get_progress() const override;
 			
 		private:
 			SharedDocumentPointer document;
@@ -262,6 +266,17 @@ template<typename T> double REHex::DataHistogramAccumulator<T>::get_type_min_val
 template<typename T> double REHex::DataHistogramAccumulator<T>::get_type_max_value_as_double() const
 {
 	return std::numeric_limits<T>::max();
+}
+
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_progress() const
+{
+	ByteRangeSet queue = rp->get_queue();
+	if(queue.empty())
+	{
+		return 1.0;
+	}
+	
+	return (double)(length) / (double)(queue.total_bytes());
 }
 
 #endif /* !REHEX_DATAHISTOGRAMACCUMULATOR_HPP */

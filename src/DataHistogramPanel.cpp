@@ -132,7 +132,7 @@ void REHex::DataHistogramRenderer::Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Ax
 		wxRect rcBar = {
 			x,
 			y,
-			rc.width / dataset->GetCount(0),
+			rc.width / (int)(dataset->GetCount(0)),
 			rc.height - y + rc.y,
 		};
 		

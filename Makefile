@@ -392,6 +392,7 @@ TEST_OBJS := \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/ConsoleBuffer.o \
+	tests/DataHistogramAccumulator.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \
 	tests/Document.o \

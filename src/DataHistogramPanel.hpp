@@ -19,6 +19,7 @@
 #define REHEX_DATAHISTOGRAMPANEL_HPP
 
 #include <wx/chartpanel.h>
+#include <wx/choice.h>
 #include <wx/timer.h>
 
 #include "DataHistogramAccumulator.hpp"
@@ -48,10 +49,19 @@ namespace REHex {
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
+			wxChoice *word_size_choice;
+			wxChoice *bucket_count_choice;
+			
 			wxChartPanel* chart_panel;
 			wxTimer update_timer;
 			
-			DataHistogramAccumulator<uint8_t> *acc;
+			DataHistogramAccumulatorInterface *accumulator;
+			Dataset *dataset;
+			
+			void reset_chart();
+			
+			void OnWordSizeChanged(wxCommandEvent &event);
+			void OnBucketCountChanged(wxCommandEvent &event);
 			
 // 			void OnDataModifying(OffsetLengthEvent &event);
 // 			void OnDataModifyAborted(OffsetLengthEvent &event);

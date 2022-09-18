@@ -27,7 +27,24 @@
 
 namespace REHex
 {
-	template<typename T> class DataHistogramAccumulator
+	class DataHistogramAccumulatorInterface
+	{
+		public:
+			virtual ~DataHistogramAccumulatorInterface() {}
+			
+			virtual size_t get_num_buckets() const = 0;
+			
+			virtual off_t get_bucket_count(size_t bucket_idx) const = 0;
+			virtual double get_bucket_min_value_as_double(size_t bucket_idx) const = 0;
+			virtual std::string get_bucket_min_value_as_string(size_t bucket_idx) const = 0;
+			virtual double get_bucket_max_value_as_double(size_t bucket_idx) const = 0;
+			virtual std::string get_bucket_max_value_as_string(size_t bucket_idx) const = 0;
+			
+			virtual double get_type_min_value_as_double() const = 0;
+			virtual double get_type_max_value_as_double() const = 0;
+	};
+	
+	template<typename T> class DataHistogramAccumulator: public DataHistogramAccumulatorInterface
 	{
 		public:
 			struct Bucket
@@ -43,10 +60,22 @@ namespace REHex
 			
 			DataHistogramAccumulator(SharedDocumentPointer &document, off_t offset, off_t stride, off_t length, unsigned int num_buckets);
 			DataHistogramAccumulator(const DataHistogramAccumulator<T> *base, const Bucket *bucket);
+			virtual ~DataHistogramAccumulator();
 			
 			const std::vector<Bucket> &get_buckets() const;
 			
 			void wait_for_completion();
+			
+			virtual size_t get_num_buckets() const override;
+			
+			virtual off_t get_bucket_count(size_t bucket_idx) const override;
+			virtual double get_bucket_min_value_as_double(size_t bucket_idx) const override;
+			virtual std::string get_bucket_min_value_as_string(size_t bucket_idx) const override;
+			virtual double get_bucket_max_value_as_double(size_t bucket_idx) const override;
+			virtual std::string get_bucket_max_value_as_string(size_t bucket_idx) const override;
+			
+			virtual double get_type_min_value_as_double() const override;
+			virtual double get_type_max_value_as_double() const override;
 			
 		private:
 			SharedDocumentPointer document;
@@ -82,7 +111,7 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 	value_to_bucket_rshift = value_bits - num_buckets_bit;
 	
 	T next_bucket = 0;
-	for(int i = 0; i < num_buckets; ++i)
+	for(unsigned int i = 0; i < num_buckets; ++i)
 	{
 		T b_min_value = next_bucket;
 		
@@ -135,6 +164,8 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 	rp->queue_range(offset, length);
 }
 
+template<typename T> REHex::DataHistogramAccumulator<T>::~DataHistogramAccumulator() {}
+
 template<typename T> const std::vector< typename REHex::DataHistogramAccumulator<T>::Bucket > &REHex::DataHistogramAccumulator<T>::get_buckets() const
 {
 	return buckets;
@@ -186,6 +217,51 @@ template<typename T> void REHex::DataHistogramAccumulator<T>::process_range(off_
 template<typename T> void REHex::DataHistogramAccumulator<T>::wait_for_completion()
 {
 	rp->wait_for_completion();
+}
+
+template<typename T> size_t REHex::DataHistogramAccumulator<T>::get_num_buckets() const
+{
+	return buckets.size();
+}
+
+template<typename T> off_t REHex::DataHistogramAccumulator<T>::get_bucket_count(size_t bucket_idx) const
+{
+	assert(bucket_idx < buckets.size());
+	return buckets[bucket_idx].count;
+}
+
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_bucket_min_value_as_double(size_t bucket_idx) const
+{
+	assert(bucket_idx < buckets.size());
+	return buckets[bucket_idx].min_value;
+}
+
+template<typename T> std::string REHex::DataHistogramAccumulator<T>::get_bucket_min_value_as_string(size_t bucket_idx) const
+{
+	assert(bucket_idx < buckets.size());
+	return std::to_string(buckets[bucket_idx].min_value);
+}
+
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_bucket_max_value_as_double(size_t bucket_idx) const
+{
+	assert(bucket_idx < buckets.size());
+	return buckets[bucket_idx].max_value;
+}
+
+template<typename T> std::string REHex::DataHistogramAccumulator<T>::get_bucket_max_value_as_string(size_t bucket_idx) const
+{
+	assert(bucket_idx < buckets.size());
+	return std::to_string(buckets[bucket_idx].max_value);
+}
+
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_type_min_value_as_double() const
+{
+	return std::numeric_limits<T>::min();
+}
+
+template<typename T> double REHex::DataHistogramAccumulator<T>::get_type_max_value_as_double() const
+{
+	return std::numeric_limits<T>::max();
 }
 
 #endif /* !REHEX_DATAHISTOGRAMACCUMULATOR_HPP */

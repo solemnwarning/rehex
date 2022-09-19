@@ -1409,6 +1409,11 @@ expand_value = function(context, type_info, struct_arg_values, is_array_element)
 				error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
 			end
 		else
+			if type_info.length == nil
+			then
+				_template_error(context, "Cannot use type '" .. _get_type_name(type_info) .. "' to declare a file variable")
+			end
+			
 			if (context.next_variable + type_info.length) > context.interface:file_length()
 			then
 				_template_error(context, "Hit end of file when declaring variable")

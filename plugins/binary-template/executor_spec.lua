@@ -6636,4 +6636,25 @@ describe("executor", function()
 			})
 			end, "Hello world 1234 at test.bt:1")
 	end)
+	
+	it("errors when declaring a 'string' file variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "string", "foo", nil, nil },
+			})
+			end, "Cannot use type 'string' to declare a file variable at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", {},
+				{
+					{ "test.bt", 2, "variable", "string", "x", nil, nil },
+				} },
+				
+				{ "test.bt", 3, "variable", "struct mystruct", "a", nil, nil },
+			})
+			end, "Cannot use type 'string' to declare a file variable at test.bt:2")
+	end)
 end)

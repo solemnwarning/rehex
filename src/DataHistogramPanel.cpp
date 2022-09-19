@@ -170,7 +170,7 @@ void REHex::DataHistogramRenderer::Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Ax
 		double xVal = accumulator->get_bucket_min_value_as_double(n);
 		double xNext = (n + 1) < accumulator->get_num_buckets()
 			? accumulator->get_bucket_min_value_as_double(n + 1)
-			: accumulator->get_all_buckets_max_value_as_double();
+			: accumulator->get_all_buckets_max_value_as_double() + 1;
 		
 		double yVal = dataset->GetY(n, 0);
 		
@@ -299,9 +299,6 @@ enum {
 	WORD_SIZE_CHOICE_16BIT,
 	WORD_SIZE_CHOICE_32BIT,
 	WORD_SIZE_CHOICE_64BIT,
-	
-	BUCKET_COUNT_CHOICE_16 = 0,
-	BUCKET_COUNT_CHOICE_256,
 };
 
 BEGIN_EVENT_TABLE(REHex::DataHistogramPanel, wxPanel)
@@ -332,8 +329,11 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	
 	bucket_count_choice = new wxChoice(this, ID_BUCKET_COUNT_CHOICE);
 	bucket_count_choice->Append("16");
+	bucket_count_choice->Append("32");
+	bucket_count_choice->Append("64");
+	bucket_count_choice->Append("128");
 	bucket_count_choice->Append("256");
-	bucket_count_choice->SetSelection(BUCKET_COUNT_CHOICE_16);
+	bucket_count_choice->SetSelection(0);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(word_size_choice, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
@@ -425,21 +425,7 @@ void REHex::DataHistogramPanel::update()
 
 void REHex::DataHistogramPanel::reset_accumulator()
 {
-	int bucket_count;
-	switch(bucket_count_choice->GetSelection())
-	{
-		case BUCKET_COUNT_CHOICE_16:
-			bucket_count = 16;
-			break;
-			
-		case BUCKET_COUNT_CHOICE_256:
-			bucket_count = 256;
-			break;
-			
-		default:
-			/* Unreachable. */
-			return;
-	}
+	int bucket_count = 16 << bucket_count_choice->GetSelection();
 	
 	switch(word_size_choice->GetSelection())
 	{
@@ -487,7 +473,7 @@ void REHex::DataHistogramPanel::reset_chart()
 	leftAxis->IntegerValues(true);
 	
 	NumberAxis *bottomAxis = new NumberAxis(AXIS_BOTTOM);
-	bottomAxis->SetFixedBounds(accumulator->get_all_buckets_min_value_as_double(), accumulator->get_all_buckets_max_value_as_double());
+	bottomAxis->SetFixedBounds(accumulator->get_all_buckets_min_value_as_double(), accumulator->get_all_buckets_max_value_as_double() + 1.0);
 	
 	// set bottom axis margins
 	bottomAxis->SetMargins(15, 15);

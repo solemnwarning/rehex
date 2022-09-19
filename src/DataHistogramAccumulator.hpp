@@ -139,16 +139,42 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 	document(base->document),
 	offset(base->offset),
 	stride(base->stride),
-	length(base->length),
-	sub_mask(base->sub_mask)
+	length(base->length)
 {
-	int num_buckets_bit = calc_num_buckets_bit(base->buckets.size());
 	int value_bits = sizeof(T) * 8;
+	
+	unsigned long long max_buckets_for_range = (bucket->max_value - bucket->min_value) + 1;
+	unsigned int num_buckets;
+	int num_buckets_bit;
+	
+	if((unsigned long long)(base->buckets.size()) <= max_buckets_for_range)
+	{
+		num_buckets = base->buckets.size();
+		num_buckets_bit = calc_num_buckets_bit(num_buckets);
+		
+		sub_mask = base->sub_mask;
+		for(int i = 0; i < num_buckets_bit; ++i)
+		{
+			sub_mask >>= 1;
+			sub_mask |= ((T)(1)) << (value_bits - 1);
+		}
+	}
+	else{
+		num_buckets = max_buckets_for_range;
+		num_buckets_bit = calc_num_buckets_bit(num_buckets);
+		
+		sub_mask = 0;
+		for(int i = 0; i < (value_bits - num_buckets_bit); ++i)
+		{
+			sub_mask >>= 1;
+			sub_mask |= ((T)(1)) << (value_bits - 1);
+		}
+	}
 	
 	value_to_bucket_rshift = base->value_to_bucket_rshift - num_buckets_bit;
 	
 	T next_bucket = bucket->min_value;
-	for(unsigned int i = 0; i < base->buckets.size(); ++i)
+	for(unsigned int i = 0; i < num_buckets; ++i)
 	{
 		T b_min_value = next_bucket;
 		
@@ -157,12 +183,9 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 		T b_max_value = next_bucket - 1;
 		
 		buckets.emplace_back(b_min_value, b_max_value);
-	}
-	
-	for(int i = 0; i < num_buckets_bit; ++i)
-	{
-		sub_mask >>= 1;
-		sub_mask |= 1 << (value_bits - 1);
+		
+		assert(b_min_value >= bucket->min_value);
+		assert(b_max_value <= bucket->max_value);
 	}
 	
 	sub_value = bucket->min_value;
@@ -219,6 +242,9 @@ template<typename T> void REHex::DataHistogramAccumulator<T>::process_range(off_
 		{
 			size_t bucket_idx = (value >> value_to_bucket_rshift) & (buckets.size() - 1);
 			assert(bucket_idx < buckets.size());
+			
+			assert(value >= buckets[bucket_idx].min_value);
+			assert(value <= buckets[bucket_idx].max_value);
 			
 			++(buckets[bucket_idx].count);
 		}

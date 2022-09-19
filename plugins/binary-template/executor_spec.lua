@@ -6623,4 +6623,17 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("errors when the Error() function is called", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "call", "Error", {
+					{ "test.bt", 1, "str", "Hello %s %d" },
+					{ "test.bt", 1, "str", "world" },
+					{ "test.bt", 1, "num", 1234 } } },
+			})
+			end, "Hello world 1234 at test.bt:1")
+	end)
 end)

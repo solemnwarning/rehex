@@ -19,6 +19,7 @@
 #define REHEX_DATAHISTOGRAMACCUMULATOR_HPP
 
 #include <atomic>
+#include <ctype.h>
 #include <memory>
 #include <vector>
 
@@ -100,6 +101,7 @@ namespace REHex
 			std::unique_ptr<RangeProcessor> rp;
 			
 			static int calc_num_buckets_bit(int num_buckets);
+			static std::string format_value(T value);
 			
 			void process_range(off_t window_base, off_t window_size);
 	};
@@ -223,6 +225,22 @@ template<typename T> int REHex::DataHistogramAccumulator<T>::calc_num_buckets_bi
 	return num_buckets_bit;
 }
 
+template<typename T> std::string REHex::DataHistogramAccumulator<T>::format_value(T value)
+{
+	return std::to_string(value);
+}
+
+template<> std::string REHex::DataHistogramAccumulator<uint8_t>::format_value(uint8_t value)
+{
+	if(isascii(value) && isprint(value))
+	{
+		return std::to_string(value) + " (" + (char)(value) + ")";
+	}
+	else{
+		return std::to_string(value);
+	}
+}
+
 template<typename T> void REHex::DataHistogramAccumulator<T>::process_range(off_t window_base, off_t window_size)
 {
 	off_t window_end = window_base + window_size;
@@ -276,7 +294,7 @@ template<typename T> double REHex::DataHistogramAccumulator<T>::get_bucket_min_v
 template<typename T> std::string REHex::DataHistogramAccumulator<T>::get_bucket_min_value_as_string(size_t bucket_idx) const
 {
 	assert(bucket_idx < buckets.size());
-	return std::to_string(buckets[bucket_idx].min_value);
+	return format_value(buckets[bucket_idx].min_value);
 }
 
 template<typename T> double REHex::DataHistogramAccumulator<T>::get_bucket_max_value_as_double(size_t bucket_idx) const
@@ -288,7 +306,7 @@ template<typename T> double REHex::DataHistogramAccumulator<T>::get_bucket_max_v
 template<typename T> std::string REHex::DataHistogramAccumulator<T>::get_bucket_max_value_as_string(size_t bucket_idx) const
 {
 	assert(bucket_idx < buckets.size());
-	return std::to_string(buckets[bucket_idx].max_value);
+	return format_value(buckets[bucket_idx].max_value);
 }
 
 template<typename T> double REHex::DataHistogramAccumulator<T>::get_all_buckets_min_value_as_double() const

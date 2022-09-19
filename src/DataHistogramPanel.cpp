@@ -85,7 +85,7 @@ double REHex::DataHistogramDatasetAdapter::GetX(size_t index, size_t serie)
 	wxCHECK(serie < 1, 0);
 	wxCHECK(index < accumulator->get_num_buckets(), 0);
 	
-	return accumulator->get_bucket_min_value_as_double(index);
+	return index;
 }
 
 double REHex::DataHistogramDatasetAdapter::GetY(size_t index, size_t serie)
@@ -167,12 +167,9 @@ void REHex::DataHistogramRenderer::Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Ax
 	
 	FOREACH_DATAITEM(n, 0, dataset)
 	{
-		double xVal = accumulator->get_bucket_min_value_as_double(n);
-		double xNext = (n + 1) < accumulator->get_num_buckets()
-			? accumulator->get_bucket_min_value_as_double(n + 1)
-			: accumulator->get_all_buckets_max_value_as_double() + 1;
-		
-		double yVal = dataset->GetY(n, 0);
+		double xVal = n;
+		double xNext = n + 1;
+		double yVal = accumulator->get_bucket_count(n);
 		
 		if (!(horizAxis->IsVisible(xVal) || horizAxis->IsVisible(xNext)) || !vertAxis->IsVisible(yVal))
 		{
@@ -473,7 +470,8 @@ void REHex::DataHistogramPanel::reset_chart()
 	leftAxis->IntegerValues(true);
 	
 	NumberAxis *bottomAxis = new NumberAxis(AXIS_BOTTOM);
-	bottomAxis->SetFixedBounds(accumulator->get_all_buckets_min_value_as_double(), accumulator->get_all_buckets_max_value_as_double() + 1.0);
+	bottomAxis->SetFixedBounds(0, accumulator->get_num_buckets());
+	bottomAxis->SetTickFormat("");
 	
 	// set bottom axis margins
 	bottomAxis->SetMargins(15, 15);
@@ -487,7 +485,7 @@ void REHex::DataHistogramPanel::reset_chart()
 	plot->LinkDataHorizontalAxis(0, 0);
 	
 	// and finally create chart
-	Chart *chart = new Chart(plot, GetName());
+	Chart *chart = new Chart(plot, wxEmptyString);
 	
 	if(chart_panel != NULL)
 	{

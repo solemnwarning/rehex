@@ -50,6 +50,12 @@ void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 			return;
 		}
 		
+		/* The wxEVT_MOUSE_CAPTURE_LOST event makes the wxAuiTabCtrl abort its drag
+		 * operation, but it leaves some members in an inconsistent state that can
+		 * make it crash if the mouse returns while the left button is still down, so
+		 * we need to synthesise a wxEVT_LEFT_UP event too...
+		*/
+		
 		//assert(tab_ctrl->HasCapture());
 		
 		if(tab_ctrl->HasCapture())
@@ -57,6 +63,11 @@ void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 			tab_ctrl->ReleaseMouse();
 			
 			wxMouseCaptureLostEvent e;
+			tab_ctrl->GetEventHandler()->ProcessEvent(e);
+		}
+		
+		{
+			wxMouseEvent e(wxEVT_LEFT_UP);
 			tab_ctrl->GetEventHandler()->ProcessEvent(e);
 		}
 		

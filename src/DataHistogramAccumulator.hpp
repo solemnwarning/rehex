@@ -23,6 +23,7 @@
 #include <memory>
 #include <vector>
 
+#include "App.hpp"
 #include "RangeProcessor.hpp"
 #include "SharedDocumentPointer.hpp"
 
@@ -249,7 +250,15 @@ template<typename T> void REHex::DataHistogramAccumulator<T>::process_range(off_
 	off_t min_end = std::min(window_end, total_end);
 	window_size = min_end - window_base;
 	
-	std::vector<unsigned char> window_data = document->read_data(window_base, window_size);
+	std::vector<unsigned char> window_data;
+	try {
+		window_data = document->read_data(window_base, window_size);
+	}
+	catch(const std::exception &e)
+	{
+		wxGetApp().printf_error("Data read error in DataHistogramAccumulator: %s\n", e.what());
+		return;
+	}
 	
 	for(size_t i = 0; (i + sizeof(T)) <= window_data.size(); i += stride)
 	{

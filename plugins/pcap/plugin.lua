@@ -59,7 +59,7 @@ function process_packet_record(doc, offset, num)
 	return PacketLength+16
 end
 
-function process_document(doc, mainwindow)
+function process_document(doc)
 	doc:set_comment(0, 24, rehex.Comment.new("File Header"))
 	doc:set_comment(0, 4, rehex.Comment.new("Magic Number"))
 	doc:set_comment(4, 2, rehex.Comment.new("Major Version"))
@@ -99,12 +99,33 @@ rehex.OnTabCreated(function(mainwindow, tab)
 		
 		local res = wx.wxMessageBox(message, "Analyse pcap file", wx.wxYES_NO, mainwindow)
 		if res == wx.wxYES then
-			process_document(tab.doc, mainwindow)
+			local doc = tab.doc
+			doc:transact_begin("Processing pcap")
+			local ok, err = pcall(function()
+				process_document(doc)
+				end)
+			if ok
+			then
+				doc:transact_commit()
+			else
+				doc:transact_rollback()
+				wx.wxMessageBox(err, "Error")
+			end
 		end
 	end
 end)
 
 rehex.AddToToolsMenu("Analyse pcap", function(mainwindow)
 	local doc = mainwindow:active_document()
-	process_document(doc)
+	doc:transact_begin("Processing pcap")
+	local ok, err = pcall(function()
+		process_document(doc)
+	end)
+	if ok
+	then
+		doc:transact_commit()
+	else
+		doc:transact_rollback()
+		wx.wxMessageBox(err, "Error")
+	end
 end);

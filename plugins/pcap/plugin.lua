@@ -48,6 +48,14 @@ function process_packet_record(doc, offset, num)
 				doc:set_comment(offset+52,2,rehex.Comment.new("TCP DST Port"))
 				doc:set_comment(offset+54,4,rehex.Comment.new("TCP Sequence Number"))
 				doc:set_comment(offset+58,4,rehex.Comment.new("TCP Acknowledgment Number"))
+				local TCPHeaderLength = string.unpack('<I1', doc:read_data(offset+62,1)) // 15 * 4
+				doc:set_comment(offset+62,2,rehex.Comment.new("TCP Header Length = " .. tostring(TCPHeaderLength) .. " and TCP Flags field"))
+				doc:set_comment(offset+64,2,rehex.Comment.new("TCP Window"))
+				doc:set_comment(offset+66,2,rehex.Comment.new("TCP Checksum"))
+				doc:set_comment(offset+68,2,rehex.Comment.new("TCP Urgent Pointer"))
+				if (TCPHeaderLength > 20) then
+					doc:set_comment(offset+70,TCPHeaderLength-20,rehex.Comment.new("TCP Options"))
+				end
 			elseif (Proto == 17) then
 				doc:set_comment(offset+50,2,rehex.Comment.new("UDP SRC Port"))
 				doc:set_comment(offset+52,2,rehex.Comment.new("UDP DST Port"))

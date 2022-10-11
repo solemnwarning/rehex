@@ -13,6 +13,13 @@ Version TBA
  * Improve performance of templates that declare many (thousands+) of
    variables in the file.
 
+ * Add Error() function for templates (#186).
+
+ * Fix crash when attempting to use string as a file variable in
+   templates (#185).
+
+ * [Pavel Martens] Add plugin for annotating pcap files.
+
 Version 0.5.3 (2022-06-25)
 
  * Fix some undefined behaviour issues.

@@ -1107,11 +1107,11 @@ describe("parser", function()
 		assert.are.same(expect, got)
 	end)
 	
-	it("errors on for loop with no non-local variable definition ini initialiser", function()
+	it("errors on for loop with no non-local variable definition in initialiser", function()
 		assert.has_error(
 			function()
-				parser.parse_text("for(int x;;)")
-			end, "Parse error at UNKNOWN FILE:1 (at 'for(int x;;')")
+				parser.parse_text("for(int x;;) {}")
+			end, "Cannot declare non-local variable in 'for' loop initialiser at UNKNOWN FILE:1 (at 'int x;;) {}')")
 	end)
 	
 	it("parses while loop", function()

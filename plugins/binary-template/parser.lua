@@ -551,7 +551,7 @@ local _parser = spc * P{
 	--  }
 	FOR = Ct( P(_capture_position) * Cc("for") *
 		P("for") * spc * P("(") * spc *
-			(V("LOCAL_VAR_DEFN") + (V("EXPR_OR_NIL") * P(";") * spc)) *
+			(V("LOCAL_VAR_DEFN") + (#V("VAR_DEFN") * _PARSE_ERROR("Cannot declare non-local variable in 'for' loop initialiser")) + (V("EXPR_OR_NIL") * P(";") * spc)) *
 			V("EXPR_OR_NIL") * P(";") * spc *
 			V("EXPR_OR_NIL") * P(")") * spc *
 			V("IF_BODY") * spc

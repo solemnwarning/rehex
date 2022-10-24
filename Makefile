@@ -599,7 +599,8 @@ export libdir
 
 PLUGINS := \
 	binary-template \
-	exe
+	exe \
+	pcap
 
 .PHONY: install
 install: $(EXE) $(HELP_TARGET)

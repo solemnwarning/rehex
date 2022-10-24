@@ -635,7 +635,7 @@ local function _builtin_function_FTell(context, argv)
 	return _builtin_types.int64_t, ImmediateValue:new(context.next_variable)
 end
 
-local function _builtin_function_Printf(context, argv)
+local function _render_format_string(context, argv)
 	local fmt = argv[1][2]:get()
 	
 	local format_params = { fmt }
@@ -706,7 +706,17 @@ local function _builtin_function_Printf(context, argv)
 		end
 	end
 	
-	context.interface.print(string.format(table.unpack(format_params)))
+	return string.format(table.unpack(format_params))
+end
+
+local function _builtin_function_Printf(context, argv)
+	local s = _render_format_string(context, argv)
+	context.interface.print(string.format(s))
+end
+
+local function _builtin_function_Error(context, argv)
+	local s = _render_format_string(context, argv)
+	_template_error(context, string.format(s))
 end
 
 local function _builtin_function_defn_ReadXXX(type_info, name)
@@ -894,6 +904,7 @@ local _builtin_functions = {
 	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "ReadFloat"),
 	
 	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
+	Error  = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Error  },
 	
 	ArrayLength = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayLength },
 	ArrayResize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayResize },
@@ -1398,6 +1409,11 @@ expand_value = function(context, type_info, struct_arg_values, is_array_element)
 				error("Internal error: Unexpected base type '" .. type_info.base .. "' at " .. filename .. ":" .. line_num)
 			end
 		else
+			if type_info.length == nil
+			then
+				_template_error(context, "Cannot use type '" .. _get_type_name(type_info) .. "' to declare a file variable")
+			end
+			
 			if (context.next_variable + type_info.length) > context.interface:file_length()
 			then
 				_template_error(context, "Hit end of file when declaring variable")

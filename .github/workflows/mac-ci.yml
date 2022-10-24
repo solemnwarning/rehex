@@ -15,12 +15,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Check Perl version
+      run: perl -V > perl-version
+
     - name: Cache Dependencies
       id: cache-dependencies
       uses: actions/cache@v2
       with:
         path: mac-dependencies
-        key: ${{ runner.os }}-${{ runner.arch }}-${{ github.workspace }}/mac-dependencies-${{ hashFiles('tools/mac-build-dependencies.sh') }}
+        key: ${{ runner.os }}-${{ runner.arch }}-${{ github.workspace }}/mac-dependencies-${{ hashFiles('tools/mac-build-dependencies.sh', 'perl-version') }}
 
     - name: Refresh Dependencies
       run: . tools/mac-build-dependencies.sh

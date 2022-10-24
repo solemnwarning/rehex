@@ -6623,4 +6623,38 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("errors when the Error() function is called", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "call", "Error", {
+					{ "test.bt", 1, "str", "Hello %s %d" },
+					{ "test.bt", 1, "str", "world" },
+					{ "test.bt", 1, "num", 1234 } } },
+			})
+			end, "Hello world 1234 at test.bt:1")
+	end)
+	
+	it("errors when declaring a 'string' file variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "string", "foo", nil, nil },
+			})
+			end, "Cannot use type 'string' to declare a file variable at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "mystruct", {},
+				{
+					{ "test.bt", 2, "variable", "string", "x", nil, nil },
+				} },
+				
+				{ "test.bt", 3, "variable", "struct mystruct", "a", nil, nil },
+			})
+			end, "Cannot use type 'string' to declare a file variable at test.bt:2")
+	end)
 end)

@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <vector>
+#include <wx/artprov.h>
 #include <wx/axis/numberaxis.h>
 #include <wx/xy/xyhistorenderer.h>
 #include <wx/xy/xyplot.h>
@@ -289,7 +290,9 @@ static REHex::ToolPanelRegistration tpr("DataHistogramPanel", "Histogram", REHex
 
 enum {
 	ID_WORD_SIZE_CHOICE = 1,
+	ID_STRIDE_VALUE,
 	ID_BUCKET_COUNT_CHOICE,
+	ID_UP_BUTTON,
 	ID_REFRESH_TIMER,
 	
 	WORD_SIZE_CHOICE_8BIT = 0,
@@ -300,7 +303,10 @@ enum {
 
 BEGIN_EVENT_TABLE(REHex::DataHistogramPanel, wxPanel)
 	EVT_CHOICE(ID_WORD_SIZE_CHOICE, REHex::DataHistogramPanel::OnWordSizeChanged)
+	EVT_SPINCTRL(ID_STRIDE_VALUE, REHex::DataHistogramPanel::OnStrideChanged)
 	EVT_CHOICE(ID_BUCKET_COUNT_CHOICE, REHex::DataHistogramPanel::OnBucketCountChanged)
+	
+	EVT_BUTTON(ID_UP_BUTTON, REHex::DataHistogramPanel::OnPopBucket)
 	
 	EVT_TIMER(ID_REFRESH_TIMER, REHex::DataHistogramPanel::OnRefreshTimer)
 	
@@ -324,6 +330,19 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	word_size_choice->Append("64-bit");
 	word_size_choice->SetSelection(WORD_SIZE_CHOICE_8BIT);
 	
+	stride_ctrl = new wxSpinCtrl(this, ID_STRIDE_VALUE);
+	stride_ctrl->SetMaxSize(stride_ctrl->GetSizeFromTextSize(stride_ctrl->GetTextExtent("000")));
+	
+	stride_ctrl->SetRange(1, stride_ctrl->GetMax());
+	stride_ctrl->SetValue(1);
+	
+	wxBoxSizer *sizer1 = new wxBoxSizer(wxHORIZONTAL);
+	sizer1->Add(new wxStaticText(this, wxID_ANY, "Values:"), 0, wxALIGN_CENTER_VERTICAL);
+	sizer1->Add(word_size_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
+	sizer1->Add(new wxStaticText(this, wxID_ANY, "Stride:"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
+	sizer1->Add(stride_ctrl, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
+	sizer1->Add(new wxStaticText(this, wxID_ANY, "bytes"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
+	
 	bucket_count_choice = new wxChoice(this, ID_BUCKET_COUNT_CHOICE);
 	bucket_count_choice->Append("16");
 	bucket_count_choice->Append("32");
@@ -332,9 +351,17 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	bucket_count_choice->Append("256");
 	bucket_count_choice->SetSelection(0);
 	
+	wxBoxSizer *sizer2 = new wxBoxSizer(wxHORIZONTAL);
+	sizer2->Add(new wxStaticText(this, wxID_ANY, "Buckets:"), 0, wxALIGN_CENTER_VERTICAL);
+	sizer2->Add(bucket_count_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
+	
+	wxBitmap bmp = wxArtProvider::GetBitmap(wxART_GO_DIR_UP, wxART_BUTTON);
+	up_button = new wxBitmapButton(this, ID_UP_BUTTON, bmp);
+	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-	sizer->Add(word_size_choice, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
-	sizer->Add(bucket_count_choice, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
+	sizer->Add(sizer1, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
+	sizer->Add(sizer2, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
+	sizer->Add(up_button, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
 	SetSizerAndFit(sizer);
 	
 	reset_accumulator();
@@ -423,23 +450,26 @@ void REHex::DataHistogramPanel::update()
 void REHex::DataHistogramPanel::reset_accumulator()
 {
 	int bucket_count = 16 << bucket_count_choice->GetSelection();
+	int stride = stride_ctrl->GetValue();
+	
+	accumulators.clear();
 	
 	switch(word_size_choice->GetSelection())
 	{
 		case WORD_SIZE_CHOICE_8BIT:
-			accumulator.reset(new DataHistogramAccumulator<uint8_t>(document, 0, sizeof(uint8_t), document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint8_t>(document, 0, stride, document->buffer_length(), bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_16BIT:
-			accumulator.reset(new DataHistogramAccumulator<uint16_t>(document, 0, sizeof(uint16_t), document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint16_t>(document, 0, stride, document->buffer_length(), bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_32BIT:
-			accumulator.reset(new DataHistogramAccumulator<uint32_t>(document, 0, sizeof(uint32_t), document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint32_t>(document, 0, stride, document->buffer_length(), bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_64BIT:
-			accumulator.reset(new DataHistogramAccumulator<uint64_t>(document, 0, sizeof(uint64_t), document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint64_t>(document, 0, stride, document->buffer_length(), bucket_count));
 			break;
 		
 		default:
@@ -456,10 +486,10 @@ void REHex::DataHistogramPanel::reset_chart()
 	XYPlot *plot = new XYPlot();
 	
 	// Second step: create the dataset.
-	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulator.get());
+	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulators.back().get());
 	this->dataset = dataset;
 	
-	DataHistogramRenderer *renderer = new DataHistogramRenderer(accumulator.get());
+	DataHistogramRenderer *renderer = new DataHistogramRenderer(accumulators.back().get());
 	dataset->SetRenderer(renderer);
 	
 	// add our dataset to plot
@@ -470,7 +500,7 @@ void REHex::DataHistogramPanel::reset_chart()
 	leftAxis->IntegerValues(true);
 	
 	NumberAxis *bottomAxis = new NumberAxis(AXIS_BOTTOM);
-	bottomAxis->SetFixedBounds(0, accumulator->get_num_buckets());
+	bottomAxis->SetFixedBounds(0, accumulators.back()->get_num_buckets());
 	bottomAxis->SetTickFormat("");
 	
 	// set bottom axis margins
@@ -513,6 +543,17 @@ void REHex::DataHistogramPanel::reset_chart()
 
 void REHex::DataHistogramPanel::OnWordSizeChanged(wxCommandEvent &event)
 {
+	static const int WORD_SIZES[] = { 1, 2, 4, 8 };
+	int word_size_bytes = WORD_SIZES[ word_size_choice->GetSelection() ];
+	
+	stride_ctrl->SetRange(word_size_bytes, stride_ctrl->GetMax());
+	stride_ctrl->SetValue(word_size_bytes);
+	
+	reset_accumulator();
+}
+
+void REHex::DataHistogramPanel::OnStrideChanged(wxSpinEvent &event)
+{
 	reset_accumulator();
 }
 
@@ -523,7 +564,7 @@ void REHex::DataHistogramPanel::OnBucketCountChanged(wxCommandEvent &event)
 
 void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 {
-	if(accumulator->get_progress() != 1.0)
+	if(accumulators.back()->get_progress() != 1.0)
 	{
 		refresh_timer.Start(-1, wxTIMER_ONE_SHOT);
 	}
@@ -535,10 +576,21 @@ void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
 {
 	int bucket_idx = event.GetInt();
 	
-	DataHistogramAccumulatorInterface *new_accumulator = accumulator->subdivide_bucket(bucket_idx);
+	DataHistogramAccumulatorInterface *new_accumulator = accumulators.back()->subdivide_bucket(bucket_idx);
 	if(new_accumulator != NULL)
 	{
-		accumulator.reset(new_accumulator);
+		/* TODO: Stop processing previous accumulator. */
+		
+		accumulators.emplace_back(new_accumulator);
+		reset_chart();
+	}
+}
+
+void REHex::DataHistogramPanel::OnPopBucket(wxCommandEvent &event)
+{
+	if(accumulators.size() > 1)
+	{
+		accumulators.pop_back();
 		reset_chart();
 	}
 }

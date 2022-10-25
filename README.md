@@ -1,6 +1,6 @@
 # ![rehex logo](res/icon64.png) Reverse Engineers' Hex Editor
 
-A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and everything else.
+A cross-platform (Windows, Linux, Mac, BSD) hex editor for reverse engineering, and everything else.
 
 An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manual/](https://solemnwarning.net/rehex/manual/).
 
@@ -88,6 +88,9 @@ Finally, you can install the package:
     $ sudo zypper ar obs://editors editors
     $ sudo zypper ref
     $ sudo zypper in rehex
+
+### FreeBSD
+    $ pkg install rehex
 
 ## Building
 

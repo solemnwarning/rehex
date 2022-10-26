@@ -231,14 +231,16 @@ template<typename T> std::string REHex::DataHistogramAccumulator<T>::format_valu
 	return std::to_string(value);
 }
 
-template<> std::string REHex::DataHistogramAccumulator<uint8_t>::format_value(uint8_t value)
-{
-	if(isascii(value) && isprint(value))
+namespace REHex {
+	template<> std::string DataHistogramAccumulator<uint8_t>::format_value(uint8_t value)
 	{
-		return std::to_string(value) + " (" + (char)(value) + ")";
-	}
-	else{
-		return std::to_string(value);
+		if(isascii(value) && isprint(value))
+		{
+			return std::to_string(value) + " (" + (char)(value) + ")";
+		}
+		else{
+			return std::to_string(value);
+		}
 	}
 }
 

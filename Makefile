@@ -359,9 +359,9 @@ APP_OBJS := \
 	src/mainwindow.o \
 	src/Palette.o \
 	src/profile.o \
+	src/RangeDialog.o \
 	src/RangeProcessor.o \
 	src/search.o \
-	src/SelectRangeDialog.o \
 	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
@@ -436,9 +436,9 @@ TEST_OBJS := \
 	src/LuaPluginLoader.o \
 	src/mainwindow.o \
 	src/Palette.o \
+	src/RangeDialog.o \
 	src/RangeProcessor.o \
 	src/search.o \
-	src/SelectRangeDialog.o \
 	src/StringPanel.o \
 	src/Tab.o \
 	src/textentrydialog.o \

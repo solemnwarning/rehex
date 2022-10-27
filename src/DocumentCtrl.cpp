@@ -24,6 +24,7 @@
 #include <jansson.h>
 #include <limits>
 #include <map>
+#include <numeric>
 #include <stack>
 #include <string>
 #include <tuple>
@@ -2259,6 +2260,71 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 	}
 }
 
+std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCtrl::_data_region_by_virt_offset(off_t virt_offset)
+{
+	/* Find region that encompasses the given offset using binary search. */
+	
+	class StubRegion: public GenericDataRegion
+	{
+		public:
+			StubRegion(off_t virt_offset):
+				GenericDataRegion(0, 0, virt_offset, 0) {}
+				
+				virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
+				virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
+				virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override { abort(); }
+				virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override { abort(); }
+				virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override { abort(); }
+				virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override { abort(); }
+				virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override { abort(); }
+				virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override { abort(); }
+				virtual int cursor_column(off_t pos) override { abort(); }
+				virtual off_t first_row_nearest_column(int column) override { abort(); }
+				virtual off_t last_row_nearest_column(int column) override { abort(); }
+				virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
+				virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
+				
+				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override { abort(); }
+				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override { abort(); }
+				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override { abort(); }
+	};
+	
+	const StubRegion virt_offset_to_find(virt_offset);
+	std::vector<GenericDataRegion*> virt_offset_to_find_vec({ (GenericDataRegion*)(&virt_offset_to_find) });
+	
+	auto cmp_by_virt_offset = [](std::vector<GenericDataRegion*>::iterator lhs, std::vector<GenericDataRegion*>::iterator rhs)
+	{
+		return (*lhs)->virt_offset < (*rhs)->virt_offset;
+	};
+	
+	/* std::upper_bound() will give us the first element whose virt_offset is greater than the
+	 * one we're looking for...
+	*/
+	auto region = std::upper_bound(data_regions_sorted_virt.begin(), data_regions_sorted_virt.end(), virt_offset_to_find_vec.begin(), cmp_by_virt_offset);
+	
+	if(region == data_regions_sorted_virt.begin())
+	{
+		/* No region encompassing the requested offset. */
+		return data_regions.end();
+	}
+	
+	/* ...so step backwards to get to the correct element. */
+	--region;
+	
+	if((**region)->virt_offset <= virt_offset
+		/* Requested offset must be within region range to match, or one past the end if
+		 * this is the last data region.
+		*/
+		&& ((**region)->virt_offset + (**region)->d_length + (*region == std::prev(data_regions.end())) > virt_offset))
+	{
+		return *region;
+	}
+	else{
+		return data_regions.end();
+	}
+}
+
 std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_by_y_offset(int64_t y_offset)
 {
 	/* Find region that encompasses the given line using binary search. */
@@ -2322,17 +2388,33 @@ int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
 		throw std::invalid_argument("Invalid offset passed to REHex::DocumentCtrl::region_offset_cmp()");
 	}
 	
-	if(a == b)
+	if(ra == rb)
 	{
-		return 0;
+		return a - b;
 	}
-	else if(ra < rb || (ra == rb && a < b))
+	else if(ra < rb)
 	{
-		return -1;
+		off_t delta = std::accumulate(ra, rb,
+			(off_t)(0), [](off_t sum, const GenericDataRegion *region) { return sum - region->d_length; });
+		
+		delta += (a - (*ra)->d_offset);
+		delta -= (b - (*rb)->d_offset);
+		
+		assert(delta < 0);
+		
+		return delta;
 	}
-	else if(ra > rb || (ra == rb && a > b))
+	else if(ra > rb)
 	{
-		return 1;
+		off_t delta = std::accumulate(rb, ra,
+			(off_t)(0), [](off_t sum, const GenericDataRegion *region) { return sum + region->d_length; });
+		
+		delta -= ((*ra)->d_length - (a - (*ra)->d_offset));
+		delta += ((*rb)->d_length - (b - (*rb)->d_offset));
+		
+		assert(delta > 0);
+		
+		return delta;
 	}
 	else{
 		/* Unreachable. */
@@ -2466,6 +2548,28 @@ bool REHex::DocumentCtrl::region_range_linear(off_t begin_offset, off_t end_offs
 			return false;
 		}
 	}
+}
+
+off_t REHex::DocumentCtrl::region_offset_to_virt(off_t offset)
+{
+	auto di = _data_region_by_offset(offset);
+	if(di == data_regions.end())
+	{
+		return -1;
+	}
+	
+	return (*di)->virt_offset + (offset - (*di)->d_offset);
+}
+
+off_t REHex::DocumentCtrl::region_virt_to_offset(off_t virt_offset)
+{
+	auto di = _data_region_by_virt_offset(virt_offset);
+	if(di == data_regions.end())
+	{
+		return -1;
+	}
+	
+	return (*di)->d_offset + (virt_offset - (*di)->virt_offset);
 }
 
 /* Scroll the Document vertically to make the given line visible.
@@ -2870,6 +2974,23 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 		[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
 		{
 			return (*lhs)->d_offset < (*rhs)->d_offset;
+		});
+	
+	/* Clear and repopulate data_regions_sorted_virt with iterators to each element in
+	 * data_regions sorted by virt_offset.
+	*/
+	
+	data_regions_sorted_virt.clear();
+	
+	for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
+	{
+		data_regions_sorted_virt.push_back(r);
+	}
+	
+	std::sort(data_regions_sorted_virt.begin(), data_regions_sorted_virt.end(),
+		[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
+		{
+			return (*lhs)->virt_offset < (*rhs)->virt_offset;
 		});
 	
 	/* Clear and repopulate processing_regions with the regions which have some background work to do. */

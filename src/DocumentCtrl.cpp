@@ -648,26 +648,31 @@ std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
 
 REHex::OrderedByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
 {
-	OrderedByteRangeSet selected_ranges;
-	
 	if(!has_selection())
 	{
-		return selected_ranges;
+		return OrderedByteRangeSet();
 	}
 	
-	auto region = _data_region_by_offset(selection_begin);
-	off_t region_select_begin = selection_begin;
+	return region_range_expand(selection_begin, selection_end);
+}
+
+REHex::OrderedByteRangeSet REHex::DocumentCtrl::region_range_expand(off_t begin_offset, off_t end_offset_incl)
+{
+	OrderedByteRangeSet selected_ranges;
+	
+	auto region = _data_region_by_offset(begin_offset);
+	off_t region_select_begin = begin_offset;
 	
 	while(region != data_regions.end())
 	{
 		assert(region_select_begin >= (*region)->d_offset);
 		assert(region_select_begin <= ((*region)->d_offset + (*region)->d_length));
 		
-		if((*region)->d_offset <= selection_end && ((*region)->d_length + (*region)->d_offset) > selection_end)
+		if((*region)->d_offset <= end_offset_incl && ((*region)->d_length + (*region)->d_offset) > end_offset_incl)
 		{
-			if(selection_end > region_select_begin)
+			if(end_offset_incl > region_select_begin)
 			{
-				selected_ranges.set_range(region_select_begin, (selection_end - region_select_begin) + 1);
+				selected_ranges.set_range(region_select_begin, (end_offset_incl - region_select_begin) + 1);
 			}
 			
 			break;

@@ -551,6 +551,17 @@ namespace REHex {
 			bool region_range_linear(off_t begin_offset, off_t end_offset_incl);
 			
 			/**
+			 * @brief Returns the set of all bytes in the given (inclusive) range.
+			 *
+			 * Ranges are inserted into the returned set by their order as defined in
+			 * the regions list.
+			 *
+			 * NOTE: This method may be expensive to call, as it potentially has to
+			 * iterate through all (data) regions in the file.
+			*/
+			OrderedByteRangeSet region_range_expand(off_t begin_offset, off_t end_offset_incl);
+			
+			/**
 			 * @brief Convert a real file offset to a virtual one.
 			 * @return Virtual offset, negative if not valid.
 			*/

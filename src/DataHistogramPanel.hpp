@@ -28,6 +28,7 @@
 
 #include "DataHistogramAccumulator.hpp"
 #include "document.hpp"
+#include "RangeChoiceLinear.hpp"
 #include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
@@ -55,6 +56,7 @@ namespace REHex {
 			
 			wxChoice *word_size_choice;
 			wxSpinCtrl *stride_ctrl;
+			RangeChoiceLinear *range_choice;
 			wxChoice *bucket_count_choice;
 			
 			wxBitmapButton *up_button;
@@ -70,6 +72,7 @@ namespace REHex {
 			
 			void OnWordSizeChanged(wxCommandEvent &event);
 			void OnStrideChanged(wxSpinEvent &event);
+			void OnRangeChanged(wxCommandEvent &event);
 			void OnBucketCountChanged(wxCommandEvent &event);
 			void OnRefreshTimer(wxTimerEvent &event);
 			void OnBucketSelected(wxCommandEvent &event);

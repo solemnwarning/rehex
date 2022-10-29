@@ -359,6 +359,7 @@ APP_OBJS := \
 	src/mainwindow.o \
 	src/Palette.o \
 	src/profile.o \
+	src/RangeChoiceLinear.o \
 	src/RangeDialog.o \
 	src/RangeProcessor.o \
 	src/search.o \

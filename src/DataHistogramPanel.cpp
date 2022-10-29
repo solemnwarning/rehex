@@ -26,6 +26,7 @@
 #include <wx/xy/xysimpledataset.h>
 
 #include "DataHistogramPanel.hpp"
+#include "Events.hpp"
 
 namespace REHex
 {
@@ -291,6 +292,7 @@ static REHex::ToolPanelRegistration tpr("DataHistogramPanel", "Histogram", REHex
 enum {
 	ID_WORD_SIZE_CHOICE = 1,
 	ID_STRIDE_VALUE,
+	ID_RANGE_CHOICE,
 	ID_BUCKET_COUNT_CHOICE,
 	ID_UP_BUTTON,
 	ID_REFRESH_TIMER,
@@ -304,6 +306,7 @@ enum {
 BEGIN_EVENT_TABLE(REHex::DataHistogramPanel, wxPanel)
 	EVT_CHOICE(ID_WORD_SIZE_CHOICE, REHex::DataHistogramPanel::OnWordSizeChanged)
 	EVT_SPINCTRL(ID_STRIDE_VALUE, REHex::DataHistogramPanel::OnStrideChanged)
+	EVT_COMMAND(ID_RANGE_CHOICE, EV_SELECTION_CHANGED, REHex::DataHistogramPanel::OnRangeChanged)
 	EVT_CHOICE(ID_BUCKET_COUNT_CHOICE, REHex::DataHistogramPanel::OnBucketCountChanged)
 	
 	EVT_BUTTON(ID_UP_BUTTON, REHex::DataHistogramPanel::OnPopBucket)
@@ -343,6 +346,8 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	sizer1->Add(stride_ctrl, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
 	sizer1->Add(new wxStaticText(this, wxID_ANY, "bytes"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
 	
+	range_choice = new RangeChoiceLinear(this, ID_RANGE_CHOICE, document, document_ctrl);
+	
 	bucket_count_choice = new wxChoice(this, ID_BUCKET_COUNT_CHOICE);
 	bucket_count_choice->Append("16");
 	bucket_count_choice->Append("32");
@@ -352,7 +357,9 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	bucket_count_choice->SetSelection(0);
 	
 	wxBoxSizer *sizer2 = new wxBoxSizer(wxHORIZONTAL);
-	sizer2->Add(new wxStaticText(this, wxID_ANY, "Buckets:"), 0, wxALIGN_CENTER_VERTICAL);
+	sizer2->Add(new wxStaticText(this, wxID_ANY, "Range:"), 0, wxALIGN_CENTER_VERTICAL);
+	sizer2->Add(range_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
+	sizer2->Add(new wxStaticText(this, wxID_ANY, "Buckets:"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
 	sizer2->Add(bucket_count_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
 	
 	wxBitmap bmp = wxArtProvider::GetBitmap(wxART_GO_DIR_UP, wxART_BUTTON);
@@ -454,22 +461,25 @@ void REHex::DataHistogramPanel::reset_accumulator()
 	
 	accumulators.clear();
 	
+	off_t range_offset, range_length;
+	std::tie(range_offset, range_length) = range_choice->get_range();
+	
 	switch(word_size_choice->GetSelection())
 	{
 		case WORD_SIZE_CHOICE_8BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint8_t>(document, 0, stride, document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint8_t>(document, range_offset, stride, range_length, bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_16BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint16_t>(document, 0, stride, document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint16_t>(document, range_offset, stride, range_length, bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_32BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint32_t>(document, 0, stride, document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint32_t>(document, range_offset, stride, range_length, bucket_count));
 			break;
 		
 		case WORD_SIZE_CHOICE_64BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint64_t>(document, 0, stride, document->buffer_length(), bucket_count));
+			accumulators.emplace_back(new DataHistogramAccumulator<uint64_t>(document, range_offset, stride, range_length, bucket_count));
 			break;
 		
 		default:
@@ -553,6 +563,11 @@ void REHex::DataHistogramPanel::OnWordSizeChanged(wxCommandEvent &event)
 }
 
 void REHex::DataHistogramPanel::OnStrideChanged(wxSpinEvent &event)
+{
+	reset_accumulator();
+}
+
+void REHex::DataHistogramPanel::OnRangeChanged(wxCommandEvent &event)
 {
 	reset_accumulator();
 }

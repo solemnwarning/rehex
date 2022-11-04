@@ -25,6 +25,7 @@
 #include <wx/choice.h>
 #include <wx/spinctrl.h>
 #include <wx/timer.h>
+#include <wx/toolbar.h>
 
 #include "DataHistogramAccumulator.hpp"
 #include "document.hpp"
@@ -61,7 +62,8 @@ namespace REHex {
 			RangeChoiceLinear *range_choice;
 			wxChoice *bucket_count_choice;
 			
-			wxBitmapButton *up_button;
+			wxToolBar *toolbar;
+			wxStaticText *nest_text;
 			
 			//std::unique_ptr<DataHistogramAccumulatorInterface> accumulator;
 			std::list< std::unique_ptr<DataHistogramAccumulatorInterface> > accumulators;
@@ -91,6 +93,8 @@ namespace REHex {
 			*/
 			wxRect get_chart_screen_rect();
 			
+			void zoom_adj(int steps);
+			
 			void OnWordSizeChanged(wxCommandEvent &event);
 			void OnStrideChanged(wxSpinEvent &event);
 			void OnRangeChanged(wxCommandEvent &event);
@@ -98,6 +102,8 @@ namespace REHex {
 			void OnRefreshTimer(wxTimerEvent &event);
 			void OnBucketSelected(wxCommandEvent &event);
 			void OnPopBucket(wxCommandEvent &event);
+			void OnZoomIn(wxCommandEvent &event);
+			void OnZoomOut(wxCommandEvent &event);
 			
 			void OnChartWheel(wxMouseEvent &event);
 			void OnChartLeftDown(wxMouseEvent &event);

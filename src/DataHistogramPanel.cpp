@@ -57,6 +57,8 @@ namespace REHex
 			void set_chart_panel(wxChartPanel *panel);
 			void force_redraw();
 			
+			wxRect get_last_draw_rect();
+			
 			virtual void Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Axis *vertAxis, XYDataset *dataset) override;
 			virtual void NeedRedraw(DrawObject *obj) override;
 			
@@ -65,6 +67,7 @@ namespace REHex
 			wxChartPanel *panel;
 			
 			std::vector<wxRect> bucket_panel_rects;
+			wxRect last_draw_rect;
 			int mouse_over_bucket_idx;
 			
 			wxPoint mouse_down_point;
@@ -148,8 +151,15 @@ void REHex::DataHistogramRenderer::force_redraw()
 	FireNeedRedraw();
 }
 
+wxRect REHex::DataHistogramRenderer::get_last_draw_rect()
+{
+	return last_draw_rect;
+}
+
 void REHex::DataHistogramRenderer::Draw(wxDC &dc, wxRect rc, Axis *horizAxis, Axis *vertAxis, XYDataset *dataset)
 {
+	last_draw_rect = rc;
+	
 	assert(dataset->GetSerieCount() == 1);
 	
 	wxPoint screen_mouse_pos = wxGetMousePosition();
@@ -322,7 +332,9 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	document_ctrl(document_ctrl),
 	dataset(NULL),
 	chart_panel(NULL),
-	refresh_timer(this, ID_REFRESH_TIMER)
+	refresh_timer(this, ID_REFRESH_TIMER),
+	wheel_accumulator(0),
+	chart_panning(false)
 {
 	static const int MARGIN = 5;
 	
@@ -499,7 +511,7 @@ void REHex::DataHistogramPanel::reset_chart()
 	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulators.back().get());
 	this->dataset = dataset;
 	
-	DataHistogramRenderer *renderer = new DataHistogramRenderer(accumulators.back().get());
+	renderer = new DataHistogramRenderer(accumulators.back().get());
 	dataset->SetRenderer(renderer);
 	
 	// add our dataset to plot
@@ -509,16 +521,19 @@ void REHex::DataHistogramPanel::reset_chart()
 	NumberAxis *leftAxis = new NumberAxis(AXIS_LEFT);
 	leftAxis->IntegerValues(true);
 	
-	NumberAxis *bottomAxis = new NumberAxis(AXIS_BOTTOM);
-	bottomAxis->SetFixedBounds(0, accumulators.back()->get_num_buckets());
-	bottomAxis->SetTickFormat("");
+	x_axis = new NumberAxis(AXIS_BOTTOM);
+	x_axis->SetFixedBounds(0, accumulators.back()->get_num_buckets());
+	x_axis->SetTickFormat("");
 	
 	// set bottom axis margins
-	bottomAxis->SetMargins(15, 15);
+	x_axis->SetMargins(15, 15);
+	
+	x_axis->SetWindowWidth(accumulators.back()->get_num_buckets());
+	x_axis->SetUseWindow(true);
 	
 	// add axes to plot
 	plot->AddAxis(leftAxis);
-	plot->AddAxis(bottomAxis);
+	plot->AddAxis(x_axis);
 	
 	// link axes and dataset
 	plot->LinkDataVerticalAxis(0, 0);
@@ -546,9 +561,32 @@ void REHex::DataHistogramPanel::reset_chart()
 	GetSizer()->Add(chart_panel, 1, (wxLEFT | wxRIGHT | wxTOP | wxEXPAND), 5);
 	GetSizer()->Layout();
 	
+	chart_panel->Bind(wxEVT_MOUSEWHEEL, &REHex::DataHistogramPanel::OnChartWheel, this);
+	chart_panel->Bind(wxEVT_LEFT_DOWN, &REHex::DataHistogramPanel::OnChartLeftDown, this);
+	chart_panel->Bind(wxEVT_LEFT_UP, &REHex::DataHistogramPanel::OnChartLeftUp, this);
+	chart_panel->Bind(wxEVT_MOTION, &REHex::DataHistogramPanel::OnChartMotion, this);
+	
 	renderer->set_chart_panel(chart_panel);
 	
 	refresh_timer.Start(500, wxTIMER_ONE_SHOT);
+}
+
+wxRect REHex::DataHistogramPanel::get_chart_panel_rect()
+{
+	assert(renderer != NULL);
+	return renderer->get_last_draw_rect();
+}
+
+wxRect REHex::DataHistogramPanel::get_chart_screen_rect()
+{
+	wxRect r = get_chart_panel_rect();
+	
+	wxPoint r_screen_base = chart_panel->ClientToScreen(wxPoint(r.x, r.y));
+	
+	r.x = r_screen_base.x;
+	r.y = r_screen_base.y;
+	
+	return r;
 }
 
 void REHex::DataHistogramPanel::OnWordSizeChanged(wxCommandEvent &event)
@@ -608,6 +646,123 @@ void REHex::DataHistogramPanel::OnPopBucket(wxCommandEvent &event)
 		accumulators.pop_back();
 		reset_chart();
 	}
+}
+
+void REHex::DataHistogramPanel::OnChartWheel(wxMouseEvent &event)
+{
+	wxMouseWheelAxis axis = event.GetWheelAxis();
+	
+	wxPoint screen_point = wxGetMousePosition();
+	wxRect chart_screen_rect = get_chart_screen_rect();
+	
+	double chart_width = x_axis->GetWindowWidth();
+	double chart_xpos  = x_axis->GetWindowPosition();
+	
+	/* Zoom on the mouse position (if inside chart boundaries), otherwise zoom on the center
+	 * of the visible area.
+	*/
+	
+	double data_x_value = chart_xpos + (chart_width / 2);
+	
+	if(chart_screen_rect.Contains(screen_point))
+	{
+		wxWindowDC dc(chart_panel);
+		
+		wxPoint panel_point = chart_panel->ScreenToClient(screen_point);
+		wxRect chart_panel_rect = get_chart_panel_rect();
+		
+		data_x_value = x_axis->ToData(dc, chart_panel_rect.x, chart_panel_rect.width, panel_point.x);
+	}
+	
+	if(axis == wxMOUSE_WHEEL_VERTICAL)
+	{
+		int delta = event.GetWheelDelta();
+		
+		wheel_accumulator += event.GetWheelRotation();
+		
+		if(wheel_accumulator >= delta)
+		{
+			chart_width -= (chart_width / 2) * (wheel_accumulator / delta);
+		}
+		else if(wheel_accumulator <= delta)
+		{
+			chart_width -= (chart_width / 2) * (wheel_accumulator / delta);
+		}
+		else{
+			return;
+		}
+		
+		wheel_accumulator %= delta;
+		
+		chart_width = std::min(chart_width, (double)(accumulators.back()->get_num_buckets()));
+		chart_width = std::max(chart_width, 4.0);
+		
+		chart_xpos = data_x_value - (chart_width / 2);
+		
+		chart_xpos = std::min(chart_xpos, (double)(accumulators.back()->get_num_buckets() - chart_width));
+		chart_xpos = std::max(chart_xpos, 0.0);
+		
+		x_axis->SetWindowWidth(chart_width);
+		x_axis->SetWindowPosition(chart_xpos);
+	}
+}
+
+void REHex::DataHistogramPanel::OnChartLeftDown(wxMouseEvent &event)
+{
+	mouse_down_point = wxGetMousePosition();
+	chart_panning = false;
+	event.Skip();
+}
+
+void REHex::DataHistogramPanel::OnChartLeftUp(wxMouseEvent &event)
+{
+	chart_panning = false;
+	event.Skip();
+}
+
+void REHex::DataHistogramPanel::OnChartMotion(wxMouseEvent &event)
+{
+	wxRect chart_screen_rect = get_chart_screen_rect();
+	
+	if(event.Dragging() && chart_screen_rect.Contains(mouse_down_point))
+	{
+		wxPoint mouse_screen_point = wxGetMousePosition();
+		
+		if(!chart_panning)
+		{
+			int drag_x = wxSystemSettings::GetMetric(wxSYS_DRAG_X);
+			int drag_y = wxSystemSettings::GetMetric(wxSYS_DRAG_Y);
+			
+			if(abs(mouse_down_point.x - mouse_screen_point.x) > drag_x || abs(mouse_screen_point.y - mouse_screen_point.y) > drag_y)
+			{
+				mouse_last_point = mouse_down_point;
+				chart_panning = true;
+			}
+		}
+		
+		if(chart_panning)
+		{
+			int adj_x = mouse_last_point.x - mouse_screen_point.x;
+			
+			double chart_width = x_axis->GetWindowWidth();
+			double chart_xpos  = x_axis->GetWindowPosition();
+			
+			double chart_xpos_per_pixel = chart_width / (double)(chart_screen_rect.width);
+			
+			chart_xpos += (double)(adj_x) * chart_xpos_per_pixel;
+			
+			chart_xpos = std::min(chart_xpos, (double)(accumulators.back()->get_num_buckets() - chart_width));
+			chart_xpos = std::max(chart_xpos, 0.0);
+			
+			x_axis->SetWindowPosition(chart_xpos);
+		}
+		
+		mouse_last_point = mouse_screen_point;
+		
+		return;
+	}
+	
+	event.Skip();
 }
 
 // void REHex::DataHistogramPanel::OnDataModifying(OffsetLengthEvent &event)
@@ -684,4 +839,3 @@ void REHex::DataHistogramPanel::OnPopBucket(wxCommandEvent &event)
 // 	/* Continue propogation. */
 // 	event.Skip();
 // }
-

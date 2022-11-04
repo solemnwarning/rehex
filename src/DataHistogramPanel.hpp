@@ -34,6 +34,8 @@
 #include "ToolPanel.hpp"
 
 namespace REHex {
+	class DataHistogramRenderer;
+	
 	class DataHistogramPanel: public ToolPanel
 	{
 		public:
@@ -65,10 +67,29 @@ namespace REHex {
 			std::list< std::unique_ptr<DataHistogramAccumulatorInterface> > accumulators;
 			Dataset *dataset;
 			wxChartPanel* chart_panel;
+			DataHistogramRenderer *renderer;
+			NumberAxis *x_axis;
 			wxTimer refresh_timer;
+			
+			int wheel_accumulator;
+			wxPoint mouse_down_point;
+			bool chart_panning;
+			wxPoint mouse_last_point;
 			
 			void reset_accumulator();
 			void reset_chart();
+			
+			/**
+			 * Get the bounding box of the *chart* (excluding legends/axes/etc) within
+			 * the chart_panel client area.
+			*/
+			wxRect get_chart_panel_rect();
+			
+			/**
+			 * Get the bounding box of the *chart* (excluding legends/axes/etc) within
+			 * the screen space.
+			*/
+			wxRect get_chart_screen_rect();
 			
 			void OnWordSizeChanged(wxCommandEvent &event);
 			void OnStrideChanged(wxSpinEvent &event);
@@ -77,6 +98,11 @@ namespace REHex {
 			void OnRefreshTimer(wxTimerEvent &event);
 			void OnBucketSelected(wxCommandEvent &event);
 			void OnPopBucket(wxCommandEvent &event);
+			
+			void OnChartWheel(wxMouseEvent &event);
+			void OnChartLeftDown(wxMouseEvent &event);
+			void OnChartLeftUp(wxMouseEvent &event);
+			void OnChartMotion(wxMouseEvent &event);
 			
 // 			void OnDataModifying(OffsetLengthEvent &event);
 // 			void OnDataModifyAborted(OffsetLengthEvent &event);

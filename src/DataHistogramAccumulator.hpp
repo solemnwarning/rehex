@@ -29,47 +29,6 @@
 
 namespace REHex
 {
-	class DataHistogramAccumulatorScope
-	{
-		private:
-			std::vector<unsigned char> data;
-			
-		public:
-			bool operator<(const DataHistogramAccumulatorScope &rhs) const
-			{
-				return data < rhs.data;
-			}
-			
-			template<typename T> void push(const T &value)
-			{
-				size_t pos = data.size();
-				
-				data.resize(pos + 1 + sizeof(value));
-				
-				data[pos] = sizeof(value);
-				memcpy(data.data() + pos + 1, &value, sizeof(value));
-			}
-			
-			template<typename T> T pop()
-			{
-				size_t pos = data.size() - sizeof(T) - 1;
-				
-				assert(data.size() > sizeof(T));
-				assert(data[pos] == sizeof(T));
-				
-				T value;
-				memcpy(&value, data.data() + pos + 1, sizeof(T));
-				data.resize(pos);
-				
-				return value;
-			}
-			
-			bool empty() const
-			{
-				return data.empty();
-			}
-	};
-	
 	class DataHistogramAccumulatorInterface
 	{
 		public:
@@ -89,16 +48,6 @@ namespace REHex
 			virtual double get_progress() const = 0;
 			
 			virtual DataHistogramAccumulatorInterface *subdivide_bucket(size_t bucket_idx) const = 0;
-			
-			virtual DataHistogramAccumulatorInterface *new_accumulator_with_scope(const DataHistogramAccumulatorScope &scope) const = 0;
-			
-			virtual DataHistogramAccumulatorScope get_scope() const = 0;
-			
-			virtual std::pair<DataHistogramAccumulatorScope, size_t> parent_accumulator_scope() const = 0;
-			virtual DataHistogramAccumulatorScope bucket_accumulator_scope(size_t bucket_idx) const = 0;
-			
-			virtual DataHistogramAccumulatorScope next_accumulator_scope() const = 0;
-			virtual DataHistogramAccumulatorScope prev_accumulator_scope() const = 0;
 	};
 	
 	template<typename T> class DataHistogramAccumulator: public DataHistogramAccumulatorInterface
@@ -138,16 +87,6 @@ namespace REHex
 			
 			virtual DataHistogramAccumulatorInterface *subdivide_bucket(size_t bucket_idx) const override;
 			
-			virtual DataHistogramAccumulatorInterface *new_accumulator_with_scope(const DataHistogramAccumulatorScope &scope) const override;
-			
-			virtual DataHistogramAccumulatorScope get_scope() const override;
-			
-			virtual std::pair<DataHistogramAccumulatorScope, size_t> parent_accumulator_scope() const override;
-			virtual DataHistogramAccumulatorScope bucket_accumulator_scope(size_t bucket_idx) const override;
-			
-			virtual DataHistogramAccumulatorScope next_accumulator_scope() const override;
-			virtual DataHistogramAccumulatorScope prev_accumulator_scope() const override;
-			
 		private:
 			SharedDocumentPointer document;
 			const off_t offset;
@@ -161,8 +100,6 @@ namespace REHex
 			
 			std::vector<Bucket> buckets;
 			std::unique_ptr<RangeProcessor> rp;
-			
-			DataHistogramAccumulator(const DataHistogramAccumulator<T> *base, int value_to_bucket_rshift, T sub_mask, T sub_value);
 			
 			static int calc_num_buckets_bit(int num_buckets);
 			static std::string format_value(T value);
@@ -261,32 +198,6 @@ template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulato
 	rp->queue_range(offset, length);
 }
 
-template<typename T> REHex::DataHistogramAccumulator<T>::DataHistogramAccumulator(const DataHistogramAccumulator<T> *base, int value_to_bucket_rshift, T sub_mask, T sub_value):
-	document(base->document),
-	offset(base->offset),
-	stride(base->stride),
-	length(base->length),
-	value_to_bucket_rshift(value_to_bucket_rshift),
-	sub_mask(sub_mask),
-	sub_value(sub_value)
-{
-	T next_bucket = sub_value;
-	for(size_t i = 0; i < base->buckets.size(); ++i)
-	{
-		T b_min_value = next_bucket;
-		
-		next_bucket += (T)(1) << value_to_bucket_rshift;
-		
-		T b_max_value = next_bucket - 1;
-		
-		buckets.emplace_back(b_min_value, b_max_value);
-	}
-	
-	// TODO: Align window size with word size
-	rp.reset(new RangeProcessor([this](off_t window_base, off_t window_size) { process_range(window_base, window_size); }, (2 * 1024 * 1024)));
-	rp->queue_range(offset, length);
-}
-
 template<typename T> REHex::DataHistogramAccumulator<T>::~DataHistogramAccumulator()
 {
 	rp.reset(NULL);
@@ -301,7 +212,7 @@ template<typename T> int REHex::DataHistogramAccumulator<T>::calc_num_buckets_bi
 {
 	int num_buckets_bit = -1;
 	
-	for(int i = 1; i < 20; ++i)
+	for(int i = 1; i < 16; ++i)
 	{
 		if((1 << i) == num_buckets)
 		{
@@ -318,6 +229,19 @@ template<typename T> int REHex::DataHistogramAccumulator<T>::calc_num_buckets_bi
 template<typename T> std::string REHex::DataHistogramAccumulator<T>::format_value(T value)
 {
 	return std::to_string(value);
+}
+
+namespace REHex {
+	template<> std::string DataHistogramAccumulator<uint8_t>::format_value(uint8_t value)
+	{
+		if(isascii(value) && isprint(value))
+		{
+			return std::to_string(value) + " (" + (char)(value) + ")";
+		}
+		else{
+			return std::to_string(value);
+		}
+	}
 }
 
 template<typename T> void REHex::DataHistogramAccumulator<T>::process_range(off_t window_base, off_t window_size)
@@ -428,126 +352,6 @@ template<typename T> REHex::DataHistogramAccumulatorInterface *REHex::DataHistog
 	}
 	
 	return new DataHistogramAccumulator<T>(this, &(buckets[bucket_idx]));
-}
-
-template<typename T> REHex::DataHistogramAccumulatorInterface *REHex::DataHistogramAccumulator<T>::new_accumulator_with_scope(const DataHistogramAccumulatorScope &scope) const
-{
-	DataHistogramAccumulatorScope scope_copy(scope);
-	
-	T sub_value = scope_copy.pop<T>();
-	T sub_mask = scope_copy.pop<T>();
-	int value_to_bucket_rshift = scope_copy.pop<int>();
-	
-	return new DataHistogramAccumulator<T>(this, value_to_bucket_rshift, sub_mask, sub_value);
-}
-
-template<typename T> REHex::DataHistogramAccumulatorScope REHex::DataHistogramAccumulator<T>::get_scope() const
-{
-	DataHistogramAccumulatorScope scope;
-	scope.push(value_to_bucket_rshift);
-	scope.push(sub_mask);
-	scope.push(sub_value);
-	
-	return scope;
-}
-
-template<typename T> std::pair<REHex::DataHistogramAccumulatorScope, size_t> REHex::DataHistogramAccumulator<T>::parent_accumulator_scope() const
-{
-	if(sub_mask == 0)
-	{
-		return std::make_pair<REHex::DataHistogramAccumulatorScope, size_t>(DataHistogramAccumulatorScope(), 0);
-	}
-	
-	size_t num_buckets = buckets.size();
-	int num_buckets_bit = calc_num_buckets_bit(num_buckets);
-	
-	T parent_mask = sub_mask << num_buckets_bit;
-	T parent_value = buckets.front().min_value & parent_mask;
-	
-	int parent_value_to_bucket_rshift = value_to_bucket_rshift + num_buckets_bit;
-	
-	size_t parent_bucket_idx = buckets.front().min_value >> parent_value_to_bucket_rshift;
-	
-	DataHistogramAccumulatorScope scope;
-	scope.push(parent_value_to_bucket_rshift);
-	scope.push(parent_mask);
-	scope.push(parent_value);
-	
-	return std::make_pair(
-		scope,
-		parent_bucket_idx);
-}
-
-template<typename T> REHex::DataHistogramAccumulatorScope REHex::DataHistogramAccumulator<T>::bucket_accumulator_scope(size_t bucket_idx) const
-{
-	assert(bucket_idx < buckets.size());
-	
-	unsigned long long bucket_values_count = (buckets[bucket_idx].max_value - buckets[bucket_idx].min_value) + 1;
-	if(bucket_values_count < buckets.size())
-	{
-		return DataHistogramAccumulatorScope();
-	}
-	
-	int value_bits = sizeof(T) * 8;
-	
-	size_t num_buckets = buckets.size();
-	int num_buckets_bit = calc_num_buckets_bit(num_buckets);
-	
-	T bucket_mask = sub_mask;
-	for(int i = 0; i < num_buckets_bit; ++i)
-	{
-		bucket_mask >>= 1;
-		bucket_mask |= ((T)(1)) << (value_bits - 1);
-	}
-	
-	DataHistogramAccumulatorScope scope;
-	scope.push(value_to_bucket_rshift - num_buckets_bit);
-	scope.push(bucket_mask);
-	scope.push(buckets[bucket_idx].min_value);
-	
-	return scope;
-}
-
-template<typename T> REHex::DataHistogramAccumulatorScope REHex::DataHistogramAccumulator<T>::next_accumulator_scope() const
-{
-	//T next_sub_value = sub_value + buckets.size();
-	//assert((next_sub_value & ~sub_mask) == 0);
-	
-	T next_sub_value = sub_value + ~sub_mask;
-	++next_sub_value;
-	
-	if(next_sub_value <= sub_value)
-	{
-		return DataHistogramAccumulatorScope();
-	}
-	
-	DataHistogramAccumulatorScope scope;
-	scope.push(value_to_bucket_rshift);
-	scope.push(sub_mask);
-	scope.push(next_sub_value);
-	
-	return scope;
-}
-
-template<typename T> REHex::DataHistogramAccumulatorScope REHex::DataHistogramAccumulator<T>::prev_accumulator_scope() const
-{
-	//T prev_sub_value = sub_value - buckets.size();
-	//assert((prev_sub_value & ~sub_mask) == 0);
-	
-	T prev_sub_value = sub_value - ~sub_mask;
-	--prev_sub_value;
-	
-	if(prev_sub_value >= sub_value)
-	{
-		return DataHistogramAccumulatorScope();
-	}
-	
-	DataHistogramAccumulatorScope scope;
-	scope.push(value_to_bucket_rshift);
-	scope.push(sub_mask);
-	scope.push(prev_sub_value);
-	
-	return scope;
 }
 
 #endif /* !REHEX_DATAHISTOGRAMACCUMULATOR_HPP */

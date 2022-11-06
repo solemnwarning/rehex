@@ -64,18 +64,9 @@ namespace REHex
 			const V *set(const K &k, const V &v);
 			
 			/**
-			 * @brief Store a value in the cache (by moving).
-			*/
-			const V *set(const K &k, V &&v);
-			
-			/**
 			 * @brief Remove all values from the cache.
 			*/
 			void clear();
-			
-			const std::pair<K, V> &front() const;
-			
-			bool empty() const;
 	};
 }
 
@@ -125,52 +116,10 @@ template<typename K, typename V> const V *REHex::LRUCache<K,V>::set(const K &k, 
 	return &(queue.front().second);
 }
 
-template<typename K, typename V> const V *REHex::LRUCache<K,V>::set(const K &k, V &&v)
-{
-	/* Check if we already have this key, and move it to the front of queue if we do. */
-	const V *old_v = get(k);
-	
-	if(old_v != NULL)
-	{
-		/* Replace the existing value. */
-		
-		assert(!(queue.front().first < k || k < queue.front().first));
-		
-		queue.pop_front();
-		
-		queue.push_front(std::make_pair(k, std::move(v)));
-		map[k] = queue.begin();
-	}
-	else{
-		/* Make space to keep us under the limit (if necessary) and add the new element. */
-		
-		while(queue.size() >= max_items)
-		{
-			map.erase(queue.back().first);
-			queue.pop_back();
-		}
-		
-		queue.push_front(std::make_pair(k, std::move(v)));
-		map[k] = queue.begin();
-	}
-
-	return &(queue.front().second);
-}
-
 template<typename K, typename V> void REHex::LRUCache<K,V>::clear()
 {
 	map.clear();
 	queue.clear();
-}
-
-template<typename K, typename V> const std::pair<K,V> &REHex::LRUCache<K,V>::front() const
-{
-	return queue.front();
-}
-
-template<typename K, typename V> bool REHex::LRUCache<K,V>::empty() const
-{
-	return queue.empty();
 }
 
 #endif /* !REHEX_LRUCACHE_HPP */

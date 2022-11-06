@@ -303,11 +303,7 @@ static REHex::ToolPanel *DataHistogramPanel_factory(wxWindow *parent, REHex::Sha
 static REHex::ToolPanelRegistration tpr("DataHistogramPanel", "Histogram", REHex::ToolPanel::TPS_TALL, &DataHistogramPanel_factory);
 
 enum {
-	ID_WORD_SIZE_CHOICE = 1,
-	ID_STRIDE_VALUE,
-	ID_RANGE_CHOICE,
-	ID_BUCKET_COUNT_CHOICE,
-	ID_UP_BUTTON,
+	ID_RANGE_CHOICE = 1,
 	ID_REFRESH_TIMER,
 	ID_ZOOM_IN,
 	ID_ZOOM_OUT,
@@ -319,12 +315,8 @@ enum {
 };
 
 BEGIN_EVENT_TABLE(REHex::DataHistogramPanel, wxPanel)
-	EVT_CHOICE(ID_WORD_SIZE_CHOICE, REHex::DataHistogramPanel::OnWordSizeChanged)
-	EVT_SPINCTRL(ID_STRIDE_VALUE, REHex::DataHistogramPanel::OnStrideChanged)
 	EVT_COMMAND(ID_RANGE_CHOICE, EV_SELECTION_CHANGED, REHex::DataHistogramPanel::OnRangeChanged)
-	EVT_CHOICE(ID_BUCKET_COUNT_CHOICE, REHex::DataHistogramPanel::OnBucketCountChanged)
 	
-	EVT_TOOL(ID_UP_BUTTON, REHex::DataHistogramPanel::OnPopBucket)
 	EVT_TOOL(ID_ZOOM_IN, REHex::DataHistogramPanel::OnZoomIn)
 	EVT_TOOL(ID_ZOOM_OUT, REHex::DataHistogramPanel::OnZoomOut)
 	
@@ -345,48 +337,13 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 {
 	static const int MARGIN = 5;
 	
-	word_size_choice = new wxChoice(this, ID_WORD_SIZE_CHOICE);
-	word_size_choice->Append("8-bit");
-	word_size_choice->Append("16-bit");
-	word_size_choice->Append("32-bit");
-	word_size_choice->Append("64-bit");
-	word_size_choice->SetSelection(WORD_SIZE_CHOICE_8BIT);
-	
-	stride_ctrl = new wxSpinCtrl(this, ID_STRIDE_VALUE);
-	stride_ctrl->SetMaxSize(stride_ctrl->GetSizeFromTextSize(stride_ctrl->GetTextExtent("000")));
-	
-	stride_ctrl->SetRange(1, stride_ctrl->GetMax());
-	stride_ctrl->SetValue(1);
-	
-	wxBoxSizer *sizer1 = new wxBoxSizer(wxHORIZONTAL);
-	sizer1->Add(new wxStaticText(this, wxID_ANY, "Values:"), 0, wxALIGN_CENTER_VERTICAL);
-	sizer1->Add(word_size_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
-	sizer1->Add(new wxStaticText(this, wxID_ANY, "Stride:"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
-	sizer1->Add(stride_ctrl, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
-	sizer1->Add(new wxStaticText(this, wxID_ANY, "bytes"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
-	
 	range_choice = new RangeChoiceLinear(this, ID_RANGE_CHOICE, document, document_ctrl);
-	
-	bucket_count_choice = new wxChoice(this, ID_BUCKET_COUNT_CHOICE);
-	bucket_count_choice->Append("16");
-	bucket_count_choice->Append("32");
-	bucket_count_choice->Append("64");
-	bucket_count_choice->Append("128");
-	bucket_count_choice->Append("256");
-	bucket_count_choice->SetSelection(0);
 	
 	wxBoxSizer *sizer2 = new wxBoxSizer(wxHORIZONTAL);
 	sizer2->Add(new wxStaticText(this, wxID_ANY, "Range:"), 0, wxALIGN_CENTER_VERTICAL);
 	sizer2->Add(range_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
-	sizer2->Add(new wxStaticText(this, wxID_ANY, "Buckets:"), 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
-	sizer2->Add(bucket_count_choice, 0, (wxLEFT | wxALIGN_CENTER_VERTICAL), MARGIN);
 	
 	toolbar = new wxToolBar(this, wxID_ANY);
-	
-	toolbar->AddTool(ID_UP_BUTTON,  "Back", wxArtProvider::GetBitmap(wxART_GO_DIR_UP, wxART_TOOLBAR), "Back a level");
-	
-	nest_text = new wxStaticText(toolbar, wxID_ANY, wxEmptyString);
-	toolbar->AddControl(nest_text);
 	
 	toolbar->AddStretchableSpace();
 	
@@ -396,7 +353,6 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	toolbar->Realize();
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
-	sizer->Add(sizer1, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
 	sizer->Add(sizer2, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
 	sizer->Add(toolbar, 0, (wxLEFT | wxRIGHT | wxTOP | wxEXPAND), MARGIN);
 	SetSizerAndFit(sizer);
@@ -486,63 +442,24 @@ void REHex::DataHistogramPanel::update()
 
 void REHex::DataHistogramPanel::reset_accumulator()
 {
-	int bucket_count = 16 << bucket_count_choice->GetSelection();
-	int stride = stride_ctrl->GetValue();
-	
-	accumulators.clear();
-	
 	off_t range_offset, range_length;
 	std::tie(range_offset, range_length) = range_choice->get_range();
 	
-	switch(word_size_choice->GetSelection())
-	{
-		case WORD_SIZE_CHOICE_8BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint8_t>(document, range_offset, stride, range_length, bucket_count));
-			break;
-		
-		case WORD_SIZE_CHOICE_16BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint16_t>(document, range_offset, stride, range_length, bucket_count));
-			break;
-		
-		case WORD_SIZE_CHOICE_32BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint32_t>(document, range_offset, stride, range_length, bucket_count));
-			break;
-		
-		case WORD_SIZE_CHOICE_64BIT:
-			accumulators.emplace_back(new DataHistogramAccumulator<uint64_t>(document, range_offset, stride, range_length, bucket_count));
-			break;
-		
-		default:
-			/* Unreachable. */
-			return;
-	}
+	accumulator.reset(new DataHistogramAccumulator<uint8_t>(document, range_offset, 1, range_length, 256));
 	
 	reset_chart();
 }
 
 void REHex::DataHistogramPanel::reset_chart()
 {
-	DataHistogramAccumulatorInterface *accumulator = accumulators.back().get();
-	
-	if(accumulators.size() == 1)
-	{
-		nest_text->SetLabelText(wxEmptyString);
-		toolbar->EnableTool(ID_UP_BUTTON, false);
-	}
-	else{
-		nest_text->SetLabel("Min value: " + accumulator->get_bucket_min_value_as_string(0) + "\n"
-			+ "Max value: " + accumulator->get_bucket_max_value_as_string(accumulator->get_num_buckets() - 1));
-		toolbar->EnableTool(ID_UP_BUTTON, true);
-	}
-	
 	// First step: create the plot.
 	XYPlot *plot = new XYPlot();
 	
 	// Second step: create the dataset.
-	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulator);
+	DataHistogramDatasetAdapter *dataset = new DataHistogramDatasetAdapter(accumulator.get());
 	this->dataset = dataset;
 	
-	renderer = new DataHistogramRenderer(accumulator);
+	renderer = new DataHistogramRenderer(accumulator.get());
 	dataset->SetRenderer(renderer);
 	
 	// add our dataset to plot
@@ -646,32 +563,16 @@ void REHex::DataHistogramPanel::zoom_adj(int steps)
 	
 	chart_width -= 4 * steps;
 	
-	chart_width = std::min(chart_width, (double)(accumulators.back()->get_num_buckets()));
+	chart_width = std::min(chart_width, (double)(accumulator->get_num_buckets()));
 	chart_width = std::max(chart_width, 4.0);
 	
 	chart_xpos = data_x_value - (chart_width / 2);
 	
-	chart_xpos = std::min(chart_xpos, (double)(accumulators.back()->get_num_buckets() - chart_width));
+	chart_xpos = std::min(chart_xpos, (double)(accumulator->get_num_buckets()) - chart_width);
 	chart_xpos = std::max(chart_xpos, 0.0);
 	
 	x_axis->SetWindowWidth(chart_width);
 	x_axis->SetWindowPosition(chart_xpos);
-}
-
-void REHex::DataHistogramPanel::OnWordSizeChanged(wxCommandEvent &event)
-{
-	static const int WORD_SIZES[] = { 1, 2, 4, 8 };
-	int word_size_bytes = WORD_SIZES[ word_size_choice->GetSelection() ];
-	
-	stride_ctrl->SetRange(word_size_bytes, stride_ctrl->GetMax());
-	stride_ctrl->SetValue(word_size_bytes);
-	
-	reset_accumulator();
-}
-
-void REHex::DataHistogramPanel::OnStrideChanged(wxSpinEvent &event)
-{
-	reset_accumulator();
 }
 
 void REHex::DataHistogramPanel::OnRangeChanged(wxCommandEvent &event)
@@ -679,14 +580,9 @@ void REHex::DataHistogramPanel::OnRangeChanged(wxCommandEvent &event)
 	reset_accumulator();
 }
 
-void REHex::DataHistogramPanel::OnBucketCountChanged(wxCommandEvent &event)
-{
-	reset_accumulator();
-}
-
 void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 {
-	if(accumulators.back()->get_progress() != 1.0)
+	if(accumulator->get_progress() != 1.0)
 	{
 		refresh_timer.Start(-1, wxTIMER_ONE_SHOT);
 	}
@@ -697,24 +593,6 @@ void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
 {
 	int bucket_idx = event.GetInt();
-	
-	DataHistogramAccumulatorInterface *new_accumulator = accumulators.back()->subdivide_bucket(bucket_idx);
-	if(new_accumulator != NULL)
-	{
-		/* TODO: Stop processing previous accumulator. */
-		
-		accumulators.emplace_back(new_accumulator);
-		reset_chart();
-	}
-}
-
-void REHex::DataHistogramPanel::OnPopBucket(wxCommandEvent &event)
-{
-	if(accumulators.size() > 1)
-	{
-		accumulators.pop_back();
-		reset_chart();
-	}
 }
 
 void REHex::DataHistogramPanel::OnZoomIn(wxCommandEvent &event)
@@ -797,7 +675,7 @@ void REHex::DataHistogramPanel::OnChartMotion(wxMouseEvent &event)
 			
 			chart_xpos += (double)(adj_x) * chart_xpos_per_pixel;
 			
-			chart_xpos = std::min(chart_xpos, (double)(accumulators.back()->get_num_buckets() - chart_width));
+			chart_xpos = std::min(chart_xpos, (double)(accumulator->get_num_buckets() - chart_width));
 			chart_xpos = std::max(chart_xpos, 0.0);
 			
 			x_axis->SetWindowPosition(chart_xpos);

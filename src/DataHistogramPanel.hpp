@@ -57,16 +57,12 @@ namespace REHex {
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
-			wxChoice *word_size_choice;
-			wxSpinCtrl *stride_ctrl;
 			RangeChoiceLinear *range_choice;
-			wxChoice *bucket_count_choice;
 			
 			wxToolBar *toolbar;
 			wxStaticText *nest_text;
 			
-			//std::unique_ptr<DataHistogramAccumulatorInterface> accumulator;
-			std::list< std::unique_ptr<DataHistogramAccumulatorInterface> > accumulators;
+			std::unique_ptr<DataHistogramAccumulatorInterface> accumulator;
 			Dataset *dataset;
 			wxChartPanel* chart_panel;
 			DataHistogramRenderer *renderer;
@@ -95,13 +91,9 @@ namespace REHex {
 			
 			void zoom_adj(int steps);
 			
-			void OnWordSizeChanged(wxCommandEvent &event);
-			void OnStrideChanged(wxSpinEvent &event);
 			void OnRangeChanged(wxCommandEvent &event);
-			void OnBucketCountChanged(wxCommandEvent &event);
 			void OnRefreshTimer(wxTimerEvent &event);
 			void OnBucketSelected(wxCommandEvent &event);
-			void OnPopBucket(wxCommandEvent &event);
 			void OnZoomIn(wxCommandEvent &event);
 			void OnZoomOut(wxCommandEvent &event);
 			

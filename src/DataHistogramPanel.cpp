@@ -331,6 +331,7 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	document_ctrl(document_ctrl),
 	dataset(NULL),
 	chart_panel(NULL),
+	x_axis(NULL),
 	refresh_timer(this, ID_REFRESH_TIMER),
 	wheel_accumulator(0),
 	chart_panning(false)
@@ -356,6 +357,10 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	sizer->Add(sizer2, 0, (wxLEFT | wxRIGHT | wxTOP), MARGIN);
 	sizer->Add(toolbar, 0, (wxLEFT | wxRIGHT | wxTOP | wxEXPAND), MARGIN);
 	SetSizerAndFit(sizer);
+	
+	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::DataHistogramPanel::OnDataErase,     this);
+	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::DataHistogramPanel::OnDataInsert,    this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::DataHistogramPanel::OnDataOverwrite, this);
 	
 	reset_accumulator();
 }
@@ -469,6 +474,15 @@ void REHex::DataHistogramPanel::reset_chart()
 	NumberAxis *leftAxis = new NumberAxis(AXIS_LEFT);
 	leftAxis->IntegerValues(true);
 	
+	double x_axis_width = accumulator->get_num_buckets();
+	double x_axis_position = 0.0;
+	
+	if(x_axis != NULL)
+	{
+		x_axis_width = x_axis->GetWindowWidth();
+		x_axis_position = x_axis->GetWindowPosition();
+	}
+	
 	x_axis = new NumberAxis(AXIS_BOTTOM);
 	x_axis->SetFixedBounds(0, accumulator->get_num_buckets());
 	x_axis->SetTickFormat("");
@@ -476,7 +490,8 @@ void REHex::DataHistogramPanel::reset_chart()
 	// set bottom axis margins
 	x_axis->SetMargins(15, 15);
 	
-	x_axis->SetWindowWidth(accumulator->get_num_buckets());
+	x_axis->SetWindowWidth(x_axis_width);
+	x_axis->SetWindowPosition(x_axis_position);
 	x_axis->SetUseWindow(true);
 	
 	// add axes to plot
@@ -689,77 +704,46 @@ void REHex::DataHistogramPanel::OnChartMotion(wxMouseEvent &event)
 	event.Skip();
 }
 
-// void REHex::DataHistogramPanel::OnDataModifying(OffsetLengthEvent &event)
-// {
-// 	pause_threads();
-// 	
-// 	/* Continue propogation. */
-// 	event.Skip();
-// }
-// 
-// void REHex::DataHistogramPanel::OnDataModifyAborted(OffsetLengthEvent &event)
-// {
-// 	start_threads();
-// 	
-// 	/* Continue propogation. */
-// 	event.Skip();
-// }
-// 
-// void REHex::DataHistogramPanel::OnDataErase(OffsetLengthEvent &event)
-// {
-// 	{
-// 		std::lock_guard<std::mutex> sl(strings_lock);
-// 		strings.data_erased(event.offset, event.length);
-// 	}
-// 	
-// 	{
-// 		std::lock_guard<std::mutex> pl(pause_lock);
-// 		
-// 		dirty.data_erased(event.offset, event.length);
-// 		pending.data_erased(event.offset, event.length);
-// 		assert(working.empty());
-// 		
-// 		mark_dirty_pad(event.offset, 0);
-// 	}
-// 	
-// 	start_threads();
-// 	
-// 	/* Continue propogation. */
-// 	event.Skip();
-// }
-// 
-// void REHex::DataHistogramPanel::OnDataInsert(OffsetLengthEvent &event)
-// {
-// 	{
-// 		std::lock_guard<std::mutex> sl(strings_lock);
-// 		strings.data_inserted(event.offset, event.length);
-// 	}
-// 	
-// 	{
-// 		std::lock_guard<std::mutex> pl(pause_lock);
-// 		
-// 		dirty.data_inserted(event.offset, event.length);
-// 		pending.data_inserted(event.offset, event.length);
-// 		assert(working.empty());
-// 		
-// 		mark_dirty_pad(event.offset, event.length);
-// 	}
-// 	
-// 	start_threads();
-// 	
-// 	/* Continue propogation. */
-// 	event.Skip();
-// }
-// 
-// void REHex::DataHistogramPanel::OnDataOverwrite(OffsetLengthEvent &event)
-// {
-// 	{
-// 		std::lock_guard<std::mutex> pl(pause_lock);
-// 		mark_dirty_pad(event.offset, event.length);
-// 	}
-// 	
-// 	start_threads();
-// 	
-// 	/* Continue propogation. */
-// 	event.Skip();
-// }
+void REHex::DataHistogramPanel::OnDataErase(OffsetLengthEvent &event)
+{
+	off_t range_offset, range_length;
+	std::tie(range_offset, range_length) = range_choice->get_range();
+	
+	if(range_length > 0 && event.offset < (range_offset + range_length))
+	{
+		reset_accumulator();
+	}
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::DataHistogramPanel::OnDataInsert(OffsetLengthEvent &event)
+{
+	off_t range_offset, range_length;
+	std::tie(range_offset, range_length) = range_choice->get_range();
+	
+	if(range_length > 0 && event.offset < (range_offset + range_length))
+	{
+		reset_accumulator();
+	}
+	
+	/* Continue propogation. */
+	event.Skip();
+}
+
+void REHex::DataHistogramPanel::OnDataOverwrite(OffsetLengthEvent &event)
+{
+	off_t range_offset, range_length;
+	std::tie(range_offset, range_length) = range_choice->get_range();
+	
+	if(range_length > 0
+		&& event.offset < (range_offset + range_length)
+		&& (event.offset + event.length) > range_offset)
+	{
+		reset_accumulator();
+	}
+	
+	/* Continue propogation. */
+	event.Skip();
+}

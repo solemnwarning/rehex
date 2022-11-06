@@ -102,11 +102,9 @@ namespace REHex {
 			void OnChartLeftUp(wxMouseEvent &event);
 			void OnChartMotion(wxMouseEvent &event);
 			
-// 			void OnDataModifying(OffsetLengthEvent &event);
-// 			void OnDataModifyAborted(OffsetLengthEvent &event);
-// 			void OnDataErase(OffsetLengthEvent &event);
-// 			void OnDataInsert(OffsetLengthEvent &event);
-// 			void OnDataOverwrite(OffsetLengthEvent &event);
+			void OnDataErase(OffsetLengthEvent &event);
+			void OnDataInsert(OffsetLengthEvent &event);
+			void OnDataOverwrite(OffsetLengthEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

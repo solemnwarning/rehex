@@ -339,6 +339,7 @@ APP_OBJS := \
 	src/CommentTree.o \
 	src/ConsoleBuffer.o \
 	src/ConsolePanel.o \
+	src/DataHistogramPan.o \
 	src/DataHistogramPanel.o \
 	src/DataType.o \
 	src/decodepanel.o \

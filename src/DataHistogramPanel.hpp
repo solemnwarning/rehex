@@ -28,6 +28,7 @@
 #include <wx/toolbar.h>
 
 #include "DataHistogramAccumulator.hpp"
+#include "DataHistogramPan.hpp"
 #include "document.hpp"
 #include "RangeChoiceLinear.hpp"
 #include "SafeWindowPointer.hpp"
@@ -66,7 +67,8 @@ namespace REHex {
 			wxStaticText *nest_text;
 			
 			//std::unique_ptr<DataHistogramAccumulatorInterface> accumulator;
-			std::list< std::unique_ptr<DataHistogramAccumulatorInterface> > accumulators;
+			//std::list< std::vector< std::unique_ptr<DataHistogramAccumulatorInterface> > > accumulators;
+			std::unique_ptr<DataHistogramPan> accumulator_pan;
 			Dataset *dataset;
 			wxChartPanel* chart_panel;
 			DataHistogramRenderer *renderer;

@@ -20,6 +20,7 @@
 
 #include <list>
 #include <memory>
+#include <wx/animate.h>
 #include <wx/bmpbuttn.h>
 #include <wx/chartpanel.h>
 #include <wx/choice.h>
@@ -60,7 +61,7 @@ namespace REHex {
 			RangeChoiceLinear *range_choice;
 			
 			wxToolBar *toolbar;
-			wxStaticText *nest_text;
+			wxAnimationCtrl *spinner;
 			
 			std::unique_ptr<DataHistogramAccumulatorInterface> accumulator;
 			Dataset *dataset;

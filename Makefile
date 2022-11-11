@@ -503,7 +503,7 @@ src/BitmapTool.o: \
 	res/actual_size16.h res/fit_to_screen16.h res/swap_horiz16.h \
 	res/swap_vert16.h res/zoom_in16.h res/zoom_out16.h
 src/DataHistogramPanel.o: \
-	res/zoom_in16.h res/zoom_out16.h
+	res/spinner24.h res/zoom_in16.h res/zoom_out16.h
 src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.o: res/license.h
 src/LuaPluginLoader.o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h

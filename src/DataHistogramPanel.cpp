@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <vector>
 #include <wx/artprov.h>
+#include <wx/mstream.h>
 #include <wx/axis/numberaxis.h>
 #include <wx/xy/xyhistorenderer.h>
 #include <wx/xy/xyplot.h>
@@ -28,6 +29,7 @@
 #include "DataHistogramPanel.hpp"
 #include "Events.hpp"
 
+#include "../res/spinner24.h"
 #include "../res/zoom_in16.h"
 #include "../res/zoom_out16.h"
 
@@ -348,6 +350,16 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	
 	toolbar->AddStretchableSpace();
 	
+	wxMemoryInputStream spinner_stream(spinner24_gif, sizeof(spinner24_gif));
+	
+	wxAnimation spinner_anim;
+	spinner_anim.Load(spinner_stream, wxANIMATION_TYPE_GIF);
+	
+	spinner = new wxAnimationCtrl(toolbar, wxID_ANY, spinner_anim, wxDefaultPosition, wxSize(24, 24));
+	spinner->Hide();
+	
+	toolbar->AddControl(spinner);
+	
 	toolbar->AddTool(ID_ZOOM_IN,  "Zoom in",  wxBITMAP_PNG_FROM_DATA(zoom_in16),  "Zoom in");
 	toolbar->AddTool(ID_ZOOM_OUT, "Zoom out", wxBITMAP_PNG_FROM_DATA(zoom_out16), "Zoom out");
 	
@@ -451,6 +463,9 @@ void REHex::DataHistogramPanel::reset_accumulator()
 	std::tie(range_offset, range_length) = range_choice->get_range();
 	
 	accumulator.reset(new DataHistogramAccumulator<uint8_t>(document, range_offset, 1, range_length, 256));
+	
+	spinner->Show();
+	spinner->Play();
 	
 	reset_chart();
 }
@@ -600,6 +615,10 @@ void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 	if(accumulator->get_progress() != 1.0)
 	{
 		refresh_timer.Start(-1, wxTIMER_ONE_SHOT);
+	}
+	else{
+		spinner->Stop();
+		spinner->Hide();
 	}
 	
 	dataset->DatasetChanged();

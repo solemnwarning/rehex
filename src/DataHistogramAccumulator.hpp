@@ -338,7 +338,8 @@ template<typename T> double REHex::DataHistogramAccumulator<T>::get_progress() c
 		return 1.0;
 	}
 	
-	return (double)(length) / (double)(queue.total_bytes());
+	off_t processed = length - queue.total_bytes();
+	return (double)(processed) / (double)(length);
 }
 
 template<typename T> REHex::DataHistogramAccumulatorInterface *REHex::DataHistogramAccumulator<T>::subdivide_bucket(size_t bucket_idx) const

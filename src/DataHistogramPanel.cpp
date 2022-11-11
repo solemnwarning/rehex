@@ -402,59 +402,7 @@ wxSize REHex::DataHistogramPanel::DoGetBestClientSize() const
 
 void REHex::DataHistogramPanel::update()
 {
-	if (!is_visible)
-	{
-		/* There is no sense in updating this if we are not visible */
-		return;
-	}
-	
-	#if 0
-	if(update_needed && document_ctrl)
-	{
-		size_t strings_count;
-		
-		{
-			std::lock_guard<std::mutex> sl(strings_lock);
-			
-			strings_count = strings.size();
-			update_needed = false;
-		}
-		
-		list_ctrl->SetItemCount(strings_count);
-		
-		bool searching = spawned_threads > 0;
-		std::string status_text = "";
-		
-		if(searching)
-		{
-			status_text += "Searching from " + format_offset(search_base, document_ctrl->get_offset_display_base(), document->buffer_length());
-			continue_button->Disable();
-		}
-		else{
-			status_text += "Searched from " + format_offset(search_base, document_ctrl->get_offset_display_base(), document->buffer_length());
-			
-			auto next_pending = pending.find_first_in(search_base, std::numeric_limits<off_t>::max());
-			continue_button->Enable(next_pending != pending.end());
-		}
-		
-		status_text += "\n";
-		
-		if(strings_count > 0)
-		{
-			status_text += "Found "
-				+ wxNumberFormatter::ToString((long)(strings_count))
-				+ " strings";
-		}
-		else if(!searching)
-		{
-			status_text += "No strings found";
-		}
-		
-		this->status_text->SetLabelText(status_text);
-	}
-	#endif
-	
-	//reset_chart();
+	dataset->DatasetChanged();
 }
 
 void REHex::DataHistogramPanel::reset_accumulator()
@@ -621,7 +569,10 @@ void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 		spinner->Hide();
 	}
 	
-	dataset->DatasetChanged();
+	if(is_visible)
+	{
+		update();
+	}
 }
 
 void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)

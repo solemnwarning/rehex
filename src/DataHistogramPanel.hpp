@@ -77,6 +77,7 @@ namespace REHex {
 			
 			void reset_accumulator();
 			void reset_chart();
+			void reset_chart_margins();
 			
 			/**
 			 * Get the bounding box of the *chart* (excluding legends/axes/etc) within

@@ -385,19 +385,14 @@ std::string REHex::DataHistogramPanel::name() const
 }
 
 void REHex::DataHistogramPanel::save_state(wxConfig *config) const
-{
-	/* TODO */
-}
+{}
 
 void REHex::DataHistogramPanel::load_state(wxConfig *config)
-{
-	/* TODO */
-}
+{}
 
 wxSize REHex::DataHistogramPanel::DoGetBestClientSize() const
 {
-	/* TODO */
-	return wxSize(100, -1);
+	return wxSize(600, -1);
 }
 
 void REHex::DataHistogramPanel::update()
@@ -450,12 +445,11 @@ void REHex::DataHistogramPanel::reset_chart()
 	x_axis->SetFixedBounds(0, accumulator->get_num_buckets());
 	x_axis->SetTickFormat("");
 	
-	// set bottom axis margins
-	x_axis->SetMargins(15, 15);
-	
 	x_axis->SetWindowWidth(x_axis_width);
 	x_axis->SetWindowPosition(x_axis_position);
 	x_axis->SetUseWindow(true);
+	
+	reset_chart_margins();
 	
 	// add axes to plot
 	plot->AddAxis(leftAxis);
@@ -495,6 +489,18 @@ void REHex::DataHistogramPanel::reset_chart()
 	renderer->set_chart_panel(chart_panel);
 	
 	refresh_timer.Start(500, wxTIMER_ONE_SHOT);
+}
+
+void REHex::DataHistogramPanel::reset_chart_margins()
+{
+	double chart_width = x_axis->GetWindowWidth();
+	double chart_xpos = x_axis->GetWindowPosition();
+	
+	double chart_xpos_max = (double)(accumulator->get_num_buckets()) - chart_width;
+	
+	x_axis->SetMargins(
+		(chart_xpos == 0.0 ? 15 : 0),
+		(chart_xpos == chart_xpos_max ? 15 : 0));
 }
 
 wxRect REHex::DataHistogramPanel::get_chart_panel_rect()
@@ -539,10 +545,10 @@ void REHex::DataHistogramPanel::zoom_adj(int steps)
 		data_x_value = x_axis->ToData(dc, chart_panel_rect.x, chart_panel_rect.width, panel_point.x);
 	}
 	
-	chart_width -= 4 * steps;
+	chart_width -= 16 * steps;
 	
 	chart_width = std::min(chart_width, (double)(accumulator->get_num_buckets()));
-	chart_width = std::max(chart_width, 4.0);
+	chart_width = std::max(chart_width, 16.0);
 	
 	chart_xpos = data_x_value - (chart_width / 2);
 	
@@ -551,6 +557,7 @@ void REHex::DataHistogramPanel::zoom_adj(int steps)
 	
 	x_axis->SetWindowWidth(chart_width);
 	x_axis->SetWindowPosition(chart_xpos);
+	reset_chart_margins();
 }
 
 void REHex::DataHistogramPanel::OnRangeChanged(wxCommandEvent &event)
@@ -664,6 +671,7 @@ void REHex::DataHistogramPanel::OnChartMotion(wxMouseEvent &event)
 			chart_xpos = std::max(chart_xpos, 0.0);
 			
 			x_axis->SetWindowPosition(chart_xpos);
+			reset_chart_margins();
 		}
 		
 		mouse_last_point = mouse_screen_point;

@@ -28,6 +28,7 @@
 
 #include "DataHistogramPanel.hpp"
 #include "Events.hpp"
+#include "search.hpp"
 
 #include "../res/spinner24.h"
 #include "../res/zoom_in16.h"
@@ -585,6 +586,24 @@ void REHex::DataHistogramPanel::OnRefreshTimer(wxTimerEvent &event)
 void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
 {
 	int bucket_idx = event.GetInt();
+	
+	wxWindow *frame = this, *parent;
+	while((parent = frame->GetParent()) != NULL)
+	{
+		frame = parent;
+	}
+	
+	off_t range_offset, range_length;
+	std::tie(range_offset, range_length) = range_choice->get_range();
+	
+	Search::Value *search = new Search::Value(frame, document);
+	search->configure(std::to_string(bucket_idx), Search::Value::FMT_I8);
+	search->limit_range(range_offset, range_offset + range_length);
+	search->set_auto_close(true);
+	search->set_auto_wrap(true);
+	search->set_modal_parent(frame);
+	
+	search->begin_search((document->get_cursor_position() + 1), (range_offset + range_length), Search::SearchDirection::FORWARDS);
 }
 
 void REHex::DataHistogramPanel::OnZoomIn(wxCommandEvent &event)

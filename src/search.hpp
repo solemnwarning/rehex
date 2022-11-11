@@ -74,6 +74,10 @@ namespace REHex {
 			wxProgressDialog *progress;
 			wxTimer timer;
 			
+			bool auto_close;
+			bool auto_wrap;
+			wxWindow *modal_parent;
+			
 		protected:
 			Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title);
 			
@@ -87,6 +91,10 @@ namespace REHex {
 		public:
 			void limit_range(off_t range_begin, off_t range_end);
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
+			
+			void set_auto_close(bool auto_close);
+			void set_auto_wrap(bool auto_wrap);
+			void set_modal_parent(wxWindow *modal_parent);
 			
 			off_t find_next(off_t from_offset, size_t window_size = DEFAULT_WINDOW_SIZE);
 			void begin_search(off_t range_begin, off_t range_end, SearchDirection direction, size_t window_size = DEFAULT_WINDOW_SIZE);

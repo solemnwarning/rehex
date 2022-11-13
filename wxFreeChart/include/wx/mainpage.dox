@@ -1,0 +1,15 @@
+/**
+\mainpage Welcome to wxFreeChart
+
+wxFreeChart is a powerful charting library, designed with flexibility in mind.
+It has a Model-Controller-View design and it can draw the following chart types: 
+    line/point/area charts based on XY coordinates, 
+    bar charts, 
+    stacked bar charts, 
+    layered bar charts, 
+    OHLC bar and candlestick financial charts, 
+    pie charts, 
+    bubble charts. 
+    
+wxFreeChart has advanced features, like: data markers, various data access helper classes, legend, various axis types.
+*/

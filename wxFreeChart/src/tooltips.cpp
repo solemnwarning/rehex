@@ -1,0 +1,11 @@
+/////////////////////////////////////////////////////////////////////////////
+// Name:    tooltips.cpp
+// Purpose: tooltips implementation
+// Author:    Moskvichev Andrey V.
+// Created:    2010/12/16
+// Copyright:    (c) 2010 Moskvichev Andrey V.
+// Licence:    wxWidgets licence
+/////////////////////////////////////////////////////////////////////////////
+
+#include <wx/tooltips.h>
+

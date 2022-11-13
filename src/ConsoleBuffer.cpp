@@ -33,6 +33,8 @@ const std::list<REHex::ConsoleBuffer::Message> &REHex::ConsoleBuffer::get_messag
 
 std::string REHex::ConsoleBuffer::get_messages_text() const
 {
+	std::lock_guard<std::mutex> l(lock);
+	
 	std::string all_text;
 	all_text.reserve(total_text);
 	
@@ -51,6 +53,8 @@ void REHex::ConsoleBuffer::print(Level level, const std::string &text)
 		/* Don't want zero-length messages in the list. */
 		return;
 	}
+	
+	std::lock_guard<std::mutex> l(lock);
 	
 	if((total_text + text.length()) > total_text_max)
 	{
@@ -100,16 +104,16 @@ void REHex::ConsoleBuffer::print(Level level, const std::string &text)
 			messages.erase(messages.begin(), erase_end);
 			total_text -= erase_total;
 			
-			ConsoleEraseEvent event(this, erase_total);
-			wxPostEvent(this, event);
+			ConsoleEraseEvent *event = new ConsoleEraseEvent(this, erase_total);
+			QueueEvent(event); /* Takes ownership of event. */
 		}
 	}
 	
 	messages.push_back(Message(level, text));
 	total_text += text.length();
 	
-	ConsolePrintEvent event(this, level, text);
-	wxPostEvent(this, event);
+	ConsolePrintEvent *event = new ConsolePrintEvent(this, level, text);
+	QueueEvent(event); /* Takes ownership of event. */
 }
 
 void REHex::ConsoleBuffer::printf(Level level, const char *fmt, ...)
@@ -138,6 +142,8 @@ void REHex::ConsoleBuffer::vprintf(Level level, const char *fmt, va_list argv)
 
 void REHex::ConsoleBuffer::clear()
 {
+	std::lock_guard<std::mutex> l(lock);
+	
 	if(total_text == 0)
 	{
 		/* Don't raise zero-length CONSOLE_ERASE events. */
@@ -149,8 +155,8 @@ void REHex::ConsoleBuffer::clear()
 	messages.clear();
 	total_text = 0;
 	
-	ConsoleEraseEvent event(this, old_total_text);
-	wxPostEvent(this, event);
+	ConsoleEraseEvent *event = new ConsoleEraseEvent(this, old_total_text);
+	QueueEvent(event); /* Takes ownership of event. */
 }
 
 REHex::ConsoleBuffer::Message::Message(Level level, const std::string &text):

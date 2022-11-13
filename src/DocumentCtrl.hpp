@@ -517,6 +517,9 @@ namespace REHex {
 			 * Returns zero if the two offsets are equal, a negative integer if a is
 			 * less than b and a positive integer if a is greater than b.
 			 *
+			 * The exact positive/negative value is equal to the difference between the
+			 * offsets as described by the regions.
+			 *
 			 * Throws an exception of type std::invalid_argument if either of the
 			 * offsets are invalid.
 			*/
@@ -546,6 +549,29 @@ namespace REHex {
 			 * @brief Check if a range of offsets is linear and contiguous.
 			*/
 			bool region_range_linear(off_t begin_offset, off_t end_offset_incl);
+			
+			/**
+			 * @brief Returns the set of all bytes in the given (inclusive) range.
+			 *
+			 * Ranges are inserted into the returned set by their order as defined in
+			 * the regions list.
+			 *
+			 * NOTE: This method may be expensive to call, as it potentially has to
+			 * iterate through all (data) regions in the file.
+			*/
+			OrderedByteRangeSet region_range_expand(off_t begin_offset, off_t end_offset_incl);
+			
+			/**
+			 * @brief Convert a real file offset to a virtual one.
+			 * @return Virtual offset, negative if not valid.
+			*/
+			off_t region_offset_to_virt(off_t offset);
+			
+			/**
+			 * @brief Convert a virtual file offset to a real one.
+			 * @return Real offset, negative if not valid.
+			*/
+			off_t region_virt_to_offset(off_t virt_offset);
 			
 			wxFont &get_font();
 			
@@ -590,6 +616,9 @@ namespace REHex {
 			
 			/** List of iterators into data_regions, sorted by d_offset. */
 			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted;
+			
+			/** List of iterators into data_regions, sorted by virt_offset. */
+			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted_virt;
 			
 			/** Maximum virtual offset in data regions (plus one). */
 			off_t end_virt_offset;
@@ -662,6 +691,7 @@ namespace REHex {
 			GenericDataRegion::ScreenArea _get_screen_area_for_cursor_state();
 			
 			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(off_t offset);
+			std::vector<GenericDataRegion*>::iterator _data_region_by_virt_offset(off_t offset);
 			
 			std::list<Region*>::iterator _region_by_y_offset(int64_t y_offset);
 			

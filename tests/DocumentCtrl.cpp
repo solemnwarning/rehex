@@ -1752,13 +1752,21 @@ TEST_F(DocumentCtrlTest, RegionOffsetCompare)
 	EXPECT_EQ(doc_ctrl->region_offset_cmp(150, 150), 0);
 	EXPECT_EQ(doc_ctrl->region_offset_cmp(350, 350), 0);
 	
-	EXPECT_LT(doc_ctrl->region_offset_cmp(150, 180), 0);
-	EXPECT_LT(doc_ctrl->region_offset_cmp(200, 150), 0);
-	EXPECT_LT(doc_ctrl->region_offset_cmp(300, 350), 0);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(150, 180), -30);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(200, 150), -50);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(300, 350), -50);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(200, 350), -150);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(200, 399), -199);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(220, 350), -130);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(220, 390), -170);
 	
-	EXPECT_GT(doc_ctrl->region_offset_cmp(180, 150), 0);
-	EXPECT_GT(doc_ctrl->region_offset_cmp(150, 200), 0);
-	EXPECT_GT(doc_ctrl->region_offset_cmp(350, 300), 0);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(180, 150), 30);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(150, 200), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(350, 300), 50);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(350, 200), 150);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(399, 200), 199);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(350, 220), 130);
+	EXPECT_EQ(doc_ctrl->region_offset_cmp(390, 220), 170);
 	
 	EXPECT_THROW(doc_ctrl->region_offset_cmp(100, 150), std::invalid_argument);
 	EXPECT_THROW(doc_ctrl->region_offset_cmp(150, 100), std::invalid_argument);

@@ -118,6 +118,9 @@ namespace REHex
 	wxDECLARE_EVENT(FONT_SIZE_ADJUSTMENT_CHANGED, FontSizeAdjustmentEvent);
 	
 	wxDECLARE_EVENT(PALETTE_CHANGED, wxCommandEvent);
+	
+	wxDECLARE_EVENT(BULK_UPDATES_FROZEN, wxCommandEvent);
+	wxDECLARE_EVENT(BULK_UPDATES_THAWED, wxCommandEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

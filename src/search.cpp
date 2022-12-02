@@ -74,7 +74,10 @@ END_EVENT_TABLE()
 REHex::Search::Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
 	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), match_found_at(-1), running(false),
-	timer(this, ID_TIMER)
+	timer(this, ID_TIMER),
+	auto_close(false),
+	auto_wrap(false),
+	modal_parent(this)
 {}
 
 void REHex::Search::setup_window()
@@ -173,6 +176,21 @@ void REHex::Search::require_alignment(off_t alignment, off_t relative_to_offset)
 	align_from = relative_to_offset;
 }
 
+void REHex::Search::set_auto_close(bool auto_close)
+{
+	this->auto_close = auto_close;
+}
+
+void REHex::Search::set_auto_wrap(bool auto_wrap)
+{
+	this->auto_wrap = auto_wrap;
+}
+
+void REHex::Search::set_modal_parent(wxWindow *modal_parent)
+{
+	this->modal_parent = modal_parent;
+}
+
 /* This method is only used by the unit tests. */
 off_t REHex::Search::find_next(off_t from_offset, size_t window_size)
 {
@@ -230,7 +248,7 @@ void REHex::Search::begin_search(off_t sub_range_begin, off_t sub_range_end, Sea
 		threads.emplace_back(&REHex::Search::thread_main, this, window_size, compare_size);
 	}
 	
-	progress = new wxProgressDialog("Searching", "Search in progress...", 100, this, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
+	progress = new wxProgressDialog("Searching", "Search in progress...", 100, modal_parent, wxPD_CAN_ABORT | wxPD_REMAINING_TIME);
 	timer.Start(200, wxTIMER_CONTINUOUS);
 }
 
@@ -281,6 +299,12 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 	if(progress->WasCancelled())
 	{
 		end_search();
+		
+		if(auto_close)
+		{
+			Destroy();
+		}
+		
 		return;
 	}
 	
@@ -303,9 +327,10 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 					? "Not found. Continue search from start of range?"
 					: "Not found. Continue search from start of file?";
 				
-				if(wrap_query(message))
+				if(auto_wrap || wrap_query(message))
 				{
 					begin_search(range_begin, search_base + compare_size, SearchDirection::FORWARDS);
+					return;
 				}
 			}
 			else if(search_direction == SearchDirection::BACKWARDS && search_end < range_end)
@@ -316,14 +341,20 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 					? "Not found. Continue search from end of range?"
 					: "Not found. Continue search from end of file?";
 				
-				if(wrap_query(message))
+				if(auto_wrap || wrap_query(message))
 				{
 					begin_search(search_end - compare_size, range_end, SearchDirection::BACKWARDS);
+					return;
 				}
 			}
 			else{
 				not_found_notification();
 			}
+		}
+		
+		if(auto_close)
+		{
+			Destroy();
 		}
 	}
 	else{

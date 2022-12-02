@@ -119,6 +119,15 @@ Calling any of these functions with an invalid offset will result in a template 
 Writes a message to the application console. The message will also be shown in the output window if the template encounters an error.
 </p>
 
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] Error(string format, ...)
+[%- END %]
+
+<p>
+Aborts template execution with the given error message, for example because of an error or inconsistency detected in the file.
+</p>
+
 <a name="arrayfunc"><h3>Array Functions</h3></a>
 
 <hr>

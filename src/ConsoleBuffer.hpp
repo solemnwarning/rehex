@@ -19,6 +19,7 @@
 #define REHEX_CONSOLEBUFFER_HPP
 
 #include <list>
+#include <mutex>
 #include <stdarg.h>
 #include <string>
 #include <wx/event.h>
@@ -26,6 +27,9 @@
 namespace REHex {
 	/**
 	 * @brief Console output message buffer.
+	 *
+	 * This class is thread-safe - messages may be posted from a worker thread and received to
+	 * be displayed in the UI thread.
 	*/
 	class ConsoleBuffer: public wxEvtHandler
 	{
@@ -58,6 +62,9 @@ namespace REHex {
 			
 			/**
 			 * @brief Get a reference to the list of messages in the buffer.
+			 *
+			 * WARNING: Accessing the returned list is not thread-safe! Do not use it
+			 * in application code!
 			*/
 			const std::list<Message> &get_messages() const;
 			
@@ -99,6 +106,8 @@ namespace REHex {
 			
 		private:
 			const size_t total_text_max;  /**< Buffer character limit (soft). */
+			
+			mutable std::mutex lock;
 			
 			size_t total_text;            /**< Number of characters in the buffer. */
 			std::list<Message> messages;  /**< Messages in the buffer. */

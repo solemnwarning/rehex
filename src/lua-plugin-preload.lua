@@ -90,3 +90,30 @@ rehex.Comment = rehex.REHex_Document_Comment
 rehex.Document = rehex.REHex_Document
 rehex.MainWindow = rehex.REHex_MainWindow
 rehex.Tab = rehex.REHex_Tab
+
+--- Print a debug message to the application console.
+-- @function print_debug
+--
+-- @param text The message.
+
+--- Print an info message to the application console.
+-- @function print_info
+--
+-- @param text The message.
+
+--- Print an error message to the application console.
+-- @function print_error
+--
+-- @param text The message.
+
+--- Temporarily freeze bulk UI updates.
+-- @function bulk_updates_freeze
+--
+-- Calling this function will suspend certain UI update operations that can be batched. This may
+-- be used when (e.g.) creating lots of comments or data type annotations at once.
+--
+-- Every call to this method *MUST* be matched with a corresponding call to the
+-- bulk_updates_thaw() method.
+
+--- Resume bulk UI updates.
+-- @function bulk_updates_thaw

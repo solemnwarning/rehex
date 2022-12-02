@@ -1,4 +1,4 @@
-Version TBA
+Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and
    ArrayExtend() template functions.
@@ -9,6 +9,16 @@ Version TBA
 
  * Don't show expand arrows next to comments without children in comments
    panel on Windows/macOS.
+
+ * Improve performance of templates that declare many (thousands+) of
+   variables in the file.
+
+ * Add Error() function for templates (#186).
+
+ * Fix crash when attempting to use string as a file variable in
+   templates (#185).
+
+ * [Pavel Martens] Add plugin for annotating pcap files.
 
 Version 0.5.3 (2022-06-25)
 

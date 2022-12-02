@@ -112,3 +112,20 @@
 -- @param virt_offset - Virtual address.
 --
 -- @return File offset of virtual address, negative if address isn't part of a virtual segment.
+
+--- Start an undo/redo transaction.
+-- @function transact_begin
+--
+-- @param desc - Description of operation.
+--
+-- This method allows batching multiple operations (modifying data, inserting comments, etc) into
+-- a single operation in the undo/redo system.
+--
+-- Every call to this method *MUST* be matched with a call to either the transact_commit() or
+-- transact_rollback() method.
+
+--- Commit a transaction started with transact_begin()
+-- @function transact_commit
+
+--- Rollback (cancel) a transaction started with transact_begin()
+-- @function transact_rollback

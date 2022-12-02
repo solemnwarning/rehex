@@ -40,8 +40,8 @@
 #include "NumericEntryDialog.hpp"
 #include "NumericTextCtrl.hpp"
 #include "Palette.hpp"
+#include "RangeDialog.hpp"
 #include "search.hpp"
-#include "SelectRangeDialog.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
@@ -1373,8 +1373,29 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	REHex::SelectRangeDialog srd(this, *(tab->doc), *(tab->doc_ctrl));
-	srd.ShowModal();
+	REHex::RangeDialog rd(this, tab->doc_ctrl, "Select range", true);
+	
+	if(tab->doc_ctrl->has_selection())
+	{
+		off_t selection_first, selection_last;
+		std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
+		
+		rd.set_range_raw(selection_first, selection_last);
+	}
+	else{
+		rd.set_offset_hint(tab->doc_ctrl->get_cursor_position());
+	}
+	
+	int s = rd.ShowModal();
+	if(s == wxID_OK)
+	{
+		assert(rd.range_valid());
+		
+		off_t range_first, range_last;
+		std::tie(range_first, range_last) = rd.get_range_raw();
+		
+		tab->doc_ctrl->set_selection_raw(range_first, range_last);
+	}
 }
 
 void REHex::MainWindow::OnFillRange(wxCommandEvent &event)

@@ -38,9 +38,9 @@ _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a6323a06d923"
 
-_rehex_wxwidgets_version="3.2.0-rc1"
+_rehex_wxwidgets_version="3.2.1"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_sha256="bac1698acbbbcbb7bd9feb775e2874ef48fdd63e6e141f558395f0db78c5dc3f"
+_rehex_wxwidgets_sha256="c229976bb413eb88e45cb5dfb68b27890d450149c09b331abd751e7ae0f5fa66"
 _rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
 
 _rehex_cpanm_version="1.7044"

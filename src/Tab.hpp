@@ -127,6 +127,9 @@ namespace REHex
 			void OnDocumentDataTypesChanged(wxCommandEvent &event);
 			void OnDocumentMappingsChanged(wxCommandEvent &event);
 			
+			void OnBulkUpdatesFrozen(wxCommandEvent &event);
+			void OnBulkUpdatesThawed(wxCommandEvent &event);
+			
 			template<typename T> void OnEventToForward(T &event)
 			{
 				event.Skip();
@@ -151,7 +154,12 @@ namespace REHex
 			void htools_adjust_now_idle(wxIdleEvent &event);
 			void xtools_fix_visibility(wxNotebook *notebook);
 			
+			bool repopulate_regions_frozen;
+			bool repopulate_regions_pending;
+			
 			void repopulate_regions();
+			void repopulate_regions_freeze();
+			void repopulate_regions_thaw();
 			
 			int hsplit_clamp_sash(int sash_position);
 			int vsplit_clamp_sash(int sash_position);

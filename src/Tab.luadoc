@@ -6,3 +6,22 @@
 
 --- The Document object within the tab.
 rehex.Tab.doc = nil
+
+--- Get the current selection (if linear).
+-- @function get_selection_linear
+--
+-- @return Selection range or nil
+--
+-- This returns the current selection in the document, but only if it is a linear sequence of bytes
+-- in the underlying file. Non-linear selections can occur when virtual sections are in use and a
+-- selection spans multiple non-contiguous selections.
+--
+-- Example usage:
+--
+--    local selection_off, selection_length = tab:get_selection_linear()
+--    if selection_off ~= nil
+--    then
+--      ...
+--    else
+--      ...
+--    end

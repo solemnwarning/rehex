@@ -1,6 +1,8 @@
 # ![rehex logo](res/icon64.png) Reverse Engineers' Hex Editor
 
-A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and everything else.
+A cross-platform (Windows, Linux, Mac, BSD) hex editor for reverse engineering, and everything else.
+
+An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manual/](https://solemnwarning.net/rehex/manual/).
 
 ## Features
 
@@ -9,7 +11,7 @@ A cross-platform (Windows, Linux, Mac) hex editor for reverse engineering, and e
 * Inline disassembly of machine code
 * Highlighting and annotation of ranges of bytes
 * Side by side comparision of whole files or selections
-* Lua scripting support ([API reference](http://www.solemnwarning.net/rehex-luadoc/))
+* Lua scripting support ([API reference](http://www.solemnwarning.net/rehex/luadoc/))
 * Virtual address mapping support
 * Support for common text encodings (ASCII, Unicode, ISO-8859-X)
 * Import and export of Intel HEX files.
@@ -87,9 +89,12 @@ Finally, you can install the package:
     $ sudo zypper ref
     $ sudo zypper in rehex
 
+### FreeBSD
+    $ pkg install rehex
+
 ## Building
 
-If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets, GTK+, Capstone, Lua, libunistring and Template Toolkit installed, along with their development packages (`sudo apt install build-essential git libcapstone-dev libgtk-3-dev libjansson-dev libwxgtk3.0-gtk3-dev liblua5.3-dev libtemplate-perl libunistring-dev lua5.3 zip` on Ubuntu).
+If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets, GTK+, Capstone, Lua, libunistring and Template Toolkit installed, along with their development packages (`sudo apt install build-essential git libcapstone-dev libgtk-3-dev libjansson-dev libwxgtk3.0-gtk3-dev liblua5.3-dev libtemplate-perl libunistring-dev lua5.3 zip lua-busted` on Ubuntu).
 
 The resulting build can be installed using `make install`, which accepts all the standard environment variables.
 

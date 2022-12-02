@@ -6,6 +6,9 @@ void print_debug(const wxString &text);
 void print_info(const wxString &text);
 void print_error(const wxString &text);
 
+void bulk_updates_freeze();
+void bulk_updates_thaw();
+
 // TODO: Make this a proper enum class?
 enum REHex::App::SetupPhase
 {};

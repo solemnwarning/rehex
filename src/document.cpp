@@ -103,7 +103,11 @@ REHex::Document::~Document()
 
 void REHex::Document::save()
 {
-	buffer->write_inplace();
+	if(is_buffer_dirty())
+	{
+		buffer->write_inplace();
+	}
+	
 	_save_metadata(filename + ".rehex-meta");
 	
 	if(current_seq != saved_seq)

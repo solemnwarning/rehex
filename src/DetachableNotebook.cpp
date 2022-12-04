@@ -67,6 +67,13 @@ void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 		DetachedPageEvent e(page, EVT_PAGE_DETACHED);
 		ProcessEvent(e);
 	}
+	else if(DragFrame::get_instance() != NULL)
+	{
+		/* I'm not exactly sure why, but sometimes a tab dragging event comes out of the
+		 * wxAuiNotebook while we are setting up the DragFrame, so we suppress the handling
+		 * during any external drag.
+		*/
+	}
 	else{
 		event.Skip();
 	}

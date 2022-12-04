@@ -22,6 +22,8 @@
 #include <wx/frame.h>
 #include <wx/timer.h>
 
+//#define REHEX_TABDRAGFRAME_FAKE_CAPTURE
+
 /* When we detatch the only tab in a MainWindow, we destroy that MainWindow, and destroying a
  * wxFrame while holding down the mouse button seems to upset mouse capture on both Windows and
  * macOS:
@@ -139,10 +141,12 @@ namespace REHex
 				private:
 					static DragFrame *instance;
 					
+					wxAuiNotebook *notebook;
 					wxWindow *page;
 					wxSize original_tab_size;
 					bool dragging;
 					
+					void drag(const wxPoint &mouse_pos);
 					void drop();
 					
 #ifdef REHEX_TABDRAGFRAME_FAKE_CAPTURE

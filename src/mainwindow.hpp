@@ -75,6 +75,7 @@ namespace REHex {
 			void switch_tab(DocumentCtrl *doc_ctrl);
 			
 			void insert_tab(Tab *tab, int position);
+			DetachableNotebook *get_notebook();
 			
 			void OnWindowClose(wxCloseEvent& event);
 			void OnWindowActivate(wxActivateEvent &event);

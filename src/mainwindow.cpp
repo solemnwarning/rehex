@@ -2034,6 +2034,11 @@ void REHex::MainWindow::insert_tab(Tab *tab, int position)
 	notebook->InsertPage(position, tab, tab->doc->get_title(), true);
 }
 
+REHex::DetachableNotebook *REHex::MainWindow::get_notebook()
+{
+	return notebook;
+}
+
 void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
 	off_t off = tab->doc->get_cursor_position();

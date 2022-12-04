@@ -50,21 +50,9 @@ void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 			return;
 		}
 		
-		/* The wxEVT_MOUSE_CAPTURE_LOST event makes the wxAuiTabCtrl abort its drag
-		 * operation, but it leaves some members in an inconsistent state that can
-		 * make it crash if the mouse returns while the left button is still down, so
-		 * we need to synthesise a wxEVT_LEFT_UP event too...
+		/* Make the wxAuiTabCtrl release the mouse capture and reset its internal state so
+		 * it doesn't think it is managing an in-progress drag.
 		*/
-		
-		//assert(tab_ctrl->HasCapture());
-		
-		if(tab_ctrl->HasCapture())
-		{
-			tab_ctrl->ReleaseMouse();
-			
-			wxMouseCaptureLostEvent e;
-			tab_ctrl->GetEventHandler()->ProcessEvent(e);
-		}
 		
 		{
 			wxMouseEvent e(wxEVT_LEFT_UP);
@@ -104,7 +92,7 @@ BEGIN_EVENT_TABLE(REHex::DetachableNotebook::DragFrame, wxFrame)
 END_EVENT_TABLE()
 
 REHex::DetachableNotebook::DragFrame::DragFrame(wxWindow *page, const void *page_drop_group, wxEvtHandler *detached_page_handler):
-	wxFrame(NULL, wxID_ANY, "", wxDefaultPosition, page->GetSize(), (wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP)),
+	wxFrame(NULL, wxID_ANY, "", wxDefaultPosition, page->GetSize(), (wxBORDER_NONE | wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP)),
 	page_drop_group(page_drop_group),
 	detached_page_handler(detached_page_handler),
 	page(page),
@@ -220,34 +208,35 @@ void REHex::DetachableNotebook::DragFrame::drag(const wxPoint &mouse_pos)
 		
 		wxRect tab_rect = dst_tc->GetPage(page_idx).rect;
 		
-		wxPoint tab_point(tab_rect.x, tab_rect.y);
-		wxPoint tab_screen_point = dst_tc->ClientToScreen(tab_point);
-		
 		{
 			wxMouseEvent e1(wxEVT_LEFT_DOWN);
-			e1.m_x = tab_screen_point.x;
-			e1.m_y = tab_screen_point.y;
-			dst_notebook->GetEventHandler()->ProcessEvent(e1);
+			e1.SetX(tab_rect.x);
+			e1.SetY(tab_rect.y);
+			e1.SetLeftDown(true);
+			
+			dst_tc->GetEventHandler()->ProcessEvent(e1);
 		}
 		
 		{
 			int drag_x_threshold = wxSystemSettings::GetMetric(wxSYS_DRAG_X);
 			
 			wxMouseEvent e2(wxEVT_MOTION);
-			e2.m_x = tab_screen_point.x + drag_x_threshold + 1;
-			e2.m_y = tab_screen_point.y;
+			e2.SetX(tab_rect.x + drag_x_threshold + 1);
+			e2.SetY(tab_rect.y);
 			e2.SetLeftDown(true);
 			
-			dst_notebook->GetEventHandler()->ProcessEvent(e2);
+			dst_tc->GetEventHandler()->ProcessEvent(e2);
 		}
 		
 		{
+			wxPoint rel_mouse_pos = dst_tc->ScreenToClient(mouse_pos);
+			
 			wxMouseEvent e3(wxEVT_MOTION);
-			e3.m_x = mouse_pos.x;
-			e3.m_y = mouse_pos.y;
+			e3.SetX(rel_mouse_pos.x);
+			e3.SetY(rel_mouse_pos.y);
 			e3.SetLeftDown(true);
 			
-			dst_notebook->GetEventHandler()->ProcessEvent(e3);
+			dst_tc->GetEventHandler()->ProcessEvent(e3);
 		}
 		
 		dragging = false;

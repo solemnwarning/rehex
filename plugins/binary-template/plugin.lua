@@ -63,7 +63,25 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 	local tab = window:active_tab()
 	local doc = window:active_document()
 	
+	-- Find any templates under the templates/ directory.
 	local templates = _find_templates(rehex.PLUGIN_DIR .. "/" .. "templates")
+	local base_templates_count = #templates
+	
+	-- Find templates recently selected using the "Browse..." button.
+	local config = wx.wxConfigBase.Get()
+	config:SetPath("/plugins/binary-template/recent-templates/")
+	
+	local recent_templates = wx.wxFileHistory.new(5)
+	recent_templates:Load(config)
+	
+	local recent_templates_count = recent_templates:GetCount()
+	for i = 0, (recent_templates_count - 1)
+	do
+		local path = recent_templates:GetHistoryFile(i)
+		local name = wx.wxFileName.new(path):GetFullName()
+		
+		table.insert(templates, { name, path })
+	end
 	
 	local my_window = wx.wxDialog(window, wx.wxID_ANY, "Execute binary template")
 	
@@ -137,6 +155,14 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 	then
 		local template_idx = template_choice:GetSelection() + 1
 		local template_path = templates[template_idx][2]
+		
+		-- If the template was browsed to manually (now or in the past), add it to the
+		-- front of the recent templates list.
+		if template_idx > base_templates_count
+		then
+			recent_templates:AddFileToHistory(template_path)
+			recent_templates:Save(config)
+		end
 		
 		local progress_dialog = wx.wxProgressDialog("Processing template", "Processing template...", 100, window, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME)
 		progress_dialog:Show()

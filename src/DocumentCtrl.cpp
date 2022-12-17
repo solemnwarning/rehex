@@ -1004,6 +1004,7 @@ void REHex::DocumentCtrl::_update_vscroll()
 		SetScrollbar(wxVERTICAL, 0, 1, 2);
 		#endif
 		
+		scroll_yoff = 0;
 		scroll_yoff_max = 0;
 	}
 	
@@ -2378,7 +2379,7 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	--region;
 	
 	assert((*region)->y_offset <= y_offset);
-	assert(((*region)->y_offset + (*region)->y_lines) > y_offset);
+	assert(((*region)->y_offset + (*region)->y_lines) > y_offset || *region == regions.back());
 	
 	return region;
 }

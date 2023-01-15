@@ -28,6 +28,7 @@
 #include "App.hpp"
 #include "ArtProvider.hpp"
 #include "DiffWindow.hpp"
+#include "IPC.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 #include "profile.hpp"
@@ -43,6 +44,7 @@ IMPLEMENT_APP(REHex::App);
 bool REHex::App::OnInit()
 {
 	bulk_updates_freeze_count = 0;
+	quick_exit = false;
 	
 	#ifdef BUILD_HELP
 	help_controller = NULL;
@@ -92,6 +94,65 @@ bool REHex::App::OnInit()
 		fprintf(stderr, "At least two filenames must be given with --compare switch\n");
 		fprintf(stderr, "Usage: %s [--compare] [--] [<filename(s)>]\n", argv[0].ToStdString().c_str());
 		return false;
+	}
+	
+	bool ipc_params_ok = false;
+	std::string ipc_host;
+	std::string ipc_service;
+	std::string ipc_topic;
+	
+	try {
+		ipc_host      = get_ipc_host();
+		ipc_service   = get_ipc_service();
+		ipc_topic     = get_ipc_topic();
+		ipc_params_ok = true;
+	}
+	catch(const std::exception &e)
+	{
+		fprintf(stderr, "Unable to get IPC parameters: %s\n", e.what());
+	}
+	
+	if(ipc_params_ok)
+	{
+		IPCClient ipc_client;
+		
+		wxConnectionBase *ipc = ipc_client.MakeConnection(ipc_host, ipc_service, ipc_topic);
+		if(ipc != NULL)
+		{
+			quick_exit = true;
+			quick_exit_code = 0;
+			
+			if(compare_mode)
+			{
+				std::vector<std::string> command = { "compare" };
+				
+				for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+				{
+					command.push_back(*filename);
+				}
+				
+				std::vector<unsigned char> encoded_command = encode_command(command);
+				bool ok = ipc->Execute(encoded_command.data(), encoded_command.size());
+				
+				if(!ok)
+				{
+					quick_exit_code = 1;
+				}
+			}
+			else{
+				for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+				{
+					std::vector<std::string> command = { "open", *filename };
+					std::vector<unsigned char> encoded_command = encode_command(command);
+					
+					ipc->Execute(encoded_command.data(), encoded_command.size());
+				}
+			}
+			
+			ipc->Disconnect();
+			
+			return true;
+		}
 	}
 	
 	call_setup_hooks(SetupPhase::EARLY);
@@ -186,13 +247,8 @@ bool REHex::App::OnInit()
 	if(compare_mode)
 	{
 		DiffWindow::instance = new DiffWindow(NULL);
+		DiffWindow::instance->set_invisible_owner_window(window);
 		DiffWindow::instance->Show(true);
-		
-		/* Special hacky handlers to deal with DiffWindow being the only visible window...
-		 * see the comments in them.
-		*/
-		window->Bind(wxEVT_SHOW, &REHex::App::OnMainWindowShow, this);
-		DiffWindow::instance->Bind(wxEVT_CLOSE_WINDOW, &REHex::App::OnDiffWindowClose, this);
 	}
 	else{
 		window->Show();
@@ -226,6 +282,23 @@ bool REHex::App::OnInit()
 		window->new_file();
 	}
 	
+	if(ipc_params_ok)
+	{
+		ipc_server = new IPCServer;
+		bool ipc_ok = ipc_server->Create(ipc_service);
+		
+		if(ipc_ok)
+		{
+			printf_info("IPC service created (%s)\n", ipc_service.c_str());
+		}
+		else{
+			printf_error("Unable to create IPC service (%s)\n", ipc_service.c_str());
+			
+			delete ipc_server;
+			ipc_server = NULL;
+		}
+	}
+	
 	#ifdef REHEX_PROFILE
 	ProfilingWindow *pw = new ProfilingWindow(window);
 	pw->Show();
@@ -238,6 +311,11 @@ bool REHex::App::OnInit()
 
 int REHex::App::OnExit()
 {
+	if(quick_exit)
+	{
+		return 0;
+	}
+	
 	call_setup_hooks(SetupPhase::SHUTDOWN);
 	
 	config->SetPath("/recent-files/");
@@ -248,6 +326,7 @@ int REHex::App::OnExit()
 	
 	settings->write(config);
 	
+	delete ipc_server;
 	delete active_palette;
 	#ifdef BUILD_HELP
 	delete help_controller;
@@ -271,34 +350,14 @@ int REHex::App::OnExit()
 	return 0;
 }
 
-void REHex::App::OnMainWindowShow(wxShowEvent &event)
+int REHex::App::OnRun()
 {
-	/* This handler gets called if the MainWindow is shown because of an action in the
-	 * DiffWindow when the --compare switch was used.
-	 *
-	 * We remove our hacky handlers and let things go as normal now.
-	*/
-	
-	if(event.IsShown())
+	if(quick_exit)
 	{
-		DiffWindow::instance->Unbind(wxEVT_CLOSE_WINDOW, &REHex::App::OnDiffWindowClose, this);
-		window->Unbind(wxEVT_SHOW, &REHex::App::OnMainWindowShow, this);
+		return quick_exit_code;
 	}
-	
-	event.Skip();
-}
-
-void REHex::App::OnDiffWindowClose(wxCloseEvent &event)
-{
-	/* This handler gets called if the DiffWindow created as the sole visible top-level window
-	 * when using the --compare switch was closed. We destroy the (invisible) MainWindow so the
-	 * program will exit.
-	*/
-	
-	if(event.GetEventObject() == DiffWindow::instance)
-	{
-		window->Destroy();
-		event.Skip();
+	else{
+		return wxApp::OnRun();
 	}
 }
 

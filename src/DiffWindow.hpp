@@ -81,6 +81,24 @@ namespace REHex {
 			DiffWindow(wxWindow *parent);
 			virtual ~DiffWindow();
 			
+			/**
+			 * Sets the "invisible owner window".
+			 *
+			 * The invisible owner window is a hack used when a DiffWindow is created
+			 * for the --compare command-line switch; a MainWindow is created holding
+			 * all the files to be compared and never displayed, the DiffWindow is then
+			 * displayed as the only window.
+			 *
+			 * If the DiffWindow is closed, then the invisible owner window is also
+			 * destroyed rather than leaving it orphaned.
+			 *
+			 * If the invisible owner window becomes visible at some point after
+			 * calling this method, then the invisible_owner_window member is cleared
+			 * and we carry on as normal.
+			*/
+			
+			void set_invisible_owner_window(wxTopLevelWindow *window);
+			
 			const std::list<Range> &get_ranges() const;
 			std::list<Range>::iterator add_range(const Range &range);
 			
@@ -162,6 +180,8 @@ namespace REHex {
 			unsigned odsr_calls;
 			#endif
 			
+			SafeWindowPointer<wxTopLevelWindow> invisible_owner_window;
+			
 			std::list<Range>::iterator remove_range(std::list<Range>::iterator range, bool called_from_page_closed_handler);
 			
 			void doc_update(Range *range);
@@ -191,6 +211,8 @@ namespace REHex {
 			void OnPrevDifference(wxCommandEvent &event);
 			void OnNextDifference(wxCommandEvent &event);
 			void OnUpdateRegionsTimer(wxTimerEvent &event);
+			void OnInvisibleOwnerWindowShow(wxShowEvent &event);
+			void OnWindowClose(wxCloseEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

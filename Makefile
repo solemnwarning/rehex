@@ -59,8 +59,8 @@ else
 endif
 
 ifeq ($(need_compiler_flags),1)
-	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv $(HELP_LIBS))
-	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv $(HELP_LIBS))
+	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv net $(HELP_LIBS))
+	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv net $(HELP_LIBS))
 	
 	CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
 	CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
@@ -353,6 +353,7 @@ APP_OBJS := \
 	src/FillRangeDialog.o \
 	src/IntelHexExport.o \
 	src/IntelHexImport.o \
+	src/IPC.o \
 	src/LicenseDialog.o \
 	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \
@@ -378,7 +379,7 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(EXE): $(APP_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \

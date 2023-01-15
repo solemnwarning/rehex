@@ -44,6 +44,11 @@ namespace REHex
 				if(event.GetEventObject() == window)
 				{
 					window = NULL;
+					
+					while(!cleanups.empty())
+					{
+						cleanups.pop();
+					}
 				}
 				
 				event.Skip();
@@ -88,12 +93,6 @@ namespace REHex
 			
 			~SafeWindowPointer()
 			{
-				if(window == NULL)
-				{
-					/* Window has already been destroyed. */
-					return;
-				}
-				
 				while(!cleanups.empty())
 				{
 					cleanups.top()();
@@ -116,6 +115,22 @@ namespace REHex
 			bool operator==(const SafeWindowPointer<T> &rhs) const
 			{
 				return window == rhs.window;
+			}
+			
+			/**
+			 * Resets the internal window pointer. Any existing bindings set on the old
+			 * pointer using auto_cleanup_bind() are undone.
+			*/
+			void reset(T *window)
+			{
+				while(!cleanups.empty())
+				{
+					cleanups.top()();
+					cleanups.pop();
+				}
+				
+				this->window = window;
+				auto_cleanup_bind(wxEVT_DESTROY, &SafeWindowPointer<T>::OnWindowDestroyed, this);
 			}
 	};
 }

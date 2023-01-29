@@ -288,8 +288,12 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const std::vector<Instruction> *instr_vec = &(instr_first.first);
 	std::vector<Instruction>::const_iterator instr = instr_first.second;
 	
+	bool is_last_data_region = (doc_ctrl.get_data_regions().back() == this);
+	
 	while(instr != instr_vec->end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
+		bool is_last_line = is_last_data_region && (line_num + 1) == (y_lines - indent_final);
+		
 		if(doc_ctrl.get_show_offsets())
 		{
 			/* Draw the offsets to the left */
@@ -303,11 +307,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			dc.DrawText(offset_str, x + offset_text_x, y);
 		}
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, hex_highlight_func);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, d_offset, 0, instr->offset, alternate, ascii_highlight_func);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, d_offset, 0, instr->offset, alternate, ascii_highlight_func, is_last_line);
 		}
 		
 		bool invert = cursor_pos >= instr->offset && cursor_pos < (instr->offset + instr->length) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
@@ -349,6 +353,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
+		bool is_last_line = is_last_data_region && (line_num + 1) == (y_lines - indent_final);
+		
 		if(doc_ctrl.get_show_offsets())
 		{
 			/* Draw the offsets to the left */
@@ -379,11 +385,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		const unsigned char *ldp = data_err ? NULL : line_data.data();
 		size_t ldl = data_err ? line_len : line_data.size();
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, hex_highlight_func);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, d_offset, 0, up_off, alternate, ascii_highlight_func);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, d_offset, 0, up_off, alternate, ascii_highlight_func, is_last_line);
 		}
 		
 		set_text_attribs(false, false);

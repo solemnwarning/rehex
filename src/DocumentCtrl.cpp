@@ -3456,6 +3456,8 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	int64_t cur_line = y_offset + skip_lines;
 	
+	bool is_last_data_region = (doc.get_data_regions().back() == this);
+	
 	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final))
 	{
 		if(doc.offset_column)
@@ -3482,7 +3484,9 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		const unsigned char *line_data = data_err ? NULL : data_p;
 		size_t line_data_len = std::min<size_t>(data_remain, (bytes_per_line_actual - line_pad_bytes));
 		
-		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, hex_highlight_func);
+		bool is_last_line = is_last_data_region && (cur_line + 1) == (y_offset + y_lines - indent_final);
+		
+		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, hex_highlight_func, is_last_line);
 		
 		if(doc.show_ascii)
 		{
@@ -3496,7 +3500,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				? cur_off - start_char_off
 				: 0;
 			
-			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, d_offset, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_highlight_func);
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, d_offset, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_highlight_func, is_last_line);
 		}
 		
 		cur_off += line_data_len;
@@ -3511,7 +3515,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off)
+void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_hex_line");
 	
@@ -3539,34 +3543,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto draw_end_cursor = [&]()
-	{
-		if((doc_ctrl->cursor_visible && doc_ctrl->hex_view_active()) || !hex_active)
-		{
-			if(doc_ctrl->insert_mode || !hex_active)
-			{
-				dc.SetPen(norm_fg_1px);
-				dc.DrawLine(hex_x, y, hex_x, y + doc_ctrl->hf_height);
-			}
-			else{
-				/* Draw the cursor in red if trying to overwrite at an invalid
-					* position. Should only happen in empty files.
-				*/
-				dc.SetPen(*wxRED_PEN);
-				dc.DrawLine(hex_x, y, hex_x, y + doc_ctrl->hf_height);
-			}
-		}
-	};
-	
-	if(data_len == 0)
-	{
-		if(cur_off == cursor_pos)
-		{
-			draw_end_cursor();
-		}
-		
-		return;
-	}
+	const wxPen *insert_cursor_pen = NULL;
+	wxPoint insert_cursor_pt1, insert_cursor_pt2;
 	
 	/* Calling wxDC::DrawText() for each individual character on the screen is
 	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
@@ -3703,8 +3681,9 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
 		{
 			/* Draw insert cursor. */
-			dc.SetPen(norm_fg_1px);
-			dc.DrawLine(pd_hx, y, pd_hx, y + doc_ctrl->hf_height);
+			insert_cursor_pen = &norm_fg_1px;
+			insert_cursor_pt1 = wxPoint(pd_hx, y);
+			insert_cursor_pt2 = wxPoint(pd_hx, y + doc_ctrl->hf_height);
 		}
 		
 		if(cur_off == cursor_pos && !doc_ctrl->insert_mode && !hex_active)
@@ -3725,6 +3704,30 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		++cur_off;
 	}
 	
+	if(is_last_line && cur_off == cursor_pos)
+	{
+		/* Draw cursor at the end of the file (i.e. after the last byte). */
+		
+		if((doc_ctrl->cursor_visible && doc_ctrl->hex_view_active()) || !hex_active)
+		{
+			if(doc_ctrl->insert_mode || !hex_active)
+			{
+				insert_cursor_pen = &norm_fg_1px;
+				insert_cursor_pt1 = wxPoint(hex_x, y);
+				insert_cursor_pt2 = wxPoint(hex_x, y + doc_ctrl->hf_height);
+			}
+			else{
+				/* Draw the cursor in red if trying to overwrite at an invalid
+				 * position. Should only happen in empty files.
+				*/
+				
+				insert_cursor_pen = wxRED_PEN;
+				insert_cursor_pt1 = wxPoint(hex_x, y);
+				insert_cursor_pt2 = wxPoint(hex_x, y + doc_ctrl->hf_height);
+			}
+		}
+	}
+	
 	frf.flush();
 	
 	normal_text_colour();
@@ -3738,9 +3741,15 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		
 		dc.DrawText(dd->second, hex_base_x, y);
 	}
+	
+	if(insert_cursor_pen != NULL)
+	{
+		dc.SetPen(*insert_cursor_pen);
+		dc.DrawLine(insert_cursor_pt1, insert_cursor_pt2);
+	}
 }
 
-void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off)
+void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_ascii_line");
 	
@@ -3768,34 +3777,8 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		dc.SetBackgroundMode(wxTRANSPARENT);
 	};
 	
-	auto draw_end_cursor = [&]()
-	{
-		if((doc_ctrl->cursor_visible && doc_ctrl->ascii_view_active()) || !ascii_active)
-		{
-			if(doc_ctrl->insert_mode || !ascii_active)
-			{
-				dc.SetPen(norm_fg_1px);
-				dc.DrawLine(ascii_x, y, ascii_x, y + doc_ctrl->hf_height);
-			}
-			else{
-				/* Draw the cursor in red if trying to overwrite at an invalid
-				 * position. Should only happen in empty files.
-				*/
-				dc.SetPen(*wxRED_PEN);
-				dc.DrawLine(ascii_x, y, ascii_x, y + doc_ctrl->hf_height);
-			}
-		}
-	};
-	
-	if(data_len == 0)
-	{
-		if(cur_off == cursor_pos)
-		{
-			draw_end_cursor();
-		}
-		
-		return;
-	}
+	const wxPen *insert_cursor_pen = NULL;
+	wxPoint insert_cursor_pt1, insert_cursor_pt2;
 	
 	const ByteRangeMap<std::string> &types = doc_ctrl->doc->get_data_types();
 	
@@ -4099,13 +4082,38 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		
 		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->cursor_visible || !ascii_active))
 		{
-			dc.SetPen(norm_fg_1px);
-			dc.DrawLine(ascii_x, y, ascii_x, y + doc_ctrl->hf_height);
+			insert_cursor_pen = &norm_fg_1px;
+			insert_cursor_pt1 = wxPoint(ascii_x, y);
+			insert_cursor_pt2 = wxPoint(ascii_x, y + doc_ctrl->hf_height);
 		}
 		
 		ascii_x = ascii_base_x + doc_ctrl->hf_string_width(++ascii_x_char);
 		
 		++cur_off;
+	}
+	
+	if(is_last_line && cur_off == cursor_pos)
+	{
+		/* Draw cursor at the end of the file (i.e. after the last byte). */
+		
+		if((doc_ctrl->cursor_visible && doc_ctrl->ascii_view_active()) || !ascii_active)
+		{
+			if(doc_ctrl->insert_mode || !ascii_active)
+			{
+				insert_cursor_pen = &norm_fg_1px;
+				insert_cursor_pt1 = wxPoint(ascii_x, y);
+				insert_cursor_pt2 = wxPoint(ascii_x, y + doc_ctrl->hf_height);
+			}
+			else{
+				/* Draw the cursor in red if trying to overwrite at an invalid
+				 * position. Should only happen in empty files.
+				*/
+				
+				insert_cursor_pen = wxRED_PEN;
+				insert_cursor_pt1 = wxPoint(ascii_x, y);
+				insert_cursor_pt2 = wxPoint(ascii_x, y + doc_ctrl->hf_height);
+			}
+		}
 	}
 	
 	frf.flush();
@@ -4184,6 +4192,12 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			dc.DrawText(c->wx_char, char_x, y);
 		}
 #endif
+	}
+	
+	if(insert_cursor_pen != NULL)
+	{
+		dc.SetPen(*insert_cursor_pen);
+		dc.DrawLine(insert_cursor_pt1, insert_cursor_pt2);
 	}
 }
 

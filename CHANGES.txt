@@ -1,3 +1,26 @@
+Version TBA
+
+ * Add data histogram tool (#140).
+
+ * Use virtual offsets in "Select range" dialog.
+
+ * Don't re-open files to save when there are no changes (#193).
+
+ * Remember recently selected templates (#183).
+
+ * Fix crash when running rehex for the first time on some systems (#194).
+
+ * Correctly draw insert cursor over highlighted data and at the end of the
+   file (#196).
+
+ * Fix true/false not being usable inside template functions/structs (#197).
+
+ * Expose current array index as ArrayIndex when expanding arrays of structs
+   in templates (#191).
+
+ * Implement lexical variable scoping in templates and allow functions to
+   access global variables defined above them (#190).
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

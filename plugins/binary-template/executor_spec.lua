@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -6656,5 +6656,182 @@ describe("executor", function()
 				{ "test.bt", 3, "variable", "struct mystruct", "a", nil, nil },
 			})
 			end, "Cannot use type 'string' to declare a file variable at test.bt:2")
+	end)
+	
+	it("exposes ArrayIndex variable in struct array elements", function()
+		local interface, log = test_interface(string.char(
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "B", {},
+			{
+				{ "test.bt", 2, "call", "Printf", {
+					{ "test.bt", 2, "str", "B ArrayIndex = %d" },
+					{ "test.bt", 2, "ref", { "ArrayIndex" } } } },
+				
+				{ "test.bt", 3, "variable", "char", "x", nil, nil },
+			} },
+			
+			{ "test.bt", 5, "struct", "A", {},
+			{
+				{ "test.bt", 6, "call", "Printf", {
+					{ "test.bt", 6, "str", "A ArrayIndex = %d" },
+					{ "test.bt", 6, "ref", { "ArrayIndex" } } } },
+				
+				{ "test.bt", 7, "variable", "struct B", "b", nil, { "test.bt", 1, "num", 3 } },
+			} },
+			
+			{ "test.bt", 9, "variable", "struct A", "a", nil, { "test.bt", 1, "num", 2 } },
+		})
+		
+		local expect_log = {
+			"print(A ArrayIndex = 0)",
+			"print(B ArrayIndex = 0)",
+			"print(B ArrayIndex = 1)",
+			"print(B ArrayIndex = 2)",
+			"print(A ArrayIndex = 1)",
+			"print(B ArrayIndex = 0)",
+			"print(B ArrayIndex = 1)",
+			"print(B ArrayIndex = 2)",
+			
+			"set_comment(0, 1, x)",
+			"set_comment(0, 1, b[0])",
+			"set_comment(1, 1, x)",
+			"set_comment(1, 1, b[1])",
+			"set_comment(2, 1, x)",
+			"set_comment(2, 1, b[2])",
+			"set_comment(0, 3, a[0])",
+			"set_comment(3, 1, x)",
+			"set_comment(3, 1, b[0])",
+			"set_comment(4, 1, x)",
+			"set_comment(4, 1, b[1])",
+			"set_comment(5, 1, x)",
+			"set_comment(5, 1, b[2])",
+			"set_comment(3, 3, a[1])",
+			"set_data_type(0, 1, s8)",
+			"set_data_type(1, 1, s8)",
+			"set_data_type(2, 1, s8)",
+			"set_data_type(3, 1, s8)",
+			"set_data_type(4, 1, s8)",
+			"set_data_type(5, 1, s8)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when modifying ArrayIndex variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "A", {},
+				{
+					{ "test.bt", 2, "assign",
+						{ "test.bt", 2, "ref", { "ArrayIndex" } },
+						{ "test.bt", 2, "num", 5678 } },
+				} },
+				
+				{ "test.bt", 9, "variable", "struct A", "a", nil, { "test.bt", 1, "num", 2 } },
+			})
+			end, "Attempt to write to ArrayIndex variable at test.bt:2")
+	end)
+	
+	it("errors on use of ArrayIndex in non-array-element struct", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "struct", "B", {},
+				{
+					{ "test.bt", 2, "call", "Printf", {
+						{ "test.bt", 2, "str", "B ArrayIndex = %d" },
+						{ "test.bt", 2, "ref", { "ArrayIndex" } } } },
+					
+					{ "test.bt", 3, "variable", "char", "x", nil, nil },
+				} },
+				
+				{ "test.bt", 5, "struct", "A", {},
+				{
+					{ "test.bt", 6, "call", "Printf", {
+						{ "test.bt", 6, "str", "A ArrayIndex = %d" },
+						{ "test.bt", 6, "ref", { "ArrayIndex" } } } },
+					
+					{ "test.bt", 7, "variable", "struct B", "b", nil, nil },
+				} },
+				
+				{ "test.bt", 9, "variable", "struct A", "a", nil, { "test.bt", 1, "num", 2 } },
+			})
+			end, "Attempt to read ArrayIndex variable outside of an array element at test.bt:2")
+	end)
+	
+	it("allows use of global defined before a function inside the function", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "int", "filevar", nil, nil },
+			{ "test.bt", 2, "local-variable", "int", "localvar", nil, nil, { "test.bt", 2, "num", 5678 } },
+			
+			{ "test.bt", 4, "function", "void", "foo", {}, {
+				{ "test.bt", 5, "call", "Printf", { { "test.bt", 5, "str", "filevar = %d" }, { "test.bt", 5, "ref", { "filevar" } } } },
+				{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "localvar = %d" }, { "test.bt", 6, "ref", { "localvar" } } } },
+				} },
+			
+			{ "test.bt", 8, "call", "foo", {} },
+		})
+		
+		local expect_log = {
+			"print(filevar = 1234)",
+			"print(localvar = 5678)",
+			
+			"set_comment(0, 4, filevar)",
+			"set_data_type(0, 4, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on use of global defined after a function inside the function", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "foo", {}, {
+					{ "test.bt", 2, "call", "Printf", { { "test.bt", 2, "str", "filevar = %d" }, { "test.bt", 2, "ref", { "filevar" } } } } } },
+				
+				{ "test.bt", 4, "variable", "int", "filevar", nil, nil },
+				{ "test.bt", 5, "local-variable", "int", "localvar", nil, nil, { "test.bt", 5, "num", 5678 } },
+				
+				{ "test.bt", 7, "call", "foo", {} },
+			})
+			end, "Attempt to use undefined variable 'filevar' at test.bt:2")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "function", "void", "foo", {}, {
+					{ "test.bt", 2, "call", "Printf", { { "test.bt", 2, "str", "localvar = %d" }, { "test.bt", 2, "ref", { "localvar" } } } } } },
+				
+				{ "test.bt", 4, "variable", "int", "filevar", nil, nil },
+				{ "test.bt", 5, "local-variable", "int", "localvar", nil, nil, { "test.bt", 5, "num", 5678 } },
+				
+				{ "test.bt", 7, "call", "foo", {} },
+			})
+			end, "Attempt to use undefined variable 'localvar' at test.bt:2")
 	end)
 end)

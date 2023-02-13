@@ -109,6 +109,8 @@ bool REHex::App::OnInit()
 	config = new wxConfig("REHex");
 	config->SetPath("/");
 	
+	wxConfig::Set(config);
+	
 	settings = new AppSettings(config);
 	
 	last_directory = config->Read("last-directory", "");

@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -14,12 +14,13 @@
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-local ArrayValue     = require 'executor.arrayvalue'
-local FileArrayValue = require 'executor.filearrayvalue'
-local FileValue      = require 'executor.filevalue'
-local ImmediateValue = require 'executor.immediatevalue'
-local PlainValue     = require 'executor.plainvalue'
-local StructValue    = require 'executor.structvalue'
+local ArrayIndexValue = require 'executor.arrayindexvalue'
+local ArrayValue      = require 'executor.arrayvalue'
+local FileArrayValue  = require 'executor.filearrayvalue'
+local FileValue       = require 'executor.filevalue'
+local ImmediateValue  = require 'executor.immediatevalue'
+local PlainValue      = require 'executor.plainvalue'
+local StructValue     = require 'executor.structvalue'
 
 local M = {}
 
@@ -508,6 +509,39 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	end
 end
 
+local function _build_parent_scope_vars(context)
+	local parent_scope_vars = {}
+	
+	for frame_idx = #context.stack, 1, -1
+	do
+		local frame = context.stack[frame_idx]
+		
+		for k,v in pairs(frame.vars)
+		do
+			if parent_scope_vars[k] == nil
+			then
+				parent_scope_vars[k] = v
+			end
+		end
+		
+		if frame.frame_type == FRAME_TYPE_FUNCTION or frame.frame_type == FRAME_TYPE_STRUCT
+		then
+			for k,v in pairs(frame.parent_scope_vars)
+			do
+				if parent_scope_vars[k] == nil
+				then
+					parent_scope_vars[k] = v
+				end
+			end
+			
+			-- Don't look for variables beyond containing scope
+			break
+		end
+	end
+	
+	return parent_scope_vars
+end
+
 local INT8_MIN  = -128
 local INT8_MAX  = 127
 local INT16_MIN = -32768
@@ -579,8 +613,10 @@ _builtin_types = {
 }
 
 local _builtin_variables = {
-	["true"]  = { _builtin_types.int, ImmediateValue:new(1) },
-	["false"] = { _builtin_types.int, ImmediateValue:new(0) },
+	["true"]  = function(context) return { _builtin_types.int, ImmediateValue:new(1) } end,
+	["false"] = function(context) return { _builtin_types.int, ImmediateValue:new(0) } end,
+	
+	["ArrayIndex"] = function(context) return { _builtin_types.int64_t, ArrayIndexValue:new(context) } end,
 }
 
 local function _builtin_function_BigEndian(context, argv)
@@ -788,7 +824,7 @@ local function _resize_array(context, array_type, array_value, new_length, struc
 			
 			for i = #array_value, new_length - 1
 			do
-				table.insert(array_value, expand_value(context, element_type, struct_arg_values, true))
+				table.insert(array_value, expand_value(context, element_type, struct_arg_values, i))
 				context.interface.yield()
 			end
 		end
@@ -1085,14 +1121,14 @@ _eval_ref = function(context, statement)
 		
 		if frame.frame_type == FRAME_TYPE_FUNCTION or frame.frame_type == FRAME_TYPE_STRUCT
 		then
+			if frame.parent_scope_vars[ path[1] ] ~= nil
+			then
+				return _walk_path(frame.parent_scope_vars[ path[1] ])
+			end
+			
 			-- Don't look for variables in parent functions
 			break
 		end
-	end
-	
-	if context.global_vars[ path[1] ] ~= nil
-	then
-		return _walk_path(context.global_vars[ path[1] ])
 	end
 	
 	_template_error(context, "Attempt to use undefined variable '" .. path[1] .. "'")
@@ -1318,7 +1354,7 @@ _eval_unary_minus = function(context, statement)
 	return value_t, ImmediateValue:new(-1 * value_v:get())
 end
 
-expand_value = function(context, type_info, struct_arg_values, is_array_element)
+expand_value = function(context, type_info, struct_arg_values, array_element_idx)
 	if type_info.base == "struct"
 	then
 		local args_ok = true
@@ -1380,7 +1416,9 @@ expand_value = function(context, type_info, struct_arg_values, is_array_element)
 			frame_type = FRAME_TYPE_STRUCT,
 			var_types = {},
 			vars = {},
+			parent_scope_vars = type_info.struct_parent_scope_vars,
 			struct_members = members,
+			array_element_idx = array_element_idx,
 			
 			blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
 		}
@@ -1486,7 +1524,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	then
 		dest_tables = { context.stack[#context.stack].vars }
 	else
-		dest_tables = { context.global_vars }
+		dest_tables = { context.stack[#context.stack].vars, context.global_vars }
 	end
 	
 	if dest_tables[1][var_name] ~= nil
@@ -1534,7 +1572,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	then
 		local base_off = context.next_variable
 		
-		root_value = expand_value(context, type_info, struct_arg_values, false)
+		root_value = expand_value(context, type_info, struct_arg_values, nil)
 		
 		for _,t in ipairs(dest_tables)
 		do
@@ -1581,7 +1619,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			
 			for i = 0, ArrayLength_val:get() - 1
 			do
-				local value = expand_value(context, type_info, struct_arg_values, true)
+				local value = expand_value(context, type_info, struct_arg_values, i)
 				table.insert(root_value, value)
 				
 				context.interface.yield()
@@ -1815,11 +1853,14 @@ _eval_func_defn = function(context, statement)
 		table.insert(arg_types, type_info)
 	end
 	
+	local parent_scope_vars = _build_parent_scope_vars(context)
+	
 	local impl_func = function(context, arguments)
 		local frame = {
 			frame_type = FRAME_TYPE_FUNCTION,
 			var_types = {},
 			vars = {},
+			parent_scope_vars = parent_scope_vars,
 			
 			handles_flowctrl_types = FLOWCTRL_TYPE_RETURN,
 			blocks_flowctrl_types  = (FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
@@ -1924,6 +1965,8 @@ _eval_struct_defn = function(context, statement)
 		struct_name = struct_name,
 		type_key  = {}, -- Uniquely-identifiable table reference used to check if struct
 		                  -- types are derived from the same root (and thus compatible)
+		
+		struct_parent_scope_vars = _build_parent_scope_vars(context),
 		
 		-- rehex_type_le = "s8",
 		-- rehex_type_be = "s8",
@@ -2491,14 +2534,6 @@ local function execute(interface, statements)
 		-- Each element points to a tuple of { type, value } like other rvalues.
 		global_vars = {},
 		
-		-- This table holds our current position in global_vars - under which new variables
-		-- be added and relative to which any lookups should be performed.
-		--
-		-- Each key will either be a tuple of { key, table }, where the key is a string
-		-- when we are descending into a struct member or a number where we are in an array
-		-- and the table is a reference to the element in global_vars at this point.
-		global_stack = {},
-		
 		next_variable = 0,
 		
 		-- Are we currently accessing variables from the file as big endian? Toggled by
@@ -2527,7 +2562,7 @@ local function execute(interface, statements)
 	local base_vars = {}
 	for k, v in pairs(_builtin_variables)
 	do
-		base_vars[k] = v
+		base_vars[k] = v(context)
 	end
 	
 	table.insert(context.stack, {

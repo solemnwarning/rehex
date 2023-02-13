@@ -161,4 +161,29 @@ This function can be called to incrementally increase the size of an array being
 Equivalent to <code>ArrayResize(array, ArrayLength(array) + num_elements)</code>.
 </p>
 
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]const int64_t[% END %] ArrayIndex
+[%- END %]
+
+<p>
+Global variable that returns the current array index when expanding arrays of structs. For example, the following template would process a file containing a number of records, then the sizes of all those records, then the records themselves:
+</p>
+
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]uint32_t[% END %] num_records;
+[% WRAPPER "code-type.tt" %]uint32_t[% END %] record_sizes[num_records];
+
+[% WRAPPER "code-keyword.tt" %]struct[% END %] Record
+{
+	[% WRAPPER "code-type.tt" %]unsigned char[% END %] data[ record_sizes[ArrayIndex] ];
+};
+
+[% WRAPPER "code-keyword.tt" %]struct[% END %] Record records[num_records];
+[%- END %]
+
+<p>
+Attempting to access the <code>ArrayIndex</code> variable when not in a struct that is being used as an array element will abort the template execution with an error.
+</p>
+
 [% END %]

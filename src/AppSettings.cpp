@@ -22,7 +22,8 @@
 wxDEFINE_EVENT(REHex::PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
 
 REHex::AppSettings::AppSettings():
-	preferred_asm_syntax(AsmSyntax::INTEL) {}
+	preferred_asm_syntax(AsmSyntax::INTEL),
+	goto_offset_base(GotoOffsetBase::AUTO) {}
 
 REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 {

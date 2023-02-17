@@ -95,3 +95,8 @@ int REHex::App::OnExit()
 {
 	return 0;
 }
+
+int REHex::App::OnRun()
+{
+	return wxApp::OnRun();
+}

@@ -73,9 +73,11 @@ void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 		}
 		
 		wxWindow *page = GetPage(event.GetSelection());
+		wxString page_caption = GetPageText(event.GetSelection());
+		wxBitmap page_bitmap = GetPageBitmap(event.GetSelection());
 		RemovePage(event.GetSelection());
 		
-		new DragFrame(page, page_drop_group, detached_page_handler);
+		new DragFrame(page, page_caption, page_bitmap, page_drop_group, detached_page_handler);
 		
 		DetachedPageEvent e(page, EVT_PAGE_DETACHED);
 		ProcessEvent(e);
@@ -104,11 +106,13 @@ BEGIN_EVENT_TABLE(REHex::DetachableNotebook::DragFrame, wxFrame)
 #endif
 END_EVENT_TABLE()
 
-REHex::DetachableNotebook::DragFrame::DragFrame(wxWindow *page, const void *page_drop_group, wxEvtHandler *detached_page_handler):
+REHex::DetachableNotebook::DragFrame::DragFrame(wxWindow *page, const wxString &page_caption, const wxBitmap &page_bitmap, const void *page_drop_group, wxEvtHandler *detached_page_handler):
 	wxFrame(NULL, wxID_ANY, "", wxDefaultPosition, page->GetSize(), (wxBORDER_NONE | wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP)),
 	page_drop_group(page_drop_group),
 	detached_page_handler(detached_page_handler),
 	page(page),
+	page_caption(page_caption),
+	page_bitmap(page_bitmap),
 	dragging(true)
 #ifdef REHEX_TABDRAGFRAME_FAKE_CAPTURE
 	, mouse_poll_timer(this, wxID_ANY)
@@ -122,7 +126,7 @@ REHex::DetachableNotebook::DragFrame::DragFrame(wxWindow *page, const void *page
 	notebook = new wxAuiNotebook(this, wxID_ANY);
 	
 	page->Reparent(notebook);
-	notebook->InsertPage(-1, page, "XXX", true);
+	notebook->InsertPage(-1, page, page_caption, true, page_bitmap);
 	#ifdef __APPLE__
 	page->Show();
 	#endif
@@ -215,9 +219,10 @@ void REHex::DetachableNotebook::DragFrame::drag(const wxPoint &mouse_pos)
 		wxAuiTabCtrl *dst_tc = find_wxAuiTabCtrl(dst_notebook);
 		
 		page->Reparent(dst_notebook);
-		dst_notebook->AddPage(page, ((Tab*)(page))->doc->get_title());
+		dst_notebook->AddPage(page, page_caption);
 		
 		int page_idx = dst_notebook->GetPageCount() - 1;
+		dst_notebook->SetPageBitmap(page_idx, page_bitmap);
 		
 		wxRect tab_rect = dst_tc->GetPage(page_idx).rect;
 		

@@ -130,7 +130,7 @@ namespace REHex
 			class DragFrame: public wxFrame
 			{
 				public:
-					DragFrame(wxWindow *page, const void *page_drop_group, wxEvtHandler *detached_page_handler);
+					DragFrame(wxWindow *page, const wxString &page_caption, const wxBitmap &page_bitmap, const void *page_drop_group, wxEvtHandler *detached_page_handler);
 					~DragFrame();
 					
 					const void *page_drop_group;
@@ -143,6 +143,8 @@ namespace REHex
 					
 					wxAuiNotebook *notebook;
 					wxWindow *page;
+					wxString page_caption;
+					wxBitmap page_bitmap;
 					wxSize original_tab_size;
 					bool dragging;
 					

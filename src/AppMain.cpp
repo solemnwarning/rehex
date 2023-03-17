@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -131,8 +131,8 @@ bool REHex::App::OnInit()
 					command.push_back(*filename);
 				}
 				
-				std::vector<unsigned char> encoded_command = encode_command(command);
-				bool ok = ipc->Execute(encoded_command.data(), encoded_command.size());
+				std::string encoded_command = encode_command(command);
+				bool ok = ipc->Execute(encoded_command);
 				
 				if(!ok)
 				{
@@ -143,9 +143,9 @@ bool REHex::App::OnInit()
 				for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
 				{
 					std::vector<std::string> command = { "open", *filename };
-					std::vector<unsigned char> encoded_command = encode_command(command);
+					std::string encoded_command = encode_command(command);
 					
-					ipc->Execute(encoded_command.data(), encoded_command.size());
+					ipc->Execute(encoded_command);
 				}
 			}
 			

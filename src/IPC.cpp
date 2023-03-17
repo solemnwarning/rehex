@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -38,16 +38,11 @@ static REHex::MainWindow *new_window()
 	return new REHex::MainWindow(windowSize);
 }
 
-bool REHex::IPCConnection::OnExecute(const wxString &topic, const void *data, size_t size, wxIPCFormat format)
+bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)
 {
-	if(format != wxIPC_PRIVATE)
-	{
-		return false;
-	}
-	
 	std::vector<std::string> command;
 	try {
-		command = decode_command(data, size);
+		command = decode_command(data.ToStdString());
 	}
 	catch(const std::exception &e)
 	{
@@ -145,87 +140,49 @@ std::string REHex::get_ipc_service()
 
 std::string REHex::get_ipc_topic()
 {
-	return "";
+	return "rehex";
 }
 
-std::vector<unsigned char> REHex::encode_command(const std::vector<std::string> &command)
+std::string REHex::encode_command(const std::vector<std::string> &command)
 {
-	size_t size = sizeof(size_t);
+	json_t *j = json_array();
 	
 	for(auto i = command.begin(); i != command.end(); ++i)
 	{
-		size += sizeof(size_t);
-		size += i->length();
+		json_array_append(j, json_string(i->c_str()));
 	}
 	
-	std::vector<unsigned char> encoded_command(size);
-	unsigned char *p = encoded_command.data();
+	char *json_c = json_dumps(j, JSON_ENSURE_ASCII);
+	json_decref(j);
 	
-	size_t num_strings = command.size();
-	memcpy(p, &num_strings, sizeof(num_strings));
-	p += sizeof(num_strings);
+	std::string json_s = json_c;
+	free(json_c);
 	
-	for(auto i = command.begin(); i != command.end(); ++i)
-	{
-		size_t string_len = i->length();
-		memcpy(p, &string_len, sizeof(string_len));
-		p += sizeof(string_len);
-		
-		memcpy(p, i->data(), string_len);
-		p += string_len;
-	}
-	
-	assert(p == (encoded_command.data() + encoded_command.size()));
-	
-	return encoded_command;
+	return json_s;
 }
 
-std::vector<std::string> REHex::decode_command(const void *data, size_t len)
+std::vector<std::string> REHex::decode_command(const std::string &data)
 {
-	const unsigned char *p = (const unsigned char*)(data);
-	const unsigned char *end = p + len;
+	json_error_t json_err;
+	json_t *j = json_loads(data.c_str(), 0, &json_err);
 	
-	auto throw_decode_error = [&]()
+	if(j == NULL)
 	{
-		throw std::runtime_error(std::string("Error decoding command at offset ") + std::to_string(p - (const unsigned char*)(data)));
-	};
-	
-	if((p + sizeof(size_t)) > end)
-	{
-		throw_decode_error();
+		throw std::runtime_error(std::string("Error decoding command: ") + json_err.text);
 	}
-	
-	size_t num_strings;
-	memcpy(&num_strings, p, sizeof(num_strings));
-	p += sizeof(num_strings);
 	
 	std::vector<std::string> decoded_command;
-	decoded_command.reserve(num_strings);
+	decoded_command.reserve(json_array_size(j));
 	
-	for(size_t i = 0; i < num_strings; ++i)
+	size_t index;
+	json_t *value;
+	
+	json_array_foreach(j, index, value)
 	{
-		if((p + sizeof(size_t)) > end)
-		{
-			throw_decode_error();
-		}
-		
-		size_t string_len;
-		memcpy(&string_len, p, sizeof(string_len));
-		p += sizeof(string_len);
-		
-		if((p + string_len) > end)
-		{
-			throw_decode_error();
-		}
-		
-		decoded_command.emplace_back((const char*)(p), string_len);
-		p += string_len;
+		decoded_command.push_back(json_string_value(value));
 	}
 	
-	if(p != end)
-	{
-		throw_decode_error();
-	}
+	json_decref(j);
 	
 	return decoded_command;
 }

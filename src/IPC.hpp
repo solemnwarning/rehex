@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,7 +27,7 @@ namespace REHex
 	class IPCConnection: public wxConnection
 	{
 		public:
-			virtual bool OnExecute(const wxString &topic, const void *data, size_t size, wxIPCFormat format) override;
+			virtual bool OnExec(const wxString &topic, const wxString &data) override;
 	};
 	
 	class IPCServer: public wxServer
@@ -45,8 +45,8 @@ namespace REHex
 	std::string get_ipc_service();
 	std::string get_ipc_topic();
 	
-	std::vector<unsigned char> encode_command(const std::vector<std::string> &command);
-	std::vector<std::string> decode_command(const void *data, size_t len);
+	std::string encode_command(const std::vector<std::string> &command);
+	std::vector<std::string> decode_command(const std::string &data);
 }
 
 #endif /* !REHEX_IPC_HPP */

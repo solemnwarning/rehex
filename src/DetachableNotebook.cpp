@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -123,7 +123,7 @@ REHex::DetachableNotebook::DragFrame::DragFrame(wxWindow *page, const wxString &
 	
 	SetTransparent(127);
 	
-	notebook = new wxAuiNotebook(this, wxID_ANY);
+	notebook = new wxAuiNotebook(this, wxID_ANY, wxPoint(0,0), GetClientSize());
 	
 	page->Reparent(notebook);
 	notebook->InsertPage(-1, page, page_caption, true, page_bitmap);

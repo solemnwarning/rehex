@@ -23,6 +23,7 @@
 #include <wx/filesys.h>
 #include <wx/fontutil.h>
 #include <wx/fs_zip.h>
+#include <wx/log.h>
 #include <wx/stdpaths.h>
 
 #include "App.hpp"
@@ -114,6 +115,12 @@ bool REHex::App::OnInit()
 	
 	if(ipc_params_ok)
 	{
+		/* wxDDEClient logs if it can't connect, which comes out as a messagebox. Failing
+		 * to connect is normal if we are the first instance of rehex, so just turn off
+		 * logging while we try to connect to an existing instance...
+		*/
+		wxLogNull bequiet;
+		
 		IPCClient ipc_client;
 		
 		wxConnectionBase *ipc = ipc_client.MakeConnection(ipc_host, ipc_service, ipc_topic);

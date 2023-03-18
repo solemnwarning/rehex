@@ -18,11 +18,17 @@ BuildRequires: lua
 BuildRequires: lua-devel
 BuildRequires: make
 BuildRequires: perl-Template-Toolkit
-BuildRequires: wxGTK3-devel
 BuildRequires: xorg-x11-server-Xvfb
 
 Requires: jansson
+
+%if 0%{?fedora} >= 39
+BuildRequires: wxGTK-devel
+Requires: wxGTK
+%else
+BuildRequires: wxGTK3-devel
 Requires: wxGTK3
+%endif
 
 %define base_make_flags DEBUG_CFLAGS="-DNDEBUG -ggdb" LUA_PKG=lua bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
 

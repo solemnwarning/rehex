@@ -117,8 +117,12 @@ namespace REHex
 		private:
 			const void *page_drop_group;
 			wxEvtHandler *detached_page_handler;
+			wxWindow *deferred_drag_page;
+			
+			void restart_drag(wxWindow *page);
 			
 			void OnTabDragMotion(wxAuiNotebookEvent &event);
+			void OnIdle(wxIdleEvent &event);
 			
 			/**
 			 * @brief Owner of a detatched DetachableNotebook page.

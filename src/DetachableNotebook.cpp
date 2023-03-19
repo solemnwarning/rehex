@@ -21,16 +21,73 @@
 wxDEFINE_EVENT(REHex::EVT_PAGE_DETACHED, REHex::DetachedPageEvent);
 wxDEFINE_EVENT(REHex::EVT_PAGE_DROPPED, REHex::DetachedPageEvent);
 
+static wxAuiTabCtrl *find_wxAuiTabCtrl(wxWindow *w);
+
 REHex::DetachableNotebook::DetachableNotebook(wxWindow *parent, wxWindowID id, const void *page_drop_group, wxEvtHandler *detached_page_handler, const wxPoint &pos, const wxSize &size, long style):
 	wxAuiNotebook(parent, id, pos, size, style),
 	page_drop_group(page_drop_group),
-	detached_page_handler(detached_page_handler != NULL ? detached_page_handler : this)
+	detached_page_handler(detached_page_handler != NULL ? detached_page_handler : this),
+	deferred_drag_page(NULL)
 {
 	assert((style & wxAUI_NB_TAB_EXTERNAL_MOVE) == 0);
 	Bind(wxEVT_AUINOTEBOOK_DRAG_MOTION, &REHex::DetachableNotebook::OnTabDragMotion, this);
+	Bind(wxEVT_IDLE, &REHex::DetachableNotebook::OnIdle, this);
 }
 
 REHex::DetachableNotebook::~DetachableNotebook() {}
+
+void REHex::DetachableNotebook::restart_drag(wxWindow *page)
+{
+	deferred_drag_page = NULL;
+	
+	wxAuiTabCtrl *dst_tc = find_wxAuiTabCtrl(this);
+	int page_idx = GetPageIndex(page);
+	if(page_idx == wxNOT_FOUND)
+	{
+		return;
+	}
+	
+	wxRect tab_rect = dst_tc->GetPage(page_idx).rect;
+	if(tab_rect.IsEmpty())
+	{
+		/* Tab rect not yet initialised. */
+		deferred_drag_page = page;
+		return;
+	}
+	
+	wxPoint mouse_pos = wxGetMousePosition();
+	
+	{
+		wxMouseEvent e1(wxEVT_LEFT_DOWN);
+		e1.SetX(tab_rect.x);
+		e1.SetY(tab_rect.y);
+		e1.SetLeftDown(true);
+		
+		dst_tc->GetEventHandler()->ProcessEvent(e1);
+	}
+	
+	{
+		int drag_x_threshold = wxSystemSettings::GetMetric(wxSYS_DRAG_X);
+		
+		wxMouseEvent e2(wxEVT_MOTION);
+		e2.SetX(tab_rect.x + drag_x_threshold + 1);
+		e2.SetY(tab_rect.y);
+		e2.SetLeftDown(true);
+		
+		dst_tc->GetEventHandler()->ProcessEvent(e2);
+	}
+	
+	{
+		wxPoint rel_mouse_pos = dst_tc->ScreenToClient(mouse_pos);
+		
+		wxMouseEvent e3(wxEVT_MOTION);
+		e3.SetX(rel_mouse_pos.x);
+		e3.SetY(rel_mouse_pos.y);
+		e3.SetLeftDown(true);
+		
+		dst_tc->GetEventHandler()->ProcessEvent(e3);
+	}
+}
 
 void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 {
@@ -91,6 +148,14 @@ void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)
 	}
 	else{
 		event.Skip();
+	}
+}
+
+void REHex::DetachableNotebook::OnIdle(wxIdleEvent &event)
+{
+	if(deferred_drag_page != NULL)
+	{
+		restart_drag(deferred_drag_page);
 	}
 }
 
@@ -216,7 +281,6 @@ void REHex::DetachableNotebook::DragFrame::drag(const wxPoint &mouse_pos)
 		notebook->RemovePage(0);
 		
 		DetachableNotebook *dst_notebook = window->get_notebook();
-		wxAuiTabCtrl *dst_tc = find_wxAuiTabCtrl(dst_notebook);
 		
 		page->Reparent(dst_notebook);
 		dst_notebook->AddPage(page, page_caption);
@@ -224,38 +288,7 @@ void REHex::DetachableNotebook::DragFrame::drag(const wxPoint &mouse_pos)
 		int page_idx = dst_notebook->GetPageCount() - 1;
 		dst_notebook->SetPageBitmap(page_idx, page_bitmap);
 		
-		wxRect tab_rect = dst_tc->GetPage(page_idx).rect;
-		
-		{
-			wxMouseEvent e1(wxEVT_LEFT_DOWN);
-			e1.SetX(tab_rect.x);
-			e1.SetY(tab_rect.y);
-			e1.SetLeftDown(true);
-			
-			dst_tc->GetEventHandler()->ProcessEvent(e1);
-		}
-		
-		{
-			int drag_x_threshold = wxSystemSettings::GetMetric(wxSYS_DRAG_X);
-			
-			wxMouseEvent e2(wxEVT_MOTION);
-			e2.SetX(tab_rect.x + drag_x_threshold + 1);
-			e2.SetY(tab_rect.y);
-			e2.SetLeftDown(true);
-			
-			dst_tc->GetEventHandler()->ProcessEvent(e2);
-		}
-		
-		{
-			wxPoint rel_mouse_pos = dst_tc->ScreenToClient(mouse_pos);
-			
-			wxMouseEvent e3(wxEVT_MOTION);
-			e3.SetX(rel_mouse_pos.x);
-			e3.SetY(rel_mouse_pos.y);
-			e3.SetLeftDown(true);
-			
-			dst_tc->GetEventHandler()->ProcessEvent(e3);
-		}
+		dst_notebook->restart_drag(page);
 		
 		dragging = false;
 		Destroy();

@@ -172,7 +172,7 @@ BEGIN_EVENT_TABLE(REHex::DetachableNotebook::DragFrame, wxFrame)
 END_EVENT_TABLE()
 
 REHex::DetachableNotebook::DragFrame::DragFrame(wxWindow *page, const wxString &page_caption, const wxBitmap &page_bitmap, const void *page_drop_group, wxEvtHandler *detached_page_handler):
-	wxFrame(NULL, wxID_ANY, "", wxDefaultPosition, page->GetSize(), (wxBORDER_NONE | wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP)),
+	wxFrame(NULL, wxID_ANY, "", wxDefaultPosition, page->GetParent()->GetSize(), (wxBORDER_NONE | wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP)),
 	page_drop_group(page_drop_group),
 	detached_page_handler(detached_page_handler),
 	page(page),

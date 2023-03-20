@@ -379,7 +379,8 @@ void REHex::App::OnTabDropped(DetachedPageEvent &event)
 	Tab *tab = dynamic_cast<Tab*>(event.page);
 	assert(tab != NULL);
 	
-	MainWindow *window = new MainWindow(tab->GetSize());
+	MainWindow *window = new MainWindow(wxDefaultSize);
+	window->SetClientSize(tab->GetParent()->GetSize());
 	window->SetPosition(mouse_position);
 	window->insert_tab(tab, -1);
 	window->Show();

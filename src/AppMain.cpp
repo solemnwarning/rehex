@@ -252,7 +252,6 @@ int REHex::App::OnExit()
 	#endif
 	delete recent_files;
 	delete settings;
-	delete config;
 	
 	#ifdef _WIN32
 	CoUninitialize();

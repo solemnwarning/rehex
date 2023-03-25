@@ -87,6 +87,10 @@ void REHex::DetachableNotebook::restart_drag(wxWindow *page)
 		
 		dst_tc->GetEventHandler()->ProcessEvent(e3);
 	}
+	
+	#ifdef __APPLE__
+	fake_broken_mouse_capture(dst_tc);
+	#endif
 }
 
 void REHex::DetachableNotebook::OnTabDragMotion(wxAuiNotebookEvent &event)

@@ -347,3 +347,73 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 		}
 	}
 }
+
+void REHex::fake_broken_mouse_capture(wxWindow *window)
+{
+	assert(window->HasCapture());
+	
+	wxTimer *timer = new wxTimer();
+	bool *left_was_down = new bool(wxGetMouseState().LeftIsDown());
+	wxPoint *last_mouse_pos = new wxPoint(wxGetMousePosition());
+	
+	auto cleanup = [=]()
+	{
+		delete last_mouse_pos;
+		delete left_was_down;
+		delete timer;
+	};
+	
+	window->Bind(wxEVT_DESTROY, [=](wxWindowDestroyEvent &event)
+	{
+		if(event.GetEventObject() == window)
+		{
+			cleanup();
+		}
+		
+		event.Skip();
+	});
+	
+	timer->Bind(wxEVT_TIMER, [=](wxTimerEvent &event)
+	{
+		if(!window->HasCapture()) /* Detect if the window has called ReleaseMouse() */
+		{
+			timer->Stop();
+			
+			window->CallAfter([=]()
+			{
+				/* Destroying the timer in its event handler would probably do bad things. */
+				cleanup();
+			});
+			
+			return;
+		}
+		
+		wxMouseState mouse_state = wxGetMouseState();
+		wxPoint mouse_pos = wxGetMousePosition();
+		
+		if(mouse_pos != *last_mouse_pos)
+		{
+			*last_mouse_pos = mouse_pos;
+			
+			wxMouseEvent e(wxEVT_MOTION);
+			window->ProcessWindowEvent(e);
+		}
+		
+		if(*left_was_down && !mouse_state.LeftIsDown())
+		{
+			*left_was_down = false;
+			
+			wxMouseEvent e(wxEVT_LEFT_UP);
+			window->ProcessWindowEvent(e);
+		}
+		else if(!*left_was_down && mouse_state.LeftIsDown())
+		{
+			*left_was_down = true;
+			
+			wxMouseEvent e(wxEVT_LEFT_DOWN);
+			window->ProcessWindowEvent(e);
+		}
+	});
+	
+	timer->Start(50, wxTIMER_CONTINUOUS);
+}

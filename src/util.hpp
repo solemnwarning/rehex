@@ -102,6 +102,8 @@ namespace REHex {
 	
 	void copy_from_doc(Document *doc, DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut);
 	
+	void fake_broken_mouse_capture(wxWindow *window);
+	
 	/**
 	 * @brief A wxColour that can be used as a key in a map/etc.
 	*/

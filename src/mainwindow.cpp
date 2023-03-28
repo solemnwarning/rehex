@@ -102,6 +102,7 @@ enum {
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_CLOSE(REHex::MainWindow::OnWindowClose)
+	EVT_ACTIVATE(REHex::MainWindow::OnWindowActivate)
 	EVT_CHAR_HOOK(REHex::MainWindow::OnCharHook)
 	
 	EVT_MENU(wxID_NEW,        REHex::MainWindow::OnNew)
@@ -191,6 +192,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
 	EVT_AUINOTEBOOK_TAB_RIGHT_DOWN(wxID_ANY, REHex::MainWindow::OnDocumentMenu)
 	EVT_AUINOTEBOOK_TAB_MIDDLE_UP( wxID_ANY, REHex::MainWindow::OnDocumentMiddleMouse)
+	EVT_DETACHABLENOTEBOOK_PAGE_DETACHED(wxID_ANY, REHex::MainWindow::OnDocumentDetached)
 	
 	EVT_CURSORUPDATE(wxID_ANY, REHex::MainWindow::OnCursorUpdate)
 	
@@ -200,6 +202,13 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_DIRTY,      REHex::MainWindow::OnBecameDirty)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_CLEAN,      REHex::MainWindow::OnBecameClean)
 END_EVENT_TABLE()
+
+std::list<REHex::MainWindow*> REHex::MainWindow::instances;
+
+const std::list<REHex::MainWindow*> &REHex::MainWindow::get_instances()
+{
+	return instances;
+}
 
 REHex::MainWindow::MainWindow(const wxSize& size):
 	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, size),
@@ -511,7 +520,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	
 	toolbar->Realize();
 	
-	notebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+	static int DOCUMENT_PAGE_GROUP;
+	notebook = new DetachableNotebook(this, wxID_ANY, &DOCUMENT_PAGE_GROUP, &(wxGetApp()), wxDefaultPosition, wxDefaultSize,
 		(wxAUI_NB_TOP | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_CLOSE_ON_ALL_TABS));
 	
 	notebook_dirty_bitmap = artp.GetBitmap(wxART_FILE_SAVE, wxART_MENU);
@@ -549,12 +559,16 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	
 	SetIcons(icons);
 	
+	instances.push_back(this);
+	instances_iter = std::prev(instances.end());
+	
 	call_setup_hooks(SetupPhase::DONE);
 }
 
 REHex::MainWindow::~MainWindow()
 {
 	wxGetApp().recent_files->RemoveMenu(recent_files_menu);
+	instances.erase(instances_iter);
 }
 
 void REHex::MainWindow::new_file()
@@ -665,6 +679,19 @@ void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 	}
 	
 	/* Base implementation will deal with cleaning up the window. */
+	event.Skip();
+}
+
+void REHex::MainWindow::OnWindowActivate(wxActivateEvent &event)
+{
+	if(event.GetActive())
+	{
+		instances.erase(instances_iter);
+		
+		instances.push_front(this);
+		instances_iter = instances.begin();
+	}
+	
 	event.Skip();
 }
 
@@ -1838,6 +1865,15 @@ void REHex::MainWindow::OnDocumentMiddleMouse(wxAuiNotebookEvent& event)
 	close_tab(tab);
 }
 
+void REHex::MainWindow::OnDocumentDetached(DetachedPageEvent &event)
+{
+	if(notebook->GetPageCount() == 0)
+	{
+		/* Detached the last tab - close the window. */
+		Destroy();
+	}
+}
+
 void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	Tab *active_tab = this->active_tab();
@@ -1985,6 +2021,22 @@ void REHex::MainWindow::switch_tab(DocumentCtrl *doc_ctrl)
 			break;
 		}
 	}
+}
+
+void REHex::MainWindow::insert_tab(Tab *tab, int position)
+{
+	if(position < 0)
+	{
+		position = notebook->GetPageCount();
+	}
+	
+	tab->Reparent(notebook);
+	notebook->InsertPage(position, tab, tab->doc->get_title(), true);
+}
+
+REHex::DetachableNotebook *REHex::MainWindow::get_notebook()
+{
+	return notebook;
 }
 
 void REHex::MainWindow::_update_status_offset(Tab *tab)

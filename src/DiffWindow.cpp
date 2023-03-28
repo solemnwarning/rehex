@@ -59,6 +59,7 @@ BEGIN_EVENT_TABLE(REHex::DiffWindow, wxFrame)
 	EVT_SIZE(REHex::DiffWindow::OnSize)
 	EVT_IDLE(REHex::DiffWindow::OnIdle)
 	EVT_CHAR_HOOK(REHex::DiffWindow::OnCharHook)
+	EVT_CLOSE(REHex::DiffWindow::OnWindowClose)
 	
 	EVT_AUINOTEBOOK_PAGE_CLOSED(wxID_ANY, REHex::DiffWindow::OnNotebookClosed)
 	
@@ -89,15 +90,16 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	searching_backwards(false),
 	searching_forwards(false),
 	search_modal(NULL),
-	search_modal_updating(false)
+	search_modal_updating(false),
 	
 	#ifdef DIFFWINDOW_PROFILING
-	,
 	idle_ticks(0),
 	idle_secs(0),
 	idle_bytes(0),
-	odsr_calls(0)
+	odsr_calls(0),
 	#endif
+	
+	invisible_owner_window(NULL)
 {
 	wxToolBar *toolbar = CreateToolBar();
 	
@@ -183,6 +185,12 @@ REHex::DiffWindow::~DiffWindow()
 	{
 		instance = NULL;
 	}
+}
+
+void REHex::DiffWindow::set_invisible_owner_window(wxTopLevelWindow *window)
+{
+	invisible_owner_window.reset(window);
+	invisible_owner_window.auto_cleanup_bind(wxEVT_SHOW, &DiffWindow::OnInvisibleOwnerWindowShow, this);
 }
 
 const std::list<REHex::DiffWindow::Range> &REHex::DiffWindow::get_ranges() const
@@ -1493,6 +1501,27 @@ void REHex::DiffWindow::OnUpdateRegionsTimer(wxTimerEvent &event)
 		r->doc_ctrl->set_scroll_yoff(restore_scroll_ypos.front(), false);
 		restore_scroll_ypos.pop_front();
 	}
+}
+
+void REHex::DiffWindow::OnInvisibleOwnerWindowShow(wxShowEvent &event)
+{
+	if(event.IsShown())
+	{
+		invisible_owner_window.reset(NULL);
+	}
+	
+	event.Skip();
+}
+
+void REHex::DiffWindow::OnWindowClose(wxCloseEvent &event)
+{
+	if(invisible_owner_window != NULL)
+	{
+		invisible_owner_window->Destroy();
+	}
+	
+	/* Base implementation will deal with cleaning up the window. */
+	event.Skip();
 }
 
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):

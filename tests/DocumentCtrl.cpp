@@ -1741,10 +1741,10 @@ TEST_F(DocumentCtrlTest, RegionOffsetCompare)
 	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
 	
 	std::vector<DocumentCtrl::Region*> regions = {
-		new DocumentCtrl::DataRegion(doc, 200, 50, 200),
-		new DocumentCtrl::DataRegion(doc, 150, 50, 250),
-		new DocumentCtrl::DataRegion(doc, 300, 50, 300),
-		new DocumentCtrl::DataRegion(doc, 350, 50, 350),
+		new DocumentCtrl::DataRegion(doc, 200, 50,  200),
+		new DocumentCtrl::DataRegion(doc, 150, 50,  250),
+		new DocumentCtrl::DataRegion(doc, 300, 50,  300),
+		new DocumentCtrl::DataRegion(doc, 350, 100, 350),
 	};
 	
 	doc_ctrl->replace_all_regions(regions);

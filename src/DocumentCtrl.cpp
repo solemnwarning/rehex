@@ -2415,8 +2415,8 @@ int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
 		off_t delta = std::accumulate(rb, ra,
 			(off_t)(0), [](off_t sum, const GenericDataRegion *region) { return sum + region->d_length; });
 		
-		delta -= ((*ra)->d_length - (a - (*ra)->d_offset));
-		delta += ((*rb)->d_length - (b - (*rb)->d_offset));
+		delta += a - (*ra)->d_offset;
+		delta -= b - (*rb)->d_offset;
 		
 		assert(delta > 0);
 		

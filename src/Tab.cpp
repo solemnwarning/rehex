@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -16,6 +16,7 @@
 */
 
 #include "platform.hpp"
+#include <algorithm>
 #include <exception>
 #include <inttypes.h>
 #include <stack>
@@ -880,6 +881,41 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 	{
 		doc->erase_comment(c_offset, c_length);
 	}, delete_comment->GetId(), delete_comment->GetId());
+	
+	wxMenuItem *delete_comment_rec = menu.Append(wxID_ANY, "Delete comment &and children");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		/* Get the iterator to this comment and all contained under it. */
+		
+		auto comments = doc->get_comments();
+		auto iters = NestedOffsetLengthMap_get_recursive(comments, NestedOffsetLengthMapKey(c_offset, c_length));
+		
+		/* Extract the offset/length from each iterator as they will be invalidated once we
+		 * start deleting comments.
+		*/
+		
+		std::vector<NestedOffsetLengthMapKey> keys;
+		keys.reserve(iters.size());
+		
+		std::transform(iters.begin(), iters.end(), std::back_inserter(keys),
+			[](const NestedOffsetLengthMap<Document::Comment>::const_iterator &iter)
+			{
+				return iter->first;
+			});
+		
+		/* Delete them all in a single transaction. */
+		
+		ScopedTransaction t(doc, "delete comment and children");
+		
+		for(auto i = keys.begin(); i != keys.end(); ++i)
+		{
+			doc->erase_comment(i->offset, i->length);
+		}
+		
+		t.commit();
+	}, delete_comment_rec->GetId(), delete_comment_rec->GetId());
+	
+	delete_comment_rec->Enable(c_length > 0);
 	
 	menu.AppendSeparator();
 	

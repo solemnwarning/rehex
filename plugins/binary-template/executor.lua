@@ -1466,7 +1466,7 @@ expand_value = function(context, type_info, struct_arg_values, array_element_idx
 	end
 end
 
-local function _decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, initial_value, is_local)
+local function _decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes, initial_value, is_local)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
@@ -1566,6 +1566,59 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		type_info = _make_overlay_type(type_info, { big_endian = false, rehex_type = type_info.rehex_type_le })
 	end
 	
+	-- Variable attributes (so far) are only used for defining encoding on character arrays, so
+	-- we check for that attribute in this lovely kludge here.
+	
+	local array_type_info = array_size ~= nil
+		and _make_aray_type(type_info)
+		or type_info
+	
+	local string_charset
+	
+	if attributes ~= nil
+	then
+		for i = 1, #attributes
+		do
+			local attr_name = attributes[i][1]
+			local attr_value_type = attributes[i][2] and attributes[i][2][1]
+			local attr_value = attributes[i][2] and attributes[i][2][2]
+			
+			if attr_name == "charset" and _type_is_char_array(array_type_info)
+			then
+				if string_charset ~= nil
+				then
+					_template_error(context, "Attribute 'charset' specified multiple times")
+				end
+				
+				if not _type_is_stringish(attr_value_type)
+				then
+					_template_error(context, "Unexpected type '" .. _get_type_name(attr_value_type) .. "' used as value for 'charset' attribute (expected string)")
+				end
+				
+				local charset_name = _stringify_value(attr_value_type, attr_value)
+				local charset_valid = false
+				
+				for j = 1, #context.valid_charsets
+				do
+					if context.valid_charsets[j] == charset_name
+					then
+						charset_valid = true
+						break
+					end
+				end
+				
+				if not charset_valid
+				then
+					_template_error(context, "Unrecognised character set '" .. charset_name .. "' specified")
+				end
+				
+				string_charset = charset_name
+			else
+				_template_error(context, "Invalid variable attribute '" .. attr_name .. "' used with type '" .. _get_type_name(array_type_info) .. "'")
+			end
+		end
+	end
+	
 	local root_value
 	
 	if array_size == nil
@@ -1585,12 +1638,11 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			_template_error(context, "Expected numeric type for array size, got '" .. _get_type_name(ArrayLength_type) .. "'")
 		end
 		
-		local array_type_info = _make_aray_type(type_info)
-		
 		if type_info.base ~= "struct" and not context.declaring_local_var
 		then
 			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
 			root_value = FileArrayValue:new(context, context.next_variable, ArrayLength_val:get(), type_info.length, data_type_fmt)
+			root_value.charset = string_charset
 			
 			context.next_variable = context.next_variable + (ArrayLength_val:get() * type_info.length)
 			
@@ -1640,6 +1692,7 @@ _eval_variable = function(context, statement)
 	local var_name = statement[5]
 	local struct_args = statement[6]
 	local array_size = statement[7]
+	local attributes = statement[8]
 	
 	local struct_arg_values = nil
 	if struct_args ~= nil
@@ -1652,7 +1705,26 @@ _eval_variable = function(context, statement)
 		end
 	end
 	
-	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, nil, false)
+	local attributes_evaluated = nil
+	if attributes ~= nil
+	then
+		attributes_evaluated = {}
+		
+		for i = 1, #attributes
+		do
+			local attr_name = attributes[i][3]
+			local attr_value = attributes[i][4]
+			
+			if attr_value ~= nil
+			then
+				attr_value = { _eval_statement(context, attr_value) }
+			end
+			
+			attributes_evaluated[i] = { attr_name, attr_value }
+		end
+	end
+	
+	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes_evaluated, nil, false)
 end
 
 _eval_local_variable = function(context, statement)
@@ -1676,7 +1748,7 @@ _eval_local_variable = function(context, statement)
 	local was_declaring_local_var = context.declaring_local_var
 	context.declaring_local_var = true
 	
-	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, initial_value, true)
+	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, nil, initial_value, true)
 	
 	context.declaring_local_var = was_declaring_local_var
 end
@@ -1990,7 +2062,7 @@ _eval_struct_defn = function(context, statement)
 		local var_args   = var_decl[2]
 		local array_size = var_decl[3]
 		
-		_decl_variable(context, statement, type_info, var_name, var_args, array_size, nil, false)
+		_decl_variable(context, statement, type_info, var_name, var_args, array_size, nil, nil, false)
 	end
 end
 
@@ -2105,7 +2177,7 @@ _eval_enum = function(context, statement)
 		local var_name   = var_decl[1]
 		local array_size = var_decl[3]
 		
-		_decl_variable(context, statement, type_info, var_name, nil, array_size, nil, false)
+		_decl_variable(context, statement, type_info, var_name, nil, array_size, nil, nil, false)
 	end
 end
 
@@ -2546,6 +2618,8 @@ local function execute(interface, statements)
 		st_stack = {},
 		
 		template_error = _template_error,
+		
+		valid_charsets = interface.get_valid_charsets(),
 	}
 	
 	for k, v in pairs(_builtin_functions)
@@ -2635,7 +2709,14 @@ local function execute(interface, statements)
 			-- for the range, else it would be displayed as a list of integers rather than a
 			-- contiguous byte sequence.
 			
-			if not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
+			if value.charset ~= nil
+			then
+				local data_start, data_end = value:data_range()
+				if data_start ~= nil
+				then
+					context.interface.set_data_type(data_start, (data_end - data_start), "text:" .. value.charset)
+				end
+			elseif not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
 			then
 				local data_start, data_end = value:data_range()
 				if data_start ~= nil

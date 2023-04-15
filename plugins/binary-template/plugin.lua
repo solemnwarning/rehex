@@ -220,6 +220,18 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 					error("Template execution aborted", 0)
 				end
 			end,
+			
+			get_valid_charsets = function()
+				local all_encodings = rehex.CharacterEncoding.all_encodings()
+				local valid_charsets = {}
+				
+				for i = 1, #all_encodings
+				do
+					table.insert(valid_charsets, all_encodings[i].key)
+				end
+				
+				return valid_charsets
+			end,
 		}
 		
 		doc:transact_begin("Binary template")

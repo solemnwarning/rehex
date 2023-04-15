@@ -1,4 +1,5 @@
 #include "../App.hpp"
+#include "../CharacterEncoder.hpp"
 #include "../document.hpp"
 #include "../mainwindow.hpp"
 
@@ -115,4 +116,13 @@ class REHex::TabCreatedEvent: public wxEvent
 	
 	// Filthy hack to get the MainWindow handle into Lua land rather than an opaque userdata.
 	REHex::MainWindow *GetEventObject();
+};
+
+class REHex::CharacterEncoding
+{
+	const wxString key;
+	const wxString label;
+	
+	static const REHex::CharacterEncoding *encoding_by_key(const wxString &key);
+	static LuaTable all_encodings();
 };

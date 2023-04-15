@@ -50,6 +50,14 @@ local function test_interface(data)
 		file_length = function()
 			return data:len()
 		end,
+		
+		get_valid_charsets = function()
+			return {
+				"ASCII",
+				"ISO-8859-1",
+				"ISO-8859-2",
+			}
+		end,
 	}
 	
 	return interface, log
@@ -6833,5 +6841,172 @@ describe("executor", function()
 				{ "test.bt", 7, "call", "foo", {} },
 			})
 			end, "Attempt to use undefined variable 'localvar' at test.bt:2")
+	end)
+	
+	it("allows setting character set on a char array", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "char", "s", nil,
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset", { "test.bt", 1, "str", "ASCII" } },
+				} },
+			
+			{ "test.bt", 2, "function", "string", "charsetfunc", {},
+			{
+				{ "test.bt", 2, "return",
+					{ "test.bt", 2, "str", "ISO-8859-1" } },
+			} },
+			
+			{ "test.bt", 3, "variable", "char", "t", nil,
+				-- array length
+				{ "test.bt", 3, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 3, "charset", { "test.bt", 3, "call", "charsetfunc", {} } },
+				} },
+		})
+		
+		local expect_log = {
+			"set_comment(0, 8, s)",
+			"set_data_type(0, 8, text:ASCII)",
+			"set_comment(8, 8, t)",
+			"set_data_type(8, 8, text:ISO-8859-1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("doesn't allow setting character set on non-char[] types", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "char", "s", nil, nil,
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset", { "test.bt", 1, "str", "ASCII" } },
+				} },
+			})
+			end, "Invalid variable attribute 'charset' used with type 'char' at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "unsigned char", "s", nil,
+				
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset", { "test.bt", 1, "str", "ASCII" } },
+				} },
+			})
+			end, "Invalid variable attribute 'charset' used with type 'unsigned char[]' at test.bt:1")
+	end)
+	
+	it("doesn't allow specifying character set multiple times", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "char", "s", nil,
+				
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset", { "test.bt", 1, "str", "ASCII" } },
+					{ "test.bt", 1, "charset", { "test.bt", 1, "str", "ASCII" } },
+				} },
+			})
+			end, "Attribute 'charset' specified multiple times at test.bt:1")
+	end)
+	
+	it("doesn't allow specifying character set as non-string types", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "char", "s", nil,
+				
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset", { "test.bt", 1, "num", 1 } },
+				} },
+			})
+			end, "Unexpected type 'const int' used as value for 'charset' attribute (expected string) at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "char", "s", nil,
+				
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset" }, -- void / no value
+				} },
+			})
+			end, "Unexpected type 'void' used as value for 'charset' attribute (expected string) at test.bt:1")
+	end)
+	
+	it("doesn't allow specifying an unknown character set", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "char", "s", nil,
+				
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "charset", { "test.bt", 1, "str", "UTF-64" } },
+				} },
+			})
+			end, "Unrecognised character set 'UTF-64' specified at test.bt:1")
 	end)
 end)

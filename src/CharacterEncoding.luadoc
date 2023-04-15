@@ -1,0 +1,40 @@
+---
+-- A text encoding (character set).
+-- @classmod rehex.CharacterEncoding
+
+--- The fixed identifier for the encoding (read only).
+rehex.CharacterEncoding.key = nil
+
+--- The display name for the encoding (read only).
+rehex.CharacterEncoding.label = nil
+
+--- Get all available encodings.
+-- @function all_encodings
+--
+-- @return A table of CharacterEncoding objects.
+--
+-- **NOTE**: This is a static method/function.
+--
+-- @usage
+--
+-- local encodings = rehex.CharacterEncoding.all_encodings()
+-- for i = 1, #encodings
+-- do
+--     print("key = " .. encodings[i].key .. ", label = " .. encodings[i].label)
+-- end
+
+--- Get an encoding by its key.
+-- @function encoding_by_key
+--
+-- @param key The key of the encoding ("ASCII", "ISO-8859-1", etc)
+--
+-- @return A CharacterEncoding object, or nil.
+--
+-- **NOTE**: This is a static method/function.
+--
+-- @usage
+--
+-- local ascii_encoding = rehex.CharacterEncoding.encoding_by_key("ASCII")
+-- if ascii_encoding ~= nil
+--     -- yep, ASCII still exists
+-- end

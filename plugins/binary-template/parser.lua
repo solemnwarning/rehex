@@ -410,6 +410,30 @@ local _parser = spc * P{
 		* (V("BRACE_BLOCK_CONTINUE") * (V("STMT") * spc + _PARSE_ERROR())) ^ 0
 		* V("BRACE_BLOCK_CLOSE"),
 	
+	-- An expression will slurp up as many valid tokens as it finds rather than only consuming
+	-- valid expressions, which is a problem when the expression terminator is itself a valid
+	-- token in an expression, e.g. variable attributes are terminated by ">", so we have the
+	-- _IN_VAR_ATTR variants which won't slurp those characters (unless inside parentheses) and
+	-- also form the base of the main EXPR match.
+	
+	EXPR_IN_VAR_ATTR =
+		Ct( P(_capture_position) * Cc("_expr") * Ct(
+			(
+				Ct( P(_capture_position) * Cc("cast") * P("(") * spc * P(_capture_type) * P(")") * V("EXPR_IN_VAR_ATTR") ) +
+				V("EXPR2_IN_VAR_ATTR")
+			) ^ 1
+		) ),
+	
+	EXPR2_IN_VAR_ATTR =
+		P("(") * spc * V("EXPR") * P(")") * spc +
+		Ct( P(_capture_position) * Cc("_ternary_t") * P("?") * spc * V("EXPR") * P(":") * spc) +
+		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
+		Ct( P(_capture_position) * Cc("postfix-increment") * Ct( V("VALUE") ) * P("++") * spc) +
+		Ct( P(_capture_position) * Cc("postfix-decrement") * Ct( V("VALUE") ) * P("--") * spc) +
+		Ct( V("VALUE") ) +
+		Ct( P(_capture_position) * Cc("_token") *
+			C( P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + P("+=") + P("-=") + P("*=") + P("/=") + P("%=") + P("<<=") + P(">>=") + P("&=") + P("^=") + P("|=") + P("<<") + P(">>") + P("++") + P("--") + S("!~*/%+-&^|=") ) * spc),
+	
 	EXPR =
 		Ct( P(_capture_position) * Cc("_expr") * Ct(
 			(
@@ -419,17 +443,16 @@ local _parser = spc * P{
 		) ),
 	
 	EXPR2 =
-		P("(") * spc * V("EXPR") * P(")") * spc +
-		Ct( P(_capture_position) * Cc("_ternary_t") * P("?") * spc * V("EXPR") * P(":") * spc) +
-		Ct( P(_capture_position) * Cc("call") * name * Ct( S("(") * spc * (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1 * S(")") ) * spc ) +
-		Ct( P(_capture_position) * Cc("postfix-increment") * Ct( V("VALUE") ) * P("++") * spc) +
-		Ct( P(_capture_position) * Cc("postfix-decrement") * Ct( V("VALUE") ) * P("--") * spc) +
-		Ct( V("VALUE") ) +
+		V("EXPR2_IN_VAR_ATTR") +
 		Ct( P(_capture_position) * Cc("_token") *
-			C( P("<=") + P(">=") + P("==") + P("!=") + P("&&") + P("||") + P("+=") + P("-=") + P("*=") + P("/=") + P("%=") + P("<<=") + P(">>=") + P("&=") + P("^=") + P("|=") + P("<<") + P(">>") + P("++") + P("--") + S("!~*/%+-<>&^|=") ) * spc),
+			C( S("<>") ) * spc),
 	
 	EXPR_OR_NIL = V("EXPR") + Cc(nil) * spc,
 	ZERO_OR_MORE_EXPRS = (V("EXPR") * (comma * V("EXPR")) ^ 0) ^ -1,
+	
+	VAR_ATTR = Ct(
+		P(_capture_position) * name *
+		(P("=") * spc * V("EXPR_IN_VAR_ATTR") + Cc(nil))),
 	
 	--  {
 	--      "file.bt", <line>,
@@ -438,12 +461,15 @@ local _parser = spc * P{
 	--      <variable name>,
 	--      { <struct parameters> } OR nil,
 	--      <array size expr> OR nil,
+	--      { { "file.bt", <line>, <attribute name>, <attribute value> OR nil }, ... } OR nil,
 	--  }
 	VAR_DEFN = Ct(
 		P(_capture_position) * Cc("variable") *
 		P(_capture_type) * name *
 		(P("(") * spc * Ct( V("ZERO_OR_MORE_EXPRS") ) * P(")") * spc + Cc(nil)) *
-		(P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) * P(";") * spc ),
+		(P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) *
+		(P("<") * spc * Ct( V("VAR_ATTR") * (comma * V("VAR_ATTR")) ^ 0 ) * P(">") * spc) ^ -1 *
+		P(";") * spc ),
 	
 	--  {
 	--      "file.bt", <line>,
@@ -945,6 +971,7 @@ local function _compile_statement(s)
 	then
 		local arguments = s[6]
 		local array_size = s[7]
+		local attributes = s[8]
 		
 		if arguments ~= nil
 		then
@@ -955,6 +982,19 @@ local function _compile_statement(s)
 		end
 		
 		if array_size then _compile_expr(array_size) end
+		
+		if attributes ~= nil
+		then
+			for i = 1, #attributes
+			do
+				_resolve_pos(attributes[i])
+				
+				if attributes[i][4] ~= nil
+				then
+					_compile_expr(attributes[i][4])
+				end
+			end
+		end
 	elseif op == "typedef"
 	then
 		local array_size = s[6]

@@ -99,7 +99,7 @@ func1(s);
 func2(t);
 [%- END %]
 
-<h4>Character Sets</h4>
+<a name="string-charset"><h4>Character Sets</h4></a>
 
 <p>
 You can specify the character set of a string in a file using the following syntax:

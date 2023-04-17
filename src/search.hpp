@@ -24,11 +24,13 @@
 #include <sys/types.h>
 #include <thread>
 #include <wx/checkbox.h>
+#include <wx/choice.h>
 #include <wx/progdlg.h>
 #include <wx/radiobut.h>
 #include <wx/textctrl.h>
 #include <wx/timer.h>
 
+#include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -124,16 +126,22 @@ namespace REHex {
 		private:
 			std::string search_for;
 			bool case_sensitive;
+			const CharacterEncoder *encoder;
+			
+			std::string initial_encoding; /* Only used during initialisation. */
 			
 			wxTextCtrl *search_for_tc;
 			wxCheckBox *case_sensitive_cb;
+			wxChoice *encoding_choice;
 			
 		public:
-			Text(wxWindow *parent, SharedDocumentPointer &doc, const std::string &search_for = "", bool case_sensitive = true);
+			Text(wxWindow *parent, SharedDocumentPointer &doc, const wxString &search_for = "", bool case_sensitive = true, const std::string &encoding = "ASCII");
 			virtual ~Text();
 			
 			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();
+			
+			bool set_search_string(const wxString &search_for);
 			
 		protected:
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer);

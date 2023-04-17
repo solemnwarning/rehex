@@ -34,7 +34,28 @@ TEST(Search, Text)
 {
 	FILE *tmp = fopen(TMPFILE, "wb");
 	assert(tmp != NULL);
-	assert(fwrite("abcdefghijklmnop", 16, 1, tmp) == 1);
+	assert(fwrite(
+		"abcdefghijklmnop"
+		
+		/* The forbidden Unicode lands */
+		
+		/* offset = 16 */
+		"n\xCC\x83" /* LATIN SMALL LETTER N (U+006E), COMBINING TILDE (U+0303) */
+		"N\xCC\x83" /* LATIN CAPITAL LETTER N (U+004E), COMBINING TILDE (U+0303) */
+		
+		/* offset = 22 */
+		"\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */
+		"\xC3\x91" /* LATIN CAPITAL LETTER N WITH TILDE (U+00D1) */
+		
+		/* offset = 26 */
+		"o\xCC\x80\xCC\x83" /* LATIN SMALL LETTER O (U+006E), COMBINING GRAVE ACCENT (U+0300), COMBINING TILDE (U+0303) */
+		"o\xCC\x83\xCC\x80" /* LATIN SMALL LETTER O (U+006E), COMBINING TILDE (U+0303), COMBINING GRAVE ACCENT (U+0300) */
+		
+		/* offset = 36 */
+		"\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */
+		"\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */
+		
+		, 68, 1, tmp) == 1);
 	fclose(tmp);
 	
 	/* Basic tests */
@@ -285,5 +306,104 @@ TEST(Search, Text)
 		REHex::Search::Text s(&frame, doc, "efgh");
 		
 		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::Text::find_next() finds strings which span an entire search window";
+	}
+	
+	/* UNICODE */
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters";
+		EXPECT_EQ(s.find_next(17), 22) << "REHEX::Search::Text::find_next() matches combining characters";
+		EXPECT_EQ(s.find_next(23), -1) << "REHEX::Search::Text::find_next() matches combining characters";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("n\xCC\x83" /* LATIN SMALL LETTER N (U+006E), COMBINING TILDE (U+0303) */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters";
+		EXPECT_EQ(s.find_next(17), 22) << "REHEX::Search::Text::find_next() matches combining characters";
+		EXPECT_EQ(s.find_next(23), -1) << "REHEX::Search::Text::find_next() matches combining characters";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), false, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
+		EXPECT_EQ(s.find_next(17), 19) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
+		EXPECT_EQ(s.find_next(20), 22) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
+		EXPECT_EQ(s.find_next(23), 24) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
+		EXPECT_EQ(s.find_next(25), -1) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("o\xCC\x80\xCC\x83" /* LATIN SMALL LETTER O (U+006E), COMBINING GRAVE ACCENT (U+0300), COMBINING TILDE (U+0303) */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 26) << "REHEX::Search::Text::find_next() matches multiple combining characters";
+		EXPECT_EQ(s.find_next(27), -1) << "REHEX::Search::Text::find_next() doesn't match out-of-order combining characters";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("o\xCC\x83\xCC\x80" /* LATIN SMALL LETTER O (U+006E), COMBINING TILDE (U+0303), COMBINING GRAVE ACCENT (U+0300) */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 31) << "REHEX::Search::Text::find_next() matches multiple combining characters";
+		EXPECT_EQ(s.find_next(32), -1) << "REHEX::Search::Text::find_next() doesn't match out-of-order combining characters";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 36) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+		EXPECT_EQ(s.find_next(37), -1) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 52) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+		EXPECT_EQ(s.find_next(53), -1) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), false, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 36) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+		EXPECT_EQ(s.find_next(37), 52) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+		EXPECT_EQ(s.find_next(53), -1) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+	}
+	
+	{
+		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		
+		REHex::Search::Text s(&frame, doc, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), false, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 36) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+		EXPECT_EQ(s.find_next(37), 52) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
+		EXPECT_EQ(s.find_next(53), -1) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
 	}
 }

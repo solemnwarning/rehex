@@ -563,6 +563,27 @@ REHex::Search::Text::~Text()
 
 bool REHex::Search::Text::test(const void *data, size_t data_size)
 {
+	if(encoding->key == "ASCII") /* TODO: Add a numeric ID to encodings to avoid this string comparison? */
+	{
+		/* Fast path for ASCII text searches.
+		 *
+		 * All the Unicode normalisation below slows the search down to a crawl, so avoid
+		 * it if we can.
+		 *
+		 * This path takes ~25s to process a 4GB sample on my machine, ~10m via the slow
+		 * path - a 24x slow down.
+		*/
+		if(case_sensitive)
+		{
+			return data_size >= search_for.size()
+				&& strncmp((const char*)(data), search_for.data(), search_for.size()) == 0;
+		}
+		else{
+			return data_size >= search_for.size()
+				&& strncasecmp((const char*)(data), search_for.data(), search_for.size()) == 0;
+		}
+	}
+	
 	/* We read data in character by character, trying to decode it using the search character
 	 * set and then normalising (decomposing any combining characters) and optionally case
 	 * folding characters as we go.
@@ -580,7 +601,7 @@ bool REHex::Search::Text::test(const void *data, size_t data_size)
 	
 	for(size_t i = 0; i < data_size && remain_cmp > 0;)
 	{
-		EncodedCharacter c = encoder->decode(((const char*)(data) + i), (data_size - i));
+		EncodedCharacter c = encoding->encoder->decode(((const char*)(data) + i), (data_size - i));
 		if(!c.valid)
 		{
 			break;
@@ -669,7 +690,7 @@ void REHex::Search::Text::setup_window_controls(wxWindow *parent, wxSizer *sizer
 			if(ce->key == initial_encoding)
 			{
 				encoding_choice->SetSelection(idx);
-				encoder = ce->encoder;
+				encoding = ce;
 			}
 		}
 		
@@ -708,7 +729,7 @@ bool REHex::Search::Text::read_window_controls()
 	case_sensitive = case_sensitive_cb->GetValue();
 	
 	const CharacterEncoding *ce = (const CharacterEncoding*)(encoding_choice->GetClientData(encoding_choice->GetSelection()));
-	encoder = ce->encoder;
+	encoding = ce;
 	
 	wxString search_for = search_for_tc->GetValue();
 	

@@ -126,7 +126,7 @@ namespace REHex {
 		private:
 			std::string search_for;
 			bool case_sensitive;
-			const CharacterEncoder *encoder;
+			const CharacterEncoding *encoding;
 			
 			std::string initial_encoding; /* Only used during initialisation. */
 			

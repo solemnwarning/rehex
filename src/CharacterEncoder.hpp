@@ -223,6 +223,7 @@ namespace REHex
 	};
 	
 	extern const CharacterEncoderASCII ascii_encoder;
+	extern const CharacterEncoder *utf8_encoder;
 }
 
 #endif /* !REHEX_CHARACTERENCODER_HPP */

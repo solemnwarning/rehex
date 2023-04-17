@@ -23,6 +23,8 @@ Version TBA
 
  * Add <charset = "XXX"> syntax to templates (#184).
 
+ * Add character set option to text search (#182, #200).
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

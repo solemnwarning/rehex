@@ -28,6 +28,11 @@ LDLIBS    += -lstdc++ -lwinpthread -liconv -Wl,-Bdynamic -static-libgcc -static-
 CFLAGS   += -D__STDC_FORMAT_MACROS
 CXXFLAGS += -D__STDC_FORMAT_MACROS
 
+# Define this otherwise MinGW's libunistring tries importing some of its
+# symbols from DLL (we link statically).
+CFLAGS   += -DIN_LIBUNISTRING
+CXXFLAGS += -DIN_LIBUNISTRING
+
 # Include compatibility headers
 CFLAGS   += -Iinclude/gcc-win-include/
 CXXFLAGS += -Iinclude/gcc-win-include/

@@ -542,6 +542,7 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 REHex::Search::Text::Text(wxWindow *parent, SharedDocumentPointer &doc, const wxString &search_for, bool case_sensitive, const std::string &encoding):
 	Search(parent, doc, "Search for text"),
 	case_sensitive(case_sensitive),
+	cmp_fast_path(encoding == "ASCII"),
 	initial_encoding(encoding)
 {
 	setup_window();
@@ -563,7 +564,7 @@ REHex::Search::Text::~Text()
 
 bool REHex::Search::Text::test(const void *data, size_t data_size)
 {
-	if(encoding->key == "ASCII") /* TODO: Add a numeric ID to encodings to avoid this string comparison? */
+	if(cmp_fast_path)
 	{
 		/* Fast path for ASCII text searches.
 		 *
@@ -730,6 +731,8 @@ bool REHex::Search::Text::read_window_controls()
 	
 	const CharacterEncoding *ce = (const CharacterEncoding*)(encoding_choice->GetClientData(encoding_choice->GetSelection()));
 	encoding = ce;
+	
+	cmp_fast_path = encoding->key == "ASCII";
 	
 	wxString search_for = search_for_tc->GetValue();
 	

@@ -25,6 +25,9 @@ Version TBA
 
  * Add character set option to text search (#182, #200).
 
+ * Add "Delete comment and children" context menu command to delete a comment
+   and any comments encapsulated by it (#198).
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

@@ -1,0 +1,69 @@
+[% WRAPPER page.tt
+   title = "Preprocessor"
+%]
+
+<H2>Preprocessor</H2>
+
+<P>
+Templates are preprocessed with a simplified C-like preprocessor. The main function of this is for including headers or template fragments within another template. Like in C, all preprocessing occurs before compilation.
+</P>
+
+<HR>
+[% WRAPPER "code.tt" -%][% WRAPPER "code-pp-directive.tt" -%]
+#include "path-relative-to-template.h"
+[%- END %][%- END %]
+
+<P>
+Inserts the contents of the given file here. Files are preprocessed recursively and so may contain further preprocessor directives.
+</P>
+
+<HR>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-pp-directive.tt" -%]
+#define MACRO_A
+
+#define MACRO_B 1234
+
+#define MACRO_C \
+    "Hello" \
+    " world"
+[%- END %]
+
+[% WRAPPER "code-type.tt" %]int[% END %] i = MACRO_B;    [% WRAPPER "code-comment.tt" %]/* 1234 */[% END %]
+[% WRAPPER "code-type.tt" %]string[% END %] s = MACRO_C; [% WRAPPER "code-comment.tt" %]/* "Hello world" */[% END %]
+[%- END %]
+
+<P>
+Defines a preprocessor macro. Like in C, any macros present in the source will be expanded to the value defined here.
+</P>
+
+<HR>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-pp-directive.tt" %]#ifdef MACRO[% END %]
+...
+[% WRAPPER "code-pp-directive.tt" %]#else[% END %]
+...
+[% WRAPPER "code-pp-directive.tt" %]#endif[% END %]
+
+[% WRAPPER "code-pp-directive.tt" %]#ifndef MACRO[% END %]
+...
+[% WRAPPER "code-pp-directive.tt" %]#else[% END %]
+...
+[% WRAPPER "code-pp-directive.tt" %]#endif[% END %]
+[%- END %]
+
+<P>
+Include or exclude a block of the template from compilation depending whether a macro is defined.
+</P>
+
+<HR>
+[% WRAPPER "code.tt" -%][% WRAPPER "code-pp-directive.tt" -%]
+#warning warning message
+#error error message
+[%- END %][%- END %]
+
+<P>
+Emits a warning message or an error (aborts template processing).
+</P>
+
+[% END %]

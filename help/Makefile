@@ -21,6 +21,7 @@ PAGES := \
 	bitmap \
 	bt \
 	bt-funcs \
+	bt-preprocessor \
 	bt-syntax \
 	bt-types \
 	comments \

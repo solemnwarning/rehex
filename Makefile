@@ -554,7 +554,7 @@ tests/%.o: tests/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-wxLua/%.o: wxLua/%.cpp $(WXLUA_BINDINGS)
+wxLua/%.o: wxLua/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)

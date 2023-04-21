@@ -894,6 +894,7 @@ wxString LUACALL wxluaT_typename(lua_State* L, int wxl_type)
         wxT("integer"),
         wxT("cfunction"),
         wxT("pointer")
+        wxT("any")
     };
 
     // Check for real type or this is a predefined WXLUA_TXXX type
@@ -916,6 +917,7 @@ wxString LUACALL wxluaT_typename(lua_State* L, int wxl_type)
             case WXLUA_TINTEGER :       return s[11];
             case WXLUA_TCFUNCTION :     return s[12];
             case WXLUA_TPOINTER :       return s[13];
+            case WXLUA_TANY :           return s[14];
         }
     }
     else
@@ -1457,6 +1459,32 @@ wxString LUACALL wxlua_getwxStringtype(lua_State *L, int stack_idx)
     return wxEmptyString;
 }
 
+wxUniChar LUACALL wxlua_getwxUniChartype(lua_State *L, int stack_idx)
+{
+    if (wxlua_isstringtype(L, stack_idx)) {
+        wxString wxstr = lua2wx(lua_tostring(L, stack_idx));
+        if (wxstr.empty()) {
+            return wxUniChar();
+        }
+        return wxstr[0];
+    }
+    else if (wxlua_iswxuserdata(L, stack_idx))
+    {
+        int stack_type = wxluaT_type(L, stack_idx);
+
+        if (wxluaT_isderivedtype(L, stack_type, *p_wxluatype_wxUniChar) >= 0)
+        {
+            wxUniChar* wxunichar = (wxUniChar*)wxlua_touserdata(L, stack_idx, false);
+            wxCHECK_MSG(wxunichar, wxUniChar(), wxT("Invalid userdata wxUniChar"));
+            return *wxunichar;
+        }
+    }
+
+    wxlua_argerror(L, stack_idx, wxT("a 'string' or 'wxUniChar'"));
+
+    return wxUniChar();
+}
+
 bool LUACALL wxlua_getbooleantype(lua_State *L, int stack_idx)
 {
     int l_type = lua_type(L, stack_idx);
@@ -1985,6 +2013,42 @@ wxLuaSharedPtr<std::vector<wxPoint2DDouble> > LUACALL wxlua_getwxPoint2DDoubleAr
         wxlua_argerror(L, stack_idx, wxT("a Lua table of 'wxPoint2DDoubles', valid tables {{1,2},...}, {{x=1,y=2},...}, or {wx.wxPoint2DDouble(1,2),,...}."));
     
     return pointArray;
+}
+
+wxVariant LUACALL wxlua_getwxVarianttype(lua_State *L, int stack_idx)
+{
+    int stack_type = wxluaT_type(L, stack_idx);
+
+    if (wxluaT_isderivedtype(L, stack_type, *p_wxluatype_wxVariant) >= 0)
+        return *(wxVariant *)wxluaT_getuserdatatype(L, stack_idx, *p_wxluatype_wxVariant);
+    else if (lua_isnil(L, stack_idx))
+        return wxVariant();
+    else if (lua_isboolean(L, stack_idx))
+        return wxVariant(wxlua_getbooleantype(L, stack_idx));
+    else if (wxlua_isintegertype(L, stack_idx))
+        return wxVariant(wxlua_getintegertype(L, stack_idx));
+    else if (wxlua_isnumbertype(L, stack_idx))
+        return wxVariant(wxlua_getnumbertype(L, stack_idx));
+    else if (wxlua_isstringtype(L, stack_idx))
+        return wxVariant(lua2wx(lua_tostring(L, stack_idx)));
+    else if (wxluaT_isderivedtype(L, stack_type, *p_wxluatype_wxDateTime) >= 0)
+        return wxVariant((wxDateTime *)wxluaT_getuserdatatype(L, stack_idx, *p_wxluatype_wxDateTime));
+    else if (wxluaT_isderivedtype(L, stack_type, *p_wxluatype_wxArrayString) >= 0)
+        return wxVariant((wxArrayString *)wxluaT_getuserdatatype(L, stack_idx, *p_wxluatype_wxArrayString));
+    else if (wxlua_iswxuserdata(L, stack_idx))
+    {
+        void* p = (void*)wxlua_touserdata(L, stack_idx, false);
+        return wxVariant(p);
+    }
+    else if (lua_istable(L, stack_idx))
+    {
+        wxLuaSmartwxArrayString arr = wxlua_getwxArrayString(L, stack_idx);
+        return wxVariant((wxArrayString&)arr);
+    }
+
+    wxlua_argerror(L, stack_idx, wxT("an object convertable to 'wxVariant'"));
+
+    return wxVariant();
 }
 
 int LUACALL wxlua_pushwxArrayStringtable(lua_State *L, const wxArrayString &strArray)

@@ -72,7 +72,10 @@ hook_cpp_binding_includes = ""
 --   X.h defines Above and Below as numbers, undef them for wx/layout.h
 hook_cpp_binding_post_includes =
 "#ifdef Above\n    #undef Above\n#endif\n"..
-"#ifdef Below\n    #undef Below\n#endif\n"
+"#ifdef Below\n    #undef Below\n#endif\n"..
+"#if wxUSE_PROPGRID && wxLUA_USE_wxPropertyGrid\n"..
+"#include \"wx/propgrid/propgriddefs.h\"\n"..
+"#endif\n"
 
 -- ----------------------------------------------------------------------------
 -- Add additional include information or C++ code for the binding header file,

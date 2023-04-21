@@ -928,20 +928,48 @@ class %delete wxFileOutputStream : public wxOutputStream
 class %delete wxMemoryInputStream : public wxInputStream
 {
     wxMemoryInputStream(const char *data, size_t length);
-    //wxMemoryInputStream(const wxMemoryOutputStream& stream);
+    wxMemoryInputStream(const wxMemoryOutputStream& stream);
 
 };
 
 // ---------------------------------------------------------------------------
 //  wxMemoryOutputStream
 
-//%include "wx/mstream.h"
+#include "wx/mstream.h"
 
-//class %delete wxMemoryInputStream : public wxInputStream
-//{
-//    wxMemoryOutputStream(void *data, size_t length);
-//    wxMemoryInputStream(const wxMemoryOutputStream& stream);
-//};
+class %delete wxMemoryOutputStream : public wxOutputStream
+{
+    // %override wxMemoryOutputStream(wxMemoryBuffer &buffer);
+    // C++ Func: wxMemoryOutputStream(void *data = NULL, size_t length = 0);
+    wxMemoryOutputStream();
+    wxMemoryOutputStream(wxMemoryBuffer &buffer, size_t length = 0);
+
+    // %override size_t CopyTo(wxMemoryBuffer &buffer);
+    // C++ Func: size_t CopyTo(void *buffer, size_t len);
+    size_t CopyTo(wxMemoryBuffer &buffer);
+};
+
+// ---------------------------------------------------------------------------
+//  wxStringInputStream
+
+#include "wx/sstream.h"
+
+class %delete wxStringInputStream : public wxInputStream
+{
+    wxStringInputStream(const wxString& s);
+};
+
+// ---------------------------------------------------------------------------
+//  wxStringOutputStream
+
+#include "wx/sstream.h"
+
+class %delete wxStringOutputStream : public wxOutputStream
+{
+    //  Implement only argumentless version
+    wxStringOutputStream();
+    const wxString& GetString() const;
+};
 
 // ---------------------------------------------------------------------------
 //  wxDataInputStream

@@ -496,6 +496,14 @@ enum
     wxMOUSE_BTN_RIGHT
 };
 
+#if %wxchkver_2_9_4
+enum wxMouseWheelAxis
+{
+    wxMOUSE_WHEEL_VERTICAL,
+    wxMOUSE_WHEEL_HORIZONTAL
+};
+#endif // %wxchkver_2_9_4
+
 class %delete wxMouseEvent : public wxEvent
 {
     %wxEventType wxEVT_ENTER_WINDOW    // EVT_ENTER_WINDOW(func);
@@ -511,6 +519,14 @@ class %delete wxMouseEvent : public wxEvent
     %wxEventType wxEVT_RIGHT_DCLICK    // EVT_RIGHT_DCLICK(func);
     %wxEventType wxEVT_RIGHT_DOWN      // EVT_RIGHT_DOWN(func);
     %wxEventType wxEVT_RIGHT_UP        // EVT_RIGHT_UP(func);
+
+    %wxchkver_3_0_0 %wxEventType wxEVT_AUX1_DOWN       // EVT_MOUSE_AUX1_DOWN(func);
+    %wxchkver_3_0_0 %wxEventType wxEVT_AUX1_UP         // EVT_MOUSE_AUX1_UP(func);
+    %wxchkver_3_0_0 %wxEventType wxEVT_AUX1_DCLICK     // EVT_MOUSE_AUX1_DCLICK(func);
+    %wxchkver_3_0_0 %wxEventType wxEVT_AUX2_DOWN       // EVT_MOUSE_AUX2_DOWN(func);
+    %wxchkver_3_0_0 %wxEventType wxEVT_AUX2_UP         // EVT_MOUSE_AUX2_UP(func);
+    %wxchkver_3_0_0 %wxEventType wxEVT_AUX2_DCLICK     // EVT_MOUSE_AUX2_DCLICK(func);
+    %wxchkver_3_1_0 %wxEventType wxEVT_MAGNIFY         // EVT_MAGNIFY (func);
 
     //%wxEventType wxEVT_NC_ENTER_WINDOW // FIXME - these are not used in wxWidgets
     //%wxEventType wxEVT_NC_LEAVE_WINDOW
@@ -549,6 +565,7 @@ class %delete wxMouseEvent : public wxEvent
     long GetX() const;
     long GetY();
     bool IsButton() const;
+    bool IsPageScroll() const;
     bool Leaving() const;
     bool LeftDClick() const;
     bool LeftDown() const;
@@ -565,6 +582,19 @@ class %delete wxMouseEvent : public wxEvent
     bool RightIsDown() const;
     bool RightUp() const;
     bool ShiftDown() const;
+
+    %wxchkver_2_9_0 int GetClickCount() const;
+    %wxchkver_2_9_5 int GetColumnsPerAction() const;
+    %wxchkver_3_1_0 float GetMagnification() const;
+    %wxchkver_2_9_4 wxMouseWheelAxis GetWheelAxis() const;
+    %wxchkver_3_1_3 bool IsWheelInverted() const;
+    %wxchkver_3_1_0 bool Magnify() const;
+    %wxchkver_3_0_0 bool Aux1DClick() const;
+    %wxchkver_3_0_0 bool Aux1Down() const;
+    %wxchkver_3_0_0 bool Aux1Up() const;
+    %wxchkver_3_0_0 bool Aux2DClick() const;
+    %wxchkver_3_0_0 bool Aux2Down() const;
+    %wxchkver_3_0_0 bool Aux2Up() const;
 };
 
 // ---------------------------------------------------------------------------

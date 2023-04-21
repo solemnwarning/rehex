@@ -69,7 +69,20 @@ hook_cpp_binding_includes = ""
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim below the
 --   #includes of every generated cpp file or "" for none
-hook_cpp_binding_post_includes = ""
+hook_cpp_binding_post_includes = "#if wxLUA_USE_wxRichText && wxCHECK_VERSION(3,0,0) && wxUSE_RICHTEXT\n" ..
+    "  static wxRichTextRange wxRICHTEXT_ALL_S = wxRICHTEXT_ALL;\n" ..
+    "  static wxRichTextRange wxRICHTEXT_NONE_S = wxRICHTEXT_NONE;\n" ..
+    "  static wxRichTextRange wxRICHTEXT_NO_SELECTION_S = wxRICHTEXT_NO_SELECTION;\n" ..
+    "#undef wxRICHTEXT_ALL\n" ..
+    "#undef wxRICHTEXT_NONE\n" ..
+    "#undef wxRICHTEXT_NO_SELECTION\n" ..
+    "#define wxRICHTEXT_ALL wxRICHTEXT_ALL_S\n" ..
+    "#define wxRICHTEXT_NONE wxRICHTEXT_NONE_S\n" ..
+    "#define wxRICHTEXT_NO_SELECTION wxRICHTEXT_NO_SELECTION_S\n" ..
+    "  static wxRect wxNULLRECT = wxRect();\n" ..
+    "  static wxPoint wxNULLPOINT = wxPoint(0, 0);\n" ..
+    "  static wxRichTextAttr wxDEFAULT_RICHTEXTATTR = wxRichTextAttr();\n" ..
+    "#endif\n"
 
 -- ----------------------------------------------------------------------------
 -- Add additional include information or C++ code for the binding header file.
@@ -77,7 +90,8 @@ hook_cpp_binding_post_includes = ""
 hook_cpp_binding_header_includes =
     "#include \"wxbind/include/wxbinddefs.h\"\n"..
     "#include \"wxluasetup.h\"\n"..
-    "#include \"wxbind/include/wxcore_bind.h\"\n"
+    "#include \"wxbind/include/wxcore_bind.h\"\n"..
+    "#include \"wxbind/include/wxxml_bind.h\"\n"
 
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim at the top of
@@ -94,14 +108,18 @@ interface_filepath = wxlua_dir.."bindings/wxwidgets"
 --   The files are loaded from the interface_filepath.
 interface_fileTable =
 {
-    "wxrichtext_richtext.i"
+    "wxrichtext_richtext.i",
+    "wxrichtext_print.i",
+    "wxrichtext_style.i",
+    "wxrichtext_symboldlg.i",
+    "wxrichtext_xml.i"
 }
 
 -- ----------------------------------------------------------------------------
 -- A list of files that contain bindings that need to be overridden or empty
 --   table {} for none.
 --   The files are loaded from the interface_filepath.
---override_fileTable = { "override.hpp" }
+override_fileTable = { "wxrichtext_override.hpp" }
 
 -- ============================================================================
 -- A table containing filenames of XXX_datatype.lua from other wrappers to
@@ -111,7 +129,8 @@ interface_fileTable =
 --        files are updated. Make sure you delete or have updated any cache file
 --        that changes any data types used by this binding.
 
-datatype_cache_input_fileTable = { wxlua_dir.."bindings/wxwidgets/wxcore_datatypes.lua" }
+datatype_cache_input_fileTable = { wxlua_dir.."bindings/wxwidgets/wxcore_datatypes.lua",
+                                   wxlua_dir.."bindings/wxwidgets/wxxml_datatypes.lua" }
 
 -- ----------------------------------------------------------------------------
 -- The file to output the data type cache for later use with a binding that

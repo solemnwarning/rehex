@@ -17,7 +17,7 @@
 -- Globals
 -- ---------------------------------------------------------------------------
 
-WXLUA_BINDING_VERSION = 41 -- Used to verify that the bindings are updated
+WXLUA_BINDING_VERSION = 44 -- Used to verify that the bindings are updated
                            -- This must match modules/wxlua/wxldefs.h
                            -- otherwise a compile time error will be generated.
 
@@ -1851,16 +1851,25 @@ function BuildDataTypeTable(interfaceData)
                 elseif action == "find_classbase" then
                     -- Note that [public,protected,private] is skipped by bindingKeywordTable
 
-                    if not dataTypeTable[tag] then
-                        AllocDataType(tag, "class", false)
-                    end
-
                     -- set class's BaseClass
                     if not dataTypeTable[classname].BaseClasses then
                         dataTypeTable[classname].BaseClasses = {}
                     end
 
-                    table.insert(dataTypeTable[classname].BaseClasses, tag)
+                    -- handle wxScrolled<wxControl>
+                    local name = tag
+                    if lineTags[t+1] == "<" then
+                       name = name .. lineTags[t+1]
+                       name = name .. lineTags[t+2]
+                       name = name .. lineTags[t+3]
+                       t = t + 3
+                    end
+
+                    if not dataTypeTable[name] then
+                        AllocDataType(name, "class", false)
+                    end
+
+                    table.insert(dataTypeTable[classname].BaseClasses, name)
 
                     action = "find_classcomma"
                 elseif action == "find_structname" then
@@ -2599,8 +2608,18 @@ function ParseData(interfaceData)
                             t = t + 1
                             tag = lineTags[t]
 
+                            -- handle wxScrolled<wxControl>
+                            local name = tag
+                            if lineTags[t+1] == "<" then
+                               name = name .. lineTags[t+1]
+                               name = name .. lineTags[t+2]
+                               name = name .. lineTags[t+3]
+                               t = t + 3
+                               tag = lineTags[t]
+                            end
+
                             if class_access == "public" then
-                                table.insert(parseState.ObjectStack[1].BaseClasses, tag)
+                                table.insert(parseState.ObjectStack[1].BaseClasses, name)
                             end
 
                             lineState.Action = "action_baseclasscomma"
@@ -2924,6 +2943,17 @@ function ParseData(interfaceData)
 
                                 lineState.Action = "action_method_body"
                                 lineState.ActionMandatory = false
+                            elseif tag == "(" and lineTags[t+1] == ")" then
+                                if not lineState.ParamState.DefaultValue then
+                                    print("ERROR: Method Parameter requires DefaultValue to be assigned. "..LineTableErrString(lineTable))
+                                end
+
+                                lineState.ParamState.DefaultValue = lineState.ParamState.DefaultValue .. "()"
+                                t = t + 1
+                                tag = lineTags[t]
+
+                                lineState.Action = "action_methodparam_defaultvalue"
+                                lineState.ActionMandatory = true
                             elseif --IsDataType(tag) or
                                    dataTypeAttribTable[tag] or functionAttribTable[tag] or
                                    (tag == "*") or (tag == "&") or (tag == "[]") or
@@ -3375,6 +3405,10 @@ if ((double)(lua_Integer)(%s) == (double)(%s)) {
                     overload_argList = overload_argList.."&wxluatype_TSTRING, "
                     CommentBindingTable(codeList, "    // get the string value\n")
                     table.insert(codeList, "    wxString val = wxlua_getwxStringtype(L, "..stack_idx..");\n")
+                elseif memberType == "wxUniChar" then
+                    overload_argList = overload_argList.."&wxluatype_TSTRING, "
+                    CommentBindingTable(codeList, "    // get the unichar value\n")
+                    table.insert(codeList, "    wxUniChar val = wxlua_getwxUniChartype(L, "..stack_idx..");\n")
                 elseif not numeric and (not memberPtr or (memberPtr == "&"))  then
                     overload_argList = overload_argList.."&wxluatype_"..MakeClassVar(memberType)..", "
                     CommentBindingTable(codeList, "    // get the data type value\n")
@@ -3868,9 +3902,18 @@ if ((double)(lua_Integer)(%s) == (double)(%s)) {
                             end
                         end
                     elseif (indirectionCount == 2) and (argPtr == "*") then
+
                         if not numeric then
                             overload_argList = overload_argList.."&wxluatype_"..MakeClassVar(argType)..", "
-                            argTypeWithAttrib = argTypeWithAttrib.." **"
+
+                            -- Handle cases like wxPGProperty*& where a single
+                            -- pointer must be passed
+                            if param.TypedDataTypePointer[2] == "&" then
+                               argTypeWithAttrib = argTypeWithAttrib.." *"
+                            else
+                               argTypeWithAttrib = argTypeWithAttrib.." **"
+                            end
+
                             argItem = "("..argTypeWithAttrib..")wxluaT_getuserdatatype(L, "..argNum..", wxluatype_"..MakeClassVar(argType)..")"
                         else
                             overload_argList = overload_argList.."&wxluatype_TLIGHTUSERDATA, "
@@ -3922,6 +3965,12 @@ if ((double)(lua_Integer)(%s) == (double)(%s)) {
                                     opt = "wxString("..opt..")"
                                 end
                             end
+                        elseif argType == "wxVariant" then
+                            overload_argList = overload_argList.."&wxluatype_TANY, "
+                            argItem = "wxlua_getwxVarianttype(L, "..argNum..")"
+                        elseif argType == "wxUniChar" then
+                            overload_argList = overload_argList.."&wxluatype_TSTRING, "
+                            argItem = "wxlua_getwxUniChartype(L, "..argNum..")"
                         elseif IsDataTypeBool(argTypeWithAttrib) then
                             overload_argList = overload_argList.."&wxluatype_TBOOLEAN, "
                             argItem = "wxlua_getbooleantype(L, "..argNum..")"
@@ -4898,7 +4947,7 @@ function GenerateHookClassFileTable(fileData)
     classNames = TableSort(classNames)
 
     for _, c in pairs_sort(classNames) do
-        table.insert(fileData, "static const char* wxluaclassname_"..c.." = \""..c.."\";\n")
+        table.insert(fileData, "static const char* wxluaclassname_"..c:gsub("[<>]", "_").." = \""..c.."\";\n")
     end
 
     table.insert(fileData, "\n")
@@ -4909,6 +4958,7 @@ function GenerateHookClassFileTable(fileData)
                 local bc_n = 0
                 local s = "static const char* wxluabaseclassnames_"..sortedBindings[n][i].LuaName.."[] = {"
                 for _, bc in ipairs(sortedBindings[n][i].BaseClasses) do
+                    bc = bc:gsub("[<>]", "_");
                     s = s.." wxluaclassname_"..bc..","
                     bc_n = bc_n + 1
                 end

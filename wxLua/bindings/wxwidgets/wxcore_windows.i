@@ -908,7 +908,53 @@ enum wxScrollbarVisibility
 };
 #endif //%wxchkver_2_9_0
 
-class wxScrolledWindow : public wxPanel
+class wxScrollHelper
+{
+#if %wxchkver_3_0_0
+    void DisableKeyboardScrolling();
+    virtual void OnDraw(wxDC& dc);
+    virtual void DoPrepareDC(wxDC& dc);
+    wxWindow *GetTargetWindow() const;
+    void HandleOnChar(wxKeyEvent& event);
+    void HandleOnPaint(wxPaintEvent& event);
+    virtual void SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY, int noUnitsX, int noUnitsY, int xPos = 0, int yPos = 0, bool noRefresh = false );
+    virtual void Scroll(int x, int y);
+    virtual void Scroll(const wxPoint& pt);
+    int GetScrollPageSize(int orient) const;
+    void SetScrollPageSize(int orient, int pageSize);
+    int GetScrollLines( int orient ) const;
+    void SetScrollRate( int xstep, int ystep );
+    void GetScrollPixelsPerUnit(int *pixelsPerUnitX, int *pixelsPerUnitY) const; // %override return [int xUnit, int yUnit]
+    void ShowScrollbars(wxScrollbarVisibility horz, wxScrollbarVisibility vert);
+    virtual bool IsScrollbarShown(int orient) const;
+    virtual void EnableScrolling(bool x_scrolling, bool y_scrolling);
+    void GetViewStart() const;  // %override return [int x, int y]
+    // wxPoint GetViewStart() const;
+    void SetScale(double xs, double ys);
+    double GetScaleX() const;
+    double GetScaleY() const;
+    void CalcScrolledPosition(int x, int y) const; // %override return [int xx, int yy]
+    //wxPoint CalcScrolledPosition(const wxPoint& pt) const;
+    void CalcUnscrolledPosition(int x, int y) const; // %override return [int xx, int yy]
+    //wxPoint CalcUnscrolledPosition(const wxPoint& pt) const;
+    //void DoCalcScrolledPosition(int x, int y, int *xx, int *yy) const;
+    //void DoCalcUnscrolledPosition(int x, int y, int *xx, int *yy) const;
+    virtual void AdjustScrollbars();
+    int CalcScrollInc(wxScrollWinEvent& event);
+    void SetTargetWindow(wxWindow *target);
+    void SetTargetRect(const wxRect& rect);
+    wxRect GetTargetRect() const;
+    bool IsAutoScrolling() const;
+    void StopAutoScrolling();
+    virtual bool SendAutoScrollEvents(wxScrollWinEvent& event) const;
+    void HandleOnScroll(wxScrollWinEvent& event);
+    void HandleOnSize(wxSizeEvent& event);
+    void HandleOnMouseEnter(wxMouseEvent& event);
+    void HandleOnMouseLeave(wxMouseEvent& event);
+#endif
+};
+
+class wxScrolledWindow : public wxPanel, public wxScrollHelper
 {
     wxScrolledWindow();
     wxScrolledWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxHSCROLL | wxVSCROLL, const wxString& name = "wxScrolledWindow");
@@ -916,49 +962,49 @@ class wxScrolledWindow : public wxPanel
 
     // %override [int xx, int yy] void wxScrolledWindow::CalcScrolledPosition(int x, int y) const;
     // C++ Func: void CalcScrolledPosition(int x, int y, int *xx, int *yy) const;
-    void CalcScrolledPosition(int x, int y) const;
+    !%wxchkver_3_0_0 void CalcScrolledPosition(int x, int y) const;
 
     // %override [int xx, int yy] void wxScrolledWindow::CalcUnscrolledPosition(int x, int y) const;
     // C++ Func: void CalcUnscrolledPosition(int x, int y, int *xx, int *yy) const;
-    void CalcUnscrolledPosition(int x, int y) const;
+    !%wxchkver_3_0_0 void CalcUnscrolledPosition(int x, int y) const;
 
-    void EnableScrolling(const bool xScrolling, const bool yScrolling);
+    !%wxchkver_3_0_0 void EnableScrolling(const bool xScrolling, const bool yScrolling);
 
     // %override [int xUnit, int yUnit] wxScrolledWindow::GetScrollPixelsPerUnit() const;
     // C++ Func: void GetScrollPixelsPerUnit(int* xUnit, int* yUnit) const;
-    void GetScrollPixelsPerUnit() const;
+    !%wxchkver_3_0_0 void GetScrollPixelsPerUnit() const;
 
     // %override [int x, int y] wxScrolledWindow::GetViewStart() const;
     // C++ Func: void GetViewStart(int* x, int* y) const;
-    void GetViewStart() const;
+    !%wxchkver_3_0_0 void GetViewStart() const;
 
     //// %override [int x, int y] wxScrolledWindow::GetVirtualSize() const;
     //// C++ Func: void GetVirtualSize(int* x, int* y) const;
     //void GetVirtualSize() const; // see wxWindow::GetVirtualSize
 
-    %wxchkver_2_9_0 void ShowScrollbars(wxScrollbarVisibility horz, wxScrollbarVisibility vert);
-    %wxchkver_2_9_1 void DisableKeyboardScrolling();
+    %wxchkver_2_9_0 && !%wxchkver_3_0_0 void ShowScrollbars(wxScrollbarVisibility horz, wxScrollbarVisibility vert);
+    %wxchkver_2_9_1 && !%wxchkver_3_0_0 void DisableKeyboardScrolling();
 
     //bool IsRetained() const; // see wxWindow::IsRetained
     void PrepareDC(wxDC& dc);
-    void Scroll(int x, int y);
-    void SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY, int noUnitsX, int noUnitsY, int xPos = 0, int yPos = 0, bool noRefresh = false);
-    void SetScrollRate(int xstep, int ystep);
-    void SetTargetWindow(wxWindow* window);
-    wxWindow *GetTargetWindow() const;
+    !%wxchkver_3_0_0 void Scroll(int x, int y);
+    !%wxchkver_3_0_0 void SetScrollbars(int pixelsPerUnitX, int pixelsPerUnitY, int noUnitsX, int noUnitsY, int xPos = 0, int yPos = 0, bool noRefresh = false);
+    !%wxchkver_3_0_0 void SetScrollRate(int xstep, int ystep);
+    !%wxchkver_3_0_0 void SetTargetWindow(wxWindow* window);
+    !%wxchkver_3_0_0 wxWindow *GetTargetWindow() const;
 
-    void SetTargetRect(const wxRect& rect);
-    wxRect GetTargetRect() const;
+    !%wxchkver_3_0_0 void SetTargetRect(const wxRect& rect);
+    !%wxchkver_3_0_0 wxRect GetTargetRect() const;
 
-    int GetScrollPageSize(int orient) const;
-    void SetScrollPageSize(int orient, int pageSize);
-    int GetScrollLines(int orient) const;
-    void SetScale(double xs, double ys);
-    double GetScaleX() const;
-    double GetScaleY() const;
+    !%wxchkver_3_0_0 int GetScrollPageSize(int orient) const;
+    !%wxchkver_3_0_0 void SetScrollPageSize(int orient, int pageSize);
+    !%wxchkver_3_0_0 int GetScrollLines(int orient) const;
+    !%wxchkver_3_0_0 void SetScale(double xs, double ys);
+    !%wxchkver_3_0_0 double GetScaleX() const;
+    !%wxchkver_3_0_0 double GetScaleY() const;
 
-    bool IsAutoScrolling() const;
-    void StopAutoScrolling();
+    !%wxchkver_3_0_0 bool IsAutoScrolling() const;
+    !%wxchkver_3_0_0 void StopAutoScrolling();
 
     // void SetVirtualSize(int width, int height) -- see wxWindow
 

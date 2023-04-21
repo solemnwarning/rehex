@@ -3618,7 +3618,8 @@ class wxStyledTextCtrl : public wxControl
     /**
         Add a selection
     */
-    %wxchkver_2_9_5 int AddSelection(int caret, int anchor);
+    !%wxchkver_3_2_2 && %wxchkver_2_9_5 int AddSelection(int caret, int anchor);
+    %wxchkver_3_2_2 void AddSelection(int caret, int anchor);
 
     /**
         Drop one selection

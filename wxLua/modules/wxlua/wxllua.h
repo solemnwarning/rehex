@@ -507,12 +507,14 @@ WXDLLIMPEXP_WXLUA bool wxlua_iswxstringtype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA const char* LUACALL wxlua_getstringtypelen(lua_State* L, int stack_idx, size_t *len);
 WXDLLIMPEXP_WXLUA const char* LUACALL wxlua_getstringtype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA wxString LUACALL    wxlua_getwxStringtype(lua_State* L, int stack_idx);
+WXDLLIMPEXP_WXLUA wxUniChar LUACALL   wxlua_getwxUniChartype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA bool LUACALL        wxlua_getbooleantype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA long LUACALL        wxlua_getenumtype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA long LUACALL        wxlua_getintegertype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA unsigned long LUACALL wxlua_getuintegertype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA double LUACALL      wxlua_getnumbertype(lua_State* L, int stack_idx);
 WXDLLIMPEXP_WXLUA void* LUACALL       wxlua_getpointertype(lua_State* L, int stack_idx);
+WXDLLIMPEXP_WXLUA wxVariant LUACALL   wxlua_getwxVarianttype(lua_State* L, int stack_idx);
 
 
 // Helper functions to get/set tables of strings and ints

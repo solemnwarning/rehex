@@ -178,12 +178,15 @@ wxLuaBinding_class_implementation =
     wxluaT_pushuserdatatype(L, NULL, wxluatype_NULL, true, true);
     lua_rawset(L, -3); // set t["NULL"] = userdata(NULL) w/ NULL tag
 
+    p_wxluatype_wxUniChar           = &wxluatype_wxUniChar;
     p_wxluatype_wxString            = &wxluatype_wxString;
     p_wxluatype_wxArrayString       = &wxluatype_wxArrayString;
     p_wxluatype_wxSortedArrayString = &wxluatype_wxSortedArrayString;
     p_wxluatype_wxArrayInt          = &wxluatype_wxArrayInt;
     p_wxluatype_wxArrayDouble       = &wxluatype_wxArrayDouble;
     p_wxluatype_wxMemoryBuffer      = &wxluatype_wxMemoryBuffer;
+    p_wxluatype_wxDateTime          = &wxluatype_wxDateTime;
+    p_wxluatype_wxVariant           = &wxluatype_wxVariant;
 
     return ret;
 }

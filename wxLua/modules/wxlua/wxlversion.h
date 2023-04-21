@@ -16,10 +16,10 @@
 //-----------------------------------------------------------------------------
 
 #define wxLUA_MAJOR_VERSION       3
-#define wxLUA_MINOR_VERSION       1
+#define wxLUA_MINOR_VERSION       2
 #define wxLUA_RELEASE_NUMBER      0
-#define wxLUA_SUBRELEASE_NUMBER   0
-#define wxLUA_VERSION_STRING      wxT("wxLua 3.1.0.0")
+#define wxLUA_SUBRELEASE_NUMBER   2
+#define wxLUA_VERSION_STRING      wxT("wxLua 3.2.0.2")
 
 // For non-Unix systems (i.e. when building without a configure script),
 // users of this component can use the following macro to check if the
@@ -46,7 +46,7 @@
 //   in genwxbind.lua as well.
 //-----------------------------------------------------------------------------
 
-#define WXLUA_BINDING_VERSION 41
+#define WXLUA_BINDING_VERSION 44
 
 
 #endif // __WX_WXLVERSION_H__

@@ -279,4 +279,41 @@ class %delete wxRect2DInt
 //    wxRect2DInt     wxTransform2D::InverseTransform(const wxRect2DInt &r) const;
 //};
 
+// ---------------------------------------------------------------------------
+// wxPosition
+
+#include "wx/position.h"
+class %delete wxPosition
+{
+public:
+    wxPosition();
+    wxPosition(int row, int col);
+
+    // default copy ctor and assignment operator are okay.
+
+    int GetRow() const;
+    int GetColumn() const;
+    int GetCol() const;
+    void SetRow(int row);
+    void SetColumn(int column);
+    void SetCol(int column);
+
+    bool operator==(const wxPosition& p) const;
+    bool operator!=(const wxPosition& p) const;
+
+    wxPosition& operator+=(const wxPosition& p);
+    wxPosition& operator-=(const wxPosition& p);
+    wxPosition& operator+=(const wxSize& s);
+    wxPosition& operator-=(const wxSize& s);
+
+    wxPosition operator+(const wxPosition& p) const;
+    wxPosition operator-(const wxPosition& p) const;
+    wxPosition operator+(const wxSize& s) const;
+    wxPosition operator-(const wxSize& s) const;
+
+private:
+    int m_row;
+    int m_column;
+};
+
 #endif //wxLUA_USE_Geometry && wxUSE_GEOMETRY

@@ -572,7 +572,7 @@ static int LUACALL wxLua_wxLuaListCtrl_constructor(lua_State *L)
 }
 %end
 
-#if wxCHECK_VERSION(3, 1, 1)
+#if wxCHECK_VERSION(3, 0, 0)
 %override wxLua_wxTextEntry_GetSelection
 // virtual void GetSelection(long* from, long* to)
 static int LUACALL wxLua_wxTextEntry_GetSelection(lua_State *L)
@@ -608,6 +608,72 @@ static int LUACALL wxLua_wxTextCtrl_GetSelection(lua_State *L)
 %end
 #endif
 
+#if wxCHECK_VERSION(3, 0, 0)
+%override wxLua_wxTextAreaBase_HitTest
+//     wxTextCtrlHitTestResult HitTest(const wxPoint& pt, wxTextCoord *col, wxTextCoord *row) const
+static int LUACALL wxLua_wxTextAreaBase_HitTest(lua_State *L)
+{
+    // wxTextCoord row
+    wxTextCoord row = wxInvalidTextCoord;
+    // wxTextCoord col
+    wxTextCoord col = wxInvalidTextCoord;
+    // const wxPoint pt
+    const wxPoint * pt = (const wxPoint *)wxluaT_getuserdatatype(L, 2, wxluatype_wxPoint);
+    // get this
+    wxTextAreaBase * self = (wxTextAreaBase *)wxluaT_getuserdatatype(L, 1, wxluatype_wxTextAreaBase);
+    // call HitTest
+    wxTextCtrlHitTestResult returns = self->HitTest(*pt, &col, &row);
+    // push the result number
+    lua_pushinteger(L, returns);
+    lua_pushinteger(L, row);
+    lua_pushinteger(L, col);
+
+    return 3;
+}
+%end
+
+%override wxLua_wxTextAreaBase_HitTestPos
+//     wxTextCtrlHitTestResult HitTestPos(const wxPoint& pt, long *pos) const
+static int LUACALL wxLua_wxTextAreaBase_HitTestPos(lua_State *L)
+{
+    // long pos
+    long pos = wxInvalidTextCoord;
+    // wxTextCoord col
+    const wxPoint * pt = (const wxPoint *)wxluaT_getuserdatatype(L, 2, wxluatype_wxPoint);
+    // get this
+    wxTextAreaBase * self = (wxTextAreaBase *)wxluaT_getuserdatatype(L, 1, wxluatype_wxTextAreaBase);
+    // call HitTest
+    wxTextCtrlHitTestResult returns = self->HitTest(*pt, &pos);
+    // push the result number
+    lua_pushinteger(L, returns);
+    lua_pushinteger(L, pos);
+
+    return 2;
+}
+%end
+
+%override wxLua_wxTextAreaBase_PositionToXY
+// bool PositionToXY(long pos, long *x, long *y) const
+static int LUACALL wxLua_wxTextAreaBase_PositionToXY(lua_State *L)
+{
+    long y;
+    long x;
+    // long pos
+    long pos = (long)wxlua_getintegertype(L, 2);
+    // get this
+    wxTextAreaBase *self = (wxTextCtrl *)wxluaT_getuserdatatype(L, 1, wxluatype_wxTextAreaBase);
+    // call PositionToXY
+    bool returns = self->PositionToXY(pos, &x, &y);
+    // push the result number
+    lua_pushboolean(L, returns);
+    lua_pushinteger(L, x);
+    lua_pushinteger(L, y);
+    // return the number of parameters
+    return 3;
+}
+%end
+
+#else
 %override wxLua_wxTextCtrl_HitTest
 //     wxTextCtrlHitTestResult HitTest(const wxPoint& pt, wxTextCoord *col, wxTextCoord *row) const
 static int LUACALL wxLua_wxTextCtrl_HitTest(lua_State *L)
@@ -671,6 +737,8 @@ static int LUACALL wxLua_wxTextCtrl_PositionToXY(lua_State *L)
     return 3;
 }
 %end
+
+#endif
 
 %override wxLua_wxTreeItemId_GetValue
 // long  GetValue() const;
@@ -2800,6 +2868,86 @@ static int LUACALL wxLua_wxNotebook_HitTest(lua_State *L)
 }
 %end
 
+#if %wxchkver_3_0_0
+
+%override wxLua_wxScrollHelper_CalcScrolledPosition
+// void CalcScrolledPosition(int x, int y, int *xx, int *yy) const
+static int LUACALL wxLua_wxScrollHelper_CalcScrolledPosition(lua_State *L)
+{
+    int yy;
+    int xx;
+    // int y
+    int y = (int)wxlua_getnumbertype(L, 3);
+    // int x
+    int x = (int)wxlua_getnumbertype(L, 2);
+    // get this
+    wxScrollHelper *self = (wxScrollHelper *)wxluaT_getuserdatatype(L, 1, wxluatype_wxScrollHelper);
+    // call CalcScrolledPosition
+    self->CalcScrolledPosition(x, y, &xx, &yy);
+    lua_pushinteger(L, xx);
+    lua_pushinteger(L, yy);
+    // return the number of parameters
+    return 2;
+}
+%end
+
+%override wxLua_wxScrollHelper_CalcUnscrolledPosition
+// void CalcUnscrolledPosition(int x, int y, int *xx, int *yy) const
+static int LUACALL wxLua_wxScrollHelper_CalcUnscrolledPosition(lua_State *L)
+{
+    int yy;
+    int xx;
+    // int y
+    int y = (int)wxlua_getnumbertype(L, 3);
+    // int x
+    int x = (int)wxlua_getnumbertype(L, 2);
+    // get this
+    wxScrollHelper *self = (wxScrollHelper *)wxluaT_getuserdatatype(L, 1, wxluatype_wxScrollHelper);
+    // call CalcUnscrolledPosition
+    self->CalcUnscrolledPosition(x, y, &xx, &yy);
+    lua_pushinteger(L, xx);
+    lua_pushinteger(L, yy);
+    // return the number of parameters
+    return 2;
+}
+%end
+
+%override wxLua_wxScrollHelper_GetScrollPixelsPerUnit
+// void GetScrollPixelsPerUnit(int* xUnit, int* yUnit) const
+static int LUACALL wxLua_wxScrollHelper_GetScrollPixelsPerUnit(lua_State *L)
+{
+    int yUnit;
+    int xUnit;
+    // get this
+    wxScrollHelper *self = (wxScrollHelper *)wxluaT_getuserdatatype(L, 1, wxluatype_wxScrollHelper);
+    // call GetScrollPixelsPerUnit
+    self->GetScrollPixelsPerUnit(&xUnit, &yUnit);
+    lua_pushinteger(L, xUnit);
+    lua_pushinteger(L, yUnit);
+    // return the number of parameters
+    return 2;
+}
+%end
+
+%override wxLua_wxScrollHelper_GetViewStart
+// void GetViewStart(int* x, int* y) const
+static int LUACALL wxLua_wxScrollHelper_GetViewStart(lua_State *L)
+{
+    int y;
+    int x;
+    // get this
+    wxScrollHelper *self = (wxScrollHelper *)wxluaT_getuserdatatype(L, 1, wxluatype_wxScrollHelper);
+    // call GetViewStart
+    self->GetViewStart(&x, &y);
+    lua_pushinteger(L, x);
+    lua_pushinteger(L, y);
+    // return the number of parameters
+    return 2;
+}
+%end
+
+#else
+
 %override wxLua_wxScrolledWindow_CalcScrolledPosition
 // void CalcScrolledPosition(int x, int y, int *xx, int *yy) const
 static int LUACALL wxLua_wxScrolledWindow_CalcScrolledPosition(lua_State *L)
@@ -2875,6 +3023,7 @@ static int LUACALL wxLua_wxScrolledWindow_GetViewStart(lua_State *L)
     return 2;
 }
 %end
+#endif
 
 %override wxLua_wxTabCtrl_HitTest
 // int HitTest(const wxPoint& pt, long& flags)
@@ -2982,6 +3131,53 @@ static int LUACALL wxLua_wxGraphicsContext_StrokeLines1(lua_State *L)
     self->StrokeLines((size_t)(beginPoints ? beginPoints->size() : 0), (beginPoints && (!beginPoints->empty())) ? &beginPoints->at(0) : NULL, (endPoints && (!endPoints->empty())) ? &endPoints->at(0) : NULL);
 
     return 0;
+}
+%end
+
+%override wxLua_wxGraphicsPenInfo_GetDashes
+// void GetDashes()
+static int LUACALL wxLua_wxGraphicsPenInfo_GetDashes(lua_State *L)
+{
+    // get this
+    wxGraphicsPenInfo *self = (wxGraphicsPenInfo *)wxluaT_getuserdatatype(L, 1, wxluatype_wxGraphicsPenInfo);
+    // get dashes
+    wxDash *dashes;
+    int nb_dashes = self->GetDashes(&dashes);
+    if (nb_dashes == 0)
+        return 0;  //  No dashes are defined
+    // create a table (which will be the return value)
+    lua_newtable(L);
+    for (int idx = 0; idx < nb_dashes; ++idx) {
+        lua_pushinteger(L, dashes[idx]);
+        lua_rawseti(L, -2, idx + 1);
+    }
+    //  return the number of parameters
+    return 1;
+}
+%end
+
+%override wxLua_wxGraphicsPenInfo_Dashes
+// wxGraphicsPenInfo& Dashes()
+static int LUACALL wxLua_wxGraphicsPenInfo_Dashes(lua_State *L)
+{
+    // get this
+    wxGraphicsPenInfo *self = (wxGraphicsPenInfo *)wxluaT_getuserdatatype(L, 1, wxluatype_wxGraphicsPenInfo);
+    // check if we have a table argument
+    if (!wxlua_iswxluatype(lua_type(L, 2), WXLUA_TTABLE))
+        wxlua_argerror(L, 2, wxT("a 'table'"));
+    int count = lua_objlen(L, 2);
+    // allocate an array of wxDashes
+    // TODO: this memory will leak when wxGraphicsPenInfo is destroyed.
+    wxDash *dashes = new wxDash[count];
+    for (int idx = 1; idx <= count; idx++) {
+        lua_rawgeti(L, 2, idx);
+        dashes[idx - 1] = (wxDash)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+    }
+    wxGraphicsPenInfo *returns = &(self->Dashes(count, dashes));
+    // push the result data
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxGraphicsPenInfo);
+    return 1;
 }
 %end
 

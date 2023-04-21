@@ -78,6 +78,7 @@ wxUSE_TEXTDLG wxString wxGetTextFromUser(const wxString& message, const wxString
 wxUSE_CHOICEDLG wxString wxGetSingleChoice(const wxString& message, const wxString& caption, const wxArrayString& choices, wxWindow *parent = NULL, int x = wxDefaultCoord, int y = wxDefaultCoord, bool centre = true, int width = wxCHOICE_WIDTH, int height = wxCHOICE_HEIGHT);
 wxUSE_CHOICEDLG int wxGetSingleChoiceIndex(const wxString& message, const wxString& caption, const wxArrayString& choices, wxWindow *parent = NULL, int x = wxDefaultCoord, int y = wxDefaultCoord, bool centre = true, int width = wxCHOICE_WIDTH, int height = wxCHOICE_HEIGHT);
 wxUSE_CHOICEDLG int wxGetSelectedChoices(wxArrayInt& selections, const wxString& message, const wxString& caption, const wxArrayString& aChoices, wxWindow* parent = NULL, int x = wxDefaultCoord, int y = wxDefaultCoord, bool centre = true, int width = wxCHOICE_WIDTH, int height = wxCHOICE_HEIGHT);
+wxUSE_NUMBERDLG long wxGetNumberFromUser(const wxString& message, const wxString& prompt, const wxString& caption, long value, long min = 0, long max = 100, wxWindow* parent = NULL, const wxPoint& pos = wxDefaultPosition);
 bool wxIsBusy();
 int wxMessageBox(const wxString& message, const wxString& caption = "Message", int style = wxOK | wxCENTRE, wxWindow *parent = NULL, int x = -1, int y = -1);
 // bool wxShowTip(wxWindow *parent, wxTipProvider *tipProvider, bool showAtStartup = true);
@@ -499,3 +500,18 @@ class wxProgressDialog : public wxDialog
 };
 
 #endif //wxUSE_PROGRESSDLG && wxLUA_USE_wxProgressDialog
+
+// ---------------------------------------------------------------------------
+// wxNumberEntryDialog - see also wxGetNumberFromUser
+
+#if wxUSE_NUMBERDLG && wxLUA_USE_wxNumberEntryDialog
+
+class wxNumberEntryDialog : public wxDialog
+{
+    wxNumberEntryDialog(wxWindow *parent, const wxString& message, const wxString& prompt, const wxString& caption, long value, long min, long max, const wxPoint& pos = wxDefaultPosition);
+
+    long GetValue() const;
+    // int ShowModal() - in wxDialog
+};
+
+#endif

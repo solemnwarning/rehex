@@ -37,7 +37,7 @@ class %delete wxMenu : public wxEvtHandler
     wxMenuItem* AppendCheckItem(int id, const wxString& item, const wxString& help = "");
     wxMenuItem* AppendRadioItem(int id, const wxString& item, const wxString& help = "");
     wxMenuItem* AppendSeparator();
-    wxMenuItem* AppendSubMenu(wxMenu *submenu, const wxString& text, const wxString& help = "");
+    wxMenuItem* AppendSubMenu(%ungc wxMenu *submenu, const wxString& text, const wxString& help = "");
     void Break();
     void Check(int id, bool check);
     void Delete(int id);
@@ -156,7 +156,7 @@ class %delete wxMenuItem : public wxObject
     %wxchkver_2_8 static wxString GetLabelText(const wxString& text);
     %win wxColour GetBackgroundColour() const;
     %win wxBitmap GetBitmap(bool checked = true) const;
-    %win wxBitmap& GetDisabledBitmap() const;
+    %win wxBitmap GetDisabledBitmap() const;
     %win wxFont GetFont() const;
     wxString GetHelp() const;
     int GetId() const;

@@ -617,6 +617,25 @@ static int LUACALL wxLua_wxString_constructor(lua_State *L)
 }
 %end
 
+%override wxLua_wxUniChar_constructor
+//     wxUniChar(const string& str = "")
+static int LUACALL wxLua_wxUniChar_constructor(lua_State *L)
+{
+    // get number of arguments
+    int argCount = lua_gettop(L);
+    // const wxUniChar c
+    const wxUniChar c = (argCount >= 1 ? wxlua_getwxUniChartype(L, 1) : wxUniChar());
+    // call constructor
+    wxUniChar* returns = new wxUniChar(c);
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxUniChar);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxUniChar);
+
+    return 1;
+}
+%end
+
 %override wxLua_wxClassInfo_constructor
 // wxClassInfo(const wxString &name)
 static int LUACALL wxLua_wxClassInfo_constructor(lua_State *L)
@@ -813,6 +832,348 @@ static int LUACALL wxLua_wxMemoryBuffer_Fill(lua_State *L)
     return 0;
 }
 %end
+
+#if wxUSE_VARIANT
+
+%override wxLua_wxVariant_ConvertToBool
+// C++: bool Convert(bool *value)
+// Lua: [bool, bool]ConvertToBool()
+static int LUACALL wxLua_wxVariant_ConvertToBool(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(bool*)
+    bool value;
+    bool returns = (self->Convert(&value));
+    // push the result flag and value
+    lua_pushboolean(L, returns);
+    lua_pushboolean(L, value);
+
+    return 2;
+}
+%end
+
+#if wxUSE_DATETIME
+%override wxLua_wxVariant_ConvertToDateTime
+// C++: bool Convert(wxDateTime *value)
+// Lua: [bool, wxDateTime]ConvertToDateTime()
+static int LUACALL wxLua_wxVariant_ConvertToDateTime(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(wxDateTime*)
+    wxDateTime value;
+    wxDateTime *newValue = NULL;
+    bool returns = (self->Convert(&value));
+    if (returns)
+        newValue = new wxDateTime(value);
+    else
+        newValue = new wxDateTime();   //  Empty value
+    // push the result flag
+    lua_pushboolean(L, returns);
+    // add the new object to the tracked memory list
+    wxluaO_addgcobject(L, newValue, wxluatype_wxDateTime);
+    // push the result datatype
+    wxluaT_pushuserdatatype(L, newValue, wxluatype_wxDateTime);
+
+    return 2;
+}
+%end
+#endif  // wxUSE_DATETIME
+
+%override wxLua_wxVariant_ConvertToDouble
+// C++: bool Convert(double *value)
+// Lua: [bool, double]ConvertToDouble()
+static int LUACALL wxLua_wxVariant_ConvertToDouble(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(double*)
+    double value;
+    bool returns = (self->Convert(&value));
+    // push the result flag and value
+    lua_pushboolean(L, returns);
+    lua_pushnumber(L, value);
+
+    return 2;
+}
+%end
+
+%override wxLua_wxVariant_ConvertToLong
+// C++: bool Convert(long *value)
+// Lua: [bool, long]ConvertToLong()
+static int LUACALL wxLua_wxVariant_ConvertToLong(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(long*)
+    long value;
+    bool returns = (self->Convert(&value));
+    // push the result flag and value
+    lua_pushboolean(L, returns);
+    // push the result number
+#if LUA_VERSION_NUM >= 503
+if ((double)(lua_Integer)value == (double)value) {
+    // Exactly representable as lua_Integer
+    lua_pushinteger(L, value);
+} else
+#endif
+{
+    lua_pushnumber(L, value);
+}
+    return 2;
+}
+%end
+
+#if wxUSE_LONGLONG
+%override wxLua_wxVariant_ConvertToLongLong
+// C++: bool Convert(wxLongLong *value)
+// Lua: [bool, wxLongLong]ConvertToLongLong()
+static int LUACALL wxLua_wxVariant_ConvertToLongLong(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(wxLongLong*)
+    wxLongLong value;
+    bool returns = (self->Convert(&value));
+    // allocate a new object using the copy constructor
+    wxLongLong *newValue;
+    if (returns)
+        newValue = new wxLongLong(value);
+    else
+        newValue = new wxLongLong();
+    // push the result flag
+    lua_pushboolean(L, returns);
+    // add the new object to the tracked memory list
+    wxluaO_addgcobject(L, newValue, wxluatype_wxLongLong);
+    // push the result datatype
+    wxluaT_pushuserdatatype(L, newValue, wxluatype_wxLongLong);
+
+    return 2;
+}
+%end
+#endif // wxUSE_LONGLONG
+
+%override wxLua_wxVariant_ConvertToString
+// C++: bool Convert(wxString *value)
+// Lua: [bool, string]ConvertToString()
+static int LUACALL wxLua_wxVariant_ConvertToString(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(wxString*)
+    wxString value;
+    bool returns = (self->Convert(&value));
+    // push the result flag
+    lua_pushboolean(L, returns);
+    // push the string
+    wxlua_pushwxString(L, value);
+
+    return 2;
+}
+%end
+
+#if wxUSE_LONGLONG
+%override wxLua_wxVariant_ConvertToULongLong
+// C++: bool Convert(wxULongLong *value)
+// Lua: [bool, wxULongLong]ConvertToULongLong()
+static int LUACALL wxLua_wxVariant_ConvertToULongLong(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call Convert(wxULongLong*)
+    wxULongLong value;
+    bool returns = (self->Convert(&value));
+    // allocate a new object using the copy constructor
+    wxULongLong *newValue;
+    if (returns)
+        newValue = new wxULongLong(value);
+    else
+        newValue = new wxULongLong();
+    // push the result flag
+    lua_pushboolean(L, returns);
+    // add the new object to the tracked memory list
+    wxluaO_addgcobject(L, newValue, wxluatype_wxULongLong);
+    // push the result datatype
+    wxluaT_pushuserdatatype(L, newValue, wxluatype_wxULongLong);
+
+    return 2;
+}
+%end
+#endif // wxUSE_LONGLONG
+
+%override wxLua_wxVariant_op_eq2
+//     bool operator== (double value) const;
+// C++: bool operator==(bool val);
+//      bool operator==(long val);
+//      bool operator==(double val);
+// Lua: bool operator==(number);
+// The type of 'number' is checked within this function
+static int LUACALL wxLua_wxVariant_op_eq2(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    bool returns;
+    // Check the lua type of the second argument
+    int arg_type = lua_type(L, 2);
+    if (arg_type == LUA_TBOOLEAN) {
+        //  Call the boolean version
+        bool value =  wxlua_getbooleantype(L, 1);
+        returns = ((*self) == (value));
+    } else {
+        //  Call the double or long version
+        double value = wxlua_getnumbertype(L, 1);
+        if ((double)(long)value == value) {
+            //  Call the 'long' version
+            long lval = (long)value;
+            returns = ((*self) == (lval));
+        } else {
+            //  Call the 'double' version
+            returns = ((*self) == (value));
+        }
+    }
+    // push the result flag
+    lua_pushboolean(L, returns);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxVariant_op_eq1
+//     bool operator== (const wxArrayString& value) const;
+static int LUACALL wxLua_wxVariant_op_eq1(lua_State *L)
+{
+    // const wxArrayString value
+    wxLuaSmartwxArrayString value = wxlua_getwxArrayString(L, 2);
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call op_eq
+    bool returns = ((*self)==((wxArrayString&)value));
+    // push the result flag
+    lua_pushboolean(L, returns);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxVariant_op_ne2
+//     bool operator!= (double value) const;
+// C++: bool operator!=(bool val);
+//      bool operator!=(long val);
+//      bool operator!=(double val);
+// Lua: bool operator!=(number);
+// The type of 'number' is checked within this function
+static int LUACALL wxLua_wxVariant_op_ne2(lua_State *L)
+{
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    bool returns;
+    // Check the lua type of the second argument
+    int arg_type = lua_type(L, 2);
+    if (arg_type == LUA_TBOOLEAN) {
+        //  Call the boolean version
+        bool value =  wxlua_getbooleantype(L, 1);
+        returns = ((*self) != (value));
+    } else {
+        //  Call the double or long version
+        double value = wxlua_getnumbertype(L, 1);
+        if ((double)(long)value == value) {
+            //  Call the 'long' version
+            long lval = (long)value;
+            returns = ((*self) != (lval));
+        } else {
+            //  Call the 'double' version
+            returns = ((*self) != (value));
+        }
+    }
+    // push the result flag
+    lua_pushboolean(L, returns);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxVariant_op_ne1
+//     bool operator!= (const wxArrayString& value) const;
+static int LUACALL wxLua_wxVariant_op_ne1(lua_State *L)
+{
+    // const wxArrayString value
+    wxLuaSmartwxArrayString value = wxlua_getwxArrayString(L, 2);
+    // get this
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+    // call op_ne
+    bool returns = ((*self)!=((wxArrayString&)value));
+    // push the result flag
+    lua_pushboolean(L, returns);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxVariant_constructor3
+// C++: wxVariant(long val, const wxString& name = wxEmptyString);
+//      wxVariant(bool val, const wxString& name = wxEmptyString);
+//      wxVariant(double val, const wxString& name = wxEmptyString);
+// Lua: wxVariant(number, const wxString& name = wxEmptyString);
+// The type of 'number' is checked within this function
+static int LUACALL wxLua_wxVariant_constructor3(lua_State *L)
+{
+    // get number of arguments
+    int argCount = lua_gettop(L);
+    // const wxString name = wxEmptyString
+    const wxString name = (argCount >= 2 ? wxlua_getwxStringtype(L, 2) : wxString(wxEmptyString));
+    // Return value
+    wxVariant *returns;
+    // Check the lua type of the first argument
+    int arg_type = lua_type(L, 1);
+    if (arg_type == LUA_TBOOLEAN) {
+        //  Call the boolean version
+        bool val = wxlua_getbooleantype(L, 1);
+        returns = new wxVariant(val, name);
+    } else {
+        //  Call the double or long version
+        double val = wxlua_getnumbertype(L, 1);
+        if ((double)(long)val == val) {
+            //  Call the 'long' version
+            long lval = (long)val;
+            returns = new wxVariant(lval, name);
+        } else {
+            //  Call the 'double' version
+            returns = new wxVariant(val, name);
+        }
+    }
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxVariant_constructor2
+//     wxVariant(const wxArrayString& val, const wxString& name = wxEmptyString);
+static int LUACALL wxLua_wxVariant_constructor2(lua_State *L)
+{
+    // get number of arguments
+    int argCount = lua_gettop(L);
+    // const wxString name = wxEmptyString
+    const wxString name = (argCount >= 2 ? wxlua_getwxStringtype(L, 2) : wxString(wxEmptyString));
+    // const wxArrayString val
+    wxLuaSmartwxArrayString val = wxlua_getwxArrayString(L, 1);
+    // call constructor
+    wxVariant* returns = new wxVariant((wxArrayString&)val, name);
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+#endif // wxUSE_VARIANT
+
 
 // ----------------------------------------------------------------------------
 // Overrides for wxbase_datetime.i
@@ -1397,6 +1758,66 @@ static int LUACALL wxLua_wxMemoryInputStream_constructor(lua_State *L)
 }
 %end
 
+%override wxLua_wxMemoryOutputStream_constructor1
+//     wxMemoryOutputStream(wxMemoryBuffer &buffer, size_t length = 0);
+// C++ Func: wxMemoryOutputStream(void *data = NULL, size_t length = 0);
+static int LUACALL wxLua_wxMemoryOutputStream_constructor1(lua_State *L)
+{
+    // size_t length
+    size_t length = (lua_gettop(L) >= 2 ? (size_t)wxlua_getnumbertype(L, 2) : 0);
+    // wxMemoryBuffer buffer
+    wxMemoryBuffer * buffer = (wxMemoryBuffer *)wxluaT_getuserdatatype(L, 1, wxluatype_wxMemoryBuffer);
+    void *data;
+    if (length > 0) {
+        data = buffer->GetWriteBuf(length);
+    } else {
+        data = buffer->GetData();
+        length = buffer->GetDataLen();
+    }
+    // call constructor
+    wxMemoryOutputStream* returns = new wxMemoryOutputStream(data, length);
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxMemoryOutputStream);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxMemoryOutputStream);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxMemoryOutputStream_CopyTo
+//     size_t CopyTo(wxMemoryBuffer &buffer, size_t length = 0);
+// C++ Func: wxMemoryOutputStream(void *data = NULL, size_t length = 0);
+static int LUACALL wxLua_wxMemoryOutputStream_CopyTo(lua_State *L)
+{
+    // size_t length
+    size_t length = (lua_gettop(L) >= 2 ? (size_t)wxlua_getnumbertype(L, 2) : 0);
+    // wxMemoryBuffer buffer
+    wxMemoryBuffer * buffer = (wxMemoryBuffer *)wxluaT_getuserdatatype(L, 2, wxluatype_wxMemoryBuffer);
+    void *data;
+    if (length > 0) {
+        data = buffer->GetWriteBuf(length);
+    } else {
+        data = buffer->GetData();
+        length = buffer->GetDataLen();
+    }
+    // get this
+    wxMemoryOutputStream * self = (wxMemoryOutputStream *)wxluaT_getuserdatatype(L, 1, wxluatype_wxMemoryOutputStream);
+    // call CopyTo
+    size_t returns = (self->CopyTo(data, length));
+    // push the result number
+#if LUA_VERSION_NUM >= 503
+if ((double)(lua_Integer)returns == (double)returns) {
+    // Exactly representable as lua_Integer
+        lua_pushinteger(L, returns);
+    } else
+#endif
+    {
+        lua_pushnumber(L, returns);
+    }
+    return 1;
+}
+%end
 
 %override wxLua_wxFileSystem_FindFileInPath
 //     bool FindFileInPath(wxString *pStr, const wxChar *path, const wxChar *file);
@@ -1417,5 +1838,189 @@ static int LUACALL wxLua_wxFileSystem_FindFileInPath(lua_State *L)
     wxlua_pushwxString(L, str);
 
     return 2;
+}
+%end
+
+
+%override wxLua_wxVariantFromString_constructor
+//     wxVariant(const wxString& str)
+static int LUACALL wxLua_wxVariantFromString_constructor(lua_State *L)
+{
+    // const wxString str = ""
+    const wxString str = wxlua_getwxStringtype(L, 1);
+    // call constructor
+    wxVariant* returns = new wxVariant(str);
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+
+%override wxLua_wxVariantFromDouble_constructor
+//     wxVariant(double d)
+static int LUACALL wxLua_wxVariantFromDouble_constructor(lua_State *L)
+{
+    wxVariant* returns;
+
+    if (lua_isboolean(L, 1)) {
+        bool b = (bool)wxlua_getbooleantype(L, 1);
+        returns = new wxVariant(b);
+    }
+    else {
+        double d = (double)wxlua_getnumbertype(L, 1);
+        if ((int)d == d) {
+            int i = (int)d;
+            returns = new wxVariant(i);
+        } else {
+            returns = new wxVariant(d);
+        }
+    }
+
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+
+%override wxLua_wxVariantFromArrayString_constructor
+//     wxVariant(const wxArrayString& a)
+static int LUACALL wxLua_wxVariantFromArrayString_constructor(lua_State *L)
+{
+    // wxLuaSmartwxArrayString a
+    wxLuaSmartwxArrayString a(wxlua_getwxArrayString(L, 1));
+    // call constructor
+    wxVariant* returns = new wxVariant((wxArrayString&)a);
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+
+%override wxLua_wxVariantFromDateTime_constructor
+//     wxVariant(const wxDateTime& d)
+static int LUACALL wxLua_wxVariantFromDateTime_constructor(lua_State *L)
+{
+    // wxDateTime d
+    wxDateTime * d = (wxDateTime *)wxluaT_getuserdatatype(L, 1, wxluatype_wxDateTime);
+    // call constructor
+    wxVariant* returns = new wxVariant(*d);
+    // add to tracked memory list
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    // push the constructed class pointer
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+
+%override wxLua_wxVariantFromVoidPtr_constructor
+//     wxVariant(void *p)
+static int LUACALL wxLua_wxVariantFromVoidPtr_constructor(lua_State *L)
+{
+    wxVariant* returns;
+
+    if (lua_isnil(L, 1)) {
+        returns = new wxVariant();
+    } else {
+        void * p = (void *)wxlua_touserdata(L, 1);
+        returns = new wxVariant(p);
+    }
+
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+
+%override wxLua_wxVariantFromObject_constructor
+//     wxVariant(wxObject *o)
+static int LUACALL wxLua_wxVariantFromObject_constructor(lua_State *L)
+{
+    // wxObject o
+    wxObject * o = (wxObject *)wxluaT_getuserdatatype(L, 1, wxluatype_wxObject);
+    if (wxluaO_isgcobject(L, o)) wxluaO_undeletegcobject(L, o);
+    // call constructor
+    wxVariant* returns = new wxVariant(o);
+    // push the constructed class pointer
+    wxluaO_addgcobject(L, returns, wxluatype_wxVariant);
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxVariant);
+
+    return 1;
+}
+%end
+
+
+%override wxLua_wxVariant_ToLuaValue
+// int ToLuaValue() const
+static int LUACALL wxLua_wxVariant_ToLuaValue(lua_State *L)
+{
+    wxVariant * self = (wxVariant *)wxluaT_getuserdatatype(L, 1, wxluatype_wxVariant);
+
+    if (self->IsType("arrstring")) {
+        wxArrayString returns = self->GetArrayString();
+        wxlua_pushwxArrayStringtable(L, returns);
+        return 1;
+    } else if (self->IsType("datetime")) {
+        wxDateTime* returns = new wxDateTime(self->GetDateTime());
+        wxluaT_pushuserdatatype(L, returns, wxluatype_wxDateTime);
+        return 1;
+    } else if (self->IsType("string")) {
+        wxString returns = self->GetString();
+        wxlua_pushwxString(L, returns);
+        return 1;
+    } else if (self->IsType("char")) {
+        wxUniChar returns = self->GetChar();
+        lua_pushnumber(L, returns.GetValue());
+        return 1;
+    } else if (self->IsType("double")) {
+        double returns = self->GetDouble();
+        lua_pushnumber(L, returns);
+        return 1;
+    } else if (self->IsType("longlong")) {
+        wxLongLong returns = self->GetLongLong();
+        lua_pushnumber(L, returns.ToLong());
+        return 1;
+    } else if (self->IsType("ulonglong")) {
+        wxULongLong returns = self->GetULongLong();
+        lua_pushnumber(L, returns.GetValue());
+        return 1;
+    } else if (self->IsType("long")) {
+        long returns = self->GetLong();
+        lua_pushnumber(L, returns);
+        return 1;
+    } else if (self->IsType("bool")) {
+        long returns = self->GetBool();
+        lua_pushboolean(L, returns);
+        return 1;
+    } else if (self->IsNull()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    wxlua_argerror(L, 1, wxT("a 'convertable variant'"));
+    return 0;
+}
+%end
+
+
+%override wxLua_wxVariantData_delete_function
+// delete is private in wxVariantData
+void wxLua_wxVariantData_delete_function(void** p)
+{
 }
 %end

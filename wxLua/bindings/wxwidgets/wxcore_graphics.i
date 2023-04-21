@@ -81,6 +81,13 @@ class %delete wxGraphicsObject : public wxObject
 
 #if %wxchkver_3_1_1
 
+enum wxGradientType
+{
+    wxGRADIENT_NONE,
+    wxGRADIENT_LINEAR,
+    wxGRADIENT_RADIAL
+};
+
 // ----------------------------------------------------------------------------
 // wxGraphicsPenInfo describes a wxGraphicsPen
 // ----------------------------------------------------------------------------
@@ -95,10 +102,59 @@ class %delete wxGraphicsPenInfo// : public wxPenInfoBase<wxGraphicsPenInfo>
     // Setters
 
     wxGraphicsPenInfo& Width(wxDouble width);
+    wxGraphicsPenInfo& Colour(const wxColour& colour);
+    wxGraphicsPenInfo& Style(wxPenStyle style);
+    wxGraphicsPenInfo& Stipple(const wxBitmap& stipple);
+    // %override wxGraphicsPenInfo& Dashes(Lua-table-of-integers);
+    // C++ Func: wxGraphicsPenInfo& Dashes(int nb_dashes, const wxDash *dash);
+    wxGraphicsPenInfo& Dashes();
+
+    wxGraphicsPenInfo& Join(wxPenJoin join);
+    wxGraphicsPenInfo& Cap(wxPenCap cap);
+
+    wxGraphicsPenInfo& LinearGradient(wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
+                   const wxColour& c1, const wxColour& c2,
+                   const wxGraphicsMatrix& matrix = wxNullGraphicsMatrix);
+    wxGraphicsPenInfo& LinearGradient(wxDouble x1, wxDouble y1, wxDouble x2, wxDouble y2,
+                   const wxGraphicsGradientStops& stops,
+                   const wxGraphicsMatrix& matrix = wxNullGraphicsMatrix);
+    wxGraphicsPenInfo& RadialGradient(wxDouble startX, wxDouble startY,
+                   wxDouble endX, wxDouble endY, wxDouble radius,
+                   const wxColour& oColor, const wxColour& cColor,
+                   const wxGraphicsMatrix& matrix = wxNullGraphicsMatrix);
+    wxGraphicsPenInfo& RadialGradient(wxDouble startX, wxDouble startY,
+                   wxDouble endX, wxDouble endY,
+                   wxDouble radius, const wxGraphicsGradientStops& stops,
+                   const wxGraphicsMatrix& matrix = wxNullGraphicsMatrix);
+                   
+
 
     // Accessors
 
     wxDouble GetWidth() const;
+    wxColour GetColour() const;
+    wxBitmap GetStipple() const;
+    wxPenStyle GetStyle() const;
+    wxPenJoin GetJoin() const;
+    wxPenCap GetCap() const;
+    // %override [table-of-integers] wxPen::GetDashes();
+    // C++ Func: int GetDashes(wxDash** ptr) const;
+    void GetDashes();
+    int GetDashCount() const;
+//    wxDash* GetDash() const;  //  Maybe we do not need this
+
+    wxGradientType GetGradientType() const;
+    wxDouble GetX1() const;
+    wxDouble GetY1() const;
+    wxDouble GetX2() const;
+    wxDouble GetY2() const;
+    wxDouble GetStartX() const;
+    wxDouble GetStartY() const;
+    wxDouble GetEndX() const;
+    wxDouble GetEndY() const;
+    wxDouble GetRadius() const;
+    const wxGraphicsGradientStops& GetStops() const;
+    const wxGraphicsMatrix& GetMatrix() const;
 };
 
 #endif // !%wxchkver_3_1_1

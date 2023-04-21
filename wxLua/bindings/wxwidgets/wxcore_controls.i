@@ -388,6 +388,200 @@ class wxComboBox : public wxControl, public wxItemContainer
 
 #endif //wxLUA_USE_wxComboBox && wxUSE_COMBOBOX
 
+
+#if wxUSE_COMBOCTRL
+
+#include "wx/combo.h"
+
+enum
+{
+    wxCC_SPECIAL_DCLICK             = 0x0100,
+    wxCC_STD_BUTTON                 = 0x0200
+};
+enum
+{
+    wxCC_BUTTON_OUTSIDE_BORDER      = 0x0001,
+    wxCC_POPUP_ON_MOUSE_UP          = 0x0002,
+    wxCC_NO_TEXT_AUTO_SELECT        = 0x0004,
+    wxCC_BUTTON_STAYS_DOWN          = 0x0008,
+    wxCC_FULL_BUTTON                = 0x0010,
+    wxCC_BUTTON_COVERS_BORDER       = 0x0020,
+
+    wxCC_IFLAG_CREATED              = 0x0100,
+    wxCC_IFLAG_BUTTON_OUTSIDE       = 0x0200,
+    wxCC_IFLAG_LEFT_MARGIN_SET      = 0x0400,
+    wxCC_IFLAG_PARENT_TAB_TRAVERSAL = 0x0800,
+    wxCC_IFLAG_USE_ALT_POPUP        = 0x1000,
+    wxCC_IFLAG_DISABLE_POPUP_ANIM   = 0x2000,
+    wxCC_IFLAG_HAS_NONSTANDARD_BUTTON   = 0x4000
+};
+enum
+{
+    wxCC_MF_ON_BUTTON               =   0x0001, // cursor is on dropbutton area
+    wxCC_MF_ON_CLICK_AREA           =   0x0002  // cursor is on dropbutton or other area
+                                                // that can be clicked to show the popup.
+};
+
+
+// Namespace for wxComboCtrl feature flags
+struct wxComboCtrlFeatures
+{
+    enum
+    {
+        MovableButton       = 0x0001, // Button can be on either side of control
+        BitmapButton        = 0x0002, // Button may be replaced with bitmap
+        ButtonSpacing       = 0x0004, // Button can have spacing from the edge
+                                      // of the control
+        TextIndent          = 0x0008, // SetMargins can be used to control
+                                      // left margin.
+        PaintControl        = 0x0010, // Combo control itself can be custom painted
+        PaintWritable       = 0x0020, // A variable-width area in front of writable
+                                      // combo control's textctrl can be custom
+                                      // painted
+        Borderless          = 0x0040, // wxNO_BORDER window style works
+        All                 = MovableButton|BitmapButton|
+                              ButtonSpacing|TextIndent|
+                              PaintControl|PaintWritable|
+                              Borderless
+    };
+};
+
+
+class %delete wxComboCtrl : public wxControl, public wxTextEntry
+{
+public:
+    wxComboCtrl();
+
+    bool Create(wxWindow *parent,
+                wxWindowID id,
+                const wxString& value,
+                const wxPoint& pos,
+                const wxSize& size,
+                long style,
+                const wxValidator& validator,
+                const wxString& name);
+    virtual void Popup();
+    virtual void Dismiss();
+    virtual void ShowPopup();
+    virtual void HidePopup(bool generateEvent=false);
+    virtual void OnButtonClick();
+    bool IsPopupShown() const;
+    void SetPopupControl( wxComboPopup* popup );
+    wxComboPopup* GetPopupControl();
+    wxWindow *GetPopupWindow() const;
+    wxTextCtrl *GetTextCtrl() const;
+    wxWindow *GetButton() const;
+    virtual bool Enable(bool enable = true);
+    virtual bool Show(bool show = true);
+    virtual bool SetFont(const wxFont& font);
+    virtual void SetValue(const wxString& value);
+    virtual void ChangeValue(const wxString& value);
+    virtual void WriteText(const wxString& text);
+    virtual void AppendText(const wxString& text);
+    virtual wxString GetValue() const;
+    virtual wxString GetRange(long from, long to) const;
+    virtual void Replace(long from, long to, const wxString& value);
+    virtual void Remove(long from, long to);
+    virtual void Copy();
+    virtual void Cut();
+    virtual void Paste();
+    virtual void Undo();
+    virtual void Redo();
+    virtual bool CanUndo() const;
+    virtual bool CanRedo() const;
+    virtual void SetInsertionPoint(long pos);
+    virtual long GetInsertionPoint() const;
+    virtual long GetLastPosition() const;
+    virtual void SetSelection(long from, long to);
+    virtual void GetSelection(long *from, long *to) const;
+    virtual bool IsEditable() const;
+    virtual void SetEditable(bool editable);
+    virtual bool SetHint(const wxString& hint);
+    virtual wxString GetHint() const;
+    void SetText(const wxString& value);
+    void SetValueByUser(const wxString& value);
+    void SetPopupMinWidth( int width );
+    void SetPopupMaxHeight( int height );
+    void SetPopupExtents( int extLeft, int extRight );
+    void SetCustomPaintWidth( int width );
+    int GetCustomPaintWidth() const;
+    void SetPopupAnchor( int anchorSide );
+    void SetButtonPosition( int width = -1, int height = -1, int side = wxRIGHT, int spacingX = 0 );
+    wxSize GetButtonSize();
+    void SetButtonBitmaps( const wxBitmap& bmpNormal, bool pushButtonBg = false, const wxBitmap& bmpPressed = wxNullBitmap, const wxBitmap& bmpHover = wxNullBitmap, const wxBitmap& bmpDisabled = wxNullBitmap );
+    const wxRect& GetTextRect() const;
+    void UseAltPopupWindow( bool enable = true );
+    void EnablePopupAnimation( bool enable = true );
+    virtual bool IsKeyPopupToggle(const wxKeyEvent& event) const;
+    virtual void PrepareBackground( wxDC& dc, const wxRect& rect, int flags ) const;
+    bool ShouldDrawFocus() const;
+    !%wxchkver_3_2_0 const wxBitmap& GetBitmapNormal() const;
+    !%wxchkver_3_2_0 const wxBitmap& GetBitmapPressed() const;
+    !%wxchkver_3_2_0 const wxBitmap& GetBitmapHover() const;
+    !%wxchkver_3_2_0 const wxBitmap& GetBitmapDisabled() const;
+    %wxchkver_3_2_0 wxBitmap GetBitmapNormal() const;
+    %wxchkver_3_2_0 wxBitmap GetBitmapPressed() const;
+    %wxchkver_3_2_0 wxBitmap GetBitmapHover() const;
+    %wxchkver_3_2_0 wxBitmap GetBitmapDisabled() const;
+    void SetTextCtrlStyle( int style );
+    wxUint32 GetInternalFlags() const;
+    bool IsCreated() const;
+    wxColour GetBackgroundColour() const;
+    void OnPopupDismiss(bool generateEvent);
+    enum
+    {
+        Hidden       = 0,
+        //Closing      = 1,
+        Animating    = 2,
+        Visible      = 3
+    };
+    bool IsPopupWindowState( int state );
+    wxByte GetPopupWindowState() const;
+    void SetCtrlMainWnd( wxWindow* wnd );
+    virtual wxWindow *GetMainWindowOfCompositeControl();
+    virtual bool SetForegroundColour(const wxColour& colour);
+    virtual bool SetBackgroundColour(const wxColour& colour);
+};
+
+// ----------------------------------------------------------------------------
+// wxComboPopup is the interface which must be implemented by a control to be
+// used as a popup by wxComboCtrl
+// ----------------------------------------------------------------------------
+
+
+// wxComboPopup internal flags
+enum
+{
+    wxCP_IFLAG_CREATED      = 0x0001 // Set by wxComboCtrlBase after Create is called
+};
+
+class %delete wxComboPopup
+{
+public:
+    //wxComboPopup();
+    virtual void Init();
+    //virtual ~wxComboPopup();
+    virtual bool Create(wxWindow* parent); // = 0;
+    virtual void DestroyPopup();
+    virtual wxWindow *GetControl(); // = 0;
+    virtual void OnPopup();
+    virtual void OnDismiss();
+    virtual void SetStringValue( const wxString& value );
+    virtual wxString GetStringValue() const; // = 0;
+    virtual bool FindItem(const wxString& item, wxString* trueItem=NULL);
+    virtual void PaintComboControl( wxDC& dc, const wxRect& rect );
+    virtual void OnComboKeyEvent( wxKeyEvent& event );
+    virtual void OnComboCharEvent( wxKeyEvent& event );
+    virtual void OnComboDoubleClick();
+    virtual wxSize GetAdjustedSize( int minWidth, int prefHeight, int maxHeight );
+    virtual bool LazyCreate();
+    void Dismiss();
+    bool IsCreated() const;
+    wxComboCtrl* GetComboCtrl() const;
+};
+
+#endif // wxUSE_COMBOCTRL
+
 // ---------------------------------------------------------------------------
 // wxGauge
 
@@ -1163,31 +1357,60 @@ class wxTextEntry
     %wxchkver_3_0_0 void GetSelection() const; // %override return [long from, long to]
 };
 
-class wxTextCtrl : public wxControl, public wxTextEntry
+class wxTextAreaBase
+{
+#if %wxchkver_3_0_0
+    virtual int GetLineLength(long lineNo) const;
+    virtual wxString GetLineText(long lineNo) const;
+    virtual int GetNumberOfLines() const;
+    bool LoadFile(const wxString& file, int fileType = wxTEXT_TYPE_ANY);
+    bool SaveFile(const wxString& file = wxEmptyString, int fileType = wxTEXT_TYPE_ANY);
+    virtual bool IsModified() const;
+    virtual void MarkDirty();
+    virtual void DiscardEdits();
+    void SetModified(bool modified);
+    virtual bool SetStyle(long start, long end, const wxTextAttr& style);
+    virtual bool GetStyle(long position, wxTextAttr& style);
+    virtual bool SetDefaultStyle(const wxTextAttr& style);
+    virtual const wxTextAttr& GetDefaultStyle() const;
+    virtual long XYToPosition(long x, long y) const;
+    wxPoint PositionToCoords(long pos) const;
+    virtual void ShowPosition(long pos);
+    virtual wxString GetValue() const;
+    virtual void SetValue(const wxString& value);
+    %rename HitTestPos wxTextCtrlHitTestResult HitTest(const wxPoint& pt) const; // return [wxTextCtrlHitTestResult, int pos]
+    virtual wxTextCtrlHitTestResult HitTest(const wxPoint& pt) const; // %override return [wxTextCtrlHitTestResult, int col, int row]
+    virtual bool PositionToXY(long pos) const; // %override return [bool, int x, int y]
+#endif // %wxchkver_3_0_0
+};
+
+class wxTextCtrlIface : public wxTextAreaBase, public wxTextEntry
+{
+    virtual wxString GetValue() const;
+    virtual void SetValue(const wxString& value);
+};
+
+class wxTextCtrl : public wxControl, public wxTextEntry, public wxTextAreaBase
 {
     wxTextCtrl();
     wxTextCtrl(wxWindow *parent, wxWindowID id, const wxString& value = "", const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = "wxTextCtrl");
     bool Create(wxWindow* parent, wxWindowID id, const wxString& value = "", const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = "wxTextCtrl");
-    void DiscardEdits();
+    !%wxchkver_3_0_0 void DiscardEdits();
     bool EmulateKeyPress(const wxKeyEvent& event);
     const wxTextAttr&  GetDefaultStyle() const;
-    int GetLineLength(long lineNo) const;
-    wxString GetLineText(long lineNo) const;
-    int GetNumberOfLines() const;
-    bool GetStyle(long position, wxTextAttr& style);
-    bool IsModified() const;
+    !%wxchkver_3_0_0 int GetLineLength(long lineNo) const;
+    !%wxchkver_3_0_0 wxString GetLineText(long lineNo) const;
+    !%wxchkver_3_0_0 int GetNumberOfLines() const;
+    !%wxchkver_3_0_0 bool GetStyle(long position, wxTextAttr& style);
+    !%wxchkver_3_0_0 bool IsModified() const;
     bool IsMultiLine() const;
     bool IsSingleLine() const;
-    %wxchkver_3_0_0 bool LoadFile(const wxString& filename, int fileType = wxTEXT_TYPE_ANY);
-    void MarkDirty();
+    !%wxchkver_3_0_0 void MarkDirty();
     // void OnDropFiles(wxDropFilesEvent& event);
-    %wxchkver_3_0_0 wxPoint PositionToCoords(long pos) const;
-    %wxchkver_3_0_0 bool SaveFile(const wxString& filename = wxEmptyString, int fileType = wxTEXT_TYPE_ANY);
-    bool SetDefaultStyle(const wxTextAttr& style);
-    %wxchkver_3_0_0 void SetModified(bool modified);
-    bool SetStyle(long start, long end, const wxTextAttr& style);
-    void ShowPosition(long pos);
-    long XYToPosition(long x, long y);
+    !%wxchkver_3_0_0 bool SetDefaultStyle(const wxTextAttr& style);
+    !%wxchkver_3_0_0 bool SetStyle(long start, long end, const wxTextAttr& style);
+    !%wxchkver_3_0_0 void ShowPosition(long pos);
+    !%wxchkver_3_0_0 long XYToPosition(long x, long y);
     !%wxchkver_3_0_0 bool IsEditable() const;
     !%wxchkver_3_0_0 bool LoadFile(const wxString& filename);
     !%wxchkver_3_0_0 bool SaveFile(const wxString& filename);
@@ -1219,9 +1442,9 @@ class wxTextCtrl : public wxControl, public wxTextEntry
     !%wxchkver_3_0_0 void GetSelection() const;
     !%wxchkver_3_0_0 void WriteText(const wxString& text);
     !%wxchkver_3_0_0 wxString GetValue() const;
-    %rename HitTestPos wxTextCtrlHitTestResult HitTest(const wxPoint& pt) const; // return [wxTextCtrlHitTestResult, int pos]
-    bool PositionToXY(long pos) const; // %override return [bool, int x, int y]
-    wxTextCtrlHitTestResult HitTest(const wxPoint& pt) const; // %override return [wxTextCtrlHitTestResult, int col, int row]
+    !%wxchkver_3_0_0 %rename HitTestPos wxTextCtrlHitTestResult HitTest(const wxPoint& pt) const; // return [wxTextCtrlHitTestResult, int pos]
+    !%wxchkver_3_0_0 bool PositionToXY(long pos) const; // %override return [bool, int x, int y]
+    !%wxchkver_3_0_0 wxTextCtrlHitTestResult HitTest(const wxPoint& pt) const; // %override return [wxTextCtrlHitTestResult, int col, int row]
 };
 
 enum wxTextAttrAlignment
@@ -1246,6 +1469,80 @@ enum wxTextAttrAlignment
 #define wxTEXT_ATTR_LEFT_INDENT
 #define wxTEXT_ATTR_RIGHT_INDENT
 #define wxTEXT_ATTR_TABS
+
+#if %wxchkver_3_0_0
+
+#define wxTEXT_ATTR_FONT_POINT_SIZE
+#define wxTEXT_ATTR_FONT_PIXEL_SIZE
+#define wxTEXT_ATTR_FONT_STRIKETHROUGH
+#define wxTEXT_ATTR_FONT_ENCODING
+#define wxTEXT_ATTR_FONT_FAMILY
+#define wxTEXT_ATTR_TABS
+#define wxTEXT_ATTR_PARA_SPACING_AFTER
+#define wxTEXT_ATTR_PARA_SPACING_BEFORE
+#define wxTEXT_ATTR_LINE_SPACING
+#define wxTEXT_ATTR_CHARACTER_STYLE_NAME
+#define wxTEXT_ATTR_PARAGRAPH_STYLE_NAME
+#define wxTEXT_ATTR_LIST_STYLE_NAME
+#define wxTEXT_ATTR_BULLET_STYLE
+#define wxTEXT_ATTR_BULLET_NUMBER
+#define wxTEXT_ATTR_BULLET_TEXT
+#define wxTEXT_ATTR_BULLET_NAME
+#define wxTEXT_ATTR_BULLET
+#define wxTEXT_ATTR_URL
+#define wxTEXT_ATTR_PAGE_BREAK
+#define wxTEXT_ATTR_EFFECTS
+#define wxTEXT_ATTR_OUTLINE_LEVEL
+#define wxTEXT_ATTR_CHARACTER
+#define wxTEXT_ATTR_PARAGRAPH
+#define wxTEXT_ATTR_ALL
+
+enum wxTextAttrBulletStyle
+{
+    wxTEXT_ATTR_BULLET_STYLE_NONE            = 0x00000000,
+    wxTEXT_ATTR_BULLET_STYLE_ARABIC          = 0x00000001,
+    wxTEXT_ATTR_BULLET_STYLE_LETTERS_UPPER   = 0x00000002,
+    wxTEXT_ATTR_BULLET_STYLE_LETTERS_LOWER   = 0x00000004,
+    wxTEXT_ATTR_BULLET_STYLE_ROMAN_UPPER     = 0x00000008,
+    wxTEXT_ATTR_BULLET_STYLE_ROMAN_LOWER     = 0x00000010,
+    wxTEXT_ATTR_BULLET_STYLE_SYMBOL          = 0x00000020,
+    wxTEXT_ATTR_BULLET_STYLE_BITMAP          = 0x00000040,
+    wxTEXT_ATTR_BULLET_STYLE_PARENTHESES     = 0x00000080,
+    wxTEXT_ATTR_BULLET_STYLE_PERIOD          = 0x00000100,
+    wxTEXT_ATTR_BULLET_STYLE_STANDARD        = 0x00000200,
+    wxTEXT_ATTR_BULLET_STYLE_RIGHT_PARENTHESIS = 0x00000400,
+    wxTEXT_ATTR_BULLET_STYLE_OUTLINE         = 0x00000800,
+
+    wxTEXT_ATTR_BULLET_STYLE_ALIGN_LEFT      = 0x00000000,
+    wxTEXT_ATTR_BULLET_STYLE_ALIGN_RIGHT     = 0x00001000,
+    wxTEXT_ATTR_BULLET_STYLE_ALIGN_CENTRE    = 0x00002000,
+
+    wxTEXT_ATTR_BULLET_STYLE_CONTINUATION    = 0x00004000
+};
+
+enum wxTextAttrEffects
+{
+    wxTEXT_ATTR_EFFECT_NONE                  = 0x00000000,
+    wxTEXT_ATTR_EFFECT_CAPITALS              = 0x00000001,
+    wxTEXT_ATTR_EFFECT_SMALL_CAPITALS        = 0x00000002,
+    wxTEXT_ATTR_EFFECT_STRIKETHROUGH         = 0x00000004,
+    wxTEXT_ATTR_EFFECT_DOUBLE_STRIKETHROUGH  = 0x00000008,
+    wxTEXT_ATTR_EFFECT_SHADOW                = 0x00000010,
+    wxTEXT_ATTR_EFFECT_EMBOSS                = 0x00000020,
+    wxTEXT_ATTR_EFFECT_OUTLINE               = 0x00000040,
+    wxTEXT_ATTR_EFFECT_ENGRAVE               = 0x00000080,
+    wxTEXT_ATTR_EFFECT_SUPERSCRIPT           = 0x00000100,
+    wxTEXT_ATTR_EFFECT_SUBSCRIPT             = 0x00000200
+};
+
+enum wxTextAttrLineSpacing
+{
+    wxTEXT_ATTR_LINE_SPACING_NORMAL         = 10,
+    wxTEXT_ATTR_LINE_SPACING_HALF           = 15,
+    wxTEXT_ATTR_LINE_SPACING_TWICE          = 20
+};
+
+#endif // %wxchkver_3_0_0
 
 class %delete wxTextAttr
 {
@@ -1278,6 +1575,113 @@ class %delete wxTextAttr
     void SetRightIndent(int indent);
     void SetTabs(const wxArrayInt& tabs);
     void SetTextColour(const wxColour& colText);
+    
+#if %wxchkver_3_0_0
+    bool EqPartial(const wxTextAttr& attr, bool weakTest = true) const;
+    bool GetFontAttributes(const wxFont& font, int flags = wxTEXT_ATTR_FONT);
+    void SetFontSize(int pointSize);
+    void SetFontPointSize(int pointSize);
+    void SetFontPixelSize(int pixelSize);
+    void SetFontStyle(wxFontStyle fontStyle);
+    void SetFontWeight(wxFontWeight fontWeight);
+    void SetFontFaceName(const wxString& faceName);
+    void SetFontUnderlined(bool underlined);
+    void SetFontStrikethrough(bool strikethrough);
+    void SetFontEncoding(wxFontEncoding encoding);
+    void SetFontFamily(wxFontFamily family);
+    void SetCharacterStyleName(const wxString& name);
+    void SetParagraphStyleName(const wxString& name);
+    void SetListStyleName(const wxString& name);
+    void SetParagraphSpacingAfter(int spacing);
+    void SetParagraphSpacingBefore(int spacing);
+    void SetLineSpacing(int spacing);
+    void SetBulletStyle(int style);
+    void SetBulletNumber(int n);
+    void SetBulletText(const wxString& text);
+    void SetBulletFont(const wxString& bulletFont);
+    void SetBulletName(const wxString& name);
+    void SetURL(const wxString& url);
+    void SetPageBreak(bool pageBreak = true);
+    void SetTextEffects(int effects);
+    void SetTextEffectFlags(int effects);
+    void SetOutlineLevel(int level);
+    int GetFontSize() const;
+    wxFontStyle GetFontStyle() const;
+    wxFontWeight GetFontWeight() const;
+    bool GetFontUnderlined() const;
+    bool GetFontStrikethrough() const;
+    const wxString& GetFontFaceName() const;
+    wxFontEncoding GetFontEncoding() const;
+    wxFontFamily GetFontFamily() const;
+    const wxString& GetCharacterStyleName() const;
+    const wxString& GetParagraphStyleName() const;
+    const wxString& GetListStyleName() const;
+    int GetParagraphSpacingAfter() const;
+    int GetParagraphSpacingBefore() const;
+
+    int GetLineSpacing() const;
+    int GetBulletStyle() const;
+    int GetBulletNumber() const;
+    const wxString& GetBulletText() const;
+    const wxString& GetBulletFont() const;
+    const wxString& GetBulletName() const;
+    const wxString& GetURL() const;
+    int GetTextEffects() const;
+    int GetTextEffectFlags() const;
+    int GetOutlineLevel() const;
+    bool HasFontWeight() const;
+    bool HasFontSize() const;
+    bool HasFontPointSize() const;
+    bool HasFontPixelSize() const;
+    bool HasFontItalic() const;
+    bool HasFontUnderlined() const;
+    bool HasFontStrikethrough() const;
+    bool HasFontFaceName() const;
+    bool HasFontEncoding() const;
+    bool HasFontFamily() const;
+    bool HasParagraphSpacingAfter() const;
+    bool HasParagraphSpacingBefore() const;
+    bool HasLineSpacing() const;
+    bool HasCharacterStyleName() const;
+    bool HasParagraphStyleName() const;
+    bool HasListStyleName() const;
+    bool HasBulletStyle() const;
+    bool HasBulletNumber() const;
+    bool HasBulletText() const;
+    bool HasBulletName() const;
+    bool HasURL() const;
+    bool HasPageBreak() const;
+    bool HasTextEffects() const;
+    bool HasTextEffect(int effect) const;
+    bool HasOutlineLevel() const;
+    void RemoveFlag(long flag);
+    void AddFlag(long flag);
+
+    // Is this a character style?
+    bool IsCharacterStyle() const;
+    bool IsParagraphStyle() const;
+    bool Apply(const wxTextAttr& style, const wxTextAttr* compareWith = NULL);
+    static wxTextAttr Merge(const wxTextAttr& base, const wxTextAttr& overlay);
+    void Merge(const wxTextAttr& overlay)
+    static wxTextAttr Combine(const wxTextAttr& attr, const wxTextAttr& attrDef, const wxTextCtrl *text);
+
+    // Compare tabs
+    static bool TabsEq(const wxArrayInt& tabs1, const wxArrayInt& tabs2);
+
+    // Remove attributes
+    static bool RemoveStyle(wxTextAttr& destStyle, const wxTextAttr& style);
+
+    // Combine two bitlists, specifying the bits of interest with separate flags.
+    static bool CombineBitlists(int& valueA, int valueB, int& flagsA, int flagsB);
+
+    // Compare two bitlists
+    static bool BitlistsEqPartial(int valueA, int valueB, int flags);
+
+    // Split into paragraph and character styles
+    static bool SplitParaCharStyles(const wxTextAttr& style, wxTextAttr& parStyle, wxTextAttr& charStyle);
+
+#endif // %wxchkver_3_0_0
+
 };
 
 // ---------------------------------------------------------------------------

@@ -95,58 +95,13 @@ interface_filepath = wxlua_dir.."bindings/wxwidgets"
 interface_fileTable =
 {
    "wxpropgrid_propgrid.i"
---[[
-    --"wx/any.h",
-    "wx/variant.h",
-
-    "wx/propgrid.h",
-    
-    "wx/propgrid/editors.h",
-    "wx/propgrid/manager.h",
-    "wx/propgrid/property.h",
-    "wx/propgrid/propgrid.h",
-    "wx/propgrid/propgridiface.h",
-    "wx/propgrid/propgridpagestate.h",
-    
-    --"colour.h",
-    "wx/combo.h",
-    "wx/cursor.h" 
- ]]
 }
-
-if false then
-
-interface_fileTable =
-{
-    --"wx/any.h",
-    "wx/variant.h",
-
-    "wx/propgrid.h",
-    
-    "wx/propgrid/editors.h",
-    "wx/propgrid/manager.h",
-    "wx/propgrid/property.h",
-    "wx/propgrid/propgrid.h",
-    "wx/propgrid/propgridiface.h",
-    "wx/propgrid/propgridpagestate.h",
-    
-    --"colour.h",
-    "wx/combo.h",
-}
-
-interface_filepath = "C:/jlabenski/wx/wx-svn/wx/wxWidgets/wxWidgets-trunk/interface/"
-
-for i = 1,#interface_fileTable do
-    hook_cpp_binding_source_includes = hook_cpp_binding_source_includes.."#include <"..interface_fileTable[i]..">\n"
-end
-
-end
 
 -- ----------------------------------------------------------------------------
 -- A list of files that contain bindings that need to be overridden or empty
 --   table {} for none.
 --   The files are loaded from the interface_filepath.
---override_fileTable = { "override.hpp" }
+override_fileTable = { "wxpropgrid_override.hpp" }
 
 -- ============================================================================
 -- A table containing filenames of XXX_datatype.lua from other wrappers to

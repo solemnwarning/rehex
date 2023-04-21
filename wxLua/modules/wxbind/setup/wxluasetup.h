@@ -399,6 +399,10 @@
 #define wxLUA_USE_wxNotebook                    1
 #endif
 
+#ifndef wxLUA_USE_wxNumberEntryDialog
+#define wxLUA_USE_wxNumberEntryDialog           1
+#endif
+
 #ifndef wxLUA_USE_wxObject
 #define wxLUA_USE_wxObject                      1
 #endif
@@ -439,6 +443,10 @@
 #define wxLUA_USE_wxProgressDialog              1
 #endif
 
+#ifndef wxLUA_USE_wxPropertyGrid
+#define wxLUA_USE_wxPropertyGrid                1
+#endif
+
 #ifndef wxLUA_USE_wxRadioBox
 #define wxLUA_USE_wxRadioBox                    1
 #endif
@@ -460,7 +468,7 @@
 #endif
 
 #ifndef wxLUA_USE_wxRichText
-#define wxLUA_USE_wxRichText                    0 // NOT FINISHED or WORKING
+#define wxLUA_USE_wxRichText                    1
 #endif
 
 #ifndef wxLUA_USE_wxSashWindow
@@ -596,7 +604,7 @@
 #endif
 
 #ifndef wxLUA_USE_wxTranslations
-#define wxLUA_USE_wxTranslations                1
+#define wxLUA_USE_wxTranslations                0 // exclude by default due to build issues with undef reference to wxPluralFormsCalculatorPtr destructor
 #endif
 
 #ifndef wxLUA_USE_wxTreebook

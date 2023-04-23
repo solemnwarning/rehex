@@ -147,6 +147,9 @@ namespace REHex {
 			void OnUndoUpdate(wxCommandEvent &event);
 			void OnBecameDirty(wxCommandEvent &event);
 			void OnBecameClean(wxCommandEvent &event);
+			void OnFileDeleted(wxCommandEvent &event);
+			void OnFileModified(wxCommandEvent &event);
+			void OnTitleChanged(DocumentTitleEvent &event);
 			
 			/**
 			 * @brief MainWindow setup phases, in order of execution.
@@ -260,6 +263,7 @@ namespace REHex {
 			
 			DetachableNotebook *notebook;
 			wxBitmap notebook_dirty_bitmap;
+			wxBitmap notebook_bad_bitmap;
 			
 			wxMenu *tool_panels_menu;
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
@@ -274,8 +278,7 @@ namespace REHex {
 			void _update_dirty(REHex::Document *doc);
 			void _update_cpos_buttons(DocumentCtrl *doc_ctrl);
 			
-			bool unsaved_confirm();
-			bool unsaved_confirm(const std::vector<wxString> &files);
+			bool confirm_close_tabs(const std::vector<Tab*> &tabs);
 			
 			void close_tab(Tab *tab);
 			void close_all_tabs();

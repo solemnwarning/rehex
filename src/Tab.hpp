@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -127,6 +127,9 @@ namespace REHex
 			void OnDocumentDataTypesChanged(wxCommandEvent &event);
 			void OnDocumentMappingsChanged(wxCommandEvent &event);
 			
+			void OnDocumentFileDeleted(wxCommandEvent &event);
+			void OnDocumentFileModified(wxCommandEvent &event);
+			
 			void OnBulkUpdatesFrozen(wxCommandEvent &event);
 			void OnBulkUpdatesThawed(wxCommandEvent &event);
 			
@@ -168,6 +171,14 @@ namespace REHex
 			void init_default_tools();
 			
 			void compare_range(off_t offset, off_t length);
+			
+			bool child_windows_hidden;
+			
+			bool file_deleted_dialog_pending;
+			void file_deleted_dialog();
+			
+			bool file_modified_dialog_pending;
+			void file_modified_dialog();
 			
 		DECLARE_EVENT_TABLE()
 	};

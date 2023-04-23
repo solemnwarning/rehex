@@ -65,8 +65,10 @@ REHex::Document::Document():
 	types_changed_buffer(this, EV_TYPES_CHANGED),
 	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
 {
-	buffer = new REHex::Buffer();
+	buffer = new Buffer();
 	title  = "Untitled";
+	
+	_forward_buffer_events();
 }
 
 REHex::Document::Document(const std::string &filename):
@@ -81,7 +83,7 @@ REHex::Document::Document(const std::string &filename):
 	types_changed_buffer(this, EV_TYPES_CHANGED),
 	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
 {
-	buffer = new REHex::Buffer(filename);
+	buffer = new Buffer(filename);
 	
 	data_seq.set_range   (0, buffer->length(), 0);
 	types.set_range      (0, buffer->length(), "");
@@ -94,6 +96,27 @@ REHex::Document::Document(const std::string &filename):
 	{
 		_load_metadata(meta_filename);
 	}
+	
+	_forward_buffer_events();
+}
+
+void REHex::Document::_forward_buffer_events()
+{
+	buffer->Bind(BACKING_FILE_DELETED, [&](wxCommandEvent &event)
+	{
+		wxCommandEvent new_event(BACKING_FILE_DELETED);
+		new_event.SetEventObject(this);
+		
+		ProcessEvent(new_event);
+	});
+	
+	buffer->Bind(BACKING_FILE_MODIFIED, [&](wxCommandEvent &event)
+	{
+		wxCommandEvent new_event(BACKING_FILE_MODIFIED);
+		new_event.SetEventObject(this);
+		
+		ProcessEvent(new_event);
+	});
 }
 
 REHex::Document::~Document()
@@ -153,6 +176,8 @@ void REHex::Document::reload()
 	delete buffer;
 	buffer = new_buffer;
 	
+	_forward_buffer_events();
+	
 	types.clear();
 	types.set_range(0, new_size, "");
 	
@@ -211,14 +236,16 @@ void REHex::Document::reload()
 
 void REHex::Document::save()
 {
-	if(is_buffer_dirty())
+	bool externally_changed = file_deleted() || file_modified();
+	
+	if(is_buffer_dirty() || externally_changed)
 	{
 		buffer->write_inplace();
 	}
 	
 	_save_metadata(filename + ".rehex-meta");
 	
-	if(current_seq != saved_seq)
+	if(current_seq != saved_seq || externally_changed)
 	{
 		saved_seq = current_seq;
 		buffer_seq = saved_seq;
@@ -230,6 +257,8 @@ void REHex::Document::save()
 
 void REHex::Document::save(const std::string &filename)
 {
+	bool externally_changed = file_deleted() || file_modified();
+	
 	buffer->write_inplace(filename);
 	this->filename = filename;
 	
@@ -238,7 +267,7 @@ void REHex::Document::save(const std::string &filename)
 	
 	_save_metadata(filename + ".rehex-meta");
 	
-	if(current_seq != saved_seq)
+	if(current_seq != saved_seq || externally_changed)
 	{
 		saved_seq = current_seq;
 		buffer_seq = saved_seq;
@@ -821,6 +850,16 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 off_t REHex::Document::buffer_length() const
 {
 	return buffer->length();
+}
+
+bool REHex::Document::file_deleted() const
+{
+	return buffer->file_deleted();
+}
+
+bool REHex::Document::file_modified() const
+{
+	return buffer->file_modified();
 }
 
 void REHex::Document::set_write_protect(bool write_protect)

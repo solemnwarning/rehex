@@ -24,6 +24,7 @@
 #include <wx/filename.h>
 #include <wx/utils.h>
 
+#include "App.hpp"
 #include "CharacterEncoder.hpp"
 #include "DataType.hpp"
 #include "document.hpp"
@@ -437,4 +438,38 @@ void REHex::fake_broken_mouse_capture(wxWindow *window)
 	}
 	
 	new GenuineImmitationMouseCapture(window);
+}
+
+std::string REHex::document_save_as_dialog(wxWindow *modal_parent, Document *document)
+{
+	std::string dir, name;
+	std::string doc_filename = document->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+		name = wxfn.GetFullName();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+		name = "";
+	}
+	
+	wxFileDialog saveFileDialog(modal_parent, "Save As", dir, name, "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return "";
+	
+	std::string filename = saveFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	return filename;
 }

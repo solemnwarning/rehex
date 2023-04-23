@@ -104,6 +104,8 @@ namespace REHex {
 	
 	void fake_broken_mouse_capture(wxWindow *window);
 	
+	std::string document_save_as_dialog(wxWindow *modal_parent, Document *document);
+	
 	/**
 	 * @brief A wxColour that can be used as a key in a map/etc.
 	*/

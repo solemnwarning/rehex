@@ -32,7 +32,8 @@ The same packages are also produced for Git commits (look for the tick), if you 
 
 First, you will need to add my APT signing key to your system:
 
-    wget -qO - https://repos.solemnwarning.net/debian-key.gpg | sudo apt-key add -
+    sudo wget -O /etc/apt/trusted.gpg.d/solemnwarning-archive-keyring.gpg \
+        https://repos.solemnwarning.net/debian/solemnwarning-archive-keyring.gpg
 
 Add the following lines to your `/etc/apt/sources.list` file:
 
@@ -50,7 +51,8 @@ Finally, you can install the package:
 
 First, you will need to add my APT signing key to your system:
 
-    wget -qO - https://repos.solemnwarning.net/ubuntu-key.gpg | sudo apt-key add -
+    sudo wget -O /etc/apt/trusted.gpg.d/solemnwarning-archive-keyring.gpg \
+        https://repos.solemnwarning.net/ubuntu/solemnwarning-archive-keyring.gpg
 
 Add the following lines to your `/etc/apt/sources.list` file:
 
@@ -71,7 +73,7 @@ Finally, you can install the package:
     $ sudo apt-get update
     $ sudo apt-get install rehex
 
-**NOTE:** Ubuntu users must have the "Universe" package repository enabled to install some of the dependencies.
+**NOTE:** Ubuntu users must have the "universe" package repository enabled to install some of the dependencies.
 
 ### Fedora
 

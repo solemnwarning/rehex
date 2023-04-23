@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -237,6 +237,22 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
 	}
 	
+	reload();
+}
+
+REHex::Buffer::~Buffer()
+{
+	if(fh != NULL)
+	{
+		fclose(fh);
+		fh = NULL;
+	}
+}
+
+void REHex::Buffer::reload()
+{
+	std::unique_lock<std::mutex> l(lock);
+	
 	/* Find out the length of the file. */
 	
 	if(fseeko(fh, 0, SEEK_END) != 0)
@@ -254,6 +270,17 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 		throw std::runtime_error(std::string("ftello: ") + strerror(err));
 	}
 	
+	_reinit_blocks(file_length);
+}
+
+void REHex::Buffer::_reinit_blocks(off_t file_length)
+{
+	/* Clear any existing blocks and references. */
+	
+	last_accessed_blocks.clear();
+	last_accessed_blocks_map.clear();
+	blocks.clear();
+	
 	/* Populate the blocks list with appropriate offsets and sizes. */
 	
 	for(off_t offset = 0; offset < file_length; offset += block_size)
@@ -264,15 +291,6 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	if(file_length == 0)
 	{
 		blocks.push_back(Block(0,0));
-	}
-}
-
-REHex::Buffer::~Buffer()
-{
-	if(fh != NULL)
-	{
-		fclose(fh);
-		fh = NULL;
 	}
 }
 
@@ -454,22 +472,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 		 * Buffer. Rebuild the block list so the offsets are correct.
 		*/
 		
-		blocks.clear();
-		
-		for(off_t offset = 0; offset < out_length; offset += block_size)
-		{
-			blocks.push_back(Block(offset, std::min((out_length - offset), block_size)));
-		}
-		
-		if(out_length == 0)
-		{
-			blocks.push_back(Block(0,0));
-		}
-		
-		/* Drop the now-invalid last_accessed_blocks structures. */
-		
-		last_accessed_blocks.clear();
-		last_accessed_blocks_map.clear();
+		_reinit_blocks(out_length);
 	}
 	
 	if(fh != NULL)

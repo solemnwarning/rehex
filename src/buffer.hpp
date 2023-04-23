@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -99,6 +99,8 @@ namespace REHex {
 			void _last_access_bump(Block *block);
 			void _last_access_remove(Block *block);
 			
+			void _reinit_blocks(off_t file_length);
+			
 			static bool _same_file(FILE *file1, const std::string &name1, FILE *file2, const std::string &name2);
 			
 		public:
@@ -119,6 +121,11 @@ namespace REHex {
 			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
 			
 			~Buffer();
+			
+			/**
+			 * @brief Reload the file, discarding any changes made.
+			*/
+			void reload();
 			
 			/**
 			 * @brief Write changes to backing file.

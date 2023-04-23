@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -118,6 +118,11 @@ namespace REHex {
 			Document(const std::string &filename);
 			
 			~Document();
+			
+			/**
+			 * @brief Reload the document, discarding any changes made.
+			*/
+			void reload();
 			
 			/**
 			 * @brief Save any changes to the file and its metadata.

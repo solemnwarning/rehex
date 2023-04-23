@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -109,6 +109,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
 	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
+	EVT_MENU(wxID_REFRESH,    REHex::MainWindow::OnReload)
 	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
 	EVT_MENU(ID_EXPORT_HEX,   REHex::MainWindow::OnExportHex)
 	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
@@ -236,6 +237,10 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
 		file_menu->Append(wxID_SAVEAS, "&Save As");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(wxID_REFRESH, "&Reload");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -772,6 +777,8 @@ void REHex::MainWindow::OnSave(wxCommandEvent &event)
 	try {
 		tab->doc->save();
 		_update_dirty(tab->doc);
+		
+		file_menu->Enable(wxID_REFRESH, true);
 	}
 	catch(const std::exception &e)
 	{
@@ -818,6 +825,8 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	try {
 		tab->doc->save(filename);
 		_update_dirty(tab->doc);
+		
+		file_menu->Enable(wxID_REFRESH, true);
 	}
 	catch(const std::exception &e)
 	{
@@ -828,6 +837,36 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	notebook->SetPageText(notebook->GetSelection(), tab->doc->get_title());
+}
+
+void REHex::MainWindow::OnReload(wxCommandEvent &event)
+{
+	Document *doc = active_document();
+	
+	assert(!doc->get_filename().empty());
+	
+	if(doc->is_dirty())
+	{
+		std::string msg
+			= "The content of " + doc->get_title() + " has been modified.\n"
+			+ "Discard changes and reload file?";
+		
+		int res = wxMessageBox(msg, "File data modified", (wxYES_NO | wxICON_EXCLAMATION), this);
+		if(res == wxNO)
+		{
+			return;
+		}
+	}
+	
+	try {
+		doc->reload();
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error reloading ") + doc->get_title() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+	}
 }
 
 void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
@@ -1699,6 +1738,8 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	}
 	
 	Tab *tab = active_tab();
+	
+	file_menu->Enable(wxID_REFRESH, !tab->doc->get_filename().empty());
 	
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc_ctrl->get_insert_mode());
 	edit_menu->Check(ID_WRITE_PROTECT, tab->doc->get_write_protect());

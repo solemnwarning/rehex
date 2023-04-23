@@ -30,6 +30,11 @@ Version TBA
 
  * Add "Apply template from cursor" option to binary template tool.
 
+ * Fix cases where the strings tool would appear to run forever with an empty
+   file.
+
+ * Remove strings from the strings panel when they are deleted from the file.
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

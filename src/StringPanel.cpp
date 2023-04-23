@@ -718,10 +718,10 @@ void REHex::StringPanel::start_threads()
 			thread_main();
 		}
 		#endif
+		
+		spinner->Show();
+		spinner->Play();
 	}
-	
-	spinner->Show();
-	spinner->Play();
 }
 
 void REHex::StringPanel::stop_threads()
@@ -807,6 +807,9 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 	
 	start_threads();
 	
+	update_needed = true;
+	update();
+	
 	/* Continue propogation. */
 	event.Skip();
 }
@@ -837,11 +840,19 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 {
 	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		strings.clear_range(event.offset, event.length);
+	}
+	
+	{
 		std::lock_guard<std::mutex> pl(pause_lock);
 		mark_dirty_pad(event.offset, event.length);
 	}
 	
 	start_threads();
+	
+	update_needed = true;
+	update();
 	
 	/* Continue propogation. */
 	event.Skip();

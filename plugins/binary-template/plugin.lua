@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -58,6 +58,7 @@ end
 local ID_BROWSE = 1
 local ID_RANGE_FILE = 2
 local ID_RANGE_SEL = 3
+local ID_RANGE_CURSOR = 4
 
 rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 	local tab = window:active_tab()
@@ -126,6 +127,9 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 	local range_sel  = wx.wxRadioButton(range_box, ID_RANGE_SEL,  "Apply template to selection only")
 	range_sizer:Add(range_sel)
 	
+	local range_cursor = wx.wxRadioButton(range_box, ID_RANGE_CURSOR, "Apply template from cursor")
+	range_sizer:Add(range_cursor)
+	
 	local selection_off, selection_length = tab:get_selection_linear()
 	if selection_off ~= nil
 	then
@@ -171,6 +175,10 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		then
 			selection_off = 0
 			selection_length = doc:buffer_length()
+		elseif range_cursor:GetValue()
+		then
+			selection_off = doc:get_cursor_position()
+			selection_length = doc:buffer_length() - selection_off
 		end
 		
 		local yield_counter = 0

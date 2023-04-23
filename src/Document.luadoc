@@ -5,6 +5,9 @@
 --- Get the length of the file, in bytes.
 -- @function buffer_length
 
+--- Get the current cursor position in the file, in bytes.
+-- @function get_cursor_position
+
 --- Get the filename of the document.
 -- @function get_filename
 

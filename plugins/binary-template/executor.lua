@@ -750,6 +750,11 @@ local function _builtin_function_Printf(context, argv)
 	context.interface.print(string.format(s))
 end
 
+local function _builtin_function_SPrintf(context, argv)
+	local s = _render_format_string(context, argv)
+	return _builtin_types.string, ImmediateValue:new(s)
+end
+
 local function _builtin_function_Error(context, argv)
 	local s = _render_format_string(context, argv)
 	_template_error(context, string.format(s))
@@ -995,8 +1000,9 @@ local _builtin_functions = {
 		impl = _builtin_function_ReadString,
 	},
 	
-	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
-	Error  = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Error  },
+	Printf  = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
+	SPrintf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_SPrintf },
+	Error   = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Error  },
 	
 	ArrayLength = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayLength },
 	ArrayResize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayResize },

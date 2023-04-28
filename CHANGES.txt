@@ -37,6 +37,8 @@ Version TBA
 
  * Add ReadString() template function.
 
+ * Add SPrintf() template function.
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

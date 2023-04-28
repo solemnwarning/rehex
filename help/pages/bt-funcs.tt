@@ -134,6 +134,15 @@ Writes a message to the application console. The message will also be shown in t
 
 <hr>
 [% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]string[% END %] SPrintf([% WRAPPER "code-type.tt" %]string[% END %] format, ...)
+[%- END %]
+
+<p>
+Creates a string from a printf-style format and parameters.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
 [% WRAPPER "code-type.tt" %]void[% END %] Error(string format, ...)
 [%- END %]
 

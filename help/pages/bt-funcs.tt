@@ -112,6 +112,19 @@ Calling any of these functions with an invalid offset will result in a template 
 
 <hr>
 [% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]string[% END %] ReadString([% WRAPPER "code-type.tt" %]int64_t[% END %] offset = FTell(), [% WRAPPER "code-type.tt" %]uint8_t[% END %] term_char = '\0', [% WRAPPER "code-type.tt" %]int64_t[% END %] max_length = -1)
+[%- END %]
+
+<p>
+The <code>ReadString()</code> function reads a variable-length string from the document and returns it.
+</p>
+
+<p>
+The function will read from the given offset until it reaches a terminator (defined by term_char) or has read max_length bytes. If max_length is negative, only a string terminator will end the string. If the end of the file is reached before either of these conditions is met, a template error will be raised.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
 [% WRAPPER "code-type.tt" %]void[% END %] Printf(string format, ...)
 [%- END %]
 

@@ -7009,4 +7009,128 @@ describe("executor", function()
 			})
 			end, "Unrecognised character set 'UTF-64' specified at test.bt:1")
 	end)
+	
+	describe("ReadString", function()
+		it("reads a nil-terminated string", function()
+			local interface, log = test_interface(string.char(
+				0x00, 0x41, 0x42, 0x43,
+				0x00, 0x00, 0x00, 0x00
+			))
+			
+			executor.execute(interface, {
+				-- Printf("%s", ReadString(1));
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "%s" },
+					{ "test.bt", 1, "call", "ReadString", {
+						{ "test.bt", 1, "num", 1 } } } } },
+				
+				-- Printf("%s", ReadString(2));
+				{ "test.bt", 2, "call", "Printf", {
+					{ "test.bt", 2, "str", "%s" },
+					{ "test.bt", 2, "call", "ReadString", {
+						{ "test.bt", 2, "num", 2 } } } } },
+				
+				-- Printf("%s", ReadString(4));
+				{ "test.bt", 3, "call", "Printf", {
+					{ "test.bt", 3, "str", "%s" },
+					{ "test.bt", 3, "call", "ReadString", {
+						{ "test.bt", 3, "num", 4 } } } } },
+			})
+			
+			local expect_log = {
+				"print(ABC)",
+				"print(BC)",
+				"print()",
+			}
+			
+			assert.are.same(expect_log, log)
+		end)
+		
+		it("reads a space-terminated string", function()
+			local interface, log = test_interface(string.char(
+				0x00, 0x41, 0x42, 0x43,
+				0x20, 0x00, 0x00, 0x00
+			))
+			
+			executor.execute(interface, {
+				-- Printf("%s", ReadString(1, ' '));
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "%s" },
+					{ "test.bt", 1, "call", "ReadString", {
+						{ "test.bt", 1, "num", 1 },
+						{ "test.bt", 1, "num", 0x20 } } } } },
+				
+				-- Printf("%s", ReadString(2, ' '));
+				{ "test.bt", 2, "call", "Printf", {
+					{ "test.bt", 2, "str", "%s" },
+					{ "test.bt", 2, "call", "ReadString", {
+						{ "test.bt", 2, "num", 2 },
+						{ "test.bt", 2, "num", 0x20 } } } } },
+				
+				-- Printf("%s", ReadString(4, ' '));
+				{ "test.bt", 3, "call", "Printf", {
+					{ "test.bt", 3, "str", "%s" },
+					{ "test.bt", 3, "call", "ReadString", {
+						{ "test.bt", 3, "num", 4 },
+						{ "test.bt", 3, "num", 0x20 } } } } },
+			})
+			
+			local expect_log = {
+				"print(ABC)",
+				"print(BC)",
+				"print()",
+			}
+			
+			assert.are.same(expect_log, log)
+		end)
+		
+		it("reads a truncated string", function()
+			local interface, log = test_interface(string.char(
+				0x00, 0x41, 0x42, 0x43,
+				0x44, 0x45, 0x46, 0x47
+			))
+			
+			executor.execute(interface, {
+				-- Printf("%s", ReadString(1, '\0', 3));
+				{ "test.bt", 1, "call", "Printf", {
+					{ "test.bt", 1, "str", "%s" },
+					{ "test.bt", 1, "call", "ReadString", {
+						{ "test.bt", 1, "num", 1 },
+						{ "test.bt", 1, "num", 0x00 },
+						{ "test.bt", 1, "num", 3 } } } } },
+				
+				-- Printf("%s", ReadString(1, '\0', 7));
+				{ "test.bt", 2, "call", "Printf", {
+					{ "test.bt", 2, "str", "%s" },
+					{ "test.bt", 2, "call", "ReadString", {
+						{ "test.bt", 2, "num", 1 },
+						{ "test.bt", 2, "num", 0x00 },
+						{ "test.bt", 2, "num", 7 } } } } },
+			})
+			
+			local expect_log = {
+				"print(ABC)",
+				"print(ABCDEFG)",
+			}
+			
+			assert.are.same(expect_log, log)
+		end)
+		
+		it("raises an error on overflow", function()
+			local interface, log = test_interface(string.char(
+				0x00, 0x41, 0x42, 0x43,
+				0x44, 0x45, 0x46, 0x47
+			))
+			
+			assert.has_error(function()
+				executor.execute(interface, {
+					-- Printf("%s", ReadString(1));
+					{ "test.bt", 1, "call", "Printf", {
+						{ "test.bt", 1, "str", "%s" },
+						{ "test.bt", 1, "call", "ReadString", {
+							{ "test.bt", 1, "num", 1 } } } } },
+				})
+				end, "Attempt to read past end of file in ReadString function at test.bt:1")
+		end)
+	end)
 end)

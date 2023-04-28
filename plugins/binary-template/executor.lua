@@ -778,6 +778,41 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 	}
 end
 
+local function _builtin_function_ReadString(context, argv)
+	local pos = argv[1][2]:get()
+	local term_char = argv[2][2]:get()
+	local max_len = argv[3][2]:get()
+	
+	local str = ""
+	local str_length = 0
+	
+	while true
+	do
+		if max_len >= 0 and str_length == max_len
+		then
+			return _builtin_types.string, ImmediateValue:new(str:sub(1, str_length))
+		end
+		
+		if str_length == str:len()
+		then
+			local str_more = context.interface.read_data(pos + str_length, 128)
+			if str_more:len() < 1
+			then
+				_template_error(context, "Attempt to read past end of file in ReadString function")
+			end
+			
+			str = str .. str_more
+		end
+		
+		if str:byte(str_length + 1) == term_char
+		then
+			return _builtin_types.string, ImmediateValue:new(str:sub(1, str_length))
+		end
+		
+		str_length = str_length + 1
+	end
+end
+
 local function _builtin_function_ArrayLength(context, argv)
 	if #argv ~= 1 or argv[1][1] == nil or not argv[1][1].is_array
 	then
@@ -938,6 +973,27 @@ local _builtin_functions = {
 	
 	ReadDouble = _builtin_function_defn_ReadXXX(_builtin_types.double, "ReadDouble"),
 	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "ReadFloat"),
+	
+	ReadString = {
+		arguments = {
+			_builtin_types.int64_t,
+			_builtin_types.uint8_t,
+			_builtin_types.int64_t,
+		},
+		
+		defaults  = {
+			-- FTell()
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "call", "FTell", {} },
+			
+			-- '\0'
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", 0 },
+			
+			-- -1
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", -1 },
+		},
+		
+		impl = _builtin_function_ReadString,
+	},
 	
 	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
 	Error  = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Error  },

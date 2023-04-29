@@ -2380,6 +2380,7 @@ _eval_switch = function(context, statement)
 	end
 	
 	local found_match = false
+	local case_match = {}
 	
 	for _, case in ipairs(cases)
 	do
@@ -2397,24 +2398,26 @@ _eval_switch = function(context, statement)
 			
 			if expr_v:get() == case_expr_v:get()
 			then
-				case[1] = true
+				table.insert(case_match, true)
 				found_match = true
 			else
-				case[1] = false
+				table.insert(case_match, false)
 			end
+		else
+			table.insert(case_match, false)
 		end
 	end
 	
 	if not found_match
 	then
-		for _, case in ipairs(cases)
+		for idx, case in ipairs(cases)
 		do
 			local case_expr = case[1]
 			local case_body = case[2]
 			
 			if case_expr == nil
 			then
-				case[1] = true
+				case_match[idx] = true
 			end
 		end
 	end
@@ -2431,12 +2434,11 @@ _eval_switch = function(context, statement)
 	
 	found_match = false
 	
-	for _, case in ipairs(cases)
+	for idx, case in ipairs(cases)
 	do
-		local case_matched = case[1]
 		local case_body = case[2]
 		
-		if not found_match and case_matched
+		if not found_match and case_match[idx]
 		then
 			found_match = true
 		end

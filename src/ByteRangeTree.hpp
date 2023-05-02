@@ -1118,10 +1118,24 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 			(*c)->parent = node->parent;
 		}
 		
+		/* Work around for GCC <4.9 where std::vector::insert() returns
+		 * void rather than an iterator to the inserted element.
+		 *
+		 * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55817
+		*/
+		#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
+		size_t first_inserted_idx = std::distance(container.begin(), erase_iter);
+		container.insert(
+			erase_iter,
+			std::make_move_iterator(node->children.begin()),
+			std::make_move_iterator(node->children.end()));
+		auto first_inserted_elem = std::next(container.begin(), first_inserted_idx);
+		#else
 		auto first_inserted_elem = container.insert(
 			erase_iter,
 			std::make_move_iterator(node->children.begin()),
 			std::make_move_iterator(node->children.end()));
+		#endif
 		
 		erase_iter = std::next(first_inserted_elem, num_children);
 		assert(erase_iter != container.end());

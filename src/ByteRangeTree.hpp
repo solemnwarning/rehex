@@ -19,6 +19,7 @@
 #define REHEX_BYTERANGETREE_HPP
 
 #include <algorithm>
+#include <assert.h>
 #include <functional>
 #include <memory>
 #include <set>
@@ -26,7 +27,7 @@
 #include <vector>
 
 #ifndef NDEBUG
-#define REHEX_BYTERANGETREE_CHECKS
+// #define REHEX_BYTERANGETREE_CHECKS
 // #define REHEX_BYTERANGETREE_DIAGS
 #endif
 
@@ -143,7 +144,8 @@ namespace REHex
 						prev_sibling(node.prev_sibling),
 						next_sibling(node.next_sibling),
 						prev_all(node.prev_all),
-						next_all(node.next_all)
+						next_all(node.next_all),
+						children(std::move(node.children))
 					{
 						if(prev_sibling != NULL)
 						{
@@ -175,6 +177,11 @@ namespace REHex
 						else{
 							assert(*last_node == &node);
 							*last_node = this;
+						}
+						
+						for(auto c = children.begin(); c != children.end(); ++c)
+						{
+							(*c)->parent = this;
 						}
 					}
 					
@@ -291,6 +298,11 @@ namespace REHex
 				{
 					return lhs.key.offset < rhs.key.offset;
 				}
+				
+				static bool key_lt(const NodeRef &lhs, const NodeRef &rhs)
+				{
+					return lhs.key < rhs.key;
+				}
 			};
 			
 			std::vector<NodeRef> root;
@@ -298,6 +310,8 @@ namespace REHex
 			
 			Node *first_node;
 			Node *last_node;
+			
+			size_t erase_recursive_impl(Node *node);
 			
 			void check() const;
 			
@@ -336,6 +350,12 @@ namespace REHex
 					}
 					
 				public:
+					using iterator_category = std::bidirectional_iterator_tag;
+					using difference_type   = ssize_t;
+					using value_type        = Node*;
+					using pointer           = value_type*;
+					using reference         = value_type&;
+					
 					/* Prefix increment */
 					const_iterator &operator++()
 					{
@@ -435,6 +455,12 @@ namespace REHex
 					}
 					
 				public:
+					using iterator_category = std::bidirectional_iterator_tag;
+					using difference_type   = ssize_t;
+					using value_type        = Node*;
+					using pointer           = value_type*;
+					using reference         = value_type&;
+					
 					/* Prefix increment */
 					iterator &operator++()
 					{
@@ -538,7 +564,7 @@ namespace REHex
 			{
 				if(!root.empty())
 				{
-					return iterator(this, root.front().node.get());
+					return iterator(this, first_node);
 				}
 				else{
 					return end();
@@ -549,7 +575,7 @@ namespace REHex
 			{
 				if(!root.empty())
 				{
-					return const_iterator(this, root.front().node.get());
+					return const_iterator(this, first_node);
 				}
 				else{
 					return end();
@@ -717,7 +743,13 @@ namespace REHex
 			 * @brief Delete a node and all children from the tree.
 			 * @returns The number of elements deleted.
 			*/
-			size_t erase_recursive(Node *node);
+			size_t erase_recursive(Node *node)
+			{
+				size_t erased_elements = erase_recursive_impl(node);
+				check();
+				
+				return erased_elements;
+			}
 			
 			/**
 			 * @brief Delete a node and all children from the tree.
@@ -728,7 +760,9 @@ namespace REHex
 				assert(it.node != NULL);
 				
 				iterator next_it = std::next(it);
-				erase_recursive(it.node);
+				erase_recursive_impl(it.node);
+				
+				check();
 				
 				return next_it;
 			}
@@ -742,7 +776,10 @@ namespace REHex
 				Node *node = find_node(key);
 				if(node != NULL)
 				{
-					return erase_recursive(node);
+					size_t erased_elements = erase_recursive_impl(node);
+					check();
+					
+					return erased_elements;
 				}
 				else{
 					return 0;
@@ -769,7 +806,6 @@ namespace REHex
 			 *
 			 * NOTE: All iterators and Node* pointers are invalidated by this method.
 			*/
-			size_t data_inserted(off_t offset, off_t length);
 			size_t data_erased(off_t offset, off_t length);
 			
 			/**
@@ -903,12 +939,13 @@ bool REHex::ByteRangeTree<T>::can_set(off_t offset, off_t length) const
 		
 		auto i = std::upper_bound(container->begin(), container->end(), n, &NodeRef::offset_lt);
 		
-		if(i != container->end() 
-			&& (offset + length) > (*i)->key.offset
-			&& (offset + length) < ((*i)->key.offset + (*i)->key.length))
+		for(auto j = i; j != container->end() && (offset + length) > (*j)->key.offset; ++j)
 		{
-			/* We are straddling the start of another node. */
-			return false;
+			if((offset + length) < ((*j)->key.offset + (*j)->key.length))
+			{
+				/* We are straddling the start of another node. */
+				return false;
+			}
 		}
 		
 		if(i != container->begin())
@@ -970,21 +1007,22 @@ bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 		{
 			auto insert_after = std::prev(insert_before);
 			
-			if(((*insert_after)->key.offset + ((*insert_after)->key.length)) > (offset + length))
-			{
-				/* We should be nested under this. */
-				
-				n_parent = *insert_after;
-				container = &((*insert_after)->children);
-				continue;
-			}
-			else if((*insert_after)->key.offset == offset && (*insert_after)->key.length == length)
+			if((*insert_after)->key.offset == offset && (*insert_after)->key.length == length)
 			{
 				/* We should replace this. */
 				
 				(*insert_after)->value = value;
 				check();
 				return true;
+			}
+			else if(((*insert_after)->key.offset + ((*insert_after)->key.length)) > offset
+				&& ((*insert_after)->key.offset + ((*insert_after)->key.length)) >= (offset + length))
+			{
+				/* We should be nested under this. */
+				
+				n_parent = *insert_after;
+				container = &((*insert_after)->children);
+				continue;
 			}
 			
 			n.node.reset(new Node(offset, length, value));
@@ -1088,7 +1126,7 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 		? node->parent->children
 		: root;
 	
-	auto erase_iter = std::lower_bound(container.begin(), container.end(), NodeRef(node->key), &NodeRef::offset_lt);
+	auto erase_iter = std::lower_bound(container.begin(), container.end(), NodeRef(node->key), &NodeRef::key_lt);
 	assert(erase_iter != container.end());
 	assert(erase_iter->node.get() == node);
 	
@@ -1103,12 +1141,14 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 		
 		if(node->prev_sibling != NULL)
 		{
+			assert(node->prev_sibling->next_sibling == node);
 			node->prev_sibling->next_sibling = first_child;
 			first_child->prev_sibling = node->prev_sibling;
 		}
 		
 		if(node->next_sibling != NULL)
 		{
+			assert(node->next_sibling->prev_sibling == node);
 			node->next_sibling->prev_sibling = last_child;
 			last_child->next_sibling = node->next_sibling;
 		}
@@ -1155,6 +1195,7 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 	
 	if(node->prev_all != NULL)
 	{
+		assert(node->prev_all->next_all == node);
 		node->prev_all->next_all = node->next_all;
 	}
 	else{
@@ -1164,6 +1205,7 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 	
 	if(node->next_all != NULL)
 	{
+		assert(node->next_all->prev_all == node);
 		node->next_all->prev_all = node->prev_all;
 	}
 	else{
@@ -1180,7 +1222,7 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 }
 
 template<typename T>
-size_t REHex::ByteRangeTree<T>::erase_recursive(Node *node)
+size_t REHex::ByteRangeTree<T>::erase_recursive_impl(Node *node)
 {
 	std::function<void(Node*)> visit_node;
 	size_t total_nodes = 0;
@@ -1191,16 +1233,19 @@ size_t REHex::ByteRangeTree<T>::erase_recursive(Node *node)
 		
 		if(n->prev_sibling != NULL)
 		{
+			assert(n->prev_sibling->next_sibling == n);
 			n->prev_sibling->next_sibling = n->next_sibling;
 		}
 		
 		if(n->next_sibling != NULL)
 		{
+			assert(n->next_sibling->prev_sibling == n);
 			n->next_sibling->prev_sibling = n->prev_sibling;
 		}
 		
 		if(n->prev_all != NULL)
 		{
+			assert(n->prev_all->next_all == n);
 			n->prev_all->next_all = n->next_all;
 		}
 		else{
@@ -1210,6 +1255,7 @@ size_t REHex::ByteRangeTree<T>::erase_recursive(Node *node)
 		
 		if(n->next_all != NULL)
 		{
+			assert(n->next_all->prev_all == n);
 			n->next_all->prev_all = n->prev_all;
 		}
 		else{
@@ -1217,7 +1263,7 @@ size_t REHex::ByteRangeTree<T>::erase_recursive(Node *node)
 			last_node = n->prev_all;
 		}
 		
-		for(auto it = node->children.begin(); it != node->children.end(); ++it)
+		for(auto it = n->children.begin(); it != n->children.end(); ++it)
 		{
 			visit_node(it->node.get());
 		}
@@ -1229,14 +1275,12 @@ size_t REHex::ByteRangeTree<T>::erase_recursive(Node *node)
 		? node->parent->children
 		: root;
 	
-	auto erase_iter = std::lower_bound(container.begin(), container.end(), NodeRef(node->key), &NodeRef::offset_lt);
+	auto erase_iter = std::lower_bound(container.begin(), container.end(), NodeRef(node->key), &NodeRef::key_lt);
 	assert(erase_iter != container.end());
 	assert(erase_iter->node.get() == node);
 	
 	container.erase(erase_iter);
 	total_size -= total_nodes;
-	
-	check();
 	
 	return total_nodes;
 }
@@ -1280,9 +1324,9 @@ size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
 	std::function<void(std::vector<NodeRef>&)> process_nodes;
 	process_nodes = [&](std::vector<NodeRef> &nodes)
 	{
-		for(auto it = nodes.begin(); it != nodes.end(); ++it)
+		for(auto it = nodes.begin(); it != nodes.end();)
 		{
-			NodeRef &n = *it;
+			NodeRef &n = *(it++);
 			
 			off_t i_offset = n.key.offset;
 			off_t i_length = n.key.length;
@@ -1309,6 +1353,8 @@ size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
 				
 				++keys_modified;
 			}
+			
+			process_nodes(n->children);
 		}
 	};
 	
@@ -1339,7 +1385,7 @@ size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
 			{
 				/* This key is wholly encompassed by the deleted range. */
 				
-				keys_modified += erase_recursive(&*n);
+				keys_modified += erase_recursive_impl(&*n);
 				continue;
 			}
 			
@@ -1421,11 +1467,21 @@ void REHex::ByteRangeTree<T>::check() const
 			fprintf(stderr, "node %p offset = %zd length = %zd\n", container[i].node.get(), container[i]->key.offset, container[i]->key.length);
 			#endif
 			
+			assert(container[i].key.offset == container[i].node->key.offset);
+			assert(container[i].key.length == container[i].node->key.length);
+			
 			assert(container[i]->parent == parent);
+			
+			if(parent != NULL)
+			{
+				assert(parent->key.contains(container[i].key));
+			}
 			
 			if(i > 0)
 			{
 				assert(container[i]->prev_sibling == container[i - 1]);
+				assert(container[i].key.offset > container[i - 1].key.offset);
+				assert(container[i].key.offset >= (container[i - 1].key.offset + container[i - 1].key.length));
 			}
 			if((i + 1) < container.size())
 			{

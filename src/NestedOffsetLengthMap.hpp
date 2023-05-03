@@ -148,6 +148,22 @@ namespace REHex {
 					}
 			};
 			
+			NestedOffsetLengthMap() {}
+			
+			NestedOffsetLengthMap(const NestedOffsetLengthMap<T> &src):
+				tree(src.tree)
+			{
+				rebuild_iterators();
+			}
+			
+			NestedOffsetLengthMap<T> &operator=(const NestedOffsetLengthMap &src)
+			{
+				tree = src.tree;
+				rebuild_iterators();
+				
+				return *this;
+			}
+			
 			iterator begin()
 			{
 				return iterator(sorted_nodes.begin());
@@ -236,6 +252,8 @@ namespace REHex {
 			
 			map.sorted_nodes[k] = map.tree.find_node(k);
 			assert(map.sorted_nodes[k] != NULL);
+			assert(map.sorted_nodes[k]->key.offset == offset);
+			assert(map.sorted_nodes[k]->key.length == length);
 		}
 		
 		return success;

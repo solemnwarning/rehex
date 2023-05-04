@@ -11,6 +11,7 @@ This page lists all the built-in functions available for templates.
 <ul>
 <li><a href="#iofunc">I/O Functions</a></li>
 <li><a href="#arrayfunc">Array Functions</a></li>
+<li><a href="#stringfunc">String Functions</a></li>
 <li><a href="#metafunc">Metadata Functions</a></li>
 </ul>
 
@@ -209,11 +210,22 @@ Global variable that returns the current array index when expanding arrays of st
 Attempting to access the <code>ArrayIndex</code> variable when not in a struct that is being used as an array element will abort the template execution with an error.
 </p>
 
+<a name="stringfunc"><h3>String Functions</h3></a>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int64_t[% END %] StringLengthBytes([% WRAPPER "code-type.tt" %]string[% END %] s)
+[%- END %]
+
+<p>
+Returns the number of <b>bytes</b> in the string.
+</p>
+
 <a name="metafunc"><h3>Metadata Functions</h3></a>
 
 <hr>
 [% WRAPPER "code.tt" -%]
-[% WRAPPER "code-type.tt" %]void[% END %] SetComment([% WRAPPER "code-type.tt" %]int64_t[% END %] offset, [% WRAPPER "code-type.tt" %]int64_t length[% END %], [% WRAPPER "code-type.tt" %]string[% END %] text)
+[% WRAPPER "code-type.tt" %]void[% END %] SetComment([% WRAPPER "code-type.tt" %]int64_t[% END %] offset, [% WRAPPER "code-type.tt" %]int64_t[% END %] length, [% WRAPPER "code-type.tt" %]string[% END %] text)
 [%- END %]
 
 <p>

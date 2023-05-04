@@ -408,7 +408,7 @@ local function _assign_value(context, dst_type, dst_val, src_type, src_val)
 			
 			if dst_type.int_mask ~= nil
 			then
-				v = v & dst_type.int_mask
+				v = math.floor(v) & dst_type.int_mask
 			end
 			
 			dst_val:set(v)
@@ -498,7 +498,7 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	
 	if dst_type.int_mask ~= nil and (src_type.int_mask == nil or src_type.int_mask ~= dst_type.int_mask)
 	then
-		return PlainValue:new(src_val:get() & dst_type.int_mask)
+		return PlainValue:new(math.floor(src_val:get()) & dst_type.int_mask)
 	end
 	
 	if move_if_possible

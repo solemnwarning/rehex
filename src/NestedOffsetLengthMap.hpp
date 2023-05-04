@@ -250,10 +250,8 @@ namespace REHex {
 		{
 			ByteRangeTreeKey k(offset, length);
 			
-			map.sorted_nodes[k] = map.tree.find_node(k);
-			assert(map.sorted_nodes[k] != NULL);
-			assert(map.sorted_nodes[k]->key.offset == offset);
-			assert(map.sorted_nodes[k]->key.length == length);
+			typename ByteRangeTree<T>::Node *n = map.sorted_nodes[k] = map.tree.find_node(k);
+			assert(n != NULL);
 		}
 		
 		return success;

@@ -2750,12 +2750,23 @@ int REHex::DocumentCtrl::hf_string_width(int length)
 /* Calculate the character at the pixel offset relative to the start of the string. */
 int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 {
-	for(int i = 0;; ++i)
+	if(hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO - 1] > (unsigned int)(x_px))
 	{
-		int w = hf_string_width(i + 1);
-		if(w > x_px)
+		auto it = std::upper_bound(
+			hf_string_width_precomp,
+			hf_string_width_precomp + PRECOMP_HF_STRING_WIDTH_TO,
+			(unsigned int)(x_px));
+		
+		return std::distance(hf_string_width_precomp, it);
+	}
+	else{
+		for(int i = PRECOMP_HF_STRING_WIDTH_TO;; ++i)
 		{
-			return i;
+			int w = hf_string_width(i + 1);
+			if(w > x_px)
+			{
+				return i;
+			}
 		}
 	}
 }

@@ -986,10 +986,7 @@ bool REHex::ByteRangeTree<T>::can_set(off_t offset, off_t length) const
 template<typename T>
 bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 {
-	if(!can_set(offset, length))
-	{
-		return false;
-	}
+	off_t end = offset + length;
 	
 	NodeRef n(offset, length);
 	Node *n_parent = NULL;
@@ -1000,6 +997,15 @@ bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 	{
 		auto insert_before = std::upper_bound(container->begin(), container->end(), n, &NodeRef::offset_lt);
 		
+		for(auto j = insert_before; j != container->end() && (offset + length) > (*j)->key.offset; ++j)
+		{
+			if((offset + length) < ((*j)->key.offset + (*j)->key.length))
+			{
+				/* We are straddling the start of another node. */
+				return false;
+			}
+		}
+		
 		auto consume_begin = insert_before;
 		auto consume_end = insert_before;
 		
@@ -1007,36 +1013,44 @@ bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 		{
 			auto insert_after = std::prev(insert_before);
 			
-			if((*insert_after)->key.offset == offset && (*insert_after)->key.length == length)
+			Node *ia_node = *insert_after;
+			off_t ia_offset = ia_node->key.offset;
+			off_t ia_length = ia_node->key.length;
+			off_t ia_end = ia_offset + ia_length;
+			
+			if(ia_offset == offset && ia_length == length)
 			{
 				/* We should replace this. */
 				
-				(*insert_after)->value = value;
+				ia_node->value = value;
 				check();
 				return true;
 			}
-			else if(((*insert_after)->key.offset + ((*insert_after)->key.length)) > offset
-				&& ((*insert_after)->key.offset + ((*insert_after)->key.length)) >= (offset + length))
+			else if(ia_end > offset && ia_end >= end)
 			{
 				/* We should be nested under this. */
 				
-				n_parent = *insert_after;
-				container = &((*insert_after)->children);
+				n_parent = ia_node;
+				container = &(ia_node->children);
 				continue;
+			}
+			else if(ia_offset < offset && ia_end > offset && ia_end < (offset + length))
+			{
+				/* We are straddling the end of another node. */
+				return false;
 			}
 			
 			n.node.reset(new Node(offset, length, value));
 			n->parent = n_parent;
 			
-			if((*insert_after)->key.offset == offset)
+			if(ia_offset == offset)
 			{
 				/* We should consume the previous element. */
 				consume_begin = insert_after;
-				n->prev_sibling = (*insert_after)->prev_sibling;
+				n->prev_sibling = ia_node->prev_sibling;
 			}
 			else{
-				n->prev_sibling = *insert_after;
-				// (*insert_after)->next_sibling = n.node.get();
+				n->prev_sibling = ia_node;
 			}
 		}
 		else{

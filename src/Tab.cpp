@@ -1765,8 +1765,8 @@ void REHex::Tab::repopulate_regions_thaw()
 
 std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode)
 {
-	auto comments = doc->get_comments();
-	auto types = doc->get_data_types();
+	auto &comments = doc->get_comments();
+	auto &types = doc->get_data_types();
 	
 	bool nest = (inline_comment_mode == ICM_SHORT_INDENT || inline_comment_mode == ICM_FULL_INDENT);
 	bool truncate = (inline_comment_mode == ICM_SHORT || inline_comment_mode == ICM_SHORT_INDENT);

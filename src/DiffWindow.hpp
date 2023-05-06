@@ -134,7 +134,7 @@ namespace REHex {
 					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc_ctrl) override;
-					virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override;
+					virtual void calc_height(DocumentCtrl &doc_ctrl) override;
 					virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
 			};
 			

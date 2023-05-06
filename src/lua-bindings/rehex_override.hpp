@@ -112,7 +112,7 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 {
 	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
 	
-	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> comments = self->get_comments();
+	const REHex::ByteRangeTree<REHex::Document::Comment> &comments = self->get_comments();
 	
 	lua_newtable(L);            /* Table to return */
 	lua_Integer table_idx = 1;  /* Next index to use in return table */

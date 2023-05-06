@@ -110,7 +110,7 @@ namespace REHex
 					+ doc_ctrl.hf_string_width(TYPE_X_CHAR + TYPE_MAX_LEN + 2 /* <> characters */);
 			}
 			
-			virtual void calc_height(DocumentCtrl &doc_ctrl, wxDC &dc) override
+			virtual void calc_height(DocumentCtrl &doc_ctrl) override
 			{
 				y_lines = indent_final + 1;
 			}

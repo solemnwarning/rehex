@@ -22,6 +22,7 @@
 #include "ConsoleBuffer.hpp"
 #include "IPC.hpp"
 #include "mainwindow.hpp"
+#include "ThreadPool.hpp"
 
 #include <functional>
 #include <map>
@@ -52,6 +53,7 @@ namespace REHex {
 			wxLocale *locale;
 			
 			ConsoleBuffer *console;
+			ThreadPool *thread_pool;
 			
 			/**
 			 * @brief Get the last directory browsed to in a load/save dialog.

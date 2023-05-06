@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -32,94 +32,267 @@
 #include <map>
 #include <stdio.h>
 
+#include "ByteRangeTree.hpp"
+
 namespace REHex {
-	struct NestedOffsetLengthMapKey
-	{
-		off_t offset;
-		off_t length;
-		
-		NestedOffsetLengthMapKey(off_t offset, off_t length):
-			offset(offset), length(length) {}
-		
-		bool operator<(const NestedOffsetLengthMapKey &rhs) const
-		{
-			if(offset == rhs.offset)
-			{
-				return length < rhs.length;
-			}
-			else{
-				return offset < rhs.offset;
-			}
-		}
-		
-		bool operator==(const NestedOffsetLengthMapKey &rhs) const
-		{
-			return offset == rhs.offset && length == rhs.length;
-		}
-	};
+	using NestedOffsetLengthMapKey = ByteRangeTreeKey;
 	
-	template<typename T> using NestedOffsetLengthMap = std::map<NestedOffsetLengthMapKey, T>;
+	template<typename T> class NestedOffsetLengthMap
+	{
+		public:
+			using Node = typename ByteRangeTree<T>::Node;
+			
+			ByteRangeTree<T> tree;
+			std::map<ByteRangeTreeKey, Node*> sorted_nodes;
+			
+			class const_iterator
+			{
+				friend NestedOffsetLengthMap;
+				
+				protected:
+					typename std::map<ByteRangeTreeKey, Node*>::const_iterator it;
+					
+				public:
+					using iterator_category = std::bidirectional_iterator_tag;
+					using difference_type   = int;
+					using value_type        = Node*;
+					using pointer           = value_type*;
+					using reference         = value_type&;
+					
+					const_iterator(const typename std::map<ByteRangeTreeKey, Node*>::const_iterator &it):
+						it(it)
+					{}
+					
+					const_iterator(const const_iterator &src):
+						it(src.it)
+					{}
+					
+					/* Prefix increment */
+					const_iterator &operator++()
+					{
+						++it;
+						return *this;
+					}
+					
+					/* Postfix increment */
+					const_iterator operator++(int)
+					{
+						const_iterator old = *this;
+						++(*this);
+						
+						return old;
+					}
+					
+					/* Prefix decrement */
+					const_iterator &operator--()
+					{
+						--it;
+						return *this;
+					}
+					
+					/* Postfix decrement */
+					const_iterator operator--(int)
+					{
+						const_iterator old = *this;
+						--(*this);
+						
+						return old;
+					}
+					
+					bool operator==(const const_iterator &rhs) const
+					{
+						return it == rhs.it;
+					}
+					
+					bool operator!=(const const_iterator &rhs) const
+					{
+						return it != rhs.it;
+					}
+					
+					operator const Node*() const
+					{
+						return it->second;
+					}
+					
+					const Node* operator->() const
+					{
+						return it->second;
+					}
+			};
+			
+			class iterator: public const_iterator
+			{
+				friend NestedOffsetLengthMap;
+				
+				public:
+					using iterator_category = std::bidirectional_iterator_tag;
+					using difference_type   = int;
+					using value_type        = Node*;
+					using pointer           = value_type*;
+					using reference         = value_type&;
+					
+					iterator(const typename std::map<ByteRangeTreeKey, Node*>::iterator &it):
+						const_iterator(it) {}
+					
+					iterator(const iterator &src):
+						const_iterator(src.it) {}
+					
+					operator Node*() const
+					{
+						return (Node*)(const_iterator::it->second);
+					}
+					
+					Node* operator->() const
+					{
+						return (Node*)(const_iterator::it->second);
+					}
+			};
+			
+			NestedOffsetLengthMap() {}
+			
+			NestedOffsetLengthMap(const NestedOffsetLengthMap<T> &src):
+				tree(src.tree)
+			{
+				rebuild_iterators();
+			}
+			
+			NestedOffsetLengthMap<T> &operator=(const NestedOffsetLengthMap &src)
+			{
+				tree = src.tree;
+				rebuild_iterators();
+				
+				return *this;
+			}
+			
+			iterator begin()
+			{
+				return iterator(sorted_nodes.begin());
+			}
+			
+			const_iterator begin() const
+			{
+				return const_iterator(sorted_nodes.begin());
+			}
+			
+			iterator end()
+			{
+				return iterator(sorted_nodes.end());
+			}
+			
+			const_iterator end() const
+			{
+				return const_iterator(sorted_nodes.end());
+			}
+			
+			iterator find(const NestedOffsetLengthMapKey &key)
+			{
+				return iterator(sorted_nodes.find(key));
+			}
+			
+			const_iterator find(const NestedOffsetLengthMapKey &key) const
+			{
+				return const_iterator(sorted_nodes.find(key));
+			}
+			
+			size_t erase(const NestedOffsetLengthMapKey &key)
+			{
+				sorted_nodes.erase(key);
+				return tree.erase(key);
+			}
+			
+			size_t erase_recursive(const NestedOffsetLengthMapKey &key)
+			{
+				size_t erased_elements = tree.erase_recursive(key);
+				if(erased_elements > 0)
+				{
+					rebuild_iterators();
+				}
+				
+				return erased_elements;
+			}
+			
+			bool set(off_t offset, off_t length, const T &value)
+			{
+				bool success = tree.set(offset, length, value);
+				if(success)
+				{
+					ByteRangeTreeKey k(offset, length);
+					
+					Node *n = sorted_nodes[k] = tree.find_node(k);
+					assert(n != NULL);
+				}
+				
+				return success;
+			}
+			
+			bool can_set(off_t offset, off_t length) const
+			{
+				return tree.can_set(offset, length);
+			}
+			
+			size_t size() const
+			{
+				return tree.size();
+			}
+			
+			bool empty() const
+			{
+				return tree.empty();
+			}
+			
+			void rebuild_iterators()
+			{
+				sorted_nodes.clear();
+				
+				for(auto it = tree.begin(); it != tree.end(); ++it)
+				{
+					sorted_nodes[it->key] = &(*it);
+				}
+			}
+			
+			bool operator==(const NestedOffsetLengthMap<T> &rhs) const
+			{
+				return tree == rhs.tree;
+			}
+			
+			T &operator[](const NestedOffsetLengthMapKey &key)
+			{
+				return tree[key];
+			}
+			
+			size_t data_inserted(off_t offset, off_t length)
+			{
+				size_t keys_modified = tree.data_inserted(offset, length);
+				rebuild_iterators();
+				
+				return keys_modified;
+			}
+			
+			size_t data_erased(off_t offset, off_t length)
+			{
+				size_t keys_modified = tree.data_erased(offset, length);
+				rebuild_iterators();
+				
+				return keys_modified;
+			}
+			
+			Node *find_most_specific_parent(off_t offset)
+			{
+				return tree.find_most_specific_parent(offset);
+			}
+			
+			const Node *find_most_specific_parent(off_t offset) const
+			{
+				return tree.find_most_specific_parent(offset);
+			}
+	};
 	
 	/* Check if a key can be inserted without overlapping the start/end of another.
 	 * Returns true if possible, false if it conflicts.
 	*/
 	template<typename T> bool NestedOffsetLengthMap_can_set(const NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
-		auto i = map.find(NestedOffsetLengthMapKey(offset, length));
-		if(i != map.end())
-		{
-			return true;
-		}
-		
-		off_t end = offset + length;
-		
-		i = map.lower_bound(NestedOffsetLengthMapKey(offset, 0));
-		if(i == map.end() && !map.empty())
-		{
-			--i;
-		}
-		
-		if(!map.empty())
-		{
-			for(;; --i)
-			{
-				off_t i_offset = i->first.offset;
-				off_t i_end    = i_offset + i->first.length;
-				
-				if(i_offset < offset && i_end > offset && i_end < end)
-				{
-					/* There is an element with a lower offset, which extends into
-					 * the new key, but doesn't fully contain it.
-					*/
-					return false;
-				}
-				
-				if(i == map.begin())
-				{
-					break;
-				}
-			}
-		}
-		
-		i = map.upper_bound(NestedOffsetLengthMapKey(offset, std::numeric_limits<off_t>::max()));
-		for(; i != map.end(); ++i)
-		{
-			off_t i_offset = i->first.offset;
-			off_t i_end    = i_offset + i->first.length;
-			
-			if(i_offset >= end)
-			{
-				break;
-			}
-			
-			if(end < i_end)
-			{
-				/* We extend into the next element, but do not encompass it. */
-				return false;
-			}
-		}
-		
-		return true;
+		return map.can_set(offset, length);
 	}
 	
 	/* Attempt to insert or replace a value into the map.
@@ -128,20 +301,7 @@ namespace REHex {
 	*/
 	template<typename T> bool NestedOffsetLengthMap_set(NestedOffsetLengthMap<T> &map, off_t offset, off_t length, const T &value)
 	{
-		auto i = map.find(NestedOffsetLengthMapKey(offset, length));
-		if(i != map.end())
-		{
-			i->second = value;
-			return true;
-		}
-		
-		if(!NestedOffsetLengthMap_can_set(map, offset, length))
-		{
-			return false;
-		}
-		
-		map.insert(std::make_pair(NestedOffsetLengthMapKey(offset, length), value));
-		return true;
+		return map.set(offset, length, value);
 	}
 	
 	/* Search for the most-specific element which encompasses the given offset.
@@ -151,39 +311,15 @@ namespace REHex {
 	*/
 	template<typename T> typename NestedOffsetLengthMap<T>::const_iterator NestedOffsetLengthMap_get(const NestedOffsetLengthMap<T> &map, off_t offset)
 	{
-		auto i = map.lower_bound(NestedOffsetLengthMapKey(offset, 1));
-		auto r = map.end();
+		auto i = map.tree.find_most_specific_parent(offset);
 		
-		if(i == map.end() && !map.empty())
+		if(i != map.tree.end())
 		{
-			--i;
+			return typename NestedOffsetLengthMap<T>::const_iterator(map.sorted_nodes.find(i->key));
 		}
-		
-		if(i != map.end())
-		{
-			for(;; --i)
-			{
-				off_t i_offset = i->first.offset;
-				off_t i_end    = i_offset + i->first.length;
-				
-				if(r != map.end() && i_offset != r->first.offset)
-				{
-					break;
-				}
-				
-				if(i_offset <= offset && i_end > offset)
-				{
-					r = i;
-				}
-				
-				if(i == map.begin())
-				{
-					break;
-				}
-			}
+		else{
+			return typename NestedOffsetLengthMap<T>::const_iterator(map.sorted_nodes.end());
 		}
-		
-		return r;
 	}
 	
 	/* Search for any elements which apply to the given offset.
@@ -194,47 +330,28 @@ namespace REHex {
 	*/
 	template<typename T> std::list<typename NestedOffsetLengthMap<T>::const_iterator> NestedOffsetLengthMap_get_all(const NestedOffsetLengthMap<T> &map, off_t offset)
 	{
-		std::list<typename NestedOffsetLengthMap<T>::const_iterator> r;
+		const typename ByteRangeTree<T>::Node *n = map.tree.find_most_specific_parent(offset);
 		
-		auto i = map.upper_bound(NestedOffsetLengthMapKey(offset, std::numeric_limits<off_t>::max()));
-		if(i == map.end() && !map.empty())
+		if(n == NULL)
 		{
-			--i;
+			return std::list<typename NestedOffsetLengthMap<T>::const_iterator>();
 		}
 		
-		if(i != map.end())
+		std::list<typename NestedOffsetLengthMap<T>::const_iterator> iterators;
+		
+		if(n->get_first_child() != NULL && n->get_first_child()->key.offset == offset)
 		{
-			off_t this_off = i->first.offset;
-			std::list<typename NestedOffsetLengthMap<T>::const_iterator> this_r;
-			
-			for(;; --i)
-			{
-				off_t i_offset = i->first.offset;
-				off_t i_end    = i_offset + i->first.length;
-				
-				if(i_offset != this_off)
-				{
-					r.insert(r.end(), this_r.begin(), this_r.end());
-					this_r.clear();
-					
-					this_off = i_offset;
-				}
-				
-				if((i_offset <= offset && i_end > offset) || i_offset == offset)
-				{
-					this_r.push_front(i);
-				}
-				
-				if(i == map.begin())
-				{
-					break;
-				}
-			}
-			
-			r.insert(r.end(), this_r.begin(), this_r.end());
+			iterators.emplace_back(map.sorted_nodes.find(n->get_first_child()->key));
 		}
 		
-		return r;
+		iterators.emplace_back(map.sorted_nodes.find(n->key));
+		
+		for(const typename ByteRangeTree<T>::Node *p = n->get_parent(); p != NULL; p = p->get_parent())
+		{
+			iterators.emplace_back(map.sorted_nodes.find(p->key));
+		}
+		
+		return iterators;
 	}
 	
 	/* Search for an exact key and any keys within that key's scope.
@@ -286,30 +403,9 @@ namespace REHex {
 	*/
 	template<typename T> size_t NestedOffsetLengthMap_data_inserted(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
-		NestedOffsetLengthMap<T> new_map;
-		size_t keys_modified = 0;
+		size_t keys_modified = map.tree.data_inserted(offset, length);
+		map.rebuild_iterators();
 		
-		for(auto i = map.begin(); i != map.end(); ++i)
-		{
-			off_t i_offset = i->first.offset;
-			off_t i_length = i->first.length;
-			
-			if(i_offset >= offset)
-			{
-				new_map.emplace(NestedOffsetLengthMapKey((i_offset + length), i_length), i->second);
-				++keys_modified;
-			}
-			else if(i_offset < offset && (i_offset + i_length) > offset)
-			{
-				new_map.emplace(NestedOffsetLengthMapKey(i_offset, (i_length + length)), i->second);
-				++keys_modified;
-			}
-			else{
-				new_map.emplace(*i);
-			}
-		}
-		
-		map.swap(new_map);
 		return keys_modified;
 	}
 	
@@ -318,46 +414,9 @@ namespace REHex {
 	*/
 	template<typename T> size_t NestedOffsetLengthMap_data_erased(NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
-		off_t end = offset + length;
+		size_t keys_modified = map.tree.data_erased(offset, length);
+		map.rebuild_iterators();
 		
-		NestedOffsetLengthMap<T> new_map;
-		size_t keys_modified = 0;
-		
-		for(auto i = map.begin(); i != map.end(); ++i)
-		{
-			off_t i_offset = i->first.offset;
-			off_t i_length = i->first.length;
-			
-			if(offset <= i_offset && end > (i_offset + i_length - (i_length > 0)))
-			{
-				/* This key is wholly encompassed by the deleted range. */
-				++keys_modified;
-				continue;
-			}
-			
-			if(offset >= i_offset && offset < (i_offset + i_length))
-			{
-				i_length -= std::min(length, (i_length - (offset - i_offset)));
-			}
-			else if(end > i_offset && end < (i_offset + i_length))
-			{
-				i_length -= end - i_offset;
-			}
-			
-			if(i_offset > offset)
-			{
-				i_offset -= std::min(length, (i_offset - offset));
-			}
-			
-			if(i_offset != i->first.offset || i_length != i->first.length)
-			{
-				++keys_modified;
-			}
-			
-			new_map.emplace(NestedOffsetLengthMapKey(i_offset, i_length), i->second);
-		}
-		
-		map.swap(new_map);
 		return keys_modified;
 	}
 }

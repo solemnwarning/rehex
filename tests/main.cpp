@@ -67,6 +67,7 @@ int main(int argc, char **argv)
 	
 	app->bulk_updates_freeze_count = 0;
 	app->console = new REHex::ConsoleBuffer();
+	app->thread_pool = new REHex::ThreadPool(std::thread::hardware_concurrency());
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	app->settings = new REHex::AppSettings();
 	app->recent_files = new wxFileHistory();

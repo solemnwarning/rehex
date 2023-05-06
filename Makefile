@@ -368,6 +368,7 @@ APP_OBJS := \
 	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
+	src/ThreadPool.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \
@@ -446,6 +447,7 @@ TEST_OBJS := \
 	src/StringPanel.o \
 	src/Tab.o \
 	src/textentrydialog.o \
+	src/ThreadPool.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \

@@ -31,6 +31,7 @@
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
 #include "EditCommentDialog.hpp"
+#include "profile.hpp"
 #include "Tab.hpp"
 #include "VirtualMappingDialog.hpp"
 
@@ -1685,6 +1686,8 @@ void REHex::Tab::init_default_tools()
 
 void REHex::Tab::repopulate_regions()
 {
+	PROFILE_BLOCK("REHex::Tab::repopulate_regions");
+	
 	if(repopulate_regions_frozen)
 	{
 		repopulate_regions_pending = true;
@@ -1696,6 +1699,8 @@ void REHex::Tab::repopulate_regions()
 	if(document_display_mode == DDM_VIRTUAL)
 	{
 		/* Virtual segments view. */
+		
+		PROFILE_INNER_BLOCK("prepare regions (virtual)");
 		
 		const ByteRangeMap<off_t> &virt_to_real_segs = doc->get_virt_to_real_segs();
 		
@@ -1722,6 +1727,8 @@ void REHex::Tab::repopulate_regions()
 		/* File view. */
 		DO_FILE_VIEW:
 		
+		PROFILE_INNER_BLOCK("prepare regions (file)");
+		
 		std::vector<DocumentCtrl::Region*> file_regions = compute_regions(doc, 0, 0, doc->buffer_length(), inline_comment_mode);
 		
 		if(file_regions.empty())
@@ -1744,7 +1751,10 @@ void REHex::Tab::repopulate_regions()
 		regions.insert(regions.end(), file_regions.begin(), file_regions.end());
 	}
 	
-	doc_ctrl->replace_all_regions(regions);
+	{
+		PROFILE_INNER_BLOCK("replace regions");
+		doc_ctrl->replace_all_regions(regions);
+	}
 }
 
 void REHex::Tab::repopulate_regions_freeze()

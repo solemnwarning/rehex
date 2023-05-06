@@ -1575,7 +1575,7 @@ int REHex::DiffWindow::MessageRegion::calc_width(REHex::DocumentCtrl &doc_ctrl)
 	return offset_column_width + message_width;
 }
 
-void REHex::DiffWindow::MessageRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+void REHex::DiffWindow::MessageRegion::calc_height(DocumentCtrl &doc_ctrl)
 {
 	y_lines = 2;
 }

@@ -89,7 +89,7 @@ class FixedHeightRegion: public DocumentCtrl::Region
 			Region(indent_offset, indent_length),
 			height(height) {}
 		
-		virtual void calc_height(DocumentCtrl &doc, wxDC &dc) override
+		virtual void calc_height(DocumentCtrl &doc) override
 		{
 			y_lines = height + indent_final;
 		}
@@ -113,7 +113,7 @@ class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
 			GenericDataRegion(d_offset, d_length, d_offset, indent_offset),
 			height(height) {}
 		
-		virtual void calc_height(DocumentCtrl &doc, wxDC &dc) override
+		virtual void calc_height(DocumentCtrl &doc) override
 		{
 			y_lines = height + indent_final;
 		}

@@ -27,6 +27,9 @@ INSTALL_FILES := \
 	plugin.lua \
 	preprocessor.lua \
 	lulpeg/lulpeg.lua \
+	templates/elf.bt \
+	templates/elf.h \
+	templates/dwarf-v1.h \
 	templates/riff.bt
 
 prefix      ?= /usr/local

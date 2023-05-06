@@ -1,0 +1,284 @@
+typedef unsigned char bool;
+
+#include "dwarf-v1.h"
+#include "elf.h"
+
+struct ELF_FileHeader file_header;
+
+FSeek(file_header.e_phoff);
+struct ELF_ProgramHeaderEntry program_header(file_header.e_ident_class)[file_header.e_phnum];
+
+FSeek(file_header.e_shoff);
+struct ELF_SectionHeaderEntry section_header(file_header.e_ident_class)[file_header.e_shnum];
+
+/* Group the program_header/section_header elements together. */
+SetComment(file_header.e_phoff, file_header.e_phentsize * file_header.e_phnum, "program_header");
+SetComment(file_header.e_shoff, file_header.e_shentsize * file_header.e_shnum, "section_header");
+
+/* Offset of .shstrtab section (section names table) */
+local int64_t shstrtab_off = section_header[file_header.e_shstrndx].sh_offset;
+local int64_t shstrtab_len = section_header[file_header.e_shstrndx].sh_size;
+
+local int64_t debug_off = -1;
+local int64_t debug_len = 0;
+
+struct DwarfV1_ProcessState
+{
+	string compile_unit_name;
+	string func_params;
+	string parent_namespaces[0];
+};
+
+int64_t virt_addr_to_file_offset(uint64_t virt_addr)
+{
+	for(local int64_t i = 0; i < ArrayLength(section_header); ++i)
+	{
+		if(section_header[i].sh_addr <= virt_addr && (section_header[i].sh_addr + section_header[i].sh_size) > virt_addr)
+		{
+			return section_header[i].sh_offset + (virt_addr - section_header[i].sh_addr);
+		}
+	}
+	
+	return -1;
+}
+
+struct TypeName
+{
+	uint32_t type_entry_debug_section_offset;
+	string type_name;
+};
+
+local struct TypeName type_names[0];
+
+void process_DwarfV1_debug_entry(struct DwarfV1_Entry &debug_entry, struct DwarfV1_ProcessState &state)
+{
+	if(debug_entry.length < 8)
+	{
+		/* Skip null entries. */
+		return;
+	}
+	
+	local string func_name;
+	local uint64_t func_low_pc;
+	local int64_t func_low_offset = -1;
+	local int64_t func_high_offset = -1;
+	
+	local bool pop_parent_namespace = false;
+	
+	switch(debug_entry.tag)
+	{
+		case DwarfV1_TAG_compile_unit:
+			DwarfV1_GetStringAttribute(state.compile_unit_name, debug_entry.attributes, DwarfV1_AT_name);
+			break;
+			
+		case DwarfV1_TAG_global_subroutine:
+		case DwarfV1_TAG_subroutine:
+			state.func_params = "";
+			
+			if(!DwarfV1_GetStringAttribute(func_name, debug_entry.attributes, DwarfV1_AT_name))
+			{
+				break;
+			}
+			
+			if(!DwarfV1_GetAddressAttribute(func_low_pc, debug_entry.attributes, DwarfV1_AT_low_pc))
+			{
+				break;
+			}
+			
+			func_low_offset = virt_addr_to_file_offset(func_low_pc);
+			if(func_low_offset < 0)
+			{
+				break;
+			}
+			
+			local uint64_t high_pc;
+			if(DwarfV1_GetAddressAttribute(high_pc, debug_entry.attributes, DwarfV1_AT_high_pc))
+			{
+				func_high_offset = virt_addr_to_file_offset(high_pc);
+				if(func_high_offset < func_low_offset)
+				{
+					func_low_offset = -1;
+					break;
+				}
+			}
+			
+			local uint32_t class_defn_off;
+			if(DwarfV1_GetReferenceAttribute(class_defn_off, debug_entry.attributes, DwarfV1_AT_member))
+			{
+				local string class_name;
+				local bool found_class = false;
+				
+				for(local int i = 0; i < ArrayLength(type_names); ++i)
+				{
+					if(type_names[i].type_entry_debug_section_offset == class_defn_off)
+					{
+						class_name = type_names[i].type_name;
+						found_class = true;
+						
+						break;
+					}
+				}
+				
+				if(found_class)
+				{
+					func_name = SPrintf("%s::%s", class_name, func_name);
+				}
+				else{
+					Error("Unknown type referenced in AT_member of debug entry at offset %d\n", OffsetOf(debug_entry));
+				}
+				
+				/*
+				if(DwarfV1_GetNameOfEntryAtOffset(class_name, debug_off, class_defn_off, file_header.e_ident_class))
+				{
+					func_name = SPrintf("%s::%s", class_name, func_name);
+				}
+				else{
+					Printf("No name in DIE at offset %d\n", debug_off + class_defn_off);
+				}
+				*/
+			}
+			else{
+				for(local int i = ArrayLength(state.parent_namespaces) - 1; i >= 0; --i)
+				{
+					func_name = SPrintf("%s::%s", state.parent_namespaces[i], func_name);
+				}
+			}
+			
+			break;
+			
+		case DwarfV1_TAG_formal_parameter:
+			local string param_name;
+			if(!DwarfV1_GetStringAttribute(param_name, debug_entry.attributes, DwarfV1_AT_name))
+			{
+				break;
+			}
+			
+			local string param_type = DwarfV1_GetTypeNameOfEntry(debug_entry, debug_off, file_header.e_ident_class);
+			
+			if(state.func_params == "")
+			{
+				state.func_params = SPrintf("%s %s", param_type, param_name);
+			}
+			else{
+				state.func_params = SPrintf("%s, %s %s", state.func_params, param_type, param_name);
+			}
+			
+		case DwarfV1_TAG_class_type:
+		case DwarfV1_TAG_structure_type:
+		case DwarfV1_TAG_union_type:
+			local string type_name;
+			if(DwarfV1_GetStringAttribute(type_name, debug_entry.attributes, DwarfV1_AT_name))
+			{
+				ArrayPush(state.parent_namespaces, type_name);
+				pop_parent_namespace = true;
+			}
+			
+			break;
+	}
+	
+	for(local int64_t i = 0; i < ArrayLength(debug_entry.children); ++i)
+	{
+		process_DwarfV1_debug_entry(debug_entry.children[i], state);
+	}
+	
+	if(func_low_offset >= 0)
+	{
+		if(func_high_offset >= 0)
+		{
+			SetComment(func_low_offset, (func_high_offset - func_low_offset),
+				SPrintf("Function: %s(%s)\nFile: %s\nBase address: %x",
+					func_name, state.func_params, state.compile_unit_name, func_low_pc));
+		}
+		else{
+			SetComment(func_low_offset, 0,
+				SPrintf("Function: %s(%s)\nFile: %s\nBase address: %x",
+					func_name, state.func_params, state.compile_unit_name, func_low_pc));
+		}
+	}
+	
+	if(pop_parent_namespace)
+	{
+		ArrayPop(state.parent_namespaces);
+	}
+}
+
+void load_types_from_DwarfV1_debug_entry(struct DwarfV1_Entry &debug_entry, string[] &parent_namespaces)
+{
+	if(debug_entry.length < 8)
+	{
+		/* Skip null entries. */
+		return;
+	}
+	
+	local bool this_is_a_type_tag;
+	
+	switch(debug_entry.tag)
+	{
+		case DwarfV1_TAG_class_type:
+		case DwarfV1_TAG_structure_type:
+		case DwarfV1_TAG_union_type:
+			local string type_name;
+			if(DwarfV1_GetStringAttribute(type_name, debug_entry.attributes, DwarfV1_AT_name))
+			{
+				this_is_a_type_tag = true;
+				ArrayPush(parent_namespaces, type_name);
+				
+				local struct TypeName t;
+				t.type_entry_debug_section_offset = OffsetOf(debug_entry);
+				t.type_name = type_name;
+				
+				ArrayPush(type_names, t);
+			}
+			
+			break;
+			
+		default:
+			break;
+	}
+	
+	for(local int64_t i = 0; i < ArrayLength(debug_entry.children); ++i)
+	{
+		load_types_from_DwarfV1_debug_entry(debug_entry.children[i], parent_namespaces);
+	}
+	
+	if(this_is_a_type_tag)
+	{
+		ArrayPop(parent_namespaces);
+	}
+}
+
+for(local int i = 0; i < file_header.e_shnum; ++i)
+{
+	local struct ELF_SectionHeaderEntry &sh_entry = section_header[i];
+	
+	if(sh_entry.sh_type == SHT_NULL || sh_entry.sh_type == SHT_NOBITS)
+	{
+		continue;
+	}
+	
+	local string name = ReadString(shstrtab_off + sh_entry.sh_name, '\0', shstrtab_len - sh_entry.sh_name);
+	local string s = SPrintf("%s section", name);
+	
+	SetComment(sh_entry.sh_offset, sh_entry.sh_size, s);
+	
+	if(name == ".debug")
+	{
+		debug_off = sh_entry.sh_offset;
+		debug_len = sh_entry.sh_size;
+		
+		FSeek(sh_entry.sh_offset);
+		private struct DwarfV1 debug_section(sh_entry.sh_size, file_header.e_ident_class);
+		
+		for(local int64_t i = 0; i < ArrayLength(debug_section.entries); ++i)
+		{
+			local string parent_namespaces[0];
+			load_types_from_DwarfV1_debug_entry(debug_section.entries[i], parent_namespaces);
+		}
+		
+		for(local int64_t i = 0; i < ArrayLength(debug_section.entries); ++i)
+		{
+			local struct DwarfV1_ProcessState state;
+			process_DwarfV1_debug_entry(debug_section.entries[i], state);
+		}
+	}
+}

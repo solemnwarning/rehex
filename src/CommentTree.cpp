@@ -235,8 +235,23 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				ClipboardGuard cg;
 				if(cg)
 				{
-					auto all_comments      = document->get_comments();
-					auto selected_comments = NestedOffsetLengthMap_get_recursive(all_comments, *key);
+					const ByteRangeTree<Document::Comment> &comments = document->get_comments().tree;
+					const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(*key);
+					
+					std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
+					
+					std::function<void(const ByteRangeTree<Document::Comment>::Node*)> add_comment;
+					add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment)
+					{
+						selected_comments.push_back(comments.find(comment->key));
+						
+						for(comment = comment->get_first_child(); comment != NULL; comment = comment->get_next())
+						{
+							add_comment(comment);
+						}
+					};
+					
+					add_comment(root_comment);
 					
 					CommentsDataObject *d = new CommentsDataObject(selected_comments, key->offset);
 					

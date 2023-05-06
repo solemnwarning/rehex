@@ -25,10 +25,10 @@ using namespace REHex;
 
 TEST(CommentsDataObject, SingleComment)
 {
-	NestedOffsetLengthMap<Document::Comment> expect_comments;
-	NestedOffsetLengthMap_set(expect_comments, 1234567890, 1234567890, Document::Comment("yarn"));
+	ByteRangeTree<Document::Comment> expect_comments;
+	expect_comments.set(1234567890, 1234567890, Document::Comment("yarn"));
 	
-	std::list<NestedOffsetLengthMap<Document::Comment>::const_iterator> in_comments;
+	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(expect_comments.begin());
 	
 	CommentsDataObject cdo_ser(in_comments);
@@ -43,14 +43,14 @@ TEST(CommentsDataObject, SingleComment)
 
 TEST(CommentsDataObject, MultipleComments)
 {
-	NestedOffsetLengthMap<Document::Comment> expect_comments;
-	NestedOffsetLengthMap_set(expect_comments, 1234567890, 0, Document::Comment("simple"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567891, 0, Document::Comment("vivacious"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567892, 0, Document::Comment("fruit"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567893, 0, Document::Comment("cut"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567894, 0, Document::Comment("weak"));
+	ByteRangeTree<Document::Comment> expect_comments;
+	expect_comments.set(1234567890, 0, Document::Comment("simple"));
+	expect_comments.set(1234567891, 0, Document::Comment("vivacious"));
+	expect_comments.set(1234567892, 0, Document::Comment("fruit"));
+	expect_comments.set(1234567893, 0, Document::Comment("cut"));
+	expect_comments.set(1234567894, 0, Document::Comment("weak"));
 	
-	std::list<NestedOffsetLengthMap<Document::Comment>::const_iterator> in_comments;
+	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(expect_comments.begin(), 0));
 	in_comments.push_back(std::next(expect_comments.begin(), 1));
 	in_comments.push_back(std::next(expect_comments.begin(), 2));
@@ -69,14 +69,14 @@ TEST(CommentsDataObject, MultipleComments)
 
 TEST(CommentsDataObject, ShiftOffset)
 {
-	NestedOffsetLengthMap<Document::Comment> source_comments;
-	NestedOffsetLengthMap_set(source_comments, 1234567890, 0, Document::Comment("enter"));
-	NestedOffsetLengthMap_set(source_comments, 1234567891, 0, Document::Comment("ludicrous"));
-	NestedOffsetLengthMap_set(source_comments, 1234567892, 0, Document::Comment("acceptable"));
-	NestedOffsetLengthMap_set(source_comments, 1234567893, 0, Document::Comment("discreet"));
-	NestedOffsetLengthMap_set(source_comments, 1234567894, 0, Document::Comment("shocking"));
+	ByteRangeTree<Document::Comment> source_comments;
+	source_comments.set(1234567890, 0, Document::Comment("enter"));
+	source_comments.set(1234567891, 0, Document::Comment("ludicrous"));
+	source_comments.set(1234567892, 0, Document::Comment("acceptable"));
+	source_comments.set(1234567893, 0, Document::Comment("discreet"));
+	source_comments.set(1234567894, 0, Document::Comment("shocking"));
 	
-	std::list<NestedOffsetLengthMap<Document::Comment>::const_iterator> in_comments;
+	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(source_comments.begin(), 0));
 	in_comments.push_back(std::next(source_comments.begin(), 1));
 	in_comments.push_back(std::next(source_comments.begin(), 2));
@@ -90,23 +90,23 @@ TEST(CommentsDataObject, ShiftOffset)
 	
 	auto got_comments = cdo_deser.get_comments();
 	
-	NestedOffsetLengthMap<Document::Comment> expect_comments;
-	NestedOffsetLengthMap_set(expect_comments, 1234567880, 0, Document::Comment("enter"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567881, 0, Document::Comment("ludicrous"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567882, 0, Document::Comment("acceptable"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567883, 0, Document::Comment("discreet"));
-	NestedOffsetLengthMap_set(expect_comments, 1234567884, 0, Document::Comment("shocking"));
+	ByteRangeTree<Document::Comment> expect_comments;
+	expect_comments.set(1234567880, 0, Document::Comment("enter"));
+	expect_comments.set(1234567881, 0, Document::Comment("ludicrous"));
+	expect_comments.set(1234567882, 0, Document::Comment("acceptable"));
+	expect_comments.set(1234567883, 0, Document::Comment("discreet"));
+	expect_comments.set(1234567884, 0, Document::Comment("shocking"));
 	
 	EXPECT_EQ(got_comments, expect_comments) << "Comment offsets are shifted by base";
 }
 
 TEST(CommentsDataObject, HighBitCharacters)
 {
-	NestedOffsetLengthMap<Document::Comment> expect_comments;
-	NestedOffsetLengthMap_set(expect_comments, 1234567890, 0, Document::Comment(wxString::FromUTF8(u8"\u0111\u00F0\u201D\u0127\u0167\u00DF\u201D\u014B\u00BB\u00B6\u2190\u00A2\u00FE\u03A9"))); /* đð”ħŧß”ŋ»¶←¢þΩ */
-	NestedOffsetLengthMap_set(expect_comments, 1234567891, 0, Document::Comment(wxString::FromUTF8(u8"\u2500\u00B2\u00F0\u00A2\u201C\u00AB\u262D\u00A7\u00D0\u00AA\u014A\u2019\u2018\u00A1"))); /* ─²ð¢“«☭§ÐªŊ’‘¡ */
+	ByteRangeTree<Document::Comment> expect_comments;
+	expect_comments.set(1234567890, 0, Document::Comment(wxString::FromUTF8(u8"\u0111\u00F0\u201D\u0127\u0167\u00DF\u201D\u014B\u00BB\u00B6\u2190\u00A2\u00FE\u03A9"))); /* đð”ħŧß”ŋ»¶←¢þΩ */
+	expect_comments.set(1234567891, 0, Document::Comment(wxString::FromUTF8(u8"\u2500\u00B2\u00F0\u00A2\u201C\u00AB\u262D\u00A7\u00D0\u00AA\u014A\u2019\u2018\u00A1"))); /* ─²ð¢“«☭§ÐªŊ’‘¡ */
 	
-	std::list<NestedOffsetLengthMap<Document::Comment>::const_iterator> in_comments;
+	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(expect_comments.begin(), 0));
 	in_comments.push_back(std::next(expect_comments.begin(), 1));
 	

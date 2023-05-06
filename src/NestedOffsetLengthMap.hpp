@@ -200,6 +200,36 @@ namespace REHex {
 				return tree.erase(key);
 			}
 			
+			size_t erase_recursive(const NestedOffsetLengthMapKey &key)
+			{
+				size_t erased_elements = tree.erase_recursive(key);
+				if(erased_elements > 0)
+				{
+					rebuild_iterators();
+				}
+				
+				return erased_elements;
+			}
+			
+			bool set(off_t offset, off_t length, const T &value)
+			{
+				bool success = tree.set(offset, length, value);
+				if(success)
+				{
+					ByteRangeTreeKey k(offset, length);
+					
+					Node *n = sorted_nodes[k] = tree.find_node(k);
+					assert(n != NULL);
+				}
+				
+				return success;
+			}
+			
+			bool can_set(off_t offset, off_t length) const
+			{
+				return tree.can_set(offset, length);
+			}
+			
 			size_t size() const
 			{
 				return tree.size();
@@ -229,6 +259,32 @@ namespace REHex {
 			{
 				return tree[key];
 			}
+			
+			size_t data_inserted(off_t offset, off_t length)
+			{
+				size_t keys_modified = tree.data_inserted(offset, length);
+				rebuild_iterators();
+				
+				return keys_modified;
+			}
+			
+			size_t data_erased(off_t offset, off_t length)
+			{
+				size_t keys_modified = tree.data_erased(offset, length);
+				rebuild_iterators();
+				
+				return keys_modified;
+			}
+			
+			Node *find_most_specific_parent(off_t offset)
+			{
+				return tree.find_most_specific_parent(offset);
+			}
+			
+			const Node *find_most_specific_parent(off_t offset) const
+			{
+				return tree.find_most_specific_parent(offset);
+			}
 	};
 	
 	/* Check if a key can be inserted without overlapping the start/end of another.
@@ -236,7 +292,7 @@ namespace REHex {
 	*/
 	template<typename T> bool NestedOffsetLengthMap_can_set(const NestedOffsetLengthMap<T> &map, off_t offset, off_t length)
 	{
-		return map.tree.can_set(offset, length);
+		return map.can_set(offset, length);
 	}
 	
 	/* Attempt to insert or replace a value into the map.
@@ -245,16 +301,7 @@ namespace REHex {
 	*/
 	template<typename T> bool NestedOffsetLengthMap_set(NestedOffsetLengthMap<T> &map, off_t offset, off_t length, const T &value)
 	{
-		bool success = map.tree.set(offset, length, value);
-		if(success)
-		{
-			ByteRangeTreeKey k(offset, length);
-			
-			typename ByteRangeTree<T>::Node *n = map.sorted_nodes[k] = map.tree.find_node(k);
-			assert(n != NULL);
-		}
-		
-		return success;
+		return map.set(offset, length, value);
 	}
 	
 	/* Search for the most-specific element which encompasses the given offset.

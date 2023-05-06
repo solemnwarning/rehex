@@ -198,6 +198,16 @@ namespace REHex {
 			bool erase_comment(off_t offset, off_t length);
 			
 			/**
+			 * @brief Erase a comment and any children in the file.
+			 *
+			 * @param offset  Offset of comment to erase.
+			 * @param length  Length of comment to erase.
+			 *
+			 * Returns true on success, false if the comment was not found.
+			*/
+			bool erase_comment_recursive(off_t offset, off_t length);
+			
+			/**
 			 * @brief Get the highlighted byte ranges in the file.
 			*/
 			const NestedOffsetLengthMap<int> &get_highlights() const;
@@ -261,7 +271,7 @@ namespace REHex {
 			off_t real_to_virt_offset(off_t real_offset) const;
 			off_t virt_to_real_offset(off_t virt_offset) const;
 			
-			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
+			void handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments);
 			
 			/**
 			 * @brief Undo the last change to the document.
@@ -552,12 +562,12 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
+			CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
 			
 			/**
 			 * @brief Deserialise the CommentsDataObject and return the stored comments.
 			*/
-			NestedOffsetLengthMap<Document::Comment> get_comments() const;
+			ByteRangeTree<Document::Comment> get_comments() const;
 			
 			/**
 			 * @brief Replace the serialised list of stored comments.
@@ -565,7 +575,7 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			void set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
+			void set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
 	};
 	
 	/**

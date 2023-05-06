@@ -886,34 +886,7 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 	wxMenuItem *delete_comment_rec = menu.Append(wxID_ANY, "Delete comment &and children");
 	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 	{
-		/* Get the iterator to this comment and all contained under it. */
-		
-		auto comments = doc->get_comments();
-		auto iters = NestedOffsetLengthMap_get_recursive(comments, NestedOffsetLengthMapKey(c_offset, c_length));
-		
-		/* Extract the offset/length from each iterator as they will be invalidated once we
-		 * start deleting comments.
-		*/
-		
-		std::vector<NestedOffsetLengthMapKey> keys;
-		keys.reserve(iters.size());
-		
-		std::transform(iters.begin(), iters.end(), std::back_inserter(keys),
-			[](const NestedOffsetLengthMap<Document::Comment>::const_iterator &iter)
-			{
-				return iter->first;
-			});
-		
-		/* Delete them all in a single transaction. */
-		
-		ScopedTransaction t(doc, "delete comment and children");
-		
-		for(auto i = keys.begin(); i != keys.end(); ++i)
-		{
-			doc->erase_comment(i->offset, i->length);
-		}
-		
-		t.commit();
+		doc->erase_comment_recursive(c_offset, c_length);
 	}, delete_comment_rec->GetId(), delete_comment_rec->GetId());
 	
 	delete_comment_rec->Enable(c_length > 0);
@@ -926,9 +899,24 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 		ClipboardGuard cg;
 		if(cg)
 		{
-			const NestedOffsetLengthMap<Document::Comment> &comments = doc->get_comments();
+			const ByteRangeTree<Document::Comment> &comments = doc->get_comments().tree;
+			const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(ByteRangeTreeKey(c_offset, c_length));
 			
-			auto selected_comments = NestedOffsetLengthMap_get_recursive(comments, NestedOffsetLengthMapKey(c_offset, c_length));
+			std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
+			
+			std::function<void(const ByteRangeTree<Document::Comment>::Node*)> add_comment;
+			add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment)
+			{
+				selected_comments.push_back(comments.find(comment->key));
+				
+				for(comment = comment->get_first_child(); comment != NULL; comment = comment->get_next())
+				{
+					add_comment(comment);
+				}
+			};
+			
+			add_comment(root_comment);
+			
 			assert(selected_comments.size() > 0);
 			
 			wxTheClipboard->SetData(new CommentsDataObject(selected_comments, c_offset));
@@ -988,17 +976,16 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	menu.AppendSeparator();
 	
-	auto comments_at_cur = NestedOffsetLengthMap_get_all(comments, cursor_pos);
-	for(auto i = comments_at_cur.begin(); i != comments_at_cur.end(); ++i)
+	for(auto comment = comments.find_most_specific_parent(cursor_pos);
+		comment != NULL;
+		comment = comment->get_parent())
 	{
-		auto ci = *i;
-		
-		wxString text = ci->second.menu_preview();
+		wxString text = comment->value.menu_preview();
 		wxMenuItem *itm = menu.Append(wxID_ANY, wxString("Edit \"") + text + "\"...");
 		
-		menu.Bind(wxEVT_MENU, [this, ci](wxCommandEvent &event)
+		menu.Bind(wxEVT_MENU, [this, comment](wxCommandEvent &event)
 		{
-			EditCommentDialog::run_modal(this, doc, ci->first.offset, ci->first.length);
+			EditCommentDialog::run_modal(this, doc, comment->key.offset, comment->key.length);
 		}, itm->GetId(), itm->GetId());
 	}
 	
@@ -1015,7 +1002,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	if(selection_length > 0
 		&& comments.find(NestedOffsetLengthMapKey(selection_off, selection_length)) == comments.end()
-		&& NestedOffsetLengthMap_can_set(comments, selection_off, selection_length))
+		&& comments.can_set(selection_off, selection_length))
 	{
 		char menu_label[64];
 		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));

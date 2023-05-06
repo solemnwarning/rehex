@@ -735,7 +735,7 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 	assert(offset >= 0);
 	assert(length >= 0);
 	
-	if(!NestedOffsetLengthMap_can_set(comments, offset, length))
+	if(!comments.can_set(offset, length))
 	{
 		return false;
 	}
@@ -743,7 +743,7 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 	_tracked_change("set comment",
 		[this, offset, length, comment]()
 		{
-			NestedOffsetLengthMap_set(comments, offset, length, comment);
+			comments.set(offset, length, comment);
 			_raise_comment_modified();
 		},
 		[this]()
@@ -777,6 +777,28 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	return true;
 }
 
+bool REHex::Document::erase_comment_recursive(off_t offset, off_t length)
+{
+	if(comments.find(ByteRangeTreeKey(offset, length)) == comments.end())
+	{
+		return false;
+	}
+	
+	_tracked_change("delete comment and children",
+		[this, offset, length]()
+		{
+			comments.erase_recursive(ByteRangeTreeKey(offset, length));
+			_raise_comment_modified();
+		},
+		[this]()
+		{
+			/* Comments are restored implicitly. */
+			_raise_comment_modified();
+		});
+	
+	return true;
+}
+
 const REHex::NestedOffsetLengthMap<int> &REHex::Document::get_highlights() const
 {
 	return highlights;
@@ -792,7 +814,7 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 		return false;
 	}
 	
-	if(!NestedOffsetLengthMap_can_set(highlights, off, length))
+	if(!highlights.can_set(off, length))
 	{
 		return false;
 	}
@@ -800,7 +822,7 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 	_tracked_change("set highlight",
 		[this, off, length, highlight_colour_idx]()
 		{
-			NestedOffsetLengthMap_set(highlights, off, length, highlight_colour_idx);
+			highlights.set(off, length, highlight_colour_idx);
 			_raise_highlights_changed();
 		},
 		
@@ -1072,7 +1094,7 @@ off_t REHex::Document::virt_to_real_offset(off_t virt_offset) const
 	}
 }
 
-void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments)
+void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments)
 {
 	off_t cursor_pos = get_cursor_position();
 	off_t buffer_length = this->buffer_length();
@@ -1086,7 +1108,7 @@ void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOf
 		}
 		
 		if(comments.find(NestedOffsetLengthMapKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
-			|| !NestedOffsetLengthMap_can_set(comments, cursor_pos + cc->first.offset, cc->first.length))
+			|| !comments.can_set(cursor_pos + cc->first.offset, cc->first.length))
 		{
 			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), modal_dialog_parent);
 			return;
@@ -1098,7 +1120,7 @@ void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const NestedOf
 		{
 			for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
 			{
-				NestedOffsetLengthMap_set(comments, cursor_pos + cc->first.offset, cc->first.length, cc->second);
+				comments.set(cursor_pos + cc->first.offset, cc->first.length, cc->second);
 			}
 			
 			_raise_comment_modified();
@@ -1381,12 +1403,12 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
 		
-		if(NestedOffsetLengthMap_data_inserted(comments, offset, length) > 0)
+		if(comments.data_inserted(offset, length) > 0)
 		{
 			_raise_comment_modified();
 		}
 		
-		if(NestedOffsetLengthMap_data_inserted(highlights, offset, length) > 0)
+		if(highlights.data_inserted(offset, length) > 0)
 		{
 			_raise_highlights_changed();
 		}
@@ -1488,12 +1510,12 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
 		
-		if(NestedOffsetLengthMap_data_erased(comments, offset, length) > 0)
+		if(comments.data_erased(offset, length) > 0)
 		{
 			_raise_comment_modified();
 		}
 		
-		if(NestedOffsetLengthMap_data_erased(highlights, offset, length) > 0)
+		if(highlights.data_erased(offset, length) > 0)
 		{
 			_raise_highlights_changed();
 		}
@@ -1740,7 +1762,7 @@ REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::Document::_load_co
 		if(offset >= 0 && offset < buffer_length
 			&& length >= 0 && (offset + length) <= buffer_length)
 		{
-			NestedOffsetLengthMap_set(comments, offset, length, Comment(text));
+			comments.set(offset, length, Comment(text));
 		}
 	}
 	
@@ -1766,7 +1788,7 @@ REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t
 			&& length > 0 && (offset + length) <= buffer_length
 			&& colour >= 0 && colour < Palette::NUM_HIGHLIGHT_COLOURS)
 		{
-			NestedOffsetLengthMap_set(highlights, offset, length, colour);
+			highlights.set(offset, length, colour);
 		}
 	}
 	
@@ -1954,15 +1976,15 @@ const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");
 REHex::CommentsDataObject::CommentsDataObject():
 	wxCustomDataObject(format) {}
 
-REHex::CommentsDataObject::CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base):
+REHex::CommentsDataObject::CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base):
 	wxCustomDataObject(format)
 {
 	set_comments(comments, base);
 }
 
-REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
+REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
 {
-	REHex::NestedOffsetLengthMap<REHex::Document::Comment> comments;
+	ByteRangeTree<Document::Comment> comments;
 	
 	const unsigned char *data = (const unsigned char*)(GetData());
 	const unsigned char *end = data + GetSize();
@@ -1972,7 +1994,7 @@ REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject
 	{
 		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
 		
-		bool x = NestedOffsetLengthMap_set(comments, header->file_offset, header->file_length, REHex::Document::Comment(text));
+		bool x = comments.set(header->file_offset, header->file_length, REHex::Document::Comment(text));
 		assert(x); /* TODO: Raise some kind of error. Beep? */
 		
 		data += sizeof(Header) + header->text_length;
@@ -1981,13 +2003,13 @@ REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::CommentsDataObject
 	return comments;
 }
 
-void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base)
+void REHex::CommentsDataObject::set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base)
 {
 	size_t size = 0;
 	
 	for(auto i = comments.begin(); i != comments.end(); ++i)
 	{
-		size += sizeof(Header) + (*i)->second.text->utf8_str().length();
+		size += sizeof(Header) + (*i)->value.text->utf8_str().length();
 	}
 	
 	void *data = Alloc(size); /* Wrapper around new[] - throws on failure */
@@ -1999,10 +2021,10 @@ void REHex::CommentsDataObject::set_comments(const std::list<NestedOffsetLengthM
 		Header *header = (Header*)(outp);
 		outp += sizeof(Header);
 		
-		const wxScopedCharBuffer utf8_text = (*i)->second.text->utf8_str();
+		const wxScopedCharBuffer utf8_text = (*i)->value.text->utf8_str();
 		
-		header->file_offset = (*i)->first.offset - base;
-		header->file_length = (*i)->first.length;
+		header->file_offset = (*i)->key.offset - base;
+		header->file_length = (*i)->key.length;
 		header->text_length = utf8_text.length();
 		
 		memcpy(outp, utf8_text.data(), utf8_text.length());

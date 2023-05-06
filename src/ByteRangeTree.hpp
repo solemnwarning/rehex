@@ -323,111 +323,6 @@ namespace REHex
 			 * in a manner similar to classical C++ iterators - the nodes at all levels
 			 * will be visited in order of insertion.
 			*/
-			class const_iterator
-			{
-				friend ByteRangeTree;
-				
-				protected:
-					const ByteRangeTree<T> *tree;
-					const Node *node;
-					
-				private:
-					const_iterator(const ByteRangeTree<T> *tree, const Node *node):
-						tree(tree),
-						node(node) {}
-					
-					const std::vector<NodeRef> &node_container() const
-					{
-						assert(node != NULL);
-						
-						if(node->parent != NULL)
-						{
-							return node->parent->children;
-						}
-						else{
-							return tree->root;
-						}
-					}
-					
-				public:
-					using iterator_category = std::bidirectional_iterator_tag;
-					using difference_type   = ssize_t;
-					using value_type        = Node*;
-					using pointer           = value_type*;
-					using reference         = value_type&;
-					
-					/* Prefix increment */
-					const_iterator &operator++()
-					{
-						assert(node != NULL);
-						
-						node = node->next_all;
-						return *this;
-					}
-					
-					/* Postfix increment */
-					const_iterator operator++(int)
-					{
-						const_iterator old = *this;
-						++(*this);
-						
-						return old;
-					}
-					
-					/* Prefix decrement */
-					const_iterator &operator--()
-					{
-						if(node == NULL)
-						{
-							node = tree->last_node;
-						}
-						else{
-							assert(node->prev_all != NULL);
-							node = node->prev_all;
-						}
-						
-						return *this;
-					}
-					
-					/* Postfix decrement */
-					const_iterator operator--(int)
-					{
-						const_iterator old = *this;
-						--(*this);
-						
-						return old;
-					}
-					
-					bool operator==(const const_iterator &rhs) const
-					{
-						assert(tree == rhs.tree);
-						return node == rhs.node;
-					}
-					
-					bool operator!=(const const_iterator &rhs) const
-					{
-						assert(tree == rhs.tree);
-						return node != rhs.node;
-					}
-					
-					operator const Node*() const
-					{
-						return node;
-					}
-					
-					const Node *operator->() const
-					{
-						return node;
-					}
-			};
-			
-			/**
-			 * @brief Class for iterating over elements in a ByteRangeTree.
-			 *
-			 * This class can be used to iterate over the elements in a ByteRangeTree,
-			 * in a manner similar to classical C++ iterators - the nodes at all levels
-			 * will be visited in order of insertion.
-			*/
 			class iterator
 			{
 				friend ByteRangeTree;
@@ -521,6 +416,114 @@ namespace REHex
 					}
 					
 					Node *operator->() const
+					{
+						return node;
+					}
+			};
+			
+			/**
+			 * @brief Class for iterating over elements in a ByteRangeTree.
+			 *
+			 * This class can be used to iterate over the elements in a ByteRangeTree,
+			 * in a manner similar to classical C++ iterators - the nodes at all levels
+			 * will be visited in order of insertion.
+			*/
+			class const_iterator
+			{
+				friend ByteRangeTree;
+				
+				protected:
+					const ByteRangeTree<T> *tree;
+					const Node *node;
+					
+				private:
+					const_iterator(const ByteRangeTree<T> *tree, const Node *node):
+						tree(tree),
+						node(node) {}
+					
+					const std::vector<NodeRef> &node_container() const
+					{
+						assert(node != NULL);
+						
+						if(node->parent != NULL)
+						{
+							return node->parent->children;
+						}
+						else{
+							return tree->root;
+						}
+					}
+					
+				public:
+					using iterator_category = std::bidirectional_iterator_tag;
+					using difference_type   = ssize_t;
+					using value_type        = Node*;
+					using pointer           = value_type*;
+					using reference         = value_type&;
+					
+					const_iterator(const iterator &it):
+						tree(it.tree), node(it.node) {}
+					
+					/* Prefix increment */
+					const_iterator &operator++()
+					{
+						assert(node != NULL);
+						
+						node = node->next_all;
+						return *this;
+					}
+					
+					/* Postfix increment */
+					const_iterator operator++(int)
+					{
+						const_iterator old = *this;
+						++(*this);
+						
+						return old;
+					}
+					
+					/* Prefix decrement */
+					const_iterator &operator--()
+					{
+						if(node == NULL)
+						{
+							node = tree->last_node;
+						}
+						else{
+							assert(node->prev_all != NULL);
+							node = node->prev_all;
+						}
+						
+						return *this;
+					}
+					
+					/* Postfix decrement */
+					const_iterator operator--(int)
+					{
+						const_iterator old = *this;
+						--(*this);
+						
+						return old;
+					}
+					
+					bool operator==(const const_iterator &rhs) const
+					{
+						assert(tree == rhs.tree);
+						return node == rhs.node;
+					}
+					
+					bool operator!=(const const_iterator &rhs) const
+					{
+						assert(tree == rhs.tree);
+						return node != rhs.node;
+					}
+					
+					operator const Node*() const
+					{
+						return node;
+					}
+					
+					const Node *operator->() const
 					{
 						return node;
 					}

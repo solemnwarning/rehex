@@ -725,7 +725,7 @@ bool REHex::Document::get_write_protect() const
 	return write_protect;
 }
 
-const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &REHex::Document::get_comments() const
+const REHex::ByteRangeTree<REHex::Document::Comment> &REHex::Document::get_comments() const
 {
 	return comments;
 }
@@ -757,7 +757,7 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 
 bool REHex::Document::erase_comment(off_t offset, off_t length)
 {
-	if(comments.find(NestedOffsetLengthMapKey(offset, length)) == comments.end())
+	if(comments.find(ByteRangeTreeKey(offset, length)) == comments.end())
 	{
 		return false;
 	}
@@ -765,7 +765,7 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	_tracked_change("delete comment",
 		[this, offset, length]()
 		{
-			comments.erase(NestedOffsetLengthMapKey(offset, length));
+			comments.erase(ByteRangeTreeKey(offset, length));
 			_raise_comment_modified();
 		},
 		[this]()
@@ -1107,7 +1107,7 @@ void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRang
 			return;
 		}
 		
-		if(comments.find(NestedOffsetLengthMapKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
+		if(comments.find(ByteRangeTreeKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
 			|| !comments.can_set(cursor_pos + cc->first.offset, cc->first.length))
 		{
 			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), modal_dialog_parent);
@@ -1744,9 +1744,9 @@ void REHex::Document::_save_metadata(const std::string &filename)
 	}
 }
 
-REHex::NestedOffsetLengthMap<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
+REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
 {
-	NestedOffsetLengthMap<Comment> comments;
+	ByteRangeTree<Comment> comments;
 	
 	json_t *j_comments = json_object_get(meta, "comments");
 	

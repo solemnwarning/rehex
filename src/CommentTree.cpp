@@ -235,7 +235,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				ClipboardGuard cg;
 				if(cg)
 				{
-					const ByteRangeTree<Document::Comment> &comments = document->get_comments().tree;
+					const ByteRangeTree<Document::Comment> &comments = document->get_comments();
 					const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(*key);
 					
 					std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
@@ -294,7 +294,7 @@ void REHex::CommentTreeModel::refresh_comments()
 {
 	PROFILE_BLOCK("REHex::CommentTreeModel::refresh_comments");
 	
-	const ByteRangeTree<Document::Comment> &comments = document->get_comments().tree;
+	const ByteRangeTree<Document::Comment> &comments = document->get_comments();
 	
 	/* Erase any comments which no longer exist, or are children of such. */
 	

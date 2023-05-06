@@ -899,7 +899,7 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 		ClipboardGuard cg;
 		if(cg)
 		{
-			const ByteRangeTree<Document::Comment> &comments = doc->get_comments().tree;
+			const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
 			const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(ByteRangeTreeKey(c_offset, c_length));
 			
 			std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
@@ -933,8 +933,8 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	off_t selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
-	const NestedOffsetLengthMap<Document::Comment> &comments   = doc->get_comments();
-	const NestedOffsetLengthMap<int>               &highlights = doc->get_highlights();
+	const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
+	const NestedOffsetLengthMap<int>     &highlights = doc->get_highlights();
 	
 	wxMenu menu;
 	
@@ -1770,7 +1770,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	/* Construct a list of interlaced comment/data regions. */
 	
-	auto next_comment = comments.tree.first_root_node();
+	auto next_comment = comments.first_root_node();
 	auto types_iter = types.begin();
 	off_t next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
 	

@@ -30,6 +30,7 @@
 #include "buffer.hpp"
 #include "ByteRangeMap.hpp"
 #include "ByteRangeSet.hpp"
+#include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
@@ -169,7 +170,7 @@ namespace REHex {
 			/**
 			 * @brief Get the comments in the file.
 			*/
-			const NestedOffsetLengthMap<Comment> &get_comments() const;
+			const ByteRangeTree<Comment> &get_comments() const;
 			
 			/**
 			 * @brief Set a comment in the file.
@@ -322,7 +323,7 @@ namespace REHex {
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
-				NestedOffsetLengthMap<Comment> old_comments;
+				ByteRangeTree<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
 				ByteRangeMap<std::string> old_types;
 				
@@ -353,7 +354,7 @@ namespace REHex {
 			ByteRangeMap<unsigned int> data_seq;
 			unsigned int saved_seq;
 			
-			NestedOffsetLengthMap<Comment> comments;
+			ByteRangeTree<Comment> comments;
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
 			ByteRangeMap<std::string> types;
 			
@@ -398,7 +399,7 @@ namespace REHex {
 			json_t *_dump_metadata(bool& has_data);
 			void _save_metadata(const std::string &filename);
 			
-			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
+			static ByteRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
 			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);

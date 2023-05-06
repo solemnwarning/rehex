@@ -947,6 +947,10 @@ local function _builtin_function_ArrayExtend(context, argv)
 	_resize_array(context, array_type, array_value, new_length, struct_arg_values)
 end
 
+local function _builtin_function_SetComment(context, argv)
+	context.interface.set_comment(argv[1][2]:get(), argv[2][2]:get(), argv[3][2]:get())
+end
+
 -- Table of builtin functions - gets copied into new interpreter contexts
 --
 -- Each key is a function name, the value is a table with the following values:
@@ -1007,6 +1011,8 @@ local _builtin_functions = {
 	ArrayLength = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayLength },
 	ArrayResize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayResize },
 	ArrayExtend = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayExtend },
+	
+	SetComment = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.string }, defaults = {}, impl = _builtin_function_SetComment },
 }
 
 _find_type = function(context, type_name)

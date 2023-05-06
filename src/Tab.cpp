@@ -1773,18 +1773,35 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	/* Construct a list of interlaced comment/data regions. */
 	
-	auto offset_base = comments.begin();
+	auto next_comment = comments.tree.first_root_node();
 	auto types_iter = types.begin();
 	off_t next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
 	
 	/* Skip over comments/types prior to real_offset_base. */
-	while(offset_base != comments.end() && offset_base->first.offset < next_data) { ++offset_base; }
+	while(next_comment != NULL && next_comment->key.offset < next_data)
+	{
+		auto first_child = next_comment->get_first_child();
+		
+		if(first_child != NULL && (first_child->key.offset == next_comment->key.offset || first_child->key.offset >= next_data))
+		{
+			next_comment = next_comment->get_first_child();
+		}
+		else{
+			while(next_comment->get_next() == NULL && next_comment->get_parent() != NULL)
+			{
+				next_comment = next_comment->get_parent();
+			}
+			
+			next_comment = next_comment->get_next();
+		}
+	}
+	
 	while(types_iter != types.end() && (types_iter->first.offset + types_iter->first.length <= next_data)) { ++types_iter; }
 	
 	if(inline_comment_mode == ICM_HIDDEN)
 	{
 		/* Inline comments are hidden. Skip over the comments. */
-		offset_base = comments.end();
+		next_comment = NULL;
 	}
 	
 	std::vector<DocumentCtrl::Region*> regions;
@@ -1793,7 +1810,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	while(remain_data > 0)
 	{
 		assert((next_data + remain_data) <= doc->buffer_length());
-		assert(offset_base == comments.end() || offset_base->first.offset >= next_data);
+		assert(next_comment == NULL || next_comment->key.offset >= next_data);
 		
 		while(!dr_limit.empty() && dr_limit.top() <= next_data)
 		{
@@ -1802,53 +1819,48 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		
 		/* We process any comments at the same offset from largest to smallest, ensuring
 		 * smaller comments are parented to the next-larger one at the same offset.
-		 *
-		 * This could be optimised by changing the order of keys in the comments map, but
-		 * that'll probably break something...
 		*/
 		
-		if(offset_base != comments.end() && offset_base->first.offset == next_data)
+		while(next_comment != NULL && next_comment->key.offset == next_data)
 		{
-			auto next_offset = offset_base;
-			while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
+			off_t indent_offset = next_virt;
+			off_t indent_length = nest
+				? std::min(next_comment->key.length, remain_data)
+				: 0;
+			
+			regions.push_back(new DocumentCtrl::CommentRegion(
+				next_comment->key.offset,
+				next_comment->key.length,
+				*(next_comment->value.text),
+				truncate,
+				indent_offset,
+				indent_length));
+			
+			if(nest && next_comment->key.length > 0)
 			{
-				++next_offset;
+				assert(dr_limit.empty() || dr_limit.top() >= next_comment->key.offset + next_comment->key.length);
+				dr_limit.push(next_comment->key.offset + next_comment->key.length);
 			}
 			
-			auto c = next_offset;
-			do {
-				--c;
-				
-				assert(c->first.offset == next_data);
-				
-				off_t indent_offset = next_virt;
-				off_t indent_length = nest
-					? std::min(c->first.length, remain_data)
-					: 0;
-				
-				regions.push_back(new DocumentCtrl::CommentRegion(
-					c->first.offset,
-					c->first.length,
-					*(c->second.text),
-					truncate,
-					indent_offset,
-					indent_length));
-				
-				if(nest && c->first.length > 0)
+			if(next_comment->get_first_child() != NULL)
+			{
+				next_comment = next_comment->get_first_child();
+			}
+			else{
+				while(next_comment->get_next() == NULL && next_comment->get_parent() != NULL)
 				{
-					assert(dr_limit.empty() || dr_limit.top() >= c->first.offset + c->first.length);
-					dr_limit.push(c->first.offset + c->first.length);
+					next_comment = next_comment->get_parent();
 				}
-			} while(c != offset_base);
-			
-			offset_base = next_offset;
+				
+				next_comment = next_comment->get_next();
+			}
 		}
 		
 		off_t dr_length = remain_data;
 		
-		if(offset_base != comments.end() && dr_length > (offset_base->first.offset - next_data))
+		if(next_comment != NULL && dr_length > (next_comment->key.offset - next_data))
 		{
-			dr_length = offset_base->first.offset - next_data;
+			dr_length = next_comment->key.offset - next_data;
 		}
 		
 		if(!dr_limit.empty() && (next_data + dr_length) >= dr_limit.top())

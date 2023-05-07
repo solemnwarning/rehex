@@ -21,18 +21,20 @@ FileValue.__index = FileValue
 
 --- Construct a new FileValue object
 --
--- @param context Reference to executor internal context table
--- @param offset  Offset to the value within the document
--- @param length  Length of the value within the document
--- @param fmt     Format token for string.unpack() to read the raw value
+-- @param context   Reference to executor internal context table
+-- @param offset    Offset to the value within the document
+-- @param length    Length of the value within the document
+-- @param fmt       Format token for string.unpack() to read the raw value
+-- @param annotate  Enable auto annotation of this variable.
 --
-function FileValue:new(context, offset, length, fmt)
+function FileValue:new(context, offset, length, fmt, annotate)
 	local self = {
 		context = context,
 		
 		offset = offset,
 		length = length,
 		fmt = fmt,
+		annotate = annotate,
 	}
 	
 	setmetatable(self, FileValue)

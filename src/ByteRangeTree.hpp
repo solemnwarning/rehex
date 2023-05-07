@@ -104,9 +104,6 @@ namespace REHex
 					Node *prev_sibling;
 					Node *next_sibling;
 					
-					Node *prev_all;
-					Node *next_all;
-					
 					std::vector<NodeRef> children;
 					
 					/**
@@ -119,9 +116,7 @@ namespace REHex
 						second(this->value),
 						parent(NULL),
 						prev_sibling(NULL),
-						next_sibling(NULL),
-						prev_all(NULL),
-						next_all(NULL) {}
+						next_sibling(NULL) {}
 					
 					/**
 					 * @brief Constructor for replacing nodes.
@@ -135,7 +130,7 @@ namespace REHex
 					 *
 					 * This invalidates the contents of the old Node.
 					*/
-					Node(off_t offset, off_t length, Node &&node, Node **first_node, Node **last_node):
+					Node(off_t offset, off_t length, Node &&node):
 						key(offset, length),
 						value(std::move(node.value)),
 						first(key),
@@ -143,8 +138,6 @@ namespace REHex
 						parent(node.parent),
 						prev_sibling(node.prev_sibling),
 						next_sibling(node.next_sibling),
-						prev_all(node.prev_all),
-						next_all(node.next_all),
 						children(std::move(node.children))
 					{
 						if(prev_sibling != NULL)
@@ -157,26 +150,6 @@ namespace REHex
 						{
 							assert(next_sibling->prev_sibling == &node);
 							next_sibling->prev_sibling = this;
-						}
-						
-						if(prev_all != NULL)
-						{
-							assert(prev_all->next_all == &node);
-							prev_all->next_all = this;
-						}
-						else{
-							assert(*first_node == &node);
-							*first_node = this;
-						}
-						
-						if(next_all != NULL)
-						{
-							assert(next_all->prev_all == &node);
-							next_all->prev_all = this;
-						}
-						else{
-							assert(*last_node == &node);
-							*last_node = this;
 						}
 						
 						for(auto c = children.begin(); c != children.end(); ++c)
@@ -307,9 +280,6 @@ namespace REHex
 			
 			std::vector<NodeRef> root;
 			size_t total_size;
-			
-			Node *first_node;
-			Node *last_node;
 			
 			size_t erase_recursive_impl(Node *node);
 			
@@ -530,14 +500,10 @@ namespace REHex
 			};
 			
 			ByteRangeTree<T>():
-				total_size(0),
-				first_node(NULL),
-				last_node(NULL) {}
+				total_size(0) {}
 			
 			ByteRangeTree<T>(const ByteRangeTree<T> &rhs):
-				total_size(0),
-				first_node(NULL),
-				last_node(NULL)
+				total_size(0)
 			{
 				for(auto it = rhs.begin(); it != rhs.end(); ++it)
 				{
@@ -567,7 +533,7 @@ namespace REHex
 			{
 				if(!root.empty())
 				{
-					return iterator(this, first_node);
+					return iterator(this, first_depth_first_node());
 				}
 				else{
 					return end();
@@ -578,7 +544,7 @@ namespace REHex
 			{
 				if(!root.empty())
 				{
-					return const_iterator(this, first_node);
+					return const_iterator(this, first_depth_first_node());
 				}
 				else{
 					return end();
@@ -618,8 +584,6 @@ namespace REHex
 			{
 				root.clear();
 				total_size = 0;
-				first_node = NULL;
-				last_node = NULL;
 			}
 			
 			/**
@@ -669,7 +633,7 @@ namespace REHex
 			
 			const Node *first_depth_first_node() const
 			{
-				return first_root_node;
+				return first_root_node();
 			}
 			
 			/**
@@ -1160,19 +1124,6 @@ bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 			(*insert_before)->prev_sibling = n.node.get();
 		}
 		
-		if(first_node == NULL)
-		{
-			assert(last_node == NULL);
-			first_node = n.node.get();
-		}
-		else{
-			assert(last_node != NULL);
-			last_node->next_all = n;
-		}
-		
-		n->prev_all = last_node;
-		last_node = n.node.get();
-		
 		container->insert(insert_before, std::move(n));
 		++total_size;
 		
@@ -1259,26 +1210,6 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 		}
 	}
 	
-	if(node->prev_all != NULL)
-	{
-		assert(node->prev_all->next_all == node);
-		node->prev_all->next_all = node->next_all;
-	}
-	else{
-		assert(first_node == node);
-		first_node = node->next_all;
-	}
-	
-	if(node->next_all != NULL)
-	{
-		assert(node->next_all->prev_all == node);
-		node->next_all->prev_all = node->prev_all;
-	}
-	else{
-		assert(last_node == node);
-		last_node = node->prev_all;
-	}
-	
 	container.erase(erase_iter);
 	--total_size;
 	
@@ -1307,26 +1238,6 @@ size_t REHex::ByteRangeTree<T>::erase_recursive_impl(Node *node)
 		{
 			assert(n->next_sibling->prev_sibling == n);
 			n->next_sibling->prev_sibling = n->prev_sibling;
-		}
-		
-		if(n->prev_all != NULL)
-		{
-			assert(n->prev_all->next_all == n);
-			n->prev_all->next_all = n->next_all;
-		}
-		else{
-			assert(first_node == n);
-			first_node = n->next_all;
-		}
-		
-		if(n->next_all != NULL)
-		{
-			assert(n->next_all->prev_all == n);
-			n->next_all->prev_all = n->prev_all;
-		}
-		else{
-			assert(last_node == n);
-			last_node = n->prev_all;
 		}
 		
 		for(auto it = n->children.begin(); it != n->children.end(); ++it)
@@ -1401,7 +1312,7 @@ size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
 			{
 				i_offset += length;
 				
-				Node *new_node = new Node(i_offset, i_length, std::move(*n), &first_node, &last_node);
+				Node *new_node = new Node(i_offset, i_length, std::move(*n));
 				
 				n.key.offset = i_offset;
 				n.node.reset(new_node);
@@ -1412,7 +1323,7 @@ size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
 			{
 				i_length += length;
 				
-				Node *new_node = new Node(i_offset, i_length, std::move(*n), &first_node, &last_node);
+				Node *new_node = new Node(i_offset, i_length, std::move(*n));
 				
 				n.key.length = i_length;
 				n.node.reset(new_node);
@@ -1471,7 +1382,7 @@ size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
 			
 			if(i_offset != n.key.offset || i_length != n.key.length)
 			{
-				Node *new_node = new Node(i_offset, i_length, std::move(*n), &first_node, &last_node);
+				Node *new_node = new Node(i_offset, i_length, std::move(*n));
 				
 				n.key.offset = i_offset;
 				n.key.length = i_length;
@@ -1589,36 +1500,6 @@ void REHex::ByteRangeTree<T>::check() const
 	
 	/* Check total_size is correct. */
 	assert(total_size == seen_nodes.size());
-	
-	/* Check we can iterate from first_node to last_node and hit every node in the tree. */
-	
-	#ifdef REHEX_BYTERANGETREE_DIAGS
-	fprintf(stderr, "ByteRangeTree %p checking list...\n", this);
-	#endif
-	
-	for(const Node *node = first_node; node != NULL; node = node->next_all)
-	{
-		#ifdef REHEX_BYTERANGETREE_DIAGS
-		fprintf(stderr, "node %p offset = %zd length = %zd\n", node, node->key.offset, node->key.length);
-		#endif
-		
-		if(node->prev_all != NULL)
-		{
-			assert(node->prev_all->next_all == node);
-		}
-		
-		if(node->next_all != NULL)
-		{
-			assert(node->next_all->prev_all == node);
-		}
-		else{
-			assert(last_node == node);
-		}
-		
-		assert(seen_nodes.erase(node) == 1U);
-	}
-	
-	assert(seen_nodes.empty());
 	
 	#endif /* REHEX_BYTERANGETREE_CHECKS */
 }

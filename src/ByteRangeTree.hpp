@@ -657,6 +657,52 @@ namespace REHex
 			}
 			
 			/**
+			 * @brief Get the first node for depth-first iteration.
+			 *
+			 * Returns the first node for iterating the tree in a depth-first manner.
+			 * Use next_depth_first_node() to continue.
+			*/
+			Node *first_depth_first_node()
+			{
+				return first_root_node();
+			}
+			
+			const Node *first_depth_first_node() const
+			{
+				return first_root_node;
+			}
+			
+			/**
+			 * @brief Get the last node for depth-first iteration.
+			 *
+			 * Returns the last node for iterating the tree in a depth-first manner.
+			 * Use prev_depth_first_node() to continue walking backwards.
+			*/
+			Node *last_depth_first_node()
+			{
+				Node *node = last_root_node();
+				
+				while(node->get_last_child() != NULL)
+				{
+					node = node->get_last_child();
+				}
+				
+				return node;
+			}
+			
+			const Node *last_depth_first_node() const
+			{
+				const Node *node = last_root_node();
+				
+				while(node->get_last_child() != NULL)
+				{
+					node = node->get_last_child();
+				}
+				
+				return node;
+			}
+			
+			/**
 			 * @brief Find the node matching the key exactly.
 			 * @returns A Node pointer, or NULL.
 			*/
@@ -816,6 +862,17 @@ namespace REHex
 			*/
 			bool operator==(const ByteRangeTree<T> &rhs) const;
 			
+			/**
+			 * @brief Find the next node in the tree, depth-first.
+			 * @returns Node pointer of the next node, or NULL.
+			*/
+			template<typename NT> static NT *next_depth_first_node(NT *node);
+			
+			/**
+			 * @brief Find the previous node in the tree, depth-first.
+			 * @returns Node pointer of the previous node, or NULL.
+			*/
+			template<typename NT> static NT *prev_depth_first_node(NT *node);
 		private:
 			template<typename NT, typename CT> static NT *find_node_impl(const ByteRangeTreeKey &key, CT *container);
 			template<typename NT, typename CT> static NT *find_most_specific_parent_impl(off_t offset, CT *container);
@@ -1433,6 +1490,44 @@ size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
 	check();
 	
 	return keys_modified;
+}
+
+template<typename T> template<typename NT>
+NT *REHex::ByteRangeTree<T>::next_depth_first_node(NT *node)
+{
+	if(node->get_first_child() != NULL)
+	{
+		node = node->get_first_child();
+	}
+	else{
+		while(node->get_next() == NULL && node->get_parent() != NULL)
+		{
+			node = node->get_parent();
+		}
+		
+		node = node->get_next();
+	}
+	
+	return node;
+}
+
+template<typename T> template<typename NT>
+NT *REHex::ByteRangeTree<T>::prev_depth_first_node(NT *node)
+{
+	if(node->get_prev() != NULL)
+	{
+		node = node->get_prev();
+		
+		while(node->get_last_child() != NULL)
+		{
+			node = node->get_last_child();
+		}
+	}
+	else{
+		node = node->get_parent();
+	}
+	
+	return node;
 }
 
 template<typename T>

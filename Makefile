@@ -456,6 +456,7 @@ TEST_OBJS := \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
+	tests/ByteRangeTree.o \
 	tests/CharacterEncoder.o \
 	tests/CharacterFinder.o \
 	tests/CommentsDataObject.o \

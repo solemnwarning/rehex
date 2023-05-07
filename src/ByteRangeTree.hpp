@@ -816,14 +816,6 @@ namespace REHex
 			*/
 			bool operator==(const ByteRangeTree<T> &rhs) const;
 			
-			/**
-			 * @brief Get a reference to an element value by key.
-			 *
-			 * Like a std::map, this will create elements using the value type's
-			 * default constructor if they don't already exist.
-			*/
-			T &operator[](const ByteRangeTreeKey &key);
-			
 		private:
 			template<typename NT, typename CT> static NT *find_node_impl(const ByteRangeTreeKey &key, CT *container);
 			template<typename NT, typename CT> static NT *find_most_specific_parent_impl(off_t offset, CT *container);
@@ -1441,20 +1433,6 @@ size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
 	check();
 	
 	return keys_modified;
-}
-
-template<typename T>
-T &REHex::ByteRangeTree<T>::operator[](const ByteRangeTreeKey &key)
-{
-	Node *node = find_node(key);
-	if(node != NULL)
-	{
-		return node->value;
-	}
-	else{
-		set(key.offset, key.length, T());
-		return find_node(key)->value;
-	}
 }
 
 template<typename T>

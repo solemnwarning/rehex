@@ -498,7 +498,7 @@ TEST_F(DocumentTest, SetHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	expect_highlights.set(10, 20, 0);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -515,7 +515,7 @@ TEST_F(DocumentTest, SetHighlightWholeFile)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(0, strlen(IPSUM)) ] = 1;
+	expect_highlights.set(0, strlen(IPSUM), 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -537,9 +537,9 @@ TEST_F(DocumentTest, SetHighlightMultiple)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(0,  10) ] = 2;
-	expect_highlights[ NestedOffsetLengthMapKey(20, 10) ] = 3;
-	expect_highlights[ NestedOffsetLengthMapKey(30, 10) ] = 4;
+	expect_highlights.set(0,  10, 2);
+	expect_highlights.set(20, 10, 3);
+	expect_highlights.set(30, 10, 4);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -561,9 +561,9 @@ TEST_F(DocumentTest, SetHighlightNested)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(0,  10) ] = 2;
-	expect_highlights[ NestedOffsetLengthMapKey(0,  20) ] = 1;
-	expect_highlights[ NestedOffsetLengthMapKey(40, 10) ] = 3;
+	expect_highlights.set(0,  10, 2);
+	expect_highlights.set(0,  20, 1);
+	expect_highlights.set(40, 10, 3);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -583,7 +583,7 @@ TEST_F(DocumentTest, SetHighlightOverwrite)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(0, 20) ] = 2;
+	expect_highlights.set(0, 20, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -603,7 +603,7 @@ TEST_F(DocumentTest, SetHighlightConflict)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(10, 20) ] = 1;
+	expect_highlights.set(10, 20, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -640,7 +640,7 @@ TEST_F(DocumentTest, SetHighlightUndo)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	expect_highlights.set(10, 20, 0);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -686,12 +686,12 @@ TEST_F(DocumentTest, InsertBeforeHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	expect_highlights_pre.set(20, 10, 1);
+	expect_highlights_pre.set(40, 10, 2);
 	
 	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post[ NestedOffsetLengthMapKey(25, 10) ] = 1;
-	expect_highlights_post[ NestedOffsetLengthMapKey(45, 10) ] = 2;
+	expect_highlights_post.set(25, 10, 1);
+	expect_highlights_post.set(45, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -737,10 +737,10 @@ TEST_F(DocumentTest, InsertWithinHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	expect_highlights_pre.set(20, 10, 1);
 	
 	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post[ NestedOffsetLengthMapKey(20, 15) ] = 1;
+	expect_highlights_post.set(20, 15, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -786,8 +786,8 @@ TEST_F(DocumentTest, InsertAfterHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(20, 10) ] = 1;
-	expect_highlights[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	expect_highlights.set(20, 10, 1);
+	expect_highlights.set(40, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -832,12 +832,12 @@ TEST_F(DocumentTest, EraseBeforeHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	expect_highlights_pre.set(20, 10, 1);
+	expect_highlights_pre.set(40, 10, 2);
 	
 	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post[ NestedOffsetLengthMapKey(15, 10) ] = 1;
-	expect_highlights_post[ NestedOffsetLengthMapKey(35, 10) ] = 2;
+	expect_highlights_post.set(15, 10, 1);
+	expect_highlights_post.set(35, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -883,10 +883,10 @@ TEST_F(DocumentTest, EraseWithinHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(20, 10) ] = 1;
+	expect_highlights_pre.set(20, 10, 1);
 	
 	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post[ NestedOffsetLengthMapKey(20, 5) ] = 1;
+	expect_highlights_post.set(20, 5, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -932,8 +932,8 @@ TEST_F(DocumentTest, EraseAfterHighlight)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights[ NestedOffsetLengthMapKey(20, 10) ] = 1;
-	expect_highlights[ NestedOffsetLengthMapKey(40, 10) ] = 2;
+	expect_highlights.set(20, 10, 1);
+	expect_highlights.set(40, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -968,7 +968,7 @@ TEST_F(DocumentTest, EraseHighlight)
 	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	expect_highlights_pre.set(10, 20, 0);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	
@@ -1001,8 +1001,8 @@ TEST_F(DocumentTest, EraseHighlightNested)
 	ASSERT_TRUE(doc->set_highlight(10,  5, 1));
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(10, 20) ] = 0;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(10,  5) ] = 1;
+	expect_highlights_pre.set(10, 20, 0);
+	expect_highlights_pre.set(10,  5, 1);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	
@@ -1015,7 +1015,7 @@ TEST_F(DocumentTest, EraseHighlightNested)
 	);
 	
 	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post[ NestedOffsetLengthMapKey(10,  5) ] = 1;
+	expect_highlights_post.set(10,  5, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 }
@@ -1028,7 +1028,7 @@ TEST_F(DocumentTest, EraseHighlightUndo)
 	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
 	
 	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre[ NestedOffsetLengthMapKey(10, 20) ] = 0;
+	expect_highlights_pre.set(10, 20, 0);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	

@@ -361,7 +361,7 @@ namespace REHex
 					{
 						assert(node != NULL);
 						
-						node = node->next_all;
+						node = ByteRangeTree<T>::next_depth_first_node(node);
 						return *this;
 					}
 					
@@ -379,11 +379,11 @@ namespace REHex
 					{
 						if(node == NULL)
 						{
-							node = tree->last_node;
+							node = tree->last_depth_first_node();
 						}
 						else{
-							assert(node->prev_all != NULL);
-							node = node->prev_all;
+							node = ByteRangeTree<T>::prev_depth_first_node(node);
+							assert(node != NULL);
 						}
 						
 						return *this;
@@ -469,7 +469,7 @@ namespace REHex
 					{
 						assert(node != NULL);
 						
-						node = node->next_all;
+						node = ByteRangeTree<T>::next_depth_first_node(node);
 						return *this;
 					}
 					
@@ -487,11 +487,11 @@ namespace REHex
 					{
 						if(node == NULL)
 						{
-							node = tree->last_node;
+							node = tree->last_depth_first_node();
 						}
 						else{
-							assert(node->prev_all != NULL);
-							node = node->prev_all;
+							node = ByteRangeTree<T>::prev_depth_first_node(node);
+							assert(node != NULL);
 						}
 						
 						return *this;
@@ -561,7 +561,7 @@ namespace REHex
 			 * @brief Get the begin iterator for all elements.
 			 *
 			 * Returns an iterator that can be used to iterate over the elements at
-			 * every level, in order of insertion.
+			 * every level, in depth-first order.
 			*/
 			iterator begin()
 			{

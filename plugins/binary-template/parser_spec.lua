@@ -1979,4 +1979,30 @@ describe("parser", function()
 		
 		assert.are.same(expect, got)
 	end);
+	
+	it("parses private variable definitions", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("private int var;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "variable", "int", "var", nil, nil, private = true }
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("private int array[10];")
+		expect = {
+			{ "UNKNOWN FILE", 1, "variable", "int", "array", nil, { "UNKNOWN FILE", 1, "num", 10 }, private = true }
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("private struct foo bar;")
+		expect = {
+			{ "UNKNOWN FILE", 1, "variable", "struct foo", "bar", nil, nil, private = true }
+		}
+		
+		assert.are.same(expect, got)
+	end)
 end);

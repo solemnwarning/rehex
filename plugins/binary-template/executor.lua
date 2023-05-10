@@ -1551,7 +1551,7 @@ expand_value = function(context, type_info, struct_arg_values, array_element_idx
 	end
 end
 
-local function _decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes, initial_value, is_local)
+local function _decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes, initial_value, is_local, is_private)
 	local filename = statement[1]
 	local line_num = statement[2]
 	
@@ -1591,13 +1591,16 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	
 	local dest_tables
 	
-	if not is_local and _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
+	if not (is_local or is_private) and _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
 	then
 		_template_error(context, "Attempt to declare non-local variable inside function")
 	end
 	
 	local struct_frame = _topmost_frame_of_type(context, FRAME_TYPE_STRUCT)
-	if struct_frame ~= nil and not is_local
+	if is_private
+	then
+		dest_tables = { context.stack[#context.stack].vars }
+	elseif struct_frame ~= nil and not is_local
 	then
 		dest_tables = { struct_frame.vars, struct_frame.struct_members }
 		
@@ -1809,7 +1812,7 @@ _eval_variable = function(context, statement)
 		end
 	end
 	
-	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes_evaluated, nil, false)
+	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes_evaluated, nil, false, statement.private)
 end
 
 _eval_local_variable = function(context, statement)

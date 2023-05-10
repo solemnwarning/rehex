@@ -7166,4 +7166,82 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("doesn't annotate private variables", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
+				{ "test.bt", 1, "variable", "int", "z", nil, nil },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil, private = true },
+			{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
+		})
+		
+		local expect_log = {
+			"set_comment(12, 4, x)",
+			"set_comment(16, 4, y)",
+			"set_comment(20, 4, z)",
+			"set_comment(12, 12, b)",
+			"set_data_type(12, 4, s32le)",
+			"set_data_type(16, 4, s32le)",
+			"set_data_type(20, 4, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("doesn't annotate private struct members", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "call", "LittleEndian", {} },
+			
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil, private = true },
+				{ "test.bt", 1, "variable", "int", "z", nil, nil },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
+			{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
+		})
+		
+		local expect_log = {
+			"set_comment(0, 4, x)",
+			"set_comment(8, 4, z)",
+			"set_comment(0, 12, a)",
+			"set_data_type(0, 4, s32le)",
+			"set_data_type(8, 4, s32le)",
+			
+			"set_comment(12, 4, x)",
+			"set_comment(20, 4, z)",
+			"set_comment(12, 12, b)",
+			"set_data_type(12, 4, s32le)",
+			"set_data_type(20, 4, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

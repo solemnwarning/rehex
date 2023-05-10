@@ -465,6 +465,7 @@ local _parser = spc * P{
 	--  }
 	VAR_DEFN = Ct(
 		P(_capture_position) * Cc("variable") *
+		(P("private") * spc * Cg( Cc(true), "private")) ^ -1 *
 		P(_capture_type) * name *
 		(P("(") * spc * Ct( V("ZERO_OR_MORE_EXPRS") ) * P(")") * spc + Cc(nil)) *
 		(P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) *

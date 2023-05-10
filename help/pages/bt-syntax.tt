@@ -56,4 +56,33 @@ Local variables are used for temporary storage within scripts - for example loop
 [% WRAPPER "code-keyword.tt" %]local[% END %] [% WRAPPER "code-type.tt" %]int[% END %] x = 0;
 [%- END %]
 
+<H2>Private variables</H2>
+
+<P>
+Private variables are like normal variables, except they will not be annotated in the editor or exported from structs. This can be used for reading structured data from the file and then processing it yourself.
+<BR>
+<BR>
+The below example shows a function which can be used to read a data structure from an arbitrary point in the file.
+</P>
+
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-keyword.tt" %]struct[% END %] vec3f
+{
+	[% WRAPPER "code-type.tt" %]double[% END %] x;
+	[% WRAPPER "code-type.tt" %]double[% END %] y;
+	[% WRAPPER "code-type.tt" %]double[% END %] z;
+};
+
+[% WRAPPER "code-keyword.tt" %]struct[% END %] vec3f read_vec3f([% WRAPPER "code-type.tt" %]int64_t[% END %] offset)
+{
+	[% WRAPPER "code-type.tt" %]int64_t[% END %] saved_offset = FTell();
+	
+	FSeek(offset);
+	[% WRAPPER "code-keyword.tt" %]private struct[% END %] vec3f v;
+	
+	FSeek(saved_offset);
+	[% WRAPPER "code-keyword.tt" %]return[% END %] v;
+}
+[%- END %]
+
 [% END %]

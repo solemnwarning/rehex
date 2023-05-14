@@ -2395,6 +2395,7 @@ TEST(Buffer, ReadWriteAnyBytes)
 	TEST_BUFFER_MANIP({});
 }
 
+#ifndef _WIN32
 TEST(Buffer, DeleteBackingFileAndRestore)
 {
 	TempFilename f1, f2;
@@ -2494,6 +2495,7 @@ TEST(Buffer, ReplaceBackingFileAndReload)
 	std::vector<unsigned char> file_data = b.read_data(0, 1024);
 	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF })) << "Buffer contains new content";
 }
+#endif
 
 TEST(Buffer, ModifyBackingFileAndReload)
 {

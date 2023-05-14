@@ -368,6 +368,7 @@ APP_OBJS := \
 	src/StringPanel.o \
 	src/textentrydialog.o \
 	src/Tab.o \
+	src/ThreadPool.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \
@@ -446,6 +447,7 @@ TEST_OBJS := \
 	src/StringPanel.o \
 	src/Tab.o \
 	src/textentrydialog.o \
+	src/ThreadPool.o \
 	src/ToolPanel.o \
 	src/util.o \
 	src/VirtualMappingDialog.o \
@@ -454,6 +456,7 @@ TEST_OBJS := \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
+	tests/ByteRangeTree.o \
 	tests/CharacterEncoder.o \
 	tests/CharacterFinder.o \
 	tests/CommentsDataObject.o \

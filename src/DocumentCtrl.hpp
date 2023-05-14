@@ -89,7 +89,7 @@ namespace REHex {
 					Region(off_t indent_offset, off_t indent_length);
 					
 					virtual int calc_width(REHex::DocumentCtrl &doc);
-					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) = 0;
+					virtual void calc_height(REHex::DocumentCtrl &doc) = 0;
 					
 					/* Draw this region on the screen.
 					 *
@@ -329,7 +329,7 @@ namespace REHex {
 					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc) override;
-					virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
+					virtual void calc_height(REHex::DocumentCtrl &doc) override;
 					virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 					
@@ -384,7 +384,7 @@ namespace REHex {
 				
 				bool truncate;
 				
-				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override;
+				virtual void calc_height(REHex::DocumentCtrl &doc) override;
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
@@ -825,7 +825,8 @@ namespace REHex {
 #endif
 			
 		public:
-			static std::list<wxString> format_text(const wxString &text, unsigned int cols, unsigned int from_line = 0, unsigned int max_lines = -1);
+			static std::list<wxString> wrap_text(const wxString &text, unsigned int cols);
+			static int wrap_text_height(const wxString &text, unsigned int cols);
 			int indent_width(int depth);
 			int get_offset_column_width();
 			int get_virtual_width();

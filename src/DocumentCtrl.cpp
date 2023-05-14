@@ -43,6 +43,7 @@
 #include "Palette.hpp"
 #include "profile.hpp"
 #include "textentrydialog.hpp"
+#include "ThreadPool.hpp"
 #include "UnsortedMapVector.hpp"
 #include "util.hpp"
 
@@ -846,6 +847,8 @@ void REHex::DocumentCtrl::OnSize(wxSizeEvent &event)
 
 void REHex::DocumentCtrl::_handle_width_change()
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl::_handle_width_change");
+	
 	/* Calculate how much space (if any) to reserve for the offsets to the left. */
 	
 	if(offset_column)
@@ -878,14 +881,18 @@ void REHex::DocumentCtrl::_handle_width_change()
 		offset_column_width = 0;
 	}
 	
-	virtual_width = 0;
-	
-	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
-		int r_min_width = (*r)->calc_width(*this);
-		if(r_min_width > virtual_width)
+		PROFILE_INNER_BLOCK("calc widths");
+		
+		virtual_width = 0;
+		
+		for(auto r = regions.begin(); r != regions.end(); ++r)
 		{
-			virtual_width = r_min_width;
+			int r_min_width = (*r)->calc_width(*this);
+			if(r_min_width > virtual_width)
+			{
+				virtual_width = r_min_width;
+			}
 		}
 	}
 	
@@ -900,15 +907,35 @@ void REHex::DocumentCtrl::_handle_width_change()
 	/* Recalculate the height and y offset of each region. */
 	
 	{
-		wxClientDC dc(this);
+		PROFILE_INNER_BLOCK("calc heights");
+		
+		static const size_t CALC_HEIGHTS_PER_CHUNK = 1000;
+		std::atomic<size_t> next_chunk_to_calc(0);
+		
+		ThreadPool::TaskHandle a = wxGetApp().thread_pool->queue_task([&]()
+		{
+			size_t base = next_chunk_to_calc.fetch_add(CALC_HEIGHTS_PER_CHUNK);
+			size_t end = std::min((base + CALC_HEIGHTS_PER_CHUNK), regions.size());
+			
+			for(size_t i = base; i < end; ++i)
+			{
+				regions[i]->calc_height(*this);
+			}
+			
+			return base >= regions.size();
+		}, -1, ThreadPool::TaskPriority::UI);
+		
+		a.join();
+	}
+	
+	{
+		PROFILE_INNER_BLOCK("calc offsets");
 		
 		int64_t next_yo = 0;
 		
 		for(auto i = regions.begin(); i != regions.end(); ++i)
 		{
 			(*i)->y_offset = next_yo;
-			(*i)->calc_height(*this, dc);
-			
 			next_yo += (*i)->y_lines;
 		}
 	}
@@ -2226,7 +2253,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 				virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
 				virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
 				
-				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override { abort(); }
+				virtual void calc_height(REHex::DocumentCtrl &doc) override { abort(); }
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override { abort(); }
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override { abort(); }
 	};
@@ -2291,7 +2318,7 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 				virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
 				virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override { abort(); }
 				
-				virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override { abort(); }
+				virtual void calc_height(REHex::DocumentCtrl &doc) override { abort(); }
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override { abort(); }
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override { abort(); }
 	};
@@ -2344,7 +2371,7 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 				this->y_offset = y_offset;
 			}
 			
-			virtual void calc_height(REHex::DocumentCtrl &doc, wxDC &dc) override
+			virtual void calc_height(REHex::DocumentCtrl &doc) override
 			{
 				abort();
 			}
@@ -2647,7 +2674,7 @@ void REHex::DocumentCtrl::_make_byte_visible(off_t offset)
 	_make_x_visible(bounds.x, bounds.w);
 }
 
-std::list<wxString> REHex::DocumentCtrl::format_text(const wxString &text, unsigned int cols, unsigned int from_line, unsigned int max_lines)
+std::list<wxString> REHex::DocumentCtrl::wrap_text(const wxString &text, unsigned int cols)
 {
 	assert(cols > 0);
 	
@@ -2680,10 +2707,39 @@ std::list<wxString> REHex::DocumentCtrl::format_text(const wxString &text, unsig
 		}
 	}
 	
-	lines.erase(lines.begin(), std::next(lines.begin(), std::min((size_t)(from_line), lines.size())));
-	lines.erase(std::next(lines.begin(), std::min((size_t)(max_lines), lines.size())), lines.end());
-	
 	return lines;
+}
+
+int REHex::DocumentCtrl::wrap_text_height(const wxString &text, unsigned int cols)
+{
+	assert(cols > 0);
+	
+	int height = 0;
+	
+	for(size_t at = 0; at < text.size();)
+	{
+		size_t newline_at = text.find_first_of('\n', at);
+		
+		if(newline_at != std::string::npos && newline_at <= (at + cols))
+		{
+			/* There is a newline within one row's worth of text of our current position.
+			 * Add all the text up to it and continue from after it.
+			*/
+			++height;
+			at = newline_at + 1;
+		}
+		else{
+			/* The line is too long, just wrap it at whatever character is on the boundary.
+			 *
+			 * std::string::substr() will clamp the length if it goes beyond the end of
+			 * the string.
+			*/
+			++height;
+			at += cols;
+		}
+	}
+	
+	return height;
 }
 
 int REHex::DocumentCtrl::indent_width(int depth)
@@ -2735,27 +2791,41 @@ int REHex::DocumentCtrl::hf_string_width(int length)
 		return 0;
 	}
 	
-	if(length <= PRECOMP_HF_STRING_WIDTH_TO)
+	int string_width = 0;
+	
+	if(length > PRECOMP_HF_STRING_WIDTH_TO)
 	{
-		return hf_string_width_precomp[length - 1];
+		int div = (length - 1) / PRECOMP_HF_STRING_WIDTH_TO;
+		
+		string_width += div * hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO - 1];
+		length -= div * PRECOMP_HF_STRING_WIDTH_TO;
 	}
 	
-	wxClientDC dc(this);
-	dc.SetFont(hex_font);
+	string_width += hf_string_width_precomp[length - 1];
 	
-	wxSize te = dc.GetTextExtent(std::string(length, 'X'));
-	return te.GetWidth();
+	return string_width;
 }
 
 /* Calculate the character at the pixel offset relative to the start of the string. */
 int REHex::DocumentCtrl::hf_char_at_x(int x_px)
 {
-	for(int i = 0;; ++i)
+	if(hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO - 1] > (unsigned int)(x_px))
 	{
-		int w = hf_string_width(i + 1);
-		if(w > x_px)
+		auto it = std::upper_bound(
+			hf_string_width_precomp,
+			hf_string_width_precomp + PRECOMP_HF_STRING_WIDTH_TO,
+			(unsigned int)(x_px));
+		
+		return std::distance(hf_string_width_precomp, it);
+	}
+	else{
+		for(int i = PRECOMP_HF_STRING_WIDTH_TO;; ++i)
 		{
-			return i;
+			int w = hf_string_width(i + 1);
+			if(w > x_px)
+			{
+				return i;
+			}
 		}
 	}
 }
@@ -2896,128 +2966,174 @@ const std::vector<REHex::DocumentCtrl::GenericDataRegion*> &REHex::DocumentCtrl:
 
 void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 {
+	PROFILE_BLOCK("REHex::DocumentCtrl::replace_all_regions");
+	
 	assert(!new_regions.empty());
 	
 	/* Erase the old regions and swap the contents of the new list in. */
 	
-	for(auto r = regions.begin(); r != regions.end(); ++r)
 	{
-		delete *r;
-	}
-	
-	regions.clear();
-	
-	regions.swap(new_regions);
-	
-	/* Initialise the indent_depth and indent_final counters. */
-	
-	std::list<off_t> indent_to;
-	
-	for(auto r = regions.begin(), p = r; r != regions.end(); ++r)
-	{
-		assert((*r)->indent_offset >= (*p)->indent_offset);
+		PROFILE_INNER_BLOCK("replace regions");
 		
-		while(!indent_to.empty() && indent_to.back() <= (*r)->indent_offset)
+		for(auto r = regions.begin(); r != regions.end(); ++r)
 		{
-			++((*p)->indent_final);
-			indent_to.pop_back();
+			delete *r;
 		}
 		
-		(*r)->indent_depth = indent_to.size();
-		(*r)->indent_final = 0;
+		regions.clear();
 		
-		if((*r)->indent_length > 0)
+		regions.swap(new_regions);
+	}
+	
+	{
+		PROFILE_INNER_BLOCK("indenting and fill data_regions");
+		
+		/* Initialise the indent_depth and indent_final counters. */
+		
+		ThreadPool::TaskHandle a = wxGetApp().thread_pool->queue_task([&]()
 		{
-			if(!indent_to.empty())
+			std::list<off_t> indent_to;
+			
+			for(auto r = regions.begin(), p = r; r != regions.end(); ++r)
 			{
-				assert(((*r)->indent_offset + (*r)->indent_length) <= indent_to.back());
+				assert((*r)->indent_offset >= (*p)->indent_offset);
+				
+				while(!indent_to.empty() && indent_to.back() <= (*r)->indent_offset)
+				{
+					++((*p)->indent_final);
+					indent_to.pop_back();
+				}
+				
+				(*r)->indent_depth = indent_to.size();
+				(*r)->indent_final = 0;
+				
+				if((*r)->indent_length > 0)
+				{
+					if(!indent_to.empty())
+					{
+						assert(((*r)->indent_offset + (*r)->indent_length) <= indent_to.back());
+					}
+					
+					indent_to.push_back((*r)->indent_offset + (*r)->indent_length);
+				}
+				
+				/* Advance p from second iteration. */
+				if(p != r)
+				{
+					++p;
+				}
 			}
 			
-			indent_to.push_back((*r)->indent_offset + (*r)->indent_length);
-		}
+			regions.back()->indent_final = indent_to.size();
+		}, ThreadPool::TaskPriority::UI);
 		
-		/* Advance p from second iteration. */
-		if(p != r)
+		/* Clear and repopulate data_regions with the GenericDataRegion regions. */
+		
+		ThreadPool::TaskHandle b = wxGetApp().thread_pool->queue_task([&]()
 		{
-			++p;
-		}
-	}
-	
-	regions.back()->indent_final = indent_to.size();
-	
-	/* Clear and repopulate data_regions with the GenericDataRegion regions. */
-	
-	data_regions.clear();
-	end_virt_offset = -1;
-	
-	for(auto r = regions.begin(); r != regions.end(); ++r)
-	{
-		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*r);
-		if(dr != NULL)
-		{
-			data_regions.push_back(dr);
+			data_regions.clear();
+			end_virt_offset = -1;
 			
-			off_t dr_end_virt_offset = dr->virt_offset + dr->d_length;
-			if(dr_end_virt_offset > end_virt_offset)
+			for(auto r = regions.begin(); r != regions.end(); ++r)
 			{
-				end_virt_offset = dr_end_virt_offset;
+				GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*r);
+				if(dr != NULL)
+				{
+					data_regions.push_back(dr);
+					
+					off_t dr_end_virt_offset = dr->virt_offset + dr->d_length;
+					if(dr_end_virt_offset > end_virt_offset)
+					{
+						end_virt_offset = dr_end_virt_offset;
+					}
+				}
 			}
-		}
-	}
-	
-	/* Clear and repopulate data_regions_sorted with iterators to each element in data_regions
-	 * sorted by d_offset.
-	*/
-	
-	data_regions_sorted.clear();
-	
-	for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
-	{
-		data_regions_sorted.push_back(r);
-	}
-	
-	std::sort(data_regions_sorted.begin(), data_regions_sorted.end(),
-		[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
-		{
-			return (*lhs)->d_offset < (*rhs)->d_offset;
-		});
-	
-	/* Clear and repopulate data_regions_sorted_virt with iterators to each element in
-	 * data_regions sorted by virt_offset.
-	*/
-	
-	data_regions_sorted_virt.clear();
-	
-	for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
-	{
-		data_regions_sorted_virt.push_back(r);
-	}
-	
-	std::sort(data_regions_sorted_virt.begin(), data_regions_sorted_virt.end(),
-		[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
-		{
-			return (*lhs)->virt_offset < (*rhs)->virt_offset;
-		});
-	
-	/* Clear and repopulate processing_regions with the regions which have some background work to do. */
-	
-	processing_regions.clear();
-	
-	for(auto r = regions.begin(); r != regions.end(); ++r)
-	{
-		unsigned int status = (*r)->check();
+		}, ThreadPool::TaskPriority::UI);
 		
-		if(status & Region::PROCESSING)
+		a.join();
+		b.join();
+	}
+	
+	{
+		PROFILE_INNER_BLOCK("fill region sub-lists");
+		
+		/* Clear and repopulate data_regions_sorted with iterators to each element in data_regions
+		* sorted by d_offset.
+		*/
+		
+		ThreadPool::TaskHandle a = wxGetApp().thread_pool->queue_task([&]()
 		{
-			processing_regions.push_back(*r);
-		}
+			data_regions_sorted.clear();
+			data_regions_sorted.reserve(data_regions.size());
+			
+			for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
+			{
+				data_regions_sorted.push_back(r);
+			}
+			
+			std::sort(data_regions_sorted.begin(), data_regions_sorted.end(),
+				[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
+				{
+					return (*lhs)->d_offset < (*rhs)->d_offset;
+				});
+		}, ThreadPool::TaskPriority::UI);
+		
+		/* Clear and repopulate data_regions_sorted_virt with iterators to each element in
+		* data_regions sorted by virt_offset.
+		*/
+		
+		ThreadPool::TaskHandle b = wxGetApp().thread_pool->queue_task([&]()
+		{
+			data_regions_sorted_virt.clear();
+			data_regions_sorted_virt.reserve(data_regions.size());
+			
+			for(auto r = data_regions.begin(); r != data_regions.end(); ++r)
+			{
+				data_regions_sorted_virt.push_back(r);
+			}
+			
+			std::sort(data_regions_sorted_virt.begin(), data_regions_sorted_virt.end(),
+				[](const std::vector<GenericDataRegion*>::iterator &lhs, const std::vector<GenericDataRegion*>::iterator &rhs)
+				{
+					return (*lhs)->virt_offset < (*rhs)->virt_offset;
+				});
+		}, ThreadPool::TaskPriority::UI);
+		
+		/* Clear and repopulate processing_regions with the regions which have some background work to do. */
+		
+		ThreadPool::TaskHandle c = wxGetApp().thread_pool->queue_task([&]()
+		{
+			processing_regions.clear();
+			
+			for(auto r = regions.begin(); r != regions.end(); ++r)
+			{
+				unsigned int status = (*r)->check();
+				
+				if(status & Region::PROCESSING)
+				{
+					processing_regions.push_back(*r);
+				}
+			}
+		}, ThreadPool::TaskPriority::UI);
+		
+		a.join();
+		b.join();
+		c.join();
 	}
 	
 	/* Recalculates region widths/heights and updates scroll bars */
-	_handle_width_change();
+	
+	{
+		PROFILE_INNER_BLOCK("_handle_width_change");
+		_handle_width_change();
+	}
 	
 	/* Update the cursor position/state if not valid within the new regions. */
-	_set_cursor_position(get_cursor_position(), get_cursor_state());
+	
+	{
+		PROFILE_INNER_BLOCK("_set_cursor_position");
+		_set_cursor_position(get_cursor_position(), get_cursor_state());
+	}
 }
 
 bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)
@@ -3237,7 +3353,7 @@ int REHex::DocumentCtrl::DataRegion::calc_width_for_bytes(DocumentCtrl &doc_ctrl
 		+ (doc_ctrl.show_ascii * doc_ctrl.hf_string_width(line_bytes));
 }
 
-void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
+void REHex::DocumentCtrl::DataRegion::calc_height(REHex::DocumentCtrl &doc)
 {
 	int indent_width = doc.indent_width(indent_depth);
 	
@@ -4817,7 +4933,7 @@ REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length
 	c_text(c_text),
 	truncate(truncate) {}
 
-void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc, wxDC &dc)
+void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc)
 {
 	if(truncate)
 	{
@@ -4832,8 +4948,8 @@ void REHex::DocumentCtrl::CommentRegion::calc_height(REHex::DocumentCtrl &doc, w
 		this->y_lines = 1 + indent_final;
 	}
 	else{
-		auto comment_lines = format_text(c_text, row_chars);
-		this->y_lines  = comment_lines.size() + 1 + indent_final;
+		int comment_lines = wrap_text_height(c_text, row_chars);
+		this->y_lines  = comment_lines + 1 + indent_final;
 	}
 }
 
@@ -4853,7 +4969,7 @@ void REHex::DocumentCtrl::CommentRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc
 		return;
 	}
 	
-	auto lines = format_text(c_text, row_chars);
+	auto lines = wrap_text(c_text, row_chars);
 	
 	if(truncate && lines.size() > 1)
 	{

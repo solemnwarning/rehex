@@ -22,8 +22,8 @@
 
 void REHex::EditCommentDialog::run_modal(wxWindow *parent, Document *doc, off_t offset, off_t length)
 {
-	const NestedOffsetLengthMap<Document::Comment> &comments = doc->get_comments();
-	auto old_comment = comments.find(NestedOffsetLengthMapKey(offset, length));
+	const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
+	auto old_comment = comments.find(ByteRangeTreeKey(offset, length));
 	
 	wxString old_comment_text = old_comment != comments.end()
 		? *(old_comment->second.text)

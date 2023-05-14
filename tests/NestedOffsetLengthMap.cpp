@@ -19,6 +19,9 @@
 #include <gtest/gtest.h>
 #include <iterator>
 
+/* Enable extra sanity checks (expensive) in ByteRangeTree. */
+#define REHEX_BYTERANGETREE_CHECKS
+
 #include "../src/NestedOffsetLengthMap.hpp"
 
 #define OK_SET(offset, length, value) \

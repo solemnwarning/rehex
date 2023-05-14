@@ -30,6 +30,7 @@
 #include "buffer.hpp"
 #include "ByteRangeMap.hpp"
 #include "ByteRangeSet.hpp"
+#include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
@@ -174,7 +175,7 @@ namespace REHex {
 			/**
 			 * @brief Get the comments in the file.
 			*/
-			const NestedOffsetLengthMap<Comment> &get_comments() const;
+			const ByteRangeTree<Comment> &get_comments() const;
 			
 			/**
 			 * @brief Set a comment in the file.
@@ -201,6 +202,16 @@ namespace REHex {
 			 * Returns true on success, false if the comment was not found.
 			*/
 			bool erase_comment(off_t offset, off_t length);
+			
+			/**
+			 * @brief Erase a comment and any children in the file.
+			 *
+			 * @param offset  Offset of comment to erase.
+			 * @param length  Length of comment to erase.
+			 *
+			 * Returns true on success, false if the comment was not found.
+			*/
+			bool erase_comment_recursive(off_t offset, off_t length);
 			
 			/**
 			 * @brief Get the highlighted byte ranges in the file.
@@ -266,7 +277,7 @@ namespace REHex {
 			off_t real_to_virt_offset(off_t real_offset) const;
 			off_t virt_to_real_offset(off_t virt_offset) const;
 			
-			void handle_paste(wxWindow *modal_dialog_parent, const NestedOffsetLengthMap<Document::Comment> &clipboard_comments);
+			void handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments);
 			
 			/**
 			 * @brief Undo the last change to the document.
@@ -317,7 +328,7 @@ namespace REHex {
 				
 				off_t       old_cpos_off;
 				CursorState old_cursor_state;
-				NestedOffsetLengthMap<Comment> old_comments;
+				ByteRangeTree<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
 				ByteRangeMap<std::string> old_types;
 				
@@ -348,7 +359,7 @@ namespace REHex {
 			ByteRangeMap<unsigned int> data_seq;
 			unsigned int saved_seq;
 			
-			NestedOffsetLengthMap<Comment> comments;
+			ByteRangeTree<Comment> comments;
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
 			ByteRangeMap<std::string> types;
 			
@@ -393,7 +404,7 @@ namespace REHex {
 			json_t *_dump_metadata(bool& has_data);
 			void _save_metadata(const std::string &filename);
 			
-			static NestedOffsetLengthMap<Comment> _load_comments(const json_t *meta, off_t buffer_length);
+			static ByteRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
 			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
@@ -557,12 +568,12 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			CommentsDataObject(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
+			CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
 			
 			/**
 			 * @brief Deserialise the CommentsDataObject and return the stored comments.
 			*/
-			NestedOffsetLengthMap<Document::Comment> get_comments() const;
+			ByteRangeTree<Document::Comment> get_comments() const;
 			
 			/**
 			 * @brief Replace the serialised list of stored comments.
@@ -570,7 +581,7 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			void set_comments(const std::list<NestedOffsetLengthMap<REHex::Document::Comment>::const_iterator> &comments, off_t base = 0);
+			void set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
 	};
 	
 	/**

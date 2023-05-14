@@ -125,7 +125,7 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 	return ascii_text_x + doc_ctrl.hf_string_width(ascii_column_chars) + indent_width;
 }
 
-void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl, wxDC &dc)
+void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl)
 {
 	int64_t total_lines = std::accumulate(processed.begin(), processed.end(),
 		(int64_t)(0), [](int64_t sum, const InstructionRange &ir) { return sum + ir.y_lines; });

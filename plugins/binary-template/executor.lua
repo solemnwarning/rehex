@@ -750,6 +750,11 @@ local function _builtin_function_Printf(context, argv)
 	context.interface.print(string.format(s))
 end
 
+local function _builtin_function_SPrintf(context, argv)
+	local s = _render_format_string(context, argv)
+	return _builtin_types.string, ImmediateValue:new(s)
+end
+
 local function _builtin_function_Error(context, argv)
 	local s = _render_format_string(context, argv)
 	_template_error(context, string.format(s))
@@ -776,6 +781,41 @@ local function _builtin_function_defn_ReadXXX(type_info, name)
 		},
 		impl = impl,
 	}
+end
+
+local function _builtin_function_ReadString(context, argv)
+	local pos = argv[1][2]:get()
+	local term_char = argv[2][2]:get()
+	local max_len = argv[3][2]:get()
+	
+	local str = ""
+	local str_length = 0
+	
+	while true
+	do
+		if max_len >= 0 and str_length == max_len
+		then
+			return _builtin_types.string, ImmediateValue:new(str:sub(1, str_length))
+		end
+		
+		if str_length == str:len()
+		then
+			local str_more = context.interface.read_data(pos + str_length, 128)
+			if str_more:len() < 1
+			then
+				_template_error(context, "Attempt to read past end of file in ReadString function")
+			end
+			
+			str = str .. str_more
+		end
+		
+		if str:byte(str_length + 1) == term_char
+		then
+			return _builtin_types.string, ImmediateValue:new(str:sub(1, str_length))
+		end
+		
+		str_length = str_length + 1
+	end
 end
 
 local function _builtin_function_ArrayLength(context, argv)
@@ -939,8 +979,30 @@ local _builtin_functions = {
 	ReadDouble = _builtin_function_defn_ReadXXX(_builtin_types.double, "ReadDouble"),
 	ReadFloat  = _builtin_function_defn_ReadXXX(_builtin_types.float,  "ReadFloat"),
 	
-	Printf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
-	Error  = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Error  },
+	ReadString = {
+		arguments = {
+			_builtin_types.int64_t,
+			_builtin_types.uint8_t,
+			_builtin_types.int64_t,
+		},
+		
+		defaults  = {
+			-- FTell()
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "call", "FTell", {} },
+			
+			-- '\0'
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", 0 },
+			
+			-- -1
+			{ debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", -1 },
+		},
+		
+		impl = _builtin_function_ReadString,
+	},
+	
+	Printf  = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Printf },
+	SPrintf = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_SPrintf },
+	Error   = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_Error  },
 	
 	ArrayLength = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayLength },
 	ArrayResize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayResize },
@@ -2318,6 +2380,7 @@ _eval_switch = function(context, statement)
 	end
 	
 	local found_match = false
+	local case_match = {}
 	
 	for _, case in ipairs(cases)
 	do
@@ -2335,24 +2398,26 @@ _eval_switch = function(context, statement)
 			
 			if expr_v:get() == case_expr_v:get()
 			then
-				case[1] = true
+				table.insert(case_match, true)
 				found_match = true
 			else
-				case[1] = false
+				table.insert(case_match, false)
 			end
+		else
+			table.insert(case_match, false)
 		end
 	end
 	
 	if not found_match
 	then
-		for _, case in ipairs(cases)
+		for idx, case in ipairs(cases)
 		do
 			local case_expr = case[1]
 			local case_body = case[2]
 			
 			if case_expr == nil
 			then
-				case[1] = true
+				case_match[idx] = true
 			end
 		end
 	end
@@ -2369,12 +2434,11 @@ _eval_switch = function(context, statement)
 	
 	found_match = false
 	
-	for _, case in ipairs(cases)
+	for idx, case in ipairs(cases)
 	do
-		local case_matched = case[1]
 		local case_body = case[2]
 		
-		if not found_match and case_matched
+		if not found_match and case_match[idx]
 		then
 			found_match = true
 		end

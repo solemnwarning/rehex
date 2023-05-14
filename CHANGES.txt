@@ -35,6 +35,12 @@ Version TBA
 
  * Remove strings from the strings panel when they are deleted from the file.
 
+ * Add ReadString() template function.
+
+ * Add SPrintf() template function.
+
+ * Fix repeated execution of the same switch() block in a template (#202).
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

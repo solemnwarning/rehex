@@ -16,6 +16,8 @@
 */
 
 #include "platform.hpp"
+
+#include <functional>
 #include <stack>
 #include <utility>
 #include <wx/clipbrd.h>
@@ -26,6 +28,7 @@
 
 #include "CommentTree.hpp"
 #include "EditCommentDialog.hpp"
+#include "profile.hpp"
 #include "util.hpp"
 
 static REHex::ToolPanel *CommentTree_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
@@ -232,8 +235,23 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				ClipboardGuard cg;
 				if(cg)
 				{
-					auto all_comments      = document->get_comments();
-					auto selected_comments = NestedOffsetLengthMap_get_recursive(all_comments, *key);
+					const ByteRangeTree<Document::Comment> &comments = document->get_comments();
+					const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(*key);
+					
+					std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
+					
+					std::function<void(const ByteRangeTree<Document::Comment>::Node*)> add_comment;
+					add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment)
+					{
+						selected_comments.push_back(comments.find(comment->key));
+						
+						for(comment = comment->get_first_child(); comment != NULL; comment = comment->get_next())
+						{
+							add_comment(comment);
+						}
+					};
+					
+					add_comment(root_comment);
 					
 					CommentsDataObject *d = new CommentsDataObject(selected_comments, key->offset);
 					
@@ -274,7 +292,9 @@ REHex::CommentTreeModel::CommentTreeModel(SharedDocumentPointer &document, Docum
 
 void REHex::CommentTreeModel::refresh_comments()
 {
-	const REHex::NestedOffsetLengthMap<REHex::Document::Comment> &comments = document->get_comments();
+	PROFILE_BLOCK("REHex::CommentTreeModel::refresh_comments");
+	
+	const ByteRangeTree<Document::Comment> &comments = document->get_comments();
 	
 	/* Erase any comments which no longer exist, or are children of such. */
 	
@@ -295,92 +315,70 @@ void REHex::CommentTreeModel::refresh_comments()
 	
 	max_comment_depth = -1;
 	
-	/* Stack of comments the point we are processing is nested within. */
-	std::stack<values_elem_t*> parents;
-	
-	for(auto offset_base = comments.begin(); offset_base != comments.end();)
+	std::function<void(const ByteRangeTree<Document::Comment>::Node*, values_elem_t*, int)> add_comment;
+	add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment, values_elem_t *parent, int depth)
 	{
-		/* Pop any comments off parents which we have gone past the end of. */
-		while(!parents.empty() && (parents.top()->first.offset + parents.top()->first.length) <= offset_base->first.offset)
+		if(depth > max_comment_depth)
 		{
-			parents.pop();
+			max_comment_depth = depth;
 		}
 		
-		if((int)(parents.size()) > max_comment_depth)
+		auto x = values.emplace(std::make_pair(comment->key, CommentData(parent, comment->value.text)));
+		values_elem_t *value = &(*(x.first));
+		
+		if(value->second.parent != parent)
 		{
-			max_comment_depth = parents.size();
+			/* Remove the item so we can re-add it if a new parent has been
+			 * created around it.
+			*/
+			
+			assert(!x.second);
+			
+			erase_value(x.first);
+			
+			x = values.emplace(std::make_pair(comment->key, CommentData(parent, comment->value.text)));
+			value = &(*(x.first));
+			
+			assert(x.second);
 		}
 		
-		/* We process any comments at the same offset from largest to smallest, ensuring
-		 * smaller comments are parented to the next-larger one at the same offset.
-		 *
-		 * This could be optimised by changing the order of keys in the comments map, but
-		 * that'll probably break something...
-		*/
-		
-		auto next_offset = offset_base;
-		while(next_offset != comments.end() && next_offset->first.offset == offset_base->first.offset)
+		if(x.second)
 		{
-			++next_offset;
-		}
-		
-		auto c = next_offset;
-		do {
-			--c;
+			/* Add the item if it wasn't already in the values map. */
 			
-			values_elem_t *parent = parents.empty() ? NULL : parents.top();
-			
-			auto x = values.emplace(std::make_pair(c->first, CommentData(parent, c->second.text)));
-			values_elem_t *value = &(*(x.first));
-			
-			if(value->second.parent != parent)
+			if(parent == NULL)
 			{
-				/* Remove the item so we can re-add it if a new parent has been
-				 * created around it.
-				*/
-				
-				assert(!x.second);
-				
-				erase_value(x.first);
-				
-				x = values.emplace(std::make_pair(c->first, CommentData(parent, c->second.text)));
-				value = &(*(x.first));
-				
-				assert(x.second);
+				root.insert(value);
 			}
-			
-			parents.push(value);
-			
-			if(x.second)
-			{
-				/* Add the item if it wasn't already in the values map. */
-				
-				if(parent == NULL)
+			else{
+				if(!parent->second.is_container)
 				{
-					root.insert(value);
-				}
-				else{
-					if(!parent->second.is_container)
-					{
-						/* Parent just became a container. Have to re-add it. */
-						re_add_item(parent, true);
-					}
-					
-					parent->second.children.insert(value);
+					/* Parent just became a container. Have to re-add it. */
+					re_add_item(parent, true);
 				}
 				
-				ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+				parent->second.children.insert(value);
 			}
-			else if(value->second.text.get() != c->second.text.get())
-			{
-				/* Text has changed. */
-				
-				value->second.text = c->second.text;
-				ItemChanged(wxDataViewItem((void*)(value)));
-			}
-		} while(c != offset_base);
+			
+			ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+		}
+		else if(value->second.text.get() != comment->value.text.get())
+		{
+			/* Text has changed. */
+			
+			value->second.text = comment->value.text;
+			ItemChanged(wxDataViewItem((void*)(value)));
+		}
 		
-		offset_base = next_offset;
+		for(auto child = comment->get_first_child(); child != NULL; child = child->get_next())
+		{
+			add_comment(child, value, depth + 1);
+		}
+	};
+	
+	for(auto comment = comments.first_root_node(); comment != NULL; comment = comment->get_next())
+	{
+		add_comment(comment, NULL, 0);
 	}
 }
 

@@ -54,6 +54,7 @@ bool REHex::App::OnInit()
 	
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
+	thread_pool = new ThreadPool(std::thread::hardware_concurrency());
 	
 	bool process_switches = true;
 	bool compare_mode = false;
@@ -346,6 +347,9 @@ int REHex::App::OnExit()
 	#endif
 	
 	call_setup_hooks(SetupPhase::SHUTDOWN_LATE);
+	
+	delete thread_pool;
+	thread_pool = NULL;
 	
 	delete console;
 	console = NULL;

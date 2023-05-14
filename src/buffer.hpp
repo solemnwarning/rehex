@@ -138,6 +138,7 @@ namespace REHex {
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
 			static const unsigned int MAX_CLEAN_BLOCKS   = 4;
 			static const unsigned int BLOCK_TRIM_THRESH  = 262144; /* 256KiB */
+			static const unsigned int FILE_CHECK_INTERVAL_MS = 1000;
 			
 			const off_t block_size;
 			

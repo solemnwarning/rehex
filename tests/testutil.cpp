@@ -15,9 +15,16 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <stdio.h>
 #include <wx/app.h>
 #include <wx/frame.h>
 #include <wx/timer.h>
+
+#ifdef _WIN32
+#include <io.h>
+#else
+#include <unistd.h>
+#endif
 
 #include "testutil.hpp"
 
@@ -63,4 +70,32 @@ bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_m
 	wxTheApp->OnRun();
 	
 	return predicate_returned_true;
+}
+
+TempFilename::TempFilename()
+{
+	if(tmpnam(tmpfile) == NULL)
+	{
+		throw std::runtime_error("Cannot generate temporary file name");
+	}
+	
+#ifdef _WIN32
+	/* > Note than when a file name is pre-pended with a backslash and no path
+	 * > information, such as \fname21, this indicates that the name is valid
+	 * > for the current working directory.
+	 * - MSDN
+	 *
+	 * Sure, that makes total sense.
+	*/
+	if(tmpfile[0] == '\\' && strchr((tmpfile + 1), '\\') == NULL)
+	{
+		/* Remove the leading slash. */
+		memmove(tmpfile, tmpfile + 1, strlen(tmpfile) - 1);
+	}
+#endif
+}
+
+TempFilename::~TempFilename()
+{
+	unlink(tmpfile);
 }

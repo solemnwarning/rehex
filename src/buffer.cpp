@@ -44,8 +44,6 @@
 #include "buffer.hpp"
 #include "win32lib.hpp"
 
-static const int FILE_CHECK_INTERVAL_MS = 1000;
-
 wxDEFINE_EVENT(REHex::BACKING_FILE_DELETED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BACKING_FILE_MODIFIED, wxCommandEvent);
 
@@ -267,6 +265,17 @@ REHex::Buffer::~Buffer()
 void REHex::Buffer::reload()
 {
 	std::unique_lock<std::mutex> l(lock);
+	
+	/* Re-open file (in case file has been replaced) */
+	FILE *inode_fh = fopen(filename.c_str(), "rb");
+	if(inode_fh == NULL)
+	{
+		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	else{
+		fclose(fh);
+		fh = inode_fh;
+	}
 	
 	/* Find out the length of the file. */
 	

@@ -240,6 +240,12 @@ namespace REHex {
 				return tree.empty();
 			}
 			
+			void clear()
+			{
+				tree.clear();
+				sorted_nodes.clear();
+			}
+			
 			void rebuild_iterators()
 			{
 				sorted_nodes.clear();

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -40,8 +40,12 @@
 #include <vector>
 #include <algorithm>
 
+#include "App.hpp"
 #include "buffer.hpp"
 #include "win32lib.hpp"
+
+wxDEFINE_EVENT(REHex::BACKING_FILE_DELETED, wxCommandEvent);
+wxDEFINE_EVENT(REHex::BACKING_FILE_MODIFIED, wxCommandEvent);
 
 REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 {
@@ -222,19 +226,55 @@ bool REHex::Buffer::_same_file(FILE *file1, const std::string &name1, FILE *file
 
 REHex::Buffer::Buffer():
 	fh(nullptr),
+	_file_deleted(false),
+	_file_modified(false),
 	block_size(DEFAULT_BLOCK_SIZE)
 {
 	blocks.push_back(Block(0,0));
 	blocks.back().state = Block::CLEAN;
+	
+	timer.Bind(wxEVT_TIMER, &REHex::Buffer::OnTimerTick, this);
 }
 
 REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
-	filename(filename), block_size(block_size)
+	filename(filename),
+	_file_deleted(false),
+	_file_modified(false),
+	block_size(block_size)
 {
+	timer.Bind(wxEVT_TIMER, &REHex::Buffer::OnTimerTick, this);
+	
 	fh = fopen(filename.c_str(), "rb");
 	if(fh == NULL)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	
+	reload();
+}
+
+REHex::Buffer::~Buffer()
+{
+	if(fh != NULL)
+	{
+		fclose(fh);
+		fh = NULL;
+	}
+}
+
+void REHex::Buffer::reload()
+{
+	std::unique_lock<std::mutex> l(lock);
+	
+	/* Re-open file (in case file has been replaced) */
+	FILE *inode_fh = fopen(filename.c_str(), "rb");
+	if(inode_fh == NULL)
+	{
+		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	else{
+		fclose(fh);
+		fh = inode_fh;
 	}
 	
 	/* Find out the length of the file. */
@@ -254,6 +294,23 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 		throw std::runtime_error(std::string("ftello: ") + strerror(err));
 	}
 	
+	_reinit_blocks(file_length);
+	
+	timer.Start(FILE_CHECK_INTERVAL_MS, wxTIMER_ONE_SHOT);
+}
+
+void REHex::Buffer::_reinit_blocks(off_t file_length)
+{
+	_file_deleted  = false;
+	_file_modified = false;
+	last_mtime    = _get_file_mtime(fh, filename);
+	
+	/* Clear any existing blocks and references. */
+	
+	last_accessed_blocks.clear();
+	last_accessed_blocks_map.clear();
+	blocks.clear();
+	
 	/* Populate the blocks list with appropriate offsets and sizes. */
 	
 	for(off_t offset = 0; offset < file_length; offset += block_size)
@@ -264,15 +321,6 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	if(file_length == 0)
 	{
 		blocks.push_back(Block(0,0));
-	}
-}
-
-REHex::Buffer::~Buffer()
-{
-	if(fh != NULL)
-	{
-		fclose(fh);
-		fh = NULL;
 	}
 }
 
@@ -448,30 +496,6 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 		throw std::runtime_error(std::string("Could not truncate file: ") + strerror(err));
 	}
 	
-	if(!updating_file)
-	{
-		/* We've written out a complete new file, and it is now the backing store for this
-		 * Buffer. Rebuild the block list so the offsets are correct.
-		*/
-		
-		blocks.clear();
-		
-		for(off_t offset = 0; offset < out_length; offset += block_size)
-		{
-			blocks.push_back(Block(offset, std::min((out_length - offset), block_size)));
-		}
-		
-		if(out_length == 0)
-		{
-			blocks.push_back(Block(0,0));
-		}
-		
-		/* Drop the now-invalid last_accessed_blocks structures. */
-		
-		last_accessed_blocks.clear();
-		last_accessed_blocks_map.clear();
-	}
-	
 	if(fh != NULL)
 	{
 		fclose(fh);
@@ -481,6 +505,22 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	
 	fh = wfh;
 	this->filename = filename;
+	
+	if(updating_file)
+	{
+		_file_deleted  = false;
+		_file_modified = false;
+		last_mtime     = _get_file_mtime(fh, filename);
+	}
+	else{
+		/* We've written out a complete new file, and it is now the backing store for this
+		 * Buffer. Rebuild the block list so the offsets are correct.
+		*/
+		
+		_reinit_blocks(out_length);
+	}
+	
+	timer.Start(FILE_CHECK_INTERVAL_MS, wxTIMER_ONE_SHOT);
 }
 
 void REHex::Buffer::write_copy(const std::string &filename)
@@ -522,6 +562,37 @@ off_t REHex::Buffer::length()
 off_t REHex::Buffer::_length()
 {
 	return blocks.back().virt_offset + blocks.back().virt_length;
+}
+
+REHex::Buffer::FileTime REHex::Buffer::_get_file_mtime(FILE *fh, const std::string &filename)
+{
+	#ifdef _WIN32
+	BY_HANDLE_FILE_INFORMATION fi;
+	if(GetFileInformationByHandle((HANDLE)(_get_osfhandle(fileno(fh))), &fi))
+	{
+		return fi.ftLastWriteTime;
+	}
+	else{
+		wxGetApp().printf_error("Could not GetFileInformationByHandle() open file \"%s\": %s\n",
+			filename.c_str(), GetLastError_strerror(GetLastError()).c_str());
+	}
+	#else
+	struct stat st;
+	if(fstat(fileno(fh), &st) == 0)
+	{
+		#ifdef __APPLE__
+		return st.st_mtimespec;
+		#else
+		return st.st_mtim;
+		#endif
+	}
+	else{
+		wxGetApp().printf_error("Could not fstat() open file \"%s\": %s\n",
+			filename.c_str(), strerror(errno));
+	}
+	#endif
+	
+	return FileTime();
 }
 
 std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_length)
@@ -701,6 +772,62 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 	return true;
 }
 
+void REHex::Buffer::OnTimerTick(wxTimerEvent &event)
+{
+	assert(fh != NULL);
+	assert(!_file_deleted);
+	assert(!_file_modified);
+	
+	FILE *inode_fh = fopen(filename.c_str(), "rb");
+	if(inode_fh != NULL)
+	{
+		_file_deleted = !_same_file(fh, filename, inode_fh, filename);
+	}
+	else{
+		/* Assume file has been deleted if we can't open it. */
+		_file_deleted = true;
+	}
+	
+	if(_file_deleted)
+	{
+		if(inode_fh != NULL)
+		{
+			fclose(inode_fh);
+		}
+		
+		wxCommandEvent event(BACKING_FILE_DELETED);
+		ProcessEvent(event);
+		
+		return;
+	}
+	
+	FileTime inode_mtime = _get_file_mtime(inode_fh, filename);
+	fclose(inode_fh);
+	
+	if(inode_mtime != last_mtime)
+	{
+		_file_modified = true;
+		
+		wxCommandEvent event(BACKING_FILE_MODIFIED);
+		ProcessEvent(event);
+		
+		return;
+	}
+	
+	/* File not modified - check again later. */
+	timer.Start(FILE_CHECK_INTERVAL_MS, wxTIMER_ONE_SHOT);
+}
+
+bool REHex::Buffer::file_deleted() const
+{
+	return _file_deleted;
+}
+
+bool REHex::Buffer::file_modified() const
+{
+	return _file_modified;
+}
+
 REHex::Buffer::Block::Block(off_t offset, off_t length):
 	real_offset(offset),
 	virt_offset(offset),
@@ -737,4 +864,48 @@ void REHex::Buffer::Block::trim()
 		data.resize(virt_length);
 		data.shrink_to_fit();
 	}
+}
+
+REHex::Buffer::FileTime::FileTime()
+{
+	tv_sec = 0;
+	tv_nsec = 0;
+}
+
+REHex::Buffer::FileTime::FileTime(const timespec &ts)
+{
+	tv_sec = ts.tv_sec;
+	tv_nsec = ts.tv_nsec;
+}
+
+#ifdef _WIN32
+REHex::Buffer::FileTime::FileTime(const FILETIME &ft)
+{
+	/* Convert the FILETIME to a real 64-bit integer. */
+	
+	uint64_t ft64 = ((uint64_t)(ft.dwHighDateTime) << 32) | (uint64_t)(ft.dwLowDateTime);
+	
+	/* Convert the 100-nanosecond quantities into a timespec. */
+	
+	static const int64_t MICROSECONDS_PER_SECOND = 1000000;
+	
+	tv_sec = ft64 / (10ULL * MICROSECONDS_PER_SECOND);
+	tv_nsec = (ft64 % MICROSECONDS_PER_SECOND) * 100ULL;
+	
+	/* Adjust the tv_sec to account for the difference between Windows epoch (Jan 1 1601) and
+	 * UNIX epoch (Jan 1 1970).
+	*/
+	
+	tv_sec -= 11644473600;
+}
+#endif
+
+bool REHex::Buffer::FileTime::operator==(const FileTime &rhs) const
+{
+	return tv_sec == rhs.tv_sec && tv_nsec == rhs.tv_nsec;
+}
+
+bool REHex::Buffer::FileTime::operator!=(const FileTime &rhs) const
+{
+	return tv_sec != rhs.tv_sec || tv_nsec != rhs.tv_nsec;
 }

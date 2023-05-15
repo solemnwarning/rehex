@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -65,8 +65,10 @@ REHex::Document::Document():
 	types_changed_buffer(this, EV_TYPES_CHANGED),
 	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
 {
-	buffer = new REHex::Buffer();
+	buffer = new Buffer();
 	title  = "Untitled";
+	
+	_forward_buffer_events();
 }
 
 REHex::Document::Document(const std::string &filename):
@@ -81,7 +83,7 @@ REHex::Document::Document(const std::string &filename):
 	types_changed_buffer(this, EV_TYPES_CHANGED),
 	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
 {
-	buffer = new REHex::Buffer(filename);
+	buffer = new Buffer(filename);
 	
 	data_seq.set_range   (0, buffer->length(), 0);
 	types.set_range      (0, buffer->length(), "");
@@ -94,6 +96,27 @@ REHex::Document::Document(const std::string &filename):
 	{
 		_load_metadata(meta_filename);
 	}
+	
+	_forward_buffer_events();
+}
+
+void REHex::Document::_forward_buffer_events()
+{
+	buffer->Bind(BACKING_FILE_DELETED, [&](wxCommandEvent &event)
+	{
+		wxCommandEvent new_event(BACKING_FILE_DELETED);
+		new_event.SetEventObject(this);
+		
+		ProcessEvent(new_event);
+	});
+	
+	buffer->Bind(BACKING_FILE_MODIFIED, [&](wxCommandEvent &event)
+	{
+		wxCommandEvent new_event(BACKING_FILE_MODIFIED);
+		new_event.SetEventObject(this);
+		
+		ProcessEvent(new_event);
+	});
 }
 
 REHex::Document::~Document()
@@ -101,16 +124,128 @@ REHex::Document::~Document()
 	delete buffer;
 }
 
+void REHex::Document::reload()
+{
+	/* Ensure no transaction is in progress. */
+	assert(undo_stack.empty() || undo_stack.back().complete);
+	
+	if(filename.empty())
+	{
+		throw std::logic_error("Attempt to reload document with no backing file");
+	}
+	
+	/* There may be background tasks operating on this document, so we have to signal the
+	 * beginning of any operations that change the virtual view of the file to pause any
+	 * background processing overlapping it, do the operation and then signal that we are done.
+	 *
+	 * First, if the file has shrunk, we erase any data past the new EOF, then we swap out the
+	 * buffer as an overwrite operation, then finally we raise an insert operation without
+	 * actually changing the data if the file has grown.
+	*/
+	
+	Buffer *new_buffer = new Buffer(filename);
+	
+	wxGetApp().bulk_updates_freeze();
+	
+	off_t old_size = buffer_length();
+	off_t new_size = new_buffer->length();
+	
+	if(new_size < old_size)
+	{
+		off_t erase_begin = new_size;
+		off_t erase_length = old_size - new_size;
+		
+		/*
+		OffsetLengthEvent data_erasing_event(this, DATA_ERASING, erase_begin, erase_length);
+		ProcessEvent(data_erasing_event);
+		
+		buffer->erase_data(erase_begin, erase_length);
+		
+		OffsetLengthEvent data_erase_event(this, DATA_ERASE, erase_begin, erase_length);
+		ProcessEvent(data_erase_event);
+		*/
+		
+		_UNTRACKED_erase_data(erase_begin, erase_length);
+	}
+	
+	off_t overlap_size = std::min(old_size, new_size);
+	
+	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, 0, overlap_size);
+	ProcessEvent(data_overwriting_event);
+	
+	delete buffer;
+	buffer = new_buffer;
+	
+	_forward_buffer_events();
+	
+	types.clear();
+	types.set_range(0, new_size, "");
+	
+	OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, 0, overlap_size);
+	ProcessEvent(data_overwrite_event);
+	
+	if(new_size > old_size)
+	{
+		OffsetLengthEvent data_inserting_event(this, DATA_INSERTING, old_size, new_size - old_size);
+		ProcessEvent(data_inserting_event);
+		
+		OffsetLengthEvent data_insert_event(this, DATA_INSERT, old_size, new_size - old_size);
+		ProcessEvent(data_insert_event);
+	}
+	
+	/* Clear all state and reload file metadata. */
+	
+	current_seq = 0;
+	buffer_seq = 0;
+	data_seq.clear();
+	data_seq.set_range(0, new_size, 0);
+	saved_seq = 0;
+	
+	undo_stack.clear();
+	redo_stack.clear();
+	
+	comments.clear();
+	highlights.clear();
+	
+	real_to_virt_segs.clear();
+	virt_to_real_segs.clear();
+	
+	size_t last_slash = filename.find_last_of("/\\");
+	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	
+	std::string meta_filename = filename + ".rehex-meta";
+	if(wxFileExists(meta_filename))
+	{
+		_load_metadata(meta_filename);
+	}
+	
+	/* Fire off every metadata change signal. This will trigger an unnecessary amount of
+	 * processing, but there's no way to coalesce these together (yet).
+	*/
+	
+	_raise_comment_modified();
+	_raise_highlights_changed();
+	_raise_types_changed();
+	_raise_mappings_changed();
+	
+	wxGetApp().bulk_updates_thaw();
+	
+	_raise_undo_update();
+	_raise_clean();
+}
+
 void REHex::Document::save()
 {
-	if(is_buffer_dirty())
+	bool externally_changed = file_deleted() || file_modified();
+	
+	if(is_buffer_dirty() || externally_changed)
 	{
 		buffer->write_inplace();
 	}
 	
 	_save_metadata(filename + ".rehex-meta");
 	
-	if(current_seq != saved_seq)
+	if(current_seq != saved_seq || externally_changed)
 	{
 		saved_seq = current_seq;
 		buffer_seq = saved_seq;
@@ -122,6 +257,8 @@ void REHex::Document::save()
 
 void REHex::Document::save(const std::string &filename)
 {
+	bool externally_changed = file_deleted() || file_modified();
+	
 	buffer->write_inplace(filename);
 	this->filename = filename;
 	
@@ -130,7 +267,7 @@ void REHex::Document::save(const std::string &filename)
 	
 	_save_metadata(filename + ".rehex-meta");
 	
-	if(current_seq != saved_seq)
+	if(current_seq != saved_seq || externally_changed)
 	{
 		saved_seq = current_seq;
 		buffer_seq = saved_seq;
@@ -713,6 +850,16 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 off_t REHex::Document::buffer_length() const
 {
 	return buffer->length();
+}
+
+bool REHex::Document::file_deleted() const
+{
+	return buffer->file_deleted();
+}
+
+bool REHex::Document::file_modified() const
+{
+	return buffer->file_modified();
 }
 
 void REHex::Document::set_write_protect(bool write_protect)

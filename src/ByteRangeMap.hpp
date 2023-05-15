@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -202,6 +202,7 @@ namespace REHex
 			size_t size() const { return ranges.size(); }
 			const std::pair<Range, T> &front() const { assert(!ranges.empty()); return ranges.front(); }
 			const std::pair<Range, T> &back() const { assert(!ranges.empty()); return ranges.back(); }
+			void clear() { ranges.clear(); }
 			
 			/**
 			 * @brief Adjust for data being inserted into file.

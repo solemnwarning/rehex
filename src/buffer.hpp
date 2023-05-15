@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,9 +22,19 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <time.h>
 #include <vector>
+#include <wx/event.h>
+#include <wx/timer.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace REHex {
+	wxDECLARE_EVENT(BACKING_FILE_DELETED, wxCommandEvent);
+	wxDECLARE_EVENT(BACKING_FILE_MODIFIED, wxCommandEvent);
+	
 	/**
 	 * @brief Paged read-write access to a file on disk.
 	 *
@@ -34,12 +44,26 @@ namespace REHex {
 	 * Blocks which have been modified are not paged out and will remain resident until the
 	 * file is written out.
 	*/
-	class Buffer
+	class Buffer: public wxEvtHandler
 	{
 		private:
 			FILE *fh;
 			std::string filename;
 			std::mutex lock;
+			
+			struct FileTime: public timespec
+			{
+				public:
+					FileTime();
+					FileTime(const timespec &ts);
+					
+					#ifdef _WIN32
+					FileTime(const FILETIME &ft);
+					#endif
+					
+					bool operator==(const FileTime &rhs) const;
+					bool operator!=(const FileTime &rhs) const;
+			};
 			
 		#ifdef UNIT_TEST
 		/* Make the block list public when unit testing so we can examine the
@@ -74,6 +98,10 @@ namespace REHex {
 			
 			std::vector<Block> blocks;
 			
+			bool _file_deleted, _file_modified;
+			FileTime last_mtime;
+			wxTimer timer;
+			
 			/* last_accessed_blocks is a list of the most recently loaded CLEAN blocks.
 			 *
 			 * last_accessed_blocks_map is a map of Block* pointers to iterators within
@@ -99,12 +127,18 @@ namespace REHex {
 			void _last_access_bump(Block *block);
 			void _last_access_remove(Block *block);
 			
+			void _reinit_blocks(off_t file_length);
+			
+			void OnTimerTick(wxTimerEvent &timer);
+			
 			static bool _same_file(FILE *file1, const std::string &name1, FILE *file2, const std::string &name2);
+			static FileTime _get_file_mtime(FILE *fh, const std::string &filename);
 			
 		public:
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
 			static const unsigned int MAX_CLEAN_BLOCKS   = 4;
 			static const unsigned int BLOCK_TRIM_THRESH  = 262144; /* 256KiB */
+			static const unsigned int FILE_CHECK_INTERVAL_MS = 1000;
 			
 			const off_t block_size;
 			
@@ -119,6 +153,11 @@ namespace REHex {
 			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
 			
 			~Buffer();
+			
+			/**
+			 * @brief Reload the file, discarding any changes made.
+			*/
+			void reload();
 			
 			/**
 			 * @brief Write changes to backing file.
@@ -216,6 +255,16 @@ namespace REHex {
 			 * Throws on I/O or memory allocation error.
 			*/
 			bool erase_data(off_t offset, off_t length);
+			
+			/**
+			 * @brief Returns true if the backing file has been deleted.
+			*/
+			bool file_deleted() const;
+			
+			/**
+			 * @brief Returns true if the backing file has been modified externally.
+			*/
+			bool file_modified() const;
 	};
 }
 

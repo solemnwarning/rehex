@@ -22,6 +22,7 @@
 #include <stack>
 #include <tuple>
 #include <vector>
+#include <wx/artprov.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
 #include <wx/sizer.h>
@@ -77,7 +78,10 @@ REHex::Tab::Tab(wxWindow *parent):
 	htools_adjust_force(false),
 	htools_initial_size(-1),
 	repopulate_regions_frozen(false),
-	repopulate_regions_pending(false)
+	repopulate_regions_pending(false),
+	child_windows_hidden(false),
+	file_deleted_dialog_pending(false),
+	file_modified_dialog_pending(false)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -100,12 +104,16 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
 	doc.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::Tab::OnDocumentMappingsChanged,   this);
 	
+	doc.auto_cleanup_bind(BACKING_FILE_DELETED,  &REHex::Tab::OnDocumentFileDeleted,  this);
+	doc.auto_cleanup_bind(BACKING_FILE_MODIFIED, &REHex::Tab::OnDocumentFileModified, this);
+	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
-	doc.auto_cleanup_bind(CURSOR_UPDATE,         &REHex::Tab::OnEventToForward<CursorUpdateEvent>, this);
-	doc.auto_cleanup_bind(EV_UNDO_UPDATE,        &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
-	doc.auto_cleanup_bind(EV_BECAME_DIRTY,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
-	doc.auto_cleanup_bind(EV_BECAME_CLEAN,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(CURSOR_UPDATE,           &REHex::Tab::OnEventToForward<CursorUpdateEvent>,   this);
+	doc.auto_cleanup_bind(EV_UNDO_UPDATE,          &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
+	doc.auto_cleanup_bind(EV_BECAME_DIRTY,         &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
+	doc.auto_cleanup_bind(EV_BECAME_CLEAN,         &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
+	doc.auto_cleanup_bind(DOCUMENT_TITLE_CHANGED,  &REHex::Tab::OnEventToForward<DocumentTitleEvent>,  this);
 	
 	repopulate_regions();
 	
@@ -151,7 +159,10 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	htools_adjust_force(false),
 	htools_initial_size(-1),
 	repopulate_regions_frozen(false),
-	repopulate_regions_pending(false)
+	repopulate_regions_pending(false),
+	child_windows_hidden(false),
+	file_deleted_dialog_pending(false),
+	file_modified_dialog_pending(false)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -174,12 +185,16 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	doc.auto_cleanup_bind(EV_TYPES_CHANGED,       &REHex::Tab::OnDocumentDataTypesChanged,  this);
 	doc.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::Tab::OnDocumentMappingsChanged,   this);
 	
+	doc.auto_cleanup_bind(BACKING_FILE_DELETED,  &REHex::Tab::OnDocumentFileDeleted,  this);
+	doc.auto_cleanup_bind(BACKING_FILE_MODIFIED, &REHex::Tab::OnDocumentFileModified, this);
+	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
 	
-	doc.auto_cleanup_bind(CURSOR_UPDATE,         &REHex::Tab::OnEventToForward<CursorUpdateEvent>, this);
-	doc.auto_cleanup_bind(EV_UNDO_UPDATE,        &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
-	doc.auto_cleanup_bind(EV_BECAME_DIRTY,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
-	doc.auto_cleanup_bind(EV_BECAME_CLEAN,       &REHex::Tab::OnEventToForward<wxCommandEvent>,    this);
+	doc.auto_cleanup_bind(CURSOR_UPDATE,           &REHex::Tab::OnEventToForward<CursorUpdateEvent>,   this);
+	doc.auto_cleanup_bind(EV_UNDO_UPDATE,          &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
+	doc.auto_cleanup_bind(EV_BECAME_DIRTY,         &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
+	doc.auto_cleanup_bind(EV_BECAME_CLEAN,         &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
+	doc.auto_cleanup_bind(DOCUMENT_TITLE_CHANGED,  &REHex::Tab::OnEventToForward<DocumentTitleEvent>,  this);
 	
 	repopulate_regions();
 	
@@ -321,6 +336,8 @@ void REHex::Tab::search_dialog_register(wxDialog *search_dialog)
 
 void REHex::Tab::hide_child_windows()
 {
+	child_windows_hidden = true;
+	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->Hide();
@@ -329,9 +346,21 @@ void REHex::Tab::hide_child_windows()
 
 void REHex::Tab::unhide_child_windows()
 {
+	child_windows_hidden = false;
+	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->ShowWithoutActivating();
+	}
+	
+	if(file_deleted_dialog_pending)
+	{
+		file_modified_dialog_pending = false;
+		file_deleted_dialog();
+	}
+	else if(file_modified_dialog_pending)
+	{
+		file_modified_dialog();
 	}
 }
 
@@ -1276,6 +1305,134 @@ void REHex::Tab::OnDocumentMappingsChanged(wxCommandEvent &event)
 	}
 	
 	event.Skip();
+}
+
+void REHex::Tab::OnDocumentFileDeleted(wxCommandEvent &event)
+{
+	OnEventToForward(event);
+	file_deleted_dialog();
+}
+
+void REHex::Tab::file_deleted_dialog()
+{
+	if(child_windows_hidden)
+	{
+		file_deleted_dialog_pending = true;
+		return;
+	}
+	
+	file_deleted_dialog_pending = false;
+	
+	wxMessageDialog confirm(
+		this,
+		(wxString("The file ") + doc->get_filename() + " has been deleted from disk."),
+		"File deleted",
+		(wxYES_NO | wxCANCEL | wxCENTER));
+	
+	confirm.SetYesNoCancelLabels("Save", "Save As", "Ignore");
+	
+	int response = confirm.ShowModal();
+	switch(response)
+	{
+		case wxID_YES:
+		{
+			try {
+				doc->save();
+			}
+			catch(const std::exception &e)
+			{
+				wxMessageBox(
+					std::string("Error saving ") + doc->get_title() + ":\n" + e.what(),
+					"Error", wxICON_ERROR, this);
+			}
+			
+			break;
+		}
+		
+		case wxID_NO:
+		{
+			std::string new_filename = document_save_as_dialog(this, doc);
+			if(new_filename == "")
+			{
+				/* Cancelled. */
+				return;
+			}
+			
+			try {
+				doc->save(new_filename);
+			}
+			catch(const std::exception &e)
+			{
+				wxMessageBox(
+					std::string("Error saving ") + doc->get_title() + ":\n" + e.what(),
+					"Error", wxICON_ERROR, this);
+			}
+			
+			break;
+		}
+		
+		default:
+		{
+			/* Ignore */
+			break;
+		}
+	}
+}
+
+void REHex::Tab::OnDocumentFileModified(wxCommandEvent &event)
+{
+	OnEventToForward(event);
+	file_modified_dialog();
+}
+
+void REHex::Tab::file_modified_dialog()
+{
+	if(child_windows_hidden)
+	{
+		file_modified_dialog_pending = true;
+	}
+	
+	file_modified_dialog_pending = false;
+	
+	if(doc->is_dirty())
+	{
+		wxMessageDialog confirm(
+			this,
+			(wxString("The file ") + doc->get_filename() + " has been modified externally AND in the editor.\n"
+				+ "DISCARD YOUR CHANGES and reload the file?"),
+			"File modified",
+			(wxYES_NO | wxICON_EXCLAMATION | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		if(response == wxNO)
+		{
+			return;
+		}
+	}
+	else{
+		wxMessageDialog confirm(
+			this,
+			(wxString("The file ") + doc->get_filename() + " has been modified externally.\n"
+				+ "Do you want to reload the file?"),
+			"File modified",
+			(wxYES_NO | wxICON_EXCLAMATION | wxCENTER));
+		
+		int response = confirm.ShowModal();
+		if(response == wxNO)
+		{
+			return;
+		}
+	}
+	
+	try {
+		doc->reload();
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error reloading ") + doc->get_title() + ":\n" + e.what(),
+			"Error", wxICON_ERROR, this);
+	}
 }
 
 void REHex::Tab::OnBulkUpdatesFrozen(wxCommandEvent &event)

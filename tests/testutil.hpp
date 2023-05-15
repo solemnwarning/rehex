@@ -23,4 +23,13 @@
 void run_wx_for(unsigned int ms);
 bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms = 10000, unsigned int check_interval_ms = 100);
 
+class TempFilename
+{
+	public:
+		char tmpfile[L_tmpnam];
+		
+		TempFilename();
+		~TempFilename();
+};
+
 #endif /* !REHEX_TESTUTIL_HPP */

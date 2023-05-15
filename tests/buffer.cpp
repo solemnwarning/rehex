@@ -30,6 +30,8 @@
 #include <unistd.h>
 #endif
 
+#include "testutil.hpp"
+
 #define UNIT_TEST
 #include "../src/buffer.hpp"
 
@@ -2391,4 +2393,137 @@ TEST(Buffer, ReadWriteAnyBytes)
 	}
 	
 	TEST_BUFFER_MANIP({});
+}
+
+#ifndef _WIN32
+TEST(Buffer, DeleteBackingFileAndRestore)
+{
+	TempFilename f1, f2;
+	
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	b.read_data(0, 1024); /* Buffer file. */
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	ASSERT_FALSE(b.file_deleted());
+	ASSERT_FALSE(b.file_modified());
+	
+	ASSERT_EQ(rename(f1.tmpfile, f2.tmpfile), 0) << "Moving backing file aside succeeds";
+	
+	run_wx_until([&]() { return b.file_deleted(); });
+	
+	EXPECT_TRUE(b.file_deleted())   << "REHex::Buffer::file_deleted() returns true when backing file has been removed";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false when backing file has been removed";
+	
+	b.write_inplace();
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	EXPECT_FALSE(b.file_deleted()) << "REHex::Buffer::file_deleted() returns false after file is re-written by REHex::Buffer::write_inplace()";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false after file is re-written by REHex::Buffer::write_inplace()";
+	
+	std::vector<unsigned char> file_data = read_file(f1.tmpfile);
+	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 })) << "File is restored with correct data";
+}
+
+TEST(Buffer, ReplaceBackingFileAndRestore)
+{
+	TempFilename f1, f2, f3;
+	
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	write_file(f2.tmpfile, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	b.read_data(0, 1024); /* Buffer file. */
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	ASSERT_FALSE(b.file_deleted());
+	ASSERT_FALSE(b.file_modified());
+	
+	ASSERT_EQ(rename(f1.tmpfile, f3.tmpfile), 0) << "Moving backing file aside succeeds";
+	ASSERT_EQ(rename(f2.tmpfile, f1.tmpfile), 0) << "Replacing backing file succeeds";
+	
+	run_wx_until([&]() { return b.file_deleted(); });
+	
+	EXPECT_TRUE(b.file_deleted())   << "REHex::Buffer::file_deleted() returns true when backing file has been replaced";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false when backing file has been replaced";
+	
+	b.write_inplace();
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	EXPECT_FALSE(b.file_deleted()) << "REHex::Buffer::file_deleted() returns false after file is re-written by REHex::Buffer::write_inplace()";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false after file is re-written by REHex::Buffer::write_inplace()";
+	
+	std::vector<unsigned char> file_data = read_file(f1.tmpfile);
+	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 })) << "File is restored with correct data";
+}
+
+TEST(Buffer, ReplaceBackingFileAndReload)
+{
+	TempFilename f1, f2, f3;
+	
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	write_file(f2.tmpfile, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	b.read_data(0, 1024); /* Buffer file. */
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	ASSERT_FALSE(b.file_deleted());
+	ASSERT_FALSE(b.file_modified());
+	
+	ASSERT_EQ(rename(f1.tmpfile, f3.tmpfile), 0) << "Moving backing file aside succeeds";
+	ASSERT_EQ(rename(f2.tmpfile, f1.tmpfile), 0) << "Replacing backing file succeeds";
+	
+	run_wx_until([&]() { return b.file_deleted(); });
+	
+	EXPECT_TRUE(b.file_deleted())   << "REHex::Buffer::file_deleted() returns true when backing file has been replaced";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false when backing file has been replaced";
+	
+	b.reload();
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	EXPECT_FALSE(b.file_deleted()) << "REHex::Buffer::file_deleted() returns false after REHex::Buffer::reload() is called";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false after REHex::Buffer::reload() is called";
+	
+	std::vector<unsigned char> file_data = b.read_data(0, 1024);
+	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF })) << "Buffer contains new content";
+}
+#endif
+
+TEST(Buffer, ModifyBackingFileAndReload)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	b.read_data(0, 1024); /* Buffer file. */
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	ASSERT_FALSE(b.file_deleted());
+	ASSERT_FALSE(b.file_modified());
+	
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }));
+	
+	run_wx_until([&]() { return b.file_modified(); });
+	
+	EXPECT_TRUE(b.file_modified()) << "REHex::Buffer::file_modified() returns true when backing file has been modified";
+	EXPECT_FALSE(b.file_deleted()) << "REHex::Buffer::file_deleted() returns false when backing file has been modified";
+	
+	b.reload();
+	
+	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
+	
+	EXPECT_FALSE(b.file_deleted()) << "REHex::Buffer::file_deleted() returns false after REHex::Buffer::reload() is called";
+	EXPECT_FALSE(b.file_modified()) << "REHex::Buffer::file_modified() returns false after REHex::Buffer::reload() is called";
+	
+	std::vector<unsigned char> file_data = b.read_data(0, 1024);
+	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF })) << "Buffer contains new content";
 }

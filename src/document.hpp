@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -119,6 +119,11 @@ namespace REHex {
 			Document(const std::string &filename);
 			
 			~Document();
+			
+			/**
+			 * @brief Reload the document, discarding any changes made.
+			*/
+			void reload();
 			
 			/**
 			 * @brief Save any changes to the file and its metadata.
@@ -349,6 +354,8 @@ namespace REHex {
 			std::string filename;
 			bool write_protect;
 			
+			void _forward_buffer_events();
+			
 			unsigned int current_seq;
 			unsigned int buffer_seq;
 			ByteRangeMap<unsigned int> data_seq;
@@ -450,6 +457,16 @@ namespace REHex {
 			 * @brief Return the current length of the file in bytes.
 			*/
 			off_t buffer_length() const;
+			
+			/**
+			 * @brief Returns true if the backing file has been deleted.
+			*/
+			bool file_deleted() const;
+			
+			/**
+			 * @brief Returns true if the backing file has been modified externally.
+			*/
+			bool file_modified() const;
 			
 			/**
 			 * @brief Set write protect flag on the file.

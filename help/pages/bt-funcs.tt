@@ -232,14 +232,4 @@ Returns the number of <b>bytes</b> in the string.
 Sets a comment on a range of bytes in the document.
 </p>
 
-<hr>
-[% WRAPPER "code.tt" -%]
-[% WRAPPER "code-type.tt" %]void[% END %] DisableAutoAnnotation()
-[% WRAPPER "code-type.tt" %]void[% END %] EnableAutoAnnotation()
-[%- END %]
-
-<p>
-Calling <code>DisableAutoAnnotation()</code> will disable auto-annotation - any file variables defined after the call won't have comments or data types applied in the editor until a call to <code>EnableAutoAnnotation()</code> re-enables it for later variables.
-</p>
-
 [% END %]

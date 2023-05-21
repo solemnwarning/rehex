@@ -36,15 +36,13 @@ FileArrayValue.__index = ArrayValue
 -- @param n_elements   Number of elements in the array
 -- @param elem_length  Length of each element, in bytes
 -- @param fmt          Format token for string.unpack() to read the raw value
--- @param annotate     Enable auto annotation of this variable.
 --
-function FileArrayValue:new(context, offset, n_elements, elem_length, fmt, annotate)
+function FileArrayValue:new(context, offset, n_elements, elem_length, fmt)
 	local self = {
 		offset = offset,
 		n_elements = n_elements,
 		elem_length = elem_length,
 		fmt = fmt,
-		annotate = annotate,
 	}
 	
 	setmetatable(self, {

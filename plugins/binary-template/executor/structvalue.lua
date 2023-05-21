@@ -24,12 +24,10 @@ StructValue.__index = StructValue
 
 --- Construct an empty StructValue table.
 --
-function StructValue:new(annotate)
+function StructValue:new()
 	local self = {}
 	
 	setmetatable(self, StructValue)
-	self.annotate = annotate;
-	self.members = {}
 	return self
 end
 
@@ -37,7 +35,7 @@ function StructValue:data_range()
 	local data_start = nil
 	local data_end = nil
 	
-	for k,v in pairs(self.members)
+	for k,v in pairs(self)
 	do
 		local member_type = v[1]
 		local member_val  = v[2]

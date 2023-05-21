@@ -7134,39 +7134,6 @@ describe("executor", function()
 		end)
 	end)
 	
-	it("doesn't annotate variables when auto-annotation is disabled", function()
-		local interface, log = test_interface(string.char(
-			0x01, 0x00, 0x00, 0x00,
-			0x02, 0x00, 0x00, 0x00,
-			0x03, 0x00, 0x00, 0x00,
-			0x04, 0x00, 0x00, 0x00
-		))
-		
-		executor.execute(interface, {
-			{ "test.bt", 1, "struct", "mystruct", {},
-			{
-				{ "test.bt", 1, "variable", "int", "x", nil, nil },
-				{ "test.bt", 1, "variable", "int", "y", nil, nil },
-			} },
-			
-			{ "test.bt", 1, "call", "DisableAutoAnnotate", {} },
-			{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
-			
-			{ "test.bt", 1, "call", "EnableAutoAnnotate", {} },
-			{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
-		})
-		
-		local expect_log = {
-			"set_comment(8, 4, x)",
-			"set_comment(12, 4, y)",
-			"set_comment(8, 8, b)",
-			"set_data_type(8, 4, s32le)",
-			"set_data_type(12, 4, s32le)",
-		}
-		
-		assert.are.same(expect_log, log)
-	end)
-	
 	it("doesn't annotate private variables", function()
 		local interface, log = test_interface(string.char(
 			0x01, 0x00, 0x00, 0x00,

@@ -394,11 +394,11 @@ local function _assign_value(context, dst_type, dst_val, src_type, src_val)
 	local do_assignment = function(dst_val, src_val)
 		if dst_type.base == "struct" and src_type.base == "struct" and dst_type.type_key == src_type.type_key
 		then
-			for name,src_pair in pairs(src_val.members)
+			for name,src_pair in pairs(src_val)
 			do
 				local member_type = src_pair[1]
 				local src_member = src_pair[2]
-				local dst_member = dst_val.members[name][2]
+				local dst_member = dst_val[name][2]
 				
 				_assign_value(context, member_type, dst_member, member_type, src_member)
 			end
@@ -480,14 +480,14 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	
 	if src_type.base == "struct"
 	then
-		local dst_val = StructValue:new(context.auto_annotate and not context.declaring_local_var)
+		local dst_val = StructValue:new()
 		
-		for k,src_pair in pairs(src_val.members)
+		for k,src_pair in pairs(src_val)
 		do
 			local src_elem_type, src_elem = table.unpack(src_pair)
 			local dst_elem_type = src_elem_type
 			
-			dst_val.members[k] = {
+			dst_val[k] = {
 				dst_elem_type,
 				_make_value_from_value(context, dst_elem_type, src_elem_type, src_elem, move_if_possible)
 			}
@@ -955,14 +955,6 @@ local function _builtin_function_SetComment(context, argv)
 	context.interface.set_comment(argv[1][2]:get(), argv[2][2]:get(), argv[3][2]:get())
 end
 
-local function _builtin_function_EnableAutoAnnotate(context, argv)
-	context.auto_annotate = true
-end
-
-local function _builtin_function_DisableAutoAnnotate(context, argv)
-	context.auto_annotate = false
-end
-
 -- Table of builtin functions - gets copied into new interpreter contexts
 --
 -- Each key is a function name, the value is a table with the following values:
@@ -1027,9 +1019,6 @@ local _builtin_functions = {
 	StringLengthBytes = { arguments = { _builtin_types.string }, defaults = {}, impl = _builtin_function_StringLengthBytes },
 	
 	SetComment = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.string }, defaults = {}, impl = _builtin_function_SetComment },
-	
-	EnableAutoAnnotate  = { arguments = {}, defaults = {}, impl = _builtin_function_EnableAutoAnnotate },
-	DisableAutoAnnotate = { arguments = {}, defaults = {}, impl = _builtin_function_DisableAutoAnnotate },
 }
 
 _find_type = function(context, type_name)
@@ -1173,13 +1162,13 @@ _eval_ref = function(context, statement)
 					_template_error(context, "Attempt to access '" .. _get_type_name(rv_type) .. "' as a struct")
 				end
 				
-				if rv_val.members[member] == nil
+				if rv_val[member] == nil
 				then
 					_template_error(context, "Attempt to access undefined struct member '" .. member .. "'")
 				end
 				
-				rv_type = rv_val.members[member][1]
-				rv_val  = rv_val.members[member][2]
+				rv_type = rv_val[member][1]
+				rv_val  = rv_val[member][2]
 			end
 			
 			force_const = force_const or rv_type.is_const
@@ -1495,14 +1484,14 @@ expand_value = function(context, type_info, struct_arg_values, array_element_idx
 			end
 		end
 		
-		local members = StructValue:new(context.auto_annotate and not context.declaring_local_var)
+		local members = StructValue:new()
 		
 		local frame = {
 			frame_type = FRAME_TYPE_STRUCT,
 			var_types = {},
 			vars = {},
 			parent_scope_vars = type_info.struct_parent_scope_vars,
-			struct_members = members.members,
+			struct_members = members,
 			array_element_idx = array_element_idx,
 			
 			blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
@@ -1546,7 +1535,7 @@ expand_value = function(context, type_info, struct_arg_values, array_element_idx
 			context.next_variable = base_off + type_info.length
 			
 			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-			return FileValue:new(context, base_off, type_info.length, data_type_fmt, context.auto_annotate)
+			return FileValue:new(context, base_off, type_info.length, data_type_fmt)
 		end
 	end
 end
@@ -1729,7 +1718,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		if type_info.base ~= "struct" and not context.declaring_local_var
 		then
 			local data_type_fmt = (context.big_endian and ">" or "<") .. type_info.string_fmt
-			root_value = FileArrayValue:new(context, context.next_variable, ArrayLength_val:get(), type_info.length, data_type_fmt, context.auto_annotate)
+			root_value = FileArrayValue:new(context, context.next_variable, ArrayLength_val:get(), type_info.length, data_type_fmt)
 			root_value.charset = string_charset
 			
 			context.next_variable = context.next_variable + (ArrayLength_val:get() * type_info.length)
@@ -2702,9 +2691,6 @@ local function execute(interface, statements)
 		-- the built-in BigEndian() and LittleEndian() functions.
 		big_endian = false,
 		
-		-- Are we currently automatically annotating file variables?
-		auto_annotate = true,
-		
 		declaring_local_var = false,
 		
 		-- Stack of statements currently being executed, used for error reporting.
@@ -2743,7 +2729,7 @@ local function execute(interface, statements)
 	
 	local set_comments = function(set_comments, name, type_info, value)
 		local do_struct = function(v)
-			for k,m in _sorted_pairs(v.members)
+			for k,m in _sorted_pairs(v)
 			do
 				set_comments(set_comments, k, m[1], m[2])
 			end
@@ -2758,7 +2744,7 @@ local function execute(interface, statements)
 				do_struct(value[i])
 				
 				local data_start, data_end = value[i]:data_range()
-				if data_start ~= nil and value[i].annotate
+				if data_start ~= nil
 				then
 					context.interface.set_comment(data_start, (data_end - data_start), name .. "[" .. (i - 1) .. "]")
 				end
@@ -2770,7 +2756,7 @@ local function execute(interface, statements)
 			end
 			
 			local data_start, data_end = value:data_range()
-			if data_start ~= nil and value.annotate
+			if data_start ~= nil
 			then
 				context.interface.set_comment(data_start, (data_end - data_start), name)
 			end
@@ -2779,7 +2765,7 @@ local function execute(interface, statements)
 	
 	local set_types = function(set_types, name, type_info, value)
 		local do_struct = function(v)
-			for k,m in _sorted_pairs(v.members)
+			for k,m in _sorted_pairs(v)
 			do
 				set_types(set_types, k, m[1], m[2])
 			end
@@ -2805,14 +2791,14 @@ local function execute(interface, statements)
 			if value.charset ~= nil
 			then
 				local data_start, data_end = value:data_range()
-				if data_start ~= nil and value.annotate
+				if data_start ~= nil
 				then
 					context.interface.set_data_type(data_start, (data_end - data_start), "text:" .. value.charset)
 				end
 			elseif not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
 			then
 				local data_start, data_end = value:data_range()
-				if data_start ~= nil and value.annotate
+				if data_start ~= nil
 				then
 					context.interface.set_data_type(data_start, (data_end - data_start), type_info.rehex_type)
 				end

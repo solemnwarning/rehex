@@ -7212,6 +7212,53 @@ describe("executor", function()
 		assert.are.same(expect_log, log)
 	end)
 	
+	it("doesn't annotate private struct members", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x04, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			-- int foo() {
+			{ "test.bt", 1, "function", "int", "foo", {}, {
+				-- private int a;
+				{ "test.bt", 2, "variable", "int", "a", nil, nil, private = true },
+				
+				-- private int b;
+				{ "test.bt", 3, "variable", "int", "b", nil, nil, private = true },
+				
+				-- Printf("a = %d, b = %d", a, b);
+				{ "test.bt", 4, "call", "Printf", {
+					{ "test.bt", 4, "str", "a = %d, b = %d" },
+					{ "test.bt", 4, "ref", { "a" } },
+					{ "test.bt", 4, "ref", { "b" } } } },
+				
+				-- return b;
+				{ "test.bt", 5, "return",
+					{ "test.bt", 5, "ref", { "b" } } },
+			} },
+			
+			-- local var c = foo();
+			{ "test.bt", 7, "local-variable", "int", "c", nil, nil, { "test.bt", 7, "call", "foo", {} } },
+			
+			-- Printf("c = %d", c);
+			{ "test.bt", 8, "call", "Printf", {
+				{ "test.bt", 8, "str", "c = %d" },
+				{ "test.bt", 8, "ref", { "c" } } } },
+		})
+		
+		local expect_log = {
+			"print(a = 1, b = 2)",
+			"print(c = 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
 	it("allows formatting strings with embedded format tokens", function()
 		local interface, log = test_interface()
 		

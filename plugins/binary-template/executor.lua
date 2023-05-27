@@ -1801,7 +1801,16 @@ _eval_variable = function(context, statement)
 		end
 	end
 	
+	local was_declaring_local_var = context.declaring_local_var
+	
+	if statement.private
+	then
+		context.declaring_local_var = false
+	end
+	
 	_decl_variable(context, statement, var_type, var_name, struct_arg_values, array_size, attributes_evaluated, nil, false, statement.private)
+	
+	context.declaring_local_var = was_declaring_local_var
 end
 
 _eval_local_variable = function(context, statement)

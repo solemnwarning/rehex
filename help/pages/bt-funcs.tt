@@ -187,6 +187,24 @@ Equivalent to <code>ArrayResize(array, ArrayLength(array) + num_elements)</code>
 
 <hr>
 [% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] ArrayPush([% WRAPPER "code-type.tt" %]any_array_type[% END %] array, [% WRAPPER "code-type.tt" %]array_value_type[% END %] value)
+[%- END %]
+
+<p>
+Adds an element to the end of an array. The value type must be correct for the array and this function can only be used on <i>local</i> variables.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]array_value_type[% END %] ArrayPop([% WRAPPER "code-type.tt" %]any_array_type[% END %] array)
+[%- END %]
+
+<p>
+Removes and returns the last element from the array. This function can only be used on <i>local</i> variables, calling it on an empty array will raise a template error.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
 [% WRAPPER "code-type.tt" %]const int64_t[% END %] ArrayIndex
 [%- END %]
 

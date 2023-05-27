@@ -7279,4 +7279,140 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("allows appending to local arrays with ArrayPush()", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local string s[4];
+			{ "test.bt", 1, "local-variable", "string", "s", nil, { "test.bt", 1, "num", 4 }, nil },
+			
+			-- s[0] = "foo"
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "s", { "test.bt", 2, "num", 0 } } },
+				{ "test.bt", 2, "str", "foo" } },
+			
+			-- s[1] = "bar"
+			{ "test.bt", 3, "assign",
+				{ "test.bt", 3, "ref", { "s", { "test.bt", 3, "num", 1 } } },
+				{ "test.bt", 3, "str", "bar" } },
+			
+			-- ArrayPush(s, "baz");
+			{ "test.bt", 4, "call", "ArrayPush", { { "test.bt", 4, "ref", { "s" } }, { "test.bt", 4, "str", "baz" } } },
+			
+			-- ArrayPush(s, "qux");
+			{ "test.bt", 5, "call", "ArrayPush", { { "test.bt", 5, "ref", { "s" } }, { "test.bt", 5, "str", "qux" } } },
+			
+			-- Printf("s[0] = %s", s[0]);
+			-- Printf("s[1] = %s", s[1]);
+			-- ...
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "s[0] = %s" }, { "test.bt", 6, "ref", { "s", { "test.bt", 6, "num", 0 } } } } },
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "s[1] = %s" }, { "test.bt", 6, "ref", { "s", { "test.bt", 6, "num", 1 } } } } },
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "s[2] = %s" }, { "test.bt", 6, "ref", { "s", { "test.bt", 6, "num", 2 } } } } },
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "s[3] = %s" }, { "test.bt", 6, "ref", { "s", { "test.bt", 6, "num", 3 } } } } },
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "s[4] = %s" }, { "test.bt", 6, "ref", { "s", { "test.bt", 6, "num", 4 } } } } },
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "s[5] = %s" }, { "test.bt", 6, "ref", { "s", { "test.bt", 6, "num", 5 } } } } },
+		})
+		
+		local expect_log = {
+			"print(s[0] = foo)",
+			"print(s[1] = bar)",
+			"print(s[2] = )",
+			"print(s[3] = )",
+			"print(s[4] = baz)",
+			"print(s[5] = qux)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when ArrayPush() is called with incompatible element type", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- local string s[4];
+				{ "test.bt", 1, "local-variable", "string", "s", nil, { "test.bt", 1, "num", 4 }, nil },
+				
+				-- ArrayPush(s, 1);
+				{ "test.bt", 2, "call", "ArrayPush", { { "test.bt", 2, "ref", { "s" } }, { "test.bt", 2, "num", 1 } } },
+			})
+			end, "Attempt to push incompatible value type 'const int' into array type 'string[]' at test.bt:2")
+	end)
+	
+	it("errors when ArrayPush() is called on file variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- int s[0];
+				{ "test.bt", 1, "variable", "int", "s", nil, { "test.bt", 1, "num", 0 }, nil },
+				
+				-- ArrayPush(s, 1);
+				{ "test.bt", 2, "call", "ArrayPush", { { "test.bt", 2, "ref", { "s" } }, { "test.bt", 2, "num", 1 } } },
+			})
+			end, "Attempt to modify non-local array at test.bt:2")
+	end)
+	
+	it("allows removing elements from local arrays ArrayPop()", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local string s[4];
+			{ "test.bt", 1, "local-variable", "string", "s", nil, { "test.bt", 1, "num", 2 }, nil },
+			
+			-- s[0] = "foo"
+			{ "test.bt", 2, "assign",
+				{ "test.bt", 2, "ref", { "s", { "test.bt", 2, "num", 0 } } },
+				{ "test.bt", 2, "str", "foo" } },
+			
+			-- s[1] = "bar"
+			{ "test.bt", 3, "assign",
+				{ "test.bt", 3, "ref", { "s", { "test.bt", 3, "num", 1 } } },
+				{ "test.bt", 3, "str", "bar" } },
+			
+			-- Printf("ArrayPop(s) = %s", ArrayPop(s)); (x2)
+			{ "test.bt", 4, "call", "Printf", { { "test.bt", 4, "str", "ArrayPop(s) = %s" }, { "test.bt", 4, "call", "ArrayPop", { { "test.bt", 4, "ref", { "s" } } } } } },
+			{ "test.bt", 4, "call", "Printf", { { "test.bt", 4, "str", "ArrayPop(s) = %s" }, { "test.bt", 4, "call", "ArrayPop", { { "test.bt", 4, "ref", { "s" } } } } } },
+			
+			-- Printf("ArrayLength(s) = %d", ArrayLength(s));
+			{ "test.bt", 5, "call", "Printf", { { "test.bt", 5, "str", "ArrayLength(s) = %d" }, { "test.bt", 5, "call", "ArrayLength", { { "test.bt", 5, "ref", { "s" } } } } } },
+		})
+		
+		local expect_log = {
+			"print(ArrayPop(s) = bar)",
+			"print(ArrayPop(s) = foo)",
+			"print(ArrayLength(s) = 0)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when ArrayPop() is called on file variable", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- int s[0];
+				{ "test.bt", 1, "variable", "int", "s", nil, { "test.bt", 1, "num", 0 }, nil },
+				
+				-- ArrayPop(s);
+				{ "test.bt", 2, "call", "ArrayPop", { { "test.bt", 2, "ref", { "s" } } } },
+			})
+			end, "Attempt to modify non-local array at test.bt:2")
+	end)
+	
+	it("errors when ArrayPop() is called on empty array", function()
+		local interface, log = test_interface()
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- local int s[0];
+				{ "test.bt", 1, "local-variable", "int", "s", nil, { "test.bt", 1, "num", 0 }, nil },
+				
+				-- ArrayPop(s);
+				{ "test.bt", 2, "call", "ArrayPop", { { "test.bt", 2, "ref", { "s" } } } },
+			})
+			end, "Attempt to pop value from empty array at test.bt:2")
+	end)
 end)

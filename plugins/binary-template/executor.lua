@@ -947,6 +947,56 @@ local function _builtin_function_ArrayExtend(context, argv)
 	_resize_array(context, array_type, array_value, new_length, struct_arg_values)
 end
 
+local function _builtin_function_ArrayPush(context, argv)
+	if #argv ~= 2 or argv[1][1] == nil or not argv[1][1].is_array
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function ArrayPush(<any array type>, <array value type>) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	if not _type_assignable(_make_nonarray_type(argv[1][1]), argv[2][1])
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to push incompatible value type '" .. _get_type_name(argv[2][1]) .. "' into array type '"  .. _get_type_name(argv[1][1]) .. "'")
+	end
+	
+	local array_type = argv[1][1]
+	local array_value = argv[1][2]
+	
+	local data_start, data_end = array_value:data_range()
+	if data_start ~= nil
+	then
+		_template_error(context, "Attempt to modify non-local array")
+	end
+	
+	local new_value = _make_value_from_value(context, _make_nonarray_type(array_type), argv[2][1], argv[2][2], false)
+	table.insert(array_value, new_value);
+end
+
+local function _builtin_function_ArrayPop(context, argv)
+	if #argv ~= 1 or argv[1][1] == nil or not argv[1][1].is_array
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function ArrayPop(<any array type>) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	local array_type = argv[1][1]
+	local array_value = argv[1][2]
+	
+	local data_start, data_end = array_value:data_range()
+	if data_start ~= nil
+	then
+		_template_error(context, "Attempt to modify non-local array")
+	end
+	
+	if #array_value == 0
+	then
+		_template_error(context, "Attempt to pop value from empty array")
+	end
+	
+	return _make_nonarray_type(array_type), table.remove(array_value)
+end
+
 local function _builtin_function_StringLengthBytes(context, argv)
 	return _builtin_types.int64_t, ImmediateValue:new(argv[1][2]:get():len())
 end
@@ -1015,6 +1065,8 @@ local _builtin_functions = {
 	ArrayLength = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayLength },
 	ArrayResize = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayResize },
 	ArrayExtend = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayExtend },
+	ArrayPush   = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayPush },
+	ArrayPop    = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayPop },
 	
 	StringLengthBytes = { arguments = { _builtin_types.string }, defaults = {}, impl = _builtin_function_StringLengthBytes },
 	

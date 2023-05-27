@@ -747,7 +747,7 @@ end
 
 local function _builtin_function_Printf(context, argv)
 	local s = _render_format_string(context, argv)
-	context.interface.print(string.format(s))
+	context.interface.print(s)
 end
 
 local function _builtin_function_SPrintf(context, argv)

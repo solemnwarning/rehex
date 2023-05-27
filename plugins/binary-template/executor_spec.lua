@@ -7211,4 +7211,25 @@ describe("executor", function()
 		
 		assert.are.same(expect_log, log)
 	end)
+	
+	it("allows formatting strings with embedded format tokens", function()
+		local interface, log = test_interface()
+		
+		executor.execute(interface, {
+			-- local string s = SPrintf("Hello %s", "foo %s bar %d");
+			{ "test.bt", 1, "local-variable", "string", "s", nil, nil,
+				{ "test.bt", 1, "call", "SPrintf", {
+					{ "test.bt", 1, "str", "Hello %s" },
+					{ "test.bt", 1, "str", "foo %s bar %d" } } } },
+			
+			-- Printf("%s", s);
+			{ "test.bt", 2, "call", "Printf", { { "test.bt", 2, "str", "%s" }, { "test.bt", 2, "ref", { "s" } } } },
+		})
+		
+		local expect_log = {
+			"print(Hello foo %s bar %d)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
 end)

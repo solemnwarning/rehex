@@ -127,6 +127,15 @@ The function will read from the given offset until it reaches a terminator (defi
 
 <hr>
 [% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int64_t[% END %] OffsetOf([% WRAPPER "code-type.tt" %]any_variable_type[% END %] variable)
+[%- END %]
+
+<p>
+The <code>OffsetOf()</code> function returns the offset of the given variable in the file. Attempting to use this function with a local (non-file) variable will raise a template error.
+</p>
+
+<hr>
+[% WRAPPER "code.tt" -%]
 [% WRAPPER "code-type.tt" %]void[% END %] Printf(string format, ...)
 [%- END %]
 

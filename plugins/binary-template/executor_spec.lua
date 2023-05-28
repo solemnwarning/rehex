@@ -7415,4 +7415,66 @@ describe("executor", function()
 			})
 			end, "Attempt to pop value from empty array at test.bt:2")
 	end)
+	
+	it("allows getting the offset of a file variable using the OffsetOf() function", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			-- int a;
+			{ "test.bt", 1, "variable", "int", "a", nil, nil, nil },
+			
+			-- int b[2];
+			{ "test.bt", 2, "variable", "int", "b", nil, { "test.bt", 2, "num", 2 }, nil },
+			
+			-- Printf("OffsetOf(a) = %d", OffsetOf(a));
+			{ "test.bt", 3, "call", "Printf", { { "test.bt", 3, "str", "OffsetOf(a) = %d" }, { "test.bt", 3, "call", "OffsetOf", { { "test.bt", 3, "ref", { "a" } } } } } },
+			
+			-- Printf("OffsetOf(b) = %d", OffsetOf(b));
+			{ "test.bt", 4, "call", "Printf", { { "test.bt", 4, "str", "OffsetOf(b) = %d" }, { "test.bt", 4, "call", "OffsetOf", { { "test.bt", 4, "ref", { "b" } } } } } },
+			
+			-- Printf("OffsetOf(b[0]) = %d", OffsetOf(b[0]));
+			{ "test.bt", 5, "call", "Printf", { { "test.bt", 5, "str", "OffsetOf(b[0]) = %d" }, { "test.bt", 5, "call", "OffsetOf", { { "test.bt", 5, "ref", { "b", { "test.bt", 5, "num", 0 } } } } } } },
+			
+			-- Printf("OffsetOf(b[1]) = %d", OffsetOf(b[1]));
+			{ "test.bt", 6, "call", "Printf", { { "test.bt", 6, "str", "OffsetOf(b[1]) = %d" }, { "test.bt", 6, "call", "OffsetOf", { { "test.bt", 6, "ref", { "b", { "test.bt", 6, "num", 1 } } } } } } },
+		})
+		
+		local expect_log = {
+			"print(OffsetOf(a) = 0)",
+			"print(OffsetOf(b) = 4)",
+			"print(OffsetOf(b[0]) = 4)",
+			"print(OffsetOf(b[1]) = 8)",
+			
+			"set_comment(0, 4, a)",
+			"set_data_type(0, 4, s32le)",
+			"set_comment(4, 8, b)",
+			"set_data_type(4, 8, s32le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors when OffsetOf() is called with a local variable", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				-- local int a;
+				{ "test.bt", 1, "local-variable", "int", "a", nil, nil, nil },
+				
+				-- Printf("OffsetOf(a) = %d", OffsetOf(a));
+				{ "test.bt", 2, "call", "Printf", { { "test.bt", 2, "str", "OffsetOf(a) = %d" }, { "test.bt", 2, "call", "OffsetOf", { { "test.bt", 2, "ref", { "a" } } } } } },
+			})
+			end, "Attempt to get file offset of a local variable at test.bt:2")
+	end)
 end)

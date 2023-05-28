@@ -997,6 +997,22 @@ local function _builtin_function_ArrayPop(context, argv)
 	return _make_nonarray_type(array_type), table.remove(array_value)
 end
 
+local function _builtin_function_OffsetOf(context, argv)
+	if #argv ~= 1 or argv[1][1] == nil
+	then
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function OffsetOf(<any type>) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	local data_start, data_end = argv[1][2]:data_range()
+	if data_start == nil
+	then
+		_template_error(context, "Attempt to get file offset of a local variable")
+	end
+	
+	return _builtin_types.int64_t, ImmediateValue:new(data_start)
+end
+
 local function _builtin_function_StringLengthBytes(context, argv)
 	return _builtin_types.int64_t, ImmediateValue:new(argv[1][2]:get():len())
 end
@@ -1067,6 +1083,8 @@ local _builtin_functions = {
 	ArrayExtend = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayExtend },
 	ArrayPush   = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayPush },
 	ArrayPop    = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_ArrayPop },
+	
+	OffsetOf = { arguments = { _variadic_placeholder }, defaults = {}, impl = _builtin_function_OffsetOf },
 	
 	StringLengthBytes = { arguments = { _builtin_types.string }, defaults = {}, impl = _builtin_function_StringLengthBytes },
 	

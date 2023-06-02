@@ -151,17 +151,30 @@ end
 -- _eval_call() function handles this specific object specially.
 local _variadic_placeholder = {}
 
-local function _make_overlay_type(base_type, child_type)
+local function _make_overlay_type(base_type, child_type, overlay_cache_key)
+	if overlay_cache_key ~= nil and base_type[overlay_cache_key] ~= nil
+	then
+		return base_type[overlay_cache_key]
+	end
+	
 	local new_type = {};
 	
 	for k,v in pairs(base_type)
 	do
-		new_type[k] = v
+		if not string.find(k, "^_overlay")
+		then
+			new_type[k] = v
+		end
 	end
 	
 	for k,v in pairs(child_type)
 	do
 		new_type[k] = v
+	end
+	
+	if overlay_cache_key ~= nil
+	then
+		base_type[overlay_cache_key] = new_type
 	end
 	
 	return new_type
@@ -172,19 +185,25 @@ local function _make_named_type(name, type_info)
 end
 
 local function _make_aray_type(type_info)
-	return _make_overlay_type(type_info, { is_array = true })
+	-- assert(not type_info.is_array, "_make_aray_type() called on array type\n" .. debug.traceback())
+	assert(not type_info.is_array)
+	
+	return _make_overlay_type(type_info, { is_array = true, _overlay_nonarray = type_info }, "_overlay_array")
 end
 
 local function _make_nonarray_type(type_info)
-	return _make_overlay_type(type_info, { is_array = false })
+	-- assert(type_info.is_array, "_make_nonarray_type() called on non-array type\n" ..  debug.traceback())
+	assert(type_info.is_array)
+	
+	return _make_overlay_type(type_info, { is_array = false, _overlay_array = type_info }, "_overlay_nonarray")
 end
 
 local function _make_ref_type(type_info)
-	return _make_overlay_type(type_info, { is_ref = true })
+	return _make_overlay_type(type_info, { is_ref = true }, "_overlay_ref")
 end
 
 local function _make_const_type(type_info)
-	return _make_overlay_type(type_info, { is_const = true })
+	return _make_overlay_type(type_info, { is_const = true }, "_overlay_const")
 end
 
 local function _get_type_name(type)
@@ -239,7 +258,7 @@ end
 local function _make_signed_type(context, type_info)
 	if type_info.signed_overlay ~= nil
 	then
-		local new_type = _make_overlay_type(type_info, type_info.signed_overlay)
+		local new_type = _make_overlay_type(type_info, type_info.signed_overlay, "_overlay_signed")
 		
 		new_type.name = "signed " .. new_type.name:gsub("^signed ", ""):gsub("^unsigned ", "")
 		
@@ -252,7 +271,7 @@ end
 local function _make_unsigned_type(context, type_info)
 	if type_info.unsigned_overlay ~= nil
 	then
-		local new_type = _make_overlay_type(type_info, type_info.unsigned_overlay)
+		local new_type = _make_overlay_type(type_info, type_info.unsigned_overlay, "_overlay_unsigned")
 		
 		new_type.name = "unsigned " .. new_type.name:gsub("^signed ", ""):gsub("^unsigned ", "")
 		
@@ -1637,17 +1656,6 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		_template_error(context, "Variable declaration with parameters for non-struct type '" .. _get_type_name(type_info) .. "'")
 	end
 	
-	if type_info.array_size ~= nil
-	then
-		if array_size ~= nil
-		then
-			_template_error(context, "Multidimensional arrays are not supported")
-		end
-		
-		-- Filthy filthy filthy...
-		array_size = { debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", type_info.array_size }
-	end
-	
 	local dest_tables
 	
 	if not (is_local or is_private) and _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
@@ -1708,17 +1716,29 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	
 	if context.big_endian
 	then
-		type_info = _make_overlay_type(type_info, { big_endian = true,  rehex_type = type_info.rehex_type_be })
+		type_info = _make_overlay_type(type_info, { big_endian = true,  rehex_type = type_info.rehex_type_be }, "_overlay_be")
 	else
-		type_info = _make_overlay_type(type_info, { big_endian = false, rehex_type = type_info.rehex_type_le })
+		type_info = _make_overlay_type(type_info, { big_endian = false, rehex_type = type_info.rehex_type_le }, "_overlay_le")
+	end
+	
+	local array_type_info = type_info
+	
+	if type_info.array_size ~= nil
+	then
+		if array_size ~= nil
+		then
+			_template_error(context, "Multidimensional arrays are not supported")
+		end
+		
+		-- Filthy filthy filthy...
+		array_size = { debug.getinfo(1,'S').source, debug.getinfo(1, 'l').currentline, "num", type_info.array_size }
+	elseif array_size ~= nil
+	then
+		array_type_info = _make_aray_type(type_info)
 	end
 	
 	-- Variable attributes (so far) are only used for defining encoding on character arrays, so
 	-- we check for that attribute in this lovely kludge here.
-	
-	local array_type_info = array_size ~= nil
-		and _make_aray_type(type_info)
-		or type_info
 	
 	local string_charset
 	

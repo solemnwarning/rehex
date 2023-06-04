@@ -32,6 +32,17 @@ function util.deep_copy_table(v)
 	end
 end
 
+function util.shallow_copy_table(v)
+	local cv = {}
+	
+	for key, elem in pairs(v)
+	do
+		cv[key] = v[key]
+	end
+	
+	return cv
+end
+
 function util.visit_statement_children(statement, func)
 	local do_array = function(statements)
 		for _, statement in ipairs(statements)
@@ -247,6 +258,95 @@ function util.visit_statement_children(statement, func)
 	then
 		func(statement[4])
 	end
+end
+
+local function _make_overlay_type(base_type, child_type, overlay_cache_key)
+	if overlay_cache_key ~= nil and base_type[overlay_cache_key] ~= nil
+	then
+		return base_type[overlay_cache_key]
+	end
+	
+	local new_type = {};
+	
+	for k,v in pairs(base_type)
+	do
+		if not string.find(k, "^_overlay")
+		then
+			new_type[k] = v
+		end
+	end
+	
+	for k,v in pairs(child_type)
+	do
+		new_type[k] = v
+	end
+	
+	if overlay_cache_key ~= nil
+	then
+		base_type[overlay_cache_key] = new_type
+	end
+	
+	return new_type
+end
+
+function util.make_named_type(name, type_info)
+	return _make_overlay_type(type_info, { name = name })
+end
+
+function util.make_array_type(type_info)
+	-- assert(not type_info.is_array, "_make_aray_type() called on array type\n" .. debug.traceback())
+	assert(not type_info.is_array)
+	
+	return _make_overlay_type(type_info, { is_array = true, _overlay_nonarray = type_info }, "_overlay_array")
+end
+
+function util.make_nonarray_type(type_info)
+	-- assert(type_info.is_array, "_make_nonarray_type() called on non-array type\n" ..  debug.traceback())
+	assert(type_info.is_array)
+	
+	return _make_overlay_type(type_info, { is_array = false, _overlay_array = type_info }, "_overlay_nonarray")
+end
+
+function util.make_ref_type(type_info)
+	return _make_overlay_type(type_info, { is_ref = true }, "_overlay_ref")
+end
+
+function util.make_const_type(type_info)
+	return _make_overlay_type(type_info, { is_const = true }, "_overlay_const")
+end
+
+function util.make_signed_type(context, type_info)
+	if type_info.signed_overlay ~= nil
+	then
+		local new_type = _make_overlay_type(type_info, type_info.signed_overlay, "_overlay_signed")
+		
+		new_type.name = "signed " .. new_type.name:gsub("^signed ", ""):gsub("^unsigned ", "")
+		
+		return new_type
+	else
+		_template_error(context, "Attempt to create invalid 'signed' version of type '" .. _get_type_name(type_info) .. "'")
+	end
+end
+
+function util.make_unsigned_type(context, type_info)
+	if type_info.unsigned_overlay ~= nil
+	then
+		local new_type = _make_overlay_type(type_info, type_info.unsigned_overlay, "_overlay_unsigned")
+		
+		new_type.name = "unsigned " .. new_type.name:gsub("^signed ", ""):gsub("^unsigned ", "")
+		
+		return new_type
+	else
+		_template_error(context, "Attempt to create invalid 'unsigned' version of type '" .. _get_type_name(type_info) .. "'")
+	end
+end
+
+function util.make_big_endian_type(type_info)
+	return _make_overlay_type(type_info, { big_endian = true,  rehex_type = type_info.rehex_type_be }, "_overlay_be")
+end
+
+function util.make_little_endian_type(type_info)
+	return _make_overlay_type(type_info, { big_endian = false, rehex_type = type_info.rehex_type_le }, "_overlay_le")
 end
 
 return util

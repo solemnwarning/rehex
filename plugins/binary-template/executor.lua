@@ -1644,11 +1644,16 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	then
 		type_info = var_type
 	else
-		type_info = _find_type(context, var_type)
-		if type_info == nil
+		if statement.cached_type_info == nil
 		then
-			_template_error(context, "Unknown variable type '" .. var_type .. "'")
+			statement.cached_type_info = _find_type(context, var_type)
+			if statement.cached_type_info == nil
+			then
+				_template_error(context, "Unknown variable type '" .. var_type .. "'")
+			end
 		end
+		
+		type_info = statement.cached_type_info
 	end
 	
 	if struct_arg_values ~= nil and type_info.base ~= "struct"
@@ -2628,11 +2633,16 @@ _eval_cast = function(context, statement)
 	local type_name = statement[4]
 	local value_expr = statement[5]
 	
-	local type_info = _find_type(context, type_name)
-	if type_info == nil
+	if statement.cached_type_info == nil
 	then
-		_template_error(context, "Unknown type '" .. type_name .. "' used in cast")
+		statement.cached_type_info = _find_type(context, type_name)
+		if statement.cached_type_info == nil
+		then
+			_template_error(context, "Unknown type '" .. type_name .. "' used in cast")
+		end
 	end
+	
+	local type_info = statement.cached_type_info
 	
 	local value_t, value_v = _eval_statement(context, value_expr)
 	if not _type_assignable(type_info, value_t)

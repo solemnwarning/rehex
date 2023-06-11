@@ -190,9 +190,9 @@ void process_DwarfV1_debug_entry(struct DwarfV1_Entry &debug_entry, struct Dwarf
 					func_name, state.func_params, state.compile_unit_name, func_low_pc));
 		}
 		else{
-			SetComment(low_offset, 0,
+			SetComment(func_low_offset, 0,
 				SPrintf("Function: %s(%s)\nFile: %s\nBase address: %x",
-					func_name, func_params, state.compile_unit_name, func_low_pc));
+					func_name, state.func_params, state.compile_unit_name, func_low_pc));
 		}
 	}
 	

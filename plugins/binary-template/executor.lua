@@ -21,6 +21,8 @@ local FileValue       = require 'executor.filevalue'
 local ImmediateValue  = require 'executor.immediatevalue'
 local PlainValue      = require 'executor.plainvalue'
 local StructValue     = require 'executor.structvalue'
+local util            = require 'executor.util'
+local VarAllocator    = require 'executor.varallocator'
 
 local M = {}
 
@@ -151,6 +153,9 @@ end
 -- _eval_call() function handles this specific object specially.
 local _variadic_placeholder = {}
 
+local _allocated_variable_placeholder = {}
+local _initialised_variable_placeholder = {}
+
 local function _make_overlay_type(base_type, child_type, overlay_cache_key)
 	if overlay_cache_key ~= nil and base_type[overlay_cache_key] ~= nil
 	then
@@ -229,7 +234,7 @@ local function _get_type_name(type)
 			type_name = "<anonymous struct>"
 		end
 	else
-		error("Internal error: unknown type in _get_type_name()")
+		error("Internal error: unknown type in _get_type_name()" .. "\n" .. debug.traceback())
 	end
 	
 	if type.is_const
@@ -526,39 +531,6 @@ local function _make_value_from_value(context, dst_type, src_type, src_val, move
 	else
 		return PlainValue:new(src_val:get())
 	end
-end
-
-local function _build_parent_scope_vars(context)
-	local parent_scope_vars = {}
-	
-	for frame_idx = #context.stack, 1, -1
-	do
-		local frame = context.stack[frame_idx]
-		
-		for k,v in pairs(frame.vars)
-		do
-			if parent_scope_vars[k] == nil
-			then
-				parent_scope_vars[k] = v
-			end
-		end
-		
-		if frame.frame_type == FRAME_TYPE_FUNCTION or frame.frame_type == FRAME_TYPE_STRUCT
-		then
-			for k,v in pairs(frame.parent_scope_vars)
-			do
-				if parent_scope_vars[k] == nil
-				then
-					parent_scope_vars[k] = v
-				end
-			end
-			
-			-- Don't look for variables beyond containing scope
-			break
-		end
-	end
-	
-	return parent_scope_vars
 end
 
 local INT8_MIN  = -128
@@ -1212,6 +1184,11 @@ _eval_ref = function(context, statement)
 		local rv_type = rvalue[1]
 		local rv_val  = rvalue[2]
 		
+		if rv_type == nil
+		then
+			error(debug.traceback())
+		end
+		
 		local force_const = rv_type.is_const
 		
 		for i = 2, #path
@@ -1271,30 +1248,13 @@ _eval_ref = function(context, statement)
 		return rv_type, rv_val
 	end
 	
-	-- Walk through symbol tables looking for the first element in path
-	
-	for frame_idx = #context.stack, 1, -1
-	do
-		local frame = context.stack[frame_idx]
-		
-		if frame.vars[ path[1] ] ~= nil
-		then
-			return _walk_path(frame.vars[ path[1] ])
-		end
-		
-		if frame.frame_type == FRAME_TYPE_FUNCTION or frame.frame_type == FRAME_TYPE_STRUCT
-		then
-			if frame.parent_scope_vars[ path[1] ] ~= nil
-			then
-				return _walk_path(frame.parent_scope_vars[ path[1] ])
-			end
-			
-			-- Don't look for variables in parent functions
-			break
-		end
+	local var_slot = statement.var_slot
+	if var_slot <= 0
+	then
+		var_slot = context.func_var_base - var_slot
 	end
 	
-	_template_error(context, "Attempt to use undefined variable '" .. path[1] .. "'")
+	return _walk_path(context.var_stack[var_slot])
 end
 
 _eval_add = function(context, statement)
@@ -1578,22 +1538,40 @@ expand_value = function(context, type_info, struct_arg_values, array_element_idx
 		local frame = {
 			frame_type = FRAME_TYPE_STRUCT,
 			var_types = {},
-			vars = {},
-			parent_scope_vars = type_info.struct_parent_scope_vars,
 			struct_members = members,
 			array_element_idx = array_element_idx,
 			
 			blocks_flowctrl_types = (FLOWCTRL_TYPE_RETURN | FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
 		}
 		
-		for idx, arg in ipairs(type_info.arguments)
+		table.insert(context.stack, frame)
+		
+		local old_func_var_base = context.func_var_base
+		context.func_var_base = #context.var_stack + 1
+		
+		for i = 1, type_info.allocate_slots
 		do
-			local arg_name = arg[1]
-			frame.vars[arg_name] = struct_arg_values[idx]
+			table.insert(context.var_stack, _initialised_variable_placeholder)
 		end
 		
-		table.insert(context.stack, frame)
+		for idx, arg in ipairs(type_info.arguments)
+		do
+			local arg_slot = type_info.arguments[idx].var_slot
+			assert(arg_slot <= 0)
+			
+			assert(context.var_stack[context.func_var_base - arg_slot] == _initialised_variable_placeholder)
+			context.var_stack[context.func_var_base - arg_slot] = struct_arg_values[idx]
+		end
+		
 		_exec_statements(context, type_info.code)
+		
+		for i = 1, type_info.allocate_slots
+		do
+			table.remove(context.var_stack)
+		end
+		
+		context.func_var_base = old_func_var_base
+		
 		table.remove(context.stack)
 		
 		return members
@@ -1669,27 +1647,41 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	end
 	
 	local struct_frame = _topmost_frame_of_type(context, FRAME_TYPE_STRUCT)
-	if is_private
+	if is_local or is_private
 	then
-		dest_tables = { context.stack[#context.stack].vars }
-	elseif struct_frame ~= nil and not is_local
-	then
-		dest_tables = { struct_frame.vars, struct_frame.struct_members }
+		dest_tables = {}
 		
-		if struct_frame.vars[var_name] ~= nil
+	elseif struct_frame ~= nil and not is_local and not is_private
+	then
+		dest_tables = { struct_frame.struct_members }
+		
+		if struct_frame.struct_members[var_name] ~= nil
 		then
 			_template_error(context, "Attempt to redefine struct member '" .. var_name .. "'")
 		end
-	elseif is_local
-	then
-		dest_tables = { context.stack[#context.stack].vars }
+		
 	else
-		dest_tables = { context.stack[#context.stack].vars, context.global_vars }
+		dest_tables = { context.global_vars }
 	end
 	
-	if dest_tables[1][var_name] ~= nil
+	local var_slot = statement.var_slot
+	if var_slot == nil
 	then
-		_template_error(context, "Attempt to redefine variable '" .. var_name .. "'")
+		local inspect = require 'inspect'
+		error(inspect(statement))
+	end
+	
+	assert(var_slot ~= nil)
+	
+	if var_slot <= 0
+	then
+		assert(context.func_var_base ~= nil)
+		var_slot = context.func_var_base - var_slot
+	end
+	
+	if context.var_stack[var_slot] ~= _initialised_variable_placeholder
+	then
+		_template_error(context, "Attempt to redefine variable '" .. var_name .. "' (previously defined at " .. context.var_stack[var_slot].def_filename .. ":" .. context.var_stack[var_slot].def_line .. ")")
 	end
 	
 	if type_info.is_ref
@@ -1715,6 +1707,8 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		do
 			t[var_name] = { type_info, iv_value }
 		end
+		
+		context.var_stack[var_slot] = { type_info, iv_value, def_filename = statement[1], def_line = statement[2] }
 		
 		return
 	end
@@ -1857,6 +1851,8 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	then
 		_assign_value(context, type_info, root_value, iv_type, iv_value)
 	end
+	
+	context.var_stack[var_slot] = { array_type_info, root_value, def_filename = statement[1], def_line = statement[2] }
 end
 
 _eval_variable = function(context, statement)
@@ -2106,14 +2102,10 @@ _eval_func_defn = function(context, statement)
 		table.insert(arg_types, type_info)
 	end
 	
-	local parent_scope_vars = _build_parent_scope_vars(context)
-	
 	local impl_func = function(context, arguments)
 		local frame = {
 			frame_type = FRAME_TYPE_FUNCTION,
 			var_types = {},
-			vars = {},
-			parent_scope_vars = parent_scope_vars,
 			
 			handles_flowctrl_types = FLOWCTRL_TYPE_RETURN,
 			blocks_flowctrl_types  = (FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
@@ -2126,20 +2118,33 @@ _eval_func_defn = function(context, statement)
 			error("Internal error: wrong number of function arguments")
 		end
 		
+		table.insert(context.stack, frame)
+		
+		local old_func_var_base = context.func_var_base
+		context.func_var_base = #context.var_stack + 1
+		
+		for i = 1, statement.allocate_slots
+		do
+			table.insert(context.var_stack, _initialised_variable_placeholder)
+		end
+		
 		for i = 1, #arguments
 		do
 			local arg_type = arg_types[i]
 			local arg_name = func_args[i][2]
+			local arg_slot = func_args[i].var_slot
 			
 			if not _type_assignable(arg_type, arguments[i][1])
 			then
 				error("Internal error: incompatible function arguments")
 			end
 			
-			frame.vars[arg_name] = arguments[i]
+			assert(arg_slot <= 0)
+			arg_slot = context.func_var_base - arg_slot
+			
+			assert(context.var_stack[arg_slot] == _initialised_variable_placeholder)
+			context.var_stack[arg_slot] = arguments[i]
 		end
-		
-		table.insert(context.stack, frame)
 		
 		local retval
 		
@@ -2158,6 +2163,13 @@ _eval_func_defn = function(context, statement)
 				end
 			end
 		end
+		
+		for i = 1, statement.allocate_slots
+		do
+			table.remove(context.var_stack)
+		end
+		
+		context.func_var_base = old_func_var_base
 		
 		table.remove(context.stack)
 		
@@ -2207,7 +2219,7 @@ _eval_struct_defn = function(context, statement)
 			_template_error(context, "Attempt to define 'struct " .. struct_name .. "' with undefined argument type '" .. struct_args[i][1] .. "'")
 		end
 		
-		table.insert(args, { struct_args[i][2], type_info })
+		table.insert(args, { struct_args[i][2], type_info, var_slot = struct_args[i].var_slot })
 	end
 	
 	local type_info = {
@@ -2219,7 +2231,7 @@ _eval_struct_defn = function(context, statement)
 		type_key  = {}, -- Uniquely-identifiable table reference used to check if struct
 		                  -- types are derived from the same root (and thus compatible)
 		
-		struct_parent_scope_vars = _build_parent_scope_vars(context),
+		allocate_slots = statement.allocate_slots,
 		
 		-- rehex_type_le = "s8",
 		-- rehex_type_be = "s8",
@@ -2251,6 +2263,11 @@ _eval_typedef = function(context, statement)
 	local type_name    = statement[4]
 	local typedef_name = statement[5]
 	local array_size   = statement[6]
+	
+	if #context.stack > 1
+	then
+		_template_error(context, "Attempt to define type inside a block")
+	end
 	
 	local type_info = _find_type(context, type_name)
 	if type_info == nil
@@ -2292,6 +2309,11 @@ _eval_enum = function(context, statement)
 	
 	local enum_typename = enum_name ~= nil and "enum " .. enum_name or nil
 	
+	if #context.stack > 1
+	then
+		_template_error(context, "Attempt to define enum inside a block")
+	end
+	
 	-- Check type names are valid
 	
 	local type_info = _find_type(context, type_name)
@@ -2313,16 +2335,11 @@ _eval_enum = function(context, statement)
 	-- Define each member as a const variable of the base type in the current scope.
 	
 	local next_member_val = 0
-	local scope_vars = context.stack[#context.stack].vars
 	
 	for _, member_pair in pairs(members)
 	do
 		local member_name, member_expr = table.unpack(member_pair)
-		
-		if scope_vars[member_name] ~= nil
-		then
-			_template_error(context, "Attempt to redefine name '" .. member_name .. "'")
-		end
+		local member_slot = member_pair.var_slot
 		
 		if member_expr ~= nil
 		then
@@ -2336,7 +2353,14 @@ _eval_enum = function(context, statement)
 			next_member_val = member_v:get()
 		end
 		
-		scope_vars[member_name] = { type_info, ImmediateValue:new(next_member_val) }
+		if member_slot <= 0
+		then
+			member_slot = context.func_var_base - member_slot
+		end
+		
+		assert(context.var_stack[member_slot] == _initialised_variable_placeholder)
+		context.var_stack[member_slot] = { type_info, ImmediateValue:new(next_member_val) }
+		
 		next_member_val = next_member_val + 1
 	end
 	
@@ -2380,7 +2404,6 @@ _eval_if = function(context, statement)
 			local frame = {
 				frame_type = FRAME_TYPE_SCOPE,
 				var_types = {},
-				vars = {},
 			}
 			
 			table.insert(context.stack, frame)
@@ -2403,16 +2426,33 @@ _eval_if = function(context, statement)
 	end
 end
 
+local function _clear_borrow_slots(context, borrow_slots_base, borrow_slots_num)
+	local borrow_slot_base = borrow_slots_base <= 0
+		and context.func_var_base - borrow_slots_base
+		or borrow_slots_base
+	
+	for i = 0, borrow_slots_num - 1
+	do
+		local borrow_slot = borrow_slot_base + i
+		context.var_stack[borrow_slot] = _initialised_variable_placeholder
+	end
+end
+
 _eval_for = function(context, statement)
 	local init_expr = statement[4]
 	local cond_expr = statement[5]
 	local iter_expr = statement[6]
 	local body      = statement[7]
 	
+	local outer_borrow_slots_base = statement.outer_borrow_slots_base
+	local outer_borrow_slots_num = statement.outer_borrow_slots_num
+	
+	local inner_borrow_slots_base = statement.inner_borrow_slots_base
+	local inner_borrow_slots_num = statement.inner_borrow_slots_num
+	
 	local frame = {
 		frame_type = FRAME_TYPE_SCOPE,
 		var_types = {},
-		vars = {},
 		
 		handles_flowctrl_types = (FLOWCTRL_TYPE_BREAK | FLOWCTRL_TYPE_CONTINUE),
 	}
@@ -2449,7 +2489,6 @@ _eval_for = function(context, statement)
 		local frame = {
 			frame_type = FRAME_TYPE_SCOPE,
 			var_types = {},
-			vars = {},
 		}
 		
 		table.insert(context.stack, frame)
@@ -2462,6 +2501,9 @@ _eval_for = function(context, statement)
 			then
 				if sr_t.flowctrl == FLOWCTRL_TYPE_BREAK
 				then
+					_clear_borrow_slots(context, inner_borrow_slots_base, inner_borrow_slots_num)
+					_clear_borrow_slots(context, outer_borrow_slots_base, outer_borrow_slots_num)
+					
 					table.remove(context.stack)
 					table.remove(context.stack)
 					return
@@ -2469,6 +2511,9 @@ _eval_for = function(context, statement)
 				then
 					break
 				else
+					_clear_borrow_slots(context, inner_borrow_slots_base, inner_borrow_slots_num)
+					_clear_borrow_slots(context, outer_borrow_slots_base, outer_borrow_slots_num)
+					
 					table.remove(context.stack)
 					table.remove(context.stack)
 					return sr_t, sr_v
@@ -2478,11 +2523,15 @@ _eval_for = function(context, statement)
 		
 		table.remove(context.stack)
 		
+		_clear_borrow_slots(context, inner_borrow_slots_base, inner_borrow_slots_num)
+		
 		if iter_expr
 		then
 			_eval_statement(context, iter_expr)
 		end
 	end
+	
+	_clear_borrow_slots(context, outer_borrow_slots_base, outer_borrow_slots_num)
 	
 	table.remove(context.stack)
 end
@@ -2544,7 +2593,6 @@ _eval_switch = function(context, statement)
 	local frame = {
 		frame_type = FRAME_TYPE_SCOPE,
 		var_types = {},
-		vars = {},
 		
 		handles_flowctrl_types = FLOWCTRL_TYPE_BREAK,
 	}
@@ -2589,10 +2637,12 @@ end
 _eval_block = function(context, statement)
 	local body = statement[4]
 	
+	local borrow_slots_base = statement.borrow_slots_base
+	local borrow_slots_num = statement.borrow_slots_num
+	
 	local frame = {
 		frame_type = FRAME_TYPE_SCOPE,
 		var_types = {},
-		vars = {},
 	}
 	
 	table.insert(context.stack, frame)
@@ -2603,10 +2653,14 @@ _eval_block = function(context, statement)
 		
 		if sr_t and sr_t.flowctrl ~= nil
 		then
+			_clear_borrow_slots(context, borrow_slots_base, borrow_slots_num)
+			
 			table.remove(context.stack)
 			return sr_t, sr_v
 		end
 	end
+	
+	_clear_borrow_slots(context, borrow_slots_base, borrow_slots_num)
 	
 	table.remove(context.stack)
 end
@@ -2765,6 +2819,138 @@ _ops = {
 	["minus"] = _eval_unary_minus,
 }
 
+local function _resolve_types(statements)
+	local block_stack = { _builtin_types, {} }
+	
+	local find_type = function(type_name)
+		for i = #block_stack, 1, -1
+		do
+			if block_stack[i][type_name] ~= nil
+			then
+				return block_stack[i][type_name]
+			end
+		end
+	end
+	
+	local process_statement
+	local process_optional_statement
+	local process_statements
+	local process_block
+	
+	process_statement = function(statement)
+		local op = statement[3]
+		
+		if op == "function"
+		then
+			local func_statements = statement[7]
+			process_block(func_statements)
+			
+		elseif op == "struct"
+		then
+			local struct_statements = statement[6]
+			local var_decl          = statement[8]
+			
+			-- TODO: Define struct type
+			
+			process_block(struct_statements)
+			
+			if var_decl ~= nil
+			then
+				local var_args   = var_decl[2]
+				local array_size = var_decl[3]
+				
+				process_statements(var_args)
+				process_statement(array_size)
+			end
+			
+		elseif op == "typedef"
+		then
+			local array_size = statement[6]
+			walk_optional(array_size)
+			
+		elseif op == "enum"
+		then
+			local members  = statement[6]
+			local var_decl = statement[8]
+			
+			for _, member_pair in pairs(members)
+			do
+				local member_name, member_expr = table.unpack(member_pair)
+				walk_optional(member_expr)
+			end
+			
+			if var_decl ~= nil
+			then
+				local var_args   = var_decl[2]
+				local array_size = var_decl[3]
+				
+				walk_array(var_args)
+				_walk_statement(array_size, func)
+			end
+			
+		elseif op == "if"
+		then
+			for i = 4, #statement
+			do
+				local cond = statement[i][2] and statement[i][1] or nil
+				local code = statement[i][2] or statement[i][1]
+				
+				if cond ~= nil
+				then
+					process_statement(cond)
+				end
+				
+				process_block(code)
+			end
+			
+		elseif op == "for"
+		then
+			local init_expr = statement[4]
+			local cond_expr = statement[5]
+			local iter_expr = statement[6]
+			local body      = statement[7]
+			
+			process_optional_statement(init_expr)
+			process_optional_statement(cond_expr)
+			process_optional_statement(iter_expr)
+			
+			process_block(body)
+			
+		elseif op == "switch"
+		then
+			
+		elseif op == "block"
+		then
+			process_block(statement[4])
+			
+		else
+			_visit_statement_children(statement, process_statement)
+		end
+	end
+	
+	process_optional_statement = function(statement)
+		if statement ~= nil
+		then
+			process_statement(statement)
+		end
+	end
+	
+	process_statements = function(statements)
+		for _, statement in ipairs(statements)
+		do
+			process_statement(statement)
+		end
+	end
+	
+	process_block = function(statements)
+		table.insert(block_stack, {})
+		process_statements(statements)
+		table.remove(block_stack)
+	end
+	
+	process_statements(statements)
+end
+
 --- External entry point into the interpreter
 -- @function execute
 --
@@ -2784,6 +2970,8 @@ _ops = {
 -- An error() may be raised within to abort the interpreter.
 
 local function execute(interface, statements)
+	statements = util.deep_copy_table(statements)
+	
 	local context = {
 		interface = interface,
 		
@@ -2793,6 +2981,9 @@ local function execute(interface, statements)
 		-- This table holds the top-level "global" (i.e. not "local") variables by name.
 		-- Each element points to a tuple of { type, value } like other rvalues.
 		global_vars = {},
+		
+		var_stack = {},
+		func_var_base = nil,
 		
 		next_variable = 0,
 		
@@ -2821,17 +3012,11 @@ local function execute(interface, statements)
 		base_types[k] = v
 	end
 	
-	local base_vars = {}
-	for k, v in pairs(_builtin_variables)
-	do
-		base_vars[k] = v(context)
-	end
+	VarAllocator._allocate_variables(context, statements, _builtin_variables, _initialised_variable_placeholder)
 	
 	table.insert(context.stack, {
 		frame_type = FRAME_TYPE_BASE,
-		
 		var_types = base_types,
-		vars = base_vars,
 	})
 	
 	_exec_statements(context, statements)

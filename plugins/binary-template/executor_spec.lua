@@ -1026,6 +1026,26 @@ describe("executor", function()
 					{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
 					{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
 				})
+			end, "Attempt to redefine variable 'x' at test.bt:1")
+			
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "call", "LittleEndian", {} },
+					
+					{ "test.bt", 1, "struct", "mystruct", {},
+					{
+						{ "test.bt", 1, "if",
+							{ { "test.bt", 1, "num", 1 }, {
+								{ "test.bt", 1, "variable", "int", "x", nil, nil },
+							} } },
+						
+						{ "test.bt", 1, "variable", "int", "x", nil, nil },
+					} },
+					
+					{ "test.bt", 1, "variable", "struct mystruct", "a", nil, nil },
+					{ "test.bt", 1, "variable", "struct mystruct", "b", nil, nil },
+				})
 			end, "Attempt to redefine struct member 'x' at test.bt:1")
 	end)
 	
@@ -3138,7 +3158,7 @@ describe("executor", function()
 					{ "FOO" },
 				}, nil },
 			})
-			end, "Attempt to redefine name 'FOO' at test.bt:1")
+			end, "Attempt to redefine variable 'FOO' at test.bt:1")
 	end)
 	
 	it("errors when reusing an existing variable name as an enum member", function()
@@ -3152,7 +3172,7 @@ describe("executor", function()
 					{ "FOO" },
 				}, nil },
 			})
-			end, "Attempt to redefine name 'FOO' at test.bt:2")
+			end, "Attempt to redefine variable 'FOO' at test.bt:2")
 	end)
 	
 	it("errors when redefining an enum type", function()
@@ -3165,7 +3185,7 @@ describe("executor", function()
 				}, nil },
 				
 				{ "test.bt", 2, "enum", "int", "myenum", {
-					{ "FOO" },
+					{ "BAZ" },
 				}, nil },
 			})
 			end, "Attempt to redefine type 'enum myenum' at test.bt:2")

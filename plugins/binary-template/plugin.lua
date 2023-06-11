@@ -244,9 +244,15 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		doc:transact_begin("Binary template")
 		
+		local start_time = os.time()
+		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
 		end)
+		
+		local end_time = os.time()
+		
+		rehex.print_info("Template execution took " .. (end_time - start_time) .. " seconds\n")
 		
 		progress_dialog:Destroy()
 		

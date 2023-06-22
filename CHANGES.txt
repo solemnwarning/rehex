@@ -35,13 +35,20 @@ Version TBA
 
  * Remove strings from the strings panel when they are deleted from the file.
 
- * Add ReadString() template function.
-
- * Add SPrintf() template function.
+ * Add new ReadString(), SPrintf(), SetComment(), StringLengthBytes(),
+   ArrayPush(), ArrayPop() and OffsetOf() template function.
 
  * Fix repeated execution of the same switch() block in a template (#202).
 
  * Monitor for open files being externally modified and allow reloading (#124).
+
+ * Add 'private' variables to template language.
+
+ * Fix template format strings that expand to further format tokens.
+
+ * Fix template error when converting a float to an int.
+
+ * Improve performance when large numbers of comments are defined.
 
 Version 0.5.4 (2022-10-23)
 

@@ -88,7 +88,22 @@ bool REHex::App::OnInit()
 			}
 		}
 		
-		open_filenames.push_back(argv[i].ToStdString());
+		/* If the filename ends in .rehex-meta and stripping it off points to an existing
+		 * file, then assume they mean to open that file - the meta file being considered
+		 * like a "project".
+		*/
+		
+		std::string filename = argv[i].ToStdString();
+		std::string meta_extension = ".rehex-meta";
+		
+		if(filename.length() >= meta_extension.length()
+			&& filename.substr(filename.length() - meta_extension.length()) == meta_extension
+			&& wxFileExists(filename.substr(0, filename.length() - meta_extension.length())))
+		{
+			filename = filename.substr(0, filename.length() - meta_extension.length());
+		}
+		
+		open_filenames.push_back(filename);
 	}
 	
 	if(compare_mode && open_filenames.size() < 2)

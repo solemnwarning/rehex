@@ -4758,7 +4758,7 @@ off_t REHex::DocumentCtrl::DataRegion::cursor_end_from(off_t pos, ScreenArea act
 	off_t visual_offset = d_offset - (off_t)(first_line_pad_bytes);
 	off_t bytes_from_start_of_visual_line = (pos - visual_offset) % bytes_per_line_actual;
 	
-	if(bytes_from_start_of_visual_line == (bytes_per_line_actual - 1))
+	if(bytes_from_start_of_visual_line == (bytes_per_line_actual - 1) || pos == (d_offset + d_length))
 	{
 		/* Already at the end of the line. */
 		return pos;

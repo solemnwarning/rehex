@@ -334,6 +334,8 @@ static IconvCharacterEncodingRegistrationHelper iso8859_13_r("ISO-8859-13", 1, t
 static IconvCharacterEncodingRegistrationHelper iso8859_14_r("ISO-8859-14", 1, true, "8-bit code pages", "ISO-8859-14", "Latin-8 (ISO-8859-14: Celtic)");
 static IconvCharacterEncodingRegistrationHelper iso8859_15_r("ISO-8859-15", 1, true, "8-bit code pages", "ISO-8859-15", "Latin-9 (ISO-8859-15: Revised Western European)");
 static IconvCharacterEncodingRegistrationHelper cp437_r     ("CP437",       1, true, "8-bit code pages", "CP437",       "Code page 437 (IBM)");
+static IconvCharacterEncodingRegistrationHelper cp866_r     ("CP866",       1, true, "8-bit code pages", "CP866",       "Code page 866 (IBM, \"DOS Cyrillic Russian\")");
+static IconvCharacterEncodingRegistrationHelper cp1251_r    ("CP1251",      1, true, "8-bit code pages", "CP1251",      "Code page 1251 (Windows)");
 
 static IconvCharacterEncodingRegistrationHelper cp932_r ("CP932", 1, false, "Multibyte code pages", "MSCP932", "Code page 932 (Windows, \"Shift JIS\")");
 static IconvCharacterEncodingRegistrationHelper cp936_r ("CP936", 1, false, "Multibyte code pages", "MSCP936", "Code page 936 (Windows, \"GBK\")");

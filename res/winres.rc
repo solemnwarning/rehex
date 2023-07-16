@@ -1,3 +1,6 @@
+#include <winuser.h>
+
 #include "winres.h"
 
-REHEX_ICON  ICON  "icon.ico"
+REHEX_MANIFEST  RT_MANIFEST  "rehex.exe.manifest"
+REHEX_ICON      ICON         "icon.ico"

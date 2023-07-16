@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -14,10 +14,10 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-_rehex_capstone_version="4.0.2"
-_rehex_capstone_url="https://github.com/aquynh/capstone/archive/${_rehex_capstone_version}.tar.gz"
-_rehex_capstone_sha256="7c81d798022f81e7507f1a60d6817f63aa76e489aa4e7055255f21a22f5e526a"
-_rehex_capstone_build_ident="${_rehex_capstone_version}-2"
+_rehex_capstone_version="5.0"
+_rehex_capstone_url="https://github.com/capstone-engine/capstone/archive/refs/tags/${_rehex_capstone_version}.tar.gz"
+_rehex_capstone_sha256="df24344407baa7415eeb006f742afc9b92cd33abf2c4c120a6e97cfb376882dc"
+_rehex_capstone_build_ident="${_rehex_capstone_version}-1"
 
 _rehex_jansson_version="2.14"
 _rehex_jansson_url="https://github.com/akheron/jansson/releases/download/v${_rehex_jansson_version}/jansson-${_rehex_jansson_version}.tar.gz"

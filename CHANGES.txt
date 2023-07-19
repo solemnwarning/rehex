@@ -50,6 +50,10 @@ Version TBA
 
  * Improve performance when large numbers of comments are defined.
 
+ * Open original file when passed a rehex-meta file on the command line (#207).
+
+ * Add IBM codepage 866 and Windows-1251 (#208).
+
 Version 0.5.4 (2022-10-23)
 
  * Allow passing arguments to structs created via ArrayResize() and

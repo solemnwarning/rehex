@@ -5077,7 +5077,16 @@ std::pair<off_t,off_t> REHex::DocumentCtrl::DataRegion::get_char_at(off_t offset
 		
 		off_t min_offset = std::max((at_offset - (off_t)(MAX_CHAR_SIZE)), d_offset);
 		
-		std::vector<unsigned char> data = document->read_data(min_offset, (MAX_CHAR_SIZE * 2));
+		std::vector<unsigned char> data;
+		try {
+			data = document->read_data(min_offset, (MAX_CHAR_SIZE * 2));
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Exception in REHex::Document::Region::Data::draw: %s\n", e.what());
+			return std::make_pair(-1, -1);
+		}
+		
 		ssize_t data_offset = at_offset - min_offset;
 		
 		while(at_offset >= min_offset && data_offset < (ssize_t)(data.size()) && data_offset >= 0)

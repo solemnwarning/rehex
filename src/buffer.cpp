@@ -250,6 +250,13 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
 	}
 	
+	struct stat st;
+	if(fstat(fileno(fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+	{
+		fclose(fh);
+		throw std::runtime_error(std::string("Could not open file: Not a regular file"));
+	}
+	
 	reload();
 }
 
@@ -273,6 +280,13 @@ void REHex::Buffer::reload()
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
 	}
 	else{
+		struct stat st;
+		if(fstat(fileno(inode_fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+		{
+			fclose(inode_fh);
+			throw std::runtime_error(std::string("Could not open file: Not a regular file"));
+		}
+		
 		fclose(fh);
 		fh = inode_fh;
 	}
@@ -345,6 +359,13 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	if(fd == -1)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	
+	struct stat st;
+	if(fstat(fd, &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+	{
+		close(fd);
+		throw std::runtime_error(std::string("Could not open file: Not a regular file"));
 	}
 	
 	FILE *wfh = fdopen(fd, "r+b");
@@ -531,6 +552,13 @@ void REHex::Buffer::write_copy(const std::string &filename)
 	if(out == NULL)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+	}
+	
+	struct stat st;
+	if(fstat(fileno(out), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+	{
+		fclose(out);
+		throw std::runtime_error(std::string("Could not open file: Not a regular file"));
 	}
 	
 	/* Disable write buffering */

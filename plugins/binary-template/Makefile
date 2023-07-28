@@ -23,6 +23,9 @@ INSTALL_FILES := \
 	executor/immediatevalue.lua \
 	executor/plainvalue.lua \
 	executor/structvalue.lua \
+	executor/typemapper.lua \
+	executor/util.lua \
+	executor/varallocator.lua \
 	parser.lua \
 	plugin.lua \
 	preprocessor.lua \

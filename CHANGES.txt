@@ -1,3 +1,7 @@
+Version 0.60.1 (2023-07-28)
+
+ * Install missing parts of binary template plugin.
+
 Version 0.60.0 (2023-07-28)
 
  * Add data histogram tool (#140).

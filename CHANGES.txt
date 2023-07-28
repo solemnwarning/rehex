@@ -1,4 +1,4 @@
-Version TBA
+Version 0.60.0 (2023-07-28)
 
  * Add data histogram tool (#140).
 

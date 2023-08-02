@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -173,4 +173,74 @@ TEST(Util, add_clamp_overflow)
 	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,      INT_MIN,  INT_MIN,      true);
 	
 	TEST_ADD_CLAMP_OVERFLOW(INT_MIN, INT_MAX, -1, false);
+}
+
+TEST(Util, memcpy_left)
+{
+	std::vector<unsigned char> src = { 0x7A, 2, 5, 128, 0xFF, 0xFF };
+	
+	std::vector<unsigned char> expect_shift1 = { 0xF4, 4,  11,  1,    0xFF, 0xFE };
+	std::vector<unsigned char> expect_shift4 = { 0xA0, 32, 88,  0x0F, 0xFF, 0xF0 };
+	std::vector<unsigned char> expect_shift7 = { 1,    2,  192, 127,  0xFF, 128 };
+	
+	std::vector<unsigned char> dst(src.size());
+	CarryBits ret;
+	
+	ret = memcpy_left(dst.data(), src.data(), src.size(), 0);
+	EXPECT_EQ(dst, src);
+	EXPECT_EQ(ret.value, 0);
+	EXPECT_EQ(ret.mask, 0);
+	
+	ret = memcpy_left(dst.data(), src.data(), src.size(), 1);
+	EXPECT_EQ(dst, expect_shift1);
+	EXPECT_EQ(ret.value, 0);
+	EXPECT_EQ(ret.mask, 1);
+	
+	ret = memcpy_left(dst.data(), src.data(), src.size(), 4);
+	EXPECT_EQ(dst, expect_shift4);
+	EXPECT_EQ(ret.value, 7);
+	EXPECT_EQ(ret.mask, 15);
+	
+	ret = memcpy_left(dst.data(), src.data(), src.size(), 7);
+	EXPECT_EQ(dst, expect_shift7);
+	EXPECT_EQ(ret.value, 61);
+	EXPECT_EQ(ret.mask, 127);
+}
+
+TEST(Util, memcpy_right)
+{
+	std::vector<unsigned char> src = { 0xFF, 2, 5, 128, 0xFF, 252 };
+	
+	std::vector<unsigned char> dst(src.size());
+	CarryBits ret;
+	
+	memset(dst.data(), 0, dst.size());
+	ret = memcpy_right(dst.data(), src.data(), src.size(), 0);
+	EXPECT_EQ(dst, src);
+	EXPECT_EQ(ret.mask, 0);
+	EXPECT_EQ(ret.value, 0);
+	
+	memset(dst.data(), 0, dst.size());
+	ret = memcpy_right(dst.data(), src.data(), src.size(), 1);
+	EXPECT_EQ(dst, std::vector<unsigned char>({ 127, 129,  2,  192, 127, 254 }));
+	EXPECT_EQ(ret.mask, 128);
+	EXPECT_EQ(ret.value, 0);
+	
+	memset(dst.data(), 0, dst.size());
+	ret = memcpy_right(dst.data(), src.data(), src.size(), 4);
+	EXPECT_EQ(dst, std::vector<unsigned char>({ 0x0F, 0xF0, 32,  88, 0x0F, 0xFF }));
+	EXPECT_EQ(ret.mask, 240);
+	EXPECT_EQ(ret.value, 192);
+	
+	memset(dst.data(), 0, dst.size());
+	ret = memcpy_right(dst.data(), src.data(), src.size(), 7);
+	EXPECT_EQ(dst, std::vector<unsigned char>({ 1, 254,  4, 11, 1, 0xFF }));
+	EXPECT_EQ(ret.mask, 254);
+	EXPECT_EQ(ret.value, 248);
+	
+	memset(dst.data(), 0xFF, dst.size());
+	ret = memcpy_right(dst.data(), src.data(), src.size(), 7);
+	EXPECT_EQ(dst, std::vector<unsigned char>({ 0xFF, 254,  4, 11, 1, 0xFF }));
+	EXPECT_EQ(ret.mask, 254);
+	EXPECT_EQ(ret.value, 248);
 }

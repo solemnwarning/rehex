@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -328,6 +328,33 @@ TEST(Buffer, ReadAcrossBlocks)
 	READ_DATA_CLEAN(0, 8);
 	READ_DATA_CLEAN(1, 8);
 	READ_DATA_UNLOADED(2);
+}
+
+TEST(Buffer, ReadAcrossBlocksShifted)
+{
+	READ_DATA_PREPARE();
+	
+	const std::vector<unsigned char> expect_data = {
+		0x57, 0x47, 0xBD, 0xA7, 0xB0, 0x11, 0xB8, 0x40,
+		0x97, 0x68,
+	};
+	
+	std::vector<unsigned char> got_data = b.read_data(REHex::BitOffset(2, 4), 10);
+	
+	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
+}
+
+TEST(Buffer, ReadToEndShifted)
+{
+	READ_DATA_PREPARE();
+	
+	const std::vector<unsigned char> expect_data = {
+		94, 19, 16, 152
+	};
+	
+	std::vector<unsigned char> got_data = b.read_data(REHex::BitOffset(18, 2), 10);
+	
+	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 }
 
 TEST(Buffer, ReadWholeFile)

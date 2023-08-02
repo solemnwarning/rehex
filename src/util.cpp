@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -539,4 +539,109 @@ double REHex::parse_double(const std::string &s)
 	}
 	
 	return n;
+}
+
+REHex::CarryBits REHex::memcpy_left(void *dst, const void *src, size_t n, int shift)
+{
+	if(shift == 0)
+	{
+		memcpy(dst, src, n);
+		return CarryBits();
+	}
+	
+	/* shift = 1, mask_a = 01111111, mask_b = 10000000
+	 * shift = 2, mask_a = 00111111, mask_b = 11000000
+	 * shift = 3, mask_a = 00011111, mask_b = 11100000
+	 * shift = 4, mask_a = 00001111, mask_b = 11110000
+	 * shift = 5, mask_a = 00000111, mask_b = 11111000
+	 * shift = 6, mask_a = 00000011, mask_b = 11111100
+	 * shift = 7, mask_a = 00000001, mask_b = 11111110
+	*/
+	
+	unsigned char mask_a = 0xFF;
+	unsigned char mask_b = 0x00;
+	
+	for(int i = 0; i < shift; ++i)
+	{
+		mask_a &= ~((unsigned char)(128) >> i);
+		mask_b |=  ((unsigned char)(128) >> i);
+	}
+	
+	int rshift = 8 - shift;
+	
+	unsigned char *dst_p = (unsigned char*)(dst);
+	const unsigned char *src_p = (const unsigned char*)(src);
+	
+	unsigned char carry = 0;
+	unsigned char carry_mask = 0;
+	if(n > 1)
+	{
+		carry = (*src_p & mask_b) >> rshift;
+		
+		for(int i = 0; i < shift; ++i)
+		{
+			carry_mask <<= 1;
+			carry_mask |= 1;
+		}
+	}
+	
+	while(n > 1)
+	{
+		*dst_p = ((*src_p & mask_a) << shift) | ((*(src_p + 1) & mask_b) >> rshift);
+		++src_p;
+		++dst_p;
+		--n;
+	}
+	
+	if(n > 0)
+	{
+		*dst_p = (*src_p & mask_a) << shift;
+	}
+	
+	return CarryBits(carry, carry_mask);
+}
+
+REHex::CarryBits REHex::memcpy_right(void *dst, const void *src, size_t n, int shift)
+{
+	if(shift == 0 || n == 0)
+	{
+		memcpy(dst, src, n);
+		return CarryBits();
+	}
+	
+	/* shift = 1, mask_a = 11111110, mask_b = 00000001
+	 * shift = 2, mask_a = 11111100, mask_b = 00000011
+	 * shift = 3, mask_a = 11111000, mask_b = 00000111
+	 * shift = 4, mask_a = 11110000, mask_b = 00001111
+	 * shift = 5, mask_a = 11100000, mask_b = 00011111
+	 * shift = 6, mask_a = 11000000, mask_b = 00111111
+	 * shift = 7, mask_a = 10000000, mask_b = 01111111
+	*/
+	
+	unsigned char mask_a = 0xFF;
+	unsigned char mask_b = 0x00;
+	
+	for(int i = 0; i < shift; ++i)
+	{
+		mask_a &= ~((unsigned char)(1) << i);
+		mask_b |=  ((unsigned char)(1) << i);
+	}
+	
+	int lshift = 8 - shift;
+	
+	unsigned char *dst_p = (unsigned char*)(dst);
+	const unsigned char *src_p = (const unsigned char*)(src);
+	
+	*dst_p &= ~(mask_a >> shift);
+	*dst_p |= ((*src_p & mask_a) >> shift);
+	--n;
+	
+	while(n > 0)
+	{
+		*(++dst_p) = ((*src_p & mask_b) << lshift) | ((*(src_p + 1) & mask_a) >> shift);
+		++src_p;
+		--n;
+	}
+	
+	return CarryBits(((*src_p & mask_b) << lshift), (mask_b << lshift));
 }

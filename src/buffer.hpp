@@ -31,6 +31,8 @@
 #include <windows.h>
 #endif
 
+#include "BitOffset.hpp"
+
 namespace REHex {
 	wxDECLARE_EVENT(BACKING_FILE_DELETED, wxCommandEvent);
 	wxDECLARE_EVENT(BACKING_FILE_MODIFIED, wxCommandEvent);
@@ -210,7 +212,7 @@ namespace REHex {
 			 *
 			 * Throws on I/O or memory allocation error.
 			*/
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
+			std::vector<unsigned char> read_data(const BitOffset &offset, off_t max_length);
 			
 			/**
 			 * @brief Overwrite a series of bytes in the Buffer.

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -126,6 +126,58 @@ namespace REHex {
 	void fake_broken_mouse_capture(wxWindow *window);
 	
 	std::string document_save_as_dialog(wxWindow *modal_parent, Document *document);
+	
+	struct CarryBits
+	{
+		unsigned char value;
+		unsigned char mask;
+		
+		CarryBits():
+			value(0),
+			mask(0) {}
+		
+		CarryBits(unsigned char value, unsigned char mask):
+			value(value),
+			mask(mask) {}
+	};
+	
+	/**
+	 * @brief Copy memory with left bit shifting.
+	 *
+	 * @param dst   Destination buffer.
+	 * @param src   Source buffer.
+	 * @param n     Number of bytes to copy.
+	 * @param shift Number of bits to left shift by (0-7).
+	 *
+	 * @returns The bits removed from the first byte.
+	 *
+	 * Copies a range of bytes between buffers, left shifting bits through the entire range,
+	 * removing the leftmost bits from the first byte and inserting zeros to the rightmost end
+	 * of the last byte.
+	 *
+	 * Any bits shifted off the end of the first byte are returned, shifted ready for being
+	 * bitwise OR'd into the end of a buffer preceeding dst when copying in chunks.
+	*/
+	CarryBits memcpy_left(void *dst, const void *src, size_t n, int shift);
+	
+	/**
+	 * @brief Copy memory with right bit shifting.
+	 *
+	 * @param dst   Destination buffer.
+	 * @param src   Source buffer.
+	 * @param n     Number of bytes to copy.
+	 * @param shift Number of bits to right shift by (0-7).
+	 *
+	 * @returns The surplus bits from the end of the last byte.
+	 *
+	 * Copies a range of bytes between buffers, right shifting bits through the entire range,
+	 * removing the rightmost bits from the last byte and preserving the existing bits to the
+	 * left of where the bits are placed in the destination buffer.
+	 *
+	 * Any bits shifted off the end of the last byte are returned, shifted ready for being
+	 * bitwise OR'd into the start of a buffer following dst when copying in chunks.
+	*/
+	CarryBits memcpy_right(void *dst, const void *src, size_t n, int shift);
 	
 	/**
 	 * @brief A wxColour that can be used as a key in a map/etc.

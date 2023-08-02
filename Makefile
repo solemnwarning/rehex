@@ -482,6 +482,7 @@ TEST_OBJS := \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
 	tests/BitmapTool.o \
+	tests/BitOffset.o \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \

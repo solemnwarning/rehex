@@ -623,14 +623,19 @@ REHex::Buffer::FileTime REHex::Buffer::_get_file_mtime(FILE *fh, const std::stri
 	return FileTime();
 }
 
-std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_length)
+std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off_t max_length)
 {
-	assert(offset >= 0);
+	assert(offset.byte() >= 0);
 	assert(max_length >= 0);
+	
+	if(offset.bit() > 0)
+	{
+		++max_length;
+	}
 	
 	std::unique_lock<std::mutex> l(lock);
 	
-	Block *block = _block_by_virt_offset(offset);
+	Block *block = _block_by_virt_offset(offset.byte());
 	if(block == nullptr)
 	{
 		return std::vector<unsigned char>();
@@ -639,21 +644,45 @@ std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_leng
 	std::vector<unsigned char> data;
 	data.reserve(max_length);
 	
-	while(block < blocks.data() + blocks.size() && max_length > 0)
+	off_t byte_offset = offset.byte();
+	
+	while(block < blocks.data() + blocks.size() && max_length > data.size())
 	{
 		_load_block(block);
 		
-		off_t block_rel_off = offset - block->virt_offset;
+		off_t block_rel_off = byte_offset - block->virt_offset;
 		off_t block_rel_len = block->virt_length - block_rel_off;
-		off_t to_copy = std::min(block_rel_len, max_length);
+		off_t to_copy = std::min(block_rel_len, (max_length - (off_t)(data.size())));
 		
 		const unsigned char *base = block->data.data() + block_rel_off;
-		data.insert(data.end(), base, base + to_copy);
+		
+		size_t dst_off = data.size();
+		data.resize(data.size() + to_copy);
+		
+		CarryBits carry = memcpy_left(data.data() + dst_off, base, to_copy, offset.bit());
+		if(dst_off > 0)
+		{
+			assert((data[dst_off - 1] & carry.mask) == 0);
+			data[dst_off - 1] |= carry.value;
+		}
 		
 		++block;
 		
-		offset     += to_copy;
-		max_length -= to_copy;
+		byte_offset += to_copy;
+	}
+	
+	if(offset.bit() > 0)
+	{
+		if(data.size() == max_length)
+		{
+			/* Pop off the extra partial byte we read to fill in the previous byte. */
+			data.pop_back();
+		}
+		else if(byte_offset == _length())
+		{
+			/* Pop off partial byte at the end of the file. */
+			data.pop_back();
+		}
 	}
 	
 	return data;

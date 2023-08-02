@@ -82,6 +82,9 @@
     <ClCompile Include="..\..\tests\BitmapTool.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\BitOffset.cpp">
+	    <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\tests\ByteRangeTree.cpp">
       <Filter>tests</Filter>
     </ClCompile>

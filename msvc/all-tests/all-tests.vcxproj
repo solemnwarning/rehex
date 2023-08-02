@@ -262,6 +262,7 @@
     <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\..\src\win32lib.cpp" />
     <ClCompile Include="..\..\tests\BitmapTool.cpp" />
+    <ClCompile Include="..\..\tests\BitOffset.cpp" />
     <ClCompile Include="..\..\tests\buffer.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />

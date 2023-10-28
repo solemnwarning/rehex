@@ -350,6 +350,7 @@ APP_OBJS := \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
 	src/Events.o \
+	src/FileWriter.o \
 	src/FillRangeDialog.o \
 	src/IntelHexExport.o \
 	src/IntelHexImport.o \
@@ -432,6 +433,7 @@ TEST_OBJS := \
 	src/DocumentCtrl.o \
 	src/EditCommentDialog.o \
 	src/Events.o \
+	src/FileWriter.o \
 	src/FillRangeDialog.o \
 	src/IntelHexExport.o \
 	src/IntelHexImport.o \
@@ -469,6 +471,7 @@ TEST_OBJS := \
 	tests/DocumentCtrl.o \
 	tests/endian_conv.o \
 	tests/FastRectangleFiller.o \
+	tests/FileWriter.o \
 	tests/IntelHexExport.o \
 	tests/IntelHexImport.o \
 	tests/LuaPluginLoader.o \

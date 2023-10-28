@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,15 +19,21 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <iterator>
 #include <numeric>
 #include <unictype.h>
 #include <unistr.h>
 #include <wx/artprov.h>
+#include <wx/clipbrd.h>
+#include <wx/filename.h>
 #include <wx/mstream.h>
 #include <wx/numformatter.h>
 
+#include "App.hpp"
 #include "CharacterEncoder.hpp"
+#include "FileWriter.hpp"
 #include "StringPanel.hpp"
+#include "util.hpp"
 
 #include "../res/spinner24.h"
 
@@ -55,6 +61,7 @@ enum {
 BEGIN_EVENT_TABLE(REHex::StringPanel, wxPanel)
 	EVT_TIMER(wxID_ANY, REHex::StringPanel::OnTimerTick)
 	EVT_LIST_ITEM_ACTIVATED(wxID_ANY, REHex::StringPanel::OnItemActivate)
+	EVT_LIST_ITEM_RIGHT_CLICK(wxID_ANY, REHex::StringPanel::OnItemRightClick)
 	EVT_CHOICE(ID_ENCODING_CHOICE, REHex::StringPanel::OnEncodingChanged)
 	
 	EVT_BUTTON(ID_RESET_BUTTON,     REHex::StringPanel::OnReset)
@@ -392,6 +399,60 @@ void REHex::StringPanel::set_min_string_length(int min_string_length)
 	start_threads();
 	
 	update_needed = true;
+}
+
+void REHex::StringPanel::select_all()
+{
+	int num_items = list_ctrl->GetItemCount();
+	
+	for(int i = 0; i < num_items; ++i)
+	{
+		list_ctrl->SetItemState(i, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+	}
+}
+
+void REHex::StringPanel::select_by_file_offset(off_t offset)
+{
+	int idx;
+	
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		
+		auto it = strings.find_first_in(offset, 1);
+		assert(it != strings.end() && it->offset == offset);
+		
+		idx = std::distance(strings.begin(), it);
+		assert(idx < list_ctrl->GetItemCount());
+	}
+	
+	list_ctrl->SetItemState(idx, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+}
+
+wxString REHex::StringPanel::copy_get_string(wxString (*get_item_func)(StringPanelListCtrl*, int))
+{
+	wxString s = "";
+	
+	for(long list_idx = -1; (list_idx = list_ctrl->GetNextItem(list_idx, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) >= 0;)
+	{
+		if(!s.empty())
+		{
+			s += "\n";
+		}
+		
+		s += get_item_func(list_ctrl, list_idx);
+	}
+	
+	return s;
+}
+
+void REHex::StringPanel::do_copy(wxString (*get_item_func)(StringPanelListCtrl*, int))
+{
+	ClipboardGuard cg;
+	if(cg)
+	{
+		wxString s = copy_get_string(get_item_func);
+		wxTheClipboard->SetData(new wxTextDataObject(s));
+	}
 }
 
 void REHex::StringPanel::thread_main()
@@ -772,6 +833,64 @@ void REHex::StringPanel::resume_threads()
 	resume_cv.notify_all();
 }
 
+void REHex::StringPanel::do_export(wxString (*get_item_func)(StringPanelListCtrl*, int))
+{
+	std::string dir;
+	std::string doc_filename = document->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+	}
+	
+	wxFileDialog saveFileDialog(this, "Export Strings", dir, "", "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = saveFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	try {
+		FileWriter file(filename.c_str());
+		
+		for(long list_idx = -1; (list_idx = list_ctrl->GetNextItem(list_idx, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) >= 0;)
+		{
+			wxString s = get_item_func(list_ctrl, list_idx) + "\n";
+			const wxScopedCharBuffer s_utf8 = s.utf8_str();
+			
+			file.write(s_utf8.data(), s_utf8.length());
+		}
+		
+		file.commit();
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(e.what(), "Error", wxICON_ERROR, this);
+	}
+}
+
+wxString REHex::StringPanel::get_item_string(StringPanelListCtrl *list_ctrl, int item_idx)
+{
+	return list_ctrl->OnGetItemText(item_idx, 1);
+}
+
+wxString REHex::StringPanel::get_item_offset_and_string(StringPanelListCtrl *list_ctrl, int item_idx)
+{
+	return list_ctrl->OnGetItemText(item_idx, 0) + "\t" + list_ctrl->OnGetItemText(item_idx, 1);
+}
+
 void REHex::StringPanel::OnDataModifying(OffsetLengthEvent &event)
 {
 	pause_threads();
@@ -860,6 +979,13 @@ void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 
 void REHex::StringPanel::OnItemActivate(wxListEvent &event)
 {
+	int num_selected = list_ctrl->GetSelectedItemCount();
+	if(num_selected > 1)
+	{
+		wxBell();
+		return;
+	}
+	
 	long item_idx = event.GetIndex();
 	assert(item_idx >= 0);
 	
@@ -875,6 +1001,52 @@ void REHex::StringPanel::OnItemActivate(wxListEvent &event)
 	
 	document->set_cursor_position(string_range.offset);
 	document_ctrl->set_selection_raw(string_range.offset, (string_range.offset + string_range.length - 1));
+}
+
+void REHex::StringPanel::OnItemRightClick(wxListEvent &event)
+{
+	int num_selected = list_ctrl->GetSelectedItemCount();
+	
+	wxMenu menu;
+	
+	wxMenuItem *copy_strings = menu.Append(wxID_ANY, "&Copy Strings");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		do_copy(&get_item_string);
+	}, copy_strings->GetId(), copy_strings->GetId());
+	
+	wxMenuItem *copy_strings_and_offsets = menu.Append(wxID_ANY, "Copy Strings and &Offsets");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		do_copy(&get_item_offset_and_string);
+	}, copy_strings_and_offsets->GetId(), copy_strings_and_offsets->GetId());
+	
+	wxMenuItem *export_strings = menu.Append(wxID_ANY, "&Export Strings");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		do_export(&get_item_string);
+	}, export_strings->GetId(), export_strings->GetId());
+	
+	wxMenuItem *export_strings_and_offsets = menu.Append(wxID_ANY, "E&xport Strings and Offsets");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		do_export(&get_item_offset_and_string);
+	}, export_strings_and_offsets->GetId(), export_strings_and_offsets->GetId());
+	
+	copy_strings->Enable(num_selected > 0);
+	copy_strings_and_offsets->Enable(num_selected > 0);
+	export_strings->Enable(num_selected > 0);
+	export_strings_and_offsets->Enable(num_selected > 0);
+	
+	menu.AppendSeparator();
+	
+	wxMenuItem *select_all = menu.Append(wxID_ANY, "Select &All");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		this->select_all();
+	}, select_all->GetId(), select_all->GetId());
+	
+	PopupMenu(&menu);
 }
 
 void REHex::StringPanel::OnTimerTick(wxTimerEvent &event)

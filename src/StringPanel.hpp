@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -46,6 +46,16 @@
 namespace REHex {
 	class StringPanel: public ToolPanel
 	{
+		private:
+			class StringPanelListCtrl: public wxListCtrl
+			{
+				public:
+					StringPanelListCtrl(StringPanel *parent);
+					
+				public:
+					virtual wxString OnGetItemText(long item, long column) const override;
+			};
+			
 		public:
 			StringPanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			~StringPanel();
@@ -66,16 +76,16 @@ namespace REHex {
 			void set_encoding(const std::string &encoding_key);
 			void set_min_string_length(int min_string_length);
 			
-		private:
-			class StringPanelListCtrl: public wxListCtrl
-			{
-				public:
-					StringPanelListCtrl(StringPanel *parent);
-					
-				protected:
-					virtual wxString OnGetItemText(long item, long column) const override;
-			};
+			void select_all();
+			void select_by_file_offset(off_t offset);
 			
+			wxString copy_get_string(wxString (*get_item_func)(StringPanelListCtrl*, int));
+			void do_copy(wxString (*get_item_func)(StringPanelListCtrl*, int));
+			
+			static wxString get_item_string(StringPanelListCtrl *list_ctrl, int item_idx);
+			static wxString get_item_offset_and_string(StringPanelListCtrl *list_ctrl, int item_idx);
+			
+		private:
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
@@ -127,12 +137,15 @@ namespace REHex {
 			void pause_threads();
 			void resume_threads();
 			
+			void do_export(wxString (*get_item_func)(StringPanelListCtrl*, int));
+			
 			void OnDataModifying(OffsetLengthEvent &event);
 			void OnDataModifyAborted(OffsetLengthEvent &event);
 			void OnDataErase(OffsetLengthEvent &event);
 			void OnDataInsert(OffsetLengthEvent &event);
 			void OnDataOverwrite(OffsetLengthEvent &event);
 			void OnItemActivate(wxListEvent &event);
+			void OnItemRightClick(wxListEvent &event);
 			void OnTimerTick(wxTimerEvent &event);
 			void OnEncodingChanged(wxCommandEvent &event);
 			void OnReset(wxCommandEvent &event);

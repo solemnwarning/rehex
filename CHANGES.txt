@@ -4,6 +4,8 @@ Version TBA
 
  * Add overwrite/insert toggle to "Fill range" dialog (#213).
 
+ * Add copy/export context menu commands to strings tool (#210).
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

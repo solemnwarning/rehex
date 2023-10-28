@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -533,7 +533,8 @@ local _parser = spc * P{
 	ENUM_BODY = Ct(
 		V("BRACE_BLOCK_OPEN") *
 		(V("ENUM_MEMBER") + _PARSE_ERROR()) *
-		(V("BRACE_BLOCK_CONTINUE") * comma * (V("ENUM_MEMBER") + _PARSE_ERROR())) ^ 0 *
+		(V("BRACE_BLOCK_CONTINUE") * comma * (-(#(P("}"))) * (V("ENUM_MEMBER") + _PARSE_ERROR()))) ^ 0 *
+		(comma * #(P("}"))) ^ -1 *
 		V("BRACE_BLOCK_CLOSE")
 	),
 	ENUM_VAR_DECL    = Ct( name * Cc(nil) * (P("[") * spc * V("EXPR") * P("]") * spc + Cc(nil)) ),

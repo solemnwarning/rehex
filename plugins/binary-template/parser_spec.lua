@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -961,14 +961,15 @@ describe("parser", function()
 				"};\n")
 			end, "Parse error at UNKNOWN FILE:3 (at '= 2,')")
 		
+		-- Trailing comma is fine, but multiple commas assume an error
 		assert.has_error(function()
 			parser.parse_text(
 				"enum myenum {\n" ..
-				"	FOO = 1,\n" ..
-				"	BAR = 2,\n" ..
+				"	FOO = 1,,\n" ..
+				"	BAR = 2\n" ..
 				"	\n" ..
 				"};\n")
-			end, "Parse error at UNKNOWN FILE:5 (at '};')")
+			end, "Parse error at UNKNOWN FILE:2 (at ',')")
 	end)
 	
 	it("reports an unterminated enum body", function()
@@ -980,6 +981,33 @@ describe("parser", function()
 				"	BAZ\n" ..
 				"\n")
 			end, "Unmatched '{' at UNKNOWN FILE:1 (at '{')")
+	end)
+	
+	it("parses enum definition with trailing comma", function()
+		local got
+		local expect
+		
+		got = parser.parse_text("enum myenum { FOO, BAR, BAZ, };")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", "myenum", {
+				{ "FOO" },
+				{ "BAR" },
+				{ "BAZ" },
+			}, nil },
+		}
+		
+		assert.are.same(expect, got)
+		
+		got = parser.parse_text("enum myenum { FOO = 1, BAR = 2, BAZ = 3, };")
+		expect = {
+			{ "UNKNOWN FILE", 1, "enum", "int", "myenum", {
+				{ "FOO", { "UNKNOWN FILE", 1, "num", 1 } },
+				{ "BAR", { "UNKNOWN FILE", 1, "num", 2 } },
+				{ "BAZ", { "UNKNOWN FILE", 1, "num", 3 } },
+			}, nil },
+		}
+		
+		assert.are.same(expect, got)
 	end)
 	
 	it("parses for loop", function()

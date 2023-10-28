@@ -40,7 +40,7 @@ Add the following lines to your `/etc/apt/sources.list` file:
     deb http://repos.solemnwarning.net/debian/ CODENAME main
     deb-src http://repos.solemnwarning.net/debian/ CODENAME main
 
-**NOTE:** Replace `CODENAME` with the version you're running (e.g. `bullseye` or `buster`).
+**NOTE:** Replace `CODENAME` with the version you're running (e.g. `bookworm` or `bullseye`).
 
 Finally, you can install the package:
 
@@ -56,17 +56,10 @@ First, you will need to add my APT signing key to your system:
 
 Add the following lines to your `/etc/apt/sources.list` file:
 
-If running Ubuntu 20.04 (Focal Fossa) or later:
-
     deb  [arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
     deb-src  [arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
 
-**NOTE:** Replace `CODENAME` with the version you're running (e.g. `focal` for 20.04 or `hirsute` for 21.04).
-
-If running Ubuntu 18.04 (Bionic Beaver):
-
-    deb http://repos.solemnwarning.net/ubuntu/ bionic main
-    deb-src http://repos.solemnwarning.net/ubuntu/ bionic main
+**NOTE:** Replace `CODENAME` with the version you're running (e.g. `focal` for 20.04 or `lunar` for 23.04).
 
 Finally, you can install the package:
 

@@ -99,6 +99,21 @@ func1(s);
 func2(t);
 [%- END %]
 
+<a name="string-nul-terminated"><h4>Nul terminated strings</h4></a>
+
+<p>
+The <code>ReadString()</code> function can be used to read a variable-length, nul-terminated string from the current file, combined with the <code>StringLengthBytes()</code> function, it is possible to mark nul-terminated strings in files as shown below:
+</p>
+
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-comment.tt" -%]
+/* Read the nul-terminated string from the file and then declare a char[] array
+ * of its length, plus one byte for the terminator.
+*/
+[%- END %]
+[% WRAPPER "code-type.tt" %]char[% END %] s[ StringLengthBytes(ReadString()) + 1 ];
+[%- END %]
+
 <a name="string-charset"><h4>Character Sets</h4></a>
 
 <p>

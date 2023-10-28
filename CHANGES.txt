@@ -2,6 +2,8 @@ Version TBA
 
  * Permit trailing commas in template enum definitions (#216).
 
+ * Add overwrite/insert toggle to "Fill range" dialog (#213).
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

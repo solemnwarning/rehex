@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -67,6 +67,21 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 		topsizer->Add(data_sizer, 0, wxEXPAND | wxALL, 10);
 	}
 	
+	{
+		wxBoxSizer *mode_sizer = new wxBoxSizer(wxHORIZONTAL);
+		
+		overwrite_mode = new wxRadioButton(this, wxID_ANY, "Overwrite data", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+		mode_sizer->Add(overwrite_mode, 0, wxALIGN_CENTER_VERTICAL);
+		
+		insert_mode = new wxRadioButton(this, wxID_ANY, "Insert data");
+		mode_sizer->Add(insert_mode, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+		
+		topsizer->Add(mode_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
+		
+		/* Default to overwrite mode. */
+		overwrite_mode->SetValue(true);
+	}
+	
 	topsizer->Add(
 		new wxStaticText(this, wxID_ANY, "Data will be truncated or repeated as\n"
 		                                 "necessary to fill the entire range."),
@@ -89,7 +104,7 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 	{
 		wxBoxSizer *to_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
-		range_to_enable = new wxRadioButton(this, wxID_ANY, "To offset");
+		range_to_enable = new wxRadioButton(this, wxID_ANY, "To offset", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 		to_sizer->Add(range_to_enable, 1, wxALIGN_CENTER_VERTICAL);
 		
 		range_to = new NumericTextCtrl(this, wxID_ANY, initial_to);
@@ -160,11 +175,19 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 		return;
 	}
 	
+	bool insert_mode_selected = insert_mode->GetValue();
+	
 	off_t doc_length = document.buffer_length();
 	off_t selection_off, selection_length;
 	
 	try {
-		selection_off = range_from->GetValue<off_t>(0, (doc_length - 1));
+		if(insert_mode_selected)
+		{
+			selection_off = range_from->GetValue<off_t>(0, doc_length);
+		}
+		else{
+			selection_off = range_from->GetValue<off_t>(0, (doc_length - 1));
+		}
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -178,8 +201,15 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 	if(range_to_enable->GetValue())
 	{
 		try {
-			off_t selection_to = range_to->GetValue<off_t>(selection_off, (doc_length - 1));
-			selection_length = (selection_to - selection_off) + 1;
+			if(insert_mode_selected)
+			{
+				off_t selection_to = range_to->GetValue<off_t>(selection_off);
+				selection_length = (selection_to - selection_off) + 1;
+			}
+			else{
+				off_t selection_to = range_to->GetValue<off_t>(selection_off, (doc_length - 1));
+				selection_length = (selection_to - selection_off) + 1;
+			}
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -192,7 +222,13 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 	else if(range_len_enable->GetValue())
 	{
 		try {
-			selection_length = range_len->GetValue<off_t>(0, (doc_length - selection_off));
+			if(insert_mode_selected)
+			{
+				selection_length = range_len->GetValue<off_t>(0);
+			}
+			else{
+				selection_length = range_len->GetValue<off_t>(0, (doc_length - selection_off));
+			}
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -229,8 +265,15 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 		return;
 	}
 	
-	document.overwrite_data(selection_off, data.data(), data.size(),
-		-1, Document::CSTATE_CURRENT, "fill range");
+	if(insert_mode_selected)
+	{
+		document.insert_data(selection_off, data.data(), data.size(),
+			-1, Document::CSTATE_CURRENT, "fill range");
+	}
+	else{
+		document.overwrite_data(selection_off, data.data(), data.size(),
+			-1, Document::CSTATE_CURRENT, "fill range");
+	}
 	
 	Close();
 }

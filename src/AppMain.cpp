@@ -348,6 +348,7 @@ int REHex::App::OnExit()
 	config->Write("last-directory", wxString(last_directory));
 	
 	settings->write(config);
+	config->Flush();
 	
 	delete ipc_server;
 	delete active_palette;

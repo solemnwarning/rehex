@@ -6,6 +6,8 @@ Version TBA
 
  * Add copy/export context menu commands to strings tool (#210).
 
+ * Fix temporary hang in strings tool when processing large files (#217).
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

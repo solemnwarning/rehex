@@ -598,12 +598,12 @@ void REHex::StringPanel::thread_main()
 			
 			is_really_string = is_i_string(true);
 			
-			while(!threads_pause && i < data.size() && is_i_string(false) == is_really_string)
+			while(!threads_pause && !threads_exit && i < data.size() && is_i_string(false) == is_really_string)
 			{
 				++num_codepoints;
 			}
 			
-			if(threads_pause)
+			if(threads_pause || threads_exit)
 			{
 				/* We are being paused to allow for data being inserted or erased.
 				 * This may invalidate the base and/or length of our window, so we
@@ -629,6 +629,12 @@ void REHex::StringPanel::thread_main()
 				thread_flush(&set_ranges, &clear_ranges, true);
 				
 				--running_threads;
+				
+				if(threads_exit)
+				{
+					--spawned_threads;
+					return;
+				}
 				
 				paused_cv.notify_all();
 				resume_cv.wait(pl, [this]() { return !threads_pause; });

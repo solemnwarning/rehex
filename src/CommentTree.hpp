@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,6 +24,7 @@
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
+#include "LoadingSpinner.hpp"
 #include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
@@ -34,7 +35,7 @@ namespace REHex {
 		public:
 			CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
-			void refresh_comments();
+			bool refresh_comments();
 			int get_max_comment_depth() const;
 			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
 			
@@ -78,6 +79,7 @@ namespace REHex {
 			std::set<values_elem_t*, ChildElemCompare> root;
 			
 			int max_comment_depth;
+			int pending_max_comment_depth;
 			
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
 			void re_add_item(values_elem_t *value, bool as_container);
@@ -107,14 +109,20 @@ namespace REHex {
 			wxDataViewColumn *offset_col, *text_col;
 			CommentTreeModel *model;
 			
+			LoadingSpinner *spinner;
+			
 			int historic_max_comment_depth;
+			bool refresh_running;
 			
 			void refresh_comments();
+			void reposition_spinner();
 			
 			void OnCommentModified(wxCommandEvent &event);
 			
 			void OnContextMenu(wxDataViewEvent &event);
 			void OnActivated(wxDataViewEvent &event);
+			void OnIdle(wxIdleEvent &event);
+			void OnSize(wxSizeEvent &event);
 			
 		/* Keep at end. */
 		DECLARE_EVENT_TABLE()

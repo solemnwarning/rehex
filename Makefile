@@ -356,6 +356,7 @@ APP_OBJS := \
 	src/IntelHexImport.o \
 	src/IPC.o \
 	src/LicenseDialog.o \
+	src/LoadingSpinner.o \
 	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \
 	src/LuaPluginLoader.o \
@@ -438,6 +439,7 @@ TEST_OBJS := \
 	src/IntelHexExport.o \
 	src/IntelHexImport.o \
 	src/LicenseDialog.o \
+	src/LoadingSpinner.o \
 	src/lua-bindings/rehex_bind.o \
 	src/lua-plugin-preload.o \
 	src/LuaPluginLoader.o \

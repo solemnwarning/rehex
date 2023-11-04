@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -51,13 +51,15 @@ enum {
 BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
 	EVT_DATAVIEW_ITEM_ACTIVATED(wxID_ANY, REHex::CommentTree::OnActivated)
+	EVT_IDLE(REHex::CommentTree::OnIdle)
 END_EVENT_TABLE()
 
 REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
 	document_ctrl(document_ctrl),
-	historic_max_comment_depth(0)
+	historic_max_comment_depth(0),
+	refresh_running(false)
 {
 	model = new CommentTreeModel(this->document, document_ctrl); /* Reference /class/ document pointer! */
 	
@@ -74,9 +76,19 @@ REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &documen
 	/* NOTE: This has to come after AssociateModel, or it will segfault. */
 	offset_col->SetSortOrder(true);
 	
+	spinner = new LoadingSpinner(this, wxID_ANY, wxPoint(0, 0), wxSize(32, 32), wxBORDER_SIMPLE);
+	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	sizer->Add(dvc, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
+	
+	dvc->Bind(wxEVT_SIZE, [&](wxSizeEvent &event)
+	{
+		reposition_spinner();
+		event.Skip();
+	});
+	
+	reposition_spinner();
 	
 	this->document.auto_cleanup_bind(EV_COMMENT_MODIFIED, &REHex::CommentTree::OnCommentModified, this);
 	
@@ -116,7 +128,19 @@ wxSize REHex::CommentTree::DoGetBestClientSize() const
 
 void REHex::CommentTree::refresh_comments()
 {
-	model->refresh_comments();
+	if(!refresh_running)
+	{
+		refresh_running = true;
+		spinner->Show();
+	}
+	
+	bool changed = model->refresh_comments();
+	if(!changed)
+	{
+		refresh_running = false;
+		spinner->Hide();
+		return;
+	}
 	
 	#ifdef __WXGTK__
 	/* wxGTK doesn't account for the expander arrow when using wxCOL_WIDTH_AUTOSIZE, so we need
@@ -168,6 +192,18 @@ void REHex::CommentTree::refresh_comments()
 	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	
 	dvc->Refresh();
+}
+
+void REHex::CommentTree::reposition_spinner()
+{
+	wxSize dvc_size = dvc->GetSize();
+	wxPoint dvc_pos = dvc->GetPosition();
+	
+	wxSize spinner_size = spinner->GetSize();
+	
+	spinner->SetPosition(wxPoint(
+		(dvc_pos.x + dvc_size.GetWidth() - spinner_size.GetWidth()),
+		(dvc_pos.y + dvc_size.GetHeight() - spinner_size.GetHeight())));
 }
 
 void REHex::CommentTree::OnCommentModified(wxCommandEvent &event)
@@ -285,26 +321,44 @@ void REHex::CommentTree::OnActivated(wxDataViewEvent &event)
 	});
 }
 
+void REHex::CommentTree::OnIdle(wxIdleEvent &event)
+{
+	if(refresh_running)
+	{
+		refresh_comments();
+		
+		if(refresh_running)
+		{
+			event.RequestMore();
+		}
+	}
+}
+
 REHex::CommentTreeModel::CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	document(document),
 	document_ctrl(document_ctrl),
-	max_comment_depth(-1) {}
+	max_comment_depth(-1),
+	pending_max_comment_depth(-1) {}
 
-void REHex::CommentTreeModel::refresh_comments()
+#define MAX_CHANGES 100
+
+bool REHex::CommentTreeModel::refresh_comments()
 {
 	PROFILE_BLOCK("REHex::CommentTreeModel::refresh_comments");
 	
 	const ByteRangeTree<Document::Comment> &comments = document->get_comments();
+	unsigned num_changed = 0;
 	
 	/* Erase any comments which no longer exist, or are children of such. */
 	
-	for(auto i = values.begin(); i != values.end();)
+	for(auto i = values.begin(); num_changed < MAX_CHANGES && i != values.end();)
 	{
 		values_elem_t *value = &(*i);
 		
 		if(comments.find(value->first) == comments.end())
 		{
 			i = erase_value(i);
+			++num_changed;
 		}
 		else{
 			++i;
@@ -313,14 +367,12 @@ void REHex::CommentTreeModel::refresh_comments()
 	
 	/* Add any comments which we don't already have registered. */
 	
-	max_comment_depth = -1;
-	
 	std::function<void(const ByteRangeTree<Document::Comment>::Node*, values_elem_t*, int)> add_comment;
 	add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment, values_elem_t *parent, int depth)
 	{
-		if(depth > max_comment_depth)
+		if(depth > pending_max_comment_depth)
 		{
-			max_comment_depth = depth;
+			pending_max_comment_depth = depth;
 		}
 		
 		auto x = values.emplace(std::make_pair(comment->key, CommentData(parent, comment->value.text)));
@@ -361,6 +413,7 @@ void REHex::CommentTreeModel::refresh_comments()
 			}
 			
 			ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+			++num_changed;
 		}
 		else if(value->second.text.get() != comment->value.text.get())
 		{
@@ -368,18 +421,28 @@ void REHex::CommentTreeModel::refresh_comments()
 			
 			value->second.text = comment->value.text;
 			ItemChanged(wxDataViewItem((void*)(value)));
+			
+			++num_changed;
 		}
 		
-		for(auto child = comment->get_first_child(); child != NULL; child = child->get_next())
+		for(auto child = comment->get_first_child(); child != NULL && num_changed < MAX_CHANGES; child = child->get_next())
 		{
 			add_comment(child, value, depth + 1);
 		}
 	};
 	
-	for(auto comment = comments.first_root_node(); comment != NULL; comment = comment->get_next())
+	for(auto comment = comments.first_root_node(); comment != NULL && num_changed < MAX_CHANGES; comment = comment->get_next())
 	{
 		add_comment(comment, NULL, 0);
 	}
+	
+	if(num_changed < MAX_CHANGES)
+	{
+		max_comment_depth = pending_max_comment_depth;
+		pending_max_comment_depth = -1;
+	}
+	
+	return num_changed > 0;
 }
 
 int REHex::CommentTreeModel::get_max_comment_depth() const

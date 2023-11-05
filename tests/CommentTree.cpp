@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2023 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -737,6 +737,253 @@ TEST(CommentTree, ModifyComment)
 	check_values(model,
 		"0000:000A+hello",
 		"0000:0014+20,10",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, SetFilter)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc->insert_data(0, z1k, 1024);
+	doc->set_comment(0, 0,   REHex::Document::Comment("foo"));
+	doc->set_comment(10, 10, REHex::Document::Comment("bar"));
+	doc->set_comment(20, 0,  REHex::Document::Comment("baz"));
+	
+	CommentTreeModel *model = new CommentTreeModel(doc, doc_ctrl);
+	
+	model->set_filter_text("a");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"bar\")",
+		"ItemAdded(\"(null)\", \"baz\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:000A+bar",
+		"0000:0014+baz",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, ClearFilter)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc->insert_data(0, z1k, 1024);
+	doc->set_comment(0, 0,   REHex::Document::Comment("foo"));
+	doc->set_comment(10, 10, REHex::Document::Comment("bar"));
+	doc->set_comment(20, 0,  REHex::Document::Comment("baz"));
+	
+	CommentTreeModel *model = new CommentTreeModel(doc, doc_ctrl);
+	
+	model->set_filter_text("a");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"bar\")",
+		"ItemAdded(\"(null)\", \"baz\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:000A+bar",
+		"0000:0014+baz",
+		NULL
+	);
+	
+	model->set_filter_text("");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"foo\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:0000+foo",
+		"0000:000A+bar",
+		"0000:0014+baz",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, ChangeFilter)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc->insert_data(0, z1k, 1024);
+	doc->set_comment(0, 0,   REHex::Document::Comment("foo"));
+	doc->set_comment(10, 10, REHex::Document::Comment("bar"));
+	doc->set_comment(20, 0,  REHex::Document::Comment("baz"));
+	
+	CommentTreeModel *model = new CommentTreeModel(doc, doc_ctrl);
+	
+	model->set_filter_text("a");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"bar\")",
+		"ItemAdded(\"(null)\", \"baz\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:000A+bar",
+		"0000:0014+baz",
+		NULL
+	);
+	
+	model->set_filter_text("ar");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemDeleted(\"(null)\", \"baz\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:000A+bar",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, FilterMatchesRootNode)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc->insert_data(0, z1k, 1024);
+	doc->set_comment(0,   100, REHex::Document::Comment("frantic"));
+	doc->set_comment(0,    50, REHex::Document::Comment("popcorn"));
+	doc->set_comment(0,    20, REHex::Document::Comment("evasive"));
+	doc->set_comment(60,   20, REHex::Document::Comment("loss"));
+	doc->set_comment(200, 100, REHex::Document::Comment("curly"));
+	doc->set_comment(220,  50, REHex::Document::Comment("slap"));
+	
+	CommentTreeModel *model = new CommentTreeModel(doc, doc_ctrl);
+	
+	model->set_filter_text("curly");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"curly\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:00C8+curly",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, FilterMatchesIntermediateNode)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc->insert_data(0, z1k, 1024);
+	doc->set_comment(0,   100, REHex::Document::Comment("frantic"));
+	doc->set_comment(0,    50, REHex::Document::Comment("popcorn"));
+	doc->set_comment(0,    20, REHex::Document::Comment("evasive"));
+	doc->set_comment(60,   20, REHex::Document::Comment("loss"));
+	doc->set_comment(200, 100, REHex::Document::Comment("curly"));
+	doc->set_comment(220,  50, REHex::Document::Comment("slap"));
+	
+	CommentTreeModel *model = new CommentTreeModel(doc, doc_ctrl);
+	
+	model->set_filter_text("corn");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"frantic\")",
+		"ItemDeleted(\"(null)\", \"frantic\")",
+		"ItemAdded(\"(null)\", \"frantic\" (container))",
+		"ItemAdded(\"frantic\", \"popcorn\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:0000+frantic",
+		"0000:0000+frantic/0000:0000+popcorn",
+		NULL
+	);
+	
+	model->DecRef();
+}
+
+TEST(CommentTree, FilterMatchesDeepNode)
+{
+	SharedDocumentPointer doc(SharedDocumentPointer::make());
+	
+	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	unsigned char z1k[1024];
+	memset(z1k, 0, 1024);
+	
+	doc->insert_data(0, z1k, 1024);
+	doc->set_comment(0,   100, REHex::Document::Comment("frantic"));
+	doc->set_comment(0,    50, REHex::Document::Comment("popcorn"));
+	doc->set_comment(0,    20, REHex::Document::Comment("evasive"));
+	doc->set_comment(60,   20, REHex::Document::Comment("loss"));
+	doc->set_comment(200, 100, REHex::Document::Comment("curly"));
+	doc->set_comment(220,  50, REHex::Document::Comment("slap"));
+	
+	CommentTreeModel *model = new CommentTreeModel(doc, doc_ctrl);
+	
+	model->set_filter_text("evasive");
+	
+	refresh_check_notifications(model, [](){},
+		"ItemAdded(\"(null)\", \"frantic\")",
+		"ItemDeleted(\"(null)\", \"frantic\")",
+		"ItemAdded(\"(null)\", \"frantic\" (container))",
+		"ItemAdded(\"frantic\", \"popcorn\")",
+		"ItemAdded(\"frantic\", \"\")",
+		"ItemDeleted(\"frantic\", \"popcorn\")",
+		"ItemAdded(\"frantic\", \"popcorn\" (container))",
+		"ItemDeleted(\"frantic\", \"\")",
+		"ItemAdded(\"popcorn\", \"evasive\")",
+		NULL
+	);
+	
+	check_values(model,
+		"0000:0000+frantic",
+		"0000:0000+frantic/0000:0000+popcorn",
+		"0000:0000+frantic/0000:0000+popcorn/0000:0000+evasive",
 		NULL
 	);
 	

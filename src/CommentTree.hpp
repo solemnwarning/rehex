@@ -19,8 +19,10 @@
 #define REHEX_COMMENTTREE_HPP
 
 #include <set>
+#include <string>
 #include <wx/dataview.h>
 #include <wx/panel.h>
+#include <wx/textctrl.h>
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
@@ -38,6 +40,9 @@ namespace REHex {
 			bool refresh_comments();
 			int get_max_comment_depth() const;
 			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
+			
+			void set_filter_text(const wxString &filter_text);
+			wxString get_filter_text() const;
 			
 			virtual int Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
 			virtual unsigned int GetChildren(const wxDataViewItem &item, wxDataViewItemArray &children) const override;
@@ -81,8 +86,12 @@ namespace REHex {
 			int max_comment_depth;
 			int pending_max_comment_depth;
 			
+			wxString filter_text;
+			
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
 			void re_add_item(values_elem_t *value, bool as_container);
+			
+			bool comment_or_child_matches_filter(const ByteRangeTree<Document::Comment>::Node *comment);
 	};
 	
 	class CommentTree: public ToolPanel
@@ -105,6 +114,8 @@ namespace REHex {
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
+			wxTextCtrl *filter_textctrl;
+			
 			wxDataViewCtrl *dvc;
 			wxDataViewColumn *offset_col, *text_col;
 			CommentTreeModel *model;
@@ -123,6 +134,7 @@ namespace REHex {
 			void OnActivated(wxDataViewEvent &event);
 			void OnIdle(wxIdleEvent &event);
 			void OnSize(wxSizeEvent &event);
+			void OnFilterTextChange(wxCommandEvent &event);
 			
 		/* Keep at end. */
 		DECLARE_EVENT_TABLE()

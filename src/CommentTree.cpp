@@ -20,7 +20,9 @@
 #include <functional>
 #include <stack>
 #include <utility>
+#include <wx/artprov.h>
 #include <wx/clipbrd.h>
+#include <wx/statbmp.h>
 
 #ifdef __WXGTK__
 #include <gtk/gtk.h>
@@ -43,6 +45,7 @@ enum {
 	ID_COPY_COMMENT,
 	ID_GOTO,
 	ID_SELECT,
+	ID_FILTER_TEXT,
 };
 
 #define MODEL_OFFSET_COLUMN 0
@@ -52,6 +55,8 @@ BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
 	EVT_DATAVIEW_ITEM_ACTIVATED(wxID_ANY, REHex::CommentTree::OnActivated)
 	EVT_IDLE(REHex::CommentTree::OnIdle)
+	
+	EVT_TEXT(ID_FILTER_TEXT, REHex::CommentTree::OnFilterTextChange)
 END_EVENT_TABLE()
 
 REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
@@ -62,6 +67,19 @@ REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &documen
 	refresh_running(false)
 {
 	model = new CommentTreeModel(this->document, document_ctrl); /* Reference /class/ document pointer! */
+	
+	wxBoxSizer *filter_sizer = new wxBoxSizer(wxHORIZONTAL);
+	
+	filter_textctrl = new wxTextCtrl(this, ID_FILTER_TEXT);
+	filter_textctrl->SetHint("Search text");
+	
+	int filter_height = filter_textctrl->GetSize().GetHeight();
+	
+	wxBitmap find_bitmap = wxArtProvider::GetBitmap(wxART_FIND, wxART_FRAME_ICON, wxSize(filter_height, filter_height));
+	wxStaticBitmap *filter_sbmp = new wxStaticBitmap(this, wxID_ANY, find_bitmap);
+	
+	filter_sizer->Add(filter_sbmp, 0);
+	filter_sizer->Add(filter_textctrl, 1);
 	
 	dvc = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
 	
@@ -79,6 +97,7 @@ REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &documen
 	spinner = new LoadingSpinner(this, wxID_ANY, wxPoint(0, 0), wxSize(32, 32), wxBORDER_SIMPLE);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+	sizer->Add(filter_sizer, 0, wxEXPAND);
 	sizer->Add(dvc, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
@@ -334,6 +353,12 @@ void REHex::CommentTree::OnIdle(wxIdleEvent &event)
 	}
 }
 
+void REHex::CommentTree::OnFilterTextChange(wxCommandEvent &event)
+{
+	model->set_filter_text(filter_textctrl->GetValue());
+	refresh_comments();
+}
+
 REHex::CommentTreeModel::CommentTreeModel(SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	document(document),
 	document_ctrl(document_ctrl),
@@ -355,7 +380,8 @@ bool REHex::CommentTreeModel::refresh_comments()
 	{
 		values_elem_t *value = &(*i);
 		
-		if(comments.find(value->first) == comments.end())
+		auto comment = comments.find_node(value->first);
+		if(comment == NULL || !comment_or_child_matches_filter(comment))
 		{
 			i = erase_value(i);
 			++num_changed;
@@ -373,6 +399,11 @@ bool REHex::CommentTreeModel::refresh_comments()
 		if(depth > pending_max_comment_depth)
 		{
 			pending_max_comment_depth = depth;
+		}
+		
+		if(!comment_or_child_matches_filter(comment))
+		{
+			return;
 		}
 		
 		auto x = values.emplace(std::make_pair(comment->key, CommentData(parent, comment->value.text)));
@@ -445,6 +476,29 @@ bool REHex::CommentTreeModel::refresh_comments()
 	return num_changed > 0;
 }
 
+bool REHex::CommentTreeModel::comment_or_child_matches_filter(const ByteRangeTree<Document::Comment>::Node *comment)
+{
+	if(filter_text.empty())
+	{
+		return true;
+	}
+	
+	if(comment->value.text.get()->Find(filter_text) != wxNOT_FOUND)
+	{
+		return true;
+	}
+	
+	for(auto child = comment->get_first_child(); child != NULL; child = child->get_next())
+	{
+		if(comment_or_child_matches_filter(child))
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
 int REHex::CommentTreeModel::get_max_comment_depth() const
 {
 	return max_comment_depth;
@@ -453,6 +507,16 @@ int REHex::CommentTreeModel::get_max_comment_depth() const
 const REHex::NestedOffsetLengthMapKey *REHex::CommentTreeModel::dv_item_to_key(const wxDataViewItem &item)
 {
 	return (const NestedOffsetLengthMapKey*)(item.GetID());
+}
+
+void REHex::CommentTreeModel::set_filter_text(const wxString &filter_text)
+{
+	this->filter_text = filter_text;
+}
+
+wxString REHex::CommentTreeModel::get_filter_text() const
+{
+	return filter_text;
 }
 
 std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator REHex::CommentTreeModel::erase_value(std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator value_i)

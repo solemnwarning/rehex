@@ -24,10 +24,12 @@
 
 BEGIN_EVENT_TABLE(REHex::LoadingSpinner, wxControl)
 	EVT_PAINT(REHex::LoadingSpinner::OnPaint)
+	EVT_TIMER(wxID_ANY, REHex::LoadingSpinner::OnRepaintTimer)
 END_EVENT_TABLE()
 
 REHex::LoadingSpinner::LoadingSpinner(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style):
-	wxControl(parent, id, pos, size, style)
+	wxControl(parent, id, pos, size, style),
+	repaint_timer(this, wxID_ANY)
 {
 	SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_LISTBOX));
 	SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
@@ -70,7 +72,12 @@ void REHex::LoadingSpinner::OnPaint(wxPaintEvent &event)
 		ms_per_tick = 160;
 	}
 	
-	int current_dot = (wxGetUTCTimeMillis().GetLo() / ms_per_tick) % total_dots;
+	unsigned long now = wxGetUTCTimeMillis().GetLo();
+	
+	int current_dot = (now / ms_per_tick) % total_dots;
+	
+	int next_step_in = ms_per_tick - (now % ms_per_tick);
+	repaint_timer.Start(next_step_in, wxTIMER_ONE_SHOT);
 	
 	wxPoint origin((client_size.GetWidth() / 2), (client_size.GetHeight() / 2));
 	
@@ -130,4 +137,9 @@ void REHex::LoadingSpinner::OnPaint(wxPaintEvent &event)
 		
 		delete gc;
 	}
+}
+
+void REHex::LoadingSpinner::OnRepaintTimer(wxTimerEvent &event)
+{
+	Refresh();
 }

@@ -196,19 +196,31 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	
 	virtual bool ItemsAdded(const wxDataViewItem &parent, const wxDataViewItemArray &items) override
 	{
-		events.push_back("ItemsAdded(XXX)");
+		for(size_t i = 0; i < items.GetCount(); ++i)
+		{
+			ItemAdded(parent, items[i]);
+		}
+		
 		return true;
 	}
 	
 	virtual bool ItemsChanged(const wxDataViewItemArray &items) override
 	{
-		events.push_back("ItemsChanged(XXX)");
+		for(size_t i = 0; i < items.GetCount(); ++i)
+		{
+			ItemChanged(items[i]);
+		}
+		
 		return true;
 	}
 	
 	virtual bool ItemsDeleted(const wxDataViewItem &parent, const wxDataViewItemArray &items) override
 	{
-		events.push_back("ItemsDeleted(XXX)");
+		for(size_t i = 0; i < items.GetCount(); ++i)
+		{
+			ItemDeleted(parent, items[i]);
+		}
+		
 		return true;
 	}
 	

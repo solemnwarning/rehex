@@ -156,12 +156,17 @@ void REHex::CommentTree::refresh_comments()
 	bool changed = model->refresh_comments();
 	if(!changed)
 	{
+		#ifdef __APPLE__
+		offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+		text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+		#endif
+		
 		refresh_running = false;
 		spinner->Hide();
 		return;
 	}
 	
-	#ifdef __WXGTK__
+	#if defined(__WXGTK__)
 	/* wxGTK doesn't account for the expander arrow when using wxCOL_WIDTH_AUTOSIZE, so we need
 	 * to calculate the width ourselves...
 	 *
@@ -204,11 +209,27 @@ void REHex::CommentTree::refresh_comments()
 		offset_col->SetWidth(offset_size.GetWidth() + ((max_comment_depth + 1) * expander_size) + (max_comment_depth * extra_indent));
 	}
 	
+	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+	
+	#elif defined(__APPLE__)
+	/* wxDataViewColumn::SetWidth() is somewhat expensive on macOS and makes the columns
+	 * twitch around, so we only update the column widths when the maximum depth increases, or
+	 * when a refresh finishes (see above).
+	*/
+	
+	int max_comment_depth = model->get_max_comment_depth();
+	if(max_comment_depth > historic_max_comment_depth)
+	{
+		historic_max_comment_depth = max_comment_depth;
+		
+		offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+		text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+	}
+	
 	#else
 	offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
-	#endif
-	
 	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
+	#endif
 	
 	dvc->Refresh();
 }
@@ -443,7 +464,7 @@ bool REHex::CommentTreeModel::refresh_comments()
 				parent->second.children.insert(value);
 			}
 			
-			ItemAdded(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
+			batched_item_added(wxDataViewItem(parent), wxDataViewItem((void*)(value)));
 			++num_changed;
 		}
 		else if(value->second.text.get() != comment->value.text.get())
@@ -451,7 +472,7 @@ bool REHex::CommentTreeModel::refresh_comments()
 			/* Text has changed. */
 			
 			value->second.text = comment->value.text;
-			ItemChanged(wxDataViewItem((void*)(value)));
+			batched_item_changed(wxDataViewItem((void*)(value)));
 			
 			++num_changed;
 		}
@@ -472,6 +493,8 @@ bool REHex::CommentTreeModel::refresh_comments()
 		max_comment_depth = pending_max_comment_depth;
 		pending_max_comment_depth = -1;
 	}
+	
+	batched_item_flush();
 	
 	return num_changed > 0;
 }
@@ -530,6 +553,13 @@ std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>:
 		erase_value(values.find(child->first));
 	}
 	
+	#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+	if(!accumulated_items_to_add.IsEmpty() || !accumulated_items_to_change.IsEmpty())
+	{
+		batched_item_flush();
+	}
+	#endif
+	
 	bool parent_became_empty = false;
 	if(parent == NULL)
 	{
@@ -542,7 +572,7 @@ std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>:
 	
 	auto next_value_i = values.erase(value_i);
 	
-	ItemDeleted(wxDataViewItem(parent), wxDataViewItem(value));
+	batched_item_deleted(wxDataViewItem(parent), wxDataViewItem(value));
 	
 	if(parent_became_empty)
 	{
@@ -572,9 +602,16 @@ void REHex::CommentTreeModel::re_add_item(values_elem_t *value, bool as_containe
 	if(parent != NULL && parent->second.children.size() == 1U)
 	{
 		parent->second.children.insert(&placeholder);
-		ItemAdded(wxDataViewItem(parent), wxDataViewItem(&placeholder));
+		batched_item_added(wxDataViewItem(parent), wxDataViewItem(&placeholder));
 		added_placeholder = true;
 	}
+	
+	#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+	if(!accumulated_items_to_add.IsEmpty() || !accumulated_items_to_change.IsEmpty())
+	{
+		batched_item_flush();
+	}
+	#endif
 	
 	if(parent != NULL)
 	{
@@ -584,7 +621,7 @@ void REHex::CommentTreeModel::re_add_item(values_elem_t *value, bool as_containe
 		root.erase(value);
 	}
 	
-	ItemDeleted(wxDataViewItem(parent), wxDataViewItem(value));
+	batched_item_deleted(wxDataViewItem(parent), wxDataViewItem(value));
 	
 	value->second.is_container = as_container;
 	
@@ -596,13 +633,103 @@ void REHex::CommentTreeModel::re_add_item(values_elem_t *value, bool as_containe
 		root.insert(value);
 	}
 	
-	ItemAdded(wxDataViewItem(parent), wxDataViewItem(value));
+	batched_item_added(wxDataViewItem(parent), wxDataViewItem(value));
 	
 	if(added_placeholder)
 	{
 		parent->second.children.erase(&placeholder);
-		ItemDeleted(wxDataViewItem(parent), wxDataViewItem(&placeholder));
+		batched_item_deleted(wxDataViewItem(parent), wxDataViewItem(&placeholder));
 	}
+}
+
+void REHex::CommentTreeModel::batched_item_added(const wxDataViewItem &parent, const wxDataViewItem &item)
+{
+	#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+	if(accumulated_items_to_add.GetCount() >= COMMENTREEEMODEL_MAX_BATCHED_UPDATES
+		|| !accumulated_items_to_delete.IsEmpty()
+		|| !accumulated_items_to_change.IsEmpty()
+		|| accumulated_items_parent != parent)
+	{
+		batched_item_flush();
+	}
+	
+	accumulated_items_parent = parent;
+	accumulated_items_to_add.Add(item);
+	
+	#else
+	ItemAdded(parent, item);
+	
+	#endif
+}
+
+void REHex::CommentTreeModel::batched_item_deleted(const wxDataViewItem &parent, const wxDataViewItem &item)
+{
+	#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+	if(accumulated_items_to_delete.GetCount() >= COMMENTREEEMODEL_MAX_BATCHED_UPDATES
+		|| !accumulated_items_to_add.IsEmpty()
+		|| !accumulated_items_to_change.IsEmpty()
+		|| accumulated_items_parent != parent)
+	{
+		batched_item_flush();
+	}
+	
+	accumulated_items_parent = parent;
+	accumulated_items_to_delete.Add(item);
+	
+	#else
+	ItemDeleted(parent, item);
+	
+	#endif
+}
+
+void REHex::CommentTreeModel::batched_item_changed(const wxDataViewItem &item)
+{
+	#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+	if(accumulated_items_to_change.GetCount() >= COMMENTREEEMODEL_MAX_BATCHED_UPDATES
+		|| !accumulated_items_to_add.IsEmpty()
+		|| !accumulated_items_to_delete.IsEmpty())
+	{
+		batched_item_flush();
+	}
+	
+	accumulated_items_to_change.Add(item);
+	
+	#else
+	ItemChanged(item);
+	
+	#endif
+}
+
+void REHex::CommentTreeModel::batched_item_flush()
+{
+	#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+	
+	if(!accumulated_items_to_add.IsEmpty())
+	{
+		assert(accumulated_items_to_delete.IsEmpty());
+		assert(accumulated_items_to_change.IsEmpty());
+		
+		ItemsAdded(accumulated_items_parent, accumulated_items_to_add);
+		accumulated_items_to_add.Empty();
+	}
+	else if(!accumulated_items_to_delete.IsEmpty())
+	{
+		assert(accumulated_items_to_add.IsEmpty());
+		assert(accumulated_items_to_change.IsEmpty());
+		
+		ItemsDeleted(accumulated_items_parent, accumulated_items_to_delete);
+		accumulated_items_to_delete.Empty();
+	}
+	else if(!accumulated_items_to_change.IsEmpty())
+	{
+		assert(accumulated_items_to_add.IsEmpty());
+		assert(accumulated_items_to_delete.IsEmpty());
+		
+		ItemsChanged(accumulated_items_to_change);
+		accumulated_items_to_change.Empty();
+	}
+	
+	#endif
 }
 
 int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const

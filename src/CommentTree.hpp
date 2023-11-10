@@ -31,6 +31,25 @@
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
+/* wxDataViewModel has two ways of being notified of updates - individually (e.g. calling
+ * wxDataViewModel::ItemAdded()), or batched (e.g. calling wxDataViewModel::ItemsAdded()).
+ *
+ * In theory, the batched approach should be as fast as doing the updates or faster on platforms
+ * whose native treeview-ish control support batch updates.
+ *
+ * In my testing, this is not the case.
+ *
+ * macOS is painfully slow at doing lots of individual updates and fast at doing batched updates.
+ * Windows is fast at doing lots of individual updates and slightly slower if you batch them.
+ * GTK is somewhat slow at doing lots of individual updates, and even slower if they are batched.
+ *
+ * So we only batch wxDataViewModel updates on macOS.
+*/
+#ifdef __APPLE__
+#define COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+#define COMMENTREEEMODEL_MAX_BATCHED_UPDATES 128
+#endif
+
 namespace REHex {
 	class CommentTreeModel: public wxDataViewModel
 	{
@@ -90,6 +109,18 @@ namespace REHex {
 			
 			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
 			void re_add_item(values_elem_t *value, bool as_container);
+			
+			#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
+			wxDataViewItemArray accumulated_items_to_add;
+			wxDataViewItemArray accumulated_items_to_delete;
+			wxDataViewItemArray accumulated_items_to_change;
+			wxDataViewItem accumulated_items_parent;
+			#endif
+			
+			void batched_item_added(const wxDataViewItem &parent, const wxDataViewItem &item);
+			void batched_item_deleted(const wxDataViewItem &parent, const wxDataViewItem &item);
+			void batched_item_changed(const wxDataViewItem &item);
+			void batched_item_flush();
 			
 			bool comment_or_child_matches_filter(const ByteRangeTree<Document::Comment>::Node *comment);
 	};

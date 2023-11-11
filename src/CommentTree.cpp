@@ -46,6 +46,7 @@ enum {
 	ID_GOTO,
 	ID_SELECT,
 	ID_FILTER_TEXT,
+	ID_REFRESH_TIMER,
 };
 
 #define MODEL_OFFSET_COLUMN 0
@@ -54,7 +55,7 @@ enum {
 BEGIN_EVENT_TABLE(REHex::CommentTree, wxPanel)
 	EVT_DATAVIEW_ITEM_CONTEXT_MENU(wxID_ANY, REHex::CommentTree::OnContextMenu)
 	EVT_DATAVIEW_ITEM_ACTIVATED(wxID_ANY, REHex::CommentTree::OnActivated)
-	EVT_IDLE(REHex::CommentTree::OnIdle)
+	EVT_TIMER(ID_REFRESH_TIMER, REHex::CommentTree::OnRefreshTimer)
 	
 	EVT_TEXT(ID_FILTER_TEXT, REHex::CommentTree::OnFilterTextChange)
 END_EVENT_TABLE()
@@ -64,7 +65,8 @@ REHex::CommentTree::CommentTree(wxWindow *parent, SharedDocumentPointer &documen
 	document(document),
 	document_ctrl(document_ctrl),
 	historic_max_comment_depth(0),
-	refresh_running(false)
+	refresh_running(false),
+	refresh_timer(this, ID_REFRESH_TIMER)
 {
 	model = new CommentTreeModel(this->document, document_ctrl); /* Reference /class/ document pointer! */
 	
@@ -151,6 +153,8 @@ void REHex::CommentTree::refresh_comments()
 	{
 		refresh_running = true;
 		spinner->Show();
+		
+		Bind(wxEVT_IDLE, &REHex::CommentTree::OnIdle, this);
 	}
 	
 	bool changed = model->refresh_comments();
@@ -161,10 +165,18 @@ void REHex::CommentTree::refresh_comments()
 		text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 		#endif
 		
+		refresh_timer.Stop();
+		Unbind(wxEVT_IDLE, &REHex::CommentTree::OnIdle, this);
+		
 		refresh_running = false;
 		spinner->Hide();
 		return;
 	}
+	
+	/* Schedule a timer to do another update step in case the system is too busy for us to be
+	 * given any idle time slots.
+	*/
+	refresh_timer.Start(MAX_IDLE_WAIT_MS, wxTIMER_ONE_SHOT);
 	
 	#if defined(__WXGTK__)
 	/* wxGTK doesn't account for the expander arrow when using wxCOL_WIDTH_AUTOSIZE, so we need
@@ -371,6 +383,14 @@ void REHex::CommentTree::OnIdle(wxIdleEvent &event)
 		{
 			event.RequestMore();
 		}
+	}
+}
+
+void REHex::CommentTree::OnRefreshTimer(wxTimerEvent &event)
+{
+	if(refresh_running)
+	{
+		refresh_comments();
 	}
 }
 

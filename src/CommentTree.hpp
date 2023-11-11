@@ -23,6 +23,7 @@
 #include <wx/dataview.h>
 #include <wx/panel.h>
 #include <wx/textctrl.h>
+#include <wx/timer.h>
 
 #include "CodeCtrl.hpp"
 #include "document.hpp"
@@ -142,6 +143,9 @@ namespace REHex {
 			virtual wxSize DoGetBestClientSize() const override;
 			
 		private:
+			/* Maximum time to wait for an idle event when updating the comments. */
+			static const int MAX_IDLE_WAIT_MS = 50;
+			
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
@@ -155,6 +159,7 @@ namespace REHex {
 			
 			int historic_max_comment_depth;
 			bool refresh_running;
+			wxTimer refresh_timer;
 			
 			void refresh_comments();
 			void reposition_spinner();
@@ -164,6 +169,7 @@ namespace REHex {
 			void OnContextMenu(wxDataViewEvent &event);
 			void OnActivated(wxDataViewEvent &event);
 			void OnIdle(wxIdleEvent &event);
+			void OnRefreshTimer(wxTimerEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnFilterTextChange(wxCommandEvent &event);
 			

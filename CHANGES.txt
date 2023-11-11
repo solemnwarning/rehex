@@ -12,6 +12,8 @@ Version TBA
 
  * Batch comments panel updates to improve responsiveness (#205).
 
+ * Add search field to comments panel (#204).
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

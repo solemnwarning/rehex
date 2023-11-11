@@ -19,6 +19,7 @@
 #define REHEX_LOADINGSPINNER_HPP
 
 #include <wx/control.h>
+#include <wx/timer.h>
 
 namespace REHex
 {
@@ -39,6 +40,9 @@ namespace REHex
 			
 		private:
 			void OnPaint(wxPaintEvent &event);
+			void OnRepaintTimer(wxTimerEvent &event);
+			
+			wxTimer repaint_timer;
 			
 		/* Keep at end. */
 		DECLARE_EVENT_TABLE()

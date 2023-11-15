@@ -517,21 +517,21 @@ $(EMBED_EXE): tools/embed.cpp
 $(GTKCONFIG_EXE): tools/gtk-config.cpp
 	$(CXX) $(CXXFLAGS_NO_GTK) $(WX_CXXFLAGS) -o $@ $<
 
-src/AboutDialog.o: res/icon128.h
-src/ArtProvider.o: \
+src/AboutDialog.$(BUILD_TYPE).o: res/icon128.h
+src/ArtProvider.$(BUILD_TYPE).o: \
 	res/ascii16.h res/ascii24.h res/ascii32.h res/ascii48.h \
 	res/diff_fold16.h res/diff_fold24.h res/diff_fold32.h res/diff_fold48.h \
 	res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
-src/BitmapTool.o: \
+src/BitmapTool.$(BUILD_TYPE).o: \
 	res/actual_size16.h res/fit_to_screen16.h res/swap_horiz16.h \
 	res/swap_vert16.h res/zoom_in16.h res/zoom_out16.h
-src/DataHistogramPanel.o: \
+src/DataHistogramPanel.$(BUILD_TYPE).o: \
 	res/spinner24.h res/zoom_in16.h res/zoom_out16.h
-src/DiffWindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
-src/LicenseDialog.o: res/license.h
-src/LuaPluginLoader.o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h
-src/mainwindow.o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
-src/StringPanel.o: res/spinner24.h
+src/DiffWindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
+src/LicenseDialog.$(BUILD_TYPE).o: res/license.h
+src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h
+src/mainwindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
+src/StringPanel.$(BUILD_TYPE).o: res/spinner24.h
 
 res/license.done: LICENSE.txt $(EMBED_EXE)
 	$(EMBED_EXE) $< LICENSE_TXT res/license.c res/license.h

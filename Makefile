@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -75,29 +75,33 @@ ifeq ($(need_compiler_flags),1)
 	GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
 endif
 
-ifeq ($(DEBUG),)
-	DEBUG=0
+BASE_CFLAGS := -Wall
+
+DEBUG_CFLAGS   := -ggdb
+RELEASE_CFLAGS := -g -O2 -DNDEBUG
+PROFILE_CFLAGS := $(RELEASE_CFLAGS) -DREHEX_PROFILE
+
+ifeq ($(BUILD_TYPE),)
+	BUILD_TYPE := release
 endif
 
-ifeq ($(DEBUG),0)
-	DEBUG_CFLAGS := -DNDEBUG
+ifeq ($(BUILD_TYPE),release)
+	BASE_CFLAGS += $(RELEASE_CFLAGS)
 else
-	DEBUG_CFLAGS := -ggdb
+	ifeq ($(BUILD_TYPE),debug)
+		BASE_CFLAGS += $(DEBUG_CFLAGS)
+	else
+		ifeq ($(BUILD_TYPE),profile)
+			BASE_CFLAGS += $(PROFILE_CFLAGS)
+		else
+			$(error unknown BUILD_TYPE '$(BUILD_TYPE)')
+		endif
+	endif
 endif
 
-ifeq ($(PROFILE),)
-	PROFILE=0
-endif
-
-ifeq ($(PROFILE),0)
-	PROFILE_CFLAGS :=
-else
-	PROFILE_CFLAGS := -DREHEX_PROFILE
-endif
-
-CFLAGS          := -Wall -std=c99   -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/                       -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS_NO_GTK := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
-CXXFLAGS        := -Wall -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(DEBUG_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
+CFLAGS          := $(BASE_CFLAGS) -std=c99   -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/                       -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
+CXXFLAGS_NO_GTK := $(BASE_CFLAGS) -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+CXXFLAGS        := $(BASE_CFLAGS) -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
 uname_S := $(shell uname -s 2>/dev/null)
 ifeq ($(uname_S),FreeBSD)
@@ -177,10 +181,18 @@ clean:
 	      res/offsets48.c res/offsets48.h \
 	      res/spinner24.c   res/spinner24.h
 	
-	rm -f $(APP_OBJS)
+	rm -f $(filter-out %.$(BUILD_TYPE).o,$(APP_OBJS))
+	rm -f $(patsubst %.$(BUILD_TYPE).o,%.debug.o,$(filter %.$(BUILD_TYPE).o,$(APP_OBJS)))
+	rm -f $(patsubst %.$(BUILD_TYPE).o,%.release.o,$(filter %.$(BUILD_TYPE).o,$(APP_OBJS)))
+	rm -f $(patsubst %.$(BUILD_TYPE).o,%.profile.o,$(filter %.$(BUILD_TYPE).o,$(APP_OBJS)))
 	rm -f $(EXE)
-	rm -f $(TEST_OBJS)
+	
+	rm -f $(filter-out %.$(BUILD_TYPE).o,$(TEST_OBJS))
+	rm -f $(patsubst %.$(BUILD_TYPE).o,%.debug.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
+	rm -f $(patsubst %.$(BUILD_TYPE).o,%.release.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
+	rm -f $(patsubst %.$(BUILD_TYPE).o,%.profile.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
 	rm -f ./tests/all-tests
+	
 	rm -f $(EMBED_EXE)
 	rm -f $(GTKCONFIG_EXE)
 	
@@ -194,107 +206,107 @@ clean:
 distclean: clean
 
 WXLUA_OBJS := \
-	wxLua/modules/wxlua/bit.o \
-	wxLua/modules/wxlua/lbitlib.o \
-	wxLua/modules/wxlua/wxlbind.o \
-	wxLua/modules/wxlua/wxlcallb.o \
-	wxLua/modules/wxlua/wxllua.o \
-	wxLua/modules/wxlua/wxlobject.o \
-	wxLua/modules/wxlua/wxlstate.o \
-	wxLua/modules/wxlua/wxlua_bind.o
+	wxLua/modules/wxlua/bit.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/lbitlib.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlbind.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlcallb.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxllua.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlobject.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlstate.$(BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlua_bind.$(BUILD_TYPE).o
 
 WXBIND_OBJS := \
-	wxLua/modules/wxbind/src/wxadv_bind.o \
-	wxLua/modules/wxbind/src/wxadv_wxladv.o \
-	wxLua/modules/wxbind/src/wxaui_bind.o \
-	wxLua/modules/wxbind/src/wxbase_base.o \
-	wxLua/modules/wxbind/src/wxbase_bind.o \
-	wxLua/modules/wxbind/src/wxbase_config.o \
-	wxLua/modules/wxbind/src/wxbase_data.o \
-	wxLua/modules/wxbind/src/wxbase_datetime.o \
-	wxLua/modules/wxbind/src/wxbase_file.o \
-	wxLua/modules/wxbind/src/wxcore_appframe.o \
-	wxLua/modules/wxbind/src/wxcore_bind.o \
-	wxLua/modules/wxbind/src/wxcore_clipdrag.o \
-	wxLua/modules/wxbind/src/wxcore_controls.o \
-	wxLua/modules/wxbind/src/wxcore_core.o \
-	wxLua/modules/wxbind/src/wxcore_defsutils.o \
-	wxLua/modules/wxbind/src/wxcore_dialogs.o \
-	wxLua/modules/wxbind/src/wxcore_event.o \
-	wxLua/modules/wxbind/src/wxcore_gdi.o \
-	wxLua/modules/wxbind/src/wxcore_geometry.o \
-	wxLua/modules/wxbind/src/wxcore_graphics.o \
-	wxLua/modules/wxbind/src/wxcore_help.o \
-	wxLua/modules/wxbind/src/wxcore_image.o \
-	wxLua/modules/wxbind/src/wxcore_mdi.o \
-	wxLua/modules/wxbind/src/wxcore_menutool.o \
-	wxLua/modules/wxbind/src/wxcore_picker.o \
-	wxLua/modules/wxbind/src/wxcore_print.o \
-	wxLua/modules/wxbind/src/wxcore_sizer.o \
-	wxLua/modules/wxbind/src/wxcore_windows.o \
-	wxLua/modules/wxbind/src/wxcore_wxlcore.o \
-	wxLua/modules/wxbind/src/wxpropgrid_bind.o
+	wxLua/modules/wxbind/src/wxadv_bind.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxadv_wxladv.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxaui_bind.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_base.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_bind.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_config.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_data.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_datetime.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_file.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_appframe.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_bind.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_clipdrag.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_controls.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_core.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_defsutils.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_dialogs.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_event.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_gdi.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_geometry.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_graphics.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_help.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_image.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_mdi.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_menutool.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_picker.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_print.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_sizer.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_windows.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_wxlcore.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxpropgrid_bind.$(BUILD_TYPE).o
 
 WXFREECHART_OBJS := \
-	wxFreeChart/src/areadraw.o \
-	wxFreeChart/src/art.o \
-	wxFreeChart/src/axis/axis.o \
-	wxFreeChart/src/axis/categoryaxis.o \
-	wxFreeChart/src/axis/compdateaxis.o \
-	wxFreeChart/src/axis/dateaxis.o \
-	wxFreeChart/src/axis/juliandateaxis.o \
-	wxFreeChart/src/axis/labelaxis.o \
-	wxFreeChart/src/axis/logarithmicnumberaxis.o \
-	wxFreeChart/src/axis/numberaxis.o \
-	wxFreeChart/src/axisplot.o \
-	wxFreeChart/src/bars/barplot.o \
-	wxFreeChart/src/bars/barrenderer.o \
-	wxFreeChart/src/category/categorydataset.o \
-	wxFreeChart/src/category/categoryrenderer.o \
-	wxFreeChart/src/category/categorysimpledataset.o \
-	wxFreeChart/src/chart.o \
-	wxFreeChart/src/chartpanel.o \
-	wxFreeChart/src/chartsplitpanel.o \
-	wxFreeChart/src/colorscheme.o \
-	wxFreeChart/src/crosshair.o \
-	wxFreeChart/src/dataset.o \
-	wxFreeChart/src/gantt/ganttdataset.o \
-	wxFreeChart/src/gantt/ganttplot.o \
-	wxFreeChart/src/gantt/ganttrenderer.o \
-	wxFreeChart/src/gantt/ganttsimpledataset.o \
-	wxFreeChart/src/legend.o \
-	wxFreeChart/src/marker.o \
-	wxFreeChart/src/multiplot.o \
-	wxFreeChart/src/ohlc/movingaverage.o \
-	wxFreeChart/src/ohlc/ohlcbarrenderer.o \
-	wxFreeChart/src/ohlc/ohlccandlestickrenderer.o \
-	wxFreeChart/src/ohlc/ohlcdataset.o \
-	wxFreeChart/src/ohlc/ohlcplot.o \
-	wxFreeChart/src/ohlc/ohlcrenderer.o \
-	wxFreeChart/src/ohlc/ohlcsimpledataset.o \
-	wxFreeChart/src/pie/pieplot.o \
-	wxFreeChart/src/plot.o \
-	wxFreeChart/src/renderer.o \
-	wxFreeChart/src/symbol.o \
-	wxFreeChart/src/title.o \
-	wxFreeChart/src/tooltips.o \
-	wxFreeChart/src/xy/functions/polynom.o \
-	wxFreeChart/src/xy/functions/sinefunction.o \
-	wxFreeChart/src/xy/juliantimeseriesdataset.o \
-	wxFreeChart/src/xy/timeseriesdataset.o \
-	wxFreeChart/src/xy/vectordataset.o \
-	wxFreeChart/src/xy/xyarearenderer.o \
-	wxFreeChart/src/xy/xydataset.o \
-	wxFreeChart/src/xy/xydynamicdataset.o \
-	wxFreeChart/src/xy/xyhistorenderer.o \
-	wxFreeChart/src/xy/xylinerenderer.o \
-	wxFreeChart/src/xy/xyplot.o \
-	wxFreeChart/src/xy/xyrenderer.o \
-	wxFreeChart/src/xy/xysimpledataset.o \
-	wxFreeChart/src/xyz/bubbleplot.o \
-	wxFreeChart/src/xyz/xyzdataset.o \
-	wxFreeChart/src/xyz/xyzrenderer.o \
-	wxFreeChart/src/zoompan.o
+	wxFreeChart/src/areadraw.$(BUILD_TYPE).o \
+	wxFreeChart/src/art.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/axis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/categoryaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/compdateaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/dateaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/juliandateaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/labelaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/logarithmicnumberaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axis/numberaxis.$(BUILD_TYPE).o \
+	wxFreeChart/src/axisplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/bars/barplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/bars/barrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/category/categorydataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/category/categoryrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/category/categorysimpledataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/chart.$(BUILD_TYPE).o \
+	wxFreeChart/src/chartpanel.$(BUILD_TYPE).o \
+	wxFreeChart/src/chartsplitpanel.$(BUILD_TYPE).o \
+	wxFreeChart/src/colorscheme.$(BUILD_TYPE).o \
+	wxFreeChart/src/crosshair.$(BUILD_TYPE).o \
+	wxFreeChart/src/dataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttdataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttsimpledataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/legend.$(BUILD_TYPE).o \
+	wxFreeChart/src/marker.$(BUILD_TYPE).o \
+	wxFreeChart/src/multiplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/movingaverage.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcbarrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlccandlestickrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcdataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcsimpledataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/pie/pieplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/plot.$(BUILD_TYPE).o \
+	wxFreeChart/src/renderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/symbol.$(BUILD_TYPE).o \
+	wxFreeChart/src/title.$(BUILD_TYPE).o \
+	wxFreeChart/src/tooltips.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/functions/polynom.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/functions/sinefunction.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/juliantimeseriesdataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/timeseriesdataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/vectordataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyarearenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xydataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xydynamicdataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyhistorenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xylinerenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/xy/xysimpledataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xyz/bubbleplot.$(BUILD_TYPE).o \
+	wxFreeChart/src/xyz/xyzdataset.$(BUILD_TYPE).o \
+	wxFreeChart/src/xyz/xyzrenderer.$(BUILD_TYPE).o \
+	wxFreeChart/src/zoompan.$(BUILD_TYPE).o
 
 APP_OBJS := \
 	res/actual_size16.o \
@@ -322,60 +334,60 @@ APP_OBJS := \
 	res/swap_vert16.o \
 	res/zoom_in16.o \
 	res/zoom_out16.o \
-	src/AboutDialog.o \
-	src/AppMain.o \
-	src/AppSettings.o \
-	src/AppTestable.o \
-	src/ArtProvider.o \
-	src/BasicDataTypes.o \
-	src/BitmapTool.o \
-	src/buffer.o \
-	src/BytesPerLineDialog.o \
-	src/ByteRangeSet.o \
-	src/CharacterEncoder.o \
-	src/CharacterFinder.o \
-	src/ClickText.o \
-	src/CodeCtrl.o \
-	src/CommentTree.o \
-	src/ConsoleBuffer.o \
-	src/ConsolePanel.o \
-	src/DataHistogramPanel.o \
-	src/DataType.o \
-	src/decodepanel.o \
-	src/DetachableNotebook.o \
-	src/DiffWindow.o \
-	src/disassemble.o \
-	src/DisassemblyRegion.o \
-	src/document.o \
-	src/DocumentCtrl.o \
-	src/EditCommentDialog.o \
-	src/Events.o \
-	src/FileWriter.o \
-	src/FillRangeDialog.o \
-	src/IntelHexExport.o \
-	src/IntelHexImport.o \
-	src/IPC.o \
-	src/LicenseDialog.o \
-	src/LoadingSpinner.o \
-	src/lua-bindings/rehex_bind.o \
-	src/lua-plugin-preload.o \
-	src/LuaPluginLoader.o \
-	src/mainwindow.o \
-	src/Palette.o \
-	src/profile.o \
-	src/RangeChoiceLinear.o \
-	src/RangeDialog.o \
-	src/RangeProcessor.o \
-	src/search.o \
-	src/StringPanel.o \
-	src/textentrydialog.o \
-	src/Tab.o \
-	src/ThreadPool.o \
-	src/ToolPanel.o \
-	src/util.o \
-	src/VirtualMappingDialog.o \
-	src/VirtualMappingList.o \
-	src/win32lib.o \
+	src/AboutDialog.$(BUILD_TYPE).o \
+	src/AppMain.$(BUILD_TYPE).o \
+	src/AppSettings.$(BUILD_TYPE).o \
+	src/AppTestable.$(BUILD_TYPE).o \
+	src/ArtProvider.$(BUILD_TYPE).o \
+	src/BasicDataTypes.$(BUILD_TYPE).o \
+	src/BitmapTool.$(BUILD_TYPE).o \
+	src/buffer.$(BUILD_TYPE).o \
+	src/BytesPerLineDialog.$(BUILD_TYPE).o \
+	src/ByteRangeSet.$(BUILD_TYPE).o \
+	src/CharacterEncoder.$(BUILD_TYPE).o \
+	src/CharacterFinder.$(BUILD_TYPE).o \
+	src/ClickText.$(BUILD_TYPE).o \
+	src/CodeCtrl.$(BUILD_TYPE).o \
+	src/CommentTree.$(BUILD_TYPE).o \
+	src/ConsoleBuffer.$(BUILD_TYPE).o \
+	src/ConsolePanel.$(BUILD_TYPE).o \
+	src/DataHistogramPanel.$(BUILD_TYPE).o \
+	src/DataType.$(BUILD_TYPE).o \
+	src/decodepanel.$(BUILD_TYPE).o \
+	src/DetachableNotebook.$(BUILD_TYPE).o \
+	src/DiffWindow.$(BUILD_TYPE).o \
+	src/disassemble.$(BUILD_TYPE).o \
+	src/DisassemblyRegion.$(BUILD_TYPE).o \
+	src/document.$(BUILD_TYPE).o \
+	src/DocumentCtrl.$(BUILD_TYPE).o \
+	src/EditCommentDialog.$(BUILD_TYPE).o \
+	src/Events.$(BUILD_TYPE).o \
+	src/FileWriter.$(BUILD_TYPE).o \
+	src/FillRangeDialog.$(BUILD_TYPE).o \
+	src/IntelHexExport.$(BUILD_TYPE).o \
+	src/IntelHexImport.$(BUILD_TYPE).o \
+	src/IPC.$(BUILD_TYPE).o \
+	src/LicenseDialog.$(BUILD_TYPE).o \
+	src/LoadingSpinner.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_bind.$(BUILD_TYPE).o \
+	src/lua-plugin-preload.$(BUILD_TYPE).o \
+	src/LuaPluginLoader.$(BUILD_TYPE).o \
+	src/mainwindow.$(BUILD_TYPE).o \
+	src/Palette.$(BUILD_TYPE).o \
+	src/profile.$(BUILD_TYPE).o \
+	src/RangeChoiceLinear.$(BUILD_TYPE).o \
+	src/RangeDialog.$(BUILD_TYPE).o \
+	src/RangeProcessor.$(BUILD_TYPE).o \
+	src/search.$(BUILD_TYPE).o \
+	src/StringPanel.$(BUILD_TYPE).o \
+	src/textentrydialog.$(BUILD_TYPE).o \
+	src/Tab.$(BUILD_TYPE).o \
+	src/ThreadPool.$(BUILD_TYPE).o \
+	src/ToolPanel.$(BUILD_TYPE).o \
+	src/util.$(BUILD_TYPE).o \
+	src/VirtualMappingDialog.$(BUILD_TYPE).o \
+	src/VirtualMappingList.$(BUILD_TYPE).o \
+	src/win32lib.$(BUILD_TYPE).o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(WXFREECHART_OBJS) \
@@ -412,50 +424,50 @@ TEST_OBJS := \
 	res/swap_vert16.o \
 	res/zoom_in16.o \
 	res/zoom_out16.o \
-	src/AboutDialog.o \
-	src/AppSettings.o \
-	src/AppTestable.o \
-	src/ArtProvider.o \
-	src/BasicDataTypes.o \
-	src/BitmapTool.o \
-	src/buffer.o \
-	src/ByteRangeSet.o \
-	src/BytesPerLineDialog.o \
-	src/CharacterEncoder.o \
-	src/CharacterFinder.o \
-	src/ClickText.o \
-	src/CommentTree.o \
-	src/ConsoleBuffer.o \
-	src/DataType.o \
-	src/DetachableNotebook.o \
-	src/DiffWindow.o \
-	src/DisassemblyRegion.o \
-	src/document.o \
-	src/DocumentCtrl.o \
-	src/EditCommentDialog.o \
-	src/Events.o \
-	src/FileWriter.o \
-	src/FillRangeDialog.o \
-	src/IntelHexExport.o \
-	src/IntelHexImport.o \
-	src/LicenseDialog.o \
-	src/LoadingSpinner.o \
-	src/lua-bindings/rehex_bind.o \
-	src/lua-plugin-preload.o \
-	src/LuaPluginLoader.o \
-	src/mainwindow.o \
-	src/Palette.o \
-	src/RangeDialog.o \
-	src/RangeProcessor.o \
-	src/search.o \
-	src/StringPanel.o \
-	src/Tab.o \
-	src/textentrydialog.o \
-	src/ThreadPool.o \
-	src/ToolPanel.o \
-	src/util.o \
-	src/VirtualMappingDialog.o \
-	src/win32lib.o \
+	src/AboutDialog.$(BUILD_TYPE).o \
+	src/AppSettings.$(BUILD_TYPE).o \
+	src/AppTestable.$(BUILD_TYPE).o \
+	src/ArtProvider.$(BUILD_TYPE).o \
+	src/BasicDataTypes.$(BUILD_TYPE).o \
+	src/BitmapTool.$(BUILD_TYPE).o \
+	src/buffer.$(BUILD_TYPE).o \
+	src/ByteRangeSet.$(BUILD_TYPE).o \
+	src/BytesPerLineDialog.$(BUILD_TYPE).o \
+	src/CharacterEncoder.$(BUILD_TYPE).o \
+	src/CharacterFinder.$(BUILD_TYPE).o \
+	src/ClickText.$(BUILD_TYPE).o \
+	src/CommentTree.$(BUILD_TYPE).o \
+	src/ConsoleBuffer.$(BUILD_TYPE).o \
+	src/DataType.$(BUILD_TYPE).o \
+	src/DetachableNotebook.$(BUILD_TYPE).o \
+	src/DiffWindow.$(BUILD_TYPE).o \
+	src/DisassemblyRegion.$(BUILD_TYPE).o \
+	src/document.$(BUILD_TYPE).o \
+	src/DocumentCtrl.$(BUILD_TYPE).o \
+	src/EditCommentDialog.$(BUILD_TYPE).o \
+	src/Events.$(BUILD_TYPE).o \
+	src/FileWriter.$(BUILD_TYPE).o \
+	src/FillRangeDialog.$(BUILD_TYPE).o \
+	src/IntelHexExport.$(BUILD_TYPE).o \
+	src/IntelHexImport.$(BUILD_TYPE).o \
+	src/LicenseDialog.$(BUILD_TYPE).o \
+	src/LoadingSpinner.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_bind.$(BUILD_TYPE).o \
+	src/lua-plugin-preload.$(BUILD_TYPE).o \
+	src/LuaPluginLoader.$(BUILD_TYPE).o \
+	src/mainwindow.$(BUILD_TYPE).o \
+	src/Palette.$(BUILD_TYPE).o \
+	src/RangeDialog.$(BUILD_TYPE).o \
+	src/RangeProcessor.$(BUILD_TYPE).o \
+	src/search.$(BUILD_TYPE).o \
+	src/StringPanel.$(BUILD_TYPE).o \
+	src/Tab.$(BUILD_TYPE).o \
+	src/textentrydialog.$(BUILD_TYPE).o \
+	src/ThreadPool.$(BUILD_TYPE).o \
+	src/ToolPanel.$(BUILD_TYPE).o \
+	src/util.$(BUILD_TYPE).o \
+	src/VirtualMappingDialog.$(BUILD_TYPE).o \
+	src/win32lib.$(BUILD_TYPE).o \
 	tests/BitmapTool.o \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \
@@ -557,12 +569,17 @@ src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.done ;
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
+%.$(BUILD_TYPE).o: %.c $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
 tests/%.o: tests/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-wxLua/%.o: wxLua/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+wxLua/%.$(BUILD_TYPE).o: wxLua/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
@@ -572,7 +589,7 @@ googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-%.o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+%.$(BUILD_TYPE).o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)

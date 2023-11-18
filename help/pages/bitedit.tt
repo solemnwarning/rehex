@@ -1,0 +1,27 @@
+[% WRAPPER page.tt
+   title = "Bit Editor"
+%]
+
+<h2>Bit Editor</h2>
+
+<p>
+The <i>Bit editor</i> tool (<i>View menu</i> &gt; <i>Tool panels</i> &gt; <i>Bit editor</i>) displays and allows changing the numeric value and bits of an unsigned integer value from the open file.
+</p>
+
+<p>
+The top section of the panel sets the integer size and endianness of the value to load from the cursor position.
+</p>
+
+<p>
+The middle section shows the current numeric value in the chosen base and which bits are set/cleared. Either of these can be changed to modify the file. Hovering over the bit checkboxes will display the numeric value of that bit.
+</p>
+
+<p>
+The operator buttons at the bottom of the panel apply bitwise operations to the value and update the value in the file (e.g. pressing NOT will flip all the bits). Operators requiring an extra operand (AND, OR, XOR) will open a dialog to enter it.
+</p>
+
+<p>
+<img src="bitedit.png">
+</p>
+
+[% END %]

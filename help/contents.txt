@@ -1,6 +1,7 @@
 index           Welcome
 comments        Setting Comments
 types           Setting Data Types
+bitedit         Bit Editor
 diff            Comparing Files
 bitmap          Bitmap Visualisation
 virt-mapping    Virtual Address Mapping

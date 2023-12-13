@@ -52,6 +52,9 @@ namespace REHex
 			*/
 			std::pair<off_t, off_t> get_range() const;
 			
+			void set_whole_file();
+			void set_follow_selection();
+			
 		private:
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> doc_ctrl;

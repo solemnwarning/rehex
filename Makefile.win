@@ -40,6 +40,10 @@ CXXFLAGS += -Iinclude/gcc-win-include/
 CFLAGS   += -DREHEX_CACHE_STRING_BITMAPS
 CXXFLAGS += -DREHEX_CACHE_STRING_BITMAPS
 
+# Botan 3 requires C++20
+BOTAN_PKG := botan-3
+CXXSTD    := -std=c++20
+
 include Makefile
 
 DISTDIR ?= rehex-$(VERSION)

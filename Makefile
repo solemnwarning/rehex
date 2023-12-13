@@ -16,9 +16,11 @@
 
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
+BOTAN_PKG    ?= botan-2
 CAPSTONE_PKG ?= capstone
 JANSSON_PKG  ?= jansson
 LUA_PKG      ?= $(shell pkg-config --exists lua5.3 && echo lua5.3 || echo lua)
+CXXSTD       ?= -std=c++11
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
@@ -62,6 +64,9 @@ ifeq ($(need_compiler_flags),1)
 	WX_CXXFLAGS ?= $(call shell-or-die,$(WX_CONFIG) --cxxflags base core aui propgrid adv net $(HELP_LIBS))
 	WX_LIBS     ?= $(call shell-or-die,$(WX_CONFIG) --libs     base core aui propgrid adv net $(HELP_LIBS))
 	
+	BOTAN_CFLAGS ?= $(call shell-or-die,pkg-config $(BOTAN_PKG) --cflags)
+	BOTAN_LIBS   ?= $(call shell-or-die,pkg-config $(BOTAN_PKG) --libs)
+	
 	CAPSTONE_CFLAGS ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --cflags)
 	CAPSTONE_LIBS   ?= $(call shell-or-die,pkg-config $(CAPSTONE_PKG) --libs)
 	
@@ -99,9 +104,9 @@ else
 	endif
 endif
 
-CFLAGS          := $(BASE_CFLAGS) -std=c99   -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/                       -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS_NO_GTK := $(BASE_CFLAGS) -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
-CXXFLAGS        := $(BASE_CFLAGS) -std=c++11 -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
+CFLAGS          := $(BASE_CFLAGS) -std=c99   -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/                       -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
+CXXFLAGS_NO_GTK := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
+CXXFLAGS        := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override -DREHEX_CACHE_CHARACTER_BITMAPS $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
 uname_S := $(shell uname -s 2>/dev/null)
 ifeq ($(uname_S),FreeBSD)
@@ -111,7 +116,7 @@ ifeq ($(uname_S),OpenBSD)
 	LDLIBS += -liconv
 endif
 
-LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
+LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 # Define this for releases
 # VERSION := x
@@ -347,6 +352,9 @@ APP_OBJS := \
 	src/ByteRangeSet.$(BUILD_TYPE).o \
 	src/CharacterEncoder.$(BUILD_TYPE).o \
 	src/CharacterFinder.$(BUILD_TYPE).o \
+	src/Checksum.$(BUILD_TYPE).o \
+	src/ChecksumImpl.$(BUILD_TYPE).o \
+	src/ChecksumPanel.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
 	src/CodeCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \

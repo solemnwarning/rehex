@@ -14,6 +14,11 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+_rehex_botan_version="2.19.3"
+_rehex_botan_url="https://botan.randombit.net/releases/Botan-${_rehex_botan_version}.tar.xz"
+_rehex_botan_sha256="dae047f399c5a47f087db5d3d9d9e8f11ae4985d14c928d71da1aff801802d55"
+_rehex_botan_build_ident="${_rehex_botan_version}-1"
+
 _rehex_capstone_version="5.0"
 _rehex_capstone_url="https://github.com/capstone-engine/capstone/archive/refs/tags/${_rehex_capstone_version}.tar.gz"
 _rehex_capstone_sha256="df24344407baa7415eeb006f742afc9b92cd33abf2c4c120a6e97cfb376882dc"
@@ -92,12 +97,53 @@ else
 	_rehex_dep_target_dir="$(pwd)/mac-dependencies"
 fi
 
+_rehex_botan_target_dir="${_rehex_dep_target_dir}/botan-${_rehex_botan_build_ident}"
 _rehex_capstone_target_dir="${_rehex_dep_target_dir}/capstone-${_rehex_capstone_build_ident}"
 _rehex_jansson_target_dir="${_rehex_dep_target_dir}/jansson-${_rehex_jansson_build_ident}"
 _rehex_libunistring_target_dir="${_rehex_dep_target_dir}/libunistring-${_rehex_libunistring_build_ident}"
 _rehex_lua_target_dir="${_rehex_dep_target_dir}/lua-${_rehex_lua_build_ident}"
 _rehex_wxwidgets_target_dir="${_rehex_dep_target_dir}/wxwidgets-${_rehex_wxwidgets_build_ident}"
 _rehex_perl_libs_target_dir="${_rehex_dep_target_dir}/perl-libs-${_rehex_perl_libs_build_ident}"
+
+if [ "$_rehex_ok" = 1 ] && [ ! -e "$_rehex_botan_target_dir" ]
+then
+	echo "== Preparing Botan ${_rehex_botan_version}"
+
+	(
+		set -e
+
+		cd "${_rehex_dep_build_dir}"
+
+		_rehex_botan_tar="$(basename "${_rehex_botan_url}")"
+
+		if [ ! -e "${_rehex_dep_build_dir}/${_rehex_botan_tar}" ]
+		then
+			echo "Downloading ${_rehex_botan_url}"
+			curl -Lo "${_rehex_botan_tar}" "${_rehex_botan_url}"
+		fi
+
+		echo "${_rehex_botan_sha256}  ${_rehex_botan_tar}" | shasum -c
+
+		mkdir -p "botan-${_rehex_botan_build_ident}"
+
+		tar -xf "${_rehex_botan_tar}" -C "botan-${_rehex_botan_build_ident}"
+		cd "botan-${_rehex_botan_build_ident}/Botan-${_rehex_botan_version}"
+
+		python3 configure.py \
+			--minimized-build \
+			--enable-modules=md5,sha1,sha2_32 \
+			--cc-abi-flags="-mmacosx-version-min=${_rehex_macos_version_min}" \
+			--prefix="${_rehex_botan_target_dir}" \
+			--disable-shared-library \
+			--without-documentation
+
+		make -j$(sysctl -n hw.logicalcpu)
+		make -j$(sysctl -n hw.logicalcpu) check
+		make -j$(sysctl -n hw.logicalcpu) install
+	)
+
+	[ $? -ne 0 ] && _rehex_ok=0
+fi
 
 if [ "$_rehex_ok" = 1 ] && [ ! -e "$_rehex_capstone_target_dir" ]
 then
@@ -365,7 +411,9 @@ You can now build rehex using \`make -f Makefile.osx\` in this shell.
 The dependencies have been cached and won't be rebuilt if you source this
 script again.
 EOF
-	
+	export BOTAN_LIBS="-L${_rehex_botan_target_dir}/lib/ -lbotan-2"
+	export BOTAN_CFLAGS="-I${_rehex_botan_target_dir}/include/botan-2/"
+
 	export CAPSTONE_LIBS="-L${_rehex_capstone_target_dir}/lib/ -lcapstone"
 	export CAPSTONE_CFLAGS="-I${_rehex_capstone_target_dir}/include/"
 	
@@ -392,6 +440,7 @@ unset _rehex_lua_target_dir
 unset _rehex_libunistring_target_dir
 unset _rehex_jansson_target_dir
 unset _rehex_capstone_target_dir
+unset _rehex_botan_target_dir
 
 unset _rehex_dep_target_dir
 unset _rehex_dep_build_dir
@@ -431,3 +480,8 @@ unset _rehex_capstone_build_ident
 unset _rehex_capstone_sha256
 unset _rehex_capstone_url
 unset _rehex_capstone_version
+
+unset _rehex_botan_build_ident
+unset _rehex_botan_sha256
+unset _rehex_botan_url
+unset _rehex_botan_version

@@ -54,8 +54,8 @@ all: REHex.app
 
 include Makefile
 
-src/mainwindow.o: res/backward32.h res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h res/forward32.h
-src/DiffWindow.o: res/down32.h res/up32.h
+src/mainwindow.$(BUILD_TYPE).o: res/backward32.h res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h res/forward32.h
+src/DiffWindow.$(BUILD_TYPE).o: res/down32.h res/up32.h
 
 ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns

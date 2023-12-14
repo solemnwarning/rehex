@@ -34,8 +34,10 @@ Requires: wxGTK3
 
 %if 0%{?el7}
 %define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe
+BuildRequires: botan-devel
 BuildRequires: pkgconfig
 %else
+BuildRequires: botan2-devel
 BuildRequires: luarocks
 BuildRequires: pkgconf
 %endif

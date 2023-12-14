@@ -33,7 +33,7 @@ Requires: wxGTK3
 %define base_make_flags DEBUG_CFLAGS="-DNDEBUG -ggdb" LUA_PKG=lua bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
 
 %if 0%{?el7}
-%define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe
+%define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe BOTAN_PKG=botan-1.10
 BuildRequires: botan-devel
 BuildRequires: pkgconfig
 %else

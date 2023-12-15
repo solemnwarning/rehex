@@ -499,10 +499,10 @@ namespace REHex
 					}
 			};
 			
-			ByteRangeTree<T>():
+			ByteRangeTree():
 				total_size(0) {}
 			
-			ByteRangeTree<T>(const ByteRangeTree<T> &rhs):
+			ByteRangeTree(const ByteRangeTree<T> &rhs):
 				total_size(0)
 			{
 				for(auto it = rhs.begin(); it != rhs.end(); ++it)

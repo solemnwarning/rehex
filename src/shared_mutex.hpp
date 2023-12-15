@@ -18,6 +18,18 @@
 #ifndef REHEX_SHARED_MUTEX_HPP
 #define REHEX_SHARED_MUTEX_HPP
 
+#if __cplusplus >= 201402L
+
+#include <shared_mutex>
+
+namespace REHex
+{
+	using shared_mutex = std::shared_mutex;
+	using shared_lock = std::shared_lock<std::shared_mutex>;
+}
+
+#else
+
 #include <assert.h>
 #include <atomic>
 #include <condition_variable>
@@ -106,5 +118,7 @@ namespace REHex
 			}
 	};
 };
+
+#endif
 
 #endif /* !REHEX_SHARED_MUTEX_HPP */

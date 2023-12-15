@@ -174,7 +174,7 @@ bool REHex::ChecksumPanel::process()
 	{
 		wxGetApp().printf_error("Data read error in ChecksumPanel: %s\n", e.what());
 		
-		CallAfter([=]()
+		CallAfter([this, e]()
 		{
 			output->SetValue(std::string("Read error: ") + e.what());
 		});
@@ -184,7 +184,7 @@ bool REHex::ChecksumPanel::process()
 	
 	if(data.size() == 0)
 	{
-		CallAfter([=]()
+		CallAfter([this]()
 		{
 			output->SetValue("Unexpected end of file");
 		});
@@ -203,7 +203,7 @@ bool REHex::ChecksumPanel::process()
 		cs_gen->finish();
 		std::string checksum = cs_gen->checksum_hex();
 		
-		CallAfter([=]()
+		CallAfter([this, checksum]()
 		{
 			output->SetValue(checksum);
 			copy_btn->Enable();

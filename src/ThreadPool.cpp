@@ -16,6 +16,7 @@
 */
 
 #include <algorithm>
+#include <assert.h>
 
 #include "ThreadPool.hpp"
 

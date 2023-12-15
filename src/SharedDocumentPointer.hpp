@@ -37,7 +37,7 @@ namespace REHex
 			
 			std::stack< std::function<void()> > cleanups;
 			
-			SharedDocumentPointerImpl<T>(std::shared_ptr<T> &document):
+			SharedDocumentPointerImpl(std::shared_ptr<T> &document):
 				document(document) {}
 			
 		public:
@@ -56,10 +56,10 @@ namespace REHex
 				});
 			}
 			
-			SharedDocumentPointerImpl<T>(const SharedDocumentPointerImpl<T> &document):
+			SharedDocumentPointerImpl(const SharedDocumentPointerImpl<T> &document):
 				document(document.document) {}
 			
-			~SharedDocumentPointerImpl<T>()
+			~SharedDocumentPointerImpl()
 			{
 				while(!cleanups.empty())
 				{

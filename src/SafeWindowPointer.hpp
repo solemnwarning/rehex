@@ -117,6 +117,11 @@ namespace REHex
 				return window == rhs.window;
 			}
 			
+			bool operator==(const T *rhs) const
+			{
+				return window == rhs;
+			}
+			
 			/**
 			 * Resets the internal window pointer. Any existing bindings set on the old
 			 * pointer using auto_cleanup_bind() are undone.

@@ -383,7 +383,7 @@ void GenuineImmitationMouseCapture::OnTimer(wxTimerEvent &event)
 	{
 		timer.Stop();
 		
-		window->CallAfter([=]()
+		window->CallAfter([this]()
 		{
 			/* Destroying the timer in its event handler would probably do bad things. */
 			delete this;

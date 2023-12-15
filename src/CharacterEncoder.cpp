@@ -297,7 +297,7 @@ class IconvCharacterEncodingRegistrationHelper
 };
 
 IconvCharacterEncodingRegistrationHelper::IconvCharacterEncodingRegistrationHelper(const char *encoding, size_t word_size, bool mid_char_safe, const char *text_group, const char *key, const char *label):
-	setup_hook(REHex::App::SetupPhase::EARLY, [=]() { deferred_init(encoding, word_size, mid_char_safe, text_group, key, label); }) {}
+	setup_hook(REHex::App::SetupPhase::EARLY, [this, encoding, word_size, mid_char_safe, text_group, key, label]() { deferred_init(encoding, word_size, mid_char_safe, text_group, key, label); }) {}
 
 void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encoding, size_t word_size, bool mid_char_safe, const char *text_group, const char *key, const char *label)
 {

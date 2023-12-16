@@ -17,7 +17,7 @@
 _rehex_botan_version="2.19.3"
 _rehex_botan_url="https://botan.randombit.net/releases/Botan-${_rehex_botan_version}.tar.xz"
 _rehex_botan_sha256="dae047f399c5a47f087db5d3d9d9e8f11ae4985d14c928d71da1aff801802d55"
-_rehex_botan_build_ident="${_rehex_botan_version}-1"
+_rehex_botan_build_ident="${_rehex_botan_version}-2"
 
 _rehex_capstone_version="5.0"
 _rehex_capstone_url="https://github.com/capstone-engine/capstone/archive/refs/tags/${_rehex_capstone_version}.tar.gz"
@@ -131,7 +131,7 @@ then
 
 		python3 configure.py \
 			--minimized-build \
-			--enable-modules=md5,sha1,sha2_32 \
+			--enable-modules=md5,sha1,sha2_32,sha2_64 \
 			--cc-abi-flags="-mmacosx-version-min=${_rehex_macos_version_min}" \
 			--prefix="${_rehex_botan_target_dir}" \
 			--disable-shared-library \

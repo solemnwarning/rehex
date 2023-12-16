@@ -444,6 +444,8 @@ TEST_OBJS := \
 	src/BytesPerLineDialog.$(BUILD_TYPE).o \
 	src/CharacterEncoder.$(BUILD_TYPE).o \
 	src/CharacterFinder.$(BUILD_TYPE).o \
+	src/Checksum.$(BUILD_TYPE).o \
+	src/ChecksumImpl.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \
@@ -484,6 +486,7 @@ TEST_OBJS := \
 	tests/ByteRangeTree.o \
 	tests/CharacterEncoder.o \
 	tests/CharacterFinder.o \
+	tests/Checksum.o \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/ConsoleBuffer.o \

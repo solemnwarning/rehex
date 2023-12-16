@@ -91,7 +91,12 @@ static REHex::ChecksumAlgorithm ALGOS[] = {
 	{ "SHA-1", "SHA-1", []() { return new REHex::ChecksumGeneratorBotan(new Botan::SHA_160()); } },
 	#endif
 	#ifdef BOTAN_HAS_SHA2_32
+	{ "SHA-224", "SHA-224", []() { return new REHex::ChecksumGeneratorBotan(new Botan::SHA_224()); } },
 	{ "SHA-256", "SHA-256", []() { return new REHex::ChecksumGeneratorBotan(new Botan::SHA_256()); } },
+	#endif
+	#ifdef BOTAN_HAS_SHA2_64
+	{ "SHA-384", "SHA-384", []() { return new REHex::ChecksumGeneratorBotan(new Botan::SHA_384()); } },
+	{ "SHA-512", "SHA-512", []() { return new REHex::ChecksumGeneratorBotan(new Botan::SHA_512()); } },
 	#endif
 	
 	#else
@@ -103,7 +108,12 @@ static REHex::ChecksumAlgorithm ALGOS[] = {
 	{ "SHA-1", "SHA-1", []() { return new REHex::ChecksumGeneratorBotan("SHA-1"); } },
 	#endif
 	#ifdef BOTAN_HAS_SHA2_32
+	{ "SHA-224", "SHA-224", []() { return new REHex::ChecksumGeneratorBotan("SHA-224"); } },
 	{ "SHA-256", "SHA-256", []() { return new REHex::ChecksumGeneratorBotan("SHA-256"); } },
+	#endif
+	#ifdef BOTAN_HAS_SHA2_64
+	{ "SHA-384", "SHA-384", []() { return new REHex::ChecksumGeneratorBotan("SHA-384"); } },
+	{ "SHA-512", "SHA-512", []() { return new REHex::ChecksumGeneratorBotan("SHA-512"); } },
 	#endif
 	
 	#endif

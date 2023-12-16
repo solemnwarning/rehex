@@ -79,6 +79,24 @@ namespace REHex {
 			std::unique_ptr<Botan::HashFunction> ctx;
 			std::string hash_hex;
 	};
+	
+	class ChecksumGeneratorAdler32: public ChecksumGenerator
+	{
+		public:
+			ChecksumGeneratorAdler32();
+			virtual ~ChecksumGeneratorAdler32() {}
+			
+			virtual void add_data(const void *data, size_t size) override;
+			virtual void finish() override;
+			
+			virtual void reset() override;
+			
+			virtual std::string checksum_hex() const override;
+			
+		private:
+			uint32_t a, b;
+			char hash_hex[12];
+	};
 }
 
 static REHex::ChecksumAlgorithm ALGOS[] = {
@@ -132,7 +150,9 @@ static REHex::ChecksumAlgorithm ALGOS[] = {
 	{ "CRC-32",                "CRC",  "CRC-32 (aka CRC-32 ADCCP, CRC-32 PKZip)",                         []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32()); } },
 	{ "CRC-32-BZIP2",          "CRC",  "CRC-32 BZIP2 (aka CRC-32 AAL5, CRC-32 DECT-B, CRC-32 B-CRC)",     []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_BZIP2()); } },
 	{ "CRC-32-MPEG-2",         "CRC",  "CRC-32 MPEG-2",                                                   []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_MPEG2()); } },
-	{ "CRC-32-POSIX",          "CRC",  "CRC-32 POSIX)",                                                   []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_POSIX()); } }
+	{ "CRC-32-POSIX",          "CRC",  "CRC-32 POSIX)",                                                   []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_POSIX()); } },
+	
+	{ "ADLER-32", "Adler-32", []() { return new REHex::ChecksumGeneratorAdler32(); } },
 };
 
 template<typename CRCType, uint16_t CRCWidth> REHex::ChecksumGeneratorCRC<CRCType, CRCWidth>::ChecksumGeneratorCRC(const CRC::Parameters<CRCType, CRCWidth> &parameters):
@@ -198,4 +218,39 @@ void REHex::ChecksumGeneratorBotan::reset()
 std::string REHex::ChecksumGeneratorBotan::checksum_hex() const
 {
 	return hash_hex;
+}
+
+/* "inefficient but straightforward" Adler-32 implementation taken from Wikipedia. */
+
+REHex::ChecksumGeneratorAdler32::ChecksumGeneratorAdler32():
+	a(1), b(0) {}
+
+void REHex::ChecksumGeneratorAdler32::add_data(const void *data, size_t size)
+{
+	static const uint32_t MOD_ADLER = 65521;
+	
+	const unsigned char *d = (const unsigned char*)(data);
+	
+	for(size_t i = 0; i < size; ++i)
+	{
+		a = (a + d[i]) % MOD_ADLER;
+		b = (b + a) % MOD_ADLER;
+	}
+}
+
+void REHex::ChecksumGeneratorAdler32::finish()
+{
+	uint32_t c = (b << 16) | a;
+	snprintf(hash_hex, sizeof(hash_hex), "%08" PRIX32, c);
+}
+
+void REHex::ChecksumGeneratorAdler32::reset()
+{
+	a = 1;
+	b = 0;
+}
+
+std::string REHex::ChecksumGeneratorAdler32::checksum_hex() const
+{
+	return std::string(hash_hex);
 }

@@ -302,3 +302,37 @@ TEST(Checksum, CRC32)
 		EXPECT_STRCASEEQ(crc_gen->checksum_hex().c_str(), "CBF43926");
 	}
 }
+
+TEST(Checksum, Alder32)
+{
+	/* Adler32 reference checksums calculated/verified with some online calculators */
+	
+	const ChecksumAlgorithm *a32_algo = ChecksumAlgorithm::by_name("ADLER-32");
+	ASSERT_NE(a32_algo, nullptr) << "Adler-32 algorithm is registered";
+	
+	{
+		ChecksumGenerator *a32_gen = a32_algo->factory();
+		
+		a32_gen->add_data("test", strlen("test"));
+		a32_gen->finish();
+		
+		EXPECT_STRCASEEQ(a32_gen->checksum_hex().c_str(), "045d01c1");
+		
+		a32_gen->reset();
+		a32_gen->add_data("foo", strlen("foo"));
+		a32_gen->finish();
+		
+		EXPECT_STRCASEEQ(a32_gen->checksum_hex().c_str(), "02820145");
+	}
+	
+	{
+		ChecksumGenerator *a32_gen = a32_algo->factory();
+		
+		a32_gen->add_data("The quick", strlen("The quick"));
+		a32_gen->add_data(" brown fox", strlen(" brown fox"));
+		a32_gen->add_data(" jumps over the lazy dog", strlen(" jumps over the lazy dog"));
+		a32_gen->finish();
+		
+		EXPECT_STRCASEEQ(a32_gen->checksum_hex().c_str(), "5bdc0fda");
+	}
+}

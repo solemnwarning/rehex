@@ -1,0 +1,42 @@
+[% WRAPPER page.tt
+   title = "Checksum Tool"
+%]
+
+<h2>Checksum Tool</h2>
+
+<p>
+The <i>Checksum</i> tool (<i>View menu</i> &gt; <i>Tool panels</i> &gt; <i>Checksum</i>) computes checksums of the chosen data (a selection/range or the whole file) in a chosen algorithm.
+</p>
+
+<p>
+<img src="checksum.png">
+</p>
+
+<p>
+The following hash algorithms are currently supported:
+</p>
+
+<ul>
+	<li>Adler-32</li>
+	<li>CRC-8</li>
+	<li>CRC-16 ARC (aka CRC-16 IBM, CRC-16 LHA)</li>
+	<li>CRC-16 BUYPASS (aka CRC-16 VERIFONE, CRC-16 UMTS)</li>
+	<li>CRC-16 CCITT FALSE</li>
+	<li>CRC-16 GENIBUS (aka CRC-16 EPC, CRC-16 I-CODE, CRC-16 DARC)</li>
+	<li>CRC-16 KERMIT (aka CRC-16 CCITT, CRC-16 CCITT-TRUE)</li>
+	<li>CRC-16 MCRF4XX</li>
+	<li>CRC-16 X-25 (aka CRC-16 IBM-SDLC, CRC-16 ISO-HDLC, CRC-16 B)</li>
+	<li>CRC-16 XMODEM (aka CRC-16 ZMODEM, CRC-16 ACORN, CRC-16 LTE)</li>
+	<li>CRC-32 (aka CRC-32 ADCCP, CRC-32 PKZip)</li>
+	<li>CRC-32 BZIP2 (aka CRC-32 AAL5, CRC-32 DECT-B, CRC-32 B-CRC)</li>
+	<li>CRC-32 MPEG-2</li>
+	<li>CRC-32 POSIX</li>
+	<li>MD5</li>
+	<li>SHA-1</li>
+	<li>SHA-224</li>
+	<li>SHA-256</li>
+	<li>SHA-384</li>
+	<li>SHA-512</li>
+</ul>
+
+[% END %]

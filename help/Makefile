@@ -25,6 +25,7 @@ PAGES := \
 	bt-preprocessor \
 	bt-syntax \
 	bt-types \
+	checksum \
 	comments \
 	diff \
 	index \

@@ -150,7 +150,7 @@ static REHex::ChecksumAlgorithm ALGOS[] = {
 	{ "CRC-32",                "CRC",  "CRC-32 (aka CRC-32 ADCCP, CRC-32 PKZip)",                         []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32()); } },
 	{ "CRC-32-BZIP2",          "CRC",  "CRC-32 BZIP2 (aka CRC-32 AAL5, CRC-32 DECT-B, CRC-32 B-CRC)",     []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_BZIP2()); } },
 	{ "CRC-32-MPEG-2",         "CRC",  "CRC-32 MPEG-2",                                                   []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_MPEG2()); } },
-	{ "CRC-32-POSIX",          "CRC",  "CRC-32 POSIX)",                                                   []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_POSIX()); } },
+	{ "CRC-32-POSIX",          "CRC",  "CRC-32 POSIX",                                                    []() { return new REHex::ChecksumGeneratorCRC<crcpp_uint32, 32>(CRC::CRC_32_POSIX()); } },
 	
 	{ "ADLER-32", "Adler-32", []() { return new REHex::ChecksumGeneratorAdler32(); } },
 };

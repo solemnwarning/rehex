@@ -18,7 +18,14 @@
 #ifndef REHEX_SHARED_MUTEX_HPP
 #define REHEX_SHARED_MUTEX_HPP
 
-#if __cplusplus >= 201402L
+/* The implementation of std::shared_mutex in MinGW seems to be broken in some
+ * subtle way possibly related to memory barriers and causes unpredictable
+ * crashes and memory corruption, so carry on using my implementation there.
+ *
+ * std::shared_mutex under Linux seems just fine in my testing.
+*/
+
+#if __cplusplus >= 201402L && !(defined(__MINGW32__))
 
 #include <shared_mutex>
 

@@ -16,6 +16,8 @@ Version TBA
 
  * Add bit editor tool.
 
+ * Add checksum tool (#219).
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

@@ -27,7 +27,7 @@ void REHex::EditCommentDialog::run_modal(wxWindow *parent, Document *doc, off_t 
 	
 	wxString old_comment_text = old_comment != comments.end()
 		? *(old_comment->second.text)
-		: "";
+		: wxString("");
 	
 	REHex::TextEntryDialog te(parent, "Enter comment", old_comment_text);
 	

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\wxFreeChart\src\areadraw.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\art.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axisplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\axis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\categoryaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\compdateaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\dateaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\juliandateaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\labelaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\logarithmicnumberaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\axis\numberaxis.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\bars\barplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\bars\barrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\category\categorydataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\category\categoryrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\category\categorysimpledataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\chart.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\chartpanel.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\chartsplitpanel.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\colorscheme.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\crosshair.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\dataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttdataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttsimpledataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\legend.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\marker.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\multiplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\movingaverage.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcbarrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlccandlestickrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcdataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcsimpledataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\pie\pieplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\plot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\renderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\symbol.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\title.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\tooltips.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xyz\bubbleplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xyz\xyzdataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xyz\xyzrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\functions\polynom.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\functions\sinefunction.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\juliantimeseriesdataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\timeseriesdataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\vectordataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyarearenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xydataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xydynamicdataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyhistorenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xylinerenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyplot.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyrenderer.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xysimpledataset.cpp" />
+    <ClCompile Include="..\..\wxFreeChart\src\zoompan.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{b84318df-37b8-41dc-8232-96663abc00a6}</ProjectGuid>
+    <RootNamespace>wxfreechart</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\thirdparty.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\thirdparty.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\thirdparty.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\thirdparty.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)..\wxFreeChart\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(SolutionDir)..\wxFreeChart\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)..\wxFreeChart\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(SolutionDir)..\wxFreeChart\include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

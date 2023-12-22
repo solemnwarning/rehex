@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "../src/platform.hpp"
+
 #include "SizeTestPanel.hpp"
 
 BEGIN_EVENT_TABLE(SizeTestPanel, REHex::ToolPanel)

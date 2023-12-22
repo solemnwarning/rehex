@@ -15,6 +15,9 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "../src/platform.hpp"
+
+#include <stdexcept>
 #include <stdio.h>
 #include <wx/app.h>
 #include <wx/frame.h>

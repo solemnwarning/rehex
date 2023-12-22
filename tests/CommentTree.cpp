@@ -236,7 +236,7 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	}
 };
 
-static void refresh_check_notifications(REHex::CommentTreeModel *model, const std::function<void()> &func, ...)
+static void refresh_check_notifications(REHex::CommentTreeModel *model, std::function<void()> func, ...)
 {
 	std::vector<std::string> expect;
 	

@@ -83,6 +83,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -102,6 +103,8 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <ObjectFileName>$(IntDir)\%(Directory)</ObjectFileName>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -117,6 +120,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +138,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,6 +158,7 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -163,31 +169,148 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\googletest\src\gtest-all.cc" />
+    <ClCompile Include="..\..\res\actual_size16.c" />
+    <ClCompile Include="..\..\res\ascii16.c" />
+    <ClCompile Include="..\..\res\ascii24.c" />
+    <ClCompile Include="..\..\res\ascii32.c" />
+    <ClCompile Include="..\..\res\ascii48.c" />
+    <ClCompile Include="..\..\res\diff_fold16.c" />
+    <ClCompile Include="..\..\res\diff_fold24.c" />
+    <ClCompile Include="..\..\res\diff_fold32.c" />
+    <ClCompile Include="..\..\res\diff_fold48.c" />
+    <ClCompile Include="..\..\res\fit_to_screen16.c" />
+    <ClCompile Include="..\..\res\icon128.c" />
+    <ClCompile Include="..\..\res\icon16.c" />
+    <ClCompile Include="..\..\res\icon32.c" />
+    <ClCompile Include="..\..\res\icon48.c" />
+    <ClCompile Include="..\..\res\icon64.c" />
+    <ClCompile Include="..\..\res\license.c" />
+    <ClCompile Include="..\..\res\offsets16.c" />
+    <ClCompile Include="..\..\res\offsets24.c" />
+    <ClCompile Include="..\..\res\offsets32.c" />
+    <ClCompile Include="..\..\res\offsets48.c" />
+    <ClCompile Include="..\..\res\spinner24.c" />
+    <ClCompile Include="..\..\res\swap_horiz16.c" />
+    <ClCompile Include="..\..\res\swap_vert16.c" />
+    <ClCompile Include="..\..\res\version.cpp" />
+    <ClCompile Include="..\..\res\zoom_in16.c" />
+    <ClCompile Include="..\..\res\zoom_out16.c" />
+    <ClCompile Include="..\..\src\AboutDialog.cpp" />
+    <ClCompile Include="..\..\src\AppSettings.cpp" />
+    <ClCompile Include="..\..\src\AppTestable.cpp" />
+    <ClCompile Include="..\..\src\ArtProvider.cpp" />
+    <ClCompile Include="..\..\src\BasicDataTypes.cpp" />
+    <ClCompile Include="..\..\src\BitmapTool.cpp" />
+    <ClCompile Include="..\..\src\buffer.cpp" />
+    <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
+    <ClCompile Include="..\..\src\BytesPerLineDialog.cpp" />
+    <ClCompile Include="..\..\src\CharacterEncoder.cpp" />
+    <ClCompile Include="..\..\src\CharacterFinder.cpp" />
+    <ClCompile Include="..\..\src\Checksum.cpp" />
+    <ClCompile Include="..\..\src\ChecksumImpl.cpp" />
+    <ClCompile Include="..\..\src\ClickText.cpp" />
+    <ClCompile Include="..\..\src\CommentTree.cpp" />
+    <ClCompile Include="..\..\src\ConsoleBuffer.cpp" />
+    <ClCompile Include="..\..\src\DataType.cpp" />
+    <ClCompile Include="..\..\src\DetachableNotebook.cpp" />
+    <ClCompile Include="..\..\src\DiffWindow.cpp" />
+    <ClCompile Include="..\..\src\DisassemblyRegion.cpp" />
+    <ClCompile Include="..\..\src\document.cpp" />
+    <ClCompile Include="..\..\src\DocumentCtrl.cpp" />
+    <ClCompile Include="..\..\src\EditCommentDialog.cpp" />
+    <ClCompile Include="..\..\src\Events.cpp" />
+    <ClCompile Include="..\..\src\FileWriter.cpp" />
+    <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
+    <ClCompile Include="..\..\src\IntelHexExport.cpp" />
+    <ClCompile Include="..\..\src\IntelHexImport.cpp" />
+    <ClCompile Include="..\..\src\LicenseDialog.cpp" />
+    <ClCompile Include="..\..\src\LoadingSpinner.cpp" />
+    <ClCompile Include="..\..\src\lua-bindings\rehex_bind.cpp" />
+    <ClCompile Include="..\..\src\lua-plugin-preload.c" />
+    <ClCompile Include="..\..\src\LuaPluginLoader.cpp" />
+    <ClCompile Include="..\..\src\mainwindow.cpp" />
+    <ClCompile Include="..\..\src\Palette.cpp" />
+    <ClCompile Include="..\..\src\RangeDialog.cpp" />
+    <ClCompile Include="..\..\src\RangeProcessor.cpp" />
+    <ClCompile Include="..\..\src\search.cpp" />
+    <ClCompile Include="..\..\src\StringPanel.cpp" />
+    <ClCompile Include="..\..\src\Tab.cpp" />
+    <ClCompile Include="..\..\src\textentrydialog.cpp" />
+    <ClCompile Include="..\..\src\ThreadPool.cpp" />
+    <ClCompile Include="..\..\src\ToolPanel.cpp" />
+    <ClCompile Include="..\..\src\util.cpp" />
+    <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
+    <ClCompile Include="..\..\src\win32lib.cpp" />
+    <ClCompile Include="..\..\tests\BitmapTool.cpp" />
     <ClCompile Include="..\..\tests\buffer.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />
+    <ClCompile Include="..\..\tests\ByteRangeTree.cpp" />
+    <ClCompile Include="..\..\tests\CharacterEncoder.cpp" />
+    <ClCompile Include="..\..\tests\CharacterFinder.cpp" />
+    <ClCompile Include="..\..\tests\Checksum.cpp" />
     <ClCompile Include="..\..\tests\CommentsDataObject.cpp" />
     <ClCompile Include="..\..\tests\CommentTree.cpp" />
+    <ClCompile Include="..\..\tests\ConsoleBuffer.cpp" />
+    <ClCompile Include="..\..\tests\DataHistogramAccumulator.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
     <ClCompile Include="..\..\tests\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />
     <ClCompile Include="..\..\tests\DocumentCtrl.cpp" />
+    <ClCompile Include="..\..\tests\endian_conv.cpp" />
+    <ClCompile Include="..\..\tests\FastRectangleFiller.cpp" />
+    <ClCompile Include="..\..\tests\FileWriter.cpp" />
+    <ClCompile Include="..\..\tests\IntelHexExport.cpp" />
+    <ClCompile Include="..\..\tests\IntelHexImport.cpp" />
+    <ClCompile Include="..\..\tests\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\tests\main.cpp" />
     <ClCompile Include="..\..\tests\NestedOffsetLengthMap.cpp" />
     <ClCompile Include="..\..\tests\NumericTextCtrl.cpp" />
+    <ClCompile Include="..\..\tests\RangeProcessor.cpp" />
     <ClCompile Include="..\..\tests\SafeWindowPointer.cpp" />
     <ClCompile Include="..\..\tests\search-bseq.cpp" />
     <ClCompile Include="..\..\tests\search-text.cpp" />
+    <ClCompile Include="..\..\tests\SearchBase.cpp" />
     <ClCompile Include="..\..\tests\SearchValue.cpp" />
     <ClCompile Include="..\..\tests\SharedDocumentPointer.cpp" />
+    <ClCompile Include="..\..\tests\SizeTestPanel.cpp" />
     <ClCompile Include="..\..\tests\StringPanel.cpp" />
     <ClCompile Include="..\..\tests\Tab.cpp" />
+    <ClCompile Include="..\..\tests\testutil.cpp" />
     <ClCompile Include="..\..\tests\util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\all-tests-appcode\all-tests-appcode.vcxproj">
-      <Project>{1930e595-706f-4cd9-b609-729ff1dfbd54}</Project>
+    <ProjectReference Include="..\wxlua\wxlua.vcxproj">
+      <Project>{518c9fd0-cc93-44d7-ae12-8974ce814fcf}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\res\actual_size16.h" />
+    <ClInclude Include="..\..\res\ascii16.h" />
+    <ClInclude Include="..\..\res\ascii24.h" />
+    <ClInclude Include="..\..\res\ascii32.h" />
+    <ClInclude Include="..\..\res\ascii48.h" />
+    <ClInclude Include="..\..\res\diff_fold16.h" />
+    <ClInclude Include="..\..\res\diff_fold24.h" />
+    <ClInclude Include="..\..\res\diff_fold32.h" />
+    <ClInclude Include="..\..\res\diff_fold48.h" />
+    <ClInclude Include="..\..\res\fit_to_screen16.h" />
+    <ClInclude Include="..\..\res\icon128.h" />
+    <ClInclude Include="..\..\res\icon16.h" />
+    <ClInclude Include="..\..\res\icon32.h" />
+    <ClInclude Include="..\..\res\icon48.h" />
+    <ClInclude Include="..\..\res\icon64.h" />
+    <ClInclude Include="..\..\res\license.h" />
+    <ClInclude Include="..\..\res\offsets16.h" />
+    <ClInclude Include="..\..\res\offsets24.h" />
+    <ClInclude Include="..\..\res\offsets32.h" />
+    <ClInclude Include="..\..\res\offsets48.h" />
+    <ClInclude Include="..\..\res\spinner24.h" />
+    <ClInclude Include="..\..\res\swap_horiz16.h" />
+    <ClInclude Include="..\..\res\swap_vert16.h" />
+    <ClInclude Include="..\..\res\zoom_in16.h" />
+    <ClInclude Include="..\..\res\zoom_out16.h" />
+    <ClInclude Include="..\..\src\lua-plugin-preload.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

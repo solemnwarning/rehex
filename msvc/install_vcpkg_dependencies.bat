@@ -1,10 +1,10 @@
 @echo off
 
 REM get vcpkg distribution
-if not exist vcpkg git clone -b libunistring-windows https://github.com/solemnwarning/vcpkg.git
+if not exist vcpkg git clone https://github.com/microsoft/vcpkg.git
 
 REM build vcpkg
 if not exist vcpkg\vcpkg.exe call vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
 REM install required packages
-vcpkg\vcpkg.exe install --triplet %1 jansson wxwidgets capstone[arm,arm64,mips,ppc,sparc,x86] lua[tools] libiconv libunistring
+vcpkg\vcpkg.exe install --triplet %1 botan jansson wxwidgets capstone[arm,arm64,mips,ppc,sparc,x86] lua[tools] libiconv libunistring

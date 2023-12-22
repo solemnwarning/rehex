@@ -31,19 +31,24 @@
       <AdditionalLibraryDirectories>$(vcpkgInstallDir)$(vcpkgDebugFolder)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
 
       <!-- Add wxWidgets base core aui propgrid adv -->
-      <AdditionalDependencies>wxbase31u$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_core.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_aui.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_propgrid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>wxmsw31u$(wxDebugSuffix)_adv.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxbase32u$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_core.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_aui.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_propgrid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_adv.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>jpeg.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>libpng16$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>lzma.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>nanosvg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>nanosvgrast.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>tiff$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>zlib$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <!-- Windows dependencies for wxWidgets -->
       <AdditionalDependencies>comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+
+      <!-- Add Botan -->
+      <AdditionalDependencies>botan-3.lib;%(AdditionalDependencies)</AdditionalDependencies>
 
       <!-- Add jansson -->
       <AdditionalDependencies>jansson$(janssonDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>

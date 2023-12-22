@@ -1,0 +1,223 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\axis">
+      <UniqueIdentifier>{b421988e-7f7d-4fb7-9eac-5ddb1f29a50f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\bars">
+      <UniqueIdentifier>{0c659e58-0192-415d-826a-df5cc6ee2a33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\category">
+      <UniqueIdentifier>{b7cb9f4c-c7c6-4c6d-a953-8a733738efcb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gantt">
+      <UniqueIdentifier>{b5f39853-b9fb-497e-9345-0db3506658b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ohlc">
+      <UniqueIdentifier>{ba5cae72-4a49-4533-8e94-31e1be261178}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\pie">
+      <UniqueIdentifier>{fdf1056d-3f0a-4cee-9fbe-936fac7652ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\xy">
+      <UniqueIdentifier>{0fce46a8-4a51-4f2f-a271-422f07142cd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\xy\functions">
+      <UniqueIdentifier>{74491304-5e6c-4459-b4ff-522fdc4a39d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\xyz">
+      <UniqueIdentifier>{84e68283-c77d-4be5-a663-895bf8410c6f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\wxFreeChart\src\areadraw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\art.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axisplot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\chart.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\chartpanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\chartsplitpanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\colorscheme.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\crosshair.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\dataset.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\legend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\marker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\multiplot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\plot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\symbol.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\title.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\tooltips.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\zoompan.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\axis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\categoryaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\compdateaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\dateaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\juliandateaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\labelaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\logarithmicnumberaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\axis\numberaxis.cpp">
+      <Filter>Source Files\axis</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\bars\barplot.cpp">
+      <Filter>Source Files\bars</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\bars\barrenderer.cpp">
+      <Filter>Source Files\bars</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\category\categorydataset.cpp">
+      <Filter>Source Files\category</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\category\categoryrenderer.cpp">
+      <Filter>Source Files\category</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\category\categorysimpledataset.cpp">
+      <Filter>Source Files\category</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttdataset.cpp">
+      <Filter>Source Files\gantt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttplot.cpp">
+      <Filter>Source Files\gantt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttrenderer.cpp">
+      <Filter>Source Files\gantt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\gantt\ganttsimpledataset.cpp">
+      <Filter>Source Files\gantt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\movingaverage.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcbarrenderer.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlccandlestickrenderer.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcdataset.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcplot.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcrenderer.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\ohlc\ohlcsimpledataset.cpp">
+      <Filter>Source Files\ohlc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\pie\pieplot.cpp">
+      <Filter>Source Files\pie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\juliantimeseriesdataset.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\timeseriesdataset.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\vectordataset.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyarearenderer.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xydataset.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xydynamicdataset.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyhistorenderer.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xylinerenderer.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyplot.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xyrenderer.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\xysimpledataset.cpp">
+      <Filter>Source Files\xy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\functions\polynom.cpp">
+      <Filter>Source Files\xy\functions</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xy\functions\sinefunction.cpp">
+      <Filter>Source Files\xy\functions</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xyz\xyzdataset.cpp">
+      <Filter>Source Files\xyz</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xyz\xyzrenderer.cpp">
+      <Filter>Source Files\xyz</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxFreeChart\src\xyz\bubbleplot.cpp">
+      <Filter>Source Files\xyz</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

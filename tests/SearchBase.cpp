@@ -34,12 +34,14 @@ class SearchBaseDummy: public Search
 	public:
 		bool should_wrap;
 		bool wrap_requested;
+		int wrap_request_count;
 		bool nothing_found;
 		
 		SearchBaseDummy(wxWindow *parent, SharedDocumentPointer &doc):
 			Search(parent, doc, "Dummy search class"),
 			should_wrap(false),
 			wrap_requested(false),
+			wrap_request_count(0),
 			nothing_found(false) {}
 		
 		/* NOTE: end_search() is called from subclass destructor rather than base to ensure search
@@ -88,6 +90,8 @@ class SearchBaseDummy: public Search
 		virtual bool wrap_query(const char *message) override
 		{
 			wrap_requested = true;
+			++wrap_request_count;
+
 			return should_wrap;
 		}
 		
@@ -140,7 +144,11 @@ class SearchBaseTest: public ::testing::Test {
 			check_timer.Start(100, wxTIMER_CONTINUOUS);
 			timeout_timer.Start(5000, wxTIMER_ONE_SHOT);
 			
-			wxTheApp->OnRun();
+			int last_wrap_count;
+			do {
+				last_wrap_count = s.wrap_request_count;
+				wxTheApp->OnRun();
+			} while (s.should_wrap && last_wrap_count != s.wrap_request_count);
 			
 			timeout_timer.Stop();
 			check_timer.Stop();

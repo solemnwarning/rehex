@@ -110,6 +110,10 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -126,6 +130,10 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -146,6 +154,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -166,6 +178,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\googletest\src\gtest-all.cc" />
@@ -311,6 +327,27 @@
     <ClInclude Include="..\..\res\zoom_in16.h" />
     <ClInclude Include="..\..\res\zoom_out16.h" />
     <ClInclude Include="..\..\src\lua-plugin-preload.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\src\lua-bindings\rehex_rules.lua">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\src\lua-bindings\FuncWrapper.hpp;..\..\src\lua-bindings\rehex.i;..\..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\src\lua-bindings\FuncWrapper.hpp;..\..\src\lua-bindings\rehex.i;..\..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\src\lua-bindings\FuncWrapper.hpp;..\..\src\lua-bindings\rehex.i;..\..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\src\lua-bindings\FuncWrapper.hpp;..\..\src\lua-bindings\rehex.i;..\..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
+      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

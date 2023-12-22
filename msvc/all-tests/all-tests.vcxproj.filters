@@ -427,4 +427,9 @@
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\src\lua-bindings\rehex_rules.lua">
+      <Filter>src</Filter>
+    </CustomBuild>
+  </ItemGroup>
 </Project>

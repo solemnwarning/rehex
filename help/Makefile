@@ -74,7 +74,7 @@ WX_TARGETS := \
 
 rehex.htb: $(WX_TARGETS)
 	cp content/* wx/content/* wx/output/
-	zip -rj rehex.htb wx/output/
+	zip -X -rj rehex.htb wx/output/*
 
 wx/output/rehex.%: wx/templates/%.tt contents.txt
 	@mkdir -p wx/output/ $(shell dirname .d/$@.d)

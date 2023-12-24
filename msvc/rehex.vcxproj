@@ -183,6 +183,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_DEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -206,6 +207,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_DEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;REHEX_PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -253,6 +255,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <PreprocessorDefinitions>_DEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;REHEX_PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -278,6 +281,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -287,6 +291,12 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">
     <ClCompile>
@@ -298,6 +308,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;REHEX_PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -307,6 +318,12 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -318,6 +335,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -327,6 +345,12 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">
     <ClCompile>
@@ -338,6 +362,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>NDEBUG;REHEX_CACHE_CHARACTER_BITMAPS;REHEX_CACHE_STRING_BITMAPS;REHEX_PROFILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -347,6 +372,12 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
+    <PreBuildEvent>
+      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Generating version_msvc.h</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\res\actual_size16.c" />
@@ -512,32 +543,32 @@
   <ItemGroup>
     <CustomBuild Include="..\src\lua-bindings\rehex_rules.lua">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd .. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">cd .. &amp;&amp; vcpkg\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>

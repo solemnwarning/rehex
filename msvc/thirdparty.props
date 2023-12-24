@@ -18,6 +18,9 @@
 
     <!-- And jansson decided that it needed to be unique -->
     <janssonDebugSuffix Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Profile (Debug)'">_d</janssonDebugSuffix>
+
+    <!-- Path to Lua executable -->
+    <luaPath>$(vcpkgInstallDir)\tools\lua\lua.exe</luaPath>
   </PropertyGroup>
 
   <ItemDefinitionGroup>

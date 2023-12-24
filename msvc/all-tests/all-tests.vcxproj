@@ -334,10 +334,10 @@
   <ItemGroup>
     <CustomBuild Include="..\..\src\lua-bindings\rehex_rules.lua">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd ..\.. &amp;&amp; msvc\vcpkg\installed\x64-windows-static\tools\lua\lua.exe -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\src\lua-bindings\rehex_bind.h;..\..\src\lua-bindings\rehex_bind.cpp;..\..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>

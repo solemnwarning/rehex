@@ -93,7 +93,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(SolutionDir) &amp;&amp; install_vcpkg_dependencies.bat x64-windows-static</Command>
+      <Command>cd $(SolutionDir) &amp;&amp; $(ProjectDir)install_vcpkg_dependencies.bat x64-windows-static-v142 "$(ProjectDir)triplets"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -108,7 +108,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(SolutionDir) &amp;&amp; install_vcpkg_dependencies.bat x86-windows-static</Command>
+      <Command>cd $(SolutionDir) &amp;&amp; $(ProjectDir)install_vcpkg_dependencies.bat x86-windows-static-v142 "$(ProjectDir)triplets"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -127,7 +127,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(SolutionDir) &amp;&amp; install_vcpkg_dependencies.bat x86-windows-static</Command>
+      <Command>cd $(SolutionDir) &amp;&amp; $(ProjectDir)install_vcpkg_dependencies.bat x86-windows-static-v142 "$(ProjectDir)triplets"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -146,7 +146,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd $(SolutionDir) &amp;&amp; install_vcpkg_dependencies.bat x64-windows-static</Command>
+      <Command>cd $(SolutionDir) &amp;&amp; $(ProjectDir)install_vcpkg_dependencies.bat x64-windows-static-v142 "$(ProjectDir)triplets"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

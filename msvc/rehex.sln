@@ -32,6 +32,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vcpkg-deploy", "vcpkg-deploy\vcpkg-deploy.vcxproj", "{73DF1FFB-1C5E-409E-A309-83934640CCB8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxfreechart", "wxfreechart\wxfreechart.vcxproj", "{B84318DF-37B8-41DC-8232-96663ABC00A6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{73DF1FFB-1C5E-409E-A309-83934640CCB8} = {73DF1FFB-1C5E-409E-A309-83934640CCB8}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

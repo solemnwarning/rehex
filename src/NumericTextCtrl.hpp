@@ -249,6 +249,11 @@ namespace REHex {
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base);
 			}
+			
+			wxString GetStringValue() const
+			{
+				return wxTextCtrl::GetValue();
+			}
 	};
 }
 

@@ -768,3 +768,401 @@ TEST(SearchValue, SearchFor1664EE)
 		EXPECT_TRUE(s.test(&check, sizeof(check))) << "Matches 64-bit big endian value";
 	}
 }
+
+#define F32_1_POINT_4_LE 0x33, 0x33, 0xb3, 0x3f
+#define F32_1_POINT_4_BE 0x3f, 0xb3, 0x33, 0x33
+#define F32_1_POINT_5_LE 0x00, 0x00, 0xc0, 0x3f
+#define F32_1_POINT_5_BE 0x3f, 0xc0, 0x00, 0x00
+#define F32_2_POINT_0_LE 0x00, 0x00, 0x00, 0x40
+#define F32_POS_INF_LE 0x00, 0x00, 0x80, 0x7f
+#define F32_NEG_INF_LE 0x00, 0x00, 0x80, 0xff
+#define F32_NAN1_LE 0x00, 0x00, 0xc0, 0xff
+#define F32_NAN2_LE 0x00, 0x10, 0xc0, 0xff
+
+TEST(SearchValue, SearchForF32LE)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches correct value";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_LE, 0x00, 0x00, 0x00, 0x00 };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches value with trailing data";
+	}
+	
+	{
+		unsigned char check[] = { 0x00, 0x00, 0x00, 0x00, F32_1_POINT_5_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match value with leading data";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_4_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match wrong value";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match big endian value";
+	}
+	
+	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE, "0.25");
+	
+	{
+		unsigned char check[] = { F32_1_POINT_4_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches close value using epsilon";
+	}
+	
+	{
+		unsigned char check[] = { F32_2_POINT_0_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match an out-of-range value using epsilon";
+	}
+	
+	{
+		unsigned char check[] = { F32_NEG_INF_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match infinity";
+	}
+	
+	{
+		unsigned char check[] = { F32_NAN1_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match NaN";
+	}
+}
+
+TEST(SearchValue, SearchForF32Infinity)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("inf", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F32_POS_INF_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches positive infinity";
+	}
+	
+	{
+		unsigned char check[] = { F32_NEG_INF_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match inf with -inf";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match a number";
+	}
+	
+	{
+		unsigned char check[] = { F32_NAN1_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match NaN";
+	}
+	
+	s.configure("-inf", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F32_NEG_INF_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches negative infinity";
+	}
+}
+
+TEST(SearchValue, SearchForF32NaN)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("NaN", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F32_NAN1_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches NaN value";
+	}
+	
+	{
+		unsigned char check[] = { F32_NAN2_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches NaN value";
+	}
+	
+	{
+		unsigned char check[] = { F32_POS_INF_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match infinity";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_4_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match a number";
+	}
+}
+
+TEST(SearchValue, SearchForF32BE)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_BE);
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_BE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches correct value";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_BE, 0x00, 0x00, 0x00, 0x00 };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches value with trailing data";
+	}
+	
+	{
+		unsigned char check[] = { 0x00, 0x00, 0x00, 0x00, F32_1_POINT_5_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match value with leading data";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_4_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match wrong value";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match little endian value";
+	}
+}
+
+TEST(SearchValue, SearchForF32EE)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_BE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches big endian value";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches little endian value";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_5_BE, 0x00, 0x00, 0x00, 0x00 };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches value with trailing data";
+	}
+	
+	{
+		unsigned char check[] = { 0x00, 0x00, 0x00, 0x00, F32_1_POINT_5_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match value with leading data";
+	}
+	
+	{
+		unsigned char check[] = { F32_1_POINT_4_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match wrong value";
+	}
+}
+
+#define F64_1_POINT_4_LE 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0xf6, 0x3f
+#define F64_1_POINT_4_BE 0x3f, 0xf6, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+#define F64_1_POINT_5_LE 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x3f
+#define F64_1_POINT_5_BE 0x3f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+#define F64_2_POINT_0_LE 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40
+#define F64_POS_INF_LE 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x7f
+#define F64_NEG_INF_LE 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xff
+#define F64_NAN1_LE 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0xff
+#define F64_NAN2_LE 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0xf8, 0xff
+
+TEST(SearchValue, SearchForF64LE)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches correct value";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_LE, 0x00, 0x00, 0x00, 0x00 };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches value with trailing data";
+	}
+	
+	{
+		unsigned char check[] = { 0x00, 0x00, 0x00, 0x00, F64_1_POINT_5_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match value with leading data";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_4_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match wrong value";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match big endian value";
+	}
+	
+	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE, "0.25");
+	
+	{
+		unsigned char check[] = { F64_1_POINT_4_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches close value using epsilon";
+	}
+	
+	{
+		unsigned char check[] = { F64_2_POINT_0_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match an out-of-range value using epsilon";
+	}
+	
+	{
+		unsigned char check[] = { F64_NEG_INF_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match infinity";
+	}
+	
+	{
+		unsigned char check[] = { F64_NAN1_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match NaN";
+	}
+}
+
+TEST(SearchValue, SearchForF64Infinity)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("inf", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F64_POS_INF_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches positive infinity";
+	}
+	
+	{
+		unsigned char check[] = { F64_NEG_INF_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match inf with -inf";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match a number";
+	}
+	
+	{
+		unsigned char check[] = { F64_NAN1_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match NaN";
+	}
+	
+	s.configure("-inf", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F64_NEG_INF_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches negative infinity";
+	}
+}
+
+TEST(SearchValue, SearchForF64NaN)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("NaN", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
+	
+	{
+		unsigned char check[] = { F64_NAN1_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches NaN value";
+	}
+	
+	{
+		unsigned char check[] = { F64_NAN2_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches NaN value";
+	}
+	
+	{
+		unsigned char check[] = { F64_POS_INF_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match infinity";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_4_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match a number";
+	}
+}
+
+TEST(SearchValue, SearchForF64BE)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_BE);
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_BE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches correct value";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_BE, 0x00, 0x00, 0x00, 0x00 };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches value with trailing data";
+	}
+	
+	{
+		unsigned char check[] = { 0x00, 0x00, 0x00, 0x00, F64_1_POINT_5_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match value with leading data";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_4_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match wrong value";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_LE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match little endian value";
+	}
+}
+
+TEST(SearchValue, SearchForF64EE)
+{
+	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	
+	REHex::Search::Value s(&frame, doc);
+	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_BE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches big endian value";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_LE };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches little endian value";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_5_BE, 0x00, 0x00, 0x00, 0x00 };
+		EXPECT_TRUE(s.test(check, sizeof(check))) << "Matches value with trailing data";
+	}
+	
+	{
+		unsigned char check[] = { 0x00, 0x00, 0x00, 0x00, F64_1_POINT_5_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match value with leading data";
+	}
+	
+	{
+		unsigned char check[] = { F64_1_POINT_4_BE };
+		EXPECT_FALSE(s.test(check, sizeof(check))) << "Doesn't match wrong value";
+	}
+}

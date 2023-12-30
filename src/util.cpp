@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 #include <ctype.h>
+#include <float.h>
 #include <inttypes.h>
 #include <string>
 #include <vector>
@@ -472,4 +473,70 @@ std::string REHex::document_save_as_dialog(wxWindow *modal_parent, Document *doc
 	}
 	
 	return filename;
+}
+
+float REHex::parse_float(const std::string &s)
+{
+	if(s.length() == 0)
+	{
+		/* String is empty */
+		throw ParseErrorEmpty();
+	}
+	
+	if(s.find_first_not_of("\t ") == std::string::npos)
+	{
+		/* String contains only whitespace */
+		throw ParseErrorEmpty();
+	}
+	
+	errno = 0;
+	char *endptr;
+	
+	float n = strtof(s.c_str(), &endptr);
+	
+	if(*endptr != '\0')
+	{
+		/* Invalid characters */
+		throw ParseErrorFormat();
+	}
+	if((n == HUGE_VALF || n == FLT_MIN) && errno == ERANGE)
+	{
+		/* Out of range of float */
+		throw ParseErrorRange();
+	}
+	
+	return n;
+}
+
+double REHex::parse_double(const std::string &s)
+{
+	if(s.length() == 0)
+	{
+		/* String is empty */
+		throw ParseErrorEmpty();
+	}
+	
+	if(s.find_first_not_of("\t ") == std::string::npos)
+	{
+		/* String contains only whitespace */
+		throw ParseErrorEmpty();
+	}
+	
+	errno = 0;
+	char *endptr;
+	
+	double n = strtod(s.c_str(), &endptr);
+	
+	if(*endptr != '\0')
+	{
+		/* Invalid characters */
+		throw ParseErrorFormat();
+	}
+	if((n == HUGE_VAL || n == DBL_MIN) && errno == ERANGE)
+	{
+		/* Out of range of float */
+		throw ParseErrorRange();
+	}
+	
+	return n;
 }

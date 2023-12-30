@@ -31,6 +31,24 @@ namespace REHex {
 			ParseError(const char *what);
 	};
 	
+	class ParseErrorFormat: public ParseError
+	{
+		public:
+			ParseErrorFormat(): ParseError("Number is not of a known format") {}
+	};
+	
+	class ParseErrorRange: public ParseError
+	{
+		public:
+			ParseErrorRange(): ParseError("Number is out of range") {}
+	};
+	
+	class ParseErrorEmpty: public ParseError
+	{
+		public:
+			ParseErrorEmpty(): ParseError("No number provided") {}
+	};
+	
 	/**
 	 * @brief RAII-style access to the clipboard.
 	 *
@@ -69,6 +87,9 @@ namespace REHex {
 	
 	std::vector<unsigned char> parse_hex_string(const std::string &hex_string);
 	unsigned char parse_ascii_nibble(char c);
+	
+	float parse_float(const std::string &s);
+	double parse_double(const std::string &s);
 	
 	void file_manager_show_file(const std::string &filename);
 	

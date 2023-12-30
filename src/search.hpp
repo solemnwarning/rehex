@@ -173,9 +173,14 @@ namespace REHex {
 		private:
 			std::list< std::vector<unsigned char> > search_for;
 			
-			NumericTextCtrl *search_for_tc;
-			wxCheckBox *i8_cb, *i16_cb,*i32_cb, *i64_cb;
+			NumericTextCtrl *search_for_tc, *epsilon_tc;
+			wxCheckBox *i8_cb, *i16_cb,*i32_cb, *i64_cb, *f32_cb, *f64_cb;
 			wxRadioButton *e_little, *e_big, *e_either;
+			
+			bool be_enabled, le_enabled;
+			bool f32_enabled, f64_enabled;
+			float f32_value, f32_epsilon;
+			double f64_value, f64_epsilon;
 		
 		public:
 			Value(wxWindow *parent, SharedDocumentPointer &doc);
@@ -187,8 +192,10 @@ namespace REHex {
 			static const unsigned FMT_I16 = (1 << 3);
 			static const unsigned FMT_I32 = (1 << 4);
 			static const unsigned FMT_I64 = (1 << 5);
+			static const unsigned FMT_F32 = (1 << 6);
+			static const unsigned FMT_F64 = (1 << 7);
 			
-			void configure(const std::string &value, unsigned formats);
+			void configure(const std::string &value, unsigned formats, const std::string &epsilon = "0");
 			
 			virtual bool test(const void *data, size_t data_size);
 			virtual size_t test_max_window();

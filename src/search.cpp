@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 #include <assert.h>
+#include <cmath>
 #include <functional>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +37,7 @@
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
 */
-#include <portable_endian.h>
+#include "endian_conv.hpp"
 
 enum {
 	ID_FIND_NEXT = 1,
@@ -834,7 +835,7 @@ REHex::Search::Value::~Value()
 	}
 }
 
-void REHex::Search::Value::configure(const std::string &value, unsigned formats)
+void REHex::Search::Value::configure(const std::string &value, unsigned formats, const std::string &epsilon)
 {
 	search_for_tc->SetValue(value);
 	
@@ -855,6 +856,10 @@ void REHex::Search::Value::configure(const std::string &value, unsigned formats)
 	i16_cb->SetValue(!!(formats & FMT_I16));
 	i32_cb->SetValue(!!(formats & FMT_I32));
 	i64_cb->SetValue(!!(formats & FMT_I64));
+	f32_cb->SetValue(!!(formats & FMT_F32));
+	f64_cb->SetValue(!!(formats & FMT_F64));
+	
+	epsilon_tc->SetValue(epsilon);
 	
 	read_window_controls();
 }
@@ -869,6 +874,84 @@ bool REHex::Search::Value::test(const void *data, size_t data_size)
 		}
 	}
 	
+	if(f32_enabled && data_size >= sizeof(float))
+	{
+		if(be_enabled)
+		{
+			float f = beXXXtoh_p<float>(data);
+			
+			if(isnan(f) && isnan(f32_value))
+			{
+				return true;
+			}
+			else if(isinf(f) && isinf(f32_value) && f == f32_value)
+			{
+				return true;
+			}
+			else if(std::isfinite(f) && std::isfinite(f32_value) && fabsf(f - f32_value) <= f32_epsilon)
+			{
+				return true;
+			}
+		}
+		
+		if(le_enabled)
+		{
+			float f = leXXXtoh_p<float>(data);
+			
+			if(isnan(f) && isnan(f32_value))
+			{
+				return true;
+			}
+			else if(isinf(f) && isinf(f32_value) && f == f32_value)
+			{
+				return true;
+			}
+			else if(std::isfinite(f) && std::isfinite(f32_value) && fabsf(f - f32_value) <= f32_epsilon)
+			{
+				return true;
+			}
+		}
+	}
+	
+	if(f64_enabled && data_size >= sizeof(double))
+	{
+		if(be_enabled)
+		{
+			double f = beXXXtoh_p<double>(data);
+			
+			if(isnan(f) && isnan(f64_value))
+			{
+				return true;
+			}
+			else if(isinf(f) && isinf(f64_value) && f == f64_value)
+			{
+				return true;
+			}
+			else if(std::isfinite(f) && std::isfinite(f64_value) && fabs(f - f64_value) <= f64_epsilon)
+			{
+				return true;
+			}
+		}
+		
+		if(le_enabled)
+		{
+			double f = leXXXtoh_p<double>(data);
+			
+			if(isnan(f) && isnan(f64_value))
+			{
+				return true;
+			}
+			else if(isinf(f) && isinf(f64_value) && f == f64_value)
+			{
+				return true;
+			}
+			else if(std::isfinite(f) && std::isfinite(f64_value) && fabs(f - f64_value) <= f64_epsilon)
+			{
+				return true;
+			}
+		}
+	}
+	
 	return false;
 }
 
@@ -879,6 +962,16 @@ size_t REHex::Search::Value::test_max_window()
 	for(auto i = search_for.begin(); i != search_for.end(); ++i)
 	{
 		search_for_max = std::max(search_for_max, i->size());
+	}
+	
+	if(f32_enabled)
+	{
+		search_for_max = std::max(search_for_max, sizeof(float));
+	}
+	
+	if(f64_enabled)
+	{
+		search_for_max = std::max(search_for_max, sizeof(double));
 	}
 	
 	return search_for_max;
@@ -902,7 +995,7 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 	{
 		wxStaticBoxSizer *sz = new wxStaticBoxSizer(wxVERTICAL, parent, "Value formats");
 		
-		wxBoxSizer *sz1 = new wxBoxSizer(wxHORIZONTAL);
+		wxGridSizer *sz1 = new wxGridSizer(4);
 		sz->Add(sz1, 0, wxTOP | wxBOTTOM, 5);
 		
 		i8_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "8-bit integer");
@@ -921,6 +1014,17 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 		i64_cb->SetValue(true);
 		sz1->Add(i64_cb, 0, wxLEFT | wxRIGHT, 5);
 		
+		sz1->AddSpacer(1);
+		sz1->AddSpacer(1);
+		
+		f32_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "32-bit float");
+		f32_cb->SetValue(true);
+		sz1->Add(f32_cb, 0, wxLEFT, 5);
+		
+		f64_cb = new wxCheckBox(sz->GetStaticBox(), wxID_ANY, "64-bit float");
+		f64_cb->SetValue(true);
+		sz1->Add(f64_cb, 0, wxLEFT | wxRIGHT, 5);
+		
 		wxStaticLine *sl1 = new wxStaticLine(sz->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 		sz->Add(sl1, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
 		
@@ -936,6 +1040,18 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 		e_either = new wxRadioButton(sz->GetStaticBox(), wxID_ANY, "Either");
 		e_either->SetValue(true);
 		sz2->Add(e_either, 0, wxLEFT | wxRIGHT, 5);
+		
+		wxStaticLine *sl2 = new wxStaticLine(sz->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+		sz->Add(sl2, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
+		
+		wxBoxSizer *sz3 = new wxBoxSizer(wxHORIZONTAL);
+		sz->Add(sz3, 0, wxTOP | wxBOTTOM, 5);
+		
+		sz3->Add(new wxStaticText(sz->GetStaticBox(), wxID_ANY, "Floating point epsilon:"), 0, wxLEFT | wxALIGN_CENTER_VERTICAL, 5);
+		
+		epsilon_tc = new NumericTextCtrl(sz->GetStaticBox(), wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, 0);
+		epsilon_tc->SetToolTip("Tolerance when comparing floating point numbers");
+		sz3->Add(epsilon_tc, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 		
 		sizer->Add(sz, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
 	}
@@ -987,6 +1103,9 @@ bool REHex::Search::Value::read_window_controls()
 {
 	search_for.clear();
 	
+	le_enabled = e_little->GetValue() || e_either->GetValue();
+	be_enabled = e_big->GetValue() || e_either->GetValue();
+	
 	if(i8_cb->GetValue())
 	{
 		try {
@@ -1008,7 +1127,29 @@ bool REHex::Search::Value::read_window_controls()
 	INTEGER_TYPE_SIZE(32);
 	INTEGER_TYPE_SIZE(64);
 	
-	if(search_for.empty())
+	f32_enabled = false;
+	if(f32_cb->GetValue())
+	{
+		try {
+			f32_value = parse_float(search_for_tc->GetStringValue().ToStdString());
+			f32_epsilon = parse_float(epsilon_tc->GetStringValue().ToStdString());
+			f32_enabled = true;
+		}
+		catch(const ParseError &e) {}
+	}
+	
+	f64_enabled = false;
+	if(f64_cb->GetValue())
+	{
+		try {
+			f64_value = parse_double(search_for_tc->GetStringValue().ToStdString());
+			f64_epsilon = parse_double(epsilon_tc->GetStringValue().ToStdString());
+			f64_enabled = true;
+		}
+		catch(const ParseError &e) {}
+	}
+	
+	if(search_for.empty() && !f32_enabled && !f64_enabled)
 	{
 		wxMessageBox("Please enter a valid value to search for", "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
 		return false;
@@ -1050,4 +1191,14 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	
 	try { search_for_tc->GetValue<uint64_t>(); i64_cb->Enable(); }
 	catch(const REHex::NumericTextCtrl::InputError &) {}
+	
+	f32_cb->Disable();
+	
+	try { parse_float(search_for_tc->GetStringValue().ToStdString()); f32_cb->Enable(); }
+	catch(const ParseError &e) {}
+	
+	f64_cb->Disable();
+	
+	try { parse_double(search_for_tc->GetStringValue().ToStdString()); f64_cb->Enable(); }
+	catch(const ParseError &e) {}
 }

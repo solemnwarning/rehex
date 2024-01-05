@@ -89,11 +89,7 @@ Finally, you can install the package:
 
 ## Building
 
-If you want to compile on Linux, just check out the source and run `make`. You will need Jansson, wxWidgets, GTK+, Capstone, Lua, libunistring and Template Toolkit installed, along with their development packages (`sudo apt install build-essential git libcapstone-dev libgtk-3-dev libjansson-dev libwxgtk3.0-gtk3-dev liblua5.3-dev libtemplate-perl libunistring-dev lua5.3 zip lua-busted` on Ubuntu, `pacman -S make base-devel capstone lua wxwidgets` on Manjaro).
-
-The resulting build can be installed using `make install`, which accepts all the standard environment variables.
-
-For Windows or Mac build instructions, see the relevant README: [README.Windows.md](README.Windows.md) [README.OSX.md](README.OSX.md)
+Compiling REHex from source is described in [COMPILING.md](COMPILING.md).
 
 ## Feedback
 

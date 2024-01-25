@@ -20,6 +20,8 @@ Version TBA
 
  * Add options to search for floating point values.
 
+ * Don't reload files modified externally when requested not to.
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

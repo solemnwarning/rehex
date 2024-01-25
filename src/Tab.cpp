@@ -1404,7 +1404,7 @@ void REHex::Tab::file_modified_dialog()
 			(wxYES_NO | wxICON_EXCLAMATION | wxCENTER));
 		
 		int response = confirm.ShowModal();
-		if(response == wxNO)
+		if(response == wxID_NO)
 		{
 			return;
 		}
@@ -1418,7 +1418,7 @@ void REHex::Tab::file_modified_dialog()
 			(wxYES_NO | wxICON_EXCLAMATION | wxCENTER));
 		
 		int response = confirm.ShowModal();
-		if(response == wxNO)
+		if(response == wxID_NO)
 		{
 			return;
 		}

@@ -31,6 +31,7 @@
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
+#include "CustomMessageDialog.hpp"
 #include "EditCommentDialog.hpp"
 #include "profile.hpp"
 #include "Tab.hpp"
@@ -82,7 +83,8 @@ REHex::Tab::Tab(wxWindow *parent):
 	child_windows_hidden(false),
 	parent_window_active(true),
 	file_deleted_dialog_pending(false),
-	file_modified_dialog_pending(false)
+	file_modified_dialog_pending(false),
+	auto_reload(false)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -164,7 +166,8 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	child_windows_hidden(false),
 	parent_window_active(true),
 	file_deleted_dialog_pending(false),
-	file_modified_dialog_pending(false)
+	file_modified_dialog_pending(false),
+	auto_reload(false)
 {
 	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
 	v_splitter->SetSashGravity(1.0);
@@ -615,6 +618,16 @@ void REHex::Tab::set_document_display_mode(DocumentDisplayMode document_display_
 {
 	this->document_display_mode = document_display_mode;
 	repopulate_regions();
+}
+
+bool REHex::Tab::get_auto_reload() const
+{
+	return auto_reload;
+}
+
+void REHex::Tab::set_auto_reload(bool auto_reload)
+{
+	this->auto_reload = auto_reload;
 }
 
 void REHex::Tab::OnSize(wxSizeEvent &event)
@@ -1430,18 +1443,36 @@ void REHex::Tab::file_modified_dialog()
 			return;
 		}
 	}
-	else{
-		wxMessageDialog confirm(
+	else if(!auto_reload)
+	{
+		enum {
+			ID_RELOAD = 1,
+			ID_AUTO_RELOAD,
+			ID_IGNORE
+		};
+		
+		CustomMessageDialog confirm(
 			this,
-			(wxString("The file ") + doc->get_filename() + " has been modified externally.\n"
-				+ "Do you want to reload the file?"),
+			(wxString("The file '") + doc->get_title() + "' has been modified externally.\n"
+				+ "Reload this file?"),
 			"File modified",
-			(wxYES_NO | wxICON_EXCLAMATION | wxCENTER));
+			(wxICON_EXCLAMATION | wxCENTER));
+		
+		confirm.AddButton(ID_RELOAD, "Yes");
+		confirm.AddButton(ID_AUTO_RELOAD, "Yes (always)");
+		confirm.AddButton(ID_IGNORE, "No");
+		
+		confirm.SetEscapeId(ID_IGNORE);
+		confirm.SetAffirmativeId(ID_RELOAD);
 		
 		int response = confirm.ShowModal();
-		if(response == wxID_NO)
+		if(response == ID_IGNORE)
 		{
 			return;
+		}
+		else if(response == ID_AUTO_RELOAD)
+		{
+			auto_reload = true;
 		}
 	}
 	

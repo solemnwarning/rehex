@@ -70,6 +70,7 @@ BEGIN_EVENT_TABLE(REHex::Search, wxDialog)
 	
 	EVT_BUTTON(ID_FIND_NEXT, REHex::Search::OnFindNext)
 	EVT_BUTTON(ID_FIND_PREV, REHex::Search::OnFindPrev)
+	EVT_TEXT_ENTER(wxID_ANY, REHex::Search::OnTextEnter)
 	EVT_BUTTON(wxID_CANCEL, REHex::Search::OnCancel)
 	EVT_TIMER(ID_TIMER, REHex::Search::OnTimer)
 END_EVENT_TABLE()
@@ -77,6 +78,7 @@ END_EVENT_TABLE()
 REHex::Search::Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
 	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), match_found_at(-1), running(false),
+	search_end_focus(NULL),
 	timer(this, ID_TIMER),
 	auto_close(false),
 	auto_wrap(false),
@@ -292,6 +294,28 @@ void REHex::Search::OnFindPrev(wxCommandEvent &event)
 	}
 }
 
+void REHex::Search::OnTextEnter(wxCommandEvent &event)
+{
+	/* The search progress dialog steals focus from whatever text control the user just pressed
+	 * enter in, we stash the control and current selection (includes cursor position) so we can
+	 * restore it when the search is finished.
+	*/
+	
+	wxTextCtrl *control = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
+	assert(control != NULL);
+	
+	search_end_focus = control;
+	control->GetSelection(&search_end_focus_from, &search_end_focus_to);
+	
+	if(wxGetKeyState(WXK_SHIFT))
+	{
+		OnFindPrev(event);
+	}
+	else{
+		OnFindNext(event);
+	}
+}
+
 void REHex::Search::OnCancel(wxCommandEvent &event)
 {
 	Close();
@@ -302,6 +326,13 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 	if(progress->WasCancelled())
 	{
 		end_search();
+		
+		if(search_end_focus != NULL)
+		{
+			search_end_focus->SetFocus();
+			search_end_focus->SetSelection(search_end_focus_from, search_end_focus_to);
+			search_end_focus = NULL;
+		}
 		
 		if(auto_close)
 		{
@@ -353,6 +384,13 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 			else{
 				not_found_notification();
 			}
+		}
+		
+		if(search_end_focus != NULL)
+		{
+			search_end_focus->SetFocus();
+			search_end_focus->SetSelection(search_end_focus_from, search_end_focus_to);
+			search_end_focus = NULL;
 		}
 		
 		if(auto_close)
@@ -662,7 +700,7 @@ void REHex::Search::Text::setup_window_controls(wxWindow *parent, wxSizer *sizer
 		
 		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Text: "), 0, wxALIGN_CENTER_VERTICAL);
 		
-		search_for_tc = new wxTextCtrl(parent, wxID_ANY, "");
+		search_for_tc = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 		text_sizer->Add(search_for_tc, 1);
 		
 		sizer->Add(text_sizer, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
@@ -789,7 +827,7 @@ void REHex::Search::ByteSequence::setup_window_controls(wxWindow *parent, wxSize
 		
 		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Data: "), 0, wxALIGN_CENTER_VERTICAL);
 		
-		search_for_tc = new wxTextCtrl(parent, wxID_ANY, "");
+		search_for_tc = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 		text_sizer->Add(search_for_tc, 1);
 		
 		sizer->Add(text_sizer, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
@@ -984,7 +1022,7 @@ void REHex::Search::Value::setup_window_controls(wxWindow *parent, wxSizer *size
 		
 		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Value: "), 0, wxALIGN_CENTER_VERTICAL);
 		
-		search_for_tc = new NumericTextCtrl(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0);
+		search_for_tc = new NumericTextCtrl(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 		text_sizer->Add(search_for_tc, 1);
 		
 		search_for_tc->Bind(wxEVT_TEXT, &REHex::Search::Value::OnText, this);

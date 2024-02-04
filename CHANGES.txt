@@ -22,6 +22,9 @@ Version TBA
 
  * Don't reload files modified externally when requested not to.
 
+ * Start search when Enter is pressed in search dialog input field, or search
+   backwards when Shift+Enter is pressed.
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

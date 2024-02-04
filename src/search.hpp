@@ -73,6 +73,9 @@ namespace REHex {
 			
 			SearchDirection search_direction;
 			
+			wxTextCtrl *search_end_focus;
+			long search_end_focus_from, search_end_focus_to;
+			
 			wxProgressDialog *progress;
 			wxTimer timer;
 			
@@ -108,6 +111,7 @@ namespace REHex {
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
 			void OnFindPrev(wxCommandEvent &event);
+			void OnTextEnter(wxCommandEvent &event);
 			void OnCancel(wxCommandEvent &event);
 			void OnTimer(wxTimerEvent &event);
 			void OnClose(wxCloseEvent &event);

@@ -74,6 +74,8 @@ namespace REHex
 			void hide_child_windows();
 			void unhide_child_windows();
 			
+			void set_parent_window_active(bool parent_window_active);
+			
 			void save_view(wxConfig *config);
 			
 			void handle_copy(bool cut);
@@ -173,6 +175,7 @@ namespace REHex
 			void compare_range(off_t offset, off_t length);
 			
 			bool child_windows_hidden;
+			bool parent_window_active;
 			
 			bool file_deleted_dialog_pending;
 			void file_deleted_dialog();

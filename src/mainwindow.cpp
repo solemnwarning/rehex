@@ -718,6 +718,18 @@ void REHex::MainWindow::OnWindowActivate(wxActivateEvent &event)
 		instances_iter = instances.begin();
 	}
 	
+	size_t num_tabs = notebook->GetPageCount();
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		assert(page != NULL);
+		
+		auto p_tab = dynamic_cast<Tab*>(page);
+		assert(p_tab != NULL);
+		
+		p_tab->set_parent_window_active(event.GetActive());
+	}
+	
 	event.Skip();
 }
 

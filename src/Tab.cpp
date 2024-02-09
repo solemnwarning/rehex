@@ -80,6 +80,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	repopulate_regions_frozen(false),
 	repopulate_regions_pending(false),
 	child_windows_hidden(false),
+	parent_window_active(true),
 	file_deleted_dialog_pending(false),
 	file_modified_dialog_pending(false)
 {
@@ -161,6 +162,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	repopulate_regions_frozen(false),
 	repopulate_regions_pending(false),
 	child_windows_hidden(false),
+	parent_window_active(true),
 	file_deleted_dialog_pending(false),
 	file_modified_dialog_pending(false)
 {
@@ -361,6 +363,24 @@ void REHex::Tab::unhide_child_windows()
 	else if(file_modified_dialog_pending)
 	{
 		file_modified_dialog();
+	}
+}
+
+void REHex::Tab::set_parent_window_active(bool parent_window_active)
+{
+	this->parent_window_active = parent_window_active;
+	
+	if(parent_window_active && !child_windows_hidden)
+	{
+		if(file_deleted_dialog_pending)
+		{
+			file_modified_dialog_pending = false;
+			file_deleted_dialog();
+		}
+		else if(file_modified_dialog_pending)
+		{
+			file_modified_dialog();
+		}
 	}
 }
 
@@ -1315,7 +1335,7 @@ void REHex::Tab::OnDocumentFileDeleted(wxCommandEvent &event)
 
 void REHex::Tab::file_deleted_dialog()
 {
-	if(child_windows_hidden)
+	if(child_windows_hidden || !parent_window_active)
 	{
 		file_deleted_dialog_pending = true;
 		return;
@@ -1387,9 +1407,10 @@ void REHex::Tab::OnDocumentFileModified(wxCommandEvent &event)
 
 void REHex::Tab::file_modified_dialog()
 {
-	if(child_windows_hidden)
+	if(child_windows_hidden || !parent_window_active)
 	{
 		file_modified_dialog_pending = true;
+		return;
 	}
 	
 	file_modified_dialog_pending = false;

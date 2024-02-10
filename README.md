@@ -13,10 +13,12 @@ An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manu
 * Side by side comparision of whole files or selections
 * Lua scripting support ([API reference](http://www.solemnwarning.net/rehex/luadoc/))
 * Virtual address mapping support
-* Support for common text encodings (ASCII, Unicode, ISO-8859-X)
+* Support for common text encodings (ASCII, Unicode, ISO-8859-X, etc)
 * Import and export of Intel HEX files.
 * Bitmap data visualisation.
 * Binary Templates for automatically annotating data (similar to 010 Editor).
+* Bit editing/manipulation.
+* Checksumming of files/selections.
 
 ![inline comments + data types demo](doc/comments-types.gif)
 
@@ -93,4 +95,4 @@ Compiling REHex from source is described in [COMPILING.md](COMPILING.md).
 
 ## Feedback
 
-If you find any bugs or have suggestions for improvements or new features, please open an issue on Github, or join the `#rehex` IRC channel on `irc.libera.chat`.
+If you find any bugs or have suggestions for improvements or new features, please open an issue on Github.

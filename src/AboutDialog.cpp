@@ -53,7 +53,7 @@ REHex::AboutDialog::AboutDialog(wxWindow *parent, wxWindowID id):
 		right_sizer->Add(new wxStaticText(this, wxID_ANY, REHEX_VERSION));
 		right_sizer->Add(new wxStaticText(this, wxID_ANY, std::string("Built on ") + REHEX_BUILD_DATE));
 		
-		right_sizer->Add(new wxStaticText(this, wxID_ANY, L"Copyright \u00A9 2017-2023 Daniel Collins"),
+		right_sizer->Add(new wxStaticText(this, wxID_ANY, L"Copyright \u00A9 2017-2024 Daniel Collins"),
 			0, wxTOP, 10);
 		
 		wxBoxSizer *license_sizer = new wxBoxSizer(wxHORIZONTAL);

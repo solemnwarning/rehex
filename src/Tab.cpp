@@ -1414,8 +1414,8 @@ void REHex::Tab::file_deleted_dialog()
 
 void REHex::Tab::OnDocumentFileModified(wxCommandEvent &event)
 {
-	OnEventToForward(event);
 	file_modified_dialog();
+	OnEventToForward(event);
 }
 
 void REHex::Tab::file_modified_dialog()

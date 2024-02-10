@@ -89,6 +89,9 @@ namespace REHex
 			DocumentDisplayMode get_document_display_mode() const;
 			void set_document_display_mode(DocumentDisplayMode document_display_mode);
 			
+			bool get_auto_reload() const;
+			void set_auto_reload(bool auto_reload);
+			
 			/* Public for use by unit tests. */
 			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode);
 			
@@ -182,6 +185,8 @@ namespace REHex
 			
 			bool file_modified_dialog_pending;
 			void file_modified_dialog();
+			
+			bool auto_reload;
 			
 		DECLARE_EVENT_TABLE()
 	};

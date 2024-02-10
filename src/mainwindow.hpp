@@ -87,6 +87,7 @@ namespace REHex {
 			void OnSave(wxCommandEvent &event);
 			void OnSaveAs(wxCommandEvent &event);
 			void OnReload(wxCommandEvent &event);
+			void OnAutoReload(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);

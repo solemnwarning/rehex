@@ -98,6 +98,7 @@ enum {
 	ID_HELP,
 	ID_IMPORT_HEX,
 	ID_EXPORT_HEX,
+	ID_AUTO_RELOAD,
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -110,6 +111,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
 	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
 	EVT_MENU(wxID_REFRESH,    REHex::MainWindow::OnReload)
+	EVT_MENU(ID_AUTO_RELOAD,  REHex::MainWindow::OnAutoReload)
 	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
 	EVT_MENU(ID_EXPORT_HEX,   REHex::MainWindow::OnExportHex)
 	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
@@ -245,6 +247,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		file_menu->AppendSeparator(); /* ---- */
 		
 		file_menu->Append(wxID_REFRESH, "&Reload");
+		file_menu->AppendCheckItem(ID_AUTO_RELOAD, "Reload automatically", "Reload the file automatically when it is modified");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -870,6 +873,12 @@ void REHex::MainWindow::OnReload(wxCommandEvent &event)
 			std::string("Error reloading ") + doc->get_title() + ":\n" + e.what(),
 			"Error", wxICON_ERROR, this);
 	}
+}
+
+void REHex::MainWindow::OnAutoReload(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	tab->set_auto_reload(event.IsChecked());
 }
 
 void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
@@ -1743,6 +1752,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	Tab *tab = active_tab();
 	
 	file_menu->Enable(wxID_REFRESH, !tab->doc->get_filename().empty());
+	file_menu->Check(ID_AUTO_RELOAD, tab->get_auto_reload());
 	
 	edit_menu->Check(ID_OVERWRITE_MODE, !tab->doc_ctrl->get_insert_mode());
 	edit_menu->Check(ID_WRITE_PROTECT, tab->doc->get_write_protect());
@@ -2201,6 +2211,7 @@ void REHex::MainWindow::_update_dirty(REHex::Document *doc)
 	if(doc == active_tab->doc)
 	{
 		file_menu->Enable(wxID_SAVE, enable_save);
+		file_menu->Check(ID_AUTO_RELOAD, active_tab->get_auto_reload());
 		
 		wxToolBar *toolbar = GetToolBar();
 		toolbar->EnableTool(wxID_SAVE, enable_save);

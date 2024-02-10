@@ -1102,6 +1102,12 @@ REHex::DocumentCtrl::FuzzyScrollPosition REHex::DocumentCtrl::get_scroll_positio
 {
 	FuzzyScrollPosition fsp;
 	
+	if(regions.empty())
+	{
+		/* We are being called during initialisation. */
+		return fsp;
+	}
+	
 	if(scroll_yoff >= (regions.back()->y_offset + regions.back()->y_lines))
 	{
 		/* This can happen in obscure cases where the DocumentCtrl is "empty", e.g. the
@@ -2968,6 +2974,8 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl::replace_all_regions");
 	
+	FuzzyScrollPosition scroll_position = get_scroll_position_fuzzy();
+	
 	assert(!new_regions.empty());
 	
 	/* Erase the old regions and swap the contents of the new list in. */
@@ -3134,6 +3142,9 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 		PROFILE_INNER_BLOCK("_set_cursor_position");
 		_set_cursor_position(get_cursor_position(), get_cursor_state());
 	}
+	
+	set_scroll_position_fuzzy(scroll_position);
+	save_scroll_position();
 }
 
 bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)

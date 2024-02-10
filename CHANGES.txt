@@ -25,6 +25,11 @@ Version TBA
  * Start search when Enter is pressed in search dialog input field, or search
    backwards when Shift+Enter is pressed.
 
+ * Add "Reload automatically" toggle to "File" menu to automatically reload
+   the file when modified externally (and not in the editor) (#222).
+
+ * Preserve scroll position when reloading file.
+
 Version 0.60.1 (2023-07-28)
 
  * Install missing parts of binary template plugin.

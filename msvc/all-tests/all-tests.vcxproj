@@ -230,6 +230,7 @@
     <ClCompile Include="..\..\src\ClickText.cpp" />
     <ClCompile Include="..\..\src\CommentTree.cpp" />
     <ClCompile Include="..\..\src\ConsoleBuffer.cpp" />
+    <ClCompile Include="..\..\src\CustomMessageDialog.cpp" />
     <ClCompile Include="..\..\src\DataType.cpp" />
     <ClCompile Include="..\..\src\DetachableNotebook.cpp" />
     <ClCompile Include="..\..\src\DiffWindow.cpp" />

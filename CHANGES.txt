@@ -1,4 +1,4 @@
-Version TBA
+Version 0.61.0 (2024-02-14)
 
  * Permit trailing commas in template enum definitions (#216).
 

@@ -2,13 +2,13 @@
 %define tilde_dist %(echo %{?dist} | tr '.' '~')
 
 Name:     rehex
-Version:  %{base_version}+%{git_commit_sha}
+Version:  %{base_version}
 Release:  0%{tilde_dist}
 Summary:  Reverse Engineers' Hex Editor
 
 License:  GPLv2
 URL:      https://www.github.com/solemnwarning/rehex/
-Source0:  rehex-%{git_commit_sha}.tar.gz
+Source0:  rehex-%{base_version}.tar.gz
 
 BuildRequires: capstone-devel
 BuildRequires: gcc-c++
@@ -45,7 +45,7 @@ BuildRequires: pkgconf
 %description
 
 %prep
-%setup -q -n rehex-%{git_commit_sha}
+%setup -q -n rehex-%{base_version}
 
 %build
 

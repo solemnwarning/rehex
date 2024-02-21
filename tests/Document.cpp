@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -78,7 +78,7 @@ class DocumentTest: public ::testing::Test
 			doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
 			{
 				char event_s[64];
-				snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d, %d)", (int)(event.cursor_pos), (int)(event.cursor_state));
+				snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d, %d)", (int)(event.cursor_pos.byte()), (int)(event.cursor_state)); /* BITFIXUP */
 				events.push_back(event_s);
 			});
 			

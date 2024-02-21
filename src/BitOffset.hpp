@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -35,6 +35,9 @@ namespace REHex
 			int64_t value;
 		
 		public:
+			static const BitOffset INVALID;
+			static const BitOffset ZERO;
+			
 			BitOffset():
 				value(0) {}
 			
@@ -67,6 +70,16 @@ namespace REHex
 // 				}
 			}
 			
+			static inline BitOffset BITS(int bits)
+			{
+				return BitOffset((bits / 8), (bits % 8));
+			}
+			
+			static inline BitOffset BYTES(off_t bytes)
+			{
+				return BitOffset(bytes, 0);
+			}
+			
 			inline off_t byte() const
 			{
 				//return (value & ~(int64_t)(7)) / 8;
@@ -88,11 +101,64 @@ namespace REHex
 				return value < rhs.value;
 			}
 			
+			inline bool operator>(const BitOffset &rhs) const
+			{
+				return value > rhs.value;
+			}
+			
+			inline bool operator<=(const BitOffset &rhs) const
+			{
+				return value <= rhs.value;
+			}
+			
+			inline bool operator>=(const BitOffset &rhs) const
+			{
+				return value >= rhs.value;
+			}
+			
 			inline off_t byte_round_up() const
 			{
 				return byte_aligned()
 					? byte()
 					: byte() + 1;
+			}
+			
+			inline bool operator==(const BitOffset &rhs) const
+			{
+				return value == rhs.value;
+			}
+			
+			inline bool operator!=(const BitOffset &rhs) const
+			{
+				return value != rhs.value;
+			}
+			
+			inline BitOffset &operator+=(const BitOffset &rhs)
+			{
+				value += rhs.value;
+				return *this;
+			}
+			
+			inline BitOffset &operator-=(const BitOffset &rhs)
+			{
+				value -= rhs.value;
+				return *this;
+			}
+			
+			inline BitOffset operator+(const BitOffset &rhs) const
+			{
+				BitOffset b;
+				b.value = value + rhs.value;
+				
+				return b;
+			}
+			
+			inline BitOffset operator-(const BitOffset &rhs) const
+			{
+				BitOffset b;
+				b.value = value - rhs.value;
+				
+				return b;
 			}
 	};
 }

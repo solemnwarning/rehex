@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -192,7 +192,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	bool alternate = ((y_offset + line_num) % 2) != 0;
 	
-	off_t cursor_pos = doc_ctrl.get_cursor_position();
+	off_t cursor_pos = doc_ctrl.get_cursor_position().byte(); /* BITFIXUP */
 	
 	off_t selection_off, selection_len;
 	std::tie(selection_off, selection_len) = doc_ctrl.get_selection_in_region(this);
@@ -504,7 +504,7 @@ unsigned int REHex::DisassemblyRegion::check()
 	return state;
 }
 
-std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
+std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
 {
 	int64_t processed_lines = this->processed_lines();
 	
@@ -516,7 +516,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. Don't know how long the line is. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 		
 		if(doc_ctrl.get_show_ascii() && mouse_x_px >= ascii_text_x)
@@ -526,10 +526,10 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
 			if(line_offset >= instr.second->length)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((instr.second->offset + line_offset), SA_ASCII);
+			return std::make_pair(BitOffset((instr.second->offset + line_offset), 0), SA_ASCII);
 		}
 		else if(mouse_x_px >= code_text_x)
 		{
@@ -538,7 +538,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.second->disasm.length())
 			{
-				return std::make_pair(instr.second->offset, SA_SPECIAL);
+				return std::make_pair(BitOffset(instr.second->offset, 0), SA_SPECIAL);
 			}
 		}
 		else if(mouse_x_px >= hex_text_x)
@@ -547,14 +547,14 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
 			if(line_offset < 0 || line_offset >= instr.second->length)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
 			return std::make_pair<off_t, ScreenArea>((instr.second->offset + line_offset), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	else{
@@ -576,10 +576,10 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
 			if(line_offset >= line_len)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((line_base + line_offset), SA_ASCII);
+			return std::make_pair(BitOffset((line_base + line_offset), 0), SA_ASCII);
 		}
 		else if(mouse_x_px >= hex_text_x)
 		{
@@ -587,21 +587,21 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
 			if(line_offset < 0 || line_offset >= line_len)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((line_base + line_offset), SA_HEX);
+			return std::make_pair(BitOffset((line_base + line_offset), 0), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	
-	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+	return std::make_pair(BitOffset::INVALID, SA_NONE);
 }
 
-std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
+std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
 {
 	int64_t processed_lines = this->processed_lines();
 	
@@ -613,7 +613,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. Don't know how long the line is. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 		
 		off_t instr_base = instr.second->offset;
@@ -625,7 +625,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			
 			if(mouse_x_px < ascii_text_x)
 			{
-				return std::make_pair(std::max<off_t>((instr_base - 1), 0), SA_ASCII);
+				return std::make_pair(BitOffset(std::max<off_t>((instr_base - 1), 0), 0), SA_ASCII);
 			}
 			else{
 				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
@@ -634,7 +634,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(instr_base + line_offset),
 					(instr_end - 1));
 				
-				return std::make_pair(real_offset, SA_ASCII);
+				return std::make_pair(BitOffset(real_offset, 0), SA_ASCII);
 			}
 		}
 		else if((mouse_x_px >= code_text_x && type_hint == SA_NONE) || type_hint == SA_SPECIAL)
@@ -643,16 +643,16 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			
 			if(mouse_x_px < code_text_x)
 			{
-				return std::make_pair(std::max<off_t>((instr.second->offset - 1), 0), SA_SPECIAL);
+				return std::make_pair(BitOffset(std::max<off_t>((instr.second->offset - 1), 0), 0), SA_SPECIAL);
 			}
 			
 			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.second->disasm.length())
 			{
-				return std::make_pair(instr.second->offset, SA_SPECIAL);
+				return std::make_pair(BitOffset(instr.second->offset, 0), SA_SPECIAL);
 			}
 			else{
-				return std::make_pair((instr.second->offset + instr.second->length - 1), SA_SPECIAL);
+				return std::make_pair(BitOffset((instr.second->offset + instr.second->length - 1), 0), SA_SPECIAL);
 			}
 		}
 		else if((mouse_x_px >= hex_text_x && type_hint == SA_NONE) || type_hint == SA_HEX)
@@ -672,11 +672,11 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(instr_end - 1));
 			}
 			
-			return std::make_pair(real_offset, SA_HEX);
+			return std::make_pair(BitOffset(real_offset, 0), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	else{
@@ -696,7 +696,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			
 			if(mouse_x_px < ascii_text_x)
 			{
-				return std::make_pair(std::max<off_t>((line_base - 1), 0), SA_ASCII);
+				return std::make_pair(BitOffset(std::max<off_t>((line_base - 1), 0), 0), SA_ASCII);
 			}
 			else{
 				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
@@ -705,7 +705,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(line_base + line_offset),
 					(line_end - 1));
 				
-				return std::make_pair(real_offset, SA_ASCII);
+				return std::make_pair(BitOffset(real_offset, 0), SA_ASCII);
 			}
 		}
 		else if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
@@ -725,19 +725,21 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(line_end - 1));
 			}
 			
-			return std::make_pair(real_offset, SA_HEX);
+			return std::make_pair(BitOffset(real_offset, 0), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	
-	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+	return std::make_pair(BitOffset::INVALID, SA_NONE);
 }
 
-off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_left_from(BitOffset pos2, ScreenArea active_type)
 {
+	off_t pos = pos2.byte(); /* BITFIXUP */
+	
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
@@ -779,8 +781,10 @@ off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_ty
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos, ScreenArea active_area)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_right_from(BitOffset pos2, ScreenArea active_area)
 {
+	off_t pos = pos2.byte(); /* BITFIXUP */
+	
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
@@ -815,8 +819,10 @@ off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos, ScreenArea active_a
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_up_from(BitOffset pos_, ScreenArea active_type)
 {
+	off_t pos = pos_.byte();
+	
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
@@ -888,8 +894,10 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_down_from(BitOffset pos_, ScreenArea active_type)
 {
+	off_t pos = pos_.byte();
+	
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
@@ -970,8 +978,10 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_ty
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_home_from(BitOffset pos_, ScreenArea active_type)
 {
+	off_t pos = pos_.byte();
+	
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
@@ -999,8 +1009,10 @@ off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos, ScreenArea active_ty
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_end_from(BitOffset pos_, ScreenArea active_type)
 {
+	off_t pos = pos_.byte();
+	
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	

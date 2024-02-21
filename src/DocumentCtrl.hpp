@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,7 @@
 #include <wx/dataobj.h>
 #include <wx/wx.h>
 
+#include "BitOffset.hpp"
 #include "buffer.hpp"
 #include "ByteRangeSet.hpp"
 #include "CharacterFinder.hpp"
@@ -180,7 +181,7 @@ namespace REHex {
 					/**
 					 * @brief Returns the offset of the byte at the given co-ordinates, negative if there isn't one.
 					*/
-					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) = 0;
+					virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) = 0;
 					
 					/**
 					 * @brief Returns the offset of the byte nearest the given co-ordinates and the screen area.
@@ -189,7 +190,7 @@ namespace REHex {
 					 * type, the nearest character in that area will be
 					 * returned rather than in the area under or closest to the
 					*/
-					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) = 0;
+					virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) = 0;
 					
 					static const off_t CURSOR_PREV_REGION = -2;
 					static const off_t CURSOR_NEXT_REGION = -3;
@@ -197,32 +198,32 @@ namespace REHex {
 					/**
 					 * @brief Returns the offset of the cursor position left of the given offset. May return CURSOR_PREV_REGION.
 					*/
-					virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position right of the given offset. May return CURSOR_NEXT_REGION.
 					*/
-					virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position up from the given offset. May return CURSOR_PREV_REGION.
 					*/
-					virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position down from the given offset. May return CURSOR_NEXT_REGION.
 					*/
-					virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position at the start of the line from the given offset.
 					*/
-					virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position at the end of the line from the given offset.
 					*/
-					virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) = 0;
 					
 					/**
 					 * @brief Returns the screen column index of the given offset within the region.
@@ -339,15 +340,15 @@ namespace REHex {
 					off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 					off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 					
-					virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
-					virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
+					virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
+					virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 					
-					virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override;
-					virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override;
-					virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override;
-					virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override;
-					virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override;
-					virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override;
 					
 					virtual int cursor_column(off_t pos) override;
 					virtual off_t first_row_nearest_column(int column) override;
@@ -430,14 +431,14 @@ namespace REHex {
 			bool get_highlight_selection_match();
 			void set_highlight_selection_match(bool highlight_selection_match);
 			
-			off_t get_cursor_position() const;
+			BitOffset get_cursor_position() const;
 			Document::CursorState get_cursor_state() const;
 			
 			bool hex_view_active() const;
 			bool ascii_view_active() const;
 			bool special_view_active() const;
 			
-			void set_cursor_position(off_t position, Document::CursorState cursor_state = Document::CSTATE_GOTO);
+			void set_cursor_position(BitOffset position, Document::CursorState cursor_state = Document::CSTATE_GOTO);
 			
 			bool has_prev_cursor_position() const;
 			void goto_prev_cursor_position();
@@ -662,13 +663,13 @@ namespace REHex {
 			int wheel_vert_accum;
 			int wheel_horiz_accum;
 			
-			off_t cpos_off{0};
+			BitOffset cpos_off;
 			bool insert_mode{false};
 			
 			static const size_t CPOS_HISTORY_LIMIT = 128;
 			
-			std::vector<off_t> cpos_prev;
-			std::vector<off_t> cpos_next;
+			std::vector<BitOffset> cpos_prev;
+			std::vector<BitOffset> cpos_next;
 			
 			off_t selection_begin;
 			off_t selection_end;
@@ -686,7 +687,7 @@ namespace REHex {
 			
 			Document::CursorState cursor_state;
 			
-			void _set_cursor_position(off_t position, Document::CursorState cursor_state, bool preserve_cpos_hist = false);
+			void _set_cursor_position(BitOffset position, Document::CursorState cursor_state, bool preserve_cpos_hist = false);
 			
 			GenericDataRegion::ScreenArea _get_screen_area_for_cursor_state();
 			

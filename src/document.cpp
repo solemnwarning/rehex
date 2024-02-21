@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -314,7 +314,7 @@ bool REHex::Document::is_buffer_dirty() const
 	return buffer_seq != saved_seq;
 }
 
-off_t REHex::Document::get_cursor_position() const
+REHex::BitOffset REHex::Document::get_cursor_position() const
 {
 	return this->cpos_off;
 }
@@ -324,15 +324,15 @@ REHex::Document::CursorState REHex::Document::get_cursor_state() const
 	return cursor_state;
 }
 
-void REHex::Document::set_cursor_position(off_t off, CursorState cursor_state)
+void REHex::Document::set_cursor_position(BitOffset off, CursorState cursor_state)
 {
 	_set_cursor_position(off, cursor_state);
 }
 
-void REHex::Document::_set_cursor_position(off_t position, enum CursorState cursor_state)
+void REHex::Document::_set_cursor_position(BitOffset position, enum CursorState cursor_state)
 {
-	position = std::max<off_t>(position, 0);
-	position = std::min(position, buffer_length());
+	position = std::max(position, BitOffset::ZERO);
+	position = std::min(position, BitOffset(buffer_length(), 0));
 	
 	if(cursor_state == CSTATE_GOTO)
 	{
@@ -362,7 +362,7 @@ std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_le
 	return buffer->read_data(offset, max_length);
 }
 
-void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -370,7 +370,7 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 		return;
 	}
 	
-	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_pos < BitOffset(0, 0))   { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
 	TransOpFunc first_op([&]()
@@ -393,7 +393,7 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
 	{
@@ -411,7 +411,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, s
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, new_data, new_cursor_pos, new_cursor_state]()
 	{
@@ -431,7 +431,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, s
 	});
 }
 
-void REHex::Document::insert_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::insert_data(off_t offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -439,8 +439,8 @@ void REHex::Document::insert_data(off_t offset, const void *data, off_t length, 
 		return;
 	}
 	
-	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
-	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	if(new_cursor_pos == BitOffset::INVALID) { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT)   { new_cursor_state = cursor_state; }
 	
 	TransOpFunc first_op([&]()
 	{
@@ -458,7 +458,7 @@ void REHex::Document::insert_data(off_t offset, const void *data, off_t length, 
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, length, new_cursor_pos, new_cursor_state]()
 	{
@@ -474,7 +474,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice)
+REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice)
 {
 	return TransOpFunc([this, offset, data, new_cursor_pos, new_cursor_state, redo_data_seq_slice]()
 	{
@@ -487,7 +487,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std:
 	});
 }
 
-void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::erase_data(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -495,8 +495,8 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 		return;
 	}
 	
-	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
-	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	if(new_cursor_pos == BitOffset::INVALID) { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT)   { new_cursor_state = cursor_state; }
 	
 	TransOpFunc first_op([&]()
 	{
@@ -516,7 +516,7 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
+REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
 {
 	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
@@ -527,7 +527,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, length, new_cursor_pos, new_cursor_state]()
 	{
@@ -545,7 +545,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t
 	});
 }
 
-void REHex::Document::replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -586,7 +586,7 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const vo
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
+REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
 {
 	return TransOpFunc([this, offset, old_data, new_data_length, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
@@ -601,7 +601,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, old_data_length, new_data, new_cursor_pos, new_cursor_state]()
 	{
@@ -1243,7 +1243,7 @@ off_t REHex::Document::virt_to_real_offset(off_t virt_offset) const
 
 void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments)
 {
-	off_t cursor_pos = get_cursor_position();
+	off_t cursor_pos = get_cursor_position().byte(); /* BITFIXUP */
 	off_t buffer_length = this->buffer_length();
 	
 	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)

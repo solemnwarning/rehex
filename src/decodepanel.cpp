@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -220,7 +220,7 @@ void REHex::DecodePanel::update()
 	
 	std::vector<unsigned char> data_at_cur;
 	try {
-		data_at_cur = document->read_data(document->get_cursor_position(), 8);
+		data_at_cur = document->read_data(document->get_cursor_position().byte(), 8); /* BITFIXUP */
 	}
 	catch(const std::exception &e)
 	{
@@ -393,7 +393,7 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 	
 	if(size > 0 && document_ctrl != NULL)
 	{
-		off_t cursor_position = document->get_cursor_position();
+		off_t cursor_position = document->get_cursor_position().byte(); /* BITFIXUP */
 		document_ctrl->set_selection_raw(cursor_position, (cursor_position + size - 1));
 	}
 }
@@ -448,7 +448,7 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedVa
 		T tval = htoX(ival);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
 		}
 		catch(const std::exception &e)
 		{
@@ -495,7 +495,7 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsigned
 		T tval = htoX(uval);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
 		}
 		catch(const std::exception &e)
 		{
@@ -533,7 +533,7 @@ template<float (*htoX)(float)> void REHex::DecodePanel::OnFloatValue(wxStringPro
 		float tval = htoX(uval);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
 		}
 		catch(const std::exception &e)
 		{
@@ -571,7 +571,7 @@ template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxString
 		double tval = htoX(uval);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
+			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
 		}
 		catch(const std::exception &e)
 		{

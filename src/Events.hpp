@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -46,11 +46,11 @@ namespace REHex
 	class CursorUpdateEvent: public wxEvent
 	{
 		public:
-			const off_t cursor_pos;
+			const BitOffset cursor_pos;
 			const Document::CursorState cursor_state;
 			
-			CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state);
-			CursorUpdateEvent(wxObject *source, off_t cursor_pos, Document::CursorState cursor_state);
+			CursorUpdateEvent(wxWindow *source, BitOffset cursor_pos, Document::CursorState cursor_state);
+			CursorUpdateEvent(wxObject *source, BitOffset cursor_pos, Document::CursorState cursor_state);
 			
 			virtual wxEvent *Clone() const override;
 	};

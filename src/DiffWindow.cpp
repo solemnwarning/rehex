@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1154,7 +1154,7 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				}
 			}
 			
-			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
+			off_t cursor_pos = r->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 			if(event.offset <= cursor_pos)
 			{
 				cursor_pos -= std::min(event.length, (cursor_pos - event.offset));
@@ -1225,7 +1225,7 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 				offsets_different.clear_all();
 			}
 			
-			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
+			off_t cursor_pos = r->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 			if(event.offset <= cursor_pos)
 			{
 				cursor_pos += event.length;
@@ -1331,7 +1331,7 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
 	assert(source_range != ranges.end());
 	
-	relative_cursor_pos = event.cursor_pos - source_range->offset;
+	relative_cursor_pos = event.cursor_pos.byte() - source_range->offset; /* BITFIXUP */
 	// assert(relative_cursor_pos >= 0);
 	
 	/* Update the cursors in every other tab to match. */
@@ -1354,7 +1354,7 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
 	assert(source_range != ranges.end());
 	
-	off_t cursor_pos = source_range->doc_ctrl->get_cursor_position();
+	off_t cursor_pos = source_range->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	bool has_selection = source_range->doc_ctrl->has_selection();
 	
 	wxMenu menu;

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -460,7 +460,7 @@ void REHex::Tab::paste_text(const std::string &text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)
 	{
-		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
 		off_t selection_off, selection_length;
@@ -496,7 +496,7 @@ void REHex::Tab::paste_text(const std::string &text)
 	
 	auto paste_text = [this](const std::string &utf8_text)
 	{
-		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
 		off_t selection_off, selection_length;
@@ -750,7 +750,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	wxChar ukey   = event.GetUnicodeKey();
 	int modifiers = event.GetModifiers();
 	
-	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	
 	off_t selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
@@ -990,7 +990,7 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 
 void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 {
-	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	
 	off_t selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
@@ -1302,13 +1302,13 @@ void REHex::Tab::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 
 void REHex::Tab::OnDocumentCursorUpdate(CursorUpdateEvent &event)
 {
-	doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
+	doc_ctrl->set_cursor_position(doc->get_cursor_position(), event.cursor_state);
 	event.Skip();
 }
 
 void REHex::Tab::OnDocumentCtrlCursorUpdate(CursorUpdateEvent &event)
 {
-	doc->set_cursor_position(event.cursor_pos, event.cursor_state);
+	doc->set_cursor_position(doc_ctrl->get_cursor_position(), event.cursor_state);
 	event.Skip();
 }
 

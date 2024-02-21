@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -603,7 +603,7 @@ void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
 	search->set_auto_wrap(true);
 	search->set_modal_parent(frame);
 	
-	search->begin_search((document->get_cursor_position() + 1), (range_offset + range_length), Search::SearchDirection::FORWARDS);
+	search->begin_search((document->get_cursor_position().byte() + 1), (range_offset + range_length), Search::SearchDirection::FORWARDS); /* BITFIXUP */
 }
 
 void REHex::DataHistogramPanel::OnZoomIn(wxCommandEvent &event)

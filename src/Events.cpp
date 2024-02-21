@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -62,7 +62,7 @@ wxEvent *REHex::OffsetLengthEvent::Clone() const
 	return new OffsetLengthEvent(*this);
 }
 
-REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state):
+REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, BitOffset cursor_pos, Document::CursorState cursor_state):
 	wxEvent(source->GetId(), CURSOR_UPDATE),
 	cursor_pos(cursor_pos),
 	cursor_state(cursor_state)
@@ -71,7 +71,7 @@ REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, 
 	SetEventObject(source);
 }
 
-REHex::CursorUpdateEvent::CursorUpdateEvent(wxObject *source, off_t cursor_pos, Document::CursorState cursor_state):
+REHex::CursorUpdateEvent::CursorUpdateEvent(wxObject *source, BitOffset cursor_pos, Document::CursorState cursor_state):
 	wxEvent(wxID_NONE, CURSOR_UPDATE),
 	cursor_pos(cursor_pos),
 	cursor_state(cursor_state)

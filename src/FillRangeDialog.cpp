@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -51,7 +51,7 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length));
 	}
 	else{
-		off_t cursor_pos = document_ctrl.get_cursor_position();
+		off_t cursor_pos = document_ctrl.get_cursor_position().byte(); /* BITFIXUP */
 		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(cursor_pos));
 	}
 	

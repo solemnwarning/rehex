@@ -143,6 +143,18 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 }
 %end
 
+%override wxLua_REHex_Document_get_cursor_position
+static int LUACALL wxLua_REHex_Document_get_cursor_position(lua_State *L)
+{
+    REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+
+    off_t cursor_position = (self->get_cursor_position().byte()); /* BITFIXUP */
+    lua_pushinteger(L, cursor_position);
+
+    return 1;
+}
+%end
+
 %override wxLua_REHex_Document_read_data
 static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 {

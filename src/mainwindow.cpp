@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1239,7 +1239,7 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	off_t current_pos = tab->doc->get_cursor_position();
+	off_t current_pos = tab->doc->get_cursor_position().byte(); /* BITFIXUP */
 	off_t max_pos     = tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode();
 	
 	NumericEntryDialog<off_t>::BaseHint base;
@@ -1344,7 +1344,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		/* Give the region the cursor is in a chance to handle the paste event. */
 		
-		off_t cursor_pos = tab->doc_ctrl->get_cursor_position();
+		off_t cursor_pos = tab->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 		
 		REHex::DocumentCtrl::GenericDataRegion *cursor_region = tab->doc_ctrl->data_region_by_offset(cursor_pos);
 		assert(cursor_region != NULL);
@@ -1434,7 +1434,7 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 		rd.set_range_raw(selection_first, selection_last);
 	}
 	else{
-		rd.set_offset_hint(tab->doc_ctrl->get_cursor_position());
+		rd.set_offset_hint(tab->doc_ctrl->get_cursor_position().byte()); /* BITFIXUP */
 	}
 	
 	int s = rd.ShowModal();
@@ -2112,9 +2112,14 @@ REHex::DetachableNotebook *REHex::MainWindow::get_notebook()
 
 void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
-	off_t off = tab->doc->get_cursor_position();
+	BitOffset off = tab->doc->get_cursor_position();
 	
-	std::string off_text = format_offset(off, tab->doc_ctrl->get_offset_display_base());
+	std::string off_text = format_offset(off.byte(), tab->doc_ctrl->get_offset_display_base());
+	
+	if(!off.byte_aligned())
+	{
+		off_text += "+" + std::to_string(off.bit()) + "b";
+	}
 	
 	SetStatusText(off_text, 0);
 }

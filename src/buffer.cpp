@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -43,6 +43,9 @@
 #include "App.hpp"
 #include "buffer.hpp"
 #include "win32lib.hpp"
+
+const REHex::BitOffset REHex::BitOffset::INVALID(-1, 0);
+const REHex::BitOffset REHex::BitOffset::ZERO(0, 0);
 
 wxDEFINE_EVENT(REHex::BACKING_FILE_DELETED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BACKING_FILE_MODIFIED, wxCommandEvent);

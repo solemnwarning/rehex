@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,6 +27,7 @@
 #include <wx/dataobj.h>
 #include <wx/wx.h>
 
+#include "BitOffset.hpp"
 #include "buffer.hpp"
 #include "ByteRangeMap.hpp"
 #include "ByteRangeSet.hpp"
@@ -168,9 +169,9 @@ namespace REHex {
 			*/
 			bool is_buffer_dirty() const;
 			
-			off_t get_cursor_position() const;
+			BitOffset get_cursor_position() const;
 			CursorState get_cursor_state() const;
-			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
+			void set_cursor_position(BitOffset off, CursorState cursor_state = CSTATE_GOTO);
 			
 			/**
 			 * @brief Get the comments in the file.
@@ -326,7 +327,7 @@ namespace REHex {
 				
 				std::list<TransOpFunc> ops;
 				
-				off_t       old_cpos_off;
+				BitOffset old_cpos_off;
 				CursorState old_cursor_state;
 				ByteRangeTree<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
@@ -370,7 +371,7 @@ namespace REHex {
 			
 			std::string title;
 			
-			off_t cpos_off{0};
+			BitOffset cpos_off;
 			
 			enum CursorState cursor_state;
 			
@@ -378,7 +379,7 @@ namespace REHex {
 			std::list<Transaction> undo_stack;
 			std::list<Transaction> redo_stack;
 			
-			void _set_cursor_position(off_t position, enum CursorState cursor_state);
+			void _set_cursor_position(BitOffset position, enum CursorState cursor_state);
 			
 			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
 			
@@ -388,17 +389,17 @@ namespace REHex {
 			void _UNTRACKED_erase_data(off_t offset, off_t length);
 			bool _virt_to_real_segs_data_erased(off_t offset, off_t length);
 			
-			TransOpFunc _op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state);
-			TransOpFunc _op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
 			
-			TransOpFunc _op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
-			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice);
+			TransOpFunc _op_insert_undo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice);
 			
-			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
-			TransOpFunc _op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
+			TransOpFunc _op_erase_redo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state);
 			
-			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
-			TransOpFunc _op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
+			TransOpFunc _op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
 			
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
 			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
@@ -491,7 +492,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void overwrite_data(off_t offset, const void *data, off_t length,                                            off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void overwrite_data(off_t offset, const void *data, off_t length,                                            BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Insert a range of bytes into the file.
@@ -503,7 +504,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void insert_data(off_t offset, const void *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void insert_data(off_t offset, const void *data, off_t length,                                      BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Erase a range of bytes in the file.
@@ -514,7 +515,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void erase_data(off_t offset, off_t length,                                                                  off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void erase_data(off_t offset, off_t length,                                                                  BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Replace a range of bytes in the file.
@@ -527,7 +528,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			static const off_t WRITE_TEXT_KEEP_POSITION = -1;  /**< Don't move the cursor after writing. */
 			static const off_t WRITE_TEXT_GOTO_NEXT = -2;      /**< Jump to byte following written data. */

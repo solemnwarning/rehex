@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -120,14 +120,14 @@ class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
 		
 		virtual void draw(DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override {}
 		
-		virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
-		virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
-		virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override { abort(); }
+		virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
+		virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
+		virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+		virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+		virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+		virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+		virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+		virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override { abort(); }
 		virtual int cursor_column(off_t pos) override { abort(); }
 		virtual off_t first_row_nearest_column(int column) override { abort(); }
 		virtual off_t last_row_nearest_column(int column) override { abort(); }

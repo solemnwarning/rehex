@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -240,7 +240,7 @@ void REHex::Disassemble::update()
 	/* Size of window to load to try disassembling. */
 	static const off_t WINDOW_SIZE = 256;
 	
-	off_t position = document->get_cursor_position();
+	off_t position = document->get_cursor_position().byte(); /* BITFIXUP */
 	
 	off_t window_base = std::max((position - (WINDOW_SIZE / 2)), (off_t)(0));
 	

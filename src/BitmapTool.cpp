@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -138,7 +138,7 @@ static const int LAST_ZOOM_LEVEL_IDX = sizeof(ZOOM_LEVELS) / sizeof(*ZOOM_LEVELS
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent),
 	document(document),
-	image_offset(document->get_cursor_position()),
+	image_offset(document->get_cursor_position().byte()), /* BITFIXUP */
 	image_width(256),
 	image_height(256),
 	row_length(-1),
@@ -958,7 +958,7 @@ void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	if(offset_follow_cb->GetValue())
 	{
-		offset_textctrl->ChangeValue(std::to_string(event.cursor_pos));
+		offset_textctrl->ChangeValue(std::to_string(event.cursor_pos.byte())); /* BITFIXUP */
 		update();
 	}
 	
@@ -984,7 +984,7 @@ void REHex::BitmapTool::OnFollowCursor(wxCommandEvent &event)
 {
 	if(offset_follow_cb->GetValue())
 	{
-		offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position()));
+		offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position().byte())); /* BITFIXUP */
 		update();
 	}
 	else{

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -117,7 +117,7 @@ namespace REHex
 			
 			virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override
 			{
-				off_t cursor_pos = doc_ctrl.get_cursor_position();
+				off_t cursor_pos = doc_ctrl.get_cursor_position().byte(); /* BITFIXUP */
 				
 				if(input_active && (cursor_pos < d_offset || cursor_pos >= (d_offset + d_length)))
 				{
@@ -291,7 +291,7 @@ namespace REHex
 				dc.DrawText(type_string, x, y);
 			}
 			
-			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
+			virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
 			{
 				off_t total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
@@ -306,7 +306,7 @@ namespace REHex
 					if(mouse_x_px < data_text_x)
 					{
 						/* Click was left of data area. */
-						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+						return std::make_pair(BitOffset::INVALID, SA_NONE);
 					}
 					
 					mouse_x_px -= data_text_x;
@@ -317,7 +317,7 @@ namespace REHex
 					if(((char_offset + 1) % ((bytes_per_group * 2) + 1)) == 0)
 					{
 						/* Click was over a space between byte groups. */
-						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+						return std::make_pair(BitOffset::INVALID, SA_NONE);
 					}
 					else{
 						unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
@@ -327,11 +327,11 @@ namespace REHex
 						if(clicked_offset < (d_offset + d_length))
 						{
 							/* Clicked on a byte */
-							return std::make_pair(clicked_offset, SA_HEX);
+							return std::make_pair(BitOffset(clicked_offset, 0), SA_HEX);
 						}
 						else{
 							/* Clicked past the end of the line */
-							return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+							return std::make_pair(BitOffset::INVALID, SA_NONE);
 						}
 					}
 				}
@@ -358,15 +358,15 @@ namespace REHex
 					if(mouse_x_px >= 0 && char_offset < data_string.length())
 					{
 						/* Within screen area of data_string. */
-						return std::make_pair(d_offset, SA_SPECIAL);
+						return std::make_pair(BitOffset(d_offset, 0), SA_SPECIAL);
 					}
 					else{
-						return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+						return std::make_pair(BitOffset::INVALID, SA_NONE);
 					}
 				}
 			}
 			
-			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
+			virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
 			{
 				mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
 				mouse_x_px = std::max(mouse_x_px, 0);
@@ -375,53 +375,53 @@ namespace REHex
 					(d_offset + (mouse_x_px / doc_ctrl.hf_string_width(2))),
 					(d_offset + d_length - 1));
 				
-				return std::make_pair(mouse_x_bytes, SA_SPECIAL);
+				return std::make_pair(BitOffset(mouse_x_bytes, 0), SA_SPECIAL);
 			}
 			
-			virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override
+			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
+				assert(pos.byte() >= d_offset);
+				assert(pos.byte() <= (d_offset + d_length));
 				
 				return CURSOR_PREV_REGION;
 			}
 			
-			virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override
+			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
+				assert(pos.byte() >= d_offset);
+				assert(pos.byte() <= (d_offset + d_length));
 				
 				return CURSOR_NEXT_REGION;
 			}
 			
-			virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override
+			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
+				assert(pos.byte() >= d_offset);
+				assert(pos.byte() <= (d_offset + d_length));
 				
 				return CURSOR_PREV_REGION;
 			}
 			
-			virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override
+			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
+				assert(pos.byte() >= d_offset);
+				assert(pos.byte() <= (d_offset + d_length));
 				
 				return CURSOR_NEXT_REGION;
 			}
 			
-			virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override
+			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
+				assert(pos.byte() >= d_offset);
+				assert(pos.byte() <= (d_offset + d_length));
 				
 				return d_offset;
 			}
 			
-			virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override
+			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
+				assert(pos.byte() >= d_offset);
+				assert(pos.byte() <= (d_offset + d_length));
 				
 				return d_offset;
 			}

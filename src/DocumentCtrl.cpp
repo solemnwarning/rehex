@@ -4330,6 +4330,192 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	}
 }
 
+void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line)
+{
+	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_bin_line");
+	
+	unsigned int bits_per_group = doc_ctrl->get_bytes_per_group() * 2;
+	
+	int hex_base_x = x;                                                     /* Base X co-ordinate to draw hex characters from */
+	int hex_x_char = (pad_bytes * 8) + ((pad_bytes * 8) / bits_per_group);  /* Column of current hex character */
+	int hex_x      = hex_base_x + doc_ctrl->hf_string_width(hex_x_char);    /* X co-ordinate of current hex character */
+	
+	BitOffset cur_off = base_off;
+	
+	dc.SetFont(doc_ctrl->hex_font);
+	
+	wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
+	dc.SetBrush(*wxTRANSPARENT_BRUSH);
+	
+	FastRectangleFiller frf(dc);
+	
+	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->special_view_active();
+	
+	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
+	
+	auto normal_text_colour = [&dc,&alternate_row]()
+	{
+		dc.SetTextForeground((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
+		dc.SetBackgroundMode(wxTRANSPARENT);
+	};
+	
+	const wxPen *insert_cursor_pen = NULL;
+	wxPoint insert_cursor_pt1, insert_cursor_pt2;
+	
+	/* Calling wxDC::DrawText() for each individual character on the screen is
+	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
+	 * area on a per-line basis.
+	 *
+	 * The key of the deferred_drawtext map is the X co-ordinate to render the string
+	 * at (hex_base_x or ascii_base_x) and the foreground colour to use.
+	 *
+	 * The draw_char_deferred() function adds a character to be drawn to the map, while
+	 * prefixing it with any spaces necessary to pad it to the correct column from the
+	 * base X co-ordinate.
+	*/
+	
+	UnsortedMapVector<wxColour, std::string> deferred_drawtext;
+	
+	auto draw_char_deferred = [&](const wxColour &fg_colour, int col, char ch)
+	{
+		PROFILE_INNER_BLOCK("draw_char_deferred");
+		
+		std::string &str = deferred_drawtext[fg_colour];
+		
+		assert(str.length() <= (size_t)(col));
+		
+		str.append((col - str.length()), ' ');
+		str.append(1, ch);
+	};
+	
+	/* Because we need to minimise wxDC::DrawText() calls (see above), we draw any
+	 * background colours ourselves and set the background mode to transparent when
+	 * drawing text, which enables us to skip over characters that shouldn't be
+	 * touched by that particular wxDC::DrawText() call by inserting spaces.
+	*/
+	
+	auto fill_char_bg = [&](int char_x, const wxColour &bg_colour)
+	{
+		PROFILE_INNER_BLOCK("fill_char_bg");
+		frf.fill_rectangle(char_x, y, doc_ctrl->hf_char_width(), doc_ctrl->hf_height, bg_colour);
+	};
+	
+	BitOffset data_offset(0, 0);
+	
+	for(size_t c = pad_bytes; data_offset.byte() < data_len; ++c)
+	{
+		if(c > pad_bytes && (c % bits_per_group) == 0)
+		{
+			hex_x = hex_base_x + doc_ctrl->hf_string_width(++hex_x_char);
+		}
+		
+		auto highlight = highlight_at_off(cur_off.byte()); /* BITFIXUP */
+		
+		/* Need the current hex_x value for drawing any boxes or insert cursors
+		 * below, before it gets updated by draw_nibble().
+		*/
+		const int pd_hx = hex_x;
+		
+		bool invert = (cur_off == cursor_pos && hex_active)
+			? !doc_ctrl->insert_mode || !cur_off.byte_aligned()
+			: false;
+		
+		char bit_s;
+		if(data == NULL)
+		{
+			bit_s = '?';
+		}
+		else if((data[data_offset.byte()] & (128 >> data_offset.bit())) != 00)
+		{
+			bit_s = '1';
+		}
+		else{
+			bit_s = '0';
+		}
+		
+		if(invert && doc_ctrl->cursor_visible)
+		{
+			fill_char_bg(hex_x, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
+			draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], hex_x_char, bit_s);
+		}
+		else if(highlight.enable)
+		{
+			fill_char_bg(hex_x, highlight.bg_colour);
+			draw_char_deferred(highlight.fg_colour, hex_x_char, bit_s);
+		}
+		else{
+			draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], hex_x_char, bit_s);
+		}
+		
+		hex_x = hex_base_x + doc_ctrl->hf_string_width(++hex_x_char);
+		
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_SPECIAL && cur_off.byte_aligned())
+		{
+			/* Draw insert cursor. */
+			insert_cursor_pen = &norm_fg_1px;
+			insert_cursor_pt1 = wxPoint(pd_hx, y);
+			insert_cursor_pt2 = wxPoint(pd_hx, y + doc_ctrl->hf_height);
+		}
+		
+		if(cur_off == cursor_pos && !doc_ctrl->insert_mode && !hex_active)
+		{
+			/* Draw inactive overwrite cursor. */
+			dc.SetBrush(*wxTRANSPARENT_BRUSH);
+			dc.SetPen(norm_fg_1px);
+			
+			dc.DrawRectangle(pd_hx, y, doc_ctrl->hf_char_width(), doc_ctrl->hf_char_height());
+		}
+		
+		cur_off += BitOffset::BITS(1);
+		data_offset += BitOffset::BITS(1);
+	}
+	
+	if(is_last_line && cur_off == cursor_pos)
+	{
+		/* Draw cursor at the end of the file (i.e. after the last byte). */
+		
+		if((doc_ctrl->cursor_visible && doc_ctrl->hex_view_active()) || !hex_active)
+		{
+			if(doc_ctrl->insert_mode || !hex_active)
+			{
+				insert_cursor_pen = &norm_fg_1px;
+				insert_cursor_pt1 = wxPoint(hex_x, y);
+				insert_cursor_pt2 = wxPoint(hex_x, y + doc_ctrl->hf_height);
+			}
+			else{
+				/* Draw the cursor in red if trying to overwrite at an invalid
+				 * position. Should only happen in empty files.
+				*/
+				
+				insert_cursor_pen = wxRED_PEN;
+				insert_cursor_pt1 = wxPoint(hex_x, y);
+				insert_cursor_pt2 = wxPoint(hex_x, y + doc_ctrl->hf_height);
+			}
+		}
+	}
+	
+	frf.flush();
+	
+	normal_text_colour();
+	
+	for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
+	{
+		PROFILE_INNER_BLOCK("drawing text");
+		
+		dc.SetTextForeground(dd->first);
+		dc.SetBackgroundMode(wxTRANSPARENT);
+		
+		dc.DrawText(dd->second, hex_base_x, y);
+	}
+	
+	if(insert_cursor_pen != NULL)
+	{
+		dc.SetPen(*insert_cursor_pen);
+		dc.DrawLine(insert_cursor_pt1, insert_cursor_pt2);
+	}
+}
+
 wxCursor REHex::DocumentCtrl::DataRegion::cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px)
 {
 	if(x >= hex_text_x)

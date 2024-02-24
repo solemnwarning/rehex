@@ -22,62 +22,82 @@
 
 using namespace REHex;
 
+static const long long INT61_MIN = -0x1000000000000000LL;
+static const long long INT61_MAX = 0xFFFFFFFFFFFFFFFLL;
+
+static void BitOffset_BasicTests_Range(int64_t byte_min, int64_t byte_max)
+{
+	for(int64_t i = byte_min; i <= byte_max; ++i)
+	{
+		int jinc = i < 0 ? -1 : 1;
+		
+		for(int j = 0; j >= -7 && j <= 7; j += jinc)
+		{
+			EXPECT_EQ(BitOffset(i, j).byte(), i) << "BitOffset(" << i << ", " << j << ").byte() yields original byte";
+			EXPECT_EQ(BitOffset(i, j).bit(), j) << "BitOffset(" << i << ", " << j << ").byte() yields original bit";
+		}
+		
+		for(int j = 0; j >= -6 && j <= 6; j += jinc)
+		{
+			if(i >= 0)
+			{
+				EXPECT_TRUE( BitOffset(i, j)      < BitOffset(i, j + 1))  << "BitOffset(" << i << ", " << j       << ") is less than BitOffset("     << i << ", " << (j + 1) << ")";
+				EXPECT_FALSE( BitOffset(i, j + 1) < BitOffset(i, j))      << "BitOffset(" << i << ", " << (j + 1) << ") is not less than BitOffset(" << i << ", " << j << ")";
+				EXPECT_FALSE( BitOffset(i, j)     < BitOffset(i, j))      << "BitOffset(" << i << ", " << j       << ") is not less than BitOffset(" << i << ", " << j << ")";
+			}
+			else{
+				EXPECT_FALSE( BitOffset(i, j)     < BitOffset(i, j - 1))  << "BitOffset(" << i << ", " << j       << ") is not less than BitOffset("     << i << ", " << (j - 1) << ")";
+				EXPECT_TRUE(  BitOffset(i, j - 1) < BitOffset(i, j))      << "BitOffset(" << i << ", " << (j - 1) << ") is less than BitOffset(" << i << ", " << j << ")";
+				EXPECT_FALSE( BitOffset(i, j)     < BitOffset(i, j))      << "BitOffset(" << i << ", " << j       << ") is not less than BitOffset(" << i << ", " << j << ")";
+			}
+			
+			if(i > byte_min)
+			{
+				EXPECT_FALSE( BitOffset(i, j) < BitOffset(i - 1, 0)) << "BitOffset(" << i << ", " << j       << ") is not less than BitOffset(" << (i - 1) << ", " << 0 << ")";
+				EXPECT_TRUE(  BitOffset(i - 1, 0) < BitOffset(i, j)) << "BitOffset(" << (i - 1) << ", " << 0 << ") is less than BitOffset(" << i << ", " << j << ")";
+				
+				if(i > 0)
+				{
+					EXPECT_FALSE( BitOffset(i, j) < BitOffset(i - 1, 7)) << "BitOffset(" << i << ", " << j       << ") is not less than BitOffset(" << (i - 1) << ", " << 7 << ")";
+					EXPECT_TRUE(  BitOffset(i - 1, 7) < BitOffset(i, j)) << "BitOffset(" << (i - 1) << ", " << 7 << ") is less than BitOffset(" << i << ", " << j << ")";
+				}
+				else{
+					EXPECT_FALSE( BitOffset(i, j) < BitOffset(i - 1, -7)) << "BitOffset(" << i << ", " << j       << ") is not less than BitOffset(" << (i - 1) << ", " << -7 << ")";
+					EXPECT_TRUE(  BitOffset(i - 1, -7) < BitOffset(i, j)) << "BitOffset(" << (i - 1) << ", " << -7 << ") is less than BitOffset(" << i << ", " << j << ")";
+				}
+			}
+		}
+	}
+}
+
 TEST(BitOffset, BasicTests)
 {
-	EXPECT_EQ(BitOffset(0, 0).bit(), 0);
-	EXPECT_EQ(BitOffset(0, 0).byte(), 0);
+	/* Arguably excessively paranoid tests here which verify BitOffset can
+	 * correctly store/return/compare ranges of values through the entire
+	 * 61/3-bit space.
+	*/
 	
-	EXPECT_EQ(BitOffset(0, 1).bit(), 1);
-	EXPECT_EQ(BitOffset(0, 1).byte(), 0);
+	BitOffset_BasicTests_Range(-10000, 10000);
 	
-	EXPECT_EQ(BitOffset(0, 7).bit(), 7);
-	EXPECT_EQ(BitOffset(0, 7).byte(), 0);
+	BitOffset_BasicTests_Range((int64_t)(INT16_MIN) - 10000, (int64_t)(INT16_MIN) + 10000);
+	BitOffset_BasicTests_Range((int64_t)(INT16_MAX) - 10000, (int64_t)(INT16_MAX) + 10000);
+	BitOffset_BasicTests_Range((int64_t)(INT32_MIN) - 10000, (int64_t)(INT32_MIN) + 10000);
+	BitOffset_BasicTests_Range((int64_t)(INT32_MAX) - 10000, (int64_t)(INT32_MAX) + 10000);
+	BitOffset_BasicTests_Range((int64_t)(INT61_MIN) + 1,     (int64_t)(INT61_MIN) + 10000);
+	BitOffset_BasicTests_Range((int64_t)(INT61_MAX) - 10000, (int64_t)(INT61_MAX));
 	
-	EXPECT_EQ(BitOffset(10, 0).bit(), 0);
-	EXPECT_EQ(BitOffset(10, 0).byte(), 10);
-	
-	EXPECT_EQ(BitOffset(10, 7).bit(), 7);
-	EXPECT_EQ(BitOffset(10, 7).byte(), 10);
-	
-	EXPECT_EQ(BitOffset(-1, 0).bit(), 0);
-	EXPECT_EQ(BitOffset(-1, 0).byte(), -1);
-	
-	EXPECT_EQ(BitOffset(-1, -7).bit(), -7);
-	EXPECT_EQ(BitOffset(-1, -7).byte(), -1);
-	
-	EXPECT_EQ(BitOffset(0xFFFFFFFFFFFFFFFLL, 0).bit(), 0);
-	EXPECT_EQ(BitOffset(0xFFFFFFFFFFFFFFFLL, 0).byte(), 0xFFFFFFFFFFFFFFFLL);
-	
-	EXPECT_EQ(BitOffset(-0x1000000000000000LL, 0).bit(), 0);
-	EXPECT_EQ(BitOffset(-0x1000000000000000LL, 0).byte(), -0x1000000000000000LL);
-	
-	EXPECT_EQ(BitOffset(0xFFFFFFFFFFFFFFFLL, 7).bit(), 7);
-	EXPECT_EQ(BitOffset(0xFFFFFFFFFFFFFFFLL, 7).byte(), 0xFFFFFFFFFFFFFFFLL);
-	
-	EXPECT_EQ(BitOffset(-0x1000000000000000LL, -7).bit(), -7);
-	EXPECT_EQ(BitOffset(-0x1000000000000000LL, -7).byte(), -0x1000000000000000LL);
-	
-	EXPECT_FALSE(BitOffset(0, 0) < BitOffset(0, 0));
-	EXPECT_FALSE(BitOffset(1, 0) < BitOffset(1, 0));
-	EXPECT_FALSE(BitOffset(-1, 0) < BitOffset(-1, 0));
-	
-	EXPECT_TRUE(BitOffset(0, 0) < BitOffset(1, 0));
-	EXPECT_FALSE(BitOffset(1, 0) < BitOffset(0, 0));
-	
-	EXPECT_TRUE(BitOffset(0, 0) < BitOffset(0, 1));
-	EXPECT_FALSE(BitOffset(0, 1) < BitOffset(0, 0));
-	
-	EXPECT_TRUE(BitOffset(1, 7) < BitOffset(2, 0));
-	EXPECT_FALSE(BitOffset(2, 0) < BitOffset(1, 7));
-	
-	EXPECT_TRUE(BitOffset(-1, 0) < BitOffset(0, 0));
-	EXPECT_FALSE(BitOffset(0, 0) < BitOffset(-1, 0));
-	
-	EXPECT_TRUE(BitOffset(-2, 0) < BitOffset(-1, 0));
-	EXPECT_FALSE(BitOffset(-1, 0) < BitOffset(-2, 0));
-	
-	EXPECT_TRUE(BitOffset(-1, -4) < BitOffset(-1, -3));
-	EXPECT_FALSE(BitOffset(-1, -3) < BitOffset(-1, -4));
+	EXPECT_TRUE ( BitOffset(0, 0) == BitOffset(0, 0) );
+	EXPECT_FALSE( BitOffset(0, 0) != BitOffset(0, 0) );
+	EXPECT_FALSE( BitOffset(0, 1) == BitOffset(0, 0) );
+	EXPECT_TRUE ( BitOffset(0, 1) != BitOffset(0, 0) );
+	EXPECT_FALSE( BitOffset(0, 0) == BitOffset(0, 1) );
+	EXPECT_TRUE ( BitOffset(0, 0) != BitOffset(0, 1) );
+	EXPECT_FALSE( BitOffset(1, 0) == BitOffset(0, 0) );
+	EXPECT_TRUE ( BitOffset(1, 0) != BitOffset(0, 0) );
+	EXPECT_FALSE( BitOffset(0, 0) == BitOffset(1, 0) );
+	EXPECT_TRUE ( BitOffset(0, 0) != BitOffset(1, 0) );
+	EXPECT_FALSE( BitOffset(1, 0) == BitOffset(-1, 0) );
+	EXPECT_TRUE ( BitOffset(1, 0) != BitOffset(-1, 0) );
 }
 
 TEST(BitOffset, Addition)

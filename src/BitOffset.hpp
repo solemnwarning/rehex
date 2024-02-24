@@ -47,27 +47,7 @@ namespace REHex
 				assert(bit <= 7);
 				assert((byte <= 0 && bit <= 0) || (byte >= 0 && bit >= 0));
 				
-				if(byte == 0)
-				{
-					value = bit;
-				}
-				else if(bit < 0)
-				{
-					value = ((int64_t)(byte) << 3) | (int64_t)(8 + bit);
-				}
-				else{
-					value = ((int64_t)(byte) << 3) | (int64_t)(bit);
-				}
-				
-				//value = ((int64_t)(byte) * 8) + (int64_t)(bit);
-				
-// 				if(byte == 0)
-// 				{
-// 					value = bit;
-// 				}
-// 				else{
-// 					value = ((int64_t)(byte) << 3) | (int64_t)(bit);
-// 				}
+				value = ((int64_t)(byte) << 3) + (int64_t)(bit);
 			}
 			
 			static inline BitOffset BITS(int bits)
@@ -82,8 +62,7 @@ namespace REHex
 			
 			inline off_t byte() const
 			{
-				//return (value & ~(int64_t)(7)) / 8;
-				return value >> 3;
+				return value / 8;
 			}
 			
 			inline int bit() const

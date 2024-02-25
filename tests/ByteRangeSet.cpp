@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,6 +27,12 @@ using namespace REHex;
 #define EXPECT_RANGES(...) \
 { \
 	std::vector<ByteRangeSet::Range> ranges = { __VA_ARGS__ }; \
+	EXPECT_EQ(brs.get_ranges(), ranges); \
+}
+
+#define EXPECT_BIT_RANGES(...) \
+{ \
+	std::vector<BitRangeSet::Range> ranges = { __VA_ARGS__ }; \
 	EXPECT_EQ(brs.get_ranges(), ranges); \
 }
 
@@ -1352,6 +1358,64 @@ TEST(ByteRangeSet, FindLastIn)
 	EXPECT_EQ(SET.find_last_in(20, 100), std::next(SET.begin(), 1));
 	EXPECT_EQ(SET.find_last_in(79, 100), std::next(SET.begin(), 1));
 	EXPECT_EQ(SET.find_last_in(80, 100), SET.end());
+}
+
+TEST(BitRangeSet, DataInserted)
+{
+	BitRangeSet brs;
+	
+	brs.set_range(BitOffset(10, 0), BitOffset(4, 0));
+	brs.set_range(BitOffset(20, 2), BitOffset(2, 6));
+	
+	brs.set_range(BitOffset(28, 4), BitOffset(10, 2));
+	brs.set_range(BitOffset(40, 7), BitOffset(10, 0));
+	
+	brs.set_range(BitOffset(60, 0), BitOffset(5, 0));
+	brs.set_range(BitOffset(70, 2), BitOffset(5, 4));
+	
+	brs.data_inserted(30, 15);
+	
+	EXPECT_BIT_RANGES(
+		BitRangeSet::Range(BitOffset(10, 0), BitOffset(4, 0)),
+		BitRangeSet::Range(BitOffset(20, 2), BitOffset(2, 6)),
+		
+		BitRangeSet::Range(BitOffset(28, 4), BitOffset(1, 4)),
+		BitRangeSet::Range(BitOffset(45, 0), BitOffset(8, 6)),
+		BitRangeSet::Range(BitOffset(55, 7), BitOffset(10, 0)),
+		
+		BitRangeSet::Range(BitOffset(75, 0), BitOffset(5, 0)),
+		BitRangeSet::Range(BitOffset(85, 2), BitOffset(5, 4)),
+	);
+	
+	// BitRangeSet::dbg_dump(brs.begin(), brs.end());
+}
+
+TEST(BitRangeSet, DataErased)
+{
+	BitRangeSet brs;
+	
+	brs.set_range(BitOffset(10, 0), BitOffset(4, 0));
+	brs.set_range(BitOffset(20, 2), BitOffset(2, 6));
+	
+	brs.set_range(BitOffset(28, 4), BitOffset(10, 2));
+	brs.set_range(BitOffset(40, 7), BitOffset(10, 0));
+	
+	brs.set_range(BitOffset(60, 0), BitOffset(5, 0));
+	brs.set_range(BitOffset(70, 2), BitOffset(5, 4));
+	
+	brs.data_erased(30, 15);
+	
+	EXPECT_BIT_RANGES(
+		BitRangeSet::Range(BitOffset(10, 0), BitOffset(4, 0)),
+		BitRangeSet::Range(BitOffset(20, 2), BitOffset(2, 6)),
+		
+		BitRangeSet::Range(BitOffset(28, 4), BitOffset(7, 3)),
+		
+		BitRangeSet::Range(BitOffset(45, 0), BitOffset(5, 0)),
+		BitRangeSet::Range(BitOffset(55, 2), BitOffset(5, 4)),
+	);
+	
+	// BitRangeSet::dbg_dump(brs.begin(), brs.end());
 }
 
 TEST(OrderedByteRangeSet, EmptySet)

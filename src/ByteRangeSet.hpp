@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,66 +23,51 @@
 #include <sys/types.h>
 #include <vector>
 
+#include "BitOffset.hpp"
 #include "util.hpp"
+
+#ifdef MAX
+#undef MAX /* Fuck you GLib */
+#endif
 
 #ifdef NDEBUG
 #define REHEX_BYTERANGESET_CHECK_PRE(begin, end) {}
 #define REHEX_BYTERANGESET_CHECK_POST(begin, end) {}
 #define REHEX_BYTERANGESET_CHECK(begin, end) {}
+
 #else
-template<typename T> static void _rehex_byterangeset_dump(T begin, T end)
-{
-	for(auto r = begin; r != end; ++r)
-	{
-		fprintf(stderr, "{ offset = %lld, length = %lld }\n", (long long)(r->offset), (long long)(r->length));
-	}
-}
-
-template<typename T> static bool _rehex_byterangeset_ok(T begin, T end)
-{
-	for(auto r = begin; r != end; ++r)
-	{
-		if(r != begin && (std::prev(r)->offset + std::prev(r)->length) >= r->offset)
-		{
-			return false;
-		}
-	}
-	
-	return true;
-}
-
 #define REHEX_BYTERANGESET_CHECK_PRE(begin, end) \
-	std::vector<ByteRangeSet::Range> _pre_check_ranges(begin, end);
+	std::vector<Range> _pre_check_ranges(begin, end);
 
 #define REHEX_BYTERANGESET_CHECK_POST(begin_i, end_i) \
 { \
-	if(!_rehex_byterangeset_ok(begin_i, end_i)) \
+	if(!dbg_check_order(begin_i, end_i)) \
 	{ \
 		fprintf(stderr, "ByteRangeSet inconsistency detected at %s:%d\n\n", __FILE__, __LINE__); \
 		\
 		fprintf(stderr, "Dumping previous (good) state:\n"); \
-		_rehex_byterangeset_dump(_pre_check_ranges.begin(), _pre_check_ranges.end()); \
+		dbg_dump(_pre_check_ranges.begin(), _pre_check_ranges.end()); \
 		fprintf(stderr, "\n"); \
 		\
 		fprintf(stderr, "Dumping current (bad) state:\n"); \
-		_rehex_byterangeset_dump(begin_i, end_i); \
+		dbg_dump(begin_i, end_i); \
 		fprintf(stderr, "\n"); \
 		\
-		assert(false && _rehex_byterangeset_ok(begin_i, end_i)); \
+		assert(false && dbg_check_order(begin_i, end_i)); \
 	} \
 }
 
 #define REHEX_BYTERANGESET_CHECK(begin, end) \
 { \
-	if(!_rehex_byterangeset_ok(begin, end)) \
+	if(!dbg_check_order(begin, end)) \
 	{ \
 		fprintf(stderr, "ByteRangeSet inconsistency detected at %s:%d\n\n", __FILE__, __LINE__); \
 		\
 		fprintf(stderr, "Dumping values:\n"); \
-		_rehex_byterangeset_dump(begin, end); \
+		dbg_dump(begin, end); \
 		fprintf(stderr, "\n"); \
 		\
-		assert(false && _rehex_byterangeset_ok(begin, end)); \
+		assert(false && dbg_check_order(begin, end)); \
 	} \
 }
 #endif
@@ -96,18 +81,18 @@ namespace REHex
 	 * ranges. Any ranges which are adjacent or overlapping will be merged to reduce memory
 	 * consumption, so only each unique contiguous range added will take space in memory.
 	*/
-	class ByteRangeSet
+	template<typename OT> class RangeSet
 	{
 		public:
 			/**
-			 * @brief A range stored within a ByteRangeSet.
+			 * @brief A range stored within a RangeSet.
 			*/
 			struct Range
 			{
-				off_t offset;
-				off_t length;
+				OT offset;
+				OT length;
 				
-				Range(off_t offset, off_t length):
+				Range(OT offset, OT length):
 					offset(offset), length(length) {}
 				
 				bool operator<(const Range &rhs) const
@@ -127,8 +112,10 @@ namespace REHex
 				}
 			};
 			
-			typedef std::vector<Range>::iterator iterator;
-			typedef std::vector<Range>::const_iterator const_iterator;
+			static OT MAX();
+			
+			typedef typename std::vector<Range>::iterator iterator;
+			typedef typename std::vector<Range>::const_iterator const_iterator;
 			
 		private:
 			std::vector<Range> ranges;
@@ -137,9 +124,9 @@ namespace REHex
 			/**
 			 * @brief Construct an empty set.
 			*/
-			ByteRangeSet() {}
+			RangeSet() {}
 			
-			ByteRangeSet(const ByteRangeSet &src):
+			RangeSet(const RangeSet<OT> &src):
 				ranges(src.ranges) {}
 			
 			/**
@@ -147,10 +134,10 @@ namespace REHex
 			 *
 			 * NOTE: The ranges MUST be in order and MUST NOT be adjacent.
 			*/
-			template<typename T> ByteRangeSet(const T begin, const T end):
+			template<typename T> RangeSet(const T begin, const T end):
 				ranges(begin, end) {}
 			
-			bool operator==(const ByteRangeSet &rhs) const
+			bool operator==(const RangeSet<OT> &rhs) const
 			{
 				return ranges == rhs.ranges;
 			}
@@ -164,7 +151,7 @@ namespace REHex
 			 *
 			 * Returns a reference to the set to allow for chaining.
 			*/
-			ByteRangeSet &set_range(off_t offset, off_t length);
+			RangeSet<OT> &set_range(OT offset, OT length);
 			
 			/**
 			 * @brief Set multiple ranges of bytes in the set.
@@ -188,7 +175,7 @@ namespace REHex
 			 * will be split if necessary to preserve bytes outside of the range to be
 			 * cleared.
 			*/
-			void clear_range(off_t offset, off_t length);
+			void clear_range(OT offset, OT length);
 			
 			/**
 			 * @brief Clear multiple ranges of bytes in the set.
@@ -210,29 +197,29 @@ namespace REHex
 			/**
 			 * @brief Check if a range is set in the set.
 			*/
-			bool isset(off_t offset, off_t length = 1) const;
+			bool isset(OT offset, OT length = 1) const;
 			
 			/**
 			 * @brief Check if any bytes in a range are set in the set.
 			*/
-			bool isset_any(off_t offset, off_t length) const;
+			bool isset_any(OT offset, OT length) const;
 			
 			/**
 			 * @brief Find the first Range that intersects the given range.
 			 * @return An iterator into the internal vector, or end.
 			*/
-			const_iterator find_first_in(off_t offset, off_t length) const;
+			const_iterator find_first_in(OT offset, OT length) const;
 			
 			/**
 			 * @brief Find the last Range that intersects the given range.
 			 * @return An iterator into the internal vector, or end.
 			*/
-			const_iterator find_last_in(off_t offset, off_t length) const;
+			const_iterator find_last_in(OT offset, OT length) const;
 			
 			/**
 			 * @brief Get the total number of bytes encompassed by the set.
 			*/
-			off_t total_bytes() const;
+			OT total_bytes() const;
 			
 			/**
 			 * @brief Get a reference to the internal std::vector.
@@ -299,11 +286,23 @@ namespace REHex
 			/**
 			 * @brief Find the intersection of two sets.
 			 *
-			 * Returns a ByteRangeSet containing only the ranges of bytes which are set
+			 * Returns a RangeSet<OT> containing only the ranges of bytes which are set
 			 * in BOTH sets.
 			*/
-			static ByteRangeSet intersection(const ByteRangeSet &a, const ByteRangeSet &b);
+			static RangeSet<OT> intersection(const RangeSet<OT> &a, const RangeSet<OT> &b);
+			
+			#ifndef NDEBUG
+			template<typename T> static bool dbg_check_order(T begin, T end);
+			template<typename T> static void dbg_dump(T begin, T end);
+			#endif
+			
+		private:
+			void data_inserted_impl(OT offset, OT length);
+			void data_erased_impl(OT offset, OT length);
 	};
+	
+	using ByteRangeSet = RangeSet<off_t>;
+	using BitRangeSet = RangeSet<BitOffset>;
 	
 	/**
 	 * @brief Variant of ByteRangeSet that preserves insertion order of ranges.
@@ -387,7 +386,40 @@ namespace REHex
 	};
 }
 
-template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T end, size_t size_hint)
+#ifndef NDEBUG
+template<typename OT> template<typename T> bool REHex::RangeSet<OT>::dbg_check_order(T begin, T end)
+{
+	for(auto r = begin; r != end; ++r)
+	{
+		if(r != begin && (std::prev(r)->offset + std::prev(r)->length) >= r->offset)
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+template<> template<typename T> void REHex::RangeSet<off_t>::dbg_dump(T begin, T end)
+{
+	for(auto r = begin; r != end; ++r)
+	{
+		fprintf(stderr, "{ offset = %lld, length = %lld }\n", (long long)(r->offset), (long long)(r->length));
+	}
+}
+
+template<> template<typename T> void REHex::RangeSet<REHex::BitOffset>::dbg_dump(T begin, T end)
+{
+	for(auto r = begin; r != end; ++r)
+	{
+		fprintf(stderr, "{ offset = %lld.%d, length = %lld.%d }\n",
+			(long long)(r->offset.byte()), r->offset.bit(),
+			(long long)(r->length.byte()), r->length.bit());
+	}
+}
+#endif
+
+template<typename OT> template<typename T> void REHex::RangeSet<OT>::set_ranges(const T begin, const T end, size_t size_hint)
 {
 	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
 	
@@ -412,16 +444,16 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 	 * and group_erase_end iterators encompass the full range of adjacent elements to be erased
 	 * from sequential inserts and group_ranges contains all adjacent elements to be inserted.
 	*/
-	std::vector<Range>::iterator group_erase_begin;
-	std::vector<Range>::iterator group_erase_end;
-	std::vector<Range> group_ranges;
+	typename std::vector<Range>::iterator group_erase_begin;
+	typename std::vector<Range>::iterator group_erase_end;
+	typename std::vector<Range> group_ranges;
 	
 	for(auto r = begin; r != end;)
 	{
 		assert(r == begin || (std::prev(r)->offset + std::prev(r)->length) < r->offset);
 		
-		off_t offset = r->offset;
-		off_t length = r->length;
+		OT offset = r->offset;
+		OT length = r->length;
 		
 		/* Find the range of elements that intersects the one we are inserting. They will be erased
 		 * and the one we are creating will grow on either end as necessary to encompass them.
@@ -429,8 +461,8 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 		
 		next = std::lower_bound(next, ranges.end(), Range((offset + length), 0));
 		
-		std::vector<Range>::iterator erase_begin = next;
-		std::vector<Range>::iterator erase_end   = next;
+		typename std::vector<Range>::iterator erase_begin = next;
+		typename std::vector<Range>::iterator erase_end   = next;
 		
 		while(erase_begin != ranges.begin())
 		{
@@ -438,8 +470,8 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 			
 			if((eb_prev->offset + eb_prev->length) >= offset)
 			{
-				off_t merged_begin = std::min(eb_prev->offset, offset);
-				off_t merged_end   = std::max((eb_prev->offset + eb_prev->length), (offset + length));
+				OT merged_begin = std::min(eb_prev->offset, offset);
+				OT merged_end   = std::max((eb_prev->offset + eb_prev->length), (offset + length));
 				
 				offset = merged_begin;
 				length = merged_end - merged_begin;
@@ -519,7 +551,7 @@ template<typename T> void REHex::ByteRangeSet::set_ranges(const T begin, const T
 	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
-template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const T end)
+template<typename OT> template<typename T> void REHex::RangeSet<OT>::clear_ranges(const T begin, const T end)
 {
 	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
 	
@@ -533,23 +565,23 @@ template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const
 	 * from sequential inserts and group_replacements contains all adjacent ranges to be
 	 * re-inserted at the same position.
 	*/
-	std::vector<Range>::iterator group_erase_begin = ranges.end();
-	std::vector<Range>::iterator group_erase_end   = ranges.end();
-	std::vector<Range> group_replacements;
+	typename std::vector<Range>::iterator group_erase_begin = ranges.end();
+	typename std::vector<Range>::iterator group_erase_end   = ranges.end();
+	typename std::vector<Range> group_replacements;
 	
 	for(auto r = begin; r != end;)
 	{
 		assert(r == begin || (std::prev(r)->offset + std::prev(r)->length) < r->offset);
 		
-		off_t offset = r->offset;
-		off_t length = r->length;
+		OT offset = r->offset;
+		OT length = r->length;
 		
 		/* Find the range of elements overlapping the range to be cleared. */
 		
 		next = std::lower_bound(next, ranges.end(), Range(add_clamp_overflow(offset, length), 0));
 		
-		std::vector<Range>::iterator erase_begin = next;
-		std::vector<Range>::iterator erase_end   = next;
+		typename std::vector<Range>::iterator erase_begin = next;
+		typename std::vector<Range>::iterator erase_end   = next;
 		
 		while(erase_begin != ranges.begin())
 		{
@@ -633,8 +665,8 @@ template<typename T> void REHex::ByteRangeSet::clear_ranges(const T begin, const
 				 * erase range.
 				*/
 				
-				off_t from = add_clamp_overflow(offset, length);
-				off_t to   = erase_last->offset + erase_last->length;
+				OT from = add_clamp_overflow(offset, length);
+				OT to   = erase_last->offset + erase_last->length;
 				
 				assert(to > from);
 				

@@ -36,6 +36,9 @@ Requires: wxGTK3
 %define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe BOTAN_PKG=botan-1.10
 BuildRequires: botan-devel
 BuildRequires: pkgconfig
+
+# Build with -fpermissive to work around GCC bug #56480 on RHEL 7.
+%global build_type_safety_c 0
 %else
 BuildRequires: botan2-devel
 BuildRequires: luarocks

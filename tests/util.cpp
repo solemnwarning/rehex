@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -135,44 +135,75 @@ TEST(Util, format_offset)
 	EXPECT_EQ(format_offset(4294967296LL, OFFSET_BASE_DEC,          0LL), "0000000004294967296");
 }
 
-#define TEST_ADD_CLAMP_OVERFLOW(a, b, result, expect_overflow) \
-	EXPECT_EQ(add_clamp_overflow<int>(a, b), result); \
-	EXPECT_EQ(add_clamp_overflow<int>(a, b, &overflow_detected), result); \
+#define TEST_ADD_CLAMP_OVERFLOW(T, a, b, result, expect_overflow) \
+	EXPECT_EQ(add_clamp_overflow<T>(a, b), result); \
+	EXPECT_EQ(add_clamp_overflow<T>(a, b, &overflow_detected), result); \
 	EXPECT_EQ(overflow_detected, expect_overflow);\
 	\
-	EXPECT_EQ(add_clamp_overflow<int>(b, a), result); \
-	EXPECT_EQ(add_clamp_overflow<int>(b, a, &overflow_detected), result); \
+	EXPECT_EQ(add_clamp_overflow<T>(b, a), result); \
+	EXPECT_EQ(add_clamp_overflow<T>(b, a, &overflow_detected), result); \
 	EXPECT_EQ(overflow_detected, expect_overflow);
 
 TEST(Util, add_clamp_overflow)
 {
 	bool overflow_detected;
 	
-	TEST_ADD_CLAMP_OVERFLOW(      1,    1,       2, false);
-	TEST_ADD_CLAMP_OVERFLOW(     10,    1,      11, false);
-	TEST_ADD_CLAMP_OVERFLOW(1000000,    1, 1000001, false);
-	TEST_ADD_CLAMP_OVERFLOW(   -100,  200,     100, false);
-	TEST_ADD_CLAMP_OVERFLOW(   -100, -100,    -200, false);
-	TEST_ADD_CLAMP_OVERFLOW(   -100,    0,    -100, false);
-	TEST_ADD_CLAMP_OVERFLOW(      0,    0,       0, false);
+	TEST_ADD_CLAMP_OVERFLOW(int,       1,    1,       2, false);
+	TEST_ADD_CLAMP_OVERFLOW(int,      10,    1,      11, false);
+	TEST_ADD_CLAMP_OVERFLOW(int, 1000000,    1, 1000001, false);
+	TEST_ADD_CLAMP_OVERFLOW(int,    -100,  200,     100, false);
+	TEST_ADD_CLAMP_OVERFLOW(int,    -100, -100,    -200, false);
+	TEST_ADD_CLAMP_OVERFLOW(int,    -100,    0,    -100, false);
+	TEST_ADD_CLAMP_OVERFLOW(int,       0,    0,       0, false);
 	
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,            0,  INT_MAX,      false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,            1,  INT_MAX,      true);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX - 1,        0,  INT_MAX - 1,  false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX - 1,        1,  INT_MAX,      false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX - 1,        2,  INT_MAX,      true);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,           -1,  INT_MAX - 1,  false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MAX,      INT_MAX,  INT_MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX,            0,  INT_MAX,      false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX,            1,  INT_MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX - 1,        0,  INT_MAX - 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX - 1,        1,  INT_MAX,      false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX - 1,        2,  INT_MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX,           -1,  INT_MAX - 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MAX,      INT_MAX,  INT_MAX,      true);
 	
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,            0,  INT_MIN,      false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,           -1,  INT_MIN,      true);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN + 1,        0,  INT_MIN + 1,  false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN + 1,       -1,  INT_MIN,      false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN + 1,       -2,  INT_MIN,      true);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,            1,  INT_MIN + 1,  false);
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN,      INT_MIN,  INT_MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN,            0,  INT_MIN,      false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN,           -1,  INT_MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN + 1,        0,  INT_MIN + 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN + 1,       -1,  INT_MIN,      false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN + 1,       -2,  INT_MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN,            1,  INT_MIN + 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN,      INT_MIN,  INT_MIN,      true);
 	
-	TEST_ADD_CLAMP_OVERFLOW(INT_MIN, INT_MAX, -1, false);
+	TEST_ADD_CLAMP_OVERFLOW(int, INT_MIN, INT_MAX, -1, false);
+}
+
+TEST(Util, add_clamp_overflow_BitOffset)
+{
+	bool overflow_detected;
+	
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset,       1,    1,       2, false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset,      10,    1,      11, false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, 1000000,    1, 1000001, false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset,    -100,  200,     100, false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset,    -100, -100,    -200, false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset,    -100,    0,    -100, false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset,       0,    0,       0, false);
+	
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX,                   0,  BitOffset::MAX,      false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX,                   1,  BitOffset::MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX - 1,               0,  BitOffset::MAX - 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX - 1,               1,  BitOffset::MAX,      false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX - 1,               2,  BitOffset::MAX,      true);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX,                  -1,  BitOffset::MAX - 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MAX,      BitOffset::MAX,  BitOffset::MAX,      true);
+	
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN,                   0,  BitOffset::MIN,      false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN,                  -1,  BitOffset::MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN + 1,               0,  BitOffset::MIN + 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN + 1,              -1,  BitOffset::MIN,      false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN + 1,              -2,  BitOffset::MIN,      true);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN,                   1,  BitOffset::MIN + 1,  false);
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN,      BitOffset::MIN,  BitOffset::MIN,      true);
+	
+	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, false);
 }
 
 TEST(Util, memcpy_left)

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,6 +23,8 @@
 #include <string>
 #include <vector>
 #include <wx/window.h>
+
+#include "BitOffset.hpp"
 
 namespace REHex {
 	class ParseError: public std::runtime_error
@@ -222,22 +224,9 @@ namespace REHex {
 			}
 	};
 	
-	/**
-	 * @brief Adds two integers together, clamping to the range of the type.
-	 *
-	 * This function adds two integer-type values together, if the result would overflow or
-	 * underflow, the result is clamped to the maximum or minimum value representable by the
-	 * type T.
-	 *
-	 * If the "overflow" parameter is non-NULL, whether or not an overflow (or overflow) was
-	 * detected is stored there.
-	*/
-	template<typename T> T add_clamp_overflow(T a, T b, bool *overflow = NULL)
+	template<typename T> T _add_clamp_overflow(T a, T b, bool *overflow, T T_min, T T_max, T T_zero)
 	{
-		const T T_min = std::numeric_limits<T>::min();
-		const T T_max = std::numeric_limits<T>::max();
-		
-		if((a < 0) != (b < 0))
+		if((a < T_zero) != (b < T_zero))
 		{
 			/* a and b have differing signs - can't overflow */
 			if(overflow != NULL)
@@ -247,7 +236,7 @@ namespace REHex {
 			
 			return a + b;
 		}
-		else if(a < 0)
+		else if(a < T_zero)
 		{
 			/* a and b are negative */
 			
@@ -295,6 +284,26 @@ namespace REHex {
 			}
 		}
 	}
+	
+	/**
+	 * @brief Adds two integers together, clamping to the range of the type.
+	 *
+	 * This function adds two integer-type values together, if the result would overflow or
+	 * underflow, the result is clamped to the maximum or minimum value representable by the
+	 * type T.
+	 *
+	 * If the "overflow" parameter is non-NULL, whether or not an overflow (or underflow) was
+	 * detected is stored there.
+	*/
+	template<typename T> T add_clamp_overflow(T a, T b, bool *overflow = NULL)
+	{
+		return _add_clamp_overflow<T>(a, b, overflow, std::numeric_limits<T>::min(), std::numeric_limits<T>::max(), 0);
+	}
+	
+	/**
+	 * @brief Specialisation of add_clamp_overflow<T>() for BitOffset.
+	*/
+	template<> BitOffset add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow);
 }
 
 #endif /* !REHEX_UTIL_HPP */

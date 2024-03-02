@@ -44,8 +44,14 @@
 #include "buffer.hpp"
 #include "win32lib.hpp"
 
+static const long long INT61_MIN = -0x1000000000000000LL;
+static const long long INT61_MAX = 0xFFFFFFFFFFFFFFFLL;
+
 const REHex::BitOffset REHex::BitOffset::INVALID(-1, 0);
 const REHex::BitOffset REHex::BitOffset::ZERO(0, 0);
+
+const REHex::BitOffset REHex::BitOffset::MIN(INT61_MIN + 1, -7);
+const REHex::BitOffset REHex::BitOffset::MAX(INT61_MAX, 7);
 
 wxDEFINE_EVENT(REHex::BACKING_FILE_DELETED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BACKING_FILE_MODIFIED, wxCommandEvent);

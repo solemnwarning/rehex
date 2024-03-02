@@ -38,6 +38,9 @@ namespace REHex
 			static const BitOffset INVALID;
 			static const BitOffset ZERO;
 			
+			static const BitOffset MIN;
+			static const BitOffset MAX;
+			
 			BitOffset():
 				value(0) {}
 			

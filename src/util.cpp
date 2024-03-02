@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -644,4 +644,9 @@ REHex::CarryBits REHex::memcpy_right(void *dst, const void *src, size_t n, int s
 	}
 	
 	return CarryBits(((*src_p & mask_b) << lshift), (mask_b << lshift));
+}
+
+template<> REHex::BitOffset REHex::add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow)
+{
+	return _add_clamp_overflow(a, b, overflow, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO);
 }

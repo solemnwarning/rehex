@@ -1,3 +1,8 @@
+Version TBA:
+
+ * Compare data from correct file offsets when "Collapse matches" option is
+   enabled in compare window (#224).
+
 Version 0.61.0 (2024-02-14)
 
  * Permit trailing commas in template enum definitions (#216).

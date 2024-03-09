@@ -417,13 +417,13 @@ template<typename OT> REHex::RangeSet<OT> REHex::RangeSet<OT>::intersection(cons
 template class REHex::RangeSet<off_t>;
 template class REHex::RangeSet<REHex::BitOffset>;
 
-REHex::OrderedByteRangeSet &REHex::OrderedByteRangeSet::set_range(off_t offset, off_t length)
+template<typename OT> REHex::OrderedRangeSet<OT> &REHex::OrderedRangeSet<OT>::set_range(OT offset, OT length)
 {
 	/* Exclude any ranges already set from the offset/length so we can push exclusive ranges
 	 * onto the sorted_ranges vector.
 	*/
 	
-	ByteRangeSet ranges_to_set;
+	RangeSet<OT> ranges_to_set;
 	ranges_to_set.set_range(offset, length);
 	
 	for(auto i = sorted_ranges.begin(); i != sorted_ranges.end(); ++i)
@@ -442,48 +442,52 @@ REHex::OrderedByteRangeSet &REHex::OrderedByteRangeSet::set_range(off_t offset, 
 	return *this;
 }
 
-bool REHex::OrderedByteRangeSet::isset(off_t offset, off_t length) const
+template<typename OT> bool REHex::OrderedRangeSet<OT>::isset(OT offset, OT length) const
 {
 	return brs.isset(offset, length);
 }
 
-bool REHex::OrderedByteRangeSet::isset_any(off_t offset, off_t length) const
+template<typename OT> bool REHex::OrderedRangeSet<OT>::isset_any(OT offset, OT length) const
 {
 	return brs.isset_any(offset, length);
 }
 
-off_t REHex::OrderedByteRangeSet::total_bytes() const
+template<typename OT> OT REHex::OrderedRangeSet<OT>::total_bytes() const
 {
 	return brs.total_bytes();
 }
 
-const std::vector<REHex::ByteRangeSet::Range> &REHex::OrderedByteRangeSet::get_ranges() const
+template<typename OT> const std::vector<typename REHex::RangeSet<OT>::Range> &REHex::OrderedRangeSet<OT>::get_ranges() const
 {
 	return sorted_ranges;
 }
 
-std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::OrderedByteRangeSet::begin() const
+template<typename OT> typename std::vector<typename REHex::RangeSet<OT>::Range>::const_iterator REHex::OrderedRangeSet<OT>::begin() const
 {
 	return sorted_ranges.begin();
 }
 
-std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::OrderedByteRangeSet::end() const
+template<typename OT> typename std::vector<typename REHex::RangeSet<OT>::Range>::const_iterator REHex::OrderedRangeSet<OT>::end() const
 {
 	return sorted_ranges.end();
 }
 
-const REHex::ByteRangeSet::Range &REHex::OrderedByteRangeSet::operator[](size_t idx) const
+template<typename OT> const typename REHex::RangeSet<OT>::Range &REHex::OrderedRangeSet<OT>::operator[](size_t idx) const
 {
 	assert(idx < sorted_ranges.size());
 	return sorted_ranges[idx];
 }
 
-size_t REHex::OrderedByteRangeSet::size() const
+template<typename OT> size_t REHex::OrderedRangeSet<OT>::size() const
 {
 	return sorted_ranges.size();
 }
 
-bool REHex::OrderedByteRangeSet::empty() const
+template<typename OT> bool REHex::OrderedRangeSet<OT>::empty() const
 {
 	return sorted_ranges.empty();
 }
+
+/* Instantiate OrderedByteRangeSet and OrderedBitRangeSet methods. */
+template class REHex::OrderedRangeSet<off_t>;
+template class REHex::OrderedRangeSet<REHex::BitOffset>;

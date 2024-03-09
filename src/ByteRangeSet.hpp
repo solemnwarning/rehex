@@ -305,31 +305,34 @@ namespace REHex
 	using BitRangeSet = RangeSet<BitOffset>;
 	
 	/**
-	 * @brief Variant of ByteRangeSet that preserves insertion order of ranges.
+	 * @brief Variant of RangeSet that preserves insertion order of ranges.
 	 *
-	 * This class is similar to ByteRangeSet, except when iterating over the ranges in the set
+	 * This class is similar to RangeSet, except when iterating over the ranges in the set
 	 * you will get them in the order they were inserted rather than sorted by offset.
 	 *
-	 * An OrderedByteRangeSet can be inplicitly converted to a ByteRangeSet, but the reverse is
+	 * An OrderedRangeSet can be implicitly converted to a RangeSet, but the reverse is
 	 * not true.
 	 *
-	 * NOTE: Doesn't implement all functionality of ByteRangeSet, uses more memory and is
+	 * NOTE: Doesn't implement all functionality of RangeSet, uses more memory and is
 	 * slower - only use it if you need the ordered behaviour.
+	 *
+	 * Use OrderedByteRangeSet or OrderedBitRangeSet rather than instantiating this template
+	 * directly.
 	*/
-	class OrderedByteRangeSet
+	template<typename OT> class OrderedRangeSet
 	{
 		private:
-			ByteRangeSet brs;
-			std::vector<ByteRangeSet::Range> sorted_ranges;
+			RangeSet<OT> brs;
+			std::vector<typename RangeSet<OT>::Range> sorted_ranges;
 			
 		public:
-			bool operator==(const OrderedByteRangeSet &rhs) const
+			bool operator==(const OrderedRangeSet<OT> &rhs) const
 			{
 				return sorted_ranges == rhs.sorted_ranges;
 			}
 			
 			/* Allow conversion to a (const) ByteRangeSet reference. */
-			operator const ByteRangeSet&() const
+			operator const RangeSet<OT>&() const
 			{
 				return brs;
 			}
@@ -337,42 +340,42 @@ namespace REHex
 			/**
 			 * @see ByteRangeSet::set_range()
 			*/
-			OrderedByteRangeSet &set_range(off_t offset, off_t length);
+			OrderedRangeSet<OT> &set_range(OT offset, OT length);
 			
 			/**
 			 * @see ByteRangeSet::isset()
 			*/
-			bool isset(off_t offset, off_t length = 1) const;
+			bool isset(OT offset, OT length = 1) const;
 			
 			/**
 			 * @see ByteRangeSet::isset_any()
 			*/
-			bool isset_any(off_t offset, off_t length) const;
+			bool isset_any(OT offset, OT length) const;
 			
 			/**
 			 * @see ByteRangeSet::total_bytes()
 			*/
-			off_t total_bytes() const;
+			OT total_bytes() const;
 			
 			/**
 			 * @see ByteRangeSet::get_ranges()
 			*/
-			const std::vector<ByteRangeSet::Range> &get_ranges() const;
+			const std::vector<typename RangeSet<OT>::Range> &get_ranges() const;
 			
 			/**
 			 * @see ByteRangeSet::begin()
 			*/
-			std::vector<ByteRangeSet::Range>::const_iterator begin() const;
+			typename std::vector<typename RangeSet<OT>::Range>::const_iterator begin() const;
 			
 			/**
 			 * @see ByteRangeSet::end()
 			*/
-			std::vector<ByteRangeSet::Range>::const_iterator end() const;
+			typename std::vector<typename RangeSet<OT>::Range>::const_iterator end() const;
 			
 			/**
 			 * @brief Access the n-th range in the set.
 			*/
-			const ByteRangeSet::Range &operator[](size_t idx) const;
+			const typename RangeSet<OT>::Range &operator[](size_t idx) const;
 			
 			/**
 			 * @see ByteRangeSet::size()
@@ -384,6 +387,9 @@ namespace REHex
 			*/
 			bool empty() const;
 	};
+	
+	using OrderedByteRangeSet = OrderedRangeSet<off_t>;
+	using OrderedBitRangeSet = OrderedRangeSet<BitOffset>;
 }
 
 #ifndef NDEBUG
@@ -676,7 +682,6 @@ template<typename OT> template<typename T> void REHex::RangeSet<OT>::clear_range
 		
 		++r;
 	}
-	
 	
 	/* Flush pending erase/insert operations. */
 	

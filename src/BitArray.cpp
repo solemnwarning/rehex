@@ -98,7 +98,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 	
 	/* TODO: Display all highlights/selections properly. */
 	
-	off_t scoped_selection_offset, scoped_selection_length;
+	BitOffset scoped_selection_offset, scoped_selection_length;
 	std::tie(scoped_selection_offset, scoped_selection_length) = doc_ctrl.get_selection_in_region(this);
 	
 	const Highlight hex_selection_highlight(
@@ -107,7 +107,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto highlight_func = [&](off_t offset)
+	auto highlight_func = [&](BitOffset offset)
 	{
 		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
@@ -162,12 +162,12 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 	if(mouse_x_px < bin_base_x)
 	{
 		/* Pointer is to the left of data. */
-		if(exact)
+		if(exact || mouse_y_lines <= 0)
 		{
 			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 		else{
-			return std::make_pair(BitOffset(mouse_line_base, 0), SA_NONE);
+			return std::make_pair(BitOffset((mouse_line_base - 1), 7), SA_SPECIAL);
 		}
 	}
 	
@@ -211,7 +211,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 	else if(mouse_position.byte() >= (mouse_line_base + BSR_BYTES_PER_LINE))
 	{
 		/* Clamp to end of line. */
-		mouse_position = BitOffset((mouse_line_base + BSR_BYTES_PER_LINE), 0);
+		mouse_position = BitOffset((mouse_line_base + BSR_BYTES_PER_LINE - 1), 7);
 	}
 	
 	return std::make_pair(mouse_position, SA_SPECIAL);

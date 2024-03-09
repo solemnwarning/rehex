@@ -40,15 +40,14 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 	char initial_to[64]   = "";
 	char initial_len[64]  = "";
 	
-	std::pair<off_t, off_t> selection = document_ctrl.get_selection_linear();
-	off_t selection_off    = selection.first;
-	off_t selection_length = selection.second;
+	BitOffset selection_off, selection_length;
+	std::tie(selection_off, selection_length) = document_ctrl.get_selection_linear();
 	
-	if(selection_length > 0)
+	if(selection_length > BitOffset::ZERO)
 	{
-		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(selection_off));
-		snprintf(initial_to,   sizeof(initial_to),   "0x%08llX", (long long unsigned)(selection_off + selection_length - 1));
-		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length));
+		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(selection_off.byte())); /* BITFIXUP */
+		snprintf(initial_to,   sizeof(initial_to),   "0x%08llX", (long long unsigned)((selection_off + selection_length - 1).byte())); /* BITFIXUP */
+		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length.byte())); /* BITFIXUP */
 	}
 	else{
 		off_t cursor_pos = document_ctrl.get_cursor_position().byte(); /* BITFIXUP */

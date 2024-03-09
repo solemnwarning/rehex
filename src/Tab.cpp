@@ -463,8 +463,9 @@ void REHex::Tab::paste_text(const std::string &text)
 		off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
-		off_t selection_off, selection_length;
-		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+		auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
+		off_t selection_off = tmp.first.byte();
+		off_t selection_length = tmp.second.byte();
 		bool has_selection = doc_ctrl->has_selection();
 		
 		if(selection_length > 0)
@@ -499,8 +500,9 @@ void REHex::Tab::paste_text(const std::string &text)
 		off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
-		off_t selection_off, selection_length;
-		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+		auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
+		off_t selection_off = tmp.first.byte();
+		off_t selection_length = tmp.second.byte();
 		bool has_selection = doc_ctrl->has_selection();
 		
 		int write_flag;
@@ -561,12 +563,12 @@ void REHex::Tab::compare_whole_file()
 
 void REHex::Tab::compare_selection()
 {
-	off_t selection_off, selection_length;
+	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
-	if(selection_length > 0)
+	if(selection_length > BitOffset::ZERO)
 	{
-		compare_range(selection_off, selection_length);
+		compare_range(selection_off.byte(), selection_length.byte()); /* BITFIXUP */
 	}
 	else{
 		wxBell();
@@ -752,8 +754,9 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	
 	off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+	auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
+	off_t selection_off = tmp.first.byte();
+	off_t selection_length = tmp.second.byte();
 	bool has_selection = doc_ctrl->has_selection();
 	
 	bool insert_mode = doc_ctrl->get_insert_mode();
@@ -992,8 +995,9 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 {
 	off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	
-	off_t selection_off, selection_length;
-	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
+	auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
+	off_t selection_off = tmp.first.byte();
+	off_t selection_length = tmp.second.byte();
 	
 	const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
 	const NestedOffsetLengthMap<int>     &highlights = doc->get_highlights();

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -117,13 +117,13 @@ void REHex::RangeChoiceLinear::update_range()
 			
 		case FOLLOW_SELECTION:
 		{
-			off_t selection_offset, selection_length;
+			BitOffset selection_offset, selection_length;
 			std::tie(selection_offset, selection_length) = doc_ctrl->get_selection_linear();
 			
-			if(selection_length > 0)
+			if(selection_length > BitOffset::ZERO)
 			{
-				new_offset = selection_offset;
-				new_length = selection_length;
+				new_offset = selection_offset.byte(); /* BITFIXUP */
+				new_length = selection_length.byte(); /* BITFIXUP */
 			}
 			else{
 				new_offset = new_length = 0;
@@ -215,10 +215,10 @@ void REHex::RangeChoiceLinear::OnChoice(wxCommandEvent &event)
 			
 		case CURRENT_SELECTION:
 		{
-			std::pair<off_t, off_t> selection = doc_ctrl->get_selection_linear();
-			if(selection.second > 0)
+			std::pair<BitOffset, BitOffset> selection = doc_ctrl->get_selection_linear();
+			if(selection.second > BitOffset::ZERO)
 			{
-				set_fixed_range(selection.first, selection.second);
+				set_fixed_range(selection.first.byte(), selection.second.byte()); /* BITFIXUP */
 			}
 			else{
 				wxBell();

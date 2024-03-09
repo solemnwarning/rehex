@@ -82,8 +82,8 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	hex_font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
 	linked_scroll_prev(NULL),
 	linked_scroll_next(NULL),
-	selection_begin(-1),
-	selection_end(-1),
+	selection_begin(BitOffset::INVALID),
+	selection_end(BitOffset::INVALID),
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER),
 	hf_gte_cache(GETTEXTEXTENT_CACHE_SIZE)
@@ -574,14 +574,14 @@ void REHex::DocumentCtrl::linked_scroll_visit_others(const std::function<void(Do
 	}
 }
 
-bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
+bool REHex::DocumentCtrl::set_selection_raw(BitOffset begin, BitOffset end)
 {
-	assert(begin >= 0);
-	assert(end >= 0);
+	assert(begin >= BitOffset::ZERO);
+	assert(end >= BitOffset::ZERO);
 	
 	{
-		auto begin_region = _data_region_by_offset(begin);
-		auto end_region = _data_region_by_offset(end);
+		auto begin_region = _data_region_by_offset(begin.byte()); /* BITFIXUP */
+		auto end_region = _data_region_by_offset(end.byte()); /* BITFIXUP */
 		
 		if(begin_region == data_regions.end()
 			|| end_region == data_regions.end()
@@ -597,7 +597,7 @@ bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
 	selection_begin = begin;
 	selection_end = end;
 	
-	if(mouse_shift_initial < begin || mouse_shift_initial > end)
+	if(mouse_shift_initial < begin.byte() || mouse_shift_initial > end.byte()) /* BITFIXUP */
 	{
 		mouse_shift_initial = -1;
 	}
@@ -616,8 +616,8 @@ bool REHex::DocumentCtrl::set_selection_raw(off_t begin, off_t end)
 
 void REHex::DocumentCtrl::clear_selection()
 {
-	selection_begin = -1;
-	selection_end   = -1;
+	selection_begin = BitOffset::INVALID;
+	selection_end   = BitOffset::INVALID;
 	
 	mouse_shift_initial = -1;
 	
@@ -633,110 +633,112 @@ void REHex::DocumentCtrl::clear_selection()
 
 bool REHex::DocumentCtrl::has_selection()
 {
-	assert((selection_begin < 0) == (selection_end < 0));
-	return !(selection_begin < 0 || selection_end < 0);
+	assert((selection_begin < BitOffset::ZERO) == (selection_end < BitOffset::ZERO));
+	return !(selection_begin < BitOffset::ZERO || selection_end < BitOffset::ZERO);
 }
 
-std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_raw()
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::get_selection_raw()
 {
-	if(selection_begin < 0)
+	if(selection_begin < BitOffset::ZERO)
 	{
 		/* No selection. */
-		return std::make_pair(-1, -1);
+		return std::make_pair(BitOffset::INVALID, BitOffset::INVALID);
 	}
 	else{
 		return std::make_pair(selection_begin, selection_end);
 	}
 }
 
-REHex::OrderedByteRangeSet REHex::DocumentCtrl::get_selection_ranges()
+REHex::OrderedBitRangeSet REHex::DocumentCtrl::get_selection_ranges()
 {
 	if(!has_selection())
 	{
-		return OrderedByteRangeSet();
+		return OrderedBitRangeSet();
 	}
 	
 	return region_range_expand(selection_begin, selection_end);
 }
 
-REHex::OrderedByteRangeSet REHex::DocumentCtrl::region_range_expand(off_t begin_offset, off_t end_offset_incl)
+REHex::OrderedBitRangeSet REHex::DocumentCtrl::region_range_expand(BitOffset begin_offset, BitOffset end_offset_incl)
 {
-	OrderedByteRangeSet selected_ranges;
+	OrderedBitRangeSet selected_ranges;
 	
-	auto region = _data_region_by_offset(begin_offset);
-	off_t region_select_begin = begin_offset;
+	auto region = _data_region_by_offset(begin_offset.byte()); /* BITFIXUP */
+	BitOffset region_select_begin = begin_offset;
 	
 	while(region != data_regions.end())
 	{
-		assert(region_select_begin >= (*region)->d_offset);
-		assert(region_select_begin <= ((*region)->d_offset + (*region)->d_length));
+		assert(region_select_begin.byte() >= (*region)->d_offset); /* BITFIXUP */
+		assert(region_select_begin.byte() <= ((*region)->d_offset + (*region)->d_length)); /* BITFIXUP */
 		
-		if((*region)->d_offset <= end_offset_incl && ((*region)->d_length + (*region)->d_offset) > end_offset_incl)
+		if((*region)->d_offset <= end_offset_incl.byte() && ((*region)->d_length + (*region)->d_offset) > end_offset_incl.byte())
 		{
+			/* Last byte of selection is within this region. */
 			if(end_offset_incl > region_select_begin)
 			{
-				selected_ranges.set_range(region_select_begin, (end_offset_incl - region_select_begin) + 1);
+				selected_ranges.set_range(region_select_begin, (end_offset_incl - region_select_begin) + BitOffset::BITS(1));
 			}
 			
 			break;
 		}
 		else{
-			selected_ranges.set_range(region_select_begin, ((*region)->d_offset + (*region)->d_length) - region_select_begin);
+			/* Last byte of selection is beyond the end of this range. */
+			selected_ranges.set_range(region_select_begin, BitOffset(((*region)->d_offset + (*region)->d_length), 0) - region_select_begin);
 		}
 		
 		++region;
 		
 		if(region != data_regions.end())
 		{
-			region_select_begin = (*region)->d_offset;
+			region_select_begin = BitOffset((*region)->d_offset, 0); /* BITFIXUP */
 		}
 	}
 	
 	return selected_ranges;
 }
 
-std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_in_region(GenericDataRegion *region)
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::get_selection_in_region(GenericDataRegion *region)
 {
-	if(selection_begin < 0)
+	if(selection_begin < BitOffset::ZERO)
 	{
 		/* No selection. */
-		return std::make_pair<off_t, off_t>(-1, -1);
+		return std::make_pair(BitOffset::INVALID, BitOffset::INVALID);
 	}
 	
 	auto region_iter = _data_region_by_offset(region->d_offset);
 	assert(region_iter != data_regions.end());
 	
-	auto sel_begin_iter = _data_region_by_offset(selection_begin);
+	auto sel_begin_iter = _data_region_by_offset(selection_begin.byte());
 	assert(sel_begin_iter != data_regions.end());
 	
-	auto sel_end_iter = _data_region_by_offset(selection_end);
+	auto sel_end_iter = _data_region_by_offset(selection_end.byte());
 	assert(sel_end_iter != data_regions.end());
 	
 	if(sel_begin_iter > region_iter || sel_end_iter < region_iter)
 	{
 		/* Selection doesn't overlap region. */
-		return std::make_pair<off_t, off_t>(-1, -1);
+		return std::make_pair(BitOffset::INVALID, BitOffset::INVALID);
 	}
 	
-	off_t region_selection_offset = (sel_begin_iter < region_iter)
-		? region->d_offset
+	BitOffset region_selection_offset = (sel_begin_iter < region_iter)
+		? BitOffset(region->d_offset, 0) /* BITFIXUP */
 		: selection_begin;
 	
-	off_t region_selection_length = (sel_end_iter > region_iter)
-		? (region->d_length - (region_selection_offset - region->d_offset))
-		: ((selection_end - region_selection_offset) + 1);
+	BitOffset region_selection_length = (sel_end_iter > region_iter)
+		? (BitOffset(region->d_length, 0) - (region_selection_offset - BitOffset(region->d_offset, 0))) /* BITFIXUP */
+		: (selection_end - region_selection_offset) + BitOffset::BITS(1);
 	
 	return std::make_pair(region_selection_offset, region_selection_length);
 }
 
-std::pair<off_t, off_t> REHex::DocumentCtrl::get_selection_linear()
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::get_selection_linear()
 {
-	if(has_selection() && region_range_linear(selection_begin, selection_end))
+	if(has_selection() && region_range_linear(selection_begin.byte(), selection_end.byte())) /* BITFIXUP */
 	{
-		return std::pair<off_t, off_t>(selection_begin, (selection_end - selection_begin) + 1);
+		return std::make_pair(selection_begin, (selection_end - selection_begin) + BitOffset::BITS(1));
 	}
 	else{
-		return std::pair<off_t, off_t>(-1, 0);
+		return std::make_pair(BitOffset::INVALID, BitOffset::ZERO);
 	}
 }
 
@@ -1456,58 +1458,11 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		
 		if(key == WXK_LEFT)
 		{
-			new_cursor_pos = (*cur_region)->cursor_left_from(new_cursor_pos, _get_screen_area_for_cursor_state());
-			
-			if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
-			{
-				/* Cursor is at the start of this region. Move to the last byte in
-				 * the previous region.
-				*/
-				
-				if(cur_region != data_regions.begin())
-				{
-					auto prev_region = std::prev(cur_region);
-					
-					new_cursor_pos = (*prev_region)->last_row_nearest_column(INT_MAX);
-					assert(new_cursor_pos.byte() >= 0);
-				}
-				else{
-					/* No previous region. Nowhere to go. */
-					new_cursor_pos = cursor_pos;
-				}
-			}
-			else{
-				assert(new_cursor_pos.byte() >= 0);
-			}
+			new_cursor_pos = region_cursor_left(new_cursor_pos, _get_screen_area_for_cursor_state());
 		}
 		else if(key == WXK_RIGHT)
 		{
-			new_cursor_pos = (*cur_region)->cursor_right_from(new_cursor_pos, _get_screen_area_for_cursor_state());
-			
-			if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
-			{
-				auto next_region = std::next(cur_region);
-				if(next_region != data_regions.end())
-				{
-					new_cursor_pos = (*next_region)->first_row_nearest_column(0);
-					assert(new_cursor_pos.byte() >= 0);
-				}
-				else if(get_insert_mode())
-				{
-					/* Special case: Can move one past the end of the final
-					 * data region in insert mode.
-					*/
-					
-					new_cursor_pos = (*cur_region)->d_offset + (*cur_region)->d_length;
-				}
-				else{
-					/* No further region. Nowhere to go. */
-					new_cursor_pos = cursor_pos;
-				}
-			}
-			else{
-				assert(new_cursor_pos.byte() >= 0);
-			}
+			new_cursor_pos = region_cursor_right(new_cursor_pos, _get_screen_area_for_cursor_state());
 		}
 		else if(key == WXK_UP)
 		{
@@ -1682,24 +1637,24 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 
 		if(modifiers & wxMOD_SHIFT)
 		{
-			if(region_offset_cmp(new_cursor_pos.byte(), cursor_pos.byte()) < 0) /* BITFIXUP */
+			if(region_offset_cmp(new_cursor_pos, cursor_pos) < BitOffset::ZERO)
 			{
 				/* Cursor moved backwards. */
 				
 				if(has_selection())
 				{
-					if(region_offset_cmp(selection_begin, cursor_pos.byte()) >= 0)
+					if(region_offset_cmp(selection_begin, cursor_pos) >= BitOffset::ZERO)
 					{
-						set_selection_raw(new_cursor_pos.byte(), selection_end); /* BITFIXUP */
+						set_selection_raw(new_cursor_pos, selection_end);
 					}
 					else{
-						if(region_offset_cmp(new_cursor_pos.byte(), selection_begin) < 0) /* BITFIXUP */
+						if(region_offset_cmp(new_cursor_pos, selection_begin) < BitOffset::ZERO)
 						{
-							set_selection_raw(new_cursor_pos.byte(), region_offset_sub(selection_begin, 1)); /* BITFIXUP */
+							set_selection_raw(new_cursor_pos, region_offset_sub(selection_begin, BitOffset::BITS(1)));
 						}
-						else if(region_offset_cmp(selection_begin, new_cursor_pos.byte()) < 0) /* BITFIXUP */
+						else if(region_offset_cmp(selection_begin, new_cursor_pos) < BitOffset::ZERO)
 						{
-							set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos.byte(), 1)); /* BITFIXUP */
+							set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos, BitOffset::BITS(1)));
 						}
 						else{
 							clear_selection();
@@ -1707,37 +1662,37 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 					}
 				}
 				else{
-					set_selection_raw(new_cursor_pos.byte(), region_offset_sub(cursor_pos.byte(), 1)); /* BITFIXUP */
+					set_selection_raw(new_cursor_pos, region_offset_sub(cursor_pos, BitOffset::BITS(1)));
 				}
 			}
-			else if(region_offset_cmp(new_cursor_pos.byte(), cursor_pos.byte()) > 0) /* BITFIXUP */
+			else if(region_offset_cmp(new_cursor_pos, cursor_pos) > BitOffset::ZERO)
 			{
 				/* Cursor moved forwards. */
 				
 				if(has_selection())
 				{
-					if(region_offset_cmp(selection_begin, cursor_pos.byte()) >= 0)
+					if(region_offset_cmp(selection_begin, cursor_pos) >= BitOffset::ZERO)
 					{
 						/* Selected backwards, now going forwards back over selection. */
 						
-						if(region_offset_cmp(new_cursor_pos.byte(), selection_end) <= 0) /* BITFIXUP */
+						if(region_offset_cmp(new_cursor_pos, selection_end) <= BitOffset::ZERO)
 						{
-							set_selection_raw(new_cursor_pos.byte(), selection_end); /* BITFIXUP */
+							set_selection_raw(new_cursor_pos, selection_end);
 						}
-						else if(region_offset_cmp(region_offset_add(selection_end, 1), new_cursor_pos.byte()) == 0) /* BITFIXUP */
+						else if(region_offset_cmp(region_cursor_right(selection_end, _get_screen_area_for_cursor_state()), new_cursor_pos) == BitOffset::ZERO)
 						{
 							clear_selection();
 						}
 						else{
-							set_selection_raw(region_offset_add(selection_end, 1), region_offset_sub(new_cursor_pos.byte(), 1)); /* BITFIXUP */
+							set_selection_raw(region_cursor_right(selection_end, _get_screen_area_for_cursor_state()), region_cursor_left(new_cursor_pos, _get_screen_area_for_cursor_state()));
 						}
 					}
 					else{
-						set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos.byte(), 1)); /* BITFIXUP */
+						set_selection_raw(selection_begin, region_offset_sub(new_cursor_pos, BitOffset::BITS(1)));
 					}
 				}
 				else{
-					set_selection_raw(cursor_pos.byte(), region_offset_sub(new_cursor_pos.byte(), 1)); /* BITFIXUP */
+					set_selection_raw(cursor_pos, region_offset_sub(new_cursor_pos, BitOffset::BITS(1)));
 				}
 			}
 		}
@@ -1832,14 +1787,14 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 					}
 					
 					mouse_shift_initial  = old_position;
-					mouse_down_at_offset = old_position;
+					mouse_down_at_offset = BitOffset(old_position, 0); /* BITFIXUP */
 					mouse_down_at_x      = rel_x;
 					mouse_down_area      = clicked_area;
 				}
 				else{
 					clear_selection();
 					
-					mouse_down_at_offset = clicked_offset.byte(); /* BITFIXUP */
+					mouse_down_at_offset = clicked_offset;
 					mouse_down_at_x      = rel_x;
 					mouse_down_area      = clicked_area;
 				}
@@ -1953,7 +1908,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 					_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
 				}
 				
-				if(has_selection() && (clicked_offset.byte() < selection_begin || clicked_offset.byte() > selection_end)) /* BITFIXUP */
+				if(has_selection() && (clicked_offset < selection_begin || clicked_offset > selection_end))
 				{
 					clear_selection();
 				}
@@ -2098,11 +2053,11 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		CommentRegion *cr;
 		if(dr != NULL)
 		{
-			off_t select_to_offset = dr->offset_near_xy(*this, rel_x, line_off, mouse_down_area).first.byte(); /* BITFIXUP */
+			BitOffset select_to_offset = dr->offset_near_xy(*this, rel_x, line_off, mouse_down_area).first;
 			
-			if(select_to_offset >= 0)
+			if(select_to_offset >= BitOffset::ZERO)
 			{
-				off_t new_sel_begin, new_sel_end;
+				BitOffset new_sel_begin, new_sel_end;
 				
 				if(select_to_offset >= mouse_down_at_offset)
 				{
@@ -2114,16 +2069,16 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 					new_sel_end   = mouse_down_at_offset;
 				}
 				
-				GenericDataRegion *end_dr = data_region_by_offset(new_sel_end);
+				GenericDataRegion *end_dr = data_region_by_offset(new_sel_end.byte());
 				assert(end_dr != NULL);
 				
-				off_t end_plus_one = end_dr->cursor_right_from(BitOffset::BYTES(new_sel_end), mouse_down_area).byte(); /* BITFIXUP */
+				BitOffset end_plus_one = end_dr->cursor_right_from(new_sel_end, mouse_down_area);
 				if(end_plus_one == GenericDataRegion::CURSOR_NEXT_REGION)
 				{
 					new_sel_end = end_dr->d_offset + end_dr->d_length - (off_t)(end_dr->d_length > 0);
 				}
 				else{
-					new_sel_end = end_plus_one - 1;
+					new_sel_end = end_plus_one - BitOffset::BITS(1);
 				}
 				
 				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hf_char_width() / 2))
@@ -2142,13 +2097,13 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		{
 			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{
-				off_t select_to_offset = cr->c_offset;
-				off_t new_sel_begin, new_sel_end;
+				BitOffset select_to_offset = BitOffset(cr->c_offset, 0);
+				BitOffset new_sel_begin, new_sel_end;
 				
 				if(select_to_offset > mouse_down_at_offset)
 				{
 					new_sel_begin = mouse_down_at_offset;
-					new_sel_end   = region_offset_sub(select_to_offset, 1);
+					new_sel_end   = region_offset_sub(select_to_offset, BitOffset::BITS(1));
 				}
 				else{
 					new_sel_begin = select_to_offset;
@@ -2419,10 +2374,10 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	return region;
 }
 
-int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
+REHex::BitOffset REHex::DocumentCtrl::region_offset_cmp(BitOffset a, BitOffset b)
 {
-	auto ra = _data_region_by_offset(a);
-	auto rb = _data_region_by_offset(b);
+	auto ra = _data_region_by_offset(a.byte());
+	auto rb = _data_region_by_offset(b.byte());
 	
 	if(ra == data_regions.end() || rb == data_regions.end())
 	{
@@ -2435,25 +2390,29 @@ int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
 	}
 	else if(ra < rb)
 	{
-		off_t delta = std::accumulate(ra, rb,
+		off_t r_delta = std::accumulate(ra, rb,
 			(off_t)(0), [](off_t sum, const GenericDataRegion *region) { return sum - region->d_length; });
 		
-		delta += (a - (*ra)->d_offset);
-		delta -= (b - (*rb)->d_offset);
+		BitOffset delta(r_delta, 0);
 		
-		assert(delta < 0);
+		delta += (a - BitOffset((*ra)->d_offset, 0));
+		delta -= (b - BitOffset((*rb)->d_offset, 0));
+		
+		assert(delta < BitOffset::ZERO);
 		
 		return delta;
 	}
 	else if(ra > rb)
 	{
-		off_t delta = std::accumulate(rb, ra,
+		off_t r_delta = std::accumulate(rb, ra,
 			(off_t)(0), [](off_t sum, const GenericDataRegion *region) { return sum + region->d_length; });
 		
-		delta += a - (*ra)->d_offset;
-		delta -= b - (*rb)->d_offset;
+		BitOffset delta(r_delta, 0);
 		
-		assert(delta > 0);
+		delta += a - BitOffset((*ra)->d_offset, 0);
+		delta -= b - BitOffset((*rb)->d_offset, 0);
+		
+		assert(delta > BitOffset::ZERO);
 		
 		return delta;
 	}
@@ -2463,16 +2422,16 @@ int REHex::DocumentCtrl::region_offset_cmp(off_t a, off_t b)
 	}
 }
 
-off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
+REHex::BitOffset REHex::DocumentCtrl::region_offset_add(BitOffset base, BitOffset add)
 {
-	auto r = _data_region_by_offset(base);
+	auto r = _data_region_by_offset(base.byte());
 	if(r == data_regions.end())
 	{
 		/* Base offset is invalid. */
 		return -1;
 	}
 	
-	if(add > 0)
+	if(add > BitOffset::ZERO)
 	{
 		/* Increment base by walking forwards from base's data region until we've covered
 		 * the requested number of bytes, or run out of regions.
@@ -2480,9 +2439,9 @@ off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
 		
 		while(r != data_regions.end())
 		{
-			assert(base >= (*r)->d_offset);
+			assert(base.byte() >= (*r)->d_offset);
 			
-			off_t remaining_in_r = (*r)->d_length - (base - (*r)->d_offset);
+			BitOffset remaining_in_r = BitOffset((*r)->d_length, 0) - (base - BitOffset((*r)->d_offset, 0));
 			
 			if(remaining_in_r <= add)
 			{
@@ -2500,7 +2459,7 @@ off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
 					}
 				}
 				else{
-					base = (*r)->d_offset;
+					base = BitOffset((*r)->d_offset, 0);
 					add -= remaining_in_r;
 				}
 			}
@@ -2509,19 +2468,19 @@ off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
 			}
 		}
 	}
-	else if(add < 0)
+	else if(add < BitOffset::ZERO)
 	{
 		/* Decrement by walking backwards from base's data region until we've subtracted
 		 * the requested number of bytes, or ran out of regions and failed.
 		*/
 		
-		off_t sub = -add;
+		BitOffset sub = -add;
 		
 		while(true)
 		{
-			assert(base >= (*r)->d_offset);
+			assert(base.byte() >= (*r)->d_offset);
 			
-			off_t remaining_in_r = base - (*r)->d_offset;
+			BitOffset remaining_in_r = base - BitOffset((*r)->d_offset, 0);
 			
 			if(remaining_in_r < sub)
 			{
@@ -2540,8 +2499,8 @@ off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
 					
 					assert((*r)->d_length > 0);
 					
-					base = (*r)->d_offset + (*r)->d_length - 1;
-					sub -= remaining_in_r + 1;
+					base = BitOffset(((*r)->d_offset + (*r)->d_length - 1), 7);
+					sub -= remaining_in_r + BitOffset::BITS(1);
 				}
 			}
 			else{
@@ -2549,17 +2508,17 @@ off_t REHex::DocumentCtrl::region_offset_add(off_t base, off_t add)
 			}
 		}
 	}
-	else if(add == 0)
+	else if(add == BitOffset::ZERO)
 	{
 		/* Nothing to add - just return base. */
 		return base;
 	}
 	
 	/* Ran out of regions while adding/subtracting above. */
-	return -1;
+	return BitOffset::INVALID;
 }
 
-off_t REHex::DocumentCtrl::region_offset_sub(off_t base, off_t sub)
+REHex::BitOffset REHex::DocumentCtrl::region_offset_sub(BitOffset base, BitOffset sub)
 {
 	return region_offset_add(base, -sub);
 }
@@ -2611,6 +2570,73 @@ off_t REHex::DocumentCtrl::region_virt_to_offset(off_t virt_offset)
 	}
 	
 	return (*di)->d_offset + (virt_offset - (*di)->virt_offset);
+}
+
+REHex::BitOffset REHex::DocumentCtrl::region_cursor_left(BitOffset cursor_pos, GenericDataRegion::ScreenArea area)
+{
+	auto region = _data_region_by_offset(cursor_pos.byte()); /* BITFIXUP */
+	assert(region != data_regions.end());
+	
+	BitOffset new_cursor_pos = (*region)->cursor_left_from(cursor_pos, area);
+	
+	if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
+	{
+		/* Cursor is at the start of this region. Move to the last byte in
+		 * the previous region.
+		*/
+		
+		if(region != data_regions.begin())
+		{
+			auto prev_region = std::prev(region);
+			
+			new_cursor_pos = (*prev_region)->last_row_nearest_column(INT_MAX);
+			assert(new_cursor_pos.byte() >= 0);
+		}
+		else{
+			/* No previous region. Nowhere to go. */
+			new_cursor_pos = cursor_pos;
+		}
+	}
+	else{
+		assert(new_cursor_pos.byte() >= 0);
+	}
+	
+	return new_cursor_pos;
+}
+
+REHex::BitOffset REHex::DocumentCtrl::region_cursor_right(BitOffset cursor_pos, GenericDataRegion::ScreenArea area)
+{
+	auto region = _data_region_by_offset(cursor_pos.byte());
+	assert(region != data_regions.end());
+	
+	BitOffset new_cursor_pos = (*region)->cursor_right_from(cursor_pos, area);
+	
+	if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
+	{
+		auto next_region = std::next(region);
+		if(next_region != data_regions.end())
+		{
+			new_cursor_pos = (*next_region)->first_row_nearest_column(0);
+			assert(new_cursor_pos.byte() >= 0);
+		}
+		else if(get_insert_mode())
+		{
+			/* Special case: Can move one past the end of the final
+			 * data region in insert mode.
+			*/
+			
+			new_cursor_pos = (*region)->d_offset + (*region)->d_length;
+		}
+		else{
+			/* No further region. Nowhere to go. */
+			new_cursor_pos = cursor_pos;
+		}
+	}
+	else{
+		assert(new_cursor_pos.byte() >= 0);
+	}
+	
+	return new_cursor_pos;
 }
 
 /* Scroll the Document vertically to make the given line visible.
@@ -3466,14 +3492,14 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	static const int SECONDARY_SELECTION_MAX = 4096;
 	
-	off_t linear_selection_off, linear_selection_len;
+	BitOffset linear_selection_off, linear_selection_len;
 	std::tie(linear_selection_off, linear_selection_len) = doc.get_selection_linear();
 	
 	std::vector<unsigned char> selection_data;
-	if(doc.get_highlight_selection_match() && linear_selection_len > 0 && linear_selection_len <= SECONDARY_SELECTION_MAX)
+	if(doc.get_highlight_selection_match() && linear_selection_len.byte() > 0 && linear_selection_len.byte() <= SECONDARY_SELECTION_MAX && linear_selection_len.byte_aligned())
 	{
 		try {
-			selection_data = doc.doc->read_data(linear_selection_off, linear_selection_len);
+			selection_data = doc.doc->read_data(linear_selection_off, linear_selection_len.byte()); /* BITFIXUP */
 		}
 		catch(const std::exception &e)
 		{
@@ -3546,7 +3572,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		}
 	};
 	
-	off_t scoped_selection_offset, scoped_selection_length;
+	BitOffset scoped_selection_offset, scoped_selection_length;
 	std::tie(scoped_selection_offset, scoped_selection_length) = doc.get_selection_in_region(this);
 	
 	const Highlight hex_selection_highlight(
@@ -3557,7 +3583,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto hex_highlight_func = [&](off_t offset)
 	{
-		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
+		if(offset >= scoped_selection_offset.byte() && offset < (scoped_selection_offset + scoped_selection_length).byte()) /* BITFIXUP */
 		{
 			return hex_selection_highlight;
 		}
@@ -3574,7 +3600,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto ascii_highlight_func = [&](off_t offset)
 	{
-		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
+		if(offset >= scoped_selection_offset.byte() && offset < (scoped_selection_offset + scoped_selection_length).byte()) /* BITFIXUP */
 		{
 			return ascii_selection_highlight;
 		}
@@ -4330,7 +4356,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_bin_line");
 	
@@ -4410,7 +4436,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			hex_x = hex_base_x + doc_ctrl->hf_string_width(++hex_x_char);
 		}
 		
-		auto highlight = highlight_at_off(cur_off.byte()); /* BITFIXUP */
+		auto highlight = highlight_at_off(cur_off);
 		
 		/* Need the current hex_x value for drawing any boxes or insert cursors
 		 * below, before it gets updated by draw_nibble().

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -108,7 +108,7 @@ void REHex::RangeDialog::set_range_raw(off_t first, off_t last)
 		abort();
 	}
 	
-	off_t virt_length = document_ctrl->region_offset_cmp(last, first) + 1;
+	off_t virt_length = document_ctrl->region_offset_cmp(last, first).byte() + 1; /* BITFIXUP */
 	assert(virt_length > 0);
 	
 	range_first = first;
@@ -137,7 +137,7 @@ std::pair<off_t, off_t> REHex::RangeDialog::get_range_raw() const
 
 void REHex::RangeDialog::set_range_linear(off_t offset, off_t length)
 {
-	off_t end_incl = document_ctrl->region_offset_add(offset, length) - 1;
+	off_t end_incl = document_ctrl->region_offset_add(offset, length).byte() - 1; /* BITFIXUP */
 	
 	if(!document_ctrl->region_range_linear(offset, end_incl))
 	{
@@ -222,7 +222,7 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 			return;
 		}
 		
-		real_end_incl = document_ctrl->region_offset_add(real_offset, length - 1);
+		real_end_incl = document_ctrl->region_offset_add(real_offset, length - 1).byte(); /* BITFIXUP */
 	}
 	else{
 		/* Shouldn't be reachable. */

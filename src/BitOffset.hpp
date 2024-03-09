@@ -142,6 +142,14 @@ namespace REHex
 				
 				return b;
 			}
+			
+			inline BitOffset operator-() const
+			{
+				BitOffset b;
+				b.value = -value;
+				
+				return b;
+			}
 	};
 }
 

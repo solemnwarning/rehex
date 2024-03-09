@@ -1323,8 +1323,9 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		if(tab->doc_ctrl->has_selection())
 		{
-			off_t selection_first, selection_last;
-			std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
+			auto tmp = tab->doc_ctrl->get_selection_raw(); /* BITFIXUP */
+			off_t selection_first = tmp.first.byte();
+			off_t selection_last = tmp.second.byte();
 			
 			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_first);
 			assert(selection_region != NULL);
@@ -1428,10 +1429,10 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 	
 	if(tab->doc_ctrl->has_selection())
 	{
-		off_t selection_first, selection_last;
+		BitOffset selection_first, selection_last;
 		std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
 		
-		rd.set_range_raw(selection_first, selection_last);
+		rd.set_range_raw(selection_first.byte(), selection_last.byte()); /* BITFIXUP */
 	}
 	else{
 		rd.set_offset_hint(tab->doc_ctrl->get_cursor_position().byte()); /* BITFIXUP */
@@ -1445,7 +1446,7 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 		off_t range_first, range_last;
 		std::tie(range_first, range_last) = rd.get_range_raw();
 		
-		tab->doc_ctrl->set_selection_raw(range_first, range_last);
+		tab->doc_ctrl->set_selection_raw(BitOffset(range_first, 0), BitOffset(range_last, 7)); /* BITFIXUP */
 	}
 }
 
@@ -2128,21 +2129,33 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 {
 	if(doc_ctrl->has_selection())
 	{
-		off_t selection_first, selection_last;
+		BitOffset selection_first, selection_last;
 		std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 		
-		std::string from_text = format_offset(selection_first, doc_ctrl->get_offset_display_base(), selection_last);
-		std::string to_text   = format_offset(selection_last,  doc_ctrl->get_offset_display_base(), selection_last);
+		std::string from_text = format_offset(selection_first.byte(), doc_ctrl->get_offset_display_base(), selection_last.byte());
+		if(selection_first.bit() > 0)
+		{
+			from_text += "+" + std::to_string(selection_first.bit()) + "b";
+		}
 		
-		ByteRangeSet selection = doc_ctrl->get_selection_ranges();
-		off_t selection_bytes = selection.total_bytes();
+		std::string to_text   = format_offset(selection_last.byte(),  doc_ctrl->get_offset_display_base(), selection_last.byte());
+		if(selection_last.bit() > 0)
+		{
+			to_text += "+" + std::to_string(selection_last.bit()) + "b";
+		}
+		
+		BitRangeSet selection = doc_ctrl->get_selection_ranges();
+		BitOffset selection_total = selection.total_bytes();
+		
+		selection_total += BitOffset::BITS(1);
 		
 		char buf[64];
-		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u bytes)",
+		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u.%d bytes)",
 			from_text.c_str(),
 			to_text.c_str(),
 			
-			(unsigned int)(selection_bytes));
+			(unsigned int)(selection_total.byte()),
+			selection_total.bit());
 		
 		SetStatusText(buf, 1);
 	}

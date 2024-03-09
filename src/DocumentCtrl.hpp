@@ -133,7 +133,7 @@ namespace REHex {
 					
 					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
 					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
-					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
+					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
 					
 					/**
 					 * @brief Calculate offset of byte at X co-ordinate.
@@ -459,7 +459,7 @@ namespace REHex {
 			 * @param begin Data offset at beginning of selection.
 			 * @param end Data offset at end of selection (inclusive).
 			*/
-			bool set_selection_raw(off_t begin, off_t end);
+			bool set_selection_raw(BitOffset begin, BitOffset end);
 			
 			/**
 			 * @brief Clear the selection (if any).
@@ -477,7 +477,7 @@ namespace REHex {
 			 * NOTE: Unlike most "end" pointers, the end offset returned from this
 			 * method is the last byte in the selection, not one past it.
 			*/
-			std::pair<off_t, off_t> get_selection_raw();
+			std::pair<BitOffset, BitOffset> get_selection_raw();
 			
 			/**
 			 * @brief Returns the subset of the current selection scoped to a region.
@@ -488,7 +488,7 @@ namespace REHex {
 			 * If there is no selection, or the selection doesn't include any bytes
 			 * from the given region, the returned length will be <= 0.
 			*/
-			std::pair<off_t, off_t> get_selection_in_region(GenericDataRegion *region);
+			std::pair<BitOffset, BitOffset> get_selection_in_region(GenericDataRegion *region);
 			
 			/**
 			 * @brief Returns the set of all bytes currently selected.
@@ -496,7 +496,7 @@ namespace REHex {
 			 * NOTE: This method may be expensive to call, as it potentially has to
 			 * iterate through all (data) regions in the file.
 			*/
-			OrderedByteRangeSet get_selection_ranges();
+			OrderedBitRangeSet get_selection_ranges();
 			
 			/**
 			 * @brief Returns the offset and length of the selection, if linear.
@@ -504,7 +504,7 @@ namespace REHex {
 			 * If there is no selection, or the selection isn't linear and contiguous, the length
 			 * will be zero.
 			*/
-			std::pair<off_t, off_t> get_selection_linear();
+			std::pair<BitOffset, BitOffset> get_selection_linear();
 			
 			const std::vector<Region*> &get_regions() const;
 			const std::vector<GenericDataRegion*> &get_data_regions() const;
@@ -525,7 +525,7 @@ namespace REHex {
 			 * Throws an exception of type std::invalid_argument if either of the
 			 * offsets are invalid.
 			*/
-			int region_offset_cmp(off_t a, off_t b);
+			BitOffset region_offset_cmp(BitOffset a, BitOffset b);
 			
 			/**
 			 * @brief Increment an offset in the address space defined by the regions.
@@ -535,7 +535,7 @@ namespace REHex {
 			 *
 			 * @return New offset, negative if invalid.
 			*/
-			off_t region_offset_add(off_t base, off_t add);
+			BitOffset region_offset_add(BitOffset base, BitOffset add);
 			
 			/**
 			 * @brief Decrement an offset in the address space defined by the regions.
@@ -545,7 +545,7 @@ namespace REHex {
 			 *
 			 * @return New offset, negative if invalid.
 			*/
-			off_t region_offset_sub(off_t base, off_t sub);
+			BitOffset region_offset_sub(BitOffset base, BitOffset sub);
 			
 			/**
 			 * @brief Check if a range of offsets is linear and contiguous.
@@ -561,7 +561,7 @@ namespace REHex {
 			 * NOTE: This method may be expensive to call, as it potentially has to
 			 * iterate through all (data) regions in the file.
 			*/
-			OrderedByteRangeSet region_range_expand(off_t begin_offset, off_t end_offset_incl);
+			OrderedBitRangeSet region_range_expand(BitOffset begin_offset, BitOffset end_offset_incl);
 			
 			/**
 			 * @brief Convert a real file offset to a virtual one.
@@ -574,6 +574,9 @@ namespace REHex {
 			 * @return Real offset, negative if not valid.
 			*/
 			off_t region_virt_to_offset(off_t virt_offset);
+			
+			BitOffset region_cursor_left(BitOffset cursor_pos, GenericDataRegion::ScreenArea area);
+			BitOffset region_cursor_right(BitOffset cursor_pos, GenericDataRegion::ScreenArea area);
 			
 			wxFont &get_font();
 			
@@ -672,8 +675,8 @@ namespace REHex {
 			std::vector<BitOffset> cpos_prev;
 			std::vector<BitOffset> cpos_next;
 			
-			off_t selection_begin;
-			off_t selection_end;
+			BitOffset selection_begin;
+			BitOffset selection_end;
 			
 			bool cursor_visible;
 			wxTimer redraw_cursor_timer;
@@ -681,7 +684,7 @@ namespace REHex {
 			static const int MOUSE_SELECT_INTERVAL = 100;
 			
 			GenericDataRegion::ScreenArea mouse_down_area;
-			off_t mouse_down_at_offset;
+			BitOffset mouse_down_at_offset;
 			int mouse_down_at_x;
 			wxTimer mouse_select_timer;
 			off_t mouse_shift_initial;

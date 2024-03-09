@@ -452,7 +452,7 @@ namespace REHex {
 			 * @brief Read some data from the file.
 			 * @see Buffer::read_data()
 			*/
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
+			std::vector<unsigned char> read_data(BitOffset offset, off_t max_length) const;
 			
 			/**
 			 * @brief Return the current length of the file in bytes.

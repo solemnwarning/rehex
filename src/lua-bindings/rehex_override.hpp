@@ -205,11 +205,11 @@ static int LUACALL wxLua_REHex_Tab_get_selection_linear(lua_State *L)
 {
 	REHex::Tab * self = (REHex::Tab *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Tab);
 	
-	std::pair<off_t,off_t> selection = self->doc_ctrl->get_selection_linear();
-	if(selection.second > 0)
+	std::pair<REHex::BitOffset, REHex::BitOffset> selection = self->doc_ctrl->get_selection_linear();
+	if(selection.second > REHex::BitOffset::ZERO)
 	{
-		lua_pushinteger(L, selection.first);
-		lua_pushinteger(L, selection.second);
+		lua_pushinteger(L, selection.first.byte()); /* BITFIXUP */
+		lua_pushinteger(L, selection.second.byte());
 		
 		return 2;
 	}

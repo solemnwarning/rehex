@@ -194,8 +194,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	off_t cursor_pos = doc_ctrl.get_cursor_position().byte(); /* BITFIXUP */
 	
-	off_t selection_off, selection_len;
-	std::tie(selection_off, selection_len) = doc_ctrl.get_selection_in_region(this);
+	auto tmp = doc_ctrl.get_selection_in_region(this); /* BITFIXUP */
+	off_t selection_off = tmp.first.byte();
+	off_t selection_len = tmp.second.byte();
 	
 	auto base_highlight_func = [&](off_t offset)
 	{
@@ -1247,8 +1248,9 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::scr
 
 wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 {
-	off_t selection_off, selection_last;
-	std::tie(selection_off, selection_last) = doc_ctrl.get_selection_raw();
+	auto tmp = doc_ctrl.get_selection_raw(); /* BITFIXUP */
+	off_t selection_off = tmp.first.byte();
+	off_t selection_last = tmp.second.byte();
 	
 	assert(selection_off >= d_offset);
 	assert(selection_last < (d_offset + d_length));

@@ -357,7 +357,7 @@ void REHex::Document::_set_cursor_position(BitOffset position, enum CursorState 
 	}
 }
 
-std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length) const
+std::vector<unsigned char> REHex::Document::read_data(BitOffset offset, off_t max_length) const
 {
 	return buffer->read_data(offset, max_length);
 }

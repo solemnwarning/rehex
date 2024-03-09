@@ -191,7 +191,13 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 {
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	OrderedByteRangeSet selection = doc_ctrl->get_selection_ranges();
+	OrderedBitRangeSet tmp = doc_ctrl->get_selection_ranges(); /* BITFIXUP */
+	OrderedByteRangeSet selection;
+	
+	for(auto i = tmp.begin(); i != tmp.end(); ++i)
+	{
+		selection.set_range(i->offset.byte(), i->length.byte());
+	}
 	
 	if(selection.empty())
 	{

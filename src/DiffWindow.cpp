@@ -1173,21 +1173,21 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 			
 			if(r->doc_ctrl->has_selection())
 			{
-				off_t selection_first, selection_last;
+				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = r->doc_ctrl->get_selection_raw();
 				
-				if((event.offset < selection_first && (event.offset + event.length) > selection_first)
-					|| (event.offset >= selection_first && event.offset <= selection_last))
+				if((event.offset < selection_first.byte() && (event.offset + event.length) > selection_first.byte())
+					|| (event.offset >= selection_first.byte() && event.offset <= selection_last.byte()))
 				{
 					r->doc_ctrl->clear_selection();
 				}
-				else if(event.offset < selection_first)
+				else if(event.offset < selection_first.byte())
 				{
-					selection_first -= event.length;
-					selection_last  -= event.length;
+					selection_first -= BitOffset::BYTES(event.length);
+					selection_last  -= BitOffset::BYTES(event.length);
 					
-					assert(selection_first >= r->offset);
-					assert(selection_last < (r->offset + r->length));
+					assert(selection_first.byte() >= r->offset);
+					assert(selection_last.byte() < (r->offset + r->length));
 					
 					r->doc_ctrl->set_selection_raw(selection_first, selection_last);
 				}
@@ -1238,20 +1238,20 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 			
 			if(r->doc_ctrl->has_selection())
 			{
-				off_t selection_first, selection_last;
+				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = r->doc_ctrl->get_selection_raw();
 				
-				if(event.offset <= selection_first)
+				if(event.offset <= selection_first.byte())
 				{
-					selection_first += event.length;
-					selection_last  += event.length;
+					selection_first += BitOffset::BYTES(event.length);
+					selection_last  += BitOffset::BYTES(event.length);
 					
-					assert(selection_first >= r->offset);
-					assert(selection_last < (r->offset + r->length));
+					assert(selection_first.byte() >= r->offset);
+					assert(selection_last.byte() < (r->offset + r->length));
 					
 					r->doc_ctrl->set_selection_raw(selection_first, selection_last);
 				}
-				else if(event.offset <= selection_last)
+				else if(event.offset <= selection_last.byte())
 				{
 					r->doc_ctrl->clear_selection();
 				}
@@ -1271,9 +1271,9 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 	{
 		if(r->doc == src)
 		{
-			ByteRangeSet selection = r->doc_ctrl->get_selection_ranges();
+			BitRangeSet selection = r->doc_ctrl->get_selection_ranges();
 			
-			if(selection.isset_any(event.offset, event.length))
+			if(selection.isset_any(BitOffset(event.offset, 0), BitOffset(event.length, 0))) /* BITFIXUP */
 			{
 				r->doc_ctrl->clear_selection();
 			}

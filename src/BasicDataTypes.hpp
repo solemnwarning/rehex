@@ -191,13 +191,13 @@ namespace REHex
 					data_string = "????";
 				}
 				
-				off_t total_selection_first, total_selection_last;
+				BitOffset total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
-				off_t region_selection_offset, region_selection_length;
+				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
 				
-				off_t region_selection_end = region_selection_offset + region_selection_length;
+				BitOffset region_selection_end = region_selection_offset + region_selection_length;
 				
 				if(input_active)
 				{
@@ -210,7 +210,7 @@ namespace REHex
 						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
 					}
 				}
-				else if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
+				else if(region_selection_length > BitOffset::ZERO && (total_selection_first != BitOffset(d_offset, 0) || total_selection_last != BitOffset((d_offset + d_length - 1), 7))) /* BITFIXUP */
 				{
 					/* Selection encompasses *some* of our bytes and/or stretches
 					* beyond either end. Render the underlying hex bytes.
@@ -261,7 +261,7 @@ namespace REHex
 					normal_text();
 					dc.DrawText("]", (x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
 				}
-				else if(region_selection_length > 0)
+				else if(region_selection_length > BitOffset::ZERO)
 				{
 					/* Selection matches our range exactly. Render value using selected
 					* text colours.
@@ -293,13 +293,13 @@ namespace REHex
 			
 			virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
 			{
-				off_t total_selection_first, total_selection_last;
+				BitOffset total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
-				off_t region_selection_offset, region_selection_length;
+				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
 				
-				if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
+				if(region_selection_length > BitOffset::ZERO && (total_selection_first != BitOffset(d_offset, 0) || total_selection_last != BitOffset((d_offset + d_length - 1), 0)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -454,13 +454,13 @@ namespace REHex
 				assert(offset >= d_offset);
 				assert(offset <= (d_offset + d_length));
 				
-				off_t total_selection_first, total_selection_last;
+				BitOffset total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl->get_selection_raw();
 				
-				off_t region_selection_offset, region_selection_length;
+				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl->get_selection_in_region(this);
 				
-				if(region_selection_length > 0 && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - 1)))
+				if(region_selection_length > BitOffset::ZERO && (total_selection_first != BitOffset(d_offset, 0) || total_selection_last != BitOffset((d_offset + d_length - 1), 0))) /* BITFIXUP */
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -649,13 +649,13 @@ namespace REHex
 			
 			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override
 			{
-				off_t selection_first, selection_last;
+				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = doc_ctrl.get_selection_raw();
 				
-				assert(selection_first >= d_offset);
-				assert(selection_last < (d_offset + d_length));
+				assert(selection_first >= BitOffset(d_offset, 0)); /* BITFIXUP */
+				assert(selection_last < BitOffset((d_offset + d_length), 0)); /* BITFIXUP */
 				
-				if(selection_first == d_offset && selection_last == (d_offset + d_length - 1))
+				if(selection_first == BitOffset(d_offset, 0) && selection_last == BitOffset((d_offset + d_length - 1), 0)) /* BITFIXUP */
 				{
 					/* Selection matches our data range. Copy stringified
 					 * numeric value to clipboard.
@@ -684,10 +684,10 @@ namespace REHex
 			
 			virtual bool OnPaste(DocumentCtrl *doc_ctrl) override
 			{
-				off_t selection_first, selection_last;
+				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 				
-				if(doc_ctrl->has_selection() && (selection_first != d_offset || selection_last != (d_offset + d_length - 1)))
+				if(doc_ctrl->has_selection() && (selection_first != BitOffset(d_offset, 0) || selection_last != BitOffset((d_offset + d_length - 1), 0))) /* BITFIXUP */
 				{
 					/* There is a selection and it doesn't exactly match our
 					 * data range. Fall back to default handling.

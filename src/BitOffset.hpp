@@ -20,6 +20,10 @@
 
 #include <stdint.h>
 
+#ifdef MAX
+#undef MAX /* Fuck you GLib */
+#endif
+
 namespace REHex
 {
 	/**

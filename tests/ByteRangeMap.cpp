@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,12 @@ using namespace REHex;
 #define EXPECT_RANGES(...) \
 { \
 	std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > ranges = { __VA_ARGS__ }; \
+	EXPECT_EQ(brm.get_ranges(), ranges); \
+}
+
+#define EXPECT_BIT_RANGES(...) \
+{ \
+	std::vector< std::pair<BitRangeMap<std::string>::Range, std::string> > ranges = { __VA_ARGS__ }; \
 	EXPECT_EQ(brm.get_ranges(), ranges); \
 }
 
@@ -893,5 +899,89 @@ TEST(ByteRangeMap, Transform)
 	EXPECT_RANGES(
 		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "front!"),
 		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "wretched!"),
+	);
+}
+
+TEST(BitRangeMap, SetRange)
+{
+	BitRangeMap<std::string> brm;
+	
+	brm.set_range(BitOffset(10, 2), BitOffset(20, 0), "toothbrush");
+	brm.set_range(BitOffset(40, 0), BitOffset( 6, 4), "heap");
+	
+	EXPECT_BIT_RANGES(
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(20, 0)), "toothbrush"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(40, 0), BitOffset( 6, 4)), "heap"),
+	);
+	
+	brm.set_range(BitOffset(20, 4), BitOffset(10, 0), "store");
+	brm.set_range(BitOffset(38, 0), BitOffset( 4, 0), "comfortable");
+	
+	EXPECT_BIT_RANGES(
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(10, 2)), "toothbrush"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(20, 4), BitOffset(10, 0)), "store"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(38, 0), BitOffset( 4, 0)), "comfortable"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(42, 0), BitOffset( 4, 4)), "heap"),
+	);
+	
+	brm.set_range(BitOffset(20, 4), BitOffset(5, 0), "toothbrush");
+	
+	EXPECT_BIT_RANGES(
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(15, 2)), "toothbrush"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(25, 4), BitOffset( 5, 0)), "store"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(38, 0), BitOffset( 4, 0)), "comfortable"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(42, 0), BitOffset( 4, 4)), "heap"),
+	);
+}
+
+TEST(BitRangeMap, ClearRange)
+{
+	BitRangeMap<std::string> brm;
+	
+	brm.set_range(BitOffset(10, 2), BitOffset(20, 0), "mind");
+	brm.set_range(BitOffset(40, 0), BitOffset( 6, 4), "whisper");
+	brm.set_range(BitOffset(50, 4), BitOffset(10, 2), "applaud");
+	
+	brm.clear_range(BitOffset(20, 4), BitOffset(32, 1));
+	
+	EXPECT_BIT_RANGES(
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(10, 2)), "mind"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(52, 5), BitOffset( 8, 1)), "applaud"),
+	);
+}
+
+TEST(BitRangeMap, DataInserted)
+{
+	BitRangeMap<std::string> brm;
+	
+	brm.set_range(BitOffset(10, 2), BitOffset(20, 0), "pathetic");
+	brm.set_range(BitOffset(40, 0), BitOffset( 6, 4), "quack");
+	brm.set_range(BitOffset(60, 0), BitOffset(10, 2), "skillful");
+	
+	brm.data_inserted(44, 10);
+	
+	EXPECT_BIT_RANGES(
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(20, 0)), "pathetic"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(40, 0), BitOffset( 4, 0)), "quack"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(54, 0), BitOffset( 2, 4)), "quack"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(70, 0), BitOffset(10, 2)), "skillful"),
+	);
+}
+
+TEST(BitRangeMap, DataErased)
+{
+	BitRangeMap<std::string> brm;
+	
+	brm.set_range(BitOffset(10, 2), BitOffset(20, 0), "achiever");
+	brm.set_range(BitOffset(40, 0), BitOffset(6,  4), "chunky");
+	brm.set_range(BitOffset(50, 0), BitOffset(8,  0), "impossible");
+	brm.set_range(BitOffset(60, 0), BitOffset(10, 2), "mourn");
+	
+	brm.data_erased(44, 20);
+	
+	EXPECT_BIT_RANGES(
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(20, 0)), "achiever"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(40, 0), BitOffset( 4, 0)), "chunky"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(44, 0), BitOffset( 6, 2)), "mourn"),
 	);
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\build\Debug\EnlyzeWinCompatLib\bin;$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\build\Debug\winpthreads\bin;$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\build\Debug\libc++\bin;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>EnlyzeWinCompatLib.lib;libc++.lib;winpthreads.lib;libcpmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\src\libcxx\src\winpthreads\include;$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\src\libcxx\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

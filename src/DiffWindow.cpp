@@ -491,18 +491,18 @@ void REHex::DiffWindow::doc_update(Range *range)
 			
 			if(is_pending)
 			{
-				regions.push_back(new MessageRegion(range->doc, base, "Processing..."));
+				regions.push_back(new MessageRegion(range->doc, (range->offset + base), "Processing..."));
 			}
 			else if(is_different)
 			{
-				regions.push_back(new DiffDataRegion(base, length, this, range));
+				regions.push_back(new DiffDataRegion((range->offset + base), length, this, range));
 				has_data_region = true;
 			}
 			else{
 				char text[64];
 				snprintf(text, sizeof(text), "[ %jd identical bytes ]", (intmax_t)(length));
 				
-				regions.push_back(new MessageRegion(range->doc, base, text));
+				regions.push_back(new MessageRegion(range->doc, (range->offset + base), text));
 			}
 			
 			base += length;

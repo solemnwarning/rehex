@@ -110,7 +110,10 @@ msvc/all-tests/x64/
 msvc/all-tests-appcode/x64/
 msvc/all-tests/tests/
 msvc/resources/x64/
-vcpkg/vcpkg
+/msvc/EnlyzeWinCompatLib/Combined/
+/msvc/EnlyzeWinCompatLib/EnlyzeWinCompatLib/
+/msvc/vcpkg/
+/msvc/vcpkg-deploy/Combined/
 
 /wxLua/bindings/.done
 /wxLua/bindings/wxlua/wxlua_datatypes.lua

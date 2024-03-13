@@ -1,3 +1,9 @@
+/* Stop libc++ headers upsetting the preprocessor used by RC. */
+#ifndef _MSC_VER
+#define _MSC_VER 1926
+#define __clang_vadefs_h
+#endif
+
 #include <winuser.h>
 
 #include "winres.h"

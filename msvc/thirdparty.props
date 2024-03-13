@@ -7,7 +7,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="UserMacros">
     <!-- Define the root directory where all vcpkg stuff is installed -->
-    <vcpkgInstallDir Condition="'$(Platform)'=='Win32'">$(MSBuildThisFileDirectory)vcpkg\installed\x86-windows-static-v142</vcpkgInstallDir>
+    <vcpkgInstallDir Condition="'$(Platform)'=='Win32'">$(MSBuildThisFileDirectory)vcpkg\installed\x86-windows-static-enlyze</vcpkgInstallDir>
     <vcpkgInstallDir Condition="'$(Platform)'=='x64'">$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static-v142</vcpkgInstallDir>
 
     <!-- Define the root directory where all vcpkg stuff is installed -->

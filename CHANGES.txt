@@ -1,4 +1,4 @@
-Version TBA:
+Version 0.61.1 (2024-03-13):
 
  * Compare data from correct file offsets when "Collapse matches" option is
    enabled in compare window (#224).

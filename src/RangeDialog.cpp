@@ -40,7 +40,7 @@ REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, c
 		wxBoxSizer *from_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
 		wxStaticText *from_label = new wxStaticText(this, wxID_ANY, "From offset");
-		from_sizer->Add(from_label, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		from_sizer->Add(from_label, 1, wxALIGN_CENTER_VERTICAL);
 		
 		range_from = new NumericTextCtrl(this, wxID_ANY);
 		from_sizer->Add(range_from, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
@@ -52,7 +52,7 @@ REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, c
 		wxBoxSizer *to_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
 		range_to_enable = new wxRadioButton(this, wxID_ANY, "To offset");
-		to_sizer->Add(range_to_enable, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		to_sizer->Add(range_to_enable, 1, wxALIGN_CENTER_VERTICAL);
 		
 		range_to = new NumericTextCtrl(this, wxID_ANY);
 		to_sizer->Add(range_to, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
@@ -67,7 +67,7 @@ REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, c
 		wxBoxSizer *len_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
 		range_len_enable = new wxRadioButton(this, wxID_ANY, "Selection length");
-		len_sizer->Add(range_len_enable, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
+		len_sizer->Add(range_len_enable, 1, wxALIGN_CENTER_VERTICAL);
 		
 		range_len = new NumericTextCtrl(this, wxID_ANY);
 		len_sizer->Add(range_len, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);

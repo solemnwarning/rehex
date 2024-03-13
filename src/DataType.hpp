@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "BitOffset.hpp"
 #include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
@@ -58,7 +59,7 @@ namespace REHex
 	class DataTypeRegistration
 	{
 		public:
-			typedef std::function<DocumentCtrl::Region*(SharedDocumentPointer &document, off_t offset, off_t length, off_t virt_offset)> RegionFactoryFunction;
+			typedef std::function<DocumentCtrl::Region*(SharedDocumentPointer &document, BitOffset offset, BitOffset length, BitOffset virt_offset)> RegionFactoryFunction;
 			
 			std::string name;
 			std::string label;

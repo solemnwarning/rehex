@@ -226,7 +226,9 @@
     <ClCompile Include="..\..\src\AppTestable.cpp" />
     <ClCompile Include="..\..\src\ArtProvider.cpp" />
     <ClCompile Include="..\..\src\BasicDataTypes.cpp" />
+    <ClCompile Include="..\..\src\BitArray.cpp" />
     <ClCompile Include="..\..\src\BitmapTool.cpp" />
+    <ClCompile Include="..\..\src\BitOffset.cpp" />
     <ClCompile Include="..\..\src\buffer.cpp" />
     <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\src\BytesPerLineDialog.cpp" />

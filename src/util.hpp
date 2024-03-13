@@ -104,6 +104,7 @@ namespace REHex {
 	};
 	
 	std::string format_offset(off_t offset, OffsetBase base, off_t upper_bound = -1);
+	std::string format_offset(BitOffset offset, OffsetBase base, BitOffset upper_bound = BitOffset::INVALID);
 	
 	template<typename T> typename T::iterator const_iterator_to_iterator(typename T::const_iterator &const_iter, T &container)
 	{

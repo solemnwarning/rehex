@@ -347,6 +347,7 @@ APP_OBJS := \
 	src/BasicDataTypes.$(BUILD_TYPE).o \
 	src/BitArray.$(BUILD_TYPE).o \
 	src/BitEditor.$(BUILD_TYPE).o \
+	src/BitOffset.$(BUILD_TYPE).o \
 	src/BitmapTool.$(BUILD_TYPE).o \
 	src/buffer.$(BUILD_TYPE).o \
 	src/BytesPerLineDialog.$(BUILD_TYPE).o \
@@ -440,6 +441,8 @@ TEST_OBJS := \
 	src/AppTestable.$(BUILD_TYPE).o \
 	src/ArtProvider.$(BUILD_TYPE).o \
 	src/BasicDataTypes.$(BUILD_TYPE).o \
+	src/BitArray.$(BUILD_TYPE).o \
+	src/BitOffset.$(BUILD_TYPE).o \
 	src/BitmapTool.$(BUILD_TYPE).o \
 	src/buffer.$(BUILD_TYPE).o \
 	src/ByteRangeSet.$(BUILD_TYPE).o \

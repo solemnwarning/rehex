@@ -83,7 +83,7 @@
       <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\tests\BitOffset.cpp">
-	    <Filter>tests</Filter>
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\tests\ByteRangeTree.cpp">
       <Filter>tests</Filter>
@@ -350,6 +350,12 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\CustomMessageDialog.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\BitOffset.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\BitArray.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

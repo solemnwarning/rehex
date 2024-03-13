@@ -44,15 +44,6 @@
 #include "buffer.hpp"
 #include "win32lib.hpp"
 
-static const long long INT61_MIN = -0x1000000000000000LL;
-static const long long INT61_MAX = 0xFFFFFFFFFFFFFFFLL;
-
-const REHex::BitOffset REHex::BitOffset::INVALID(-1, 0);
-const REHex::BitOffset REHex::BitOffset::ZERO(0, 0);
-
-const REHex::BitOffset REHex::BitOffset::MIN(INT61_MIN + 1, -7);
-const REHex::BitOffset REHex::BitOffset::MAX(INT61_MAX, 7);
-
 wxDEFINE_EVENT(REHex::BACKING_FILE_DELETED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BACKING_FILE_MODIFIED, wxCommandEvent);
 
@@ -695,6 +686,31 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 	}
 	
 	return data;
+}
+
+std::vector<bool> REHex::Buffer::read_bits(const BitOffset &offset, size_t max_length)
+{
+	BitOffset file_data_base = BitOffset(offset.byte(), 0);
+	
+	std::vector<unsigned char> file_data = read_data(file_data_base, ((max_length + 7) / 8) + 1);
+	
+	std::vector<bool> file_bits;
+	file_bits.reserve(std::min(max_length, (file_data.size() * 8)));
+	
+	int next_bit = 7 - offset.bit();
+	
+	for(size_t i = 0, j = 0; i < file_data.size() && j < max_length; ++i)
+	{
+		for(; next_bit >= 0 && j < max_length; ++j, --next_bit)
+		{
+			bool bit = ((file_data[i] & (1 << next_bit)) != 0);
+			file_bits.push_back(bit);
+		}
+		
+		next_bit = 7;
+	}
+	
+	return file_bits;
 }
 
 bool REHex::Buffer::overwrite_data(off_t offset, unsigned const char *data, off_t length)

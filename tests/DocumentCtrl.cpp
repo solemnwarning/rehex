@@ -128,17 +128,17 @@ class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
 		virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override { abort(); }
 		virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override { abort(); }
 		virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-		virtual int cursor_column(off_t pos) override { abort(); }
-		virtual off_t first_row_nearest_column(int column) override { abort(); }
-		virtual off_t last_row_nearest_column(int column) override { abort(); }
-		virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
+		virtual int cursor_column(BitOffset pos) override { abort(); }
+		virtual BitOffset first_row_nearest_column(int column) override { abort(); }
+		virtual BitOffset last_row_nearest_column(int column) override { abort(); }
+		virtual BitOffset nth_row_nearest_column(int64_t row, int column) override { abort(); }
 		
-		virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override
+		virtual DocumentCtrl::Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override
 		{
 			return DocumentCtrl::Rect(y_offset, 1, 1, 1);
 		}
 		
-		virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override
+		virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override
 		{
 			return SA_HEX;
 		}

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -69,7 +69,7 @@ void REHex::CharacterFinder::start_worker()
 		auto type_at_base = types.get_range(base);
 		assert(type_at_base != types.end());
 		
-		off_t encoding_base = type_at_base->first.offset;
+		off_t encoding_base = type_at_base->first.offset.byte(); /* BITFIXUP */
 		assert(encoding_base <= base);
 		
 		const CharacterEncoder *encoder;
@@ -227,7 +227,7 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 		auto type_at_base = types.get_range(t2_base_offset);
 		assert(type_at_base != types.end());
 		
-		off_t encoding_base = type_at_base->first.offset;
+		off_t encoding_base = type_at_base->first.offset.byte(); /* BITFIXUP */
 		assert(encoding_base <= t2_base_offset);
 		
 		const CharacterEncoder *encoder;

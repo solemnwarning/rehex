@@ -1415,8 +1415,8 @@ void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 	DocumentCtrl::GenericDataRegion *first_region = tab->doc_ctrl->get_data_regions().front();
 	DocumentCtrl::GenericDataRegion *last_region = tab->doc_ctrl->get_data_regions().back();
 	
-	off_t first_off = first_region->d_offset;
-	off_t last_off  = last_region->d_offset + last_region->d_length - (last_region->d_length > 0);
+	BitOffset first_off = first_region->d_offset;
+	BitOffset last_off  = last_region->d_offset + last_region->d_length - (last_region->d_length > BitOffset::ZERO ? BitOffset::BITS(1) : BitOffset::ZERO);
 	
 	tab->doc_ctrl->set_selection_raw(first_off, last_off);
 }
@@ -2147,7 +2147,7 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 		BitRangeSet selection = doc_ctrl->get_selection_ranges();
 		BitOffset selection_total = selection.total_bytes();
 		
-		selection_total += BitOffset::BITS(1);
+		// selection_total += BitOffset::BITS(1);
 		
 		char buf[64];
 		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u.%d bytes)",

@@ -187,6 +187,18 @@ std::string REHex::format_offset(off_t offset, OffsetBase base, off_t upper_boun
 	return fmt_out;
 }
 
+std::string REHex::format_offset(BitOffset offset, OffsetBase base, BitOffset upper_bound)
+{
+	std::string fmt_out = format_offset(offset.byte(), base, upper_bound.byte());
+	
+	if(!offset.byte_aligned())
+	{
+		fmt_out += "+" + std::to_string(offset.bit()) + "b";
+	}
+	
+	return fmt_out;
+}
+
 void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut)
 {
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
@@ -258,7 +270,7 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 			wxString data_string;
 			data_string.reserve(upper_limit);
 			
-			const ByteRangeMap<std::string> &types = doc->get_data_types();
+			const BitRangeMap<std::string> &types = doc->get_data_types();
 			
 			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 			{

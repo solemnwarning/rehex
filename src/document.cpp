@@ -362,6 +362,11 @@ std::vector<unsigned char> REHex::Document::read_data(BitOffset offset, off_t ma
 	return buffer->read_data(offset, max_length);
 }
 
+std::vector<bool> REHex::Document::read_bits(BitOffset offset, size_t max_length) const
+{
+	return buffer->read_bits(offset, max_length);
+}
+
 void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
@@ -1005,14 +1010,14 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	return true;
 }
 
-const REHex::ByteRangeMap<std::string> &REHex::Document::get_data_types() const
+const REHex::BitRangeMap<std::string> &REHex::Document::get_data_types() const
 {
 	return types;
 }
 
-bool REHex::Document::set_data_type(off_t offset, off_t length, const std::string &type)
+bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const std::string &type)
 {
-	if(offset < 0 || length < 1 || (offset + length) > buffer_length())
+	if(offset < BitOffset::ZERO || length <= BitOffset::ZERO || (offset + length).byte() > buffer_length())
 	{
 		return false;
 	}
@@ -1751,9 +1756,9 @@ REHex::Document::TransOpFunc REHex::Document::_op_tracked_change(const std::func
 	});
 }
 
-json_t *REHex::Document::_dump_metadata(bool& has_data)
+json_t *REHex::Document::serialise_metadata() const
 {
-	has_data = false;
+	bool has_data = false;
 	json_t *root = json_object();
 	if(root == NULL)
 	{
@@ -1831,9 +1836,9 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		}
 		
 		json_t *data_type = json_object();
-		if(json_array_append(data_types, data_type) == -1
-			|| json_object_set_new(data_type, "offset", json_integer(dt->first.offset)) == -1
-			|| json_object_set_new(data_type, "length", json_integer(dt->first.length)) == -1
+		if(json_array_append_new(data_types, data_type) == -1
+			|| json_object_set_new(data_type, "offset", dt->first.offset.to_json()) == -1
+			|| json_object_set_new(data_type, "length", dt->first.length.to_json()) == -1
 			|| json_object_set_new(data_type, "type",   json_string(dt->second.c_str())) == -1)
 		{
 			json_decref(root);
@@ -1865,6 +1870,12 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		has_data = true;
 	}
 	
+	if(!has_data)
+	{
+		json_decref(root);
+		root = NULL;
+	}
+	
 	return root;
 }
 
@@ -1872,10 +1883,9 @@ void REHex::Document::_save_metadata(const std::string &filename)
 {
 	/* TODO: Atomically replace file. */
 	
-	bool has_data = false;
-	json_t *meta = _dump_metadata(has_data);
+	json_t *meta = serialise_metadata();
 	int res = 0;
-	if (has_data)
+	if (meta != NULL)
 	{
 		res = json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
 	}
@@ -1902,6 +1912,13 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(c
 	
 	json_array_foreach(j_comments, index, value)
 	{
+		if(!json_is_integer(json_object_get(value, "offset"))
+			|| !json_is_integer(json_object_get(value, "length"))
+			|| !json_is_string(json_object_get(value, "text")))
+		{
+			continue;
+		}
+		
 		off_t offset  = json_integer_value(json_object_get(value, "offset"));
 		off_t length  = json_integer_value(json_object_get(value, "length"));
 		wxString text = wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
@@ -1942,10 +1959,10 @@ REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t
 	return highlights;
 }
 
-REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
+REHex::BitRangeMap<std::string> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
 {
-	ByteRangeMap<std::string> types;
-	types.set_range(0, buffer_length, "");
+	BitRangeMap<std::string> types;
+	types.set_range(BitOffset(0, 0), BitOffset(buffer_length, 0), "");
 	
 	json_t *j_types = json_object_get(meta, "data_types");
 	
@@ -1954,12 +1971,12 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 	
 	json_array_foreach(j_types, index, value)
 	{
-		off_t offset     = json_integer_value(json_object_get(value, "offset"));
-		off_t length     = json_integer_value(json_object_get(value, "length"));
+		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
+		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
 		const char *type = json_string_value(json_object_get(value, "type"));
 		
-		if(offset >= 0 && offset < buffer_length
-			&& length > 0 && (offset + length) <= buffer_length
+		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
+			&& length > BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0)
 			&& type != NULL)
 		{
 			types.set_range(offset, length, type);
@@ -2005,15 +2022,20 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	json_error_t json_err;
 	json_t *meta = json_load_file(filename.c_str(), 0, &json_err);
 	
-	comments = _load_comments(meta, buffer_length());
-	highlights = _load_highlights(meta, buffer_length());
-	types = _load_types(meta, buffer_length());
-	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
-	
-	json_t *write_protect = json_object_get(meta, "write_protect");
-	set_write_protect(json_is_true(write_protect));
+	load_metadata(meta);
 	
 	json_decref(meta);
+}
+
+void REHex::Document::load_metadata(const json_t *metadata)
+{
+	comments = _load_comments(metadata, buffer_length());
+	highlights = _load_highlights(metadata, buffer_length());
+	types = _load_types(metadata, buffer_length());
+	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(metadata, buffer_length());
+	
+	json_t *write_protect = json_object_get(metadata, "write_protect");
+	set_write_protect(json_is_true(write_protect));
 }
 
 void REHex::Document::_raise_comment_modified()

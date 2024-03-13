@@ -249,7 +249,7 @@ namespace REHex {
 			/**
 			 * @brief Get the mapping of byte ranges to data types in the file.
 			*/
-			const ByteRangeMap<std::string> &get_data_types() const;
+			const BitRangeMap<std::string> &get_data_types() const;
 			
 			/**
 			 * @brief Set a data type mapping in the file.
@@ -264,7 +264,7 @@ namespace REHex {
 			 * Returns true on success, false if the offset and/or length is beyond the
 			 * current size of the file.
 			*/
-			bool set_data_type(off_t offset, off_t length, const std::string &type);
+			bool set_data_type(BitOffset offset, BitOffset length, const std::string &type);
 			
 			const CharacterEncoder *get_text_encoder(off_t offset) const;
 			
@@ -305,6 +305,9 @@ namespace REHex {
 			*/
 			void reset_to_clean();
 			
+			json_t *serialise_metadata() const;
+			void load_metadata(const json_t *metadata);
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif
@@ -331,7 +334,7 @@ namespace REHex {
 				CursorState old_cursor_state;
 				ByteRangeTree<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
-				ByteRangeMap<std::string> old_types;
+				BitRangeMap<std::string> old_types;
 				
 				ByteRangeMap<off_t> old_real_to_virt_segs;
 				ByteRangeMap<off_t> old_virt_to_real_segs;
@@ -364,7 +367,7 @@ namespace REHex {
 			
 			ByteRangeTree<Comment> comments;
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
-			ByteRangeMap<std::string> types;
+			BitRangeMap<std::string> types;
 			
 			ByteRangeMap<off_t> real_to_virt_segs;
 			ByteRangeMap<off_t> virt_to_real_segs;
@@ -404,12 +407,11 @@ namespace REHex {
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
 			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
 			
-			json_t *_dump_metadata(bool& has_data);
 			void _save_metadata(const std::string &filename);
 			
 			static ByteRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
-			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
+			static BitRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
@@ -453,6 +455,12 @@ namespace REHex {
 			 * @see Buffer::read_data()
 			*/
 			std::vector<unsigned char> read_data(BitOffset offset, off_t max_length) const;
+			
+			/**
+			 * @brief Read some data from the file.
+			 * @see Buffer::read_bits()
+			*/
+			std::vector<bool> read_bits(BitOffset offset, size_t max_length) const;
 			
 			/**
 			 * @brief Return the current length of the file in bytes.

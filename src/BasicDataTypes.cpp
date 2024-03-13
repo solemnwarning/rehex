@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,6 +22,7 @@
 #include <stdio.h>
 
 #include "BasicDataTypes.hpp"
+#include "BitOffset.hpp"
 #include "DataType.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
@@ -34,7 +35,7 @@
 #include "endian_conv.hpp"
 
 #define IMPLEMENT_NDTR_CLASS(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
 	std::string REHex::NAME::to_string(const T *data) const \
@@ -56,11 +57,11 @@
 			return false; \
 		} \
 		buf = HTOX(buf); \
-		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
+		doc->overwrite_data(d_offset.byte(), &buf, sizeof(buf)); /* BITFIXUP */ \
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset) \
 	{ \
 		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
@@ -102,7 +103,7 @@ static REHex::DataTypeRegistration s64le_dtr("s64le", "signed 64-bit (little end
 static REHex::DataTypeRegistration s64be_dtr("s64be", "signed 64-bit (big endian)",      &s64be_factory, std::vector<std::string>({"Number"}), sizeof(int64_t));
 
 #define IMPLEMENT_NDTR_CLASS_FLOAT(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
 	std::string REHex::NAME::to_string(const T *data) const \
@@ -134,11 +135,11 @@ static REHex::DataTypeRegistration s64be_dtr("s64be", "signed 64-bit (big endian
 		} \
 		\
 		buf = HTOX<T>(buf); \
-		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
+		doc->overwrite_data(d_offset.byte(), &buf, sizeof(buf)); /* BITFIXUP */ \
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset) \
 	{ \
 		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}
@@ -150,7 +151,7 @@ static REHex::DataTypeRegistration f32le_dtr("f32le", "32-bit float (little endi
 static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)",    &f32be_factory, std::vector<std::string>({"Number"}), sizeof(float));
 
 #define IMPLEMENT_NDTR_CLASS_DOUBLE(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset): \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
 	std::string REHex::NAME::to_string(const T *data) const \
@@ -182,11 +183,11 @@ static REHex::DataTypeRegistration f32be_dtr("f32be", "32-bit float (big endian)
 		} \
 		\
 		buf = HTOX<T>(buf); \
-		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
+		doc->overwrite_data(d_offset.byte(), &buf, sizeof(buf)); /* BITFIXUP */ \
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset) \
 	{ \
 		return new REHex::NAME(doc, offset, length, virt_offset); \
 	}

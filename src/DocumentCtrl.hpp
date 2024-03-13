@@ -69,8 +69,8 @@ namespace REHex {
 					int indent_final;  /* Number of inner indentation levels we are the final region in */
 					
 				public:
-					const off_t indent_offset;
-					const off_t indent_length;
+					const BitOffset indent_offset;
+					const BitOffset indent_length;
 					
 					virtual ~Region();
 					
@@ -87,7 +87,7 @@ namespace REHex {
 					virtual unsigned int check();
 					
 				protected:
-					Region(off_t indent_offset, off_t indent_length);
+					Region(BitOffset indent_offset, BitOffset indent_length);
 					
 					virtual int calc_width(REHex::DocumentCtrl &doc);
 					virtual void calc_height(REHex::DocumentCtrl &doc) = 0;
@@ -131,9 +131,9 @@ namespace REHex {
 						NoHighlight(): Highlight() {}
 					};
 					
-					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
-					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
-					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, off_t base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
+					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
+					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
+					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
 					
 					/**
 					 * @brief Calculate offset of byte at X co-ordinate.
@@ -160,13 +160,13 @@ namespace REHex {
 			class GenericDataRegion: public Region
 			{
 				protected:
-					GenericDataRegion(off_t d_offset, off_t d_length, off_t virt_offset, off_t indent_offset);
+					GenericDataRegion(BitOffset d_offset, BitOffset d_length, BitOffset virt_offset, BitOffset indent_offset);
 					
 				public:
-					const off_t d_offset;
-					const off_t d_length;
+					const BitOffset d_offset;
+					const BitOffset d_length;
 					
-					const off_t virt_offset;
+					const BitOffset virt_offset;
 					
 					/**
 					 * @brief Represents an on-screen area of the region.
@@ -229,33 +229,33 @@ namespace REHex {
 					/**
 					 * @brief Returns the screen column index of the given offset within the region.
 					*/
-					virtual int cursor_column(off_t pos) = 0;
+					virtual int cursor_column(BitOffset pos) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position nearest the given column on the first screen line of the region.
 					*/
-					virtual off_t first_row_nearest_column(int column) = 0;
+					virtual BitOffset first_row_nearest_column(int column) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position nearest the given column on the last screen line of the region.
 					*/
-					virtual off_t last_row_nearest_column(int column) = 0;
+					virtual BitOffset last_row_nearest_column(int column) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position nearest the given column on the given row within the region.
 					*/
-					virtual off_t nth_row_nearest_column(int64_t row, int column) = 0;
+					virtual BitOffset nth_row_nearest_column(int64_t row, int column) = 0;
 					
 					/**
 					 * @brief Calculate the on-screen bounding box of a byte in the region.
 					*/
-					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) = 0;
+					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Find which screen areas exist for the cursor to occupy at the given offset.
 					 * @return SA_XXX constants bitwise OR'd together.
 					*/
-					virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) = 0;
+					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Process key presses while the cursor is in this region.
@@ -325,7 +325,7 @@ namespace REHex {
 					unsigned int first_line_pad_bytes;   /* Number of bytes to pad first line with. */
 					
 				public:
-					DataRegion(SharedDocumentPointer &document, off_t d_offset, off_t d_length, off_t virt_offset);
+					DataRegion(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
 					
 					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
 					
@@ -335,11 +335,11 @@ namespace REHex {
 					virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 					virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 					
-					off_t offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-					off_t offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					BitOffset offset_at_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					BitOffset offset_at_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 					
-					off_t offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
-					off_t offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					BitOffset offset_near_xy_hex  (REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
+					BitOffset offset_near_xy_ascii(REHex::DocumentCtrl &doc, int mouse_x_px, uint64_t mouse_y_lines);
 					
 					virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
 					virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
@@ -351,19 +351,19 @@ namespace REHex {
 					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override;
 					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override;
 					
-					virtual int cursor_column(off_t pos) override;
-					virtual off_t first_row_nearest_column(int column) override;
-					virtual off_t last_row_nearest_column(int column) override;
-					virtual off_t nth_row_nearest_column(int64_t row, int column) override;
+					virtual int cursor_column(BitOffset pos) override;
+					virtual BitOffset first_row_nearest_column(int column) override;
+					virtual BitOffset last_row_nearest_column(int column) override;
+					virtual BitOffset nth_row_nearest_column(int64_t row, int column) override;
 					
-					virtual Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
-					virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override;
+					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
+					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					
 					virtual Highlight highlight_at_off(off_t off) const;
 					
 				private:
 					std::unique_ptr<CharacterFinder> char_finder;
-					std::pair<off_t,off_t> get_char_at(off_t offset);
+					std::pair<BitOffset,off_t> get_char_at(BitOffset offset);
 					
 				friend DocumentCtrl;
 			};
@@ -371,7 +371,7 @@ namespace REHex {
 			class DataRegionDocHighlight: public DataRegion
 			{
 				public:
-					DataRegionDocHighlight(SharedDocumentPointer &document, off_t d_offset, off_t d_length, off_t virt_offset);
+					DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
 					
 				protected:
 					virtual Highlight highlight_at_off(off_t off) const override;
@@ -390,7 +390,7 @@ namespace REHex {
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
-				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, off_t indent_offset, off_t indent_length);
+				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length);
 				
 				friend DocumentCtrl;
 			};
@@ -510,7 +510,7 @@ namespace REHex {
 			const std::vector<GenericDataRegion*> &get_data_regions() const;
 			void replace_all_regions(std::vector<Region*> &new_regions);
 			bool region_OnChar(wxKeyEvent &event);
-			GenericDataRegion *data_region_by_offset(off_t offset);
+			GenericDataRegion *data_region_by_offset(BitOffset offset);
 			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
 			/**
@@ -550,7 +550,7 @@ namespace REHex {
 			/**
 			 * @brief Check if a range of offsets is linear and contiguous.
 			*/
-			bool region_range_linear(off_t begin_offset, off_t end_offset_incl);
+			bool region_range_linear(BitOffset begin_offset, BitOffset end_offset_incl);
 			
 			/**
 			 * @brief Returns the set of all bytes in the given (inclusive) range.
@@ -626,7 +626,7 @@ namespace REHex {
 			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted_virt;
 			
 			/** Maximum virtual offset in data regions (plus one). */
-			off_t end_virt_offset;
+			BitOffset end_virt_offset;
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
@@ -695,8 +695,8 @@ namespace REHex {
 			
 			GenericDataRegion::ScreenArea _get_screen_area_for_cursor_state();
 			
-			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(off_t offset);
-			std::vector<GenericDataRegion*>::iterator _data_region_by_virt_offset(off_t offset);
+			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(BitOffset offset);
+			std::vector<GenericDataRegion*>::iterator _data_region_by_virt_offset(BitOffset offset);
 			
 			std::list<Region*>::iterator _region_by_y_offset(int64_t y_offset);
 			

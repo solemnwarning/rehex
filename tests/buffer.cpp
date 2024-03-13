@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -2553,4 +2553,73 @@ TEST(Buffer, ModifyBackingFileAndReload)
 	
 	std::vector<unsigned char> file_data = b.read_data(0, 1024);
 	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF })) << "Buffer contains new content";
+}
+
+TEST(Buffer, ReadBitsWholeFile)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	
+	std::vector<bool> bits = b.read_bits(REHex::BitOffset(0, 0), 100);
+	
+	std::vector<bool> EXPECT = {
+		false, false, false, false, false, false, false, false, /* 0x00 */
+		false, false, false, false, false, false, false,  true, /* 0x01 */
+		false, false, false, false, false, false,  true, false, /* 0x02 */
+		false, false, false, false, false, false,  true,  true, /* 0x03 */
+		false, false, false, false, false,  true, false, false, /* 0x04 */
+		false, false, false, false, false,  true, false,  true, /* 0x05 */
+		false, false, false, false, false,  true,  true, false, /* 0x06 */
+		false, false, false, false, false,  true,  true,  true, /* 0x07 */
+	};
+	
+	EXPECT_EQ(bits, EXPECT);
+}
+
+TEST(Buffer, ReadBitsFromFile)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	
+	std::vector<bool> bits = b.read_bits(REHex::BitOffset(1, 2), 15);
+	
+	std::vector<bool> EXPECT = {
+		/* false, false, false, false, false, false, false, false, */  /* 0x00 */
+		/* false, false, */ false, false, false, false, false,  true,  /* 0x01 */
+		false, false, false, false, false, false,  true, false,        /* 0x02 */
+		false, /* false, false, false, false, false,  true,  true, */  /* 0x03 */
+		/* false, false, false, false, false,  true, false, false, */  /* 0x04 */
+		/* false, false, false, false, false,  true, false,  true, */  /* 0x05 */
+		/* false, false, false, false, false,  true,  true, false, */  /* 0x06 */
+		/* false, false, false, false, false,  true,  true,  true, */  /* 0x07 */
+	};
+	
+	EXPECT_EQ(bits, EXPECT);
+}
+
+TEST(Buffer, ReadBitsAtEOF)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	
+	std::vector<bool> bits = b.read_bits(REHex::BitOffset(7, 5), 15);
+	
+	std::vector<bool> EXPECT = {
+		/* false, false, false, false, false, false, false, false, */  /* 0x00 */
+		/* false, false, false, false, false, false, false,  true, */  /* 0x01 */
+		/* false, false, false, false, false, false,  true, false, */  /* 0x02 */
+		/* false, false, false, false, false, false,  true,  true, */  /* 0x03 */
+		/* false, false, false, false, false,  true, false, false, */  /* 0x04 */
+		/* false, false, false, false, false,  true, false,  true, */  /* 0x05 */
+		/* false, false, false, false, false,  true,  true, false, */  /* 0x06 */
+		/* false, false, false, false, false, */  true,  true,  true,  /* 0x07 */
+	};
+	
+	EXPECT_EQ(bits, EXPECT);
 }

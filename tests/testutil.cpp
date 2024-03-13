@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,8 +17,10 @@
 
 #include "../src/platform.hpp"
 
+#include <ostream>
 #include <stdexcept>
 #include <stdio.h>
+#include <vector>
 #include <wx/app.h>
 #include <wx/frame.h>
 #include <wx/timer.h>
@@ -101,4 +103,45 @@ TempFilename::TempFilename()
 TempFilename::~TempFilename()
 {
 	unlink(tmpfile);
+}
+
+AutoJSON::AutoJSON():
+	json(NULL) {}
+
+AutoJSON::AutoJSON(json_t *json_obj):
+	json(json_obj) {}
+
+AutoJSON::AutoJSON(const char *json_text)
+{
+	json_error_t err;
+	json = json_loads(json_text, 0, &err);
+	
+	if(json == NULL)
+	{
+		throw std::runtime_error(err.text);
+	}
+}
+
+AutoJSON::~AutoJSON()
+{
+	json_decref(json);
+}
+
+std::string AutoJSON::serialise() const
+{
+	std::vector<char> buf(json_dumpb(json, NULL, 0, JSON_INDENT(4) | JSON_SORT_KEYS));
+	json_dumpb(json, buf.data(), buf.size(), JSON_INDENT(4) | JSON_SORT_KEYS);
+	
+	return std::string(buf.data(), buf.size());
+}
+
+bool AutoJSON::operator==(const AutoJSON &rhs) const
+{
+	return (json == NULL && rhs.json == NULL)
+		|| json_equal(json, rhs.json);
+}
+
+std::ostream& operator<<(std::ostream& os, const AutoJSON &json)
+{
+	return os << json.serialise();
 }

@@ -18,6 +18,8 @@
 #ifndef REHEX_BITOFFSET_HPP
 #define REHEX_BITOFFSET_HPP
 
+#include <assert.h>
+#include <jansson.h>
 #include <stdint.h>
 
 #ifdef MAX
@@ -57,6 +59,16 @@ namespace REHex
 				value = ((int64_t)(byte) << 3) + (int64_t)(bit);
 			}
 			
+			/**
+			 * @brief Reconstruct a BitOffset previously serialised to JSON.
+			*/
+			static BitOffset from_json(json_t *json);
+			
+			/**
+			 * @brief Serialise BitOffset to JSON.
+			*/
+			json_t *to_json() const;
+			
 			static inline BitOffset BITS(int bits)
 			{
 				return BitOffset((bits / 8), (bits % 8));
@@ -75,6 +87,11 @@ namespace REHex
 			inline int bit() const
 			{
 				return value % 8;
+			}
+			
+			inline int64_t total_bits() const
+			{
+				return value;
 			}
 			
 			inline bool byte_aligned() const

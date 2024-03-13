@@ -24,6 +24,8 @@
 #include <vector>
 #include <wx/frame.h>
 
+#include "testutil.hpp"
+
 #include "../src/document.hpp"
 #include "../src/Events.hpp"
 
@@ -128,12 +130,12 @@ class DocumentTest: public ::testing::Test
 
 #define EXPECT_DATA_TYPES(...) \
 { \
-	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > expect_types = {  __VA_ARGS__ }; \
+	const std::vector< std::pair<BitRangeMap<std::string>::Range, std::string> > expect_types = {  __VA_ARGS__ }; \
 	EXPECT_EQ(doc->get_data_types().get_ranges(), expect_types); \
 }
 
 #define DATA_TYPE(offset, length, type) \
-	std::make_pair(ByteRangeMap<std::string>::Range(offset, length), type)
+	std::make_pair(BitRangeMap<std::string>::Range(offset, length), type)
 
 TEST_F(DocumentTest, InsertData)
 {
@@ -3510,4 +3512,481 @@ TEST_F(DocumentTest, ReplaceTextMixed)
 		DATA_TYPE( 5, 14, "text:UTF-8"),
 		DATA_TYPE(19,  8, "text:ISO-8859-1"),
 	);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataEmptyFile)
+{
+	AutoJSON got(doc->serialise_metadata());
+	AutoJSON expect;
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataNoMetadata)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON got(doc->serialise_metadata());
+	AutoJSON expect;
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataWriteProtectedFile)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	doc->set_write_protect(true);
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": true
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataComments)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_comment( 0, 10, REHex::Document::Comment("cold"));
+	doc->set_comment(20, 10, REHex::Document::Comment("strong"));
+	doc->set_comment(20,  5, REHex::Document::Comment("industrious"));
+	doc->set_comment(25,  5, REHex::Document::Comment("bury"));
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "cold"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"text": "strong"
+			},
+			{
+				"length": 5,
+				"offset": 20,
+				"text": "industrious"
+			},
+			{
+				"length": 5,
+				"offset": 25,
+				"text": "bury"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataComments)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "cold"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"text": "strong"
+			},
+			{
+				"length": 5,
+				"offset": 20,
+				"text": "industrious"
+			},
+			{
+				"length": 5,
+				"offset": 25,
+				"text": "bury"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_comments();
+	
+	ByteRangeTree<Document::Comment> expect;
+	expect.set( 0, 10, REHex::Document::Comment("cold"));
+	expect.set(20, 10, REHex::Document::Comment("strong"));
+	expect.set(20,  5, REHex::Document::Comment("industrious"));
+	expect.set(25,  5, REHex::Document::Comment("bury"));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataCommentUnicode)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_comment(0, 10, REHex::Document::Comment(wxString::FromUTF8("mundané")));
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect((const char*)(u8R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "mundané"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})"));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataCommentUnicode)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata((const char*)(u8R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "mundané"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})"));
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_comments();
+	
+	ByteRangeTree<Document::Comment> expect;
+	expect.set(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataCommentsSkipBad)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [
+			{
+				"length": -1,
+				"offset": 0,
+				"text": "negative length"
+			},
+			{
+				"length": 10,
+				"offset": -20,
+				"text": "negative offset"
+			},
+			{
+				"length": 2048,
+				"offset": 20,
+				"text": "out-of-range length"
+			},
+			{
+				"length": 5,
+				"offset": 2048,
+				"text": "out-of-range offset"
+			},
+			{
+				"length": 0,
+				"offset": 0,
+				"text": "valid comment"
+			},
+			{
+				"length": 10,
+				"offset": 10
+			},
+			{
+				"length": 5,
+				"text": "no offset"
+			},
+			{
+				"offset": 20,
+				"text": "no length"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_comments();
+	
+	ByteRangeTree<Document::Comment> expect;
+	expect.set(0, 0, REHex::Document::Comment("valid comment"));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataDataTypes)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "s8");
+	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16");
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypes)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<std::string> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), "s8");
+	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), "");
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), "u16");
+	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), "");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"type": "u16"
+			},
+			{
+				"length": 10,
+				"offset": 30
+			},
+			{
+				"length": 10,
+				"offset": 40,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<std::string> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), "");
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), "u16");
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), "");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 4,
+				"offset": -10,
+				"type": "s8"
+			},
+			{
+				"length": -4,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 4,
+				"offset": 1024,
+				"type": "s8"
+			},
+			{
+				"length": 1000,
+				"offset": 100,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 40,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<std::string> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), "");
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), "u16");
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), "");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 2), "s8");
+	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16");
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": [ 10, 2 ],
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": [ 20, 6 ],
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": [ 10, 2 ],
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": [ 20, 6 ],
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<std::string> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 2), "s8");
+	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), "");
+	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), "u16");
+	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), "");
+	
+	EXPECT_EQ(got, expect);
 }

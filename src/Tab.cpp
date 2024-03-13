@@ -28,6 +28,7 @@
 #include <wx/sizer.h>
 
 #include "App.hpp"
+#include "BitArray.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
@@ -995,9 +996,11 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 {
 	off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	
-	auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
-	off_t selection_off = tmp.first.byte();
-	off_t selection_length = tmp.second.byte();
+	//auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
+	//off_t selection_off = tmp.first.byte();
+	//off_t selection_length = tmp.second.byte();
+	BitOffset selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
 	const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
 	const NestedOffsetLengthMap<int>     &highlights = doc->get_highlights();
@@ -1067,16 +1070,17 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	}
 	
 	if(selection_length > 0
-		&& comments.find(NestedOffsetLengthMapKey(selection_off, selection_length)) == comments.end()
-		&& comments.can_set(selection_off, selection_length))
+		&& selection_off.byte_aligned() && selection_length.byte_aligned()
+		&& comments.find(NestedOffsetLengthMapKey(selection_off.byte(), selection_length.byte())) == comments.end()
+		&& comments.can_set(selection_off.byte(), selection_length.byte()))
 	{
 		char menu_label[64];
-		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));
+		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length.byte()));
 		wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			EditCommentDialog::run_modal(this, doc, selection_off, selection_length);
+			EditCommentDialog::run_modal(this, doc, selection_off.byte(), selection_length.byte());
 		}, itm->GetId(), itm->GetId());
 	}
 	
@@ -1090,10 +1094,10 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
 	
-	if(selection_length > 0)
+	if(selection_length > 0 && selection_off.byte_aligned() && selection_length.byte_aligned())
 	{
-		highlight_off    = selection_off;
-		highlight_length = selection_length;
+		highlight_off    = selection_off.byte(); /* BITFIXUP */
+		highlight_length = selection_length.byte();
 	}
 	else if(highlight_at_cur != highlights.end())
 	{
@@ -1174,7 +1178,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	if(selection_length > 0)
 	{
-		const ByteRangeMap<std::string> &data_types = doc->get_data_types();
+		const BitRangeMap<std::string> &data_types = doc->get_data_types();
 		
 		auto selection_off_type = data_types.get_range(selection_off);
 		assert(selection_off_type != data_types.end());
@@ -1210,7 +1214,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		{
 			const DataTypeRegistration *dt = *dti;
 			
-			if(dt->fixed_size >= 0 && (selection_length % dt->fixed_size) != 0)
+			if(dt->fixed_size >= 0 && (selection_length.byte() % dt->fixed_size) != 0) /* BITFIXUP */
 			{
 				/* Selection is too short/long for this type. */
 				continue;
@@ -1266,7 +1270,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			VirtualMappingDialog d(this, doc, selection_off, selection_length);
+			VirtualMappingDialog d(this, doc, selection_off.byte(), selection_length.byte()); /* BITFIXUP */
 			d.ShowModal();
 		}, vm_itm->GetId(), vm_itm->GetId());
 	}
@@ -1279,7 +1283,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			compare_range(selection_off, selection_length);
+			compare_range(selection_off.byte(), selection_length.byte()); /* BITFIXUP */
 		}, itm->GetId(), itm->GetId());
 	}
 	
@@ -1973,7 +1977,7 @@ void REHex::Tab::repopulate_regions_thaw()
 	}
 }
 
-std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode)
+std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode)
 {
 	auto &comments = doc->get_comments();
 	auto &types = doc->get_data_types();
@@ -1985,14 +1989,14 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	auto next_comment = comments.first_root_node();
 	auto types_iter = types.begin();
-	off_t next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
+	BitOffset next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
 	
 	/* Skip over comments/types prior to real_offset_base. */
-	while(next_comment != NULL && next_comment->key.offset < next_data)
+	while(next_comment != NULL && BitOffset(next_comment->key.offset, 0) < next_data)
 	{
 		auto first_child = next_comment->get_first_child();
 		
-		if(first_child != NULL && (first_child->key.offset == next_comment->key.offset || first_child->key.offset >= next_data))
+		if(first_child != NULL && (first_child->key.offset == next_comment->key.offset || BitOffset(first_child->key.offset, 0) >= next_data))
 		{
 			next_comment = next_comment->get_first_child();
 		}
@@ -2015,12 +2019,12 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	}
 	
 	std::vector<DocumentCtrl::Region*> regions;
-	std::stack<off_t> dr_limit;
+	std::stack<BitOffset> dr_limit;
 	
 	while(remain_data > 0)
 	{
-		assert((next_data + remain_data) <= doc->buffer_length());
-		assert(next_comment == NULL || next_comment->key.offset >= next_data);
+		assert((next_data + remain_data) <= BitOffset(doc->buffer_length(), 0));
+		assert(next_comment == NULL || BitOffset(next_comment->key.offset, 0) >= next_data);
 		
 		while(!dr_limit.empty() && dr_limit.top() <= next_data)
 		{
@@ -2031,11 +2035,11 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		 * smaller comments are parented to the next-larger one at the same offset.
 		*/
 		
-		while(next_comment != NULL && next_comment->key.offset == next_data)
+		while(next_comment != NULL && BitOffset(next_comment->key.offset, 0) == next_data)
 		{
-			off_t indent_offset = next_virt;
-			off_t indent_length = nest
-				? std::min(next_comment->key.length, remain_data)
+			BitOffset indent_offset = next_virt;
+			BitOffset indent_length = nest
+				? std::min(BitOffset(next_comment->key.length, 0), remain_data)
 				: 0;
 			
 			regions.push_back(new DocumentCtrl::CommentRegion(
@@ -2066,11 +2070,11 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			}
 		}
 		
-		off_t dr_length = remain_data;
+		BitOffset dr_length = remain_data;
 		
-		if(next_comment != NULL && dr_length > (next_comment->key.offset - next_data))
+		if(next_comment != NULL && dr_length > (BitOffset(next_comment->key.offset, 0) - next_data))
 		{
-			dr_length = next_comment->key.offset - next_data;
+			dr_length = BitOffset(next_comment->key.offset, 0) - next_data;
 		}
 		
 		if(!dr_limit.empty() && (next_data + dr_length) >= dr_limit.top())
@@ -2089,24 +2093,39 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		
 		const DataTypeRegistration *dtr = DataTypeRegistry::by_name(types_iter->second);
 		
-		if(dtr != NULL && dtr->fixed_size <= dr_length)
+		if(dtr != NULL && BitOffset(dtr->fixed_size, 0) <= dr_length)
 		{
-			if(dtr->fixed_size >= 0 && dr_length > dtr->fixed_size)
+			if(dtr->fixed_size >= 0 && dr_length > BitOffset(dtr->fixed_size, 0))
 			{
-				dr_length = dtr->fixed_size;
+				dr_length = BitOffset(dtr->fixed_size, 0);
 			}
 			
 			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_virt));
 		}
 		else{
-			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, next_data, dr_length, next_virt));
+			/* DataRegion only allows whole-byte lengths, so if we have any spare bits
+			 * in an untyped region we will make a little BitArrayRegion to cover them.
+			*/
+			
+			if(dr_length < BitOffset(1, 0))
+			{
+				regions.push_back(new BitArrayRegion(doc, next_data, dr_length, next_virt));
+			}
+			else{
+				if(!dr_length.byte_aligned())
+				{
+					dr_length = BitOffset(dr_length.byte(), 0);
+				}
+				
+				regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, next_data, dr_length, next_virt));
+			}
 		}
 		
 		next_data   += dr_length;
 		next_virt   += dr_length;
 		remain_data -= dr_length;
 		
-		if(next_data >= (types_iter->first.offset + types_iter->first.length))
+		if(next_data >= (types_iter->first.offset + types_iter->first.length).byte()) /* BITFIXUP */
 		{
 			++types_iter;
 		}

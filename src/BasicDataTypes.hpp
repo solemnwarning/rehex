@@ -79,7 +79,7 @@ namespace REHex
 			}
 			
 		protected:
-			NumericDataTypeRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, const std::string &type_label):
+			NumericDataTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const std::string &type_label):
 				GenericDataRegion(offset, length, virt_offset, virt_offset),
 				doc(doc),
 				type_label(type_label),
@@ -117,7 +117,7 @@ namespace REHex
 			
 			virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override
 			{
-				off_t cursor_pos = doc_ctrl.get_cursor_position().byte(); /* BITFIXUP */
+				BitOffset cursor_pos = doc_ctrl.get_cursor_position();
 				
 				if(input_active && (cursor_pos < d_offset || cursor_pos >= (d_offset + d_length)))
 				{
@@ -157,7 +157,7 @@ namespace REHex
 				{
 					/* Draw the offsets to the left */
 					
-					std::string offset_str = format_offset(virt_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
+					std::string offset_str = format_offset(virt_offset.byte(), doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset()); /* BITFIXUP */
 					
 					normal_text();
 					dc.DrawText(offset_str, x, y);
@@ -177,7 +177,7 @@ namespace REHex
 				std::string data_string;
 				
 				try {
-					data = doc->read_data(d_offset, d_length);
+					data = doc->read_data(d_offset, d_length.byte());
 					assert(data.size() == sizeof(T));
 					
 					data_string = to_string((const T*)(data.data()));
@@ -187,7 +187,7 @@ namespace REHex
 					fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::draw: %s\n", e.what());
 					
 					data_err = true;
-					data.insert(data.end(), d_length, '?');
+					data.insert(data.end(), d_length.byte(), '?');
 					data_string = "????";
 				}
 				
@@ -210,7 +210,7 @@ namespace REHex
 						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
 					}
 				}
-				else if(region_selection_length > BitOffset::ZERO && (total_selection_first != BitOffset(d_offset, 0) || total_selection_last != BitOffset((d_offset + d_length - 1), 7))) /* BITFIXUP */
+				else if(region_selection_length > BitOffset::ZERO && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - BitOffset::BITS(1))))
 				{
 					/* Selection encompasses *some* of our bytes and/or stretches
 					* beyond either end. Render the underlying hex bytes.
@@ -299,7 +299,7 @@ namespace REHex
 				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
 				
-				if(region_selection_length > BitOffset::ZERO && (total_selection_first != BitOffset(d_offset, 0) || total_selection_last != BitOffset((d_offset + d_length - 1), 0)))
+				if(region_selection_length > BitOffset::ZERO && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - BitOffset::BITS(1))))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -322,12 +322,12 @@ namespace REHex
 					else{
 						unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
 						unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
-						off_t clicked_offset                = d_offset + line_offset_bytes;
+						BitOffset clicked_offset            = d_offset + BitOffset::BYTES(line_offset_bytes);
 						
 						if(clicked_offset < (d_offset + d_length))
 						{
 							/* Clicked on a byte */
-							return std::make_pair(BitOffset(clicked_offset, 0), SA_HEX);
+							return std::make_pair(clicked_offset, SA_HEX);
 						}
 						else{
 							/* Clicked past the end of the line */
@@ -341,7 +341,7 @@ namespace REHex
 					std::vector<unsigned char> data;
 					
 					try {
-						data = doc->read_data(d_offset, d_length);
+						data = doc->read_data(d_offset, d_length.byte());
 						assert(data.size() == sizeof(T));
 					}
 					catch(const std::exception &e)
@@ -358,7 +358,7 @@ namespace REHex
 					if(mouse_x_px >= 0 && char_offset < data_string.length())
 					{
 						/* Within screen area of data_string. */
-						return std::make_pair(BitOffset(d_offset, 0), SA_SPECIAL);
+						return std::make_pair(d_offset, SA_SPECIAL);
 					}
 					else{
 						return std::make_pair(BitOffset::INVALID, SA_NONE);
@@ -371,62 +371,62 @@ namespace REHex
 				mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
 				mouse_x_px = std::max(mouse_x_px, 0);
 				
-				off_t mouse_x_bytes = std::min(
-					(d_offset + (mouse_x_px / doc_ctrl.hf_string_width(2))),
-					(d_offset + d_length - 1));
+				BitOffset mouse_x_bytes = std::min(
+					(d_offset + BitOffset::BYTES(mouse_x_px / doc_ctrl.hf_string_width(2))),
+					(d_offset + d_length - BitOffset::BYTES(1)));
 				
-				return std::make_pair(BitOffset(mouse_x_bytes, 0), SA_SPECIAL);
+				return std::make_pair(mouse_x_bytes, SA_SPECIAL);
 			}
 			
 			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos.byte() >= d_offset);
-				assert(pos.byte() <= (d_offset + d_length));
+				assert(pos >= d_offset);
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_PREV_REGION;
 			}
 			
 			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos.byte() >= d_offset);
-				assert(pos.byte() <= (d_offset + d_length));
+				assert(pos >= d_offset);
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_NEXT_REGION;
 			}
 			
 			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos.byte() >= d_offset);
-				assert(pos.byte() <= (d_offset + d_length));
+				assert(pos >= d_offset);
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_PREV_REGION;
 			}
 			
 			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos.byte() >= d_offset);
-				assert(pos.byte() <= (d_offset + d_length));
+				assert(pos >= d_offset);
+				assert(pos <= (d_offset + d_length));
 				
 				return CURSOR_NEXT_REGION;
 			}
 			
 			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos.byte() >= d_offset);
-				assert(pos.byte() <= (d_offset + d_length));
+				assert(pos >= d_offset);
+				assert(pos <= (d_offset + d_length));
 				
 				return d_offset;
 			}
 			
 			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos.byte() >= d_offset);
-				assert(pos.byte() <= (d_offset + d_length));
+				assert(pos >= d_offset);
+				assert(pos <= (d_offset + d_length));
 				
 				return d_offset;
 			}
 			
-			virtual int cursor_column(off_t pos) override
+			virtual int cursor_column(BitOffset pos) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -434,22 +434,22 @@ namespace REHex
 				return 0;
 			}
 			
-			virtual off_t first_row_nearest_column(int column) override
+			virtual BitOffset first_row_nearest_column(int column) override
 			{
 				return d_offset;
 			}
 			
-			virtual off_t last_row_nearest_column(int column) override
+			virtual BitOffset last_row_nearest_column(int column) override
 			{
 				return d_offset;
 			}
 			
-			virtual off_t nth_row_nearest_column(int64_t row, int column) override
+			virtual BitOffset nth_row_nearest_column(int64_t row, int column) override
 			{
 				return d_offset;
 			}
 			
-			DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override
+			DocumentCtrl::Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override
 			{
 				assert(offset >= d_offset);
 				assert(offset <= (d_offset + d_length));
@@ -460,11 +460,11 @@ namespace REHex
 				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl->get_selection_in_region(this);
 				
-				if(region_selection_length > BitOffset::ZERO && (total_selection_first != BitOffset(d_offset, 0) || total_selection_last != BitOffset((d_offset + d_length - 1), 0))) /* BITFIXUP */
+				if(region_selection_length > BitOffset::ZERO && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - BitOffset::BITS(1))))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
-					off_t rel_offset = offset - d_offset;
+					off_t rel_offset = (offset - d_offset).byte();
 					
 					unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
 					int line_x = data_text_x + doc_ctrl->hf_string_width((rel_offset * 2) + (rel_offset / bytes_per_group));
@@ -488,7 +488,7 @@ namespace REHex
 				}
 			}
 			
-			virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override
+			virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override
 			{
 				assert(offset >= d_offset);
 				assert(offset <= (d_offset + d_length));
@@ -571,7 +571,7 @@ namespace REHex
 					std::vector<unsigned char> data;
 					
 					try {
-						data = doc->read_data(d_offset, d_length);
+						data = doc->read_data(d_offset, d_length.byte()); /* BITFIXUP */
 						assert(data.size() == sizeof(T));
 					}
 					catch(const std::exception &e)
@@ -652,10 +652,10 @@ namespace REHex
 				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = doc_ctrl.get_selection_raw();
 				
-				assert(selection_first >= BitOffset(d_offset, 0)); /* BITFIXUP */
-				assert(selection_last < BitOffset((d_offset + d_length), 0)); /* BITFIXUP */
+				assert(selection_first >= d_offset);
+				assert(selection_last < (d_offset + d_length));
 				
-				if(selection_first == BitOffset(d_offset, 0) && selection_last == BitOffset((d_offset + d_length - 1), 0)) /* BITFIXUP */
+				if(selection_first == d_offset && selection_last == (d_offset + d_length - BitOffset::BITS(1))) /* BITFIXUP */
 				{
 					/* Selection matches our data range. Copy stringified
 					 * numeric value to clipboard.
@@ -664,7 +664,7 @@ namespace REHex
 					std::vector<unsigned char> data;
 					
 					try {
-						data = doc->read_data(d_offset, d_length);
+						data = doc->read_data(d_offset, d_length.byte()); /* BITFIXUP */
 						assert(data.size() == sizeof(T));
 					}
 					catch(const std::exception &e)
@@ -687,7 +687,7 @@ namespace REHex
 				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 				
-				if(doc_ctrl->has_selection() && (selection_first != BitOffset(d_offset, 0) || selection_last != BitOffset((d_offset + d_length - 1), 0))) /* BITFIXUP */
+				if(doc_ctrl->has_selection() && (selection_first != d_offset || selection_last != (d_offset + d_length - BitOffset::BYTES(1)))) /* BITFIXUP */
 				{
 					/* There is a selection and it doesn't exactly match our
 					 * data range. Fall back to default handling.
@@ -731,7 +731,7 @@ namespace REHex
 		class NAME: public NumericDataTypeRegion<T> \
 		{ \
 			public: \
-				NAME(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset); \
+				NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset); \
 				\
 			protected: \
 				virtual std::string to_string(const T *data) const override; \

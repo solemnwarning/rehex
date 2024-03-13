@@ -110,7 +110,7 @@ REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const
 	label(label),
 	groups(groups),
 	fixed_size(-1),
-	region_factory([](SharedDocumentPointer &document, off_t offset, off_t length, off_t virt_offset)
+	region_factory([](SharedDocumentPointer &document, BitOffset offset, BitOffset length, BitOffset virt_offset)
 		{ return new DocumentCtrl::DataRegionDocHighlight(document, offset, length, virt_offset); }),
 	encoder(encoder)
 {

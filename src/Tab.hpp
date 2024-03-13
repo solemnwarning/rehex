@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,7 @@
 #include <wx/splitter.h>
 #include <wx/wx.h>
 
+#include "BitOffset.hpp"
 #include "DiffWindow.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
@@ -93,7 +94,7 @@ namespace REHex
 			void set_auto_reload(bool auto_reload);
 			
 			/* Public for use by unit tests. */
-			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode);
+			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode);
 			
 		private:
 			InlineCommentMode inline_comment_mode;

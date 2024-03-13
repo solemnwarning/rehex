@@ -38,7 +38,7 @@ namespace REHex {
 			std::pair<BitOffset, ScreenArea> offset_near_or_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, bool exact);
 			
 		public:
-			BitArrayRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset);
+			BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset);
 			
 			virtual int calc_width(DocumentCtrl &doc_ctrl) override;
 			virtual void calc_height(DocumentCtrl &doc_ctrl) override;
@@ -55,13 +55,13 @@ namespace REHex {
 			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override;
 			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override;
 			
-			virtual int cursor_column(off_t pos) override;
-			virtual off_t first_row_nearest_column(int column) override;
-			virtual off_t last_row_nearest_column(int column) override;
-			virtual off_t nth_row_nearest_column(int64_t row, int column) override;
+			virtual int cursor_column(BitOffset pos) override;
+			virtual BitOffset first_row_nearest_column(int column) override;
+			virtual BitOffset last_row_nearest_column(int column) override;
+			virtual BitOffset nth_row_nearest_column(int64_t row, int column) override;
 			
-			virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
-			virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override;
+			virtual DocumentCtrl::Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
+			virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 			
 			virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event) override;
 	};

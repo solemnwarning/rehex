@@ -215,6 +215,21 @@ namespace REHex {
 			std::vector<unsigned char> read_data(const BitOffset &offset, off_t max_length);
 			
 			/**
+			 * @brief Read data from the Buffer.
+			 *
+			 * @param off_t       Offset to read from.
+			 * @param max_length  Maximum number of BITS to read.
+			 *
+			 * Reads data from the Buffer, paging blocks in from disk if necessary.
+			 *
+			 * Returns a vector containing up to the requested number of bits from the
+			 * given offset, ending early only if the end of file is reached.
+			 *
+			 * Throws on I/O or memory allocation error.
+			*/
+			std::vector<bool> read_bits(const BitOffset &offset, size_t max_length);
+			
+			/**
 			 * @brief Overwrite a series of bytes in the Buffer.
 			 *
 			 * @param offset  Offset to write from.

@@ -2,13 +2,13 @@
 %define tilde_dist %(echo %{?dist} | tr '.' '~')
 
 Name:     rehex
-Version:  %{base_version}+%{git_commit_sha}
+Version:  %{base_version}
 Release:  0%{tilde_dist}
 Summary:  Reverse Engineers' Hex Editor
 
 License:  GPLv2
 URL:      https://www.github.com/solemnwarning/rehex/
-Source0:  rehex-%{git_commit_sha}.tar.gz
+Source0:  rehex-%{base_version}.tar.gz
 
 BuildRequires: capstone-devel
 BuildRequires: gcc-c++
@@ -33,8 +33,7 @@ Requires: wxGTK3
 %define base_make_flags DEBUG_CFLAGS="-DNDEBUG -ggdb" LUA_PKG=lua bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
 
 %if 0%{?el7}
-# Build with -fpermissive to work around GCC bug #56480 on RHEL 7.
-%define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe CXX="g++ -fpermissive" BOTAN_PKG=botan-1.10
+%define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe BOTAN_PKG=botan-1.10
 BuildRequires: botan-devel
 BuildRequires: pkgconfig
 %else
@@ -46,7 +45,7 @@ BuildRequires: pkgconf
 %description
 
 %prep
-%setup -q -n rehex-%{git_commit_sha}
+%setup -q -n rehex-%{base_version}
 
 %build
 

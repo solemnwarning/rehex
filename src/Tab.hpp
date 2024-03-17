@@ -118,8 +118,8 @@ namespace REHex
 			
 			void OnDocumentCtrlChar(wxKeyEvent &key);
 			
-			void OnCommentLeftClick(OffsetLengthEvent &event);
-			void OnCommentRightClick(OffsetLengthEvent &event);
+			void OnCommentLeftClick(BitRangeEvent &event);
+			void OnCommentRightClick(BitRangeEvent &event);
 			void OnDataRightClick(wxCommandEvent &event);
 			
 			void OnDocumentDataErase(OffsetLengthEvent &event);

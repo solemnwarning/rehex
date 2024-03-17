@@ -176,7 +176,7 @@ namespace REHex {
 			/**
 			 * @brief Get the comments in the file.
 			*/
-			const ByteRangeTree<Comment> &get_comments() const;
+			const BitRangeTree<Comment> &get_comments() const;
 			
 			/**
 			 * @brief Set a comment in the file.
@@ -192,7 +192,7 @@ namespace REHex {
 			 * Comments can have a length of zero, in which case they are displayed at
 			 * the given offset, but do not encompass a range of bytes.
 			*/
-			bool set_comment(off_t offset, off_t length, const Comment &comment);
+			bool set_comment(BitOffset offset, BitOffset length, const Comment &comment);
 			
 			/**
 			 * @brief Erase a comment in the file.
@@ -202,7 +202,7 @@ namespace REHex {
 			 *
 			 * Returns true on success, false if the comment was not found.
 			*/
-			bool erase_comment(off_t offset, off_t length);
+			bool erase_comment(BitOffset offset, BitOffset length);
 			
 			/**
 			 * @brief Erase a comment and any children in the file.
@@ -212,7 +212,7 @@ namespace REHex {
 			 *
 			 * Returns true on success, false if the comment was not found.
 			*/
-			bool erase_comment_recursive(off_t offset, off_t length);
+			bool erase_comment_recursive(BitOffset offset, BitOffset length);
 			
 			/**
 			 * @brief Get the highlighted byte ranges in the file.
@@ -278,7 +278,7 @@ namespace REHex {
 			off_t real_to_virt_offset(off_t real_offset) const;
 			off_t virt_to_real_offset(off_t virt_offset) const;
 			
-			void handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments);
+			void handle_paste(wxWindow *modal_dialog_parent, const BitRangeTree<Document::Comment> &clipboard_comments);
 			
 			/**
 			 * @brief Undo the last change to the document.
@@ -332,7 +332,7 @@ namespace REHex {
 				
 				BitOffset old_cpos_off;
 				CursorState old_cursor_state;
-				ByteRangeTree<Comment> old_comments;
+				BitRangeTree<Comment> old_comments;
 				NestedOffsetLengthMap<int> old_highlights;
 				BitRangeMap<std::string> old_types;
 				
@@ -365,7 +365,7 @@ namespace REHex {
 			ByteRangeMap<unsigned int> data_seq;
 			unsigned int saved_seq;
 			
-			ByteRangeTree<Comment> comments;
+			BitRangeTree<Comment> comments;
 			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
 			BitRangeMap<std::string> types;
 			
@@ -409,7 +409,7 @@ namespace REHex {
 			
 			void _save_metadata(const std::string &filename);
 			
-			static ByteRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
+			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
 			static BitRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
@@ -566,8 +566,8 @@ namespace REHex {
 		private:
 			struct Header
 			{
-				off_t file_offset;
-				off_t file_length;
+				int64_t file_offset;
+				int64_t file_length;
 				
 				size_t text_length;
 			};
@@ -589,12 +589,12 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
+			CommentsDataObject(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base = BitOffset::ZERO);
 			
 			/**
 			 * @brief Deserialise the CommentsDataObject and return the stored comments.
 			*/
-			ByteRangeTree<Document::Comment> get_comments() const;
+			BitRangeTree<Document::Comment> get_comments() const;
 			
 			/**
 			 * @brief Replace the serialised list of stored comments.
@@ -602,7 +602,7 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			void set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
+			void set_comments(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base = BitOffset::ZERO);
 	};
 	
 	/**

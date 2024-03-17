@@ -1020,7 +1020,7 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 	conf_dialog.SetSizerAndFit(conf_sizer);
 	
 	auto &comments = tab->doc->get_comments();
-	auto comment = comments.find(NestedOffsetLengthMapKey(0, 0));
+	auto comment = comments.find(BitRangeTreeKey(BitOffset(0, 0), BitOffset(0, 0)));
 	if(comment != comments.end())
 	{
 		const wxString &comment_text = *(comment->second.text);

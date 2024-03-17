@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,12 +21,14 @@
 #include <sys/types.h>
 #include <wx/window.h>
 
+#include "BitOffset.hpp"
+
 namespace REHex
 {
 	class EditCommentDialog
 	{
 		public:
-			static void run_modal(wxWindow *parent, Document *doc, off_t offset, off_t length);
+			static void run_modal(wxWindow *parent, Document *doc, BitOffset offset, BitOffset length);
 	};
 }
 

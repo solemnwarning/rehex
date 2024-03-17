@@ -50,8 +50,8 @@ static std::vector<std::string> stringify_regions(const std::vector<DocumentCtrl
 		if(cr != NULL)
 		{
 			snprintf(buf, sizeof(buf),
-				"CommentRegion(c_offset = %ld, c_length = %ld, indent_offset = %ld+%db, indent_length = %ld+%db, c_text = '%s', truncate = %d)",
-				(long)(cr->c_offset), (long)(cr->c_length), (long)(cr->indent_offset.byte()), cr->indent_offset.bit(), (long)(cr->indent_length.byte()), cr->indent_length.bit(), cr->c_text.ToStdString().c_str(), (int)(cr->truncate));
+				"CommentRegion(c_offset = %ld.%d, c_length = %ld.%d, indent_offset = %ld+%db, indent_length = %ld+%db, c_text = '%s', truncate = %d)",
+				(long)(cr->c_offset.byte()), cr->c_offset.bit(), (long)(cr->c_length.byte()), cr->c_length.bit(), (long)(cr->indent_offset.byte()), cr->indent_offset.bit(), (long)(cr->indent_length.byte()), cr->indent_length.bit(), cr->c_text.ToStdString().c_str(), (int)(cr->truncate));
 		}
 		else if(drdh != NULL)
 		{
@@ -147,15 +147,15 @@ TEST(Tab, ComputeRegionsFlatComments)
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1024, c_length = 128, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'unite', truncate = 0)",
-		"CommentRegion(c_offset = 1024, c_length = 64, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'release', truncate = 0)",
-		"CommentRegion(c_offset = 1024, c_length = 0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'unite', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'release', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088+0b, indent_length = 0+0b, c_text = 'uncle', truncate = 0)",
+		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 0+0b, c_text = 'uncle', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152+0b, indent_length = 0+0b, c_text = 'scarecrow', truncate = 0)",
+		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 0+0b, c_text = 'scarecrow', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 896+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 2048, c_length = 64, indent_offset = 2048+0b, indent_length = 0+0b, c_text = 'crowded', truncate = 0)",
+		"CommentRegion(c_offset = 2048.0, c_length = 64.0, indent_offset = 2048+0b, indent_length = 0+0b, c_text = 'crowded', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
@@ -181,15 +181,15 @@ TEST(Tab, ComputeRegionsShortComments)
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"CommentRegion(c_offset = 0, c_length = 128, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'unite', truncate = 1)",
-		"CommentRegion(c_offset = 0, c_length = 64, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'release', truncate = 1)",
-		"CommentRegion(c_offset = 0, c_length = 0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'robin', truncate = 1)",
+		"CommentRegion(c_offset = 0.0, c_length = 128.0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'unite', truncate = 1)",
+		"CommentRegion(c_offset = 0.0, c_length = 64.0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'release', truncate = 1)",
+		"CommentRegion(c_offset = 0.0, c_length = 0.0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'robin', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 64+0b, indent_offset = 0+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 64, c_length = 64, indent_offset = 64+0b, indent_length = 0+0b, c_text = 'uncle', truncate = 1)",
+		"CommentRegion(c_offset = 64.0, c_length = 64.0, indent_offset = 64+0b, indent_length = 0+0b, c_text = 'uncle', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 64+0b, d_length = 64+0b, indent_offset = 64+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 128, c_length = 64, indent_offset = 128+0b, indent_length = 0+0b, c_text = 'scarecrow', truncate = 1)",
+		"CommentRegion(c_offset = 128.0, c_length = 64.0, indent_offset = 128+0b, indent_length = 0+0b, c_text = 'scarecrow', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 128+0b, d_length = 1920+0b, indent_offset = 128+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 2048, c_length = 64, indent_offset = 2048+0b, indent_length = 0+0b, c_text = 'crowded', truncate = 1)",
+		"CommentRegion(c_offset = 2048.0, c_length = 64.0, indent_offset = 2048+0b, indent_length = 0+0b, c_text = 'crowded', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
@@ -236,16 +236,16 @@ TEST(Tab, ComputeRegionsNestedComments)
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1024, c_length = 128, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 0)",
-		"CommentRegion(c_offset = 1024, c_length = 64, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 0)",
-		"CommentRegion(c_offset = 1024, c_length = 0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
+		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 0)",
+		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 2048, c_length = 2048, indent_offset = 2048+0b, indent_length = 2048+0b, c_text = 'crowded', truncate = 0)",
+		"CommentRegion(c_offset = 2048.0, c_length = 2048.0, indent_offset = 2048+0b, indent_length = 2048+0b, c_text = 'crowded', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
@@ -272,16 +272,16 @@ TEST(Tab, ComputeRegionsNestedShortComments)
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1024, c_length = 128, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 1)",
-		"CommentRegion(c_offset = 1024, c_length = 64, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 1)",
-		"CommentRegion(c_offset = 1024, c_length = 0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 1)",
+		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 1)",
+		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 1)",
+		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 1)",
+		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 1)",
+		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 2048, c_length = 64, indent_offset = 2048+0b, indent_length = 64+0b, c_text = 'crowded', truncate = 1)",
+		"CommentRegion(c_offset = 2048.0, c_length = 64.0, indent_offset = 2048+0b, indent_length = 64+0b, c_text = 'crowded', truncate = 1)",
 		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 64+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 2112+0b, d_length = 1984+0b, indent_offset = 2112+0b, indent_length = 0+0b)",
 	};
@@ -309,12 +309,12 @@ TEST(Tab, ComputeRegionsClampStart)
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 1050+0b, d_length = 38+0b, indent_offset = 1050+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
+		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 0)",
+		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 2048, c_length = 2048, indent_offset = 2048+0b, indent_length = 2048+0b, c_text = 'crowded', truncate = 0)",
+		"CommentRegion(c_offset = 2048.0, c_length = 2048.0, indent_offset = 2048+0b, indent_length = 2048+0b, c_text = 'crowded', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
@@ -341,13 +341,13 @@ TEST(Tab, ComputeRegionsClampEnd)
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1024, c_length = 128, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 0)",
-		"CommentRegion(c_offset = 1024, c_length = 64, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 0)",
-		"CommentRegion(c_offset = 1024, c_length = 0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 0)",
+		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1088, c_length = 64, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
+		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
-		"CommentRegion(c_offset = 1152, c_length = 64, indent_offset = 1152+0b, indent_length = 48+0b, c_text = 'scarecrow', truncate = 0)",
+		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 48+0b, c_text = 'scarecrow', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 48+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
 	};
 	
@@ -421,7 +421,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedInComment)
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 126+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
-		"CommentRegion(c_offset = 126, c_length = 8, indent_offset = 126+0b, indent_length = 8+0b, c_text = 'special', truncate = 0)",
+		"CommentRegion(c_offset = 126.0, c_length = 8.0, indent_offset = 126+0b, indent_length = 8+0b, c_text = 'special', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 126+0b, d_length = 2+0b, indent_offset = 126+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 128+0b, d_length = 2+0b, indent_offset = 128+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 130+0b, d_length = 4+0b, indent_offset = 130+0b, indent_length = 0+0b)",
@@ -449,7 +449,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedAtStartOfComment)
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 140+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
-		"CommentRegion(c_offset = 140, c_length = 10, indent_offset = 140+0b, indent_length = 10+0b, c_text = 'gusty', truncate = 0)",
+		"CommentRegion(c_offset = 140.0, c_length = 10.0, indent_offset = 140+0b, indent_length = 10+0b, c_text = 'gusty', truncate = 0)",
 		"S16LEDataRegion(d_offset = 140+0b, d_length = 2+0b, indent_offset = 140+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 142+0b, d_length = 2+0b, indent_offset = 142+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 144+0b, d_length = 6+0b, indent_offset = 144+0b, indent_length = 0+0b)",
@@ -477,7 +477,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedAtEndOfComment)
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 160+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
-		"CommentRegion(c_offset = 160, c_length = 10, indent_offset = 160+0b, indent_length = 10+0b, c_text = 'call', truncate = 0)",
+		"CommentRegion(c_offset = 160.0, c_length = 10.0, indent_offset = 160+0b, indent_length = 10+0b, c_text = 'call', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 160+0b, d_length = 8+0b, indent_offset = 160+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 168+0b, d_length = 2+0b, indent_offset = 168+0b, indent_length = 0+0b)",
 		
@@ -504,7 +504,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedOccupyingWholeComment)
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 180+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
-		"CommentRegion(c_offset = 180, c_length = 2, indent_offset = 180+0b, indent_length = 2+0b, c_text = 'wind', truncate = 0)",
+		"CommentRegion(c_offset = 180.0, c_length = 2.0, indent_offset = 180+0b, indent_length = 2+0b, c_text = 'wind', truncate = 0)",
 		"S16LEDataRegion(d_offset = 180+0b, d_length = 2+0b, indent_offset = 180+0b, indent_length = 0+0b)",
 		
 		"DataRegionDocHighlight(d_offset = 182+0b, d_length = 3914+0b, indent_offset = 182+0b, indent_length = 0+0b)",
@@ -531,7 +531,7 @@ TEST(Tab, ComputeRegionsDataTypesNestedMultipleInComment)
 	const std::vector<std::string> EXPECT_REGIONS = {
 		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 256+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
-		"CommentRegion(c_offset = 256, c_length = 64, indent_offset = 256+0b, indent_length = 64+0b, c_text = 'sister', truncate = 0)",
+		"CommentRegion(c_offset = 256.0, c_length = 64.0, indent_offset = 256+0b, indent_length = 64+0b, c_text = 'sister', truncate = 0)",
 		"DataRegionDocHighlight(d_offset = 256+0b, d_length = 4+0b, indent_offset = 256+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 260+0b, d_length = 2+0b, indent_offset = 260+0b, indent_length = 0+0b)",
 		"DataRegionDocHighlight(d_offset = 262+0b, d_length = 8+0b, indent_offset = 262+0b, indent_length = 0+0b)",

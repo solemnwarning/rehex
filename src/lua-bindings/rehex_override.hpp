@@ -112,7 +112,7 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 {
 	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
 	
-	const REHex::ByteRangeTree<REHex::Document::Comment> &comments = self->get_comments();
+	const REHex::BitRangeTree<REHex::Document::Comment> &comments = self->get_comments();
 	
 	lua_newtable(L);            /* Table to return */
 	lua_Integer table_idx = 1;  /* Next index to use in return table */
@@ -124,11 +124,11 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 		lua_newtable(L);  /* Table for comment. */
 		
 		lua_pushstring(L, "offset");
-		lua_pushinteger(L, c->first.offset);
+		lua_pushinteger(L, c->first.offset.byte()); /* BITFIXUP */
 		lua_settable(L, -3);
 		
 		lua_pushstring(L, "length");
-		lua_pushinteger(L, c->first.length);
+		lua_pushinteger(L, c->first.length.byte()); /* BITFIXUP */
 		lua_settable(L, -3);
 		
 		lua_pushstring(L, "text");

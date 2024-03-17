@@ -18,8 +18,8 @@
 #include "platform.hpp"
 #include "Events.hpp"
 
-wxDEFINE_EVENT(REHex::COMMENT_LEFT_CLICK,     REHex::OffsetLengthEvent);
-wxDEFINE_EVENT(REHex::COMMENT_RIGHT_CLICK,    REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::COMMENT_LEFT_CLICK,     REHex::BitRangeEvent);
+wxDEFINE_EVENT(REHex::COMMENT_RIGHT_CLICK,    REHex::BitRangeEvent);
 wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);
 
 wxDEFINE_EVENT(REHex::DATA_ERASING,              REHex::OffsetLengthEvent);
@@ -60,6 +60,25 @@ REHex::OffsetLengthEvent::OffsetLengthEvent(wxObject *source, wxEventType event,
 wxEvent *REHex::OffsetLengthEvent::Clone() const
 {
 	return new OffsetLengthEvent(*this);
+}
+
+REHex::BitRangeEvent::BitRangeEvent(wxWindow *source, wxEventType event, BitOffset offset, BitOffset length):
+	wxEvent(source->GetId(), event), offset(offset), length(length)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+REHex::BitRangeEvent::BitRangeEvent(wxObject *source, wxEventType event, BitOffset offset, BitOffset length):
+	wxEvent(wxID_NONE, event), offset(offset), length(length)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::BitRangeEvent::Clone() const
+{
+	return new BitRangeEvent(*this);
 }
 
 REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, BitOffset cursor_pos, Document::CursorState cursor_state):

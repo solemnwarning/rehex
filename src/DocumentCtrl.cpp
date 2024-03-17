@@ -1819,7 +1819,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 				&& rel_x >= (indent_width + (hf_width / 4)) /* Not left of left edge. */
 				&& rel_x < ((virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
 			{
-				OffsetLengthEvent event(this, COMMENT_LEFT_CLICK, cr->c_offset, cr->c_length);
+				BitRangeEvent event(this, COMMENT_LEFT_CLICK, cr->c_offset, cr->c_length);
 				ProcessWindowEvent(event);
 			}
 		}
@@ -1935,7 +1935,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 				&& rel_x >= (indent_width + (hf_width / 4)) /* Not left of left edge. */
 				&& rel_x < ((virtual_width - (hf_width / 4)) - indent_width)) /* Not right of right edge. */
 			{
-				OffsetLengthEvent event(this, COMMENT_RIGHT_CLICK, cr->c_offset, cr->c_length);
+				BitRangeEvent event(this, COMMENT_RIGHT_CLICK, cr->c_offset, cr->c_length);
 				ProcessWindowEvent(event);
 			}
 		}
@@ -2095,7 +2095,7 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		{
 			if(mouse_down_area != GenericDataRegion::SA_NONE)
 			{
-				BitOffset select_to_offset = BitOffset(cr->c_offset, 0);
+				BitOffset select_to_offset = cr->c_offset;
 				BitOffset new_sel_begin, new_sel_end;
 				
 				if(select_to_offset > mouse_down_at_offset)
@@ -5160,7 +5160,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 	}
 }
 
-REHex::DocumentCtrl::CommentRegion::CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length):
+REHex::DocumentCtrl::CommentRegion::CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length):
 	Region(indent_offset, indent_length),
 	c_offset(c_offset),
 	c_length(c_length),

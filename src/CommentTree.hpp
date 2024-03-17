@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -59,7 +59,7 @@ namespace REHex {
 			
 			bool refresh_comments();
 			int get_max_comment_depth() const;
-			static const NestedOffsetLengthMapKey *dv_item_to_key(const wxDataViewItem &item);
+			static const BitRangeTreeKey *dv_item_to_key(const wxDataViewItem &item);
 			
 			void set_filter_text(const wxString &filter_text);
 			wxString get_filter_text() const;
@@ -79,7 +79,7 @@ namespace REHex {
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			struct CommentData;
-			typedef std::pair<const NestedOffsetLengthMapKey, CommentData> values_elem_t;
+			typedef std::pair<const BitRangeTreeKey, CommentData> values_elem_t;
 			
 			struct ChildElemCompare
 			{
@@ -100,7 +100,7 @@ namespace REHex {
 				CommentData(values_elem_t *parent, const std::shared_ptr<const wxString> &text): parent(parent), is_container(false), text(text) {}
 			};
 			
-			std::map<NestedOffsetLengthMapKey, CommentData> values;
+			std::map<BitRangeTreeKey, CommentData> values;
 			std::set<values_elem_t*, ChildElemCompare> root;
 			
 			int max_comment_depth;
@@ -108,7 +108,7 @@ namespace REHex {
 			
 			wxString filter_text;
 			
-			std::map<NestedOffsetLengthMapKey, CommentData>::iterator erase_value(std::map<NestedOffsetLengthMapKey, CommentData>::iterator value_i);
+			std::map<BitRangeTreeKey, CommentData>::iterator erase_value(std::map<BitRangeTreeKey, CommentData>::iterator value_i);
 			void re_add_item(values_elem_t *value, bool as_container);
 			
 			#ifdef COMMENTTREEMODEL_BATCH_MODEL_UPDATES
@@ -123,7 +123,7 @@ namespace REHex {
 			void batched_item_changed(const wxDataViewItem &item);
 			void batched_item_flush();
 			
-			bool comment_or_child_matches_filter(const ByteRangeTree<Document::Comment>::Node *comment);
+			bool comment_or_child_matches_filter(const BitRangeTree<Document::Comment>::Node *comment);
 	};
 	
 	class CommentTree: public ToolPanel

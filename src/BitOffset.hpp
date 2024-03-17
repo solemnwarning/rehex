@@ -69,6 +69,22 @@ namespace REHex
 			*/
 			json_t *to_json() const;
 			
+			/**
+			 * @brief Unpack a BitOffset previously packed into an int64_t.
+			*/
+			static inline BitOffset from_int64(int64_t value)
+			{
+				return BitOffset((value / 8), (value % 8));
+			}
+			
+			/**
+			 * @brief Pack a BitOffset into an int64_t.
+			*/
+			int64_t to_int64() const
+			{
+				return value;
+			}
+			
 			static inline BitOffset BITS(int bits)
 			{
 				return BitOffset((bits / 8), (bits % 8));

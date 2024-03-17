@@ -3634,7 +3634,7 @@ TEST_F(DocumentTest, LoadMetadataComments)
 	
 	auto &got = doc->get_comments();
 	
-	ByteRangeTree<Document::Comment> expect;
+	BitRangeTree<Document::Comment> expect;
 	expect.set( 0, 10, REHex::Document::Comment("cold"));
 	expect.set(20, 10, REHex::Document::Comment("strong"));
 	expect.set(20,  5, REHex::Document::Comment("industrious"));
@@ -3692,7 +3692,7 @@ TEST_F(DocumentTest, LoadMetadataCommentUnicode)
 	
 	auto &got = doc->get_comments();
 	
-	ByteRangeTree<Document::Comment> expect;
+	BitRangeTree<Document::Comment> expect;
 	expect.set(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
 	
 	EXPECT_EQ(got, expect);
@@ -3753,7 +3753,7 @@ TEST_F(DocumentTest, LoadMetadataCommentsSkipBad)
 	
 	auto &got = doc->get_comments();
 	
-	ByteRangeTree<Document::Comment> expect;
+	BitRangeTree<Document::Comment> expect;
 	expect.set(0, 0, REHex::Document::Comment("valid comment"));
 	
 	EXPECT_EQ(got, expect);

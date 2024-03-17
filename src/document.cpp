@@ -877,15 +877,15 @@ bool REHex::Document::get_write_protect() const
 	return write_protect;
 }
 
-const REHex::ByteRangeTree<REHex::Document::Comment> &REHex::Document::get_comments() const
+const REHex::BitRangeTree<REHex::Document::Comment> &REHex::Document::get_comments() const
 {
 	return comments;
 }
 
-bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &comment)
+bool REHex::Document::set_comment(BitOffset offset, BitOffset length, const Comment &comment)
 {
-	assert(offset >= 0);
-	assert(length >= 0);
+	assert(offset >= BitOffset::ZERO);
+	assert(length >= BitOffset::ZERO);
 	
 	if(!comments.can_set(offset, length))
 	{
@@ -907,9 +907,9 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 	return true;
 }
 
-bool REHex::Document::erase_comment(off_t offset, off_t length)
+bool REHex::Document::erase_comment(BitOffset offset, BitOffset length)
 {
-	if(comments.find(ByteRangeTreeKey(offset, length)) == comments.end())
+	if(comments.find(BitRangeTreeKey(offset, length)) == comments.end())
 	{
 		return false;
 	}
@@ -917,7 +917,7 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	_tracked_change("delete comment",
 		[this, offset, length]()
 		{
-			comments.erase(ByteRangeTreeKey(offset, length));
+			comments.erase(BitRangeTreeKey(offset, length));
 			_raise_comment_modified();
 		},
 		[this]()
@@ -929,9 +929,9 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	return true;
 }
 
-bool REHex::Document::erase_comment_recursive(off_t offset, off_t length)
+bool REHex::Document::erase_comment_recursive(BitOffset offset, BitOffset length)
 {
-	if(comments.find(ByteRangeTreeKey(offset, length)) == comments.end())
+	if(comments.find(BitRangeTreeKey(offset, length)) == comments.end())
 	{
 		return false;
 	}
@@ -939,7 +939,7 @@ bool REHex::Document::erase_comment_recursive(off_t offset, off_t length)
 	_tracked_change("delete comment and children",
 		[this, offset, length]()
 		{
-			comments.erase_recursive(ByteRangeTreeKey(offset, length));
+			comments.erase_recursive(BitRangeTreeKey(offset, length));
 			_raise_comment_modified();
 		},
 		[this]()
@@ -1246,10 +1246,10 @@ off_t REHex::Document::virt_to_real_offset(off_t virt_offset) const
 	}
 }
 
-void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments)
+void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const BitRangeTree<Document::Comment> &clipboard_comments)
 {
-	off_t cursor_pos = get_cursor_position().byte(); /* BITFIXUP */
-	off_t buffer_length = this->buffer_length();
+	BitOffset cursor_pos = get_cursor_position();
+	BitOffset buffer_length = BitOffset(this->buffer_length(), 0);
 	
 	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
 	{
@@ -1259,7 +1259,7 @@ void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRang
 			return;
 		}
 		
-		if(comments.find(ByteRangeTreeKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
+		if(comments.find(BitRangeTreeKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
 			|| !comments.can_set(cursor_pos + cc->first.offset, cc->first.length))
 		{
 			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), modal_dialog_parent);
@@ -1789,8 +1789,8 @@ json_t *REHex::Document::serialise_metadata() const
 		
 		json_t *comment = json_object();
 		if(json_array_append(comments, comment) == -1
-			|| json_object_set_new(comment, "offset", json_integer(c->first.offset)) == -1
-			|| json_object_set_new(comment, "length", json_integer(c->first.length)) == -1
+			|| json_object_set_new(comment, "offset", c->first.offset.to_json()) == -1
+			|| json_object_set_new(comment, "length", c->first.length.to_json()) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
 		{
 			json_decref(root);
@@ -1901,9 +1901,9 @@ void REHex::Document::_save_metadata(const std::string &filename)
 	}
 }
 
-REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
+REHex::BitRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
 {
-	ByteRangeTree<Comment> comments;
+	BitRangeTree<Comment> comments;
 	
 	json_t *j_comments = json_object_get(meta, "comments");
 	
@@ -1912,19 +1912,17 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(c
 	
 	json_array_foreach(j_comments, index, value)
 	{
-		if(!json_is_integer(json_object_get(value, "offset"))
-			|| !json_is_integer(json_object_get(value, "length"))
-			|| !json_is_string(json_object_get(value, "text")))
+		if(!json_is_string(json_object_get(value, "text")))
 		{
 			continue;
 		}
 		
-		off_t offset  = json_integer_value(json_object_get(value, "offset"));
-		off_t length  = json_integer_value(json_object_get(value, "length"));
+		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
+		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
 		wxString text = wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
 		
-		if(offset >= 0 && offset < buffer_length
-			&& length >= 0 && (offset + length) <= buffer_length)
+		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
+			&& length >= BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0))
 		{
 			comments.set(offset, length, Comment(text));
 		}
@@ -2140,20 +2138,20 @@ REHex::Document::TransOpFunc REHex::Document::TransOpFunc::operator()() const
 	return func();
 }
 
-const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");
+const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v2");
 
 REHex::CommentsDataObject::CommentsDataObject():
 	wxCustomDataObject(format) {}
 
-REHex::CommentsDataObject::CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base):
+REHex::CommentsDataObject::CommentsDataObject(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base):
 	wxCustomDataObject(format)
 {
 	set_comments(comments, base);
 }
 
-REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
+REHex::BitRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
 {
-	ByteRangeTree<Document::Comment> comments;
+	BitRangeTree<Document::Comment> comments;
 	
 	const unsigned char *data = (const unsigned char*)(GetData());
 	const unsigned char *end = data + GetSize();
@@ -2163,7 +2161,7 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_co
 	{
 		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
 		
-		bool x = comments.set(header->file_offset, header->file_length, REHex::Document::Comment(text));
+		bool x = comments.set(BitOffset::from_int64(header->file_offset), BitOffset::from_int64(header->file_length), REHex::Document::Comment(text));
 		assert(x); /* TODO: Raise some kind of error. Beep? */
 		
 		data += sizeof(Header) + header->text_length;
@@ -2172,7 +2170,7 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_co
 	return comments;
 }
 
-void REHex::CommentsDataObject::set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base)
+void REHex::CommentsDataObject::set_comments(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base)
 {
 	size_t size = 0;
 	
@@ -2192,8 +2190,8 @@ void REHex::CommentsDataObject::set_comments(const std::list<ByteRangeTree<Docum
 		
 		const wxScopedCharBuffer utf8_text = (*i)->value.text->utf8_str();
 		
-		header->file_offset = (*i)->key.offset - base;
-		header->file_length = (*i)->key.length;
+		header->file_offset = ((*i)->key.offset - base).to_int64();
+		header->file_length = (*i)->key.length.to_int64();
 		header->text_length = utf8_text.length();
 		
 		memcpy(outp, utf8_text.data(), utf8_text.length());

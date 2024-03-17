@@ -381,7 +381,7 @@ namespace REHex {
 			{
 				public:
 				
-				off_t c_offset, c_length;
+				BitOffset c_offset, c_length;
 				const wxString &c_text;
 				
 				bool truncate;
@@ -390,7 +390,7 @@ namespace REHex {
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				
-				CommentRegion(off_t c_offset, off_t c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length);
+				CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length);
 				
 				friend DocumentCtrl;
 			};

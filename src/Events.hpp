@@ -22,6 +22,7 @@
 #include <wx/event.h>
 #include <wx/window.h>
 
+#include "BitOffset.hpp"
 #include "document.hpp"
 
 namespace REHex
@@ -42,6 +43,23 @@ namespace REHex
 	
 	#define EVT_OFFSETLENGTH(id, type, func) \
 		wx__DECLARE_EVT1(type, id, wxEVENT_HANDLER_CAST(OffsetLengthEventFunction, func))
+	
+	class BitRangeEvent: public wxEvent
+	{
+		public:
+			const BitOffset offset;
+			const BitOffset length;
+			
+			BitRangeEvent(wxWindow *source, wxEventType event, BitOffset offset, BitOffset length);
+			BitRangeEvent(wxObject *source, wxEventType event, BitOffset offset, BitOffset length);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
+	typedef void (wxEvtHandler::*BitRangeEventFunction)(BitRangeEvent&);
+	
+	#define EVT_BITRANGE(id, type, func) \
+		wx__DECLARE_EVT1(type, id, wxEVENT_HANDLER_CAST(BitRangeEventFunction, func))
 	
 	class CursorUpdateEvent: public wxEvent
 	{
@@ -97,8 +115,8 @@ namespace REHex
 	#define EVT_FONTSIZEADJUSTMENT(func) \
 		wx__DECLARE_EVT1(FONT_SIZE_ADJUSTMENT_CHANGED, wxID_ANY, wxEVENT_HANDLER_CAST(FontSizeAdjustmentEventFunction, func))
 	
-	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     OffsetLengthEvent);
-	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    OffsetLengthEvent);
+	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     BitRangeEvent);
+	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    BitRangeEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
 	
 	wxDECLARE_EVENT(DATA_ERASING,              OffsetLengthEvent);

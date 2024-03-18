@@ -40,7 +40,7 @@ namespace REHex
 		OT offset;
 		OT length;
 		
-		RangeTreeKey<OT>(OT offset, OT length):
+		RangeTreeKey(OT offset, OT length):
 			offset(offset), length(length) {}
 		
 		bool operator<(const RangeTreeKey<OT> &rhs) const

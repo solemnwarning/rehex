@@ -3648,7 +3648,7 @@ TEST_F(DocumentTest, SerialiseMetadataCommentUnicode)
 	std::vector<unsigned char> zero_1k(1024, 0);
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
-	doc->set_comment(0, 10, REHex::Document::Comment(wxString::FromUTF8("mundané")));
+	doc->set_comment(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
 	
 	AutoJSON got(doc->serialise_metadata());
 	

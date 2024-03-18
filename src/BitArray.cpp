@@ -113,9 +113,18 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 	
 	auto highlight_func = [&](BitOffset offset)
 	{
+		const BitRangeMap<int> &highlights = doc->get_highlights();
+		auto highlight = highlights.get_range(offset);
+		
 		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			return hex_selection_highlight;
+		}
+		else if(highlight != highlights.end())
+		{
+			return Highlight(
+				active_palette->get_highlight_fg(highlight->second),
+				active_palette->get_highlight_bg(highlight->second));
 		}
 		else{
 			return Highlight(NoHighlight());

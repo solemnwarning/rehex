@@ -994,13 +994,13 @@ void REHex::Tab::OnCommentRightClick(BitRangeEvent &event)
 
 void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 {
-	off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
+	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
 	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
-	const BitRangeTree<Document::Comment> &comments = doc->get_comments();
-	const NestedOffsetLengthMap<int>     &highlights = doc->get_highlights();
+	const BitRangeTree<Document::Comment> &comments   = doc->get_comments();
+	const BitRangeMap<int>                &highlights = doc->get_highlights();
 	
 	wxMenu menu;
 	
@@ -1021,7 +1021,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		if(cg)
 		{
 			char offset_str[24];
-			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos));
+			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos.byte())); /* BITFIXUP */
 			
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
@@ -1034,7 +1034,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		if(cg)
 		{
 			char offset_str[24];
-			snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos));
+			snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos.byte())); /* BITFIXUP */
 			
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
@@ -1085,15 +1085,15 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	/* We need to maintain bitmap instances for lifespan of menu. */
 	std::list<wxBitmap> bitmaps;
 	
-	off_t highlight_off;
-	off_t highlight_length = 0;
+	BitOffset highlight_off;
+	BitOffset highlight_length = BitOffset::ZERO;
 	
-	auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
+	auto highlight_at_cur = highlights.get_range(cursor_pos);
 	
-	if(selection_length > 0 && selection_off.byte_aligned() && selection_length.byte_aligned())
+	if(selection_length > BitOffset::ZERO)
 	{
-		highlight_off    = selection_off.byte(); /* BITFIXUP */
-		highlight_length = selection_length.byte();
+		highlight_off    = selection_off;
+		highlight_length = selection_length;
 	}
 	else if(highlight_at_cur != highlights.end())
 	{
@@ -1106,7 +1106,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		highlight_length = 1;
 	}
 	
-	if(highlight_length > 0 && NestedOffsetLengthMap_can_set(highlights, highlight_off, highlight_length))
+	if(highlight_length > BitOffset::ZERO)
 	{
 		wxMenu *hlmenu = new wxMenu();
 		
@@ -1164,7 +1164,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	{
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Remove Highlight");
 		
-		NestedOffsetLengthMapKey key = highlight_at_cur->first;
+		BitRangeMap<int>::Range key = highlight_at_cur->first;
 		
 		menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
 		{

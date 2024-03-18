@@ -951,22 +951,17 @@ bool REHex::Document::erase_comment_recursive(BitOffset offset, BitOffset length
 	return true;
 }
 
-const REHex::NestedOffsetLengthMap<int> &REHex::Document::get_highlights() const
+const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 {
 	return highlights;
 }
 
-bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colour_idx)
+bool REHex::Document::set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx)
 {
 	assert(highlight_colour_idx >= 0);
 	assert(highlight_colour_idx < Palette::NUM_HIGHLIGHT_COLOURS);
 	
-	if(off < 0 || length < 1 || (off + length) > buffer_length())
-	{
-		return false;
-	}
-	
-	if(!highlights.can_set(off, length))
+	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0))
 	{
 		return false;
 	}
@@ -974,7 +969,7 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 	_tracked_change("set highlight",
 		[this, off, length, highlight_colour_idx]()
 		{
-			highlights.set(off, length, highlight_colour_idx);
+			highlights.set_range(off, length, highlight_colour_idx);
 			_raise_highlights_changed();
 		},
 		
@@ -987,9 +982,10 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 	return true;
 }
 
-bool REHex::Document::erase_highlight(off_t off, off_t length)
+bool REHex::Document::erase_highlight(BitOffset off, BitOffset length)
 {
-	if(highlights.find(NestedOffsetLengthMapKey(off, length)) == highlights.end())
+	auto highlight = highlights.get_range(off);
+	if(highlight == highlights.end() || highlight->first.offset != off || highlight->first.length != length)
 	{
 		return false;
 	}
@@ -997,7 +993,7 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	_tracked_change("remove highlight",
 		[this, off, length]()
 		{
-			highlights.erase(NestedOffsetLengthMapKey(off, length));
+			highlights.clear_range(off, length);
 			_raise_highlights_changed();
 		},
 		
@@ -1810,8 +1806,8 @@ json_t *REHex::Document::serialise_metadata() const
 	{
 		json_t *highlight = json_object();
 		if(json_array_append(highlights, highlight) == -1
-			|| json_object_set_new(highlight, "offset",     json_integer(h->first.offset)) == -1
-			|| json_object_set_new(highlight, "length",     json_integer(h->first.length)) == -1
+			|| json_object_set_new(highlight, "offset",     h->first.offset.to_json()) == -1
+			|| json_object_set_new(highlight, "length",     h->first.length.to_json()) == -1
 			|| json_object_set_new(highlight, "colour-idx", json_integer(h->second)) == -1)
 		{
 			json_decref(root);
@@ -1931,9 +1927,9 @@ REHex::BitRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(co
 	return comments;
 }
 
-REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length)
+REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length)
 {
-	NestedOffsetLengthMap<int> highlights;
+	BitRangeMap<int> highlights;
 	
 	json_t *j_highlights = json_object_get(meta, "highlights");
 	
@@ -1942,15 +1938,15 @@ REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t
 	
 	json_array_foreach(j_highlights, index, value)
 	{
-		off_t offset = json_integer_value(json_object_get(value, "offset"));
-		off_t length = json_integer_value(json_object_get(value, "length"));
-		int   colour = json_integer_value(json_object_get(value, "colour-idx"));
+		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
+		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
+		int       colour = json_integer_value(json_object_get(value, "colour-idx"));
 		
-		if(offset >= 0 && offset < buffer_length
-			&& length > 0 && (offset + length) <= buffer_length
+		if(offset >= 0 && offset < BitOffset(buffer_length, 0)
+			&& length > 0 && (offset + length) <= BitOffset(buffer_length, 0)
 			&& colour >= 0 && colour < Palette::NUM_HIGHLIGHT_COLOURS)
 		{
-			highlights.set(offset, length, colour);
+			highlights.set_range(offset, length, colour);
 		}
 	}
 	

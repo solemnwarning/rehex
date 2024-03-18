@@ -499,8 +499,8 @@ TEST_F(DocumentTest, SetHighlight)
 		"EV_HIGHLIGHTS_CHANGED"
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(10, 20, 0);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -516,8 +516,8 @@ TEST_F(DocumentTest, SetHighlightWholeFile)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0, strlen(IPSUM), 1);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0, strlen(IPSUM), 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -538,34 +538,10 @@ TEST_F(DocumentTest, SetHighlightMultiple)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0,  10, 2);
-	expect_highlights.set(20, 10, 3);
-	expect_highlights.set(30, 10, 4);
-	
-	EXPECT_EQ(doc->get_highlights(), expect_highlights);
-}
-
-TEST_F(DocumentTest, SetHighlightNested)
-{
-	/* Preload document with data. */
-	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
-	events.clear();
-	
-	ASSERT_TRUE(doc->set_highlight(0,  20, 1));
-	ASSERT_TRUE(doc->set_highlight(0,  10, 2));
-	ASSERT_TRUE(doc->set_highlight(40, 10, 3));
-	
-	EXPECT_EVENTS(
-		"EV_HIGHLIGHTS_CHANGED",
-		"EV_HIGHLIGHTS_CHANGED",
-		"EV_HIGHLIGHTS_CHANGED",
-	);
-	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0,  10, 2);
-	expect_highlights.set(0,  20, 1);
-	expect_highlights.set(40, 10, 3);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0,  10, 2);
+	expect_highlights.set_range(20, 10, 3);
+	expect_highlights.set_range(30, 10, 4);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -584,28 +560,29 @@ TEST_F(DocumentTest, SetHighlightOverwrite)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0, 20, 2);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0, 20, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
 
-TEST_F(DocumentTest, SetHighlightConflict)
+TEST_F(DocumentTest, SetHighlightOverwriteOverlap)
 {
 	/* Preload document with data. */
 	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
 	events.clear();
 	
-	ASSERT_TRUE (doc->set_highlight(10, 20, 1));
-	ASSERT_FALSE(doc->set_highlight( 0, 20, 2));
-	ASSERT_FALSE(doc->set_highlight(20, 20, 3));
+	ASSERT_TRUE(doc->set_highlight(0, 20, 1));
+	ASSERT_TRUE(doc->set_highlight(10, 20, 2));
 	
 	EXPECT_EVENTS(
 		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(10, 20, 1);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0, 10, 1);
+	expect_highlights.set_range(10, 20, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -641,8 +618,8 @@ TEST_F(DocumentTest, SetHighlightUndo)
 		"EV_HIGHLIGHTS_CHANGED"
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(10, 20, 0);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -655,7 +632,7 @@ TEST_F(DocumentTest, SetHighlightUndo)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> no_highlights;
+	BitRangeMap<int> no_highlights;
 	EXPECT_EQ(doc->get_highlights(), no_highlights);
 	
 	/* Redo the highlight... */
@@ -687,13 +664,13 @@ TEST_F(DocumentTest, InsertBeforeHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
-	expect_highlights_pre.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
+	expect_highlights_pre.set_range(40, 10, 2);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(25, 10, 1);
-	expect_highlights_post.set(45, 10, 2);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(25, 10, 1);
+	expect_highlights_post.set_range(45, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -738,11 +715,12 @@ TEST_F(DocumentTest, InsertWithinHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(20, 15, 1);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(20, 5, 1);
+	expect_highlights_post.set_range(30, 5, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -787,9 +765,9 @@ TEST_F(DocumentTest, InsertAfterHighlight)
 		"DATA_INSERT(50, 5)",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(20, 10, 1);
-	expect_highlights.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(20, 10, 1);
+	expect_highlights.set_range(40, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -833,13 +811,13 @@ TEST_F(DocumentTest, EraseBeforeHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
-	expect_highlights_pre.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
+	expect_highlights_pre.set_range(40, 10, 2);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(15, 10, 1);
-	expect_highlights_post.set(35, 10, 2);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(15, 10, 1);
+	expect_highlights_post.set_range(35, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -884,11 +862,11 @@ TEST_F(DocumentTest, EraseWithinHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(20, 5, 1);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(20, 5, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -933,9 +911,9 @@ TEST_F(DocumentTest, EraseAfterHighlight)
 		"DATA_ERASE(50, 5)",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(20, 10, 1);
-	expect_highlights.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(20, 10, 1);
+	expect_highlights.set_range(40, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -969,8 +947,8 @@ TEST_F(DocumentTest, EraseHighlight)
 	
 	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(10, 20, 0);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	
@@ -989,35 +967,7 @@ TEST_F(DocumentTest, EraseHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	
-	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
-}
-
-TEST_F(DocumentTest, EraseHighlightNested)
-{
-	/* Preload document with data. */
-	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
-	
-	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
-	ASSERT_TRUE(doc->set_highlight(10,  5, 1));
-	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(10, 20, 0);
-	expect_highlights_pre.set(10,  5, 1);
-	
-	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
-	
-	events.clear();
-	
-	ASSERT_TRUE(doc->erase_highlight(10, 20));
-	
-	EXPECT_EVENTS(
-		"EV_HIGHLIGHTS_CHANGED",
-	);
-	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(10,  5, 1);
+	BitRangeMap<int> expect_highlights_post;
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 }
@@ -1029,14 +979,14 @@ TEST_F(DocumentTest, EraseHighlightUndo)
 	
 	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(10, 20, 0);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	
 	ASSERT_TRUE(doc->erase_highlight(10, 20));
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
+	BitRangeMap<int> expect_highlights_post;
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -3987,6 +3937,73 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), "");
 	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), "u16");
 	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), "");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataHighlights)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_highlight(BitOffset( 0, 0), BitOffset(10, 0), 1);
+	doc->set_highlight(BitOffset(20, 2), BitOffset( 0, 4), 2);
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [],
+		"highlights": [
+			{
+				"colour-idx": 1,
+				"length": 10,
+				"offset": 0
+			},
+			{
+				"colour-idx": 2,
+				"length": [ 0, 4 ],
+				"offset": [ 20, 2 ]
+			}
+		],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataHighlights)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [],
+		"highlights": [
+			{
+				"colour-idx": 1,
+				"length": 10,
+				"offset": 0
+			},
+			{
+				"colour-idx": 2,
+				"length": [ 0, 4 ],
+				"offset": [ 20, 2 ]
+			}
+		],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_highlights();
+	
+	BitRangeMap<int> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset(10, 0), 1);
+	expect.set_range(BitOffset(20, 2), BitOffset( 0, 4), 2);
 	
 	EXPECT_EQ(got, expect);
 }

@@ -118,7 +118,7 @@ namespace REHex {
 					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc) override;
-					virtual Highlight highlight_at_off(off_t off) const override;
+					virtual Highlight highlight_at_off(BitOffset off) const override;
 			};
 			
 			class MessageRegion: public DocumentCtrl::Region

@@ -3553,9 +3553,9 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	wxSize client_size = doc.GetClientSize();
 	
-	auto highlight_func = [&](off_t offset)
+	auto highlight_func = [&](BitOffset offset)
 	{
-		if(ranges_matching_selection.isset(offset))
+		if(ranges_matching_selection.isset(offset.byte())) /* BITFIXUP */
 		{
 			return Highlight(
 				(*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_FG],
@@ -3575,9 +3575,9 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto hex_highlight_func = [&](off_t offset)
+	auto hex_highlight_func = [&](BitOffset offset)
 	{
-		if(offset >= scoped_selection_offset.byte() && offset < (scoped_selection_offset + scoped_selection_length).byte()) /* BITFIXUP */
+		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			return hex_selection_highlight;
 		}
@@ -3592,9 +3592,9 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto ascii_highlight_func = [&](off_t offset)
+	auto ascii_highlight_func = [&](BitOffset offset)
 	{
-		if(offset >= scoped_selection_offset.byte() && offset < (scoped_selection_offset + scoped_selection_length).byte()) /* BITFIXUP */
+		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			return ascii_selection_highlight;
 		}
@@ -3665,7 +3665,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_hex_line");
 	
@@ -3776,7 +3776,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		unsigned char high_nibble = (byte & 0xF0) >> 4;
 		unsigned char low_nibble  = (byte & 0x0F);
 		
-		auto highlight = highlight_at_off(cur_off.byte()); /* BITFIXUP */
+		auto highlight = highlight_at_off(cur_off);
 		
 		auto draw_nibble = [&](unsigned char nibble, bool invert)
 		{
@@ -3899,7 +3899,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_ascii_line");
 	
@@ -4192,7 +4192,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		const void *c_data = (data != NULL) ? (const void*)(data + i)          : (const void*)("?");
 		size_t c_data_len  = (data != NULL) ? (data_len - i) + data_extra_post : 1;
 		
-		auto highlight = highlight_at_off(cur_off.byte()); /* BITFIXUP */
+		auto highlight = highlight_at_off(cur_off);
 		
 		wxRect char_bbox;
 		if(ascii_active)
@@ -5130,7 +5130,7 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegi
 	}
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(off_t off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off) const
 {
 	return NoHighlight();
 }
@@ -5138,18 +5138,18 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset):
 	DataRegion(document, d_offset, d_length, virt_offset) {}
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(off_t off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off) const
 {
-	const NestedOffsetLengthMap<int> &highlights = document->get_highlights();
+	const BitRangeMap<int> &highlights = document->get_highlights();
 	
-	auto highlight = NestedOffsetLengthMap_get(highlights, off);
+	auto highlight = highlights.get_range(off);
 	if(highlight != highlights.end())
 	{
 		return Highlight(
 			active_palette->get_highlight_fg(highlight->second),
 			active_palette->get_highlight_bg(highlight->second));
 	}
-	else if(document->is_byte_dirty(off))
+	else if(document->is_byte_dirty(off.byte()))
 	{
 		return Highlight(
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],

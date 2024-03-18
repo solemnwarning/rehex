@@ -33,7 +33,6 @@
 #include "ByteRangeSet.hpp"
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
-#include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
 
 namespace REHex {
@@ -217,7 +216,7 @@ namespace REHex {
 			/**
 			 * @brief Get the highlighted byte ranges in the file.
 			*/
-			const NestedOffsetLengthMap<int> &get_highlights() const;
+			const BitRangeMap<int> &get_highlights() const;
 			
 			/**
 			 * @brief Set a highlight on a range of bytes in the file.
@@ -230,7 +229,7 @@ namespace REHex {
 			 * current size of the file, or the range is straddling the end of another
 			 * existing highlight.
 			*/
-			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
+			bool set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx);
 			
 			/**
 			 * @brief Remove a highlight from the file.
@@ -244,7 +243,7 @@ namespace REHex {
 			 *
 			 * Returns true on success, false if the highlight wasn't found.
 			*/
-			bool erase_highlight(off_t off, off_t length);
+			bool erase_highlight(BitOffset off, BitOffset length);
 			
 			/**
 			 * @brief Get the mapping of byte ranges to data types in the file.
@@ -333,7 +332,7 @@ namespace REHex {
 				BitOffset old_cpos_off;
 				CursorState old_cursor_state;
 				BitRangeTree<Comment> old_comments;
-				NestedOffsetLengthMap<int> old_highlights;
+				BitRangeMap<int> old_highlights;
 				BitRangeMap<std::string> old_types;
 				
 				ByteRangeMap<off_t> old_real_to_virt_segs;
@@ -366,7 +365,7 @@ namespace REHex {
 			unsigned int saved_seq;
 			
 			BitRangeTree<Comment> comments;
-			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
+			BitRangeMap<int> highlights;
 			BitRangeMap<std::string> types;
 			
 			ByteRangeMap<off_t> real_to_virt_segs;
@@ -410,7 +409,7 @@ namespace REHex {
 			void _save_metadata(const std::string &filename);
 			
 			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
-			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			static BitRangeMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
 			static BitRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);

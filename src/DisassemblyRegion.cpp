@@ -203,20 +203,20 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	BitOffset selection_off, selection_len;
 	std::tie(selection_off, selection_len) = doc_ctrl.get_selection_in_region(this);
 	
-	auto base_highlight_func = [&](off_t offset)
+	auto base_highlight_func = [&](BitOffset offset)
 	{
 		/* TODO: Support secondary selection. */
 		
-		const NestedOffsetLengthMap<int> &highlights = doc->get_highlights();
+		const BitRangeMap<int> &highlights = doc->get_highlights();
 		
-		auto highlight = NestedOffsetLengthMap_get(highlights, offset);
+		auto highlight = highlights.get_range(offset);
 		if(highlight != highlights.end())
 		{
 			return Highlight(
 				active_palette->get_highlight_fg(highlight->second),
 				active_palette->get_highlight_bg(highlight->second));
 		}
-		else if(doc->is_byte_dirty(offset))
+		else if(doc->is_byte_dirty(offset.byte())) /* BITFIXUP */
 		{
 			return Highlight(
 				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
@@ -233,9 +233,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto hex_highlight_func = [&](off_t offset)
+	auto hex_highlight_func = [&](BitOffset offset)
 	{
-		if(selection_len > 0 && BitOffset(offset, 0) >= selection_off && BitOffset(offset, 0) < (selection_off + selection_len)) /* BITFIXUP */
+		if(selection_len > BitOffset::ZERO && offset >= selection_off && offset < (selection_off + selection_len))
 		{
 			return hex_selection_highlight;
 		}
@@ -250,9 +250,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto ascii_highlight_func = [&](off_t offset)
+	auto ascii_highlight_func = [&](BitOffset offset)
 	{
-		if(selection_len > 0 && BitOffset(offset, 0) >= selection_off && BitOffset(offset, 0) < (selection_off + selection_len)) /* BITFIXUP */
+		if(selection_len > BitOffset::ZERO && offset >= selection_off && offset < (selection_off + selection_len))
 		{
 			return ascii_selection_highlight;
 		}

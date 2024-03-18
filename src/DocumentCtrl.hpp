@@ -131,8 +131,8 @@ namespace REHex {
 						NoHighlight(): Highlight() {}
 					};
 					
-					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
-					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(off_t)> &highlight_at_off, bool is_last_line);
+					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
+					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
 					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
 					
 					/**
@@ -359,7 +359,7 @@ namespace REHex {
 					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					
-					virtual Highlight highlight_at_off(off_t off) const;
+					virtual Highlight highlight_at_off(BitOffset off) const;
 					
 				private:
 					std::unique_ptr<CharacterFinder> char_finder;
@@ -374,7 +374,7 @@ namespace REHex {
 					DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
 					
 				protected:
-					virtual Highlight highlight_at_off(off_t off) const override;
+					virtual Highlight highlight_at_off(BitOffset off) const override;
 			};
 			
 			class CommentRegion: public Region

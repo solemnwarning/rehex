@@ -1537,14 +1537,16 @@ int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 	return width;
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(off_t off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(BitOffset off) const
 {
-	assert(off >= range->offset);
-	off_t relative_off = off - range->offset;
+	assert(off.byte_aligned());
 	
-	if(diff_window->offsets_pending.isset(off))
+	assert(off >= range->offset);
+	off_t relative_off = off.byte() - range->offset;
+	
+	if(diff_window->offsets_pending.isset(off.byte()))
 	{
-		diff_window->process_now(off, 2048 /* Probably enough to process screen in one go. */);
+		diff_window->process_now(off.byte(), 2048 /* Probably enough to process screen in one go. */);
 	}
 	
 	if(diff_window->offsets_different.isset(relative_off))

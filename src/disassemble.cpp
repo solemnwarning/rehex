@@ -110,7 +110,7 @@ static const CSArchitecture known_arch_list[] = {
 
 /* List of all supported architectures */
 static std::vector<CSArchitecture> arch_list;
-static std::list<REHex::DataTypeRegistration> disasm_dtrs;
+static std::list<REHex::StaticDataTypeRegistration> disasm_dtrs;
 static const char *DEFAULT_ARCH = "x86_64";
 
 static void Initialize_disassembler()
@@ -125,11 +125,14 @@ static void Initialize_disassembler()
 			disasm_dtrs.emplace_back(
 				(std::string("code:") + desc.triple),
 				(std::string("Machine code (") + desc.label + ")"),
-				[desc](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
-				{
-					return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
-				},
-				std::vector<std::string>({ "Machine code" }));
+				std::vector<std::string>({ "Machine code" }),
+				REHex::DataType()
+					.WithWordSize(REHex::BitOffset(1, 0))
+					.WithVariableSizeRegion(
+						[desc](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
+						{
+							return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
+						}));
 		}
 		else
 		{

@@ -86,7 +86,7 @@ REHex::Document::Document(const std::string &filename):
 	buffer = new Buffer(filename);
 	
 	data_seq.set_range   (0, buffer->length(), 0);
-	types.set_range      (0, buffer->length(), "");
+	types.set_range      (0, buffer->length(), TypeInfo(""));
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -179,7 +179,7 @@ void REHex::Document::reload()
 	_forward_buffer_events();
 	
 	types.clear();
-	types.set_range(0, new_size, "");
+	types.set_range(0, new_size, TypeInfo(""));
 	
 	OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, 0, overlap_size);
 	ProcessEvent(data_overwrite_event);
@@ -719,7 +719,7 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	
 	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
-	std::string data_type;
+	TypeInfo data_type;
 	const CharacterEncoder *encoder;
 	
 	if(buffer_length > 0)
@@ -733,7 +733,6 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 		encoder = get_text_encoder(ref_offset);
 	}
 	else{
-		data_type = "";
 		encoder = &ascii_encoder;
 	}
 	
@@ -776,7 +775,7 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	if(!encoded_text.empty())
 	{
 		insert_data(offset, encoded_text.data(), encoded_text.size(), new_cursor_pos, new_cursor_state);
-		set_data_type(offset, encoded_text.size(), data_type);
+		set_data_type(offset, encoded_text.size(), data_type.name, data_type.options);
 	}
 	
 	t.commit();
@@ -803,7 +802,7 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 	const CharacterEncoder *encoder = get_text_encoder(offset);
 	assert(encoder != NULL);
 	
-	std::string data_type = types.get_range(offset)->second;
+	TypeInfo data_type = types.get_range(offset)->second;
 	
 	for(off_t utf8_off = 0; utf8_off < (off_t)(utf8_text.size());)
 	{
@@ -844,7 +843,7 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 	if(!encoded_text.empty())
 	{
 		replace_data(offset, old_data_length, encoded_text.data(), encoded_text.size(), new_cursor_pos, new_cursor_state);
-		set_data_type(offset, encoded_text.size(), data_type);
+		set_data_type(offset, encoded_text.size(), data_type.name, data_type.options);
 	}
 	
 	t.commit();
@@ -1006,22 +1005,24 @@ bool REHex::Document::erase_highlight(BitOffset off, BitOffset length)
 	return true;
 }
 
-const REHex::BitRangeMap<std::string> &REHex::Document::get_data_types() const
+const REHex::BitRangeMap<REHex::Document::TypeInfo> &REHex::Document::get_data_types() const
 {
 	return types;
 }
 
-bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const std::string &type)
+bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const std::string &type, const json_t *options)
 {
 	if(offset < BitOffset::ZERO || length <= BitOffset::ZERO || (offset + length).byte() > buffer_length())
 	{
 		return false;
 	}
 	
+	TypeInfo type_info(type, options);
+	
 	_tracked_change("set data type",
-		[this, offset, length, type]()
+		[this, offset, length, type_info]()
 		{
-			types.set_range(offset, length, type);
+			types.set_range(offset, length, type_info);
 			_raise_types_changed();
 		},
 		
@@ -1043,17 +1044,19 @@ const REHex::CharacterEncoder *REHex::Document::get_text_encoder(off_t offset) c
 	auto type_at_off = types.get_range(offset);
 	assert(type_at_off != types.end());
 	
-	if(type_at_off->second != "")
+	if(type_at_off->second.name != "")
 	{
-		const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
-		assert(dt_reg != NULL);
+		auto type = DataTypeRegistry::get_type(type_at_off->second.name, type_at_off->second.options);
+		assert(type != NULL);
 		
-		return dt_reg->encoder;
+		if(type->encoder != NULL)
+		{
+			return type->encoder;
+		}
 	}
-	else{
-		static REHex::CharacterEncoderASCII ascii_encoder;
-		return &ascii_encoder;
-	}
+	
+	static REHex::CharacterEncoderASCII ascii_encoder;
+	return &ascii_encoder;
 }
 
 bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
@@ -1546,7 +1549,7 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		data_seq.set_slice(data_seq_slice);
 		
 		types.data_inserted(offset, length);
-		types.set_range(offset, length, "");
+		types.set_range(offset, length, TypeInfo(""));
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
@@ -1825,7 +1828,7 @@ json_t *REHex::Document::serialise_metadata() const
 	
 	for(auto dt = this->types.begin(); dt != this->types.end(); ++dt)
 	{
-		if(dt->second == "")
+		if(dt->second.name == "")
 		{
 			/* Don't bother serialising "this is data" */
 			continue;
@@ -1835,7 +1838,8 @@ json_t *REHex::Document::serialise_metadata() const
 		if(json_array_append_new(data_types, data_type) == -1
 			|| json_object_set_new(data_type, "offset", dt->first.offset.to_json()) == -1
 			|| json_object_set_new(data_type, "length", dt->first.length.to_json()) == -1
-			|| json_object_set_new(data_type, "type",   json_string(dt->second.c_str())) == -1)
+			|| json_object_set_new(data_type, "type",   json_string(dt->second.name.c_str())) == -1
+			|| (dt->second.options != NULL && json_object_set(data_type, "options", dt->second.options) == -1))
 		{
 			json_decref(root);
 			return NULL;
@@ -1953,10 +1957,10 @@ REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, of
 	return highlights;
 }
 
-REHex::BitRangeMap<std::string> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
+REHex::BitRangeMap<REHex::Document::TypeInfo> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
 {
-	BitRangeMap<std::string> types;
-	types.set_range(BitOffset(0, 0), BitOffset(buffer_length, 0), "");
+	BitRangeMap<TypeInfo> types;
+	types.set_range(BitOffset(0, 0), BitOffset(buffer_length, 0), TypeInfo(""));
 	
 	json_t *j_types = json_object_get(meta, "data_types");
 	
@@ -1968,12 +1972,13 @@ REHex::BitRangeMap<std::string> REHex::Document::_load_types(const json_t *meta,
 		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
 		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
 		const char *type = json_string_value(json_object_get(value, "type"));
+		json_t *options  = json_object_get(value, "options");
 		
 		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
 			&& length > BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0)
 			&& type != NULL)
 		{
-			types.set_range(offset, length, type);
+			types.set_range(offset, length, TypeInfo(type, options));
 		}
 	}
 	
@@ -2117,6 +2122,97 @@ wxString REHex::Document::Comment::menu_preview() const
 	}
 	else{
 		return first_line;
+	}
+}
+
+REHex::Document::TypeInfo::TypeInfo():
+	name(""),
+	options(NULL) {}
+
+REHex::Document::TypeInfo::TypeInfo(const std::string &name, const json_t *options):
+	name(name),
+	options(NULL)
+{
+	if(options != NULL)
+	{
+		this->options = json_deep_copy(options);
+		if(this->options == NULL)
+		{
+			throw std::bad_alloc();
+		}
+	}
+}
+
+REHex::Document::TypeInfo::TypeInfo(const TypeInfo &src):
+	name(src.name),
+	options(src.options)
+{
+	json_incref(options);
+}
+
+REHex::Document::TypeInfo::~TypeInfo()
+{
+	json_decref(options);
+}
+
+bool REHex::Document::TypeInfo::operator==(const TypeInfo &rhs) const
+{
+	return name == rhs.name
+		&& ((options == NULL && rhs.options == NULL) || json_equal(options, rhs.options));
+}
+
+bool REHex::Document::TypeInfo::operator!=(const TypeInfo &rhs) const
+{
+	return !(*this == rhs);
+}
+
+bool REHex::Document::TypeInfo::operator<(const TypeInfo &rhs) const
+{
+	if(name < rhs.name)
+	{
+		return true;
+	}
+	else if(name > rhs.name)
+	{
+		return false;
+	}
+	else{
+		if(options == NULL && rhs.options == NULL)
+		{
+			/* this == rhs */
+			return false;
+		}
+		else if(options == NULL)
+		{
+			/* this < rhs */
+			return true;
+		}
+		else if(rhs.options == NULL)
+		{
+			/* this > rhs */
+			return false;
+		}
+		else{
+			/* TODO: Implement a proper JSON compare function. */
+			
+			char *lhs_options = json_dumps(options,     JSON_COMPACT | JSON_SORT_KEYS);
+			char *rhs_options = json_dumps(rhs.options, JSON_COMPACT | JSON_SORT_KEYS);
+			
+			if(lhs_options == NULL || rhs_options == NULL)
+			{
+				free(lhs_options);
+				free(rhs_options);
+				
+				throw std::bad_alloc();
+			}
+			
+			int result = strcmp(lhs_options, rhs_options);
+			
+			free(lhs_options);
+			free(rhs_options);
+			
+			return result < 0;
+		}
 	}
 }
 

@@ -1174,7 +1174,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	if(selection_length > 0)
 	{
-		const BitRangeMap<std::string> &data_types = doc->get_data_types();
+		const BitRangeMap<Document::TypeInfo> &data_types = doc->get_data_types();
 		
 		auto selection_off_type = data_types.get_range(selection_off);
 		assert(selection_off_type != data_types.end());
@@ -1186,7 +1186,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		wxMenuItem *data_itm = dtmenu->AppendCheckItem(wxID_ANY, "Data");
 		
 		if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
-			&& selection_off_type->second == "")
+			&& selection_off_type->second.name == "")
 		{
 			data_itm->Check(true);
 		}
@@ -1208,9 +1208,17 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		for(auto dti = sorted_dts.begin(); dti != sorted_dts.end(); ++dti)
 		{
-			const DataTypeRegistration *dt = *dti;
+			const DataTypeRegistration *dtr = *dti;
 			
-			if(dt->fixed_size >= 0 && (selection_length.byte() % dt->fixed_size) != 0) /* BITFIXUP */
+			if(dtr->configurable())
+			{
+				/* TODO: Support configurable types. */
+				continue;
+			}
+			
+			auto dt = dtr->get_type(NULL);
+			
+			if((selection_length % dt->word_size) != BitOffset::ZERO)
 			{
 				/* Selection is too short/long for this type. */
 				continue;
@@ -1219,10 +1227,10 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			wxMenu *group_menu = dtmenu;
 			
 			{
-				auto g = dt->groups.begin();
+				auto g = dtr->groups.begin();
 				auto p = group_menus.begin();
 				
-				for(; g != dt->groups.end(); ++g, ++p)
+				for(; g != dtr->groups.end(); ++g, ++p)
 				{
 					if(p == group_menus.end() || p->first != *g)
 					{
@@ -1237,26 +1245,26 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				}
 			}
 			
-			if(group_menus.size() > dt->groups.size())
+			if(group_menus.size() > dtr->groups.size())
 			{
-				group_menus.erase(std::next(group_menus.begin(), dt->groups.size()), group_menus.end());
+				group_menus.erase(std::next(group_menus.begin(), dtr->groups.size()), group_menus.end());
 			}
 			
-			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dt->label);
+			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dtr->label);
 			
 			if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
-				&& selection_off_type->second == dt->name)
+				&& selection_off_type->second.name == dtr->name)
 			{
 				itm->Check(true);
 			}
 			
 			#ifdef _WIN32
-			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			menu.Bind(wxEVT_MENU, [this, dtr, selection_off, selection_length](wxCommandEvent &event)
 			#else
-			group_menu->Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			group_menu->Bind(wxEVT_MENU, [this, dtr, selection_off, selection_length](wxCommandEvent &event)
 			#endif
 			{
-				doc->set_data_type(selection_off, selection_length, dt->name);
+				doc->set_data_type(selection_off, selection_length, dtr->name);
 			}, itm->GetId(), itm->GetId());
 		}
 		
@@ -2087,16 +2095,22 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			dr_length,
 			types_iter->first.length - (next_data - types_iter->first.offset));
 		
-		const DataTypeRegistration *dtr = DataTypeRegistry::by_name(types_iter->second);
+		std::shared_ptr<const DataType> dt = DataTypeRegistry::get_type(types_iter->second.name, types_iter->second.options);
 		
-		if(dtr != NULL && BitOffset(dtr->fixed_size, 0) <= dr_length)
+		if(dt != NULL && dt->region_factory && dt->region_fixed_size <= dr_length)
 		{
-			if(dtr->fixed_size >= 0 && dr_length > BitOffset(dtr->fixed_size, 0))
+			if(dt->region_fixed_size > BitOffset::ZERO && dr_length > dt->region_fixed_size)
 			{
-				dr_length = BitOffset(dtr->fixed_size, 0);
+				dr_length = dt->region_fixed_size;
+			}
+			else if((dr_length % dt->word_size) != BitOffset::ZERO)
+			{
+				dr_length -= dr_length % dt->word_size;
 			}
 			
-			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_virt));
+			assert(dr_length > BitOffset::ZERO);
+			
+			regions.push_back(dt->region_factory(doc, next_data, dr_length, next_virt));
 		}
 		else{
 			/* DataRegion only allows whole-byte lengths, so if we have any spare bits

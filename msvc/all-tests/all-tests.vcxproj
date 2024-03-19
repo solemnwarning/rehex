@@ -283,6 +283,7 @@
     <ClCompile Include="..\..\tests\CommentTree.cpp" />
     <ClCompile Include="..\..\tests\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\tests\DataHistogramAccumulator.cpp" />
+    <ClCompile Include="..\..\tests\DataType.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
     <ClCompile Include="..\..\tests\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />

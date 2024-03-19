@@ -130,12 +130,12 @@ class DocumentTest: public ::testing::Test
 
 #define EXPECT_DATA_TYPES(...) \
 { \
-	const std::vector< std::pair<BitRangeMap<std::string>::Range, std::string> > expect_types = {  __VA_ARGS__ }; \
+	const std::vector< std::pair<BitRangeMap<Document::TypeInfo>::Range, Document::TypeInfo> > expect_types = {  __VA_ARGS__ }; \
 	EXPECT_EQ(doc->get_data_types().get_ranges(), expect_types); \
 }
 
 #define DATA_TYPE(offset, length, type) \
-	std::make_pair(BitRangeMap<std::string>::Range(offset, length), type)
+	std::make_pair(BitRangeMap<Document::TypeInfo>::Range(offset, length), Document::TypeInfo(type))
 
 TEST_F(DocumentTest, InsertData)
 {
@@ -3769,11 +3769,11 @@ TEST_F(DocumentTest, LoadMetadataDataTypes)
 	
 	auto &got = doc->get_data_types();
 	
-	BitRangeMap<std::string> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), "s8");
-	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), "");
-	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), "u16");
-	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), "");
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("s8", NULL));
+	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
 }
@@ -3813,10 +3813,10 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 	
 	auto &got = doc->get_data_types();
 	
-	BitRangeMap<std::string> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), "");
-	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), "u16");
-	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), "");
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
 }
@@ -3864,10 +3864,10 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
 	
 	auto &got = doc->get_data_types();
 	
-	BitRangeMap<std::string> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), "");
-	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), "u16");
-	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), "");
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
 }
@@ -3932,11 +3932,92 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 	
 	auto &got = doc->get_data_types();
 	
-	BitRangeMap<std::string> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 2), "s8");
-	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), "");
-	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), "u16");
-	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), "");
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 2), Document::TypeInfo("s8", NULL));
+	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataDataTypesWithOptions)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "type1", AutoJSON("{ \"foo\": 1 }").json);
+	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "type2", AutoJSON("{ \"foo\": 2 }").json);
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "type1",
+				"options": {
+					"foo": 1
+				}
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "type2",
+				"options": {
+					"foo": 2
+				}
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesWithOptions)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "type1",
+				"options": {
+					"foo": 1
+				}
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "type2",
+				"options": {
+					"foo": 2
+				}
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("type1", AutoJSON("{ \"foo\": 1 }").json));
+	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("type2", AutoJSON("{ \"foo\": 2 }").json));
+	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
 }
@@ -4006,4 +4087,26 @@ TEST_F(DocumentTest, LoadMetadataDataHighlights)
 	expect.set_range(BitOffset(20, 2), BitOffset( 0, 4), 2);
 	
 	EXPECT_EQ(got, expect);
+}
+
+TEST(Document, TypeInfoComparison)
+{
+	/* Check name comparison. */
+	EXPECT_FALSE(Document::TypeInfo("a") < Document::TypeInfo("a"));
+	EXPECT_TRUE( Document::TypeInfo("a") < Document::TypeInfo("b"));
+	EXPECT_FALSE(Document::TypeInfo("b") < Document::TypeInfo("a"));
+	
+	/* Check options vs. no options comparison. */
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{}").json) < Document::TypeInfo("a"));
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{}").json) < Document::TypeInfo("a", AutoJSON("{}").json));
+	EXPECT_TRUE( Document::TypeInfo("a")                      < Document::TypeInfo("a", AutoJSON("{}").json));
+	
+	/* Check options comparison. */
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json));
+	EXPECT_TRUE( Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json));
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json));
+	
+	/* Check name takes priority over options. */
+	EXPECT_FALSE(Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json));
+	EXPECT_TRUE( Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json) < Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json));
 }

@@ -25,8 +25,12 @@ static REHex::DocumentCtrl::Region *BitArrayRegion_factory(REHex::SharedDocument
 	return new REHex::BitArrayRegion(doc, offset, length, virt_offset);
 }
 
-static REHex::DataTypeRegistration BitArrayType("bitarray", "Bit array", &BitArrayRegion_factory);
-
+static REHex::StaticDataTypeRegistration BitArrayTypeReg(
+	"bitarray", "Bit array", {},
+	REHex::DataType()
+		.WithWordSize(REHex::BitOffset(0, 1))
+		.WithVariableSizeRegion(&BitArrayRegion_factory));
+	
 REHex::BitArrayRegion::BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset):
 	GenericDataRegion(offset, length, virt_offset, virt_offset),
 	doc(doc),

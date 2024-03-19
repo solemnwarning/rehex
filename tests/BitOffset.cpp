@@ -158,3 +158,18 @@ TEST(BitOffset, Subtraction)
 	bo -= BitOffset(-10, 0);
 	EXPECT_EQ(bo, BitOffset(15, 6));
 }
+
+TEST(BitOffset, Modulo)
+{
+	EXPECT_EQ(BitOffset(0, 0) % BitOffset(1, 0), BitOffset(0, 0));
+	EXPECT_EQ(BitOffset(1, 0) % BitOffset(1, 0), BitOffset(0, 0));
+	EXPECT_EQ(BitOffset(0, 5) % BitOffset(1, 0), BitOffset(0, 5));
+	EXPECT_EQ(BitOffset(1, 2) % BitOffset(1, 0), BitOffset(0, 2));
+	EXPECT_EQ(BitOffset(1, 2) % BitOffset(0, 1), BitOffset(0, 0));
+	EXPECT_EQ(BitOffset(1, 2) % BitOffset(0, 4), BitOffset(0, 2));
+	EXPECT_EQ(BitOffset(1, 0) % BitOffset(0, 4), BitOffset(0, 0));
+	EXPECT_EQ(BitOffset(2, 0) % BitOffset(0, 4), BitOffset(0, 0));
+	EXPECT_EQ(BitOffset(1, 4) % BitOffset(0, 4), BitOffset(0, 0));
+	EXPECT_EQ(BitOffset(1, 0) % BitOffset(0, 7), BitOffset(0, 1));
+	EXPECT_EQ(BitOffset(2, 0) % BitOffset(0, 7), BitOffset(0, 2));
+}

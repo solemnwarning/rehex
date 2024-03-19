@@ -108,6 +108,21 @@ namespace REHex {
 				CSTATE_CURRENT,
 			};
 			
+			struct TypeInfo
+			{
+				std::string name;
+				json_t *options;
+				
+				TypeInfo();
+				TypeInfo(const std::string &name, const json_t *options = NULL);
+				TypeInfo(const TypeInfo &src);
+				~TypeInfo();
+				
+				bool operator==(const TypeInfo &rhs) const;
+				bool operator!=(const TypeInfo &rhs) const;
+				bool operator<(const TypeInfo &rhs) const;
+			};
+			
 			/**
 			 * @brief Create a Document for a new file.
 			*/
@@ -248,7 +263,7 @@ namespace REHex {
 			/**
 			 * @brief Get the mapping of byte ranges to data types in the file.
 			*/
-			const BitRangeMap<std::string> &get_data_types() const;
+			const BitRangeMap<TypeInfo> &get_data_types() const;
 			
 			/**
 			 * @brief Set a data type mapping in the file.
@@ -263,7 +278,7 @@ namespace REHex {
 			 * Returns true on success, false if the offset and/or length is beyond the
 			 * current size of the file.
 			*/
-			bool set_data_type(BitOffset offset, BitOffset length, const std::string &type);
+			bool set_data_type(BitOffset offset, BitOffset length, const std::string &type, const json_t *options = NULL);
 			
 			const CharacterEncoder *get_text_encoder(off_t offset) const;
 			
@@ -333,7 +348,7 @@ namespace REHex {
 				CursorState old_cursor_state;
 				BitRangeTree<Comment> old_comments;
 				BitRangeMap<int> old_highlights;
-				BitRangeMap<std::string> old_types;
+				BitRangeMap<TypeInfo> old_types;
 				
 				ByteRangeMap<off_t> old_real_to_virt_segs;
 				ByteRangeMap<off_t> old_virt_to_real_segs;
@@ -366,7 +381,7 @@ namespace REHex {
 			
 			BitRangeTree<Comment> comments;
 			BitRangeMap<int> highlights;
-			BitRangeMap<std::string> types;
+			BitRangeMap<TypeInfo> types;
 			
 			ByteRangeMap<off_t> real_to_virt_segs;
 			ByteRangeMap<off_t> virt_to_real_segs;
@@ -410,7 +425,7 @@ namespace REHex {
 			
 			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static BitRangeMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
-			static BitRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
+			static BitRangeMap<TypeInfo> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			

@@ -184,6 +184,14 @@ namespace REHex
 				return b;
 			}
 			
+			inline BitOffset operator%(const BitOffset &rhs) const
+			{
+				BitOffset b;
+				b.value = value % rhs.value;
+				
+				return b;
+			}
+			
 			inline BitOffset operator-() const
 			{
 				BitOffset b;

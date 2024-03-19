@@ -270,7 +270,7 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 			wxString data_string;
 			data_string.reserve(upper_limit);
 			
-			const BitRangeMap<std::string> &types = doc->get_data_types();
+			const BitRangeMap<Document::TypeInfo> &types = doc->get_data_types();
 			
 			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 			{
@@ -284,17 +284,17 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 						auto type_at_off = types.get_range(sr->offset + (off_t)(sd_off));
 						assert(type_at_off != types.end());
 						
-						const CharacterEncoder *encoder;
-						if(type_at_off->second != "")
+						static REHex::CharacterEncoderASCII ascii_encoder;
+						const CharacterEncoder *encoder = &ascii_encoder;
+						if(type_at_off->second.name != "")
 						{
-							const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+							std::shared_ptr<const DataType> dt_reg = DataTypeRegistry::get_type(type_at_off->second.name, type_at_off->second.options);
 							assert(dt_reg != NULL);
 							
-							encoder = dt_reg->encoder;
-						}
-						else{
-							static REHex::CharacterEncoderASCII ascii_encoder;
-							encoder = &ascii_encoder;
+							if(dt_reg->encoder != NULL)
+							{
+								encoder = dt_reg->encoder;
+							}
 						}
 						
 						/* TODO: Should we restrict to printable characters here? */

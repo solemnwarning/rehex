@@ -73,12 +73,15 @@ void REHex::CharacterFinder::start_worker()
 		assert(encoding_base <= base);
 		
 		const CharacterEncoder *encoder;
-		if(type_at_base->second != "")
+		if(type_at_base->second.name != "")
 		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
-			assert(dt_reg != NULL);
+			auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);
+			assert(type != NULL);
 			
-			encoder = dt_reg->encoder;
+			if(type->encoder != NULL)
+			{
+				encoder = type->encoder;
+			}
 		}
 		else{
 			static REHex::CharacterEncoderASCII ascii_encoder;
@@ -230,17 +233,17 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 		off_t encoding_base = type_at_base->first.offset.byte(); /* BITFIXUP */
 		assert(encoding_base <= t2_base_offset);
 		
-		const CharacterEncoder *encoder;
-		if(type_at_base->second != "")
+		static REHex::CharacterEncoderASCII ascii_encoder;
+		const CharacterEncoder *encoder = &ascii_encoder;
+		if(type_at_base->second.name != "")
 		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
-			assert(dt_reg != NULL);
+			auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);
+			assert(type != NULL);
 			
-			encoder = dt_reg->encoder;
-		}
-		else{
-			static REHex::CharacterEncoderASCII ascii_encoder;
-			encoder = &ascii_encoder;
+			if(type->encoder != NULL)
+			{
+				encoder = type->encoder;
+			}
 		}
 		
 		std::vector<unsigned char> data;

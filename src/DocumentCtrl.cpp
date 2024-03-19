@@ -3930,7 +3930,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	const wxPen *insert_cursor_pen = NULL;
 	wxPoint insert_cursor_pt1, insert_cursor_pt2;
 	
-	const BitRangeMap<std::string> &types = doc_ctrl->doc->get_data_types(); /* BITFIXUP */
+	const BitRangeMap<Document::TypeInfo> &types = doc_ctrl->doc->get_data_types(); /* BITFIXUP */
 	
 	size_t consume_chars = 0;
 	
@@ -4070,17 +4070,17 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		off_t encoding_base = std::max(type_at_off->first.offset.byte(), alignment_hint); /* BITFIXUP */
 		assert(encoding_base <= cur_off.byte()); /* BITFIXUP */
 		
-		const CharacterEncoder *encoder;
-		if(type_at_off->second != "")
+		static REHex::CharacterEncoderASCII ascii_encoder;
+		const CharacterEncoder *encoder = &ascii_encoder;
+		if(type_at_off->second.name != "")
 		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
-			assert(dt_reg != NULL);
+			auto type = DataTypeRegistry::get_type(type_at_off->second.name, type_at_off->second.options);
+			assert(type != NULL);
 			
-			encoder = dt_reg->encoder;
-		}
-		else{
-			static REHex::CharacterEncoderASCII ascii_encoder;
-			encoder = &ascii_encoder;
+			if(type->encoder != NULL)
+			{
+				encoder = type->encoder;
+			}
 		}
 		
 		EncodedCharacter ec = encoder->decode(data, data_len);
@@ -5277,7 +5277,7 @@ std::pair<REHex::BitOffset, off_t> REHex::DocumentCtrl::DataRegion::get_char_at(
 		return std::make_pair(BitOffset::INVALID, -1);
 	}
 	
-	const BitRangeMap<std::string> &types = document->get_data_types();
+	const BitRangeMap<Document::TypeInfo> &types = document->get_data_types();
 	
 	/* If the offset isn't aligned to the bounds of a multibyte character and the decoder can
 	 * detect the start/end of characters, then we can walk backwards to find where the
@@ -5291,17 +5291,17 @@ std::pair<REHex::BitOffset, off_t> REHex::DocumentCtrl::DataRegion::get_char_at(
 	BitOffset encoding_base = type_at_base->first.offset;
 	assert(encoding_base <= offset);
 	
-	const CharacterEncoder *encoder;
-	if(type_at_base->second != "")
+	static REHex::CharacterEncoderASCII ascii_encoder;
+	const CharacterEncoder *encoder = &ascii_encoder;
+	if(type_at_base->second.name != "")
 	{
-		const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
-		assert(dt_reg != NULL);
+		auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);
+		assert(type != NULL);
 		
-		encoder = dt_reg->encoder;
-	}
-	else{
-		static REHex::CharacterEncoderASCII ascii_encoder;
-		encoder = &ascii_encoder;
+		if(type->encoder != NULL)
+		{
+			encoder = type->encoder;
+		}
 	}
 	
 	if(encoder->mid_char_safe)

@@ -358,6 +358,9 @@
     <ClCompile Include="..\..\src\BitArray.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\DataType.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\res\ascii16.h">

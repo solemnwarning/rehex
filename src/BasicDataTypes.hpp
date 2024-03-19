@@ -48,13 +48,16 @@ namespace REHex
 			int offset_text_x;  /**< Virtual X coord of left edge of offsets, in pixels. */
 			int data_text_x;    /**< Virtual X coord of left edge of data, in pixels. */
 			
-			bool input_active;      /**< Is the user typing a new value for this range in? */
+			off_t input_off;        /**< Is the user typing a new value for this range in?
+			                         *   Offset of value relative to d_offset when value is being
+			                         *   modified, negative otherwise.
+			                        */
 			std::string input_buf;  /**< Input text buffer, empty when input_active is false. */
 			size_t input_pos;       /**< Insert cursor position in input_buf, zero when input_active is false. */
 			
-			void activate()
+			void activate(DocumentCtrl *doc_ctrl)
 			{
-				if(input_active)
+				if(input_off >= 0)
 				{
 					/* Already active. */
 					return;
@@ -63,19 +66,25 @@ namespace REHex
 				assert(input_buf.empty());
 				assert(input_pos == 0);
 				
-				input_active = true;
+				off_t relative_pos = (doc_ctrl->get_cursor_position() - d_offset).byte();
+				relative_pos = relative_pos - (relative_pos % sizeof(T));
+				
+				assert(relative_pos >= 0);
+				assert(relative_pos <= (d_length.byte() - (off_t)(sizeof(T))));
+				
+				input_off = relative_pos;
 			}
 			
 			void commit()
 			{
-				if(!write_string_value(input_buf))
+				if(!write_string_value(input_buf, (d_offset + BitOffset(input_off))))
 				{
 					wxBell();
 				}
 				
 				input_pos = 0;
 				input_buf.clear();
-				input_active = false;
+				input_off = -1;
 			}
 			
 		protected:
@@ -85,14 +94,14 @@ namespace REHex
 				type_label(type_label),
 				offset_text_x(-1),
 				data_text_x(-1),
-				input_active(false),
+				input_off(-1),
 				input_pos(0)
 			{
-				assert(length == sizeof(T));
+				assert(length.byte_aligned() && (length.byte() % sizeof(T)) == 0);
 			}
 			
 			virtual std::string to_string(const T *data) const = 0;
-			virtual bool write_string_value(const std::string &value) = 0;
+			virtual bool write_string_value(const std::string &value, BitOffset file_offset) = 0;
 			
 			virtual int calc_width(DocumentCtrl &doc_ctrl) override
 			{
@@ -112,20 +121,57 @@ namespace REHex
 			
 			virtual void calc_height(DocumentCtrl &doc_ctrl) override
 			{
-				y_lines = indent_final + 1;
+				y_lines = indent_final + (d_length.byte() / sizeof(T));
 			}
 			
 			virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override
 			{
 				BitOffset cursor_pos = doc_ctrl.get_cursor_position();
 				
-				if(input_active && (cursor_pos < d_offset || cursor_pos >= (d_offset + d_length)))
+				if(input_off >= 0)
 				{
 					/* Filthy hack - using the draw() function to detect the cursor
 					 * moving off and comitting the in-progress edit.
 					*/
 					
-					commit();
+					BitOffset io_base = d_offset + BitOffset(input_off, 0);
+					BitOffset io_end = io_base + BitOffset(sizeof(T), 0);
+					
+					if(cursor_pos < io_base || cursor_pos >= io_end)
+					{
+						commit();
+					}
+				}
+				
+				/* If we are scrolled part-way into a data region, don't render data above the client area
+	 			 * as it would get expensive very quickly with large files.
+				*/
+				int64_t skip_lines = (y < 0 ? (-y / doc_ctrl.hf_char_height()) : 0);
+				off_t skip_bytes  = skip_lines * sizeof(T);
+				
+				y += doc_ctrl.hf_char_height() * skip_lines;
+				
+				/* The maximum amount of data that can be drawn on the screen before we're past the bottom
+				 * of the client area. Drawing more than this would be pointless and very expensive in the
+				 * case of large files.
+				*/
+				int max_lines = ((doc_ctrl.GetClientSize().GetHeight() - y) / doc_ctrl.hf_char_height()) + 1;
+				off_t max_bytes = max_lines * sizeof(T);
+				
+				BitOffset data_pos = d_offset + BitOffset(skip_bytes, 0);
+				BitOffset virt_pos = virt_offset + BitOffset(skip_bytes, 0);
+				
+				BitOffset data_end = std::min(
+					(d_offset + d_length),
+					(data_pos + BitOffset(max_bytes, 0)));
+				
+				std::vector<unsigned char> data;
+				try {
+					data = doc->read_data(data_pos, (data_end - data_pos).byte());
+				}
+				catch(const std::exception &e)
+				{
+					fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::draw: %s\n", e.what());
 				}
 				
 				draw_container(doc_ctrl, dc, x, y);
@@ -151,155 +197,157 @@ namespace REHex
 					dc.SetTextBackground((*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 				};
 				
-				x += offset_text_x;
-				
-				if(doc_ctrl.get_show_offsets())
-				{
-					/* Draw the offsets to the left */
-					
-					std::string offset_str = format_offset(virt_offset.byte(), doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset()); /* BITFIXUP */
-					
-					normal_text();
-					dc.DrawText(offset_str, x, y);
-					
-					x += (data_text_x - offset_text_x);
-					
-					int offset_vl_x = x - (doc_ctrl.hf_char_width() / 2);
-					
-					wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
-					
-					dc.SetPen(norm_fg_1px);
-					dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
-				}
-				
-				bool data_err = false;
-				std::vector<unsigned char> data;
-				std::string data_string;
-				
-				try {
-					data = doc->read_data(d_offset, d_length.byte());
-					assert(data.size() == sizeof(T));
-					
-					data_string = to_string((const T*)(data.data()));
-				}
-				catch(const std::exception &e)
-				{
-					fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::draw: %s\n", e.what());
-					
-					data_err = true;
-					data.insert(data.end(), d_length.byte(), '?');
-					data_string = "????";
-				}
-				
 				BitOffset total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
 				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
-				
 				BitOffset region_selection_end = region_selection_offset + region_selection_length;
 				
-				if(input_active)
+				for(size_t buf_pos = 0; data_pos < data_end;)
 				{
-					normal_text();
-					dc.DrawText("[" + input_buf + "]", x, y);
-					
-					if(doc_ctrl.get_cursor_visible())
+					if(doc_ctrl.get_show_offsets())
 					{
-						int cursor_x = x + doc_ctrl.hf_string_width(1 + input_pos);
-						dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
+						/* Draw the offsets to the left */
+						
+						std::string offset_str = format_offset(virt_pos, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
+						
+						normal_text();
+						dc.DrawText(offset_str, (x + offset_text_x), y);
+						
+						int offset_vl_x = x + data_text_x - (doc_ctrl.hf_char_width() / 2);
+						
+						wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
+						
+						dc.SetPen(norm_fg_1px);
+						dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
 					}
-				}
-				else if(region_selection_length > BitOffset::ZERO && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - BitOffset::BITS(1))))
-				{
-					/* Selection encompasses *some* of our bytes and/or stretches
-					* beyond either end. Render the underlying hex bytes.
-					*/
 					
-					unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
-					unsigned int col = 0;
+					int data_x = x + data_text_x;
 					
-					for(size_t i = 0; i < data.size(); ++i)
+					std::string data_string = ((buf_pos + sizeof(T)) <= data.size())
+						? to_string((const T*)(data.data() + buf_pos))
+						: "????";
+					
+					if(input_off >= 0
+						&& data_pos >= (d_offset + BitOffset(input_off, 0))
+						&& data_pos < (d_offset + BitOffset((input_off + sizeof(T)), 0)))
 					{
-						if(i > 0 && (i % bytes_per_group) == 0)
+						normal_text();
+						dc.DrawText("[" + input_buf + "]", data_x, y);
+						
+						if(doc_ctrl.get_cursor_visible())
 						{
-							++col;
+							int cursor_x = data_x + doc_ctrl.hf_string_width(1 + input_pos);
+							dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
 						}
-						
-						const char *nibble_to_hex = data_err
-							? "????????????????"
-							: "0123456789ABCDEF";
-						
-						const char hex_str[] = {
-							nibble_to_hex[ (data[i] & 0xF0) >> 4 ],
-							nibble_to_hex[ data[i] & 0x0F ],
-							'\0'
-						};
-						
-						if(region_selection_offset <= (d_offset + (off_t)(i)) && region_selection_end > (d_offset + (off_t)(i)))
-						{
-							selected_text();
-						}
-						else{
-							normal_text();
-						}
-						
-						dc.DrawText(hex_str, x + doc_ctrl.hf_string_width(col), y);
-						col += 2;
 					}
+					else if(region_selection_length > BitOffset::ZERO
+						&& ((region_selection_offset > data_pos && region_selection_offset < (data_pos + BitOffset(sizeof(T), 0)))
+							|| (region_selection_end > data_pos && region_selection_end < (data_pos + BitOffset(sizeof(T), 0)))))
+					{
+						/* Selection encompasses *some* of our bytes and/or stretches
+						* beyond either end. Render the underlying hex bytes.
+						*/
+						
+						unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
+						unsigned int col = 0;
+						
+						for(size_t i = 0; i < sizeof(T); ++i)
+						{
+							if(i > 0 && (i % bytes_per_group) == 0)
+							{
+								++col;
+							}
+							
+							const char *nibble_to_hex = ((buf_pos + i) >= data.size())
+								? "????????????????"
+								: "0123456789ABCDEF";
+							
+							const char hex_str[] = {
+								nibble_to_hex[ (data[buf_pos + i] & 0xF0) >> 4 ],
+								nibble_to_hex[ data[buf_pos + i] & 0x0F ],
+								'\0'
+							};
+							
+							if(region_selection_offset <= (data_pos + (off_t)(i)) && region_selection_end > (data_pos + (off_t)(i)))
+							{
+								selected_text();
+							}
+							else{
+								normal_text();
+							}
+							
+							dc.DrawText(hex_str, data_x + doc_ctrl.hf_string_width(col), y);
+							col += 2;
+						}
+					}
+					else if(cursor_pos >= data_pos && cursor_pos < (data_pos + BitOffset(sizeof(T), 0)) && doc_ctrl.get_cursor_visible())
+					{
+						/* Invert colour for cursor position/blink. */
+						
+						normal_text();
+						dc.DrawText("[", data_x, y);
+						
+						inverted_text();
+						dc.DrawText(data_string, (data_x + doc_ctrl.hf_char_width()), y);
+						
+						normal_text();
+						dc.DrawText("]", (data_x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
+					}
+					else if(region_selection_length > BitOffset::ZERO
+						&& region_selection_offset <= data_pos && region_selection_end >= (data_pos + BitOffset(sizeof(T), 0)))
+					{
+						/* Selection encompasses our range fully. Render value using selected
+						* text colours.
+						*/
+						
+						normal_text();
+						dc.DrawText("[", data_x, y);
+						
+						selected_text();
+						dc.DrawText(data_string, (data_x + doc_ctrl.hf_char_width()), y);
+						
+						normal_text();
+						dc.DrawText("]", (data_x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
+					}
+					else{
+						/* No data in our range is selected. Render normally. */
+						
+						normal_text();
+						dc.DrawText("[" + data_string + "]", data_x, y);
+					}
+					
+					int type_x = data_x + doc_ctrl.hf_string_width(TYPE_X_CHAR);
+					
+					std::string type_string = std::string("<") + type_label + ">";
+					
+					normal_text();
+					dc.DrawText(type_string, type_x, y);
+					
+					data_pos += BitOffset(sizeof(T), 0);
+					virt_pos += BitOffset(sizeof(T), 0);
+					buf_pos  += sizeof(T);
+					
+					y += doc_ctrl.hf_char_height();
 				}
-				else if(cursor_pos >= d_offset && cursor_pos < (d_offset + d_length) && doc_ctrl.get_cursor_visible())
-				{
-					/* Invert colour for cursor position/blink. */
-					
-					normal_text();
-					dc.DrawText("[", x, y);
-					
-					inverted_text();
-					dc.DrawText(data_string, (x + doc_ctrl.hf_char_width()), y);
-					
-					normal_text();
-					dc.DrawText("]", (x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
-				}
-				else if(region_selection_length > BitOffset::ZERO)
-				{
-					/* Selection matches our range exactly. Render value using selected
-					* text colours.
-					*/
-					
-					normal_text();
-					dc.DrawText("[", x, y);
-					
-					selected_text();
-					dc.DrawText(data_string, (x + doc_ctrl.hf_char_width()), y);
-					
-					normal_text();
-					dc.DrawText("]", (x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
-				}
-				else{
-					/* No data in our range is selected. Render normally. */
-					
-					normal_text();
-					dc.DrawText("[" + data_string + "]", x, y);
-				}
-				
-				x += doc_ctrl.hf_string_width(TYPE_X_CHAR);
-				
-				std::string type_string = std::string("<") + type_label + ">";
-				
-				normal_text();
-				dc.DrawText(type_string, x, y);
 			}
 			
 			virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override
 			{
+				BitOffset line_offset = d_offset + BitOffset((mouse_y_lines * sizeof(T)), 0);
+				BitOffset line_end = line_offset + BitOffset(sizeof(T), 0);
+				
 				BitOffset total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 				
 				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl.get_selection_in_region(this);
+				BitOffset region_selection_end = region_selection_offset + region_selection_length;
 				
-				if(region_selection_length > BitOffset::ZERO && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - BitOffset::BITS(1))))
+				if(region_selection_length > BitOffset::ZERO
+					&& ((region_selection_offset > line_offset && region_selection_offset < line_end)
+						|| (region_selection_end > line_offset && region_selection_end < line_end)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
@@ -322,7 +370,7 @@ namespace REHex
 					else{
 						unsigned int char_offset_sub_spaces = char_offset - (char_offset / ((bytes_per_group * 2) + 1));
 						unsigned int line_offset_bytes      = char_offset_sub_spaces / 2;
-						BitOffset clicked_offset            = d_offset + BitOffset::BYTES(line_offset_bytes);
+						BitOffset clicked_offset            = line_offset + BitOffset::BYTES(line_offset_bytes);
 						
 						if(clicked_offset < (d_offset + d_length))
 						{
@@ -341,7 +389,7 @@ namespace REHex
 					std::vector<unsigned char> data;
 					
 					try {
-						data = doc->read_data(d_offset, d_length.byte());
+						data = doc->read_data(line_offset, sizeof(T));
 						assert(data.size() == sizeof(T));
 					}
 					catch(const std::exception &e)
@@ -358,7 +406,7 @@ namespace REHex
 					if(mouse_x_px >= 0 && char_offset < data_string.length())
 					{
 						/* Within screen area of data_string. */
-						return std::make_pair(d_offset, SA_SPECIAL);
+						return std::make_pair(line_offset, SA_SPECIAL);
 					}
 					else{
 						return std::make_pair(BitOffset::INVALID, SA_NONE);
@@ -368,14 +416,8 @@ namespace REHex
 			
 			virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
 			{
-				mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
-				mouse_x_px = std::max(mouse_x_px, 0);
-				
-				BitOffset mouse_x_bytes = std::min(
-					(d_offset + BitOffset::BYTES(mouse_x_px / doc_ctrl.hf_string_width(2))),
-					(d_offset + d_length - BitOffset::BYTES(1)));
-				
-				return std::make_pair(mouse_x_bytes, SA_SPECIAL);
+				BitOffset line_offset = d_offset + BitOffset((mouse_y_lines * sizeof(T)), 0);
+				return std::make_pair(line_offset, SA_SPECIAL);
 			}
 			
 			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override
@@ -383,7 +425,18 @@ namespace REHex
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
 				
-				return CURSOR_PREV_REGION;
+				off_t relative_pos = (pos - d_offset).byte();
+				relative_pos = relative_pos - (relative_pos % sizeof(T));
+				
+				off_t goto_pos = relative_pos - sizeof(T);
+				
+				if(goto_pos < 0)
+				{
+					return CURSOR_PREV_REGION;
+				}
+				else{
+					return d_offset + BitOffset(goto_pos);
+				}
 			}
 			
 			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override
@@ -391,23 +444,28 @@ namespace REHex
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
 				
-				return CURSOR_NEXT_REGION;
+				off_t relative_pos = (pos - d_offset).byte();
+				relative_pos = relative_pos - (relative_pos % sizeof(T));
+				
+				off_t goto_pos = relative_pos + sizeof(T);
+				
+				if(goto_pos >= d_length.byte())
+				{
+					return CURSOR_NEXT_REGION;
+				}
+				else{
+					return d_offset + BitOffset(goto_pos);
+				}
 			}
 			
 			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
-				
-				return CURSOR_PREV_REGION;
+				return cursor_left_from(pos, active_type);
 			}
 			
 			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override
 			{
-				assert(pos >= d_offset);
-				assert(pos <= (d_offset + d_length));
-				
-				return CURSOR_NEXT_REGION;
+				return cursor_right_from(pos, active_type);
 			}
 			
 			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override
@@ -441,12 +499,12 @@ namespace REHex
 			
 			virtual BitOffset last_row_nearest_column(int column) override
 			{
-				return d_offset;
+				return d_offset + d_length - BitOffset(sizeof(T), 0);
 			}
 			
 			virtual BitOffset nth_row_nearest_column(int64_t row, int column) override
 			{
-				return d_offset;
+				return d_offset + (sizeof(T) * row);
 			}
 			
 			DocumentCtrl::Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override
@@ -454,24 +512,33 @@ namespace REHex
 				assert(offset >= d_offset);
 				assert(offset <= (d_offset + d_length));
 				
+				off_t rel_offset = (offset - d_offset).byte();
+				int64_t line_num = rel_offset / sizeof(T);
+				
+				BitOffset line_offset = d_offset + BitOffset((line_num * sizeof(T)), 0);
+				BitOffset line_end = line_offset + BitOffset(sizeof(T), 0);
+				
 				BitOffset total_selection_first, total_selection_last;
 				std::tie(total_selection_first, total_selection_last) = doc_ctrl->get_selection_raw();
 				
 				BitOffset region_selection_offset, region_selection_length;
 				std::tie(region_selection_offset, region_selection_length) = doc_ctrl->get_selection_in_region(this);
+				BitOffset region_selection_end = region_selection_offset + region_selection_length;
 				
-				if(region_selection_length > BitOffset::ZERO && (total_selection_first != d_offset || total_selection_last != (d_offset + d_length - BitOffset::BITS(1))))
+				if(region_selection_length > BitOffset::ZERO
+					&& ((region_selection_offset > line_offset && region_selection_offset < line_end)
+						|| (region_selection_end > line_offset && region_selection_end < line_end)))
 				{
 					/* Our data is partially selected. We are displaying hex bytes. */
 					
-					off_t rel_offset = (offset - d_offset).byte();
+					off_t offset_within_line = rel_offset % sizeof(T);
 					
 					unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
-					int line_x = data_text_x + doc_ctrl->hf_string_width((rel_offset * 2) + (rel_offset / bytes_per_group));
+					int line_x = data_text_x + doc_ctrl->hf_string_width((offset_within_line * 2) + (offset_within_line / bytes_per_group));
 					
 					return DocumentCtrl::Rect(
 						line_x,                        /* x */
-						y_offset,                      /* y */
+						(y_offset * line_num),         /* y */
 						doc_ctrl->hf_string_width(2),  /* w */
 						1);                            /* h */
 				}
@@ -482,7 +549,7 @@ namespace REHex
 					
 					return DocumentCtrl::Rect(
 						data_text_x,                                   /* x */
-						y_offset,                                      /* y */
+						(y_offset + line_num),                         /* y */
 						doc_ctrl->hf_string_width(MAX_INPUT_LEN + 2),  /* w */
 						1);                                            /* h */
 				}
@@ -508,7 +575,7 @@ namespace REHex
 					|| (key >= 'A' && key <= 'Z')
 					|| key == '.')
 				{
-					activate();
+					activate(doc_ctrl);
 					
 					if(input_buf.length() < MAX_INPUT_LEN)
 					{
@@ -527,7 +594,7 @@ namespace REHex
 				{
 					if(input_pos == 0)
 					{
-						activate();
+						activate(doc_ctrl);
 						
 						input_buf.insert(input_pos, 1, key);
 						++input_pos;
@@ -539,7 +606,7 @@ namespace REHex
 				}
 				else if(key == WXK_DELETE)
 				{
-					activate();
+					activate(doc_ctrl);
 					
 					if(input_pos < input_buf.length())
 					{
@@ -552,7 +619,7 @@ namespace REHex
 				}
 				else if(key == WXK_BACK) /* Backspace */
 				{
-					activate();
+					activate(doc_ctrl);
 					
 					if(input_pos > 0)
 					{
@@ -580,7 +647,7 @@ namespace REHex
 						return true;
 					}
 					
-					activate();
+					activate(doc_ctrl);
 					
 					input_buf = to_string((const T*)(data.data()));
 					input_pos = input_buf.length();
@@ -593,7 +660,7 @@ namespace REHex
 				{
 					input_pos = 0;
 					input_buf.clear();
-					input_active = false;
+					input_off = -1;
 					
 					doc_ctrl->Refresh();
 					
@@ -601,7 +668,7 @@ namespace REHex
 				}
 				else if(key == WXK_RETURN)
 				{
-					if(input_active)
+					if(input_off >= 0)
 					{
 						commit();
 						doc_ctrl->Refresh();
@@ -625,7 +692,7 @@ namespace REHex
 				}
 				else if(key == WXK_HOME)
 				{
-					if(input_active)
+					if(input_off >= 0)
 					{
 						input_pos = 0;
 						doc_ctrl->Refresh();
@@ -635,7 +702,7 @@ namespace REHex
 				}
 				else if(key == WXK_END)
 				{
-					if(input_active)
+					if(input_off >= 0)
 					{
 						input_pos = input_buf.length();
 						doc_ctrl->Refresh();
@@ -705,7 +772,7 @@ namespace REHex
 					
 					std::string clipboard_text = clipboard_data.GetText().ToStdString();
 					
-					activate();
+					activate(doc_ctrl);
 					
 					input_buf.insert(input_pos, clipboard_text);
 					input_pos += clipboard_text.length();
@@ -735,7 +802,7 @@ namespace REHex
 				\
 			protected: \
 				virtual std::string to_string(const T *data) const override; \
-				virtual bool write_string_value(const std::string &value) override; \
+				virtual bool write_string_value(const std::string &value, BitOffset file_offset) override; \
 		};
 	
 	DECLARE_NDTR_CLASS(U8DataRegion, uint8_t)

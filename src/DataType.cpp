@@ -89,13 +89,14 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 
 static REHex::CharacterEncoderASCII ascii_encoder;
 
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::vector<std::string> &groups, off_t fixed_size):
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::vector<std::string> &groups):
 	name(name),
 	label(label),
 	groups(groups),
-	fixed_size(fixed_size),
 	region_factory(region_factory),
-	encoder(&ascii_encoder)
+	encoder(&ascii_encoder),
+	region_fixed_size(BitOffset::INVALID),
+	region_multi_size(BitOffset::INVALID),
 {
 	if(DataTypeRegistry::registrations == NULL)
 	{
@@ -109,10 +110,11 @@ REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const
 	name(name),
 	label(label),
 	groups(groups),
-	fixed_size(-1),
 	region_factory([](SharedDocumentPointer &document, BitOffset offset, BitOffset length, BitOffset virt_offset)
 		{ return new DocumentCtrl::DataRegionDocHighlight(document, offset, length, virt_offset); }),
-	encoder(encoder)
+	encoder(encoder),
+	region_fixed_size(BitOffset::INVALID),
+	region_multi_size(BitOffset::INVALID),
 {
 	if(DataTypeRegistry::registrations == NULL)
 	{
@@ -131,4 +133,20 @@ REHex::DataTypeRegistration::~DataTypeRegistration()
 		delete DataTypeRegistry::registrations;
 		DataTypeRegistry::registrations = NULL;
 	}
+}
+
+REHex::DataTypeRegistration &REHex::DataTypeRegistration::make_region_fixed_size(BitOffset size)
+{
+	assert(region_fixed_size == BitOffset::INVALID);
+	assert(region_multi_size == BitOffset::INVALID);
+	
+	region_fixed_size = size;
+}
+
+REHex::DataTypeRegistration &REHex::DataTypeRegistration::make_region_multi_size(BitOffset size)
+{
+	assert(region_fixed_size == BitOffset::INVALID);
+	assert(region_multi_size == BitOffset::INVALID);
+	
+	region_multi_size = size;
 }

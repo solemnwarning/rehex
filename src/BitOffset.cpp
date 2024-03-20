@@ -22,11 +22,32 @@
 static const int64_t INT61_MIN = -0x1000000000000000LL;
 static const int64_t INT61_MAX = 0xFFFFFFFFFFFFFFFLL;
 
-const REHex::BitOffset REHex::BitOffset::INVALID(-1, 0);
-const REHex::BitOffset REHex::BitOffset::ZERO(0, 0);
+/* This is a weird hack... but it seems to work.
+ *
+ * The BitOffset constants need to be initialised before other global objects
+ * to ensure they are valid (e.g.) when setting up DataType registrations.
+ *
+ * Constructing a BitOffset in the normal manner as a static object will
+ * initialise them at an indeterminate point during global initialisation, but
+ * constexpr will come first.
+ *
+ * You can't have a static constexpr member within a class of the same type as
+ * the containing class because it isn't fully defined, but you _can_
+ * (apparently) have a static reference member within the class and point it at
+ * a static constexpr instance defined outside of it.
+*/
 
-const REHex::BitOffset REHex::BitOffset::MIN(INT61_MIN + 1, -7);
-const REHex::BitOffset REHex::BitOffset::MAX(INT61_MAX, 7);
+static constexpr REHex::BitOffset BitOffset_INVALID{-1, 0, REHex::BitOffset::ConstantTag()};
+const REHex::BitOffset &REHex::BitOffset::INVALID = BitOffset_INVALID;
+
+static constexpr REHex::BitOffset BitOffset_ZERO{0, 0, REHex::BitOffset::ConstantTag()};
+const REHex::BitOffset &REHex::BitOffset::ZERO = BitOffset_ZERO;
+
+static constexpr REHex::BitOffset BitOffset_MIN{INT61_MIN + 1, -7, REHex::BitOffset::ConstantTag()};
+const REHex::BitOffset &REHex::BitOffset::MIN = BitOffset_MIN;
+
+static constexpr REHex::BitOffset BitOffset_MAX{INT61_MAX, 7, REHex::BitOffset::ConstantTag()};
+const REHex::BitOffset &REHex::BitOffset::MAX = BitOffset_MAX;
 
 REHex::BitOffset REHex::BitOffset::from_json(json_t *json)
 {

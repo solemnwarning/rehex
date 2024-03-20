@@ -41,11 +41,11 @@ namespace REHex
 			int64_t value;
 		
 		public:
-			static const BitOffset INVALID;
-			static const BitOffset ZERO;
+			static const BitOffset &INVALID;
+			static const BitOffset &ZERO;
 			
-			static const BitOffset MIN;
-			static const BitOffset MAX;
+			static const BitOffset &MIN;
+			static const BitOffset &MAX;
 			
 			BitOffset():
 				value(0) {}
@@ -56,8 +56,12 @@ namespace REHex
 				assert(bit <= 7);
 				assert((byte <= 0 && bit <= 0) || (byte >= 0 && bit >= 0));
 				
-				value = ((int64_t)(byte) << 3) + (int64_t)(bit);
+				value = ((int64_t)(byte) * 8) + (int64_t)(bit);
 			}
+			
+			class ConstantTag {};
+			constexpr BitOffset(off_t byte, int bit, ConstantTag tag):
+				value(((int64_t)(byte) * 8) + (int64_t)(bit)) {}
 			
 			/**
 			 * @brief Reconstruct a BitOffset previously serialised to JSON.

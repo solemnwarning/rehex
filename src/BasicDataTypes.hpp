@@ -78,6 +78,18 @@ namespace REHex
 				input_active = false;
 			}
 			
+			bool partially_selected(DocumentCtrl *doc_ctrl)
+			{
+				BitOffset total_selection_first, total_selection_last;
+				std::tie(total_selection_first, total_selection_last) = doc_ctrl->get_selection_raw();
+				
+				BitOffset region_selection_offset, region_selection_length;
+				std::tie(region_selection_offset, region_selection_length) = doc_ctrl->get_selection_in_region(this);
+				
+				return region_selection_length > BitOffset::ZERO
+					&& (total_selection_first != d_offset || (total_selection_last + BitOffset(0, 1)) != (d_offset + d_length));
+			}
+			
 		protected:
 			NumericDataTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const std::string &type_label):
 				GenericDataRegion(offset, length, virt_offset, virt_offset),
@@ -368,17 +380,23 @@ namespace REHex
 			
 			virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override
 			{
-				mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
-				mouse_x_px = std::max(mouse_x_px, 0);
-				
-				BitOffset mouse_x_bytes = std::min(
-					(d_offset + BitOffset::BYTES(mouse_x_px / doc_ctrl.hf_string_width(2))),
-					(d_offset + d_length - BitOffset::BYTES(1)));
-				
-				return std::make_pair(mouse_x_bytes, SA_SPECIAL);
+				if(partially_selected(&doc_ctrl))
+				{
+					mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
+					mouse_x_px = std::max(mouse_x_px, 0);
+					
+					BitOffset mouse_x_bytes = std::min(
+						(d_offset + BitOffset::BYTES(mouse_x_px / doc_ctrl.hf_string_width(2))),
+						(d_offset + d_length - BitOffset::BITS(1)));
+					
+					return std::make_pair(mouse_x_bytes, SA_SPECIAL);
+				}
+				else{
+					return std::make_pair(d_offset, SA_SPECIAL);
+				}
 			}
 			
-			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override
+			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -386,15 +404,27 @@ namespace REHex
 				return CURSOR_PREV_REGION;
 			}
 			
-			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override
+			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
 				
-				return CURSOR_NEXT_REGION;
+				if(partially_selected(doc_ctrl))
+				{
+					if((pos + BitOffset(1, 0)) < (d_offset + d_length))
+					{
+						return pos + BitOffset(1, 0);
+					}
+					else{
+						return CURSOR_NEXT_REGION;
+					}
+				}
+				else{
+					return CURSOR_NEXT_REGION;
+				}
 			}
 			
-			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override
+			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -402,7 +432,7 @@ namespace REHex
 				return CURSOR_PREV_REGION;
 			}
 			
-			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override
+			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -410,7 +440,7 @@ namespace REHex
 				return CURSOR_NEXT_REGION;
 			}
 			
-			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override
+			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));
@@ -418,7 +448,7 @@ namespace REHex
 				return d_offset;
 			}
 			
-			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override
+			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override
 			{
 				assert(pos >= d_offset);
 				assert(pos <= (d_offset + d_length));

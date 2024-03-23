@@ -258,7 +258,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 	return offset_near_or_at_xy(doc_ctrl, mouse_x_px, mouse_y_lines, false);
 }
 
-REHex::BitOffset REHex::BitArrayRegion::cursor_left_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::BitArrayRegion::cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -274,7 +274,7 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_left_from(BitOffset pos, ScreenAr
 	}
 }
 
-REHex::BitOffset REHex::BitArrayRegion::cursor_right_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::BitArrayRegion::cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -290,7 +290,7 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_right_from(BitOffset pos, ScreenA
 	}
 }
 
-REHex::BitOffset REHex::BitArrayRegion::cursor_up_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::BitArrayRegion::cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -304,7 +304,7 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_up_from(BitOffset pos, ScreenArea
 	}
 }
 
-REHex::BitOffset REHex::BitArrayRegion::cursor_down_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::BitArrayRegion::cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -318,7 +318,7 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_down_from(BitOffset pos, ScreenAr
 	}
 }
 
-REHex::BitOffset REHex::BitArrayRegion::cursor_home_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::BitArrayRegion::cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -328,7 +328,7 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_home_from(BitOffset pos, ScreenAr
 	return d_offset + BitOffset(line_offset, 0);
 }
 
-REHex::BitOffset REHex::BitArrayRegion::cursor_end_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::BitArrayRegion::cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));

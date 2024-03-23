@@ -142,12 +142,12 @@ namespace REHex
 			virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override;
 			virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 			
-			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override;
-			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_area) override;
-			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override;
-			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override;
-			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override;
-			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override;
+			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_area, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
 			
 			virtual int cursor_column(BitOffset pos) override;
 			virtual BitOffset first_row_nearest_column(int column) override;

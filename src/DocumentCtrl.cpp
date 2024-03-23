@@ -1464,7 +1464,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_UP)
 		{
-			new_cursor_pos = (*cur_region)->cursor_up_from(new_cursor_pos, _get_screen_area_for_cursor_state());
+			new_cursor_pos = (*cur_region)->cursor_up_from(new_cursor_pos, _get_screen_area_for_cursor_state(), this);
 			
 			if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
 			{
@@ -1490,7 +1490,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		}
 		else if(key == WXK_DOWN)
 		{
-			new_cursor_pos = (*cur_region)->cursor_down_from(new_cursor_pos, _get_screen_area_for_cursor_state());
+			new_cursor_pos = (*cur_region)->cursor_down_from(new_cursor_pos, _get_screen_area_for_cursor_state(), this);
 			
 			if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
 			{
@@ -1531,7 +1531,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		else if(key == WXK_HOME)
 		{
 			/* Move cursor to start of line. */
-			new_cursor_pos = (*cur_region)->cursor_home_from(new_cursor_pos, _get_screen_area_for_cursor_state());
+			new_cursor_pos = (*cur_region)->cursor_home_from(new_cursor_pos, _get_screen_area_for_cursor_state(), this);
 		}
 		else if(key == WXK_END && (modifiers & wxMOD_CONTROL))
 		{
@@ -1553,7 +1553,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		else if(key == WXK_END)
 		{
 			/* Move cursor to end of line. */
-			new_cursor_pos = (*cur_region)->cursor_end_from(new_cursor_pos, _get_screen_area_for_cursor_state());
+			new_cursor_pos = (*cur_region)->cursor_end_from(new_cursor_pos, _get_screen_area_for_cursor_state(), this);
 			
 			/* Special case: If "end" is pressed on the last line of the final data
 			 * region when in insert mode, jump past it.
@@ -2070,10 +2070,10 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 				GenericDataRegion *end_dr = data_region_by_offset(new_sel_end);
 				assert(end_dr != NULL);
 				
-				BitOffset end_plus_one = end_dr->cursor_right_from(new_sel_end, mouse_down_area);
+				BitOffset end_plus_one = end_dr->cursor_right_from(new_sel_end, mouse_down_area, this);
 				if(end_plus_one == GenericDataRegion::CURSOR_NEXT_REGION)
 				{
-					new_sel_end = end_dr->d_offset + end_dr->d_length - (off_t)(end_dr->d_length > 0);
+					new_sel_end = end_dr->d_offset + end_dr->d_length - BitOffset(0, (end_dr->d_length > 0 ? 1 : 0));
 				}
 				else{
 					new_sel_end = end_plus_one - BitOffset::BITS(1);
@@ -2201,12 +2201,12 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 				
 				virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
 				virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
-				virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+				virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
 				virtual int cursor_column(BitOffset pos) override { abort(); }
 				virtual BitOffset first_row_nearest_column(int column) override { abort(); }
 				virtual BitOffset last_row_nearest_column(int column) override { abort(); }
@@ -2266,12 +2266,12 @@ std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCt
 				
 				virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
 				virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
-				virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override { abort(); }
-				virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override { abort(); }
+				virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+				virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
 				virtual int cursor_column(BitOffset pos) override { abort(); }
 				virtual BitOffset first_row_nearest_column(int column) override { abort(); }
 				virtual BitOffset last_row_nearest_column(int column) override { abort(); }
@@ -2571,7 +2571,7 @@ REHex::BitOffset REHex::DocumentCtrl::region_cursor_left(BitOffset cursor_pos, G
 	auto region = _data_region_by_offset(cursor_pos);
 	assert(region != data_regions.end());
 	
-	BitOffset new_cursor_pos = (*region)->cursor_left_from(cursor_pos, area);
+	BitOffset new_cursor_pos = (*region)->cursor_left_from(cursor_pos, area, this);
 	
 	if(new_cursor_pos == GenericDataRegion::CURSOR_PREV_REGION)
 	{
@@ -2603,7 +2603,7 @@ REHex::BitOffset REHex::DocumentCtrl::region_cursor_right(BitOffset cursor_pos, 
 	auto region = _data_region_by_offset(cursor_pos);
 	assert(region != data_regions.end());
 	
-	BitOffset new_cursor_pos = (*region)->cursor_right_from(cursor_pos, area);
+	BitOffset new_cursor_pos = (*region)->cursor_right_from(cursor_pos, area, this);
 	
 	if(new_cursor_pos == GenericDataRegion::CURSOR_NEXT_REGION)
 	{
@@ -4803,7 +4803,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 	}
 }
 
-REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_left_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -4835,7 +4835,7 @@ REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_left_from(BitOffset pos
 	}
 }
 
-REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_right_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -4864,7 +4864,7 @@ REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_right_from(BitOffset po
 	}
 }
 
-REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_up_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -4899,7 +4899,7 @@ REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_up_from(BitOffset pos, 
 	}
 }
 
-REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_down_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -4941,7 +4941,7 @@ REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_down_from(BitOffset pos
 	}
 }
 
-REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_home_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
@@ -4978,7 +4978,7 @@ REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_home_from(BitOffset pos
 	return new_pos;
 }
 
-REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_end_from(BitOffset pos, ScreenArea active_type)
+REHex::BitOffset REHex::DocumentCtrl::DataRegion::cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));

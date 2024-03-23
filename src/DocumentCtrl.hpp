@@ -199,32 +199,32 @@ namespace REHex {
 					/**
 					 * @brief Returns the offset of the cursor position left of the given offset. May return CURSOR_PREV_REGION.
 					*/
-					virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position right of the given offset. May return CURSOR_NEXT_REGION.
 					*/
-					virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position up from the given offset. May return CURSOR_PREV_REGION.
 					*/
-					virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position down from the given offset. May return CURSOR_NEXT_REGION.
 					*/
-					virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position at the start of the line from the given offset.
 					*/
-					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Returns the offset of the cursor position at the end of the line from the given offset.
 					*/
-					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) = 0;
+					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) = 0;
 					
 					/**
 					 * @brief Returns the screen column index of the given offset within the region.
@@ -344,12 +344,12 @@ namespace REHex {
 					virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override;
 					virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 					
-					virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type) override;
-					virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type) override;
-					virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type) override;
-					virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type) override;
-					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type) override;
-					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type) override;
+					virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+					virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+					virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+					virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+					virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+					virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
 					
 					virtual int cursor_column(BitOffset pos) override;
 					virtual BitOffset first_row_nearest_column(int column) override;

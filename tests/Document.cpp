@@ -176,15 +176,16 @@ TEST_F(DocumentTest, InsertData)
 	events.clear();
 	
 	const char *DATA3 = "bubble";
-	doc->insert_data(15, (const unsigned char*)(DATA3), strlen(DATA3), 10, Document::CSTATE_HEX_MID, "seed");
+	doc->insert_data(15, (const unsigned char*)(DATA3), strlen(DATA3), 10, Document::CSTATE_HEX, "seed");
+	
 	
 	EXPECT_EVENTS(
 		"DATA_INSERT(15, 6)",
-		"CURSOR_UPDATE(10, 1)",
+		"CURSOR_UPDATE(10, 0)",
 	);
 	
-	EXPECT_EQ(doc->get_cursor_position(), 10)                    << "Document::insert_data() moves cursor to requested position";
-	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX_MID) << "Document::insert_data() sets cursor to requested state";
+	EXPECT_EQ(doc->get_cursor_position(), 10)                << "Document::insert_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::insert_data() sets cursor to requested state";
 	
 	ASSERT_DATA("impressstraightbubble");
 	
@@ -199,8 +200,8 @@ TEST_F(DocumentTest, InsertData)
 		"DATA_INSERT(7, 6)",
 	);
 	
-	EXPECT_EQ(doc->get_cursor_position(), 10)                    << "Document::insert_data() moves cursor to requested position";
-	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX_MID) << "Document::insert_data() sets cursor to requested state";
+	EXPECT_EQ(doc->get_cursor_position(), 10)                << "Document::insert_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::insert_data() sets cursor to requested state";
 	
 	ASSERT_DATA("impressyellowstraightbubble");
 }
@@ -372,6 +373,77 @@ TEST_F(DocumentTest, OverwriteDataUndo)
 	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::redo() sets cursor to requested state";
 	
 	ASSERT_DATA("CREDITlibrarydaughter");
+}
+
+TEST_F(DocumentTest, OverwriteBits)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "oceanic";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	doc->reset_to_clean();
+	
+	ASSERT_DATA("oceanic");
+	
+	ASSERT_FALSE(doc->is_dirty());
+	ASSERT_FALSE(doc->is_buffer_dirty());
+	ASSERT_FALSE(doc->is_byte_dirty(0));
+	ASSERT_FALSE(doc->is_byte_dirty(1));
+	ASSERT_FALSE(doc->is_byte_dirty(2));
+	
+	/* Overwrite at beginning of document... */
+	
+	events.clear();
+	
+	doc->overwrite_bits(BitOffset(0, 7), std::vector<bool>({ 1, 0, 1, 0 }));
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 2)",
+	);
+	
+	EXPECT_DATA("oCeanic");
+	
+	EXPECT_TRUE(doc->is_dirty());
+	EXPECT_TRUE(doc->is_buffer_dirty());
+	EXPECT_TRUE(doc->is_byte_dirty(0));
+	EXPECT_TRUE(doc->is_byte_dirty(1));
+	EXPECT_FALSE(doc->is_byte_dirty(2));
+	
+	/* Undo the overwrite... */
+	
+	events.clear();
+	
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 2)",
+	);
+	
+	EXPECT_DATA("oceanic");
+	
+	EXPECT_FALSE(doc->is_dirty());
+	EXPECT_FALSE(doc->is_buffer_dirty());
+	EXPECT_FALSE(doc->is_byte_dirty(0));
+	EXPECT_FALSE(doc->is_byte_dirty(1));
+	EXPECT_FALSE(doc->is_byte_dirty(2));
+	
+	/* Redo the overwrite... */
+	
+	events.clear();
+	
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 2)",
+	);
+	
+	EXPECT_DATA("oCeanic");
+	
+	EXPECT_TRUE(doc->is_dirty());
+	EXPECT_TRUE(doc->is_buffer_dirty());
+	EXPECT_TRUE(doc->is_byte_dirty(0));
+	EXPECT_TRUE(doc->is_byte_dirty(1));
+	EXPECT_FALSE(doc->is_byte_dirty(2));
 }
 
 TEST_F(DocumentTest, EraseData)

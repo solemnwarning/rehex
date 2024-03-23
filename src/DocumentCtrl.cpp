@@ -303,7 +303,7 @@ REHex::Document::CursorState REHex::DocumentCtrl::get_cursor_state() const
 
 bool REHex::DocumentCtrl::hex_view_active() const
 {
-	return cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID;
+	return cursor_state == Document::CSTATE_HEX;
 }
 
 bool REHex::DocumentCtrl::ascii_view_active() const
@@ -335,13 +335,7 @@ void REHex::DocumentCtrl::set_cursor_position(BitOffset position, Document::Curs
 	
 	if(cursor_state == Document::CSTATE_GOTO)
 	{
-		if(this->cursor_state == Document::CSTATE_HEX_MID)
-		{
-			cursor_state = Document::CSTATE_HEX;
-		}
-		else{
-			cursor_state = this->cursor_state;
-		}
+		cursor_state = this->cursor_state;
 	}
 	
 	/* Clamp cursor state to states valid at the new position. */
@@ -352,7 +346,7 @@ void REHex::DocumentCtrl::set_cursor_position(BitOffset position, Document::Curs
 	GenericDataRegion::ScreenArea valid_areas = region->screen_areas_at_offset(position, this);
 	assert((valid_areas & (GenericDataRegion::SA_HEX | GenericDataRegion::SA_ASCII | GenericDataRegion::SA_SPECIAL)) != 0);
 	
-	if(((cursor_state == Document::CSTATE_HEX || cursor_state == Document::CSTATE_HEX_MID) && (valid_areas & GenericDataRegion::SA_HEX) == 0)
+	if((cursor_state == Document::CSTATE_HEX && (valid_areas & GenericDataRegion::SA_HEX) == 0)
 		|| (cursor_state == Document::CSTATE_ASCII && (valid_areas & GenericDataRegion::SA_ASCII) == 0)
 		|| (cursor_state == Document::CSTATE_SPECIAL && (valid_areas & GenericDataRegion::SA_SPECIAL) == 0))
 	{
@@ -478,7 +472,6 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::_get_scr
 	switch(cursor_state)
 	{
 		case Document::CSTATE_HEX:
-		case Document::CSTATE_HEX_MID:
 			return GenericDataRegion::SA_HEX;
 			
 		case Document::CSTATE_ASCII:
@@ -1387,7 +1380,6 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		switch(cursor_state)
 		{
 			case Document::CSTATE_HEX:
-			case Document::CSTATE_HEX_MID:
 				if((valid_areas & GenericDataRegion::SA_SPECIAL) != 0)
 				{
 					/* Focus "special" view. */
@@ -3801,23 +3793,18 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			hex_x = hex_base_x + doc_ctrl->hf_string_width(++hex_x_char);
 		};
 		
-		bool inv_high, inv_low;
-		if(cur_off == cursor_pos && hex_active)
+		bool inv_high = false, inv_low = false;
+		if(hex_active && !doc_ctrl->insert_mode)
 		{
-			if(doc_ctrl->cursor_state == Document::CSTATE_HEX)
+			if(cursor_pos == cur_off)
 			{
-				inv_high = !doc_ctrl->insert_mode;
-				inv_low  = !doc_ctrl->insert_mode;
-			}
-			else /* if(doc_ctrl->cursor_state == Document::CSTATE_HEX_MID) */
-			{
-				inv_high = false;
+				inv_high = true;
 				inv_low  = true;
 			}
-		}
-		else{
-			inv_high = false;
-			inv_low  = false;
+			else if(cursor_pos == (cur_off + BitOffset(0, 4)))
+			{
+				inv_low = true;
+			}
 		}
 		
 		/* Need the current hex_x value for drawing any boxes or insert cursors
@@ -3836,13 +3823,13 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			insert_cursor_pt2 = wxPoint(pd_hx, y + doc_ctrl->hf_height);
 		}
 		
-		if(cur_off == cursor_pos && !doc_ctrl->insert_mode && !hex_active)
+		if((cur_off == cursor_pos || (cur_off + BitOffset(0, 4)) == cursor_pos) && !doc_ctrl->insert_mode && !hex_active)
 		{
 			/* Draw inactive overwrite cursor. */
 			dc.SetBrush(*wxTRANSPARENT_BRUSH);
 			dc.SetPen(norm_fg_1px);
 			
-			if(doc_ctrl->cursor_state == Document::CSTATE_HEX_MID)
+			if((cur_off + BitOffset(0, 4)) == cursor_pos)
 			{
 				dc.DrawRectangle(pd_hx + doc_ctrl->hf_char_width(), y, doc_ctrl->hf_char_width(), doc_ctrl->hf_height);
 			}

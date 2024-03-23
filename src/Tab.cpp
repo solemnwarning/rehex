@@ -755,9 +755,13 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	
 	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
-	auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
-	off_t selection_off = tmp.first.byte();
-	off_t selection_length = tmp.second.byte();
+	DocumentCtrl::GenericDataRegion *region = doc_ctrl->data_region_by_offset(cursor_pos);
+	assert(region != NULL);
+	
+	BitOffset cursor_pos_within_region = cursor_pos - region->d_offset;
+	
+	BitOffset selection_off, selection_length;
+	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	bool has_selection = doc_ctrl->has_selection();
 	
 	bool insert_mode = doc_ctrl->get_insert_mode();
@@ -768,59 +772,30 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	{
 		unsigned char nibble = REHex::parse_ascii_nibble(key);
 		
-		if(cursor_state == Document::CSTATE_HEX_MID)
+		if(insert_mode)
 		{
-			/* Overwrite least significant nibble of current byte, then move onto
-			 * inserting or overwriting at the next byte.
-			*/
-			
-			std::vector<unsigned char> cur_data;
-			try {
-				cur_data = doc->read_data(cursor_pos, 1);
-				assert(cur_data.size() == 1);
-			}
-			catch(const std::exception &e)
+			if(!cursor_pos.byte_aligned())
 			{
-				wxGetApp().printf_error("Exception in REHex::Tab::OnDocumentCtrlChar: %s\n", e.what());
+				wxBell();
 				return;
 			}
 			
-			unsigned char old_byte = cur_data[0];
-			unsigned char new_byte = (old_byte & 0xF0) | nibble;
-			
-			doc->overwrite_data(cursor_pos.byte() /* BITFIXUP */, &new_byte, 1, cursor_pos + 1, Document::CSTATE_HEX, "change data");
-		}
-		else if(insert_mode)
-		{
 			/* Inserting a new byte. Initialise the most significant nibble then move
 			 * onto overwriting the least significant.
 			*/
 			
 			unsigned char byte = (nibble << 4);
-			doc->insert_data(cursor_pos.byte() /* BITFIXUP */, &byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+			doc->insert_data(cursor_pos.byte(), &byte, 1, (cursor_pos + BitOffset(0, 4)), Document::CSTATE_GOTO, "change data");
 		}
 		else{
-			/* Overwrite most significant nibble of current byte, then move onto
-			 * overwriting the least significant.
-			*/
+			std::vector<bool> nibble_bits = {
+				((nibble & 8) != 0),
+				((nibble & 4) != 0),
+				((nibble & 2) != 0),
+				((nibble & 1) != 0),
+			};
 			
-			std::vector<unsigned char> cur_data;
-			try {
-				cur_data = doc->read_data(cursor_pos, 1);
-			}
-			catch(const std::exception &e)
-			{
-				wxGetApp().printf_error("Exception in REHex::Tab::OnDocumentCtrlChar: %s\n", e.what());
-				return;
-			}
-			
-			if(!cur_data.empty())
-			{
-				unsigned char old_byte = cur_data[0];
-				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
-				
-				doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
-			}
+			doc->overwrite_bits(cursor_pos, nibble_bits, (cursor_pos + BitOffset(0, 4)), Document::CSTATE_GOTO, "change data");
 		}
 		
 		doc_ctrl->clear_selection();
@@ -853,47 +828,69 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
-				doc_ctrl->clear_selection();
+				if(selection_off.byte_aligned() && selection_length.byte_aligned())
+				{
+					doc->erase_data(selection_off.byte(), selection_length.byte(), selection_off, Document::CSTATE_GOTO, "delete selection");
+					doc_ctrl->clear_selection();
+				}
+				else{
+					/* Selection isn't byte aligned. */
+					wxBell();
+				}
 			}
 			else if(has_selection)
 			{
 				/* Nonlinear selection. */
 				wxBell();
 			}
-			else if((cursor_pos + 1) < doc->buffer_length())
+			else if(cursor_pos.byte_aligned()
+				&& cursor_pos_within_region.byte_aligned()
+				&& (cursor_pos.byte() + 1) < doc->buffer_length())
 			{
-				doc->erase_data(cursor_pos.byte() /* BITFIXUP */, 1, cursor_pos, Document::CSTATE_GOTO, "delete");
+				doc->erase_data(cursor_pos.byte(), 1, cursor_pos, Document::CSTATE_GOTO, "delete");
 			}
-			else if(cursor_pos < doc->buffer_length())
+			else if(cursor_pos.byte_aligned()
+				&& cursor_pos_within_region.byte_aligned()
+				&& cursor_pos.byte() < doc->buffer_length())
 			{
-				doc->erase_data(cursor_pos.byte() /* BITFIXUP */, 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
+				doc->erase_data(cursor_pos.byte(), 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
 			}
 			
 			return;
 		}
 		else if(key == WXK_BACK)
 		{
-			if(selection_length > 0)
+			if(selection_length > BitOffset::ZERO)
 			{
-				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
-				doc_ctrl->clear_selection();
+				if(selection_off.byte_aligned() && selection_length.byte_aligned())
+				{
+					doc->erase_data(selection_off.byte(), selection_length.byte(), selection_off, Document::CSTATE_GOTO, "delete selection");
+					doc_ctrl->clear_selection();
+				}
+				else{
+					/* Selection isn't byte aligned. */
+					wxBell();
+				}
 			}
 			else if(has_selection)
 			{
 				/* Nonlinear selection. */
 				wxBell();
 			}
-			else if(cursor_state == Document::CSTATE_HEX_MID)
+			else if(cursor_pos.bit() == 4 && cursor_pos_within_region.bit() == 4)
 			{
 				/* Backspace while waiting for the second nibble in a byte should erase the current byte
 				 * rather than the previous one.
 				*/
-				doc->erase_data(cursor_pos.byte() /* BITFIXUP */, 1, (cursor_pos - 1), Document::CSTATE_HEX, "delete");
+				doc->erase_data(cursor_pos.byte(), 1, (cursor_pos - BitOffset(1, 4)), Document::CSTATE_GOTO, "delete");
 			}
-			else if(cursor_pos > 0)
+			else if(cursor_pos.bit() == 0 && cursor_pos_within_region.bit() == 0)
 			{
-				doc->erase_data((cursor_pos.byte() /* BITFIXUP */ - 1), 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
+				doc->erase_data((cursor_pos.byte() - 1), 1, (cursor_pos - BitOffset(1, 0)), Document::CSTATE_GOTO, "delete");
+			}
+			else{
+				/* Not aligned to byte. */
+				wxBell();
 			}
 			
 			return;

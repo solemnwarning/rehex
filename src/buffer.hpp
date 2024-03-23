@@ -245,6 +245,21 @@ namespace REHex {
 			bool overwrite_data(BitOffset offset, unsigned const char *data, off_t length);
 			
 			/**
+			 * @brief Overwrite a series of bits in the Buffer.
+			 *
+			 * @param offset  Offset to write from.
+			 * @param data    Data to write into the buffer.
+			 *
+			 * Overwrites the given range of data in the buffer, returning true if the
+			 * write was successful, false if the offset and/or length are beyond the
+			 * current size of the buffer.
+			 *
+			 * This can be used for writing sub-byte quantities of data into the
+			 * buffer, up to the last bit in the file.
+			*/
+			bool overwrite_bits(BitOffset offset, const std::vector<bool> &data);
+			
+			/**
 			 * @brief Insert a series of bytes into the buffer.
 			 *
 			 * @param offset  Offset to write from.

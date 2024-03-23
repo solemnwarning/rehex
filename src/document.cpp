@@ -336,13 +336,7 @@ void REHex::Document::_set_cursor_position(BitOffset position, enum CursorState 
 	
 	if(cursor_state == CSTATE_GOTO)
 	{
-		if(this->cursor_state == CSTATE_HEX_MID)
-		{
-			cursor_state = CSTATE_HEX;
-		}
-		else{
-			cursor_state = this->cursor_state;
-		}
+		cursor_state = this->cursor_state;
 	}
 	
 	bool cursor_updated = (cpos_off != position || this->cursor_state != cursor_state);
@@ -433,6 +427,75 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(BitOffset offse
 		_set_cursor_position(new_cursor_pos, new_cursor_state);
 		
 		return _op_overwrite_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+void REHex::Document::overwrite_bits(BitOffset offset, const std::vector<bool> &data, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+{
+	if(write_protect)
+	{
+		wxGetApp().printf_error("Cannot modify file - write protect is enabled\n");
+		return;
+	}
+	
+	if(new_cursor_pos < BitOffset::ZERO)   { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	
+	TransOpFunc first_op([&]()
+	{
+		std::shared_ptr< std::vector<bool> > old_data(new std::vector<bool>(std::move( read_bits(offset, data.size()) )));
+		assert(old_data->size() == data.size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset.byte(), ((offset.bit() + data.size() + 7) / 8))
+			.transform([](const unsigned int &value) { return value + 1; });
+		
+		_UNTRACKED_overwrite_bits(offset, data, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_overwrite_bits_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
+	
+	transact_step(first_op, change_desc);
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_bits_undo(BitOffset offset, std::shared_ptr< std::vector<bool> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<bool> > new_data(new std::vector<bool>(std::move( read_bits(offset, old_data->size()) )));
+		assert(new_data->size() == old_data->size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset.byte(), ((offset.bit() + old_data->size() + 7) / 8))
+			.transform([](const unsigned int &value) { return value - 1; });
+		
+		_UNTRACKED_overwrite_bits(offset, *old_data, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
+		return _op_overwrite_bits_redo(offset, new_data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_bits_redo(BitOffset offset, std::shared_ptr< std::vector<bool> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, new_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<bool> > old_data(new std::vector<bool>(std::move( read_bits(offset, new_data->size()) )));
+		assert(old_data->size() == new_data->size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset.byte(), ((offset.bit() + new_data->size() + 7) / 8))
+			.transform([](const unsigned int &value) { return value + 1; });
+		
+		_UNTRACKED_overwrite_bits(offset, *new_data, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_overwrite_bits_undo(offset, old_data, new_cursor_pos, new_cursor_state);
 	});
 }
 
@@ -1523,6 +1586,37 @@ void REHex::Document::_UNTRACKED_overwrite_data(BitOffset offset, const unsigned
 	ProcessEvent(data_overwriting_event);
 	
 	bool ok = buffer->overwrite_data(offset, data, length);
+	assert(ok);
+	
+	if(ok)
+	{
+		data_seq.set_slice(data_seq_slice);
+		
+		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, byte_offset, byte_length);
+		ProcessEvent(data_overwrite_event);
+	}
+	else{
+		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, byte_offset, byte_length);
+		ProcessEvent(data_overwrite_aborted_event);
+	}
+}
+
+void REHex::Document::_UNTRACKED_overwrite_bits(BitOffset offset, const std::vector<bool> &data, const ByteRangeMap<unsigned int> &data_seq_slice)
+{
+	/* The overwrite events use byte offsets and lengths, there isn't really much reason to
+	 * refactor them for bit alignment, so we just grow the reported length by one when the
+	 * write length isn't byte aligned to ensure it covers all modified bytes.
+	*/
+	off_t byte_offset = offset.byte();
+	off_t byte_length = (offset.bit() + data.size() + 7) / 8;
+	
+	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= byte_offset);
+	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (byte_offset + byte_length));
+	
+	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, byte_offset, byte_length);
+	ProcessEvent(data_overwriting_event);
+	
+	bool ok = buffer->overwrite_bits(offset, data);
 	assert(ok);
 	
 	if(ok)

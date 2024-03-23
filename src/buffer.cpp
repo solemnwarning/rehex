@@ -767,6 +767,61 @@ bool REHex::Buffer::overwrite_data(BitOffset offset, unsigned const char *data, 
 	return true;
 }
 
+bool REHex::Buffer::overwrite_bits(BitOffset offset, const std::vector<bool> &data)
+{
+	std::unique_lock<std::mutex> l(lock);
+	
+	if((offset + BitOffset::from_int64(data.size())) > BitOffset(_length(), 0))
+	{
+		/* Runs past the end of the buffer. */
+		return false;
+	}
+	
+	Block *block = _block_by_virt_offset(offset.byte());
+	assert(block != nullptr);
+	
+	size_t data_pos = 0;
+	BitOffset block_offset = offset - BitOffset(block->virt_offset, 0);
+	
+	while(data_pos < data.size())
+	{
+		assert(block != (blocks.data() + blocks.size()));
+		
+		_load_block(block);
+		
+		bool touched_block = false;
+		
+		while(data_pos < data.size() && block_offset < block->virt_length)
+		{
+			unsigned char bit = 128 >> block_offset.bit();
+			
+			if(data[data_pos])
+			{
+				block->data[block_offset.byte()] |= bit;
+			}
+			else{
+				block->data[block_offset.byte()] &= ~bit;
+			}
+			
+			++data_pos;
+			block_offset += BitOffset(0, 1);
+			
+			touched_block = true;
+		}
+		
+		if(touched_block)
+		{
+			block->state = Block::DIRTY;
+			_last_access_remove(block);
+		}
+		
+		++block;
+		block_offset = BitOffset::ZERO;
+	}
+	
+	return true;
+}
+
 bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t length)
 {
 	std::unique_lock<std::mutex> l(lock);

@@ -448,7 +448,7 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnSignedVa
 		T tval = htoX(ival);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
 		}
 		catch(const std::exception &e)
 		{
@@ -495,7 +495,7 @@ template<typename T, int base, T (*htoX)(T)> void REHex::DecodePanel::OnUnsigned
 		T tval = htoX(uval);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
 		}
 		catch(const std::exception &e)
 		{
@@ -533,7 +533,7 @@ template<float (*htoX)(float)> void REHex::DecodePanel::OnFloatValue(wxStringPro
 		float tval = htoX(uval);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
 		}
 		catch(const std::exception &e)
 		{
@@ -571,7 +571,7 @@ template<double (*htoX)(double)> void REHex::DecodePanel::OnDoubleValue(wxString
 		double tval = htoX(uval);
 		
 		try {
-			document->overwrite_data(document->get_cursor_position().byte(), &tval, sizeof(tval)); /* BITFIXUP */
+			document->overwrite_data(document->get_cursor_position(), &tval, sizeof(tval));
 		}
 		catch(const std::exception &e)
 		{

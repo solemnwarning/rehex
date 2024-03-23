@@ -2784,25 +2784,8 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_RANGE_DIRTY(0, 16, "Document is dirty before saving");
 	
 	/* Save the file. */
-	char tmpfile[L_tmpnam];
-	tmpnam(tmpfile);
-	
-#ifdef _WIN32
-	/* > Note than when a file name is pre-pended with a backslash and no path
-	 * > information, such as \fname21, this indicates that the name is valid
-	 * > for the current working directory.
-	 * - MSDN
-	 *
-	 * Sure, that makes total sense.
-	*/
-	if(tmpfile[0] == '\\' && strchr((tmpfile + 1), '\\') == NULL)
-	{
-		/* Remove the leading slash. */
-		memmove(tmpfile, tmpfile + 1, strlen(tmpfile) - 1);
-	}
-#endif
-	
-	doc->save(tmpfile);
+	TempFilename tmpfile;
+	doc->save(tmpfile.tmpfile);
 	
 	EXPECT_EVENTS();
 	
@@ -2968,6 +2951,34 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save and then making new changes");
 	EXPECT_RANGE_DIRTY( 5, 21, "Modified range dirty after undoing changes made prior to save and then making new changes");
+}
+
+TEST_F(DocumentTest, DirtyStateBitAligned)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	TempFilename tmpfile;
+	doc->save(tmpfile.tmpfile);
+	
+	events.clear();
+	
+	ASSERT_FALSE(doc->is_dirty()) << "Document is clean after saving";
+	ASSERT_FALSE(doc->is_buffer_dirty()) << "Document is clean after saving";
+	EXPECT_RANGE_CLEAN(0, 1024, "Document is clean after saving");
+	
+	std::vector<unsigned char> ff_16(16, 0xFF);
+	doc->overwrite_data(BitOffset(16, 2), ff_16.data(), ff_16.size());
+	
+	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after bit-aligned write";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after bit-aligned write";
+	EXPECT_RANGE_CLEAN( 0,  16, "Unmodified range clean after bit-aligned write");
+	EXPECT_RANGE_DIRTY(16,  17, "Modified range dirty after bit-aligned write");
+	EXPECT_RANGE_CLEAN(33, 991, "Unmodified range clean bit-aligned write");
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(16, 17)",
+	);
 }
 
 TEST_F(DocumentTest, OverwriteTextLatin1)

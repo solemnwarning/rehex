@@ -57,7 +57,7 @@
 			return false; \
 		} \
 		buf = HTOX(buf); \
-		doc->overwrite_data(d_offset.byte(), &buf, sizeof(buf)); /* BITFIXUP */ \
+		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
 		return true; \
 	} \
 	\
@@ -201,7 +201,7 @@ static REHex::StaticDataTypeRegistration s64be_dtr(
 		} \
 		\
 		buf = HTOX<T>(buf); \
-		doc->overwrite_data(d_offset.byte(), &buf, sizeof(buf)); /* BITFIXUP */ \
+		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
 		return true; \
 	} \
 	\
@@ -258,7 +258,7 @@ static REHex::StaticDataTypeRegistration f32be_dtr(
 		} \
 		\
 		buf = HTOX<T>(buf); \
-		doc->overwrite_data(d_offset.byte(), &buf, sizeof(buf)); /* BITFIXUP */ \
+		doc->overwrite_data(d_offset, &buf, sizeof(buf)); \
 		return true; \
 	} \
 	\

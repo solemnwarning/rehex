@@ -819,7 +819,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 				unsigned char old_byte = cur_data[0];
 				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
 				
-				doc->overwrite_data(cursor_pos.byte() /* BITFIXUP */, &new_byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+				doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
 			}
 		}
 		

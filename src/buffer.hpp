@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -242,7 +242,7 @@ namespace REHex {
 			 *
 			 * Throws on I/O or memory allocation error.
 			*/
-			bool overwrite_data(off_t offset, unsigned const char *data, off_t length);
+			bool overwrite_data(BitOffset offset, unsigned const char *data, off_t length);
 			
 			/**
 			 * @brief Insert a series of bytes into the buffer.

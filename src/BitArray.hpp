@@ -37,6 +37,10 @@ namespace REHex {
 			
 			std::pair<BitOffset, ScreenArea> offset_near_or_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, bool exact);
 			
+			BitOffset calc_last_line_offset() const;
+			BitOffset calc_line_offset(BitOffset offset_within_line) const;
+			BitOffset calc_line_end(BitOffset offset_within_line) const;
+			
 		public:
 			BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset);
 			

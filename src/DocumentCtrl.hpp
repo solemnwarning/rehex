@@ -703,7 +703,7 @@ namespace REHex {
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);
 			
-			void _make_byte_visible(off_t offset);
+			void _make_byte_visible(BitOffset offset);
 			
 			void _handle_width_change();
 			void _handle_height_change();

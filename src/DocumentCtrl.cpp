@@ -394,7 +394,7 @@ void REHex::DocumentCtrl::set_cursor_position(BitOffset position, Document::Curs
 	cpos_off = position;
 	this->cursor_state = cursor_state;
 	
-	_make_byte_visible(cpos_off.byte()); /* BITFIXUP */
+	_make_byte_visible(cpos_off);
 	save_scroll_position();
 	
 	/* TODO: Limit paint to affected area */
@@ -2682,7 +2682,7 @@ void REHex::DocumentCtrl::_make_x_visible(int x_px, int width_px)
 /* Scroll the Document to make the byte at the given offset visible.
  * Does nothing if the byte is already on-screen.
 */
-void REHex::DocumentCtrl::_make_byte_visible(off_t offset)
+void REHex::DocumentCtrl::_make_byte_visible(BitOffset offset)
 {
 	auto dr = _data_region_by_offset(offset);
 	assert(dr != data_regions.end());

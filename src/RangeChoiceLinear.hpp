@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,7 @@
 #include <wx/choice.h>
 #include <utility>
 
+#include "BitOffset.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
 #include "SafeWindowPointer.hpp"
@@ -50,22 +51,41 @@ namespace REHex
 			 * Returns the offset and length of the chosen range. Length will be zero
 			 * if no data is selected.
 			*/
-			std::pair<off_t, off_t> get_range() const;
+			std::pair<BitOffset, BitOffset> get_range() const;
 			
 			void set_whole_file();
 			void set_follow_selection();
+			
+			/**
+			 * @brief Set whether bit-aligned offsets are allowed.
+			 *
+			 * If this is enabled, then ranges with bit-aligned offsets will be
+			 * permitted. Disabled by default.
+			*/
+			void set_allow_bit_aligned_offset(bool allow_bit_aligned_offset);
+			
+			/**
+			 * @brief Set whether bit-aligned lengths are allowed.
+			 *
+			 * If this is enabled, then ranges which are not a whole number of bytes
+			 * in length are permitted. Disabled by default.
+			*/
+			void set_allow_bit_aligned_length(bool allow_bit_aligned_length);
 			
 		private:
 			SharedDocumentPointer document;
 			SafeWindowPointer<DocumentCtrl> doc_ctrl;
 			
-			int current_selection;
-			off_t current_offset, current_length;
+			bool allow_bit_aligned_offset;
+			bool allow_bit_aligned_length;
 			
-			off_t fixed_offset, fixed_length;
+			int current_selection;
+			BitOffset current_offset, current_length;
+			
+			BitOffset fixed_offset, fixed_length;
 			
 			void update_range();
-			void set_fixed_range(off_t offset, off_t length);
+			void set_fixed_range(BitOffset offset, BitOffset length);
 			void clear_fixed_range();
 			
 			void OnChoice(wxCommandEvent &event);

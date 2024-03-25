@@ -40,7 +40,7 @@ REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, BitOffs
 		--t1_size;
 	}
 	
-	t1.reset(new std::atomic<BitOffset>[t1_size]);
+	t1.reset(new std::atomic<int64_t>[t1_size]);
 	
 	reset_from(base);
 }
@@ -126,7 +126,7 @@ void REHex::CharacterFinder::start_worker()
 					
 					if(at_offset >= target_off && (at_offset + (off_t)(char_size)) <= (base + length))
 					{
-						t1[idx] = at_offset;
+						t1[idx] = at_offset.to_int64();
 						
 						base_off = at_offset;
 						target_off += chunk_size;
@@ -191,7 +191,7 @@ std::pair<REHex::BitOffset,off_t> REHex::CharacterFinder::get_char_range(BitOffs
 	assert(t1_idx < (ssize_t)(t1_size));
 	
 	BitOffset t2_base_offset = t1_idx >= 0
-		? t1[t1_idx].load()
+		? BitOffset::from_int64(t1[t1_idx].load())
 		: base;
 	
 	if(t2_base_offset < 0)
@@ -206,12 +206,12 @@ std::pair<REHex::BitOffset,off_t> REHex::CharacterFinder::get_char_range(BitOffs
 		assert(t1_idx < (ssize_t)(t1_size));
 		
 		t2_base_offset = t1_idx >= 0
-			? t1[t1_idx].load()
+			? BitOffset::from_int64(t1[t1_idx].load())
 			: base;
 	}
 	
 	BitOffset t2_end_offset = ((t1_idx + 1) < (ssize_t)(t1_size))
-		? t1[t1_idx + 1].load()
+		? BitOffset::from_int64(t1[t1_idx + 1].load())
 		: base + length;
 	
 	if(t2_end_offset < 0)

@@ -80,7 +80,7 @@ namespace REHex
 			const size_t chunk_size;
 			
 			size_t t1_size;
-			std::unique_ptr< std::atomic<BitOffset>[] > t1;
+			std::unique_ptr< std::atomic<int64_t>[] > t1;
 			
 			volatile bool t1_filling;
 			volatile bool t1_done;

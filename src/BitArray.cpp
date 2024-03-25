@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 
+#include "App.hpp"
 #include "BitArray.hpp"
 #include "DataType.hpp"
 
@@ -84,13 +85,15 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 		data_length = BitOffset(max_data_in_client_area, 0);
 	}
 	
-	/* TODO: Catch I/O errors */
-	
 	std::vector<bool> data;
-	if(data_length > BitOffset::ZERO)
-	{
+	try {
 		data = doc->read_bits(data_base, ((data_length.byte() * 8) + data_length.bit()));
 	}
+	catch(const std::exception &e)
+	{
+		wxGetApp().printf_error("Exception in REHex::BitArrayRegion::draw: %s\n", e.what());
+	}
+	
 	
 	BitOffset data_cur = data_base;
 	BitOffset data_remain = data_length;
@@ -446,9 +449,21 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::BitArrayRegion::screen
 bool REHex::BitArrayRegion::OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event)
 {
 	int key = event.GetKeyCode();
+	int modifiers = event.GetModifiers();
 	
-	if(key == '0' || key == '1')
+	if(modifiers == wxMOD_NONE && (key == '0' || key == '1'))
 	{
+		BitOffset cursor_position = doc_ctrl->get_cursor_position();
+		
+		try {
+			std::vector<bool> bit = { (key == '1') };
+			doc->overwrite_bits(cursor_position, bit, (cursor_position + BitOffset(0, 1)));
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Exception in REHex::BitArrayRegion::OnChar: %s\n", e.what());
+		}
+		
 		return true;
 	}
 	

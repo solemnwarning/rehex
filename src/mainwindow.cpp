@@ -1239,30 +1239,30 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	off_t current_pos = tab->doc->get_cursor_position().byte(); /* BITFIXUP */
-	off_t max_pos     = tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode();
+	BitOffset current_pos = tab->doc->get_cursor_position();
+	BitOffset max_pos     = BitOffset((tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode()), 0);
 	
-	NumericEntryDialog<off_t>::BaseHint base;
+	NumericEntryDialog<BitOffset>::BaseHint base;
 	switch(wxGetApp().settings->get_goto_offset_base())
 	{
 		case GotoOffsetBase::AUTO:
-			base = NumericEntryDialog<off_t>::BaseHint::AUTO;
+			base = NumericEntryDialog<BitOffset>::BaseHint::AUTO;
 			break;
 		
 		case GotoOffsetBase::OCT:
-			base = NumericEntryDialog<off_t>::BaseHint::OCT;
+			base = NumericEntryDialog<BitOffset>::BaseHint::OCT;
 			break;
 		
 		case GotoOffsetBase::DEC:
-			base = NumericEntryDialog<off_t>::BaseHint::DEC;
+			base = NumericEntryDialog<BitOffset>::BaseHint::DEC;
 			break;
 		
 		case GotoOffsetBase::HEX:
-			base = NumericEntryDialog<off_t>::BaseHint::HEX;
+			base = NumericEntryDialog<BitOffset>::BaseHint::HEX;
 			break;
 	}
 	
-	REHex::NumericEntryDialog<off_t> ni(this,
+	REHex::NumericEntryDialog<BitOffset> ni(this,
 		"Jump to offset",
 		"Prefix offset with -/+ to jump relative to current cursor position",
 		current_pos, 0, max_pos, current_pos, base);
@@ -1273,19 +1273,19 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 		base = ni.GetBase();
 		switch(base)
 		{
-			case NumericEntryDialog<off_t>::BaseHint::AUTO:
+			case NumericEntryDialog<BitOffset>::BaseHint::AUTO:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::AUTO);
 				break;
 				
-			case NumericEntryDialog<off_t>::BaseHint::OCT:
+			case NumericEntryDialog<BitOffset>::BaseHint::OCT:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::OCT);
 				break;
 				
-			case NumericEntryDialog<off_t>::BaseHint::DEC:
+			case NumericEntryDialog<BitOffset>::BaseHint::DEC:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::DEC);
 				break;
 				
-			case NumericEntryDialog<off_t>::BaseHint::HEX:
+			case NumericEntryDialog<BitOffset>::BaseHint::HEX:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::HEX);
 				break;
 				

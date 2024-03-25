@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,6 +18,7 @@
 #ifndef REHEX_NUMERICENTRYDIALOG_HPP
 #define REHEX_NUMERICENTRYDIALOG_HPP
 
+#include <limits>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -25,6 +26,7 @@
 #include <wx/radiobut.h>
 #include <wx/stattext.h>
 
+#include "BitOffset.hpp"
 #include "NumericTextCtrl.hpp"
 
 namespace REHex {
@@ -49,7 +51,9 @@ namespace REHex {
 			
 			NumericTextCtrl *textbox;
 			
-			static std::string format_value(T value, BaseHint base)
+			template<typename Q = T>
+				static typename std::enable_if<std::numeric_limits<Q>::is_integer, std::string>::type
+				format_value(T value, BaseHint base)
 			{
 				std::ostringstream ss;
 				
@@ -68,6 +72,37 @@ namespace REHex {
 					case BaseHint::OCT:
 						ss << std::oct << value;
 						break;
+				}
+				
+				return ss.str();
+			}
+			
+			template<typename Q = T>
+				static typename std::enable_if<std::is_same<Q, BitOffset>::value, std::string>::type
+				format_value(T value, BaseHint base)
+			{
+				std::ostringstream ss;
+				
+				switch(base)
+				{
+					case BaseHint::AUTO_FORCE:
+					case BaseHint::AUTO:
+					case BaseHint::DEC:
+						ss << value.byte();
+						break;
+						
+					case BaseHint::HEX:
+						ss << std::hex << value.byte();
+						break;
+						
+					case BaseHint::OCT:
+						ss << std::oct << value.byte();
+						break;
+				}
+				
+				if(!value.byte_aligned())
+				{
+					ss << "+" << value.bit() << "b";
 				}
 				
 				return ss.str();

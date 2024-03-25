@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,6 +24,7 @@
 #include <wx/control.h>
 #include <wx/wx.h>
 
+#include "BitOffset.hpp"
 #include "Events.hpp"
 #include "util.hpp"
 
@@ -33,7 +34,7 @@ namespace REHex {
 			CodeCtrl(wxWindow *parent, wxWindowID id = wxID_ANY);
 			~CodeCtrl();
 			
-			void append_line(off_t offset, const std::string &text, bool active = false);
+			void append_line(BitOffset offset, const std::string &text, bool active = false);
 			void clear();
 			
 			void center_line(int line);
@@ -44,11 +45,11 @@ namespace REHex {
 			static const int MOUSE_SELECT_INTERVAL = 100;
 			
 			struct Line {
-				off_t offset;
+				BitOffset offset;
 				std::string text;
 				bool active;
 				
-				Line(off_t offset, const std::string &text, bool active):
+				Line(BitOffset offset, const std::string &text, bool active):
 					offset(offset), text(text), active(active) {}
 			};
 			
@@ -60,6 +61,7 @@ namespace REHex {
 			int code_xoff;
 			
 			std::vector<Line> lines;
+			bool all_lines_byte_aligned;
 			int max_line_width;
 			
 			OffsetBase offset_display_base;

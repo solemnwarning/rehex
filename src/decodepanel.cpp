@@ -220,7 +220,7 @@ void REHex::DecodePanel::update()
 	
 	std::vector<unsigned char> data_at_cur;
 	try {
-		data_at_cur = document->read_data(document->get_cursor_position().byte(), 8); /* BITFIXUP */
+		data_at_cur = document->read_data(document->get_cursor_position(), 8);
 	}
 	catch(const std::exception &e)
 	{
@@ -393,8 +393,8 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 	
 	if(size > 0 && document_ctrl != NULL)
 	{
-		off_t cursor_position = document->get_cursor_position().byte(); /* BITFIXUP */
-		document_ctrl->set_selection_raw(cursor_position, (cursor_position + size - 1));
+		BitOffset cursor_position = document->get_cursor_position();
+		document_ctrl->set_selection_raw(cursor_position, (cursor_position + BitOffset(size, 0) - BitOffset(0, 1)));
 	}
 }
 

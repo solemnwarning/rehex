@@ -80,7 +80,14 @@ class DocumentTest: public ::testing::Test
 			doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
 			{
 				char event_s[64];
-				snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d, %d)", (int)(event.cursor_pos.byte()), (int)(event.cursor_state)); /* BITFIXUP */
+				if(event.cursor_pos.byte_aligned())
+				{
+					snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d, %d)", (int)(event.cursor_pos.byte()), (int)(event.cursor_state));
+				}
+				else{
+					snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d.%d, %d)", (int)(event.cursor_pos.byte()), event.cursor_pos.bit(), (int)(event.cursor_state));
+				}
+				
 				events.push_back(event_s);
 			});
 			

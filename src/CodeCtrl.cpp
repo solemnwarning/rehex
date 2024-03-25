@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -46,6 +46,7 @@ END_EVENT_TABLE()
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
 	font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
+	all_lines_byte_aligned(true),
 	max_line_width(0),
 	offset_display_base(OFFSET_BASE_HEX),
 	offset_display_upper_bound(0xFFFFFFFF),
@@ -85,7 +86,7 @@ REHex::CodeCtrl::~CodeCtrl()
 	wxGetApp().Unbind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::CodeCtrl::OnFontSizeAdjustmentChanged, this);
 }
 
-void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool active)
+void REHex::CodeCtrl::append_line(BitOffset offset, const std::string &text, bool active)
 {
 	wxClientDC dc(this);
 	dc.SetFont(font);
@@ -101,6 +102,12 @@ void REHex::CodeCtrl::append_line(off_t offset, const std::string &text, bool ac
 	{
 		size_t n_spaces = TAB_WIDTH - (p % TAB_WIDTH);
 		text_no_tabs.replace(p, 1, n_spaces, ' ');
+	}
+	
+	if(all_lines_byte_aligned && !offset.byte_aligned())
+	{
+		all_lines_byte_aligned = false;
+		update_widths();
 	}
 	
 	int line_width = code_xoff + dc.GetTextExtent(text_no_tabs).GetWidth();
@@ -121,6 +128,7 @@ void REHex::CodeCtrl::clear()
 	selection_end   = CodeCharRef(-1, -1);
 	
 	max_line_width = 0;
+	all_lines_byte_aligned = true;
 	lines.clear();
 	
 	update_scrollbars();
@@ -193,7 +201,11 @@ void REHex::CodeCtrl::update_widths()
 	wxClientDC dc(this);
 	dc.SetFont(font);
 	
-	std::string offset_str = format_offset(0, offset_display_base, offset_display_upper_bound);
+	BitOffset zero_off = all_lines_byte_aligned
+		? BitOffset(0, 0)
+		: BitOffset(0, 1);
+	
+	std::string offset_str = format_offset(zero_off, offset_display_base, offset_display_upper_bound);
 	code_xoff = dc.GetTextExtent(offset_str + "  ").GetWidth();
 	
 	max_line_width = 0;

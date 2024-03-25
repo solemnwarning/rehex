@@ -5293,11 +5293,8 @@ std::pair<REHex::BitOffset, off_t> REHex::DocumentCtrl::DataRegion::get_char_at(
 	
 	if(encoder->mid_char_safe)
 	{
-		/* Step back if necessary to be byte aligned relative to type base. */
-		offset -= BitOffset::BITS((offset - encoding_base).bit());
-		
 		/* Step back if necessary to align to word size. */
-		BitOffset at_offset = offset - BitOffset::BYTES((offset - encoding_base).byte() % encoder->word_size);
+		BitOffset at_offset = offset - ((offset - encoding_base) % encoder->word_size);
 		
 		BitOffset min_offset = std::max((at_offset - BitOffset::BYTES(MAX_CHAR_SIZE)), d_offset);
 		
@@ -5328,14 +5325,11 @@ std::pair<REHex::BitOffset, off_t> REHex::DocumentCtrl::DataRegion::get_char_at(
 		return std::make_pair(offset, 1);
 	}
 	else{
-		abort();
-		#if 0 /* BITFIXUP */
 		if(!char_finder)
 		{
-			char_finder.reset(new CharacterFinder(document, d_offset.byte(), d_length.byte())); /* BITFIXUP */
+			char_finder.reset(new CharacterFinder(document, d_offset, d_length.byte()));
 		}
 		
 		return char_finder->get_char_range(offset);
-		#endif
 	}
 }

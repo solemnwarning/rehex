@@ -254,9 +254,9 @@ void REHex::BitEditor::update()
 	
 	num_value_bad->Hide();
 	
-	value_offset = document->get_cursor_position().byte(); /* BITFIXUP */
+	value_offset = document->get_cursor_position();
 	
-	if((value_offset + num_bytes) > document->buffer_length())
+	if((value_offset + BitOffset(num_bytes, 0)) > BitOffset(document->buffer_length(), 0))
 	{
 		/* There aren't num_bytes of data left from cursor to end of file. */
 		

@@ -3365,6 +3365,11 @@ int REHex::DocumentCtrl::DataRegion::calc_width(REHex::DocumentCtrl &doc)
 
 int REHex::DocumentCtrl::DataRegion::calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const
 {
+	return calc_width_for_bytes(doc_ctrl, line_bytes, indent_depth);
+}
+
+int REHex::DocumentCtrl::DataRegion::calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes, int indent_depth)
+{
 	return doc_ctrl.offset_column_width
 		/* indentation */
 		+ (doc_ctrl.indent_width(indent_depth) * 2)

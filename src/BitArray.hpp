@@ -23,8 +23,6 @@
 #include "DocumentCtrl.hpp"
 #include "SharedDocumentPointer.hpp"
 
-#define BSR_BYTES_PER_LINE 4
-
 namespace REHex {
 	class BitArrayRegion: public DocumentCtrl::GenericDataRegion
 	{
@@ -34,6 +32,8 @@ namespace REHex {
 		private:
 			int offset_text_x;  /**< Virtual X coord of left edge of offsets, in pixels. */
 			int data_text_x;    /**< Virtual X coord of left edge of data, in pixels. */
+			
+			int bytes_per_line_actual;
 			
 			std::pair<BitOffset, ScreenArea> offset_near_or_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, bool exact);
 			

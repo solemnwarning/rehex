@@ -36,7 +36,8 @@ REHex::BitArrayRegion::BitArrayRegion(SharedDocumentPointer &doc, BitOffset offs
 	GenericDataRegion(offset, length, virt_offset, virt_offset),
 	doc(doc),
 	offset_text_x(-1),
-	data_text_x(-1)
+	data_text_x(-1),
+	bytes_per_line_actual(8) /* Arbitrary initial value */
 {}
 
 int REHex::BitArrayRegion::calc_width(DocumentCtrl &doc_ctrl)
@@ -47,17 +48,48 @@ int REHex::BitArrayRegion::calc_width(DocumentCtrl &doc_ctrl)
 		? doc_ctrl.get_offset_column_width()
 		: 0;
 	
+	int bytes_per_line = doc_ctrl.get_bytes_per_line();
+	int client_width = doc_ctrl.GetClientSize().GetWidth();
+	
 	offset_text_x = indent_width;
 	data_text_x   = indent_width + offset_column_width;
 	
+	if(bytes_per_line == DocumentCtrl::BYTES_PER_LINE_FIT_BYTES)
+	{
+		bytes_per_line_actual = 1;
+		
+		while(DocumentCtrl::DataRegion::calc_width_for_bytes(doc_ctrl, ((bytes_per_line_actual + 1) * 4), indent_depth) <= client_width)
+		{
+			++bytes_per_line_actual;
+		}
+	}
+	else if(bytes_per_line == DocumentCtrl::BYTES_PER_LINE_FIT_GROUPS)
+	{
+		int bytes_per_group = doc_ctrl.get_bytes_per_group();
+		bytes_per_line_actual = bytes_per_group / 4;
+		
+		while(DocumentCtrl::DataRegion::calc_width_for_bytes(doc_ctrl, ((bytes_per_line_actual + bytes_per_group) * 4), indent_depth) <= client_width)
+		{
+			bytes_per_line_actual += bytes_per_group;
+		}
+		
+		if(bytes_per_line_actual < 1)
+		{
+			bytes_per_line_actual = 1;
+		}
+	}
+	else{
+		bytes_per_line_actual = std::max((bytes_per_line / 4), 1);
+	}
+	
 	return (2 * indent_width)
 		+ offset_column_width
-		+ doc_ctrl.hf_string_width(BSR_BYTES_PER_LINE * 8);
+		+ doc_ctrl.hf_string_width(bytes_per_line_actual * 8);
 }
 
 void REHex::BitArrayRegion::calc_height(DocumentCtrl &doc_ctrl)
 {
-	y_lines = indent_final + ((d_length.byte_round_up() + BSR_BYTES_PER_LINE - 1) / BSR_BYTES_PER_LINE);
+	y_lines = indent_final + ((d_length.byte_round_up() + bytes_per_line_actual - 1) / bytes_per_line_actual);
 }
 
 void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
@@ -69,7 +101,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 	draw_container(doc_ctrl, dc, x, y);
 	
 	int64_t skip_lines = (y < 0 ? (-y / doc_ctrl.hf_char_height()) : 0);
-	off_t skip_bytes  = skip_lines * BSR_BYTES_PER_LINE;
+	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
 	y += skip_lines * doc_ctrl.hf_char_height();
 	
@@ -78,7 +110,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 	virt_base   += BitOffset::BYTES(skip_bytes);
 	
 	wxSize client_size = doc_ctrl.GetClientSize();
-	off_t max_data_in_client_area = BSR_BYTES_PER_LINE * ((client_size.GetHeight() / doc_ctrl.hf_char_height()) + 1);
+	off_t max_data_in_client_area = bytes_per_line_actual * ((client_size.GetHeight() / doc_ctrl.hf_char_height()) + 1);
 	
 	if(data_length.byte() > max_data_in_client_area)
 	{
@@ -158,7 +190,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
 		}
 		
-		BitOffset line_len = std::min(data_remain, BitOffset(BSR_BYTES_PER_LINE, 0));
+		BitOffset line_len = std::min(data_remain, BitOffset(bytes_per_line_actual, 0));
 		
 		off_t data_offset = (data_cur - data_base).total_bits();
 		assert(data_offset >= 0);
@@ -188,7 +220,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 
 std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::BitArrayRegion::offset_near_or_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, bool exact)
 {
-	BitOffset mouse_line_base = d_offset + BitOffset((mouse_y_lines * BSR_BYTES_PER_LINE), 0);
+	BitOffset mouse_line_base = d_offset + BitOffset((mouse_y_lines * bytes_per_line_actual), 0);
 	
 	unsigned int bits_per_group = doc_ctrl.get_bytes_per_group() * 2;
 	int bin_base_x = data_text_x;
@@ -227,7 +259,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 	
 	BitOffset mouse_position = mouse_line_base + BitOffset(mouse_x_bytes, mouse_x_bits);
 	
-	if(mouse_x_bytes >= BSR_BYTES_PER_LINE)
+	if(mouse_x_bytes >= bytes_per_line_actual)
 	{
 		/* Pointer is beyond end of line. */
 		
@@ -242,10 +274,10 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		/* Clamp to end of region. */
 		mouse_position = d_offset + d_length - BitOffset::BITS(1);
 	}
-	else if(mouse_position >= (mouse_line_base + BitOffset::BYTES(BSR_BYTES_PER_LINE)))
+	else if(mouse_position >= (mouse_line_base + BitOffset::BYTES(bytes_per_line_actual)))
 	{
 		/* Clamp to end of line. */
-		mouse_position = mouse_line_base + BitOffset::BYTES(BSR_BYTES_PER_LINE) - BitOffset::BITS(1);
+		mouse_position = mouse_line_base + BitOffset::BYTES(bytes_per_line_actual) - BitOffset::BITS(1);
 	}
 	
 	return std::make_pair(mouse_position, SA_SPECIAL);
@@ -298,9 +330,9 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_up_from(BitOffset pos, ScreenArea
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	if(pos >= (d_offset + BitOffset(BSR_BYTES_PER_LINE, 0)))
+	if(pos >= (d_offset + BitOffset(bytes_per_line_actual, 0)))
 	{
-		return pos - BitOffset::BYTES(BSR_BYTES_PER_LINE);
+		return pos - BitOffset::BYTES(bytes_per_line_actual);
 	}
 	else{
 		return CURSOR_PREV_REGION;
@@ -312,9 +344,9 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_down_from(BitOffset pos, ScreenAr
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	if((pos + BitOffset(BSR_BYTES_PER_LINE, 0)) < (d_offset + d_length))
+	if((pos + BitOffset(bytes_per_line_actual, 0)) < (d_offset + d_length))
 	{
-		return pos + BitOffset::BYTES(BSR_BYTES_PER_LINE);
+		return pos + BitOffset::BYTES(bytes_per_line_actual);
 	}
 	else if(pos < calc_last_line_offset())
 	{
@@ -330,7 +362,7 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_home_from(BitOffset pos, ScreenAr
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t line_offset = ((pos - d_offset).byte() / BSR_BYTES_PER_LINE) * BSR_BYTES_PER_LINE;
+	off_t line_offset = ((pos - d_offset).byte() / bytes_per_line_actual) * bytes_per_line_actual;
 	
 	return d_offset + BitOffset(line_offset, 0);
 }
@@ -340,8 +372,8 @@ REHex::BitOffset REHex::BitArrayRegion::cursor_end_from(BitOffset pos, ScreenAre
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t line_offset = ((pos - d_offset).byte() / BSR_BYTES_PER_LINE) * BSR_BYTES_PER_LINE;
-	BitOffset line_end = std::min((d_offset + d_length), (d_offset + BitOffset((line_offset + BSR_BYTES_PER_LINE), 0)));
+	off_t line_offset = ((pos - d_offset).byte() / bytes_per_line_actual) * bytes_per_line_actual;
+	BitOffset line_end = std::min((d_offset + d_length), (d_offset + BitOffset((line_offset + bytes_per_line_actual), 0)));
 	
 	return line_end - BitOffset::BITS(1);
 }
@@ -352,7 +384,7 @@ int REHex::BitArrayRegion::cursor_column(BitOffset pos)
 	assert(pos <= (d_offset + d_length));
 	
 	BitOffset offset_in_region = pos - d_offset;
-	BitOffset offset_in_line = offset_in_region % BitOffset(BSR_BYTES_PER_LINE);
+	BitOffset offset_in_line = offset_in_region % BitOffset(bytes_per_line_actual);
 	
 	return offset_in_line.total_bits();
 }
@@ -361,7 +393,7 @@ REHex::BitOffset REHex::BitArrayRegion::first_row_nearest_column(int column)
 {
 	BitOffset first_line_last = std::min(
 		(d_offset + d_length - BitOffset(0, 1)),
-		(d_offset + BitOffset(BSR_BYTES_PER_LINE) - BitOffset(0, 1)));
+		(d_offset + BitOffset(bytes_per_line_actual) - BitOffset(0, 1)));
 	
 	return std::min(first_line_last, (d_offset + BitOffset::from_int64(column)));
 }
@@ -382,11 +414,11 @@ REHex::BitOffset REHex::BitArrayRegion::nth_row_nearest_column(int64_t row, int 
 	BitOffset last_row_offset = calc_last_line_offset();
 	
 	BitOffset nth_row_offset = std::min(
-		(d_offset + BitOffset((row * BSR_BYTES_PER_LINE), 0)),
+		(d_offset + BitOffset((row * bytes_per_line_actual), 0)),
 		last_row_offset);
 	
 	BitOffset nth_row_last = std::min(
-		(nth_row_offset + BitOffset(BSR_BYTES_PER_LINE) - BitOffset(0, 1)),
+		(nth_row_offset + BitOffset(bytes_per_line_actual) - BitOffset(0, 1)),
 		(d_offset + d_length - BitOffset(0, 1)));
 	
 	BitOffset result = nth_row_offset + BitOffset::from_int64(column);
@@ -397,7 +429,7 @@ REHex::BitOffset REHex::BitArrayRegion::nth_row_nearest_column(int64_t row, int 
 
 REHex::BitOffset REHex::BitArrayRegion::calc_last_line_offset() const
 {
-	return d_offset + BitOffset((((d_length.byte_round_up() - 1) / BSR_BYTES_PER_LINE) * BSR_BYTES_PER_LINE), 0);
+	return d_offset + BitOffset((((d_length.byte_round_up() - 1) / bytes_per_line_actual) * bytes_per_line_actual), 0);
 }
 
 REHex::BitOffset REHex::BitArrayRegion::calc_line_offset(BitOffset offset_within_line) const
@@ -405,7 +437,7 @@ REHex::BitOffset REHex::BitArrayRegion::calc_line_offset(BitOffset offset_within
 	assert(offset_within_line >= d_offset);
 	assert(offset_within_line <= (d_offset + d_length));
 	
-	return offset_within_line - ((offset_within_line - d_offset) % BitOffset(BSR_BYTES_PER_LINE, 0));
+	return offset_within_line - ((offset_within_line - d_offset) % BitOffset(bytes_per_line_actual, 0));
 }
 
 REHex::BitOffset REHex::BitArrayRegion::calc_line_end(BitOffset offset_within_line) const
@@ -416,7 +448,7 @@ REHex::BitOffset REHex::BitArrayRegion::calc_line_end(BitOffset offset_within_li
 	BitOffset line_offset = calc_line_offset(offset_within_line);
 	
 	return std::min(
-		(line_offset + BitOffset(BSR_BYTES_PER_LINE, 0)),
+		(line_offset + BitOffset(bytes_per_line_actual, 0)),
 		(d_offset + d_length));
 }
 
@@ -429,7 +461,7 @@ REHex::DocumentCtrl::Rect REHex::BitArrayRegion::calc_offset_bounds(BitOffset of
 	BitOffset offset_within_line = offset - line_offset;
 	
 	int     bit_pos_x_px    = data_text_x + doc_ctrl->hf_string_width(offset_within_line.total_bits());
-	int64_t bit_pos_y_lines = y_offset + ((line_offset - d_offset).byte() / BSR_BYTES_PER_LINE);
+	int64_t bit_pos_y_lines = y_offset + ((line_offset - d_offset).byte() / bytes_per_line_actual);
 	
 	return DocumentCtrl::Rect(
 			bit_pos_x_px,               /* x (pixels) */

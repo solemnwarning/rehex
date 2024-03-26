@@ -328,6 +328,7 @@ namespace REHex {
 					DataRegion(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
 					
 					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
+					static int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes, int indent_depth);
 					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc) override;

@@ -216,7 +216,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 				active_palette->get_highlight_fg(highlight->second),
 				active_palette->get_highlight_bg(highlight->second));
 		}
-		else if(doc->is_byte_dirty(offset.byte())) /* BITFIXUP */
+		else if(doc->is_byte_dirty(offset))
 		{
 			return Highlight(
 				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
@@ -1275,8 +1275,11 @@ wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 	assert(selection_off_ >= d_offset);
 	assert(selection_last_ < (d_offset + d_length));
 	
-	assert((selection_off_ - d_offset).bit() == 0); /* BITFIXUP */
-	// assert((selection_last_ - d_offset).bit() == 7); /* BITFIXUP */
+	/* If selection isn't byte aligned within the region, skip. */
+	if((selection_off_ - d_offset).bit() != 0 || (selection_last_ - d_offset).bit() != 7)
+	{
+		return NULL;
+	}
 	
 	off_t selection_off = (selection_off_ - d_offset).byte();
 	off_t selection_last = (selection_last_ - d_offset).byte();

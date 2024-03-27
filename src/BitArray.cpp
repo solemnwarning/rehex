@@ -165,6 +165,12 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 				active_palette->get_highlight_fg(highlight->second),
 				active_palette->get_highlight_bg(highlight->second));
 		}
+		else if(doc->is_byte_dirty(offset.byte())) /* Check if the byte containing the bit is dirty, not the "byte" starting from this bit. */
+		{
+			return Highlight(
+				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
+				(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
+		}
 		else{
 			return Highlight(NoHighlight());
 		}

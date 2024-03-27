@@ -173,7 +173,7 @@ namespace REHex {
 			/**
 			 * @brief Check if the given byte in the backing file has been modified since the last save.
 			*/
-			bool is_byte_dirty(off_t offset) const;
+			bool is_byte_dirty(BitOffset offset) const;
 			
 			/**
 			 * @brief Check if the BUFFER has any pending changes to be saved.

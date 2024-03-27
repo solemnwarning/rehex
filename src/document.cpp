@@ -303,10 +303,28 @@ bool REHex::Document::is_dirty()
 	return current_seq != saved_seq;
 }
 
-bool REHex::Document::is_byte_dirty(off_t offset) const
+bool REHex::Document::is_byte_dirty(BitOffset offset) const
 {
-	auto i = data_seq.get_range(offset);
-	return i != data_seq.end() && i->second != saved_seq;
+	auto i = data_seq.get_range(offset.byte());
+	if(i != data_seq.end() && i->second != saved_seq)
+	{
+		return true;
+	}
+	
+	if(!offset.byte_aligned())
+	{
+		/* The offset isn't byte-aligned, so we need to check if the
+		 * subsequent byte is dirty too.
+		*/
+		
+		i = data_seq.get_range(offset.byte() + 1);
+		if(i != data_seq.end() && i->second != saved_seq)
+		{
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 bool REHex::Document::is_buffer_dirty() const

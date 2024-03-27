@@ -5141,7 +5141,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 			active_palette->get_highlight_fg(highlight->second),
 			active_palette->get_highlight_bg(highlight->second));
 	}
-	else if(document->is_byte_dirty(off.byte()))
+	else if(document->is_byte_dirty(off))
 	{
 		return Highlight(
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],

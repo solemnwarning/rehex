@@ -866,7 +866,7 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection_raw(0x7150, 0x7150 + 22 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7150, 0), BitOffset((0x7150 + 22 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -915,7 +915,7 @@ TEST(DisassemblyRegion, CopyInHexView)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_HEX);
-	doc_ctrl->set_selection_raw(0x7150, 0x7150 + 22 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7150, 0), BitOffset((0x7150 + 22 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -949,7 +949,7 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection_raw(0x7151, 0x7151 + 20 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7151, 0), BitOffset((0x7151 + 20 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -996,7 +996,7 @@ TEST(DisassemblyRegion, CopyPartialInstruction)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection_raw(0x7153, 0x7153 + 2 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7153, 0), BitOffset((0x7153 + 2 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	

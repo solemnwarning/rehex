@@ -169,7 +169,7 @@ namespace REHex
 				{
 					/* Draw the offsets to the left */
 					
-					std::string offset_str = format_offset(virt_offset.byte(), doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset()); /* BITFIXUP */
+					std::string offset_str = format_offset(virt_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 					
 					normal_text();
 					dc.DrawText(offset_str, x, y);
@@ -601,7 +601,7 @@ namespace REHex
 					std::vector<unsigned char> data;
 					
 					try {
-						data = doc->read_data(d_offset, d_length.byte()); /* BITFIXUP */
+						data = doc->read_data(d_offset, d_length.byte());
 						assert(data.size() == sizeof(T));
 					}
 					catch(const std::exception &e)
@@ -685,7 +685,7 @@ namespace REHex
 				assert(selection_first >= d_offset);
 				assert(selection_last < (d_offset + d_length));
 				
-				if(selection_first == d_offset && selection_last == (d_offset + d_length - BitOffset::BITS(1))) /* BITFIXUP */
+				if(selection_first == d_offset && selection_last == (d_offset + d_length - BitOffset::BITS(1)))
 				{
 					/* Selection matches our data range. Copy stringified
 					 * numeric value to clipboard.
@@ -694,7 +694,7 @@ namespace REHex
 					std::vector<unsigned char> data;
 					
 					try {
-						data = doc->read_data(d_offset, d_length.byte()); /* BITFIXUP */
+						data = doc->read_data(d_offset, d_length.byte());
 						assert(data.size() == sizeof(T));
 					}
 					catch(const std::exception &e)
@@ -717,7 +717,7 @@ namespace REHex
 				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 				
-				if(doc_ctrl->has_selection() && (selection_first != d_offset || selection_last != (d_offset + d_length - BitOffset::BYTES(1)))) /* BITFIXUP */
+				if(doc_ctrl->has_selection() && (selection_first != d_offset || selection_last != (d_offset + d_length - BitOffset::BYTES(1))))
 				{
 					/* There is a selection and it doesn't exactly match our
 					 * data range. Fall back to default handling.

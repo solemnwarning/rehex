@@ -1425,17 +1425,17 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	REHex::RangeDialog rd(this, tab->doc_ctrl, "Select range", true);
+	REHex::RangeDialog rd(this, tab->doc_ctrl, "Select range", true, true, true);
 	
 	if(tab->doc_ctrl->has_selection())
 	{
 		BitOffset selection_first, selection_last;
 		std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
 		
-		rd.set_range_raw(selection_first.byte(), selection_last.byte()); /* BITFIXUP */
+		rd.set_range_raw(selection_first, selection_last);
 	}
 	else{
-		rd.set_offset_hint(tab->doc_ctrl->get_cursor_position().byte()); /* BITFIXUP */
+		rd.set_offset_hint(tab->doc_ctrl->get_cursor_position());
 	}
 	
 	int s = rd.ShowModal();
@@ -1443,10 +1443,10 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 	{
 		assert(rd.range_valid());
 		
-		off_t range_first, range_last;
+		BitOffset range_first, range_last;
 		std::tie(range_first, range_last) = rd.get_range_raw();
 		
-		tab->doc_ctrl->set_selection_raw(BitOffset(range_first, 0), BitOffset(range_last, 7)); /* BITFIXUP */
+		tab->doc_ctrl->set_selection_raw(range_first, range_last);
 	}
 }
 
@@ -2115,13 +2115,7 @@ void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
 	BitOffset off = tab->doc->get_cursor_position();
 	
-	std::string off_text = format_offset(off.byte(), tab->doc_ctrl->get_offset_display_base());
-	
-	if(!off.byte_aligned())
-	{
-		off_text += "+" + std::to_string(off.bit()) + "b";
-	}
-	
+	std::string off_text = format_offset(off, tab->doc_ctrl->get_offset_display_base());
 	SetStatusText(off_text, 0);
 }
 
@@ -2132,32 +2126,23 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 		BitOffset selection_first, selection_last;
 		std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 		
-		std::string from_text = format_offset(selection_first.byte(), doc_ctrl->get_offset_display_base(), selection_last.byte());
-		if(selection_first.bit() > 0)
+		if(selection_first.byte_aligned() && selection_last.bit() == 7)
 		{
-			from_text += "+" + std::to_string(selection_first.bit()) + "b";
+			selection_last = BitOffset(selection_last.byte(), 0);
 		}
 		
-		std::string to_text   = format_offset(selection_last.byte(),  doc_ctrl->get_offset_display_base(), selection_last.byte());
-		if(selection_last.bit() > 0)
-		{
-			to_text += "+" + std::to_string(selection_last.bit()) + "b";
-		}
+		std::string from_text = format_offset(selection_first, doc_ctrl->get_offset_display_base(), selection_last.byte());
+		std::string to_text   = format_offset(selection_last,  doc_ctrl->get_offset_display_base(), selection_last.byte());
 		
 		BitRangeSet selection = doc_ctrl->get_selection_ranges();
 		BitOffset selection_total = selection.total_bytes();
 		
-		// selection_total += BitOffset::BITS(1);
+		std::string len_text = selection_total.byte_aligned()
+			? (std::to_string(selection_total.byte()) + " bytes")
+			: (std::to_string(selection_total.byte()) + " bytes, " + std::to_string(selection_total.bit()) + " bits");
 		
-		char buf[64];
-		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u.%d bytes)",
-			from_text.c_str(),
-			to_text.c_str(),
-			
-			(unsigned int)(selection_total.byte()),
-			selection_total.bit());
-		
-		SetStatusText(buf, 1);
+		std::string text = "Selection: " + from_text + " - " + to_text + " (" + len_text + ")";
+		SetStatusText(text, 1);
 	}
 	else{
 		SetStatusText("", 1);

@@ -138,7 +138,7 @@ static const int LAST_ZOOM_LEVEL_IDX = sizeof(ZOOM_LEVELS) / sizeof(*ZOOM_LEVELS
 REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
 	ToolPanel(parent),
 	document(document),
-	image_offset(document->get_cursor_position().byte()), /* BITFIXUP */
+	image_offset(document->get_cursor_position()),
 	image_width(256),
 	image_height(256),
 	row_length(-1),
@@ -151,19 +151,23 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
-	wxGridSizer *grid_sizer = new wxGridSizer(2);
+	wxFlexGridSizer *grid_sizer = new wxFlexGridSizer(2);
 	sizer->Add(grid_sizer);
 	
 	auto sizer_add_pair = [&](const char *label, wxWindow *window)
 	{
-		grid_sizer->Add(new wxStaticText(this, wxID_ANY, label), 0, wxALIGN_CENTER_VERTICAL);
-		grid_sizer->Add(window, 0, wxALIGN_CENTER_VERTICAL);
+		grid_sizer->Add(new wxStaticText(this, wxID_ANY, label), 0, (wxALIGN_CENTER_VERTICAL | wxLEFT | wxTOP), 8);
+		grid_sizer->Add(window, 0, (wxALIGN_CENTER_VERTICAL | wxLEFT | wxTOP), 4);
 	};
 	
 	sizer_add_pair("Image offset:", (offset_textctrl = new NumericTextCtrl(this, ID_IMAGE_OFFSET)));
 	sizer_add_pair("",              (offset_follow_cb = new wxCheckBox(this, ID_FOLLOW_CURSOR, "Follow cursor")));
 	
-	offset_textctrl->ChangeValue(std::to_string(image_offset));
+	wxSize initial_size = offset_textctrl->GetSize();
+	wxSize text_size = offset_textctrl->GetTextExtent("0x0000000000000000+0b");
+	offset_textctrl->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
+	
+	offset_textctrl->ChangeValue(format_offset(image_offset, OFFSET_BASE_DEC, BitOffset::ZERO));
 	offset_follow_cb->SetValue(true);
 	
 	sizer_add_pair("Image width:",  (width_textctrl = new wxSpinCtrl(this, ID_IMAGE_WIDTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, image_width)));
@@ -365,7 +369,7 @@ void REHex::BitmapTool::update()
 	bitmap_update_line = -1;
 	
 	try {
-		image_offset = offset_textctrl->GetValue<off_t>(0);
+		image_offset = offset_textctrl->GetValue<BitOffset>(BitOffset::ZERO);
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -762,7 +766,7 @@ void REHex::BitmapTool::update_pixel_fmt()
 	}
 }
 
-void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, int width, int height)
+void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offset, int width, int height)
 {
 	int output_width = bitmap->GetWidth();
 	int output_height = bitmap->GetHeight();
@@ -776,7 +780,7 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 	assert(bmp_data);
 	
 	std::vector<unsigned char> data;
-	off_t data_begin = 0, data_end = 0;
+	BitOffset data_begin = BitOffset::ZERO, data_end = BitOffset::ZERO;
 	
 	wxNativePixelData::Iterator output_ptr(bmp_data);
 	output_ptr.OffsetY(bmp_data, region_y);
@@ -802,13 +806,13 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 			? row_length
 			: (width * pixel_fmt_multi) / pixel_fmt_div;
 		
-		off_t line_off = row_length > 0
-			? offset + input_y * line_len
-			: offset + (width * input_y * pixel_fmt_multi) / pixel_fmt_div;
+		BitOffset line_off = row_length > 0
+			? offset + BitOffset((input_y * line_len), 0)
+			: offset + BitOffset(((width * input_y * pixel_fmt_multi) / pixel_fmt_div), 0);
 		
-		if(line_off < data_begin || (line_off + line_len) > data_end)
+		if(line_off < data_begin || (line_off + BitOffset(line_len, 0)) > data_end)
 		{
-			off_t data_read_base = line_off;
+			BitOffset data_read_base = line_off;
 			off_t data_read_max = line_len * 200;
 			
 // 			if(flip_y)
@@ -824,10 +828,11 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, off_t offset, 
 			data = document->read_data(data_read_base, data_read_max);
 			
 			data_begin = line_off;
-			data_end = data_begin + data.size();
+			data_end = data_begin + BitOffset(data.size(), 0);
 		}
 		
-		const unsigned char *line_ptr = data.data() + (line_off - data_begin);
+		assert((line_off - data_begin).byte_aligned());
+		const unsigned char *line_ptr = data.data() + (line_off - data_begin).byte();
 		
 		wxNativePixelData::Iterator output_col_ptr = output_ptr;
 		
@@ -958,7 +963,7 @@ void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	if(offset_follow_cb->GetValue())
 	{
-		offset_textctrl->ChangeValue(std::to_string(event.cursor_pos.byte())); /* BITFIXUP */
+		offset_textctrl->ChangeValue(format_offset(event.cursor_pos, OFFSET_BASE_DEC, BitOffset::ZERO));
 		update();
 	}
 	
@@ -984,7 +989,7 @@ void REHex::BitmapTool::OnFollowCursor(wxCommandEvent &event)
 {
 	if(offset_follow_cb->GetValue())
 	{
-		offset_textctrl->ChangeValue(std::to_string(document->get_cursor_position().byte())); /* BITFIXUP */
+		offset_textctrl->ChangeValue(format_offset(document->get_cursor_position(), OFFSET_BASE_DEC, BitOffset::ZERO));
 		update();
 	}
 	else{
@@ -1218,9 +1223,9 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 	PopupMenu(&menu);
 }
 
-void REHex::BitmapTool::set_image_offset(off_t offset)
+void REHex::BitmapTool::set_image_offset(BitOffset offset)
 {
-	offset_textctrl->SetValue(std::to_string(offset));
+	offset_textctrl->SetValue(format_offset(offset, OFFSET_BASE_DEC, BitOffset::ZERO));
 	offset_follow_cb->SetValue(false);
 }
 

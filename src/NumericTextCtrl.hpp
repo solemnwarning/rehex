@@ -237,7 +237,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::is_same<T, BitOffset>::value, T>::type
-				static ParseValue(std::string sval, T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0)
+				static ParseValue(std::string sval, T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
 			{
 				if(sval.length() == 0)
 				{
@@ -266,6 +266,17 @@ namespace REHex {
 					if(*endptr == 'b')
 					{
 						++endptr;
+					}
+					
+					if(bit_explicit != NULL)
+					{
+						*bit_explicit = true;
+					}
+				}
+				else{
+					if(bit_explicit != NULL)
+					{
+						*bit_explicit = false;
 					}
 				}
 				
@@ -330,11 +341,21 @@ namespace REHex {
 			 *
 			 * On error throws an exception of type NumericTextCtrl::InputError.
 			*/
+			
 			template<typename T>
-				T GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
+				typename std::enable_if<std::numeric_limits<T>::is_integer, T>::type
+				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base);
+			}
+			
+			template<typename T>
+				typename std::enable_if<std::is_same<T, BitOffset>::value, T>::type
+				GetValue(T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
+			{
+				std::string sval = wxTextCtrl::GetValue().ToStdString();
+				return ParseValue<T>(sval, min, max, rel_base, base, bit_explicit);
 			}
 			
 			wxString GetStringValue() const

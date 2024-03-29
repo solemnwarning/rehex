@@ -246,12 +246,12 @@ void REHex::RangeChoiceLinear::OnChoice(wxCommandEvent &event)
 		
 		case ENTER_RANGE:
 		{
-			RangeDialog rd(this, doc_ctrl, "Enter range", false);
+			RangeDialog rd(this, doc_ctrl, "Enter range", false, allow_bit_aligned_offset, allow_bit_aligned_length);
 			
 			int s = rd.ShowModal();
 			if(s == wxID_OK)
 			{
-				std::pair<off_t, off_t> range = rd.get_range_linear();
+				std::pair<BitOffset, BitOffset> range = rd.get_range_linear();
 				set_fixed_range(range.first, range.second);
 			}
 			else{

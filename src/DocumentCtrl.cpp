@@ -126,7 +126,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	wheel_horiz_accum = 0;
 	cursor_visible    = true;
 	mouse_down_area   = GenericDataRegion::SA_NONE;
-	mouse_shift_initial = -1;
+	mouse_shift_initial = BitOffset::INVALID;
 	cursor_state      = Document::CSTATE_HEX;
 	
 	assert(hex_font.IsFixedWidth());
@@ -588,9 +588,9 @@ bool REHex::DocumentCtrl::set_selection_raw(BitOffset begin, BitOffset end)
 	selection_begin = begin;
 	selection_end = end;
 	
-	if(mouse_shift_initial < begin.byte() || mouse_shift_initial > end.byte()) /* BITFIXUP */
+	if(mouse_shift_initial < begin || mouse_shift_initial > end)
 	{
-		mouse_shift_initial = -1;
+		mouse_shift_initial = BitOffset::INVALID;
 	}
 	
 	{
@@ -610,7 +610,7 @@ void REHex::DocumentCtrl::clear_selection()
 	selection_begin = BitOffset::INVALID;
 	selection_end   = BitOffset::INVALID;
 	
-	mouse_shift_initial = -1;
+	mouse_shift_initial = BitOffset::INVALID;
 	
 	{
 		wxCommandEvent event(REHex::EV_SELECTION_CHANGED);
@@ -1132,7 +1132,7 @@ REHex::DocumentCtrl::FuzzyScrollPosition REHex::DocumentCtrl::get_scroll_positio
 	{
 		/* Cursor is on-screen, use it as the scroll position anchor. */
 		
-		fsp.data_offset       = cursor_pos.byte(); /* BITFIXUP */
+		fsp.data_offset       = cursor_pos;
 		fsp.data_offset_line  = cursor_rect.y - scroll_yoff;
 		fsp.data_offset_valid = true;
 	}
@@ -1151,12 +1151,12 @@ REHex::DocumentCtrl::FuzzyScrollPosition REHex::DocumentCtrl::get_scroll_positio
 			
 			if(dr->y_offset >= scroll_yoff)
 			{
-				fsp.data_offset       = dr->nth_row_nearest_column(0, 0).byte(); /* BITFIXUP */
+				fsp.data_offset       = dr->nth_row_nearest_column(0, 0);
 				fsp.data_offset_line  = dr->y_offset - scroll_yoff;
 				fsp.data_offset_valid = true;
 			}
 			else{
-				fsp.data_offset       = dr->nth_row_nearest_column((scroll_yoff - dr->y_offset), 0).byte(); /* BITFIXUP */
+				fsp.data_offset       = dr->nth_row_nearest_column((scroll_yoff - dr->y_offset), 0);
 				fsp.data_offset_line  = 0;
 				fsp.data_offset_valid = true;
 			}
@@ -1172,7 +1172,7 @@ void REHex::DocumentCtrl::set_scroll_position_fuzzy(const FuzzyScrollPosition &f
 {
 	if(fsp.data_offset_valid)
 	{
-		auto dr = _data_region_by_offset(fsp.data_offset); /* BITFIXUP */
+		auto dr = _data_region_by_offset(fsp.data_offset);
 		if(dr != data_regions.end())
 		{
 			Rect byte_rect = (*dr)->calc_offset_bounds(fsp.data_offset, this);
@@ -1745,7 +1745,7 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 			{
 				assert(clicked_area != GenericDataRegion::SA_NONE);
 				
-				off_t old_position = (mouse_shift_initial >= 0 ? mouse_shift_initial : get_cursor_position().byte()); /* BITFIXUP */
+				BitOffset old_position = (mouse_shift_initial >= BitOffset::ZERO ? mouse_shift_initial : get_cursor_position());
 				
 				switch(clicked_area)
 				{
@@ -1768,16 +1768,16 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 				
 				if(event.ShiftDown())
 				{
-					if(region_offset_cmp(clicked_offset.byte(), old_position) > 0) /* BITFIXUP */
+					if(region_offset_cmp(clicked_offset, old_position) > 0)
 					{
-						set_selection_raw(old_position, clicked_offset.byte()); /* BITFIXUP */
+						set_selection_raw(old_position, clicked_offset);
 					}
 					else{
-						set_selection_raw(clicked_offset.byte(), old_position); /* BITFIXUP */
+						set_selection_raw(clicked_offset, old_position);
 					}
 					
 					mouse_shift_initial  = old_position;
-					mouse_down_at_offset = BitOffset(old_position, 0); /* BITFIXUP */
+					mouse_down_at_offset = old_position;
 					mouse_down_at_x      = rel_x;
 					mouse_down_area      = clicked_area;
 				}
@@ -2536,7 +2536,7 @@ bool REHex::DocumentCtrl::region_range_linear(BitOffset begin_offset, BitOffset 
 	}
 }
 
-off_t REHex::DocumentCtrl::region_offset_to_virt(off_t offset)
+REHex::BitOffset REHex::DocumentCtrl::region_offset_to_virt(BitOffset offset)
 {
 	auto di = _data_region_by_offset(offset);
 	if(di == data_regions.end())
@@ -2544,10 +2544,10 @@ off_t REHex::DocumentCtrl::region_offset_to_virt(off_t offset)
 		return -1;
 	}
 	
-	return (*di)->virt_offset.byte() + (offset - (*di)->d_offset.byte()); /* BITFIXUP */
+	return (*di)->virt_offset + (offset - (*di)->d_offset);
 }
 
-off_t REHex::DocumentCtrl::region_virt_to_offset(off_t virt_offset)
+REHex::BitOffset REHex::DocumentCtrl::region_virt_to_offset(BitOffset virt_offset)
 {
 	auto di = _data_region_by_virt_offset(virt_offset);
 	if(di == data_regions.end())
@@ -2555,7 +2555,7 @@ off_t REHex::DocumentCtrl::region_virt_to_offset(off_t virt_offset)
 		return -1;
 	}
 	
-	return (*di)->d_offset.byte() + (virt_offset - (*di)->virt_offset.byte()); /* BITFIXUP */
+	return (*di)->d_offset + (virt_offset - (*di)->virt_offset);
 }
 
 REHex::BitOffset REHex::DocumentCtrl::region_cursor_left(BitOffset cursor_pos, GenericDataRegion::ScreenArea area)
@@ -2782,9 +2782,9 @@ bool REHex::DocumentCtrl::get_cursor_visible()
 	return cursor_visible;
 }
 
-off_t REHex::DocumentCtrl::get_end_virt_offset() const
+REHex::BitOffset REHex::DocumentCtrl::get_end_virt_offset() const
 {
-	return end_virt_offset.byte(); /* BITFIXUP */
+	return end_virt_offset;
 }
 
 /* Calculate the width of a character in hex_font. */
@@ -3163,7 +3163,7 @@ void REHex::DocumentCtrl::replace_all_regions(std::vector<Region*> &new_regions)
 
 bool REHex::DocumentCtrl::region_OnChar(wxKeyEvent &event)
 {
-	off_t cursor_pos = get_cursor_position().byte(); /* BITFIXUP */
+	BitOffset cursor_pos = get_cursor_position();
 	
 	auto cur_region = _data_region_by_offset(cursor_pos);
 	assert(cur_region != data_regions.end());

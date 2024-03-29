@@ -568,13 +568,13 @@ namespace REHex {
 			 * @brief Convert a real file offset to a virtual one.
 			 * @return Virtual offset, negative if not valid.
 			*/
-			off_t region_offset_to_virt(off_t offset);
+			BitOffset region_offset_to_virt(BitOffset offset);
 			
 			/**
 			 * @brief Convert a virtual file offset to a real one.
 			 * @return Real offset, negative if not valid.
 			*/
-			off_t region_virt_to_offset(off_t virt_offset);
+			BitOffset region_virt_to_offset(BitOffset virt_offset);
 			
 			BitOffset region_cursor_left(BitOffset cursor_pos, GenericDataRegion::ScreenArea area);
 			BitOffset region_cursor_right(BitOffset cursor_pos, GenericDataRegion::ScreenArea area);
@@ -688,7 +688,7 @@ namespace REHex {
 			BitOffset mouse_down_at_offset;
 			int mouse_down_at_x;
 			wxTimer mouse_select_timer;
-			off_t mouse_shift_initial;
+			BitOffset mouse_shift_initial;
 			
 			Document::CursorState cursor_state;
 			
@@ -721,7 +721,7 @@ namespace REHex {
 			struct FuzzyScrollPosition
 			{
 				bool data_offset_valid;   /**< True if data_offset and data_offset_line are valid. */
-				off_t data_offset;        /**< File offset used as reference point. */
+				BitOffset data_offset;    /**< File offset used as reference point. */
 				int64_t data_offset_line; /**< Visible (on-screen) line where data_offset is. */
 				
 				bool region_idx_valid;    /**< True if region_idx and region_idx_line are valid. */
@@ -837,7 +837,7 @@ namespace REHex {
 			int get_offset_column_width();
 			int get_virtual_width();
 			bool get_cursor_visible();
-			off_t get_end_virt_offset() const;
+			BitOffset get_end_virt_offset() const;
 			
 			int hf_char_width();
 			int hf_char_height();

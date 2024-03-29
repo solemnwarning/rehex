@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,6 +26,7 @@
 #include <wx/timer.h>
 #include <wx/toolbar.h>
 
+#include "BitOffset.hpp"
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -68,7 +69,7 @@ namespace REHex {
 			
 			virtual wxSize DoGetBestClientSize() const override;
 			
-			void set_image_offset(off_t offset);
+			void set_image_offset(BitOffset offset);
 			void set_image_size(int width, int height);
 			void set_pixel_format(PixelFormat format);
 			void force_bitmap_size(int width, int height);
@@ -96,7 +97,7 @@ namespace REHex {
 			wxScrolledWindow *bitmap_scrollwin;
 			wxGenericStaticBitmap *s_bitmap;
 			
-			off_t image_offset;
+			BitOffset image_offset;
 			int image_width, image_height;
 			int row_length;
 			
@@ -124,7 +125,7 @@ namespace REHex {
 			void reset_row_length_spinner();
 			
 			void update();
-			void render_region(int region_y, int region_h, off_t offset, int width, int height);
+			void render_region(int region_y, int region_h, BitOffset offset, int width, int height);
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCursorUpdate(CursorUpdateEvent &event);

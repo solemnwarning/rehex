@@ -43,14 +43,14 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = document_ctrl.get_selection_linear();
 	
-	if(selection_length > BitOffset::ZERO)
+	if(selection_length > BitOffset::ZERO && selection_off.byte_aligned() && selection_length.byte_aligned())
 	{
-		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(selection_off.byte())); /* BITFIXUP */
-		snprintf(initial_to,   sizeof(initial_to),   "0x%08llX", (long long unsigned)((selection_off + selection_length - 1).byte())); /* BITFIXUP */
-		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length.byte())); /* BITFIXUP */
+		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(selection_off.byte()));
+		snprintf(initial_to,   sizeof(initial_to),   "0x%08llX", (long long unsigned)((selection_off + selection_length - 1).byte()));
+		snprintf(initial_len,  sizeof(initial_len),  "0x%08llX", (long long unsigned)(selection_length.byte()));
 	}
 	else{
-		off_t cursor_pos = document_ctrl.get_cursor_position().byte(); /* BITFIXUP */
+		off_t cursor_pos = document_ctrl.get_cursor_position().byte();
 		snprintf(initial_from, sizeof(initial_from), "0x%08llX", (long long unsigned)(cursor_pos));
 	}
 	
@@ -97,6 +97,10 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 		range_from = new NumericTextCtrl(this, wxID_ANY, initial_from);
 		from_sizer->Add(range_from, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
 		
+		wxSize initial_size = range_from->GetSize();
+		wxSize text_size = range_from->GetTextExtent("0x0000000000000000+0b");
+		range_from->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
+		
 		range_sizer->Add(from_sizer, 0, wxEXPAND | wxALL, 10);
 	}
 	
@@ -108,6 +112,10 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 		
 		range_to = new NumericTextCtrl(this, wxID_ANY, initial_to);
 		to_sizer->Add(range_to, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+		
+		wxSize initial_size = range_to->GetSize();
+		wxSize text_size = range_to->GetTextExtent("0x0000000000000000+0b");
+		range_to->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
 		
 		range_sizer->Add(to_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
 		
@@ -123,6 +131,10 @@ REHex::FillRangeDialog::FillRangeDialog(wxWindow *parent, Document &document, Do
 		
 		range_len = new NumericTextCtrl(this, wxID_ANY, initial_len);
 		len_sizer->Add(range_len, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+		
+		wxSize initial_size = range_len->GetSize();
+		wxSize text_size = range_len->GetTextExtent("0x0000000000000000+0b");
+		range_len->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
 		
 		range_sizer->Add(len_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
 	}

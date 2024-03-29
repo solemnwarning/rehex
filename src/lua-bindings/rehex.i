@@ -1,4 +1,5 @@
 #include "../App.hpp"
+#include "../BitOffset.hpp"
 #include "../CharacterEncoder.hpp"
 #include "../document.hpp"
 #include "../mainwindow.hpp"
@@ -54,6 +55,29 @@ enum REHex::MainWindow::SetupPhase
 class %delete REHex::MainWindow::SetupHookRegistration
 {
 	REHex::MainWindow::SetupHookRegistration(REHex::MainWindow::SetupPhase phase, const LuaFunction func);
+};
+
+class %delete REHex::BitOffset
+{
+	REHex::BitOffset();
+	REHex::BitOffset(off_t byte, int bit = 0);
+	
+	off_t byte() const;
+	int bit() const;
+	off_t total_bits();
+	bool byte_aligned() const;
+	off_t byte_round_up() const;
+	
+	bool operator<(const REHex::BitOffset &rhs) const;
+	bool operator<=(const REHex::BitOffset &rhs) const;
+	bool operator==(const REHex::BitOffset &rhs) const;
+	
+	REHex::BitOffset operator+(const REHex::BitOffset &rhs) const;
+	REHex::BitOffset operator-(const REHex::BitOffset &rhs) const;
+	
+	// BitOffset operator%(const BitOffset &rhs) const;
+	
+	REHex::BitOffset operator-() const;
 };
 
 class REHex::MainWindow: public wxFrame

@@ -48,9 +48,23 @@ static void pump_events()
 	timer.Stop();
 }
 
+class LuaPluginLoaderInitialiser
+{
+	public:
+		LuaPluginLoaderInitialiser()
+		{
+			LuaPluginLoader::init();
+		}
+		
+		~LuaPluginLoaderInitialiser()
+		{
+			LuaPluginLoader::shutdown();
+		}
+};
+
 TEST(LuaPluginLoader, LoadPlugin)
 {
-	LuaPluginLoader::init();
+	LuaPluginLoaderInitialiser lpl_init;
 	
 	App &app = wxGetApp();
 	app.console->clear();
@@ -63,13 +77,11 @@ TEST(LuaPluginLoader, LoadPlugin)
 	}
 	
 	EXPECT_EQ(app.console->get_messages_text(), "stub plugin unloaded\n");
-	
-	LuaPluginLoader::shutdown();
 }
 
 TEST(LuaPluginLoader, ErrorPlugin)
 {
-	LuaPluginLoader::init();
+	LuaPluginLoaderInitialiser lpl_init;
 	
 	App &app = wxGetApp();
 	app.console->clear();
@@ -93,13 +105,11 @@ TEST(LuaPluginLoader, ErrorPlugin)
 		std::runtime_error);
 	
 	EXPECT_EQ(app.console->get_messages_text(), "");
-	
-	LuaPluginLoader::shutdown();
 }
 
 TEST(LuaPluginLoader, ReadData)
 {
-	LuaPluginLoader::init();
+	LuaPluginLoaderInitialiser lpl_init;
 	
 	App &app = wxGetApp();
 	app.console->clear();
@@ -120,13 +130,11 @@ TEST(LuaPluginLoader, ReadData)
 		
 		EXPECT_EQ(app.console->get_messages_text(), expect);
 	}
-	
-	LuaPluginLoader::shutdown();
 }
 
 TEST(LuaPluginLoader, ReadDataOffset)
 {
-	LuaPluginLoader::init();
+	LuaPluginLoaderInitialiser lpl_init;
 	
 	App &app = wxGetApp();
 	app.console->clear();
@@ -147,13 +155,11 @@ TEST(LuaPluginLoader, ReadDataOffset)
 		
 		EXPECT_EQ(app.console->get_messages_text(), expect);
 	}
-	
-	LuaPluginLoader::shutdown();
 }
 
 TEST(LuaPluginLoader, ReadDataLimitLength)
 {
-	LuaPluginLoader::init();
+	LuaPluginLoaderInitialiser lpl_init;
 	
 	App &app = wxGetApp();
 	app.console->clear();
@@ -173,6 +179,80 @@ TEST(LuaPluginLoader, ReadDataLimitLength)
 		
 		EXPECT_EQ(app.console->get_messages_text(), expect);
 	}
+}
+
+TEST(LuaPluginLoader, BitOffsetBindings)
+{
+	LuaPluginLoaderInitialiser lpl_init;
 	
-	LuaPluginLoader::shutdown();
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		LuaPlugin p = LuaPluginLoader::load_plugin("tests/bitoffset-test.lua");
+		
+		EXPECT_EQ(app.console->get_messages_text(),
+			/* Constructors */
+			
+			"rehex.BitOffset():byte() = 0\n"
+			"rehex.BitOffset():bit() = 0\n"
+			
+			"rehex.BitOffset(10, 0):byte() = 10\n"
+			"rehex.BitOffset(10, 0):bit() = 0\n"
+			
+			"rehex.BitOffset(10, 2):byte() = 10\n"
+			"rehex.BitOffset(10, 2):bit() = 2\n"
+			
+			/* Accessors */
+			
+			"rehex.BitOffset(0, 0):total_bits() = 0\n"
+			"rehex.BitOffset(10, 0):total_bits() = 80\n"
+			"rehex.BitOffset(10, 3):total_bits() = 83\n"
+			"rehex.BitOffset(-10, 0):total_bits() = -80\n"
+			"rehex.BitOffset(-10, -3):total_bits() = -83\n"
+			
+			"rehex.BitOffset(0, 0):byte_aligned() = true\n"
+			"rehex.BitOffset(10, 0):byte_aligned() = true\n"
+			"rehex.BitOffset(10, 3):byte_aligned() = false\n"
+			"rehex.BitOffset(-10, 0):byte_aligned() = true\n"
+			"rehex.BitOffset(-10, -3):byte_aligned() = false\n"
+			
+			"rehex.BitOffset(0, 0):byte_round_up() = 0\n"
+			"rehex.BitOffset(10, 0):byte_round_up() = 10\n"
+			"rehex.BitOffset(10, 3):byte_round_up() = 11\n"
+			
+			/* Comparison operators */
+			
+			"rehex.BitOffset(10, 0) == rehex.BitOffset(10, 0) = true\n"
+			"rehex.BitOffset(10, 0) ~= rehex.BitOffset(10, 0) = false\n"
+			
+			"rehex.BitOffset(10, 0) == rehex.BitOffset(20, 0) = false\n"
+			"rehex.BitOffset(10, 0) ~= rehex.BitOffset(20, 0) = true\n"
+			
+			"rehex.BitOffset(10, 0) < rehex.BitOffset(10, 0) = false\n"
+			"rehex.BitOffset(10, 0) <= rehex.BitOffset(10, 0) = true\n"
+			"rehex.BitOffset(10, 0) > rehex.BitOffset(10, 0) = false\n"
+			"rehex.BitOffset(10, 0) >= rehex.BitOffset(10, 0) = true\n"
+			
+			"rehex.BitOffset(10, 0) < rehex.BitOffset(20, 0) = true\n"
+			"rehex.BitOffset(10, 0) <= rehex.BitOffset(20, 0) = true\n"
+			"rehex.BitOffset(10, 0) > rehex.BitOffset(20, 0) = false\n"
+			"rehex.BitOffset(10, 0) >= rehex.BitOffset(20, 0) = false\n"
+			
+			/* Binary operators */
+			
+			"rehex.BitOffset(1, 0) + rehex.BitOffset(1, 0) = { 2, 0 }\n"
+			"rehex.BitOffset(1, 2) + rehex.BitOffset(2, 4) = { 3, 6 }\n"
+			
+			"rehex.BitOffset(1, 0) - rehex.BitOffset(1, 0) = { 0, 0 }\n"
+			"rehex.BitOffset(1, 2) - rehex.BitOffset(2, 4) = { -1, -2 }\n"
+			
+			/* Unary operators */
+			
+			"-(rehex.BitOffset(0, 0)) = { 0, 0 }\n"
+			"-(rehex.BitOffset(10, 0)) = { -10, 0 }\n"
+			"-(rehex.BitOffset(10, 7)) = { -10, -7 }\n"
+			"-(rehex.BitOffset(-10, -7)) = { 10, 7 }\n"
+		);
+	}
 }

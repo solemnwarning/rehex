@@ -68,6 +68,7 @@ namespace REHex {
 			virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 			
 			virtual bool OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event) override;
+			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override;
 	};
 }
 

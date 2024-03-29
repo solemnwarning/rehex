@@ -662,10 +662,10 @@ REHex::OrderedBitRangeSet REHex::DocumentCtrl::region_range_expand(BitOffset beg
 		assert(region_select_begin >= (*region)->d_offset);
 		assert(region_select_begin <= ((*region)->d_offset + (*region)->d_length));
 		
-		if((*region)->d_offset <= end_offset_incl.byte() && ((*region)->d_length + (*region)->d_offset) > end_offset_incl.byte())
+		if((*region)->d_offset <= end_offset_incl && ((*region)->d_length + (*region)->d_offset) > end_offset_incl)
 		{
 			/* Last byte of selection is within this region. */
-			if(end_offset_incl > region_select_begin)
+			if(end_offset_incl >= region_select_begin)
 			{
 				selected_ranges.set_range(region_select_begin, (end_offset_incl - region_select_begin) + BitOffset::BITS(1));
 			}

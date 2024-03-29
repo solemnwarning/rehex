@@ -203,19 +203,26 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 {
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	OrderedBitRangeSet tmp = doc_ctrl->get_selection_ranges(); /* BITFIXUP */
-	OrderedByteRangeSet selection;
-	
-	for(auto i = tmp.begin(); i != tmp.end(); ++i)
-	{
-		selection.set_range(i->offset.byte(), i->length.byte());
-	}
+	OrderedBitRangeSet selection = doc_ctrl->get_selection_ranges();
 	
 	if(selection.empty())
 	{
 		/* Nothing selected - nothing to copy. */
 		wxBell();
 		return;
+	}
+	
+	if(cut)
+	{
+		for(auto s = selection.begin(); s != selection.end(); ++s)
+		{
+			if(!s->offset.byte_aligned() || !s->length.byte_aligned())
+			{
+				/* Selection isn't byte-aligned - can't cut */
+				wxBell();
+				return;
+			}
+		}
 	}
 	
 	wxDataObject *copy_data = NULL;
@@ -246,8 +253,8 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 	static size_t COPY_MAX_SOFT = 16777216;
 	
 	size_t upper_limit = cursor_state == Document::CSTATE_ASCII
-		? selection.total_bytes()
-		: (selection.total_bytes() * 2);
+		? selection.total_bytes().byte()
+		: (selection.total_bytes().byte() * 2);
 	
 	if(copy_data == NULL && upper_limit > COPY_MAX_SOFT)
 	{
@@ -274,8 +281,15 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 			
 			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 			{
-				std::vector<unsigned char> selection_data = doc->read_data(sr->offset, sr->length);
-				assert((off_t)(selection_data.size()) == sr->length);
+				if(!sr->length.byte_aligned())
+				{
+					/* Can't copy a sub-byte quantity. */
+					wxBell();
+					return;
+				}
+				
+				std::vector<unsigned char> selection_data = doc->read_data(sr->offset, sr->length.byte());
+				assert((off_t)(selection_data.size()) == sr->length.byte());
 				
 				if(cursor_state == Document::CSTATE_ASCII)
 				{
@@ -357,7 +371,7 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 				
 				for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 				{
-					doc->erase_data(sr->offset, sr->length);
+					doc->erase_data(sr->offset.byte(), sr->length.byte());
 				}
 				
 				t.commit();

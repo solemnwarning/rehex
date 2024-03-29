@@ -507,3 +507,37 @@ bool REHex::BitArrayRegion::OnChar(DocumentCtrl *doc_ctrl, wxKeyEvent &event)
 	
 	return false;
 }
+
+wxDataObject *REHex::BitArrayRegion::OnCopy(DocumentCtrl &doc_ctrl)
+{
+	BitOffset selection_first, selection_last;
+	std::tie(selection_first, selection_last) = doc_ctrl.get_selection_raw();
+	
+	assert(selection_first >= d_offset);
+	assert(selection_last < (d_offset + d_length));
+	
+	if(doc_ctrl.special_view_active())
+	{
+		try {
+			std::vector<bool> data = doc->read_bits(selection_first, ((selection_last - selection_first).total_bits() + 1));
+			
+			std::string data_string;
+			data_string.reserve(data.size());
+			
+			for(auto p = data.begin(); p != data.end(); ++p)
+			{
+				data_string.append(1, (*p ? '1' : '0'));
+			}
+			
+			return new wxTextDataObject(data_string);
+		}
+		catch(const std::exception &e)
+		{
+			fprintf(stderr, "Exception in REHex::NumericDataTypeRegion::OnCopy: %s\n", e.what());
+			return NULL;
+		}
+	}
+	
+	/* Fall back to default handling - copy selected bytes. */
+	return NULL;
+}

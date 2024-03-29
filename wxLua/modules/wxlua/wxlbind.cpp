@@ -342,6 +342,254 @@ int LUACALL wxlua_wxLuaBindClass__tostring(lua_State *L)
 }
 
 // ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__add
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__add(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_add", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_add method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__sub
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__sub(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_sub", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_sub method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__mul
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__mul(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_mul", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_mul method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__div
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__div(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_div", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_div method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__neg
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__neg(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_neg", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_neg method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__eq
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__eq(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_eq", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_eq method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__lt
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__lt(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_lt", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_lt method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// wxlua_wxLuaBindClass__le
+// ----------------------------------------------------------------------------
+
+int LUACALL wxlua_wxLuaBindClass__le(lua_State *L)
+{
+    int wxl_type = wxluaT_type(L, 1);
+    if (wxlua_iswxuserdatatype(wxl_type))
+    {
+        const wxLuaBindClass* wxl_class = wxluaT_getclass(L, wxl_type);
+        if(wxl_class == NULL)
+        {
+            wxlua_error(L, "wxLua: Unknown wxLua class type!");
+        }
+
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxl_class, "op_le", WXLUAMETHOD_METHOD, false);
+        if(wxl_method == NULL)
+        {
+            wxlua_error(L, "wxLua: op_le method not found");
+        }
+
+        if (wxl_method->wxluacfuncs_n > 1)
+            return wxlua_callOverloadedFunction(L, wxl_method);
+        else
+            return (*wxl_method->wxluacfuncs[0].lua_cfunc)(L);
+    }
+
+    wxlua_error(L, "wxLua: Unknown wxLua class type!");
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
 // The __call metatable function to allow the class tables to be called as functions
 // ----------------------------------------------------------------------------
 
@@ -971,6 +1219,25 @@ bool wxLuaBinding::InstallClassMetatable(lua_State* L, const wxLuaBindClass* wxl
     };
     static const size_t s_funcCount = sizeof(s_funcTable)/sizeof(s_funcTable[0]);
 
+    struct wxLua_opfunc {
+        const char *metatable_method_name;
+        const char *wxlua_method_name;
+        lua_CFunction wxlua_method_func;
+    };
+
+    static const wxLua_opfunc s_opTable[] = {
+        { "__add", "op_add", wxlua_wxLuaBindClass__add },
+        { "__sub", "op_sub", wxlua_wxLuaBindClass__sub },
+        { "__mul", "op_mul", wxlua_wxLuaBindClass__mul },
+        { "__div", "op_div", wxlua_wxLuaBindClass__div },
+        { "__unm", "op_neg", wxlua_wxLuaBindClass__neg },
+
+        { "__eq", "op_eq", wxlua_wxLuaBindClass__eq },
+        { "__lt", "op_lt", wxlua_wxLuaBindClass__lt },
+        { "__le", "op_le", wxlua_wxLuaBindClass__le },
+    };
+    static const size_t s_opCount = sizeof(s_opTable) / sizeof(s_opTable[0]);
+
     // ------------------------------------------------------------------
     // Add to the lookup table for "class name" to wxLuaBindClass struct
     lua_pushlightuserdata(L, &wxlua_lreg_classes_key);
@@ -1001,6 +1268,19 @@ bool wxLuaBinding::InstallClassMetatable(lua_State* L, const wxLuaBindClass* wxl
         lua_pushlightuserdata(L, (void *)wxlClass);       // push the userdata
         lua_pushcclosure(L, s_funcTable[i_func].func, 1); // push func with wxlClass as upvalue
         lua_rawset(L, -3);  // t["method_name"] = closure of func and upvalues
+    }
+
+    // set the functions for operator overloads in the metatable
+    for(size_t i_op = 0; i_op < s_opCount; ++i_op)
+    {
+        wxLuaBindMethod *wxl_method = wxLuaBinding::GetClassMethod(wxlClass, s_opTable[i_op].wxlua_method_name, WXLUAMETHOD_METHOD, false);
+        if(wxl_method != NULL)
+        {
+            lua_pushstring(L, s_opTable[i_op].metatable_method_name);  // push method name
+            lua_pushlightuserdata(L, (void *)wxlClass);                // push the userdata
+            lua_pushcclosure(L, s_opTable[i_op].wxlua_method_func, 1); // push func with wxlClass as upvalue
+            lua_rawset(L, -3);  // t["method_name"] = closure of func and upvalues
+        }
     }
 
     lua_pop(L, 1); // pop metatable from wxluaT_newmetatable()

@@ -282,7 +282,7 @@ void REHex::Search::OnFindNext(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		begin_search((doc->get_cursor_position().byte() + 1), range_end, SearchDirection::FORWARDS); /* BITFIXUP */
+		begin_search((doc->get_cursor_position().byte() + 1), range_end, SearchDirection::FORWARDS);
 	}
 }
 
@@ -290,7 +290,7 @@ void REHex::Search::OnFindPrev(wxCommandEvent &event)
 {
 	if(read_base_window_controls() && read_window_controls())
 	{
-		begin_search(range_begin, doc->get_cursor_position().byte(), SearchDirection::BACKWARDS); /* BITFIXUP */
+		begin_search(range_begin, doc->get_cursor_position().byte(), SearchDirection::BACKWARDS);
 	}
 }
 

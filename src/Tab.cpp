@@ -461,20 +461,26 @@ void REHex::Tab::paste_text(const std::string &text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)
 	{
-		off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
+		BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
-		auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
-		off_t selection_off = tmp.first.byte();
-		off_t selection_length = tmp.second.byte();
+		BitOffset selection_off, selection_length;
+		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 		bool has_selection = doc_ctrl->has_selection();
 		
-		if(selection_length > 0)
+		if(selection_length > BitOffset::ZERO)
 		{
 			/* Some data is selected, replace it. */
 			
-			doc->replace_data(selection_off, selection_length, data, size, selection_off + size, Document::CSTATE_GOTO, "paste");
-			doc_ctrl->clear_selection();
+			if(selection_off.byte_aligned() && selection_length.byte_aligned())
+			{
+				doc->replace_data(selection_off.byte(), selection_length.byte(), data, size, (selection_off + BitOffset(size, 0)), Document::CSTATE_GOTO, "paste");
+				doc_ctrl->clear_selection();
+			}
+			else{
+				/* Selection isn't aligned on byte boundary. */
+				wxBell();
+			}
 		}
 		else if(has_selection)
 		{
@@ -484,26 +490,33 @@ void REHex::Tab::paste_text(const std::string &text)
 		else if(insert_mode)
 		{
 			/* We are in insert mode, insert at the cursor. */
-			doc->insert_data(cursor_pos, data, size, cursor_pos + size, Document::CSTATE_GOTO, "paste");
+			
+			if(cursor_pos.byte_aligned())
+			{
+				doc->insert_data(cursor_pos.byte(), data, size, cursor_pos + BitOffset(size, 0), Document::CSTATE_GOTO, "paste");
+			}
+			else{
+				/* Cursor isn't on a byte boundary. */
+				wxBell();
+			}
 		}
 		else{
 			/* We are in overwrite mode, overwrite up to the end of the file. */
 			
-			off_t to_end = doc->buffer_length() - cursor_pos;
+			off_t to_end = (BitOffset(doc->buffer_length(), 0) - cursor_pos).byte();
 			off_t to_write = std::min(to_end, (off_t)(size));
 			
-			doc->overwrite_data(cursor_pos, data, to_write, cursor_pos + to_write, Document::CSTATE_GOTO, "paste");
+			doc->overwrite_data(cursor_pos, data, to_write, cursor_pos + BitOffset(to_write, 0), Document::CSTATE_GOTO, "paste");
 		}
 	};
 	
 	auto paste_text = [this](const std::string &utf8_text)
 	{
-		off_t cursor_pos = doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
+		BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
-		auto tmp = doc_ctrl->get_selection_linear(); /* BITFIXUP */
-		off_t selection_off = tmp.first.byte();
-		off_t selection_length = tmp.second.byte();
+		BitOffset selection_off, selection_length;
+		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 		bool has_selection = doc_ctrl->has_selection();
 		
 		int write_flag;
@@ -512,8 +525,15 @@ void REHex::Tab::paste_text(const std::string &text)
 		{
 			/* Some data is selected, replace it. */
 			
-			write_flag = doc->replace_text(selection_off, selection_length, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
-			doc_ctrl->clear_selection();
+			if(selection_off.byte_aligned() && selection_length.byte_aligned())
+			{
+				write_flag = doc->replace_text(selection_off.byte(), selection_length.byte(), utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+				doc_ctrl->clear_selection();
+			}
+			else{
+				/* Selection isn't aligned to byte boundary. */
+				write_flag = Document::WRITE_TEXT_BAD_OFFSET;
+			}
 		}
 		else if(has_selection)
 		{
@@ -523,7 +543,15 @@ void REHex::Tab::paste_text(const std::string &text)
 		else if(insert_mode)
 		{
 			/* We are in insert mode, insert at the cursor. */
-			write_flag = doc->insert_text(cursor_pos, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+			
+			if(cursor_pos.byte_aligned())
+			{
+				write_flag = doc->insert_text(cursor_pos.byte(), utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+			}
+			else{
+				/* Cursor isn't on byte boundary. */
+				write_flag = Document::WRITE_TEXT_BAD_OFFSET;
+			}
 		}
 		else{
 			/* We are in overwrite mode, overwrite up to the end of the file. */
@@ -567,9 +595,11 @@ void REHex::Tab::compare_selection()
 	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
-	if(selection_length > BitOffset::ZERO)
+	if(selection_length > BitOffset::ZERO
+		&& selection_off.byte_aligned()
+		&& selection_length.byte_aligned())
 	{
-		compare_range(selection_off.byte(), selection_length.byte()); /* BITFIXUP */
+		compare_range(selection_off.byte(), selection_length.byte());
 	}
 	else{
 		wxBell();
@@ -766,8 +796,6 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	
 	bool insert_mode = doc_ctrl->get_insert_mode();
 	
-	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
-	
 	if(doc_ctrl->hex_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
 	{
 		unsigned char nibble = REHex::parse_ascii_nibble(key);
@@ -809,10 +837,17 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		
 		if(insert_mode)
 		{
-			doc->insert_text(cursor_pos.byte() /* BITFIXUP */, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
+			if(cursor_pos.byte_aligned())
+			{
+				doc->insert_text(cursor_pos.byte(), utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
+			}
+			else{
+				/* Cursor isn't byte aligned. */
+				wxBell();
+			}
 		}
 		else{
-			doc->overwrite_text(cursor_pos.byte() /* BITFIXUP */, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
+			doc->overwrite_text(cursor_pos, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
 		}
 		
 		return;
@@ -1018,7 +1053,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		if(cg)
 		{
 			char offset_str[24];
-			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos.byte())); /* BITFIXUP */
+			int len = snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos.byte()));
+			
+			if(!cursor_pos.byte_aligned())
+			{
+				snprintf((offset_str + len), (sizeof(offset_str) - len), "+%db", cursor_pos.bit());
+			}
 			
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
@@ -1031,7 +1071,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		if(cg)
 		{
 			char offset_str[24];
-			snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos.byte())); /* BITFIXUP */
+			int len = snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos.byte()));
+			
+			if(!cursor_pos.byte_aligned())
+			{
+				snprintf((offset_str + len), (sizeof(offset_str) - len), "+%db", cursor_pos.bit());
+			}
 			
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
@@ -1268,10 +1313,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		menu.AppendSubMenu(dtmenu, "Set data type");
 		
 		wxMenuItem *vm_itm = menu.Append(wxID_ANY, "Set virtual address mapping...");
+		vm_itm->Enable(selection_off.byte_aligned() && selection_off.byte_aligned());
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			VirtualMappingDialog d(this, doc, selection_off.byte(), selection_length.byte()); /* BITFIXUP */
+			assert(selection_off.byte_aligned());
+			assert(selection_length.byte_aligned());
+			
+			VirtualMappingDialog d(this, doc, selection_off.byte(), selection_length.byte());
 			d.ShowModal();
 		}, vm_itm->GetId(), vm_itm->GetId());
 	}
@@ -1280,11 +1329,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	{
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare selection...\tCtrl-Shift-K");
-		itm->Enable(selection_length > 0);
+		itm->Enable(selection_length > BitOffset::ZERO && selection_off.byte_aligned() && selection_length.byte_aligned());
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			compare_range(selection_off.byte(), selection_length.byte()); /* BITFIXUP */
+			assert(selection_off.byte_aligned());
+			assert(selection_length.byte_aligned());
+			
+			compare_range(selection_off.byte(), selection_length.byte());
 		}, itm->GetId(), itm->GetId());
 	}
 	
@@ -2132,7 +2184,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		next_virt   += dr_length;
 		remain_data -= dr_length;
 		
-		if(next_data >= (types_iter->first.offset + types_iter->first.length).byte()) /* BITFIXUP */
+		if(next_data >= (types_iter->first.offset + types_iter->first.length))
 		{
 			++types_iter;
 		}

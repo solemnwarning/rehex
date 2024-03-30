@@ -709,11 +709,11 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 	});
 }
 
-int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+int REHex::Document::overwrite_text(BitOffset offset, const std::string &utf8_text, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
-	off_t buffer_length = buffer->length();
+	BitOffset buffer_length(buffer->length(), 0);
 	
-	if(offset < 0 || offset >= buffer_length)
+	if(offset < BitOffset::ZERO || offset >= buffer_length)
 	{
 		return WRITE_TEXT_BAD_OFFSET;
 	}
@@ -725,7 +725,10 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 	
 	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
-	for(off_t utf8_off = 0, write_pos = offset; utf8_off < (off_t)(utf8_text.size());)
+	size_t utf8_off;
+	BitOffset write_pos;
+	
+	for(utf8_off = 0, write_pos = offset; utf8_off < utf8_text.size();)
 	{
 		if(write_pos >= buffer_length)
 		{
@@ -741,7 +744,7 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 		
 		if(ec.valid)
 		{
-			if((write_pos + (off_t)(ec.encoded_char().size())) > buffer_length)
+			if((write_pos + BitOffset(ec.encoded_char().size(), 0)) > buffer_length)
 			{
 				/* Won't fit without extending document. */
 				ret_flags |= WRITE_TEXT_TRUNCATED;
@@ -749,7 +752,7 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 			}
 			
 			encoded_text.append(ec.encoded_char());
-			write_pos += ec.encoded_char().size();
+			write_pos += BitOffset(ec.encoded_char().size(), 0);
 			
 			utf8_off += ec.utf8_char().size();
 		}
@@ -772,11 +775,11 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 		}
 	}
 	
-	assert((offset + (off_t)(encoded_text.size())) <= buffer_length);
+	assert((offset + BitOffset(encoded_text.size(), 0)) <= buffer_length);
 	
 	if(new_cursor_pos == WRITE_TEXT_GOTO_NEXT)
 	{
-		new_cursor_pos = offset + (off_t)(encoded_text.size());
+		new_cursor_pos = offset + BitOffset(encoded_text.size(), 0);
 	}
 	
 	overwrite_data(offset, encoded_text.data(), encoded_text.size(), new_cursor_pos, new_cursor_state, change_desc);
@@ -1115,7 +1118,7 @@ bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const st
 	return true;
 }
 
-const REHex::CharacterEncoder *REHex::Document::get_text_encoder(off_t offset) const
+const REHex::CharacterEncoder *REHex::Document::get_text_encoder(BitOffset offset) const
 {
 	if(offset < 0 || offset >= buffer_length())
 	{

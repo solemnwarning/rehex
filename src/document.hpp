@@ -277,7 +277,7 @@ namespace REHex {
 			*/
 			bool set_data_type(BitOffset offset, BitOffset length, const std::string &type, const json_t *options = NULL);
 			
-			const CharacterEncoder *get_text_encoder(off_t offset) const;
+			const CharacterEncoder *get_text_encoder(BitOffset offset) const;
 			
 			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
 			void clear_virt_mapping_r(off_t real_offset, off_t length);
@@ -572,7 +572,7 @@ namespace REHex {
 			static const int WRITE_TEXT_SKIPPED = 2;
 			static const int WRITE_TEXT_TRUNCATED = 4;
 			
-			int overwrite_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			int overwrite_text(BitOffset offset, const std::string &utf8_text, BitOffset new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			int insert_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			int replace_text(off_t offset, off_t old_data_length, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			

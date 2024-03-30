@@ -3246,6 +3246,66 @@ TEST_F(DocumentTest, OverwriteTextUTF8)
 	);
 }
 
+TEST_F(DocumentTest, OverwriteTextUTF8BitAligned)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	doc->set_data_type(0, strlen(DATA1), "text:UTF-8");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	events.clear();
+	
+	// LATIN CAPITAL LETTER AE
+	// Division Sign
+	// Latin Capital Letter Thorn
+	EXPECT_EQ(
+		doc->overwrite_text(BitOffset(8, 4), "\xC3\x86\xC3\xB7\xC3\x9E", +Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "average"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(8, 7)",
+		"CURSOR_UPDATE(14.4, 2)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), BitOffset(14, 4))    << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_EQ(
+		doc->read_data(BitOffset(8, 4), 6),
+		std::vector<unsigned char>({ 0xC3, 0x86, 0xC3, 0xB7, 0xC3, 0x9E }));
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	/* Write some characters that won't all fit in the file */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->overwrite_text(BitOffset(19, 4), "\xC3\x86\xC3\xB7", -1, Document::CSTATE_CURRENT, "lackadaisical"),
+		+Document::WRITE_TEXT_TRUNCATED);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(19, 3)",
+	);
+	
+	ASSERT_EQ(
+		doc->read_data(BitOffset(19, 4), 2),
+		std::vector<unsigned char>({ 0xC3, 0x86 }));
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+}
+
 TEST_F(DocumentTest, InsertText7Bit)
 {
 	/* Insert into empty document... */

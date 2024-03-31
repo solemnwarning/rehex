@@ -132,7 +132,7 @@ namespace REHex {
 					};
 					
 					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
-					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
+					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
 					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
 					
 					/**

@@ -319,7 +319,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, d_offset.byte() /* BITFIXUP */, 0, abs_inst_offset, alternate, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, 0, abs_inst_offset, alternate, ascii_highlight_func, is_last_line);
 		}
 		
 		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr->length)) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
@@ -399,7 +399,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, d_offset.byte() /* BITFIXUP */, 0, abs_up_off, alternate, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, 0, abs_up_off, alternate, ascii_highlight_func, is_last_line);
 		}
 		
 		set_text_attribs(false, false);

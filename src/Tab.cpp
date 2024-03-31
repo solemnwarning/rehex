@@ -800,7 +800,7 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	{
 		unsigned char nibble = REHex::parse_ascii_nibble(key);
 		
-		if(insert_mode)
+		if(insert_mode && (cursor_pos_within_region % BitOffset(1,0) != BitOffset(0, 4)))
 		{
 			if(!cursor_pos.byte_aligned())
 			{

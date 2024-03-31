@@ -1323,15 +1323,14 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		if(tab->doc_ctrl->has_selection())
 		{
-			auto tmp = tab->doc_ctrl->get_selection_raw(); /* BITFIXUP */
-			off_t selection_first = tmp.first.byte();
-			off_t selection_last = tmp.second.byte();
+			BitOffset selection_first, selection_last;
+			std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
 			
 			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_first);
 			assert(selection_region != NULL);
 			
 			assert(selection_region->d_offset <= selection_last);
-			assert((selection_region->d_offset + (selection_region->d_length)) > selection_first);
+			assert((selection_region->d_offset + selection_region->d_length) >= selection_first);
 			
 			if((selection_region->d_offset + selection_region->d_length) > selection_last)
 			{
@@ -1345,7 +1344,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		/* Give the region the cursor is in a chance to handle the paste event. */
 		
-		off_t cursor_pos = tab->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
+		BitOffset cursor_pos = tab->doc_ctrl->get_cursor_position();
 		
 		REHex::DocumentCtrl::GenericDataRegion *cursor_region = tab->doc_ctrl->data_region_by_offset(cursor_pos);
 		assert(cursor_region != NULL);

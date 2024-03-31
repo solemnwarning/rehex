@@ -499,13 +499,14 @@ void REHex::DocumentCtrl::set_insert_mode(bool enabled)
 	
 	insert_mode = enabled;
 	
-	off_t cursor_pos = get_cursor_position().byte(); /* BITFIXUP */
-	if(!insert_mode && cursor_pos > 0 && cursor_pos == doc->buffer_length())
+	BitOffset cursor_pos = get_cursor_position();
+	if(!insert_mode && cursor_pos > BitOffset::ZERO && cursor_pos == BitOffset(doc->buffer_length(), 0))
 	{
 		/* Move cursor back if going from insert to overwrite mode and it
 		 * was at the end of the file.
 		*/
-		_set_cursor_position((cursor_pos - 1), Document::CSTATE_GOTO);
+		
+		_set_cursor_position(region_cursor_left(cursor_pos, _get_screen_area_for_cursor_state()), Document::CSTATE_GOTO);
 	}
 	
 	wxCommandEvent event(REHex::EV_INSERT_TOGGLED);
@@ -1550,7 +1551,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 			/* Special case: If "end" is pressed on the last line of the final data
 			 * region when in insert mode, jump past it.
 			*/
-			if(get_insert_mode() && (*cur_region)->last_row_nearest_column(INT_MAX) == new_cursor_pos.byte()) /* BITFIXUP */
+			if(get_insert_mode() && (*cur_region)->last_row_nearest_column(INT_MAX) == new_cursor_pos)
 			{
 				auto next_region = std::next(cur_region);
 				if(next_region == data_regions.end())
@@ -3490,7 +3491,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	if(doc.get_highlight_selection_match() && linear_selection_len.byte() > 0 && linear_selection_len.byte() <= SECONDARY_SELECTION_MAX && linear_selection_len.byte_aligned())
 	{
 		try {
-			selection_data = doc.doc->read_data(linear_selection_off, linear_selection_len.byte()); /* BITFIXUP */
+			selection_data = doc.doc->read_data(linear_selection_off, linear_selection_len.byte());
 		}
 		catch(const std::exception &e)
 		{
@@ -3502,7 +3503,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	std::vector<unsigned char> data;
 	bool data_err = false;
 	
-	ByteRangeSet ranges_matching_selection;
+	BitRangeSet ranges_matching_selection;
 	
 	const unsigned char *data_p = NULL;
 	size_t data_remain;
@@ -3527,7 +3528,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			{
 				if(memcmp((data.data() + i), selection_data.data(), selection_data.size()) == 0)
 				{
-					ranges_matching_selection.set_range(data_base.byte() + i, selection_data.size()); /* BITFIXUP */
+					ranges_matching_selection.set_range(data_base + BitOffset(i, 0), selection_data.size());
 					i += selection_data.size();
 				}
 				else{
@@ -3552,7 +3553,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto highlight_func = [&](BitOffset offset)
 	{
-		if(ranges_matching_selection.isset(offset.byte())) /* BITFIXUP */
+		if(ranges_matching_selection.isset(offset))
 		{
 			return Highlight(
 				(*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_FG],
@@ -3647,7 +3648,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				? (cur_off - start_char_off).byte()
 				: 0;
 			
-			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, d_offset.byte() /* BITFIXUP */, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_highlight_func, is_last_line);
 		}
 		
 		cur_off += line_data_len;
@@ -3799,16 +3800,16 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		};
 		
 		bool inv_high = false, inv_low = false;
-		if(hex_active && !doc_ctrl->insert_mode)
+		if(hex_active)
 		{
-			if(cursor_pos == cur_off)
+			if(cursor_pos == (cur_off + BitOffset(0, 4)))
+			{
+				inv_low = true;
+			}
+			else if(!doc_ctrl->insert_mode && cursor_pos == cur_off)
 			{
 				inv_high = true;
 				inv_low  = true;
-			}
-			else if(cursor_pos == (cur_off + BitOffset(0, 4)))
-			{
-				inv_low = true;
 			}
 		}
 		
@@ -3891,7 +3892,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, off_t alignment_hint, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_ascii_line");
 	
@@ -3922,7 +3923,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	const wxPen *insert_cursor_pen = NULL;
 	wxPoint insert_cursor_pt1, insert_cursor_pt2;
 	
-	const BitRangeMap<Document::TypeInfo> &types = doc_ctrl->doc->get_data_types(); /* BITFIXUP */
+	const BitRangeMap<Document::TypeInfo> &types = doc_ctrl->doc->get_data_types();
 	
 	size_t consume_chars = 0;
 	
@@ -4059,8 +4060,9 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		auto type_at_off = types.get_range(cur_off);
 		assert(type_at_off != types.end());
 		
-		off_t encoding_base = std::max(type_at_off->first.offset.byte(), alignment_hint); /* BITFIXUP */
-		assert(encoding_base <= cur_off.byte()); /* BITFIXUP */
+		// TODO: Advance to start of next character if not aligned
+		//BitOffset encoding_base = type_at_off->first.offset;
+		//assert(encoding_base <= cur_off);
 		
 		static REHex::CharacterEncoderASCII ascii_encoder;
 		const CharacterEncoder *encoder = &ascii_encoder;
@@ -4435,7 +4437,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			: false;
 		
 		char bit_s;
-		if(data.size() <= data_offset.total_bits())
+		if(data.size() <= (size_t)(data_offset.total_bits()))
 		{
 			bit_s = '?';
 		}
@@ -5075,7 +5077,7 @@ REHex::BitOffset REHex::DocumentCtrl::DataRegion::nth_row_nearest_column(int64_t
 REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl)
 {
 	assert(offset >= d_offset);
-	assert(offset <= (d_offset + d_length));
+	assert(offset <= (d_offset + d_length + BitOffset(1, 0)));
 	
 	BitOffset visual_offset = d_offset - BitOffset(first_line_pad_bytes, 0);
 	off_t region_offset = (offset - visual_offset).byte();
@@ -5111,7 +5113,7 @@ REHex::DocumentCtrl::Rect REHex::DocumentCtrl::DataRegion::calc_offset_bounds(Bi
 REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegion::screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl)
 {
 	assert(offset >= d_offset);
-	assert(offset <= (d_offset + d_length));
+	assert(offset <= (d_offset + d_length + BitOffset(1, 0)));
 	
 	if(doc_ctrl->get_show_ascii())
 	{

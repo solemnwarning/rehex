@@ -1273,7 +1273,7 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 		{
 			BitRangeSet selection = r->doc_ctrl->get_selection_ranges();
 			
-			if(selection.isset_any(BitOffset(event.offset, 0), BitOffset(event.length, 0))) /* BITFIXUP */
+			if(selection.isset_any(BitOffset(event.offset, 0), BitOffset(event.length, 0)))
 			{
 				r->doc_ctrl->clear_selection();
 			}

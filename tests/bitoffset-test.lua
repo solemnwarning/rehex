@@ -65,7 +65,7 @@ print("rehex.BitOffset(1, 2) - rehex.BitOffset(2, 4) = { "
 
 --- Unary operators
 
-print("-(rehex.BitOffset(0, 0)) = { " .. -(rehex.BitOffset(0, 0)):byte() .. ", " .. -(rehex.BitOffset(0, 0)):bit() .. " }")
-print("-(rehex.BitOffset(10, 0)) = { " .. -(rehex.BitOffset(10, 0)):byte() .. ", " .. -(rehex.BitOffset(10, 0)):bit() .. " }")
-print("-(rehex.BitOffset(10, 7)) = { " .. -(rehex.BitOffset(10, 7)):byte() .. ", " .. -(rehex.BitOffset(10, 7)):bit() .. " }")
-print("-(rehex.BitOffset(-10, -7)) = { " .. -(rehex.BitOffset(-10, -7)):byte() .. ", " .. -(rehex.BitOffset(-10, -7)):bit() .. " }")
+print("-(rehex.BitOffset(0, 0)) = { " .. (-rehex.BitOffset(0, 0)):byte() .. ", " .. (-rehex.BitOffset(0, 0)):bit() .. " }")
+print("-(rehex.BitOffset(10, 0)) = { " .. (-rehex.BitOffset(10, 0)):byte() .. ", " .. (-rehex.BitOffset(10, 0)):bit() .. " }")
+print("-(rehex.BitOffset(10, 7)) = { " .. (-rehex.BitOffset(10, 7)):byte() .. ", " .. (-rehex.BitOffset(10, 7)):bit() .. " }")
+print("-(rehex.BitOffset(-10, -7)) = { " .. (-rehex.BitOffset(-10, -7)):byte() .. ", " .. (-rehex.BitOffset(-10, -7)):bit() .. " }")

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1020,7 +1020,7 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 	conf_dialog.SetSizerAndFit(conf_sizer);
 	
 	auto &comments = tab->doc->get_comments();
-	auto comment = comments.find(NestedOffsetLengthMapKey(0, 0));
+	auto comment = comments.find(BitRangeTreeKey(BitOffset(0, 0), BitOffset(0, 0)));
 	if(comment != comments.end())
 	{
 		const wxString &comment_text = *(comment->second.text);
@@ -1239,30 +1239,30 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	off_t current_pos = tab->doc->get_cursor_position();
-	off_t max_pos     = tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode();
+	BitOffset current_pos = tab->doc->get_cursor_position();
+	BitOffset max_pos     = BitOffset((tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode()), 0);
 	
-	NumericEntryDialog<off_t>::BaseHint base;
+	NumericEntryDialog<BitOffset>::BaseHint base;
 	switch(wxGetApp().settings->get_goto_offset_base())
 	{
 		case GotoOffsetBase::AUTO:
-			base = NumericEntryDialog<off_t>::BaseHint::AUTO;
+			base = NumericEntryDialog<BitOffset>::BaseHint::AUTO;
 			break;
 		
 		case GotoOffsetBase::OCT:
-			base = NumericEntryDialog<off_t>::BaseHint::OCT;
+			base = NumericEntryDialog<BitOffset>::BaseHint::OCT;
 			break;
 		
 		case GotoOffsetBase::DEC:
-			base = NumericEntryDialog<off_t>::BaseHint::DEC;
+			base = NumericEntryDialog<BitOffset>::BaseHint::DEC;
 			break;
 		
 		case GotoOffsetBase::HEX:
-			base = NumericEntryDialog<off_t>::BaseHint::HEX;
+			base = NumericEntryDialog<BitOffset>::BaseHint::HEX;
 			break;
 	}
 	
-	REHex::NumericEntryDialog<off_t> ni(this,
+	REHex::NumericEntryDialog<BitOffset> ni(this,
 		"Jump to offset",
 		"Prefix offset with -/+ to jump relative to current cursor position",
 		current_pos, 0, max_pos, current_pos, base);
@@ -1273,19 +1273,19 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 		base = ni.GetBase();
 		switch(base)
 		{
-			case NumericEntryDialog<off_t>::BaseHint::AUTO:
+			case NumericEntryDialog<BitOffset>::BaseHint::AUTO:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::AUTO);
 				break;
 				
-			case NumericEntryDialog<off_t>::BaseHint::OCT:
+			case NumericEntryDialog<BitOffset>::BaseHint::OCT:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::OCT);
 				break;
 				
-			case NumericEntryDialog<off_t>::BaseHint::DEC:
+			case NumericEntryDialog<BitOffset>::BaseHint::DEC:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::DEC);
 				break;
 				
-			case NumericEntryDialog<off_t>::BaseHint::HEX:
+			case NumericEntryDialog<BitOffset>::BaseHint::HEX:
 				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::HEX);
 				break;
 				
@@ -1323,14 +1323,14 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		if(tab->doc_ctrl->has_selection())
 		{
-			off_t selection_first, selection_last;
+			BitOffset selection_first, selection_last;
 			std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
 			
 			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_first);
 			assert(selection_region != NULL);
 			
 			assert(selection_region->d_offset <= selection_last);
-			assert((selection_region->d_offset + (selection_region->d_length)) > selection_first);
+			assert((selection_region->d_offset + selection_region->d_length) >= selection_first);
 			
 			if((selection_region->d_offset + selection_region->d_length) > selection_last)
 			{
@@ -1344,7 +1344,7 @@ void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 		
 		/* Give the region the cursor is in a chance to handle the paste event. */
 		
-		off_t cursor_pos = tab->doc_ctrl->get_cursor_position();
+		BitOffset cursor_pos = tab->doc_ctrl->get_cursor_position();
 		
 		REHex::DocumentCtrl::GenericDataRegion *cursor_region = tab->doc_ctrl->data_region_by_offset(cursor_pos);
 		assert(cursor_region != NULL);
@@ -1414,8 +1414,8 @@ void REHex::MainWindow::OnSelectAll(wxCommandEvent &event)
 	DocumentCtrl::GenericDataRegion *first_region = tab->doc_ctrl->get_data_regions().front();
 	DocumentCtrl::GenericDataRegion *last_region = tab->doc_ctrl->get_data_regions().back();
 	
-	off_t first_off = first_region->d_offset;
-	off_t last_off  = last_region->d_offset + last_region->d_length - (last_region->d_length > 0);
+	BitOffset first_off = first_region->d_offset;
+	BitOffset last_off  = last_region->d_offset + last_region->d_length - (last_region->d_length > BitOffset::ZERO ? BitOffset::BITS(1) : BitOffset::ZERO);
 	
 	tab->doc_ctrl->set_selection_raw(first_off, last_off);
 }
@@ -1424,11 +1424,11 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	REHex::RangeDialog rd(this, tab->doc_ctrl, "Select range", true);
+	REHex::RangeDialog rd(this, tab->doc_ctrl, "Select range", true, true, true);
 	
 	if(tab->doc_ctrl->has_selection())
 	{
-		off_t selection_first, selection_last;
+		BitOffset selection_first, selection_last;
 		std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
 		
 		rd.set_range_raw(selection_first, selection_last);
@@ -1442,7 +1442,7 @@ void REHex::MainWindow::OnSelectRange(wxCommandEvent &event)
 	{
 		assert(rd.range_valid());
 		
-		off_t range_first, range_last;
+		BitOffset range_first, range_last;
 		std::tie(range_first, range_last) = rd.get_range_raw();
 		
 		tab->doc_ctrl->set_selection_raw(range_first, range_last);
@@ -2112,10 +2112,9 @@ REHex::DetachableNotebook *REHex::MainWindow::get_notebook()
 
 void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
-	off_t off = tab->doc->get_cursor_position();
+	BitOffset off = tab->doc->get_cursor_position();
 	
 	std::string off_text = format_offset(off, tab->doc_ctrl->get_offset_display_base());
-	
 	SetStatusText(off_text, 0);
 }
 
@@ -2123,23 +2122,26 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 {
 	if(doc_ctrl->has_selection())
 	{
-		off_t selection_first, selection_last;
+		BitOffset selection_first, selection_last;
 		std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
 		
-		std::string from_text = format_offset(selection_first, doc_ctrl->get_offset_display_base(), selection_last);
-		std::string to_text   = format_offset(selection_last,  doc_ctrl->get_offset_display_base(), selection_last);
+		if(selection_first.byte_aligned() && selection_last.bit() == 7)
+		{
+			selection_last = BitOffset(selection_last.byte(), 0);
+		}
 		
-		ByteRangeSet selection = doc_ctrl->get_selection_ranges();
-		off_t selection_bytes = selection.total_bytes();
+		std::string from_text = format_offset(selection_first, doc_ctrl->get_offset_display_base(), selection_last.byte());
+		std::string to_text   = format_offset(selection_last,  doc_ctrl->get_offset_display_base(), selection_last.byte());
 		
-		char buf[64];
-		snprintf(buf, sizeof(buf), "Selection: %s - %s (%u bytes)",
-			from_text.c_str(),
-			to_text.c_str(),
-			
-			(unsigned int)(selection_bytes));
+		BitRangeSet selection = doc_ctrl->get_selection_ranges();
+		BitOffset selection_total = selection.total_bytes();
 		
-		SetStatusText(buf, 1);
+		std::string len_text = selection_total.byte_aligned()
+			? (std::to_string(selection_total.byte()) + " bytes")
+			: (std::to_string(selection_total.byte()) + " bytes, " + std::to_string(selection_total.bit()) + " bits");
+		
+		std::string text = "Selection: " + from_text + " - " + to_text + " (" + len_text + ")";
+		SetStatusText(text, 1);
 	}
 	else{
 		SetStatusText("", 1);

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -41,10 +41,10 @@ TEST(DisassemblyRegion, ProcessFile)
 		const std::vector<DisassemblyRegion::InstructionRange> &ranges = region->get_processed();
 		EXPECT_EQ(ranges.size(), 0U);
 		
-		EXPECT_EQ(region->processed_by_offset(0x46F0), ranges.end());
+		EXPECT_EQ(region->processed_by_rel_offset(0x46F0 - 0x46F0), ranges.end());
 		EXPECT_EQ(region->processed_by_line(0), ranges.end());
 		
-		EXPECT_EQ(region->unprocessed_offset(), 0x46F0);
+		EXPECT_EQ(region->unprocessed_offset_rel(), 0x46F0 - 0x46F0);
 		EXPECT_EQ(region->unprocessed_bytes(), 0x125BE /* 75,198 bytes */);
 		EXPECT_EQ(region->processed_lines(), 0);
 	}
@@ -57,20 +57,20 @@ TEST(DisassemblyRegion, ProcessFile)
 		const std::vector<DisassemblyRegion::InstructionRange> &ranges = region->get_processed();
 		ASSERT_EQ(ranges.size(), 1U);
 		
-		EXPECT_EQ(ranges[0].offset, 0x46F0);
+		EXPECT_EQ(ranges[0].offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(ranges[0].length, (0x6EF4 - 0x46F0) /* 10,244 bytes */);
 		EXPECT_EQ(ranges[0].rel_y_offset, 0);
 		EXPECT_EQ(ranges[0].y_lines, 2237);
 		
-		EXPECT_EQ(region->processed_by_offset(0x46F0),  std::next(ranges.begin(), 0));
-		EXPECT_EQ(region->processed_by_offset(0x6EF3),  std::next(ranges.begin(), 0));
+		EXPECT_EQ(region->processed_by_rel_offset(0x46F0 - 0x46F0),  std::next(ranges.begin(), 0));
+		EXPECT_EQ(region->processed_by_rel_offset(0x6EF3 - 0x46F0),  std::next(ranges.begin(), 0));
 		EXPECT_EQ(region->processed_by_line(0),         std::next(ranges.begin(), 0));
 		EXPECT_EQ(region->processed_by_line(2236),      std::next(ranges.begin(), 0));
 		
-		EXPECT_EQ(region->processed_by_offset(0x6EF4),  ranges.end());
+		EXPECT_EQ(region->processed_by_rel_offset(0x6EF4 - 0x46F0),  ranges.end());
 		EXPECT_EQ(region->processed_by_line(2237),      ranges.end());
 		
-		EXPECT_EQ(region->unprocessed_offset(), 0x6EF4);
+		EXPECT_EQ(region->unprocessed_offset_rel(), 0x6EF4 - 0x46F0);
 		EXPECT_EQ(region->unprocessed_bytes(), 0xFDBA /* 64,954 bytes */);
 		EXPECT_EQ(region->processed_lines(), 2237);
 	}
@@ -89,67 +89,67 @@ TEST(DisassemblyRegion, ProcessFile)
 		const std::vector<DisassemblyRegion::InstructionRange> &ranges = region->get_processed();
 		ASSERT_EQ(ranges.size(), 8U);
 		
-		EXPECT_EQ(region->processed_by_offset(0x46EF),  ranges.end());
+		EXPECT_EQ(region->processed_by_rel_offset(0x46EF - 0x46F0),  ranges.end());
 		
-		EXPECT_EQ(ranges[0].offset, 0x46F0);
+		EXPECT_EQ(ranges[0].offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(ranges[0].length, (0x6EF4 - 0x46F0) /* 10,244 bytes */);
 		EXPECT_EQ(ranges[0].rel_y_offset, 0);
 		EXPECT_EQ(ranges[0].y_lines, 2237);
 		
-		EXPECT_EQ(region->processed_by_offset(0x46F0),  std::next(ranges.begin(), 0));
-		EXPECT_EQ(region->processed_by_offset(0x6EF3),  std::next(ranges.begin(), 0));
+		EXPECT_EQ(region->processed_by_rel_offset(0x46F0 - 0x46F0),  std::next(ranges.begin(), 0));
+		EXPECT_EQ(region->processed_by_rel_offset(0x6EF3 - 0x46F0),  std::next(ranges.begin(), 0));
 		EXPECT_EQ(region->processed_by_line(0),         std::next(ranges.begin(), 0));
 		EXPECT_EQ(region->processed_by_line(2236),      std::next(ranges.begin(), 0));
 		
-		EXPECT_EQ(ranges[1].offset, 0x6EF4);
+		EXPECT_EQ(ranges[1].offset, 0x6EF4 - 0x46F0);
 		EXPECT_EQ(ranges[1].length, (0x96F5 - 0x6EF4) /* 10,241 bytes */);
 		EXPECT_EQ(ranges[1].rel_y_offset, 2237);
 		EXPECT_EQ(ranges[1].y_lines, 2453);
 		
-		EXPECT_EQ(region->processed_by_offset(0x6EF4),  std::next(ranges.begin(), 1));
-		EXPECT_EQ(region->processed_by_offset(0x96F4),  std::next(ranges.begin(), 1));
+		EXPECT_EQ(region->processed_by_rel_offset(0x6EF4 - 0x46F0),  std::next(ranges.begin(), 1));
+		EXPECT_EQ(region->processed_by_rel_offset(0x96F4 - 0x46F0),  std::next(ranges.begin(), 1));
 		EXPECT_EQ(region->processed_by_line(2237),      std::next(ranges.begin(), 1));
 		EXPECT_EQ(region->processed_by_line(4689),      std::next(ranges.begin(), 1));
 		
-		EXPECT_EQ(ranges[2].offset, 0x96F5);
+		EXPECT_EQ(ranges[2].offset, 0x96F5 - 0x46F0);
 		EXPECT_EQ(ranges[2].length, (0xBEF7 - 0x96F5) /* 10,242 bytes */);
 		EXPECT_EQ(ranges[2].rel_y_offset, 4690);
 		EXPECT_EQ(ranges[2].y_lines, 2457);
 		
-		EXPECT_EQ(ranges[3].offset, 0xBEF7);
+		EXPECT_EQ(ranges[3].offset, 0xBEF7 - 0x46F0);
 		EXPECT_EQ(ranges[3].length, (0xE6FA - 0xBEF7) /* 10,243 bytes */);
 		EXPECT_EQ(ranges[3].rel_y_offset, 7147);
 		EXPECT_EQ(ranges[3].y_lines, 2751);
 		
-		EXPECT_EQ(ranges[4].offset, 0xE6FA);
+		EXPECT_EQ(ranges[4].offset, 0xE6FA - 0x46F0);
 		EXPECT_EQ(ranges[4].length, (0x10EFA - 0xE6FA) /* 10,240 bytes */);
 		EXPECT_EQ(ranges[4].rel_y_offset, 9898);
 		EXPECT_EQ(ranges[4].y_lines, 2783);
 		
-		EXPECT_EQ(ranges[5].offset, 0x10EFA);
+		EXPECT_EQ(ranges[5].offset, 0x10EFA - 0x46F0);
 		EXPECT_EQ(ranges[5].length, (0x136FA - 0x10EFA) /* 10,240 bytes */);
 		EXPECT_EQ(ranges[5].rel_y_offset, 12681);
 		EXPECT_EQ(ranges[5].y_lines, 2547);
 		
-		EXPECT_EQ(ranges[6].offset, 0x136FA);
+		EXPECT_EQ(ranges[6].offset, 0x136FA - 0x46F0);
 		EXPECT_EQ(ranges[6].length, (0x15EFA - 0x136FA) /* 10,240 bytes */);
 		EXPECT_EQ(ranges[6].rel_y_offset, 15228);
 		EXPECT_EQ(ranges[6].y_lines, 2581);
 		
-		EXPECT_EQ(ranges[7].offset, 0x15EFA);
+		EXPECT_EQ(ranges[7].offset, 0x15EFA - 0x46F0);
 		EXPECT_EQ(ranges[7].length, (0x16CAE - 0x15EFA) /* 3,508 bytes */);
 		EXPECT_EQ(ranges[7].rel_y_offset, 17809);
 		EXPECT_EQ(ranges[7].y_lines, 1031);
 		
-		EXPECT_EQ(region->processed_by_offset(0x15EFA),  std::next(ranges.begin(), 7));
-		EXPECT_EQ(region->processed_by_offset(0x16CAD),  std::next(ranges.begin(), 7));
+		EXPECT_EQ(region->processed_by_rel_offset(0x15EFA - 0x46F0),  std::next(ranges.begin(), 7));
+		EXPECT_EQ(region->processed_by_rel_offset(0x16CAD - 0x46F0),  std::next(ranges.begin(), 7));
 		EXPECT_EQ(region->processed_by_line(17809),      std::next(ranges.begin(), 7));
 		EXPECT_EQ(region->processed_by_line(18839),      std::next(ranges.begin(), 7));
 		
-		EXPECT_EQ(region->processed_by_offset(0x16CAE),  ranges.end());
+		EXPECT_EQ(region->processed_by_rel_offset(0x16CAE - 0x46F0),  ranges.end());
 		EXPECT_EQ(region->processed_by_line(18840),      ranges.end());
 		
-		EXPECT_EQ(region->unprocessed_offset(), 0x16CAE);
+		EXPECT_EQ(region->unprocessed_offset_rel(), 0x16CAE - 0x46F0);
 		EXPECT_EQ(region->unprocessed_bytes(), 0);
 		EXPECT_EQ(region->processed_lines(), 18840);
 	}
@@ -164,20 +164,20 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Check the region is unprocessed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x46F0);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
 	
 	{
-		auto x = region->instruction_by_offset(0);
+		auto x = region->instruction_by_rel_offset(-0x46F0);
 		EXPECT_EQ(x.second, x.first.end());
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F0);
+		auto x = region->instruction_by_rel_offset(0x46F0 - 0x46F0);
 		EXPECT_EQ(x.second, x.first.end());
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x16CAE);
+		auto x = region->instruction_by_rel_offset(0x16CAE - 0x46F0);
 		EXPECT_EQ(x.second, x.first.end());
 	}
 	
@@ -187,19 +187,19 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	region->check();
 	
 	/* Check the region is partially processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0xE6FA - 0x46F0);
 	
 	{
-		auto x = region->instruction_by_offset(0x46EF);
+		auto x = region->instruction_by_rel_offset(0x46EF - 0x46F0);
 		EXPECT_EQ(x.second, x.first.end());
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F0);
+		auto x = region->instruction_by_rel_offset(0x46F0 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F0);
+		EXPECT_EQ(x.second->offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x8B, 0xF9, 0xFF, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "call    0x4080");
@@ -207,11 +207,11 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F4);
+		auto x = region->instruction_by_rel_offset(0x46F4 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F0);
+		EXPECT_EQ(x.second->offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x8B, 0xF9, 0xFF, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "call    0x4080");
@@ -219,11 +219,11 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F5);
+		auto x = region->instruction_by_rel_offset(0x46F5 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F5);
+		EXPECT_EQ(x.second->offset, 0x46F5 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x86, 0xF9, 0xFF, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "call    0x4080");
@@ -231,11 +231,11 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x4730);
+		auto x = region->instruction_by_rel_offset(0x4730 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x4730);
+		EXPECT_EQ(x.second->offset, 0x4730 - 0x46F0);
 		EXPECT_EQ(x.second->length, 2);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x41, 0x57}));
 		EXPECT_EQ(x.second->disasm, "push    r15");
@@ -243,11 +243,11 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0xE6F9);
+		auto x = region->instruction_by_rel_offset(0xE6F9 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0xE6F6);
+		EXPECT_EQ(x.second->offset, 0xE6F6 - 0x46F0);
 		EXPECT_EQ(x.second->length, 4);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x48, 0x89, 0x55, 0x48}));
 		EXPECT_EQ(x.second->disasm, "mov     qword ptr [rbp + 0x48], rdx");
@@ -255,7 +255,7 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0xE6FA);
+		auto x = region->instruction_by_rel_offset(0xE6FA - 0x46F0);
 		EXPECT_EQ(x.second, x.first.end());
 	}
 	
@@ -265,14 +265,14 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	region->check();
 	
 	/* Ensure region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	{
-		auto x = region->instruction_by_offset(0xE6FA);
+		auto x = region->instruction_by_rel_offset(0xE6FA - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0xE6FA);
+		EXPECT_EQ(x.second->offset, 0xE6FA - 0x46F0);
 		EXPECT_EQ(x.second->length, 4);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x48, 0x8B, 0x53, 0x08}));
 		EXPECT_EQ(x.second->disasm, "mov     rdx, qword ptr [rbx + 8]");
@@ -280,11 +280,11 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x16CAA);
+		auto x = region->instruction_by_rel_offset(0x16CAA - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x16CA9);
+		EXPECT_EQ(x.second->offset, 0x16CA9 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE9, 0x22, 0xD9, 0xFE, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "jmp     0x45d0");
@@ -292,7 +292,7 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x16CAE);
+		auto x = region->instruction_by_rel_offset(0x16CAE - 0x46F0);
 		ASSERT_EQ(x.second, x.first.end());
 	}
 }
@@ -306,7 +306,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Check the region is unprocessed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x46F0);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
 	
 	{
 		auto x = region->instruction_by_line(0);
@@ -319,14 +319,14 @@ TEST(DisassemblyRegion, InstructionByLine)
 	region->check();
 	
 	/* Check the region is half-processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0xE6FA - 0x46F0);
 	
 	{
 		auto x = region->instruction_by_line(0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F0);
+		EXPECT_EQ(x.second->offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x8B, 0xF9, 0xFF, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "call    0x4080");
@@ -338,7 +338,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F5);
+		EXPECT_EQ(x.second->offset, 0x46F5 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x86, 0xF9, 0xFF, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "call    0x4080");
@@ -350,7 +350,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x4730);
+		EXPECT_EQ(x.second->offset, 0x4730 - 0x46F0);
 		EXPECT_EQ(x.second->length, 2);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x41, 0x57}));
 		EXPECT_EQ(x.second->disasm, "push    r15");
@@ -362,7 +362,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0xE6F6);
+		EXPECT_EQ(x.second->offset, 0xE6F6 - 0x46F0);
 		EXPECT_EQ(x.second->length, 4);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x48, 0x89, 0x55, 0x48}));
 		EXPECT_EQ(x.second->disasm, "mov     qword ptr [rbp + 0x48], rdx");
@@ -370,7 +370,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(9898);
+		auto x = region->instruction_by_line(9898);
 		EXPECT_EQ(x.second, x.first.end());
 	}
 	
@@ -380,14 +380,14 @@ TEST(DisassemblyRegion, InstructionByLine)
 	region->check();
 	
 	/* Ensure region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	{
 		auto x = region->instruction_by_line(9898);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0xE6FA);
+		EXPECT_EQ(x.second->offset, 0xE6FA - 0x46F0);
 		EXPECT_EQ(x.second->length, 4);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x48, 0x8B, 0x53, 0x08}));
 		EXPECT_EQ(x.second->disasm, "mov     rdx, qword ptr [rbx + 8]");
@@ -399,7 +399,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x16CA9);
+		EXPECT_EQ(x.second->offset, 0x16CA9 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE9, 0x22, 0xD9, 0xFE, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "jmp     0x45d0");
@@ -427,18 +427,18 @@ TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 		const std::vector<DisassemblyRegion::InstructionRange> &ranges = region->get_processed();
 		ASSERT_EQ(ranges.size(), 1U);
 		
-		EXPECT_EQ(ranges[0].offset, 0x46F0);
+		EXPECT_EQ(ranges[0].offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(ranges[0].length, 9);
 		EXPECT_EQ(ranges[0].rel_y_offset, 0);
 		EXPECT_EQ(ranges[0].y_lines, 4);
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F0);
+		auto x = region->instruction_by_rel_offset(0x46F0 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F0);
+		EXPECT_EQ(x.second->offset, 0x46F0 - 0x46F0);
 		EXPECT_EQ(x.second->length, 5);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8, 0x8B, 0xF9, 0xFF, 0xFF}));
 		EXPECT_EQ(x.second->disasm, "call    0x4080");
@@ -446,11 +446,11 @@ TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F5);
+		auto x = region->instruction_by_rel_offset(0x46F5 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F5);
+		EXPECT_EQ(x.second->offset, 0x46F5 - 0x46F0);
 		EXPECT_EQ(x.second->length, 1);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xE8}));
 		EXPECT_EQ(x.second->disasm, ".byte   0xe8");
@@ -458,11 +458,11 @@ TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F6);
+		auto x = region->instruction_by_rel_offset(0x46F6 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F6);
+		EXPECT_EQ(x.second->offset, 0x46F6 - 0x46F0);
 		EXPECT_EQ(x.second->length, 2);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0x86, 0xF9}));
 		EXPECT_EQ(x.second->disasm, "xchg    cl, bh");
@@ -470,11 +470,11 @@ TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x46F8);
+		auto x = region->instruction_by_rel_offset(0x46F8 - 0x46F0);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
-		EXPECT_EQ(x.second->offset, 0x46F8);
+		EXPECT_EQ(x.second->offset, 0x46F8 - 0x46F0);
 		EXPECT_EQ(x.second->length, 1);
 		EXPECT_EQ(x.second->data,   std::vector<unsigned char>({0xFF}));
 		EXPECT_EQ(x.second->disasm, ".byte   0xff");
@@ -482,7 +482,7 @@ TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x49F9);
+		auto x = region->instruction_by_rel_offset(0x49F9 - 0x46F0);
 		ASSERT_EQ(x.second, x.first.end());
 	}
 	
@@ -511,16 +511,16 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0, 15, 0, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Check the region is unprocessed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
 	
 	/* Data is small, so should process in one go. */
 	EXPECT_FALSE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
-	/* Check the region is fully. */
-	EXPECT_EQ(region->unprocessed_offset(), 15);
+	/* Check the region is fully processed. */
+	EXPECT_EQ(region->unprocessed_offset_rel(), 15);
 	
 	{
-		auto x = region->instruction_by_offset(0x00);
+		auto x = region->instruction_by_rel_offset(0x00);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -531,7 +531,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x04);
+		auto x = region->instruction_by_rel_offset(0x04);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -542,7 +542,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x06);
+		auto x = region->instruction_by_rel_offset(0x06);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -553,7 +553,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x07);
+		auto x = region->instruction_by_rel_offset(0x07);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -564,7 +564,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x08);
+		auto x = region->instruction_by_rel_offset(0x08);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -575,7 +575,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x0C);
+		auto x = region->instruction_by_rel_offset(0x0C);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -586,7 +586,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x0E);
+		auto x = region->instruction_by_rel_offset(0x0E);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -619,16 +619,16 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0, 18, 0, CS_ARCH_ARM64, (cs_mode)(CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN)));
 	
 	/* Check the region is unprocessed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
 	
 	/* Data is small, so should process in one go. */
 	EXPECT_FALSE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
-	/* Check the region is fully. */
-	EXPECT_EQ(region->unprocessed_offset(), 18);
+	/* Check the region is fully processed. */
+	EXPECT_EQ(region->unprocessed_offset_rel(), 18);
 	
 	{
-		auto x = region->instruction_by_offset(0x00);
+		auto x = region->instruction_by_rel_offset(0x00);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -639,7 +639,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x04);
+		auto x = region->instruction_by_rel_offset(0x04);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -650,7 +650,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x08);
+		auto x = region->instruction_by_rel_offset(0x08);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -661,7 +661,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x0C);
+		auto x = region->instruction_by_rel_offset(0x0C);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -672,7 +672,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x10);
+		auto x = region->instruction_by_rel_offset(0x10);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -683,7 +683,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	}
 	
 	{
-		auto x = region->instruction_by_offset(0x11);
+		auto x = region->instruction_by_rel_offset(0x11);
 		
 		ASSERT_NE(x.second, x.first.end());
 		
@@ -708,17 +708,17 @@ TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
 	/* Check the region is half-processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0xA00A);
 	
 	ByteRangeSet expect_dirty;
-	expect_dirty.set_range(0xE6FA, (0x125BE - (0xE6FA - 0x46F0)));
+	expect_dirty.set_range(0xA00A, (0x125BE - 0xA00A));
 	
 	ASSERT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges());
 	
 	char data[4] = { 0 };
 	doc->overwrite_data(0x46EC, data, 4);
 	
-	EXPECT_EQ(region->unprocessed_offset(), 0xE6FA) << "Region not affected by data overwrite before d_offset";
+	EXPECT_EQ(region->unprocessed_offset_rel(), 0xA00A) << "Region not affected by data overwrite before d_offset";
 	
 	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Region not affected by data overwrite before d_offset";
 }
@@ -737,15 +737,15 @@ TEST(DisassemblyRegion, OverwriteDataAtStart)
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
 	/* Check the region is half-processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0xA00A);
 	
 	char data[4] = { 0 };
 	doc->overwrite_data(0x46EE, data, 4);
 	
-	EXPECT_EQ(region->unprocessed_offset(), 0x46F0) << "Processing reset by overwrite straddling d_offset";
+	EXPECT_EQ(region->unprocessed_offset_rel(), 0) << "Processing reset by overwrite straddling d_offset";
 	
 	ByteRangeSet expect_dirty;
-	expect_dirty.set_range(0x46F0, 0x125BE);
+	expect_dirty.set_range(0, 0x125BE);
 	
 	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Processing reset by overwrite straddling d_offset";
 }
@@ -764,15 +764,15 @@ TEST(DisassemblyRegion, OverwriteDataInRegion)
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
 	/* Check the region is half-processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0xE6FA);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0xA00A);
 	
 	char data[4] = { 0 };
 	doc->overwrite_data(0xAAAA, data, 4);
 	
-	EXPECT_EQ(region->unprocessed_offset(), 0x96F5) << "Processing reset to InstructionRange where overwrite happened";
+	EXPECT_EQ(region->unprocessed_offset_rel(), 0x5005) << "Processing reset to InstructionRange where overwrite happened";
 	
 	ByteRangeSet expect_dirty;
-	expect_dirty.set_range(0x96F5, (0x125BE - (0x96F5 - 0x46F0)));
+	expect_dirty.set_range(0x5005, (0x125BE - 0x5005));
 	
 	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Processing reset to InstructionRange where overwrite happened";
 }
@@ -795,15 +795,15 @@ TEST(DisassemblyRegion, OverwriteDataAtEnd)
 	EXPECT_FALSE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
 	/* Check the region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	char data[4] = { 0 };
 	doc->overwrite_data(0x16CAC, data, 4);
 	
-	EXPECT_EQ(region->unprocessed_offset(), 0x15EFA) << "Processing reset to InstructionRange where overwrite happened";
+	EXPECT_EQ(region->unprocessed_offset_rel(), 0x1180A) << "Processing reset to InstructionRange where overwrite happened";
 	
 	ByteRangeSet expect_dirty;
-	expect_dirty.set_range(0x15EFA, (0x125BE - (0x15EFA - 0x46F0)));
+	expect_dirty.set_range(0x1180A, (0x125BE - 0x1180A));
 	
 	EXPECT_EQ(region->get_dirty().get_ranges(), expect_dirty.get_ranges()) << "Processing reset to InstructionRange where overwrite happened";
 }
@@ -826,7 +826,7 @@ TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 	EXPECT_FALSE(region->check() & DocumentCtrl::Region::PROCESSING);
 	
 	/* Check the region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	const ByteRangeSet EMPTY_SET;
 	ASSERT_EQ(region->get_dirty().get_ranges(), EMPTY_SET.get_ranges());
@@ -834,7 +834,7 @@ TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 	char data[4] = { 0 };
 	doc->overwrite_data(0x16CAE, data, 4);
 	
-	EXPECT_EQ(region->unprocessed_offset(), 0x16CAE) << "Region not affected by overwriting data after it";
+	EXPECT_EQ(region->unprocessed_offset_rel(), 0x125BE) << "Region not affected by overwriting data after it";
 	
 	EXPECT_EQ(region->get_dirty().get_ranges(), EMPTY_SET.get_ranges()) << "Region not affected by overwriting data after it";
 }
@@ -857,7 +857,7 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 	region->check();
 	
 	/* Check the region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
 	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
@@ -866,7 +866,7 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection_raw(0x7150, 0x7150 + 22 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7150, 0), BitOffset((0x7150 + 22 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -906,7 +906,7 @@ TEST(DisassemblyRegion, CopyInHexView)
 	region->check();
 	
 	/* Check the region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
 	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
@@ -915,7 +915,7 @@ TEST(DisassemblyRegion, CopyInHexView)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_HEX);
-	doc_ctrl->set_selection_raw(0x7150, 0x7150 + 22 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7150, 0), BitOffset((0x7150 + 22 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -940,7 +940,7 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 	region->check();
 	
 	/* Check the region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
 	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
@@ -949,7 +949,7 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection_raw(0x7151, 0x7151 + 20 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7151, 0), BitOffset((0x7151 + 20 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	
@@ -987,7 +987,7 @@ TEST(DisassemblyRegion, CopyPartialInstruction)
 	region->check();
 	
 	/* Check the region is fully processed. */
-	ASSERT_EQ(region->unprocessed_offset(), 0x16CAE);
+	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
 	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
 	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
@@ -996,7 +996,7 @@ TEST(DisassemblyRegion, CopyPartialInstruction)
 	doc_ctrl->replace_all_regions(regions);
 	
 	doc_ctrl->set_cursor_position(0x7150, Document::CSTATE_SPECIAL);
-	doc_ctrl->set_selection_raw(0x7153, 0x7153 + 2 - 1);
+	doc_ctrl->set_selection_raw(BitOffset(0x7153, 0), BitOffset((0x7153 + 2 - 1), 7));
 	
 	wxDataObject *data_obj = region->OnCopy(*doc_ctrl);
 	

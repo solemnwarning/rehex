@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -110,7 +110,7 @@ static const CSArchitecture known_arch_list[] = {
 
 /* List of all supported architectures */
 static std::vector<CSArchitecture> arch_list;
-static std::list<REHex::DataTypeRegistration> disasm_dtrs;
+static std::list<REHex::StaticDataTypeRegistration> disasm_dtrs;
 static const char *DEFAULT_ARCH = "x86_64";
 
 static void Initialize_disassembler()
@@ -125,11 +125,14 @@ static void Initialize_disassembler()
 			disasm_dtrs.emplace_back(
 				(std::string("code:") + desc.triple),
 				(std::string("Machine code (") + desc.label + ")"),
-				[desc](REHex::SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset)
-				{
-					return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
-				},
-				std::vector<std::string>({ "Machine code" }));
+				std::vector<std::string>({ "Machine code" }),
+				REHex::DataType()
+					.WithWordSize(REHex::BitOffset(1, 0))
+					.WithVariableSizeRegion(
+						[desc](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
+						{
+							return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
+						}));
 		}
 		else
 		{
@@ -240,9 +243,9 @@ void REHex::Disassemble::update()
 	/* Size of window to load to try disassembling. */
 	static const off_t WINDOW_SIZE = 256;
 	
-	off_t position = document->get_cursor_position();
+	BitOffset position = document->get_cursor_position();
 	
-	off_t window_base = std::max((position - (WINDOW_SIZE / 2)), (off_t)(0));
+	BitOffset window_base = std::max((position - BitOffset((WINDOW_SIZE / 2), 0)), BitOffset(0, position.bit()));
 	
 	std::vector<unsigned char> data;
 	try {
@@ -256,16 +259,19 @@ void REHex::Disassemble::update()
 		return;
 	}
 	
-	std::map<off_t, Instruction> instructions;
+	std::map<BitOffset, Instruction> instructions;
 	
 	/* Step 1: We try disassembling each offset from the start of the window up to the current
 	 * position, the first one that disassembles to a contiguous series of instructions where
 	 * one starts at position is where we display disassembly from.
 	*/
 	
-	for(off_t doc_off = window_base, data_off = 0; doc_off <= position && (size_t)(data_off) < data.size(); ++doc_off, ++data_off)
+	BitOffset doc_off;
+	size_t data_off;
+	
+	for(doc_off = window_base, data_off = 0; doc_off <= position && data_off < data.size(); doc_off += BitOffset(1, 0), ++data_off)
 	{
-		std::map<off_t, Instruction> i_instructions = disassemble(doc_off, data.data() + data_off, data.size() - data_off);
+		std::map<BitOffset, Instruction> i_instructions = disassemble(doc_off, data.data() + data_off, data.size() - data_off);
 		
 		if(i_instructions.find(position) != i_instructions.end())
 		{
@@ -281,9 +287,9 @@ void REHex::Disassemble::update()
 	
 	if(instructions.empty())
 	{
-		for(off_t doc_off = window_base, data_off = 0; doc_off <= position && (size_t)(data_off) < data.size(); ++doc_off, ++data_off)
+		for(doc_off = window_base, data_off = 0; doc_off <= position && data_off < data.size(); doc_off += BitOffset(1, 0), ++data_off)
 		{
-			std::map<off_t, Instruction> i_instructions = disassemble(doc_off, data.data() + data_off, data.size() - data_off);
+			std::map<BitOffset, Instruction> i_instructions = disassemble(doc_off, data.data() + data_off, data.size() - data_off);
 			
 			auto ii = i_instructions.lower_bound(position);
 			if(ii != i_instructions.begin()
@@ -356,14 +362,14 @@ void REHex::Disassemble::reinit_disassembler()
 	}
 }
 
-std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble(off_t offset, const void *code, size_t size)
+std::map<REHex::BitOffset, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble(BitOffset offset, const void *code, size_t size)
 {
-	std::map<off_t, Instruction> instructions;
+	std::map<BitOffset, Instruction> instructions;
 	char disasm_buf[256];
 	
 	const uint8_t* code_ = static_cast<const uint8_t*>(code);
 	size_t code_size = size;
-	uint64_t address = offset;
+	uint64_t address = offset.byte();
 	cs_insn* insn = cs_malloc(disassembler);
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
@@ -375,7 +381,7 @@ std::map<off_t, REHex::Disassemble::Instruction> REHex::Disassemble::disassemble
 		inst.length = insn->size;
 		inst.disasm = disasm_buf;
 		
-		instructions.insert(std::make_pair(insn->address, inst));
+		instructions.insert(std::make_pair(BitOffset(insn->address, offset.bit()), inst));
 	}
 	cs_free(insn, 1);
 	

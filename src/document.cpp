@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -86,7 +86,7 @@ REHex::Document::Document(const std::string &filename):
 	buffer = new Buffer(filename);
 	
 	data_seq.set_range   (0, buffer->length(), 0);
-	types.set_range      (0, buffer->length(), "");
+	types.set_range      (0, buffer->length(), TypeInfo(""));
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -179,7 +179,7 @@ void REHex::Document::reload()
 	_forward_buffer_events();
 	
 	types.clear();
-	types.set_range(0, new_size, "");
+	types.set_range(0, new_size, TypeInfo(""));
 	
 	OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, 0, overlap_size);
 	ProcessEvent(data_overwrite_event);
@@ -303,10 +303,28 @@ bool REHex::Document::is_dirty()
 	return current_seq != saved_seq;
 }
 
-bool REHex::Document::is_byte_dirty(off_t offset) const
+bool REHex::Document::is_byte_dirty(BitOffset offset) const
 {
-	auto i = data_seq.get_range(offset);
-	return i != data_seq.end() && i->second != saved_seq;
+	auto i = data_seq.get_range(offset.byte());
+	if(i != data_seq.end() && i->second != saved_seq)
+	{
+		return true;
+	}
+	
+	if(!offset.byte_aligned())
+	{
+		/* The offset isn't byte-aligned, so we need to check if the
+		 * subsequent byte is dirty too.
+		*/
+		
+		i = data_seq.get_range(offset.byte() + 1);
+		if(i != data_seq.end() && i->second != saved_seq)
+		{
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 bool REHex::Document::is_buffer_dirty() const
@@ -314,7 +332,7 @@ bool REHex::Document::is_buffer_dirty() const
 	return buffer_seq != saved_seq;
 }
 
-off_t REHex::Document::get_cursor_position() const
+REHex::BitOffset REHex::Document::get_cursor_position() const
 {
 	return this->cpos_off;
 }
@@ -324,25 +342,19 @@ REHex::Document::CursorState REHex::Document::get_cursor_state() const
 	return cursor_state;
 }
 
-void REHex::Document::set_cursor_position(off_t off, CursorState cursor_state)
+void REHex::Document::set_cursor_position(BitOffset off, CursorState cursor_state)
 {
 	_set_cursor_position(off, cursor_state);
 }
 
-void REHex::Document::_set_cursor_position(off_t position, enum CursorState cursor_state)
+void REHex::Document::_set_cursor_position(BitOffset position, enum CursorState cursor_state)
 {
-	position = std::max<off_t>(position, 0);
-	position = std::min(position, buffer_length());
+	position = std::max(position, BitOffset::ZERO);
+	position = std::min(position, BitOffset(buffer_length(), 0));
 	
 	if(cursor_state == CSTATE_GOTO)
 	{
-		if(this->cursor_state == CSTATE_HEX_MID)
-		{
-			cursor_state = CSTATE_HEX;
-		}
-		else{
-			cursor_state = this->cursor_state;
-		}
+		cursor_state = this->cursor_state;
 	}
 	
 	bool cursor_updated = (cpos_off != position || this->cursor_state != cursor_state);
@@ -357,12 +369,17 @@ void REHex::Document::_set_cursor_position(off_t position, enum CursorState curs
 	}
 }
 
-std::vector<unsigned char> REHex::Document::read_data(off_t offset, off_t max_length) const
+std::vector<unsigned char> REHex::Document::read_data(BitOffset offset, off_t max_length) const
 {
 	return buffer->read_data(offset, max_length);
 }
 
-void REHex::Document::overwrite_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+std::vector<bool> REHex::Document::read_bits(BitOffset offset, size_t max_length) const
+{
+	return buffer->read_bits(offset, max_length);
+}
+
+void REHex::Document::overwrite_data(BitOffset offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -370,7 +387,7 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 		return;
 	}
 	
-	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_pos < BitOffset(0, 0))   { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
 	
 	TransOpFunc first_op([&]()
@@ -379,7 +396,7 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 		assert(old_data->size() == (size_t)(length));
 		
 		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
-			.get_slice(offset, length)
+			.get_slice(offset.byte(), length + !offset.byte_aligned())
 			.transform([](const unsigned int &value) { return value + 1; });
 		
 		_UNTRACKED_overwrite_data(offset, (const unsigned char*)(data), length, new_data_seq_slice);
@@ -393,7 +410,7 @@ void REHex::Document::overwrite_data(off_t offset, const void *data, off_t lengt
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(BitOffset offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
 	{
@@ -401,7 +418,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, s
 		assert(new_data->size() == old_data->size());
 		
 		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
-			.get_slice(offset, old_data->size())
+			.get_slice(offset.byte(), old_data->size() + !offset.byte_aligned())
 			.transform([](const unsigned int &value) { return value - 1; });
 		
 		_UNTRACKED_overwrite_data(offset, old_data->data(), old_data->size(), new_data_seq_slice);
@@ -411,7 +428,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_undo(off_t offset, s
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(BitOffset offset, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, new_data, new_cursor_pos, new_cursor_state]()
 	{
@@ -419,7 +436,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, s
 		assert(old_data->size() == new_data->size());
 		
 		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
-			.get_slice(offset, new_data->size())
+			.get_slice(offset.byte(), new_data->size() + !offset.byte_aligned())
 			.transform([](const unsigned int &value) { return value + 1; });
 		
 		_UNTRACKED_overwrite_data(offset, new_data->data(), new_data->size(), new_data_seq_slice);
@@ -431,7 +448,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_overwrite_redo(off_t offset, s
 	});
 }
 
-void REHex::Document::insert_data(off_t offset, const void *data, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::overwrite_bits(BitOffset offset, const std::vector<bool> &data, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -439,8 +456,77 @@ void REHex::Document::insert_data(off_t offset, const void *data, off_t length, 
 		return;
 	}
 	
-	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
+	if(new_cursor_pos < BitOffset::ZERO)   { new_cursor_pos = cpos_off; }
 	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	
+	TransOpFunc first_op([&]()
+	{
+		std::shared_ptr< std::vector<bool> > old_data(new std::vector<bool>(std::move( read_bits(offset, data.size()) )));
+		assert(old_data->size() == data.size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset.byte(), ((offset.bit() + data.size() + 7) / 8))
+			.transform([](const unsigned int &value) { return value + 1; });
+		
+		_UNTRACKED_overwrite_bits(offset, data, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_overwrite_bits_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
+	
+	transact_step(first_op, change_desc);
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_bits_undo(BitOffset offset, std::shared_ptr< std::vector<bool> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<bool> > new_data(new std::vector<bool>(std::move( read_bits(offset, old_data->size()) )));
+		assert(new_data->size() == old_data->size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset.byte(), ((offset.bit() + old_data->size() + 7) / 8))
+			.transform([](const unsigned int &value) { return value - 1; });
+		
+		_UNTRACKED_overwrite_bits(offset, *old_data, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
+		return _op_overwrite_bits_redo(offset, new_data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+REHex::Document::TransOpFunc REHex::Document::_op_overwrite_bits_redo(BitOffset offset, std::shared_ptr< std::vector<bool> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
+{
+	return TransOpFunc([this, offset, new_data, new_cursor_pos, new_cursor_state]()
+	{
+		std::shared_ptr< std::vector<bool> > old_data(new std::vector<bool>(std::move( read_bits(offset, new_data->size()) )));
+		assert(old_data->size() == new_data->size());
+		
+		ByteRangeMap<unsigned int> new_data_seq_slice = data_seq
+			.get_slice(offset.byte(), ((offset.bit() + new_data->size() + 7) / 8))
+			.transform([](const unsigned int &value) { return value + 1; });
+		
+		_UNTRACKED_overwrite_bits(offset, *new_data, new_data_seq_slice);
+		buffer_seq = current_seq;
+		
+		_set_cursor_position(new_cursor_pos, new_cursor_state);
+		
+		return _op_overwrite_bits_undo(offset, old_data, new_cursor_pos, new_cursor_state);
+	});
+}
+
+void REHex::Document::insert_data(off_t offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+{
+	if(write_protect)
+	{
+		wxGetApp().printf_error("Cannot modify file - write protect is enabled\n");
+		return;
+	}
+	
+	if(new_cursor_pos == BitOffset::INVALID) { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT)   { new_cursor_state = cursor_state; }
 	
 	TransOpFunc first_op([&]()
 	{
@@ -458,7 +544,7 @@ void REHex::Document::insert_data(off_t offset, const void *data, off_t length, 
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, length, new_cursor_pos, new_cursor_state]()
 	{
@@ -474,7 +560,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_undo(off_t offset, off_
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice)
+REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice)
 {
 	return TransOpFunc([this, offset, data, new_cursor_pos, new_cursor_state, redo_data_seq_slice]()
 	{
@@ -487,7 +573,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_insert_redo(off_t offset, std:
 	});
 }
 
-void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::erase_data(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -495,8 +581,8 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 		return;
 	}
 	
-	if(new_cursor_pos < 0)                 { new_cursor_pos = cpos_off; }
-	if(new_cursor_state == CSTATE_CURRENT) { new_cursor_state = cursor_state; }
+	if(new_cursor_pos == BitOffset::INVALID) { new_cursor_pos = cpos_off; }
+	if(new_cursor_state == CSTATE_CURRENT)   { new_cursor_state = cursor_state; }
 	
 	TransOpFunc first_op([&]()
 	{
@@ -516,7 +602,7 @@ void REHex::Document::erase_data(off_t offset, off_t length, off_t new_cursor_po
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
+REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
 {
 	return TransOpFunc([this, offset, old_data, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
@@ -527,7 +613,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_undo(off_t offset, std::
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, length, new_cursor_pos, new_cursor_state]()
 	{
@@ -545,7 +631,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_erase_redo(off_t offset, off_t
 	});
 }
 
-void REHex::Document::replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+void REHex::Document::replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
 	{
@@ -586,7 +672,7 @@ void REHex::Document::replace_data(off_t offset, off_t old_data_length, const vo
 	transact_step(first_op, change_desc);
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
+REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice)
 {
 	return TransOpFunc([this, offset, old_data, new_data_length, new_cursor_pos, new_cursor_state, undo_data_seq_slice]()
 	{
@@ -601,7 +687,7 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_undo(off_t offset, std
 	});
 }
 
-REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state)
+REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state)
 {
 	return TransOpFunc([this, offset, old_data_length, new_data, new_cursor_pos, new_cursor_state]()
 	{
@@ -623,11 +709,11 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 	});
 }
 
-int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
+int REHex::Document::overwrite_text(BitOffset offset, const std::string &utf8_text, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
-	off_t buffer_length = buffer->length();
+	BitOffset buffer_length(buffer->length(), 0);
 	
-	if(offset < 0 || offset >= buffer_length)
+	if(offset < BitOffset::ZERO || offset >= buffer_length)
 	{
 		return WRITE_TEXT_BAD_OFFSET;
 	}
@@ -639,7 +725,10 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 	
 	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
-	for(off_t utf8_off = 0, write_pos = offset; utf8_off < (off_t)(utf8_text.size());)
+	size_t utf8_off;
+	BitOffset write_pos;
+	
+	for(utf8_off = 0, write_pos = offset; utf8_off < utf8_text.size();)
 	{
 		if(write_pos >= buffer_length)
 		{
@@ -655,7 +744,7 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 		
 		if(ec.valid)
 		{
-			if((write_pos + (off_t)(ec.encoded_char().size())) > buffer_length)
+			if((write_pos + BitOffset(ec.encoded_char().size(), 0)) > buffer_length)
 			{
 				/* Won't fit without extending document. */
 				ret_flags |= WRITE_TEXT_TRUNCATED;
@@ -663,7 +752,7 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 			}
 			
 			encoded_text.append(ec.encoded_char());
-			write_pos += ec.encoded_char().size();
+			write_pos += BitOffset(ec.encoded_char().size(), 0);
 			
 			utf8_off += ec.utf8_char().size();
 		}
@@ -686,11 +775,11 @@ int REHex::Document::overwrite_text(off_t offset, const std::string &utf8_text, 
 		}
 	}
 	
-	assert((offset + (off_t)(encoded_text.size())) <= buffer_length);
+	assert((offset + BitOffset(encoded_text.size(), 0)) <= buffer_length);
 	
 	if(new_cursor_pos == WRITE_TEXT_GOTO_NEXT)
 	{
-		new_cursor_pos = offset + (off_t)(encoded_text.size());
+		new_cursor_pos = offset + BitOffset(encoded_text.size(), 0);
 	}
 	
 	overwrite_data(offset, encoded_text.data(), encoded_text.size(), new_cursor_pos, new_cursor_state, change_desc);
@@ -714,7 +803,7 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	
 	CharacterEncoderIconv utf8_encoder("UTF-8", 1, true);
 	
-	std::string data_type;
+	TypeInfo data_type;
 	const CharacterEncoder *encoder;
 	
 	if(buffer_length > 0)
@@ -728,7 +817,6 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 		encoder = get_text_encoder(ref_offset);
 	}
 	else{
-		data_type = "";
 		encoder = &ascii_encoder;
 	}
 	
@@ -771,7 +859,7 @@ int REHex::Document::insert_text(off_t offset, const std::string &utf8_text, off
 	if(!encoded_text.empty())
 	{
 		insert_data(offset, encoded_text.data(), encoded_text.size(), new_cursor_pos, new_cursor_state);
-		set_data_type(offset, encoded_text.size(), data_type);
+		set_data_type(offset, encoded_text.size(), data_type.name, data_type.options);
 	}
 	
 	t.commit();
@@ -798,7 +886,7 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 	const CharacterEncoder *encoder = get_text_encoder(offset);
 	assert(encoder != NULL);
 	
-	std::string data_type = types.get_range(offset)->second;
+	TypeInfo data_type = types.get_range(offset)->second;
 	
 	for(off_t utf8_off = 0; utf8_off < (off_t)(utf8_text.size());)
 	{
@@ -839,7 +927,7 @@ int REHex::Document::replace_text(off_t offset, off_t old_data_length, const std
 	if(!encoded_text.empty())
 	{
 		replace_data(offset, old_data_length, encoded_text.data(), encoded_text.size(), new_cursor_pos, new_cursor_state);
-		set_data_type(offset, encoded_text.size(), data_type);
+		set_data_type(offset, encoded_text.size(), data_type.name, data_type.options);
 	}
 	
 	t.commit();
@@ -872,15 +960,15 @@ bool REHex::Document::get_write_protect() const
 	return write_protect;
 }
 
-const REHex::ByteRangeTree<REHex::Document::Comment> &REHex::Document::get_comments() const
+const REHex::BitRangeTree<REHex::Document::Comment> &REHex::Document::get_comments() const
 {
 	return comments;
 }
 
-bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &comment)
+bool REHex::Document::set_comment(BitOffset offset, BitOffset length, const Comment &comment)
 {
-	assert(offset >= 0);
-	assert(length >= 0);
+	assert(offset >= BitOffset::ZERO);
+	assert(length >= BitOffset::ZERO);
 	
 	if(!comments.can_set(offset, length))
 	{
@@ -902,9 +990,9 @@ bool REHex::Document::set_comment(off_t offset, off_t length, const Comment &com
 	return true;
 }
 
-bool REHex::Document::erase_comment(off_t offset, off_t length)
+bool REHex::Document::erase_comment(BitOffset offset, BitOffset length)
 {
-	if(comments.find(ByteRangeTreeKey(offset, length)) == comments.end())
+	if(comments.find(BitRangeTreeKey(offset, length)) == comments.end())
 	{
 		return false;
 	}
@@ -912,7 +1000,7 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	_tracked_change("delete comment",
 		[this, offset, length]()
 		{
-			comments.erase(ByteRangeTreeKey(offset, length));
+			comments.erase(BitRangeTreeKey(offset, length));
 			_raise_comment_modified();
 		},
 		[this]()
@@ -924,9 +1012,9 @@ bool REHex::Document::erase_comment(off_t offset, off_t length)
 	return true;
 }
 
-bool REHex::Document::erase_comment_recursive(off_t offset, off_t length)
+bool REHex::Document::erase_comment_recursive(BitOffset offset, BitOffset length)
 {
-	if(comments.find(ByteRangeTreeKey(offset, length)) == comments.end())
+	if(comments.find(BitRangeTreeKey(offset, length)) == comments.end())
 	{
 		return false;
 	}
@@ -934,7 +1022,7 @@ bool REHex::Document::erase_comment_recursive(off_t offset, off_t length)
 	_tracked_change("delete comment and children",
 		[this, offset, length]()
 		{
-			comments.erase_recursive(ByteRangeTreeKey(offset, length));
+			comments.erase_recursive(BitRangeTreeKey(offset, length));
 			_raise_comment_modified();
 		},
 		[this]()
@@ -946,22 +1034,17 @@ bool REHex::Document::erase_comment_recursive(off_t offset, off_t length)
 	return true;
 }
 
-const REHex::NestedOffsetLengthMap<int> &REHex::Document::get_highlights() const
+const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 {
 	return highlights;
 }
 
-bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colour_idx)
+bool REHex::Document::set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx)
 {
 	assert(highlight_colour_idx >= 0);
 	assert(highlight_colour_idx < Palette::NUM_HIGHLIGHT_COLOURS);
 	
-	if(off < 0 || length < 1 || (off + length) > buffer_length())
-	{
-		return false;
-	}
-	
-	if(!highlights.can_set(off, length))
+	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0))
 	{
 		return false;
 	}
@@ -969,7 +1052,7 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 	_tracked_change("set highlight",
 		[this, off, length, highlight_colour_idx]()
 		{
-			highlights.set(off, length, highlight_colour_idx);
+			highlights.set_range(off, length, highlight_colour_idx);
 			_raise_highlights_changed();
 		},
 		
@@ -982,9 +1065,10 @@ bool REHex::Document::set_highlight(off_t off, off_t length, int highlight_colou
 	return true;
 }
 
-bool REHex::Document::erase_highlight(off_t off, off_t length)
+bool REHex::Document::erase_highlight(BitOffset off, BitOffset length)
 {
-	if(highlights.find(NestedOffsetLengthMapKey(off, length)) == highlights.end())
+	auto highlight = highlights.get_range(off);
+	if(highlight == highlights.end() || highlight->first.offset != off || highlight->first.length != length)
 	{
 		return false;
 	}
@@ -992,7 +1076,7 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	_tracked_change("remove highlight",
 		[this, off, length]()
 		{
-			highlights.erase(NestedOffsetLengthMapKey(off, length));
+			highlights.clear_range(off, length);
 			_raise_highlights_changed();
 		},
 		
@@ -1005,22 +1089,24 @@ bool REHex::Document::erase_highlight(off_t off, off_t length)
 	return true;
 }
 
-const REHex::ByteRangeMap<std::string> &REHex::Document::get_data_types() const
+const REHex::BitRangeMap<REHex::Document::TypeInfo> &REHex::Document::get_data_types() const
 {
 	return types;
 }
 
-bool REHex::Document::set_data_type(off_t offset, off_t length, const std::string &type)
+bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const std::string &type, const json_t *options)
 {
-	if(offset < 0 || length < 1 || (offset + length) > buffer_length())
+	if(offset < BitOffset::ZERO || length <= BitOffset::ZERO || (offset + length).byte() > buffer_length())
 	{
 		return false;
 	}
 	
+	TypeInfo type_info(type, options);
+	
 	_tracked_change("set data type",
-		[this, offset, length, type]()
+		[this, offset, length, type_info]()
 		{
-			types.set_range(offset, length, type);
+			types.set_range(offset, length, type_info);
 			_raise_types_changed();
 		},
 		
@@ -1032,7 +1118,7 @@ bool REHex::Document::set_data_type(off_t offset, off_t length, const std::strin
 	return true;
 }
 
-const REHex::CharacterEncoder *REHex::Document::get_text_encoder(off_t offset) const
+const REHex::CharacterEncoder *REHex::Document::get_text_encoder(BitOffset offset) const
 {
 	if(offset < 0 || offset >= buffer_length())
 	{
@@ -1042,17 +1128,19 @@ const REHex::CharacterEncoder *REHex::Document::get_text_encoder(off_t offset) c
 	auto type_at_off = types.get_range(offset);
 	assert(type_at_off != types.end());
 	
-	if(type_at_off->second != "")
+	if(type_at_off->second.name != "")
 	{
-		const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
-		assert(dt_reg != NULL);
+		auto type = DataTypeRegistry::get_type(type_at_off->second.name, type_at_off->second.options);
+		assert(type != NULL);
 		
-		return dt_reg->encoder;
+		if(type->encoder != NULL)
+		{
+			return type->encoder;
+		}
 	}
-	else{
-		static REHex::CharacterEncoderASCII ascii_encoder;
-		return &ascii_encoder;
-	}
+	
+	static REHex::CharacterEncoderASCII ascii_encoder;
+	return &ascii_encoder;
 }
 
 bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
@@ -1241,10 +1329,10 @@ off_t REHex::Document::virt_to_real_offset(off_t virt_offset) const
 	}
 }
 
-void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments)
+void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const BitRangeTree<Document::Comment> &clipboard_comments)
 {
-	off_t cursor_pos = get_cursor_position();
-	off_t buffer_length = this->buffer_length();
+	BitOffset cursor_pos = get_cursor_position();
+	BitOffset buffer_length = BitOffset(this->buffer_length(), 0);
 	
 	for(auto cc = clipboard_comments.begin(); cc != clipboard_comments.end(); ++cc)
 	{
@@ -1254,7 +1342,7 @@ void REHex::Document::handle_paste(wxWindow *modal_dialog_parent, const ByteRang
 			return;
 		}
 		
-		if(comments.find(ByteRangeTreeKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
+		if(comments.find(BitRangeTreeKey(cursor_pos + cc->first.offset, cc->first.length)) != comments.end()
 			|| !comments.can_set(cursor_pos + cc->first.offset, cc->first.length))
 		{
 			wxMessageBox("Cannot paste comment(s) - would overwrite one or more existing", "Error", (wxOK | wxICON_ERROR), modal_dialog_parent);
@@ -1503,12 +1591,19 @@ void REHex::Document::transact_rollback()
 	wxGetApp().bulk_updates_thaw();
 }
 
-void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice)
+void REHex::Document::_UNTRACKED_overwrite_data(BitOffset offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice)
 {
-	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= offset);
-	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (offset + length));
+	/* The overwrite events use byte offsets and lengths, there isn't really much reason to
+	 * refactor them for bit alignment, so we just grow the reported length by one when the
+	 * write length isn't byte aligned to ensure it covers all modified bytes.
+	*/
+	off_t byte_offset = offset.byte();
+	off_t byte_length = length + !offset.byte_aligned();
 	
-	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, offset, length);
+	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= byte_offset);
+	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (byte_offset + byte_length));
+	
+	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, byte_offset, byte_length);
 	ProcessEvent(data_overwriting_event);
 	
 	bool ok = buffer->overwrite_data(offset, data, length);
@@ -1518,11 +1613,42 @@ void REHex::Document::_UNTRACKED_overwrite_data(off_t offset, const unsigned cha
 	{
 		data_seq.set_slice(data_seq_slice);
 		
-		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, offset, length);
+		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, byte_offset, byte_length);
 		ProcessEvent(data_overwrite_event);
 	}
 	else{
-		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, offset, length);
+		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, byte_offset, byte_length);
+		ProcessEvent(data_overwrite_aborted_event);
+	}
+}
+
+void REHex::Document::_UNTRACKED_overwrite_bits(BitOffset offset, const std::vector<bool> &data, const ByteRangeMap<unsigned int> &data_seq_slice)
+{
+	/* The overwrite events use byte offsets and lengths, there isn't really much reason to
+	 * refactor them for bit alignment, so we just grow the reported length by one when the
+	 * write length isn't byte aligned to ensure it covers all modified bytes.
+	*/
+	off_t byte_offset = offset.byte();
+	off_t byte_length = (offset.bit() + data.size() + 7) / 8;
+	
+	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= byte_offset);
+	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (byte_offset + byte_length));
+	
+	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, byte_offset, byte_length);
+	ProcessEvent(data_overwriting_event);
+	
+	bool ok = buffer->overwrite_bits(offset, data);
+	assert(ok);
+	
+	if(ok)
+	{
+		data_seq.set_slice(data_seq_slice);
+		
+		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, byte_offset, byte_length);
+		ProcessEvent(data_overwrite_event);
+	}
+	else{
+		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, byte_offset, byte_length);
 		ProcessEvent(data_overwrite_aborted_event);
 	}
 }
@@ -1545,7 +1671,7 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		data_seq.set_slice(data_seq_slice);
 		
 		types.data_inserted(offset, length);
-		types.set_range(offset, length, "");
+		types.set_range(offset, length, TypeInfo(""));
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
@@ -1751,9 +1877,9 @@ REHex::Document::TransOpFunc REHex::Document::_op_tracked_change(const std::func
 	});
 }
 
-json_t *REHex::Document::_dump_metadata(bool& has_data)
+json_t *REHex::Document::serialise_metadata() const
 {
-	has_data = false;
+	bool has_data = false;
 	json_t *root = json_object();
 	if(root == NULL)
 	{
@@ -1784,8 +1910,8 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		
 		json_t *comment = json_object();
 		if(json_array_append(comments, comment) == -1
-			|| json_object_set_new(comment, "offset", json_integer(c->first.offset)) == -1
-			|| json_object_set_new(comment, "length", json_integer(c->first.length)) == -1
+			|| json_object_set_new(comment, "offset", c->first.offset.to_json()) == -1
+			|| json_object_set_new(comment, "length", c->first.length.to_json()) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
 		{
 			json_decref(root);
@@ -1805,8 +1931,8 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 	{
 		json_t *highlight = json_object();
 		if(json_array_append(highlights, highlight) == -1
-			|| json_object_set_new(highlight, "offset",     json_integer(h->first.offset)) == -1
-			|| json_object_set_new(highlight, "length",     json_integer(h->first.length)) == -1
+			|| json_object_set_new(highlight, "offset",     h->first.offset.to_json()) == -1
+			|| json_object_set_new(highlight, "length",     h->first.length.to_json()) == -1
 			|| json_object_set_new(highlight, "colour-idx", json_integer(h->second)) == -1)
 		{
 			json_decref(root);
@@ -1824,17 +1950,18 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 	
 	for(auto dt = this->types.begin(); dt != this->types.end(); ++dt)
 	{
-		if(dt->second == "")
+		if(dt->second.name == "")
 		{
 			/* Don't bother serialising "this is data" */
 			continue;
 		}
 		
 		json_t *data_type = json_object();
-		if(json_array_append(data_types, data_type) == -1
-			|| json_object_set_new(data_type, "offset", json_integer(dt->first.offset)) == -1
-			|| json_object_set_new(data_type, "length", json_integer(dt->first.length)) == -1
-			|| json_object_set_new(data_type, "type",   json_string(dt->second.c_str())) == -1)
+		if(json_array_append_new(data_types, data_type) == -1
+			|| json_object_set_new(data_type, "offset", dt->first.offset.to_json()) == -1
+			|| json_object_set_new(data_type, "length", dt->first.length.to_json()) == -1
+			|| json_object_set_new(data_type, "type",   json_string(dt->second.name.c_str())) == -1
+			|| (dt->second.options != NULL && json_object_set(data_type, "options", dt->second.options) == -1))
 		{
 			json_decref(root);
 			return NULL;
@@ -1865,6 +1992,12 @@ json_t *REHex::Document::_dump_metadata(bool& has_data)
 		has_data = true;
 	}
 	
+	if(!has_data)
+	{
+		json_decref(root);
+		root = NULL;
+	}
+	
 	return root;
 }
 
@@ -1872,10 +2005,9 @@ void REHex::Document::_save_metadata(const std::string &filename)
 {
 	/* TODO: Atomically replace file. */
 	
-	bool has_data = false;
-	json_t *meta = _dump_metadata(has_data);
+	json_t *meta = serialise_metadata();
 	int res = 0;
-	if (has_data)
+	if (meta != NULL)
 	{
 		res = json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
 	}
@@ -1891,9 +2023,9 @@ void REHex::Document::_save_metadata(const std::string &filename)
 	}
 }
 
-REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
+REHex::BitRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(const json_t *meta, off_t buffer_length)
 {
-	ByteRangeTree<Comment> comments;
+	BitRangeTree<Comment> comments;
 	
 	json_t *j_comments = json_object_get(meta, "comments");
 	
@@ -1902,12 +2034,17 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(c
 	
 	json_array_foreach(j_comments, index, value)
 	{
-		off_t offset  = json_integer_value(json_object_get(value, "offset"));
-		off_t length  = json_integer_value(json_object_get(value, "length"));
+		if(!json_is_string(json_object_get(value, "text")))
+		{
+			continue;
+		}
+		
+		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
+		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
 		wxString text = wxString::FromUTF8(json_string_value(json_object_get(value, "text")));
 		
-		if(offset >= 0 && offset < buffer_length
-			&& length >= 0 && (offset + length) <= buffer_length)
+		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
+			&& length >= BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0))
 		{
 			comments.set(offset, length, Comment(text));
 		}
@@ -1916,9 +2053,9 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(c
 	return comments;
 }
 
-REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length)
+REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length)
 {
-	NestedOffsetLengthMap<int> highlights;
+	BitRangeMap<int> highlights;
 	
 	json_t *j_highlights = json_object_get(meta, "highlights");
 	
@@ -1927,25 +2064,25 @@ REHex::NestedOffsetLengthMap<int> REHex::Document::_load_highlights(const json_t
 	
 	json_array_foreach(j_highlights, index, value)
 	{
-		off_t offset = json_integer_value(json_object_get(value, "offset"));
-		off_t length = json_integer_value(json_object_get(value, "length"));
-		int   colour = json_integer_value(json_object_get(value, "colour-idx"));
+		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
+		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
+		int       colour = json_integer_value(json_object_get(value, "colour-idx"));
 		
-		if(offset >= 0 && offset < buffer_length
-			&& length > 0 && (offset + length) <= buffer_length
+		if(offset >= 0 && offset < BitOffset(buffer_length, 0)
+			&& length > 0 && (offset + length) <= BitOffset(buffer_length, 0)
 			&& colour >= 0 && colour < Palette::NUM_HIGHLIGHT_COLOURS)
 		{
-			highlights.set(offset, length, colour);
+			highlights.set_range(offset, length, colour);
 		}
 	}
 	
 	return highlights;
 }
 
-REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
+REHex::BitRangeMap<REHex::Document::TypeInfo> REHex::Document::_load_types(const json_t *meta, off_t buffer_length)
 {
-	ByteRangeMap<std::string> types;
-	types.set_range(0, buffer_length, "");
+	BitRangeMap<TypeInfo> types;
+	types.set_range(BitOffset(0, 0), BitOffset(buffer_length, 0), TypeInfo(""));
 	
 	json_t *j_types = json_object_get(meta, "data_types");
 	
@@ -1954,15 +2091,16 @@ REHex::ByteRangeMap<std::string> REHex::Document::_load_types(const json_t *meta
 	
 	json_array_foreach(j_types, index, value)
 	{
-		off_t offset     = json_integer_value(json_object_get(value, "offset"));
-		off_t length     = json_integer_value(json_object_get(value, "length"));
+		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
+		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
 		const char *type = json_string_value(json_object_get(value, "type"));
+		json_t *options  = json_object_get(value, "options");
 		
-		if(offset >= 0 && offset < buffer_length
-			&& length > 0 && (offset + length) <= buffer_length
+		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
+			&& length > BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0)
 			&& type != NULL)
 		{
-			types.set_range(offset, length, type);
+			types.set_range(offset, length, TypeInfo(type, options));
 		}
 	}
 	
@@ -2005,15 +2143,20 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	json_error_t json_err;
 	json_t *meta = json_load_file(filename.c_str(), 0, &json_err);
 	
-	comments = _load_comments(meta, buffer_length());
-	highlights = _load_highlights(meta, buffer_length());
-	types = _load_types(meta, buffer_length());
-	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(meta, buffer_length());
-	
-	json_t *write_protect = json_object_get(meta, "write_protect");
-	set_write_protect(json_is_true(write_protect));
+	load_metadata(meta);
 	
 	json_decref(meta);
+}
+
+void REHex::Document::load_metadata(const json_t *metadata)
+{
+	comments = _load_comments(metadata, buffer_length());
+	highlights = _load_highlights(metadata, buffer_length());
+	types = _load_types(metadata, buffer_length());
+	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(metadata, buffer_length());
+	
+	json_t *write_protect = json_object_get(metadata, "write_protect");
+	set_write_protect(json_is_true(write_protect));
 }
 
 void REHex::Document::_raise_comment_modified()
@@ -2104,6 +2247,97 @@ wxString REHex::Document::Comment::menu_preview() const
 	}
 }
 
+REHex::Document::TypeInfo::TypeInfo():
+	name(""),
+	options(NULL) {}
+
+REHex::Document::TypeInfo::TypeInfo(const std::string &name, const json_t *options):
+	name(name),
+	options(NULL)
+{
+	if(options != NULL)
+	{
+		this->options = json_deep_copy(options);
+		if(this->options == NULL)
+		{
+			throw std::bad_alloc();
+		}
+	}
+}
+
+REHex::Document::TypeInfo::TypeInfo(const TypeInfo &src):
+	name(src.name),
+	options(src.options)
+{
+	json_incref(options);
+}
+
+REHex::Document::TypeInfo::~TypeInfo()
+{
+	json_decref(options);
+}
+
+bool REHex::Document::TypeInfo::operator==(const TypeInfo &rhs) const
+{
+	return name == rhs.name
+		&& ((options == NULL && rhs.options == NULL) || json_equal(options, rhs.options));
+}
+
+bool REHex::Document::TypeInfo::operator!=(const TypeInfo &rhs) const
+{
+	return !(*this == rhs);
+}
+
+bool REHex::Document::TypeInfo::operator<(const TypeInfo &rhs) const
+{
+	if(name < rhs.name)
+	{
+		return true;
+	}
+	else if(name > rhs.name)
+	{
+		return false;
+	}
+	else{
+		if(options == NULL && rhs.options == NULL)
+		{
+			/* this == rhs */
+			return false;
+		}
+		else if(options == NULL)
+		{
+			/* this < rhs */
+			return true;
+		}
+		else if(rhs.options == NULL)
+		{
+			/* this > rhs */
+			return false;
+		}
+		else{
+			/* TODO: Implement a proper JSON compare function. */
+			
+			char *lhs_options = json_dumps(options,     JSON_COMPACT | JSON_SORT_KEYS);
+			char *rhs_options = json_dumps(rhs.options, JSON_COMPACT | JSON_SORT_KEYS);
+			
+			if(lhs_options == NULL || rhs_options == NULL)
+			{
+				free(lhs_options);
+				free(rhs_options);
+				
+				throw std::bad_alloc();
+			}
+			
+			int result = strcmp(lhs_options, rhs_options);
+			
+			free(lhs_options);
+			free(rhs_options);
+			
+			return result < 0;
+		}
+	}
+}
+
 REHex::Document::TransOpFunc::TransOpFunc(const std::function<TransOpFunc()> &func):
 	func(func) {}
 
@@ -2118,20 +2352,20 @@ REHex::Document::TransOpFunc REHex::Document::TransOpFunc::operator()() const
 	return func();
 }
 
-const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v1");
+const wxDataFormat REHex::CommentsDataObject::format("rehex/comments/v2");
 
 REHex::CommentsDataObject::CommentsDataObject():
 	wxCustomDataObject(format) {}
 
-REHex::CommentsDataObject::CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base):
+REHex::CommentsDataObject::CommentsDataObject(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base):
 	wxCustomDataObject(format)
 {
 	set_comments(comments, base);
 }
 
-REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
+REHex::BitRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_comments() const
 {
-	ByteRangeTree<Document::Comment> comments;
+	BitRangeTree<Document::Comment> comments;
 	
 	const unsigned char *data = (const unsigned char*)(GetData());
 	const unsigned char *end = data + GetSize();
@@ -2141,7 +2375,7 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_co
 	{
 		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
 		
-		bool x = comments.set(header->file_offset, header->file_length, REHex::Document::Comment(text));
+		bool x = comments.set(BitOffset::from_int64(header->file_offset), BitOffset::from_int64(header->file_length), REHex::Document::Comment(text));
 		assert(x); /* TODO: Raise some kind of error. Beep? */
 		
 		data += sizeof(Header) + header->text_length;
@@ -2150,7 +2384,7 @@ REHex::ByteRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_co
 	return comments;
 }
 
-void REHex::CommentsDataObject::set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base)
+void REHex::CommentsDataObject::set_comments(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base)
 {
 	size_t size = 0;
 	
@@ -2170,8 +2404,8 @@ void REHex::CommentsDataObject::set_comments(const std::list<ByteRangeTree<Docum
 		
 		const wxScopedCharBuffer utf8_text = (*i)->value.text->utf8_str();
 		
-		header->file_offset = (*i)->key.offset - base;
-		header->file_length = (*i)->key.length;
+		header->file_offset = ((*i)->key.offset - base).to_int64();
+		header->file_length = (*i)->key.length.to_int64();
 		header->text_length = utf8_text.length();
 		
 		memcpy(outp, utf8_text.data(), utf8_text.length());

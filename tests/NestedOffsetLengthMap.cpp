@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -344,6 +344,8 @@ TEST(NestedOffsetLengthMap, DataErased)
 		NestedOffsetLengthMap<int> map;
 		NestedOffsetLengthMap_set(map, 10, 0, 0);
 		size_t keys_modified = NestedOffsetLengthMap_data_erased(map, 6, 4);
+		
+		ASSERT_EQ(map.size(), 1U);
 		
 		EXPECT_EQ(map.begin()->first.offset, 6)  << "Erasing data immediately before zero-length key shifts offset";
 		EXPECT_EQ(map.begin()->first.length, 0)  << "Erasing data immediately before zero-length key doesn't touch length";

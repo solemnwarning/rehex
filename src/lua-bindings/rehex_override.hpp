@@ -112,7 +112,7 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 {
 	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
 	
-	const REHex::ByteRangeTree<REHex::Document::Comment> &comments = self->get_comments();
+	const REHex::BitRangeTree<REHex::Document::Comment> &comments = self->get_comments();
 	
 	lua_newtable(L);            /* Table to return */
 	lua_Integer table_idx = 1;  /* Next index to use in return table */
@@ -124,11 +124,11 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 		lua_newtable(L);  /* Table for comment. */
 		
 		lua_pushstring(L, "offset");
-		lua_pushinteger(L, c->first.offset);
+		push_BitOffset(L, c->first.offset);
 		lua_settable(L, -3);
 		
 		lua_pushstring(L, "length");
-		lua_pushinteger(L, c->first.length);
+		push_BitOffset(L, c->first.length);
 		lua_settable(L, -3);
 		
 		lua_pushstring(L, "text");
@@ -148,7 +148,7 @@ static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 {
 	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
 	
-	off_t offset     = (off_t)(wxlua_getnumbertype(L, 2));
+	REHex::BitOffset offset = *(REHex::BitOffset*)(wxluaT_getuserdatatype(L, 2, wxluatype_REHex_BitOffset));
 	off_t max_length = (off_t)(wxlua_getnumbertype(L, 3));
 	
 	// TODO: Handle exceptions(?)
@@ -160,13 +160,68 @@ static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 }
 %end
 
+%override wxLua_REHex_Document_read_data1
+static int LUACALL wxLua_REHex_Document_read_data1(lua_State *L)
+{
+	wxGetApp().print_info("Warning: Calling rehex.Document:read_data() with a numeric offset is deprecated\n");
+	
+	REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+	
+	off_t offset = (off_t)(wxlua_getnumbertype(L, 2));
+	off_t max_length = (off_t)(wxlua_getnumbertype(L, 3));
+	
+	// TODO: Handle exceptions(?)
+	
+	std::vector<unsigned char> data = self->read_data(REHex::BitOffset(offset, 0), max_length);
+	lua_pushlstring(L, (const char*)(data.data()), data.size());
+	
+	return 1;
+}
+%end
+
+%override wxLua_REHex_Document_set_comment1
+static int LUACALL wxLua_REHex_Document_set_comment1(lua_State *L)
+{
+	wxGetApp().print_info("Warning: Calling rehex.Document:set_comment() with a numeric offset/length is deprecated\n");
+	
+	REHex::Document *self = (REHex::Document *)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+	
+	const REHex::Document::Comment *comment = (const REHex::Document::Comment*)(wxluaT_getuserdatatype(L, 4, wxluatype_REHex_Document_Comment));
+	off_t length = (off_t)(wxlua_getnumbertype(L, 3));
+	off_t offset = (off_t)(wxlua_getnumbertype(L, 2));
+	
+	bool returns = self->set_comment(offset, length, *comment);
+	lua_pushboolean(L, returns);
+	
+	return 1;
+}
+%end
+
 %override wxLua_REHex_Document_set_data_type
 static int LUACALL wxLua_REHex_Document_set_data_type(lua_State *L)
 {
 	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
 	
-	off_t offset = (off_t)wxlua_getnumbertype(L, 2);
-	off_t length = (off_t)wxlua_getnumbertype(L, 3);
+	REHex::BitOffset offset = *(REHex::BitOffset*)(wxluaT_getuserdatatype(L, 2, wxluatype_REHex_BitOffset));
+	REHex::BitOffset length = *(REHex::BitOffset*)(wxluaT_getuserdatatype(L, 3, wxluatype_REHex_BitOffset));
+	const wxString type = wxlua_getwxStringtype(L, 4);
+	
+	bool returns = self->set_data_type(offset, length, type.ToStdString());
+	lua_pushboolean(L, returns);
+	
+	return 1;
+}
+%end
+
+%override wxLua_REHex_Document_set_data_type1
+static int LUACALL wxLua_REHex_Document_set_data_type1(lua_State *L)
+{
+	wxGetApp().print_info("Warning: Calling rehex.Document:set_data_type() with a numeric offset/length is deprecated\n");
+	
+	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
+	
+	off_t offset = (off_t)(wxlua_getnumbertype(L, 2));
+	off_t length = (off_t)(wxlua_getnumbertype(L, 3));
 	const wxString type = wxlua_getwxStringtype(L, 4);
 	
 	bool returns = self->set_data_type(offset, length, type.ToStdString());
@@ -193,11 +248,12 @@ static int LUACALL wxLua_REHex_Tab_get_selection_linear(lua_State *L)
 {
 	REHex::Tab * self = (REHex::Tab *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Tab);
 	
-	std::pair<off_t,off_t> selection = self->doc_ctrl->get_selection_linear();
-	if(selection.second > 0)
+	std::pair<REHex::BitOffset, REHex::BitOffset> selection = self->doc_ctrl->get_selection_linear();
+	if(selection.second > REHex::BitOffset::ZERO)
 	{
-		lua_pushinteger(L, selection.first);
-		lua_pushinteger(L, selection.second);
+		
+		push_BitOffset(L, selection.first);
+		push_BitOffset(L, selection.second);
 		
 		return 2;
 	}

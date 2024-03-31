@@ -226,7 +226,9 @@
     <ClCompile Include="..\..\src\AppTestable.cpp" />
     <ClCompile Include="..\..\src\ArtProvider.cpp" />
     <ClCompile Include="..\..\src\BasicDataTypes.cpp" />
+    <ClCompile Include="..\..\src\BitArray.cpp" />
     <ClCompile Include="..\..\src\BitmapTool.cpp" />
+    <ClCompile Include="..\..\src\BitOffset.cpp" />
     <ClCompile Include="..\..\src\buffer.cpp" />
     <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\src\BytesPerLineDialog.cpp" />
@@ -269,6 +271,7 @@
     <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\..\src\win32lib.cpp" />
     <ClCompile Include="..\..\tests\BitmapTool.cpp" />
+    <ClCompile Include="..\..\tests\BitOffset.cpp" />
     <ClCompile Include="..\..\tests\buffer.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />
@@ -280,6 +283,7 @@
     <ClCompile Include="..\..\tests\CommentTree.cpp" />
     <ClCompile Include="..\..\tests\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\tests\DataHistogramAccumulator.cpp" />
+    <ClCompile Include="..\..\tests\DataType.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
     <ClCompile Include="..\..\tests\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,8 @@
 #include <utility>
 #include <vector>
 
+#include "BitOffset.hpp"
+
 namespace REHex
 {
 	/**
@@ -38,19 +40,22 @@ namespace REHex
 	 * ranges in the file. Any ranges which are adjacent or overlapping and have the same value
 	 * will be merged to reduce memory consumption, so only each unique contiguous range added
 	 * will take space in memory.
+	 *
+	 * You probably want to use the BitRangeMap<T> and/or ByteRangeMap<T> specialisations of
+	 * this class.
 	*/
-	template<typename T> class ByteRangeMap
+	template<typename OT, typename T> class RangeMap
 	{
 		public:
 			/**
-			 * @brief A range stored within a ByteRangeMap.
+			 * @brief A range stored within a RangeMap.
 			*/
 			struct Range
 			{
-				off_t offset;
-				off_t length;
+				OT offset;
+				OT length;
 				
-				Range(off_t offset, off_t length):
+				Range(OT offset, OT length):
 					offset(offset), length(length) {}
 				
 				bool operator<(const Range &rhs) const
@@ -73,6 +78,20 @@ namespace REHex
 			typedef typename std::vector< std::pair<Range, T> >::iterator iterator;
 			typedef typename std::vector< std::pair<Range, T> >::const_iterator const_iterator;
 			
+			template<typename OT2 = OT>
+			static typename std::enable_if<std::is_same<OT2, off_t>::value, OT>::type
+			OT_MAX()
+			{
+				return std::numeric_limits<off_t>::max();
+			}
+			
+			template<typename OT2 = OT>
+			static typename std::enable_if<std::is_same<OT2, BitOffset>::value, OT>::type
+			OT_MAX()
+			{
+				return BitOffset::MAX;
+			}
+			
 		private:
 			T default_value;
 			
@@ -87,16 +106,16 @@ namespace REHex
 			/**
 			 * @brief Construct an empty map.
 			*/
-			ByteRangeMap(const T &default_value = T()):
+			RangeMap(const T &default_value = T()):
 				default_value(default_value),
 				last_get_iter(ranges.end()) {}
 			
-			ByteRangeMap(const ByteRangeMap &src):
+			RangeMap(const RangeMap &src):
 				default_value(src.default_value),
 				ranges(src.ranges),
 				last_get_iter(ranges.end()) {}
 			
-			ByteRangeMap &operator=(const ByteRangeMap &rhs)
+			RangeMap &operator=(const RangeMap<OT, T> &rhs)
 			{
 				default_value = rhs.default_value;
 				ranges = rhs.ranges;
@@ -105,12 +124,12 @@ namespace REHex
 				return *this;
 			}
 			
-			bool operator==(const ByteRangeMap<T> &rhs) const
+			bool operator==(const RangeMap<OT, T> &rhs) const
 			{
 				return ranges == rhs.ranges;
 			}
 			
-			bool operator!=(const ByteRangeMap<T> &rhs) const
+			bool operator!=(const RangeMap<OT, T> &rhs) const
 			{
 				return ranges != rhs.ranges;
 			}
@@ -121,7 +140,7 @@ namespace REHex
 			 * NOTE: The ranges MUST be in order and MUST NOT be adjacent
 			 * (unless the values differ).
 			*/
-			template<typename I> ByteRangeMap(const I begin, const I end, const T &default_value = T()):
+			template<typename I> RangeMap(const I begin, const I end, const T &default_value = T()):
 				default_value(default_value),
 				ranges(begin, end),
 				last_get_iter(ranges.end()) {}
@@ -131,7 +150,7 @@ namespace REHex
 			 *
 			 * Returns an iterator to the relevant range, end if there isn't one.
 			*/
-			const_iterator get_range(off_t offset) const;
+			const_iterator get_range(OT offset) const;
 			
 			/**
 			 * @brief Search the map for a range intersecting with the given range.
@@ -139,7 +158,7 @@ namespace REHex
 			 * Returns an iterator to the first intersecting range, end if there aren't
 			 * any.
 			*/
-			const_iterator get_range_in(off_t offset, off_t length) const;
+			const_iterator get_range_in(OT offset, OT length) const;
 			
 			/**
 			 * @brief Set a range of bytes in the map.
@@ -148,7 +167,7 @@ namespace REHex
 			 * adjacent to or within the new range will be merged into the new range
 			 * and removed from the set.
 			*/
-			void set_range(off_t offset, off_t length, const T &value);
+			void set_range(OT offset, OT length, const T &value);
 			
 			/**
 			 * @brief Clear a range of bytes in the map.
@@ -157,23 +176,23 @@ namespace REHex
 			 * range. If any elements partially intersect the given range, the portion
 			 * outside of the range will be preserved.
 			*/
-			void clear_range(off_t offset, off_t length);
+			void clear_range(OT offset, OT length);
 			
 			/**
 			 * @brief Get a subset of the ranges defined in the map.
 			 *
-			 * This method builds a ByteRangeMap containing any ranges intersecting the
+			 * This method builds a RangeMap containing any ranges intersecting the
 			 * given range, clamped to the ends of the range.
 			*/
-			ByteRangeMap<T> get_slice(off_t offset, off_t length) const;
+			RangeMap<OT, T> get_slice(OT offset, OT length) const;
 			
 			/**
-			 * @brief Set all keys defined in another ByteRangeMap.
+			 * @brief Set all keys defined in another RangeMap.
 			 *
-			 * This method copies ranges from another ByteRangeMap, overwriting any
+			 * This method copies ranges from another RangeMap, overwriting any
 			 * already set in this one.
 			*/
-			void set_slice(const ByteRangeMap<T> &slice);
+			void set_slice(const RangeMap<OT, T> &slice);
 			
 			/**
 			 * @brief Transform all values defined in the map.
@@ -186,7 +205,7 @@ namespace REHex
 			 * WARNING: The transform MUST NOT cause values that were previously equal
 			 * to become not-equal or vice-versa.
 			*/
-			ByteRangeMap<T> &transform(const std::function<T(const T &value)> &func);
+			RangeMap<OT, T> &transform(const std::function<T(const T &value)> &func);
 			
 			/**
 			 * @brief Get a reference to the internal std::vector.
@@ -204,13 +223,31 @@ namespace REHex
 			const std::pair<Range, T> &back() const { assert(!ranges.empty()); return ranges.back(); }
 			void clear() { ranges.clear(); }
 			
+		private:
+			bool data_inserted_impl(OT offset, OT length);
+			bool data_erased_impl(OT offset, OT length);
+			
+		public:
 			/**
 			 * @brief Adjust for data being inserted into file.
 			 *
 			 * Ranges after the insertion will be moved along by the size of the
 			 * insertion. Ranges spanning the insertion will be split.
 			*/
-			bool data_inserted(off_t offset, off_t length);
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, off_t>::value, bool>::type
+			data_inserted(off_t offset, off_t length)
+			{
+				return data_inserted_impl(offset, length);
+			}
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, BitOffset>::value, bool>::type
+			data_inserted(off_t offset, off_t length)
+			{
+				return data_inserted_impl(BitOffset(offset, 0), BitOffset(length, 0));
+			}
 			
 			/**
 			 * @brief Minimum number of ranges to make data_inserted() use threads.
@@ -224,11 +261,27 @@ namespace REHex
 			 * insertion. Ranges wholly within the erased section will be lost. Ranges
 			 * on either side of the erase will be truncated and merged as necessary.
 			*/
-			bool data_erased(off_t offset, off_t length);
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, off_t>::value, bool>::type
+			data_erased(off_t offset, off_t length)
+			{
+				return data_erased_impl(offset, length);
+			}
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, BitOffset>::value, bool>::type
+			data_erased(off_t offset, off_t length)
+			{
+				return data_erased_impl(BitOffset(offset, 0), BitOffset(length, 0));
+			}
 	};
+	
+	template<typename T> using ByteRangeMap = RangeMap<off_t, T>;
+	template<typename T> using BitRangeMap = RangeMap<BitOffset, T>;
 }
 
-template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::ByteRangeMap<T>::get_range(off_t offset) const
+template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::get_range(OT offset) const
 {
 	if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
 	{
@@ -256,7 +309,7 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 	return end();
 }
 
-template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::ByteRangeMap<T>::get_range_in(off_t offset, off_t length) const
+template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::get_range_in(OT offset, OT length) const
 {
 	if(length <= 0)
 	{
@@ -270,13 +323,13 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 		--i;
 	}
 	
-	off_t end = (std::numeric_limits<off_t>::max() - length) < offset
-		? std::numeric_limits<off_t>::max()
+	OT end = (OT_MAX() - length) < offset
+		? OT_MAX()
 		: offset + length;
 	
 	for(; i != ranges.end() && i->first.offset < end; ++i)
 	{
-		off_t i_end = i->first.offset + i->first.length;
+		OT i_end = i->first.offset + i->first.length;
 		
 		if((i->first.offset < end || end < offset) && offset < i_end)
 		{
@@ -288,7 +341,7 @@ template<typename T> typename REHex::ByteRangeMap<T>::const_iterator REHex::Byte
 	return ranges.end();
 }
 
-template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t length, const T &value)
+template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offset, OT length, const T &value)
 {
 	if(length <= 0)
 	{
@@ -339,8 +392,8 @@ template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t 
 				 *    erase/replace operation.
 				*/
 				
-				off_t begin = offset + length;
-				off_t end   = eb_prev->first.offset + eb_prev->first.length;
+				OT begin = offset + length;
+				OT end   = eb_prev->first.offset + eb_prev->first.length;
 				
 				insert_after.push_back(std::make_pair(Range(begin, (end - begin)), eb_prev->second));
 				
@@ -351,8 +404,8 @@ template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t 
 			 *    blocks into our work...
 			*/
 			
-			off_t merged_begin = std::min(eb_prev->first.offset, offset);
-			off_t merged_end   = std::max((eb_prev->first.offset + eb_prev->first.length), (offset + length));
+			OT merged_begin = std::min(eb_prev->first.offset, offset);
+			OT merged_end   = std::max((eb_prev->first.offset + eb_prev->first.length), (offset + length));
 			
 			offset = merged_begin;
 			length = merged_end - merged_begin;
@@ -409,7 +462,7 @@ template<typename T> void REHex::ByteRangeMap<T>::set_range(off_t offset, off_t 
 	last_get_iter = ranges.end();
 }
 
-template<typename T> void REHex::ByteRangeMap<T>::clear_range(off_t offset, off_t length)
+template<typename OT, typename T> void REHex::RangeMap<OT, T>::clear_range(OT offset, OT length)
 {
 	if(length <= 0)
 	{
@@ -445,8 +498,8 @@ template<typename T> void REHex::ByteRangeMap<T>::clear_range(off_t offset, off_
 			
 			if((eb_prev->first.offset + eb_prev->first.length) > (offset + length))
 			{
-				off_t begin = offset + length;
-				off_t end   = eb_prev->first.offset + eb_prev->first.length;
+				OT begin = offset + length;
+				OT end   = eb_prev->first.offset + eb_prev->first.length;
 				
 				insert_after.push_back(std::make_pair(Range(begin, (end - begin)), eb_prev->second));
 			}
@@ -487,16 +540,16 @@ template<typename T> void REHex::ByteRangeMap<T>::clear_range(off_t offset, off_
 	last_get_iter = ranges.end();
 }
 
-template<typename T> REHex::ByteRangeMap<T> REHex::ByteRangeMap<T>::get_slice(off_t offset, off_t length) const
+template<typename OT, typename T> REHex::RangeMap<OT, T> REHex::RangeMap<OT, T>::get_slice(OT offset, OT length) const
 {
-	off_t end = offset + length;
+	OT end = offset + length;
 	
-	ByteRangeMap<T> slice;
+	RangeMap<OT, T> slice;
 	
 	for(auto i = get_range_in(offset, length); i != this->end() && i->first.offset < end; ++i)
 	{
-		off_t slice_off = std::max(i->first.offset, offset);
-		off_t slice_len = std::min(i->first.length, (end - slice_off));
+		OT slice_off = std::max(i->first.offset, offset);
+		OT slice_len = std::min(i->first.length, (end - slice_off));
 		
 		slice.set_range(slice_off, slice_len, i->second);
 	}
@@ -504,7 +557,7 @@ template<typename T> REHex::ByteRangeMap<T> REHex::ByteRangeMap<T>::get_slice(of
 	return slice;
 }
 
-template<typename T> void REHex::ByteRangeMap<T>::set_slice(const ByteRangeMap<T> &slice)
+template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_slice(const RangeMap<OT, T> &slice)
 {
 	for(auto i = slice.begin(); i != slice.end(); ++i)
 	{
@@ -512,7 +565,7 @@ template<typename T> void REHex::ByteRangeMap<T>::set_slice(const ByteRangeMap<T
 	}
 }
 
-template<typename T> REHex::ByteRangeMap<T> &REHex::ByteRangeMap<T>::transform(const std::function<T(const T &value)> &func)
+template<typename OT, typename T> REHex::RangeMap<OT, T> &REHex::RangeMap<OT, T>::transform(const std::function<T(const T &value)> &func)
 {
 	for(auto i = ranges.begin(); i != ranges.end(); ++i)
 	{
@@ -522,7 +575,7 @@ template<typename T> REHex::ByteRangeMap<T> &REHex::ByteRangeMap<T>::transform(c
 	return *this;
 }
 
-template<typename T> bool REHex::ByteRangeMap<T>::data_inserted(off_t offset, off_t length)
+template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_inserted_impl(OT offset, OT length)
 {
 	std::mutex lock;
 	std::vector< std::pair<Range, T> > insert_elem;
@@ -615,7 +668,7 @@ template<typename T> bool REHex::ByteRangeMap<T>::data_inserted(off_t offset, of
 	return elements_changed;
 }
 
-template<typename T> bool REHex::ByteRangeMap<T>::data_erased(off_t offset, off_t length)
+template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(OT offset, OT length)
 {
 	/* Find the range of elements overlapping the range to be erased. */
 	
@@ -647,8 +700,8 @@ template<typename T> bool REHex::ByteRangeMap<T>::data_erased(off_t offset, off_
 	{
 		auto erase_last = std::prev(erase_end);
 		
-		off_t begin = std::min(erase_begin->first.offset, offset);
-		off_t end   = erase_last->first.offset + erase_last->first.length;
+		OT begin = std::min(erase_begin->first.offset, offset);
+		OT end   = erase_last->first.offset + erase_last->first.length;
 		
 		T begin_value = erase_begin->second;
 		T last_value  = erase_last->second;

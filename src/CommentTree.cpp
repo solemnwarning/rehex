@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -268,7 +268,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 {
 	assert(document != NULL);
 	
-	const NestedOffsetLengthMapKey *key = CommentTreeModel::dv_item_to_key(event.GetItem());
+	const BitRangeTreeKey *key = CommentTreeModel::dv_item_to_key(event.GetItem());
 	if(key == NULL)
 	{
 		/* Click wasn't over an item. */
@@ -323,13 +323,13 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				ClipboardGuard cg;
 				if(cg)
 				{
-					const ByteRangeTree<Document::Comment> &comments = document->get_comments();
-					const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(*key);
+					const BitRangeTree<Document::Comment> &comments = document->get_comments();
+					const BitRangeTree<Document::Comment>::Node *root_comment = comments.find_node(*key);
 					
-					std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
+					std::list< BitRangeTree<Document::Comment>::const_iterator > selected_comments;
 					
-					std::function<void(const ByteRangeTree<Document::Comment>::Node*)> add_comment;
-					add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment)
+					std::function<void(const BitRangeTree<Document::Comment>::Node*)> add_comment;
+					add_comment = [&](const BitRangeTree<Document::Comment>::Node *comment)
 					{
 						selected_comments.push_back(comments.find(comment->key));
 						
@@ -361,7 +361,7 @@ void REHex::CommentTree::OnActivated(wxDataViewEvent &event)
 {
 	assert(document != NULL);
 	
-	const NestedOffsetLengthMapKey *key = CommentTreeModel::dv_item_to_key(event.GetItem());
+	const BitRangeTreeKey *key = CommentTreeModel::dv_item_to_key(event.GetItem());
 	assert(key != NULL);
 	
 	document->set_cursor_position(key->offset);
@@ -412,7 +412,7 @@ bool REHex::CommentTreeModel::refresh_comments()
 {
 	PROFILE_BLOCK("REHex::CommentTreeModel::refresh_comments");
 	
-	const ByteRangeTree<Document::Comment> &comments = document->get_comments();
+	const BitRangeTree<Document::Comment> &comments = document->get_comments();
 	unsigned num_changed = 0;
 	
 	/* Erase any comments which no longer exist, or are children of such. */
@@ -434,8 +434,8 @@ bool REHex::CommentTreeModel::refresh_comments()
 	
 	/* Add any comments which we don't already have registered. */
 	
-	std::function<void(const ByteRangeTree<Document::Comment>::Node*, values_elem_t*, int)> add_comment;
-	add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment, values_elem_t *parent, int depth)
+	std::function<void(const BitRangeTree<Document::Comment>::Node*, values_elem_t*, int)> add_comment;
+	add_comment = [&](const BitRangeTree<Document::Comment>::Node *comment, values_elem_t *parent, int depth)
 	{
 		if(depth > pending_max_comment_depth)
 		{
@@ -519,7 +519,7 @@ bool REHex::CommentTreeModel::refresh_comments()
 	return num_changed > 0;
 }
 
-bool REHex::CommentTreeModel::comment_or_child_matches_filter(const ByteRangeTree<Document::Comment>::Node *comment)
+bool REHex::CommentTreeModel::comment_or_child_matches_filter(const BitRangeTree<Document::Comment>::Node *comment)
 {
 	if(filter_text.empty())
 	{
@@ -547,9 +547,9 @@ int REHex::CommentTreeModel::get_max_comment_depth() const
 	return max_comment_depth;
 }
 
-const REHex::NestedOffsetLengthMapKey *REHex::CommentTreeModel::dv_item_to_key(const wxDataViewItem &item)
+const REHex::BitRangeTreeKey *REHex::CommentTreeModel::dv_item_to_key(const wxDataViewItem &item)
 {
-	return (const NestedOffsetLengthMapKey*)(item.GetID());
+	return (const BitRangeTreeKey*)(item.GetID());
 }
 
 void REHex::CommentTreeModel::set_filter_text(const wxString &filter_text)
@@ -562,7 +562,7 @@ wxString REHex::CommentTreeModel::get_filter_text() const
 	return filter_text;
 }
 
-std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator REHex::CommentTreeModel::erase_value(std::map<REHex::NestedOffsetLengthMapKey, REHex::CommentTreeModel::CommentData>::iterator value_i)
+std::map<REHex::BitRangeTreeKey, REHex::CommentTreeModel::CommentData>::iterator REHex::CommentTreeModel::erase_value(std::map<REHex::BitRangeTreeKey, REHex::CommentTreeModel::CommentData>::iterator value_i)
 {
 	values_elem_t *value  = &(*value_i);
 	values_elem_t *parent = value->second.parent;
@@ -616,7 +616,7 @@ void REHex::CommentTreeModel::re_add_item(values_elem_t *value, bool as_containe
 	*/
 	
 	std::shared_ptr<const wxString> placeholder_text(new wxString(""));
-	values_elem_t placeholder(NestedOffsetLengthMapKey(-1, 0), CommentData(parent, placeholder_text));
+	values_elem_t placeholder(BitRangeTreeKey(BitOffset(-1, 0), BitOffset(0, 0)), CommentData(parent, placeholder_text));
 	bool added_placeholder = false;
 	
 	if(parent != NULL && parent->second.children.size() == 1U)
@@ -759,8 +759,8 @@ int REHex::CommentTreeModel::Compare(const wxDataViewItem &item1, const wxDataVi
 	assert(item1.IsOk());
 	assert(item2.IsOk());
 	
-	const NestedOffsetLengthMapKey *key1 = (const NestedOffsetLengthMapKey*)(item1.GetID());
-	const NestedOffsetLengthMapKey *key2 = (const NestedOffsetLengthMapKey*)(item2.GetID());
+	const BitRangeTreeKey *key1 = (const BitRangeTreeKey*)(item1.GetID());
+	const BitRangeTreeKey *key2 = (const BitRangeTreeKey*)(item2.GetID());
 	
 	int result;
 	if(key1->offset < key2->offset)

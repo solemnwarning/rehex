@@ -5,7 +5,7 @@
 --- Get the length of the file, in bytes.
 -- @function buffer_length
 
---- Get the current cursor position in the file, in bytes.
+--- Get the current cursor position in the file, as a rehex.BitOffset object.
 -- @function get_cursor_position
 
 --- Get the filename of the document.
@@ -17,7 +17,7 @@
 --- Read data from the document.
 -- @function read_data
 --
--- @param offset File offset to read from, in bytes.
+-- @param offset File offset to read from, as a rehex.BitOffset object.
 -- @param max_length Maximum number of bytes to read.
 --
 -- @return The binary data as a string.
@@ -29,13 +29,13 @@
 --
 --    {
 --        {
---            offset = 0,
---            length = 0,
+--            offset = rehex.BitOffset(0, 0),
+--            length = rehex.BitOffset(0, 0),
 --            text   = "First comment",
 --        },
 --        {
---            offset = 10,
---            length = 8,
+--            offset = rehex.BitOffset(10, 0),
+--            length = rehex.BitOffset(8, 0),
 --            text   = "Second comment",
 --        },
 --    }
@@ -43,8 +43,8 @@
 --- Set a comment in the document.
 -- @function set_comment
 --
--- @param offset File offset in bytes.
--- @param length Length in bytes.
+-- @param offset File offset as a rehex.BitOffset object.
+-- @param length Length as a rehex.BitOffset object.
 -- @param comment rehex.REHex_Document_Comment object.
 --
 -- @return true on success, false on failure
@@ -52,7 +52,7 @@
 -- Example usage:
 --
 --    -- Set a comment at the start of the file.
---    doc:set_comment(0, 0, rehex.Comment.new("Hello world"))
+--    doc:set_comment(rehex.BitOffset(0, 0), rehex.BitOffset(0, 0), rehex.Comment.new("Hello world"))
 --
 -- The length parameter sets how many bytes are encompassed by the comment - if it is zero, the
 -- comment will just be inserted at that point in the data, if nonzero, it will visibly nest the
@@ -60,12 +60,12 @@
 --
 -- Existing comments with the same offset and length will be replaced.
 
---- Set the data type of a range of bytes.
+--- Set the data type of a range of bytes (or bits).
 -- @function set_data_type
 --
--- @param offset File offset in bytes
--- @param length Length in bytes
--- @param type Data type as a string
+-- @param offset Data offset as a rehex.BitOffset object.
+-- @param length Data length as a rehex.BitOffset object.
+-- @param type Data type as a string.
 --
 -- @return true on success, false on failure
 --

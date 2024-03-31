@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -403,10 +403,13 @@ void REHex::DataHistogramPanel::update()
 
 void REHex::DataHistogramPanel::reset_accumulator()
 {
-	off_t range_offset, range_length;
+	BitOffset range_offset, range_length;
 	std::tie(range_offset, range_length) = range_choice->get_range();
 	
-	accumulator.reset(new DataHistogramAccumulator<uint8_t>(document, range_offset, 1, range_length, 256));
+	assert(range_offset.byte_aligned());
+	assert(range_length.byte_aligned());
+	
+	accumulator.reset(new DataHistogramAccumulator<uint8_t>(document, range_offset.byte(), 1, range_length.byte(), 256));
 	
 	spinner->Show();
 	spinner->Play();
@@ -593,17 +596,20 @@ void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
 		frame = parent;
 	}
 	
-	off_t range_offset, range_length;
+	BitOffset range_offset, range_length;
 	std::tie(range_offset, range_length) = range_choice->get_range();
+	
+	assert(range_offset.byte_aligned());
+	assert(range_length.byte_aligned());
 	
 	Search::Value *search = new Search::Value(frame, document);
 	search->configure(std::to_string(bucket_idx), Search::Value::FMT_I8);
-	search->limit_range(range_offset, range_offset + range_length);
+	search->limit_range(range_offset.byte(), range_offset.byte() + range_length.byte());
 	search->set_auto_close(true);
 	search->set_auto_wrap(true);
 	search->set_modal_parent(frame);
 	
-	search->begin_search((document->get_cursor_position() + 1), (range_offset + range_length), Search::SearchDirection::FORWARDS);
+	search->begin_search((document->get_cursor_position().byte() + 1), (range_offset.byte() + range_length.byte()), Search::SearchDirection::FORWARDS);
 }
 
 void REHex::DataHistogramPanel::OnZoomIn(wxCommandEvent &event)
@@ -703,10 +709,10 @@ void REHex::DataHistogramPanel::OnChartMotion(wxMouseEvent &event)
 
 void REHex::DataHistogramPanel::OnDataErase(OffsetLengthEvent &event)
 {
-	off_t range_offset, range_length;
+	BitOffset range_offset, range_length;
 	std::tie(range_offset, range_length) = range_choice->get_range();
 	
-	if(range_length > 0 && event.offset < (range_offset + range_length))
+	if(range_length.byte() > 0 && event.offset < (range_offset.byte() + range_length.byte()))
 	{
 		reset_accumulator();
 	}
@@ -717,10 +723,13 @@ void REHex::DataHistogramPanel::OnDataErase(OffsetLengthEvent &event)
 
 void REHex::DataHistogramPanel::OnDataInsert(OffsetLengthEvent &event)
 {
-	off_t range_offset, range_length;
+	BitOffset range_offset, range_length;
 	std::tie(range_offset, range_length) = range_choice->get_range();
 	
-	if(range_length > 0 && event.offset < (range_offset + range_length))
+	assert(range_offset.byte_aligned());
+	assert(range_length.byte_aligned());
+	
+	if(range_length.byte() > 0 && event.offset < (range_offset.byte() + range_length.byte()))
 	{
 		reset_accumulator();
 	}
@@ -731,12 +740,15 @@ void REHex::DataHistogramPanel::OnDataInsert(OffsetLengthEvent &event)
 
 void REHex::DataHistogramPanel::OnDataOverwrite(OffsetLengthEvent &event)
 {
-	off_t range_offset, range_length;
+	BitOffset range_offset, range_length;
 	std::tie(range_offset, range_length) = range_choice->get_range();
 	
-	if(range_length > 0
-		&& event.offset < (range_offset + range_length)
-		&& (event.offset + event.length) > range_offset)
+	assert(range_offset.byte_aligned());
+	assert(range_length.byte_aligned());
+	
+	if(range_length.byte() > 0
+		&& event.offset < (range_offset.byte() + range_length.byte())
+		&& (event.offset + event.length) > range_offset.byte())
 	{
 		reset_accumulator();
 	}

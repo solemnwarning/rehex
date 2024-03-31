@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,6 +33,8 @@ REHex::RangeChoiceLinear::RangeChoiceLinear(wxWindow *parent, wxWindowID id, Sha
 	wxChoice(parent, id),
 	document(document),
 	doc_ctrl(doc_ctrl),
+	allow_bit_aligned_offset(false),
+	allow_bit_aligned_length(false),
 	current_selection(WHOLE_FILE),
 	current_offset(0),
 	current_length(document->buffer_length()),
@@ -81,7 +83,7 @@ REHex::RangeChoiceLinear::~RangeChoiceLinear()
 	document->Unbind(DATA_ERASE, &REHex::RangeChoiceLinear::OnDocumentDataErase, this);
 }
 
-std::pair<off_t, off_t> REHex::RangeChoiceLinear::get_range() const
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::RangeChoiceLinear::get_range() const
 {
 	return std::make_pair(current_offset, current_length);
 }
@@ -104,29 +106,41 @@ void REHex::RangeChoiceLinear::set_follow_selection()
 	update_range();
 }
 
+void REHex::RangeChoiceLinear::set_allow_bit_aligned_offset(bool allow_bit_aligned_offset)
+{
+	this->allow_bit_aligned_offset = allow_bit_aligned_offset;
+}
+
+void REHex::RangeChoiceLinear::set_allow_bit_aligned_length(bool allow_bit_aligned_length)
+{
+	this->allow_bit_aligned_length = allow_bit_aligned_length;
+}
+
 void REHex::RangeChoiceLinear::update_range()
 {
-	off_t new_offset, new_length;
+	BitOffset new_offset, new_length;
 	
 	switch(GetSelection())
 	{
 		case WHOLE_FILE:
-			new_offset = 0;
-			new_length = document->buffer_length();
+			new_offset = BitOffset(0, 0);
+			new_length = BitOffset(document->buffer_length(), 0);
 			break;
 			
 		case FOLLOW_SELECTION:
 		{
-			off_t selection_offset, selection_length;
+			BitOffset selection_offset, selection_length;
 			std::tie(selection_offset, selection_length) = doc_ctrl->get_selection_linear();
 			
-			if(selection_length > 0)
+			if(selection_length > BitOffset::ZERO
+				&& (allow_bit_aligned_offset || selection_offset.byte_aligned())
+				&& (allow_bit_aligned_length || selection_length.byte_aligned()))
 			{
 				new_offset = selection_offset;
 				new_length = selection_length;
 			}
 			else{
-				new_offset = new_length = 0;
+				new_offset = new_length = BitOffset::ZERO;
 			}
 			
 			break;
@@ -153,7 +167,7 @@ void REHex::RangeChoiceLinear::update_range()
 	}
 }
 
-void REHex::RangeChoiceLinear::set_fixed_range(off_t offset, off_t length)
+void REHex::RangeChoiceLinear::set_fixed_range(BitOffset offset, BitOffset length)
 {
 	std::string first_s = format_offset(offset, doc_ctrl->get_offset_display_base(), document->buffer_length());
 	std::string last_s  = format_offset((offset + length - 1), doc_ctrl->get_offset_display_base(), document->buffer_length());
@@ -171,7 +185,7 @@ void REHex::RangeChoiceLinear::set_fixed_range(off_t offset, off_t length)
 	}
 	#endif
 	
-	if(fixed_length > 0)
+	if(fixed_length > BitOffset::ZERO)
 	{
 		SetString(FIXED_RANGE, s);
 	}
@@ -196,9 +210,9 @@ void REHex::RangeChoiceLinear::set_fixed_range(off_t offset, off_t length)
 
 void REHex::RangeChoiceLinear::clear_fixed_range()
 {
-	if(fixed_length > 0)
+	if(fixed_length > BitOffset::ZERO)
 	{
-		fixed_offset = fixed_length = 0;
+		fixed_offset = fixed_length = BitOffset::ZERO;
 		Delete(FIXED_RANGE);
 	}
 }
@@ -215,8 +229,10 @@ void REHex::RangeChoiceLinear::OnChoice(wxCommandEvent &event)
 			
 		case CURRENT_SELECTION:
 		{
-			std::pair<off_t, off_t> selection = doc_ctrl->get_selection_linear();
-			if(selection.second > 0)
+			std::pair<BitOffset, BitOffset> selection = doc_ctrl->get_selection_linear();
+			if(selection.second > BitOffset::ZERO
+				&& (allow_bit_aligned_offset || selection.first.byte_aligned())
+				&& (allow_bit_aligned_length || selection.second.byte_aligned()))
 			{
 				set_fixed_range(selection.first, selection.second);
 			}
@@ -230,12 +246,12 @@ void REHex::RangeChoiceLinear::OnChoice(wxCommandEvent &event)
 		
 		case ENTER_RANGE:
 		{
-			RangeDialog rd(this, doc_ctrl, "Enter range", false);
+			RangeDialog rd(this, doc_ctrl, "Enter range", false, allow_bit_aligned_offset, allow_bit_aligned_length);
 			
 			int s = rd.ShowModal();
 			if(s == wxID_OK)
 			{
-				std::pair<off_t, off_t> range = rd.get_range_linear();
+				std::pair<BitOffset, BitOffset> range = rd.get_range_linear();
 				set_fixed_range(range.first, range.second);
 			}
 			else{

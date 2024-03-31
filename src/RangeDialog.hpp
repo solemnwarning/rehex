@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,6 +22,7 @@
 #include <wx/radiobut.h>
 #include <utility>
 
+#include "BitOffset.hpp"
 #include "DocumentCtrl.hpp"
 #include "NumericTextCtrl.hpp"
 
@@ -44,12 +45,14 @@ namespace REHex {
 			/**
 			 * @brief Create a RangeDialog object.
 			 *
-			 * @param parent           Parent wxWindow object.
-			 * @param document_ctrl    DocumentCtrl to use the file address space from.
-			 * @param title            Title for the dialog.
-			 * @param allow_nonlinear  If true, nonlinear ranges may be entered.
+			 * @param parent            Parent wxWindow object.
+			 * @param document_ctrl     DocumentCtrl to use the file address space from.
+			 * @param title             Title for the dialog.
+			 * @param allow_nonlinear   If true, nonlinear ranges may be entered.
+			 * @param allow_bit_offset  If true, offsets not aligned to a byte boundary are allowed.
+			 * @param allow_bit_length  If true, ranges which are not a whole number of bytes long are allowed.
 			*/
-			RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, const wxString &title, bool allow_nonlinear);
+			RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, const wxString &title, bool allow_nonlinear, bool allow_bit_offset, bool allow_bit_length);
 			
 			virtual ~RangeDialog();
 			
@@ -64,19 +67,19 @@ namespace REHex {
 			 * @param first First offset in the range.
 			 * @param last  Last offset in the range.
 			*/
-			void set_range_raw(off_t first, off_t last);
+			void set_range_raw(BitOffset first, BitOffset last);
 			
 			/**
 			 * @brief Returns the first/last real offsets in the range.
 			 *
 			 * The range is valid if both fields are >= 0.
 			*/
-			std::pair<off_t, off_t> get_range_raw() const;
+			std::pair<BitOffset, BitOffset> get_range_raw() const;
 			
 			/**
 			 * @brief Set a range from a real offset and (linear) length.
 			*/
-			void set_range_linear(off_t offset, off_t length);
+			void set_range_linear(BitOffset offset, BitOffset length);
 			
 			/**
 			 * @brief Get the chosen linear range.
@@ -84,7 +87,7 @@ namespace REHex {
 			 * If no (or a nonlinear) range has been entered, a range of length zero
 			 * will be returned.
 			*/
-			std::pair<off_t, off_t> get_range_linear() const;
+			std::pair<BitOffset, BitOffset> get_range_linear() const;
 			
 			/**
 			 * @brief Fill in the offset input in the dialog.
@@ -92,11 +95,13 @@ namespace REHex {
 			 * Intended for suggesting a start point (e.g. the cursor position) when
 			 * there is no existing range to base the range on.
 			*/
-			void set_offset_hint(off_t offset);
+			void set_offset_hint(BitOffset offset);
 			
 		private:
 			DocumentCtrl *document_ctrl;
 			bool allow_nonlinear;
+			bool allow_bit_offset;
+			bool allow_bit_length;
 			
 			NumericTextCtrl *range_from;
 			
@@ -106,8 +111,8 @@ namespace REHex {
 			wxRadioButton *range_len_enable;
 			NumericTextCtrl *range_len;
 			
-			off_t range_first;
-			off_t range_last;
+			BitOffset range_first;
+			BitOffset range_last;
 			
 			void enable_inputs();
 			

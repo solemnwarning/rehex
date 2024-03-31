@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,6 +23,8 @@
 #include <string.h>
 #include <vector>
 #include <wx/frame.h>
+
+#include "testutil.hpp"
 
 #include "../src/document.hpp"
 #include "../src/Events.hpp"
@@ -78,7 +80,14 @@ class DocumentTest: public ::testing::Test
 			doc->Bind(CURSOR_UPDATE, [this](CursorUpdateEvent &event)
 			{
 				char event_s[64];
-				snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d, %d)", (int)(event.cursor_pos), (int)(event.cursor_state));
+				if(event.cursor_pos.byte_aligned())
+				{
+					snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d, %d)", (int)(event.cursor_pos.byte()), (int)(event.cursor_state));
+				}
+				else{
+					snprintf(event_s, sizeof(event_s), "CURSOR_UPDATE(%d.%d, %d)", (int)(event.cursor_pos.byte()), event.cursor_pos.bit(), (int)(event.cursor_state));
+				}
+				
 				events.push_back(event_s);
 			});
 			
@@ -128,12 +137,12 @@ class DocumentTest: public ::testing::Test
 
 #define EXPECT_DATA_TYPES(...) \
 { \
-	const std::vector< std::pair<ByteRangeMap<std::string>::Range, std::string> > expect_types = {  __VA_ARGS__ }; \
+	const std::vector< std::pair<BitRangeMap<Document::TypeInfo>::Range, Document::TypeInfo> > expect_types = {  __VA_ARGS__ }; \
 	EXPECT_EQ(doc->get_data_types().get_ranges(), expect_types); \
 }
 
 #define DATA_TYPE(offset, length, type) \
-	std::make_pair(ByteRangeMap<std::string>::Range(offset, length), type)
+	std::make_pair(BitRangeMap<Document::TypeInfo>::Range(offset, length), Document::TypeInfo(type))
 
 TEST_F(DocumentTest, InsertData)
 {
@@ -174,15 +183,16 @@ TEST_F(DocumentTest, InsertData)
 	events.clear();
 	
 	const char *DATA3 = "bubble";
-	doc->insert_data(15, (const unsigned char*)(DATA3), strlen(DATA3), 10, Document::CSTATE_HEX_MID, "seed");
+	doc->insert_data(15, (const unsigned char*)(DATA3), strlen(DATA3), 10, Document::CSTATE_HEX, "seed");
+	
 	
 	EXPECT_EVENTS(
 		"DATA_INSERT(15, 6)",
-		"CURSOR_UPDATE(10, 1)",
+		"CURSOR_UPDATE(10, 0)",
 	);
 	
-	EXPECT_EQ(doc->get_cursor_position(), 10)                    << "Document::insert_data() moves cursor to requested position";
-	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX_MID) << "Document::insert_data() sets cursor to requested state";
+	EXPECT_EQ(doc->get_cursor_position(), 10)                << "Document::insert_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::insert_data() sets cursor to requested state";
 	
 	ASSERT_DATA("impressstraightbubble");
 	
@@ -197,8 +207,8 @@ TEST_F(DocumentTest, InsertData)
 		"DATA_INSERT(7, 6)",
 	);
 	
-	EXPECT_EQ(doc->get_cursor_position(), 10)                    << "Document::insert_data() moves cursor to requested position";
-	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX_MID) << "Document::insert_data() sets cursor to requested state";
+	EXPECT_EQ(doc->get_cursor_position(), 10)                << "Document::insert_data() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_HEX) << "Document::insert_data() sets cursor to requested state";
 	
 	ASSERT_DATA("impressyellowstraightbubble");
 }
@@ -372,6 +382,77 @@ TEST_F(DocumentTest, OverwriteDataUndo)
 	ASSERT_DATA("CREDITlibrarydaughter");
 }
 
+TEST_F(DocumentTest, OverwriteBits)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "oceanic";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	doc->reset_to_clean();
+	
+	ASSERT_DATA("oceanic");
+	
+	ASSERT_FALSE(doc->is_dirty());
+	ASSERT_FALSE(doc->is_buffer_dirty());
+	ASSERT_FALSE(doc->is_byte_dirty(0));
+	ASSERT_FALSE(doc->is_byte_dirty(1));
+	ASSERT_FALSE(doc->is_byte_dirty(2));
+	
+	/* Overwrite at beginning of document... */
+	
+	events.clear();
+	
+	doc->overwrite_bits(BitOffset(0, 7), std::vector<bool>({ 1, 0, 1, 0 }));
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 2)",
+	);
+	
+	EXPECT_DATA("oCeanic");
+	
+	EXPECT_TRUE(doc->is_dirty());
+	EXPECT_TRUE(doc->is_buffer_dirty());
+	EXPECT_TRUE(doc->is_byte_dirty(0));
+	EXPECT_TRUE(doc->is_byte_dirty(1));
+	EXPECT_FALSE(doc->is_byte_dirty(2));
+	
+	/* Undo the overwrite... */
+	
+	events.clear();
+	
+	doc->undo();
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 2)",
+	);
+	
+	EXPECT_DATA("oceanic");
+	
+	EXPECT_FALSE(doc->is_dirty());
+	EXPECT_FALSE(doc->is_buffer_dirty());
+	EXPECT_FALSE(doc->is_byte_dirty(0));
+	EXPECT_FALSE(doc->is_byte_dirty(1));
+	EXPECT_FALSE(doc->is_byte_dirty(2));
+	
+	/* Redo the overwrite... */
+	
+	events.clear();
+	
+	doc->redo();
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(0, 2)",
+	);
+	
+	EXPECT_DATA("oCeanic");
+	
+	EXPECT_TRUE(doc->is_dirty());
+	EXPECT_TRUE(doc->is_buffer_dirty());
+	EXPECT_TRUE(doc->is_byte_dirty(0));
+	EXPECT_TRUE(doc->is_byte_dirty(1));
+	EXPECT_FALSE(doc->is_byte_dirty(2));
+}
+
 TEST_F(DocumentTest, EraseData)
 {
 	/* Preload document with data. */
@@ -497,8 +578,8 @@ TEST_F(DocumentTest, SetHighlight)
 		"EV_HIGHLIGHTS_CHANGED"
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(10, 20, 0);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -514,8 +595,8 @@ TEST_F(DocumentTest, SetHighlightWholeFile)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0, strlen(IPSUM), 1);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0, strlen(IPSUM), 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -536,34 +617,10 @@ TEST_F(DocumentTest, SetHighlightMultiple)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0,  10, 2);
-	expect_highlights.set(20, 10, 3);
-	expect_highlights.set(30, 10, 4);
-	
-	EXPECT_EQ(doc->get_highlights(), expect_highlights);
-}
-
-TEST_F(DocumentTest, SetHighlightNested)
-{
-	/* Preload document with data. */
-	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
-	events.clear();
-	
-	ASSERT_TRUE(doc->set_highlight(0,  20, 1));
-	ASSERT_TRUE(doc->set_highlight(0,  10, 2));
-	ASSERT_TRUE(doc->set_highlight(40, 10, 3));
-	
-	EXPECT_EVENTS(
-		"EV_HIGHLIGHTS_CHANGED",
-		"EV_HIGHLIGHTS_CHANGED",
-		"EV_HIGHLIGHTS_CHANGED",
-	);
-	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0,  10, 2);
-	expect_highlights.set(0,  20, 1);
-	expect_highlights.set(40, 10, 3);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0,  10, 2);
+	expect_highlights.set_range(20, 10, 3);
+	expect_highlights.set_range(30, 10, 4);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -582,28 +639,29 @@ TEST_F(DocumentTest, SetHighlightOverwrite)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(0, 20, 2);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0, 20, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
 
-TEST_F(DocumentTest, SetHighlightConflict)
+TEST_F(DocumentTest, SetHighlightOverwriteOverlap)
 {
 	/* Preload document with data. */
 	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
 	events.clear();
 	
-	ASSERT_TRUE (doc->set_highlight(10, 20, 1));
-	ASSERT_FALSE(doc->set_highlight( 0, 20, 2));
-	ASSERT_FALSE(doc->set_highlight(20, 20, 3));
+	ASSERT_TRUE(doc->set_highlight(0, 20, 1));
+	ASSERT_TRUE(doc->set_highlight(10, 20, 2));
 	
 	EXPECT_EVENTS(
 		"EV_HIGHLIGHTS_CHANGED",
+		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(10, 20, 1);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(0, 10, 1);
+	expect_highlights.set_range(10, 20, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 }
@@ -639,8 +697,8 @@ TEST_F(DocumentTest, SetHighlightUndo)
 		"EV_HIGHLIGHTS_CHANGED"
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(10, 20, 0);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -653,7 +711,7 @@ TEST_F(DocumentTest, SetHighlightUndo)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> no_highlights;
+	BitRangeMap<int> no_highlights;
 	EXPECT_EQ(doc->get_highlights(), no_highlights);
 	
 	/* Redo the highlight... */
@@ -685,13 +743,13 @@ TEST_F(DocumentTest, InsertBeforeHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
-	expect_highlights_pre.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
+	expect_highlights_pre.set_range(40, 10, 2);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(25, 10, 1);
-	expect_highlights_post.set(45, 10, 2);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(25, 10, 1);
+	expect_highlights_post.set_range(45, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -736,11 +794,12 @@ TEST_F(DocumentTest, InsertWithinHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(20, 15, 1);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(20, 5, 1);
+	expect_highlights_post.set_range(30, 5, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -785,9 +844,9 @@ TEST_F(DocumentTest, InsertAfterHighlight)
 		"DATA_INSERT(50, 5)",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(20, 10, 1);
-	expect_highlights.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(20, 10, 1);
+	expect_highlights.set_range(40, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -831,13 +890,13 @@ TEST_F(DocumentTest, EraseBeforeHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
-	expect_highlights_pre.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
+	expect_highlights_pre.set_range(40, 10, 2);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(15, 10, 1);
-	expect_highlights_post.set(35, 10, 2);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(15, 10, 1);
+	expect_highlights_post.set_range(35, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -882,11 +941,11 @@ TEST_F(DocumentTest, EraseWithinHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(20, 10, 1);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(20, 10, 1);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(20, 5, 1);
+	BitRangeMap<int> expect_highlights_post;
+	expect_highlights_post.set_range(20, 5, 1);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -931,9 +990,9 @@ TEST_F(DocumentTest, EraseAfterHighlight)
 		"DATA_ERASE(50, 5)",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights;
-	expect_highlights.set(20, 10, 1);
-	expect_highlights.set(40, 10, 2);
+	BitRangeMap<int> expect_highlights;
+	expect_highlights.set_range(20, 10, 1);
+	expect_highlights.set_range(40, 10, 2);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights);
 	
@@ -967,8 +1026,8 @@ TEST_F(DocumentTest, EraseHighlight)
 	
 	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(10, 20, 0);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	
@@ -987,35 +1046,7 @@ TEST_F(DocumentTest, EraseHighlight)
 		"EV_HIGHLIGHTS_CHANGED",
 	);
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	
-	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
-}
-
-TEST_F(DocumentTest, EraseHighlightNested)
-{
-	/* Preload document with data. */
-	doc->insert_data(0, (const unsigned char*)(IPSUM), strlen(IPSUM));
-	
-	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
-	ASSERT_TRUE(doc->set_highlight(10,  5, 1));
-	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(10, 20, 0);
-	expect_highlights_pre.set(10,  5, 1);
-	
-	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
-	
-	events.clear();
-	
-	ASSERT_TRUE(doc->erase_highlight(10, 20));
-	
-	EXPECT_EVENTS(
-		"EV_HIGHLIGHTS_CHANGED",
-	);
-	
-	NestedOffsetLengthMap<int> expect_highlights_post;
-	expect_highlights_post.set(10,  5, 1);
+	BitRangeMap<int> expect_highlights_post;
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 }
@@ -1027,14 +1058,14 @@ TEST_F(DocumentTest, EraseHighlightUndo)
 	
 	ASSERT_TRUE(doc->set_highlight(10, 20, 0));
 	
-	NestedOffsetLengthMap<int> expect_highlights_pre;
-	expect_highlights_pre.set(10, 20, 0);
+	BitRangeMap<int> expect_highlights_pre;
+	expect_highlights_pre.set_range(10, 20, 0);
 	
 	ASSERT_EQ(doc->get_highlights(), expect_highlights_pre);
 	
 	ASSERT_TRUE(doc->erase_highlight(10, 20));
 	
-	NestedOffsetLengthMap<int> expect_highlights_post;
+	BitRangeMap<int> expect_highlights_post;
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 	
@@ -2832,25 +2863,8 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_RANGE_DIRTY(0, 16, "Document is dirty before saving");
 	
 	/* Save the file. */
-	char tmpfile[L_tmpnam];
-	tmpnam(tmpfile);
-	
-#ifdef _WIN32
-	/* > Note than when a file name is pre-pended with a backslash and no path
-	 * > information, such as \fname21, this indicates that the name is valid
-	 * > for the current working directory.
-	 * - MSDN
-	 *
-	 * Sure, that makes total sense.
-	*/
-	if(tmpfile[0] == '\\' && strchr((tmpfile + 1), '\\') == NULL)
-	{
-		/* Remove the leading slash. */
-		memmove(tmpfile, tmpfile + 1, strlen(tmpfile) - 1);
-	}
-#endif
-	
-	doc->save(tmpfile);
+	TempFilename tmpfile;
+	doc->save(tmpfile.tmpfile);
 	
 	EXPECT_EVENTS();
 	
@@ -3016,6 +3030,34 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after undoing changes made prior to save and then making new changes";
 	EXPECT_RANGE_CLEAN( 0,  5, "Unmodified range clean after undoing changes made prior to save and then making new changes");
 	EXPECT_RANGE_DIRTY( 5, 21, "Modified range dirty after undoing changes made prior to save and then making new changes");
+}
+
+TEST_F(DocumentTest, DirtyStateBitAligned)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	TempFilename tmpfile;
+	doc->save(tmpfile.tmpfile);
+	
+	events.clear();
+	
+	ASSERT_FALSE(doc->is_dirty()) << "Document is clean after saving";
+	ASSERT_FALSE(doc->is_buffer_dirty()) << "Document is clean after saving";
+	EXPECT_RANGE_CLEAN(0, 1024, "Document is clean after saving");
+	
+	std::vector<unsigned char> ff_16(16, 0xFF);
+	doc->overwrite_data(BitOffset(16, 2), ff_16.data(), ff_16.size());
+	
+	EXPECT_TRUE(doc->is_dirty()) << "Document is dirty after bit-aligned write";
+	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty after bit-aligned write";
+	EXPECT_RANGE_CLEAN( 0,  16, "Unmodified range clean after bit-aligned write");
+	EXPECT_RANGE_DIRTY(16,  17, "Modified range dirty after bit-aligned write");
+	EXPECT_RANGE_CLEAN(33, 991, "Unmodified range clean bit-aligned write");
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(16, 17)",
+	);
 }
 
 TEST_F(DocumentTest, OverwriteTextLatin1)
@@ -3198,6 +3240,66 @@ TEST_F(DocumentTest, OverwriteTextUTF8)
 	);
 	
 	ASSERT_DATA("piquantl" "\xC3\x86\xC3\xB7\xC3\x9E" "efrigh" "\xC3\x86" "n");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+}
+
+TEST_F(DocumentTest, OverwriteTextUTF8BitAligned)
+{
+	/* Insert into empty document... */
+	
+	const char *DATA1 = "colossalsupremefrighten";
+	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1));
+	doc->set_data_type(0, strlen(DATA1), "text:UTF-8");
+	
+	ASSERT_DATA("colossalsupremefrighten");
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	events.clear();
+	
+	// LATIN CAPITAL LETTER AE
+	// Division Sign
+	// Latin Capital Letter Thorn
+	EXPECT_EQ(
+		doc->overwrite_text(BitOffset(8, 4), "\xC3\x86\xC3\xB7\xC3\x9E", +Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII, "average"),
+		+Document::WRITE_TEXT_OK);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(8, 7)",
+		"CURSOR_UPDATE(14.4, 2)",
+	);
+	
+	EXPECT_EQ(doc->get_cursor_position(), BitOffset(14, 4))    << "Document::overwrite_text() moves cursor to requested position";
+	EXPECT_EQ(doc->get_cursor_state(), Document::CSTATE_ASCII) << "Document::overwrite_text() sets cursor to requested state";
+	
+	ASSERT_EQ(
+		doc->read_data(BitOffset(8, 4), 6),
+		std::vector<unsigned char>({ 0xC3, 0x86, 0xC3, 0xB7, 0xC3, 0x9E }));
+	
+	EXPECT_DATA_TYPES(
+		DATA_TYPE(0, 23, "text:UTF-8"),
+	);
+	
+	/* Write some characters that won't all fit in the file */
+	
+	events.clear();
+	
+	EXPECT_EQ(
+		doc->overwrite_text(BitOffset(19, 4), "\xC3\x86\xC3\xB7", -1, Document::CSTATE_CURRENT, "lackadaisical"),
+		+Document::WRITE_TEXT_TRUNCATED);
+	
+	EXPECT_EVENTS(
+		"DATA_OVERWRITE(19, 3)",
+	);
+	
+	ASSERT_EQ(
+		doc->read_data(BitOffset(19, 4), 2),
+		std::vector<unsigned char>({ 0xC3, 0x86 }));
 	
 	EXPECT_DATA_TYPES(
 		DATA_TYPE(0, 23, "text:UTF-8"),
@@ -3510,4 +3612,651 @@ TEST_F(DocumentTest, ReplaceTextMixed)
 		DATA_TYPE( 5, 14, "text:UTF-8"),
 		DATA_TYPE(19,  8, "text:ISO-8859-1"),
 	);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataEmptyFile)
+{
+	AutoJSON got(doc->serialise_metadata());
+	AutoJSON expect;
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataNoMetadata)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON got(doc->serialise_metadata());
+	AutoJSON expect;
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataWriteProtectedFile)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	doc->set_write_protect(true);
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": true
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataComments)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_comment( 0, 10, REHex::Document::Comment("cold"));
+	doc->set_comment(20, 10, REHex::Document::Comment("strong"));
+	doc->set_comment(20,  5, REHex::Document::Comment("industrious"));
+	doc->set_comment(25,  5, REHex::Document::Comment("bury"));
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "cold"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"text": "strong"
+			},
+			{
+				"length": 5,
+				"offset": 20,
+				"text": "industrious"
+			},
+			{
+				"length": 5,
+				"offset": 25,
+				"text": "bury"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataComments)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "cold"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"text": "strong"
+			},
+			{
+				"length": 5,
+				"offset": 20,
+				"text": "industrious"
+			},
+			{
+				"length": 5,
+				"offset": 25,
+				"text": "bury"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_comments();
+	
+	BitRangeTree<Document::Comment> expect;
+	expect.set( 0, 10, REHex::Document::Comment("cold"));
+	expect.set(20, 10, REHex::Document::Comment("strong"));
+	expect.set(20,  5, REHex::Document::Comment("industrious"));
+	expect.set(25,  5, REHex::Document::Comment("bury"));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataCommentUnicode)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_comment(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect((const char*)(u8R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "mundané"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})"));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataCommentUnicode)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata((const char*)(u8R"({
+		"comments": [
+			{
+				"length": 10,
+				"offset": 0,
+				"text": "mundané"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})"));
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_comments();
+	
+	BitRangeTree<Document::Comment> expect;
+	expect.set(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataCommentsSkipBad)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [
+			{
+				"length": -1,
+				"offset": 0,
+				"text": "negative length"
+			},
+			{
+				"length": 10,
+				"offset": -20,
+				"text": "negative offset"
+			},
+			{
+				"length": 2048,
+				"offset": 20,
+				"text": "out-of-range length"
+			},
+			{
+				"length": 5,
+				"offset": 2048,
+				"text": "out-of-range offset"
+			},
+			{
+				"length": 0,
+				"offset": 0,
+				"text": "valid comment"
+			},
+			{
+				"length": 10,
+				"offset": 10
+			},
+			{
+				"length": 5,
+				"text": "no offset"
+			},
+			{
+				"offset": 20,
+				"text": "no length"
+			}
+		],
+		"data_types": [],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_comments();
+	
+	BitRangeTree<Document::Comment> expect;
+	expect.set(0, 0, REHex::Document::Comment("valid comment"));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataDataTypes)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "s8");
+	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16");
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypes)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("s8", NULL));
+	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"type": "u16"
+			},
+			{
+				"length": 10,
+				"offset": 30
+			},
+			{
+				"length": 10,
+				"offset": 40,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 4,
+				"offset": -10,
+				"type": "s8"
+			},
+			{
+				"length": -4,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 4,
+				"offset": 1024,
+				"type": "s8"
+			},
+			{
+				"length": 1000,
+				"offset": 100,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 40,
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 2), "s8");
+	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16");
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": [ 10, 2 ],
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": [ 20, 6 ],
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": [ 10, 2 ],
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": [ 20, 6 ],
+				"type": "u16"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 2), Document::TypeInfo("s8", NULL));
+	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataDataTypesWithOptions)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "type1", AutoJSON("{ \"foo\": 1 }").json);
+	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "type2", AutoJSON("{ \"foo\": 2 }").json);
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "type1",
+				"options": {
+					"foo": 1
+				}
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "type2",
+				"options": {
+					"foo": 2
+				}
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesWithOptions)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "type1",
+				"options": {
+					"foo": 1
+				}
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "type2",
+				"options": {
+					"foo": 2
+				}
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("type1", AutoJSON("{ \"foo\": 1 }").json));
+	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("type2", AutoJSON("{ \"foo\": 2 }").json));
+	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, SerialiseMetadataHighlights)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	doc->set_highlight(BitOffset( 0, 0), BitOffset(10, 0), 1);
+	doc->set_highlight(BitOffset(20, 2), BitOffset( 0, 4), 2);
+	
+	AutoJSON got(doc->serialise_metadata());
+	
+	AutoJSON expect(R"({
+		"comments": [],
+		"data_types": [],
+		"highlights": [
+			{
+				"colour-idx": 1,
+				"length": 10,
+				"offset": 0
+			},
+			{
+				"colour-idx": 2,
+				"length": [ 0, 4 ],
+				"offset": [ 20, 2 ]
+			}
+		],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataHighlights)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [],
+		"highlights": [
+			{
+				"colour-idx": 1,
+				"length": 10,
+				"offset": 0
+			},
+			{
+				"colour-idx": 2,
+				"length": [ 0, 4 ],
+				"offset": [ 20, 2 ]
+			}
+		],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_highlights();
+	
+	BitRangeMap<int> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset(10, 0), 1);
+	expect.set_range(BitOffset(20, 2), BitOffset( 0, 4), 2);
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST(Document, TypeInfoComparison)
+{
+	/* Check name comparison. */
+	EXPECT_FALSE(Document::TypeInfo("a") < Document::TypeInfo("a"));
+	EXPECT_TRUE( Document::TypeInfo("a") < Document::TypeInfo("b"));
+	EXPECT_FALSE(Document::TypeInfo("b") < Document::TypeInfo("a"));
+	
+	/* Check options vs. no options comparison. */
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{}").json) < Document::TypeInfo("a"));
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{}").json) < Document::TypeInfo("a", AutoJSON("{}").json));
+	EXPECT_TRUE( Document::TypeInfo("a")                      < Document::TypeInfo("a", AutoJSON("{}").json));
+	
+	/* Check options comparison. */
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json));
+	EXPECT_TRUE( Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json));
+	EXPECT_FALSE(Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 1 }").json));
+	
+	/* Check name takes priority over options. */
+	EXPECT_FALSE(Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json));
+	EXPECT_TRUE( Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json) < Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json));
 }

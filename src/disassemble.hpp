@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -65,7 +65,7 @@ namespace REHex {
 			CodeCtrl *assembly;
 			
 			void reinit_disassembler();
-			std::map<off_t, Instruction> disassemble(off_t offset, const void *code, size_t size);
+			std::map<BitOffset, Instruction> disassemble(BitOffset offset, const void *code, size_t size);
 			
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnArch(wxCommandEvent &event);

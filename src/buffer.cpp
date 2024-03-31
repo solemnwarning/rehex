@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -623,14 +623,19 @@ REHex::Buffer::FileTime REHex::Buffer::_get_file_mtime(FILE *fh, const std::stri
 	return FileTime();
 }
 
-std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_length)
+std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off_t max_length)
 {
-	assert(offset >= 0);
+	assert(offset.byte() >= 0);
 	assert(max_length >= 0);
+	
+	if(offset.bit() > 0)
+	{
+		++max_length;
+	}
 	
 	std::unique_lock<std::mutex> l(lock);
 	
-	Block *block = _block_by_virt_offset(offset);
+	Block *block = _block_by_virt_offset(offset.byte());
 	if(block == nullptr)
 	{
 		return std::vector<unsigned char>();
@@ -639,56 +644,179 @@ std::vector<unsigned char> REHex::Buffer::read_data(off_t offset, off_t max_leng
 	std::vector<unsigned char> data;
 	data.reserve(max_length);
 	
-	while(block < blocks.data() + blocks.size() && max_length > 0)
+	off_t byte_offset = offset.byte();
+	
+	while(block < blocks.data() + blocks.size() && max_length > data.size())
 	{
 		_load_block(block);
 		
-		off_t block_rel_off = offset - block->virt_offset;
+		off_t block_rel_off = byte_offset - block->virt_offset;
 		off_t block_rel_len = block->virt_length - block_rel_off;
-		off_t to_copy = std::min(block_rel_len, max_length);
+		off_t to_copy = std::min(block_rel_len, (max_length - (off_t)(data.size())));
 		
 		const unsigned char *base = block->data.data() + block_rel_off;
-		data.insert(data.end(), base, base + to_copy);
+		
+		size_t dst_off = data.size();
+		data.resize(data.size() + to_copy);
+		
+		CarryBits carry = memcpy_left(data.data() + dst_off, base, to_copy, offset.bit());
+		if(dst_off > 0)
+		{
+			assert((data[dst_off - 1] & carry.mask) == 0);
+			data[dst_off - 1] |= carry.value;
+		}
 		
 		++block;
 		
-		offset     += to_copy;
-		max_length -= to_copy;
+		byte_offset += to_copy;
+	}
+	
+	if(offset.bit() > 0)
+	{
+		if(data.size() == max_length)
+		{
+			/* Pop off the extra partial byte we read to fill in the previous byte. */
+			data.pop_back();
+		}
+		else if(byte_offset == _length())
+		{
+			/* Pop off partial byte at the end of the file. */
+			data.pop_back();
+		}
 	}
 	
 	return data;
 }
 
-bool REHex::Buffer::overwrite_data(off_t offset, unsigned const char *data, off_t length)
+std::vector<bool> REHex::Buffer::read_bits(const BitOffset &offset, size_t max_length)
+{
+	BitOffset file_data_base = BitOffset(offset.byte(), 0);
+	
+	std::vector<unsigned char> file_data = read_data(file_data_base, ((max_length + 7) / 8) + 1);
+	
+	std::vector<bool> file_bits;
+	file_bits.reserve(std::min(max_length, (file_data.size() * 8)));
+	
+	int next_bit = 7 - offset.bit();
+	
+	for(size_t i = 0, j = 0; i < file_data.size() && j < max_length; ++i)
+	{
+		for(; next_bit >= 0 && j < max_length; ++j, --next_bit)
+		{
+			bool bit = ((file_data[i] & (1 << next_bit)) != 0);
+			file_bits.push_back(bit);
+		}
+		
+		next_bit = 7;
+	}
+	
+	return file_bits;
+}
+
+bool REHex::Buffer::overwrite_data(BitOffset offset, unsigned const char *data, off_t length)
 {
 	std::unique_lock<std::mutex> l(lock);
 	
-	if((offset + length) > _length())
+	if((offset + BitOffset(length, 0)) > BitOffset(_length(), 0))
 	{
 		/* Runs past the end of the buffer. */
 		return false;
 	}
 	
-	Block *block = _block_by_virt_offset(offset);
+	Block *block = _block_by_virt_offset(offset.byte());
 	assert(block != nullptr);
 	
-	while(length > 0)
+	CarryBits carry;
+	
+	while(length > 0 || offset.bit() > 0)
 	{
 		_load_block(block);
 		
-		off_t block_rel_off = offset - block->virt_offset;
+		off_t block_rel_off = offset.byte() - block->virt_offset;
 		off_t to_copy = std::min((block->virt_length - block_rel_off), length);
 		
-		memcpy((block->data.data() + block_rel_off), data, to_copy);
+		block->data[block_rel_off] &= ~carry.mask;
+		block->data[block_rel_off] |= (carry.mask & carry.value);
+		
+		carry = memcpy_right((block->data.data() + block_rel_off), data, to_copy, offset.bit());
 		
 		block->state = Block::DIRTY;
 		_last_access_remove(block);
 		
+		if(length == 0)
+		{
+			assert(offset.bit() > 0);
+			break;
+		}
+		
+		if((block_rel_off + to_copy) < block->virt_length)
+		{
+			block->data[block_rel_off + to_copy] &= ~carry.mask;
+			block->data[block_rel_off + to_copy] |= (carry.mask & carry.value);
+			
+			break;
+		}
+		
 		data   += to_copy;
-		offset += to_copy;
+		offset += BitOffset(to_copy, 0);
 		length -= to_copy;
 		
 		++block;
+	}
+	
+	return true;
+}
+
+bool REHex::Buffer::overwrite_bits(BitOffset offset, const std::vector<bool> &data)
+{
+	std::unique_lock<std::mutex> l(lock);
+	
+	if((offset + BitOffset::from_int64(data.size())) > BitOffset(_length(), 0))
+	{
+		/* Runs past the end of the buffer. */
+		return false;
+	}
+	
+	Block *block = _block_by_virt_offset(offset.byte());
+	assert(block != nullptr);
+	
+	size_t data_pos = 0;
+	BitOffset block_offset = offset - BitOffset(block->virt_offset, 0);
+	
+	while(data_pos < data.size())
+	{
+		assert(block != (blocks.data() + blocks.size()));
+		
+		_load_block(block);
+		
+		bool touched_block = false;
+		
+		while(data_pos < data.size() && block_offset < block->virt_length)
+		{
+			unsigned char bit = 128 >> block_offset.bit();
+			
+			if(data[data_pos])
+			{
+				block->data[block_offset.byte()] |= bit;
+			}
+			else{
+				block->data[block_offset.byte()] &= ~bit;
+			}
+			
+			++data_pos;
+			block_offset += BitOffset(0, 1);
+			
+			touched_block = true;
+		}
+		
+		if(touched_block)
+		{
+			block->state = Block::DIRTY;
+			_last_access_remove(block);
+		}
+		
+		++block;
+		block_offset = BitOffset::ZERO;
 	}
 	
 	return true;

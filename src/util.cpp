@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -187,17 +187,42 @@ std::string REHex::format_offset(off_t offset, OffsetBase base, off_t upper_boun
 	return fmt_out;
 }
 
+std::string REHex::format_offset(BitOffset offset, OffsetBase base, BitOffset upper_bound)
+{
+	std::string fmt_out = format_offset(offset.byte(), base, upper_bound.byte());
+	
+	if(!offset.byte_aligned())
+	{
+		fmt_out += "+" + std::to_string(offset.bit()) + "b";
+	}
+	
+	return fmt_out;
+}
+
 void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut)
 {
 	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
 	
-	OrderedByteRangeSet selection = doc_ctrl->get_selection_ranges();
+	OrderedBitRangeSet selection = doc_ctrl->get_selection_ranges();
 	
 	if(selection.empty())
 	{
 		/* Nothing selected - nothing to copy. */
 		wxBell();
 		return;
+	}
+	
+	if(cut)
+	{
+		for(auto s = selection.begin(); s != selection.end(); ++s)
+		{
+			if(!s->offset.byte_aligned() || !s->length.byte_aligned())
+			{
+				/* Selection isn't byte-aligned - can't cut */
+				wxBell();
+				return;
+			}
+		}
 	}
 	
 	wxDataObject *copy_data = NULL;
@@ -228,8 +253,8 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 	static size_t COPY_MAX_SOFT = 16777216;
 	
 	size_t upper_limit = cursor_state == Document::CSTATE_ASCII
-		? selection.total_bytes()
-		: (selection.total_bytes() * 2);
+		? selection.total_bytes().byte()
+		: (selection.total_bytes().byte() * 2);
 	
 	if(copy_data == NULL && upper_limit > COPY_MAX_SOFT)
 	{
@@ -252,12 +277,19 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 			wxString data_string;
 			data_string.reserve(upper_limit);
 			
-			const ByteRangeMap<std::string> &types = doc->get_data_types();
+			const BitRangeMap<Document::TypeInfo> &types = doc->get_data_types();
 			
 			for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 			{
-				std::vector<unsigned char> selection_data = doc->read_data(sr->offset, sr->length);
-				assert((off_t)(selection_data.size()) == sr->length);
+				if(!sr->length.byte_aligned())
+				{
+					/* Can't copy a sub-byte quantity. */
+					wxBell();
+					return;
+				}
+				
+				std::vector<unsigned char> selection_data = doc->read_data(sr->offset, sr->length.byte());
+				assert((off_t)(selection_data.size()) == sr->length.byte());
 				
 				if(cursor_state == Document::CSTATE_ASCII)
 				{
@@ -266,17 +298,17 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 						auto type_at_off = types.get_range(sr->offset + (off_t)(sd_off));
 						assert(type_at_off != types.end());
 						
-						const CharacterEncoder *encoder;
-						if(type_at_off->second != "")
+						static REHex::CharacterEncoderASCII ascii_encoder;
+						const CharacterEncoder *encoder = &ascii_encoder;
+						if(type_at_off->second.name != "")
 						{
-							const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_off->second);
+							std::shared_ptr<const DataType> dt_reg = DataTypeRegistry::get_type(type_at_off->second.name, type_at_off->second.options);
 							assert(dt_reg != NULL);
 							
-							encoder = dt_reg->encoder;
-						}
-						else{
-							static REHex::CharacterEncoderASCII ascii_encoder;
-							encoder = &ascii_encoder;
+							if(dt_reg->encoder != NULL)
+							{
+								encoder = dt_reg->encoder;
+							}
 						}
 						
 						/* TODO: Should we restrict to printable characters here? */
@@ -339,7 +371,7 @@ void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, w
 				
 				for(auto sr = selection.begin(); sr != selection.end(); ++sr)
 				{
-					doc->erase_data(sr->offset, sr->length);
+					doc->erase_data(sr->offset.byte(), sr->length.byte());
 				}
 				
 				t.commit();
@@ -539,4 +571,114 @@ double REHex::parse_double(const std::string &s)
 	}
 	
 	return n;
+}
+
+REHex::CarryBits REHex::memcpy_left(void *dst, const void *src, size_t n, int shift)
+{
+	if(shift == 0)
+	{
+		memcpy(dst, src, n);
+		return CarryBits();
+	}
+	
+	/* shift = 1, mask_a = 01111111, mask_b = 10000000
+	 * shift = 2, mask_a = 00111111, mask_b = 11000000
+	 * shift = 3, mask_a = 00011111, mask_b = 11100000
+	 * shift = 4, mask_a = 00001111, mask_b = 11110000
+	 * shift = 5, mask_a = 00000111, mask_b = 11111000
+	 * shift = 6, mask_a = 00000011, mask_b = 11111100
+	 * shift = 7, mask_a = 00000001, mask_b = 11111110
+	*/
+	
+	unsigned char mask_a = 0xFF;
+	unsigned char mask_b = 0x00;
+	
+	for(int i = 0; i < shift; ++i)
+	{
+		mask_a &= ~((unsigned char)(128) >> i);
+		mask_b |=  ((unsigned char)(128) >> i);
+	}
+	
+	int rshift = 8 - shift;
+	
+	unsigned char *dst_p = (unsigned char*)(dst);
+	const unsigned char *src_p = (const unsigned char*)(src);
+	
+	unsigned char carry = 0;
+	unsigned char carry_mask = 0;
+	if(n > 1)
+	{
+		carry = (*src_p & mask_b) >> rshift;
+		
+		for(int i = 0; i < shift; ++i)
+		{
+			carry_mask <<= 1;
+			carry_mask |= 1;
+		}
+	}
+	
+	while(n > 1)
+	{
+		*dst_p = ((*src_p & mask_a) << shift) | ((*(src_p + 1) & mask_b) >> rshift);
+		++src_p;
+		++dst_p;
+		--n;
+	}
+	
+	if(n > 0)
+	{
+		*dst_p = (*src_p & mask_a) << shift;
+	}
+	
+	return CarryBits(carry, carry_mask);
+}
+
+REHex::CarryBits REHex::memcpy_right(void *dst, const void *src, size_t n, int shift)
+{
+	if(shift == 0 || n == 0)
+	{
+		memcpy(dst, src, n);
+		return CarryBits();
+	}
+	
+	/* shift = 1, mask_a = 11111110, mask_b = 00000001
+	 * shift = 2, mask_a = 11111100, mask_b = 00000011
+	 * shift = 3, mask_a = 11111000, mask_b = 00000111
+	 * shift = 4, mask_a = 11110000, mask_b = 00001111
+	 * shift = 5, mask_a = 11100000, mask_b = 00011111
+	 * shift = 6, mask_a = 11000000, mask_b = 00111111
+	 * shift = 7, mask_a = 10000000, mask_b = 01111111
+	*/
+	
+	unsigned char mask_a = 0xFF;
+	unsigned char mask_b = 0x00;
+	
+	for(int i = 0; i < shift; ++i)
+	{
+		mask_a &= ~((unsigned char)(1) << i);
+		mask_b |=  ((unsigned char)(1) << i);
+	}
+	
+	int lshift = 8 - shift;
+	
+	unsigned char *dst_p = (unsigned char*)(dst);
+	const unsigned char *src_p = (const unsigned char*)(src);
+	
+	*dst_p &= ~(mask_a >> shift);
+	*dst_p |= ((*src_p & mask_a) >> shift);
+	--n;
+	
+	while(n > 0)
+	{
+		*(++dst_p) = ((*src_p & mask_b) << lshift) | ((*(src_p + 1) & mask_a) >> shift);
+		++src_p;
+		--n;
+	}
+	
+	return CarryBits(((*src_p & mask_b) << lshift), (mask_b << lshift));
+}
+
+template<> REHex::BitOffset REHex::add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow)
+{
+	return _add_clamp_overflow(a, b, overflow, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO);
 }

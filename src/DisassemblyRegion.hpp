@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -38,7 +38,8 @@ namespace REHex
 	{
 		public:
 			struct Instruction {
-				off_t offset, length;
+				off_t offset;  /**< Offset of instruction, relative to d_offset. */
+				off_t length;
 				std::vector<unsigned char> data;
 				std::string disasm;
 				int64_t rel_y_offset;
@@ -49,7 +50,7 @@ namespace REHex
 			*/
 			struct InstructionRange
 			{
-				off_t offset;  /**< Offset to range within file. */
+				off_t offset;  /**< Offset to range within file, relative to d_offset. */
 				off_t length;  /**< Length of range within file. */
 				
 				off_t longest_instruction;  /**< Longest instruction in the range, in bytes. */
@@ -70,7 +71,7 @@ namespace REHex
 			int code_text_x;    /**< X co-ordinate of left edge of disassembly. */
 			int ascii_text_x;
 			
-			ByteRangeSet dirty;                       /**< Bytes which are waiting to be analysed. */
+			ByteRangeSet dirty;                       /**< Bytes which are waiting to be analysed, relative to d_offset */
 			std::vector<InstructionRange> processed;  /**< Ranges of up-to-date analysed code. */
 			std::vector<Instruction> instructions;    /**< Cached disassembled instructions. */
 			
@@ -84,7 +85,9 @@ namespace REHex
 			void OnDataOverwrite(OffsetLengthEvent &event);
 			
 		public:
-			off_t unprocessed_offset() const;
+			off_t unprocessed_offset_rel() const;
+			BitOffset unprocessed_offset_abs() const;
+			
 			off_t unprocessed_bytes() const;
 			int64_t processed_lines() const;
 			
@@ -94,7 +97,7 @@ namespace REHex
 			 * @brief Find the element in processed which encompasses an offset.
 			 * @returns Iterator to matching element, or end iterator if none match.
 			*/
-			std::vector<InstructionRange>::const_iterator processed_by_offset(off_t abs_offset);
+			std::vector<InstructionRange>::const_iterator processed_by_rel_offset(off_t rel_offset);
 			
 			/**
 			 * @brief Find the element in processed which encompasses a line.
@@ -110,7 +113,7 @@ namespace REHex
 			 * Instruction hasn't been cached, and may invalidate references/iterators
 			 * returned by previous calls.
 			*/
-			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_offset(off_t abs_offset);
+			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_rel_offset(off_t rel_offset);
 			
 			/**
 			 * @brief Find the Instruction on the given line.
@@ -122,7 +125,7 @@ namespace REHex
 			*/
 			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_line(int64_t rel_line);
 			
-			DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, cs_arch arch, cs_mode mode);
+			DisassemblyRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, cs_arch arch, cs_mode mode);
 			~DisassemblyRegion();
 			
 			/* For unit testing. */
@@ -136,23 +139,23 @@ namespace REHex
 			
 			virtual unsigned int check() override;
 			
-			virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override;
-			virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
+			virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines) override;
+			virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override;
 			
-			virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override;
-			virtual off_t cursor_right_from(off_t pos, ScreenArea active_area) override;
-			virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override;
-			virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override;
-			virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override;
-			virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override;
+			virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_area, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
+			virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override;
 			
-			virtual int cursor_column(off_t pos) override;
-			virtual off_t first_row_nearest_column(int column) override;
-			virtual off_t last_row_nearest_column(int column) override;
-			virtual off_t nth_row_nearest_column(int64_t row, int column) override;
+			virtual int cursor_column(BitOffset pos) override;
+			virtual BitOffset first_row_nearest_column(int column) override;
+			virtual BitOffset last_row_nearest_column(int column) override;
+			virtual BitOffset nth_row_nearest_column(int64_t row, int column) override;
 			
-			virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override;
-			virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override;
+			virtual DocumentCtrl::Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
+			virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 			
 			virtual wxDataObject *OnCopy(DocumentCtrl &doc_ctrl) override;
 	};

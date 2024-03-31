@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,7 +24,7 @@
 #include "CharacterFinder.hpp"
 #include "DataType.hpp"
 
-REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, off_t base, off_t length, size_t chunk_size, size_t lru_cache_size):
+REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, BitOffset base, off_t length, size_t chunk_size, size_t lru_cache_size):
 	document(document),
 	base(base),
 	length(length),
@@ -40,7 +40,7 @@ REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, off_t b
 		--t1_size;
 	}
 	
-	t1.reset(new std::atomic<off_t>[t1_size]);
+	t1.reset(new std::atomic<int64_t>[t1_size]);
 	
 	reset_from(base);
 }
@@ -69,16 +69,19 @@ void REHex::CharacterFinder::start_worker()
 		auto type_at_base = types.get_range(base);
 		assert(type_at_base != types.end());
 		
-		off_t encoding_base = type_at_base->first.offset;
+		BitOffset encoding_base = type_at_base->first.offset;
 		assert(encoding_base <= base);
 		
 		const CharacterEncoder *encoder;
-		if(type_at_base->second != "")
+		if(type_at_base->second.name != "")
 		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
-			assert(dt_reg != NULL);
+			auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);
+			assert(type != NULL);
 			
-			encoder = dt_reg->encoder;
+			if(type->encoder != NULL)
+			{
+				encoder = type->encoder;
+			}
 		}
 		else{
 			static REHex::CharacterEncoderASCII ascii_encoder;
@@ -88,15 +91,16 @@ void REHex::CharacterFinder::start_worker()
 		t1_worker = std::thread([this, encoding_base, encoder]()
 		{
 			size_t idx = 0;
-			off_t base_off = base, target_off = base + chunk_size;
+			BitOffset base_off = base, target_off = base + BitOffset(chunk_size, 0);
 			
-			while(t1_filling && target_off < (base + length))
+			while(t1_filling && target_off < (base + BitOffset(length, 0)))
 			{
 				assert(target_off >= base_off);
 				
 				std::vector<unsigned char> data;
 				try {
-					data = document->read_data(base_off, ((target_off - base_off) + MAX_CHAR_SIZE));
+					assert((target_off - base_off).byte_aligned());
+					data = document->read_data(base_off, ((target_off - base_off).byte() + MAX_CHAR_SIZE));
 				}
 				catch(const std::exception &e)
 				{
@@ -106,10 +110,10 @@ void REHex::CharacterFinder::start_worker()
 				
 				bool ok = false;
 				
-				for(
-					off_t at_offset = base_off - ((base_off - encoding_base) % encoder->word_size), data_off = 0;
-					at_offset < (base + length) && (size_t)(data_off) < data.size();
-				)
+				BitOffset at_offset = base_off - ((base_off - encoding_base) % encoder->word_size);
+				size_t data_off = 0;
+				
+				while(at_offset < (base + BitOffset(length, 0)) && (size_t)(data_off) < data.size())
 				{
 					EncodedCharacter ec = encoder->decode((data.data() + data_off), (data.size() - data_off));
 					
@@ -122,7 +126,7 @@ void REHex::CharacterFinder::start_worker()
 					
 					if(at_offset >= target_off && (at_offset + (off_t)(char_size)) <= (base + length))
 					{
-						t1[idx] = at_offset;
+						t1[idx] = at_offset.to_int64();
 						
 						base_off = at_offset;
 						target_off += chunk_size;
@@ -154,7 +158,7 @@ void REHex::CharacterFinder::stop_worker()
 	}
 }
 
-void REHex::CharacterFinder::reset_from(off_t offset)
+void REHex::CharacterFinder::reset_from(BitOffset offset)
 {
 	if(offset < base || offset >= (base + length))
 	{
@@ -164,7 +168,7 @@ void REHex::CharacterFinder::reset_from(off_t offset)
 	
 	stop_worker();
 	
-	for(size_t i = std::max((((offset - base) / (off_t)(chunk_size)) - 1), (off_t)(0)); i < t1_size; ++i)
+	for(size_t i = std::max((((offset - base).byte() / (off_t)(chunk_size)) - 1), (off_t)(0)); i < t1_size; ++i)
 	{
 		t1[i] = -1;
 	}
@@ -175,25 +179,25 @@ void REHex::CharacterFinder::reset_from(off_t offset)
 	start_worker();
 }
 
-std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
+std::pair<REHex::BitOffset,off_t> REHex::CharacterFinder::get_char_range(BitOffset offset)
 {
-	if(offset < base || offset >= (base + length))
+	if(offset < base || offset >= (base + BitOffset(length, 0)))
 	{
 		/* Not in range tracked by this CharacterFinder. */
-		return std::make_pair(-1, -1);
+		return std::make_pair(BitOffset::INVALID, -1);
 	}
 	
-	ssize_t t1_idx = ((offset - base) / (off_t)(chunk_size)) - 1;
+	ssize_t t1_idx = ((offset - base).byte() / (off_t)(chunk_size)) - 1;
 	assert(t1_idx < (ssize_t)(t1_size));
 	
-	off_t t2_base_offset = t1_idx >= 0
-		? t1[t1_idx].load()
+	BitOffset t2_base_offset = t1_idx >= 0
+		? BitOffset::from_int64(t1[t1_idx].load())
 		: base;
 	
 	if(t2_base_offset < 0)
 	{
 		/* t1 slot not filled yet. */
-		return std::make_pair(-1, -1);
+		return std::make_pair(BitOffset::INVALID, -1);
 	}
 	
 	if(t2_base_offset > offset)
@@ -202,18 +206,18 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 		assert(t1_idx < (ssize_t)(t1_size));
 		
 		t2_base_offset = t1_idx >= 0
-			? t1[t1_idx].load()
+			? BitOffset::from_int64(t1[t1_idx].load())
 			: base;
 	}
 	
-	off_t t2_end_offset = ((t1_idx + 1) < (ssize_t)(t1_size))
-		? t1[t1_idx + 1].load()
+	BitOffset t2_end_offset = ((t1_idx + 1) < (ssize_t)(t1_size))
+		? BitOffset::from_int64(t1[t1_idx + 1].load())
 		: base + length;
 	
 	if(t2_end_offset < 0)
 	{
 		/* t1 slot not filled yet. */
-		return std::make_pair(-1, -1);
+		return std::make_pair(BitOffset::INVALID, -1);
 	}
 	
 	const std::vector<size_t> *t2_elem = t2.get(t2_base_offset);
@@ -227,25 +231,26 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 		auto type_at_base = types.get_range(t2_base_offset);
 		assert(type_at_base != types.end());
 		
-		off_t encoding_base = type_at_base->first.offset;
+		BitOffset encoding_base = type_at_base->first.offset;
 		assert(encoding_base <= t2_base_offset);
 		
-		const CharacterEncoder *encoder;
-		if(type_at_base->second != "")
+		static REHex::CharacterEncoderASCII ascii_encoder;
+		const CharacterEncoder *encoder = &ascii_encoder;
+		if(type_at_base->second.name != "")
 		{
-			const DataTypeRegistration *dt_reg = DataTypeRegistry::by_name(type_at_base->second);
-			assert(dt_reg != NULL);
+			auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);
+			assert(type != NULL);
 			
-			encoder = dt_reg->encoder;
-		}
-		else{
-			static REHex::CharacterEncoderASCII ascii_encoder;
-			encoder = &ascii_encoder;
+			if(type->encoder != NULL)
+			{
+				encoder = type->encoder;
+			}
 		}
 		
 		std::vector<unsigned char> data;
 		try {
-			data = document->read_data(t2_base_offset, (t2_end_offset - t2_base_offset));
+			assert((t2_end_offset - t2_base_offset).byte_aligned());
+			data = document->read_data(t2_base_offset, (t2_end_offset - t2_base_offset).byte());
 		}
 		catch(const std::exception &e)
 		{
@@ -253,9 +258,13 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 			return std::make_pair(-1, -1);
 		}
 		
-		for(off_t t2_off = t2_base_offset, data_off = 0; t2_off < t2_end_offset && (size_t)(data_off) < data.size();)
+		BitOffset t2_off = t2_base_offset;
+		size_t data_off = 0;
+		
+		for(; t2_off < t2_end_offset && data_off < data.size();)
 		{
-			new_t2_elem.push_back(t2_off - t2_base_offset);
+			assert((t2_off - t2_base_offset).byte_aligned());
+			new_t2_elem.push_back((t2_off - t2_base_offset).byte());
 			
 			assert(types.get_range(t2_off) == type_at_base);
 			
@@ -280,7 +289,7 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 	auto next_char_off = std::upper_bound(t2_elem->begin(), t2_elem->end(), (offset - t2_base_offset));
 	auto this_char_off = std::prev(next_char_off);
 	
-	off_t abs_this_char_off = (off_t)(*this_char_off) + t2_base_offset;
+	BitOffset abs_this_char_off = BitOffset(*this_char_off, 0) + t2_base_offset;
 	
 	if(next_char_off != t2_elem->end())
 	{
@@ -288,19 +297,20 @@ std::pair<off_t,off_t> REHex::CharacterFinder::get_char_range(off_t offset)
 	}
 	else if(t2_end_offset > t2_base_offset)
 	{
-		return std::make_pair(abs_this_char_off, (t2_end_offset - abs_this_char_off));
+		assert((t2_end_offset - abs_this_char_off).byte_aligned());
+		return std::make_pair(abs_this_char_off, (t2_end_offset - abs_this_char_off).byte());
 	}
 	else{
 		return std::make_pair(-1, -1);
 	}
 }
 
-off_t REHex::CharacterFinder::get_char_start(off_t offset)
+REHex::BitOffset REHex::CharacterFinder::get_char_start(BitOffset offset)
 {
 	return get_char_range(offset).first;
 }
 
-off_t REHex::CharacterFinder::get_char_length(off_t offset)
+off_t REHex::CharacterFinder::get_char_length(BitOffset offset)
 {
 	return get_char_range(offset).second;
 }

@@ -66,7 +66,17 @@ hook_cpp_binding_includes = "#include \"../platform.hpp\"\n"
 -- Set any #includes or other C++ code to be placed verbatim below the
 --   #includes of every generated cpp file or "" for none
 hook_cpp_binding_post_includes =
-    "#include \"FuncWrapper.hpp\"\n"
+    "#include \"../BitOffset.hpp\"\n" ..
+    "#include \"FuncWrapper.hpp\"\n" ..
+    "\n" ..
+    "static void push_BitOffset(lua_State *L, REHex::BitOffset value)\n" ..
+    "{\n" ..
+    "    REHex::BitOffset* obj = new REHex::BitOffset(value);\n" ..
+    "    // add to tracked memory list\n" ..
+    "    wxluaO_addgcobject(L, obj, wxluatype_REHex_BitOffset);\n" ..
+    "    // push the constructed class pointer\n" ..
+    "    wxluaT_pushuserdatatype(L, obj, wxluatype_REHex_BitOffset);\n" ..
+    "}\n"
 
 -- ----------------------------------------------------------------------------
 -- Add additional include information or C++ code for the binding header file.

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -37,38 +37,6 @@
 
 #define TMPFILE  "tests/.tmpfile"
 #define TMPFILE2 "tests/.tmpfile2"
-
-static void write_file(const char *filename, const std::vector<unsigned char>& data)
-{
-	FILE *fh = fopen(filename, "wb");
-	assert(fh);	// Ensure the 'tests' directory can be accessed when hitting this
-	
-	if(data.size() > 0)
-		assert(fwrite(data.data(), data.size(), 1, fh) == 1);
-	
-	fclose(fh);
-}
-
-static std::vector<unsigned char> read_file(const char *filename)
-{
-	FILE *fh = fopen(filename, "rb");
-	assert(fh);
-	
-	std::vector<unsigned char> data;
-	
-	unsigned char buf[1024];
-	size_t len;
-	while((len = fread(buf, 1, sizeof(buf), fh)) > 0)
-	{
-		data.insert(data.end(), buf, buf + len);
-	}
-	
-	assert(!ferror(fh));
-	
-	fclose(fh);
-	
-	return data;
-}
 
 #define TEST_BUFFER_MANIP(buffer_manip_code) \
 { \
@@ -163,6 +131,16 @@ if(END_DATA.size() > 0) \
 #define TEST_OVERWRITE_FAIL(offset, data_vec) \
 { \
 	EXPECT_FALSE(b.overwrite_data(offset, data_vec.data(), data_vec.size())) << "Buffer::overwrite_data() returns false"; \
+}
+
+#define TEST_OVERWRITE_BITS_OK(offset, ...) \
+{ \
+	EXPECT_TRUE(b.overwrite_bits(offset, std::vector<bool>({ __VA_ARGS__ }))) << "Buffer::overwrite_data() returns true"; \
+}
+
+#define TEST_OVERWRITE_BITS_FAIL(offset, ...) \
+{ \
+	EXPECT_FALSE(b.overwrite_bits(offset, std::vector<bool>({ __VA_ARGS__ }))) << "Buffer::overwrite_data() returns false"; \
 }
 
 #define TEST_ERASE_OK(offset, length) \
@@ -328,6 +306,33 @@ TEST(Buffer, ReadAcrossBlocks)
 	READ_DATA_CLEAN(0, 8);
 	READ_DATA_CLEAN(1, 8);
 	READ_DATA_UNLOADED(2);
+}
+
+TEST(Buffer, ReadAcrossBlocksShifted)
+{
+	READ_DATA_PREPARE();
+	
+	const std::vector<unsigned char> expect_data = {
+		0x57, 0x47, 0xBD, 0xA7, 0xB0, 0x11, 0xB8, 0x40,
+		0x97, 0x68,
+	};
+	
+	std::vector<unsigned char> got_data = b.read_data(REHex::BitOffset(2, 4), 10);
+	
+	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
+}
+
+TEST(Buffer, ReadToEndShifted)
+{
+	READ_DATA_PREPARE();
+	
+	const std::vector<unsigned char> expect_data = {
+		94, 19, 16, 152
+	};
+	
+	std::vector<unsigned char> got_data = b.read_data(REHex::BitOffset(18, 2), 10);
+	
+	EXPECT_EQ(got_data, expect_data) << "Buffer::read_data() returns the correct data";
 }
 
 TEST(Buffer, ReadWholeFile)
@@ -961,6 +966,198 @@ TEST(Buffer, OverwriteEmptyFileStart)
 	);
 }
 
+TEST(Buffer, OverwriteShifted)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0xAB, 0xE4, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_OK(REHex::BitOffset(1, 1), (std::vector<unsigned char>{ 0x57 }));
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(DIRTY,    0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteShiftedToEndOfBlock)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x98, 0x92,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_OK(REHex::BitOffset(6, 7), (std::vector<unsigned char>{ 0x49 }));
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(DIRTY,    0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteShiftedOverEndOfBlock)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x98, 0x93,
+		0x55, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_OK(REHex::BitOffset(6, 7), (std::vector<unsigned char>{ 0x49, 0xAA }));
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(DIRTY,    0,  8);
+				TEST_BLOCK_DEF(DIRTY,    8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteShiftedAcrossBlocks)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x98, 0x93,
+		0x55, 0x54, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_OK(REHex::BitOffset(6, 7), (std::vector<unsigned char>{ 0x49, 0xAA, 0xAA }));
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(DIRTY,    0,  8);
+				TEST_BLOCK_DEF(DIRTY,    8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteShiftedToEndOfFile)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x6A, 0xB9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_OK(REHex::BitOffset(28, 4), (std::vector<unsigned char>{ 0xAB }));
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(UNLOADED, 0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(DIRTY,    24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteShiftedOverEndOfFile)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_FAIL(REHex::BitOffset(28, 4), (std::vector<unsigned char>{ 0xAB, 0xCD }));
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(UNLOADED, 0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
 TEST(Buffer, OverwriteEmptyFileBeyondEnd)
 {
 	const std::vector<unsigned char> BEGIN_DATA = {};
@@ -975,6 +1172,144 @@ TEST(Buffer, OverwriteEmptyFileBeyondEnd)
 			});
 			
 			TEST_LENGTH(0);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteSingleBit)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x16, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_BITS_OK(REHex::BitOffset(1, 0),
+				0
+			);
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(DIRTY,    0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteMultipleBits)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD3,
+		0xD2, 0xDB, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_BITS_OK(REHex::BitOffset(15, 6),
+				                  1, 1,
+				1, 1, 0, 1, 0, 0, 1, 0,
+				1, 1, 0,
+			);
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(UNLOADED, 0,  8);
+				TEST_BLOCK_DEF(DIRTY,    8,  8);
+				TEST_BLOCK_DEF(DIRTY,    16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteBitsToEnd)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC3,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_BITS_OK(REHex::BitOffset(29, 4),
+				0, 0, 1, 1,
+			);
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(UNLOADED, 0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(DIRTY,    24, 6);
+			});
+			
+			TEST_LENGTH(30);
+		}
+	);
+}
+
+TEST(Buffer, OverwriteBitsPastEnd)
+{
+	const std::vector<unsigned char> BEGIN_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	const std::vector<unsigned char> END_DATA = {
+		0x06, 0x96, 0x64, 0x58, 0xC9, 0xB5, 0x99, 0x4E,
+		0xE7, 0xA8, 0x06, 0x24, 0xEC, 0xB6, 0x8C, 0xD1,
+		0xE0, 0x3B, 0x0F, 0x7C, 0xAD, 0x80, 0xB3, 0xB4,
+		0x51, 0xA0, 0x0D, 0xAD, 0x67, 0xC9,
+	};
+	
+	TEST_BUFFER_MANIP(
+		{
+			TEST_OVERWRITE_BITS_FAIL(REHex::BitOffset(29, 4),
+				0, 0, 1, 1, 0,
+			);
+			
+			TEST_BLOCKS({
+				TEST_BLOCK_DEF(UNLOADED, 0,  8);
+				TEST_BLOCK_DEF(UNLOADED, 8,  8);
+				TEST_BLOCK_DEF(UNLOADED, 16, 8);
+				TEST_BLOCK_DEF(UNLOADED, 24, 6);
+			});
+			
+			TEST_LENGTH(30);
 		}
 	);
 }
@@ -2526,4 +2861,73 @@ TEST(Buffer, ModifyBackingFileAndReload)
 	
 	std::vector<unsigned char> file_data = b.read_data(0, 1024);
 	EXPECT_EQ(file_data, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF })) << "Buffer contains new content";
+}
+
+TEST(Buffer, ReadBitsWholeFile)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	
+	std::vector<bool> bits = b.read_bits(REHex::BitOffset(0, 0), 100);
+	
+	std::vector<bool> EXPECT = {
+		false, false, false, false, false, false, false, false, /* 0x00 */
+		false, false, false, false, false, false, false,  true, /* 0x01 */
+		false, false, false, false, false, false,  true, false, /* 0x02 */
+		false, false, false, false, false, false,  true,  true, /* 0x03 */
+		false, false, false, false, false,  true, false, false, /* 0x04 */
+		false, false, false, false, false,  true, false,  true, /* 0x05 */
+		false, false, false, false, false,  true,  true, false, /* 0x06 */
+		false, false, false, false, false,  true,  true,  true, /* 0x07 */
+	};
+	
+	EXPECT_EQ(bits, EXPECT);
+}
+
+TEST(Buffer, ReadBitsFromFile)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	
+	std::vector<bool> bits = b.read_bits(REHex::BitOffset(1, 2), 15);
+	
+	std::vector<bool> EXPECT = {
+		/* false, false, false, false, false, false, false, false, */  /* 0x00 */
+		/* false, false, */ false, false, false, false, false,  true,  /* 0x01 */
+		false, false, false, false, false, false,  true, false,        /* 0x02 */
+		false, /* false, false, false, false, false,  true,  true, */  /* 0x03 */
+		/* false, false, false, false, false,  true, false, false, */  /* 0x04 */
+		/* false, false, false, false, false,  true, false,  true, */  /* 0x05 */
+		/* false, false, false, false, false,  true,  true, false, */  /* 0x06 */
+		/* false, false, false, false, false,  true,  true,  true, */  /* 0x07 */
+	};
+	
+	EXPECT_EQ(bits, EXPECT);
+}
+
+TEST(Buffer, ReadBitsAtEOF)
+{
+	TempFilename f1;
+	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
+	
+	REHex::Buffer b(f1.tmpfile);
+	
+	std::vector<bool> bits = b.read_bits(REHex::BitOffset(7, 5), 15);
+	
+	std::vector<bool> EXPECT = {
+		/* false, false, false, false, false, false, false, false, */  /* 0x00 */
+		/* false, false, false, false, false, false, false,  true, */  /* 0x01 */
+		/* false, false, false, false, false, false,  true, false, */  /* 0x02 */
+		/* false, false, false, false, false, false,  true,  true, */  /* 0x03 */
+		/* false, false, false, false, false,  true, false, false, */  /* 0x04 */
+		/* false, false, false, false, false,  true, false,  true, */  /* 0x05 */
+		/* false, false, false, false, false,  true,  true, false, */  /* 0x06 */
+		/* false, false, false, false, false, */  true,  true,  true,  /* 0x07 */
+	};
+	
+	EXPECT_EQ(bits, EXPECT);
 }

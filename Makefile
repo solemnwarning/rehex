@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -345,7 +345,9 @@ APP_OBJS := \
 	src/AppTestable.$(BUILD_TYPE).o \
 	src/ArtProvider.$(BUILD_TYPE).o \
 	src/BasicDataTypes.$(BUILD_TYPE).o \
+	src/BitArray.$(BUILD_TYPE).o \
 	src/BitEditor.$(BUILD_TYPE).o \
+	src/BitOffset.$(BUILD_TYPE).o \
 	src/BitmapTool.$(BUILD_TYPE).o \
 	src/buffer.$(BUILD_TYPE).o \
 	src/BytesPerLineDialog.$(BUILD_TYPE).o \
@@ -439,6 +441,8 @@ TEST_OBJS := \
 	src/AppTestable.$(BUILD_TYPE).o \
 	src/ArtProvider.$(BUILD_TYPE).o \
 	src/BasicDataTypes.$(BUILD_TYPE).o \
+	src/BitArray.$(BUILD_TYPE).o \
+	src/BitOffset.$(BUILD_TYPE).o \
 	src/BitmapTool.$(BUILD_TYPE).o \
 	src/buffer.$(BUILD_TYPE).o \
 	src/ByteRangeSet.$(BUILD_TYPE).o \
@@ -482,6 +486,7 @@ TEST_OBJS := \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
 	tests/BitmapTool.o \
+	tests/BitOffset.o \
 	tests/buffer.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
@@ -492,6 +497,7 @@ TEST_OBJS := \
 	tests/CommentsDataObject.o \
 	tests/CommentTree.o \
 	tests/ConsoleBuffer.o \
+	tests/DataType.o \
 	tests/DataHistogramAccumulator.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \

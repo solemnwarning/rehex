@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1154,7 +1154,7 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 				}
 			}
 			
-			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
+			off_t cursor_pos = r->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 			if(event.offset <= cursor_pos)
 			{
 				cursor_pos -= std::min(event.length, (cursor_pos - event.offset));
@@ -1173,21 +1173,21 @@ void REHex::DiffWindow::OnDocumentDataErase(OffsetLengthEvent &event)
 			
 			if(r->doc_ctrl->has_selection())
 			{
-				off_t selection_first, selection_last;
+				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = r->doc_ctrl->get_selection_raw();
 				
-				if((event.offset < selection_first && (event.offset + event.length) > selection_first)
-					|| (event.offset >= selection_first && event.offset <= selection_last))
+				if((event.offset < selection_first.byte() && (event.offset + event.length) > selection_first.byte())
+					|| (event.offset >= selection_first.byte() && event.offset <= selection_last.byte()))
 				{
 					r->doc_ctrl->clear_selection();
 				}
-				else if(event.offset < selection_first)
+				else if(event.offset < selection_first.byte())
 				{
-					selection_first -= event.length;
-					selection_last  -= event.length;
+					selection_first -= BitOffset::BYTES(event.length);
+					selection_last  -= BitOffset::BYTES(event.length);
 					
-					assert(selection_first >= r->offset);
-					assert(selection_last < (r->offset + r->length));
+					assert(selection_first.byte() >= r->offset);
+					assert(selection_last.byte() < (r->offset + r->length));
 					
 					r->doc_ctrl->set_selection_raw(selection_first, selection_last);
 				}
@@ -1225,7 +1225,7 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 				offsets_different.clear_all();
 			}
 			
-			off_t cursor_pos = r->doc_ctrl->get_cursor_position();
+			off_t cursor_pos = r->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 			if(event.offset <= cursor_pos)
 			{
 				cursor_pos += event.length;
@@ -1238,20 +1238,20 @@ void REHex::DiffWindow::OnDocumentDataInsert(OffsetLengthEvent &event)
 			
 			if(r->doc_ctrl->has_selection())
 			{
-				off_t selection_first, selection_last;
+				BitOffset selection_first, selection_last;
 				std::tie(selection_first, selection_last) = r->doc_ctrl->get_selection_raw();
 				
-				if(event.offset <= selection_first)
+				if(event.offset <= selection_first.byte())
 				{
-					selection_first += event.length;
-					selection_last  += event.length;
+					selection_first += BitOffset::BYTES(event.length);
+					selection_last  += BitOffset::BYTES(event.length);
 					
-					assert(selection_first >= r->offset);
-					assert(selection_last < (r->offset + r->length));
+					assert(selection_first.byte() >= r->offset);
+					assert(selection_last.byte() < (r->offset + r->length));
 					
 					r->doc_ctrl->set_selection_raw(selection_first, selection_last);
 				}
-				else if(event.offset <= selection_last)
+				else if(event.offset <= selection_last.byte())
 				{
 					r->doc_ctrl->clear_selection();
 				}
@@ -1271,9 +1271,9 @@ void REHex::DiffWindow::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 	{
 		if(r->doc == src)
 		{
-			ByteRangeSet selection = r->doc_ctrl->get_selection_ranges();
+			BitRangeSet selection = r->doc_ctrl->get_selection_ranges();
 			
-			if(selection.isset_any(event.offset, event.length))
+			if(selection.isset_any(BitOffset(event.offset, 0), BitOffset(event.length, 0)))
 			{
 				r->doc_ctrl->clear_selection();
 			}
@@ -1331,7 +1331,7 @@ void REHex::DiffWindow::OnCursorUpdate(CursorUpdateEvent &event)
 	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
 	assert(source_range != ranges.end());
 	
-	relative_cursor_pos = event.cursor_pos - source_range->offset;
+	relative_cursor_pos = event.cursor_pos.byte() - source_range->offset; /* BITFIXUP */
 	// assert(relative_cursor_pos >= 0);
 	
 	/* Update the cursors in every other tab to match. */
@@ -1354,7 +1354,7 @@ void REHex::DiffWindow::OnDataRightClick(wxCommandEvent &event)
 	auto source_range = std::find_if(ranges.begin(), ranges.end(), [&](const Range &r) { return r.doc_ctrl == event.GetEventObject(); });
 	assert(source_range != ranges.end());
 	
-	off_t cursor_pos = source_range->doc_ctrl->get_cursor_position();
+	off_t cursor_pos = source_range->doc_ctrl->get_cursor_position().byte(); /* BITFIXUP */
 	bool has_selection = source_range->doc_ctrl->has_selection();
 	
 	wxMenu menu;
@@ -1537,14 +1537,16 @@ int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 	return width;
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(off_t off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(BitOffset off) const
 {
-	assert(off >= range->offset);
-	off_t relative_off = off - range->offset;
+	assert(off.byte_aligned());
 	
-	if(diff_window->offsets_pending.isset(off))
+	assert(off >= range->offset);
+	off_t relative_off = off.byte() - range->offset;
+	
+	if(diff_window->offsets_pending.isset(off.byte()))
 	{
-		diff_window->process_now(off, 2048 /* Probably enough to process screen in one go. */);
+		diff_window->process_now(off.byte(), 2048 /* Probably enough to process screen in one go. */);
 	}
 	
 	if(diff_window->offsets_different.isset(relative_off))

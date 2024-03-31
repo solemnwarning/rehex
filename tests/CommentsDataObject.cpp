@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,10 +25,10 @@ using namespace REHex;
 
 TEST(CommentsDataObject, SingleComment)
 {
-	ByteRangeTree<Document::Comment> expect_comments;
+	BitRangeTree<Document::Comment> expect_comments;
 	expect_comments.set(1234567890, 1234567890, Document::Comment("yarn"));
 	
-	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
+	std::list<BitRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(expect_comments.begin());
 	
 	CommentsDataObject cdo_ser(in_comments);
@@ -43,14 +43,14 @@ TEST(CommentsDataObject, SingleComment)
 
 TEST(CommentsDataObject, MultipleComments)
 {
-	ByteRangeTree<Document::Comment> expect_comments;
+	BitRangeTree<Document::Comment> expect_comments;
 	expect_comments.set(1234567890, 0, Document::Comment("simple"));
 	expect_comments.set(1234567891, 0, Document::Comment("vivacious"));
 	expect_comments.set(1234567892, 0, Document::Comment("fruit"));
 	expect_comments.set(1234567893, 0, Document::Comment("cut"));
 	expect_comments.set(1234567894, 0, Document::Comment("weak"));
 	
-	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
+	std::list<BitRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(expect_comments.begin(), 0));
 	in_comments.push_back(std::next(expect_comments.begin(), 1));
 	in_comments.push_back(std::next(expect_comments.begin(), 2));
@@ -69,14 +69,14 @@ TEST(CommentsDataObject, MultipleComments)
 
 TEST(CommentsDataObject, ShiftOffset)
 {
-	ByteRangeTree<Document::Comment> source_comments;
+	BitRangeTree<Document::Comment> source_comments;
 	source_comments.set(1234567890, 0, Document::Comment("enter"));
 	source_comments.set(1234567891, 0, Document::Comment("ludicrous"));
 	source_comments.set(1234567892, 0, Document::Comment("acceptable"));
 	source_comments.set(1234567893, 0, Document::Comment("discreet"));
 	source_comments.set(1234567894, 0, Document::Comment("shocking"));
 	
-	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
+	std::list<BitRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(source_comments.begin(), 0));
 	in_comments.push_back(std::next(source_comments.begin(), 1));
 	in_comments.push_back(std::next(source_comments.begin(), 2));
@@ -90,7 +90,7 @@ TEST(CommentsDataObject, ShiftOffset)
 	
 	auto got_comments = cdo_deser.get_comments();
 	
-	ByteRangeTree<Document::Comment> expect_comments;
+	BitRangeTree<Document::Comment> expect_comments;
 	expect_comments.set(1234567880, 0, Document::Comment("enter"));
 	expect_comments.set(1234567881, 0, Document::Comment("ludicrous"));
 	expect_comments.set(1234567882, 0, Document::Comment("acceptable"));
@@ -102,11 +102,11 @@ TEST(CommentsDataObject, ShiftOffset)
 
 TEST(CommentsDataObject, HighBitCharacters)
 {
-	ByteRangeTree<Document::Comment> expect_comments;
+	BitRangeTree<Document::Comment> expect_comments;
 	expect_comments.set(1234567890, 0, Document::Comment(wxString::FromUTF8((const char*)(u8"\u0111\u00F0\u201D\u0127\u0167\u00DF\u201D\u014B\u00BB\u00B6\u2190\u00A2\u00FE\u03A9")))); /* đð”ħŧß”ŋ»¶←¢þΩ */
 	expect_comments.set(1234567891, 0, Document::Comment(wxString::FromUTF8((const char*)(u8"\u2500\u00B2\u00F0\u00A2\u201C\u00AB\u262D\u00A7\u00D0\u00AA\u014A\u2019\u2018\u00A1")))); /* ─²ð¢“«☭§ÐªŊ’‘¡ */
 	
-	std::list<ByteRangeTree<Document::Comment>::const_iterator> in_comments;
+	std::list<BitRangeTree<Document::Comment>::const_iterator> in_comments;
 	in_comments.push_back(std::next(expect_comments.begin(), 0));
 	in_comments.push_back(std::next(expect_comments.begin(), 1));
 	

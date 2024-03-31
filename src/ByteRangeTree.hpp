@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <vector>
 
+#include "BitOffset.hpp"
+
 #ifndef NDEBUG
 // #define REHEX_BYTERANGETREE_CHECKS
 // #define REHEX_BYTERANGETREE_DIAGS
@@ -33,15 +35,15 @@
 
 namespace REHex
 {
-	struct ByteRangeTreeKey
+	template<typename OT> struct RangeTreeKey
 	{
-		off_t offset;
-		off_t length;
+		OT offset;
+		OT length;
 		
-		ByteRangeTreeKey(off_t offset, off_t length):
+		RangeTreeKey(OT offset, OT length):
 			offset(offset), length(length) {}
 		
-		bool operator<(const ByteRangeTreeKey &rhs) const
+		bool operator<(const RangeTreeKey<OT> &rhs) const
 		{
 			if(offset == rhs.offset)
 			{
@@ -52,12 +54,12 @@ namespace REHex
 			}
 		}
 		
-		bool operator==(const ByteRangeTreeKey &rhs) const
+		bool operator==(const RangeTreeKey<OT> &rhs) const
 		{
 			return offset == rhs.offset && length == rhs.length;
 		}
 		
-		bool contains(const ByteRangeTreeKey &inner) const
+		bool contains(const RangeTreeKey<OT> &inner) const
 		{
 			return offset <= inner.offset && (offset + length) >= (inner.offset + inner.length);
 		}
@@ -75,27 +77,27 @@ namespace REHex
 	 * Unless otherwise noted, iterators and Node* pointers obtained from this class are stable
 	 * and will not be invalidated by modifications to other elements.
 	*/
-	template<typename T> class ByteRangeTree
+	template<typename OT, typename T> class RangeTree
 	{
 		private:
 			struct NodeRef;
 			
 		public:
 			/**
-			 * @brief An element in a ByteRangeTree.
+			 * @brief An element in a RangeTree.
 			*/
 			class Node
 			{
-				friend ByteRangeTree;
+				friend RangeTree;
 				
 				public:
-					const ByteRangeTreeKey key; /**< The key (offset+length) of the element. */
+					const RangeTreeKey<OT> key; /**< The key (offset+length) of the element. */
 					T value;                    /**< The value of the element. */
 					
 					/* Compatibility hack for old code written against the
 					 * NestedOffsetMap container.
 					*/
-					const ByteRangeTreeKey &first;
+					const RangeTreeKey<OT> &first;
 					T &second;
 					
 				private:
@@ -109,7 +111,7 @@ namespace REHex
 					/**
 					 * @brief Constructor for new nodes being inserted.
 					*/
-					Node(off_t offset, off_t length, const T& value):
+					Node(OT offset, OT length, const T& value):
 						key(offset, length),
 						value(value),
 						first(key),
@@ -130,7 +132,7 @@ namespace REHex
 					 *
 					 * This invalidates the contents of the old Node.
 					*/
-					Node(off_t offset, off_t length, Node &&node):
+					Node(OT offset, OT length, Node &&node):
 						key(offset, length),
 						value(std::move(node.value)),
 						first(key),
@@ -241,13 +243,13 @@ namespace REHex
 		private:
 			struct NodeRef
 			{
-				ByteRangeTreeKey key;
+				RangeTreeKey<OT> key;
 				std::unique_ptr<Node> node;
 				
-				NodeRef(off_t offset, off_t length):
+				NodeRef(OT offset, OT length):
 					key(offset, length) {}
 				
-				NodeRef(const ByteRangeTreeKey &key, Node *node = NULL):
+				NodeRef(const RangeTreeKey<OT> &key, Node *node = NULL):
 					key(key), node(node) {}
 				
 				NodeRef(NodeRef &&src) = default;
@@ -287,22 +289,22 @@ namespace REHex
 			
 		public:
 			/**
-			 * @brief Class for iterating over elements in a ByteRangeTree.
+			 * @brief Class for iterating over elements in a RangeTree.
 			 *
-			 * This class can be used to iterate over the elements in a ByteRangeTree,
+			 * This class can be used to iterate over the elements in a RangeTree,
 			 * in a manner similar to classical C++ iterators - the nodes at all levels
 			 * will be visited in order of insertion.
 			*/
 			class iterator
 			{
-				friend ByteRangeTree;
+				friend RangeTree;
 				
 				protected:
-					ByteRangeTree<T> *tree;
+					RangeTree<OT, T> *tree;
 					Node *node;
 					
 				private:
-					iterator(ByteRangeTree<T> *tree, Node *node):
+					iterator(RangeTree<OT, T> *tree, Node *node):
 						tree(tree),
 						node(node) {}
 					
@@ -331,7 +333,7 @@ namespace REHex
 					{
 						assert(node != NULL);
 						
-						node = ByteRangeTree<T>::next_depth_first_node(node);
+						node = RangeTree<OT, T>::next_depth_first_node(node);
 						return *this;
 					}
 					
@@ -352,7 +354,7 @@ namespace REHex
 							node = tree->last_depth_first_node();
 						}
 						else{
-							node = ByteRangeTree<T>::prev_depth_first_node(node);
+							node = RangeTree<OT, T>::prev_depth_first_node(node);
 							assert(node != NULL);
 						}
 						
@@ -392,22 +394,22 @@ namespace REHex
 			};
 			
 			/**
-			 * @brief Class for iterating over elements in a ByteRangeTree.
+			 * @brief Class for iterating over elements in a RangeTree.
 			 *
-			 * This class can be used to iterate over the elements in a ByteRangeTree,
+			 * This class can be used to iterate over the elements in a RangeTree,
 			 * in a manner similar to classical C++ iterators - the nodes at all levels
 			 * will be visited in order of insertion.
 			*/
 			class const_iterator
 			{
-				friend ByteRangeTree;
+				friend RangeTree;
 				
 				protected:
-					const ByteRangeTree<T> *tree;
+					const RangeTree<OT, T> *tree;
 					const Node *node;
 					
 				private:
-					const_iterator(const ByteRangeTree<T> *tree, const Node *node):
+					const_iterator(const RangeTree<OT, T> *tree, const Node *node):
 						tree(tree),
 						node(node) {}
 					
@@ -439,7 +441,7 @@ namespace REHex
 					{
 						assert(node != NULL);
 						
-						node = ByteRangeTree<T>::next_depth_first_node(node);
+						node = RangeTree<OT, T>::next_depth_first_node(node);
 						return *this;
 					}
 					
@@ -460,7 +462,7 @@ namespace REHex
 							node = tree->last_depth_first_node();
 						}
 						else{
-							node = ByteRangeTree<T>::prev_depth_first_node(node);
+							node = RangeTree<OT, T>::prev_depth_first_node(node);
 							assert(node != NULL);
 						}
 						
@@ -499,10 +501,10 @@ namespace REHex
 					}
 			};
 			
-			ByteRangeTree():
+			RangeTree():
 				total_size(0) {}
 			
-			ByteRangeTree(const ByteRangeTree<T> &rhs):
+			RangeTree(const RangeTree<OT, T> &rhs):
 				total_size(0)
 			{
 				for(auto it = rhs.begin(); it != rhs.end(); ++it)
@@ -511,7 +513,7 @@ namespace REHex
 				}
 			}
 			
-			ByteRangeTree<T> &operator=(const ByteRangeTree<T> &rhs)
+			RangeTree<OT, T> &operator=(const RangeTree<OT, T> &rhs)
 			{
 				clear();
 				
@@ -670,8 +672,8 @@ namespace REHex
 			 * @brief Find the node matching the key exactly.
 			 * @returns A Node pointer, or NULL.
 			*/
-			Node *find_node(const ByteRangeTreeKey &key);
-			const Node *find_node(const ByteRangeTreeKey &key) const;
+			Node *find_node(const RangeTreeKey<OT> &key);
+			const Node *find_node(const RangeTreeKey<OT> &key) const;
 			
 			/**
 			 * @brief Find the smallest/deepest node containing the given offset.
@@ -679,15 +681,15 @@ namespace REHex
 			 * Searches for the deepest-nested node that encapsulates the offset.
 			 * Returns NULL if none match. Does not match zero-length nodes.
 			*/
-			Node *find_most_specific_parent(off_t offset);
-			const Node *find_most_specific_parent(off_t offset) const;
+			Node *find_most_specific_parent(OT offset);
+			const Node *find_most_specific_parent(OT offset) const;
 			
 			/**
 			 * @brief Find the node matching the key exactly.
 			 * @returns An iterator, end() if not found.
 			*/
-			iterator find(const ByteRangeTreeKey &key);
-			const_iterator find(const ByteRangeTreeKey &key) const;
+			iterator find(const RangeTreeKey<OT> &key);
+			const_iterator find(const RangeTreeKey<OT> &key) const;
 			
 			/**
 			 * @brief Check if a key can be inserted.
@@ -695,7 +697,7 @@ namespace REHex
 			 * Checks if the given key can be inserted without overlapping the
 			 * start/end of another. Returns true if possible, false if it conflicts.
 			*/
-			bool can_set(off_t offset, off_t length) const;
+			bool can_set(OT offset, OT length) const;
 			
 			/**
 			 * @brief Insert or replace a key in the map.
@@ -706,7 +708,7 @@ namespace REHex
 			 * Returns true on success, false if the new key conflicted with an
 			 * existing one (i.e. straddled the end of it).
 			*/
-			bool set(off_t offset, off_t length, const T &value);
+			bool set(OT offset, OT length, const T &value);
 			
 			/**
 			 * @brief Delete a node from the tree.
@@ -740,7 +742,7 @@ namespace REHex
 			 * Deletes a single node from the tree, any child nodes under it are moved
 			 * up to occupy the position where the deleted node was.
 			*/
-			size_t erase(const ByteRangeTreeKey &key)
+			size_t erase(const RangeTreeKey<OT> &key)
 			{
 				Node *node = find_node(key);
 				if(node != NULL)
@@ -784,7 +786,7 @@ namespace REHex
 			 * @brief Delete a node and all children from the tree.
 			 * @returns The number of elements deleted.
 			*/
-			size_t erase_recursive(const ByteRangeTreeKey &key)
+			size_t erase_recursive(const RangeTreeKey<OT> &key)
 			{
 				Node *node = find_node(key);
 				if(node != NULL)
@@ -808,7 +810,20 @@ namespace REHex
 			 *
 			 * NOTE: All iterators and Node* pointers are invalidated by this method.
 			*/
-			size_t data_inserted(off_t offset, off_t length);
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, off_t>::value, size_t>::type
+			data_inserted(off_t offset, off_t length)
+			{
+				return data_inserted_impl(offset, length);
+			}
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, BitOffset>::value, size_t>::type
+			data_inserted(off_t offset, off_t length)
+			{
+				return data_inserted_impl(BitOffset(offset, 0), BitOffset(length, 0));
+			}
 			
 			/**
 			 * @brief Update the keys in the map for data being erased from the file.
@@ -819,12 +834,25 @@ namespace REHex
 			 *
 			 * NOTE: All iterators and Node* pointers are invalidated by this method.
 			*/
-			size_t data_erased(off_t offset, off_t length);
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, off_t>::value, size_t>::type
+			data_erased(off_t offset, off_t length)
+			{
+				return data_erased_impl(offset, length);
+			}
+			
+			template<typename OT2 = OT>
+			inline typename std::enable_if<std::is_same<OT2, BitOffset>::value, size_t>::type
+			data_erased(off_t offset, off_t length)
+			{
+				return data_erased_impl(BitOffset(offset, 0), BitOffset(length, 0));
+			}
 			
 			/**
 			 * @brief Check if the KEYS and VALUES of two trees match.
 			*/
-			bool operator==(const ByteRangeTree<T> &rhs) const;
+			bool operator==(const RangeTree<OT, T> &rhs) const;
 			
 			/**
 			 * @brief Find the next node in the tree, depth-first.
@@ -838,25 +866,34 @@ namespace REHex
 			*/
 			template<typename NT> static NT *prev_depth_first_node(NT *node);
 		private:
-			template<typename NT, typename CT> static NT *find_node_impl(const ByteRangeTreeKey &key, CT *container);
-			template<typename NT, typename CT> static NT *find_most_specific_parent_impl(off_t offset, CT *container);
+			template<typename NT, typename CT> static NT *find_node_impl(const RangeTreeKey<OT> &key, CT *container);
+			template<typename NT, typename CT> static NT *find_most_specific_parent_impl(OT offset, CT *container);
+			
+			size_t data_inserted_impl(OT offset, OT length);
+			size_t data_erased_impl(OT offset, OT length);
 	};
+	
+	template<typename T> using ByteRangeTree = RangeTree<off_t, T>;
+	using ByteRangeTreeKey = RangeTreeKey<off_t>;
+	
+	template<typename T> using BitRangeTree = RangeTree<BitOffset, T>;
+	using BitRangeTreeKey = RangeTreeKey<BitOffset>;
 }
 
-template<typename T>
-typename REHex::ByteRangeTree<T>::Node *REHex::ByteRangeTree<T>::find_node(const ByteRangeTreeKey &key)
+template<typename OT, typename T>
+typename REHex::RangeTree<OT, T>::Node *REHex::RangeTree<OT, T>::find_node(const RangeTreeKey<OT> &key)
 {
 	return find_node_impl<Node>(key, &root);
 }
 
-template<typename T>
-const typename REHex::ByteRangeTree<T>::Node *REHex::ByteRangeTree<T>::find_node(const ByteRangeTreeKey &key) const
+template<typename OT, typename T>
+const typename REHex::RangeTree<OT, T>::Node *REHex::RangeTree<OT, T>::find_node(const RangeTreeKey<OT> &key) const
 {
 	return find_node_impl<const Node>(key, &root);
 }
 
-template<typename T> template<typename NT, typename CT>
-NT *REHex::ByteRangeTree<T>::find_node_impl(const ByteRangeTreeKey &key, CT *container)
+template<typename OT, typename T> template<typename NT, typename CT>
+NT *REHex::RangeTree<OT, T>::find_node_impl(const RangeTreeKey<OT> &key, CT *container)
 {
 	while(!container->empty())
 	{
@@ -887,32 +924,32 @@ NT *REHex::ByteRangeTree<T>::find_node_impl(const ByteRangeTreeKey &key, CT *con
 	return NULL;
 }
 
-template<typename T>
-typename REHex::ByteRangeTree<T>::iterator REHex::ByteRangeTree<T>::find(const ByteRangeTreeKey &key)
+template<typename OT, typename T>
+typename REHex::RangeTree<OT, T>::iterator REHex::RangeTree<OT, T>::find(const RangeTreeKey<OT> &key)
 {
 	return iterator(this, find_node(key));
 }
 
-template<typename T>
-typename REHex::ByteRangeTree<T>::const_iterator REHex::ByteRangeTree<T>::find(const ByteRangeTreeKey &key) const
+template<typename OT, typename T>
+typename REHex::RangeTree<OT, T>::const_iterator REHex::RangeTree<OT, T>::find(const RangeTreeKey<OT> &key) const
 {
-	return const_iterator(this, REHex::ByteRangeTree<T>::find_node(key));
+	return const_iterator(this, REHex::RangeTree<OT, T>::find_node(key));
 }
 
-template<typename T>
-typename REHex::ByteRangeTree<T>::Node *REHex::ByteRangeTree<T>::find_most_specific_parent(off_t offset)
+template<typename OT, typename T>
+typename REHex::RangeTree<OT, T>::Node *REHex::RangeTree<OT, T>::find_most_specific_parent(OT offset)
 {
 	return find_most_specific_parent_impl<Node>(offset, &root);
 }
 
-template<typename T>
-const typename REHex::ByteRangeTree<T>::Node *REHex::ByteRangeTree<T>::find_most_specific_parent(off_t offset) const
+template<typename OT, typename T>
+const typename REHex::RangeTree<OT, T>::Node *REHex::RangeTree<OT, T>::find_most_specific_parent(OT offset) const
 {
 	return find_most_specific_parent_impl<const Node>(offset, &root);
 }
 
-template<typename T> template<typename NT, typename CT>
-NT *REHex::ByteRangeTree<T>::find_most_specific_parent_impl(off_t offset, CT *container)
+template<typename OT, typename T> template<typename NT, typename CT>
+NT *REHex::RangeTree<OT, T>::find_most_specific_parent_impl(OT offset, CT *container)
 {
 	NT *best_match = NULL;
 	
@@ -942,8 +979,8 @@ NT *REHex::ByteRangeTree<T>::find_most_specific_parent_impl(off_t offset, CT *co
 	return best_match;
 }
 
-template<typename T>
-bool REHex::ByteRangeTree<T>::can_set(off_t offset, off_t length) const
+template<typename OT, typename T>
+bool REHex::RangeTree<OT, T>::can_set(OT offset, OT length) const
 {
 	const std::vector<NodeRef> *container = &root;
 	
@@ -972,8 +1009,8 @@ bool REHex::ByteRangeTree<T>::can_set(off_t offset, off_t length) const
 			
 			assert((*i)->key.offset <= offset);
 			
-			off_t i_offset = (*i)->key.offset;
-			off_t i_end = i_offset + (*i)->key.length;
+			OT i_offset = (*i)->key.offset;
+			OT i_end = i_offset + (*i)->key.length;
 			
 			if(i_offset < offset && i_end > offset && i_end < (offset + length))
 			{
@@ -999,10 +1036,10 @@ bool REHex::ByteRangeTree<T>::can_set(off_t offset, off_t length) const
 	return false;
 }
 
-template<typename T>
-bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
+template<typename OT, typename T>
+bool REHex::RangeTree<OT, T>::set(OT offset, OT length, const T &value)
 {
-	off_t end = offset + length;
+	OT end = offset + length;
 	
 	NodeRef n(offset, length);
 	Node *n_parent = NULL;
@@ -1030,9 +1067,9 @@ bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 			auto insert_after = std::prev(insert_before);
 			
 			Node *ia_node = *insert_after;
-			off_t ia_offset = ia_node->key.offset;
-			off_t ia_length = ia_node->key.length;
-			off_t ia_end = ia_offset + ia_length;
+			OT ia_offset = ia_node->key.offset;
+			OT ia_length = ia_node->key.length;
+			OT ia_end = ia_offset + ia_length;
 			
 			if(ia_offset == offset && ia_length == length)
 			{
@@ -1134,8 +1171,8 @@ bool REHex::ByteRangeTree<T>::set(off_t offset, off_t length, const T &value)
 	return true;
 }
 
-template<typename T>
-size_t REHex::ByteRangeTree<T>::erase(Node *node)
+template<typename OT, typename T>
+size_t REHex::RangeTree<OT, T>::erase(Node *node)
 {
 	std::function<void(Node*)> visit_node;
 	
@@ -1218,8 +1255,8 @@ size_t REHex::ByteRangeTree<T>::erase(Node *node)
 	return 1;
 }
 
-template<typename T>
-size_t REHex::ByteRangeTree<T>::erase_recursive_impl(Node *node)
+template<typename OT, typename T>
+size_t REHex::RangeTree<OT, T>::erase_recursive_impl(Node *node)
 {
 	std::function<void(Node*)> visit_node;
 	size_t total_nodes = 0;
@@ -1262,8 +1299,8 @@ size_t REHex::ByteRangeTree<T>::erase_recursive_impl(Node *node)
 	return total_nodes;
 }
 
-template<typename T>
-bool REHex::ByteRangeTree<T>::operator==(const ByteRangeTree<T> &rhs) const
+template<typename OT, typename T>
+bool REHex::RangeTree<OT, T>::operator==(const RangeTree<OT, T> &rhs) const
 {
 	bool matches = true;
 	
@@ -1293,8 +1330,8 @@ bool REHex::ByteRangeTree<T>::operator==(const ByteRangeTree<T> &rhs) const
 	return matches;
 }
 
-template<typename T>
-size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
+template<typename OT, typename T>
+size_t REHex::RangeTree<OT, T>::data_inserted_impl(OT offset, OT length)
 {
 	size_t keys_modified = 0;
 	
@@ -1305,8 +1342,8 @@ size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
 		{
 			NodeRef &n = *(it++);
 			
-			off_t i_offset = n.key.offset;
-			off_t i_length = n.key.length;
+			OT i_offset = n.key.offset;
+			OT i_length = n.key.length;
 			
 			if(i_offset >= offset)
 			{
@@ -1341,10 +1378,10 @@ size_t REHex::ByteRangeTree<T>::data_inserted(off_t offset, off_t length)
 	return keys_modified;
 }
 
-template<typename T>
-size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
+template<typename OT, typename T>
+size_t REHex::RangeTree<OT, T>::data_erased_impl(OT offset, OT length)
 {
-	off_t end = offset + length;
+	OT end = offset + length;
 	
 	size_t keys_modified = 0;
 	
@@ -1355,10 +1392,11 @@ size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
 		{
 			NodeRef &n = nodes[i];
 			
-			off_t i_offset = n.key.offset;
-			off_t i_length = n.key.length;
+			OT i_offset = n.key.offset;
+			OT i_length = n.key.length;
+			OT i_end = i_offset + i_length;
 			
-			if(offset <= i_offset && end > (i_offset + i_length - (i_length > 0)))
+			if(offset <= i_offset && (end > i_end || (i_end > i_offset && end == i_end)))
 			{
 				/* This key is wholly encompassed by the deleted range. */
 				
@@ -1403,8 +1441,8 @@ size_t REHex::ByteRangeTree<T>::data_erased(off_t offset, off_t length)
 	return keys_modified;
 }
 
-template<typename T> template<typename NT>
-NT *REHex::ByteRangeTree<T>::next_depth_first_node(NT *node)
+template<typename OT, typename T> template<typename NT>
+NT *REHex::RangeTree<OT, T>::next_depth_first_node(NT *node)
 {
 	if(node->get_first_child() != NULL)
 	{
@@ -1422,8 +1460,8 @@ NT *REHex::ByteRangeTree<T>::next_depth_first_node(NT *node)
 	return node;
 }
 
-template<typename T> template<typename NT>
-NT *REHex::ByteRangeTree<T>::prev_depth_first_node(NT *node)
+template<typename OT, typename T> template<typename NT>
+NT *REHex::RangeTree<OT, T>::prev_depth_first_node(NT *node)
 {
 	if(node->get_prev() != NULL)
 	{
@@ -1441,13 +1479,13 @@ NT *REHex::ByteRangeTree<T>::prev_depth_first_node(NT *node)
 	return node;
 }
 
-template<typename T>
-void REHex::ByteRangeTree<T>::check() const
+template<typename OT, typename T>
+void REHex::RangeTree<OT, T>::check() const
 {
 	#ifdef REHEX_BYTERANGETREE_CHECKS
 	
 	#ifdef REHEX_BYTERANGETREE_DIAGS
-	fprintf(stderr, "ByteRangeTree %p checking tree...\n", this);
+	fprintf(stderr, "RangeTree %p checking tree...\n", this);
 	#endif
 	
 	/* Iterate over the entire tree, checking all inter-Node pointers are correct. */

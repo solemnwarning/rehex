@@ -1,0 +1,44 @@
+---
+-- A file offset with bit precision.
+-- @classmod rehex.BitOffset
+--
+-- NOTE: In addition to the methods below, operator overloads are available on BitOffset objects
+-- for addition/subtraction/comparison/etc.
+--
+-- @usage
+-- local zero                  = rehex.BitOffset( 0, 0)
+-- local one_byte              = rehex.BitOffset( 1, 0)
+-- local ten_bytes_and_one_bit = rehex.BitOffset(10, 1)
+
+--- Fetch the byte portion of a BitOffset object.
+-- @function byte
+--
+-- @usage my_offset:byte()
+
+--- Fetch the bit portion of a BitOffset object.
+-- @function bit
+--
+-- @usage my_offset:bit()
+
+--- Fetch the total number of bits in a BitOffset object.
+-- @function total_bits
+--
+-- @usage
+-- local total_bits = my_offset:total_bits()
+--
+-- rehex.BitOffset(10, 0):total_bits() --- Returns 80
+-- rehex.BitOffset(10, 4):total_bits() --- Returns 84
+
+--- Check if a BitOffset is aligned to a whole number of bytes.
+-- @function byte_aligned
+--
+-- @usage my_offset:byte_aligned()
+
+--- Fetch the number of bytes in a BitOffset object, rounded up to the nearest whole byte.
+-- @function byte_round_up
+--
+-- @usage
+-- local byte = my_offset:byte_round_up()
+--
+-- rehex.BitOffset(10, 0) --- Returns 10
+-- rehex.BitOffset(10, 1) --- Returns 11

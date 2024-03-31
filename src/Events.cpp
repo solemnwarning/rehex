@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,8 +18,8 @@
 #include "platform.hpp"
 #include "Events.hpp"
 
-wxDEFINE_EVENT(REHex::COMMENT_LEFT_CLICK,     REHex::OffsetLengthEvent);
-wxDEFINE_EVENT(REHex::COMMENT_RIGHT_CLICK,    REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::COMMENT_LEFT_CLICK,     REHex::BitRangeEvent);
+wxDEFINE_EVENT(REHex::COMMENT_RIGHT_CLICK,    REHex::BitRangeEvent);
 wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);
 
 wxDEFINE_EVENT(REHex::DATA_ERASING,              REHex::OffsetLengthEvent);
@@ -62,7 +62,26 @@ wxEvent *REHex::OffsetLengthEvent::Clone() const
 	return new OffsetLengthEvent(*this);
 }
 
-REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, Document::CursorState cursor_state):
+REHex::BitRangeEvent::BitRangeEvent(wxWindow *source, wxEventType event, BitOffset offset, BitOffset length):
+	wxEvent(source->GetId(), event), offset(offset), length(length)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+REHex::BitRangeEvent::BitRangeEvent(wxObject *source, wxEventType event, BitOffset offset, BitOffset length):
+	wxEvent(wxID_NONE, event), offset(offset), length(length)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::BitRangeEvent::Clone() const
+{
+	return new BitRangeEvent(*this);
+}
+
+REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, BitOffset cursor_pos, Document::CursorState cursor_state):
 	wxEvent(source->GetId(), CURSOR_UPDATE),
 	cursor_pos(cursor_pos),
 	cursor_state(cursor_state)
@@ -71,7 +90,7 @@ REHex::CursorUpdateEvent::CursorUpdateEvent(wxWindow *source, off_t cursor_pos, 
 	SetEventObject(source);
 }
 
-REHex::CursorUpdateEvent::CursorUpdateEvent(wxObject *source, off_t cursor_pos, Document::CursorState cursor_state):
+REHex::CursorUpdateEvent::CursorUpdateEvent(wxObject *source, BitOffset cursor_pos, Document::CursorState cursor_state):
 	wxEvent(wxID_NONE, CURSOR_UPDATE),
 	cursor_pos(cursor_pos),
 	cursor_state(cursor_state)

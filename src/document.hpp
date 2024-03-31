@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,12 +27,12 @@
 #include <wx/dataobj.h>
 #include <wx/wx.h>
 
+#include "BitOffset.hpp"
 #include "buffer.hpp"
 #include "ByteRangeMap.hpp"
 #include "ByteRangeSet.hpp"
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
-#include "NestedOffsetLengthMap.hpp"
 #include "util.hpp"
 
 namespace REHex {
@@ -92,20 +92,32 @@ namespace REHex {
 			};
 			
 			enum CursorState {
-				CSTATE_HEX,
-				CSTATE_HEX_MID,
-				CSTATE_ASCII,
+				CSTATE_HEX = 0,
+				CSTATE_ASCII = 2,
 				CSTATE_SPECIAL,
 				
-				/* Only valid as parameter to _set_cursor_position(), will go
-				 * CSTATE_HEX if in CSTATE_HEX_MID, else will use current state.
-				*/
+				/* Only valid as parameter to _set_cursor_position(), will use current state. */
 				CSTATE_GOTO,
 				
 				/* Only valid as parameter to data manipulation methods to use
 				 * current value of cursor_state.
 				*/
 				CSTATE_CURRENT,
+			};
+			
+			struct TypeInfo
+			{
+				std::string name;
+				json_t *options;
+				
+				TypeInfo();
+				TypeInfo(const std::string &name, const json_t *options = NULL);
+				TypeInfo(const TypeInfo &src);
+				~TypeInfo();
+				
+				bool operator==(const TypeInfo &rhs) const;
+				bool operator!=(const TypeInfo &rhs) const;
+				bool operator<(const TypeInfo &rhs) const;
 			};
 			
 			/**
@@ -161,21 +173,21 @@ namespace REHex {
 			/**
 			 * @brief Check if the given byte in the backing file has been modified since the last save.
 			*/
-			bool is_byte_dirty(off_t offset) const;
+			bool is_byte_dirty(BitOffset offset) const;
 			
 			/**
 			 * @brief Check if the BUFFER has any pending changes to be saved.
 			*/
 			bool is_buffer_dirty() const;
 			
-			off_t get_cursor_position() const;
+			BitOffset get_cursor_position() const;
 			CursorState get_cursor_state() const;
-			void set_cursor_position(off_t off, CursorState cursor_state = CSTATE_GOTO);
+			void set_cursor_position(BitOffset off, CursorState cursor_state = CSTATE_GOTO);
 			
 			/**
 			 * @brief Get the comments in the file.
 			*/
-			const ByteRangeTree<Comment> &get_comments() const;
+			const BitRangeTree<Comment> &get_comments() const;
 			
 			/**
 			 * @brief Set a comment in the file.
@@ -191,7 +203,7 @@ namespace REHex {
 			 * Comments can have a length of zero, in which case they are displayed at
 			 * the given offset, but do not encompass a range of bytes.
 			*/
-			bool set_comment(off_t offset, off_t length, const Comment &comment);
+			bool set_comment(BitOffset offset, BitOffset length, const Comment &comment);
 			
 			/**
 			 * @brief Erase a comment in the file.
@@ -201,7 +213,7 @@ namespace REHex {
 			 *
 			 * Returns true on success, false if the comment was not found.
 			*/
-			bool erase_comment(off_t offset, off_t length);
+			bool erase_comment(BitOffset offset, BitOffset length);
 			
 			/**
 			 * @brief Erase a comment and any children in the file.
@@ -211,12 +223,12 @@ namespace REHex {
 			 *
 			 * Returns true on success, false if the comment was not found.
 			*/
-			bool erase_comment_recursive(off_t offset, off_t length);
+			bool erase_comment_recursive(BitOffset offset, BitOffset length);
 			
 			/**
 			 * @brief Get the highlighted byte ranges in the file.
 			*/
-			const NestedOffsetLengthMap<int> &get_highlights() const;
+			const BitRangeMap<int> &get_highlights() const;
 			
 			/**
 			 * @brief Set a highlight on a range of bytes in the file.
@@ -229,7 +241,7 @@ namespace REHex {
 			 * current size of the file, or the range is straddling the end of another
 			 * existing highlight.
 			*/
-			bool set_highlight(off_t off, off_t length, int highlight_colour_idx);
+			bool set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx);
 			
 			/**
 			 * @brief Remove a highlight from the file.
@@ -243,12 +255,12 @@ namespace REHex {
 			 *
 			 * Returns true on success, false if the highlight wasn't found.
 			*/
-			bool erase_highlight(off_t off, off_t length);
+			bool erase_highlight(BitOffset off, BitOffset length);
 			
 			/**
 			 * @brief Get the mapping of byte ranges to data types in the file.
 			*/
-			const ByteRangeMap<std::string> &get_data_types() const;
+			const BitRangeMap<TypeInfo> &get_data_types() const;
 			
 			/**
 			 * @brief Set a data type mapping in the file.
@@ -263,9 +275,9 @@ namespace REHex {
 			 * Returns true on success, false if the offset and/or length is beyond the
 			 * current size of the file.
 			*/
-			bool set_data_type(off_t offset, off_t length, const std::string &type);
+			bool set_data_type(BitOffset offset, BitOffset length, const std::string &type, const json_t *options = NULL);
 			
-			const CharacterEncoder *get_text_encoder(off_t offset) const;
+			const CharacterEncoder *get_text_encoder(BitOffset offset) const;
 			
 			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
 			void clear_virt_mapping_r(off_t real_offset, off_t length);
@@ -277,7 +289,7 @@ namespace REHex {
 			off_t real_to_virt_offset(off_t real_offset) const;
 			off_t virt_to_real_offset(off_t virt_offset) const;
 			
-			void handle_paste(wxWindow *modal_dialog_parent, const ByteRangeTree<Document::Comment> &clipboard_comments);
+			void handle_paste(wxWindow *modal_dialog_parent, const BitRangeTree<Document::Comment> &clipboard_comments);
 			
 			/**
 			 * @brief Undo the last change to the document.
@@ -304,6 +316,9 @@ namespace REHex {
 			*/
 			void reset_to_clean();
 			
+			json_t *serialise_metadata() const;
+			void load_metadata(const json_t *metadata);
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif
@@ -326,11 +341,11 @@ namespace REHex {
 				
 				std::list<TransOpFunc> ops;
 				
-				off_t       old_cpos_off;
+				BitOffset old_cpos_off;
 				CursorState old_cursor_state;
-				ByteRangeTree<Comment> old_comments;
-				NestedOffsetLengthMap<int> old_highlights;
-				ByteRangeMap<std::string> old_types;
+				BitRangeTree<Comment> old_comments;
+				BitRangeMap<int> old_highlights;
+				BitRangeMap<TypeInfo> old_types;
 				
 				ByteRangeMap<off_t> old_real_to_virt_segs;
 				ByteRangeMap<off_t> old_virt_to_real_segs;
@@ -361,16 +376,16 @@ namespace REHex {
 			ByteRangeMap<unsigned int> data_seq;
 			unsigned int saved_seq;
 			
-			ByteRangeTree<Comment> comments;
-			NestedOffsetLengthMap<int> highlights; /* TODO: Change this to a ByteRangeMap. */
-			ByteRangeMap<std::string> types;
+			BitRangeTree<Comment> comments;
+			BitRangeMap<int> highlights;
+			BitRangeMap<TypeInfo> types;
 			
 			ByteRangeMap<off_t> real_to_virt_segs;
 			ByteRangeMap<off_t> virt_to_real_segs;
 			
 			std::string title;
 			
-			off_t cpos_off{0};
+			BitOffset cpos_off;
 			
 			enum CursorState cursor_state;
 			
@@ -378,9 +393,10 @@ namespace REHex {
 			std::list<Transaction> undo_stack;
 			std::list<Transaction> redo_stack;
 			
-			void _set_cursor_position(off_t position, enum CursorState cursor_state);
+			void _set_cursor_position(BitOffset position, enum CursorState cursor_state);
 			
-			void _UNTRACKED_overwrite_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
+			void _UNTRACKED_overwrite_data(BitOffset offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
+			void _UNTRACKED_overwrite_bits(BitOffset offset, const std::vector<bool> &data, const ByteRangeMap<unsigned int> &data_seq_slice);
 			
 			void _UNTRACKED_insert_data(off_t offset, const unsigned char *data, off_t length, const ByteRangeMap<unsigned int> &data_seq_slice);
 			void _update_mappings_data_inserted(off_t offset, off_t length);
@@ -388,27 +404,29 @@ namespace REHex {
 			void _UNTRACKED_erase_data(off_t offset, off_t length);
 			bool _virt_to_real_segs_data_erased(off_t offset, off_t length);
 			
-			TransOpFunc _op_overwrite_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state);
-			TransOpFunc _op_overwrite_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_overwrite_undo(BitOffset offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_overwrite_redo(BitOffset offset, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
 			
-			TransOpFunc _op_insert_undo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
-			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice);
+			TransOpFunc _op_overwrite_bits_undo(BitOffset offset, std::shared_ptr< std::vector<bool> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_overwrite_bits_redo(BitOffset offset, std::shared_ptr< std::vector<bool> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
 			
-			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
-			TransOpFunc _op_erase_redo(off_t offset, off_t length, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_insert_undo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_insert_redo(off_t offset, std::shared_ptr< std::vector<unsigned char> > data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &redo_data_seq_slice);
 			
-			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, off_t new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
-			TransOpFunc _op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, off_t new_cursor_pos, CursorState new_cursor_state);
+			TransOpFunc _op_erase_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
+			TransOpFunc _op_erase_redo(off_t offset, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state);
+			
+			TransOpFunc _op_replace_undo(off_t offset, std::shared_ptr< std::vector<unsigned char> > old_data, off_t new_data_length, BitOffset new_cursor_pos, CursorState new_cursor_state, const ByteRangeMap<unsigned int> &undo_data_seq_slice);
+			TransOpFunc _op_replace_redo(off_t offset, off_t old_data_length, std::shared_ptr< std::vector<unsigned char> > new_data, BitOffset new_cursor_pos, CursorState new_cursor_state);
 			
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
 			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
 			
-			json_t *_dump_metadata(bool& has_data);
 			void _save_metadata(const std::string &filename);
 			
-			static ByteRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
-			static NestedOffsetLengthMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
-			static ByteRangeMap<std::string> _load_types(const json_t *meta, off_t buffer_length);
+			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
+			static BitRangeMap<int> _load_highlights(const json_t *meta, off_t buffer_length);
+			static BitRangeMap<TypeInfo> _load_types(const json_t *meta, off_t buffer_length);
 			static std::pair< ByteRangeMap<off_t>, ByteRangeMap<off_t> > _load_virt_mappings(const json_t *meta, off_t buffer_length);
 			void _load_metadata(const std::string &filename);
 			
@@ -451,7 +469,13 @@ namespace REHex {
 			 * @brief Read some data from the file.
 			 * @see Buffer::read_data()
 			*/
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length) const;
+			std::vector<unsigned char> read_data(BitOffset offset, off_t max_length) const;
+			
+			/**
+			 * @brief Read some data from the file.
+			 * @see Buffer::read_bits()
+			*/
+			std::vector<bool> read_bits(BitOffset offset, size_t max_length) const;
 			
 			/**
 			 * @brief Return the current length of the file in bytes.
@@ -491,7 +515,18 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void overwrite_data(off_t offset, const void *data, off_t length,                                            off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void overwrite_data(BitOffset offset, const void *data, off_t length,                                            BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			
+			/**
+			 * @brief Overwrite a range of bits in the file.
+			 *
+			 * @param offset            File offset to write data at.
+			 * @param data              Pointer to data buffer.
+			 * @param new_cursor_pos    New cursor position. Pass a negative value to not change cursor position.
+			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
+			 * @param change_desc       Description of change for undo history.
+			*/
+			void overwrite_bits(BitOffset offset, const std::vector<bool> &data, BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Insert a range of bytes into the file.
@@ -503,7 +538,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void insert_data(off_t offset, const void *data, off_t length,                                      off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void insert_data(off_t offset, const void *data, off_t length,                                      BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Erase a range of bytes in the file.
@@ -514,7 +549,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void erase_data(off_t offset, off_t length,                                                                  off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void erase_data(off_t offset, off_t length,                                                                  BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			/**
 			 * @brief Replace a range of bytes in the file.
@@ -527,7 +562,7 @@ namespace REHex {
 			 * @param new_cursor_state  New cursor state. Pass CSTATE_CURRENT to not change the cursor state.
 			 * @param change_desc       Description of change for undo history.
 			*/
-			void replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, off_t new_cursor_pos = -1, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			void replace_data(off_t offset, off_t old_data_length, const void *new_data, off_t new_data_length, BitOffset new_cursor_pos = BitOffset::INVALID, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
 			static const off_t WRITE_TEXT_KEEP_POSITION = -1;  /**< Don't move the cursor after writing. */
 			static const off_t WRITE_TEXT_GOTO_NEXT = -2;      /**< Jump to byte following written data. */
@@ -537,7 +572,7 @@ namespace REHex {
 			static const int WRITE_TEXT_SKIPPED = 2;
 			static const int WRITE_TEXT_TRUNCATED = 4;
 			
-			int overwrite_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
+			int overwrite_text(BitOffset offset, const std::string &utf8_text, BitOffset new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			int insert_text(off_t offset, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			int replace_text(off_t offset, off_t old_data_length, const std::string &utf8_text, off_t new_cursor_pos = WRITE_TEXT_GOTO_NEXT, CursorState new_cursor_state = CSTATE_CURRENT, const char *change_desc = "change data");
 			
@@ -557,8 +592,8 @@ namespace REHex {
 		private:
 			struct Header
 			{
-				off_t file_offset;
-				off_t file_length;
+				int64_t file_offset;
+				int64_t file_length;
 				
 				size_t text_length;
 			};
@@ -580,12 +615,12 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			CommentsDataObject(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
+			CommentsDataObject(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base = BitOffset::ZERO);
 			
 			/**
 			 * @brief Deserialise the CommentsDataObject and return the stored comments.
 			*/
-			ByteRangeTree<Document::Comment> get_comments() const;
+			BitRangeTree<Document::Comment> get_comments() const;
 			
 			/**
 			 * @brief Replace the serialised list of stored comments.
@@ -593,7 +628,7 @@ namespace REHex {
 			 * @param comments  List of iterators to comments to be serialised.
 			 * @param base      Base offset to be subtracted from the offset of each comment.
 			*/
-			void set_comments(const std::list<ByteRangeTree<Document::Comment>::const_iterator> &comments, off_t base = 0);
+			void set_comments(const std::list<BitRangeTree<Document::Comment>::const_iterator> &comments, BitOffset base = BitOffset::ZERO);
 	};
 	
 	/**

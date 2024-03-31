@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -120,25 +120,25 @@ class FixedHeightDataRegion: public DocumentCtrl::GenericDataRegion
 		
 		virtual void draw(DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override {}
 		
-		virtual std::pair<off_t, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
-		virtual std::pair<off_t, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
-		virtual off_t cursor_left_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_right_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_up_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_down_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_home_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual off_t cursor_end_from(off_t pos, ScreenArea active_type) override { abort(); }
-		virtual int cursor_column(off_t pos) override { abort(); }
-		virtual off_t first_row_nearest_column(int column) override { abort(); }
-		virtual off_t last_row_nearest_column(int column) override { abort(); }
-		virtual off_t nth_row_nearest_column(int64_t row, int column) override { abort(); }
+		virtual std::pair<BitOffset, ScreenArea> offset_at_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines) override { abort(); }
+		virtual std::pair<BitOffset, ScreenArea> offset_near_xy(DocumentCtrl &doc, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint) override { abort(); }
+		virtual BitOffset cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+		virtual BitOffset cursor_right_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+		virtual BitOffset cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+		virtual BitOffset cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+		virtual BitOffset cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+		virtual BitOffset cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl) override { abort(); }
+		virtual int cursor_column(BitOffset pos) override { abort(); }
+		virtual BitOffset first_row_nearest_column(int column) override { abort(); }
+		virtual BitOffset last_row_nearest_column(int column) override { abort(); }
+		virtual BitOffset nth_row_nearest_column(int64_t row, int column) override { abort(); }
 		
-		virtual DocumentCtrl::Rect calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl) override
+		virtual DocumentCtrl::Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override
 		{
 			return DocumentCtrl::Rect(y_offset, 1, 1, 1);
 		}
 		
-		virtual ScreenArea screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl) override
+		virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override
 		{
 			return SA_HEX;
 		}
@@ -1608,47 +1608,47 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesWithinRegion)
 	
 	/* 100 - */
 	
-	doc_ctrl->set_selection_raw(120, 129);
+	doc_ctrl->set_selection_raw(BitOffset(120, 0), BitOffset(129, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(120, 10));
+		OrderedBitRangeSet().set_range(BitOffset(120, 0), BitOffset(10, 0)));
 	
-	doc_ctrl->set_selection_raw(100, 119);
+	doc_ctrl->set_selection_raw(BitOffset(100, 0), BitOffset(119, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(100, 20));
+		OrderedBitRangeSet().set_range(BitOffset(100, 0), BitOffset(20, 0)));
 	
-	doc_ctrl->set_selection_raw(120, 149);
+	doc_ctrl->set_selection_raw(BitOffset(120, 0), BitOffset(149, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(120, 30));
+		OrderedBitRangeSet().set_range(BitOffset(120, 0), BitOffset(30, 0)));
 	
-	doc_ctrl->set_selection_raw(100, 149);
+	doc_ctrl->set_selection_raw(BitOffset(100, 0), BitOffset(149, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(100, 50));
+		OrderedBitRangeSet().set_range(BitOffset(100, 0), BitOffset(50, 0)));
 	
 	/* 350 - */
 	
-	doc_ctrl->set_selection_raw(370, 379);
+	doc_ctrl->set_selection_raw(BitOffset(370, 0), BitOffset(379, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(370, 10));
+		OrderedBitRangeSet().set_range(BitOffset(370, 0), BitOffset(10, 0)));
 	
-	doc_ctrl->set_selection_raw(350, 369);
+	doc_ctrl->set_selection_raw(BitOffset(350, 0), BitOffset(369, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(350, 20));
+		OrderedBitRangeSet().set_range(BitOffset(350, 0), BitOffset(20, 0)));
 	
-	doc_ctrl->set_selection_raw(370, 399);
+	doc_ctrl->set_selection_raw(BitOffset(370, 0), BitOffset(399, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(370, 30));
+		OrderedBitRangeSet().set_range(BitOffset(370, 0), BitOffset(30, 0)));
 	
-	doc_ctrl->set_selection_raw(350, 399);
+	doc_ctrl->set_selection_raw(BitOffset(350, 0), BitOffset(399, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(350, 50));
+		OrderedBitRangeSet().set_range(BitOffset(350, 0), BitOffset(50, 0)));
 }
 
 TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningContiguousRegions)
@@ -1667,20 +1667,28 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningContiguousRegions)
 	
 	doc_ctrl->replace_all_regions(regions);
 	
-	doc_ctrl->set_selection_raw(220, 269);
+	doc_ctrl->set_selection_raw(BitOffset(220, 0), BitOffset(269, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(220, 30).set_range(250, 20));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(220, 0), BitOffset(30, 0))
+			.set_range(BitOffset(250, 0), BitOffset(20, 0)));
 	
-	doc_ctrl->set_selection_raw(200, 299);
+	doc_ctrl->set_selection_raw(BitOffset(200, 0), BitOffset(299, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(200, 50).set_range(250, 50));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(200, 0), BitOffset(50, 0))
+			.set_range(BitOffset(250, 0), BitOffset(50, 0)));
 	
-	doc_ctrl->set_selection_raw(200, 399);
+	doc_ctrl->set_selection_raw(BitOffset(200, 0), BitOffset(399, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(200, 50).set_range(250, 50).set_range(300, 50).set_range(350, 50));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(200, 0), BitOffset(50, 0))
+			.set_range(BitOffset(250, 0), BitOffset(50, 0))
+			.set_range(BitOffset(300, 0), BitOffset(50, 0))
+			.set_range(BitOffset(350, 0), BitOffset(50, 0)));
 }
 
 TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningDiscontiguousRegions)
@@ -1699,15 +1707,20 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningDiscontiguousRegions)
 	
 	doc_ctrl->replace_all_regions(regions);
 	
-	doc_ctrl->set_selection_raw(120, 219);
+	doc_ctrl->set_selection_raw(BitOffset(120, 0), BitOffset(219, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(120, 30).set_range(200, 20));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(120, 0), BitOffset(30, 0))
+			.set_range(BitOffset(200, 0), BitOffset(20, 0)));
 	
-	doc_ctrl->set_selection_raw(100, 299);
+	doc_ctrl->set_selection_raw(BitOffset(100, 0), BitOffset(299, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(100, 50).set_range(200, 50).set_range(250, 50));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(100, 0), BitOffset(50, 0))
+			.set_range(BitOffset(200, 0), BitOffset(50, 0))
+			.set_range(BitOffset(250, 0), BitOffset(50, 0)));
 }
 
 TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
@@ -1724,15 +1737,58 @@ TEST_F(DocumentCtrlTest, GetSelectionRangesSpanningOutOfOrderRegions)
 	
 	doc_ctrl->replace_all_regions(regions);
 	
-	doc_ctrl->set_selection_raw(220, 319);
+	doc_ctrl->set_selection_raw(BitOffset(220, 0), BitOffset(319, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(220, 30).set_range(150, 50).set_range(300, 20));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(220, 0), BitOffset(30, 0))
+			.set_range(BitOffset(150, 0), BitOffset(50, 0))
+			.set_range(BitOffset(300, 0), BitOffset(20, 0)));
 	
-	doc_ctrl->set_selection_raw(200, 349);
+	doc_ctrl->set_selection_raw(BitOffset(200, 0), BitOffset(349, 7));
 	EXPECT_EQ(
 		doc_ctrl->get_selection_ranges(),
-		OrderedByteRangeSet().set_range(200, 50).set_range(150, 50).set_range(300, 50));
+		OrderedBitRangeSet()
+			.set_range(BitOffset(200, 0), BitOffset(50, 0))
+			.set_range(BitOffset(150, 0), BitOffset(50, 0))
+			.set_range(BitOffset(300, 0), BitOffset(50, 0)));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionRangesBitAligned)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	std::vector<DocumentCtrl::Region*> regions = {
+		new DocumentCtrl::DataRegion(doc, 100, 50, 100),
+		
+		new DocumentCtrl::DataRegion(doc, 200, 50, 200),
+		new DocumentCtrl::DataRegion(doc, 250, 50, 250),
+		new DocumentCtrl::DataRegion(doc, 300, 50, 300),
+		new DocumentCtrl::DataRegion(doc, 350, 50, 350),
+	};
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(BitOffset(120, 4), BitOffset(129, 7));
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedBitRangeSet().set_range(BitOffset(120, 4), BitOffset(9, 4)));
+	
+	doc_ctrl->set_selection_raw(BitOffset(120, 0), BitOffset(129, 3));
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedBitRangeSet().set_range(BitOffset(120, 0), BitOffset(9, 4)));
+	
+	doc_ctrl->set_selection_raw(BitOffset(120, 2), BitOffset(370, 1));
+	EXPECT_EQ(
+		doc_ctrl->get_selection_ranges(),
+		OrderedBitRangeSet()
+			.set_range(BitOffset(120, 2), BitOffset(29, 6))
+			.set_range(BitOffset(200, 0), BitOffset(50, 0))
+			.set_range(BitOffset(250, 0), BitOffset(50, 0))
+			.set_range(BitOffset(300, 0), BitOffset(50, 0))
+			.set_range(BitOffset(350, 0), BitOffset(20, 2)));
 }
 
 TEST_F(DocumentCtrlTest, RegionOffsetCompare)
@@ -1770,4 +1826,86 @@ TEST_F(DocumentCtrlTest, RegionOffsetCompare)
 	
 	EXPECT_THROW(doc_ctrl->region_offset_cmp(100, 150), std::invalid_argument);
 	EXPECT_THROW(doc_ctrl->region_offset_cmp(150, 100), std::invalid_argument);
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionInRegion)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::DataRegion *r1 = new DocumentCtrl::DataRegion(doc, 200, 50, 200);
+	DocumentCtrl::DataRegion *r2 = new DocumentCtrl::DataRegion(doc, 250, 50, 250);
+	DocumentCtrl::DataRegion *r3 = new DocumentCtrl::DataRegion(doc, 300, 50, 300);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(BitOffset(200, 0), BitOffset(219, 7));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r1),
+		std::make_pair(BitOffset(200, 0), BitOffset(20, 0)));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r2),
+		std::make_pair(BitOffset::INVALID, BitOffset::INVALID));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r3),
+		std::make_pair(BitOffset::INVALID, BitOffset::INVALID));
+	
+	doc_ctrl->set_selection_raw(BitOffset(220, 0), BitOffset(319, 7));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r1),
+		std::make_pair(BitOffset(220, 0), BitOffset(30, 0)));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r2),
+		std::make_pair(BitOffset(250, 0), BitOffset(50, 0)));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r3),
+		std::make_pair(BitOffset(300, 0), BitOffset(20, 0)));
+}
+
+TEST_F(DocumentCtrlTest, GetSelectionInRegionBitAligned)
+{
+	std::vector<unsigned char> Z_DATA(256);
+	doc->insert_data(0, Z_DATA.data(), Z_DATA.size());
+	
+	DocumentCtrl::DataRegion *r1 = new DocumentCtrl::DataRegion(doc, 200, 50, 200);
+	DocumentCtrl::DataRegion *r2 = new DocumentCtrl::DataRegion(doc, 250, 50, 250);
+	DocumentCtrl::DataRegion *r3 = new DocumentCtrl::DataRegion(doc, 300, 50, 300);
+	
+	std::vector<DocumentCtrl::Region*> regions = { r1, r2, r3 };
+	doc_ctrl->replace_all_regions(regions);
+	
+	doc_ctrl->set_selection_raw(BitOffset(200, 2), BitOffset(219, 6));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r1),
+		std::make_pair(BitOffset(200, 2), BitOffset(19, 5)));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r2),
+		std::make_pair(BitOffset::INVALID, BitOffset::INVALID));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r3),
+		std::make_pair(BitOffset::INVALID, BitOffset::INVALID));
+	
+	doc_ctrl->set_selection_raw(BitOffset(220, 4), BitOffset(319, 1));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r1),
+		std::make_pair(BitOffset(220, 4), BitOffset(29, 4)));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r2),
+		std::make_pair(BitOffset(250, 0), BitOffset(50, 0)));
+	
+	EXPECT_EQ(
+		doc_ctrl->get_selection_in_region(r3),
+		std::make_pair(BitOffset(300, 0), BitOffset(19, 2)));
 }

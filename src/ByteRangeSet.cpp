@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,7 +25,20 @@
 
 #include "ByteRangeSet.hpp"
 
-REHex::ByteRangeSet &REHex::ByteRangeSet::set_range(off_t offset, off_t length)
+static const long long INT61_MIN = -0x1000000000000000LL;
+static const long long INT61_MAX = 0xFFFFFFFFFFFFFFFLL;
+
+template<> off_t REHex::RangeSet<off_t>::MAX()
+{
+	return std::numeric_limits<off_t>::max();
+}
+
+template<> REHex::BitOffset REHex::RangeSet<REHex::BitOffset>::MAX()
+{
+	return BitOffset(INT61_MAX, 7);
+}
+
+template<typename OT> REHex::RangeSet<OT> &REHex::RangeSet<OT>::set_range(OT offset, OT length)
 {
 	if(length <= 0)
 	{
@@ -38,7 +51,7 @@ REHex::ByteRangeSet &REHex::ByteRangeSet::set_range(off_t offset, off_t length)
 	return *this;
 }
 
-void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
+template<typename OT> void REHex::RangeSet<OT>::clear_range(OT offset, OT length)
 {
 	if(length <= 0)
 	{
@@ -49,12 +62,12 @@ void REHex::ByteRangeSet::clear_range(off_t offset, off_t length)
 	clear_ranges(&range, (&range) + 1);
 }
 
-void REHex::ByteRangeSet::clear_all()
+template<typename OT> void REHex::RangeSet<OT>::clear_all()
 {
 	ranges.clear();
 }
 
-bool REHex::ByteRangeSet::isset(off_t offset, off_t length) const
+template<typename OT> bool REHex::RangeSet<OT>::isset(OT offset, OT length) const
 {
 	auto lb = std::lower_bound(ranges.begin(), ranges.end(), Range(offset, 0));
 	
@@ -75,17 +88,17 @@ bool REHex::ByteRangeSet::isset(off_t offset, off_t length) const
 	return false;
 }
 
-bool REHex::ByteRangeSet::isset_any(off_t offset, off_t length) const
+template<typename OT> bool REHex::RangeSet<OT>::isset_any(OT offset, OT length) const
 {
-	ByteRangeSet check;
+	RangeSet<OT> check;
 	check.set_range(offset, length);
 	
-	ByteRangeSet i = intersection(*this, check);
+	RangeSet<OT> i = intersection(*this, check);
 	
 	return !i.empty();
 }
 
-REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_first_in(off_t offset, off_t length) const
+template<typename OT> typename REHex::RangeSet<OT>::const_iterator REHex::RangeSet<OT>::find_first_in(OT offset, OT length) const
 {
 	auto i = std::lower_bound(ranges.begin(), ranges.end(), Range(offset, 0));
 	
@@ -94,13 +107,13 @@ REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_first_in(off_t off
 		--i;
 	}
 	
-	off_t end = (std::numeric_limits<off_t>::max() - length) < offset
-		? std::numeric_limits<off_t>::max()
+	OT end = (MAX() - length) < offset
+		? MAX()
 		: offset + length;
 	
 	for(; i != ranges.end() && (i->offset < end || end < offset); ++i)
 	{
-		off_t i_end = i->offset + i->length;
+		OT i_end = i->offset + i->length;
 		
 		if((i->offset < end || end < offset) && offset < i_end)
 		{
@@ -112,7 +125,7 @@ REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_first_in(off_t off
 	return ranges.end();
 }
 
-REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_last_in(off_t offset, off_t length) const
+template<typename OT> typename REHex::RangeSet<OT>::const_iterator REHex::RangeSet<OT>::find_last_in(OT offset, OT length) const
 {
 	auto i = find_first_in((offset + length), std::numeric_limits<off_t>::max());
 	
@@ -138,46 +151,46 @@ REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::find_last_in(off_t offs
 	return ranges.end();
 }
 
-off_t REHex::ByteRangeSet::total_bytes() const
+template<typename OT> OT REHex::RangeSet<OT>::total_bytes() const
 {
-	off_t total_bytes = std::accumulate(ranges.begin(), ranges.end(),
-		(off_t)(0), [](off_t sum, const Range &range) { return sum + range.length; });
+	OT total_bytes = std::accumulate(ranges.begin(), ranges.end(),
+		(OT)(0), [](OT sum, const Range &range) { return sum + range.length; });
 	
 	return total_bytes;
 }
 
-const std::vector<REHex::ByteRangeSet::Range> &REHex::ByteRangeSet::get_ranges() const
+template<typename OT> const std::vector<typename REHex::RangeSet<OT>::Range> &REHex::RangeSet<OT>::get_ranges() const
 {
 	return ranges;
 }
 
-REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::begin() const
+template<typename OT> typename REHex::RangeSet<OT>::const_iterator REHex::RangeSet<OT>::begin() const
 {
 	return ranges.begin();
 }
 
-REHex::ByteRangeSet::const_iterator REHex::ByteRangeSet::end() const
+template<typename OT> typename REHex::RangeSet<OT>::const_iterator REHex::RangeSet<OT>::end() const
 {
 	return ranges.end();
 }
 
-const REHex::ByteRangeSet::Range &REHex::ByteRangeSet::operator[](size_t idx) const
+template<typename OT> const typename REHex::RangeSet<OT>::Range &REHex::RangeSet<OT>::operator[](size_t idx) const
 {
 	assert(idx < ranges.size());
 	return ranges[idx];
 }
 
-size_t REHex::ByteRangeSet::size() const
+template<typename OT> size_t REHex::RangeSet<OT>::size() const
 {
 	return ranges.size();
 }
 
-bool REHex::ByteRangeSet::empty() const
+template<typename OT> bool REHex::RangeSet<OT>::empty() const
 {
 	return ranges.empty();
 }
 
-void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
+template<typename OT> void REHex::RangeSet<OT>::data_inserted_impl(OT offset, OT length)
 {
 	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
 	
@@ -264,7 +277,17 @@ void REHex::ByteRangeSet::data_inserted(off_t offset, off_t length)
 	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
-void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
+template<> void REHex::RangeSet<off_t>::data_inserted(off_t offset, off_t length)
+{
+	data_inserted_impl(offset, length);
+}
+
+template<> void REHex::RangeSet<REHex::BitOffset>::data_inserted(off_t offset, off_t length)
+{
+	data_inserted_impl(BitOffset(offset, 0), BitOffset(length, 0));
+}
+
+template<typename OT> void REHex::RangeSet<OT>::data_erased_impl(OT offset, OT length)
 {
 	REHEX_BYTERANGESET_CHECK_PRE(ranges.begin(), ranges.end());
 	
@@ -272,8 +295,8 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 	
 	auto next = std::lower_bound(ranges.begin(), ranges.end(), Range((offset + length + 1), 0));
 	
-	std::vector<Range>::iterator erase_begin = next;
-	std::vector<Range>::iterator erase_end   = next;
+	typename std::vector<Range>::iterator erase_begin = next;
+	typename std::vector<Range>::iterator erase_end   = next;
 	
 	while(erase_begin != ranges.begin())
 	{
@@ -296,8 +319,8 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 	{
 		auto erase_last = std::prev(erase_end);
 		
-		off_t begin = std::min(erase_begin->offset, offset);
-		off_t end   = erase_last->offset + erase_last->length;
+		OT begin = std::min(erase_begin->offset, offset);
+		OT end   = erase_last->offset + erase_last->length;
 		
 		erase_end = ranges.erase(erase_begin, erase_end);
 		
@@ -326,22 +349,32 @@ void REHex::ByteRangeSet::data_erased(off_t offset, off_t length)
 	REHEX_BYTERANGESET_CHECK_POST(ranges.begin(), ranges.end());
 }
 
-REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, const ByteRangeSet &b)
+template<> void REHex::RangeSet<off_t>::data_erased(off_t offset, off_t length)
+{
+	data_erased_impl(offset, length);
+}
+
+template<> void REHex::RangeSet<REHex::BitOffset>::data_erased(off_t offset, off_t length)
+{
+	data_erased_impl(BitOffset(offset, 0), BitOffset(length, 0));
+}
+
+template<typename OT> REHex::RangeSet<OT> REHex::RangeSet<OT>::intersection(const RangeSet<OT> &a, const RangeSet<OT> &b)
 {
 	if(a.empty() || b.empty())
 	{
-		return ByteRangeSet();
+		return RangeSet<OT>();
 	}
 	
-	ByteRangeSet intersection;
+	RangeSet<OT> intersection;
 	
 	auto ai = a.begin();
 	auto bi = b.begin();
 	
 	while(ai != a.end() && bi != b.end())
 	{
-		off_t a_end = ai->offset + ai->length;
-		off_t b_end = bi->offset + bi->length;
+		OT a_end = ai->offset + ai->length;
+		OT b_end = bi->offset + bi->length;
 		
 		if(a_end <= bi->offset)
 		{
@@ -352,8 +385,8 @@ REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, con
 			++bi;
 		}
 		else{
-			off_t overlap_begin = std::max(ai->offset, bi->offset);
-			off_t overlap_end   = std::min(a_end, b_end);
+			OT overlap_begin = std::max(ai->offset, bi->offset);
+			OT overlap_end   = std::min(a_end, b_end);
 			
 			if(overlap_end > overlap_begin)
 			{
@@ -380,13 +413,17 @@ REHex::ByteRangeSet REHex::ByteRangeSet::intersection(const ByteRangeSet &a, con
 	return intersection;
 }
 
-REHex::OrderedByteRangeSet &REHex::OrderedByteRangeSet::set_range(off_t offset, off_t length)
+/* Instantiate ByteRangeSet and BitRangeSet methods. */
+template class REHex::RangeSet<off_t>;
+template class REHex::RangeSet<REHex::BitOffset>;
+
+template<typename OT> REHex::OrderedRangeSet<OT> &REHex::OrderedRangeSet<OT>::set_range(OT offset, OT length)
 {
 	/* Exclude any ranges already set from the offset/length so we can push exclusive ranges
 	 * onto the sorted_ranges vector.
 	*/
 	
-	ByteRangeSet ranges_to_set;
+	RangeSet<OT> ranges_to_set;
 	ranges_to_set.set_range(offset, length);
 	
 	for(auto i = sorted_ranges.begin(); i != sorted_ranges.end(); ++i)
@@ -405,48 +442,52 @@ REHex::OrderedByteRangeSet &REHex::OrderedByteRangeSet::set_range(off_t offset, 
 	return *this;
 }
 
-bool REHex::OrderedByteRangeSet::isset(off_t offset, off_t length) const
+template<typename OT> bool REHex::OrderedRangeSet<OT>::isset(OT offset, OT length) const
 {
 	return brs.isset(offset, length);
 }
 
-bool REHex::OrderedByteRangeSet::isset_any(off_t offset, off_t length) const
+template<typename OT> bool REHex::OrderedRangeSet<OT>::isset_any(OT offset, OT length) const
 {
 	return brs.isset_any(offset, length);
 }
 
-off_t REHex::OrderedByteRangeSet::total_bytes() const
+template<typename OT> OT REHex::OrderedRangeSet<OT>::total_bytes() const
 {
 	return brs.total_bytes();
 }
 
-const std::vector<REHex::ByteRangeSet::Range> &REHex::OrderedByteRangeSet::get_ranges() const
+template<typename OT> const std::vector<typename REHex::RangeSet<OT>::Range> &REHex::OrderedRangeSet<OT>::get_ranges() const
 {
 	return sorted_ranges;
 }
 
-std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::OrderedByteRangeSet::begin() const
+template<typename OT> typename std::vector<typename REHex::RangeSet<OT>::Range>::const_iterator REHex::OrderedRangeSet<OT>::begin() const
 {
 	return sorted_ranges.begin();
 }
 
-std::vector<REHex::ByteRangeSet::Range>::const_iterator REHex::OrderedByteRangeSet::end() const
+template<typename OT> typename std::vector<typename REHex::RangeSet<OT>::Range>::const_iterator REHex::OrderedRangeSet<OT>::end() const
 {
 	return sorted_ranges.end();
 }
 
-const REHex::ByteRangeSet::Range &REHex::OrderedByteRangeSet::operator[](size_t idx) const
+template<typename OT> const typename REHex::RangeSet<OT>::Range &REHex::OrderedRangeSet<OT>::operator[](size_t idx) const
 {
 	assert(idx < sorted_ranges.size());
 	return sorted_ranges[idx];
 }
 
-size_t REHex::OrderedByteRangeSet::size() const
+template<typename OT> size_t REHex::OrderedRangeSet<OT>::size() const
 {
 	return sorted_ranges.size();
 }
 
-bool REHex::OrderedByteRangeSet::empty() const
+template<typename OT> bool REHex::OrderedRangeSet<OT>::empty() const
 {
 	return sorted_ranges.empty();
 }
+
+/* Instantiate OrderedByteRangeSet and OrderedBitRangeSet methods. */
+template class REHex::OrderedRangeSet<off_t>;
+template class REHex::OrderedRangeSet<REHex::BitOffset>;

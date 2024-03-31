@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -393,8 +393,8 @@ void REHex::DecodePanel::OnPropertyGridSelected(wxPropertyGridEvent &event)
 	
 	if(size > 0 && document_ctrl != NULL)
 	{
-		off_t cursor_position = document->get_cursor_position();
-		document_ctrl->set_selection_raw(cursor_position, (cursor_position + size - 1));
+		BitOffset cursor_position = document->get_cursor_position();
+		document_ctrl->set_selection_raw(cursor_position, (cursor_position + BitOffset(size, 0) - BitOffset(0, 1)));
 	}
 }
 

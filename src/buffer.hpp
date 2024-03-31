@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -30,6 +30,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+#include "BitOffset.hpp"
 
 namespace REHex {
 	wxDECLARE_EVENT(BACKING_FILE_DELETED, wxCommandEvent);
@@ -210,7 +212,22 @@ namespace REHex {
 			 *
 			 * Throws on I/O or memory allocation error.
 			*/
-			std::vector<unsigned char> read_data(off_t offset, off_t max_length);
+			std::vector<unsigned char> read_data(const BitOffset &offset, off_t max_length);
+			
+			/**
+			 * @brief Read data from the Buffer.
+			 *
+			 * @param off_t       Offset to read from.
+			 * @param max_length  Maximum number of BITS to read.
+			 *
+			 * Reads data from the Buffer, paging blocks in from disk if necessary.
+			 *
+			 * Returns a vector containing up to the requested number of bits from the
+			 * given offset, ending early only if the end of file is reached.
+			 *
+			 * Throws on I/O or memory allocation error.
+			*/
+			std::vector<bool> read_bits(const BitOffset &offset, size_t max_length);
 			
 			/**
 			 * @brief Overwrite a series of bytes in the Buffer.
@@ -225,7 +242,22 @@ namespace REHex {
 			 *
 			 * Throws on I/O or memory allocation error.
 			*/
-			bool overwrite_data(off_t offset, unsigned const char *data, off_t length);
+			bool overwrite_data(BitOffset offset, unsigned const char *data, off_t length);
+			
+			/**
+			 * @brief Overwrite a series of bits in the Buffer.
+			 *
+			 * @param offset  Offset to write from.
+			 * @param data    Data to write into the buffer.
+			 *
+			 * Overwrites the given range of data in the buffer, returning true if the
+			 * write was successful, false if the offset and/or length are beyond the
+			 * current size of the buffer.
+			 *
+			 * This can be used for writing sub-byte quantities of data into the
+			 * buffer, up to the last bit in the file.
+			*/
+			bool overwrite_bits(BitOffset offset, const std::vector<bool> &data);
 			
 			/**
 			 * @brief Insert a series of bytes into the buffer.

@@ -67,7 +67,7 @@ namespace REHex {
 			wxButton *not_btn, *and_btn, *or_btn;
 			wxButton *xor_btn, *lsh_btn, *rsh_btn;
 			
-			off_t value_offset;
+			BitOffset value_offset;
 			uint64_t max_value;
 			
 			int get_num_base();

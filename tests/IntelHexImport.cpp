@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -89,7 +89,7 @@ class HexImportTestFile
 #define EXPECT_HEADER_COMMENT(t) \
 { \
 	auto &comments = doc->get_comments(); \
-	auto comment = comments.find(NestedOffsetLengthMapKey(0, 0)); \
+	auto comment = comments.find(BitRangeTreeKey(0, 0)); \
 	EXPECT_NE(comment, comments.end()); \
 	if(comment != comments.end()) \
 	{ \
@@ -100,7 +100,7 @@ class HexImportTestFile
 #define EXPECT_NO_HEADER_COMMENT() \
 { \
 	auto &comments = doc->get_comments(); \
-	auto comment = comments.find(NestedOffsetLengthMapKey(0, 0)); \
+	auto comment = comments.find(BitRangeTreeKey(0, 0)); \
 	EXPECT_EQ(comment, comments.end()); \
 }
 

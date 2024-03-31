@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -40,7 +40,7 @@ std::map<std::string, const REHex::DataTypeRegistration*>::const_iterator REHex:
 		: no_registrations.end();
 }
 
-const REHex::DataTypeRegistration *REHex::DataTypeRegistry::by_name(const std::string &name)
+const REHex::DataTypeRegistration *REHex::DataTypeRegistry::get_registration(const std::string &name)
 {
 	if(registrations == NULL)
 	{
@@ -51,6 +51,18 @@ const REHex::DataTypeRegistration *REHex::DataTypeRegistry::by_name(const std::s
 	if(i != registrations->end())
 	{
 		return i->second;
+	}
+	else{
+		return NULL;
+	}
+}
+
+std::shared_ptr<const REHex::DataType> REHex::DataTypeRegistry::get_type(const std::string &name, const json_t *options)
+{
+	const DataTypeRegistration *reg = get_registration(name);
+	if(reg != NULL)
+	{
+		return reg->get_type(options);
 	}
 	else{
 		return NULL;
@@ -87,32 +99,24 @@ std::vector<const REHex::DataTypeRegistration*> REHex::DataTypeRegistry::sorted_
 	return sorted_registrations;
 }
 
-static REHex::CharacterEncoderASCII ascii_encoder;
-
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, RegionFactoryFunction region_factory, const std::vector<std::string> &groups, off_t fixed_size):
-	name(name),
-	label(label),
-	groups(groups),
-	fixed_size(fixed_size),
-	region_factory(region_factory),
-	encoder(&ascii_encoder)
+REHex::ScopedDataTypeRegistry::ScopedDataTypeRegistry()
 {
-	if(DataTypeRegistry::registrations == NULL)
-	{
-		DataTypeRegistry::registrations = new std::map<std::string, const REHex::DataTypeRegistration*>();
-	}
-	
-	DataTypeRegistry::registrations->insert(std::make_pair(name, this));
+	registrations = DataTypeRegistry::registrations;
+	DataTypeRegistry::registrations = NULL;
 }
 
-REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, const std::vector<std::string> &groups, const CharacterEncoder *encoder):
+REHex::ScopedDataTypeRegistry::~ScopedDataTypeRegistry()
+{
+	assert(DataTypeRegistry::registrations == NULL);
+	DataTypeRegistry::registrations = registrations;
+}
+
+static REHex::CharacterEncoderASCII ascii_encoder;
+
+REHex::DataTypeRegistration::DataTypeRegistration(const std::string &name, const std::string &label, const std::vector<std::string> &groups):
 	name(name),
 	label(label),
-	groups(groups),
-	fixed_size(-1),
-	region_factory([](SharedDocumentPointer &document, off_t offset, off_t length, off_t virt_offset)
-		{ return new DocumentCtrl::DataRegionDocHighlight(document, offset, length, virt_offset); }),
-	encoder(encoder)
+	groups(groups)
 {
 	if(DataTypeRegistry::registrations == NULL)
 	{
@@ -131,4 +135,107 @@ REHex::DataTypeRegistration::~DataTypeRegistration()
 		delete DataTypeRegistry::registrations;
 		DataTypeRegistry::registrations = NULL;
 	}
+}
+
+REHex::DataType::DataType():
+	word_size(REHex::BitOffset::ZERO),
+	region_fixed_size(REHex::BitOffset::ZERO),
+	encoder(NULL) {}
+
+REHex::DataType REHex::DataType::WithWordSize(BitOffset word_size)
+{
+	assert(word_size > BitOffset::ZERO);
+	assert(this->word_size == BitOffset::ZERO);
+	
+	DataType dt_copy(*this);
+	dt_copy.word_size = word_size;
+	
+	return dt_copy;
+}
+
+REHex::DataType REHex::DataType::WithVariableSizeRegion(const RegionFactoryFunction &region_factory)
+{
+	assert(!this->region_factory);
+	
+	DataType dt_copy(*this);
+	dt_copy.region_factory = region_factory;
+	
+	return dt_copy;
+}
+
+REHex::DataType REHex::DataType::WithFixedSizeRegion(const RegionFactoryFunction &region_factory, BitOffset region_fixed_size)
+{
+	assert(!this->region_factory);
+	
+	DataType dt_copy(*this);
+	dt_copy.region_factory = region_factory;
+	dt_copy.region_fixed_size = region_fixed_size;
+	
+	return dt_copy;
+}
+
+REHex::DataType REHex::DataType::WithCharacterEncoder(const CharacterEncoder *encoder)
+{
+	assert(this->encoder == NULL);
+	
+	DataType dt_copy(*this);
+	dt_copy.encoder = encoder;
+	
+	return dt_copy;
+}
+
+REHex::StaticDataTypeRegistration::StaticDataTypeRegistration(const std::string &name, const std::string &label, const std::vector<std::string> &groups, DataType type):
+	DataTypeRegistration(name, label, groups),
+	m_type(std::make_shared<DataType>(type))
+{
+	assert(type.word_size > BitOffset::ZERO);
+}
+
+std::shared_ptr<const REHex::DataType> REHex::StaticDataTypeRegistration::get_type(const json_t *options) const
+{
+	if(options != NULL)
+	{
+		throw std::logic_error("Attempt to construct a static DataType with options");
+	}
+	
+	return m_type;
+}
+
+bool REHex::StaticDataTypeRegistration::configurable() const
+{
+	return false;
+}
+
+json_t *REHex::StaticDataTypeRegistration::configure(wxWindow *parent)
+{
+	throw std::logic_error("Attempt to configure a static data type");
+}
+
+REHex::ConfigurableDataTypeRegistration::ConfigurableDataTypeRegistration(
+const std::string &name, const std::string &label,
+const DynamicDataTypeConfigurator &configurator, const DynamicDataTypeFactory &factory):
+	DataTypeRegistration(name, label, {}),
+	m_configurator(configurator),
+	m_factory(factory) {}
+
+REHex::ConfigurableDataTypeRegistration::ConfigurableDataTypeRegistration(
+const std::string &name, const std::string &label, const std::vector<std::string> &groups,
+const DynamicDataTypeConfigurator &configurator, const DynamicDataTypeFactory &factory):
+	DataTypeRegistration(name, label, groups),
+	m_configurator(configurator),
+	m_factory(factory) {}
+
+std::shared_ptr<const REHex::DataType> REHex::ConfigurableDataTypeRegistration::get_type(const json_t *options) const
+{
+	return std::make_shared<DataType>(m_factory(options));
+}
+
+bool REHex::ConfigurableDataTypeRegistration::configurable() const
+{
+	return true;
+}
+
+json_t *REHex::ConfigurableDataTypeRegistration::configure(wxWindow *parent)
+{
+	return m_configurator(parent);
 }

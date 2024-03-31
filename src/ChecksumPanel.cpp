@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -55,6 +55,7 @@ REHex::ChecksumPanel::ChecksumPanel(wxWindow *parent, SharedDocumentPointer &doc
 	document_ctrl(document_ctrl)
 {
 	range_choice = new RangeChoiceLinear(this, ID_RANGE_CHOICE, document, document_ctrl);
+	range_choice->set_allow_bit_aligned_offset(true);
 	
 	algo_choice = new wxChoice(this, ID_ALGO_CHOICE);
 	
@@ -143,7 +144,11 @@ void REHex::ChecksumPanel::restart()
 	
 	copy_btn->Disable();
 	
-	std::tie(range_offset, range_length) = range_choice->get_range();
+	BitOffset range_length_tmp;
+	std::tie(range_offset, range_length_tmp) = range_choice->get_range();
+	
+	assert(range_length_tmp.byte_aligned());
+	range_length = range_length_tmp.byte();
 	
 	if(range_length <= 0)
 	{
@@ -163,12 +168,13 @@ void REHex::ChecksumPanel::restart()
 
 bool REHex::ChecksumPanel::process()
 {
-	off_t remain = (range_offset + range_length) - work_offset;
+	BitOffset remain = (range_offset + BitOffset(range_length, 0)) - work_offset;
+	assert(remain.byte_aligned());
 	assert(remain > 0);
 	
 	std::vector<unsigned char> data;
 	try {
-		data = document->read_data(work_offset, std::min<off_t>(CHECKSUM_CHUNK_SIZE, remain));
+		data = document->read_data(work_offset, std::min<off_t>(CHECKSUM_CHUNK_SIZE, remain.byte()));
 	}
 	catch(const std::exception &e)
 	{
@@ -193,12 +199,13 @@ bool REHex::ChecksumPanel::process()
 	}
 	
 	cs_gen->add_data(data.data(), data.size());
-	work_offset += data.size();
+	work_offset += BitOffset(data.size(), 0);
 	
 	remain = (range_offset + range_length) - work_offset;
+	assert(remain.byte_aligned());
 	assert(remain >= 0);
 	
-	if(remain == 0)
+	if(remain == BitOffset::ZERO)
 	{
 		cs_gen->finish();
 		std::string checksum = cs_gen->checksum_hex();
@@ -237,7 +244,7 @@ void REHex::ChecksumPanel::OnCopyChecksum(wxCommandEvent &event)
 void REHex::ChecksumPanel::OnDataErase(OffsetLengthEvent &event)
 {
 	/* Reset if the data was erased before the end of our range. */
-	if(range_length > 0 && event.offset < (range_offset + range_length))
+	if(range_length > 0 && BitOffset(event.offset, 0) < (range_offset + BitOffset(range_length, 0)))
 	{
 		restart();
 	}
@@ -248,7 +255,7 @@ void REHex::ChecksumPanel::OnDataErase(OffsetLengthEvent &event)
 void REHex::ChecksumPanel::OnDataInsert(OffsetLengthEvent &event)
 {
 	/* Reset if the data was inserted before the end of our range. */
-	if(range_length > 0 && event.offset < (range_offset + range_length))
+	if(range_length > 0 && BitOffset(event.offset, 0) < (range_offset + BitOffset(range_length, 0)))
 	{
 		restart();
 	}
@@ -260,7 +267,7 @@ void REHex::ChecksumPanel::OnDataOverwrite(OffsetLengthEvent &event)
 {
 	/* Reset if any of the overwritten bytes were within our chosen range. */
 	if(range_length > 0
-		&& !(range_offset >= (event.offset + event.length) || (range_offset + range_length) <= event.offset))
+		&& !(range_offset >= BitOffset((event.offset + event.length), 0) || (range_offset + BitOffset(range_length, 0)) <= BitOffset(event.offset, 0)))
 	{
 		restart();
 	}

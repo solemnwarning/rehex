@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,6 +23,7 @@
 #include <wx/choice.h>
 #include <wx/textctrl.h>
 
+#include "BitOffset.hpp"
 #include "Checksum.hpp"
 #include "RangeChoiceLinear.hpp"
 #include "SafeWindowPointer.hpp"
@@ -53,11 +54,11 @@ namespace REHex
 			std::vector<const ChecksumAlgorithm*> cs_algos;
 			std::unique_ptr<ChecksumGenerator> cs_gen;
 			
-			off_t range_offset;
+			BitOffset range_offset;
 			off_t range_length;
 			
 			std::unique_ptr<ThreadPool::TaskHandle> work_task;
-			off_t work_offset;
+			BitOffset work_offset;
 			
 			RangeChoiceLinear *range_choice;
 			wxChoice *algo_choice;

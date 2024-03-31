@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,9 +19,15 @@
 #define REHEX_TESTUTIL_HPP
 
 #include <functional>
+#include <jansson.h>
+#include <string>
+#include <vector>
 
 void run_wx_for(unsigned int ms);
 bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms = 10000, unsigned int check_interval_ms = 100);
+
+void write_file(const std::string &filename, const std::vector<unsigned char>& data);
+std::vector<unsigned char> read_file(const std::string &filename);
 
 class TempFilename
 {
@@ -31,5 +37,23 @@ class TempFilename
 		TempFilename();
 		~TempFilename();
 };
+
+class AutoJSON
+{
+	public:
+		json_t *json;
+		
+		AutoJSON();
+		AutoJSON(json_t *json_obj);
+		AutoJSON(const char *json_text);
+		~AutoJSON();
+		
+		std::string serialise() const;
+		
+		bool operator==(const AutoJSON &rhs) const;
+};
+
+/* Used by Google Test to print out JSON data. */
+std::ostream& operator<<(std::ostream& os, const AutoJSON &json);
 
 #endif /* !REHEX_TESTUTIL_HPP */

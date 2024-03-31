@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,7 @@
 #include <wx/sizer.h>
 
 #include "App.hpp"
+#include "BitArray.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
@@ -61,8 +62,8 @@ BEGIN_EVENT_TABLE(REHex::Tab, wxPanel)
 	EVT_SPLITTER_SASH_POS_CHANGING(ID_HSPLITTER, REHex::Tab::OnHSplitterSashPosChanging)
 	EVT_SPLITTER_SASH_POS_CHANGING(ID_VSPLITTER, REHex::Tab::OnVSplitterSashPosChanging)
 	
-	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::Tab::OnCommentLeftClick)
-	EVT_OFFSETLENGTH(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::Tab::OnCommentRightClick)
+	EVT_BITRANGE(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::Tab::OnCommentLeftClick)
+	EVT_BITRANGE(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::Tab::OnCommentRightClick)
 	
 	EVT_COMMAND(wxID_ANY, REHex::DATA_RIGHT_CLICK, REHex::Tab::OnDataRightClick)
 END_EVENT_TABLE()
@@ -460,19 +461,26 @@ void REHex::Tab::paste_text(const std::string &text)
 {
 	auto paste_data = [this](const unsigned char* data, size_t size)
 	{
-		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
-		off_t selection_off, selection_length;
+		BitOffset selection_off, selection_length;
 		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 		bool has_selection = doc_ctrl->has_selection();
 		
-		if(selection_length > 0)
+		if(selection_length > BitOffset::ZERO)
 		{
 			/* Some data is selected, replace it. */
 			
-			doc->replace_data(selection_off, selection_length, data, size, selection_off + size, Document::CSTATE_GOTO, "paste");
-			doc_ctrl->clear_selection();
+			if(selection_off.byte_aligned() && selection_length.byte_aligned())
+			{
+				doc->replace_data(selection_off.byte(), selection_length.byte(), data, size, (selection_off + BitOffset(size, 0)), Document::CSTATE_GOTO, "paste");
+				doc_ctrl->clear_selection();
+			}
+			else{
+				/* Selection isn't aligned on byte boundary. */
+				wxBell();
+			}
 		}
 		else if(has_selection)
 		{
@@ -482,24 +490,32 @@ void REHex::Tab::paste_text(const std::string &text)
 		else if(insert_mode)
 		{
 			/* We are in insert mode, insert at the cursor. */
-			doc->insert_data(cursor_pos, data, size, cursor_pos + size, Document::CSTATE_GOTO, "paste");
+			
+			if(cursor_pos.byte_aligned())
+			{
+				doc->insert_data(cursor_pos.byte(), data, size, cursor_pos + BitOffset(size, 0), Document::CSTATE_GOTO, "paste");
+			}
+			else{
+				/* Cursor isn't on a byte boundary. */
+				wxBell();
+			}
 		}
 		else{
 			/* We are in overwrite mode, overwrite up to the end of the file. */
 			
-			off_t to_end = doc->buffer_length() - cursor_pos;
+			off_t to_end = (BitOffset(doc->buffer_length(), 0) - cursor_pos).byte();
 			off_t to_write = std::min(to_end, (off_t)(size));
 			
-			doc->overwrite_data(cursor_pos, data, to_write, cursor_pos + to_write, Document::CSTATE_GOTO, "paste");
+			doc->overwrite_data(cursor_pos, data, to_write, cursor_pos + BitOffset(to_write, 0), Document::CSTATE_GOTO, "paste");
 		}
 	};
 	
 	auto paste_text = [this](const std::string &utf8_text)
 	{
-		off_t cursor_pos = doc_ctrl->get_cursor_position();
+		BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 		bool insert_mode = doc_ctrl->get_insert_mode();
 		
-		off_t selection_off, selection_length;
+		BitOffset selection_off, selection_length;
 		std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 		bool has_selection = doc_ctrl->has_selection();
 		
@@ -509,8 +525,15 @@ void REHex::Tab::paste_text(const std::string &text)
 		{
 			/* Some data is selected, replace it. */
 			
-			write_flag = doc->replace_text(selection_off, selection_length, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
-			doc_ctrl->clear_selection();
+			if(selection_off.byte_aligned() && selection_length.byte_aligned())
+			{
+				write_flag = doc->replace_text(selection_off.byte(), selection_length.byte(), utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+				doc_ctrl->clear_selection();
+			}
+			else{
+				/* Selection isn't aligned to byte boundary. */
+				write_flag = Document::WRITE_TEXT_BAD_OFFSET;
+			}
 		}
 		else if(has_selection)
 		{
@@ -520,7 +543,15 @@ void REHex::Tab::paste_text(const std::string &text)
 		else if(insert_mode)
 		{
 			/* We are in insert mode, insert at the cursor. */
-			write_flag = doc->insert_text(cursor_pos, utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+			
+			if(cursor_pos.byte_aligned())
+			{
+				write_flag = doc->insert_text(cursor_pos.byte(), utf8_text, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_GOTO, "paste");
+			}
+			else{
+				/* Cursor isn't on byte boundary. */
+				write_flag = Document::WRITE_TEXT_BAD_OFFSET;
+			}
 		}
 		else{
 			/* We are in overwrite mode, overwrite up to the end of the file. */
@@ -561,12 +592,14 @@ void REHex::Tab::compare_whole_file()
 
 void REHex::Tab::compare_selection()
 {
-	off_t selection_off, selection_length;
+	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
-	if(selection_length > 0)
+	if(selection_length > BitOffset::ZERO
+		&& selection_off.byte_aligned()
+		&& selection_length.byte_aligned())
 	{
-		compare_range(selection_off, selection_length);
+		compare_range(selection_off.byte(), selection_length.byte());
 	}
 	else{
 		wxBell();
@@ -750,73 +783,47 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	wxChar ukey   = event.GetUnicodeKey();
 	int modifiers = event.GetModifiers();
 	
-	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
-	off_t selection_off, selection_length;
+	DocumentCtrl::GenericDataRegion *region = doc_ctrl->data_region_by_offset(cursor_pos);
+	assert(region != NULL);
+	
+	BitOffset cursor_pos_within_region = cursor_pos - region->d_offset;
+	
+	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	bool has_selection = doc_ctrl->has_selection();
 	
 	bool insert_mode = doc_ctrl->get_insert_mode();
 	
-	Document::CursorState cursor_state = doc_ctrl->get_cursor_state();
-	
 	if(doc_ctrl->hex_view_active() && (modifiers == wxMOD_NONE || modifiers == wxMOD_SHIFT) && isasciihex(key))
 	{
 		unsigned char nibble = REHex::parse_ascii_nibble(key);
 		
-		if(cursor_state == Document::CSTATE_HEX_MID)
+		if(insert_mode && (cursor_pos_within_region % BitOffset(1,0) != BitOffset(0, 4)))
 		{
-			/* Overwrite least significant nibble of current byte, then move onto
-			 * inserting or overwriting at the next byte.
-			*/
-			
-			std::vector<unsigned char> cur_data;
-			try {
-				cur_data = doc->read_data(cursor_pos, 1);
-				assert(cur_data.size() == 1);
-			}
-			catch(const std::exception &e)
+			if(!cursor_pos.byte_aligned())
 			{
-				wxGetApp().printf_error("Exception in REHex::Tab::OnDocumentCtrlChar: %s\n", e.what());
+				wxBell();
 				return;
 			}
 			
-			unsigned char old_byte = cur_data[0];
-			unsigned char new_byte = (old_byte & 0xF0) | nibble;
-			
-			doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos + 1, Document::CSTATE_HEX, "change data");
-		}
-		else if(insert_mode)
-		{
 			/* Inserting a new byte. Initialise the most significant nibble then move
 			 * onto overwriting the least significant.
 			*/
 			
 			unsigned char byte = (nibble << 4);
-			doc->insert_data(cursor_pos, &byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
+			doc->insert_data(cursor_pos.byte(), &byte, 1, (cursor_pos + BitOffset(0, 4)), Document::CSTATE_GOTO, "change data");
 		}
 		else{
-			/* Overwrite most significant nibble of current byte, then move onto
-			 * overwriting the least significant.
-			*/
+			std::vector<bool> nibble_bits = {
+				((nibble & 8) != 0),
+				((nibble & 4) != 0),
+				((nibble & 2) != 0),
+				((nibble & 1) != 0),
+			};
 			
-			std::vector<unsigned char> cur_data;
-			try {
-				cur_data = doc->read_data(cursor_pos, 1);
-			}
-			catch(const std::exception &e)
-			{
-				wxGetApp().printf_error("Exception in REHex::Tab::OnDocumentCtrlChar: %s\n", e.what());
-				return;
-			}
-			
-			if(!cur_data.empty())
-			{
-				unsigned char old_byte = cur_data[0];
-				unsigned char new_byte = (old_byte & 0x0F) | (nibble << 4);
-				
-				doc->overwrite_data(cursor_pos, &new_byte, 1, cursor_pos, Document::CSTATE_HEX_MID, "change data");
-			}
+			doc->overwrite_bits(cursor_pos, nibble_bits, (cursor_pos + BitOffset(0, 4)), Document::CSTATE_GOTO, "change data");
 		}
 		
 		doc_ctrl->clear_selection();
@@ -830,7 +837,14 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		
 		if(insert_mode)
 		{
-			doc->insert_text(cursor_pos, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
+			if(cursor_pos.byte_aligned())
+			{
+				doc->insert_text(cursor_pos.byte(), utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
+			}
+			else{
+				/* Cursor isn't byte aligned. */
+				wxBell();
+			}
 		}
 		else{
 			doc->overwrite_text(cursor_pos, utf8_key, Document::WRITE_TEXT_GOTO_NEXT, Document::CSTATE_ASCII);
@@ -849,47 +863,69 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 		{
 			if(selection_length > 0)
 			{
-				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
-				doc_ctrl->clear_selection();
+				if(selection_off.byte_aligned() && selection_length.byte_aligned())
+				{
+					doc->erase_data(selection_off.byte(), selection_length.byte(), selection_off, Document::CSTATE_GOTO, "delete selection");
+					doc_ctrl->clear_selection();
+				}
+				else{
+					/* Selection isn't byte aligned. */
+					wxBell();
+				}
 			}
 			else if(has_selection)
 			{
 				/* Nonlinear selection. */
 				wxBell();
 			}
-			else if((cursor_pos + 1) < doc->buffer_length())
+			else if(cursor_pos.byte_aligned()
+				&& cursor_pos_within_region.byte_aligned()
+				&& (cursor_pos.byte() + 1) < doc->buffer_length())
 			{
-				doc->erase_data(cursor_pos, 1, cursor_pos, Document::CSTATE_GOTO, "delete");
+				doc->erase_data(cursor_pos.byte(), 1, cursor_pos, Document::CSTATE_GOTO, "delete");
 			}
-			else if(cursor_pos < doc->buffer_length())
+			else if(cursor_pos.byte_aligned()
+				&& cursor_pos_within_region.byte_aligned()
+				&& cursor_pos.byte() < doc->buffer_length())
 			{
-				doc->erase_data(cursor_pos, 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
+				doc->erase_data(cursor_pos.byte(), 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
 			}
 			
 			return;
 		}
 		else if(key == WXK_BACK)
 		{
-			if(selection_length > 0)
+			if(selection_length > BitOffset::ZERO)
 			{
-				doc->erase_data(selection_off, selection_length, selection_off, Document::CSTATE_GOTO, "delete selection");
-				doc_ctrl->clear_selection();
+				if(selection_off.byte_aligned() && selection_length.byte_aligned())
+				{
+					doc->erase_data(selection_off.byte(), selection_length.byte(), selection_off, Document::CSTATE_GOTO, "delete selection");
+					doc_ctrl->clear_selection();
+				}
+				else{
+					/* Selection isn't byte aligned. */
+					wxBell();
+				}
 			}
 			else if(has_selection)
 			{
 				/* Nonlinear selection. */
 				wxBell();
 			}
-			else if(cursor_state == Document::CSTATE_HEX_MID)
+			else if(cursor_pos.bit() == 4 && cursor_pos_within_region.bit() == 4)
 			{
 				/* Backspace while waiting for the second nibble in a byte should erase the current byte
 				 * rather than the previous one.
 				*/
-				doc->erase_data(cursor_pos, 1, (cursor_pos - 1), Document::CSTATE_HEX, "delete");
+				doc->erase_data(cursor_pos.byte(), 1, (cursor_pos - BitOffset(1, 4)), Document::CSTATE_GOTO, "delete");
 			}
-			else if(cursor_pos > 0)
+			else if(cursor_pos.bit() == 0 && cursor_pos_within_region.bit() == 0)
 			{
-				doc->erase_data((cursor_pos - 1), 1, (cursor_pos - 1), Document::CSTATE_GOTO, "delete");
+				doc->erase_data((cursor_pos.byte() - 1), 1, (cursor_pos - BitOffset(1, 0)), Document::CSTATE_GOTO, "delete");
+			}
+			else{
+				/* Not aligned to byte. */
+				wxBell();
 			}
 			
 			return;
@@ -908,10 +944,10 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	event.Skip();
 }
 
-void REHex::Tab::OnCommentLeftClick(OffsetLengthEvent &event)
+void REHex::Tab::OnCommentLeftClick(BitRangeEvent &event)
 {
-	off_t c_offset = event.offset;
-	off_t c_length = event.length;
+	BitOffset c_offset = event.offset;
+	BitOffset c_length = event.length;
 	
 	if(c_offset < 0)
 	{
@@ -921,10 +957,10 @@ void REHex::Tab::OnCommentLeftClick(OffsetLengthEvent &event)
 	EditCommentDialog::run_modal(this, doc, c_offset, c_length);
 }
 
-void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
+void REHex::Tab::OnCommentRightClick(BitRangeEvent &event)
 {
-	off_t c_offset = event.offset;
-	off_t c_length = event.length;
+	BitOffset c_offset = event.offset;
+	BitOffset c_length = event.length;
 	
 	if(c_offset < 0)
 	{
@@ -961,13 +997,13 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 		ClipboardGuard cg;
 		if(cg)
 		{
-			const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
-			const ByteRangeTree<Document::Comment>::Node *root_comment = comments.find_node(ByteRangeTreeKey(c_offset, c_length));
+			const BitRangeTree<Document::Comment> &comments = doc->get_comments();
+			const BitRangeTree<Document::Comment>::Node *root_comment = comments.find_node(BitRangeTreeKey(c_offset, c_length));
 			
-			std::list< ByteRangeTree<Document::Comment>::const_iterator > selected_comments;
+			std::list< BitRangeTree<Document::Comment>::const_iterator > selected_comments;
 			
-			std::function<void(const ByteRangeTree<Document::Comment>::Node*)> add_comment;
-			add_comment = [&](const ByteRangeTree<Document::Comment>::Node *comment)
+			std::function<void(const BitRangeTree<Document::Comment>::Node*)> add_comment;
+			add_comment = [&](const BitRangeTree<Document::Comment>::Node *comment)
 			{
 				selected_comments.push_back(comments.find(comment->key));
 				
@@ -990,13 +1026,13 @@ void REHex::Tab::OnCommentRightClick(OffsetLengthEvent &event)
 
 void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 {
-	off_t cursor_pos = doc_ctrl->get_cursor_position();
+	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
-	off_t selection_off, selection_length;
+	BitOffset selection_off, selection_length;
 	std::tie(selection_off, selection_length) = doc_ctrl->get_selection_linear();
 	
-	const ByteRangeTree<Document::Comment> &comments = doc->get_comments();
-	const NestedOffsetLengthMap<int>     &highlights = doc->get_highlights();
+	const BitRangeTree<Document::Comment> &comments   = doc->get_comments();
+	const BitRangeMap<int>                &highlights = doc->get_highlights();
 	
 	wxMenu menu;
 	
@@ -1017,7 +1053,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		if(cg)
 		{
 			char offset_str[24];
-			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos));
+			int len = snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(cursor_pos.byte()));
+			
+			if(!cursor_pos.byte_aligned())
+			{
+				snprintf((offset_str + len), (sizeof(offset_str) - len), "+%db", cursor_pos.bit());
+			}
 			
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
@@ -1030,7 +1071,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		if(cg)
 		{
 			char offset_str[24];
-			snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos));
+			int len = snprintf(offset_str, sizeof(offset_str), "%llu", (long long unsigned)(cursor_pos.byte()));
+			
+			if(!cursor_pos.byte_aligned())
+			{
+				snprintf((offset_str + len), (sizeof(offset_str) - len), "+%db", cursor_pos.bit());
+			}
 			
 			wxTheClipboard->SetData(new wxTextDataObject(offset_str));
 		}
@@ -1051,7 +1097,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		}, itm->GetId(), itm->GetId());
 	}
 	
-	if(comments.find(NestedOffsetLengthMapKey(cursor_pos, 0)) == comments.end()
+	if(comments.find(BitRangeTreeKey(cursor_pos, 0)) == comments.end()
 		&& cursor_pos < doc->buffer_length())
 	{
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Insert comment here...");
@@ -1062,12 +1108,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		}, itm->GetId(), itm->GetId());
 	}
 	
-	if(selection_length > 0
-		&& comments.find(NestedOffsetLengthMapKey(selection_off, selection_length)) == comments.end()
+	if(selection_length > BitOffset::ZERO
+		&& comments.find(BitRangeTreeKey(selection_off, selection_length)) == comments.end()
 		&& comments.can_set(selection_off, selection_length))
 	{
 		char menu_label[64];
-		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length));
+		snprintf(menu_label, sizeof(menu_label), "Set comment on %" PRId64 " bytes...", (int64_t)(selection_length.byte()));
 		wxMenuItem *itm =  menu.Append(wxID_ANY, menu_label);
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
@@ -1081,12 +1127,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	/* We need to maintain bitmap instances for lifespan of menu. */
 	std::list<wxBitmap> bitmaps;
 	
-	off_t highlight_off;
-	off_t highlight_length = 0;
+	BitOffset highlight_off;
+	BitOffset highlight_length = BitOffset::ZERO;
 	
-	auto highlight_at_cur = NestedOffsetLengthMap_get(highlights, cursor_pos);
+	auto highlight_at_cur = highlights.get_range(cursor_pos);
 	
-	if(selection_length > 0)
+	if(selection_length > BitOffset::ZERO)
 	{
 		highlight_off    = selection_off;
 		highlight_length = selection_length;
@@ -1102,7 +1148,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		highlight_length = 1;
 	}
 	
-	if(highlight_length > 0 && NestedOffsetLengthMap_can_set(highlights, highlight_off, highlight_length))
+	if(highlight_length > BitOffset::ZERO)
 	{
 		wxMenu *hlmenu = new wxMenu();
 		
@@ -1160,7 +1206,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	{
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Remove Highlight");
 		
-		NestedOffsetLengthMapKey key = highlight_at_cur->first;
+		BitRangeMap<int>::Range key = highlight_at_cur->first;
 		
 		menu.Bind(wxEVT_MENU, [this, key](wxCommandEvent &event)
 		{
@@ -1170,7 +1216,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	if(selection_length > 0)
 	{
-		const ByteRangeMap<std::string> &data_types = doc->get_data_types();
+		const BitRangeMap<Document::TypeInfo> &data_types = doc->get_data_types();
 		
 		auto selection_off_type = data_types.get_range(selection_off);
 		assert(selection_off_type != data_types.end());
@@ -1182,7 +1228,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		wxMenuItem *data_itm = dtmenu->AppendCheckItem(wxID_ANY, "Data");
 		
 		if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
-			&& selection_off_type->second == "")
+			&& selection_off_type->second.name == "")
 		{
 			data_itm->Check(true);
 		}
@@ -1204,9 +1250,17 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		for(auto dti = sorted_dts.begin(); dti != sorted_dts.end(); ++dti)
 		{
-			const DataTypeRegistration *dt = *dti;
+			const DataTypeRegistration *dtr = *dti;
 			
-			if(dt->fixed_size >= 0 && (selection_length % dt->fixed_size) != 0)
+			if(dtr->configurable())
+			{
+				/* TODO: Support configurable types. */
+				continue;
+			}
+			
+			auto dt = dtr->get_type(NULL);
+			
+			if((selection_length % dt->word_size) != BitOffset::ZERO)
 			{
 				/* Selection is too short/long for this type. */
 				continue;
@@ -1215,10 +1269,10 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			wxMenu *group_menu = dtmenu;
 			
 			{
-				auto g = dt->groups.begin();
+				auto g = dtr->groups.begin();
 				auto p = group_menus.begin();
 				
-				for(; g != dt->groups.end(); ++g, ++p)
+				for(; g != dtr->groups.end(); ++g, ++p)
 				{
 					if(p == group_menus.end() || p->first != *g)
 					{
@@ -1233,36 +1287,40 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				}
 			}
 			
-			if(group_menus.size() > dt->groups.size())
+			if(group_menus.size() > dtr->groups.size())
 			{
-				group_menus.erase(std::next(group_menus.begin(), dt->groups.size()), group_menus.end());
+				group_menus.erase(std::next(group_menus.begin(), dtr->groups.size()), group_menus.end());
 			}
 			
-			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dt->label);
+			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dtr->label);
 			
 			if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
-				&& selection_off_type->second == dt->name)
+				&& selection_off_type->second.name == dtr->name)
 			{
 				itm->Check(true);
 			}
 			
 			#ifdef _WIN32
-			menu.Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			menu.Bind(wxEVT_MENU, [this, dtr, selection_off, selection_length](wxCommandEvent &event)
 			#else
-			group_menu->Bind(wxEVT_MENU, [this, dt, selection_off, selection_length](wxCommandEvent &event)
+			group_menu->Bind(wxEVT_MENU, [this, dtr, selection_off, selection_length](wxCommandEvent &event)
 			#endif
 			{
-				doc->set_data_type(selection_off, selection_length, dt->name);
+				doc->set_data_type(selection_off, selection_length, dtr->name);
 			}, itm->GetId(), itm->GetId());
 		}
 		
 		menu.AppendSubMenu(dtmenu, "Set data type");
 		
 		wxMenuItem *vm_itm = menu.Append(wxID_ANY, "Set virtual address mapping...");
+		vm_itm->Enable(selection_off.byte_aligned() && selection_off.byte_aligned());
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			VirtualMappingDialog d(this, doc, selection_off, selection_length);
+			assert(selection_off.byte_aligned());
+			assert(selection_length.byte_aligned());
+			
+			VirtualMappingDialog d(this, doc, selection_off.byte(), selection_length.byte());
 			d.ShowModal();
 		}, vm_itm->GetId(), vm_itm->GetId());
 	}
@@ -1271,11 +1329,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	
 	{
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Compare selection...\tCtrl-Shift-K");
-		itm->Enable(selection_length > 0);
+		itm->Enable(selection_length > BitOffset::ZERO && selection_off.byte_aligned() && selection_length.byte_aligned());
 		
 		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 		{
-			compare_range(selection_off, selection_length);
+			assert(selection_off.byte_aligned());
+			assert(selection_length.byte_aligned());
+			
+			compare_range(selection_off.byte(), selection_length.byte());
 		}, itm->GetId(), itm->GetId());
 	}
 	
@@ -1302,13 +1363,13 @@ void REHex::Tab::OnDocumentDataOverwrite(OffsetLengthEvent &event)
 
 void REHex::Tab::OnDocumentCursorUpdate(CursorUpdateEvent &event)
 {
-	doc_ctrl->set_cursor_position(event.cursor_pos, event.cursor_state);
+	doc_ctrl->set_cursor_position(doc->get_cursor_position(), event.cursor_state);
 	event.Skip();
 }
 
 void REHex::Tab::OnDocumentCtrlCursorUpdate(CursorUpdateEvent &event)
 {
-	doc->set_cursor_position(event.cursor_pos, event.cursor_state);
+	doc->set_cursor_position(doc_ctrl->get_cursor_position(), event.cursor_state);
 	event.Skip();
 }
 
@@ -1969,7 +2030,7 @@ void REHex::Tab::repopulate_regions_thaw()
 	}
 }
 
-std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, off_t real_offset_base, off_t virt_offset_base, off_t length, InlineCommentMode inline_comment_mode)
+std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode)
 {
 	auto &comments = doc->get_comments();
 	auto &types = doc->get_data_types();
@@ -1981,7 +2042,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	
 	auto next_comment = comments.first_root_node();
 	auto types_iter = types.begin();
-	off_t next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
+	BitOffset next_data = real_offset_base, next_virt = virt_offset_base, remain_data = length;
 	
 	/* Skip over comments/types prior to real_offset_base. */
 	while(next_comment != NULL && next_comment->key.offset < next_data)
@@ -2011,11 +2072,11 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 	}
 	
 	std::vector<DocumentCtrl::Region*> regions;
-	std::stack<off_t> dr_limit;
+	std::stack<BitOffset> dr_limit;
 	
 	while(remain_data > 0)
 	{
-		assert((next_data + remain_data) <= doc->buffer_length());
+		assert((next_data + remain_data) <= BitOffset(doc->buffer_length(), 0));
 		assert(next_comment == NULL || next_comment->key.offset >= next_data);
 		
 		while(!dr_limit.empty() && dr_limit.top() <= next_data)
@@ -2029,10 +2090,10 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 		
 		while(next_comment != NULL && next_comment->key.offset == next_data)
 		{
-			off_t indent_offset = next_virt;
-			off_t indent_length = nest
+			BitOffset indent_offset = next_virt;
+			BitOffset indent_length = nest
 				? std::min(next_comment->key.length, remain_data)
-				: 0;
+				: BitOffset::ZERO;
 			
 			regions.push_back(new DocumentCtrl::CommentRegion(
 				next_comment->key.offset,
@@ -2062,7 +2123,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			}
 		}
 		
-		off_t dr_length = remain_data;
+		BitOffset dr_length = remain_data;
 		
 		if(next_comment != NULL && dr_length > (next_comment->key.offset - next_data))
 		{
@@ -2083,19 +2144,40 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			dr_length,
 			types_iter->first.length - (next_data - types_iter->first.offset));
 		
-		const DataTypeRegistration *dtr = DataTypeRegistry::by_name(types_iter->second);
+		std::shared_ptr<const DataType> dt = DataTypeRegistry::get_type(types_iter->second.name, types_iter->second.options);
 		
-		if(dtr != NULL && dtr->fixed_size <= dr_length)
+		if(dt != NULL && dt->region_factory && dt->region_fixed_size <= dr_length)
 		{
-			if(dtr->fixed_size >= 0 && dr_length > dtr->fixed_size)
+			if(dt->region_fixed_size > BitOffset::ZERO && dr_length > dt->region_fixed_size)
 			{
-				dr_length = dtr->fixed_size;
+				dr_length = dt->region_fixed_size;
+			}
+			else if((dr_length % dt->word_size) != BitOffset::ZERO)
+			{
+				dr_length -= dr_length % dt->word_size;
 			}
 			
-			regions.push_back(dtr->region_factory(doc, next_data, dr_length, next_virt));
+			assert(dr_length > BitOffset::ZERO);
+			
+			regions.push_back(dt->region_factory(doc, next_data, dr_length, next_virt));
 		}
 		else{
-			regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, next_data, dr_length, next_virt));
+			/* DataRegion only allows whole-byte lengths, so if we have any spare bits
+			 * in an untyped region we will make a little BitArrayRegion to cover them.
+			*/
+			
+			if(dr_length < BitOffset(1, 0))
+			{
+				regions.push_back(new BitArrayRegion(doc, next_data, dr_length, next_virt));
+			}
+			else{
+				if(!dr_length.byte_aligned())
+				{
+					dr_length = BitOffset(dr_length.byte(), 0);
+				}
+				
+				regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, next_data, dr_length, next_virt));
+			}
 		}
 		
 		next_data   += dr_length;

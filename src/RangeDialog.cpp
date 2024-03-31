@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,10 +27,12 @@ BEGIN_EVENT_TABLE(REHex::RangeDialog, wxDialog)
 	EVT_RADIOBUTTON(wxID_ANY, REHex::RangeDialog::OnRadio)
 END_EVENT_TABLE()
 
-REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, const wxString &title, bool allow_nonlinear):
+REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, const wxString &title, bool allow_nonlinear, bool allow_bit_offset, bool allow_bit_length):
 	wxDialog(parent, wxID_ANY, title),
 	document_ctrl(document_ctrl),
 	allow_nonlinear(allow_nonlinear),
+	allow_bit_offset(allow_bit_offset),
+	allow_bit_length(allow_bit_length),
 	range_first(-1),
 	range_last(-1)
 {
@@ -45,6 +47,10 @@ REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, c
 		range_from = new NumericTextCtrl(this, wxID_ANY);
 		from_sizer->Add(range_from, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
 		
+		wxSize initial_size = range_from->GetSize();
+		wxSize text_size = range_from->GetTextExtent("0x0000000000000000+0b");
+		range_from->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
+		
 		topsizer->Add(from_sizer, 0, wxEXPAND | wxALL, 10);
 	}
 	
@@ -56,6 +62,10 @@ REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, c
 		
 		range_to = new NumericTextCtrl(this, wxID_ANY);
 		to_sizer->Add(range_to, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+		
+		wxSize initial_size = range_to->GetSize();
+		wxSize text_size = range_to->GetTextExtent("0x0000000000000000+0b");
+		range_to->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
 		
 		topsizer->Add(to_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
 		
@@ -71,6 +81,10 @@ REHex::RangeDialog::RangeDialog(wxWindow *parent, DocumentCtrl *document_ctrl, c
 		
 		range_len = new NumericTextCtrl(this, wxID_ANY);
 		len_sizer->Add(range_len, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 10);
+		
+		wxSize initial_size = range_len->GetSize();
+		wxSize text_size = range_len->GetTextExtent("0x0000000000000000+0b");
+		range_len->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
 		
 		topsizer->Add(len_sizer, 0, wxEXPAND | wxLEFT | wxRIGHT, 10);
 	}
@@ -100,7 +114,7 @@ bool REHex::RangeDialog::range_valid() const
 	return range_first >= 0 && range_last >= 0;
 }
 
-void REHex::RangeDialog::set_range_raw(off_t first, off_t last)
+void REHex::RangeDialog::set_range_raw(BitOffset first, BitOffset last)
 {
 	if(document_ctrl->region_offset_cmp(first, last) > 0)
 	{
@@ -108,36 +122,57 @@ void REHex::RangeDialog::set_range_raw(off_t first, off_t last)
 		abort();
 	}
 	
-	off_t virt_length = document_ctrl->region_offset_cmp(last, first) + 1;
-	assert(virt_length > 0);
+	BitOffset virt_length = document_ctrl->region_offset_cmp(last, first) + BitOffset(0, 1);
+	assert(virt_length > BitOffset::ZERO);
 	
 	range_first = first;
 	range_last  = last;
 	
-	off_t virt_first = document_ctrl->region_offset_to_virt(first);
-	off_t virt_last  = document_ctrl->region_offset_to_virt(last);
+	BitOffset virt_first = document_ctrl->region_offset_to_virt(first);
+	BitOffset virt_last  = document_ctrl->region_offset_to_virt(last);
 	
 	char range_from_val[64];
-	snprintf(range_from_val, sizeof(range_from_val), "0x%08llX", (long long unsigned)(virt_first));
-	range_from->SetValue(range_from_val);
+	int rf_len = snprintf(range_from_val, sizeof(range_from_val), "0x%08llX", (long long unsigned)(virt_first.byte()));
+	
+	if(!virt_first.byte_aligned() || virt_last.bit() != 7)
+	{
+		rf_len += snprintf((range_from_val + rf_len), (sizeof(range_from_val) - rf_len), "+%db", virt_first.bit());
+	}
 	
 	char range_to_val[64];
-	snprintf(range_to_val, sizeof(range_to_val), "0x%08llX", (long long unsigned)(virt_last));
-	range_to->SetValue(range_to_val);
+	int rt_len = snprintf(range_to_val, sizeof(range_to_val), "0x%08llX", (long long unsigned)(virt_last.byte()));
+	
+	if(virt_first.byte_aligned() && virt_last.bit() == 7)
+	{
+		/* If a range of aligned bytes has been selected, we assume the user is working on
+		 * whole byte quantities and omit the "+7b" from the end of the end offset.
+		*/
+	}
+	else{
+		rt_len += snprintf((range_to_val + rt_len), (sizeof(range_to_val) - rt_len), "+%db", virt_last.bit());
+	}
 	
 	char range_len_val[64];
-	snprintf(range_len_val, sizeof(range_len_val), "0x%08llX", (long long unsigned)(virt_length));
+	int rl_len = snprintf(range_len_val, sizeof(range_len_val), "0x%08llX", (long long unsigned)(virt_length.byte()));
+	
+	if(!virt_length.byte_aligned())
+	{
+		rl_len += snprintf((range_len_val + rl_len), (sizeof(range_len_val) - rl_len), "+%db", virt_length.bit());
+	}
+	
+	range_from->SetValue(range_from_val);
+	range_to->SetValue(range_to_val);
 	range_len->SetValue(range_len_val);
 }
 
-std::pair<off_t, off_t> REHex::RangeDialog::get_range_raw() const
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::RangeDialog::get_range_raw() const
 {
 	return std::make_pair(range_first, range_last);
 }
 
-void REHex::RangeDialog::set_range_linear(off_t offset, off_t length)
+void REHex::RangeDialog::set_range_linear(BitOffset offset, BitOffset length)
 {
-	off_t end_incl = document_ctrl->region_offset_add(offset, length) - 1;
+	BitOffset end_incl = document_ctrl->region_offset_add(offset, length) - BitOffset(0, 1);
 	
 	if(!document_ctrl->region_range_linear(offset, end_incl))
 	{
@@ -148,22 +183,28 @@ void REHex::RangeDialog::set_range_linear(off_t offset, off_t length)
 	set_range_raw(offset, end_incl);
 }
 
-std::pair<off_t, off_t> REHex::RangeDialog::get_range_linear() const
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::RangeDialog::get_range_linear() const
 {
 	if(!document_ctrl->region_range_linear(range_first, range_last))
 	{
-		return std::make_pair<off_t, off_t>(0, 0);
+		return std::make_pair(BitOffset::ZERO, BitOffset::ZERO);
 	}
 	
-	return std::make_pair(range_first, (range_last - range_first) + 1);
+	return std::make_pair(range_first, (range_last - range_first) + BitOffset(0, 1));
 }
 
-void REHex::RangeDialog::set_offset_hint(off_t offset)
+void REHex::RangeDialog::set_offset_hint(BitOffset offset)
 {
-	off_t virt_offset = document_ctrl->region_offset_to_virt(offset);
+	BitOffset virt_offset = document_ctrl->region_offset_to_virt(offset);
 	
 	char range_from_val[64];
-	snprintf(range_from_val, sizeof(range_from_val), "0x%08llX", (long long unsigned)(virt_offset));
+	int rf_len = snprintf(range_from_val, sizeof(range_from_val), "0x%08llX", (long long unsigned)(virt_offset.byte()));
+	
+	if(!virt_offset.byte_aligned())
+	{
+		rf_len += snprintf((range_from_val + rf_len), (sizeof(range_from_val) - rf_len), "+%db", virt_offset.bit());
+	}
+	
 	range_from->SetValue(range_from_val);
 }
 
@@ -175,9 +216,10 @@ void REHex::RangeDialog::enable_inputs()
 
 void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 {
-	off_t virt_offset;
+	BitOffset virt_offset;
+	bool virt_offset_bit;
 	try {
-		virt_offset = range_from->GetValue<off_t>();
+		virt_offset = range_from->GetValue<BitOffset>(BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, 0, &virt_offset_bit);
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -185,8 +227,8 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 		return;
 	}
 	
-	off_t real_offset = document_ctrl->region_virt_to_offset(virt_offset);
-	if(real_offset < 0)
+	BitOffset real_offset = document_ctrl->region_virt_to_offset(virt_offset);
+	if(real_offset < BitOffset::ZERO)
 	{
 		wxMessageBox("Start offset out of range", "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
 		return;
@@ -194,27 +236,37 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 	
 	assert(range_to_enable->GetValue() || range_len_enable->GetValue());
 	
-	off_t real_end_incl;
+	BitOffset real_end_incl;
 	
 	if(range_to_enable->GetValue())
 	{
-		off_t virt_end_incl;
+		BitOffset virt_end_incl;
+		bool virt_end_bit;
 		try {
-			virt_end_incl = range_to->GetValue<off_t>();
+			virt_end_incl = range_to->GetValue<BitOffset>(BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, 0, &virt_end_bit);
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
 			wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
 			return;
+		}
+		
+		if(!virt_offset_bit && !virt_end_bit)
+		{
+			/* If both the start and end offset were specified as bytes, assume they
+			 * want the whole end byte, not just the first bit of it.
+			*/
+			
+			virt_end_incl = BitOffset(virt_end_incl.byte(), 7);
 		}
 		
 		real_end_incl = document_ctrl->region_virt_to_offset(virt_end_incl);
 	}
 	else if(range_len_enable->GetValue())
 	{
-		off_t length;
+		BitOffset length;
 		try {
-			length = range_len->GetValue<off_t>(1);
+			length = range_len->GetValue<BitOffset>(BitOffset(0, 1));
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -222,7 +274,7 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 			return;
 		}
 		
-		real_end_incl = document_ctrl->region_offset_add(real_offset, length - 1);
+		real_end_incl = document_ctrl->region_offset_add(real_offset, length - BitOffset(0, 1));
 	}
 	else{
 		/* Shouldn't be reachable. */
@@ -232,6 +284,18 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 	if(real_end_incl < 0)
 	{
 		wxMessageBox("End offset is out of range", "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
+		return;
+	}
+	
+	if(!allow_bit_offset && !real_offset.byte_aligned())
+	{
+		wxMessageBox("Start offset must be a whole number of bytes", "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
+		return;
+	}
+	
+	if(!allow_bit_length && (real_end_incl - real_offset).bit() != 7)
+	{
+		wxMessageBox("Selection length must be a whole number of bytes", "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);
 		return;
 	}
 	

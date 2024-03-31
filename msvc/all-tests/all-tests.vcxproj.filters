@@ -82,6 +82,9 @@
     <ClCompile Include="..\..\tests\BitmapTool.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\BitOffset.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\tests\ByteRangeTree.cpp">
       <Filter>tests</Filter>
     </ClCompile>
@@ -348,6 +351,15 @@
     </ClCompile>
     <ClCompile Include="..\..\src\CustomMessageDialog.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\BitOffset.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\BitArray.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\DataType.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

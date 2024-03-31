@@ -286,7 +286,7 @@ class IconvCharacterEncodingRegistrationHelper
 {
 	private:
 		std::unique_ptr<REHex::CharacterEncoder> encoder;
-		std::unique_ptr<REHex::DataTypeRegistration> dt_registration;
+		std::unique_ptr<REHex::StaticDataTypeRegistration> dt_registration;
 		std::unique_ptr<REHex::CharacterEncoding> ce_registration;
 		
 		REHex::App::SetupHookRegistration setup_hook;
@@ -303,7 +303,11 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 {
 	try {
 		encoder.reset(new REHex::CharacterEncoderIconv(encoding, word_size, mid_char_safe));
-		dt_registration.reset(new REHex::DataTypeRegistration(std::string("text:") + key, label, std::vector<std::string>({"Text", text_group}), encoder.get()));
+		dt_registration.reset(new REHex::StaticDataTypeRegistration(
+			std::string("text:") + key, label, {"Text", text_group},
+			REHex::DataType()
+				.WithWordSize(REHex::BitOffset(word_size, 0))
+				.WithCharacterEncoder(encoder.get())));
 		ce_registration.reset(new REHex::CharacterEncoding(key, label, encoder.get(), std::vector<std::string>({ text_group })));
 	}
 	catch(const std::exception &e)

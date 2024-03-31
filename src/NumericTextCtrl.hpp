@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,8 @@
 #include <stdexcept>
 #include <stdlib.h>
 #include <wx/textctrl.h>
+
+#include "BitOffset.hpp"
 
 namespace REHex {
 	/**
@@ -83,7 +85,7 @@ namespace REHex {
 			 * On error throws an exception of type NumericTextCtrl::InputError.
 			*/
 			template<typename T>
-				typename std::enable_if<std::numeric_limits<T>::is_signed, T>::type
+				typename std::enable_if<std::numeric_limits<T>::is_integer && std::numeric_limits<T>::is_signed, T>::type
 				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
@@ -147,7 +149,7 @@ namespace REHex {
 			}
 			
 			template<typename T>
-				typename std::enable_if<!std::numeric_limits<T>::is_signed, T>::type
+				typename std::enable_if<std::numeric_limits<T>::is_integer && !std::numeric_limits<T>::is_signed, T>::type
 				static ParseValue(std::string sval, T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				static_assert(std::numeric_limits<T>::is_integer, "GetValue() instantiated with non-integer type");
@@ -233,6 +235,102 @@ namespace REHex {
 				return ival;
 			}
 			
+			template<typename T>
+				typename std::enable_if<std::is_same<T, BitOffset>::value, T>::type
+				static ParseValue(std::string sval, T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
+			{
+				if(sval.length() == 0)
+				{
+					/* String is empty */
+					throw EmptyError();
+				}
+				
+				if(sval.find_first_not_of("\t ") == std::string::npos)
+				{
+					/* String contains only whitespace */
+					throw EmptyError();
+				}
+				
+				errno = 0;
+				char *endptr;
+				
+				int bit = 0;
+				
+				long long int ival = strtoll(sval.c_str(), &endptr, base);
+				
+				if(endptr[0] == '+' && endptr[1] >= '0' && endptr[1] <= '7')
+				{
+					bit = endptr[1] - '0';
+					endptr += 2;
+					
+					if(*endptr == 'b')
+					{
+						++endptr;
+					}
+					
+					if(bit_explicit != NULL)
+					{
+						*bit_explicit = true;
+					}
+				}
+				else{
+					if(bit_explicit != NULL)
+					{
+						*bit_explicit = false;
+					}
+				}
+				
+				if(*endptr != '\0')
+				{
+					/* Invalid characters */
+					throw FormatError();
+				}
+				else if((ival == LLONG_MIN || ival == LLONG_MAX) && errno == ERANGE)
+				{
+					/* Out of range of long long */
+					throw RangeError();
+				}
+				else if(ival < BitOffset::MIN.byte() || ival > BitOffset::MAX.byte())
+				{
+					/* Out of range of BitOffset */
+					throw RangeError();
+				}
+				
+				if(ival < 0)
+				{
+					bit = -bit;
+				}
+				
+				BitOffset boval(ival, bit);
+				
+				size_t first_non_space = sval.find_first_not_of(" \t");
+				assert(first_non_space != std::string::npos);
+				
+				if(sval[first_non_space] == '+' || sval[first_non_space] == '-')
+				{
+					if(boval > BitOffset::ZERO && rel_base > BitOffset::ZERO)
+					{
+						if((BitOffset::MAX - rel_base) < boval)
+						{
+							/* rel_base + ival > LLONG_MAX */
+							throw RangeError();
+						}
+					}
+					else if(boval < BitOffset::ZERO && rel_base < BitOffset::ZERO)
+					{
+						if((BitOffset::MIN - rel_base) > boval)
+						{
+							/* rel_base + ival < LLONG_MIN */
+							throw RangeError();
+						}
+					}
+					
+					boval += rel_base;
+				}
+				
+				return boval;
+			}
+			
 			/**
 			 * @brief Parse the control value and return as a number.
 			 *
@@ -243,11 +341,21 @@ namespace REHex {
 			 *
 			 * On error throws an exception of type NumericTextCtrl::InputError.
 			*/
+			
 			template<typename T>
-				T GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
+				typename std::enable_if<std::numeric_limits<T>::is_integer, T>::type
+				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base);
+			}
+			
+			template<typename T>
+				typename std::enable_if<std::is_same<T, BitOffset>::value, T>::type
+				GetValue(T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
+			{
+				std::string sval = wxTextCtrl::GetValue().ToStdString();
+				return ParseValue<T>(sval, min, max, rel_base, base, bit_explicit);
 			}
 			
 			wxString GetStringValue() const

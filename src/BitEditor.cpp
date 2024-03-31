@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -256,7 +256,7 @@ void REHex::BitEditor::update()
 	
 	value_offset = document->get_cursor_position();
 	
-	if((value_offset + num_bytes) > document->buffer_length())
+	if((value_offset + BitOffset(num_bytes, 0)) > BitOffset(document->buffer_length(), 0))
 	{
 		/* There aren't num_bytes of data left from cursor to end of file. */
 		

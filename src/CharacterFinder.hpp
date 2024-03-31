@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,6 +25,7 @@
 #include <thread>
 #include <vector>
 
+#include "BitOffset.hpp"
 #include "LRUCache.hpp"
 #include "SharedDocumentPointer.hpp"
 
@@ -42,7 +43,7 @@ namespace REHex
 			static const size_t DEFAULT_CHUNK_SIZE = 512 * 1024; /* 512KiB */
 			static const size_t DEFAULT_LRU_CACHE_SIZE = 4;
 			
-			CharacterFinder(SharedDocumentPointer &document, off_t base, off_t length, size_t chunk_size = DEFAULT_CHUNK_SIZE, size_t lru_cache_size = DEFAULT_LRU_CACHE_SIZE);
+			CharacterFinder(SharedDocumentPointer &document, BitOffset base, off_t length, size_t chunk_size = DEFAULT_CHUNK_SIZE, size_t lru_cache_size = DEFAULT_LRU_CACHE_SIZE);
 			~CharacterFinder();
 			
 			/**
@@ -51,7 +52,7 @@ namespace REHex
 			 * Returns a pair containing the start offset and length, or -1 and -1 if
 			 * the requested character hasn't been processed yet.
 			*/
-			std::pair<off_t,off_t> get_char_range(off_t offset);
+			std::pair<BitOffset,off_t> get_char_range(BitOffset offset);
 			
 			/**
 			 * @brief Get the start offset of a character in the Document.
@@ -59,7 +60,7 @@ namespace REHex
 			 * Returns the start offset of the character, or -1 if the character hasn't
 			 * been processed yet.
 			*/
-			off_t get_char_start(off_t offset);
+			BitOffset get_char_start(BitOffset offset);
 			
 			/**
 			 * @brief Get the length of a character in the Document.
@@ -67,28 +68,29 @@ namespace REHex
 			 * Returns the length of the character in bytes, or -1 if the character
 			 * hasn't been processed yet.
 			*/
-			off_t get_char_length(off_t offset);
+			off_t get_char_length(BitOffset offset);
 			
 			bool finished();
 			
 		private:
 			SharedDocumentPointer &document;
 			
-			const off_t base, length;
+			const BitOffset base;
+			const off_t length;
 			const size_t chunk_size;
 			
 			size_t t1_size;
-			std::unique_ptr< std::atomic<off_t>[] > t1;
+			std::unique_ptr< std::atomic<int64_t>[] > t1;
 			
 			volatile bool t1_filling;
 			volatile bool t1_done;
 			std::thread t1_worker;
 			
-			LRUCache< off_t, std::vector<size_t> > t2;
+			LRUCache< BitOffset, std::vector<size_t> > t2;
 			
 			void start_worker();
 			void stop_worker();
-			void reset_from(off_t offset);
+			void reset_from(BitOffset offset);
 	};
 }
 

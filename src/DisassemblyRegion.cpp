@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,12 +33,14 @@
 static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
 static const size_t INSTRUCTION_CACHE_LIMIT = 250000;
 
-REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t offset, off_t length, off_t virt_offset, cs_arch arch, cs_mode mode):
+REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, cs_arch arch, cs_mode mode):
 	GenericDataRegion(offset, length, virt_offset, virt_offset),
 	doc(doc),
 	arch(arch),
 	preferred_asm_syntax(AsmSyntax::INTEL)
 {
+	assert(d_length.byte_aligned());
+	
 	cs_err error = cs_open(arch, mode, &disassembler);
 	if(error != CS_ERR_OK)
 	{
@@ -53,7 +55,7 @@ REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, off_t of
 	
 	this->doc.auto_cleanup_bind(DATA_OVERWRITE, &REHex::DisassemblyRegion::OnDataOverwrite, this);
 	
-	dirty.set_range(d_offset, d_length);
+	dirty.set_range(0, d_length.byte());
 }
 
 REHex::DisassemblyRegion::~DisassemblyRegion()
@@ -63,34 +65,38 @@ REHex::DisassemblyRegion::~DisassemblyRegion()
 
 void REHex::DisassemblyRegion::OnDataOverwrite(OffsetLengthEvent &event)
 {
-	off_t d_end = d_offset + d_length;
-	off_t event_end = event.offset + event.length;
+	BitOffset d_end = d_offset + d_length;
 	
-	if(event.offset < d_end && event_end > d_offset)
+	BitOffset event_offset(event.offset, 0);
+	BitOffset event_length(event.length, 0);
+	BitOffset event_end = event_offset + event_length;
+	
+	if(event_offset < d_end && event_end > d_offset)
 	{
-		off_t intersection_offset = std::max(d_offset, event.offset);
+		BitOffset intersection_offset = std::max(d_offset, event_offset);
+		off_t rel_intersection_offset = (intersection_offset - d_offset).byte();
 		
 		/* Workaround for older GCC/libstd++ which don't support passing a const_iterator
 		 * to std::vector::erase() despite claiming to be C++11.
 		*/
 		#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9))
-		auto p_erase_begin_c = processed_by_offset(intersection_offset);
+		auto p_erase_begin_c = processed_by_rel_offset(rel_intersection_offset);
 		auto p_erase_begin = const_iterator_to_iterator(p_erase_begin_c, processed);
 		#else
-		auto p_erase_begin = processed_by_offset(intersection_offset);
+		auto p_erase_begin = processed_by_rel_offset(rel_intersection_offset);
 		#endif
 		
 		if(p_erase_begin != processed.end())
 		{
-			assert(p_erase_begin->offset <= intersection_offset);
+			assert(p_erase_begin->offset <= rel_intersection_offset);
 			
-			dirty.set_range(p_erase_begin->offset, (d_length - (p_erase_begin->offset - d_offset)));
+			dirty.set_range(p_erase_begin->offset, (d_length.byte() - p_erase_begin->offset));
 			
 			processed.erase(p_erase_begin, processed.end());
 			instructions.clear();
 		}
 		
-		assert(dirty.isset(intersection_offset, (d_length - (intersection_offset - d_offset))));
+		assert(dirty.isset(rel_intersection_offset, (d_length.byte() - rel_intersection_offset)));
 	}
 	
 	event.Skip();
@@ -161,7 +167,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			longest_disasm = 0;
 			longest_instruction = 0;
 			
-			dirty.set_range(d_offset, d_length);
+			dirty.set_range(0, d_length.byte());
 			
 			processed.clear();
 			instructions.clear();
@@ -192,18 +198,18 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	bool alternate = ((y_offset + line_num) % 2) != 0;
 	
-	off_t cursor_pos = doc_ctrl.get_cursor_position();
+	BitOffset cursor_pos = doc_ctrl.get_cursor_position();
 	
-	off_t selection_off, selection_len;
+	BitOffset selection_off, selection_len;
 	std::tie(selection_off, selection_len) = doc_ctrl.get_selection_in_region(this);
 	
-	auto base_highlight_func = [&](off_t offset)
+	auto base_highlight_func = [&](BitOffset offset)
 	{
 		/* TODO: Support secondary selection. */
 		
-		const NestedOffsetLengthMap<int> &highlights = doc->get_highlights();
+		const BitRangeMap<int> &highlights = doc->get_highlights();
 		
-		auto highlight = NestedOffsetLengthMap_get(highlights, offset);
+		auto highlight = highlights.get_range(offset);
 		if(highlight != highlights.end())
 		{
 			return Highlight(
@@ -227,9 +233,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto hex_highlight_func = [&](off_t offset)
+	auto hex_highlight_func = [&](BitOffset offset)
 	{
-		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
+		if(selection_len > BitOffset::ZERO && offset >= selection_off && offset < (selection_off + selection_len))
 		{
 			return hex_selection_highlight;
 		}
@@ -244,9 +250,9 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
-	auto ascii_highlight_func = [&](off_t offset)
+	auto ascii_highlight_func = [&](BitOffset offset)
 	{
-		if(selection_len > 0 && offset >= selection_off && offset < (selection_off + selection_len))
+		if(selection_len > BitOffset::ZERO && offset >= selection_off && offset < (selection_off + selection_len))
 		{
 			return ascii_selection_highlight;
 		}
@@ -294,12 +300,14 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	{
 		bool is_last_line = is_last_data_region && (line_num + 1) == (y_lines - indent_final);
 		
+		off_t rel_inst_offset = instr->offset;
+		BitOffset abs_inst_offset = d_offset + BitOffset(rel_inst_offset, 0);
+		
 		if(doc_ctrl.get_show_offsets())
 		{
 			/* Draw the offsets to the left */
 			
-			off_t offset_within_region = instr->offset - d_offset;
-			off_t display_offset = virt_offset + offset_within_region;
+			BitOffset display_offset = virt_offset + BitOffset(rel_inst_offset, 0);
 			
 			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 			
@@ -307,15 +315,15 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			dc.DrawText(offset_str, x + offset_text_x, y);
 		}
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, instr->offset, alternate, hex_highlight_func, is_last_line);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, abs_inst_offset, alternate, hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, d_offset, 0, instr->offset, alternate, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, 0, abs_inst_offset, alternate, ascii_highlight_func, is_last_line);
 		}
 		
-		bool invert = cursor_pos >= instr->offset && cursor_pos < (instr->offset + instr->length) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
-		bool selected = selection_len > 0 && selection_off <= instr->offset && (selection_off + selection_len) >= (instr->offset + instr->length);
+		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr->length)) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
+		bool selected = selection_len > 0 && selection_off <= abs_inst_offset && (selection_off + selection_len) >= (abs_inst_offset + BitOffset::BYTES(instr->length));
 		
 		set_text_attribs(invert, selected);
 		
@@ -348,19 +356,21 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	int64_t up_first_line = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
 	off_t up_skip_bytes = (line_num - up_first_line) * up_bytes_per_line;
 	
-	off_t up_off    = unprocessed_offset() + up_skip_bytes;
+	off_t up_off    = unprocessed_offset_rel() + up_skip_bytes;
 	off_t up_remain = unprocessed_bytes() - up_skip_bytes;
 	
 	while(up_remain > 0 && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
+		BitOffset abs_up_off = d_offset + BitOffset(up_off, 0);
+		
 		bool is_last_line = is_last_data_region && (line_num + 1) == (y_lines - indent_final);
 		
 		if(doc_ctrl.get_show_offsets())
 		{
 			/* Draw the offsets to the left */
 			
-			off_t offset_within_region = up_off - d_offset;
-			off_t display_offset = virt_offset + offset_within_region;
+			BitOffset offset_within_region = abs_up_off - d_offset;
+			BitOffset display_offset = virt_offset + offset_within_region;
 			
 			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 			
@@ -373,7 +383,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		bool data_err = false;
 		std::vector<unsigned char> line_data;
 		try {
-			line_data = doc->read_data(up_off, line_len);
+			line_data = doc->read_data(abs_up_off, line_len);
 			assert(line_data.size() == (size_t)(line_len));
 		}
 		catch(const std::exception &e)
@@ -385,11 +395,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		const unsigned char *ldp = data_err ? NULL : line_data.data();
 		size_t ldl = data_err ? line_len : line_data.size();
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, up_off, alternate, hex_highlight_func, is_last_line);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, abs_up_off, alternate, hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, d_offset, 0, up_off, alternate, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, 0, abs_up_off, alternate, ascii_highlight_func, is_last_line);
 		}
 		
 		set_text_attribs(false, false);
@@ -425,14 +435,14 @@ unsigned int REHex::DisassemblyRegion::check()
 	 * of the range and expand the InstructionRange to encompass it.
 	*/
 	
-	off_t remain_after = (d_offset + d_length) - (process_base + process_len);
+	off_t remain_after = d_length.byte() - (process_base + process_len);
 	assert(remain_after >= 0);
 	
 	off_t process_extra = std::min<off_t>(128, remain_after);
 	
 	std::vector<unsigned char> data;
 	try {
-		data = doc->read_data(process_base, process_len + process_extra);
+		data = doc->read_data((d_offset + BitOffset(process_base, 0)), process_len + process_extra);
 	}
 	catch(const std::exception &e)
 	{
@@ -442,7 +452,8 @@ unsigned int REHex::DisassemblyRegion::check()
 	
 	const uint8_t* code_ = static_cast<const uint8_t*>(data.data());
 	size_t code_size = data.size();
-	uint64_t address = process_base;
+	// uint64_t address = process_base;
+	uint64_t address = d_offset.byte() + process_base;
 	cs_insn* insn = cs_malloc(disassembler);
 	
 	InstructionRange new_ir;
@@ -504,7 +515,7 @@ unsigned int REHex::DisassemblyRegion::check()
 	return state;
 }
 
-std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
+std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
 {
 	int64_t processed_lines = this->processed_lines();
 	
@@ -516,8 +527,10 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. Don't know how long the line is. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
+		
+		BitOffset abs_inst_offset = d_offset + BitOffset(instr.second->offset, 0);
 		
 		if(doc_ctrl.get_show_ascii() && mouse_x_px >= ascii_text_x)
 		{
@@ -526,10 +539,10 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
 			if(line_offset >= instr.second->length)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((instr.second->offset + line_offset), SA_ASCII);
+			return std::make_pair(abs_inst_offset + BitOffset(line_offset, 0), SA_ASCII);
 		}
 		else if(mouse_x_px >= code_text_x)
 		{
@@ -538,7 +551,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.second->disasm.length())
 			{
-				return std::make_pair(instr.second->offset, SA_SPECIAL);
+				return std::make_pair(abs_inst_offset, SA_SPECIAL);
 			}
 		}
 		else if(mouse_x_px >= hex_text_x)
@@ -547,26 +560,26 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
 			if(line_offset < 0 || line_offset >= instr.second->length)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((instr.second->offset + line_offset), SA_HEX);
+			return std::make_pair((abs_inst_offset + BitOffset(line_offset, 0)), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	else{
 		/* Line isn't processed yet. */
 		
-		off_t up_base = unprocessed_offset();
+		off_t up_base = unprocessed_offset_rel();
 		off_t up_bytes_per_line = max_bytes_per_line();
 		
 		int64_t up_row = mouse_y_lines - processed_lines;
 		
 		off_t line_base = up_base + (up_row * up_bytes_per_line);
-		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_offset + d_length - 1));
+		off_t line_end  = std::min((line_base + up_bytes_per_line), d_length.byte());
 		off_t line_len  = line_end - line_base;
 		
 		if(doc_ctrl.get_show_ascii() && mouse_x_px >= ascii_text_x)
@@ -576,10 +589,10 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
 			if(line_offset >= line_len)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((line_base + line_offset), SA_ASCII);
+			return std::make_pair((d_offset + BitOffset((line_base + line_offset), 0)), SA_ASCII);
 		}
 		else if(mouse_x_px >= hex_text_x)
 		{
@@ -587,21 +600,21 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
 			if(line_offset < 0 || line_offset >= line_len)
 			{
-				return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
 			
-			return std::make_pair<off_t, ScreenArea>((line_base + line_offset), SA_HEX);
+			return std::make_pair((d_offset + BitOffset((line_base + line_offset), 0)), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	
-	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+	return std::make_pair(BitOffset::INVALID, SA_NONE);
 }
 
-std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
+std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
 {
 	int64_t processed_lines = this->processed_lines();
 	
@@ -613,7 +626,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. Don't know how long the line is. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 		
 		off_t instr_base = instr.second->offset;
@@ -625,7 +638,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			
 			if(mouse_x_px < ascii_text_x)
 			{
-				return std::make_pair(std::max<off_t>((instr_base - 1), 0), SA_ASCII);
+				return std::make_pair(d_offset + BitOffset(std::max<off_t>((instr_base - 1), 0), 0), SA_ASCII);
 			}
 			else{
 				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
@@ -634,7 +647,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(instr_base + line_offset),
 					(instr_end - 1));
 				
-				return std::make_pair(real_offset, SA_ASCII);
+				return std::make_pair(d_offset + BitOffset(real_offset, 0), SA_ASCII);
 			}
 		}
 		else if((mouse_x_px >= code_text_x && type_hint == SA_NONE) || type_hint == SA_SPECIAL)
@@ -643,16 +656,16 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			
 			if(mouse_x_px < code_text_x)
 			{
-				return std::make_pair(std::max<off_t>((instr.second->offset - 1), 0), SA_SPECIAL);
+				return std::make_pair(BitOffset(std::max<off_t>((instr.second->offset - 1), 0), 0), SA_SPECIAL);
 			}
 			
 			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.second->disasm.length())
 			{
-				return std::make_pair(instr.second->offset, SA_SPECIAL);
+				return std::make_pair(d_offset + BitOffset(instr.second->offset, 0), SA_SPECIAL);
 			}
 			else{
-				return std::make_pair((instr.second->offset + instr.second->length - 1), SA_SPECIAL);
+				return std::make_pair(d_offset + BitOffset((instr.second->offset + instr.second->length - 1), 0), SA_SPECIAL);
 			}
 		}
 		else if((mouse_x_px >= hex_text_x && type_hint == SA_NONE) || type_hint == SA_HEX)
@@ -672,23 +685,23 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(instr_end - 1));
 			}
 			
-			return std::make_pair(real_offset, SA_HEX);
+			return std::make_pair(d_offset + BitOffset(real_offset, 0), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	else{
 		/* Line isn't processed yet. */
 		
-		off_t up_base = unprocessed_offset();
+		off_t up_base = unprocessed_offset_rel();
 		off_t up_bytes_per_line = max_bytes_per_line();
 		
 		int64_t up_row = mouse_y_lines - processed_lines;
 		
 		off_t line_base = up_base + (up_row * up_bytes_per_line);
-		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_offset + d_length - 1));
+		off_t line_end  = std::min((line_base + up_bytes_per_line), (d_length.byte() - 1));
 		
 		if(doc_ctrl.get_show_ascii() && ((mouse_x_px >= ascii_text_x && type_hint == SA_NONE) || type_hint == SA_ASCII))
 		{
@@ -696,7 +709,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 			
 			if(mouse_x_px < ascii_text_x)
 			{
-				return std::make_pair(std::max<off_t>((line_base - 1), 0), SA_ASCII);
+				return std::make_pair(d_offset + BitOffset(std::max<off_t>((line_base - 1), 0), 0), SA_ASCII);
 			}
 			else{
 				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
@@ -705,7 +718,7 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(line_base + line_offset),
 					(line_end - 1));
 				
-				return std::make_pair(real_offset, SA_ASCII);
+				return std::make_pair(d_offset + BitOffset(real_offset, 0), SA_ASCII);
 			}
 		}
 		else if(mouse_x_px >= hex_text_x || type_hint == SA_HEX)
@@ -725,27 +738,29 @@ std::pair<off_t, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::Disa
 					(line_end - 1));
 			}
 			
-			return std::make_pair(real_offset, SA_HEX);
+			return std::make_pair(d_offset + BitOffset(real_offset, 0), SA_HEX);
 		}
 		else{
 			/* Mouse in offset area. */
-			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+			return std::make_pair(BitOffset::INVALID, SA_NONE);
 		}
 	}
 	
-	return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
+	return std::make_pair(BitOffset::INVALID, SA_NONE);
 }
 
-off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_left_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
-	if(active_type == SA_SPECIAL && pos < up_off)
+	off_t up_off = unprocessed_offset_rel();
+	
+	if(active_type == SA_SPECIAL && rel_pos < up_off)
 	{
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -754,13 +769,13 @@ off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_ty
 		
 		off_t this_instr_off = instr.second->offset;
 		
-		if(this_instr_off == d_offset)
+		if(this_instr_off == 0)
 		{
 			/* Already on first instruction in region. */
 			return CURSOR_PREV_REGION;
 		}
 		
-		auto prev_instr = instruction_by_offset(this_instr_off - 1);
+		auto prev_instr = instruction_by_rel_offset(this_instr_off - 1);
 		if(prev_instr.second == prev_instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -768,27 +783,29 @@ off_t REHex::DisassemblyRegion::cursor_left_from(off_t pos, ScreenArea active_ty
 		}
 		
 		off_t prev_instr_off = prev_instr.second->offset;
-		return prev_instr_off;
+		return d_offset + BitOffset(prev_instr_off, 0);
 	}
 	else if(pos > d_offset)
 	{
-		return pos - 1;
+		return pos - BitOffset(1, 0);
 	}
 	else{
 		return CURSOR_PREV_REGION;
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos, ScreenArea active_area)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_right_from(BitOffset pos, ScreenArea active_area, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
-	if(active_area == SA_SPECIAL && pos < up_off)
+	off_t up_off = unprocessed_offset_rel();
+	
+	if(active_area == SA_SPECIAL && rel_pos < up_off)
 	{
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -798,35 +815,36 @@ off_t REHex::DisassemblyRegion::cursor_right_from(off_t pos, ScreenArea active_a
 		off_t this_instr_off = instr.second->offset;
 		off_t next_instr_off = this_instr_off + instr.second->length;
 		
-		if(this_instr_off >= (d_offset + d_length))
+		if(this_instr_off >= d_length.byte())
 		{
 			/* Already on last instruction in region. */
 			return CURSOR_NEXT_REGION;
 		}
 		
-		return next_instr_off;
+		return d_offset + BitOffset(next_instr_off, 0);
 	}
-	else if((pos + 1) < (d_offset + d_length))
+	else if((pos + BitOffset(1, 0)) < (d_offset + d_length))
 	{
-		return pos + 1;
+		return pos + BitOffset(1, 0);
 	}
 	else{
 		return CURSOR_NEXT_REGION;
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_up_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
+	off_t up_off = unprocessed_offset_rel();
 	off_t up_bytes_per_line = max_bytes_per_line();
 	
-	if(pos < up_off)
+	if(rel_pos < up_off)
 	{
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -835,13 +853,13 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type
 		
 		off_t this_instr_off = instr.second->offset;
 		
-		if(this_instr_off == d_offset)
+		if(this_instr_off == 0)
 		{
 			/* Already on first line in region. */
 			return CURSOR_PREV_REGION;
 		}
 		
-		auto prev_instr = instruction_by_offset(this_instr_off - 1);
+		auto prev_instr = instruction_by_rel_offset(this_instr_off - 1);
 		if(prev_instr.second == prev_instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -851,20 +869,22 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type
 		off_t prev_instr_off = prev_instr.second->offset;
 		off_t prev_instr_len = prev_instr.second->length;
 		
-		return std::min(
-			(prev_instr_off + (pos - this_instr_off)),
+		off_t goto_off = std::min(
+			(prev_instr_off + (rel_pos - this_instr_off)),
 			(prev_instr_off + prev_instr_len - 1));
+		
+		return d_offset + BitOffset(goto_off, 0);
 	}
-	else if(pos < (up_off + up_bytes_per_line))
+	else if(rel_pos < (up_off + up_bytes_per_line))
 	{
 		/* Move from top of unprocessed data to last line of disassembly. */
 		
-		if(up_off == d_offset)
+		if(up_off == 0)
 		{
 			return CURSOR_PREV_REGION;
 		}
 		else{
-			auto instr = instruction_by_offset(up_off - 1);
+			auto instr = instruction_by_rel_offset(up_off - 1);
 			if(instr.second == instr.first.end())
 			{
 				/* Couldn't get instruction. */
@@ -873,12 +893,14 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type
 			
 			if(active_type == SA_SPECIAL)
 			{
-				return instr.second->offset;
+				return d_offset + BitOffset(instr.second->offset, 0);
 			}
 			else{
-				return std::min(
-					(instr.second->offset + (pos - up_off)),
+				off_t goto_off = std::min(
+					(instr.second->offset + (rel_pos - up_off)),
 					(instr.second->offset + instr.second->length - 1));
+				
+				return d_offset + BitOffset(goto_off, 0);
 			}
 		}
 	}
@@ -888,20 +910,21 @@ off_t REHex::DisassemblyRegion::cursor_up_from(off_t pos, ScreenArea active_type
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_down_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
+	off_t up_off = unprocessed_offset_rel();
 	off_t up_bytes_per_line = max_bytes_per_line();
 	
-	if(pos < up_off)
+	if(rel_pos < up_off)
 	{
 		/* Move down a line from within disassembly. */
 		
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -911,9 +934,7 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_ty
 		off_t this_instr_off = instr.second->offset;
 		off_t this_instr_len = instr.second->length;
 		
-		off_t up_off = unprocessed_offset();
-		
-		if((this_instr_off + this_instr_len) == (d_offset + d_length))
+		if((this_instr_off + this_instr_len) == d_length.byte())
 		{
 			/* Already on last line in region. */
 			return CURSOR_NEXT_REGION;
@@ -923,11 +944,11 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_ty
 			/* On last line in disassembly. */
 			
 			return std::min(
-				(up_off + (pos - this_instr_off)),
-				(d_offset + d_length - 1));
+				(d_offset + BitOffset((up_off + (rel_pos - this_instr_off)), 0)),
+				(d_offset + d_length - BitOffset(1, 0)));
 		}
 		
-		auto next_instr = instruction_by_offset(this_instr_off + this_instr_len);
+		auto next_instr = instruction_by_rel_offset(this_instr_off + this_instr_len);
 		if(next_instr.second == next_instr.first.end())
 		{
 			/* Couldn't get instruction. */
@@ -939,29 +960,31 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_ty
 		
 		if(active_type == SA_SPECIAL)
 		{
-			return next_instr_off;
+			return d_offset + BitOffset(next_instr_off, 0);
 		}
 		else{
-			return std::min(
-				(next_instr_off + (pos - this_instr_off)),
+			off_t goto_off = std::min(
+				(next_instr_off + (rel_pos - this_instr_off)),
 				(next_instr_off + next_instr_len - 1));
+			
+			return d_offset + BitOffset(goto_off, 0);
 		}
 	}
 	else{
 		/* Move down a line from within unprocessed data. */
-		off_t line_pos = (pos - up_off) % up_bytes_per_line;
-		off_t next_line_begin = (pos - line_pos) + up_bytes_per_line;
-		off_t next_line_pos = pos + up_bytes_per_line;
+		off_t line_pos = (rel_pos - up_off) % up_bytes_per_line;
+		off_t next_line_begin = (rel_pos - line_pos) + up_bytes_per_line;
+		off_t next_line_pos = rel_pos + up_bytes_per_line;
 		
-		if(next_line_pos < (d_offset + d_length))
+		if(next_line_pos < d_length.byte())
 		{
 			/* Move to same position in next line. */
-			return next_line_pos;
+			return d_offset + BitOffset(next_line_pos, 0);
 		}
-		else if(next_line_begin < (d_offset + d_length))
+		else if(next_line_begin < d_length.byte())
 		{
 			/* Move to end of next (last) line. */
-			return (d_offset + d_length - 1);
+			return (d_offset + d_length - BitOffset::BYTES(1));
 		}
 		else{
 			/* Move to next region. */
@@ -970,107 +993,112 @@ off_t REHex::DisassemblyRegion::cursor_down_from(off_t pos, ScreenArea active_ty
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_home_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_home_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
+	off_t up_off = unprocessed_offset_rel();
 	off_t up_bytes_per_line = max_bytes_per_line();
 	
-	if(pos < up_off)
+	if(rel_pos < up_off)
 	{
 		/* Move to start of line in disassembly. */
 		
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get Instruction. */
 			return pos;
 		}
 		
-		return instr.second->offset;
+		return d_offset + BitOffset(instr.second->offset, 0);
 	}
 	else{
 		/* Move to start of unprocessed line. */
-		off_t line_pos = (pos - up_off) % up_bytes_per_line;
-		return pos - line_pos;
+		off_t line_pos = (rel_pos - up_off) % up_bytes_per_line;
+		return d_offset + BitOffset(line_pos, 0);
 	}
 }
 
-off_t REHex::DisassemblyRegion::cursor_end_from(off_t pos, ScreenArea active_type)
+REHex::BitOffset REHex::DisassemblyRegion::cursor_end_from(BitOffset pos, ScreenArea active_type, DocumentCtrl *doc_ctrl)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
+	off_t up_off = unprocessed_offset_rel();
 	off_t up_bytes_per_line = max_bytes_per_line();
 	
-	if(pos < up_off)
+	if(rel_pos < up_off)
 	{
 		/* Move to end of line in disassembly. */
 		
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get Instruction. */
 			return pos;
 		}
 		
-		return instr.second->offset + instr.second->length - 1;
+		return d_offset + BitOffset((instr.second->offset + instr.second->length - 1), 0);
 	}
 	else{
 		/* Move to end of unprocessed line. */
-		off_t line_pos = (pos - up_off) % up_bytes_per_line;
+		off_t line_pos = (rel_pos - up_off) % up_bytes_per_line;
+		
 		return std::min(
-			((pos - line_pos) + (up_bytes_per_line - 1)),
+			((pos - BitOffset::BYTES(line_pos)) + BitOffset::BYTES(up_bytes_per_line - 1)),
 			(d_offset + d_length - 1));
 	}
 }
 
-int REHex::DisassemblyRegion::cursor_column(off_t pos)
+int REHex::DisassemblyRegion::cursor_column(BitOffset pos)
 {
 	assert(pos >= d_offset);
 	assert(pos <= (d_offset + d_length));
 	
-	off_t up_off = unprocessed_offset();
+	off_t rel_pos = (pos - d_offset).byte();
 	
-	if(pos < up_off)
+	off_t up_off = unprocessed_offset_rel();
+	
+	if(rel_pos < up_off)
 	{
 		/* Offset is within disassembled area. */
 		
-		auto instr = instruction_by_offset(pos);
+		auto instr = instruction_by_rel_offset(rel_pos);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. Fallback. */
 			return 0;
 		}
 		
-		assert(instr.second->offset <= pos);
-		assert((instr.second->offset + instr.second->length) > pos);
+		assert(instr.second->offset <= rel_pos);
+		assert((instr.second->offset + instr.second->length) > rel_pos);
 		
-		return pos - instr.second->offset;
+		return rel_pos - instr.second->offset;
 	}
 	else{
 		/* Offset is within not-yet-processed data. */
 		
-		return (pos - up_off) % max_bytes_per_line();
+		return rel_pos % max_bytes_per_line();
 	}
 }
 
-off_t REHex::DisassemblyRegion::first_row_nearest_column(int column)
+REHex::BitOffset REHex::DisassemblyRegion::first_row_nearest_column(int column)
 {
 	return nth_row_nearest_column(0, column);
 }
 
-off_t REHex::DisassemblyRegion::last_row_nearest_column(int column)
+REHex::BitOffset REHex::DisassemblyRegion::last_row_nearest_column(int column)
 {
 	return nth_row_nearest_column(y_lines, column);
 }
 
-off_t REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
+REHex::BitOffset REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
 {
 	int64_t processed_lines = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
 	
@@ -1085,43 +1113,49 @@ off_t REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, int column)
 			return d_offset;
 		}
 		
-		return std::min(
+		off_t goto_off = std::min(
 			(instr.second->offset + column),
 			(instr.second->offset + instr.second->length - 1));
+		
+		return d_offset + BitOffset(goto_off, 0);
 	}
 	else{
 		/* Line isn't processed yet. */
 		
-		off_t up_base = unprocessed_offset();
+		off_t up_base = unprocessed_offset_rel();
 		int64_t up_row = row - processed_lines;
 		
 		return std::min(
-			(up_base + (up_row * max_bytes_per_line()) + column),
+			d_offset + BitOffset((up_base + (up_row * max_bytes_per_line()) + column), 0),
 			(d_offset + d_length - 1));
 	}
 }
 
-REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t offset, DocumentCtrl *doc_ctrl)
+REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl)
 {
-	off_t up_off = unprocessed_offset();
+	assert(offset >= d_offset);
+	assert(offset <= (d_offset + d_length));
 	
+	off_t rel_offset = (offset - d_offset).byte();
+	
+	off_t up_off = unprocessed_offset_rel();
 	unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
 	
-	if(offset < up_off)
+	if(rel_offset < up_off)
 	{
 		/* Offset is within disassembly. */
 		
-		auto instr = instruction_by_offset(offset);
+		auto instr = instruction_by_rel_offset(rel_offset);
 		if(instr.second == instr.first.end())
 		{
 			/* Couldn't get instruction. Fallback. */
 			return DocumentCtrl::Rect(y_offset, y_lines, 1, 1);
 		}
 		
-		assert(instr.second->offset <= offset);
-		assert((instr.second->offset + instr.second->length) > offset);
+		assert(instr.second->offset <= rel_offset);
+		assert((instr.second->offset + instr.second->length) > rel_offset);
 		
-		off_t line_off = offset - instr.second->offset;
+		off_t line_off = rel_offset - instr.second->offset;
 		
 		if(doc_ctrl->hex_view_active())
 		{
@@ -1175,7 +1209,7 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 		
 		off_t up_bytes_per_line = max_bytes_per_line();
 		
-		off_t offset_within_up = offset - up_off;
+		off_t offset_within_up = rel_offset - up_off;
 		off_t line_off = offset_within_up % up_bytes_per_line;
 		
 		int64_t processed_lines = processed.empty() ? 0 : (processed.back().rel_y_offset + processed.back().y_lines);
@@ -1213,7 +1247,7 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(off_t off
 	}
 }
 
-REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::screen_areas_at_offset(off_t offset, DocumentCtrl *doc_ctrl)
+REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl)
 {
 	assert(offset >= d_offset);
 	assert(offset <= (d_offset + d_length));
@@ -1225,7 +1259,7 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::scr
 		areas = (ScreenArea)(areas | SA_ASCII);
 	}
 	
-	if(offset < unprocessed_offset())
+	if(offset < unprocessed_offset_abs())
 	{
 		areas = (ScreenArea)(areas | SA_SPECIAL);
 	}
@@ -1235,17 +1269,26 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DisassemblyRegion::scr
 
 wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 {
-	off_t selection_off, selection_last;
-	std::tie(selection_off, selection_last) = doc_ctrl.get_selection_raw();
+	BitOffset selection_off_, selection_last_;
+	std::tie(selection_off_, selection_last_) = doc_ctrl.get_selection_raw();
 	
-	assert(selection_off >= d_offset);
-	assert(selection_last < (d_offset + d_length));
+	assert(selection_off_ >= d_offset);
+	assert(selection_last_ < (d_offset + d_length));
+	
+	/* If selection isn't byte aligned within the region, skip. */
+	if((selection_off_ - d_offset).bit() != 0 || (selection_last_ - d_offset).bit() != 7)
+	{
+		return NULL;
+	}
+	
+	off_t selection_off = (selection_off_ - d_offset).byte();
+	off_t selection_last = (selection_last_ - d_offset).byte();
 	
 	if(doc_ctrl.special_view_active())
 	{
 		/* Copy disassembled instructions within selection. */
 		
-		auto instr_first = instruction_by_offset(selection_off);
+		auto instr_first = instruction_by_rel_offset(selection_off);
 		
 		const std::vector<Instruction> *instr_vec = &(instr_first.first);
 		std::vector<Instruction>::const_iterator instr = instr_first.second;
@@ -1275,7 +1318,7 @@ wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 			
 			if(instr == instr_vec->end())
 			{
-				auto next_instr = instruction_by_offset(next_off);
+				auto next_instr = instruction_by_rel_offset(next_off);
 				
 				instr_vec = &(next_instr.first);
 				instr = next_instr.second;
@@ -1295,20 +1338,25 @@ wxDataObject *REHex::DisassemblyRegion::OnCopy(DocumentCtrl &doc_ctrl)
 	return NULL;
 }
 
-off_t REHex::DisassemblyRegion::unprocessed_offset() const
+off_t REHex::DisassemblyRegion::unprocessed_offset_rel() const
 {
 	if(processed.empty())
 	{
-		return d_offset;
+		return 0;
 	}
 	else{
 		return processed.back().offset + processed.back().length;
 	}
 }
 
+REHex::BitOffset REHex::DisassemblyRegion::unprocessed_offset_abs() const
+{
+	return d_offset + BitOffset(unprocessed_offset_rel(), 0);
+}
+
 off_t REHex::DisassemblyRegion::unprocessed_bytes() const
 {
-	return d_length - (unprocessed_offset() - d_offset);
+	return d_length.byte() - unprocessed_offset_rel();
 }
 
 int64_t REHex::DisassemblyRegion::processed_lines() const
@@ -1329,10 +1377,10 @@ off_t REHex::DisassemblyRegion::max_bytes_per_line() const
 		: 8;
 }
 
-std::vector<REHex::DisassemblyRegion::InstructionRange>::const_iterator REHex::DisassemblyRegion::processed_by_offset(off_t abs_offset)
+std::vector<REHex::DisassemblyRegion::InstructionRange>::const_iterator REHex::DisassemblyRegion::processed_by_rel_offset(off_t rel_offset)
 {
 	InstructionRange ir_v;
-	ir_v.offset = abs_offset;
+	ir_v.offset = rel_offset;
 	
 	auto next_ir = std::upper_bound(processed.begin(), processed.end(), ir_v,
 		[](const InstructionRange &lhs, const InstructionRange &rhs)
@@ -1347,7 +1395,7 @@ std::vector<REHex::DisassemblyRegion::InstructionRange>::const_iterator REHex::D
 	
 	auto ir = std::prev(next_ir);
 	
-	if(ir->offset <= abs_offset && (ir->offset + ir->length) > abs_offset)
+	if(ir->offset <= rel_offset && (ir->offset + ir->length) > rel_offset)
 	{
 		return ir;
 	}
@@ -1383,13 +1431,13 @@ std::vector<REHex::DisassemblyRegion::InstructionRange>::const_iterator REHex::D
 	}
 }
 
-std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector<REHex::DisassemblyRegion::Instruction>::const_iterator> REHex::DisassemblyRegion::instruction_by_offset(off_t abs_offset)
+std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector<REHex::DisassemblyRegion::Instruction>::const_iterator> REHex::DisassemblyRegion::instruction_by_rel_offset(off_t rel_offset)
 {
 	static const std::vector<Instruction> EMPTY;
 	static const std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> EMPTY_END(EMPTY, EMPTY.end());
 	
 	Instruction i_v;
-	i_v.offset = abs_offset;
+	i_v.offset = rel_offset;
 	
 	auto next_i = std::upper_bound(instructions.begin(), instructions.end(), i_v,
 		[](const Instruction &lhs, const Instruction &rhs)
@@ -1401,7 +1449,7 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	{
 		auto i = std::prev(next_i);
 		
-		if(i->offset <= abs_offset && (i->offset + i->length) > abs_offset)
+		if(i->offset <= rel_offset && (i->offset + i->length) > rel_offset)
 		{
 			return std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator>(
 				instructions,
@@ -1409,7 +1457,7 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 		}
 	}
 	
-	auto ir = processed_by_offset(abs_offset);
+	auto ir = processed_by_rel_offset(rel_offset);
 	if(ir == processed.end())
 	{
 		return EMPTY_END;
@@ -1417,7 +1465,7 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	
 	std::vector<unsigned char> ir_data;
 	try {
-		ir_data = doc->read_data(ir->offset, ir->length);
+		ir_data = doc->read_data((d_offset + BitOffset(ir->offset, 0)), ir->length);
 	}
 	catch(const std::exception &e)
 	{
@@ -1427,9 +1475,16 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	
 	std::vector<Instruction> new_instructions;
 	
+	/* I don't know if this is a bug in Capstone, or some horribleness in x86 instruction
+	 * encoding, but some instructions in my testing disassemble (slightly) differently if I
+	 * give the disassembler the address where the instruction was in the original executable
+	 * vs. relative to the start of the region, so we try to give it a file-relative address.
+	*/
+	off_t disasm_base_addr = d_offset.byte();
+	
 	const uint8_t* code_ = static_cast<const uint8_t*>(ir_data.data());
 	size_t code_size = ir_data.size();
-	uint64_t address = ir->offset;
+	uint64_t address = disasm_base_addr + ir->offset;
 	cs_insn* insn = cs_malloc(disassembler);
 	
 	/* NOTE: @code, @code_size & @address variables are all updated! */
@@ -1448,7 +1503,7 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 		
 		std::string disasm_buf = std::string(insn->mnemonic) + std::string(space_count, ' ') + insn->op_str;
 		
-		inst.offset       = insn->address;
+		inst.offset       = insn->address - disasm_base_addr;
 		inst.length       = insn->size;
 		inst.data         = std::vector<unsigned char>((unsigned char*)(code_ - insn->size), (unsigned char*)(code_));
 		inst.disasm       = disasm_buf;
@@ -1476,7 +1531,7 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	
 	instructions.insert(next_i, new_instructions.begin(), new_instructions.end());
 	
-	return instruction_by_offset(abs_offset);
+	return instruction_by_rel_offset(rel_offset);
 }
 
 std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector<REHex::DisassemblyRegion::Instruction>::const_iterator> REHex::DisassemblyRegion::instruction_by_line(int64_t rel_line)
@@ -1494,7 +1549,7 @@ std::pair<const std::vector<REHex::DisassemblyRegion::Instruction>&, std::vector
 	assert(line_within_ir >= 0);
 	assert(line_within_ir < (ir->rel_y_offset + ir->y_lines));
 	
-	auto ir_first_i = instruction_by_offset(ir->offset);
+	auto ir_first_i = instruction_by_rel_offset(ir->offset);
 	if(ir_first_i.second == ir_first_i.first.end())
 	{
 		return EMPTY_END;

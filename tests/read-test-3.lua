@@ -1,7 +1,7 @@
 rehex.OnTabCreated(function(window, tab)
 	local doc = tab.doc
 	
-	local data = doc:read_data(0, 128)
+	local data = doc:read_data(rehex.BitOffset(0, 0), 128)
 	local len = string.len(data)
 	
 	for i = 1, len

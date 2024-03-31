@@ -131,9 +131,10 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 	range_sizer:Add(range_cursor)
 	
 	local selection_off, selection_length = tab:get_selection_linear()
-	if selection_off ~= nil
+	if selection_off ~= nil and selection_length:byte_aligned()
 	then
 		range_sel:SetValue(true)
+		selection_length = selection_length:byte()
 	else
 		range_sel:Disable()
 		range_file:SetValue(true)
@@ -173,27 +174,27 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		if range_file:GetValue()
 		then
-			selection_off = 0
+			selection_off = rehex.BitOffset(0, 0)
 			selection_length = doc:buffer_length()
 		elseif range_cursor:GetValue()
 		then
 			selection_off = doc:get_cursor_position()
-			selection_length = doc:buffer_length() - selection_off
+			selection_length = (rehex.BitOffset(doc:buffer_length(), 0) - selection_off):byte()
 		end
 		
 		local yield_counter = 0
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
-				doc:set_data_type(selection_off + offset, length, data_type)
+				doc:set_data_type(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), data_type)
 			end,
 			
 			set_comment = function(offset, length, text)
-				doc:set_comment(selection_off + offset, length, rehex.Comment.new(text))
+				doc:set_comment(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), rehex.Comment.new(text))
 			end,
 			
 			read_data = function(offset, length)
-				return doc:read_data(selection_off + offset, length)
+				return doc:read_data(selection_off + rehex.BitOffset(offset, 0), length)
 			end,
 			
 			file_length = function()

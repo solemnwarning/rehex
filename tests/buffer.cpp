@@ -38,38 +38,6 @@
 #define TMPFILE  "tests/.tmpfile"
 #define TMPFILE2 "tests/.tmpfile2"
 
-static void write_file(const char *filename, const std::vector<unsigned char>& data)
-{
-	FILE *fh = fopen(filename, "wb");
-	assert(fh);	// Ensure the 'tests' directory can be accessed when hitting this
-	
-	if(data.size() > 0)
-		assert(fwrite(data.data(), data.size(), 1, fh) == 1);
-	
-	fclose(fh);
-}
-
-static std::vector<unsigned char> read_file(const char *filename)
-{
-	FILE *fh = fopen(filename, "rb");
-	assert(fh);
-	
-	std::vector<unsigned char> data;
-	
-	unsigned char buf[1024];
-	size_t len;
-	while((len = fread(buf, 1, sizeof(buf), fh)) > 0)
-	{
-		data.insert(data.end(), buf, buf + len);
-	}
-	
-	assert(!ferror(fh));
-	
-	fclose(fh);
-	
-	return data;
-}
-
 #define TEST_BUFFER_MANIP(buffer_manip_code) \
 { \
 	write_file(TMPFILE, BEGIN_DATA); \

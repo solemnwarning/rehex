@@ -20,9 +20,14 @@
 
 #include <functional>
 #include <jansson.h>
+#include <string>
+#include <vector>
 
 void run_wx_for(unsigned int ms);
 bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms = 10000, unsigned int check_interval_ms = 100);
+
+void write_file(const std::string &filename, const std::vector<unsigned char>& data);
+std::vector<unsigned char> read_file(const std::string &filename);
 
 class TempFilename
 {

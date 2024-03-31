@@ -60,7 +60,7 @@ class %delete REHex::MainWindow::SetupHookRegistration
 class %delete REHex::BitOffset
 {
 	REHex::BitOffset();
-	REHex::BitOffset(off_t byte, int bit = 0);
+	REHex::BitOffset(off_t byte, int bit);
 	
 	off_t byte() const;
 	int bit() const;
@@ -103,11 +103,14 @@ class REHex::Document: public wxEvtHandler
 	wxString get_title();
 	wxString get_filename();
 	
+	wxString read_data(REHex::BitOffset offset, off_t max_length) const;
 	wxString read_data(off_t offset, off_t max_length) const;
 	off_t buffer_length();
 	
 	LuaTable get_comments() const;
+	bool set_comment(REHex::BitOffset offset, REHex::BitOffset length, const REHex::Document::Comment &comment);
 	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
+	bool set_data_type(REHex::BitOffset offset, REHex::BitOffset length, const wxString &type);
 	bool set_data_type(off_t offset, off_t length, const wxString &type);
 	
 	bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
@@ -120,7 +123,7 @@ class REHex::Document: public wxEvtHandler
 	off_t real_to_virt_offset(off_t real_offset) const;
 	off_t virt_to_real_offset(off_t virt_offset) const;
 	
-	off_t get_cursor_position() const;
+	REHex::BitOffset get_cursor_position() const;
 	
 	void transact_begin(const wxString &desc);
 	void transact_commit();

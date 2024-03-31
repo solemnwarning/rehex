@@ -77,6 +77,54 @@ bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_m
 	return predicate_returned_true;
 }
 
+void write_file(const std::string &filename, const std::vector<unsigned char>& data)
+{
+	FILE *fh = fopen(filename.c_str(), "wb");
+	if(!fh)
+	{
+		throw std::runtime_error(std::string("Unable to open file ") + filename);
+	}
+	
+	if(data.size() > 0)
+	{
+		if(fwrite(data.data(), data.size(), 1, fh) != 1)
+		{
+			fclose(fh);
+			throw std::runtime_error(std::string("Unable to write to file ") + filename);
+		}
+	}
+	
+	fclose(fh);
+}
+
+std::vector<unsigned char> read_file(const std::string &filename)
+{
+	FILE *fh = fopen(filename.c_str(), "rb");
+	if(!fh)
+	{
+		throw std::runtime_error("Unable to open file " + filename);
+	}
+	
+	std::vector<unsigned char> data;
+	
+	unsigned char buf[1024];
+	size_t len;
+	while((len = fread(buf, 1, sizeof(buf), fh)) > 0)
+	{
+		data.insert(data.end(), buf, buf + len);
+	}
+	
+	if(ferror(fh))
+	{
+		fclose(fh);
+		throw std::runtime_error("Unable to read file " + filename);
+	}
+	
+	fclose(fh);
+	
+	return data;
+}
+
 TempFilename::TempFilename()
 {
 	if(tmpnam(tmpfile) == NULL)

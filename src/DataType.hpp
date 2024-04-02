@@ -239,7 +239,7 @@ namespace REHex
 			 * Calling this method on a non-configurable data type will throw a
 			 * std::logic_error exception.
 			*/
-			virtual json_t *configure(wxWindow *parent) = 0;
+			virtual json_t *configure(wxWindow *parent) const = 0;
 	};
 	
 	/**
@@ -263,7 +263,7 @@ namespace REHex
 			
 			virtual std::shared_ptr<const DataType> get_type(const json_t *options) const override;
 			virtual bool configurable() const override;
-			virtual json_t *configure(wxWindow *parent) override;
+			virtual json_t *configure(wxWindow *parent) const override;
 	};
 	
 	typedef std::function<json_t*(wxWindow*)> DynamicDataTypeConfigurator;
@@ -306,7 +306,7 @@ namespace REHex
 			
 			virtual std::shared_ptr<const DataType> get_type(const json_t *options) const override;
 			virtual bool configurable() const override;
-			virtual json_t *configure(wxWindow *parent) override;
+			virtual json_t *configure(wxWindow *parent) const override;
 	};
 }
 

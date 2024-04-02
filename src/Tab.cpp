@@ -1252,18 +1252,15 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		{
 			const DataTypeRegistration *dtr = *dti;
 			
-			if(dtr->configurable())
+			if(!dtr->configurable())
 			{
-				/* TODO: Support configurable types. */
-				continue;
-			}
-			
-			auto dt = dtr->get_type(NULL);
-			
-			if((selection_length % dt->word_size) != BitOffset::ZERO)
-			{
-				/* Selection is too short/long for this type. */
-				continue;
+				auto dt = dtr->get_type(NULL);
+				
+				if((selection_length % dt->word_size) != BitOffset::ZERO)
+				{
+					/* Selection is too short/long for this type. */
+					continue;
+				}
 			}
 			
 			wxMenu *group_menu = dtmenu;
@@ -1306,7 +1303,19 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			group_menu->Bind(wxEVT_MENU, [this, dtr, selection_off, selection_length](wxCommandEvent &event)
 			#endif
 			{
-				doc->set_data_type(selection_off, selection_length, dtr->name);
+				if(dtr->configurable())
+				{
+					json_t *dt_config = dtr->configure(this);
+					
+					if(dt_config != NULL)
+					{
+						doc->set_data_type(selection_off, selection_length, dtr->name, dt_config);
+						json_decref(dt_config);
+					}
+				}
+				else{
+					doc->set_data_type(selection_off, selection_length, dtr->name);
+				}
 			}, itm->GetId(), itm->GetId());
 		}
 		

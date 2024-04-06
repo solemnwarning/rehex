@@ -24,6 +24,7 @@
 
 #include "DataType.hpp"
 #include "DocumentCtrl.hpp"
+#include "FixedSizeValueRegion.hpp"
 
 namespace REHex
 {
@@ -77,6 +78,11 @@ namespace REHex
 			size_t get_bits() const;
 			
 			/**
+			 * @brief Get the human-readable description of this type.
+			*/
+			std::string get_description() const;
+			
+			/**
 			 * @brief Get a DataType for this CustomNumericType.
 			*/
 			DataType get_DataType() const;
@@ -116,6 +122,19 @@ namespace REHex
 			void OnSizeChange(wxSpinEvent &event);
 			
 		DECLARE_EVENT_TABLE()
+	};
+	
+	class CustomNumericTypeRegion: public FixedSizeValueRegion
+	{
+		private:
+			CustomNumericType type;
+			
+		public:
+			CustomNumericTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const CustomNumericType &type);
+			
+		protected:
+			virtual std::string load_value() const override;
+			virtual bool store_value(const std::string &value) override;
 	};
 };
 

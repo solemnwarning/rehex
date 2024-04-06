@@ -138,13 +138,20 @@ size_t REHex::CustomNumericType::get_bits() const
 	return bits;
 }
 
+std::string REHex::CustomNumericType::get_description() const
+{
+	return std::to_string(bits) + " bits, unsigned int, " + (endianness == Endianness::BIG ? "big endian" : "little endian");
+}
+
 REHex::DataType REHex::CustomNumericType::get_DataType() const
 {
+	CustomNumericType type = *this;
+	
 	return DataType()
 		.WithWordSize(BitOffset::from_int64(bits))
-		.WithFixedSizeRegion([](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
+		.WithFixedSizeRegion([type](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
 		{
-			return new DocumentCtrl::DataRegion(doc, offset, length, virt_offset);
+			return new CustomNumericTypeRegion(doc, offset, length, virt_offset, type);
 		}, REHex::BitOffset((bits / 8), (bits % 8)));
 }
 
@@ -337,4 +344,34 @@ json_t *REHex::CustomNumericTypeDialog::get_options() const
 void REHex::CustomNumericTypeDialog::OnSizeChange(wxSpinEvent &event)
 {
 	endianness_choice->Enable((event.GetPosition() % 8) == 0);
+}
+
+REHex::CustomNumericTypeRegion::CustomNumericTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const CustomNumericType &type):
+	FixedSizeValueRegion(doc, offset, length, virt_offset, type.get_description()),
+	type(type) {}
+
+std::string REHex::CustomNumericTypeRegion::load_value() const
+{
+	std::vector<bool> data = doc->read_bits(d_offset, type.get_bits());
+	if(data.size() != type.get_bits())
+	{
+		throw std::runtime_error("Unexpected end of file");
+	}
+	
+	return type.format_value(data);
+}
+
+bool REHex::CustomNumericTypeRegion::store_value(const std::string &value)
+{
+	std::vector<bool> data;
+	try {
+		data = type.parse_value(value);
+	}
+	catch(const std::invalid_argument &e)
+	{
+		return false;
+	}
+	
+	doc->overwrite_bits(d_offset, data);
+	return true;
 }

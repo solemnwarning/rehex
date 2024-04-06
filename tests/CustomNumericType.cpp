@@ -18,6 +18,8 @@
 #include "../src/platform.hpp"
 #include <gtest/gtest.h>
 
+#include "testutil.hpp"
+
 #include "../src/CustomNumericType.hpp"
 
 using namespace REHex;
@@ -662,4 +664,87 @@ TEST(CustomNumericType, ParseUnsigned64Bit)
 	EXPECT_THROW({ u64le.parse_value("cheese"); }, std::invalid_argument);
 	EXPECT_THROW({ u64le.parse_value("-1"); }, std::invalid_argument);
 	EXPECT_THROW({ u64le.parse_value("18446744073709551616"); }, std::invalid_argument);
+}
+
+TEST(CustomNumericType, DeserialiseLittleEndianUnsigned)
+{
+	CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"LITTLE\", \"bits\": 24 }").json);
+	
+	EXPECT_EQ(type.get_base_type(), CustomNumericType::BaseType::UNSIGNED_INT);
+	EXPECT_EQ(type.get_endianness(), CustomNumericType::Endianness::LITTLE);
+	EXPECT_EQ(type.get_bits(), 24U);
+}
+
+TEST(CustomNumericType, DeserialiseBigEndianUnsigned)
+{
+	CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 24 }").json);
+	
+	EXPECT_EQ(type.get_base_type(), CustomNumericType::BaseType::UNSIGNED_INT);
+	EXPECT_EQ(type.get_endianness(), CustomNumericType::Endianness::BIG);
+	EXPECT_EQ(type.get_bits(), 24U);
+}
+
+TEST(CustomNumericType, DeserialiseLittleEndianUnsignedOddSize)
+{
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"LITTLE\", \"bits\": 14 }").json);
+	}, std::invalid_argument);
+}
+
+TEST(CustomNumericType, DeserialiseBigEndianUnsignedOddSize)
+{
+	CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 14 }").json);
+	
+	EXPECT_EQ(type.get_base_type(), CustomNumericType::BaseType::UNSIGNED_INT);
+	EXPECT_EQ(type.get_endianness(), CustomNumericType::Endianness::BIG);
+	EXPECT_EQ(type.get_bits(), 14U);
+}
+
+TEST(CustomNumericType, DeserialiseInvalidBaseType)
+{
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"STEVE\", \"endianness\": \"LITTLE\", \"bits\": 24 }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": [], \"endianness\": \"LITTLE\", \"bits\": 24 }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"endianness\": \"LITTLE\", \"bits\": 24 }").json);
+	}, std::invalid_argument);
+}
+
+TEST(CustomNumericType, DeserialiseInvalidEndian)
+{
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"LITTLE2\", \"bits\": 24 }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": [], \"bits\": 24 }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"bits\": 24 }").json);
+	}, std::invalid_argument);
+}
+
+TEST(CustomNumericType, DeserialiseInvalidBits)
+{
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 0 }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 65 }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": [] }").json);
+	}, std::invalid_argument);
+	
+	EXPECT_THROW({
+		CustomNumericType type(AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\" }").json);
+	}, std::invalid_argument);
 }

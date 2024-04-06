@@ -377,6 +377,7 @@ APP_OBJS := \
 	src/Events.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
+	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
 	src/IPC.$(BUILD_TYPE).o \
@@ -467,6 +468,7 @@ TEST_OBJS := \
 	src/Events.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
+	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
 	src/LicenseDialog.$(BUILD_TYPE).o \

@@ -1289,7 +1289,11 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				group_menus.erase(std::next(group_menus.begin(), dtr->groups.size()), group_menus.end());
 			}
 			
-			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, dtr->label);
+			std::string itm_label = dtr->configurable()
+				? dtr->label + "..."
+				: dtr->label;
+			
+			wxMenuItem *itm = group_menu->AppendCheckItem(wxID_ANY, itm_label);
 			
 			if((selection_off_type->first.offset + selection_off_type->first.length) >= (selection_off + selection_length)
 				&& selection_off_type->second.name == dtr->name)

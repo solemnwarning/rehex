@@ -38,15 +38,21 @@
 	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
-	std::string REHex::NAME::to_string(const T *data) const \
+	std::string REHex::NAME::load_value() const \
 	{ \
+		std::vector<unsigned char> data_buf = doc->read_data(d_offset, d_length.byte()); \
+		if(data_buf.size() != (size_t)(d_length.byte())) \
+		{ \
+			throw std::runtime_error("Unexpected end of file"); \
+		} \
+		const T *data = (T*)(data_buf.data()); \
 		char buf[128]; \
 		snprintf(buf, sizeof(buf), FMT, (T)(XTOH(*data))); \
 		\
 		return std::string(buf); \
 	} \
 	\
-	bool REHex::NAME::write_string_value(const std::string &value) \
+	bool REHex::NAME::store_value(const std::string &value) \
 	{ \
 		T buf; \
 		try { \
@@ -172,15 +178,21 @@ static REHex::StaticDataTypeRegistration s64be_dtr(
 	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
-	std::string REHex::NAME::to_string(const T *data) const \
+	std::string REHex::NAME::load_value() const \
 	{ \
+		std::vector<unsigned char> data_buf = doc->read_data(d_offset, d_length.byte()); \
+		if(data_buf.size() != (size_t)(d_length.byte())) \
+		{ \
+			throw std::runtime_error("Unexpected end of file"); \
+		} \
+		const T *data = (T*)(data_buf.data()); \
 		char buf[128]; \
 		snprintf(buf, sizeof(buf), FMT, XTOH<T>(*data)); \
 		\
 		return std::string(buf); \
 	} \
 	\
-	bool REHex::NAME::write_string_value(const std::string &value) \
+	bool REHex::NAME::store_value(const std::string &value) \
 	{ \
 		if(value.length() == 0) \
 		{ \
@@ -229,15 +241,21 @@ static REHex::StaticDataTypeRegistration f32be_dtr(
 	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
 		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
 	\
-	std::string REHex::NAME::to_string(const T *data) const \
+	std::string REHex::NAME::load_value() const \
 	{ \
+		std::vector<unsigned char> data_buf = doc->read_data(d_offset, d_length.byte()); \
+		if(data_buf.size() != (size_t)(d_length.byte())) \
+		{ \
+			throw std::runtime_error("Unexpected end of file"); \
+		} \
+		const T *data = (T*)(data_buf.data()); \
 		char buf[128]; \
 		snprintf(buf, sizeof(buf), FMT, XTOH<T>(*data)); \
 		\
 		return std::string(buf); \
 	} \
 	\
-	bool REHex::NAME::write_string_value(const std::string &value) \
+	bool REHex::NAME::store_value(const std::string &value) \
 	{ \
 		if(value.length() == 0) \
 		{ \

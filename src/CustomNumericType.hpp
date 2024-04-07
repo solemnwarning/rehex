@@ -34,6 +34,7 @@ namespace REHex
 			enum class BaseType
 			{
 				UNSIGNED_INT,
+				SIGNED_INT,
 			};
 			
 			enum class Endianness

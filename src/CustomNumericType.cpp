@@ -87,6 +87,10 @@ REHex::CustomNumericType::CustomNumericType(const json_t *options)
 	{
 		base_type_value = BaseType::UNSIGNED_INT;
 	}
+	else if(strcmp(base_type_string, "SIGNED_INT") == 0)
+	{
+		base_type_value = BaseType::SIGNED_INT;
+	}
 	else{
 		throw std::invalid_argument(std::string("Invalid \"base-type\" option (") + base_type_string + ")");
 	}
@@ -159,46 +163,68 @@ std::string REHex::CustomNumericType::format_value(const std::vector<bool> &data
 {
 	assert(data.size() == bits);
 	
+	std::vector<bool> swapped_data;
+	
+	switch(endianness)
+	{
+		case Endianness::BIG:
+		{
+			swapped_data = data;
+			break;
+		}
+		
+		case Endianness::LITTLE:
+		{
+			assert((bits % 8) == 0);
+			
+			swapped_data.reserve(bits);
+			
+			for(int i = bits - 8; i >= 0; i -= 8)
+			{
+				swapped_data.insert(swapped_data.end(),
+					(data.begin() + i), (data.begin() + i + 8));
+			}
+			
+			break;
+		}
+	}
+	
 	switch(base_type)
 	{
 		case BaseType::UNSIGNED_INT:
 		{
 			uint64_t value = 0;
 			
-			for(auto b = data.begin(); b != data.end(); ++b)
+			for(auto b = swapped_data.begin(); b != swapped_data.end(); ++b)
 			{
 				value <<= 1;
 				value |= *b;
 			}
 			
-			if(endianness == Endianness::LITTLE)
-			{
-				assert((bits % 8) == 0);
-				
-				uint64_t swapped = 0;
-				
-				int shift = bits - 8;
-				uint64_t vmask = 0xFFULL << shift;
-				
-				for(size_t i = 0; i < (bits / 8); ++i)
-				{
-					if(shift >= 0)
-					{
-						swapped |= (value & vmask) >> shift;
-					}
-					else{
-						swapped |= (value & vmask) << -shift;
-					}
-					
-					vmask >>= 8;
-					shift -= 16;
-				}
-				
-				value = swapped;
-			}
-			
 			return std::to_string(value);
 		}
+		
+		case BaseType::SIGNED_INT:
+			int64_t value = 0;
+			
+			for(auto b = swapped_data.rbegin(); b != swapped_data.rend(); ++b)
+			{
+				int64_t high_bit = 1LL << 63;
+				
+				value >>= 1;
+				
+				if(*b)
+				{
+					value |= high_bit;
+				}
+				else{
+					value &= ~high_bit;
+				}
+			}
+			
+			value >>= 64 - swapped_data.size();
+			
+			return std::to_string(value);
 	}
 	
 	abort(); /* Unreachable */
@@ -233,22 +259,53 @@ std::vector<bool> REHex::CustomNumericType::parse_value(const std::string &value
 				data.insert(data.begin(), (value_u & (1ULL << i)) != 0);
 			}
 			
-			if(endianness == Endianness::LITTLE)
-			{
-				assert((bits % 8) == 0);
-				
-				std::vector<bool> swapped;
-				swapped.reserve(bits);
-				
-				for(int i = bits - 8; i >= 0; i -= 8)
-				{
-					swapped.insert(swapped.end(),
-						(data.begin() + i), (data.begin() + i + 8));
-				}
-				
-				data = swapped;
-			}
+			break;
 		}
+		
+		case BaseType::SIGNED_INT:
+		{
+			assert(bits <= 64);
+			
+			int64_t value_min = bits < 64
+				? -(1LL << (bits - 1))
+				: std::numeric_limits<int64_t>::min();
+			
+			int64_t value_max = bits < 64
+				? (1LL << (bits - 1)) - 1
+				: std::numeric_limits<int64_t>::max();
+			
+			int64_t value_s;
+			try {
+				value_s = NumericTextCtrl::ParseValue<int64_t>(value, value_min, value_max);
+			}
+			catch(const NumericTextCtrl::InputError &e)
+			{
+				throw std::invalid_argument(e.what());
+			}
+			
+			for(size_t i = 0; i < bits; ++i)
+			{
+				data.insert(data.begin(), (value_s & (1LL << i)) != 0);
+			}
+			
+			break;
+		}
+	}
+	
+	if(endianness == Endianness::LITTLE)
+	{
+		assert((bits % 8) == 0);
+		
+		std::vector<bool> swapped;
+		swapped.reserve(bits);
+		
+		for(int i = bits - 8; i >= 0; i -= 8)
+		{
+			swapped.insert(swapped.end(),
+				(data.begin() + i), (data.begin() + i + 8));
+		}
+		
+		data = swapped;
 	}
 	
 	return data;
@@ -274,6 +331,7 @@ REHex::CustomNumericTypeDialog::CustomNumericTypeDialog(wxWindow *parent):
 	grid_sizer->Add(base_type_choice, 0, wxALIGN_CENTER_VERTICAL);
 	
 	base_type_choice->Append("Unsigned integer");
+	base_type_choice->Append("Signed integer");
 	base_type_choice->SetSelection(0);
 	
 	grid_sizer->Add(new wxStaticText(this, wxID_ANY, "Endianness:"), 0, wxALIGN_CENTER_VERTICAL);
@@ -318,6 +376,7 @@ json_t *REHex::CustomNumericTypeDialog::get_options() const
 	
 	static const char *BASE_TYPE_STRINGS[] = {
 		"UNSIGNED_INT",
+		"SIGNED_INT",
 	};
 	
 	static const char *ENDIANNESS_STRINGS[] = {

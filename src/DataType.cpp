@@ -206,7 +206,7 @@ bool REHex::StaticDataTypeRegistration::configurable() const
 	return false;
 }
 
-json_t *REHex::StaticDataTypeRegistration::configure(wxWindow *parent)
+json_t *REHex::StaticDataTypeRegistration::configure(wxWindow *parent) const
 {
 	throw std::logic_error("Attempt to configure a static data type");
 }
@@ -235,7 +235,7 @@ bool REHex::ConfigurableDataTypeRegistration::configurable() const
 	return true;
 }
 
-json_t *REHex::ConfigurableDataTypeRegistration::configure(wxWindow *parent)
+json_t *REHex::ConfigurableDataTypeRegistration::configure(wxWindow *parent) const
 {
 	return m_configurator(parent);
 }

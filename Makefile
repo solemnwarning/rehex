@@ -394,6 +394,7 @@ APP_OBJS := \
 	src/RangeDialog.$(BUILD_TYPE).o \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
+	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
@@ -483,6 +484,7 @@ TEST_OBJS := \
 	src/RangeDialog.$(BUILD_TYPE).o \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
+	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \

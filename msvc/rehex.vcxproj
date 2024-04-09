@@ -473,6 +473,7 @@
     <ClCompile Include="..\src\RangeDialog.cpp" />
     <ClCompile Include="..\src\RangeProcessor.cpp" />
     <ClCompile Include="..\src\search.cpp" />
+    <ClCompile Include="..\src\SettingsDialog.cpp" />
     <ClCompile Include="..\src\StringPanel.cpp" />
     <ClCompile Include="..\src\Tab.cpp" />
     <ClCompile Include="..\src\textentrydialog.cpp" />

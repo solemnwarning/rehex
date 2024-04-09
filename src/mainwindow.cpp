@@ -18,6 +18,7 @@
 #include "platform.hpp"
 #include <exception>
 #include <limits>
+#include <memory>
 #include <new>
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
@@ -42,6 +43,7 @@
 #include "Palette.hpp"
 #include "RangeDialog.hpp"
 #include "search.hpp"
+#include "SettingsDialog.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
@@ -149,6 +151,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_COMPARE_FILE,  REHex::MainWindow::OnCompareFile)
 	
 	EVT_MENU(ID_GOTO_OFFSET, REHex::MainWindow::OnGotoOffset)
+	
+	EVT_MENU(wxID_PREFERENCES, REHex::MainWindow::OnSettings)
 	
 	EVT_MENU(wxID_CUT,   REHex::MainWindow::OnCut)
 	EVT_MENU(wxID_COPY,  REHex::MainWindow::OnCopy)
@@ -311,6 +315,10 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		edit_menu->AppendSeparator(); /* ---- */
 		
 		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...\tCtrl-G");
+		
+		edit_menu->AppendSeparator(); /* ---- */
+		
+		edit_menu->Append(wxID_PREFERENCES, "Preferences");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
@@ -1482,6 +1490,15 @@ void REHex::MainWindow::OnWriteProtect(wxCommandEvent &event)
 	}
 	
 	doc->set_write_protect(event.IsChecked());
+}
+
+void REHex::MainWindow::OnSettings(wxCommandEvent &event)
+{
+	std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+	
+	SettingsDialog dialog(this, std::move(panels));
+	
+	dialog.ShowModal();
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)

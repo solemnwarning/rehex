@@ -113,6 +113,7 @@ namespace REHex {
 			void OnFillRange(wxCommandEvent &event);
 			void OnOverwriteMode(wxCommandEvent &event);
 			void OnWriteProtect(wxCommandEvent &event);
+			void OnSettings(wxCommandEvent &event);
 			
 			void OnSetBytesPerLine(wxCommandEvent &event);
 			void OnSetBytesPerGroup(wxCommandEvent &event);

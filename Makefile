@@ -378,6 +378,7 @@ APP_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
 	src/IPC.$(BUILD_TYPE).o \
@@ -469,6 +470,7 @@ TEST_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
 	src/LicenseDialog.$(BUILD_TYPE).o \
@@ -511,6 +513,7 @@ TEST_OBJS := \
 	tests/endian_conv.o \
 	tests/FastRectangleFiller.o \
 	tests/FileWriter.o \
+	tests/HSVColour.o \
 	tests/IntelHexExport.o \
 	tests/IntelHexImport.o \
 	tests/LuaPluginLoader.o \

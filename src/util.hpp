@@ -18,6 +18,7 @@
 #ifndef REHEX_UTIL_HPP
 #define REHEX_UTIL_HPP
 
+#include <jansson.h>
 #include <iterator>
 #include <stdexcept>
 #include <string>
@@ -305,6 +306,12 @@ namespace REHex {
 	 * @brief Specialisation of add_clamp_overflow<T>() for BitOffset.
 	*/
 	template<> BitOffset add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow);
+	
+	json_t *colour_to_json(const wxColour &colour);
+	wxColour colour_from_json(const json_t *json);
+	
+	std::string colour_to_string(const wxColour &colour);
+	wxColour colour_from_string(const std::string &s);
 }
 
 #endif /* !REHEX_UTIL_HPP */

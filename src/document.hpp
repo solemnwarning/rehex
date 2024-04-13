@@ -235,7 +235,7 @@ namespace REHex {
 			 *
 			 * @param off                   Offset of byte range.
 			 * @param length                Length of byte range.
-			 * @param highlight_colour_idx  Highlight colour index (0 .. Palette::NUM_HIGHLIGHT_COLOURS - 1).
+			 * @param highlight_colour_idx  Highlight colour index (0 .. HighlightColourMap::MAX_NUM - 1).
 			 *
 			 * Returns true on success, false if off and/or length is beyond the
 			 * current size of the file, or the range is straddling the end of another

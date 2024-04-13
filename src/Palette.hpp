@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,8 +28,6 @@ namespace REHex {
 	class Palette
 	{
 		public:
-			static const int NUM_HIGHLIGHT_COLOURS = 6;
-			
 			enum ColourIndex
 			{
 				PAL_NORMAL_TEXT_BG,
@@ -43,12 +41,6 @@ namespace REHex {
 				PAL_SECONDARY_SELECTED_TEXT_FG,
 				PAL_DIRTY_TEXT_BG,
 				PAL_DIRTY_TEXT_FG,
-				
-				PAL_HIGHLIGHT_TEXT_MIN_BG,
-				PAL_HIGHLIGHT_TEXT_MIN_FG,
-				PAL_HIGHLIGHT_TEXT_MAX_BG = (PAL_HIGHLIGHT_TEXT_MIN_BG + (NUM_HIGHLIGHT_COLOURS - 1) * 2),
-				PAL_HIGHLIGHT_TEXT_MAX_FG = (PAL_HIGHLIGHT_TEXT_MIN_FG + (NUM_HIGHLIGHT_COLOURS - 1) * 2),
-				
 				PAL_COMMENT_BG,
 				PAL_COMMENT_FG,
 				
@@ -81,28 +73,15 @@ namespace REHex {
 			 *
 			 * @param highlight_idx Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
 			*/
-			const wxColour &get_highlight_bg(int highlight_idx) const;
+			const wxColour get_highlight_bg(int highlight_idx) const;
 			
 			/**
 			 * @brief Get the foreground colour for the given text highlight colour.
 			 *
 			 * @param highlight_idx Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
 			*/
-			const wxColour &get_highlight_fg(int highlight_idx) const;
+			const wxColour get_highlight_fg(int highlight_idx) const;
 			
-			/**
-			 * @brief Get the background colour palette index for the given text highlight colour.
-			 *
-			 * @param index Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
-			*/
-			static ColourIndex get_highlight_bg_idx(int index);
-			
-			/**
-			 * @brief Get the foreground colour palette index for the given text highlight colour.
-			 *
-			 * @param index Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
-			*/
-			static ColourIndex get_highlight_fg_idx(int index);
 			
 			/**
 			 * @brief Blend two palette colours together.

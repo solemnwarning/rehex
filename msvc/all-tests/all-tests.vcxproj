@@ -251,6 +251,8 @@
     <ClCompile Include="..\..\src\FileWriter.cpp" />
     <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp" />
+    <ClCompile Include="..\..\src\HighlightColourMap.cpp" />
+    <ClCompile Include="..\..\src\HSVColour.cpp" />
     <ClCompile Include="..\..\src\IntelHexExport.cpp" />
     <ClCompile Include="..\..\src\IntelHexImport.cpp" />
     <ClCompile Include="..\..\src\LicenseDialog.cpp" />
@@ -264,6 +266,7 @@
     <ClCompile Include="..\..\src\RangeProcessor.cpp" />
     <ClCompile Include="..\..\src\search.cpp" />
     <ClCompile Include="..\..\src\SettingsDialog.cpp" />
+    <ClCompile Include="..\..\src\SettingsDialogHighlights.cpp" />
     <ClCompile Include="..\..\src\StringPanel.cpp" />
     <ClCompile Include="..\..\src\Tab.cpp" />
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
@@ -293,6 +296,8 @@
     <ClCompile Include="..\..\tests\endian_conv.cpp" />
     <ClCompile Include="..\..\tests\FastRectangleFiller.cpp" />
     <ClCompile Include="..\..\tests\FileWriter.cpp" />
+    <ClCompile Include="..\..\tests\HighlightColourMap.cpp" />
+    <ClCompile Include="..\..\tests\HSVColour.cpp" />
     <ClCompile Include="..\..\tests\IntelHexExport.cpp" />
     <ClCompile Include="..\..\tests\IntelHexImport.cpp" />
     <ClCompile Include="..\..\tests\LuaPluginLoader.cpp" />

@@ -1152,25 +1152,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	{
 		wxMenu *hlmenu = new wxMenu();
 		
-		for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
+		const HighlightColourMap &highlight_colours = wxGetApp().settings->get_highlight_colours();
+		
+		for(auto i = highlight_colours.begin(); i != highlight_colours.end(); ++i)
 		{
-			/* Hardcoded list of names for the highlight colours.
-			 * This will need to be done better soon... but for now all the highlight
-			 * colours used in each pallette are the same and we don't have any more
-			 * specific names for them (#60).
-			*/
-			static const char *highlight_strings[] = {
-				"Red",
-				"Orange",
-				"Yellow",
-				"Green",
-				"Violet",
-				"Grey",
-			};
+			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, i->second.label);
 			
-			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, highlight_strings[i]);
-			
-			wxColour bg_colour = active_palette->get_highlight_bg(i);
+			size_t colour_idx = i->first;
+			wxColour bg_colour = i->second.primary_colour;
 			
 			/* TODO: Get appropriate size for menu bitmap.
 			 * TODO: Draw a character in image using foreground colour.
@@ -1189,13 +1178,12 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			 * On GTK, both work.
 			*/
 			#ifdef _WIN32
-			menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, colour_idx](wxCommandEvent &event)
 			#else
-			hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, colour_idx](wxCommandEvent &event)
 			#endif
 			{
-				int colour = i;
-				doc->set_highlight(highlight_off, highlight_length, colour);
+				doc->set_highlight(highlight_off, highlight_length, colour_idx);
 			}, itm->GetId(), itm->GetId());
 		}
 		

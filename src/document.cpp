@@ -1041,9 +1041,6 @@ const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 
 bool REHex::Document::set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx)
 {
-	assert(highlight_colour_idx >= 0);
-	assert(highlight_colour_idx < Palette::NUM_HIGHLIGHT_COLOURS);
-	
 	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0))
 	{
 		return false;
@@ -2070,7 +2067,7 @@ REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, of
 		
 		if(offset >= 0 && offset < BitOffset(buffer_length, 0)
 			&& length > 0 && (offset + length) <= BitOffset(buffer_length, 0)
-			&& colour >= 0 && colour < Palette::NUM_HIGHLIGHT_COLOURS)
+			&& colour >= 0 && colour < HighlightColourMap::MAX_NUM)
 		{
 			highlights.set_range(offset, length, colour);
 		}

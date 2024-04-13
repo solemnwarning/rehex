@@ -378,6 +378,7 @@ APP_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
@@ -395,6 +396,7 @@ APP_OBJS := \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
+	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
@@ -471,6 +473,7 @@ TEST_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
@@ -485,6 +488,7 @@ TEST_OBJS := \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
+	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
@@ -515,6 +519,7 @@ TEST_OBJS := \
 	tests/endian_conv.o \
 	tests/FastRectangleFiller.o \
 	tests/FileWriter.o \
+	tests/HighlightColourMap.o \
 	tests/HSVColour.o \
 	tests/IntelHexExport.o \
 	tests/IntelHexImport.o \

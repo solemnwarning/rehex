@@ -44,6 +44,7 @@
 #include "RangeDialog.hpp"
 #include "search.hpp"
 #include "SettingsDialog.hpp"
+#include "SettingsDialogHighlights.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
@@ -1495,6 +1496,7 @@ void REHex::MainWindow::OnWriteProtect(wxCommandEvent &event)
 void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 {
 	std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogHighlights()));
 	
 	SettingsDialog dialog(this, std::move(panels));
 	

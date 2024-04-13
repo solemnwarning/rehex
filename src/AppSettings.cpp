@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,13 +17,15 @@
 
 #include "platform.hpp"
 
+#include "App.hpp"
 #include "AppSettings.hpp"
 
 wxDEFINE_EVENT(REHex::PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
 
 REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
-	goto_offset_base(GotoOffsetBase::AUTO) {}
+	goto_offset_base(GotoOffsetBase::AUTO),
+	highlight_colours(HighlightColourMap::defaults()) {}
 
 REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 {
@@ -52,12 +54,31 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 		default:
 			break;
 	}
+	
+	if(config->HasGroup("highlight-colours"))
+	{
+		try {
+			wxConfigPathChanger scoped_path(config, "highlight-colours/");
+			highlight_colours = HighlightColourMap::from_config(config);
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Error loading highlight colours: %s\n", e.what());
+		}
+	}
 }
 
 void REHex::AppSettings::write(wxConfig *config)
 {
 	config->Write("preferred-asm-syntax", (long)(preferred_asm_syntax));
 	config->Write("goto-offset-base", (long)(goto_offset_base));
+	
+	{
+		config->DeleteGroup("highlight-colours");
+		
+		wxConfigPathChanger scoped_path(config, "highlight-colours/");
+		highlight_colours.to_config(config);
+	}
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -86,4 +107,14 @@ REHex::GotoOffsetBase REHex::AppSettings::get_goto_offset_base() const
 void REHex::AppSettings::set_goto_offset_base(GotoOffsetBase goto_offset_base)
 {
 	this->goto_offset_base = goto_offset_base;
+}
+
+const REHex::HighlightColourMap &REHex::AppSettings::get_highlight_colours() const
+{
+	return highlight_colours;
+}
+
+void REHex::AppSettings::set_highlight_colours(const HighlightColourMap &highlight_colours)
+{
+	this->highlight_colours = highlight_colours;
 }

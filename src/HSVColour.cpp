@@ -43,6 +43,54 @@ REHex::HSVColour::HSVColour(const wxColour &rgb)
 	float g = (float)(rgb.Green()) / 255.0f;
 	float b = (float)(rgb.Blue()) / 255.0f;
 	
+#ifdef __i386__
+	/* When compiling for 32-bit x86, GCC may use x87 instructions for
+	 * floating-point maths, with some combination of moving values around
+	 * between memory and the x87 registers and rounding and/or truncating
+	 * in the process.
+	 *
+	 * With optimisations turned on, the initialisation of r/g/b above is
+	 * incorrect but only for certain combinations of values.
+	 *
+	 * An excerpt from a debugging session where I was investigating this:
+	 *
+	 * > REHex::HSVColour::HSVColour (this=0xffffd114, rgb=...) at src/HSVColour.cpp:42
+	 * > 42              fprintf(stderr, "rgb = { %d, %d, %d }\n", (int)(rgb.Red()), (int)(rgb.Green()), (int)(rgb.Blue()));
+	 * > (gdb) next
+	 * > rgb = { 195, 195, 195 }
+	 * > 44              float r = (float)(rgb.Red()) / 255.0f;
+	 * > (gdb) s
+	 * > 45              float g = (float)(rgb.Green()) / 255.0f;
+	 * > (gdb) s
+	 * > 46              float b = (float)(rgb.Blue()) / 255.0f;
+	 * > (gdb) s
+	 * > 48              float cmax = std::max({ r, g, b });
+	 * > (gdb) print r
+	 * > $1 = 255
+	 * > (gdb) print g
+	 * > $2 = 0.764705896
+	 * > (gdb) print b
+	 * > $3 = 0.764705896
+	 *
+	 * tl;dr: according to some intersection of the GCC developrs and Intel
+	 * engineers, (195.0 / 255.0 == 255.0), but only in 1/3rd of cases.
+	 *
+	 * Compiling and linking the entire program with -ffloat-store fixes
+	 * this at the cost of reduced float performance, but locally applying
+	 * that flag to this function doesn't, nor does applying it to this
+	 * file, the tests and the linking stage so I guess somehow a
+	 * translation unit where that flag ISN'T applied and doesn't have
+	 * anything to do with this function breaks it.
+	 *
+	 * Passing the values into snprintf() afterwards seems to trick the
+	 * optimiser into uh... behaving differently in some way and the unit
+	 * tests pass now so that means it *must* be correct!
+	*/
+	
+	// load bearing snprintf, do not remove
+	snprintf(NULL, 0, "%f%f%f", r, g, b);
+#endif
+	
 	float cmax = std::max({ r, g, b });
 	float cmin = std::min({ r, g, b });
 	float cdiff = cmax - cmin;

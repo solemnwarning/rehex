@@ -61,7 +61,7 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, std::vector< std::unique
 		}
 	}
 	
-	treectrl->SetMinSize(wxSize(100, 600));
+	treectrl->SetMinSize(wxSize(200, 600));
 	
 	wxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
 	top_sizer->Add(button_sizer);

@@ -44,6 +44,7 @@
 #include "RangeDialog.hpp"
 #include "search.hpp"
 #include "SettingsDialog.hpp"
+#include "SettingsDialogByteColour.hpp"
 #include "SettingsDialogHighlights.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
@@ -102,6 +103,9 @@ enum {
 	ID_IMPORT_HEX,
 	ID_EXPORT_HEX,
 	ID_AUTO_RELOAD,
+	
+	ID_COLOUR_MAP_MENU_MIN,
+	ID_COLOUR_MAP_MENU_MAX = (ID_COLOUR_MAP_MENU_MIN + 100),
 };
 
 BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
@@ -174,6 +178,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_ASM_SYNTAX_ATT,   REHex::MainWindow::OnAsmSyntax)
 	
 	EVT_MENU(ID_HIGHLIGHT_SELECTION_MATCH, REHex::MainWindow::OnHighlightSelectionMatch)
+	
+	EVT_MENU_RANGE(ID_COLOUR_MAP_MENU_MIN, ID_COLOUR_MAP_MENU_MAX, REHex::MainWindow::OnColourMap)
 	
 	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
@@ -350,6 +356,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
 		
 		view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
+		
+		colour_map_menu = new wxMenu;
+		view_menu->AppendSubMenu(colour_map_menu, "Colour map");
 		
 		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
 		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
@@ -587,10 +596,14 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	instances_iter = std::prev(instances.end());
 	
 	call_setup_hooks(SetupPhase::DONE);
+	
+	wxGetApp().settings->Bind(BYTE_COLOUR_MAPS_CHANGED, &REHex::MainWindow::OnByteColourMapsChanged, this);
 }
 
 REHex::MainWindow::~MainWindow()
 {
+	wxGetApp().settings->Unbind(BYTE_COLOUR_MAPS_CHANGED, &REHex::MainWindow::OnByteColourMapsChanged, this);
+	
 	wxGetApp().recent_files->RemoveMenu(recent_files_menu);
 	instances.erase(instances_iter);
 }
@@ -1496,6 +1509,7 @@ void REHex::MainWindow::OnWriteProtect(wxCommandEvent &event)
 void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 {
 	std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogHighlights()));
 	
 	SettingsDialog dialog(this, std::move(panels));
@@ -1617,6 +1631,29 @@ void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	tab->doc_ctrl->set_highlight_selection_match(event.IsChecked());
+}
+
+void REHex::MainWindow::OnColourMap(wxCommandEvent &event)
+{
+	int menu_item_id = event.GetId();
+	
+	Tab *tab = active_tab();
+	
+	if(menu_item_id == ID_COLOUR_MAP_MENU_MIN)
+	{
+		tab->doc_ctrl->set_byte_colour_map(nullptr);
+	}
+	else{
+		assert(colour_map_menu_id_to_bcm_id.find(menu_item_id) != colour_map_menu_id_to_bcm_id.end());
+		int colour_map_id = colour_map_menu_id_to_bcm_id[menu_item_id];
+		
+		auto maps = wxGetApp().settings->get_byte_colour_maps();
+		
+		auto colour_map = maps.find(colour_map_id);
+		assert(colour_map != maps.end());
+		
+		tab->doc_ctrl->set_byte_colour_map(colour_map->second);
+	}
 }
 
 void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr)
@@ -1846,6 +1883,7 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 	_update_undo(tab->doc);
 	_update_dirty(tab->doc);
 	_update_cpos_buttons(tab->doc_ctrl);
+	_update_colour_map_menu(tab->doc_ctrl);
 	
 	/* Show any search dialogs attached to this tab. */
 	tab->unhide_child_windows();
@@ -2078,6 +2116,12 @@ void REHex::MainWindow::OnFileModified(wxCommandEvent &event)
 	_update_dirty(event_doc);
 }
 
+void REHex::MainWindow::OnByteColourMapsChanged(wxCommandEvent &event)
+{
+	_update_colour_map_menu(active_tab()->doc_ctrl);
+	event.Skip();
+}
+
 REHex::Tab *REHex::MainWindow::active_tab()
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -2265,6 +2309,38 @@ void REHex::MainWindow::_update_cpos_buttons(DocumentCtrl *doc_ctrl)
 	
 	toolbar->EnableTool(wxID_BACKWARD, doc_ctrl->has_prev_cursor_position());
 	toolbar->EnableTool(wxID_FORWARD,  doc_ctrl->has_next_cursor_position());
+}
+
+void REHex::MainWindow::_update_colour_map_menu(DocumentCtrl *doc_ctrl)
+{
+	/* Purge the current menu items. */
+	
+	for(auto i = colour_map_menu_id_to_bcm_id.begin(); i != colour_map_menu_id_to_bcm_id.end();)
+	{
+		colour_map_menu->Destroy(i->first);
+		i = colour_map_menu_id_to_bcm_id.erase(i);
+	}
+	
+	/* Repopulate the menu items. */
+	
+	auto maps = wxGetApp().settings->get_byte_colour_maps();
+	
+	int id = ID_COLOUR_MAP_MENU_MIN;
+	
+	colour_map_menu->AppendRadioItem(id, "None");
+	colour_map_menu_id_to_bcm_id[id] = -1;
+	++id;
+	
+	for(auto i = maps.begin(); i != maps.end() && id < ID_COLOUR_MAP_MENU_MAX; ++i, ++id)
+	{
+		colour_map_menu->AppendRadioItem(id, i->second->get_label());
+		colour_map_menu_id_to_bcm_id[id] = i->first;
+		
+		if(i->second == doc_ctrl->get_byte_colour_map())
+		{
+			colour_map_menu->Check(id, true);
+		}
+	}
 }
 
 bool REHex::MainWindow::confirm_close_tabs(const std::vector<Tab*> &tabs)

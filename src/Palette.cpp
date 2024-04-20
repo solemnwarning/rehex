@@ -18,6 +18,7 @@
 #include "platform.hpp"
 
 #include <assert.h>
+#include <memory>
 #include <wx/colour.h>
 #include <wx/settings.h>
 
@@ -91,6 +92,13 @@ REHex::Palette *REHex::Palette::create_system_palette()
 	const wxColour HIGHLIGHT     = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHT);
 	const wxColour HIGHLIGHTTEXT = wxSystemSettings::GetColour(wxSYS_COLOUR_HIGHLIGHTTEXT);
 	
+	std::unique_ptr<Palette> light_palette(create_light_palette());
+	std::unique_ptr<Palette> dark_palette(create_dark_palette());
+	
+	Palette *base_palette = is_light(WINDOW)
+		? light_palette.get()
+		: dark_palette.get();
+	
 	const wxColour colours[] = {
 		WINDOW,      /* PAL_NORMAL_TEXT_BG */
 		WINDOWTEXT,  /* PAL_NORMAL_TEXT_FG */
@@ -121,6 +129,12 @@ REHex::Palette *REHex::Palette::create_system_palette()
 			: WINDOW.ChangeLightness(130)),  /* PAL_COMMENT_BG */
 		
 		WINDOWTEXT,  /* PAL_COMMENT_FG */
+		
+		(*base_palette)[PAL_CONTRAST_TEXT_1_FG],
+		(*base_palette)[PAL_CONTRAST_TEXT_2_FG],
+		(*base_palette)[PAL_CONTRAST_TEXT_3_FG],
+		(*base_palette)[PAL_CONTRAST_TEXT_4_FG],
+		(*base_palette)[PAL_CONTRAST_TEXT_5_FG],
 	};
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
@@ -144,6 +158,26 @@ REHex::Palette *REHex::Palette::create_light_palette()
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		wxColour(0xD3, 0xD3, 0xD3),  /* PAL_COMMENT_BG */
 		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
+		
+		// wxColour(0xEE, 0x3E, 0x34), /* PAL_CONTRAST_TEXT_1_FG */
+		// wxColour(0xFF, 0x00, 0x00),
+		wxColour(0xC0, 0x00, 0x00),
+		
+		// wxColour(0x1D, 0x4F, 0x9C), /* PAL_CONTRAST_TEXT_2_FG */
+		// wxColour(0x00, 0x00, 0xFF),
+		wxColour(0x00, 0x00, 0xC0),
+		
+		// wxColour(0x54, 0xB9, 0x48), /* PAL_CONTRAST_TEXT_3_FG */
+		// wxColour(0x00, 0xC0, 0x00),
+		wxColour(0x00, 0x80, 0x00),
+		
+		// wxColour(0xBD, 0xA0, 0xCC), /* PAL_CONTRAST_TEXT_4_FG */
+		// wxColour(0x80, 0x00, 0x80),
+		wxColour(0xC0, 0x00, 0xC0),
+		
+		// wxColour(0xF0, 0x92, 0x43), /* PAL_CONTRAST_TEXT_5_FG */
+		wxColour(0xFF, 0x80, 0x00),
+		// wxColour(0xC0, 0x58, 0x00),
 	};
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
@@ -167,6 +201,26 @@ REHex::Palette *REHex::Palette::create_dark_palette()
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		wxColour(0x58, 0x58, 0x58),  /* PAL_COMMENT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
+		
+		// wxColour(0xEE, 0x3E, 0x34), /* PAL_CONTRAST_TEXT_1_FG */
+		// wxColour(0xFF, 0x00, 0x00),
+		wxColour(0xFF, 0x4D, 0x00),
+		
+		// wxColour(0x1D, 0x4F, 0x9C), /* PAL_CONTRAST_TEXT_2_FG */
+		// wxColour(0x00, 0x00, 0xFF),
+		wxColour(0x00, 0xB2, 0xFF),
+		
+		// wxColour(0x54, 0xB9, 0x48), /* PAL_CONTRAST_TEXT_3_FG */
+		wxColour(0x00, 0xC0, 0x00),
+		// wxColour(0x00, 0x80, 0x00),
+		
+		wxColour(0xBD, 0xA0, 0xCC), /* PAL_CONTRAST_TEXT_4_FG */
+		// wxColour(0x80, 0x00, 0x80),
+		// wxColour(0xC0, 0x00, 0xC0),
+		
+		wxColour(0xF0, 0x92, 0x43), /* PAL_CONTRAST_TEXT_5_FG */
+		// wxColour(0xFF, 0x80, 0x00),
+		// wxColour(0xC0, 0x58, 0x00),
 	};
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");

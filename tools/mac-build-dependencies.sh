@@ -14,9 +14,9 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-_rehex_botan_version="2.19.3"
+_rehex_botan_version="2.19.4"
 _rehex_botan_url="https://botan.randombit.net/releases/Botan-${_rehex_botan_version}.tar.xz"
-_rehex_botan_sha256="dae047f399c5a47f087db5d3d9d9e8f11ae4985d14c928d71da1aff801802d55"
+_rehex_botan_sha256="5a3a88ef6433e97bcab0efa1ed60c6197e4ada9d9d30bc1c47437bf89b97f276"
 _rehex_botan_build_ident="${_rehex_botan_version}-2"
 
 _rehex_capstone_version="5.0"
@@ -29,10 +29,10 @@ _rehex_jansson_url="https://github.com/akheron/jansson/releases/download/v${_reh
 _rehex_jansson_sha256="5798d010e41cf8d76b66236cfb2f2543c8d082181d16bc3085ab49538d4b9929"
 _rehex_jansson_build_ident="${_rehex_jansson_version}-2"
 
-_rehex_libunistring_version="0.9.10"
+_rehex_libunistring_version="1.2"
 _rehex_libunistring_url="https://ftp.gnu.org/gnu/libunistring/libunistring-${_rehex_libunistring_version}.tar.gz"
-_rehex_libunistring_sha256="a82e5b333339a88ea4608e4635479a1cfb2e01aafb925e1290b65710d43f610b"
-_rehex_libunistring_build_ident="${_rehex_libunistring_version}-2"
+_rehex_libunistring_sha256="fd6d5662fa706487c48349a758b57bc149ce94ec6c30624ec9fdc473ceabbc8e"
+_rehex_libunistring_build_ident="${_rehex_libunistring_version}-1"
 
 _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
@@ -43,9 +43,9 @@ _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a6323a06d923"
 
-_rehex_wxwidgets_version="3.2.2.1"
+_rehex_wxwidgets_version="3.2.4"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_sha256="dffcb6be71296fff4b7f8840eb1b510178f57aa2eb236b20da41182009242c02"
+_rehex_wxwidgets_sha256="0640e1ab716db5af2ecb7389dbef6138d7679261fbff730d23845ba838ca133e"
 _rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
 
 _rehex_cpanm_version="1.7044"

@@ -250,6 +250,7 @@
     <ClCompile Include="..\..\src\Events.cpp" />
     <ClCompile Include="..\..\src\FileWriter.cpp" />
     <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
+    <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp" />
     <ClCompile Include="..\..\src\IntelHexExport.cpp" />
     <ClCompile Include="..\..\src\IntelHexImport.cpp" />
     <ClCompile Include="..\..\src\LicenseDialog.cpp" />

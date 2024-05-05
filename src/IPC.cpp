@@ -46,7 +46,7 @@ bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)
 	try {
 		command = decode_command(data.ToStdString());
 	}
-	catch(const std::exception &e)
+	catch(const std::exception&)
 	{
 		return false;
 	}

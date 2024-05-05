@@ -115,7 +115,7 @@ namespace REHex {
 					std::string s_value = format_value(value, base);
 					textbox->SetValue(s_value);
 				}
-				catch(const REHex::NumericTextCtrl::InputError &e) {}
+				catch(const REHex::NumericTextCtrl::InputError&) {}
 				
 				this->base = base;
 			}

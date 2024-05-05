@@ -1681,7 +1681,7 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 			_raise_comment_modified();
 		}
 		
-		if(highlights.data_inserted(offset, length) > 0)
+		if(highlights.data_inserted(offset, length))
 		{
 			_raise_highlights_changed();
 		}
@@ -1788,7 +1788,7 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 			_raise_comment_modified();
 		}
 		
-		if(highlights.data_erased(offset, length) > 0)
+		if(highlights.data_erased(offset, length))
 		{
 			_raise_highlights_changed();
 		}

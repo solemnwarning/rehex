@@ -371,7 +371,7 @@ void REHex::BitmapTool::update()
 	try {
 		image_offset = offset_textctrl->GetValue<BitOffset>(BitOffset::ZERO);
 	}
-	catch(const NumericTextCtrl::InputError &e)
+	catch(const NumericTextCtrl::InputError&)
 	{
 		/* TODO: Placeholder */
 		return;

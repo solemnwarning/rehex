@@ -58,7 +58,7 @@
 		try { \
 			buf = NumericTextCtrl::ParseValue<T>(value); \
 		} \
-		catch(const REHex::NumericTextCtrl::InputError &e) \
+		catch(const REHex::NumericTextCtrl::InputError&) \
 		{ \
 			return false; \
 		} \

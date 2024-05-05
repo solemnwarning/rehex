@@ -1173,7 +1173,7 @@ bool REHex::Search::Value::read_window_controls()
 			f32_epsilon = parse_float(epsilon_tc->GetStringValue().ToStdString());
 			f32_enabled = true;
 		}
-		catch(const ParseError &e) {}
+		catch(const ParseError&) {}
 	}
 	
 	f64_enabled = false;
@@ -1184,7 +1184,7 @@ bool REHex::Search::Value::read_window_controls()
 			f64_epsilon = parse_double(epsilon_tc->GetStringValue().ToStdString());
 			f64_enabled = true;
 		}
-		catch(const ParseError &e) {}
+		catch(const ParseError&) {}
 	}
 	
 	if(search_for.empty() && !f32_enabled && !f64_enabled)
@@ -1233,10 +1233,10 @@ void REHex::Search::Value::OnText(wxCommandEvent &event)
 	f32_cb->Disable();
 	
 	try { parse_float(search_for_tc->GetStringValue().ToStdString()); f32_cb->Enable(); }
-	catch(const ParseError &e) {}
+	catch(const ParseError&) {}
 	
 	f64_cb->Disable();
 	
 	try { parse_double(search_for_tc->GetStringValue().ToStdString()); f64_cb->Enable(); }
-	catch(const ParseError &e) {}
+	catch(const ParseError&) {}
 }

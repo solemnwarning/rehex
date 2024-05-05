@@ -646,7 +646,7 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 	
 	off_t byte_offset = offset.byte();
 	
-	while(block < blocks.data() + blocks.size() && max_length > data.size())
+	while(block < blocks.data() + blocks.size() && (size_t)(max_length) > data.size())
 	{
 		_load_block(block);
 		

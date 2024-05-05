@@ -533,7 +533,7 @@ void REHex::StringPanel::thread_main()
 		try {
 			data = document->read_data(window_base_adj, window_length_adj);
 		}
-		catch(const std::exception &e)
+		catch(const std::exception&)
 		{
 			/* Failed to read the file. Stick this back in the dirty queue and fetch
 			 * another block to process.
@@ -1234,7 +1234,7 @@ wxString REHex::StringPanel::StringPanelListCtrl::OnGetItemText(long item, long 
 				
 				return wxString::FromUTF8(string.data(), string.size());
 			}
-			catch(const std::exception &e)
+			catch(const std::exception&)
 			{
 				/* Probably a file I/O error. */
 				return "???";

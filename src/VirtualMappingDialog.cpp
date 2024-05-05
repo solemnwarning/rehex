@@ -274,7 +274,7 @@ void REHex::VirtualMappingDialog::update_warning()
 			conflict_warning->Hide();
 		}
 	}
-	catch(const NumericTextCtrl::InputError &e)
+	catch(const NumericTextCtrl::InputError&)
 	{
 		conflict_warning->Hide();
 	}

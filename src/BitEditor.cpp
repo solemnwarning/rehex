@@ -289,7 +289,7 @@ void REHex::BitEditor::update()
 		int num_value_base = get_num_base();
 		old_val = num_value->GetValue<uint64_t>(0, std::numeric_limits<uint64_t>::max(), 0, num_value_base);
 	}
-	catch(const REHex::NumericTextCtrl::InputError &e) {}
+	catch(const REHex::NumericTextCtrl::InputError&) {}
 	
 	if(value != old_val)
 	{

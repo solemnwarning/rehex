@@ -36,15 +36,19 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	
 	wxBoxSizer *top_sizer = new wxBoxSizer(wxHORIZONTAL);
 	
-	grid = new wxGrid(this, wxID_ANY);
-	top_sizer->Add(grid, 1, (wxEXPAND | wxTOP | wxLEFT | wxBOTTOM), 4);
+	grid = new wxGrid(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxBORDER_SIMPLE | wxWANTS_CHARS));
+	top_sizer->Add(grid, 1, wxEXPAND);
 	
 	grid->CreateGrid(0, 1);
 	
 	grid->SetRowLabelSize(0);
 	grid->SetColLabelSize(0);
 	
-	grid->SetMinSize(wxSize(400, 200));
+	/* Resize column width to fit control. */
+	grid->Bind(wxEVT_SIZE, [&](wxSizeEvent &event)
+	{
+		grid->SetColSize(0, grid->GetClientSize().GetWidth());
+	});
 	
 	grid->EnableDragGridSize(false);
 	grid->EnableEditing(false);
@@ -69,11 +73,14 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 		grid->SetCellFont(grid_row, 0, hex_font);
 	}
 	
-	wxBoxSizer *button_sizer = new wxBoxSizer(wxVERTICAL);
-	top_sizer->Add(button_sizer, 0, (wxTOP | wxLEFT), 4);
+	wxBoxSizer *side_sizer = new wxBoxSizer(wxVERTICAL);
+	top_sizer->Add(side_sizer, 0, (wxTOP | wxLEFT), SettingsDialog::MARGIN);
+	
+	wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
+	side_sizer->Add(button_sizer, 0, wxBOTTOM, SettingsDialog::MARGIN);
 	
 	add_button = new wxButton(this, wxID_ADD);
-	button_sizer->Add(add_button, 0, wxBOTTOM, 4);
+	button_sizer->Add(add_button);
 	
 	add_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent &event)
 	{
@@ -103,7 +110,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	add_button->Enable(colours.size() < HighlightColourMap::MAX_NUM);
 	
 	del_button = new wxButton(this, wxID_DELETE);
-	button_sizer->Add(del_button, 0, wxBOTTOM, 4);
+	button_sizer->Add(del_button, 0, wxLEFT, SettingsDialog::MARGIN);
 	
 	del_button->Bind(wxEVT_BUTTON, [=](wxCommandEvent &event)
 	{
@@ -128,12 +135,12 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	
 	del_button->Disable();
 	
-	button_sizer->Add(new wxStaticLine(this), 0, (wxEXPAND | wxBOTTOM), 4);
+	side_sizer->Add(new wxStaticLine(this), 0, (wxEXPAND | wxBOTTOM), SettingsDialog::MARGIN);
 	
-	button_sizer->Add(new wxStaticText(this, wxID_ANY, "Label"));
+	side_sizer->Add(new wxStaticText(this, wxID_ANY, "Label"));
 	
 	label_input = new wxTextCtrl(this, wxID_ANY);
-	button_sizer->Add(label_input, 0, wxBOTTOM, 4);
+	side_sizer->Add(label_input, 0, (wxBOTTOM | wxEXPAND), SettingsDialog::MARGIN);
 	
 	label_input->Bind(wxEVT_TEXT, [=](wxCommandEvent &event)
 	{
@@ -152,10 +159,10 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	
 	label_input->Disable();
 	
-	button_sizer->Add(new wxStaticText(this, wxID_ANY, "Primary colour"));
+	side_sizer->Add(new wxStaticText(this, wxID_ANY, "Primary colour"));
 	
 	primary_picker = new wxColourPickerCtrl(this, wxID_ANY);
-	button_sizer->Add(primary_picker, 0, wxBOTTOM, 4);
+	side_sizer->Add(primary_picker, 0, wxBOTTOM, SettingsDialog::MARGIN);
 	
 	primary_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [=](wxColourPickerEvent &event)
 	{
@@ -174,10 +181,10 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	
 	primary_picker->Disable();
 	
-	button_sizer->Add(new wxStaticText(this, wxID_ANY, "Secondary colour"));
+	side_sizer->Add(new wxStaticText(this, wxID_ANY, "Secondary colour"));
 	
 	secondary_picker = new wxColourPickerCtrl(this, wxID_ANY);
-	button_sizer->Add(secondary_picker);
+	side_sizer->Add(secondary_picker);
 	
 	secondary_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [=](wxColourPickerEvent &event)
 	{

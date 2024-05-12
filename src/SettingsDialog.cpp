@@ -28,17 +28,17 @@ BEGIN_EVENT_TABLE(REHex::SettingsDialog, wxDialog)
 	EVT_BUTTON(wxID_OK, REHex::SettingsDialog::OnOK)
 END_EVENT_TABLE()
 
-REHex::SettingsDialog::SettingsDialog(wxWindow *parent, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels):
-	wxDialog(parent, wxID_ANY, "test"),
+REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels):
+	wxDialog(parent, wxID_ANY, title),
 	panels(std::move(panels))
 {
 	wxSizer *top_sizer = new wxBoxSizer(wxVERTICAL);
 	
 	wxSizer *tree_panel_sizer = new wxBoxSizer(wxHORIZONTAL);
-	top_sizer->Add(tree_panel_sizer, 1);
+	top_sizer->Add(tree_panel_sizer, 1, (wxALL | wxEXPAND), MARGIN);
 	
-	treectrl = new wxTreeCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxTR_HAS_BUTTONS | wxTR_HIDE_ROOT));
-	tree_panel_sizer->Add(treectrl, 0, wxEXPAND);
+	treectrl = new wxTreeCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, (wxBORDER_SIMPLE | wxTR_HAS_BUTTONS | wxTR_HIDE_ROOT));
+	tree_panel_sizer->Add(treectrl, 0, (wxEXPAND | wxRIGHT), MARGIN);
 	
 	wxTreeItemId tree_root = treectrl->AddRoot(wxEmptyString);
 	
@@ -63,11 +63,18 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, std::vector< std::unique
 	
 	treectrl->SetMinSize(wxSize(200, 600));
 	
+	top_sizer->Add(new wxStaticLine(this), 0, (wxEXPAND | wxLEFT | wxRIGHT), MARGIN);
+	
 	wxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
-	top_sizer->Add(button_sizer);
+	top_sizer->Add(button_sizer, 0, (wxALL | wxEXPAND), MARGIN);
+	
+	wxButton *help_button = new wxButton(this, wxID_HELP);
+	button_sizer->Add(help_button);
+	
+	button_sizer->AddStretchSpacer(1);
 	
 	wxButton *ok_button = new wxButton(this, wxID_OK);
-	button_sizer->Add(ok_button);
+	button_sizer->Add(ok_button, 0, wxRIGHT, MARGIN);
 	
 	wxButton *cancel_button = new wxButton(this, wxID_CANCEL);
 	button_sizer->Add(cancel_button);

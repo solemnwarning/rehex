@@ -67,12 +67,12 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	wxBoxSizer *top_sizer = new wxBoxSizer(wxVERTICAL);
 	
 	wxStaticBoxSizer *profile_box = new wxStaticBoxSizer(wxHORIZONTAL, this, "Maps");
-	top_sizer->Add(profile_box, 0, (wxEXPAND | wxRIGHT | wxLEFT | wxBOTTOM), 8);
+	top_sizer->Add(profile_box, 0, (wxEXPAND | wxBOTTOM), SettingsDialog::MARGIN);
 	
-	profile_box->Add(new wxStaticText(profile_box->GetStaticBox(), wxID_ANY, "Selected map:"), 0, (wxBOTTOM | wxRIGHT | wxLEFT | wxALIGN_CENTRE), 8);
+	profile_box->Add(new wxStaticText(profile_box->GetStaticBox(), wxID_ANY, "Selected map:"), 0, (wxBOTTOM | wxRIGHT | wxLEFT | wxALIGN_CENTRE), SettingsDialog::MARGIN);
 	
 	map_choice = new wxChoice(profile_box->GetStaticBox(), ID_MAP_CHOICE);
-	profile_box->Add(map_choice, 1, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), 8);
+	profile_box->Add(map_choice, 1, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), SettingsDialog::MARGIN);
 	
 	for(auto i = maps.begin(); i != maps.end(); ++i)
 	{
@@ -81,13 +81,13 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	}
 	
 	new_button = new wxButton(profile_box->GetStaticBox(), wxID_ADD, "New");
-	profile_box->Add(new_button, 0, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), 8);
+	profile_box->Add(new_button, 0, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), SettingsDialog::MARGIN);
 	
 	rename_button = new wxButton(profile_box->GetStaticBox(), wxID_EDIT, "Rename");
-	profile_box->Add(rename_button, 0, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), 8);
+	profile_box->Add(rename_button, 0, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), SettingsDialog::MARGIN);
 	
 	delete_button = new wxButton(profile_box->GetStaticBox(), wxID_DELETE, "Delete");
-	profile_box->Add(delete_button, 0, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), 8);
+	profile_box->Add(delete_button, 0, (wxBOTTOM | wxRIGHT | wxALIGN_CENTRE), SettingsDialog::MARGIN);
 	
 	wxBoxSizer *profile_sizer = new wxBoxSizer(wxHORIZONTAL);
 	top_sizer->Add(profile_sizer, 0, wxEXPAND);
@@ -103,10 +103,10 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	dummy_doc->reset_to_clean();
 	
 	wxStaticBoxSizer *ddc_sizer = new wxStaticBoxSizer(wxHORIZONTAL, this, "Preview");
-	profile_sizer->Add(ddc_sizer, 0, (wxRIGHT | wxBOTTOM | wxLEFT), 8);
+	profile_sizer->Add(ddc_sizer, 0, (wxBOTTOM | wxRIGHT), SettingsDialog::MARGIN);
 	
 	dummy_doc_ctrl = new DocumentCtrl(this, dummy_doc, (DCTRL_LOCK_SCROLL | DCTRL_HIDE_CURSOR));
-	ddc_sizer->Add(dummy_doc_ctrl, 0, (wxRIGHT | wxBOTTOM | wxLEFT), 8);
+	ddc_sizer->Add(dummy_doc_ctrl, 0, (wxRIGHT | wxBOTTOM | wxLEFT), SettingsDialog::MARGIN);
 	
 	dummy_doc_ctrl->SetMinSize(
 		wxSize(dummy_doc_ctrl->hf_string_width(16 * 4), (dummy_doc_ctrl->hf_char_height() * 16)));
@@ -154,12 +154,15 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	dummy_doc_ctrl->set_bytes_per_group(1);
 	
 	wxPanel *colour_panel = new wxPanel(this);
-	profile_sizer->Add(colour_panel, 0, wxRIGHT, 8);
+	profile_sizer->Add(colour_panel);
 	
 	wxBoxSizer *colour_sizer = new wxBoxSizer(wxVERTICAL);
 	
 	selection_text = new wxStaticText(colour_panel, wxID_ANY, "Select bytes to the left");
 	colour_sizer->Add(selection_text);
+	
+	wxSize selection_text_req_size = selection_text->GetTextExtent("Selected: 255 (X) - 255 (X)");
+	selection_text->SetMinClientSize(selection_text_req_size);
 	
 	std::vector<Palette::ColourIndex> pal_colours = {
 		Palette::PAL_NORMAL_TEXT_FG,
@@ -170,7 +173,7 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 		Palette::PAL_CONTRAST_TEXT_5_FG,
 	};
 	
-	colour_sizer->Add(new wxStaticLine(colour_panel), 0, wxEXPAND);
+	colour_sizer->Add(new wxStaticLine(colour_panel), 0, (wxEXPAND | wxTOP), SettingsDialog::MARGIN);
 	
 	colour_sizer->Add(new wxStaticText(colour_panel, wxID_ANY, "Base colour:"));
 	
@@ -178,7 +181,7 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	colour1_picker->Disable();
 	colour_sizer->Add(colour1_picker);
 	
-	colour_sizer->Add(new wxStaticLine(colour_panel), 0, wxEXPAND);
+	colour_sizer->Add(new wxStaticLine(colour_panel), 0, (wxEXPAND | wxTOP), SettingsDialog::MARGIN);
 	
 	colour_sizer->Add(new wxStaticText(colour_panel, wxID_ANY, "Gradient colour:"));
 	

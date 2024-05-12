@@ -1512,7 +1512,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogHighlights()));
 	
-	SettingsDialog dialog(this, std::move(panels));
+	SettingsDialog dialog(this, "Preferences", std::move(panels));
 	
 	dialog.ShowModal();
 }

@@ -81,7 +81,9 @@ namespace REHex
 			void OnOK(wxCommandEvent &event);
 			
 		public:
-			SettingsDialog(wxWindow *parent, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels);
+			static constexpr int MARGIN = 8;
+			
+			SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels);
 			
 		DECLARE_EVENT_TABLE()
 	};

@@ -6,6 +6,7 @@ checksum        Checksum Tool
 diff            Comparing Files
 bitmap          Bitmap Visualisation
 virt-mapping    Virtual Address Mapping
+value-colour-map  Value Colourisation
 plugins         Writing Plugins
 
 bt                   Binary Templates

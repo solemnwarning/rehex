@@ -29,12 +29,12 @@ REHex::AppSettings::AppSettings():
 	highlight_colours(HighlightColourMap::defaults())
 {
 	ByteColourMap bcm_types;
-	bcm_types.set_label("Types");
+	bcm_types.set_label("ASCII Values");
 	
-	bcm_types.set_colour(0x00, ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_3_FG));
+	bcm_types.set_colour(0x00, ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_1_FG));
+	bcm_types.set_colour_range(0x01, 0x1F, ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_2_FG));
 	bcm_types.set_colour_range(0x20, 0x7E, ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_5_FG));
 	bcm_types.set_colour(0x7F, ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_2_FG));
-	bcm_types.set_colour(0xFF, ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_1_FG));
 	
 	byte_colour_maps[1] = std::make_shared<ByteColourMap>(bcm_types);
 	

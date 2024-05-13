@@ -73,6 +73,7 @@ namespace REHex
 			virtual bool Create(wxWindow *parent) override;
 			
 			virtual std::string label() const override;
+			virtual std::string help_page() const override;
 			
 			virtual bool validate() override;
 			virtual void save() override;

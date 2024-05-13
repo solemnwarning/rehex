@@ -358,7 +358,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
 		
 		colour_map_menu = new wxMenu;
-		view_menu->AppendSubMenu(colour_map_menu, "Colour map");
+		view_menu->AppendSubMenu(colour_map_menu, "Value colour map");
 		
 		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_HIDDEN, "Hidden");
 		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_SHORT,  "Short");
@@ -1508,13 +1508,21 @@ void REHex::MainWindow::OnWriteProtect(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 {
-	std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
-	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
-	panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogHighlights()));
+	static SafeWindowPointer<SettingsDialog> dialog(NULL);
 	
-	SettingsDialog dialog(this, "Preferences", std::move(panels));
-	
-	dialog.ShowModal();
+	if(dialog == NULL)
+	{
+		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogHighlights()));
+		
+		dialog.reset(new SettingsDialog(this, "Preferences", std::move(panels)));
+		
+		dialog->Show();
+	}
+	else{
+		dialog->Raise();
+	}
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)

@@ -201,6 +201,7 @@ namespace REHex {
 			#ifdef BUILD_HELP
 			HelpController *get_help_controller(wxWindow *error_parent);
 			void show_help_contents(wxWindow *error_parent);
+			void show_help_page(wxWindow *error_parent, const std::string &page_name);
 			#endif
 			
 			virtual bool OnInit() override;

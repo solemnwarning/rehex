@@ -50,6 +50,14 @@ namespace REHex
 			virtual std::string label() const = 0;
 			
 			/**
+			 * @brief Returns the name of the manual page for this settings panel.
+			*/
+			virtual std::string help_page() const
+			{
+				return ""; /* Empty string is "none" */
+			}
+			
+			/**
 			 * @brief Validate the panel settings.
 			 *
 			 * This method will be called by SettingsDialog before saving the settings
@@ -77,7 +85,10 @@ namespace REHex
 			std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
 			std::map<wxTreeItemId, SettingsDialogPanel*> panel_tree_items;
 			
+			SettingsDialogPanel *selected_panel;
+			
 			void OnTreeSelect(wxTreeEvent &event);
+			void OnHelp(wxCommandEvent &event);
 			void OnOK(wxCommandEvent &event);
 			
 		public:

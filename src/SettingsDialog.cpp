@@ -21,10 +21,12 @@
 #include <wx/sizer.h>
 #include <wx/statline.h>
 
+#include "App.hpp"
 #include "SettingsDialog.hpp"
 
 BEGIN_EVENT_TABLE(REHex::SettingsDialog, wxDialog)
 	EVT_TREE_SEL_CHANGED(wxID_ANY, REHex::SettingsDialog::OnTreeSelect)
+	EVT_BUTTON(wxID_HELP, REHex::SettingsDialog::OnHelp)
 	EVT_BUTTON(wxID_OK, REHex::SettingsDialog::OnOK)
 END_EVENT_TABLE()
 
@@ -68,8 +70,10 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 	wxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
 	top_sizer->Add(button_sizer, 0, (wxALL | wxEXPAND), MARGIN);
 	
+	#ifdef BUILD_HELP
 	wxButton *help_button = new wxButton(this, wxID_HELP);
 	button_sizer->Add(help_button);
+	#endif
 	
 	button_sizer->AddStretchSpacer(1);
 	
@@ -93,10 +97,26 @@ void REHex::SettingsDialog::OnTreeSelect(wxTreeEvent &event)
 	auto new_item = panel_tree_items.find(event.GetItem());
 	if(new_item != panel_tree_items.end())
 	{
+		selected_panel = new_item->second;
 		new_item->second->Show();
 	}
 	
 	Layout();
+}
+
+void REHex::SettingsDialog::OnHelp(wxCommandEvent &event)
+{
+#ifdef BUILD_HELP
+	std::string help_page_basename = selected_panel->help_page();
+	
+	if(help_page_basename.empty())
+	{
+		wxMessageBox("There is no help for these settings", "No help available", (wxOK | wxCENTRE | wxICON_INFORMATION), this);
+	}
+	else{
+		wxGetApp().show_help_page(this, help_page_basename + ".html");
+	}
+#endif
 }
 
 void REHex::SettingsDialog::OnOK(wxCommandEvent &event)

@@ -415,6 +415,11 @@ std::string REHex::SettingsDialogByteColour::label() const
 	return "Value colour maps";
 }
 
+std::string REHex::SettingsDialogByteColour::help_page() const
+{
+	return "value-colour-map";
+}
+
 bool REHex::SettingsDialogByteColour::validate()
 {
 	return true;

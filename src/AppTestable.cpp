@@ -326,7 +326,11 @@ void REHex::App::show_help_page(wxWindow *error_parent, const std::string &page_
 		wxHtmlHelpWindow *help_window = help_controller->GetHelpWindow();
 		#endif
 		
-		help_controller->Display(page_name);
+		#ifdef _WIN32
+		help_controller->DisplaySection(page_name + ".htm");
+		#else
+		help_controller->Display(page_name + ".html");
+		#endif
 		
 		#ifndef _WIN32
 		if(help_window == NULL)

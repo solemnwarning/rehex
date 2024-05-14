@@ -114,7 +114,7 @@ void REHex::SettingsDialog::OnHelp(wxCommandEvent &event)
 		wxMessageBox("There is no help for these settings", "No help available", (wxOK | wxCENTRE | wxICON_INFORMATION), this);
 	}
 	else{
-		wxGetApp().show_help_page(this, help_page_basename + ".html");
+		wxGetApp().show_help_page(this, help_page_basename);
 	}
 #endif
 }

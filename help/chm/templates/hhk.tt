@@ -2,7 +2,7 @@
 	[% FOREACH page IN contents %]
 	<li><object type="text/sitemap">
 		<param name="Name" value="[% page.title | html %]">
-		<param name="Local" value="[% page.page | html %].html">
+		<param name="Local" value="[% page.page | html %].htm">
 		
 		[% IF !page.children.empty; INCLUDE process contents = page.children; END %]
 	</li>

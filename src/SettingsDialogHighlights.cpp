@@ -248,6 +248,11 @@ std::string REHex::SettingsDialogHighlights::label() const
 	return "Highlight colours";
 }
 
+std::string REHex::SettingsDialogHighlights::help_page() const
+{
+	return "highlights";
+}
+
 bool REHex::SettingsDialogHighlights::validate() { return true; }
 
 void REHex::SettingsDialogHighlights::save()

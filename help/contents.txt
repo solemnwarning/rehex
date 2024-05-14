@@ -1,6 +1,7 @@
 index           Welcome
 comments        Setting Comments
 types           Setting Data Types
+highlights      Setting Highlight Colours
 bitedit         Bit Editor
 checksum        Checksum Tool
 diff            Comparing Files

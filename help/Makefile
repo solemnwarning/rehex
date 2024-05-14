@@ -28,6 +28,7 @@ PAGES := \
 	checksum \
 	comments \
 	diff \
+	highlights \
 	index \
 	plugins \
 	types \

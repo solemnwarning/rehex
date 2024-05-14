@@ -1,0 +1,29 @@
+[% WRAPPER page.tt
+   title = "Setting Highlight Colours"
+%]
+
+<h2>Setting Highlight Colours</h2>
+
+<p>
+Ranges of bytes can be highlighted with a chosen colour to help with categorising them.
+</p>
+
+<p>
+As shown in the screenshot below, simply select a range of bytes in the hex view, right click on them and choose a colour under the "Set Highlight" context sub-menu.
+</p>
+
+<p>
+<img src="highlight-menu.png" alt="Set Highlight context menu">
+</p>
+
+<h2>Custom Highlight Colours</h2>
+
+<p>
+The highlight colours can be changed in the application preferences window (applies to newly opened/created files) or by clicking "Edit highlight colours..." in the "Set Highlight" context menu (applies to the current file).
+</p>
+
+<p>
+<img src="highlight-colours.png" alt="Highlight colours settings">
+</p>
+
+[% END %]

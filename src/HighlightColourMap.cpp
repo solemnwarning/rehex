@@ -195,8 +195,7 @@ json_t *REHex::HighlightColourMap::to_json() const
 	json_t *json = json_array();
 	if(json == NULL)
 	{
-		json_decref(json);
-		throw std::bad_alloc();
+		return NULL;
 	}
 	
 	for(auto c = colours.begin(); c != colours.end(); ++c)
@@ -211,8 +210,8 @@ json_t *REHex::HighlightColourMap::to_json() const
 			|| (!(c->second.secondary_colour_is_default) && json_object_set_new(elem, "secondary_colour", colour_to_json(c->second.secondary_colour)) == -1)
 			|| (!(c->second.label_is_default) && json_object_set_new(elem, "label", json_stringn(label_utf8.data(), label_utf8.length())) == -1))
 		{
-				json_decref(json);
-				throw std::bad_alloc();
+			json_decref(json);
+			return NULL;
 		}
 	}
 	
@@ -245,6 +244,11 @@ void REHex::HighlightColourMap::erase(const const_iterator &it)
 size_t REHex::HighlightColourMap::size() const
 {
 	return colours.size();
+}
+
+bool REHex::HighlightColourMap::empty() const
+{
+	return colours.empty();
 }
 
 REHex::HighlightColourMap::iterator REHex::HighlightColourMap::find(size_t highlight_idx)

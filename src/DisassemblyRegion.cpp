@@ -212,19 +212,23 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		auto highlight = highlights.get_range(offset);
 		if(highlight != highlights.end())
 		{
-			return Highlight(
-				active_palette->get_highlight_fg(highlight->second),
-				active_palette->get_highlight_bg(highlight->second));
+			const HighlightColourMap &highlight_colours = doc->get_highlight_colours();
+			
+			auto hc = highlight_colours.find(highlight->second);
+			if(hc != highlight_colours.end())
+			{
+				return Highlight(hc->second.secondary_colour, hc->second.primary_colour);
+			}
 		}
-		else if(doc->is_byte_dirty(offset))
+		
+		if(doc->is_byte_dirty(offset))
 		{
 			return Highlight(
 				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
 				(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
 		}
-		else{
-			return (Highlight)(NoHighlight());
-		}
+		
+		return (Highlight)(NoHighlight());
 	};
 	
 	const Highlight hex_selection_highlight(

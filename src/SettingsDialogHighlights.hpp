@@ -26,6 +26,7 @@
 #include <wx/textctrl.h>
 
 #include "HighlightColourMap.hpp"
+#include "SharedDocumentPointer.hpp"
 #include "SettingsDialog.hpp"
 
 namespace REHex
@@ -47,9 +48,13 @@ namespace REHex
 			wxColourPickerCtrl *primary_picker;
 			wxColourPickerCtrl *secondary_picker;
 			
-		public:
+		protected:
 			SettingsDialogHighlights();
 			
+			virtual HighlightColourMap load_colours() const = 0;
+			virtual void save_colours(const HighlightColourMap &colours) const = 0;
+			
+		public:
 			virtual bool Create(wxWindow *parent) override;
 			
 			virtual std::string label() const override;
@@ -57,6 +62,29 @@ namespace REHex
 			virtual bool validate() override;
 			virtual void save() override;
 			virtual void reset() override;
+	};
+	
+	class SettingsDialogAppHighlights: public SettingsDialogHighlights
+	{
+		protected:
+			virtual HighlightColourMap load_colours() const override;
+			virtual void save_colours(const HighlightColourMap &colours) const override;
+			
+		public:
+			SettingsDialogAppHighlights();
+	};
+	
+	class SettingsDialogDocHighlights: public SettingsDialogHighlights
+	{
+		private:
+			SharedDocumentPointer doc;
+			
+		protected:
+			virtual HighlightColourMap load_colours() const override;
+			virtual void save_colours(const HighlightColourMap &colours) const override;
+			
+		public:
+			SettingsDialogDocHighlights(const SharedDocumentPointer &doc);
 	};
 }
 

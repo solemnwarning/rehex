@@ -63,8 +63,6 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 		}
 	}
 	
-	treectrl->SetMinSize(wxSize(200, 600));
-	
 	top_sizer->Add(new wxStaticLine(this), 0, (wxEXPAND | wxLEFT | wxRIGHT), MARGIN);
 	
 	wxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -135,5 +133,5 @@ void REHex::SettingsDialog::OnOK(wxCommandEvent &event)
 		(*i)->save();
 	}
 	
-	EndModal(wxID_OK);
+	Destroy();
 }

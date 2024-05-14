@@ -77,6 +77,16 @@ namespace REHex
 				void set_primary_colour(const wxColour &colour);
 				void set_secondary_colour(const wxColour &colour);
 				void set_label(const wxString &label);
+				
+				bool operator==(const HighlightColour &rhs) const
+				{
+					return primary_colour == rhs.primary_colour
+						&& primary_colour_is_default == rhs.primary_colour_is_default
+						&& secondary_colour == rhs.secondary_colour
+						&& secondary_colour_is_default == rhs.secondary_colour_is_default
+						&& label == rhs.label
+						&& label_is_default == rhs.label_is_default;
+				}
 			};
 			
 			static constexpr size_t DEFAULT_NUM = 6;
@@ -105,6 +115,7 @@ namespace REHex
 			void erase(const const_iterator &iter);
 			
 			size_t size() const;
+			bool empty() const;
 			
 			iterator find(size_t highlight_idx);
 			const_iterator find(size_t highlight_idx) const;
@@ -116,6 +127,16 @@ namespace REHex
 			const_iterator end() const;
 			
 			HighlightColour &operator[](size_t highlight_idx);
+			
+			bool operator==(const HighlightColourMap &rhs) const
+			{
+				return colours == rhs.colours;
+			}
+			
+			bool operator!=(const HighlightColourMap &rhs) const
+			{
+				return !(*this == rhs);
+			}
 	};
 }
 

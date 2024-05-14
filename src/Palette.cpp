@@ -57,18 +57,6 @@ const wxColour &REHex::Palette::operator[](int index) const
 	return palette[index];
 }
 
-const wxColour REHex::Palette::get_highlight_bg(int index) const
-{
-	HighlightColourMap highlight_colours = wxGetApp().settings->get_highlight_colours();
-	return highlight_colours[index].primary_colour;
-}
-
-const wxColour REHex::Palette::get_highlight_fg(int index) const
-{
-	HighlightColourMap highlight_colours = wxGetApp().settings->get_highlight_colours();
-	return highlight_colours[index].secondary_colour;
-}
-
 wxColour REHex::Palette::get_average_colour(int colour_a_idx, int colour_b_idx) const
 {
 	const wxColour &colour_a = (*this)[colour_a_idx];

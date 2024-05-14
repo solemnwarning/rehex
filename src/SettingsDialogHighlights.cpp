@@ -30,7 +30,7 @@ REHex::SettingsDialogHighlights::SettingsDialogHighlights():
 
 bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 {
-	colours = wxGetApp().settings->get_highlight_colours();
+	colours = load_colours();
 	
 	wxPanel::Create(parent);
 	
@@ -48,11 +48,15 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	grid->Bind(wxEVT_SIZE, [&](wxSizeEvent &event)
 	{
 		grid->SetColSize(0, grid->GetClientSize().GetWidth());
+		event.Skip();
 	});
 	
 	grid->EnableDragGridSize(false);
 	grid->EnableEditing(false);
 	grid->SetTabBehaviour(wxGrid::Tab_Leave);
+	
+	/* Arbitrary minimum size because the default is FOR ANTS. */
+	grid->SetMinSize(wxSize(300, 100));
 	
 	wxFont hex_font(wxFontInfo().FaceName(wxGetApp().get_font_name()));
 	
@@ -248,7 +252,37 @@ bool REHex::SettingsDialogHighlights::validate() { return true; }
 
 void REHex::SettingsDialogHighlights::save()
 {
-	wxGetApp().settings->set_highlight_colours(colours);
+	save_colours(colours);
 }
 
 void REHex::SettingsDialogHighlights::reset() {}
+
+REHex::SettingsDialogAppHighlights::SettingsDialogAppHighlights():
+	SettingsDialogHighlights() {}
+
+REHex::HighlightColourMap REHex::SettingsDialogAppHighlights::load_colours() const
+{
+	return wxGetApp().settings->get_highlight_colours();
+}
+
+void REHex::SettingsDialogAppHighlights::save_colours(const HighlightColourMap &colours) const
+{
+	wxGetApp().settings->set_highlight_colours(colours);
+}
+
+REHex::SettingsDialogDocHighlights::SettingsDialogDocHighlights(const SharedDocumentPointer &doc):
+	SettingsDialogHighlights(),
+	doc(doc) {}
+
+REHex::HighlightColourMap REHex::SettingsDialogDocHighlights::load_colours() const
+{
+	return doc->get_highlight_colours();
+}
+
+void REHex::SettingsDialogDocHighlights::save_colours(const HighlightColourMap &colours) const
+{
+	if(doc->get_highlight_colours() != colours)
+	{
+		doc->set_highlight_colours(colours);
+	}
+}

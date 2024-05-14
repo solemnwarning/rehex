@@ -3644,6 +3644,14 @@ TEST_F(DocumentTest, SerialiseMetadataWriteProtectedFile)
 	AutoJSON expect(R"({
 		"comments": [],
 		"data_types": [],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
+		],
 		"highlights": [],
 		"virt_mappings": [],
 		"write_protect": true
@@ -3688,6 +3696,14 @@ TEST_F(DocumentTest, SerialiseMetadataComments)
 			}
 		],
 		"data_types": [],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
+		],
 		"highlights": [],
 		"virt_mappings": [],
 		"write_protect": false
@@ -3761,6 +3777,14 @@ TEST_F(DocumentTest, SerialiseMetadataCommentUnicode)
 			}
 		],
 		"data_types": [],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
+		],
 		"highlights": [],
 		"virt_mappings": [],
 		"write_protect": false
@@ -3882,6 +3906,14 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypes)
 				"offset": 20,
 				"type": "u16"
 			}
+		],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
 		],
 		"highlights": [],
 		"virt_mappings": [],
@@ -4046,6 +4078,14 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
 				"type": "u16"
 			}
 		],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
+		],
 		"highlights": [],
 		"virt_mappings": [],
 		"write_protect": false
@@ -4121,6 +4161,14 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesWithOptions)
 				}
 			}
 		],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
+		],
 		"highlights": [],
 		"virt_mappings": [],
 		"write_protect": false
@@ -4185,6 +4233,14 @@ TEST_F(DocumentTest, SerialiseMetadataHighlights)
 	AutoJSON expect(R"({
 		"comments": [],
 		"data_types": [],
+		"highlight-colours": [
+			{ "index": 0 },
+			{ "index": 1 },
+			{ "index": 2 },
+			{ "index": 3 },
+			{ "index": 4 },
+			{ "index": 5 }
+		],
 		"highlights": [
 			{
 				"colour-idx": 1,
@@ -4230,13 +4286,83 @@ TEST_F(DocumentTest, LoadMetadataDataHighlights)
 	
 	doc->load_metadata(metadata.json);
 	
-	auto &got = doc->get_highlights();
+	{
+		auto &got_highlight_colours = doc->get_highlight_colours();
+		HighlightColourMap expect_highlight_colours = HighlightColourMap::defaults();
+		
+		EXPECT_EQ(got_highlight_colours, expect_highlight_colours);
+	}
 	
-	BitRangeMap<int> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset(10, 0), 1);
-	expect.set_range(BitOffset(20, 2), BitOffset( 0, 4), 2);
+	{
+		auto &got_highlights = doc->get_highlights();
+		
+		BitRangeMap<int> expect_highlights;
+		expect_highlights.set_range(BitOffset( 0, 0), BitOffset(10, 0), 1);
+		expect_highlights.set_range(BitOffset(20, 2), BitOffset( 0, 4), 2);
+		
+		EXPECT_EQ(got_highlights, expect_highlights);
+	}
+}
+
+TEST_F(DocumentTest, LoadMetadataDataHighlightsCustomColours)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
-	EXPECT_EQ(got, expect);
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [],
+		"highlight-colours": [
+			{
+				"index": 0,
+				"primary_colour": "c061cb",
+				"label": "fancy"
+			},
+			{
+				"index": 8,
+				"secondary_colour": "c64600",
+				"label": "stain"
+			}
+		],
+		"highlights": [
+			{
+				"colour-idx": 0,
+				"length": 10,
+				"offset": 0
+			},
+			{
+				"colour-idx": 8,
+				"length": [ 0, 4 ],
+				"offset": [ 20, 2 ]
+			}
+		],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	{
+		auto &got_highlight_colours = doc->get_highlight_colours();
+		
+		HighlightColourMap expect_highlight_colours;
+		expect_highlight_colours[0].set_primary_colour(wxColour(0xC0, 0x61, 0xCB));
+		expect_highlight_colours[0].set_label("fancy");
+		expect_highlight_colours[8].set_secondary_colour(wxColour(0xC6, 0x46, 0x00));
+		expect_highlight_colours[8].set_label("stain");
+		
+		EXPECT_EQ(got_highlight_colours, expect_highlight_colours);
+	}
+	
+	{
+		auto &got_highlights = doc->get_highlights();
+		
+		BitRangeMap<int> expect_highlights;
+		expect_highlights.set_range(BitOffset( 0, 0), BitOffset(10, 0), 0);
+		expect_highlights.set_range(BitOffset(20, 2), BitOffset( 0, 4), 8);
+		
+		EXPECT_EQ(got_highlights, expect_highlights);
+	}
 }
 
 TEST(Document, TypeInfoComparison)

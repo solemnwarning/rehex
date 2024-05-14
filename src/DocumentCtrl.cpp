@@ -5231,19 +5231,23 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 	auto highlight = highlights.get_range(off);
 	if(highlight != highlights.end())
 	{
-		return Highlight(
-			active_palette->get_highlight_fg(highlight->second),
-			active_palette->get_highlight_bg(highlight->second));
+		const HighlightColourMap &highlight_colours = document->get_highlight_colours();
+		
+		auto hc = highlight_colours.find(highlight->second);
+		if(hc != highlight_colours.end())
+		{
+			return Highlight(hc->second.secondary_colour, hc->second.primary_colour);
+		}
 	}
-	else if(document->is_byte_dirty(off))
+	
+	if(document->is_byte_dirty(off))
 	{
 		return Highlight(
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
 	}
-	else{
-		return NoHighlight();
-	}
+	
+	return NoHighlight();
 }
 
 REHex::DocumentCtrl::CommentRegion::CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length):

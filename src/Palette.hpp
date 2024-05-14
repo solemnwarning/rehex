@@ -75,21 +75,6 @@ namespace REHex {
 			const wxColour &operator[](int index) const;
 			
 			/**
-			 * @brief Get the background colour for the given text highlight colour.
-			 *
-			 * @param highlight_idx Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
-			*/
-			const wxColour get_highlight_bg(int highlight_idx) const;
-			
-			/**
-			 * @brief Get the foreground colour for the given text highlight colour.
-			 *
-			 * @param highlight_idx Highlight index (0 .. NUM_HIGHLIGHT_COLOURS - 1).
-			*/
-			const wxColour get_highlight_fg(int highlight_idx) const;
-			
-			
-			/**
 			 * @brief Blend two palette colours together.
 			 *
 			 * @param colour_a_idx Palette index of colour A (0 .. PAL_MAX).

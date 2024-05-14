@@ -33,6 +33,8 @@
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "SafeWindowPointer.hpp"
+#include "SettingsDialog.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
@@ -107,6 +109,8 @@ namespace REHex
 			
 			std::map<std::string, ToolPanel*> tools;
 			std::set<wxDialog*> search_dialogs;
+			
+			SafeWindowPointer<SettingsDialog> doc_properties;
 			
 			void OnSize(wxSizeEvent &size);
 			

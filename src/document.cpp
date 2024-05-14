@@ -59,6 +59,7 @@ REHex::Document::Document():
 	current_seq(0),
 	buffer_seq(0),
 	saved_seq(0),
+	highlight_colour_map(wxGetApp().settings->get_highlight_colours()),
 	cursor_state(CSTATE_HEX),
 	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
 	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
@@ -77,6 +78,7 @@ REHex::Document::Document(const std::string &filename):
 	current_seq(0),
 	buffer_seq(0),
 	saved_seq(0),
+	highlight_colour_map(HighlightColourMap::defaults()),
 	cursor_state(CSTATE_HEX),
 	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
 	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
@@ -1034,6 +1036,46 @@ bool REHex::Document::erase_comment_recursive(BitOffset offset, BitOffset length
 	return true;
 }
 
+const REHex::HighlightColourMap &REHex::Document::get_highlight_colours() const
+{
+	return highlight_colour_map;
+}
+
+void REHex::Document::set_highlight_colours(const HighlightColourMap &highlight_colours)
+{
+	_tracked_change("change highlight colours",
+		[this, highlight_colours]()
+		{
+			highlight_colour_map = highlight_colours;
+			
+			/* Delete any highlights using a deleted colour. */
+			
+			for(auto it = highlights.begin(); it != highlights.end();)
+			{
+				if(highlight_colour_map.find(it->second) != highlight_colour_map.end())
+				{
+					++it;
+				}
+				else{
+					BitOffset it_offset = it->first.offset;
+					BitOffset it_length = it->first.length;
+					
+					highlights.clear_range(it_offset, it_length);
+					
+					it = highlights.get_range_in(it_offset, BitOffset::MAX);
+				}
+			}
+			
+			_raise_highlights_changed();
+		},
+		
+		[this]()
+		{
+			/* Highlight changes are undone implicitly. */
+			_raise_highlights_changed();
+		});
+}
+
 const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 {
 	return highlights;
@@ -1389,6 +1431,7 @@ void REHex::Document::undo()
 		cpos_off     = trans.old_cpos_off;
 		cursor_state = trans.old_cursor_state;
 		comments     = trans.old_comments;
+		highlight_colour_map = trans.old_highlight_colours;
 		highlights   = trans.old_highlights;
 		
 		if(types != trans.old_types)
@@ -1917,6 +1960,13 @@ json_t *REHex::Document::serialise_metadata() const
 		has_data = true;
 	}
 	
+	json_t *highlight_colours = highlight_colour_map.to_json();
+	if(json_object_set_new(root, "highlight-colours", highlight_colours) == -1)
+	{
+		json_decref(root);
+		return NULL;
+	}
+	
 	json_t *highlights = json_array();
 	if(json_object_set_new(root, "highlights", highlights) == -1)
 	{
@@ -2050,7 +2100,7 @@ REHex::BitRangeTree<REHex::Document::Comment> REHex::Document::_load_comments(co
 	return comments;
 }
 
-REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length)
+REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, off_t buffer_length, const HighlightColourMap &highlight_colour_map)
 {
 	BitRangeMap<int> highlights;
 	
@@ -2067,7 +2117,7 @@ REHex::BitRangeMap<int> REHex::Document::_load_highlights(const json_t *meta, of
 		
 		if(offset >= 0 && offset < BitOffset(buffer_length, 0)
 			&& length > 0 && (offset + length) <= BitOffset(buffer_length, 0)
-			&& colour >= 0 && colour < HighlightColourMap::MAX_NUM)
+			&& highlight_colour_map.find(colour) != highlight_colour_map.end())
 		{
 			highlights.set_range(offset, length, colour);
 		}
@@ -2148,7 +2198,20 @@ void REHex::Document::_load_metadata(const std::string &filename)
 void REHex::Document::load_metadata(const json_t *metadata)
 {
 	comments = _load_comments(metadata, buffer_length());
-	highlights = _load_highlights(metadata, buffer_length());
+	
+	json_t *highlight_colours = json_object_get(metadata, "highlight-colours");
+	if(highlight_colours != NULL)
+	{
+		try {
+			highlight_colour_map = HighlightColourMap::from_json(highlight_colours);
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Error loading highlight colours from file: %s\n", e.what());
+		}
+	}
+	
+	highlights = _load_highlights(metadata, buffer_length(), highlight_colour_map);
 	types = _load_types(metadata, buffer_length());
 	std::tie(real_to_virt_segs, virt_to_real_segs) = _load_virt_mappings(metadata, buffer_length());
 	

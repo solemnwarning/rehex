@@ -1514,7 +1514,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	{
 		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
-		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogHighlights()));
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
 		
 		dialog.reset(new SettingsDialog(this, "Preferences", std::move(panels)));
 		

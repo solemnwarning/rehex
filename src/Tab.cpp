@@ -35,6 +35,7 @@
 #include "CustomMessageDialog.hpp"
 #include "EditCommentDialog.hpp"
 #include "profile.hpp"
+#include "SettingsDialogHighlights.hpp"
 #include "Tab.hpp"
 #include "VirtualMappingDialog.hpp"
 
@@ -73,6 +74,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc(SharedDocumentPointer::make()),
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
+	doc_properties(NULL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -156,6 +158,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	doc(document),
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
+	doc_properties(NULL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -348,6 +351,11 @@ void REHex::Tab::hide_child_windows()
 	{
 		(*sdi)->Hide();
 	}
+	
+	if(doc_properties != NULL)
+	{
+		doc_properties->Hide();
+	}
 }
 
 void REHex::Tab::unhide_child_windows()
@@ -357,6 +365,11 @@ void REHex::Tab::unhide_child_windows()
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->ShowWithoutActivating();
+	}
+	
+	if(doc_properties != NULL)
+	{
+		doc_properties->ShowWithoutActivating();
 	}
 	
 	if(file_deleted_dialog_pending)
@@ -1152,7 +1165,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	{
 		wxMenu *hlmenu = new wxMenu();
 		
-		const HighlightColourMap &highlight_colours = wxGetApp().settings->get_highlight_colours();
+		const HighlightColourMap &highlight_colours = doc->get_highlight_colours();
 		
 		for(auto i = highlight_colours.begin(); i != highlight_colours.end(); ++i)
 		{
@@ -1186,6 +1199,36 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 				doc->set_highlight(highlight_off, highlight_length, colour_idx);
 			}, itm->GetId(), itm->GetId());
 		}
+		
+		if(!highlight_colours.empty())
+		{
+			hlmenu->AppendSeparator();
+		}
+		
+		wxMenuItem *edit_itm = hlmenu->Append(wxID_ANY, "Edit highlight colours...");
+		
+		#ifdef _WIN32
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		#else
+		hlmenu->Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		#endif
+		{
+			CallAfter([this]()
+			{
+				if(doc_properties == NULL)
+				{
+					std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+					panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogDocHighlights(doc)));
+					
+					doc_properties.reset(new SettingsDialog(this, doc->get_title() + " - File properties", std::move(panels)));
+					doc_properties->Show();
+				}
+				else{
+					doc_properties->Raise();
+				}
+			});
+			
+		}, edit_itm->GetId(), edit_itm->GetId());
 		
 		menu.AppendSubMenu(hlmenu, "Set Highlight");
 	}

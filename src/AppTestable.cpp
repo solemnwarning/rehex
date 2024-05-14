@@ -268,7 +268,16 @@ REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 		}
 		
 		#else /* Linux/UNIX */
-		help_loaded = help_controller->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb");
+		
+		#ifndef NDEBUG
+		std::string exe_dir = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath().ToStdString();
+		help_loaded = help_controller->AddBook(exe_dir + "/help/rehex.htb");
+		#endif
+		
+		if(!help_loaded)
+		{
+			help_loaded = help_controller->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb");
+		}
 		#endif
 	}
 	

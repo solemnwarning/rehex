@@ -1,0 +1,44 @@
+[% WRAPPER page.tt
+   title = "Value Colourisation"
+%]
+
+<h2>Value Colourisation</h2>
+
+<p>
+The value colourisation function allows colouring bytes in the hex view by their numerical value.
+</p>
+
+<p>
+To enable value colourisation, open the "View" menu and select a map under the "Value colour map" submenu, for example the "ASCII Values" map which is included by default:
+
+<p>
+<img src="value-colour-menu.png" alt="Value colour map menu">
+</p>
+
+<p>
+...will highlight printable ASCII characters one colour and control characters another colour:
+</p>
+
+<p>
+<img src="value-colour-ascii.png" alt="Value colour mapping screenshot">
+</p>
+
+<h3>Customising value colour maps</h3>
+
+<p>
+Custom value colour maps can be created in the application preferences dialog shown below.
+</p>
+
+<p>
+<ol>
+<li>Create or select a map to modify in the "Maps" box at the top.</li>
+<li>Select a range of one or more byte values using the mouse in the "Preview" box.</li>
+<li>Choose a "Base colour" for the selected byte range to the left.</li>
+<li>Optionally choose a "Gradient colour" to colour the range of values using a gradient between two colours.</li>
+<li>Repeat from 2) for any other values to colour.</li>
+</p>
+
+<p>
+<img src="value-colour-settings.png" alt="Value colour maps settings">
+</p>
+[% END %]

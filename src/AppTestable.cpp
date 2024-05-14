@@ -268,7 +268,16 @@ REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 		}
 		
 		#else /* Linux/UNIX */
-		help_loaded = help_controller->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb");
+		
+		#ifndef NDEBUG
+		std::string exe_dir = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath().ToStdString();
+		help_loaded = help_controller->AddBook(exe_dir + "/help/rehex.htb");
+		#endif
+		
+		if(!help_loaded)
+		{
+			help_loaded = help_controller->AddBook(std::string(REHEX_DATADIR) + "/rehex/rehex.htb");
+		}
 		#endif
 	}
 	
@@ -291,6 +300,46 @@ void REHex::App::show_help_contents(wxWindow *error_parent)
 		#endif
 		
 		help->DisplayContents();
+		
+		#ifndef _WIN32
+		if(help_window == NULL)
+		{
+			help_window = help_controller->GetHelpWindow();
+			assert(help_window != NULL);
+			
+			help_window->Bind(wxEVT_HTML_LINK_CLICKED, [&](wxHtmlLinkEvent &event)
+			{
+				const wxHtmlLinkInfo &linkinfo = event.GetLinkInfo();
+				
+				if(linkinfo.GetTarget() == "_blank")
+				{
+					/* External link - display it in the web browser. */
+					wxLaunchDefaultBrowser(linkinfo.GetHref());
+				}
+				else{
+					/* Internal link - let the help viewer deal with it. */
+					event.Skip();
+				}
+			});
+		}
+		#endif
+	}
+}
+
+void REHex::App::show_help_page(wxWindow *error_parent, const std::string &page_name)
+{
+	HelpController *help = get_help_controller(error_parent);
+	if(help)
+	{
+		#ifndef _WIN32
+		wxHtmlHelpWindow *help_window = help_controller->GetHelpWindow();
+		#endif
+		
+		#ifdef _WIN32
+		help_controller->DisplaySection(page_name + ".htm");
+		#else
+		help_controller->Display(page_name + ".html");
+		#endif
 		
 		#ifndef _WIN32
 		if(help_window == NULL)

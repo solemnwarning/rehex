@@ -23,11 +23,13 @@ use FindBin;
 use Getopt::Long;
 
 my @include_paths = ();
+my @define_vars = ();
 my $dep_file;
 my $dep_target;
 
 GetOptions(
 	"include=s"    => \@include_paths,
+	"define=s"     => \@define_vars,
 	"dep-file=s"   => \$dep_file,
 	"dep-target=s" => \$dep_target,
 );
@@ -46,7 +48,8 @@ my $tt = Template->new({
 
 $tt->process("$template_name.tt", {
 	contents      => \@contents,
-	template_name => $template_name }
+	template_name => $template_name,
+	(map { my ($name, $value) = split(m/=/, $_, 2); ($name => $value); } @define_vars) }
 ) or die $tt->error();
 
 open(my $dep_out, ">", $dep_file) or die "$dep_file: $!\n";

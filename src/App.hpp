@@ -200,7 +200,21 @@ namespace REHex {
 			
 			#ifdef BUILD_HELP
 			HelpController *get_help_controller(wxWindow *error_parent);
+
+			/**
+			 * @brief Display the contents page from the manual in the help viewer.
+			 *
+			 * @param error_parent  Window to parent (modal) error dialog to if there is an error.
+			*/
 			void show_help_contents(wxWindow *error_parent);
+
+			/**
+			 * @brief Display a page from the manual in the help viewer.
+			 *
+			 * @param error_parent  Window to parent (modal) error dialog to if there is an error.
+			 * @param page_name     Filename of page, without path or file extension.
+			*/
+			void show_help_page(wxWindow *error_parent, const std::string &page_name);
 			#endif
 			
 			virtual bool OnInit() override;

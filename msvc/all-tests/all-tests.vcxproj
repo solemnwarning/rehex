@@ -230,6 +230,7 @@
     <ClCompile Include="..\..\src\BitmapTool.cpp" />
     <ClCompile Include="..\..\src\BitOffset.cpp" />
     <ClCompile Include="..\..\src\buffer.cpp" />
+    <ClCompile Include="..\..\src\ByteColourMap.cpp" />
     <ClCompile Include="..\..\src\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\src\BytesPerLineDialog.cpp" />
     <ClCompile Include="..\..\src\CharacterEncoder.cpp" />
@@ -237,6 +238,7 @@
     <ClCompile Include="..\..\src\Checksum.cpp" />
     <ClCompile Include="..\..\src\ChecksumImpl.cpp" />
     <ClCompile Include="..\..\src\ClickText.cpp" />
+    <ClCompile Include="..\..\src\ColourPickerCtrl.cpp" />
     <ClCompile Include="..\..\src\CommentTree.cpp" />
     <ClCompile Include="..\..\src\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\src\CustomMessageDialog.cpp" />
@@ -251,6 +253,8 @@
     <ClCompile Include="..\..\src\FileWriter.cpp" />
     <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp" />
+    <ClCompile Include="..\..\src\HighlightColourMap.cpp" />
+    <ClCompile Include="..\..\src\HSVColour.cpp" />
     <ClCompile Include="..\..\src\IntelHexExport.cpp" />
     <ClCompile Include="..\..\src\IntelHexImport.cpp" />
     <ClCompile Include="..\..\src\LicenseDialog.cpp" />
@@ -263,6 +267,9 @@
     <ClCompile Include="..\..\src\RangeDialog.cpp" />
     <ClCompile Include="..\..\src\RangeProcessor.cpp" />
     <ClCompile Include="..\..\src\search.cpp" />
+    <ClCompile Include="..\..\src\SettingsDialog.cpp" />
+    <ClCompile Include="..\..\src\SettingsDialogByteColour.cpp" />
+    <ClCompile Include="..\..\src\SettingsDialogHighlights.cpp" />
     <ClCompile Include="..\..\src\StringPanel.cpp" />
     <ClCompile Include="..\..\src\Tab.cpp" />
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
@@ -274,6 +281,7 @@
     <ClCompile Include="..\..\tests\BitmapTool.cpp" />
     <ClCompile Include="..\..\tests\BitOffset.cpp" />
     <ClCompile Include="..\..\tests\buffer.cpp" />
+    <ClCompile Include="..\..\tests\ByteColourMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeTree.cpp" />
@@ -292,6 +300,8 @@
     <ClCompile Include="..\..\tests\endian_conv.cpp" />
     <ClCompile Include="..\..\tests\FastRectangleFiller.cpp" />
     <ClCompile Include="..\..\tests\FileWriter.cpp" />
+    <ClCompile Include="..\..\tests\HighlightColourMap.cpp" />
+    <ClCompile Include="..\..\tests\HSVColour.cpp" />
     <ClCompile Include="..\..\tests\IntelHexExport.cpp" />
     <ClCompile Include="..\..\tests\IntelHexImport.cpp" />
     <ClCompile Include="..\..\tests\LuaPluginLoader.cpp" />

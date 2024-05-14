@@ -1,11 +1,13 @@
 index           Welcome
 comments        Setting Comments
 types           Setting Data Types
+highlights      Setting Highlight Colours
 bitedit         Bit Editor
 checksum        Checksum Tool
 diff            Comparing Files
 bitmap          Bitmap Visualisation
 virt-mapping    Virtual Address Mapping
+value-colour-map  Value Colourisation
 plugins         Writing Plugins
 
 bt                   Binary Templates

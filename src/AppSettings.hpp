@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,8 +18,13 @@
 #ifndef REHEX_APPSETTINGS_HPP
 #define REHEX_APPSETTINGS_HPP
 
+#include <map>
+#include <memory>
 #include <wx/config.h>
 #include <wx/wx.h>
+
+#include "ByteColourMap.hpp"
+#include "HighlightColourMap.hpp"
 
 namespace REHex
 {
@@ -51,12 +56,21 @@ namespace REHex
 			GotoOffsetBase get_goto_offset_base() const;
 			void set_goto_offset_base(GotoOffsetBase goto_offset_base);
 			
+			const HighlightColourMap &get_highlight_colours() const;
+			void set_highlight_colours(const HighlightColourMap &highlight_colours);
+			
+			std::map< int, std::shared_ptr<const ByteColourMap> > get_byte_colour_maps() const;
+			void set_byte_colour_maps(const std::map<int, ByteColourMap> &byte_colour_maps);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
+			HighlightColourMap highlight_colours;
+			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
 	};
 	
 	wxDECLARE_EVENT(PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
+	wxDECLARE_EVENT(BYTE_COLOUR_MAPS_CHANGED, wxCommandEvent);
 }
 
 #endif /* !REHEX_APPSETTINGS_HPP */

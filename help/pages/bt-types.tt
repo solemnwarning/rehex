@@ -51,7 +51,7 @@ Arrays are also present from C and can be used to declare file data or local var
 [%- END %]
 
 <p>
-Unlike C arrays, arrays in templates have a known size and can be resized at runtime. Local arrays can be grown or shrunk arbitrarily while file arrays can only be grown, and not once further file variables have been defined after the array. See <a href="bt-funcs.html#arrayfunc">Array Functions</a> for more information.
+Unlike C arrays, arrays in templates have a known size and can be resized at runtime. Local arrays can be grown or shrunk arbitrarily while file arrays can only be grown, and not once further file variables have been defined after the array. See <a href="bt-funcs.[% page_ext %]#arrayfunc">Array Functions</a> for more information.
 </p>
 
 <p>

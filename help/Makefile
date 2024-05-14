@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -28,9 +28,11 @@ PAGES := \
 	checksum \
 	comments \
 	diff \
+	highlights \
 	index \
 	plugins \
 	types \
+	value-colour-map \
 	virt-mapping
 
 .PHONY: all
@@ -47,8 +49,10 @@ clean:
 	rm -rf wx/output/
 	rm -rf online/output/
 
+CHM_PAGE_EXT := htm
+
 CHM_TARGETS := \
-	$(addsuffix .html,$(addprefix chm/output/,$(PAGES))) \
+	$(addsuffix .$(CHM_PAGE_EXT),$(addprefix chm/output/,$(PAGES))) \
 	chm/output/rehex.hhc \
 	chm/output/rehex.hhk
 
@@ -63,12 +67,14 @@ chm/output/rehex.%: chm/templates/%.tt contents.txt
 	@mkdir -p chm/output/ $(shell dirname .d/$@.d)
 	$(PERL) template.pl --include chm/templates --dep-file .d/$@.d --dep-target $@ $* > $@
 
-chm/output/%.html: pages/%.tt
+chm/output/%.$(CHM_PAGE_EXT): pages/%.tt
 	@mkdir -p chm/output/ $(shell dirname .d/$@.d)
-	$(PERL) template.pl --include chm/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+	$(PERL) template.pl --define page_ext=$(CHM_PAGE_EXT) --include chm/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+
+WX_PAGE_EXT := html
 
 WX_TARGETS := \
-	$(addsuffix .html,$(addprefix wx/output/,$(PAGES))) \
+	$(addsuffix .$(WX_PAGE_EXT),$(addprefix wx/output/,$(PAGES))) \
 	wx/output/rehex.hhc \
 	wx/output/rehex.hhk
 
@@ -80,19 +86,21 @@ wx/output/rehex.%: wx/templates/%.tt contents.txt
 	@mkdir -p wx/output/ $(shell dirname .d/$@.d)
 	$(PERL) template.pl --include wx/templates --dep-file .d/$@.d --dep-target $@ $* > $@
 
-wx/output/%.html: pages/%.tt
+wx/output/%.$(WX_PAGE_EXT): pages/%.tt
 	@mkdir -p wx/output/ $(shell dirname .d/$@.d)
-	$(PERL) template.pl --include wx/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+	$(PERL) template.pl --define page_ext=$(WX_PAGE_EXT) --include wx/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+
+ONLINE_PAGE_EXT := html
 
 ONLINE_TARGETS := \
-	$(addsuffix .html,$(addprefix online/output/,$(PAGES)))
+	$(addsuffix .$(ONLINE_PAGE_EXT),$(addprefix online/output/,$(PAGES)))
 
 .PHONY: online-help
 online-help: $(ONLINE_TARGETS)
 	cp content/* online/content/* online/output/
 
-online/output/%.html: pages/%.tt contents.txt
+online/output/%.$(ONLINE_PAGE_EXT): pages/%.tt contents.txt
 	@mkdir -p online/output/ $(shell dirname .d/$@.d)
-	$(PERL) template.pl --include online/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+	$(PERL) template.pl --define page_ext=$(ONLINE_PAGE_EXT) --include online/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
 
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)

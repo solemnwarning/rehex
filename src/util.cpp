@@ -682,3 +682,48 @@ template<> REHex::BitOffset REHex::add_clamp_overflow(BitOffset a, BitOffset b, 
 {
 	return _add_clamp_overflow(a, b, overflow, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO);
 }
+
+json_t *REHex::colour_to_json(const wxColour &colour)
+{
+	std::string s = colour_to_string(colour);
+	return json_string(s.c_str());
+}
+
+wxColour REHex::colour_from_json(const json_t *json)
+{
+	const char *s = json_string_value(json);
+	
+	if(s == NULL)
+	{
+		throw std::invalid_argument("Invalid colour (expected a string of 6 hex digits)");
+	}
+	
+	return colour_from_string(s);
+}
+
+std::string REHex::colour_to_string(const wxColour &colour)
+{
+	char s[16];
+	snprintf(s, sizeof(s), "%02x%02x%02x", (int)(colour.Red()), (int)(colour.Green()), (int)(colour.Blue()));
+	
+	return s;
+}
+
+wxColour REHex::colour_from_string(const std::string &s)
+{
+	if(s.length() != 6
+		|| std::find_if(s.begin(), s.end(), [](char c) { return !isxdigit(c); }) != s.end())
+	{
+		throw std::invalid_argument("Invalid colour (expected a string of 6 hex digits)");
+	}
+	
+	char rs[] = { s[0], s[1], '\0' };
+	char gs[] = { s[2], s[3], '\0' };
+	char bs[] = { s[4], s[5], '\0' };
+	
+	int red = strtol(rs, NULL, 16);
+	int green = strtol(gs, NULL, 16);
+	int blue = strtol(bs, NULL, 16);
+	
+	return wxColour(red, green, blue);
+}

@@ -76,7 +76,7 @@ static unsigned int pack_colour(const wxColour &colour)
 	return (unsigned int)(colour.Red()) | ((unsigned int)(colour.Blue()) << 8) | ((unsigned int)(colour.Green()) << 16);
 }
 
-REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
+REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, long style):
 	wxControl(),
 	doc(doc),
 	hex_font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
@@ -108,7 +108,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc):
 	/* The background style MUST be set before the control is created. */
 	SetBackgroundStyle(wxBG_STYLE_PAINT);
 	Create(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS));
+		(wxVSCROLL | wxHSCROLL | wxWANTS_CHARS | style));
 	
 	client_width      = 0;
 	client_height     = 0;
@@ -289,6 +289,16 @@ void REHex::DocumentCtrl::set_highlight_selection_match(bool highlight_selection
 {
 	this->highlight_selection_match = highlight_selection_match;
 	Refresh();
+}
+
+std::shared_ptr<const REHex::ByteColourMap> REHex::DocumentCtrl::get_byte_colour_map() const
+{
+	return byte_colour_map;
+}
+
+void REHex::DocumentCtrl::set_byte_colour_map(const std::shared_ptr<const ByteColourMap> &map)
+{
+	byte_colour_map = map;
 }
 
 REHex::BitOffset REHex::DocumentCtrl::get_cursor_position() const
@@ -937,7 +947,14 @@ void REHex::DocumentCtrl::_handle_width_change()
 	}
 
 	/* TODO: Preserve/scale the position as the window size changes. */
-	SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
+	
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) == 0)
+	{
+		SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
+	}
+	else{
+		SetScrollbar(wxHORIZONTAL, 0, 0, 0);
+	}
 	
 	/* Update vertical scrollbar, since we just recalculated the height of the document. */
 	_update_vscroll();
@@ -962,6 +979,16 @@ void REHex::DocumentCtrl::_handle_height_change()
 void REHex::DocumentCtrl::_update_vscroll()
 {
 	static const int MAX_STEPS = 10000;
+
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) != 0)
+	{
+		SetScrollbar(wxVERTICAL, 0, 0, 0);
+
+		scroll_yoff = 0;
+		scroll_yoff_max = 0;
+
+		return;
+	}
 	
 	uint64_t total_lines = regions.back()->y_offset + regions.back()->y_lines;
 	
@@ -1047,6 +1074,11 @@ void REHex::DocumentCtrl::_update_vscroll()
 
 void REHex::DocumentCtrl::_update_vscroll_pos(bool update_linked_scroll_others)
 {
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) != 0)
+	{
+		return;
+	}
+	
 	int range = GetScrollRange(wxVERTICAL);
 	int thumb = GetScrollThumb(wxVERTICAL);
 	
@@ -1207,6 +1239,11 @@ void REHex::DocumentCtrl::restore_scroll_position()
 
 void REHex::DocumentCtrl::OnScroll(wxScrollWinEvent &event)
 {
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) != 0)
+	{
+		return;
+	}
+	
 	wxEventType type = event.GetEventType();
 	int orientation  = event.GetOrientation();
 	
@@ -1307,6 +1344,11 @@ void REHex::DocumentCtrl::OnScroll(wxScrollWinEvent &event)
 
 void REHex::DocumentCtrl::OnWheel(wxMouseEvent &event)
 {
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) != 0)
+	{
+		return;
+	}
+	
 	wxMouseWheelAxis axis = event.GetWheelAxis();
 	int delta             = event.GetWheelDelta();
 	int ticks_per_delta   = event.GetLinesPerAction();
@@ -1618,7 +1660,7 @@ void REHex::DocumentCtrl::OnChar(wxKeyEvent &event)
 		
 		_set_cursor_position(new_cursor_pos, Document::CSTATE_GOTO);
 		
-		if (update_scrollpos)
+		if (update_scrollpos && (GetWindowStyle() & DCTRL_LOCK_SCROLL) == 0)
 		{
 			scroll_yoff = new_scroll_yoff;
 			_update_vscroll_pos();
@@ -1831,6 +1873,8 @@ void REHex::DocumentCtrl::OnLeftUp(wxMouseEvent &event)
 	}
 	
 	mouse_down_area = GenericDataRegion::SA_NONE;
+	
+	Refresh();
 }
 
 void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
@@ -1988,39 +2032,42 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 	
 	wxClientDC dc(this);
 	
-	int scroll_xoff_max = GetScrollRange(wxHORIZONTAL) - GetScrollThumb(wxHORIZONTAL);
-	
-	if(mouse_x < 0)
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) == 0)
 	{
-		scroll_xoff -= std::min(abs(mouse_x), scroll_xoff);
-		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		int scroll_xoff_max = GetScrollRange(wxHORIZONTAL) - GetScrollThumb(wxHORIZONTAL);
 		
-		mouse_x = 0;
-	}
-	else if(mouse_x >= client_width)
-	{
-		scroll_xoff += std::min((int)(mouse_x - client_width), (scroll_xoff_max - scroll_xoff));
-		SetScrollPos(wxHORIZONTAL, scroll_xoff);
+		if(mouse_x < 0)
+		{
+			scroll_xoff -= std::min(abs(mouse_x), scroll_xoff);
+			SetScrollPos(wxHORIZONTAL, scroll_xoff);
+			
+			mouse_x = 0;
+		}
+		else if(mouse_x >= client_width)
+		{
+			scroll_xoff += std::min((int)(mouse_x - client_width), (scroll_xoff_max - scroll_xoff));
+			SetScrollPos(wxHORIZONTAL, scroll_xoff);
+			
+			mouse_x = client_width - 1;
+		}
 		
-		mouse_x = client_width - 1;
-	}
-	
-	if(mouse_y < 0)
-	{
-		scroll_yoff -= std::min((int64_t)(abs(mouse_y) / hf_height + 1), scroll_yoff);
-		_update_vscroll_pos();
+		if(mouse_y < 0)
+		{
+			scroll_yoff -= std::min((int64_t)(abs(mouse_y) / hf_height + 1), scroll_yoff);
+			_update_vscroll_pos();
+			
+			mouse_y = 0;
+		}
+		else if(mouse_y >= client_height)
+		{
+			scroll_yoff += std::min((int64_t)((mouse_y - client_height) / hf_height + 1), (scroll_yoff_max - scroll_yoff));
+			_update_vscroll_pos();
+			
+			mouse_y = client_height - 1;
+		}
 		
-		mouse_y = 0;
+		save_scroll_position();
 	}
-	else if(mouse_y >= client_height)
-	{
-		scroll_yoff += std::min((int64_t)((mouse_y - client_height) / hf_height + 1), (scroll_yoff_max - scroll_yoff));
-		_update_vscroll_pos();
-		
-		mouse_y = client_height - 1;
-	}
-	
-	save_scroll_position();
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
@@ -2685,6 +2732,11 @@ void REHex::DocumentCtrl::_make_x_visible(int x_px, int width_px)
 */
 void REHex::DocumentCtrl::_make_byte_visible(BitOffset offset)
 {
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) != 0)
+	{
+		return;
+	}
+	
 	auto dr = _data_region_by_offset(offset);
 	assert(dr != data_regions.end());
 	
@@ -2780,7 +2832,17 @@ int REHex::DocumentCtrl::get_virtual_width()
 
 bool REHex::DocumentCtrl::get_cursor_visible()
 {
+	if((GetWindowStyle() & DCTRL_HIDE_CURSOR) != 0)
+	{
+		return false;
+	}
+	
 	return cursor_visible;
+}
+
+bool REHex::DocumentCtrl::is_selection_hidden() const
+{
+	return (mouse_down_area == GenericDataRegion::SA_NONE) && ((GetWindowStyle() & DCTRL_HIDE_CURSOR) != 0);
 }
 
 REHex::BitOffset REHex::DocumentCtrl::get_end_virt_offset() const
@@ -3199,6 +3261,11 @@ void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff, bool update_linke
 
 void REHex::DocumentCtrl::set_scroll_yoff_clamped(int64_t scroll_yoff)
 {
+	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) != 0)
+	{
+		return;
+	}
+	
 	if(scroll_yoff < 0)
 	{
 		scroll_yoff = 0;
@@ -3500,6 +3567,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	}
 	
 	/* Fetch the data to be drawn. */
+	BitOffset data_base;
 	std::vector<unsigned char> data;
 	bool data_err = false;
 	
@@ -3514,7 +3582,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	off_t hsm_post = std::max<off_t>(selection_data.size(), MAX_CHAR_SIZE);
 	
 	try {
-		BitOffset data_base = d_offset + BitOffset::BYTES(skip_bytes - hsm_pre);
+		data_base = d_offset + BitOffset::BYTES(skip_bytes - hsm_pre);
 		off_t data_to_draw = std::min(max_bytes, (d_length.byte() - std::min(skip_bytes, d_length.byte())));
 		
 		data = doc.doc->read_data(data_base, data_to_draw + hsm_pre + hsm_post);
@@ -3560,7 +3628,29 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				(*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
 		}
 		else{
-			return highlight_at_off(offset);
+			Highlight h = highlight_at_off(offset);
+			if(h.enable)
+			{
+				return h;
+			}
+			
+			auto byte_colour_map = doc.get_byte_colour_map();
+			if(byte_colour_map)
+			{
+				BitOffset offset_within_data = offset - data_base;
+				assert(offset_within_data >= BitOffset::ZERO);
+				
+				if(offset_within_data.byte() < data.size())
+				{
+					unsigned char byte = data[offset_within_data.byte()];
+					
+					return Highlight(
+						byte_colour_map->get_colour(byte),
+						(*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
+				}
+			}
+			
+			return Highlight(NoHighlight());
 		}
 	};
 	
@@ -3573,9 +3663,11 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
 			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
+	bool selection_hidden = doc.is_selection_hidden();
+	
 	auto hex_highlight_func = [&](BitOffset offset)
 	{
-		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
+		if(!selection_hidden && offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			return hex_selection_highlight;
 		}
@@ -3592,7 +3684,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	auto ascii_highlight_func = [&](BitOffset offset)
 	{
-		if(offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
+		if(!selection_hidden && offset >= scoped_selection_offset && offset < (scoped_selection_offset + scoped_selection_length))
 		{
 			return ascii_selection_highlight;
 		}
@@ -3782,7 +3874,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 				? "0123456789ABCDEF"
 				: "????????????????";
 			
-			if(invert && doc_ctrl->cursor_visible)
+			if(invert && doc_ctrl->get_cursor_visible())
 			{
 				fill_char_bg(hex_x, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 				draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
@@ -3821,7 +3913,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		draw_nibble(high_nibble, inv_high);
 		draw_nibble(low_nibble,  inv_low);
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->get_cursor_visible() && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
 		{
 			/* Draw insert cursor. */
 			insert_cursor_pen = &norm_fg_1px;
@@ -3851,7 +3943,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	{
 		/* Draw cursor at the end of the file (i.e. after the last byte). */
 		
-		if((doc_ctrl->cursor_visible && doc_ctrl->hex_view_active()) || !hex_active)
+		if((doc_ctrl->get_cursor_visible() && doc_ctrl->hex_view_active()) || !hex_active)
 		{
 			if(doc_ctrl->insert_mode || !hex_active)
 			{
@@ -4191,7 +4283,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		wxRect char_bbox;
 		if(ascii_active)
 		{
-			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->cursor_visible)
+			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->get_cursor_visible())
 			{
 				char_bbox = draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 				fill_char_bg(char_bbox, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
@@ -4224,7 +4316,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			}
 		}
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->cursor_visible || !ascii_active))
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || !ascii_active))
 		{
 			insert_cursor_pen = &norm_fg_1px;
 			insert_cursor_pt1 = wxPoint(ascii_x, y);
@@ -4240,7 +4332,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	{
 		/* Draw cursor at the end of the file (i.e. after the last byte). */
 		
-		if((doc_ctrl->cursor_visible && doc_ctrl->ascii_view_active()) || !ascii_active)
+		if((doc_ctrl->get_cursor_visible() && doc_ctrl->ascii_view_active()) || !ascii_active)
 		{
 			if(doc_ctrl->insert_mode || !ascii_active)
 			{
@@ -4449,7 +4541,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			bit_s = '0';
 		}
 		
-		if(invert && doc_ctrl->cursor_visible)
+		if(invert && doc_ctrl->get_cursor_visible())
 		{
 			fill_char_bg(hex_x, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], hex_x_char, bit_s);
@@ -4465,7 +4557,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		
 		hex_x = hex_base_x + doc_ctrl->hf_string_width(++hex_x_char);
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && doc_ctrl->cursor_visible && doc_ctrl->cursor_state == Document::CSTATE_SPECIAL && cur_off.byte_aligned())
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && doc_ctrl->get_cursor_visible() && doc_ctrl->cursor_state == Document::CSTATE_SPECIAL && cur_off.byte_aligned())
 		{
 			/* Draw insert cursor. */
 			insert_cursor_pen = &norm_fg_1px;
@@ -4490,7 +4582,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	{
 		/* Draw cursor at the end of the file (i.e. after the last byte). */
 		
-		if((doc_ctrl->cursor_visible && doc_ctrl->hex_view_active()) || !hex_active)
+		if((doc_ctrl->get_cursor_visible() && doc_ctrl->hex_view_active()) || !hex_active)
 		{
 			if(doc_ctrl->insert_mode || !hex_active)
 			{
@@ -5139,19 +5231,23 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 	auto highlight = highlights.get_range(off);
 	if(highlight != highlights.end())
 	{
-		return Highlight(
-			active_palette->get_highlight_fg(highlight->second),
-			active_palette->get_highlight_bg(highlight->second));
+		const HighlightColourMap &highlight_colours = document->get_highlight_colours();
+		
+		auto hc = highlight_colours.find(highlight->second);
+		if(hc != highlight_colours.end())
+		{
+			return Highlight(hc->second.secondary_colour, hc->second.primary_colour);
+		}
 	}
-	else if(document->is_byte_dirty(off))
+	
+	if(document->is_byte_dirty(off))
 	{
 		return Highlight(
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
 	}
-	else{
-		return NoHighlight();
-	}
+	
+	return NoHighlight();
 }
 
 REHex::DocumentCtrl::CommentRegion::CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length):

@@ -31,6 +31,7 @@
 
 #include "BitOffset.hpp"
 #include "buffer.hpp"
+#include "ByteColourMap.hpp"
 #include "ByteRangeSet.hpp"
 #include "CharacterFinder.hpp"
 #include "document.hpp"
@@ -40,6 +41,10 @@
 #include "Palette.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "util.hpp"
+
+/* DocumentCtrl style flags */
+#define DCTRL_LOCK_SCROLL 1
+#define DCTRL_HIDE_CURSOR 2
 
 namespace REHex {
 	class DocumentCtrl: public wxControl {
@@ -407,7 +412,7 @@ namespace REHex {
 					wx_char(wx_char), unicode_char(unicode_char), char_size(char_size), column(column) {}
 			};
 			
-			DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc);
+			DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, long style = 0);
 			~DocumentCtrl();
 			
 			static const int BYTES_PER_LINE_FIT_BYTES  = 0;
@@ -432,6 +437,9 @@ namespace REHex {
 			
 			bool get_highlight_selection_match();
 			void set_highlight_selection_match(bool highlight_selection_match);
+			
+			std::shared_ptr<const ByteColourMap> get_byte_colour_map() const;
+			void set_byte_colour_map(const std::shared_ptr<const ByteColourMap> &map);
 			
 			BitOffset get_cursor_position() const;
 			Document::CursorState get_cursor_state() const;
@@ -656,6 +664,7 @@ namespace REHex {
 			bool show_ascii;
 			
 			bool highlight_selection_match;
+			std::shared_ptr<const ByteColourMap> byte_colour_map;
 			
 			int     scroll_xoff;
 			int64_t scroll_yoff;
@@ -838,6 +847,7 @@ namespace REHex {
 			int get_virtual_width();
 			bool get_cursor_visible();
 			BitOffset get_end_virt_offset() const;
+			bool is_selection_hidden() const;
 			
 			int hf_char_width();
 			int hf_char_height();

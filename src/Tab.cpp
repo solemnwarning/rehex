@@ -35,6 +35,7 @@
 #include "CustomMessageDialog.hpp"
 #include "EditCommentDialog.hpp"
 #include "profile.hpp"
+#include "SettingsDialogHighlights.hpp"
 #include "Tab.hpp"
 #include "VirtualMappingDialog.hpp"
 
@@ -73,6 +74,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc(SharedDocumentPointer::make()),
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
+	doc_properties(NULL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -156,6 +158,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	doc(document),
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
+	doc_properties(NULL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -348,6 +351,11 @@ void REHex::Tab::hide_child_windows()
 	{
 		(*sdi)->Hide();
 	}
+	
+	if(doc_properties != NULL)
+	{
+		doc_properties->Hide();
+	}
 }
 
 void REHex::Tab::unhide_child_windows()
@@ -357,6 +365,11 @@ void REHex::Tab::unhide_child_windows()
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->ShowWithoutActivating();
+	}
+	
+	if(doc_properties != NULL)
+	{
+		doc_properties->ShowWithoutActivating();
 	}
 	
 	if(file_deleted_dialog_pending)
@@ -1152,25 +1165,14 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	{
 		wxMenu *hlmenu = new wxMenu();
 		
-		for(int i = 0; i < Palette::NUM_HIGHLIGHT_COLOURS; ++i)
+		const HighlightColourMap &highlight_colours = doc->get_highlight_colours();
+		
+		for(auto i = highlight_colours.begin(); i != highlight_colours.end(); ++i)
 		{
-			/* Hardcoded list of names for the highlight colours.
-			 * This will need to be done better soon... but for now all the highlight
-			 * colours used in each pallette are the same and we don't have any more
-			 * specific names for them (#60).
-			*/
-			static const char *highlight_strings[] = {
-				"Red",
-				"Orange",
-				"Yellow",
-				"Green",
-				"Violet",
-				"Grey",
-			};
+			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, i->second.label);
 			
-			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, highlight_strings[i]);
-			
-			wxColour bg_colour = active_palette->get_highlight_bg(i);
+			size_t colour_idx = i->first;
+			wxColour bg_colour = i->second.primary_colour;
 			
 			/* TODO: Get appropriate size for menu bitmap.
 			 * TODO: Draw a character in image using foreground colour.
@@ -1189,15 +1191,44 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			 * On GTK, both work.
 			*/
 			#ifdef _WIN32
-			menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			menu.Bind(wxEVT_MENU, [this, highlight_off, highlight_length, colour_idx](wxCommandEvent &event)
 			#else
-			hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, i](wxCommandEvent &event)
+			hlmenu->Bind(wxEVT_MENU, [this, highlight_off, highlight_length, colour_idx](wxCommandEvent &event)
 			#endif
 			{
-				int colour = i;
-				doc->set_highlight(highlight_off, highlight_length, colour);
+				doc->set_highlight(highlight_off, highlight_length, colour_idx);
 			}, itm->GetId(), itm->GetId());
 		}
+		
+		if(!highlight_colours.empty())
+		{
+			hlmenu->AppendSeparator();
+		}
+		
+		wxMenuItem *edit_itm = hlmenu->Append(wxID_ANY, "Edit highlight colours...");
+		
+		#ifdef _WIN32
+		menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		#else
+		hlmenu->Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+		#endif
+		{
+			CallAfter([this]()
+			{
+				if(doc_properties == NULL)
+				{
+					std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+					panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogDocHighlights(doc)));
+					
+					doc_properties.reset(new SettingsDialog(this, doc->get_title() + " - File properties", std::move(panels)));
+					doc_properties->Show();
+				}
+				else{
+					doc_properties->Raise();
+				}
+			});
+			
+		}, edit_itm->GetId(), edit_itm->GetId());
 		
 		menu.AppendSubMenu(hlmenu, "Set Highlight");
 	}

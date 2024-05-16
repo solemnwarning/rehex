@@ -24,8 +24,12 @@ CXXSTD       ?= -std=c++11
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
+TEST_EXE ?= ./tests/all-tests
 GTKCONFIG_EXE ?= ./tools/gtk-config
 HELP_TARGET ?= help/rehex.htb
+
+DEFAULT_EXE_TARGET  ?= $(EXE)
+DEFAULT_TEST_TARGET ?= $(TEST_EXE)
 
 # Wrapper around the $(shell) function that aborts the build if the command
 # exits with a nonzero status.
@@ -42,7 +46,7 @@ shell-or-die = $\
 
 NONCOMPILE_TARGETS=clean distclean dist
 
-need_compiler_flags=1
+need_compiler_flags ?= 1
 ifneq ($(MAKECMDGOALS),)
 	ifeq ($(filter-out $(NONCOMPILE_TARGETS),$(MAKECMDGOALS)),)
 		need_compiler_flags=0
@@ -156,8 +160,8 @@ all: $(EXE)
 .SECONDARY:
 
 .PHONY: check
-check: tests/all-tests
-	./tests/all-tests
+check: $(TEST_EXE)
+	$(TEST_EXE)
 	
 	for p in $(PLUGINS); \
 	do \
@@ -196,7 +200,7 @@ clean:
 	rm -f $(patsubst %.$(BUILD_TYPE).o,%.debug.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
 	rm -f $(patsubst %.$(BUILD_TYPE).o,%.release.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
 	rm -f $(patsubst %.$(BUILD_TYPE).o,%.profile.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
-	rm -f ./tests/all-tests
+	rm -f $(TEST_EXE)
 	
 	rm -f $(EMBED_EXE)
 	rm -f $(GTKCONFIG_EXE)
@@ -414,7 +418,7 @@ APP_OBJS := \
 	$(WXFREECHART_OBJS) \
 	$(EXTRA_APP_OBJS)
 
-$(EXE): $(APP_OBJS) $(GTKCONFIG_EXE)
+$(DEFAULT_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
 	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
@@ -549,7 +553,7 @@ TEST_OBJS := \
 	$(WXBIND_OBJS) \
 	$(EXTRA_TEST_OBJS)
 
-tests/all-tests: $(TEST_OBJS) $(GTKCONFIG_EXE)
+$(DEFAULT_TEST_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
 	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
 	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 

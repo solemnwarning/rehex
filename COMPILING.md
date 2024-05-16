@@ -63,6 +63,8 @@ The recommended way to compile REHex on Windows is using [MinGW MSYS2](https://w
 
 There is also a Visual Studio solution (`msvc/rehex.sln`) which will download and build dependencies using vcpkg and then build the editor. This is less-tested, but provided for those who prefer development within the Visual Studio environment. Note that some things (e.g. running plugin tests and generating the help file) aren't integrated with the solution.
 
+There is a `Makefile.msvc` makefile which uses the above Visual Studio solution to build the application while allowing you to run the tests and build a distribution package as per normal. It needs to be run from an MSYS2 (or similar) shell for the POSIX tools and the path to `MSBuild.exe` may be specified via the `MSBUILD` variable. This is used for the official 32-bit packages.
+
 ### macOS
 
 You will need the XCode build tools and the libraries listed above to build REHex on macOS.

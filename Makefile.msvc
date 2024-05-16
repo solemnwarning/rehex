@@ -1,0 +1,103 @@
+# Reverse Engineer's Hex Editor
+# Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as published by
+# the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 51
+# Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+MSBUILD ?= MSBuild
+
+ifeq ($(BUILD_ARCH),x86)
+	MSVC_ARCH_DIR :=
+else
+	ifeq ($(BUILD_ARCH),x64)
+		MSVC_ARCH_DIR := x64/
+	else
+		X := $(error BUILD_ARCH must be set to 'x86' or 'x64')
+	endif
+endif
+
+ifeq ($(BUILD_TYPE),)
+	BUILD_TYPE := release
+endif
+
+ifeq ($(BUILD_TYPE),release)	
+	EXE      := msvc/$(MSVC_ARCH_DIR)Release/rehex.exe
+	TEST_EXE := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
+	
+	# Help is only enabled for Release builds in the VS solution.
+	ifneq ($(BUILD_HELP),0)
+		HELP_TARGET := rehex.chm
+	endif
+else
+	ifeq ($(BUILD_TYPE),debug)
+		EXE      := msvc/$(MSVC_ARCH_DIR)Debug/rehex.exe
+		TEST_EXT := msvc/$(MSVC_ARCH_DIR)D/all-tests.exe
+	else
+		X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)')
+	endif
+endif
+
+need_compiler_flags := 0
+DEFAULT_EXE_TARGET  := DEFAULT_EXE_TARGET_SKIP
+DEFAULT_TEST_TARGET := DEFAULT_TEST_TARGET_SKIP
+
+include Makefile
+
+.PHONY: msvc/Release/rehex.exe
+msvc/Release/rehex.exe:
+	"$(MSBUILD)" msvc/rehex.sln //t:rehex //p:Configuration="Release" //p:Platform="x86"
+
+.PHONY: msvc/Debug/rehex.exe
+msvc/Debug/rehex.exe:
+	"$(MSBUILD)" msvc/rehex.sln //t:rehex //p:Configuration="Debug" //p:Platform="x86"
+
+.PHONY: msvc/x64/Release/rehex.exe
+msvc/x64/Release/rehex.exe:
+	"$(MSBUILD)" msvc/rehex.sln //t:rehex //p:Configuration="Release" //p:Platform="x64"
+
+.PHONY: msvc/x64/Debug/rehex.exe
+msvc/x64/Debug/rehex.exe:
+	"$(MSBUILD)" msvc/rehex.sln //t:rehex //p:Configuration="Debug" //p:Platform="x64"
+
+.PHONY: msvc/Release/all-tests.exe
+msvc/Release/all-tests.exe:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\all-tests /p:Configuration="Release" /p:Platform="x86"
+
+.PHONY: msvc/Debug/all-tests.exe
+msvc/Debug/all-tests.exe:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\all-tests /p:Configuration="Debug" /p:Platform="x86"
+
+.PHONY: msvc/x64/Release/all-tests.exe
+msvc/x64/Release/all-tests.exe:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\all-tests /p:Configuration="Release" /p:Platform="x64"
+
+.PHONY: msvc/x64/Debug/all-tests.exe
+msvc/x64/Debug/all-tests.exe:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\all-tests /p:Configuration="Debug" /p:Platform="x64"
+
+DISTDIR ?= rehex-$(VERSION)
+
+windist: $(EXE) $(HELP_TARGET)
+	mkdir $(DISTDIR)
+	
+	cp $(EXE) $(DISTDIR)
+	
+ifneq ($(HELP_TARGET),)
+	cp $(HELP_TARGET) $(DISTDIR)
+endif
+	
+	mkdir $(DISTDIR)/Plugins/
+	for p in $(PLUGINS); \
+	do \
+		$(MAKE) -C plugins/$${p} PLUGINS_INST_DIR=$$(realpath $(DISTDIR)/Plugins/) install || exit $$?; \
+	done

@@ -242,7 +242,8 @@ REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 	if(help_controller != NULL && !help_loaded)
 	{
 		#if defined(_WIN32)
-		wxString chm_path = wxStandardPaths::Get().GetResourcesDir() + "/rehex.chm";
+		wxString exe_dir = wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath();
+		wxString chm_path = exe_dir + "\\rehex.chm";
 		
 		/* Delete the "Zone.Identifier" NTFS alternate stream if present on the help file.
 		 *

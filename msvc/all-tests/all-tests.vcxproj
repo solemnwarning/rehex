@@ -280,7 +280,9 @@
     <ClCompile Include="..\..\src\win32lib.cpp" />
     <ClCompile Include="..\..\tests\BitmapTool.cpp" />
     <ClCompile Include="..\..\tests\BitOffset.cpp" />
-    <ClCompile Include="..\..\tests\buffer.cpp" />
+    <ClCompile Include="..\..\tests\BufferTest1.cpp" />
+    <ClCompile Include="..\..\tests\BufferTest2.cpp" />
+    <ClCompile Include="..\..\tests\BufferTest3.cpp" />
     <ClCompile Include="..\..\tests\ByteColourMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />

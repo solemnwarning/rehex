@@ -19,9 +19,6 @@
     <ClCompile Include="..\..\googletest\src\gtest-all.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\tests\buffer.cpp">
-      <Filter>tests</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp">
       <Filter>tests</Filter>
     </ClCompile>
@@ -393,6 +390,15 @@
     </ClCompile>
     <ClCompile Include="..\..\src\ColourPickerCtrl.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\BufferTest1.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\BufferTest2.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\BufferTest3.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

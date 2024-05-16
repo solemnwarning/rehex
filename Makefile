@@ -509,7 +509,9 @@ TEST_OBJS := \
 	src/win32lib.$(BUILD_TYPE).o \
 	tests/BitmapTool.o \
 	tests/BitOffset.o \
-	tests/buffer.o \
+	tests/BufferTest1.o \
+	tests/BufferTest2.o \
+	tests/BufferTest3.o \
 	tests/ByteColourMap.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \

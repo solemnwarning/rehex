@@ -41,7 +41,7 @@ ifeq ($(BUILD_TYPE),release)
 else
 	ifeq ($(BUILD_TYPE),debug)
 		EXE      := msvc/$(MSVC_ARCH_DIR)Debug/rehex.exe
-		TEST_EXT := msvc/$(MSVC_ARCH_DIR)D/all-tests.exe
+		TEST_EXE := msvc/$(MSVC_ARCH_DIR)Debug/all-tests.exe
 	else
 		X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)')
 	endif

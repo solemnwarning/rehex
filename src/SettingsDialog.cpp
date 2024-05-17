@@ -25,9 +25,11 @@
 #include "SettingsDialog.hpp"
 
 BEGIN_EVENT_TABLE(REHex::SettingsDialog, wxDialog)
+	EVT_CLOSE(REHex::SettingsDialog::OnClose)
 	EVT_TREE_SEL_CHANGED(wxID_ANY, REHex::SettingsDialog::OnTreeSelect)
 	EVT_BUTTON(wxID_HELP, REHex::SettingsDialog::OnHelp)
 	EVT_BUTTON(wxID_OK, REHex::SettingsDialog::OnOK)
+	EVT_BUTTON(wxID_CANCEL, REHex::SettingsDialog::OnCancel)
 END_EVENT_TABLE()
 
 REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels):
@@ -84,6 +86,11 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 	SetSizerAndFit(top_sizer);
 }
 
+void REHex::SettingsDialog::OnClose(wxCloseEvent &event)
+{
+	Destroy();
+}
+
 void REHex::SettingsDialog::OnTreeSelect(wxTreeEvent &event)
 {
 	auto old_item = panel_tree_items.find(event.GetOldItem());
@@ -134,4 +141,9 @@ void REHex::SettingsDialog::OnOK(wxCommandEvent &event)
 	}
 	
 	Destroy();
+}
+
+void REHex::SettingsDialog::OnCancel(wxCommandEvent &event)
+{
+	Close();
 }

@@ -87,9 +87,11 @@ namespace REHex
 			
 			SettingsDialogPanel *selected_panel;
 			
+			void OnClose(wxCloseEvent &event);
 			void OnTreeSelect(wxTreeEvent &event);
 			void OnHelp(wxCommandEvent &event);
 			void OnOK(wxCommandEvent &event);
+			void OnCancel(wxCommandEvent &event);
 			
 		public:
 			static constexpr int MARGIN = 8;

@@ -62,7 +62,7 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, SharedDocumentPointer &documen
 	pgrid = new wxPropertyGrid(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 		wxPG_STATIC_SPLITTER);
 	
-	wxGetApp().Bind(PALETTE_CHANGED, [this](wxCommandEvent &event) { set_pgrid_colours(); });
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::DecodePanel::OnColourPaletteChanged, this);
 	set_pgrid_colours();
 	
 	pgrid->Append(c8 = new wxPropertyCategory("8 bit integer"));
@@ -135,6 +135,11 @@ REHex::DecodePanel::DecodePanel(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::DecodePanel::OnDataModified, this);
 	
 	update();
+}
+
+REHex::DecodePanel::~DecodePanel()
+{
+	wxGetApp().Unbind(PALETTE_CHANGED, &REHex::DecodePanel::OnColourPaletteChanged, this);
 }
 
 std::string REHex::DecodePanel::name() const
@@ -408,6 +413,12 @@ void REHex::DecodePanel::OnSize(wxSizeEvent &event)
 	pgrid->SetSplitterLeft();
 	
 	/* Continue propogation of EVT_SIZE event. */
+	event.Skip();
+}
+
+void REHex::DecodePanel::OnColourPaletteChanged(wxCommandEvent &event)
+{
+	set_pgrid_colours();
 	event.Skip();
 }
 

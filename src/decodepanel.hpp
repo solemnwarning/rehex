@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -36,6 +36,7 @@ namespace REHex {
 	{
 		public:
 			DecodePanel(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			~DecodePanel();
 			
 			virtual std::string name() const override;
 // 			virtual std::string label() const override;
@@ -83,6 +84,7 @@ namespace REHex {
 			void OnPropertyGridSelected(wxPropertyGridEvent &event);
 			void OnEndian(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
+			void OnColourPaletteChanged(wxCommandEvent &event);
 			
 			template<typename T, int base, T (*htoX)(T)> void OnSignedValue(wxStringProperty *property);
 			template<typename T, int base, T (*htoX)(T)> void OnUnsignedValue(wxStringProperty *property);

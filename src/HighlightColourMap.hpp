@@ -97,16 +97,19 @@ namespace REHex
 			
 		private:
 			std::map<size_t, HighlightColour> colours;
+			int default_colour_lightness;
 			
-			static HighlightColour make_default_highlight(size_t highlight_idx);
+			static HighlightColour make_default_highlight(size_t highlight_idx, int lightness);
 			
 		public:
-			static HighlightColourMap defaults();
+			HighlightColourMap();
 			
-			static HighlightColourMap from_config(const wxConfigBase *config);
+			static HighlightColourMap defaults(int default_colour_lightness = 100);
+			
+			static HighlightColourMap from_config(const wxConfigBase *config, int default_colour_lightness = 100);
 			void to_config(wxConfigBase *config) const;
 			
-			static HighlightColourMap from_json(const json_t *json);
+			static HighlightColourMap from_json(const json_t *json, int default_colour_lightness = 100);
 			json_t *to_json() const;
 			
 			iterator add();
@@ -127,6 +130,8 @@ namespace REHex
 			const_iterator end() const;
 			
 			HighlightColour &operator[](size_t highlight_idx);
+			
+			void set_default_lightness(int lightness);
 			
 			bool operator==(const HighlightColourMap &rhs) const
 			{

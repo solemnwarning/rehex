@@ -478,6 +478,8 @@ namespace REHex {
 			CommandEventBuffer mappings_changed_buffer;
 			void _raise_mappings_changed();
 			
+			void OnColourPaletteChanged(wxCommandEvent &event);
+			
 		public:
 			/**
 			 * @brief Read some data from the file.

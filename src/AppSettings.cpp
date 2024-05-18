@@ -72,6 +72,8 @@ REHex::AppSettings::AppSettings():
 	
 	byte_colour_maps[4] = std::make_shared<ByteColourMap>(bcm_colour_test);
 #endif
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
 REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
@@ -145,6 +147,13 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 			wxGetApp().printf_error("Error loading value colour maps: %s\n", e.what());
 		}
 	}
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
+}
+
+REHex::AppSettings::~AppSettings()
+{
+	wxGetApp().Unbind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
 void REHex::AppSettings::write(wxConfig *config)
@@ -250,4 +259,10 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)
+{
+	highlight_colours.set_default_lightness(active_palette->get_default_highlight_lightness());
+	event.Skip();
 }

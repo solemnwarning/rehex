@@ -48,6 +48,8 @@ namespace REHex
 			AppSettings();
 			AppSettings(wxConfig *config);
 			
+			~AppSettings();
+			
 			void write(wxConfig *config);
 			
 			AsmSyntax get_preferred_asm_syntax() const;
@@ -67,6 +69,8 @@ namespace REHex
 			GotoOffsetBase goto_offset_base;
 			HighlightColourMap highlight_colours;
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
+			
+			void OnColourPaletteChanged(wxCommandEvent &event);
 	};
 	
 	wxDECLARE_EVENT(PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);

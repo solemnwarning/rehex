@@ -70,6 +70,8 @@ REHex::Document::Document():
 	title  = "Untitled";
 	
 	_forward_buffer_events();
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
 
 REHex::Document::Document(const std::string &filename):
@@ -100,6 +102,8 @@ REHex::Document::Document(const std::string &filename):
 	}
 	
 	_forward_buffer_events();
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
 
 void REHex::Document::_forward_buffer_events()
@@ -123,6 +127,7 @@ void REHex::Document::_forward_buffer_events()
 
 REHex::Document::~Document()
 {
+	wxGetApp().Unbind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 	delete buffer;
 }
 
@@ -2261,6 +2266,12 @@ void REHex::Document::_raise_types_changed()
 void REHex::Document::_raise_mappings_changed()
 {
 	mappings_changed_buffer.raise();
+}
+
+void REHex::Document::OnColourPaletteChanged(wxCommandEvent &event)
+{
+	highlight_colour_map.set_default_lightness(active_palette->get_default_highlight_lightness());
+	event.Skip();
 }
 
 REHex::Document::Comment::Comment(const wxString &text):

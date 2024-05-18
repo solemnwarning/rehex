@@ -55,7 +55,7 @@ namespace REHex {
 				PAL_INVALID = 9999,
 			};
 			
-			Palette(const std::string &name, const std::string &label, const wxColour colours[]);
+			Palette(const std::string &name, const std::string &label, const wxColour colours[], int default_highlight_lightness);
 			
 			/**
 			 * @brief Get the internal name of the palette.
@@ -87,6 +87,8 @@ namespace REHex {
 			*/
 			static wxColour get_average_colour(const wxColour &colour_a, const wxColour &colour_b);
 			
+			int get_default_highlight_lightness() const;
+			
 			static Palette *create_system_palette();
 			static Palette *create_light_palette();
 			static Palette *create_dark_palette();
@@ -96,6 +98,7 @@ namespace REHex {
 			std::string label;
 			
 			wxColour palette[PAL_MAX + 1];
+			int default_highlight_lightness;
 	};
 	
 	/**

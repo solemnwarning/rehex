@@ -21,9 +21,13 @@
 #include "HSVColour.hpp"
 #include "util.hpp"
 
-REHex::HighlightColourMap REHex::HighlightColourMap::defaults()
+REHex::HighlightColourMap::HighlightColourMap():
+	default_colour_lightness(100) {}
+
+REHex::HighlightColourMap REHex::HighlightColourMap::defaults(int default_colour_lightness)
 {
 	HighlightColourMap map;
+	map.default_colour_lightness = default_colour_lightness;
 	
 	for(size_t i = 0; i < DEFAULT_NUM; ++i)
 	{
@@ -34,9 +38,10 @@ REHex::HighlightColourMap REHex::HighlightColourMap::defaults()
 	return map;
 }
 
-REHex::HighlightColourMap REHex::HighlightColourMap::from_config(const wxConfigBase *config)
+REHex::HighlightColourMap REHex::HighlightColourMap::from_config(const wxConfigBase *config, int default_colour_lightness)
 {
 	HighlightColourMap map;
+	map.default_colour_lightness = default_colour_lightness;
 	
 	wxString group_path;
 	long group_idx;
@@ -54,7 +59,7 @@ REHex::HighlightColourMap REHex::HighlightColourMap::from_config(const wxConfigB
 		{
 			wxConfigPathChanger scoped_path(config, group_path + "/");
 			
-			HighlightColour hc = make_default_highlight(v_index);
+			HighlightColour hc = make_default_highlight(v_index, default_colour_lightness);
 			
 			if(config->HasEntry("primary_colour"))
 			{
@@ -116,9 +121,10 @@ void REHex::HighlightColourMap::to_config(wxConfigBase *config) const
 	}
 }
 
-REHex::HighlightColourMap REHex::HighlightColourMap::from_json(const json_t *json)
+REHex::HighlightColourMap REHex::HighlightColourMap::from_json(const json_t *json, int default_colour_lightness)
 {
 	HighlightColourMap map;
+	map.default_colour_lightness = default_colour_lightness;
 	
 	if(!json_is_array(json))
 	{
@@ -151,7 +157,7 @@ REHex::HighlightColourMap REHex::HighlightColourMap::from_json(const json_t *jso
 			throw std::invalid_argument("Highlight index out of range");
 		}
 		
-		HighlightColour hc = make_default_highlight(v_index);
+		HighlightColour hc = make_default_highlight(v_index, default_colour_lightness);
 		
 		wxColour colour_from_json(const json_t *json);
 		json_t *colour_to_json(const wxColour &colour);
@@ -224,7 +230,7 @@ REHex::HighlightColourMap::iterator REHex::HighlightColourMap::add()
 	{
 		if(colours.find(i) == colours.end())
 		{
-			return colours.insert(std::make_pair(i, make_default_highlight(i))).first;
+			return colours.insert(std::make_pair(i, make_default_highlight(i, default_colour_lightness))).first;
 		}
 	}
 	
@@ -286,13 +292,28 @@ REHex::HighlightColourMap::HighlightColour &REHex::HighlightColourMap::operator[
 	auto it = colours.find(highlight_idx);
 	if(it == colours.end())
 	{
-		it = colours.insert(std::make_pair(highlight_idx, make_default_highlight(highlight_idx))).first;
+		it = colours.insert(std::make_pair(highlight_idx, make_default_highlight(highlight_idx, default_colour_lightness))).first;
 	}
 	
 	return it->second;
 }
 
-REHex::HighlightColourMap::HighlightColour REHex::HighlightColourMap::make_default_highlight(size_t highlight_idx)
+void REHex::HighlightColourMap::set_default_lightness(int lightness)
+{
+	default_colour_lightness = lightness;
+	
+	for(auto it = colours.begin(); it != colours.end(); ++it)
+	{
+		HighlightColour default_hc = make_default_highlight(it->first, default_colour_lightness);
+		
+		if(it->second.primary_colour_is_default)
+		{
+			it->second.primary_colour = default_hc.primary_colour;
+		}
+	}
+}
+
+REHex::HighlightColourMap::HighlightColour REHex::HighlightColourMap::make_default_highlight(size_t highlight_idx, int lightness)
 {
 	HighlightColour hc;
 	
@@ -346,7 +367,7 @@ REHex::HighlightColourMap::HighlightColour REHex::HighlightColourMap::make_defau
 			
 			for(size_t i = 0; i < highlight_idx && i < 6; ++i)
 			{
-				HighlightColour i_hc = make_default_highlight(i);
+				HighlightColour i_hc = make_default_highlight(i, 100);
 				HSVColour primary_colour_hsv = HSVColour(i_hc.primary_colour);
 				
 				existing_primary_hues.push_back(primary_colour_hsv.h);
@@ -369,6 +390,8 @@ REHex::HighlightColourMap::HighlightColour REHex::HighlightColourMap::make_defau
 			break;
 		}
 	}
+	
+	hc.primary_colour = hc.primary_colour.ChangeLightness(lightness);
 	
 	hc.primary_colour_is_default = true;
 	hc.secondary_colour_is_default = true;

@@ -52,6 +52,8 @@ bool REHex::App::OnInit()
 	help_loaded = false;
 	#endif
 	
+	active_palette = Palette::create_light_palette();
+	
 	locale = new wxLocale(wxLANGUAGE_DEFAULT);
 	console = new ConsoleBuffer();
 	thread_pool = new ThreadPool(std::thread::hardware_concurrency());
@@ -238,15 +240,23 @@ bool REHex::App::OnInit()
 	std::string theme = config->Read("theme", "system").ToStdString();
 	if(theme == "light")
 	{
+		delete active_palette;
 		active_palette = Palette::create_light_palette();
 	}
 	else if(theme == "dark")
 	{
+		delete active_palette;
 		active_palette = Palette::create_dark_palette();
 	}
 	else /* if(theme == "system") */
 	{
+		delete active_palette;
 		active_palette = Palette::create_system_palette();
+	}
+	
+	{
+		wxCommandEvent pc_event(PALETTE_CHANGED);
+		ProcessEvent(pc_event);
 	}
 	
 	Bind(EVT_PAGE_DROPPED, &REHex::App::OnTabDropped, this);

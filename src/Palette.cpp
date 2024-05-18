@@ -30,8 +30,8 @@ static bool is_light(const wxColour &c) { return ((int)(c.Red()) + (int)(c.Green
 
 REHex::Palette *REHex::active_palette = NULL;
 
-REHex::Palette::Palette(const std::string &name, const std::string &label, const wxColour colours[]):
-	name(name), label(label)
+REHex::Palette::Palette(const std::string &name, const std::string &label, const wxColour colours[], int default_highlight_lightness):
+	name(name), label(label), default_highlight_lightness(default_highlight_lightness)
 {
 	for(int i = 0; i <= PAL_MAX; ++i)
 	{
@@ -71,6 +71,11 @@ wxColour REHex::Palette::get_average_colour(const wxColour &colour_a, const wxCo
 		(((int)(colour_a.Red())   + (int)(colour_b.Red()))   / 2),
 		(((int)(colour_a.Green()) + (int)(colour_b.Green())) / 2),
 		(((int)(colour_a.Blue())  + (int)(colour_b.Blue()))  / 2));
+}
+
+int REHex::Palette::get_default_highlight_lightness() const
+{
+	return default_highlight_lightness;
 }
 
 REHex::Palette *REHex::Palette::create_system_palette()
@@ -127,7 +132,9 @@ REHex::Palette *REHex::Palette::create_system_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
-	return new Palette("system", "System colours", colours);
+	int default_highlight_lightness = is_light(WINDOW) ? 100 : 80;
+	
+	return new Palette("system", "System colours", colours, default_highlight_lightness);
 }
 
 REHex::Palette *REHex::Palette::create_light_palette()
@@ -170,7 +177,7 @@ REHex::Palette *REHex::Palette::create_light_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
-	return new Palette("light", "Light", colours);
+	return new Palette("light", "Light", colours, 100);
 }
 
 REHex::Palette *REHex::Palette::create_dark_palette()
@@ -213,5 +220,5 @@ REHex::Palette *REHex::Palette::create_dark_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
-	return new Palette("dark", "Dark", colours);
+	return new Palette("dark", "Dark", colours, 80);
 }

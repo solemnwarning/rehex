@@ -42,6 +42,12 @@ namespace REHex
 		HEX  = 16,
 	};
 	
+	enum class HexCursorMode
+	{
+		NIBBLE = 4,
+		BYTE = 8,
+	};
+	
 	class AppSettings: public wxEvtHandler
 	{
 		public:
@@ -64,11 +70,15 @@ namespace REHex
 			std::map< int, std::shared_ptr<const ByteColourMap> > get_byte_colour_maps() const;
 			void set_byte_colour_maps(const std::map<int, ByteColourMap> &byte_colour_maps);
 			
+			HexCursorMode get_hex_cursor_mode() const;
+			void set_hex_cursor_mode(HexCursorMode hex_cursor_mode);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
 			HighlightColourMap highlight_colours;
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
+			HexCursorMode hex_cursor_mode;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

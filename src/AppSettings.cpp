@@ -26,7 +26,8 @@ wxDEFINE_EVENT(REHex::BYTE_COLOUR_MAPS_CHANGED, wxCommandEvent);
 REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
 	goto_offset_base(GotoOffsetBase::AUTO),
-	highlight_colours(HighlightColourMap::defaults())
+	highlight_colours(HighlightColourMap::defaults()),
+	hex_cursor_mode(HexCursorMode::BYTE)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -259,6 +260,16 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+REHex::HexCursorMode REHex::AppSettings::get_hex_cursor_mode() const
+{
+	return hex_cursor_mode;
+}
+
+void REHex::AppSettings::set_hex_cursor_mode(HexCursorMode hex_cursor_mode)
+{
+	this->hex_cursor_mode = hex_cursor_mode;
 }
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)

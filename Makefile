@@ -403,6 +403,7 @@ APP_OBJS := \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
+	src/SettingsDialogGeneral.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \

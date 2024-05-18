@@ -45,6 +45,7 @@
 #include "search.hpp"
 #include "SettingsDialog.hpp"
 #include "SettingsDialogByteColour.hpp"
+#include "SettingsDialogGeneral.hpp"
 #include "SettingsDialogHighlights.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
@@ -1513,6 +1514,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	if(dialog == NULL)
 	{
 		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogGeneral()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
 		

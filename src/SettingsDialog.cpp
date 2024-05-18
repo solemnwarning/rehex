@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 
+#include <vector>
 #include <wx/button.h>
 #include <wx/sizer.h>
 #include <wx/statline.h>
@@ -45,6 +46,7 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 	tree_panel_sizer->Add(treectrl, 0, (wxEXPAND | wxRIGHT), MARGIN);
 	
 	wxTreeItemId tree_root = treectrl->AddRoot(wxEmptyString);
+	std::vector<wxTreeItemId> panel_items;
 	
 	for(auto p = this->panels.begin(); p != this->panels.end(); ++p)
 	{
@@ -55,6 +57,8 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 		
 		assert(panel_tree_items.find(p_item) == panel_tree_items.end());
 		panel_tree_items[p_item] = p->get();
+		
+		panel_items.push_back(p_item);
 		
 		if(p == this->panels.begin())
 		{
@@ -83,7 +87,23 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 	wxButton *cancel_button = new wxButton(this, wxID_CANCEL);
 	button_sizer->Add(cancel_button);
 	
-	SetSizerAndFit(top_sizer);
+	int max_window_width = -1;
+	int max_window_height = -1;
+	
+	for(auto i = panel_items.begin(); i != panel_items.end(); ++i)
+	{
+		treectrl->SelectItem(*i);
+		
+		SetSizerAndFit(top_sizer);
+		wxSize this_panel_window_size = GetSize();
+		
+		max_window_width  = std::max(max_window_width,  this_panel_window_size.GetWidth());
+		max_window_height = std::max(max_window_height, this_panel_window_size.GetHeight());
+	}
+	
+	SetSize(wxSize(max_window_width, max_window_height));
+	
+	treectrl->SelectItem(panel_items.front());
 }
 
 void REHex::SettingsDialog::OnClose(wxCloseEvent &event)

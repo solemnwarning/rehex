@@ -19,9 +19,11 @@ MAKEFLAGS="LUA=lua5.3 -j$(nproc)"
 
 [ -z "$I386_CHROOT" ]      && I386_CHROOT="bionic-i386-sbuild"
 [ -z "$I386_LINUXDEPLOY" ] && I386_LINUXDEPLOY="https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-i386.AppImage"
+[ -z "$I386_RUNTIME" ]     && I386_RUNTIME="https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-i686"
 
 [ -z "$AMD64_CHROOT" ]      && AMD64_CHROOT="bionic-amd64-sbuild"
 [ -z "$AMD64_LINUXDEPLOY" ] && AMD64_LINUXDEPLOY="https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+[ -z "$AMD64_RUNTIME" ]     && AMD64_RUNTIME="https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64"
 
 DEPENDS="
 	libbotan-2-dev
@@ -89,7 +91,8 @@ function build-appimage()
 		&& schroot -c "$SESSION" -r -u root -- apt-get -y install $DEPENDS \
 		&& wget -O "$tmpdir/linuxdeploy.AppImage" "$4" \
 		&& chmod +x "$tmpdir/linuxdeploy.AppImage" \
-		&& schroot -c "$SESSION" -d "$tmpdir" -r -- make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="./linuxdeploy.AppImage --appimage-extract-and-run" \
+		&& wget -O "$tmpdir/AppImage-runtime" "$5" \
+		&& schroot -c "$SESSION" -d "$tmpdir" -r -- make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="LDAI_RUNTIME_FILE=AppImage-runtime ./linuxdeploy.AppImage --appimage-extract-and-run" \
 		&& cp "$tmpdir/rehex.AppImage" "$3"
 	
 	status=$?
@@ -102,5 +105,5 @@ function build-appimage()
 	return $status
 }
 
-build-appimage "$1" "$I386_CHROOT" "$i386_out" "$I386_LINUXDEPLOY" \
-	&& build-appimage "$1" "$AMD64_CHROOT" "$amd64_out" "$AMD64_LINUXDEPLOY"
+build-appimage "$1" "$I386_CHROOT" "$i386_out" "$I386_LINUXDEPLOY" "$I386_RUNTIME" \
+	&& build-appimage "$1" "$AMD64_CHROOT" "$amd64_out" "$AMD64_LINUXDEPLOY" "$AMD64_RUNTIME"

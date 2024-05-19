@@ -90,9 +90,10 @@ function build-appimage()
 		&& schroot -c "$SESSION" -r -u root -- apt-get update \
 		&& schroot -c "$SESSION" -r -u root -- apt-get -y install $DEPENDS \
 		&& wget -O "$tmpdir/linuxdeploy.AppImage" "$4" \
-		&& chmod +x "$tmpdir/linuxdeploy.AppImage" \
+		&& wget -O "$tmpdir/linuxdeploy-plugin-gtk.sh" "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" \
+		&& chmod +x "$tmpdir/linuxdeploy.AppImage" "$tmpdir/linuxdeploy-plugin-gtk.sh" \
 		&& wget -O "$tmpdir/AppImage-runtime" "$5" \
-		&& schroot -c "$SESSION" -d "$tmpdir" -r -- make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="LDAI_RUNTIME_FILE=AppImage-runtime ./linuxdeploy.AppImage --appimage-extract-and-run" \
+		&& schroot -c "$SESSION" -d "$tmpdir" -r -- make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="LDAI_RUNTIME_FILE=AppImage-runtime DEPLOY_GTK_VERSION=2 ./linuxdeploy.AppImage --appimage-extract-and-run" \
 		&& cp "$tmpdir/rehex.AppImage" "$3"
 	
 	status=$?

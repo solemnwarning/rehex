@@ -29,4 +29,4 @@ include Makefile
 
 $(APPIMAGE_NAME): $(EXE)
 	$(MAKE) -f Makefile.AppImage DESTDIR=$(shell realpath $(APPIMAGE_DIR)) install
-	OUTPUT=$(APPIMAGE_NAME) $(LINUXDEPLOY) --appdir $(APPIMAGE_DIR) --output appimage
+	OUTPUT=$(APPIMAGE_NAME) $(LINUXDEPLOY) --plugin gtk --appdir $(APPIMAGE_DIR) --output appimage

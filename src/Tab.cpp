@@ -1167,7 +1167,8 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 		
 		const HighlightColourMap &highlight_colours = doc->get_highlight_colours();
 		
-		for(auto i = highlight_colours.begin(); i != highlight_colours.end(); ++i)
+		int highlight_num = 0;
+		for(auto i = highlight_colours.begin(); i != highlight_colours.end(); ++i, ++highlight_num)
 		{
 			wxMenuItem *itm = new wxMenuItem(hlmenu, wxID_ANY, i->second.label);
 			
@@ -1183,6 +1184,17 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 			
 			bitmaps.emplace_back(img);
 			itm->SetBitmap(bitmaps.back());
+			
+			switch(highlight_num)
+			{
+				case 0: wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "set_highlight_1"); break;
+				case 1: wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "set_highlight_2"); break;
+				case 2: wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "set_highlight_3"); break;
+				case 3: wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "set_highlight_4"); break;
+				case 4: wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "set_highlight_5"); break;
+				case 5: wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "set_highlight_6"); break;
+				default: break;
+			}
 			
 			hlmenu->Append(itm);
 			
@@ -1236,6 +1248,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 	if(highlight_at_cur != highlights.end())
 	{
 		wxMenuItem *itm = menu.Append(wxID_ANY, "Remove Highlight");
+		wxGetApp().settings->get_main_window_commands().set_menu_item_accelerator(itm, "remove_highlight");
 		
 		BitRangeMap<int>::Range key = highlight_at_cur->first;
 		

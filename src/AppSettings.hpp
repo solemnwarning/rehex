@@ -25,6 +25,7 @@
 
 #include "ByteColourMap.hpp"
 #include "HighlightColourMap.hpp"
+#include "WindowCommands.hpp"
 
 namespace REHex
 {
@@ -64,17 +65,22 @@ namespace REHex
 			std::map< int, std::shared_ptr<const ByteColourMap> > get_byte_colour_maps() const;
 			void set_byte_colour_maps(const std::map<int, ByteColourMap> &byte_colour_maps);
 			
+			const WindowCommandTable &get_main_window_commands() const;
+			void set_main_window_accelerators(const WindowCommandTable &new_accelerators);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
 			HighlightColourMap highlight_colours;
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
+			WindowCommandTable main_window_commands;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};
 	
 	wxDECLARE_EVENT(PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
 	wxDECLARE_EVENT(BYTE_COLOUR_MAPS_CHANGED, wxCommandEvent);
+	wxDECLARE_EVENT(MAIN_WINDOW_ACCELERATORS_CHANGED, wxCommandEvent);
 }
 
 #endif /* !REHEX_APPSETTINGS_HPP */

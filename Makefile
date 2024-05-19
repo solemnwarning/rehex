@@ -188,6 +188,7 @@ clean:
 	      res/offsets24.c res/offsets24.h \
 	      res/offsets32.c res/offsets32.h \
 	      res/offsets48.c res/offsets48.h \
+	      res/shortcut48.c  res/shortcut48.h \
 	      res/spinner24.c   res/spinner24.h
 	
 	rm -f $(filter-out %.$(BUILD_TYPE).o,$(APP_OBJS))
@@ -338,6 +339,7 @@ APP_OBJS := \
 	res/offsets24.o \
 	res/offsets32.o \
 	res/offsets48.o \
+	res/shortcut48.o \
 	res/spinner24.o \
 	res/swap_horiz16.o \
 	res/swap_vert16.o \
@@ -404,6 +406,7 @@ APP_OBJS := \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
+	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
@@ -413,6 +416,7 @@ APP_OBJS := \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/VirtualMappingList.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
+	src/WindowCommands.$(BUILD_TYPE).o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(WXFREECHART_OBJS) \
@@ -444,6 +448,7 @@ TEST_OBJS := \
 	res/offsets24.o \
 	res/offsets32.o \
 	res/offsets48.o \
+	res/shortcut48.o \
 	res/spinner24.o \
 	res/swap_horiz16.o \
 	res/swap_vert16.o \
@@ -499,6 +504,7 @@ TEST_OBJS := \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
+	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
@@ -507,6 +513,7 @@ TEST_OBJS := \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
+	src/WindowCommands.$(BUILD_TYPE).o \
 	tests/BitmapTool.o \
 	tests/BitOffset.o \
 	tests/BufferTest1.o \
@@ -551,6 +558,7 @@ TEST_OBJS := \
 	tests/Tab.o \
 	tests/testutil.o \
 	tests/util.o \
+	tests/WindowCommands.o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(EXTRA_TEST_OBJS)
@@ -579,6 +587,7 @@ src/DiffWindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon6
 src/LicenseDialog.$(BUILD_TYPE).o: res/license.h
 src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h
 src/mainwindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
+src/SettingsDialogKeyboard.$(BUILD_TYPE).o: res/shortcut48.h
 src/StringPanel.$(BUILD_TYPE).o: res/spinner24.h
 
 res/license.done: LICENSE.txt $(EMBED_EXE)

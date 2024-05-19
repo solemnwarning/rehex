@@ -215,6 +215,7 @@
     <ClCompile Include="..\..\res\offsets24.c" />
     <ClCompile Include="..\..\res\offsets32.c" />
     <ClCompile Include="..\..\res\offsets48.c" />
+    <ClCompile Include="..\..\res\shortcut48.c" />
     <ClCompile Include="..\..\res\spinner24.c" />
     <ClCompile Include="..\..\res\swap_horiz16.c" />
     <ClCompile Include="..\..\res\swap_vert16.c" />
@@ -270,6 +271,7 @@
     <ClCompile Include="..\..\src\SettingsDialog.cpp" />
     <ClCompile Include="..\..\src\SettingsDialogByteColour.cpp" />
     <ClCompile Include="..\..\src\SettingsDialogHighlights.cpp" />
+    <ClCompile Include="..\..\src\SettingsDialogKeyboard.cpp" />
     <ClCompile Include="..\..\src\StringPanel.cpp" />
     <ClCompile Include="..\..\src\Tab.cpp" />
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
@@ -278,6 +280,7 @@
     <ClCompile Include="..\..\src\util.cpp" />
     <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\..\src\win32lib.cpp" />
+    <ClCompile Include="..\..\src\WindowCommands.cpp" />
     <ClCompile Include="..\..\tests\BitmapTool.cpp" />
     <ClCompile Include="..\..\tests\BitOffset.cpp" />
     <ClCompile Include="..\..\tests\BufferTest1.cpp" />
@@ -322,6 +325,7 @@
     <ClCompile Include="..\..\tests\Tab.cpp" />
     <ClCompile Include="..\..\tests\testutil.cpp" />
     <ClCompile Include="..\..\tests\util.cpp" />
+    <ClCompile Include="..\..\tests\WindowCommands.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\wxlua\wxlua.vcxproj">
@@ -349,6 +353,7 @@
     <ClInclude Include="..\..\res\offsets24.h" />
     <ClInclude Include="..\..\res\offsets32.h" />
     <ClInclude Include="..\..\res\offsets48.h" />
+    <ClInclude Include="..\..\res\shortcut48.h" />
     <ClInclude Include="..\..\res\spinner24.h" />
     <ClInclude Include="..\..\res\swap_horiz16.h" />
     <ClInclude Include="..\..\res\swap_vert16.h" />

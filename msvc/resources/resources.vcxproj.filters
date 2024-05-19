@@ -60,6 +60,9 @@
     <CustomBuild Include="..\..\res\diff_fold48.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\res\shortcut48.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="..\..\res\spinner24.gif">
       <Filter>Resource Files</Filter>
     </CustomBuild>

@@ -400,6 +400,18 @@
     <ClCompile Include="..\..\tests\BufferTest3.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\res\shortcut48.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\SettingsDialogKeyboard.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\WindowCommands.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\WindowCommands.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\res\ascii16.h">
@@ -479,6 +491,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\lua-plugin-preload.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\shortcut48.h">
+      <Filter>res</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

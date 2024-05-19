@@ -43,15 +43,30 @@ DEPENDS="
 	zlib1g-dev
 "
 
+selected_arch=
+
+if [ "$#" -ge 1 ]
+then
+	if [ "$1" = "--i386" ]
+	then
+		selected_arch=i386
+		shift
+	elif [ "$1" = "--amd64" ]
+	then
+		selected_arch=amd64
+		shift
+	fi
+fi
+
 if [ "$#" -ne 1 ]
 then
-	echo "Usage: $0 <version>" 1>&2
+	echo "Usage: $0 [--i386|--amd64] <version>" 1>&2
 	exit 64 # EX_USAGE
 fi
 
 dist="rehex-$1.tar.gz"
-i386_out="rehex-$1-i386.AppImage"
-amd64_out="rehex-$1-x86_64.AppImage"
+i386_out="rehex-$1-linux-generic-i386.AppImage"
+amd64_out="rehex-$1-linux-generic-x86_64.AppImage"
 
 if [ ! -f "$dist" ]
 then
@@ -59,13 +74,13 @@ then
 	exit 66 # EX_NOINPUT
 fi
 
-if [ -e "$i386_out" ]
+if [ "$selected_arch" != "amd64" ] && [ -e "$i386_out" ]
 then
 	echo "$i386_out already exists!" 1>&2
 	exit 73 # EX_CANTCREAT
 fi
 
-if [ -e "$amd64_out" ]
+if [ "$selected_arch" != "i386" ] && [ -e "$amd64_out" ]
 then
 	echo "$amd64_out already exists!" 1>&2
 	exit 73 # EX_CANTCREAT
@@ -106,5 +121,12 @@ function build-appimage()
 	return $status
 }
 
-build-appimage "$1" "$I386_CHROOT" "$i386_out" "$I386_LINUXDEPLOY" "$I386_RUNTIME" \
-	&& build-appimage "$1" "$AMD64_CHROOT" "$amd64_out" "$AMD64_LINUXDEPLOY" "$AMD64_RUNTIME"
+if [ "$selected_arch" != "amd64" ]
+then
+	build-appimage "$1" "$I386_CHROOT" "$i386_out" "$I386_LINUXDEPLOY" "$I386_RUNTIME"
+fi
+
+if [ "$selected_arch" != "i386" ]
+then
+	build-appimage "$1" "$AMD64_CHROOT" "$amd64_out" "$AMD64_LINUXDEPLOY" "$AMD64_RUNTIME"
+fi

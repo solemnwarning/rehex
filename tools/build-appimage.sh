@@ -123,10 +123,10 @@ function build-appimage()
 
 if [ "$selected_arch" != "amd64" ]
 then
-	build-appimage "$1" "$I386_CHROOT" "$i386_out" "$I386_LINUXDEPLOY" "$I386_RUNTIME"
+	build-appimage "$1" "$I386_CHROOT" "$i386_out" "$I386_LINUXDEPLOY" "$I386_RUNTIME" || exit $?
 fi
 
 if [ "$selected_arch" != "i386" ]
 then
-	build-appimage "$1" "$AMD64_CHROOT" "$amd64_out" "$AMD64_LINUXDEPLOY" "$AMD64_RUNTIME"
+	build-appimage "$1" "$AMD64_CHROOT" "$amd64_out" "$AMD64_LINUXDEPLOY" "$AMD64_RUNTIME" || exit $?
 fi

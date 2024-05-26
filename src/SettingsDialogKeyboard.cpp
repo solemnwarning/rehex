@@ -104,7 +104,14 @@ void REHex::SettingsDialogKeyboard::OnListItemActivated(wxListEvent &event)
 	long item_idx = event.GetIndex();
 	int item_id = listctrl->GetItemData(item_idx);
 	
-	KeyCombination c = KeyCombinationDialog::prompt(this);
+	/* Find the top-level window to parent the KeyCombinationDialog under. */
+	wxWindow *frame = this;
+	while(!frame->IsTopLevel())
+	{
+		frame = frame->GetParent();
+	}
+	
+	KeyCombination c = KeyCombinationDialog::prompt(frame);
 	
 	if(c)
 	{

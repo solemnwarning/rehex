@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,17 @@ REHex::TextEntryDialog::TextEntryDialog(wxWindow *parent, const std::string &tit
 	
 	textbox = new wxTextCtrl(this, wxID_ANY, initial_text, wxDefaultPosition, wxSize(480,120), wxTE_MULTILINE);
 	topsizer->Add(textbox, 1, wxEXPAND | wxALL, 10);
+
+	textbox->Bind(wxEVT_CHAR, [&](wxKeyEvent &event)
+	{
+		if(event.GetKeyCode() == WXK_RETURN && event.GetModifiers() == wxMOD_SHIFT)
+		{
+			EndModal(wxID_OK);
+		}
+		else {
+			event.Skip();
+		}
+	});
 	
 	wxBoxSizer *button_sizer = new wxBoxSizer(wxHORIZONTAL);
 	

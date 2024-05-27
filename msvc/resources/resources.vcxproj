@@ -279,6 +279,16 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\diff_fold48.c;..\..\res\diff_fold48.h;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\diff_fold48.c;..\..\res\diff_fold48.h;%(Outputs)</Outputs>
     </CustomBuild>
+    <CustomBuild Include="..\..\res\shortcut48.png">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\shortcut48.png shortcut48_png ..\..\res\shortcut48.c ..\..\res\shortcut48.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\shortcut48.png shortcut48_png ..\..\res\shortcut48.c ..\..\res\shortcut48.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\shortcut48.png shortcut48_png ..\..\res\shortcut48.c ..\..\res\shortcut48.h</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\shortcut48.png shortcut48_png ..\..\res\shortcut48.c ..\..\res\shortcut48.h</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\shortcut48.c;..\..\res\shortcut48.h;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\shortcut48.c;..\..\res\shortcut48.h;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\shortcut48.c;..\..\res\shortcut48.h;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\shortcut48.c;..\..\res\shortcut48.h;%(Outputs)</Outputs>
+    </CustomBuild>
     <CustomBuild Include="..\..\res\spinner24.gif">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\spinner24.gif spinner24_gif ..\..\res\spinner24.c ..\..\res\spinner24.h</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\spinner24.gif spinner24_gif ..\..\res\spinner24.c ..\..\res\spinner24.h</Command>

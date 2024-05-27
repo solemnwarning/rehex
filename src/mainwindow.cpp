@@ -34,6 +34,7 @@
 #include "AboutDialog.hpp"
 #include "App.hpp"
 #include "BytesPerLineDialog.hpp"
+#include "EditCommentDialog.hpp"
 #include "FillRangeDialog.hpp"
 #include "IntelHexExport.hpp"
 #include "IntelHexImport.hpp"
@@ -46,6 +47,7 @@
 #include "SettingsDialog.hpp"
 #include "SettingsDialogByteColour.hpp"
 #include "SettingsDialogHighlights.hpp"
+#include "SettingsDialogKeyboard.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 #include "util.hpp"
@@ -73,6 +75,7 @@ enum {
 	ID_SEARCH_BSEQ,
 	ID_SEARCH_VALUE,
 	ID_COMPARE_FILE,
+	ID_COMPARE_SELECTION,
 	ID_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
 	ID_WRITE_PROTECT,
@@ -103,6 +106,17 @@ enum {
 	ID_IMPORT_HEX,
 	ID_EXPORT_HEX,
 	ID_AUTO_RELOAD,
+	
+	ID_SET_COMMENT_CURSOR,
+	ID_SET_COMMENT_SELECTION,
+	
+	ID_SET_HIGHLIGHT_1,
+	ID_SET_HIGHLIGHT_2,
+	ID_SET_HIGHLIGHT_3,
+	ID_SET_HIGHLIGHT_4,
+	ID_SET_HIGHLIGHT_5,
+	ID_SET_HIGHLIGHT_6,
+	ID_REMOVE_HIGHLIGHT,
 	
 	ID_COLOUR_MAP_MENU_MIN,
 	ID_COLOUR_MAP_MENU_MAX = (ID_COLOUR_MAP_MENU_MIN + 100),
@@ -153,7 +167,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SEARCH_BSEQ,  REHex::MainWindow::OnSearchBSeq)
 	EVT_MENU(ID_SEARCH_VALUE,  REHex::MainWindow::OnSearchValue)
 	
-	EVT_MENU(ID_COMPARE_FILE,  REHex::MainWindow::OnCompareFile)
+	EVT_MENU(ID_COMPARE_FILE,       REHex::MainWindow::OnCompareFile)
+	EVT_MENU(ID_COMPARE_SELECTION,  REHex::MainWindow::OnCompareSelection)
 	
 	EVT_MENU(ID_GOTO_OFFSET, REHex::MainWindow::OnGotoOffset)
 	
@@ -201,6 +216,12 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	#endif
 	EVT_MENU(wxID_ABOUT, REHex::MainWindow::OnAbout)
 	
+	EVT_MENU(ID_SET_COMMENT_CURSOR,     REHex::MainWindow::OnSetCommentAtCursor)
+	EVT_MENU(ID_SET_COMMENT_SELECTION,  REHex::MainWindow::OnSetCommentOnSelection)
+	
+	EVT_MENU_RANGE(ID_SET_HIGHLIGHT_1, ID_SET_HIGHLIGHT_6, REHex::MainWindow::OnSetHighlight)
+	EVT_MENU(ID_REMOVE_HIGHLIGHT, REHex::MainWindow::OnRemoveHighlight)
+	
 	EVT_AUINOTEBOOK_PAGE_CHANGED(  wxID_ANY, REHex::MainWindow::OnDocumentChange)
 	EVT_AUINOTEBOOK_PAGE_CLOSE(    wxID_ANY, REHex::MainWindow::OnDocumentClose)
 	EVT_AUINOTEBOOK_PAGE_CLOSED(   wxID_ANY, REHex::MainWindow::OnDocumentClosed)
@@ -235,7 +256,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	edit_menu(NULL),
 	view_menu(NULL),
 	tools_menu(NULL),
-	help_menu(NULL)
+	help_menu(NULL),
+	window_commands(wxGetApp().settings->get_main_window_commands().get_commands(), this)
 {
 	menu_bar = new wxMenuBar;
 	
@@ -246,13 +268,13 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		call_setup_hooks(SetupPhase::FILE_MENU_TOP);
 		
-		file_menu->Append(wxID_NEW,  "&New\tCtrl-N");
-		file_menu->Append(wxID_OPEN, "&Open\tCtrl-O");
+		file_menu->Append(wxID_NEW,  "&New");
+		file_menu->Append(wxID_OPEN, "&Open");
 		
 		recent_files_menu = new wxMenu;
 		file_menu->AppendSubMenu(recent_files_menu, "Open &Recent");
 		
-		file_menu->Append(wxID_SAVE,   "&Save\tCtrl-S");
+		file_menu->Append(wxID_SAVE,   "&Save");
 		file_menu->Append(wxID_SAVEAS, "&Save As");
 		
 		file_menu->AppendSeparator(); /* ---- */
@@ -267,7 +289,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
-		file_menu->Append(wxID_CLOSE,  "&Close\tCtrl-W");
+		file_menu->Append(wxID_CLOSE,  "&Close");
 		file_menu->Append(ID_CLOSE_ALL, "Close All");
 		file_menu->Append(ID_CLOSE_OTHERS, "Close Others");
 		
@@ -289,12 +311,12 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		call_setup_hooks(SetupPhase::EDIT_MENU_TOP);
 		
-		edit_menu->Append(wxID_UNDO, "&Undo\tCtrl-Z");
-		edit_menu->Append(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+		edit_menu->Append(wxID_UNDO, "&Undo");
+		edit_menu->Append(wxID_REDO, "&Redo");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
-		edit_menu->Append(wxID_SELECTALL, "Select &All\tCtrl-A");
+		edit_menu->Append(wxID_SELECTALL, "Select &All");
 		edit_menu->Append(ID_SELECT_RANGE, "Select range...");
 		
 		edit_menu->AppendSeparator(); /* ---- */
@@ -317,11 +339,12 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
-		edit_menu->Append(ID_COMPARE_FILE, "Compare whole file...\tCtrl-K");
+		edit_menu->Append(ID_COMPARE_FILE, "Compare whole file...");
+		edit_menu->Append(ID_COMPARE_SELECTION, "Compare selection...");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
-		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...\tCtrl-G");
+		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
@@ -595,13 +618,17 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	instances.push_back(this);
 	instances_iter = std::prev(instances.end());
 	
+	window_commands.update_window_accelerators();
+	
 	call_setup_hooks(SetupPhase::DONE);
 	
 	wxGetApp().settings->Bind(BYTE_COLOUR_MAPS_CHANGED, &REHex::MainWindow::OnByteColourMapsChanged, this);
+	wxGetApp().settings->Bind(MAIN_WINDOW_ACCELERATORS_CHANGED, &REHex::MainWindow::OnAcceleratorsChanged, this);
 }
 
 REHex::MainWindow::~MainWindow()
 {
+	wxGetApp().settings->Unbind(MAIN_WINDOW_ACCELERATORS_CHANGED, &REHex::MainWindow::OnAcceleratorsChanged, this);
 	wxGetApp().settings->Unbind(BYTE_COLOUR_MAPS_CHANGED, &REHex::MainWindow::OnByteColourMapsChanged, this);
 	
 	wxGetApp().recent_files->RemoveMenu(recent_files_menu);
@@ -1257,6 +1284,12 @@ void REHex::MainWindow::OnCompareFile(wxCommandEvent &event)
 	tab->compare_whole_file();
 }
 
+void REHex::MainWindow::OnCompareSelection(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	tab->compare_selection();
+}
+
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1515,6 +1548,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogKeyboard()));
 		
 		dialog.reset(new SettingsDialog(this, "Preferences", std::move(panels)));
 		
@@ -1523,6 +1557,17 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	else{
 		dialog->Raise();
 	}
+	
+	//wxAcceleratorTable *at = GetAcceleratorTable();
+	
+	wxMenuItem *itm = GetMenuBar()->FindItem(ID_SELECT_RANGE);
+	
+	wxAcceleratorEntry a(wxACCEL_CTRL | wxACCEL_SHIFT, 'R', ID_SELECT_RANGE);
+	wxAcceleratorTable at(1, &a);
+	
+	itm->SetAccel(&a);
+	
+	// SetAcceleratorTable(at);
 }
 
 void REHex::MainWindow::OnSetBytesPerLine(wxCommandEvent &event)
@@ -2130,6 +2175,78 @@ void REHex::MainWindow::OnByteColourMapsChanged(wxCommandEvent &event)
 	event.Skip();
 }
 
+void REHex::MainWindow::OnAcceleratorsChanged(wxCommandEvent &event)
+{
+	window_commands.replace_accelerators(wxGetApp().settings->get_main_window_commands());
+	event.Skip();
+}
+
+void REHex::MainWindow::OnSetCommentAtCursor(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	BitOffset cursor_pos = tab->doc_ctrl->get_cursor_position();
+	
+	if(cursor_pos < BitOffset(tab->doc->buffer_length(), 0))
+	{
+		EditCommentDialog::run_modal(this, tab->doc, cursor_pos, 0);
+	}
+}
+
+void REHex::MainWindow::OnSetCommentOnSelection(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	BitOffset selection_off, selection_length;
+	std::tie(selection_off, selection_length) = tab->doc_ctrl->get_selection_linear();
+	
+	if(selection_length > BitOffset::ZERO)
+	{
+		EditCommentDialog::run_modal(this, tab->doc, selection_off, selection_length);
+	}
+}
+
+void REHex::MainWindow::OnSetHighlight(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	int command_id = event.GetId();
+	int highlight_num = command_id - ID_SET_HIGHLIGHT_1;
+	
+	const HighlightColourMap highlight_colours = tab->doc->get_highlight_colours();
+	if(highlight_colours.size() < highlight_num)
+	{
+		return;
+	}
+	
+	size_t highlight_id = std::next(highlight_colours.begin(), highlight_num)->first;
+	
+	BitOffset selection_off, selection_length;
+	std::tie(selection_off, selection_length) = tab->doc_ctrl->get_selection_linear();
+	
+	if(selection_length == BitOffset::ZERO)
+	{
+		return;
+	}
+	
+	tab->doc->set_highlight(selection_off, selection_length, highlight_id);
+}
+
+void REHex::MainWindow::OnRemoveHighlight(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	BitOffset cursor_pos = tab->doc->get_cursor_position();
+	
+	const auto &highlights = tab->doc->get_highlights();
+	auto highlight_at_cur  = highlights.get_range(cursor_pos);
+	
+	if(highlight_at_cur != highlights.end())
+	{
+		tab->doc->erase_highlight(highlight_at_cur->first.offset, highlight_at_cur->first.length);
+	}
+}
+
 REHex::Tab *REHex::MainWindow::active_tab()
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -2217,6 +2334,8 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 	else{
 		SetStatusText("", 1);
 	}
+	
+	edit_menu->Enable(ID_COMPARE_SELECTION, doc_ctrl->has_selection());
 }
 
 void REHex::MainWindow::_update_status_mode(REHex::DocumentCtrl *doc_ctrl)
@@ -2232,33 +2351,40 @@ void REHex::MainWindow::_update_status_mode(REHex::DocumentCtrl *doc_ctrl)
 
 void REHex::MainWindow::_update_undo(REHex::Document *doc)
 {
+	wxMenuItem *undo_menu_item = edit_menu->FindItem(wxID_UNDO);
+	wxMenuItem *redo_menu_item = edit_menu->FindItem(wxID_REDO);
+	
 	const char *undo_desc = doc->undo_desc();
 	if(undo_desc != NULL)
 	{
 		char label[64];
-		snprintf(label, sizeof(label), "&Undo %s\tCtrl-Z", undo_desc);
+		snprintf(label, sizeof(label), "&Undo %s", undo_desc);
 		
 		edit_menu->SetLabel(wxID_UNDO, label);
 		edit_menu->Enable(wxID_UNDO, true);
 	}
 	else{
-		edit_menu->SetLabel(wxID_UNDO, "&Undo\tCtrl-Z");
+		edit_menu->SetLabel(wxID_UNDO, "&Undo");
 		edit_menu->Enable(wxID_UNDO, false);
 	}
+	
+	window_commands.set_menu_item_accelerator(undo_menu_item, wxID_UNDO);
 	
 	const char *redo_desc = doc->redo_desc();
 	if(redo_desc != NULL)
 	{
 		char label[64];
-		snprintf(label, sizeof(label), "&Redo %s\tCtrl-Shift-Z", redo_desc);
+		snprintf(label, sizeof(label), "&Redo %s", redo_desc);
 		
 		edit_menu->SetLabel(wxID_REDO, label);
 		edit_menu->Enable(wxID_REDO, true);
 	}
 	else{
-		edit_menu->SetLabel(wxID_REDO, "&Redo\tCtrl-Shift-Z");
+		edit_menu->SetLabel(wxID_REDO, "&Redo");
 		edit_menu->Enable(wxID_REDO, false);
 	}
+	
+	window_commands.set_menu_item_accelerator(redo_menu_item, wxID_REDO);
 }
 
 void REHex::MainWindow::_update_dirty(REHex::Document *doc)
@@ -2646,6 +2772,47 @@ void REHex::MainWindow::call_setup_hooks(SetupPhase phase)
 			func(this);
 		}
 	}
+}
+
+std::vector<REHex::WindowCommand> REHex::MainWindow::get_template_commands()
+{
+	return std::vector<WindowCommand>({
+		WindowCommand( "file_new",           "New",           wxID_NEW,         wxACCEL_CTRL, 'N' ),
+		WindowCommand( "file_open",          "Open",          wxID_OPEN,        wxACCEL_CTRL, 'O' ),
+		WindowCommand( "file_save",          "Save",          wxID_SAVE,        wxACCEL_CTRL, 'S' ),
+		WindowCommand( "file_save_as",       "Save as",       wxID_SAVEAS                         ),
+		WindowCommand( "file_reload",        "Reload",        wxID_REFRESH                        ),
+		WindowCommand( "file_close",         "Close",         wxID_CLOSE,       wxACCEL_CTRL, 'W' ),
+		WindowCommand( "file_close_all",     "Close all",     ID_CLOSE_ALL                        ),
+		WindowCommand( "file_close_others",  "Close others",  ID_CLOSE_OTHERS                     ),
+		
+		WindowCommand( "cursor_prev",        "Previous cursor position",  wxID_BACKWARD,         wxACCEL_ALT, WXK_LEFT             ),
+		WindowCommand( "cursor_next",        "Next cursor position",      wxID_FORWARD,          wxACCEL_ALT, WXK_RIGHT            ),
+		WindowCommand( "undo",               "Undo",                      wxID_UNDO,             wxACCEL_CTRL, 'Z'                 ),
+		WindowCommand( "redo",               "Redo",                      wxID_REDO,             wxACCEL_CTRL | wxACCEL_SHIFT, 'Z' ),
+		WindowCommand( "select_all",         "Select all",                wxID_SELECTALL,        wxACCEL_CTRL, 'A'                 ),
+		WindowCommand( "select_range",       "Select range",              ID_SELECT_RANGE                                          ),
+		WindowCommand( "fill_range",         "Fill range",                ID_FILL_RANGE),
+		WindowCommand( "overwrite_mode",     "Overwrite mode",            ID_OVERWRITE_MODE),
+		WindowCommand( "write_protect",      "Write protect",             ID_WRITE_PROTECT),
+		WindowCommand( "search_text",        "Search for text",           ID_SEARCH_TEXT),
+		WindowCommand( "search_bseq",        "Search for byte sequence",  ID_SEARCH_BSEQ),
+		WindowCommand( "search_value",       "Search for value",          ID_SEARCH_VALUE),
+		WindowCommand( "compare_file",       "Compare whole file",        ID_COMPARE_FILE,       wxACCEL_CTRL,                 'K'),
+		WindowCommand( "compare_selection",  "Compare selection",         ID_COMPARE_SELECTION,  wxACCEL_CTRL | wxACCEL_SHIFT, 'K'),
+		WindowCommand( "goto_offset",        "Jump to offset",            ID_GOTO_OFFSET,        wxACCEL_CTRL,                 'G'),
+		
+		WindowCommand("set_comment_at_cursor",     "Set comment at cursor position",  ID_SET_COMMENT_CURSOR),
+		WindowCommand("set_comment_on_selection",  "Set comment on selected data",    ID_SET_COMMENT_SELECTION),
+		
+		WindowCommand("set_highlight_1",  "Set highlight 1",  ID_SET_HIGHLIGHT_1,  wxACCEL_CTRL, '1'),
+		WindowCommand("set_highlight_2",  "Set highlight 2",  ID_SET_HIGHLIGHT_2,  wxACCEL_CTRL, '2'),
+		WindowCommand("set_highlight_3",  "Set highlight 3",  ID_SET_HIGHLIGHT_3,  wxACCEL_CTRL, '3'),
+		WindowCommand("set_highlight_4",  "Set highlight 4",  ID_SET_HIGHLIGHT_4,  wxACCEL_CTRL, '4'),
+		WindowCommand("set_highlight_5",  "Set highlight 5",  ID_SET_HIGHLIGHT_5,  wxACCEL_CTRL, '5'),
+		WindowCommand("set_highlight_6",  "Set highlight 6",  ID_SET_HIGHLIGHT_6,  wxACCEL_CTRL, '6'),
+		WindowCommand("remove_highlight", "Remove highlight", ID_REMOVE_HIGHLIGHT, wxACCEL_CTRL, '0'),
+	});
 }
 
 REHex::MainWindow::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):

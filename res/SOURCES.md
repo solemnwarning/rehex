@@ -20,4 +20,5 @@
 - document_save_as32.png
 - down32.png
 - forward32.png
+- shortcut48.png
 - up32.png

@@ -29,6 +29,7 @@
 #include "Events.hpp"
 #include "Tab.hpp"
 #include "ToolPanel.hpp"
+#include "WindowCommands.hpp"
 
 namespace REHex {
 	/**
@@ -102,6 +103,7 @@ namespace REHex {
 			void OnSearchBSeq(wxCommandEvent &event);
 			void OnSearchValue(wxCommandEvent &event);
 			void OnCompareFile(wxCommandEvent &event);
+			void OnCompareSelection(wxCommandEvent &event);
 			void OnGotoOffset(wxCommandEvent &event);
 			void OnCut(wxCommandEvent &event);
 			void OnCopy(wxCommandEvent &event);
@@ -155,6 +157,12 @@ namespace REHex {
 			void OnTitleChanged(DocumentTitleEvent &event);
 			
 			void OnByteColourMapsChanged(wxCommandEvent &event);
+			void OnAcceleratorsChanged(wxCommandEvent &event);
+			
+			void OnSetCommentAtCursor(wxCommandEvent &event);
+			void OnSetCommentOnSelection(wxCommandEvent &event);
+			void OnSetHighlight(wxCommandEvent &event);
+			void OnRemoveHighlight(wxCommandEvent &event);
 			
 			/**
 			 * @brief MainWindow setup phases, in order of execution.
@@ -210,6 +218,11 @@ namespace REHex {
 			 * @brief Unregister a setup hook.
 			*/
 			static void unregister_setup_hook(SetupPhase phase, const SetupHookFunction *func);
+			
+			/**
+			 * @brief Gets the configurable window commands and their default accelerators.
+			*/
+			static std::vector<WindowCommand> get_template_commands();
 			
 			/**
 			 * @brief Get a list of all MainWindow instances.
@@ -298,6 +311,8 @@ namespace REHex {
 			
 			static std::list<MainWindow*> instances;
 			std::list<MainWindow*>::iterator instances_iter;
+			
+			WindowCommandTable window_commands;
 			
 			DECLARE_EVENT_TABLE()
 	};

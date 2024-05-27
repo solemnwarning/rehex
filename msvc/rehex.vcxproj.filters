@@ -303,6 +303,15 @@
     <ClCompile Include="..\src\ColourPickerCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\SettingsDialogKeyboard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\WindowCommands.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\res\shortcut48.c">
+      <Filter>res</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AboutDialog.hpp">
@@ -504,6 +513,9 @@
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="..\res\zoom_out16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\res\shortcut48.h">
       <Filter>res</Filter>
     </ClInclude>
   </ItemGroup>

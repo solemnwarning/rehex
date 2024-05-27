@@ -19,14 +19,17 @@
 
 #include "App.hpp"
 #include "AppSettings.hpp"
+#include "mainwindow.hpp"
 
 wxDEFINE_EVENT(REHex::PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BYTE_COLOUR_MAPS_CHANGED, wxCommandEvent);
+wxDEFINE_EVENT(REHex::MAIN_WINDOW_ACCELERATORS_CHANGED, wxCommandEvent);
 
 REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
 	goto_offset_base(GotoOffsetBase::AUTO),
-	highlight_colours(HighlightColourMap::defaults())
+	highlight_colours(HighlightColourMap::defaults()),
+	main_window_commands(MainWindow::get_template_commands())
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -148,6 +151,12 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 		}
 	}
 	
+	if(config->HasGroup("main-window-accelerators"))
+	{
+		wxConfigPathChanger scoped_path(config, "main-window-accelerators/");
+		main_window_commands.load_accelerators(config);
+	}
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -183,6 +192,13 @@ void REHex::AppSettings::write(wxConfig *config)
 			
 			i->second->save(config);
 		}
+	}
+	
+	{
+		config->DeleteGroup("main-window-accelerators");
+		
+		wxConfigPathChanger scoped_path(config, "main-window-accelerators/");
+		main_window_commands.save_accelerators(config);
 	}
 }
 
@@ -256,6 +272,21 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	}
 	
 	wxCommandEvent event(BYTE_COLOUR_MAPS_CHANGED);
+	event.SetEventObject(this);
+	
+	wxPostEvent(this, event);
+}
+
+const REHex::WindowCommandTable &REHex::AppSettings::get_main_window_commands() const
+{
+	return main_window_commands;
+}
+
+void REHex::AppSettings::set_main_window_accelerators(const WindowCommandTable &new_accelerators)
+{
+	main_window_commands.replace_accelerators(new_accelerators);
+	
+	wxCommandEvent event(MAIN_WINDOW_ACCELERATORS_CHANGED);
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);

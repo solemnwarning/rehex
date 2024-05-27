@@ -2300,10 +2300,29 @@ REHex::DetachableNotebook *REHex::MainWindow::get_notebook()
 
 void REHex::MainWindow::_update_status_offset(Tab *tab)
 {
-	BitOffset off = tab->doc->get_cursor_position();
+	BitOffset off   = tab->doc->get_cursor_position();
+	OffsetBase base = tab->doc_ctrl->get_offset_display_base();
 	
-	std::string off_text = format_offset(off, tab->doc_ctrl->get_offset_display_base());
-	SetStatusText(off_text, 0);
+	switch(base)
+	{
+		case OFFSET_BASE_HEX:
+		{
+			std::string off_text = format_offset(off, OFFSET_BASE_HEX) + " (" + format_offset(off, OFFSET_BASE_DEC) + ")";
+			SetStatusText(off_text, 0);
+			break;
+		}
+		
+		case OFFSET_BASE_DEC:
+		{
+			std::string off_text = format_offset(off, OFFSET_BASE_DEC) + " (" + format_offset(off, OFFSET_BASE_HEX) + ")";
+			SetStatusText(off_text, 0);
+			break;
+		}
+		
+		default:
+			assert(false); /* Unreachable. */
+			break;
+	}
 }
 
 void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)

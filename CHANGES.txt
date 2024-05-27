@@ -1,3 +1,25 @@
+Version TBC:
+
+ * Add bit array data type (#167).
+
+ * Allow selecting and setting comments/highlights/types on
+   bit-sized/aligned quantities, not just byte-aligned (#155).
+
+ * Allow defining arbitrary integer types, up to 64 bits wide (#215).
+
+ * Allow colouring data by byte value (#223).
+
+ * Allow changing/defining custom highlight colours and assigning
+   labels to them (#227).
+
+ * Use dimmer highlight colours for dark colour schemes (#227).
+
+ * Save highlight colours/labels per-file (#60).
+
+ * Allow changing keyboard shortcuts (#226).
+
+ * Add Shift+Enter shortcut for "OK" in the comment dialog (#226).
+
 Version 0.61.1 (2024-03-13):
 
  * Compare data from correct file offsets when "Collapse matches" option is

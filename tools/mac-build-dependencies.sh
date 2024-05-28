@@ -386,6 +386,22 @@ then
 		tar -xf "${_rehex_wxwidgets_tar}" -C "wxwidgets-${_rehex_wxwidgets_build_ident}"
 		cd "wxwidgets-${_rehex_wxwidgets_build_ident}/wxWidgets-${_rehex_wxwidgets_version}"
 		
+		# Workaround for https://github.com/wxWidgets/wxWidgets/issues/24560
+		patch <<'EOF'
+--- src/osx/cocoa/toolbar.mm	2024-05-28 00:56:37
++++ src/osx/cocoa/toolbar.mm	2024-05-28 00:57:38
+@@ -970,8 +970,8 @@
+         if (curToolbarRef == NULL)
+         {
+             bResult = true;
+-            [tlw setToolbar:(NSToolbar*) m_macToolbar];
+             [(NSToolbar*) m_macToolbar setVisible:YES];
++            [tlw setToolbar:(NSToolbar*) m_macToolbar];
+ 
+             GetPeer()->Move(0,0,0,0 );
+             SetSize( wxSIZE_AUTO_WIDTH, 0 );
+EOF
+		
 		./configure \
 			--prefix="${_rehex_wxwidgets_target_dir}" \
 			--with-libiconv-prefix="${_rehex_libiconv_target_dir}" \

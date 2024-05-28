@@ -48,10 +48,10 @@ _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a6323a06d923"
 
-_rehex_wxwidgets_version="3.2.4"
+_rehex_wxwidgets_version="3.2.5"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_sha256="0640e1ab716db5af2ecb7389dbef6138d7679261fbff730d23845ba838ca133e"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
+_rehex_wxwidgets_sha256="0ad86a3ad3e2e519b6a705248fc9226e3a09bbf069c6c692a02acf7c2d1c6b51"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"

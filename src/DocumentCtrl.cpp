@@ -874,12 +874,12 @@ void REHex::DocumentCtrl::_handle_width_change()
 			}
 		}
 		else{
-			int offWidth = snprintf(nullptr, 0, "%d", end_virt_offset);
 			if(offset_display_base == OFFSET_BASE_HEX)
 			{
 				offset_column_width = hf_string_width(10 + 3);
 			}
 			else{
+				int offWidth = snprintf(nullptr, 0, "%" PRId64, (int64_t)(end_virt_offset.byte()));
 				offset_column_width = hf_string_width(offWidth + 3);
 			}
 		}

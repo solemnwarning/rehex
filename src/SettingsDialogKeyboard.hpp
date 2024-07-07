@@ -19,6 +19,7 @@
 #define REHEX_SETTINGSDIALOGKEYBOARD_HPP
 
 #include <wx/listctrl.h>
+#include <wx/radiobut.h>
 #include <wx/stattext.h>
 
 #include "SettingsDialog.hpp"
@@ -30,6 +31,9 @@ namespace REHex
 	{
 		private:
 			WindowCommandTable main_window_commands;
+			
+			wxRadioButton *cnm_byte;
+			wxRadioButton *cnm_nibble;
 			
 			wxListCtrl *listctrl;
 			

@@ -23,6 +23,7 @@
 #include <wx/config.h>
 #include <wx/wx.h>
 
+#include "BitOffset.hpp"
 #include "ByteColourMap.hpp"
 #include "HighlightColourMap.hpp"
 #include "WindowCommands.hpp"
@@ -41,6 +42,12 @@ namespace REHex
 		OCT  = 8,
 		DEC  = 10,
 		HEX  = 16,
+	};
+	
+	enum class CursorNavMode
+	{
+		BYTE   = 1,
+		NIBBLE = 2,
 	};
 	
 	class AppSettings: public wxEvtHandler
@@ -68,12 +75,17 @@ namespace REHex
 			const WindowCommandTable &get_main_window_commands() const;
 			void set_main_window_accelerators(const WindowCommandTable &new_accelerators);
 			
+			CursorNavMode get_cursor_nav_mode() const;
+			void set_cursor_nav_mode(CursorNavMode cursor_nav_mode);
+			BitOffset get_cursor_nav_alignment() const;
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
 			HighlightColourMap highlight_colours;
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
 			WindowCommandTable main_window_commands;
+			CursorNavMode cursor_nav_mode;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

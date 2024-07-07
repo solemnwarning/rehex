@@ -29,7 +29,8 @@ REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
 	goto_offset_base(GotoOffsetBase::AUTO),
 	highlight_colours(HighlightColourMap::defaults()),
-	main_window_commands(MainWindow::get_template_commands())
+	main_window_commands(MainWindow::get_template_commands()),
+	cursor_nav_mode(CursorNavMode::BYTE)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -157,6 +158,17 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 		main_window_commands.load_accelerators(config);
 	}
 	
+	long cursor_nav_mode = config->ReadLong("cursor-nav-mode", -1);
+	switch(cursor_nav_mode)
+	{
+		case (long)(CursorNavMode::BYTE):
+		case (long)(CursorNavMode::NIBBLE):
+			this->cursor_nav_mode = (CursorNavMode)(cursor_nav_mode);
+			
+		default:
+			break;
+	}
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -167,6 +179,7 @@ REHex::AppSettings::~AppSettings()
 
 void REHex::AppSettings::write(wxConfig *config)
 {
+	config->Write("cursor-nav-mode", (long)(cursor_nav_mode));
 	config->Write("preferred-asm-syntax", (long)(preferred_asm_syntax));
 	config->Write("goto-offset-base", (long)(goto_offset_base));
 	
@@ -290,6 +303,27 @@ void REHex::AppSettings::set_main_window_accelerators(const WindowCommandTable &
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+REHex::CursorNavMode REHex::AppSettings::get_cursor_nav_mode() const
+{
+	return cursor_nav_mode;
+}
+
+void REHex::AppSettings::set_cursor_nav_mode(CursorNavMode cursor_nav_mode)
+{
+	this->cursor_nav_mode = cursor_nav_mode;
+}
+
+REHex::BitOffset REHex::AppSettings::get_cursor_nav_alignment() const
+{
+	switch(cursor_nav_mode)
+	{
+		case CursorNavMode::BYTE:    return BitOffset(1, 0);
+		case CursorNavMode::NIBBLE:  return BitOffset(0, 4);
+	}
+	
+	abort(); /* Unreachable. */
 }
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)

@@ -103,7 +103,7 @@ else
 		ifeq ($(BUILD_TYPE),profile)
 			BASE_CFLAGS += $(PROFILE_CFLAGS)
 		else
-			$(error unknown BUILD_TYPE '$(BUILD_TYPE)')
+			X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)' (should be release, debug or profile))
 		endif
 	endif
 endif

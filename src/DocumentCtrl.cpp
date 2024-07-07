@@ -3866,9 +3866,10 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		unsigned char high_nibble = (byte & 0xF0) >> 4;
 		unsigned char low_nibble  = (byte & 0x0F);
 		
-		auto highlight = highlight_at_off(cur_off);
+		auto highlight_high = highlight_at_off(cur_off);
+		auto highlight_low  = highlight_at_off(cur_off + BitOffset(0, 4));
 		
-		auto draw_nibble = [&](unsigned char nibble, bool invert)
+		auto draw_nibble = [&](unsigned char nibble, bool invert, Highlight highlight)
 		{
 			const char *nibble_to_hex = (data != NULL)
 				? "0123456789ABCDEF"
@@ -3910,8 +3911,8 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		*/
 		const int pd_hx = hex_x;
 		
-		draw_nibble(high_nibble, inv_high);
-		draw_nibble(low_nibble,  inv_low);
+		draw_nibble(high_nibble, inv_high, highlight_high);
+		draw_nibble(low_nibble,  inv_low,  highlight_low);
 		
 		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->get_cursor_visible() && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
 		{

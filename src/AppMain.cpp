@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <wx/event.h>
+#include <wx/filename.h>
 #include <wx/filesys.h>
 #include <wx/fontutil.h>
 #include <wx/fs_zip.h>
@@ -90,22 +91,26 @@ bool REHex::App::OnInit()
 			}
 		}
 		
+		wxFileName filename(argv[i]);
+		filename.MakeAbsolute();
+		
 		/* If the filename ends in .rehex-meta and stripping it off points to an existing
 		 * file, then assume they mean to open that file - the meta file being considered
 		 * like a "project".
 		*/
 		
-		std::string filename = argv[i].ToStdString();
-		std::string meta_extension = ".rehex-meta";
-		
-		if(filename.length() >= meta_extension.length()
-			&& filename.substr(filename.length() - meta_extension.length()) == meta_extension
-			&& wxFileExists(filename.substr(0, filename.length() - meta_extension.length())))
+		if(filename.GetExt() == "rehex-meta")
 		{
-			filename = filename.substr(0, filename.length() - meta_extension.length());
+			wxFileName nometa_fn(filename);
+			nometa_fn.ClearExt();
+			
+			if(nometa_fn.FileExists())
+			{
+				filename = nometa_fn;
+			}
 		}
 		
-		open_filenames.push_back(filename);
+		open_filenames.push_back(filename.GetFullPath().ToStdString());
 	}
 	
 	if(compare_mode && open_filenames.size() < 2)

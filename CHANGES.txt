@@ -22,6 +22,9 @@ Version TBC:
 
  * Display offset in both decimal and hexadecimal in status bar (#228).
 
+ * Fix handling of relative paths specified on the command line when
+   opening in an existing instance (#237).
+
 Version 0.61.1 (2024-03-13):
 
  * Compare data from correct file offsets when "Collapse matches" option is

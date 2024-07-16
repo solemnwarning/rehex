@@ -312,6 +312,9 @@
     <ClCompile Include="..\res\shortcut48.c">
       <Filter>res</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CustomNumericType.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AboutDialog.hpp">

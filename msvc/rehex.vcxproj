@@ -447,6 +447,7 @@
     <ClCompile Include="..\src\ConsoleBuffer.cpp" />
     <ClCompile Include="..\src\ConsolePanel.cpp" />
     <ClCompile Include="..\src\CustomMessageDialog.cpp" />
+    <ClCompile Include="..\src\CustomNumericType.cpp" />
     <ClCompile Include="..\src\DataHistogramPanel.cpp" />
     <ClCompile Include="..\src\DataType.cpp" />
     <ClCompile Include="..\src\decodepanel.cpp" />

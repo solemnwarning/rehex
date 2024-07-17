@@ -108,7 +108,7 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	dummy_doc_ctrl = new DocumentCtrl(this, dummy_doc, (DCTRL_LOCK_SCROLL | DCTRL_HIDE_CURSOR));
 	ddc_sizer->Add(dummy_doc_ctrl, 0, (wxRIGHT | wxBOTTOM | wxLEFT), SettingsDialog::MARGIN);
 	
-	dummy_doc_ctrl->SetMinSize(
+	dummy_doc_ctrl->SetMinClientSize(
 		wxSize(dummy_doc_ctrl->hf_string_width(16 * 4), (dummy_doc_ctrl->hf_char_height() * 16)));
 	
 	class Foo: public REHex::DocumentCtrl::DataRegion

@@ -1,0 +1,9 @@
+--- a/src/lib/rng/processor_rng/info.txt
++++ b/src/lib/rng/processor_rng/info.txt
+@@ -19,4 +19,6 @@
+ 
+ <isa>
++x86_32:rdrand
++x86_64:rdrand
+ ppc64:power9
+ </isa>

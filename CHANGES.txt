@@ -1,3 +1,7 @@
+Version 0.62.1 (2024-07-24):
+
+ * Fix crashes in x86 Windows build on older CPUs.
+
 Version 0.62.0 (2024-07-20):
 
  * Add bit array data type (#167).

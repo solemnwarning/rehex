@@ -16,11 +16,11 @@
 
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
-BOTAN_PKG    ?= botan-2
+BOTAN_PKG    ?= botan-3
 CAPSTONE_PKG ?= capstone
 JANSSON_PKG  ?= jansson
 LUA_PKG      ?= $(shell pkg-config --exists lua5.3 && echo lua5.3 || echo lua)
-CXXSTD       ?= -std=c++11
+CXXSTD       ?= -std=c++20
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed

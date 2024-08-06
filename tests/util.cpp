@@ -120,7 +120,11 @@ TEST(Util, parse_hex_string)
 TEST(Util, format_offset)
 {
 	EXPECT_EQ(format_offset(0, OFFSET_BASE_HEX, 0), "0000:0000");
-	EXPECT_EQ(format_offset(0, OFFSET_BASE_DEC, 0), "0000000000");
+	EXPECT_EQ(format_offset(0, OFFSET_BASE_DEC, 0), "0");
+	
+	EXPECT_EQ(format_offset(   0, OFFSET_BASE_DEC,   1234),   "0000");
+	EXPECT_EQ(format_offset(1234, OFFSET_BASE_DEC,      0),   "1234");
+	EXPECT_EQ(format_offset(1234, OFFSET_BASE_DEC, 123456), "001234");
 	
 	EXPECT_EQ(format_offset( 0xABCDEF10LL, OFFSET_BASE_HEX,         0x0LL),         "ABCD:EF10");
 	EXPECT_EQ(format_offset( 0xABCDEF10LL, OFFSET_BASE_HEX,  0xFFFFFFFFLL),         "ABCD:EF10");

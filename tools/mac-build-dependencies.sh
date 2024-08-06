@@ -473,6 +473,7 @@ You can now build rehex using \`make -f Makefile.osx\` in this shell.
 The dependencies have been cached and won't be rebuilt if you source this
 script again.
 EOF
+	export BOTAN_PKG="botan-2" # used to determine required -std= for C++
 	export BOTAN_LIBS="-L${_rehex_botan_target_dir}/lib/ -lbotan-2"
 	export BOTAN_CFLAGS="-I${_rehex_botan_target_dir}/include/botan-2/"
 

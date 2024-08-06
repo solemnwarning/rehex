@@ -14,13 +14,19 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+# Returns the first of $(1) or $(2) which is defined in the pkg-config
+# database, or errors if neither are.
+pkg-select-ab = $\
+	$(if $(filter yes,$(shell pkg-config --exists $(1) && echo yes)),$(1),$\
+		$(if $(filter yes,$(shell pkg-config --exists $(2) && echo yes)),$(2),$\
+			$(error Could not find $(1) or $(2) using pkg-config)))
+
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
-BOTAN_PKG    ?= botan-2
+BOTAN_PKG    ?= $(call pkg-select-ab,botan-3,botan-2)
 CAPSTONE_PKG ?= capstone
 JANSSON_PKG  ?= jansson
-LUA_PKG      ?= $(shell pkg-config --exists lua5.3 && echo lua5.3 || echo lua)
-CXXSTD       ?= -std=c++11
+LUA_PKG      ?= $(call pkg-select-ab,lua5.3,lua)
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
@@ -82,6 +88,12 @@ ifeq ($(need_compiler_flags),1)
 	
 	GTK_CFLAGS = $$($(GTKCONFIG_EXE) --cflags)
 	GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
+	
+	ifeq ($(BOTAN_PKG),botan-3)
+		CXXSTD ?= -std=c++20
+	else
+		CXXSTD ?= -std=c++11
+	endif
 endif
 
 BASE_CFLAGS := -Wall

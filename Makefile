@@ -559,6 +559,7 @@ TEST_OBJS := \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
+	tests/Range.o \
 	tests/RangeProcessor.o \
 	tests/search-bseq.o \
 	tests/search-text.o \

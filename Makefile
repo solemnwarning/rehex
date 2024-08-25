@@ -593,6 +593,7 @@ TEST_OBJS := \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
 	tests/MultiSplitter.o \
+	tests/Range.o \
 	tests/RangeProcessor.o \
 	tests/search-bseq.o \
 	tests/search-text.o \

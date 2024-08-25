@@ -466,6 +466,9 @@
     <ClCompile Include="..\..\res\dock_top.c">
       <Filter>res</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\Range.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\res\ascii16.h">

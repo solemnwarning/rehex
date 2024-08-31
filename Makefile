@@ -535,6 +535,7 @@ TEST_OBJS := \
 	tests/BufferTest1.o \
 	tests/BufferTest2.o \
 	tests/BufferTest3.o \
+	tests/ByteAccumulator.o \
 	tests/ByteColourMap.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \

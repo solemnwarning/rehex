@@ -361,6 +361,9 @@
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\HierarchicalByteAccumulator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\SettingsDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -369,6 +372,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\HSVColour.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\HierarchicalByteAccumulator.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\tests\HighlightColourMap.cpp">
       <Filter>tests</Filter>

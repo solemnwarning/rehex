@@ -255,6 +255,7 @@
     <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp" />
     <ClCompile Include="..\..\src\GotoOffsetDialog.cpp" />
+    <ClCompile Include="..\..\src\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\..\src\HighlightColourMap.cpp" />
     <ClCompile Include="..\..\src\HSVColour.cpp" />
     <ClCompile Include="..\..\src\IntelHexExport.cpp" />
@@ -308,6 +309,7 @@
     <ClCompile Include="..\..\tests\endian_conv.cpp" />
     <ClCompile Include="..\..\tests\FastRectangleFiller.cpp" />
     <ClCompile Include="..\..\tests\FileWriter.cpp" />
+    <ClCompile Include="..\..\tests\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\..\tests\HighlightColourMap.cpp" />
     <ClCompile Include="..\..\tests\HSVColour.cpp" />
     <ClCompile Include="..\..\tests\IntelHexExport.cpp" />

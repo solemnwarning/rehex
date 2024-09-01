@@ -399,6 +399,7 @@ APP_OBJS := \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
 	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
@@ -502,6 +503,7 @@ TEST_OBJS := \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
 	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
@@ -556,6 +558,7 @@ TEST_OBJS := \
 	tests/endian_conv.o \
 	tests/FastRectangleFiller.o \
 	tests/FileWriter.o \
+	tests/HierarchicalByteAccumulator.o \
 	tests/HighlightColourMap.o \
 	tests/HSVColour.o \
 	tests/IntelHexExport.o \

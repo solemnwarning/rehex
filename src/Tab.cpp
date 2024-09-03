@@ -29,6 +29,7 @@
 
 #include "App.hpp"
 #include "BitArray.hpp"
+#include "DataMapScrollbar.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
@@ -226,6 +227,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(v_splitter, 1, wxEXPAND);
+	sizer->Add(new DataMapScrollbar(this, wxID_ANY, document), 0, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
 	vtools_adjust_on_idle(true);

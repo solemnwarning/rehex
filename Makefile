@@ -385,6 +385,8 @@ APP_OBJS := \
 	src/CustomMessageDialog.$(BUILD_TYPE).o \
 	src/CustomNumericType.$(BUILD_TYPE).o \
 	src/DataHistogramPanel.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
 	src/decodepanel.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
@@ -491,6 +493,8 @@ TEST_OBJS := \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \
 	src/CustomMessageDialog.$(BUILD_TYPE).o \
 	src/CustomNumericType.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \

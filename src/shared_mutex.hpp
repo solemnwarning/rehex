@@ -109,6 +109,9 @@ namespace REHex
 				lock();
 			}
 			
+			shared_lock(shared_mutex &mutex, std::defer_lock_t t):
+				mutex(mutex) {}
+			
 			~shared_lock()
 			{
 				unlock();

@@ -67,6 +67,11 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	processor.queue_range(0, range_length);
 }
 
+void REHex::HierarchicalByteAccumulator::pre_destroy()
+{
+	processor.pre_destroy();
+}
+
 const REHex::ByteAccumulator &REHex::HierarchicalByteAccumulator::get_result()
 {
 	if(result_rebuild_pending)

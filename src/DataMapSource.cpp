@@ -37,6 +37,14 @@ REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedDocumentPointer &d
 	}
 }
 
+REHex::EntropyDataMapSource::~EntropyDataMapSource()
+{
+	for(auto it = sub_ranges.begin(); it != sub_ranges.end(); ++it)
+	{
+		it->accumulator->pre_destroy();
+	}
+}
+
 REHex::BitRangeMap<wxColour> REHex::EntropyDataMapSource::get_data_map()
 {
 	BitRangeMap<wxColour> result;

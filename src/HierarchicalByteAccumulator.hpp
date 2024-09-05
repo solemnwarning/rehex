@@ -103,6 +103,14 @@ namespace REHex
 			HierarchicalByteAccumulator(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length);
 			
 			/**
+			 * @brief Prepare the HierarchicalByteAccumulator to be destroyed.
+			 *
+			 * This method stops any further processing from being scheduled and can be
+			 * used to speed up the object destruction at a later point.
+			*/
+			void pre_destroy();
+			
+			/**
 			 * @brief Get the current result.
 			 *
 			 * This returns a reference to the final ByteAccumulator object which may

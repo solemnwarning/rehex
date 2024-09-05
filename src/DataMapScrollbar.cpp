@@ -55,6 +55,8 @@ REHex::DataMapScrollbar::~DataMapScrollbar()
 
 void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 {
+	PROFILE_BLOCK("REHex::DataMapScrollbar::OnPaint");
+	
 	wxSize client_size = GetClientSize();
 	
 	wxBufferedPaintDC dc(this);
@@ -97,6 +99,7 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 	if(client_height != new_height)
 	{
 		client_height = new_height;
+		source.reset();
 		source.reset(new EntropyDataMapSource(document, BitOffset(0, 0), document->buffer_length(), client_height));
 	}
 	

@@ -35,6 +35,14 @@ REHex::RangeProcessor::~RangeProcessor()
 	stop_threads();
 }
 
+void REHex::RangeProcessor::pre_destroy()
+{
+	if(task)
+	{
+		task.finish();
+	}
+}
+
 REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 {
 	std::lock_guard<std::mutex> pl(pause_lock);

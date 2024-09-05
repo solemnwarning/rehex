@@ -50,6 +50,7 @@ namespace REHex
 	{
 		public:
 			EntropyDataMapSource(const SharedDocumentPointer &doc, BitOffset range_offset, off_t range_length, size_t max_points);
+			~EntropyDataMapSource();
 			
 			virtual BitRangeMap<wxColour> get_data_map() override;
 			

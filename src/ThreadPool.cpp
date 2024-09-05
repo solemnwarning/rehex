@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -132,16 +132,19 @@ void REHex::ThreadPool::worker_main()
 					continue;
 				}
 				
-				if(task->max_concurrency >= 0 && --(task->available_concurrency) < 0)
+				int max_concurrency = task->max_concurrency.load();
+				if(++(task->current_concurrency) > max_concurrency && max_concurrency >= 0)
 				{
-					++(task->available_concurrency);
+					--(task->current_concurrency);
 					continue;
 				}
 				
 				task_queues_lock.unlock();
 				
+				int restart_count = task->restart_count.load();
 				bool now_finished = task->func();
-				if(now_finished)
+				
+				if(now_finished && restart_count == task->restart_count.load())
 				{
 					std::unique_lock<std::mutex> l(task->finished_mutex);
 					task->finished = true;
@@ -155,10 +158,7 @@ void REHex::ThreadPool::worker_main()
 				
 				work_available = true;
 				
-				if(task->max_concurrency >= 0)
-				{
-					++(task->available_concurrency);
-				}
+				--(task->current_concurrency);
 				
 				task_queues_lock.lock();
 			}
@@ -181,6 +181,11 @@ REHex::ThreadPool::TaskHandle::TaskHandle(Task *task, ThreadPool *pool, TaskPrio
 	priority(priority),
 	task_idx(task_idx) {}
 
+REHex::ThreadPool::TaskHandle::TaskHandle():
+	task(NULL),
+	pool(NULL),
+	task_idx(-1) {}
+
 REHex::ThreadPool::TaskHandle::TaskHandle(TaskHandle &&handle):
 	task(handle.task),
 	pool(handle.pool),
@@ -192,10 +197,31 @@ REHex::ThreadPool::TaskHandle::TaskHandle(TaskHandle &&handle):
 	handle.task_idx = -1;
 }
 
+REHex::ThreadPool::TaskHandle &REHex::ThreadPool::TaskHandle::operator=(TaskHandle &&handle)
+{
+	assert(task == NULL);
+	
+	task = handle.task;
+	pool = handle.pool;
+	priority = handle.priority;
+	task_idx = handle.task_idx;
+	
+	handle.task = NULL;
+	handle.pool = NULL;
+	handle.task_idx = -1;
+	
+	return *this;
+}
+
 REHex::ThreadPool::TaskHandle::~TaskHandle()
 {
 	/* Ensure join() was called. */
 	assert(task == NULL);
+}
+
+REHex::ThreadPool::TaskHandle::operator bool() const
+{
+	return task != NULL;
 }
 
 bool REHex::ThreadPool::TaskHandle::finished() const
@@ -270,4 +296,34 @@ void REHex::ThreadPool::TaskHandle::finish()
 	task->finished_mutex.unlock();
 	
 	task->finished_cv.notify_all();
+}
+
+void REHex::ThreadPool::TaskHandle::restart()
+{
+	assert(task != NULL);
+	
+	++(task->restart_count);
+	
+	/* We lock ThreadPool::task_queues_mutex rather than Task::finished_mutex here because we
+	 * need to avoid racing with the worker threads checking for available work rather than
+	 * other threads waiting on TaskHandle::join() (which they shouldn't be doing at the same
+	 * time as we are being called anyway).
+	*/
+	
+	pool->task_queues_mutex.lock();
+	task->finished = false;
+	pool->task_queues_mutex.unlock();
+	
+	pool->task_queues_cv.notify_all();
+}
+
+void REHex::ThreadPool::TaskHandle::change_concurrency(int max_concurrency)
+{
+	assert(task != NULL);
+	
+	pool->task_queues_mutex.lock();
+	task->max_concurrency = max_concurrency;
+	pool->task_queues_mutex.unlock();
+	
+	pool->task_queues_cv.notify_all();
 }

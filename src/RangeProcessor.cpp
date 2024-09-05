@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,16 +20,14 @@
 #include <assert.h>
 #include <numeric>
 
+#include "App.hpp"
 #include "RangeProcessor.hpp"
 
 REHex::RangeProcessor::RangeProcessor(const std::function<void(off_t, off_t)> &work_func, size_t max_window_size):
 	work_func(work_func),
 	max_window_size(max_window_size),
 	max_threads(0),
-	threads_exit(false),
-	threads_pause(false),
-	spawned_threads(0),
-	running_threads(0)
+	task_paused(false)
 {}
 
 REHex::RangeProcessor::~RangeProcessor()
@@ -87,10 +85,10 @@ void REHex::RangeProcessor::queue_range_locked(off_t offset, off_t length)
 	queued .set_ranges( to_queued.begin(),  to_queued.end());
 	pending.set_ranges(to_pending.begin(), to_pending.end());
 	
-	if(!pending.empty())
+	if(!pending.empty() && task)
 	{
 		/* Notify any sleeping workers that there is now work to be done. */
-		resume_cv.notify_all();
+		task.restart();
 	}
 }
 
@@ -105,91 +103,60 @@ void REHex::RangeProcessor::mark_work_done(off_t offset, off_t length)
 	
 	queued.clear_ranges(to_pending.begin(), to_pending.end());
 	pending.set_ranges(to_pending.begin(), to_pending.end());
-	
-	if(!pending.empty())
-	{
-		/* Notify any sleeping workers that there is now work to be done. */
-		resume_cv.notify_all();
-	}
 }
 
-void REHex::RangeProcessor::thread_main()
+bool REHex::RangeProcessor::task_function()
 {
 	std::unique_lock<std::mutex> pl(pause_lock);
 	
-	while(!threads_exit)
+	/* Take up to WINDOW_SIZE bytes from the next range in the pending pool to be
+	 * processed in this thread.
+	*/
+	
+	auto next_dirty_range = pending.begin();
+	if(next_dirty_range == pending.end())
 	{
-		if(threads_pause)
-		{
-			--running_threads;
-			
-			paused_cv.notify_all();
-			resume_cv.wait(pl, [this]() { return !threads_pause; });
-			
-			++running_threads;
-		}
-		
-		/* Take up to WINDOW_SIZE bytes from the next range in the pending pool to be
-		 * processed in this thread.
-		*/
-		
-		auto next_dirty_range = pending.begin();
-		if(next_dirty_range == pending.end())
-		{
-			/* Nothing to do.
-			 * Wait until some work is available or we need to pause/stop the thread.
-			*/
-			
-			idle_cv.notify_all();
-			resume_cv.wait(pl, [&]() { return !pending.empty() || threads_pause || threads_exit; });
-			
-			if(threads_pause)
-			{
-				--running_threads;
-				
-				paused_cv.notify_all();
-				resume_cv.wait(pl, [this]() { return !threads_pause; });
-				
-				++running_threads;
-			}
-			
-			continue;
-		}
-		
-		off_t  window_base   = next_dirty_range->offset;
-		size_t window_length = next_dirty_range->length;
-		
-		window_length = std::min<off_t>(window_length, max_window_size);
-		
-		pending.clear_range(window_base, window_length);
-		working.set_range(  window_base, window_length);
-		
-		pl.unlock();
-		work_func(window_base, window_length);
-		pl.lock();
-		
-		mark_work_done(window_base, window_length);
+		/* Nothing to do. */
+		idle_cv.notify_all();
+		return queued.empty();
 	}
 	
-	--running_threads;
-	--spawned_threads;
+	off_t  window_base   = next_dirty_range->offset;
+	size_t window_length = next_dirty_range->length;
+	
+	window_length = std::min<off_t>(window_length, max_window_size);
+	
+	pending.clear_range(window_base, window_length);
+	working.set_range(  window_base, window_length);
+	
+	pl.unlock();
+	work_func(window_base, window_length);
+	pl.lock();
+	
+	mark_work_done(window_base, window_length);
+	
+	idle_cv.notify_all();
+	
+	return false;
 }
 
 void REHex::RangeProcessor::start_threads()
 {
-	std::lock_guard<std::mutex> pl(pause_lock);
+	off_t working_total;
 	
-	ByteRangeSet merged;
-	merged.set_ranges(queued.begin(),  queued.end());
-	merged.set_ranges(pending.begin(), pending.end());
-	merged.set_ranges(working.begin(), working.end());
-	
-	off_t working_total = merged.total_bytes();
+	{
+		std::lock_guard<std::mutex> pl(pause_lock);
+		
+		ByteRangeSet merged;
+		merged.set_ranges(queued.begin(),  queued.end());
+		merged.set_ranges(pending.begin(), pending.end());
+		merged.set_ranges(working.begin(), working.end());
+		
+		working_total = merged.total_bytes();
+	}
 	
 	if(working_total > 0)
 	{
-		threads_exit = false;
-		
 		#if 0
 		if(dirty_total >= (off_t)(UI_THREAD_THRESH))
 		{
@@ -211,12 +178,14 @@ void REHex::RangeProcessor::start_threads()
 				want_threads = max_threads;
 			}
 			
-			while(spawned_threads < want_threads)
+			if(task)
 			{
-				threads.emplace_back(&REHex::RangeProcessor::thread_main, this);
-				
-				++spawned_threads;
-				++running_threads;
+				task.change_concurrency(want_threads);
+				task.restart();
+			}
+			else if(!task_paused)
+			{
+				task = wxGetApp().thread_pool->queue_task([this]() { return task_function(); }, want_threads);
 			}
 		#if 0
 		}
@@ -235,42 +204,37 @@ void REHex::RangeProcessor::start_threads()
 
 void REHex::RangeProcessor::stop_threads()
 {
+	if(task)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		threads_exit = true;
-	}
-	
-	/* Wake any threads that are paused so they can exit. */
-	resume_threads();
-	
-	while(!threads.empty())
-	{
-		threads.front().join();
-		threads.pop_front();
+		task.finish();
+		task.join();
 	}
 }
 
 void REHex::RangeProcessor::pause_threads()
 {
-	std::unique_lock<std::mutex> pl(pause_lock);
+	if(task && !task_paused)
+	{
+		task.pause();
+	}
 	
-	threads_pause = true;
-	
-	/* Wake any threads that are waiting for work so they can be paused. */
-	resume_cv.notify_all();
-	
-	/* Wait for all threads to pause. */
-	paused_cv.wait(pl, [this]() { return running_threads == 0; });
+	task_paused = true;
 }
 
 void REHex::RangeProcessor::resume_threads()
 {
+	if(task_paused)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		threads_pause = false;
+		task_paused = false;
+		
+		if(task)
+		{
+			task.resume();
+		}
+		else{
+			start_threads();
+		}
 	}
-	
-	resume_cv.notify_all();
 }
 
 void REHex::RangeProcessor::wait_for_completion()

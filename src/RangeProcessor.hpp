@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,6 +27,7 @@
 #include <thread>
 
 #include "ByteRangeSet.hpp"
+#include "ThreadPool.hpp"
 
 namespace REHex
 {
@@ -116,13 +117,10 @@ namespace REHex
 			const size_t max_window_size;
 			unsigned int max_threads;
 			
-			std::list<std::thread> threads;  /**< List of threads created and not yet reaped. */
-			std::atomic<bool> threads_exit;  /**< Threads should exit. */
+			ThreadPool::TaskHandle task;
+			bool task_paused;
 			
 			mutable std::mutex pause_lock;      /**< Mutex protecting access to this block of members: */
-			std::atomic<bool> threads_pause;    /**< Running threads should enter paused state. */
-			unsigned int spawned_threads;       /**< Number of threads created. */
-			unsigned int running_threads;       /**< Number of threads not paused. */
 			std::condition_variable paused_cv;  /**< Notifies pause_threads() that a thread has paused. */
 			std::condition_variable resume_cv;  /**< Notifies paused threads that they should resume. */
 			std::condition_variable idle_cv;    /**< Notifies wait_for_completion() that a thread has gone idle. */
@@ -133,7 +131,7 @@ namespace REHex
 			void queue_range_locked(off_t offset, off_t length);
 			void mark_work_done(off_t offset, off_t length);
 			
-			void thread_main();
+			bool task_function();
 			void start_threads();
 			void stop_threads();
 			

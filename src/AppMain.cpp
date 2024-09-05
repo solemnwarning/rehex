@@ -45,6 +45,10 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	#ifdef REHEX_PROFILE
+	ProfilingCollector::set_thread_group(ProfilingCollector::ThreadGroup::MAIN);
+	#endif
+	
 	bulk_updates_freeze_count = 0;
 	quick_exit = false;
 	

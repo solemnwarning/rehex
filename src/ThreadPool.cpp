@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <assert.h>
 
+#include "profile.hpp"
 #include "ThreadPool.hpp"
 
 REHex::ThreadPool::ThreadPool(unsigned int num_threads):
@@ -99,6 +100,8 @@ REHex::ThreadPool::TaskHandle REHex::ThreadPool::queue_task(const std::function<
 
 void REHex::ThreadPool::worker_main()
 {
+	PROFILE_SET_THREAD_GROUP(POOL);
+	
 	bool work_available = true;
 	
 	shared_lock task_queues_lock(task_queues_mutex);
@@ -107,6 +110,7 @@ void REHex::ThreadPool::worker_main()
 	{
 		if(!work_available)
 		{
+			PROFILE_BLOCK("ThreadPool worker idle");
 			task_queues_cv.wait(task_queues_lock);
 		}
 		

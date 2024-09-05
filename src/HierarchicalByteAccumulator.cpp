@@ -19,6 +19,7 @@
 
 #include "App.hpp"
 #include "HierarchicalByteAccumulator.hpp"
+#include "profile.hpp"
 
 constexpr size_t REHex::HierarchicalByteAccumulator::CHUNK_SIZE;
 constexpr size_t REHex::HierarchicalByteAccumulator::L1_CACHE_SIZE;
@@ -92,6 +93,8 @@ void REHex::HierarchicalByteAccumulator::wait_for_completion()
 
 void REHex::HierarchicalByteAccumulator::process_range(off_t offset, off_t length)
 {
+	PROFILE_BLOCK("REHex::HierarchicalByteAccumulator::process_range");
+	
 	off_t chunk_offset = offset - (offset % CHUNK_SIZE);
 	off_t chunk_length = std::min<off_t>(CHUNK_SIZE, (range_length - chunk_offset));
 	

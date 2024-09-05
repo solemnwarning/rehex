@@ -106,6 +106,8 @@ void REHex::ThreadPool::worker_main()
 	
 	shared_lock task_queues_lock(task_queues_mutex);
 	
+	size_t task_indices[] = { 0, 0, 0, 0 };
+	
 	while(!stopping)
 	{
 		if(!work_available)
@@ -116,14 +118,28 @@ void REHex::ThreadPool::worker_main()
 		
 		work_available = false;
 		
-		for(int i = 0; i < 4; ++i)
+		for(int i = 0; i < 4 && !work_available; ++i)
 		{
 			std::vector<Task*> &queue = task_queues[i];
-			bool queue_cleared = true;
 			
-			for(size_t task_idx = 0; task_idx < queue.size(); ++task_idx)
+			/* Loop over all the tasks at this priority level until we find one that
+			 * is ready to ber serviced, starting after the last task we serviced at
+			 * the same priority to ensure even distribution of worker time between
+			 * high numbers of tasks.
+			 *
+			 * We return to the outer loop after servicing a single task so that any
+			 * higher-priority tasks which have become ready since the loop began will
+			 * preempt any further processing of lower-priority ones.
+			*/
+			
+			for(size_t j = 0; j < queue.size() && !work_available; ++j, ++(task_indices[i]))
 			{
-				Task *task = queue[task_idx];
+				if(task_indices[i] >= queue.size())
+				{
+					task_indices[i] = 0;
+				}
+				
+				Task *task = queue[ task_indices[i] ];
 				if(task == NULL)
 				{
 					continue;
@@ -145,10 +161,15 @@ void REHex::ThreadPool::worker_main()
 				
 				task_queues_lock.unlock();
 				
-				int restart_count = task->restart_count.load();
-				bool now_finished = task->func();
+				int old_restart_count = task->restart_count.load();
+				bool now_finished;
 				
-				if(now_finished && restart_count == task->restart_count.load())
+				{
+					PROFILE_BLOCK("ThreadPool task function");
+					now_finished = task->func();
+				}
+				
+				if(now_finished && task->restart_count.load() == old_restart_count)
 				{
 					std::unique_lock<std::mutex> l(task->finished_mutex);
 					task->finished = true;
@@ -156,24 +177,12 @@ void REHex::ThreadPool::worker_main()
 					
 					task->finished_cv.notify_all();
 				}
-				else{
-					queue_cleared = false;
-				}
 				
 				work_available = true;
 				
 				--(task->current_concurrency);
 				
 				task_queues_lock.lock();
-			}
-			
-			if(!queue_cleared)
-			{
-				/* There is still work to be done at this priority level.
-				 * Don't move on to lower-priority work.
-				*/
-				
-				break;
 			}
 		}
 	}
@@ -236,9 +245,13 @@ bool REHex::ThreadPool::TaskHandle::finished() const
 
 void REHex::ThreadPool::TaskHandle::join()
 {
+	PROFILE_BLOCK("REHex::ThreadPool::TaskHandle::join");
+	
 	assert(task != NULL);
 	
 	{
+		PROFILE_INNER_BLOCK("waiting for task to finish");
+		
 		std::unique_lock<std::mutex> lock(task->finished_mutex);
 		task->finished_cv.wait(lock, [&]()
 		{
@@ -247,6 +260,8 @@ void REHex::ThreadPool::TaskHandle::join()
 	}
 	
 	{
+		PROFILE_INNER_BLOCK("removing task from queue");
+		
 		std::unique_lock<shared_mutex> lock(pool->task_queues_mutex);
 		
 		assert(pool->task_queues[ (size_t)(priority) ][task_idx] == task);
@@ -259,9 +274,13 @@ void REHex::ThreadPool::TaskHandle::join()
 	 * still hold it.
 	*/
 	
-	task->task_mutex.lock();
-	task->task_mutex.unlock();
-	delete task;
+	{
+		PROFILE_INNER_BLOCK("destroying task");
+		
+		task->task_mutex.lock();
+		task->task_mutex.unlock();
+		delete task;
+	}
 	
 	task = NULL;
 	pool = NULL;
@@ -273,7 +292,9 @@ void REHex::ThreadPool::TaskHandle::pause()
 	assert(task != NULL);
 	assert(!task->paused.load());
 	
+	pool->task_queues_mutex.lock();
 	task->paused = true;
+	pool->task_queues_mutex.unlock();
 	
 	task->task_mutex.lock();
 	task->task_mutex.unlock();

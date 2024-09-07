@@ -130,6 +130,9 @@
     <ClCompile Include="..\..\tests\testutil.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\ThreadPool.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\AboutDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>

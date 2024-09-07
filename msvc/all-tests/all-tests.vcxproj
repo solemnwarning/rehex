@@ -329,6 +329,7 @@
     <ClCompile Include="..\..\tests\StringPanel.cpp" />
     <ClCompile Include="..\..\tests\Tab.cpp" />
     <ClCompile Include="..\..\tests\testutil.cpp" />
+    <ClCompile Include="..\..\tests\ThreadPool.cpp" />
     <ClCompile Include="..\..\tests\util.cpp" />
     <ClCompile Include="..\..\tests\WindowCommands.cpp" />
   </ItemGroup>

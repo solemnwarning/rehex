@@ -581,6 +581,7 @@ TEST_OBJS := \
 	tests/StringPanel.o \
 	tests/Tab.o \
 	tests/testutil.o \
+	tests/ThreadPool.o \
 	tests/util.o \
 	tests/WindowCommands.o \
 	$(WXLUA_OBJS) \

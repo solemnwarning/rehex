@@ -48,6 +48,8 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
 	wxDECLARE_EVENT(EV_MAPPINGS_CHANGED,    wxCommandEvent);
 	
+	wxDECLARE_EVENT(EVENT_RECURSION_FIXUP, wxCommandEvent);
+	
 	/**
 	 * @brief Data and metadata of an open file.
 	 *
@@ -595,6 +597,8 @@ namespace REHex {
 			void transact_begin(const std::string &desc);
 			void transact_commit();
 			void transact_rollback();
+			
+			virtual bool ProcessEvent(wxEvent &event) override;
 	};
 	
 	/**

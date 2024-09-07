@@ -54,6 +54,8 @@ wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
+wxDEFINE_EVENT(REHex::EVENT_RECURSION_FIXUP, wxCommandEvent);
+
 REHex::Document::Document():
 	write_protect(false),
 	current_seq(0),
@@ -2272,6 +2274,31 @@ void REHex::Document::OnColourPaletteChanged(wxCommandEvent &event)
 {
 	highlight_colour_map.set_default_lightness(active_palette->get_default_highlight_lightness());
 	event.Skip();
+}
+
+bool REHex::Document::ProcessEvent(wxEvent &event)
+{
+	/* When a handler is removed from a wxEvtHandler object, the slot is cleared but the array
+	 * doesn't get compacted until the next time an event is dispatched.
+	 *
+	 * If the next event dispatched on that wxEvtHandler happens to recurse, it triggers an
+	 * assertion failure in wxEvtHandler::SearchDynamicEventTable() and may cause handlers on
+	 * that event to be skipped.
+	 *
+	 * To work around this, we always raise a stub event which should have no handlers bound to
+	 * it before each real event, which causes the handler table compaction to run sooner.
+	 *
+	 * This won't fix all cases - if the handler callback removes a handler from the
+	 * wxEvtHandler before further recursion happens then we are still screwed, but hopefully
+	 * that condition won't ever happen...
+	 *
+	 * See https://github.com/wxWidgets/wxWidgets/issues/24803 for more details.
+	*/
+	
+	wxCommandEvent stub_event(EVENT_RECURSION_FIXUP);
+	wxEvtHandler::ProcessEvent(stub_event);
+	
+	return wxEvtHandler::ProcessEvent(event);
 }
 
 REHex::Document::Comment::Comment(const wxString &text):

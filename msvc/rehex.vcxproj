@@ -453,6 +453,8 @@
     <ClCompile Include="..\src\CustomMessageDialog.cpp" />
     <ClCompile Include="..\src\CustomNumericType.cpp" />
     <ClCompile Include="..\src\DataHistogramPanel.cpp" />
+    <ClCompile Include="..\src\DataMapScrollbar.cpp" />
+    <ClCompile Include="..\src\DataMapSource.cpp" />
     <ClCompile Include="..\src\DataType.cpp" />
     <ClCompile Include="..\src\decodepanel.cpp" />
     <ClCompile Include="..\src\DetachableNotebook.cpp" />

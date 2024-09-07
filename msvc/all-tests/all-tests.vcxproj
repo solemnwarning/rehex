@@ -243,6 +243,8 @@
     <ClCompile Include="..\..\src\CommentTree.cpp" />
     <ClCompile Include="..\..\src\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\src\CustomMessageDialog.cpp" />
+    <ClCompile Include="..\..\src\DataMapScrollbar.cpp" />
+    <ClCompile Include="..\..\src\DataMapSource.cpp" />
     <ClCompile Include="..\..\src\DataType.cpp" />
     <ClCompile Include="..\..\src\DetachableNotebook.cpp" />
     <ClCompile Include="..\..\src\DiffWindow.cpp" />

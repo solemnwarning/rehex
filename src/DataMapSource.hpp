@@ -49,8 +49,25 @@ namespace REHex
 	class EntropyDataMapSource: public DataMapSource
 	{
 		public:
-			EntropyDataMapSource(const SharedDocumentPointer &doc, BitOffset range_offset, off_t range_length, size_t max_points);
-			~EntropyDataMapSource();
+			/**
+			 * @brief Construct an EntropyDataMapSource covering a whole file.
+			 *
+			 * @param document    Document to accumulate data from.
+			 * @param max_points  Maximum number of data points to output.
+			*/
+			EntropyDataMapSource(const SharedDocumentPointer &document, size_t max_points);
+			
+			/**
+			 * @brief Construct an EntropyDataMapSource covering a range within a file.
+			 *
+			 * @param document      Document to accumulate data from.
+			 * @param range_offset  Offset within file to accumulate data from.
+			 * @param range_length  Length of range to accumulate data from.
+			 * @param max_points    Maximum number of data points to output.
+			*/
+			EntropyDataMapSource(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t max_points);
+			
+			virtual ~EntropyDataMapSource();
 			
 			virtual BitRangeMap<wxColour> get_data_map() override;
 			
@@ -68,10 +85,19 @@ namespace REHex
 					accumulator(new HierarchicalByteAccumulator(doc, (base_offset + BitOffset(rel_offset, 0)), length)) {}
 			};
 			
+			SharedDocumentPointer document;
+			
 			BitOffset range_offset;
 			off_t range_length;
 			
+			size_t max_points;
+			
 			std::vector<SubRange> sub_ranges;
+			
+			void repopulate_sub_ranges();
+			
+			void OnDocumentDataErase(OffsetLengthEvent &event);
+			void OnDocumentDataInsert(OffsetLengthEvent &event);
 	};
 }
 

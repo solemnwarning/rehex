@@ -198,6 +198,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -225,6 +226,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -304,6 +306,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
@@ -334,6 +337,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>

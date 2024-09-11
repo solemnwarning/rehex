@@ -38,7 +38,7 @@ jobs:
           . tools/mac-build-dependencies.sh
           make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) DEBUG=1 check
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: rehex-mac.dmg
         path: REHex.dmg

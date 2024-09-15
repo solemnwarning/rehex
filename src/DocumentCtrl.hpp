@@ -595,6 +595,8 @@ namespace REHex {
 			*/
 			int64_t get_scroll_yoff() const;
 			
+			int64_t get_scroll_yoff_max() const;
+			
 			/**
 			 * @brief Set the vertical scroll position, in lines.
 			*/

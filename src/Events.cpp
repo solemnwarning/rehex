@@ -33,6 +33,7 @@ wxDEFINE_EVENT(REHex::DATA_OVERWRITE,            REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITE_ABORTED,    REHex::OffsetLengthEvent);
 
 wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
+wxDEFINE_EVENT(REHex::SCROLL_UPDATE,    REHex::ScrollUpdateEvent);
 
 wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
 
@@ -132,4 +133,19 @@ REHex::FontSizeAdjustmentEvent::FontSizeAdjustmentEvent(int font_size_adjustment
 wxEvent *REHex::FontSizeAdjustmentEvent::Clone() const
 {
 	return new FontSizeAdjustmentEvent(font_size_adjustment);
+}
+
+REHex::ScrollUpdateEvent::ScrollUpdateEvent(wxWindow *source, int64_t pos, int64_t max, int orientation):
+	wxEvent(wxID_NONE, SCROLL_UPDATE),
+	pos(pos),
+	max(max),
+	orientation(orientation)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::ScrollUpdateEvent::Clone() const
+{
+	return new ScrollUpdateEvent(*this);
 }

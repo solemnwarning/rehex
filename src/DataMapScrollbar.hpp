@@ -22,26 +22,35 @@
 #include <wx/control.h>
 
 #include "DataMapSource.hpp"
+#include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 
 namespace REHex {
 	class DataMapScrollbar: public wxControl {
 		public:
-			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedDocumentPointer &document);
+			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			~DataMapScrollbar();
 			
 		private:
 			SharedDocumentPointer document;
+			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			int client_height;
 			wxTimer redraw_timer;
 			
 			std::unique_ptr<EntropyDataMapSource> source;
 			
+			bool mouse_dragging;
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent &event);
 			void OnSize(wxSizeEvent &event);
+			void OnMotion(wxMouseEvent &event);
+			void OnLeftDown(wxMouseEvent &event);
+			void OnLeftUp(wxMouseEvent &event);
+			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

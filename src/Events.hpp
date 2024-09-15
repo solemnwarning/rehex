@@ -18,6 +18,7 @@
 #ifndef REHEX_EVENTS_HPP
 #define REHEX_EVENTS_HPP
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <wx/event.h>
 #include <wx/window.h>
@@ -115,6 +116,18 @@ namespace REHex
 	#define EVT_FONTSIZEADJUSTMENT(func) \
 		wx__DECLARE_EVT1(FONT_SIZE_ADJUSTMENT_CHANGED, wxID_ANY, wxEVENT_HANDLER_CAST(FontSizeAdjustmentEventFunction, func))
 	
+	class ScrollUpdateEvent: public wxEvent
+	{
+		public:
+			const int64_t pos;
+			const int64_t max;
+			const int orientation;
+			
+			ScrollUpdateEvent(wxWindow *source, int64_t pos, int64_t max, int orientation);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     BitRangeEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    BitRangeEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
@@ -130,6 +143,7 @@ namespace REHex
 	wxDECLARE_EVENT(DATA_OVERWRITE_ABORTED,    OffsetLengthEvent);
 	
 	wxDECLARE_EVENT(CURSOR_UPDATE,    CursorUpdateEvent);
+	wxDECLARE_EVENT(SCROLL_UPDATE,    ScrollUpdateEvent);
 	
 	wxDECLARE_EVENT(DOCUMENT_TITLE_CHANGED,  DocumentTitleEvent);
 	

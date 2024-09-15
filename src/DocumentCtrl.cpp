@@ -1075,6 +1075,11 @@ void REHex::DocumentCtrl::_update_vscroll()
 		scroll_yoff_max = 0;
 	}
 	
+	{
+		ScrollUpdateEvent event(this, scroll_yoff, scroll_yoff_max, wxVERTICAL);
+		ProcessWindowEvent(event);
+	}
+	
 	linked_scroll_visit_others([this](DocumentCtrl *other)
 	{
 		other->scroll_yoff = scroll_yoff;
@@ -3271,6 +3276,11 @@ wxFont &REHex::DocumentCtrl::get_font()
 int64_t REHex::DocumentCtrl::get_scroll_yoff() const
 {
 	return scroll_yoff;
+}
+
+int64_t REHex::DocumentCtrl::get_scroll_yoff_max() const
+{
+	return scroll_yoff_max;
 }
 
 void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff, bool update_linked_scroll_others)

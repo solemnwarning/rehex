@@ -79,6 +79,9 @@ namespace REHex
 			void set_cursor_nav_mode(CursorNavMode cursor_nav_mode);
 			BitOffset get_cursor_nav_alignment() const;
 			
+			bool get_goto_offset_modal() const;
+			void set_goto_offset_modal(bool goto_offset_modal);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
@@ -86,6 +89,7 @@ namespace REHex
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
 			WindowCommandTable main_window_commands;
 			CursorNavMode cursor_nav_mode;
+			bool goto_offset_modal;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

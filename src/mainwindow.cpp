@@ -36,6 +36,7 @@
 #include "BytesPerLineDialog.hpp"
 #include "EditCommentDialog.hpp"
 #include "FillRangeDialog.hpp"
+#include "GotoOffsetDialog.hpp"
 #include "IntelHexExport.hpp"
 #include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
@@ -47,6 +48,7 @@
 #include "SettingsDialog.hpp"
 #include "SettingsDialogByteColour.hpp"
 #include "SettingsDialogHighlights.hpp"
+#include "SettingsDialogGeneral.hpp"
 #include "SettingsDialogKeyboard.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
@@ -1293,64 +1295,7 @@ void REHex::MainWindow::OnCompareSelection(wxCommandEvent &event)
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
-	
-	BitOffset current_pos = tab->doc->get_cursor_position();
-	BitOffset max_pos     = BitOffset((tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode()), 0);
-	
-	NumericEntryDialog<BitOffset>::BaseHint base;
-	switch(wxGetApp().settings->get_goto_offset_base())
-	{
-		case GotoOffsetBase::AUTO:
-			base = NumericEntryDialog<BitOffset>::BaseHint::AUTO;
-			break;
-		
-		case GotoOffsetBase::OCT:
-			base = NumericEntryDialog<BitOffset>::BaseHint::OCT;
-			break;
-		
-		case GotoOffsetBase::DEC:
-			base = NumericEntryDialog<BitOffset>::BaseHint::DEC;
-			break;
-		
-		case GotoOffsetBase::HEX:
-			base = NumericEntryDialog<BitOffset>::BaseHint::HEX;
-			break;
-	}
-	
-	REHex::NumericEntryDialog<BitOffset> ni(this,
-		"Jump to offset",
-		"Prefix offset with -/+ to jump relative to current cursor position",
-		current_pos, 0, max_pos, current_pos, base);
-	
-	int rc = ni.ShowModal();
-	if(rc == wxID_OK)
-	{
-		base = ni.GetBase();
-		switch(base)
-		{
-			case NumericEntryDialog<BitOffset>::BaseHint::AUTO:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::AUTO);
-				break;
-				
-			case NumericEntryDialog<BitOffset>::BaseHint::OCT:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::OCT);
-				break;
-				
-			case NumericEntryDialog<BitOffset>::BaseHint::DEC:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::DEC);
-				break;
-				
-			case NumericEntryDialog<BitOffset>::BaseHint::HEX:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::HEX);
-				break;
-				
-			default:
-				/* Unreachable. */
-				abort();
-		}
-		
-		tab->doc->set_cursor_position(ni.GetValue());
-	}
+	tab->show_goto_offset_dialog();
 }
 
 void REHex::MainWindow::OnCut(wxCommandEvent &event)
@@ -1546,6 +1491,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	if(dialog == NULL)
 	{
 		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogGeneral()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogKeyboard()));

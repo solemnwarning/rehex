@@ -40,32 +40,6 @@ bool REHex::SettingsDialogKeyboard::Create(wxWindow *parent)
 	
 	wxBoxSizer *top_sizer = new wxBoxSizer(wxVERTICAL);
 	
-	wxBoxSizer *cnm_sizer = new wxBoxSizer(wxHORIZONTAL);
-	top_sizer->Add(cnm_sizer, 0, wxBOTTOM, SettingsDialog::MARGIN);
-	
-	cnm_sizer->Add(new wxStaticText(this, wxID_ANY, "Hex cursor navigation:"), 0, wxALIGN_CENTER_VERTICAL);
-	
-	cnm_byte = new wxRadioButton(this, wxID_ANY, "By byte");
-	cnm_sizer->Add(cnm_byte, 0, (wxALIGN_CENTER_VERTICAL | wxLEFT), SettingsDialog::MARGIN);
-	
-	cnm_byte->SetToolTip("The arrow keys will move the cursor in whole byte increments");
-	
-	cnm_nibble = new wxRadioButton(this, wxID_ANY, "By nibble");
-	cnm_sizer->Add(cnm_nibble, 0, (wxALIGN_CENTER_VERTICAL | wxLEFT), SettingsDialog::MARGIN);
-	
-	cnm_nibble->SetToolTip("The arrow keys will move the cursor in nibble (half byte) increments");
-	
-	switch(wxGetApp().settings->get_cursor_nav_mode())
-	{
-		case CursorNavMode::BYTE:
-			cnm_byte->SetValue(true);
-			break;
-			
-		case CursorNavMode::NIBBLE:
-			cnm_nibble->SetValue(true);
-			break;
-	}
-	
 	listctrl = new wxListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT);
 	top_sizer->Add(listctrl, 1, wxEXPAND);
 	
@@ -121,15 +95,6 @@ bool REHex::SettingsDialogKeyboard::validate() { return true; }
 
 void REHex::SettingsDialogKeyboard::save()
 {
-	if(cnm_byte->GetValue())
-	{
-		wxGetApp().settings->set_cursor_nav_mode(CursorNavMode::BYTE);
-	}
-	else if(cnm_nibble->GetValue())
-	{
-		wxGetApp().settings->set_cursor_nav_mode(CursorNavMode::NIBBLE);
-	}
-	
 	wxGetApp().settings->set_main_window_accelerators(main_window_commands);
 }
 

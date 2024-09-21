@@ -466,6 +466,7 @@
     <ClCompile Include="..\src\FileWriter.cpp" />
     <ClCompile Include="..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp" />
+    <ClCompile Include="..\src\GotoOffsetDialog.cpp" />
     <ClCompile Include="..\src\HighlightColourMap.cpp" />
     <ClCompile Include="..\src\HSVColour.cpp" />
     <ClCompile Include="..\src\IntelHexExport.cpp" />
@@ -485,6 +486,7 @@
     <ClCompile Include="..\src\search.cpp" />
     <ClCompile Include="..\src\SettingsDialog.cpp" />
     <ClCompile Include="..\src\SettingsDialogByteColour.cpp" />
+    <ClCompile Include="..\src\SettingsDialogGeneral.cpp" />
     <ClCompile Include="..\src\SettingsDialogHighlights.cpp" />
     <ClCompile Include="..\src\SettingsDialogKeyboard.cpp" />
     <ClCompile Include="..\src\StringPanel.cpp" />

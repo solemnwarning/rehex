@@ -1320,7 +1320,12 @@ void REHex::MainWindow::OnRepeatGotoOffset(wxCommandEvent &event)
 		last_goto_offset += tab->doc->get_cursor_position();
 	}
 	
-	/* TODO: Check offset is valid. */
+	/* Check if desired offset is valid/reachable in the DocumentCtrl. */
+	if(!(tab->doc_ctrl->check_cursor_position(last_goto_offset)))
+	{
+		wxBell();
+		return;
+	}
 	
 	tab->doc->set_cursor_position(last_goto_offset);
 }

@@ -79,6 +79,39 @@ REHex::NumericEntryDialog<REHex::BitOffset>::BaseHint REHex::GotoOffsetDialog::g
 
 void REHex::GotoOffsetDialog::OnOK(wxCommandEvent &event)
 {
+	/* Get the entered offset and adjust if relative. */
+	
+	BitOffset requested_offset = GetValue();
+	
+	std::string text_offset = textbox->GetStringValue().ToStdString();
+	
+	size_t first_non_space = text_offset.find_first_not_of(" \t");
+	assert(first_non_space != std::string::npos);
+	
+	bool is_relative = text_offset[first_non_space] == '+' || text_offset[first_non_space] == '-';
+	
+	BitOffset actual_offset = requested_offset;
+	
+	if(is_relative)
+	{
+		actual_offset += document->get_cursor_position();
+	}
+	
+	/* Check if desired offset is valid/reachable in the DocumentCtrl. */
+	if(!(tab->doc_ctrl->check_cursor_position(actual_offset)))
+	{
+		wxMessageBox("Chosen offset is not valid", "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
+		return;
+	}
+	
+	/* Move the cursor */
+	document->set_cursor_position(actual_offset);
+	
+	/* Save the entered offset for the "Repeat 'Jump to offset'" command. */
+	tab->set_last_goto_offset(requested_offset, is_relative);
+	
+	/* Save the selected number base as the default for next time. */
+	
 	NumericEntryDialog<BitOffset>::BaseHint base = GetBase();
 	
 	switch(base)
@@ -103,28 +136,6 @@ void REHex::GotoOffsetDialog::OnOK(wxCommandEvent &event)
 			/* Unreachable. */
 			abort();
 	}
-	
-	/* TODO: Check position is valid. */
-	
-	BitOffset requested_offset = GetValue();
-	
-	std::string text_offset = textbox->GetStringValue().ToStdString();
-	
-	size_t first_non_space = text_offset.find_first_not_of(" \t");
-	assert(first_non_space != std::string::npos);
-	
-	bool is_relative = text_offset[first_non_space] == '+' || text_offset[first_non_space] == '-';
-	
-	BitOffset actual_offset = requested_offset;
-	
-	if(is_relative)
-	{
-		actual_offset += document->get_cursor_position();
-	}
-	
-	document->set_cursor_position(actual_offset);
-	
-	tab->set_last_goto_offset(requested_offset, is_relative);
 	
 	if(is_modal)
 	{

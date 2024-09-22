@@ -411,6 +411,23 @@ void REHex::DocumentCtrl::set_cursor_position(BitOffset position, Document::Curs
 	Refresh();
 }
 
+bool REHex::DocumentCtrl::check_cursor_position(BitOffset position)
+{
+	GenericDataRegion *last_dr = data_regions.back();
+	
+	if(_data_region_by_offset(position) == data_regions.end())
+	{
+		return false;
+	}
+	
+	if(!insert_mode && position > last_dr->d_offset && position == (last_dr->d_offset + last_dr->d_length))
+	{
+		return false;
+	}
+	
+	return true;
+}
+
 void REHex::DocumentCtrl::_set_cursor_position(BitOffset position, REHex::Document::CursorState cursor_state, bool preserve_cpos_hist)
 {
 	BitOffset old_cursor_pos               = get_cursor_position();
@@ -2232,6 +2249,12 @@ void REHex::DocumentCtrl::OnIdle(wxIdleEvent &event)
 std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCtrl::_data_region_by_offset(BitOffset offset)
 {
 	/* Find region that encompasses the given offset using binary search. */
+	
+	if(offset < BitOffset::ZERO)
+	{
+		/* Invalid offset. */
+		return data_regions.end();
+	}
 	
 	class StubRegion: public GenericDataRegion
 	{

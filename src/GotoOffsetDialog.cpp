@@ -150,5 +150,10 @@ void REHex::GotoOffsetDialog::OnCancel(wxCommandEvent &event)
 
 void REHex::GotoOffsetDialog::OnClose(wxCloseEvent &event)
 {
+	if(is_modal)
+	{
+		EndModal(0);
+	}
+	
 	Destroy();
 }

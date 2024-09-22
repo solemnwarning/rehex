@@ -156,6 +156,7 @@ namespace REHex {
 			void OnFileDeleted(wxCommandEvent &event);
 			void OnFileModified(wxCommandEvent &event);
 			void OnTitleChanged(DocumentTitleEvent &event);
+			void OnLastGotoOffsetChanged(wxCommandEvent &event);
 			
 			void OnByteColourMapsChanged(wxCommandEvent &event);
 			void OnAcceleratorsChanged(wxCommandEvent &event);

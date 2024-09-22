@@ -242,6 +242,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_CLEAN,      REHex::MainWindow::OnBecameClean)
 	EVT_COMMAND(wxID_ANY, REHex::BACKING_FILE_DELETED, REHex::MainWindow::OnFileDeleted)
 	EVT_COMMAND(wxID_ANY, REHex::BACKING_FILE_MODIFIED, REHex::MainWindow::OnFileModified)
+	EVT_COMMAND(wxID_ANY, REHex::LAST_GOTO_OFFSET_CHANGED,  REHex::MainWindow::OnLastGotoOffsetChanged)
 	
 	EVT_DOCUMENTTITLE(wxID_ANY, REHex::MainWindow::OnTitleChanged)
 END_EVENT_TABLE()
@@ -2035,13 +2036,6 @@ void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 		 * active document.
 		*/
 		_update_status_offset(active_tab);
-		
-		BitOffset last_goto_offset;
-		bool is_relative;
-		
-		std::tie(last_goto_offset, is_relative) = active_tab->get_last_goto_offset();
-		
-		edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
 	}
 	
 	if(event_src == active_tab->doc || event_src == active_tab->doc_ctrl)
@@ -2159,6 +2153,25 @@ void REHex::MainWindow::OnFileModified(wxCommandEvent &event)
 {
 	Document *event_doc = (Document*)(event.GetEventObject());
 	_update_dirty(event_doc);
+}
+
+void REHex::MainWindow::OnLastGotoOffsetChanged(wxCommandEvent &event)
+{
+	Tab *active_tab = this->active_tab();
+	
+	wxObject *event_src = event.GetEventObject();
+	
+	if(event_src == active_tab)
+	{
+		/* Only enable the menu command if the event originated from the active tab. */
+		
+		BitOffset last_goto_offset;
+		bool is_relative;
+		
+		std::tie(last_goto_offset, is_relative) = active_tab->get_last_goto_offset();
+		
+		edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
+	}
 }
 
 void REHex::MainWindow::OnByteColourMapsChanged(wxCommandEvent &event)

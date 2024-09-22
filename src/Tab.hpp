@@ -57,6 +57,8 @@ namespace REHex
 		DDM_MAX = 2,
 	};
 	
+	wxDECLARE_EVENT(LAST_GOTO_OFFSET_CHANGED, wxCommandEvent);
+	
 	class Tab: public wxPanel
 	{
 		public:

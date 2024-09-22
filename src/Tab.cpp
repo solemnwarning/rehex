@@ -54,6 +54,8 @@ enum {
 	ID_VSPLITTER,
 };
 
+wxDEFINE_EVENT(REHex::LAST_GOTO_OFFSET_CHANGED, wxCommandEvent);
+
 BEGIN_EVENT_TABLE(REHex::Tab, wxPanel)
 	EVT_SIZE(REHex::Tab::OnSize)
 	
@@ -720,6 +722,11 @@ void REHex::Tab::set_last_goto_offset(BitOffset last_goto_offset, bool is_relati
 {
 	this->last_goto_offset = last_goto_offset;
 	this->last_goto_offset_relative = is_relative;
+	
+	wxCommandEvent event(LAST_GOTO_OFFSET_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
 }
 
 void REHex::Tab::OnSize(wxSizeEvent &event)

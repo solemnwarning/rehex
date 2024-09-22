@@ -27,21 +27,19 @@ BEGIN_EVENT_TABLE(REHex::GotoOffsetDialog, REHex::NumericEntryDialog<REHex::BitO
 	EVT_CLOSE(REHex::GotoOffsetDialog::OnClose)
 END_EVENT_TABLE()
 
-REHex::GotoOffsetDialog::GotoOffsetDialog(wxWindow *parent, const SharedDocumentPointer &document):
+REHex::GotoOffsetDialog::GotoOffsetDialog(wxWindow *parent, Tab *tab):
 	NumericEntryDialog(
 		parent,
 		"Jump to offset",
 		"Prefix offset with -/+ to jump relative to current cursor position",
-		document->get_cursor_position(),
+		tab->doc->get_cursor_position(),
 		BitOffset::ZERO,
 		BitOffset::MAX,
-		document->get_cursor_position(),
+		BitOffset::ZERO,
 		get_last_base()),
-	document(document),
-	is_modal(false)
-{
-	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::GotoOffsetDialog::OnDocumentCursorUpdate, this);
-}
+	tab(tab),
+	document(tab->doc),
+	is_modal(false) {}
 
 int REHex::GotoOffsetDialog::ShowModal()
 {
@@ -79,12 +77,6 @@ REHex::NumericEntryDialog<REHex::BitOffset>::BaseHint REHex::GotoOffsetDialog::g
 	return base;
 }
 
-void REHex::GotoOffsetDialog::OnDocumentCursorUpdate(CursorUpdateEvent &event)
-{
-	set_rel_base(event.cursor_pos);
-	event.Skip(); /* Continue propagation. */
-}
-
 void REHex::GotoOffsetDialog::OnOK(wxCommandEvent &event)
 {
 	NumericEntryDialog<BitOffset>::BaseHint base = GetBase();
@@ -114,7 +106,25 @@ void REHex::GotoOffsetDialog::OnOK(wxCommandEvent &event)
 	
 	/* TODO: Check position is valid. */
 	
-	document->set_cursor_position(GetValue());
+	BitOffset requested_offset = GetValue();
+	
+	std::string text_offset = textbox->GetStringValue().ToStdString();
+	
+	size_t first_non_space = text_offset.find_first_not_of(" \t");
+	assert(first_non_space != std::string::npos);
+	
+	bool is_relative = text_offset[first_non_space] == '+' || text_offset[first_non_space] == '-';
+	
+	BitOffset actual_offset = requested_offset;
+	
+	if(is_relative)
+	{
+		actual_offset += document->get_cursor_position();
+	}
+	
+	document->set_cursor_position(actual_offset);
+	
+	tab->set_last_goto_offset(requested_offset, is_relative);
 	
 	if(is_modal)
 	{

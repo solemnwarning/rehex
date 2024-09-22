@@ -20,9 +20,13 @@
 
 #include "BitOffset.hpp"
 #include "NumericEntryDialog.hpp"
+#include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
+#include "Tab.hpp"
 
 namespace REHex {
+	class Tab;
+	
 	/**
 	 * @brief "Jump to offset" dialog.
 	 *
@@ -36,17 +40,16 @@ namespace REHex {
 	class GotoOffsetDialog: public NumericEntryDialog<BitOffset>
 	{
 		public:
-			GotoOffsetDialog(wxWindow *parent, const SharedDocumentPointer &document);
+			GotoOffsetDialog(wxWindow *parent, Tab *tab);
 			
 			virtual int ShowModal() override;
 			
 		private:
+			SafeWindowPointer<Tab> tab;
 			SharedDocumentPointer document;
 			bool is_modal;
 			
 			static BaseHint get_last_base();
-			
-			void OnDocumentCursorUpdate(CursorUpdateEvent &event);
 			
 			void OnOK(wxCommandEvent &event);
 			void OnCancel(wxCommandEvent &event);

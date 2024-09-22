@@ -105,6 +105,7 @@ namespace REHex {
 			void OnCompareFile(wxCommandEvent &event);
 			void OnCompareSelection(wxCommandEvent &event);
 			void OnGotoOffset(wxCommandEvent &event);
+			void OnRepeatGotoOffset(wxCommandEvent &event);
 			void OnCut(wxCommandEvent &event);
 			void OnCopy(wxCommandEvent &event);
 			void OnPaste(wxCommandEvent &event);

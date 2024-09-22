@@ -98,6 +98,9 @@ namespace REHex
 			
 			void show_goto_offset_dialog();
 			
+			std::pair<BitOffset, bool> get_last_goto_offset() const;
+			void set_last_goto_offset(BitOffset last_goto_offset, bool is_relative);
+			
 			/* Public for use by unit tests. */
 			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode);
 			
@@ -115,6 +118,8 @@ namespace REHex
 			
 			SafeWindowPointer<SettingsDialog> doc_properties;
 			SafeWindowPointer<GotoOffsetDialog> goto_offset_dialog;
+			BitOffset last_goto_offset;
+			bool last_goto_offset_relative;
 			
 			void OnSize(wxSizeEvent &size);
 			

@@ -42,10 +42,10 @@ namespace REHex {
 				OCT,
 			};
 			
-		private:
+		protected:
 			const T min_value;
 			const T max_value;
-			T rel_base;
+			const T rel_base;
 			
 			BaseHint base;
 			
@@ -187,11 +187,6 @@ namespace REHex {
 					/* Continue on to handling in base class. */
 					event.Skip();
 				});
-			}
-			
-			void set_rel_base(T rel_base)
-			{
-				this->rel_base = rel_base;
 			}
 			
 			T GetValue()

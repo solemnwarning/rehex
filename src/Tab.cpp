@@ -76,6 +76,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	document_display_mode(DDM_NORMAL),
 	doc_properties(NULL),
 	goto_offset_dialog(NULL),
+	last_goto_offset(BitOffset::MIN),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -161,6 +162,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	document_display_mode(DDM_NORMAL),
 	doc_properties(NULL),
 	goto_offset_dialog(NULL),
+	last_goto_offset(BitOffset::MIN),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -698,7 +700,7 @@ void REHex::Tab::show_goto_offset_dialog()
 	
 	bool be_modal = wxGetApp().settings->get_goto_offset_modal();
 	
-	goto_offset_dialog.reset(new GotoOffsetDialog(this, doc));
+	goto_offset_dialog.reset(new GotoOffsetDialog(this, this));
 	
 	if(be_modal)
 	{
@@ -707,6 +709,17 @@ void REHex::Tab::show_goto_offset_dialog()
 	else{
 		goto_offset_dialog->Show();
 	}
+}
+
+std::pair<REHex::BitOffset, bool> REHex::Tab::get_last_goto_offset() const
+{
+	return std::make_pair(last_goto_offset, last_goto_offset_relative);
+}
+
+void REHex::Tab::set_last_goto_offset(BitOffset last_goto_offset, bool is_relative)
+{
+	this->last_goto_offset = last_goto_offset;
+	this->last_goto_offset_relative = is_relative;
 }
 
 void REHex::Tab::OnSize(wxSizeEvent &event)

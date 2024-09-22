@@ -79,6 +79,7 @@ enum {
 	ID_COMPARE_FILE,
 	ID_COMPARE_SELECTION,
 	ID_GOTO_OFFSET,
+	ID_REPEAT_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
 	ID_WRITE_PROTECT,
 	ID_SAVE_VIEW,
@@ -172,7 +173,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_COMPARE_FILE,       REHex::MainWindow::OnCompareFile)
 	EVT_MENU(ID_COMPARE_SELECTION,  REHex::MainWindow::OnCompareSelection)
 	
-	EVT_MENU(ID_GOTO_OFFSET, REHex::MainWindow::OnGotoOffset)
+	EVT_MENU(ID_GOTO_OFFSET,        REHex::MainWindow::OnGotoOffset)
+	EVT_MENU(ID_REPEAT_GOTO_OFFSET, REHex::MainWindow::OnRepeatGotoOffset)
 	
 	EVT_MENU(wxID_PREFERENCES, REHex::MainWindow::OnSettings)
 	
@@ -347,6 +349,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		edit_menu->AppendSeparator(); /* ---- */
 		
 		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...");
+		edit_menu->Append(ID_REPEAT_GOTO_OFFSET, "Repeat last 'Jump to offset'");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
@@ -1298,6 +1301,30 @@ void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 	tab->show_goto_offset_dialog();
 }
 
+void REHex::MainWindow::OnRepeatGotoOffset(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	BitOffset last_goto_offset;
+	bool is_relative;
+	
+	std::tie(last_goto_offset, is_relative) = tab->get_last_goto_offset();
+	
+	if(last_goto_offset == BitOffset::MIN)
+	{
+		return;
+	}
+	
+	if(is_relative)
+	{
+		last_goto_offset += tab->doc->get_cursor_position();
+	}
+	
+	/* TODO: Check offset is valid. */
+	
+	tab->doc->set_cursor_position(last_goto_offset);
+}
+
 void REHex::MainWindow::OnCut(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1876,6 +1903,13 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		tool_panels_menu->Check(menu_id, active);
 	}
 	
+	BitOffset last_goto_offset;
+	bool is_relative;
+	
+	std::tie(last_goto_offset, is_relative) = tab->get_last_goto_offset();
+	
+	edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
+	
 	_update_status_offset(tab);
 	_update_status_selection(tab->doc_ctrl);
 	_update_status_mode(tab->doc_ctrl);
@@ -1996,6 +2030,13 @@ void REHex::MainWindow::OnCursorUpdate(CursorUpdateEvent &event)
 		 * active document.
 		*/
 		_update_status_offset(active_tab);
+		
+		BitOffset last_goto_offset;
+		bool is_relative;
+		
+		std::tie(last_goto_offset, is_relative) = active_tab->get_last_goto_offset();
+		
+		edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
 	}
 	
 	if(event_src == active_tab->doc || event_src == active_tab->doc_ctrl)
@@ -2751,21 +2792,22 @@ std::vector<REHex::WindowCommand> REHex::MainWindow::get_template_commands()
 		WindowCommand( "file_close_all",     "Close all",     ID_CLOSE_ALL                        ),
 		WindowCommand( "file_close_others",  "Close others",  ID_CLOSE_OTHERS                     ),
 		
-		WindowCommand( "cursor_prev",        "Previous cursor position",  wxID_BACKWARD,         wxACCEL_ALT, WXK_LEFT             ),
-		WindowCommand( "cursor_next",        "Next cursor position",      wxID_FORWARD,          wxACCEL_ALT, WXK_RIGHT            ),
-		WindowCommand( "undo",               "Undo",                      wxID_UNDO,             wxACCEL_CTRL, 'Z'                 ),
-		WindowCommand( "redo",               "Redo",                      wxID_REDO,             wxACCEL_CTRL | wxACCEL_SHIFT, 'Z' ),
-		WindowCommand( "select_all",         "Select all",                wxID_SELECTALL,        wxACCEL_CTRL, 'A'                 ),
-		WindowCommand( "select_range",       "Select range",              ID_SELECT_RANGE                                          ),
-		WindowCommand( "fill_range",         "Fill range",                ID_FILL_RANGE),
-		WindowCommand( "overwrite_mode",     "Overwrite mode",            ID_OVERWRITE_MODE),
-		WindowCommand( "write_protect",      "Write protect",             ID_WRITE_PROTECT),
-		WindowCommand( "search_text",        "Search for text",           ID_SEARCH_TEXT),
-		WindowCommand( "search_bseq",        "Search for byte sequence",  ID_SEARCH_BSEQ),
-		WindowCommand( "search_value",       "Search for value",          ID_SEARCH_VALUE),
-		WindowCommand( "compare_file",       "Compare whole file",        ID_COMPARE_FILE,       wxACCEL_CTRL,                 'K'),
-		WindowCommand( "compare_selection",  "Compare selection",         ID_COMPARE_SELECTION,  wxACCEL_CTRL | wxACCEL_SHIFT, 'K'),
-		WindowCommand( "goto_offset",        "Jump to offset",            ID_GOTO_OFFSET,        wxACCEL_CTRL,                 'G'),
+		WindowCommand( "cursor_prev",        "Previous cursor position",      wxID_BACKWARD,          wxACCEL_ALT, WXK_LEFT             ),
+		WindowCommand( "cursor_next",        "Next cursor position",          wxID_FORWARD,           wxACCEL_ALT, WXK_RIGHT            ),
+		WindowCommand( "undo",               "Undo",                          wxID_UNDO,              wxACCEL_CTRL, 'Z'                 ),
+		WindowCommand( "redo",               "Redo",                          wxID_REDO,              wxACCEL_CTRL | wxACCEL_SHIFT, 'Z' ),
+		WindowCommand( "select_all",         "Select all",                    wxID_SELECTALL,         wxACCEL_CTRL, 'A'                 ),
+		WindowCommand( "select_range",       "Select range",                  ID_SELECT_RANGE                                          ),
+		WindowCommand( "fill_range",         "Fill range",                    ID_FILL_RANGE),
+		WindowCommand( "overwrite_mode",     "Overwrite mode",                ID_OVERWRITE_MODE),
+		WindowCommand( "write_protect",      "Write protect",                 ID_WRITE_PROTECT),
+		WindowCommand( "search_text",        "Search for text",               ID_SEARCH_TEXT),
+		WindowCommand( "search_bseq",        "Search for byte sequence",      ID_SEARCH_BSEQ),
+		WindowCommand( "search_value",       "Search for value",              ID_SEARCH_VALUE),
+		WindowCommand( "compare_file",       "Compare whole file",            ID_COMPARE_FILE,        wxACCEL_CTRL,                 'K'),
+		WindowCommand( "compare_selection",  "Compare selection",             ID_COMPARE_SELECTION,   wxACCEL_CTRL | wxACCEL_SHIFT, 'K'),
+		WindowCommand( "goto_offset",        "Jump to offset",                ID_GOTO_OFFSET,         wxACCEL_CTRL,                 'G'),
+		WindowCommand( "repeat_goto_offset", "Repeat last 'Jump to offset'",  ID_REPEAT_GOTO_OFFSET,  wxACCEL_CTRL | wxACCEL_SHIFT, 'G'),
 		
 		WindowCommand("set_comment_at_cursor",     "Set comment at cursor position",  ID_SET_COMMENT_CURSOR),
 		WindowCommand("set_comment_on_selection",  "Set comment on selected data",    ID_SET_COMMENT_SELECTION),

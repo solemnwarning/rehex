@@ -33,6 +33,7 @@
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "GotoOffsetDialog.hpp"
 #include "SafeWindowPointer.hpp"
 #include "SettingsDialog.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -55,6 +56,8 @@ namespace REHex
 		
 		DDM_MAX = 2,
 	};
+	
+	wxDECLARE_EVENT(LAST_GOTO_OFFSET_CHANGED, wxCommandEvent);
 	
 	class Tab: public wxPanel
 	{
@@ -95,6 +98,11 @@ namespace REHex
 			bool get_auto_reload() const;
 			void set_auto_reload(bool auto_reload);
 			
+			void show_goto_offset_dialog();
+			
+			std::pair<BitOffset, bool> get_last_goto_offset() const;
+			void set_last_goto_offset(BitOffset last_goto_offset, bool is_relative);
+			
 			/* Public for use by unit tests. */
 			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode);
 			
@@ -111,6 +119,9 @@ namespace REHex
 			std::set<wxDialog*> search_dialogs;
 			
 			SafeWindowPointer<SettingsDialog> doc_properties;
+			SafeWindowPointer<GotoOffsetDialog> goto_offset_dialog;
+			BitOffset last_goto_offset;
+			bool last_goto_offset_relative;
 			
 			void OnSize(wxSizeEvent &size);
 			

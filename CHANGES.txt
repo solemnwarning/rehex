@@ -1,3 +1,9 @@
+Version TBC:
+
+ * Add non-modal "Jump to offset" dialog option (#242).
+
+ * Add "Repeat last 'Jump to offset'" command (#242).
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

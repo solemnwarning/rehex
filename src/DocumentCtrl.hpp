@@ -449,6 +449,7 @@ namespace REHex {
 			bool special_view_active() const;
 			
 			void set_cursor_position(BitOffset position, Document::CursorState cursor_state = Document::CSTATE_GOTO);
+			bool check_cursor_position(BitOffset position);
 			
 			bool has_prev_cursor_position() const;
 			void goto_prev_cursor_position();

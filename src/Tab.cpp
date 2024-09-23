@@ -54,6 +54,8 @@ enum {
 	ID_VSPLITTER,
 };
 
+wxDEFINE_EVENT(REHex::LAST_GOTO_OFFSET_CHANGED, wxCommandEvent);
+
 BEGIN_EVENT_TABLE(REHex::Tab, wxPanel)
 	EVT_SIZE(REHex::Tab::OnSize)
 	
@@ -75,6 +77,8 @@ REHex::Tab::Tab(wxWindow *parent):
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
 	doc_properties(NULL),
+	goto_offset_dialog(NULL),
+	last_goto_offset(BitOffset::MIN),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -159,6 +163,8 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	inline_comment_mode(ICM_FULL_INDENT),
 	document_display_mode(DDM_NORMAL),
 	doc_properties(NULL),
+	goto_offset_dialog(NULL),
+	last_goto_offset(BitOffset::MIN),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -356,6 +362,11 @@ void REHex::Tab::hide_child_windows()
 	{
 		doc_properties->Hide();
 	}
+	
+	if(goto_offset_dialog != NULL)
+	{
+		goto_offset_dialog->Hide();
+	}
 }
 
 void REHex::Tab::unhide_child_windows()
@@ -370,6 +381,11 @@ void REHex::Tab::unhide_child_windows()
 	if(doc_properties != NULL)
 	{
 		doc_properties->ShowWithoutActivating();
+	}
+	
+	if(goto_offset_dialog != NULL)
+	{
+		goto_offset_dialog->ShowWithoutActivating();
 	}
 	
 	if(file_deleted_dialog_pending)
@@ -674,6 +690,43 @@ bool REHex::Tab::get_auto_reload() const
 void REHex::Tab::set_auto_reload(bool auto_reload)
 {
 	this->auto_reload = auto_reload;
+}
+
+void REHex::Tab::show_goto_offset_dialog()
+{
+	if(goto_offset_dialog != NULL)
+	{
+		goto_offset_dialog->Raise();
+		return;
+	}
+	
+	bool be_modal = wxGetApp().settings->get_goto_offset_modal();
+	
+	goto_offset_dialog.reset(new GotoOffsetDialog(this, this));
+	
+	if(be_modal)
+	{
+		goto_offset_dialog->ShowModal();
+	}
+	else{
+		goto_offset_dialog->Show();
+	}
+}
+
+std::pair<REHex::BitOffset, bool> REHex::Tab::get_last_goto_offset() const
+{
+	return std::make_pair(last_goto_offset, last_goto_offset_relative);
+}
+
+void REHex::Tab::set_last_goto_offset(BitOffset last_goto_offset, bool is_relative)
+{
+	this->last_goto_offset = last_goto_offset;
+	this->last_goto_offset_relative = is_relative;
+	
+	wxCommandEvent event(LAST_GOTO_OFFSET_CHANGED);
+	event.SetEventObject(this);
+	
+	ProcessEvent(event);
 }
 
 void REHex::Tab::OnSize(wxSizeEvent &event)

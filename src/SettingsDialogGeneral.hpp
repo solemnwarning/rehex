@@ -15,29 +15,26 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef REHEX_SETTINGSDIALOGKEYBOARD_HPP
-#define REHEX_SETTINGSDIALOGKEYBOARD_HPP
+#ifndef REHEX_SETTINGSDIALOGGENERAL_HPP
+#define REHEX_SETTINGSDIALOGGENERAL_HPP
 
-#include <wx/listctrl.h>
-#include <wx/stattext.h>
+#include <wx/checkbox.h>
+#include <wx/radiobut.h>
 
 #include "SettingsDialog.hpp"
 #include "WindowCommands.hpp"
 
 namespace REHex
 {
-	class SettingsDialogKeyboard: public SettingsDialogPanel
+	class SettingsDialogGeneral: public SettingsDialogPanel
 	{
 		private:
-			WindowCommandTable main_window_commands;
+			wxRadioButton *cnm_byte;
+			wxRadioButton *cnm_nibble;
 			
-			wxListCtrl *listctrl;
-			
-			void OnListItemActivated(wxListEvent &event);
+			wxCheckBox *goto_offset_modeless;
 			
 		public:
-			SettingsDialogKeyboard();
-			
 			virtual bool Create(wxWindow *parent) override;
 			
 			virtual std::string label() const override;
@@ -46,42 +43,7 @@ namespace REHex
 			virtual bool validate() override;
 			virtual void save() override;
 			virtual void reset() override;
-			
-		DECLARE_EVENT_TABLE()
-	};
-	
-	struct KeyCombination
-	{
-		int modifiers;
-		int keycode;
-		
-		KeyCombination():
-			modifiers(wxMOD_NONE),
-			keycode(WXK_NONE) {}
-		
-		operator bool() const
-		{
-			return keycode != WXK_NONE;
-		}
-	};
-	
-	class KeyCombinationDialog: public wxDialog
-	{
-		private:
-			KeyCombination combination;
-			
-			wxStaticText *prompt_text;
-			
-			void update_prompt();
-			
-			void OnKeyDown(wxKeyEvent &event);
-			void OnKeyUp(wxKeyEvent &event);
-			
-			KeyCombinationDialog(wxWindow *parent);
-			
-		public:
-			static KeyCombination prompt(wxWindow *parent_window);
 	};
 }
 
-#endif /* !REHEX_SETTINGSDIALOGKEYBOARD_HPP */
+#endif /* !REHEX_SETTINGSDIALOGGENERAL_HPP */

@@ -30,7 +30,8 @@ REHex::AppSettings::AppSettings():
 	goto_offset_base(GotoOffsetBase::AUTO),
 	highlight_colours(HighlightColourMap::defaults()),
 	main_window_commands(MainWindow::get_template_commands()),
-	cursor_nav_mode(CursorNavMode::BYTE)
+	cursor_nav_mode(CursorNavMode::BYTE),
+	goto_offset_modal(true)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -169,6 +170,8 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 			break;
 	}
 	
+	goto_offset_modal = config->ReadBool("goto-offset-modal", goto_offset_modal);
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -213,6 +216,8 @@ void REHex::AppSettings::write(wxConfig *config)
 		wxConfigPathChanger scoped_path(config, "main-window-accelerators/");
 		main_window_commands.save_accelerators(config);
 	}
+	
+	config->Write("goto-offset-modal", goto_offset_modal);
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -324,6 +329,16 @@ REHex::BitOffset REHex::AppSettings::get_cursor_nav_alignment() const
 	}
 	
 	abort(); /* Unreachable. */
+}
+
+bool REHex::AppSettings::get_goto_offset_modal() const
+{
+	return goto_offset_modal;
+}
+
+void REHex::AppSettings::set_goto_offset_modal(bool goto_offset_modal)
+{
+	this->goto_offset_modal = goto_offset_modal;
 }
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)

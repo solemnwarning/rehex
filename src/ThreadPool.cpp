@@ -178,13 +178,18 @@ void REHex::ThreadPool::worker_main()
 				
 				task_queues_lock.lock();
 				
-				if(now_finished && task->restart_count == old_restart_count)
+				unsigned int new_restart_count = task->restart_count;
+				
+				if(new_restart_count == old_restart_count)
 				{
-					std::unique_lock<std::mutex> l(task->finished_mutex);
-					task->finished = true;
-					l.unlock();
-					
-					task->finished_cv.notify_all();
+					if(now_finished)
+					{
+						task->finished = true;
+						task->finished_cv.notify_all();
+					}
+					else{
+						task->finished = false;
+					}
 				}
 				
 				work_available = true;
@@ -262,7 +267,7 @@ void REHex::ThreadPool::TaskHandle::join()
 	{
 		PROFILE_INNER_BLOCK("waiting for task to finish");
 		
-		std::unique_lock<std::mutex> lock(task->finished_mutex);
+		std::unique_lock<shared_mutex> lock(pool->task_queues_mutex);
 		task->finished_cv.wait(lock, [&]()
 		{
 			return task->finished.load();
@@ -326,9 +331,10 @@ void REHex::ThreadPool::TaskHandle::finish()
 {
 	assert(task != NULL);
 	
-	task->finished_mutex.lock();
+	pool->task_queues_mutex.lock();
+	++(task->restart_count);
 	task->finished = true;
-	task->finished_mutex.unlock();
+	pool->task_queues_mutex.unlock();
 	
 	task->finished_cv.notify_all();
 }
@@ -336,12 +342,6 @@ void REHex::ThreadPool::TaskHandle::finish()
 void REHex::ThreadPool::TaskHandle::restart()
 {
 	assert(task != NULL);
-	
-	/* We lock ThreadPool::task_queues_mutex rather than Task::finished_mutex here because we
-	 * need to avoid racing with the worker threads checking for available work rather than
-	 * other threads waiting on TaskHandle::join() (which they shouldn't be doing at the same
-	 * time as we are being called anyway).
-	*/
 	
 	pool->task_queues_mutex.lock();
 	++(task->restart_count);

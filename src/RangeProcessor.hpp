@@ -81,6 +81,15 @@ namespace REHex
 			void queue_range(off_t offset, off_t length);
 			
 			/**
+			 * @brief Add a range of bytes to the work queue.
+			 *
+			 * This is basically the same as queue_range(), except this one should be
+			 * called from within the work callback function rather than from the main
+			 * thread.
+			*/
+			void queue_range_in_worker(off_t offset, off_t length);
+			
+			/**
 			 * @brief Remove a range of bytes from the work queue.
 			 *
 			 * Once this function returns, no more blocks from the given range will be
@@ -135,6 +144,10 @@ namespace REHex
 			ByteRangeSet queued;                /**< Ranges which are queued, but already being worked. */
 			ByteRangeSet pending;               /**< Ranges waiting to be processed. */
 			ByteRangeSet working;               /**< Ranges currently being processed. */
+			
+			#ifndef NDEBUG
+			static thread_local bool in_work_func;
+			#endif
 			
 			void queue_range_locked(off_t offset, off_t length);
 			void mark_work_done(off_t offset, off_t length);

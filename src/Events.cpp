@@ -58,6 +58,16 @@ REHex::OffsetLengthEvent::OffsetLengthEvent(wxObject *source, wxEventType event,
 	SetEventObject(source);
 }
 
+std::pair<off_t, off_t> REHex::OffsetLengthEvent::get_clamped_range(off_t clamp_offset, off_t clamp_length) const
+{
+	off_t clamped_offset = std::max(offset, clamp_offset);
+	off_t clamped_end    = std::min((offset + length), (clamp_offset + clamp_length));
+	
+	off_t clamped_length = clamped_end - clamped_offset;
+	
+	return std::make_pair(clamped_offset, clamped_length);
+}
+
 wxEvent *REHex::OffsetLengthEvent::Clone() const
 {
 	return new OffsetLengthEvent(*this);

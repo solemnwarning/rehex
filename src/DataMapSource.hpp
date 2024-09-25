@@ -19,7 +19,6 @@
 #define REHEX_DATAMAPSOURCE_HPP
 
 #include <memory>
-#include <vector>
 #include <wx/colour.h>
 
 #include "BitOffset.hpp"
@@ -67,24 +66,11 @@ namespace REHex
 			*/
 			EntropyDataMapSource(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t max_points);
 			
-			virtual ~EntropyDataMapSource();
+			virtual ~EntropyDataMapSource() = default;
 			
 			virtual BitRangeMap<wxColour> get_data_map() override;
 			
 		private:
-			struct SubRange
-			{
-				off_t rel_offset;
-				off_t length;
-				
-				std::unique_ptr<HierarchicalByteAccumulator> accumulator;
-				
-				SubRange(const SharedDocumentPointer &doc, BitOffset base_offset, off_t rel_offset, off_t length):
-					rel_offset(rel_offset),
-					length(length),
-					accumulator(new HierarchicalByteAccumulator(doc, (base_offset + BitOffset(rel_offset, 0)), length)) {}
-			};
-			
 			SharedDocumentPointer document;
 			
 			BitOffset range_offset;
@@ -92,12 +78,7 @@ namespace REHex
 			
 			size_t max_points;
 			
-			std::vector<SubRange> sub_ranges;
-			
-			void repopulate_sub_ranges();
-			
-			void OnDocumentDataErase(OffsetLengthEvent &event);
-			void OnDocumentDataInsert(OffsetLengthEvent &event);
+			std::unique_ptr<HierarchicalByteAccumulator> accumulator;
 	};
 }
 

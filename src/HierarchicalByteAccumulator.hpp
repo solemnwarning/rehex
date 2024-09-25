@@ -19,6 +19,8 @@
 #define REHEX_HIERARCHICALBYTEACCUMULATOR_HPP
 
 #include <atomic>
+#include <memory>
+#include <vector>
 
 #include "BitOffset.hpp"
 #include "ByteAccumulator.hpp"
@@ -38,21 +40,47 @@ namespace REHex
 	class HierarchicalByteAccumulator
 	{
 		public:
-			static constexpr size_t CHUNK_SIZE = 4 * 1024 * 1024; /* 4MiB */
-			
-			static constexpr size_t L1_CACHE_SIZE = 128; /* ~256KiB */
 			static constexpr size_t L2_CACHE_SIZE = 512; /* Up to ~1MiB */
+			
+			struct Shard
+			{
+				BitOffset offset;
+				off_t length;
+				
+				ByteAccumulator result;
+				
+				Shard(BitOffset offset, off_t length):
+					offset(offset),
+					length(length) {}
+			};
 			
 		private:
 			struct L1CacheNode
 			{
-				ByteAccumulator accumulator;
+				off_t offset;
+				off_t length;
+				
+				std::unique_ptr<ByteAccumulator> accumulator;
+				
+				L1CacheNode(off_t offset, off_t length, bool init_accumulator):
+					offset(offset), length(length)
+				{
+					if(init_accumulator)
+					{
+						accumulator.reset(new ByteAccumulator());
+					}
+				}
 			};
 			
 			SharedDocumentPointer document;
 			
 			BitOffset range_offset;
 			off_t range_length;
+			bool whole_file;
+			
+			size_t target_num_shards;
+			
+			size_t chunk_size;
 			
 			ByteAccumulator result;
 			
@@ -63,18 +91,8 @@ namespace REHex
 			 *
 			 * The L1 cache breaks the file up into chunks and holds a ByteAccumulator
 			 * for each which is used to regenerate the output accumulator as required.
-			 *
-			 * The byte range is evenly distributed across the L1 cache indices with
-			 * the following notes:
-			 *
-			 *   - All but the final slot in the L1 cache will be a multiple of
-			 *     CHUNK_SIZE bytes long.
 			*/
-			L1CacheNode l1_cache[L1_CACHE_SIZE];
-			
-			off_t l1_slot_base_size;
-			
-			size_t l1_slot_count;
+			std::vector<L1CacheNode> l1_cache;
 			
 			ByteRangeSet l1_counted;
 			
@@ -97,10 +115,26 @@ namespace REHex
 			
 			std::mutex l2_mutex;
 			
-			RangeProcessor processor;
+			std::unique_ptr<RangeProcessor> processor;
 			
 		public:
-			HierarchicalByteAccumulator(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length);
+			/**
+			 * @brief Construct a HierarchicalByteAccumulator to accumulate a whole file.
+			 *
+			 * @param document    Document to accumulate data from.
+			 * @param num_shards  Number of shards to divide range into.
+			*/
+			HierarchicalByteAccumulator(const SharedDocumentPointer &document, size_t num_shards = 1);
+			
+			/**
+			 * @brief Construct a HierarchicalByteAccumulator to accumulate a range of bytes.
+			 *
+			 * @param document      Document to accumulate data from.
+			 * @param range_offset  Start offset of range to accumulate data from.
+			 * @param range_length  Length of range to accumulate data from, in bytes.
+			 * @param num_shards    Number of shards to divide range into.
+			*/
+			HierarchicalByteAccumulator(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t num_shards = 1);
 			
 			/**
 			 * @brief Prepare the HierarchicalByteAccumulator to be destroyed.
@@ -120,6 +154,14 @@ namespace REHex
 			const ByteAccumulator &get_result();
 			
 			/**
+			 * @brief Get the shards and their current results.
+			 *
+			 * This returns a vector of each shard and the the stats accumulated in it
+			 * so far, which may or may not yet have all data.
+			*/
+			std::vector<Shard> get_shards();
+			
+			/**
 			 * @brief Wait for work queue to be empty.
 			 *
 			 * This is mostly intended for unit tests. This should not be used from the
@@ -127,7 +169,12 @@ namespace REHex
 			*/
 			void wait_for_completion();
 			
+			void flush_l2_cache();
+			
 		private:
+			std::pair<size_t, size_t> calc_chunk_size();
+			void update_chunk_size();
+			
 			void process_range(off_t offset, off_t length);
 			
 			/**
@@ -136,22 +183,6 @@ namespace REHex
 			 * @param relative_offset  Offset relative to range_offset.
 			*/
 			size_t relative_offset_to_l1_cache_idx(off_t relative_offset);
-			
-			/**
-			 * @brief Get the base relative offset of an L1 cache slot.
-			 *
-			 * @param l1_cache_idx  Index into the l1_cache array.
-			*/
-			off_t l1_cache_idx_relative_offset(size_t l1_cache_idx);
-			
-			/**
-			 * @brief Get the length of data encompassed by an L1 cache slot.
-			 *
-			 * @param l1_cache_idx  Index into the l1_cache array.
-			*/
-			off_t l1_cache_idx_length(size_t l1_cache_idx);
-			
-			void l1_cache_reset_slot(size_t l1_cache_idx);
 			
 			void OnDataModifying(OffsetLengthEvent &event);
 			void OnDataModifyAborted(OffsetLengthEvent &event);

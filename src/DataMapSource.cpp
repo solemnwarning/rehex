@@ -27,10 +27,7 @@ REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedDocumentPointer &d
 	range_length(-1),
 	max_points(max_points)
 {
-	this->document.auto_cleanup_bind(DATA_ERASE,  &REHex::EntropyDataMapSource::OnDocumentDataErase,  this);
-	this->document.auto_cleanup_bind(DATA_INSERT, &REHex::EntropyDataMapSource::OnDocumentDataInsert, this);
-	
-	repopulate_sub_ranges();
+	accumulator.reset(new HierarchicalByteAccumulator(document, max_points));
 }
 
 REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t max_points):
@@ -39,74 +36,18 @@ REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedDocumentPointer &d
 	range_length(range_length),
 	max_points(max_points)
 {
-	this->document.auto_cleanup_bind(DATA_ERASE,  &REHex::EntropyDataMapSource::OnDocumentDataErase,  this);
-	this->document.auto_cleanup_bind(DATA_INSERT, &REHex::EntropyDataMapSource::OnDocumentDataInsert, this);
-	
-	repopulate_sub_ranges();
-}
-
-REHex::EntropyDataMapSource::~EntropyDataMapSource()
-{
-	for(auto it = sub_ranges.begin(); it != sub_ranges.end(); ++it)
-	{
-		it->accumulator->pre_destroy();
-	}
-}
-
-void REHex::EntropyDataMapSource::repopulate_sub_ranges()
-{
-	for(auto old_sr = sub_ranges.begin(); old_sr != sub_ranges.end(); ++old_sr)
-	{
-		old_sr->accumulator->pre_destroy();
-	}
-	
-	sub_ranges.clear();
-	
-	off_t actual_range_length = range_length >= 0
-		? range_length
-		: document->buffer_length();
-	
-	off_t bytes_per_sub_range = std::max<off_t>((actual_range_length / (off_t)(max_points)), 1);
-	off_t next_rel_offset = 0;
-	
-	while(next_rel_offset < actual_range_length)
-	{
-		off_t sub_range_length = (sub_ranges.size() + 1) == max_points
-			? (actual_range_length - next_rel_offset)
-			: bytes_per_sub_range;
-		
-		sub_ranges.emplace_back(document, range_offset, next_rel_offset, sub_range_length);
-		next_rel_offset += sub_range_length;
-	}
-}
-
-void REHex::EntropyDataMapSource::OnDocumentDataErase(OffsetLengthEvent &event)
-{
-	if(range_length < 0)
-	{
-		repopulate_sub_ranges();
-	}
-	
-	event.Skip();
-}
-
-void REHex::EntropyDataMapSource::OnDocumentDataInsert(OffsetLengthEvent &event)
-{
-	if(range_length < 0)
-	{
-		repopulate_sub_ranges();
-	}
-	
-	event.Skip();
+	accumulator.reset(new HierarchicalByteAccumulator(document, range_offset, range_length, max_points));
 }
 
 REHex::BitRangeMap<wxColour> REHex::EntropyDataMapSource::get_data_map()
 {
 	BitRangeMap<wxColour> result;
 	
-	for(auto it = sub_ranges.begin(); it != sub_ranges.end(); ++it)
+	std::vector<HierarchicalByteAccumulator::Shard> shards = accumulator->get_shards();
+	
+	for(auto it = shards.begin(); it != shards.end(); ++it)
 	{
-		const ByteAccumulator &sub_range_result = it->accumulator->get_result();
+		const ByteAccumulator &sub_range_result = it->result;
 		uint64_t total_bytes = sub_range_result.get_total_bytes();
 		
 		if(total_bytes == 0)
@@ -137,7 +78,7 @@ REHex::BitRangeMap<wxColour> REHex::EntropyDataMapSource::get_data_map()
 		int entropy_8bit = (entropy_num * 255) / std::max<uint64_t>(entropy_den, 1);
 		wxColour colour(255, (255 - entropy_8bit), (255 - entropy_8bit));
 		
-		result.set_range((range_offset + BitOffset(it->rel_offset, 0)), it->length, colour);
+		result.set_range(it->offset, it->length, colour);
 	}
 	
 	return result;

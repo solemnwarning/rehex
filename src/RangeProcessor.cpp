@@ -23,6 +23,10 @@
 #include "App.hpp"
 #include "RangeProcessor.hpp"
 
+#ifndef NDEBUG
+thread_local bool REHex::RangeProcessor::in_work_func = false;
+#endif
+
 REHex::RangeProcessor::RangeProcessor(const std::function<void(off_t, off_t)> &work_func, size_t max_window_size):
 	work_func(work_func),
 	max_window_size(max_window_size),
@@ -45,6 +49,8 @@ void REHex::RangeProcessor::pre_destroy()
 
 REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	
 	/* Merge the all the ranges in queued, pending and working. */
@@ -59,14 +65,34 @@ REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 
 void REHex::RangeProcessor::queue_range(off_t offset, off_t length)
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	
 	queue_range_locked(offset, length);
+	
+	if(!pending.empty() && task)
+	{
+		/* Notify any sleeping workers that there is now work to be done. */
+		task.restart();
+	}
+	
 	start_threads();
+}
+
+void REHex::RangeProcessor::queue_range_in_worker(off_t offset, off_t length)
+{
+	assert(in_work_func);
+	
+	std::lock_guard<std::mutex> pl(pause_lock);
+	
+	queue_range_locked(offset, length);
 }
 
 void REHex::RangeProcessor::unqueue_range(off_t offset, off_t length)
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	pending.clear_range(offset, length);
 	queued.clear_range(offset, length);
@@ -74,6 +100,8 @@ void REHex::RangeProcessor::unqueue_range(off_t offset, off_t length)
 
 void REHex::RangeProcessor::clear_queue()
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	pending.clear_all();
 	queued.clear_all();
@@ -90,12 +118,6 @@ void REHex::RangeProcessor::queue_range_locked(off_t offset, off_t length)
 	
 	queued .set_ranges( to_queued.begin(),  to_queued.end());
 	pending.set_ranges(to_pending.begin(), to_pending.end());
-	
-	if(!pending.empty() && task)
-	{
-		/* Notify any sleeping workers that there is now work to be done. */
-		task.restart();
-	}
 }
 
 void REHex::RangeProcessor::mark_work_done(off_t offset, off_t length)
@@ -124,8 +146,7 @@ bool REHex::RangeProcessor::task_function()
 	{
 		if(queued.empty())
 		{
-			/* Nothing to do. */
-			
+			/* All ranges processed. */
 			idle_cv.notify_all();
 			return true;
 		}
@@ -146,15 +167,23 @@ bool REHex::RangeProcessor::task_function()
 	pending.clear_range(window_base, window_length);
 	working.set_range(  window_base, window_length);
 	
+	#ifndef NDEBUG
+	in_work_func = true;
+	#endif
+	
 	pl.unlock();
 	work_func(window_base, window_length);
 	pl.lock();
+	
+	#ifndef NDEBUG
+	in_work_func = false;
+	#endif
 	
 	mark_work_done(window_base, window_length);
 	
 	idle_cv.notify_all();
 	
-	return false;
+	return pending.empty() && queued.empty();
 }
 
 void REHex::RangeProcessor::start_threads()
@@ -224,6 +253,8 @@ void REHex::RangeProcessor::stop_threads()
 
 void REHex::RangeProcessor::pause_threads()
 {
+	assert(!in_work_func);
+	
 	if(task && !task_paused)
 	{
 		task.pause();
@@ -234,6 +265,8 @@ void REHex::RangeProcessor::pause_threads()
 
 void REHex::RangeProcessor::resume_threads()
 {
+	assert(!in_work_func);
+	
 	std::unique_lock<std::mutex> pl(pause_lock);
 	
 	if(task_paused)

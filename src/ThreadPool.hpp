@@ -56,8 +56,7 @@ namespace REHex
 				std::mutex concurrency_mutex;
 				
 				shared_mutex task_mutex;
-				std::mutex finished_mutex;
-				std::condition_variable finished_cv;
+				std::condition_variable_any finished_cv;
 				std::atomic<bool> finished;
 				std::atomic<bool> paused;
 				unsigned int restart_count;

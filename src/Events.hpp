@@ -37,6 +37,8 @@ namespace REHex
 			OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length);
 			OffsetLengthEvent(wxObject *source, wxEventType event, off_t offset, off_t length);
 			
+			std::pair<off_t, off_t> get_clamped_range(off_t clamp_offset, off_t clamp_length) const;
+			
 			virtual wxEvent *Clone() const override;
 	};
 	

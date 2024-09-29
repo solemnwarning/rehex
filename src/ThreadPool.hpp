@@ -50,7 +50,10 @@ namespace REHex
 				std::function<bool()> func;
 				
 				std::atomic<int> max_concurrency;
-				std::atomic<int> current_concurrency;
+				
+				/* TODO: Use a semaphore under C++20. */
+				int current_concurrency;
+				std::mutex concurrency_mutex;
 				
 				shared_mutex task_mutex;
 				std::mutex finished_mutex;

@@ -155,10 +155,15 @@ void REHex::ThreadPool::worker_main()
 				}
 				
 				int max_concurrency = task->max_concurrency.load();
-				if(++(task->current_concurrency) > max_concurrency && max_concurrency >= 0)
+				
 				{
-					--(task->current_concurrency);
-					continue;
+					std::unique_lock<std::mutex> cc_lock(task->concurrency_mutex);
+					
+					if(++(task->current_concurrency) > max_concurrency && max_concurrency >= 0)
+					{
+						--(task->current_concurrency);
+						continue;
+					}
 				}
 				
 				unsigned int old_restart_count = task->restart_count;
@@ -184,7 +189,10 @@ void REHex::ThreadPool::worker_main()
 				
 				work_available = true;
 				
-				--(task->current_concurrency);
+				{
+					std::unique_lock<std::mutex> cc_lock(task->concurrency_mutex);
+					--(task->current_concurrency);
+				}
 			}
 		}
 	}

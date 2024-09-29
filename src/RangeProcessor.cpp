@@ -124,9 +124,20 @@ bool REHex::RangeProcessor::task_function()
 	auto next_dirty_range = pending.begin();
 	if(next_dirty_range == pending.end())
 	{
-		/* Nothing to do. */
-		idle_cv.notify_all();
-		return queued.empty();
+		if(queued.empty())
+		{
+			/* Nothing to do. */
+			
+			idle_cv.notify_all();
+			return true;
+		}
+		else{
+			/* A range currently being processed in another thread has been queued
+			 * for processing again, don't let the task go to sleep.
+			*/
+			
+			return false;
+		}
 	}
 	
 	off_t  window_base   = next_dirty_range->offset;

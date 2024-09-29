@@ -134,7 +134,9 @@ void REHex::ThreadPool::worker_main()
 			
 			for(size_t j = 0; j < queue.size() && !work_available; ++j, ++(task_indices[i]))
 			{
-				if(task_indices[i] >= queue.size())
+				assert(task_indices[i] <= queue.size());
+				
+				if(task_indices[i] == queue.size())
 				{
 					task_indices[i] = 0;
 				}
@@ -159,17 +161,19 @@ void REHex::ThreadPool::worker_main()
 					continue;
 				}
 				
+				unsigned int old_restart_count = task->restart_count;
+				
 				task_queues_lock.unlock();
 				
-				int old_restart_count = task->restart_count.load();
 				bool now_finished;
-				
 				{
 					PROFILE_BLOCK("ThreadPool task function");
 					now_finished = task->func();
 				}
 				
-				if(now_finished && task->restart_count.load() == old_restart_count)
+				task_queues_lock.lock();
+				
+				if(now_finished && task->restart_count == old_restart_count)
 				{
 					std::unique_lock<std::mutex> l(task->finished_mutex);
 					task->finished = true;
@@ -181,8 +185,6 @@ void REHex::ThreadPool::worker_main()
 				work_available = true;
 				
 				--(task->current_concurrency);
-				
-				task_queues_lock.lock();
 			}
 		}
 	}
@@ -327,8 +329,6 @@ void REHex::ThreadPool::TaskHandle::restart()
 {
 	assert(task != NULL);
 	
-	++(task->restart_count);
-	
 	/* We lock ThreadPool::task_queues_mutex rather than Task::finished_mutex here because we
 	 * need to avoid racing with the worker threads checking for available work rather than
 	 * other threads waiting on TaskHandle::join() (which they shouldn't be doing at the same
@@ -336,6 +336,7 @@ void REHex::ThreadPool::TaskHandle::restart()
 	*/
 	
 	pool->task_queues_mutex.lock();
+	++(task->restart_count);
 	task->finished = false;
 	pool->task_queues_mutex.unlock();
 	

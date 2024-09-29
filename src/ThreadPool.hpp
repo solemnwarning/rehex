@@ -57,7 +57,7 @@ namespace REHex
 				std::condition_variable finished_cv;
 				std::atomic<bool> finished;
 				std::atomic<bool> paused;
-				std::atomic<int> restart_count;
+				unsigned int restart_count;
 				
 				Task(const std::function<bool()> &func, int max_concurrency):
 					func(func),

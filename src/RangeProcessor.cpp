@@ -59,11 +59,9 @@ REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 
 void REHex::RangeProcessor::queue_range(off_t offset, off_t length)
 {
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		queue_range_locked(offset, length);
-	}
+	std::lock_guard<std::mutex> pl(pause_lock);
 	
+	queue_range_locked(offset, length);
 	start_threads();
 }
 
@@ -161,18 +159,12 @@ bool REHex::RangeProcessor::task_function()
 
 void REHex::RangeProcessor::start_threads()
 {
-	off_t working_total;
+	ByteRangeSet merged;
+	merged.set_ranges(queued.begin(),  queued.end());
+	merged.set_ranges(pending.begin(), pending.end());
+	merged.set_ranges(working.begin(), working.end());
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		
-		ByteRangeSet merged;
-		merged.set_ranges(queued.begin(),  queued.end());
-		merged.set_ranges(pending.begin(), pending.end());
-		merged.set_ranges(working.begin(), working.end());
-		
-		working_total = merged.total_bytes();
-	}
+	off_t working_total = merged.total_bytes();
 	
 	if(working_total > 0)
 	{
@@ -242,6 +234,8 @@ void REHex::RangeProcessor::pause_threads()
 
 void REHex::RangeProcessor::resume_threads()
 {
+	std::unique_lock<std::mutex> pl(pause_lock);
+	
 	if(task_paused)
 	{
 		task_paused = false;

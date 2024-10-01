@@ -233,6 +233,17 @@ namespace REHex
 		private:
 			void worker_main();
 			void clear_threads();
+			
+			#ifndef NDEBUG
+			/**
+			 * @brief Check if the caller is running in a worker thread.
+			 *
+			 * This method returns true if called from one of the worker threads.
+			 *
+			 * This method is only available in debug builds.
+			*/
+			bool in_worker_thread() const;
+			#endif
 	};
 }
 

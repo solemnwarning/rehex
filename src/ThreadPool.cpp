@@ -31,14 +31,22 @@ REHex::ThreadPool::ThreadPool(unsigned int num_threads):
 
 REHex::ThreadPool::~ThreadPool()
 {
+	assert(!in_worker_thread());
 	clear_threads();
 }
 
 void REHex::ThreadPool::rescale(unsigned int num_threads)
 {
+	assert(!in_worker_thread());
+	
 	clear_threads();
 	
 	workers.reserve(num_threads);
+	
+	/* Ensure no threads can start executing tasks, which could try invoking a TaskHandle
+	 * method that needs to examine the workers array before it is fully populated.
+	*/
+	std::unique_lock<shared_mutex> lock(task_queues_mutex);
 	
 	while(workers.size() < num_threads)
 	{
@@ -65,6 +73,8 @@ void REHex::ThreadPool::clear_threads()
 
 REHex::ThreadPool::TaskHandle REHex::ThreadPool::queue_task(const std::function<bool()> &func, int max_concurrency, TaskPriority priority)
 {
+	assert(!in_worker_thread());
+	
 	std::vector<Task*> &queue = task_queues[ (size_t)(priority) ];
 	
 	Task *task = new Task(func, max_concurrency);
@@ -91,6 +101,8 @@ REHex::ThreadPool::TaskHandle REHex::ThreadPool::queue_task(const std::function<
 
 REHex::ThreadPool::TaskHandle REHex::ThreadPool::queue_task(const std::function<void()> &func, TaskPriority priority)
 {
+	assert(!in_worker_thread());
+	
 	return queue_task([func]()
 	{
 		func();
@@ -203,6 +215,14 @@ void REHex::ThreadPool::worker_main()
 	}
 }
 
+#ifndef NDEBUG
+bool REHex::ThreadPool::in_worker_thread() const
+{
+	return std::find_if(workers.begin(), workers.end(),
+		[](const std::thread &t) { return t.get_id() == std::this_thread::get_id(); }) != workers.end();
+}
+#endif
+
 REHex::ThreadPool::TaskHandle::TaskHandle(Task *task, ThreadPool *pool, TaskPriority priority, size_t task_idx):
 	task(task),
 	pool(pool),
@@ -263,6 +283,7 @@ void REHex::ThreadPool::TaskHandle::join()
 	PROFILE_BLOCK("REHex::ThreadPool::TaskHandle::join");
 	
 	assert(task != NULL);
+	assert(!pool->in_worker_thread());
 	
 	{
 		PROFILE_INNER_BLOCK("waiting for task to finish");
@@ -305,6 +326,7 @@ void REHex::ThreadPool::TaskHandle::join()
 void REHex::ThreadPool::TaskHandle::pause()
 {
 	assert(task != NULL);
+	assert(!pool->in_worker_thread());
 	assert(!task->paused.load());
 	
 	pool->task_queues_mutex.lock();
@@ -318,6 +340,7 @@ void REHex::ThreadPool::TaskHandle::pause()
 void REHex::ThreadPool::TaskHandle::resume()
 {
 	assert(task != NULL);
+	assert(!pool->in_worker_thread());
 	assert(task->paused.load());
 	
 	pool->task_queues_mutex.lock();
@@ -330,6 +353,7 @@ void REHex::ThreadPool::TaskHandle::resume()
 void REHex::ThreadPool::TaskHandle::finish()
 {
 	assert(task != NULL);
+	assert(!pool->in_worker_thread());
 	
 	pool->task_queues_mutex.lock();
 	++(task->restart_count);
@@ -342,6 +366,7 @@ void REHex::ThreadPool::TaskHandle::finish()
 void REHex::ThreadPool::TaskHandle::restart()
 {
 	assert(task != NULL);
+	assert(!pool->in_worker_thread());
 	
 	pool->task_queues_mutex.lock();
 	++(task->restart_count);
@@ -354,6 +379,7 @@ void REHex::ThreadPool::TaskHandle::restart()
 void REHex::ThreadPool::TaskHandle::change_concurrency(int max_concurrency)
 {
 	assert(task != NULL);
+	assert(!pool->in_worker_thread());
 	
 	pool->task_queues_mutex.lock();
 	task->max_concurrency = max_concurrency;

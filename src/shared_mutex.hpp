@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -41,6 +41,8 @@ namespace REHex
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
+#include <vector>
 
 namespace REHex
 {
@@ -54,7 +56,13 @@ namespace REHex
 			
 			std::mutex readers_lock;
 			std::condition_variable readers_cv;
-			volatile unsigned int readers;
+			unsigned int readers;
+			
+			#ifndef NDEBUG
+			/* Store the threads which hold the mutex for debugging. */
+			std::thread::id writer_thread;
+			std::vector<std::thread::id> reader_threads;
+			#endif
 			
 		public:
 			shared_mutex():
@@ -69,6 +77,10 @@ namespace REHex
 				{
 					return readers == 0;
 				});
+				
+				#ifndef NDEBUG
+				writer_thread = std::this_thread::get_id();
+				#endif
 			}
 			
 			void unlock()
@@ -81,6 +93,10 @@ namespace REHex
 				std::lock_guard<std::mutex> wl(write_lock);
 				std::lock_guard<std::mutex> rl(readers_lock);
 				++readers;
+				
+				#ifndef NDEBUG
+				reader_threads.push_back(std::this_thread::get_id());
+				#endif
 			}
 			
 			void unlock_shared()
@@ -88,6 +104,11 @@ namespace REHex
 				{
 					std::lock_guard<std::mutex> rl(readers_lock);
 					--readers;
+					
+					#ifndef NDEBUG
+					auto it = std::find(reader_threads.begin(), reader_threads.end(), std::this_thread::get_id());
+					reader_threads.erase(it);
+					#endif
 				}
 				
 				readers_cv.notify_one();

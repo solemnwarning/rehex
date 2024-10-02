@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,9 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#undef NDEBUG
 #include "../src/platform.hpp"
-#include <assert.h>
 
 #include <functional>
 #include <gtest/gtest.h>
@@ -29,6 +27,8 @@
 #include <wx/dataview.h>
 #include <wx/init.h>
 #include <wx/wx.h>
+
+#include "testutil.hpp"
 
 #include "../src/CommentTree.hpp"
 #include "../src/document.hpp"
@@ -45,7 +45,7 @@ static int build_model_values_cmp(wxDataViewItem *a, wxDataViewItem *b)
 {
 	int asc = build_model_values_cmp_model->Compare(*a, *b, 0, true);
 	int desc = build_model_values_cmp_model->Compare(*a, *b, 0, false);
-	assert(asc == (-1 * desc));
+	always_assert(asc == (-1 * desc));
 	
 	return asc;
 }
@@ -127,12 +127,12 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 		{
 			wxDataViewItem item = items[i];
 			
-			assert(item.IsOk());
+			always_assert(item.IsOk());
 			
 			wxVariant value;
 			model->GetValue(value, item, MODEL_TEXT_COLUMN);
 			
-			assert(this->items.find(item.GetID()) == this->items.end());
+			always_assert(this->items.find(item.GetID()) == this->items.end());
 			this->items.emplace(item.GetID(), value.GetString().ToStdString());
 			
 			populate_items(item);
@@ -157,8 +157,8 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	
 	virtual bool ItemAdded(const wxDataViewItem &parent, const wxDataViewItem &item) override
 	{
-		assert(item.IsOk());
-		assert(items.find(item.GetID()) == items.end());
+		always_assert(item.IsOk());
+		always_assert(items.find(item.GetID()) == items.end());
 		
 		const char *iscontainer = model->IsContainer(item)
 			? " (container)"
@@ -171,8 +171,8 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	
 	virtual bool ItemChanged(const wxDataViewItem &item) override
 	{
-		assert(item.IsOk());
-		assert(items.find(item.GetID()) != items.end());
+		always_assert(item.IsOk());
+		always_assert(items.find(item.GetID()) != items.end());
 		
 		events.push_back(std::string("ItemChanged(\"") + items[item.GetID()] + "\")");
 		items[item.GetID()] = item_string(item);
@@ -183,11 +183,11 @@ struct TestDataViewModelNotifier: public wxDataViewModelNotifier
 	{
 		if(parent.IsOk())
 		{
-			assert(items.find(parent.GetID()) != items.end());
+			always_assert(items.find(parent.GetID()) != items.end());
 		}
 		
-		assert(item.IsOk());
-		assert(items.find(item.GetID()) != items.end());
+		always_assert(item.IsOk());
+		always_assert(items.find(item.GetID()) != items.end());
 		
 		events.push_back(std::string("ItemDeleted(\"") + (parent.IsOk() ? items[parent.GetID()] : "(null)") + "\", \"" + items[item.GetID()] + "\")");
 		items.erase(item.GetID());

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,15 +15,15 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#undef NDEBUG
 #include "../src/platform.hpp"
-#include <assert.h>
 
 #include <gtest/gtest.h>
 #include <stdio.h>
 #include <vector>
 #include <wx/init.h>
 #include <wx/wx.h>
+
+#include "testutil.hpp"
 
 #include "../src/document.hpp"
 #include "../src/search.hpp"
@@ -34,7 +34,7 @@
 TEST(Search, ByteSequence)
 {
 	FILE *tmp = fopen(TMPFILE, "wb");
-	assert(tmp != NULL);
+	always_assert(tmp != NULL);
 	for(int c = 0; c < 128; ++c) { fputc(c, tmp); }
 	for(int c = 0; c < 256; ++c) { fputc(c, tmp); }
 	fclose(tmp);

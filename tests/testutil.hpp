@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <jansson.h>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -28,6 +29,16 @@
 #else
 #define CONFIG_EOL "\n"
 #endif
+
+/**
+ * @brief Like assert(), but compiled in release builds too.
+*/
+#define always_assert(expr) \
+	if(!(expr)) \
+	{ \
+		fprintf(stderr, "Assertion failed at %s:%d: %s\n", __FILE__, __LINE__, #expr); \
+		abort(); \
+	}
 
 void run_wx_for(unsigned int ms);
 bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms = 10000, unsigned int check_interval_ms = 100);

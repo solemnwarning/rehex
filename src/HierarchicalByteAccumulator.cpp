@@ -73,9 +73,10 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	update_chunk_size();
 }
 
-void REHex::HierarchicalByteAccumulator::pre_destroy()
+REHex::HierarchicalByteAccumulator::~HierarchicalByteAccumulator()
 {
-	processor->pre_destroy();
+	/* Ensure our callbacks are finished running before destruction proceeds. */
+	processor->pause_threads();
 }
 
 const REHex::ByteAccumulator &REHex::HierarchicalByteAccumulator::get_result()

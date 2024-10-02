@@ -39,14 +39,6 @@ REHex::RangeProcessor::~RangeProcessor()
 	stop_threads();
 }
 
-void REHex::RangeProcessor::pre_destroy()
-{
-	if(task)
-	{
-		task.finish();
-	}
-}
-
 REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 {
 	assert(!in_work_func);

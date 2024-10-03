@@ -30,7 +30,8 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	whole_file(true),
 	target_num_shards(num_shards),
 	chunk_size(0),
-	l2_cache(L2_CACHE_SIZE)
+	l2_cache(L2_CACHE_SIZE),
+	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1))
 {
 	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
 	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
@@ -40,9 +41,6 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	this->document.auto_cleanup_bind(DATA_ERASE_ABORTED,        &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
 	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
-	
-	/* Placeholder. */
-	processor.reset(new RangeProcessor([this](off_t offset, off_t length) {}, 1024));
 	
 	/* Initialise chunk_size, populate l1 cache and queue up work. */
 	update_chunk_size();
@@ -55,7 +53,8 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	whole_file(false),
 	target_num_shards(num_shards),
 	chunk_size(0),
-	l2_cache(L2_CACHE_SIZE)
+	l2_cache(L2_CACHE_SIZE),
+	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1))
 {
 	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
 	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
@@ -66,9 +65,6 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
 	
-	/* Placeholder. */
-	processor.reset(new RangeProcessor([this](off_t offset, off_t length) {}, 1024));
-	
 	/* Initialise chunk_size, populate l1 cache and queue up work. */
 	update_chunk_size();
 }
@@ -76,7 +72,8 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 REHex::HierarchicalByteAccumulator::~HierarchicalByteAccumulator()
 {
 	/* Ensure our callbacks are finished running before destruction proceeds. */
-	processor->pause_threads();
+	task.finish();
+	task.join();
 }
 
 const REHex::ByteAccumulator &REHex::HierarchicalByteAccumulator::get_result()
@@ -126,7 +123,17 @@ std::vector<REHex::HierarchicalByteAccumulator::Shard> REHex::HierarchicalByteAc
 
 void REHex::HierarchicalByteAccumulator::wait_for_completion()
 {
-	return processor->wait_for_completion();
+	/* Crappy spinloop as its only used by the unit tests... */
+	
+	while(true)
+	{
+		std::unique_lock<std::mutex> queue_lock_guard(queue_mutex);
+		
+		if(pending.empty() && working.empty() && blocked.empty())
+		{
+			break;
+		}
+	}
 }
 
 void REHex::HierarchicalByteAccumulator::flush_l2_cache()
@@ -237,7 +244,7 @@ void REHex::HierarchicalByteAccumulator::update_chunk_size()
 		return;
 	}
 	
-	processor->pause_threads();
+	task.pause();
 	
 	std::vector<L1CacheNode> new_l1_cache;
 	new_l1_cache.reserve(l1_slot_count);
@@ -270,50 +277,101 @@ void REHex::HierarchicalByteAccumulator::update_chunk_size()
 	chunk_size = new_chunk_size;
 	l1_cache = std::move(new_l1_cache);
 	
-	processor.reset(new RangeProcessor([this](off_t offset, off_t length) { process_range(offset, length); }, chunk_size));
-	processor->queue_range(0, range_length);
+	queue_range(0, range_length);
+	task.restart();
+	
+	task.resume();
 }
 
-void REHex::HierarchicalByteAccumulator::process_range(off_t offset, off_t length)
+void REHex::HierarchicalByteAccumulator::queue_range(off_t relative_offset, off_t length)
 {
-	PROFILE_BLOCK("REHex::HierarchicalByteAccumulator::process_range");
+	std::lock_guard<std::mutex> queue_lock_guard(queue_mutex);
 	
-	off_t chunk_offset = offset;
-	off_t chunk_length = length;
+	ByteRangeSet to_pending;
+	to_pending.set_range(relative_offset, length);
 	
+	ByteRangeSet to_blocked = ByteRangeSet::intersection(to_pending, working);
+	
+	to_pending.clear_ranges(to_blocked.begin(), to_blocked.end());
+	
+	blocked.set_ranges(to_blocked.begin(), to_blocked.end());
+	pending.set_ranges(to_pending.begin(), to_pending.end());
+}
+
+bool REHex::HierarchicalByteAccumulator::task_func()
+{
+	PROFILE_BLOCK("REHex::HierarchicalByteAccumulator::task_func");
+	
+	off_t chunk_offset, chunk_length;
 	size_t l1_slot_idx;
+	
+	bool chunk_ok = false;
+	
 	{
-		std::unique_lock<std::mutex> l1_lock_guard(l1_mutex);
+		std::unique_lock<std::mutex> queue_lock_guard(queue_mutex);
 		
-		l1_slot_idx = relative_offset_to_l1_cache_idx(offset);
-		
-		/* Step back to the start of the L2 slots which are aligned relative to the start
-		 * of the L1 slot (if necessary).
-		*/
-		if(((chunk_offset - l1_cache[l1_slot_idx].offset) % chunk_size) != 0)
+		for(auto pi = pending.begin(); pi != pending.end() && !chunk_ok; ++pi)
 		{
-			chunk_offset -= (chunk_offset - l1_cache[l1_slot_idx].offset) % chunk_size;
+			chunk_offset = pi->offset;
+			
+			while(chunk_offset < (pi->offset + pi->length) && !chunk_ok)
+			{
+				l1_slot_idx = relative_offset_to_l1_cache_idx(chunk_offset);
+				
+				/* Step back to the start of the L2 slots which are aligned
+				 * relative to the start of the L1 slot (if necessary).
+				*/
+				if(((chunk_offset - l1_cache[l1_slot_idx].offset) % chunk_size) != 0)
+				{
+					chunk_offset -= (chunk_offset - l1_cache[l1_slot_idx].offset) % chunk_size;
+				}
+				
+				off_t l1_remaining = l1_cache[l1_slot_idx].length - (chunk_offset - l1_cache[l1_slot_idx].offset);
+				assert((chunk_offset + l1_remaining) == (l1_cache[l1_slot_idx].offset + l1_cache[l1_slot_idx].length));
+				
+				chunk_length = std::min<off_t>(chunk_size, l1_remaining);
+				
+				if(working.isset_any(chunk_offset, chunk_length))
+				{
+					chunk_offset += chunk_length;
+				}
+				else{
+					chunk_ok = true;
+				}
+			}
 		}
 		
-		off_t l1_remaining = l1_cache[l1_slot_idx].length - (chunk_offset - l1_cache[l1_slot_idx].offset);
-		
-		assert((chunk_offset + l1_remaining) == (l1_cache[l1_slot_idx].offset + l1_cache[l1_slot_idx].length));
-		
-		chunk_length = std::min<off_t>(chunk_size, l1_remaining);
-		
-		assert(chunk_offset <= offset);
-		// assert(chunk_length == (off_t)(chunk_size) || chunk_length == (l1_cache[l1_slot_idx].offset + l1_cache[l1_slot_idx].length));
-		
-		if((offset + length) > (chunk_offset + chunk_length))
+		if(chunk_ok)
 		{
-			/* We've been given a range which overlaps multiple chunks, return the
-			 * overflow to the RangeProcessor to be processed later.
-			*/
-			
-			processor->queue_range_in_worker((chunk_offset + chunk_length), ((offset + length) - (chunk_offset + chunk_length)));
+			pending.clear_range(chunk_offset, chunk_length);
+			working.set_range(chunk_offset, chunk_length);
+		}
+		else{
+			return pending.empty() && blocked.empty();
 		}
 	}
 	
+	process_chunk(chunk_offset, chunk_length, l1_slot_idx);
+	
+	{
+		std::unique_lock<std::mutex> queue_lock_guard(queue_mutex);
+		
+		working.clear_range(chunk_offset, chunk_length);
+		
+		ByteRangeSet work_done;
+		work_done.set_range(chunk_offset, chunk_length);
+		
+		ByteRangeSet unblocked = ByteRangeSet::intersection(work_done, blocked);
+		
+		blocked.clear_ranges(unblocked.begin(), unblocked.end());
+		pending.set_ranges(unblocked.begin(), unblocked.end());
+		
+		return pending.empty() && blocked.empty();
+	}
+}
+
+void REHex::HierarchicalByteAccumulator::process_chunk(off_t chunk_offset, off_t chunk_length, size_t l1_slot_idx)
+{
 	ByteAccumulator prev_chunk_accumulator;
 	bool l2_cache_hit = false;
 	
@@ -337,22 +395,23 @@ void REHex::HierarchicalByteAccumulator::process_range(off_t offset, off_t lengt
 			/* Our chunk wasn't found in the L2 cache but has been recorded in the L1
 			 * cache, we don't know the previous values to subtract, so every chunk in
 			 * the L1 cache slot needs to be re-counted.
-			 *
-			 * All relevant chunks will be re-queued to the RangeProcessor within the
-			 * l1_cache_reset_slot() call, causing us to be called again in the future,
-			 * so we just return afterwards.
 			*/
 			
 			l1_counted.clear_range(l1_cache[l1_slot_idx].offset, l1_cache[l1_slot_idx].length);
 			l1_cache[l1_slot_idx].accumulator->reset();
 			
-			processor->queue_range_in_worker(l1_cache[l1_slot_idx].offset, l1_cache[l1_slot_idx].length);
+			ByteRangeSet rest_of_this_l1_slot;
+			rest_of_this_l1_slot.set_range(l1_cache[l1_slot_idx].offset, l1_cache[l1_slot_idx].length);
+			rest_of_this_l1_slot.clear_range(chunk_offset, chunk_length);
+			
+			for(auto i = rest_of_this_l1_slot.begin(); i != rest_of_this_l1_slot.end(); ++i)
+			{
+				queue_range(i->offset, i->length);
+			}
 			
 			std::unique_lock<std::mutex> l2_lock_guard(l2_mutex);
 			
 			l2_cache.erase(l1_cache[l1_slot_idx].offset, (l1_cache[l1_slot_idx].offset + l1_cache[l1_slot_idx].length));
-			
-			return;
 		}
 	}
 	
@@ -412,7 +471,7 @@ size_t REHex::HierarchicalByteAccumulator::relative_offset_to_l1_cache_idx(off_t
 
 void REHex::HierarchicalByteAccumulator::OnDataModifying(OffsetLengthEvent &event)
 {
-	processor->pause_threads();
+	task.pause();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -420,7 +479,7 @@ void REHex::HierarchicalByteAccumulator::OnDataModifying(OffsetLengthEvent &even
 
 void REHex::HierarchicalByteAccumulator::OnDataModifyAborted(OffsetLengthEvent &event)
 {
-	processor->resume_threads();
+	task.resume();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -436,15 +495,10 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 		 * at/after the insertion point to be correct.
 		*/
 		
-		ByteRangeSet pending_ranges = processor->get_queue();
-		processor->clear_queue();
+		assert(working.empty());
+		assert(blocked.empty());
 		
-		pending_ranges.data_erased(event.offset, event.length);
-		
-		for(auto r = pending_ranges.begin(); r != pending_ranges.end(); ++r)
-		{
-			processor->queue_range(r->offset, r->length);
-		}
+		pending.data_erased(event.offset, event.length);
 		
 		/* Find the L1 slot covering the start of the erased range. */
 		size_t l1_slot_idx = relative_offset_to_l1_cache_idx(event.offset);
@@ -472,7 +526,8 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 					}
 					
 					/* Flag the whole L1 cache slot to be re-scanned. */
-					processor->queue_range(l1_cache[i].offset, l1_cache[i].length);
+					queue_range(l1_cache[i].offset, l1_cache[i].length);
+					task.restart();
 					
 					++i;
 				}
@@ -500,18 +555,20 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 		
 		if(event.offset <= range_offset.byte())
 		{
-			processor->queue_range(0, range_length);
+			queue_range(0, range_length);
+			task.restart();
 		}
 		else if(event.offset < (range_offset.byte_round_up() + range_length))
 		{
 			off_t refresh_from = event.offset - range_offset.byte();
 			off_t refresh_length = range_length - refresh_from;
 			
-			processor->queue_range(refresh_from, refresh_length);
+			queue_range(refresh_from, refresh_length);
+			task.restart();
 		}
 	}
 	
-	processor->resume_threads();
+	task.resume();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -547,40 +604,34 @@ void REHex::HierarchicalByteAccumulator::OnDataInsert(OffsetLengthEvent &event)
 		 * at/after the insertion point to be correct.
 		*/
 		
-		ByteRangeSet pending_ranges = processor->get_queue();
-		processor->clear_queue();
+		assert(working.empty());
+		assert(blocked.empty());
 		
-		for(auto r = pending_ranges.begin(); r != pending_ranges.end(); ++r)
-		{
-			if((range_offset.byte() + r->offset) < event.offset)
-			{
-				processor->queue_range(r->offset, r->length);
-			}
-			else{
-				processor->queue_range((r->offset + event.length), r->length);
-			}
-		}
+		pending.data_inserted(event.offset, event.length);
 		
 		/* Flag the whole L1 cache slot to be re-scanned. */
-		processor->queue_range(l1_cache[l1_slot_idx].offset, l1_cache[l1_slot_idx].length);
+		pending.set_range(l1_cache[l1_slot_idx].offset, l1_cache[l1_slot_idx].length);
+		task.restart();
 	}
 	else{
 		/* Fixed range. Refresh any offsets affected by the insert. */
 		
 		if(event.offset <= range_offset.byte())
 		{
-			processor->queue_range(0, range_length);
+			queue_range(0, range_length);
+			task.restart();
 		}
 		else if(event.offset < (range_offset.byte_round_up() + range_length))
 		{
 			off_t refresh_from = event.offset - range_offset.byte();
 			off_t refresh_length = range_length - refresh_from;
 			
-			processor->queue_range(refresh_from, refresh_length);
+			queue_range(refresh_from, refresh_length);
+			task.restart();
 		}
 	}
 	
-	processor->resume_threads();
+	task.resume();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -593,10 +644,9 @@ void REHex::HierarchicalByteAccumulator::OnDataOverwrite(OffsetLengthEvent &even
 	
 	if(clamped_length > 0)
 	{
-		processor->queue_range((clamped_offset - range_offset.byte()), clamped_length);
+		queue_range((clamped_offset - range_offset.byte()), clamped_length);
+		task.restart();
 	}
-	
-	processor->resume_threads();
 	
 	/* Continue propogation. */
 	event.Skip();

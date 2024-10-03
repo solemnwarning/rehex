@@ -26,8 +26,8 @@
 #include "ByteAccumulator.hpp"
 #include "Events.hpp"
 #include "LRUCache.hpp"
-#include "RangeProcessor.hpp"
 #include "SharedDocumentPointer.hpp"
+#include "ThreadPool.hpp"
 
 namespace REHex
 {
@@ -115,7 +115,12 @@ namespace REHex
 			
 			std::mutex l2_mutex;
 			
-			std::unique_ptr<RangeProcessor> processor;
+			std::mutex queue_mutex;
+			ByteRangeSet pending;  /**< Ranges waiting to be processed. */
+			ByteRangeSet working;  /**< Ranges currently being processed. */
+			ByteRangeSet blocked;  /**< Ranges which are queued, but already being worked. */
+			
+			ThreadPool::TaskHandle task;
 			
 		public:
 			/**
@@ -169,7 +174,10 @@ namespace REHex
 			std::pair<size_t, size_t> calc_chunk_size();
 			void update_chunk_size();
 			
-			void process_range(off_t offset, off_t length);
+			void queue_range(off_t relative_offset, off_t length);
+			
+			bool task_func();
+			void process_chunk(off_t chunk_offset, off_t chunk_length, size_t l1_slot_idx);
 			
 			/**
 			 * @brief Get the L1 cache slot index encompassing a (relative) offset.

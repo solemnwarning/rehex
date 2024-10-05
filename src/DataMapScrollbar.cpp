@@ -42,7 +42,7 @@ REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const
 	wxSize client_size = GetClientSize();
 	client_height = std::max(client_size.GetHeight(), 1);
 	
-	source.reset(new EntropyDataMapSource(document, BitOffset(0, 0), document->buffer_length(), client_height));
+	source.reset(new EntropyDataMapSource(document, client_height));
 	
 	redraw_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 	{
@@ -77,11 +77,6 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	off_t bytes_per_y = document->buffer_length() / client_size.GetHeight();
 	off_t next_off = 0;
 	
-	int64_t scroll_yoff     = document_ctrl->get_scroll_yoff();
-	int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max();
-	
-	int arrow_y = 0;
-	
 	for(int y = 0; y < client_size.GetHeight(); ++y)
 	{
 		auto dm_it = data_map.get_range(BitOffset(next_off, 0));
@@ -91,14 +86,19 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 			dc.DrawLine(4, y, (client_size.GetWidth() - 4), y);
 		}
 		
-		if((int64_t)((double)(scroll_yoff_max) * ((double)(y) / (double)(client_size.GetHeight()))) <= scroll_yoff)
-		{
-			arrow_y = y;
-		}
-		
 		next_off += bytes_per_y;
 	}
 	
+	uint64_t num_visible_lines = document_ctrl->get_visible_lines();
+	
+	int64_t first_visible_line = document_ctrl->get_scroll_yoff();
+	int64_t last_visible_line  = first_visible_line + num_visible_lines - 1;
+	int64_t max_visible_line   = document_ctrl->get_scroll_yoff_max() + num_visible_lines - 1;
+	
+	int box_top_y    = ((double)(first_visible_line) / (double)(max_visible_line)) * (double)(client_size.GetHeight());
+	int box_bottom_y = ((double)(last_visible_line)  / (double)(max_visible_line)) * (double)(client_size.GetHeight());
+	
+	/*
 	dc.SetPen(wxPen(*wxBLACK, 1));
 	dc.SetBrush(*wxBLACK_BRUSH);
 	
@@ -109,6 +109,12 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	};
 	
 	dc.DrawPolygon(3, points, 0, arrow_y);
+	*/
+	
+	dc.SetBrush(wxNullBrush);
+	dc.SetPen(wxPen(*wxBLUE, 1));
+	
+	dc.DrawRectangle(0, box_top_y, client_size.GetWidth(), ((box_bottom_y - box_top_y) + 1));
 }
 
 void REHex::DataMapScrollbar::OnErase(wxEraseEvent& event)
@@ -126,8 +132,7 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 	if(client_height != new_height)
 	{
 		client_height = new_height;
-		source.reset();
-		source.reset(new EntropyDataMapSource(document, BitOffset(0, 0), document->buffer_length(), client_height));
+		source.reset(new EntropyDataMapSource(document, client_height));
 	}
 	
 	Refresh();
@@ -135,10 +140,12 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 
 void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 {
-	if(mouse_dragging)
+	if(mouse_dragging && document_ctrl)
 	{
-		int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max();
-		document_ctrl->set_scroll_yoff((double)(scroll_yoff_max) * ((double)(event.GetY()) / (double)(GetClientSize().GetHeight())));
+		int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max() + document_ctrl->get_visible_lines() - 1;
+		document_ctrl->set_scroll_yoff(((double)(scroll_yoff_max) * ((double)(event.GetY()) / (double)(GetClientSize().GetHeight()))) - (document_ctrl->get_visible_lines() / 2));
+		
+		Refresh();
 	}
 }
 
@@ -152,8 +159,10 @@ void REHex::DataMapScrollbar::OnLeftDown(wxMouseEvent &event)
 	
 	if(document_ctrl)
 	{
-		int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max();
-		document_ctrl->set_scroll_yoff((double)(scroll_yoff_max) * ((double)(event.GetY()) / (double)(GetClientSize().GetHeight())));
+		int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max() + document_ctrl->get_visible_lines() - 1;
+		document_ctrl->set_scroll_yoff(((double)(scroll_yoff_max) * ((double)(event.GetY()) / (double)(GetClientSize().GetHeight()))) - (document_ctrl->get_visible_lines() / 2));
+		
+		Refresh();
 	}
 }
 

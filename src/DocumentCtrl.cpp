@@ -3283,6 +3283,11 @@ int64_t REHex::DocumentCtrl::get_scroll_yoff_max() const
 	return scroll_yoff_max;
 }
 
+unsigned int REHex::DocumentCtrl::get_visible_lines() const
+{
+	return visible_lines;
+}
+
 void REHex::DocumentCtrl::set_scroll_yoff(int64_t scroll_yoff, bool update_linked_scroll_others)
 {
 	set_scroll_yoff_clamped(scroll_yoff);

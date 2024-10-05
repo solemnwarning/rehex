@@ -50,32 +50,22 @@ REHex::BitRangeMap<wxColour> REHex::EntropyDataMapSource::get_data_map()
 		const ByteAccumulator &sub_range_result = it->result;
 		uint64_t total_bytes = sub_range_result.get_total_bytes();
 		
-		if(total_bytes == 0)
-		{
-			continue;
-		}
-		
-		uint64_t count_d256_floor = total_bytes / 256;
-		uint64_t count_d256_ceil = ((total_bytes - 1) / 256) + 1;
-		
-		uint64_t entropy_num = total_bytes;
-		uint64_t entropy_den = total_bytes;
+		double entropy = 0.0f;
 		
 		for(int i = 0; i < 256; ++i)
 		{
 			uint64_t byte_count = sub_range_result.get_byte_count(i);
 			
-			if(byte_count < count_d256_floor)
+			if(byte_count > 0)
 			{
-				entropy_num -= (count_d256_floor - byte_count);
-			}
-			else if(byte_count > count_d256_ceil)
-			{
-				entropy_den += (byte_count - count_d256_ceil);
+				double byte_prob = (double)(byte_count) / (double)(total_bytes);
+				entropy += -byte_prob * log2(byte_prob);
 			}
 		}
 		
-		int entropy_8bit = (entropy_num * 255) / std::max<uint64_t>(entropy_den, 1);
+		entropy = abs(entropy / 8.0f);
+		
+		int entropy_8bit = (int)(entropy * 255.0f);
 		wxColour colour(255, (255 - entropy_8bit), (255 - entropy_8bit));
 		
 		result.set_range(it->offset, it->length, colour);

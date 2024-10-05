@@ -89,14 +89,16 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 		next_off += bytes_per_y;
 	}
 	
+	int max_y = client_size.GetHeight() - 1;
+	
 	uint64_t num_visible_lines = document_ctrl->get_visible_lines();
 	
 	int64_t first_visible_line = document_ctrl->get_scroll_yoff();
 	int64_t last_visible_line  = first_visible_line + num_visible_lines - 1;
 	int64_t max_visible_line   = document_ctrl->get_scroll_yoff_max() + num_visible_lines - 1;
 	
-	int box_top_y    = ((double)(first_visible_line) / (double)(max_visible_line)) * (double)(client_size.GetHeight());
-	int box_bottom_y = ((double)(last_visible_line)  / (double)(max_visible_line)) * (double)(client_size.GetHeight());
+	int box_top_y    = ((double)(first_visible_line) / (double)(max_visible_line)) * (double)(max_y);
+	int box_bottom_y = ((double)(last_visible_line)  / (double)(max_visible_line)) * (double)(max_y);
 	
 	/*
 	dc.SetPen(wxPen(*wxBLACK, 1));

@@ -102,7 +102,14 @@ REHex::Tab::Tab(wxWindow *parent):
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
-	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
+	wxPanel *p = new wxPanel(h_splitter);
+	
+	doc_ctrl = new REHex::DocumentCtrl(p, doc);
+	
+	wxBoxSizer *psizer = new wxBoxSizer(wxHORIZONTAL);
+	psizer->Add(doc_ctrl, 1, wxEXPAND);
+	psizer->Add(new DataMapScrollbar(p, wxID_ANY, doc, doc_ctrl), 0, wxEXPAND);
+	p->SetSizerAndFit(psizer);
 	
 	doc.auto_cleanup_bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
 	doc.auto_cleanup_bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
@@ -137,7 +144,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
 	v_tools->SetFitToCurrentPage(true);
 	
-	h_splitter->SplitHorizontally(doc_ctrl, h_tools);
+	h_splitter->SplitHorizontally(p, h_tools);
 	v_splitter->SplitVertically(h_splitter, v_tools);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -188,7 +195,14 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
-	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
+	wxPanel *p = new wxPanel(h_splitter);
+	
+	doc_ctrl = new REHex::DocumentCtrl(p, doc);
+	
+	wxBoxSizer *psizer = new wxBoxSizer(wxHORIZONTAL);
+	psizer->Add(doc_ctrl, 1, wxEXPAND);
+	psizer->Add(new DataMapScrollbar(p, wxID_ANY, doc, doc_ctrl), 0, wxEXPAND);
+	p->SetSizerAndFit(psizer);
 	
 	doc.auto_cleanup_bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
 	doc.auto_cleanup_bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
@@ -222,12 +236,11 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
 	v_tools->SetFitToCurrentPage(true);
 	
-	h_splitter->SplitHorizontally(doc_ctrl, h_tools);
+	h_splitter->SplitHorizontally(p, h_tools);
 	v_splitter->SplitVertically(h_splitter, v_tools);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(v_splitter, 1, wxEXPAND);
-	sizer->Add(new DataMapScrollbar(this, wxID_ANY, document, doc_ctrl), 0, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
 	vtools_adjust_on_idle(true);

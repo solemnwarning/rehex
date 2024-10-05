@@ -94,6 +94,8 @@ namespace REHex
 			*/
 			std::vector<L1CacheNode> l1_cache;
 			
+			off_t l1_slot_base_size;
+			
 			ByteRangeSet l1_counted;
 			
 			std::mutex l1_mutex;

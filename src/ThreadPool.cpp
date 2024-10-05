@@ -350,6 +350,13 @@ void REHex::ThreadPool::TaskHandle::resume()
 	pool->task_queues_cv.notify_all();
 }
 
+bool REHex::ThreadPool::TaskHandle::paused() const
+{
+	assert(task != NULL);
+	
+	return task->paused.load();
+}
+
 void REHex::ThreadPool::TaskHandle::finish()
 {
 	assert(task != NULL);

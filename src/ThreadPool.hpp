@@ -147,6 +147,11 @@ namespace REHex
 					void resume();
 					
 					/**
+					 * @brief Check if the task is paused.
+					*/
+					bool paused() const;
+					
+					/**
 					 * @brief Finish the task early.
 					 *
 					 * This method will mark the task as finished, preventing

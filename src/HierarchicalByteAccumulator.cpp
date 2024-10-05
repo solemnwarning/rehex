@@ -43,7 +43,9 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
 	
 	/* Initialise chunk_size, populate l1 cache and queue up work. */
+	task.pause();
 	update_chunk_size();
+	task.resume();
 }
 
 REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t num_shards):
@@ -66,7 +68,9 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
 	
 	/* Initialise chunk_size, populate l1 cache and queue up work. */
+	task.pause();
 	update_chunk_size();
+	task.resume();
 }
 
 REHex::HierarchicalByteAccumulator::~HierarchicalByteAccumulator()
@@ -236,20 +240,15 @@ std::pair<size_t, size_t> REHex::HierarchicalByteAccumulator::calc_chunk_size()
 
 void REHex::HierarchicalByteAccumulator::update_chunk_size()
 {
+	assert(task.paused());
+	
 	size_t new_chunk_size, l1_slot_count;
 	std::tie(new_chunk_size, l1_slot_count) = calc_chunk_size();
-	
-	if(new_chunk_size == chunk_size)
-	{
-		return;
-	}
-	
-	task.pause();
 	
 	std::vector<L1CacheNode> new_l1_cache;
 	new_l1_cache.reserve(l1_slot_count);
 	
-	off_t l1_slot_base_size = range_length / l1_slot_count;
+	l1_slot_base_size = range_length / l1_slot_count;
 	
 	if(l1_slot_base_size == 0)
 	{
@@ -269,7 +268,7 @@ void REHex::HierarchicalByteAccumulator::update_chunk_size()
 		new_l1_cache.emplace_back(next_l1_offset, l1_slot_base_size, true);
 	}
 	
-	if(next_l1_offset < range_length)
+	if(next_l1_offset < range_length || new_l1_cache.empty())
 	{
 		new_l1_cache.emplace_back(next_l1_offset, (range_length - next_l1_offset), true);
 	}
@@ -277,10 +276,11 @@ void REHex::HierarchicalByteAccumulator::update_chunk_size()
 	chunk_size = new_chunk_size;
 	l1_cache = std::move(new_l1_cache);
 	
+	l1_counted.clear_all();
+	l2_cache.clear();
+	
 	queue_range(0, range_length);
 	task.restart();
-	
-	task.resume();
 }
 
 void REHex::HierarchicalByteAccumulator::queue_range(off_t relative_offset, off_t length)
@@ -520,6 +520,18 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 					l1_cache.erase(std::next(l1_cache.begin(), i));
 				}
 				else{
+					if(l1_cache[i].length < (l1_slot_base_size / 2))
+					{
+						/* Grow range_length to new file size. */
+						range_length -= event.length;
+						
+						update_chunk_size();
+						task.resume();
+						
+						event.Skip(); /* Continue propogation. */
+						return;
+					}
+					
 					if(l1_cache[i].offset > event.offset)
 					{
 						l1_cache[i].offset -= event.length;
@@ -541,6 +553,8 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 		}
 		
 		assert(erase_remaining == 0);
+		
+		l1_counted.data_erased(event.offset, event.length);
 		
 		/* Clear all L2 cache entries from the erased point - we need to repopulate it
 		 * from scratch since L2 cache key alignment will no longer be correct.
@@ -581,7 +595,9 @@ void REHex::HierarchicalByteAccumulator::OnDataInsert(OffsetLengthEvent &event)
 		/* Following document size. */
 		
 		/* Find the L1 slot covering the insertion offset. */
-		size_t l1_slot_idx = relative_offset_to_l1_cache_idx(event.offset);
+		size_t l1_slot_idx = (event.offset == range_length)
+			? (l1_cache.size() - 1)
+			: relative_offset_to_l1_cache_idx(event.offset);
 		
 		/* Clear all L2 cache entries within the L1 cache slot - we need to repopulate it
 		 * from scratch since L2 cache key alignment will no longer be correct.
@@ -591,14 +607,28 @@ void REHex::HierarchicalByteAccumulator::OnDataInsert(OffsetLengthEvent &event)
 		/* Extend the L1 cache slot range to cover the newly inserted data. */
 		l1_cache[l1_slot_idx].length += event.length;
 		
+		/* Grow range_length to new file size. */
+		range_length += event.length;
+		
+		if(l1_cache[l1_slot_idx].length > (2 * l1_slot_base_size))
+		{
+			update_chunk_size();
+			task.resume();
+			
+			event.Skip(); /* Continue propogation */
+			return;
+		}
+		
 		/* Shuffle the offset of any subsequent L1 slots along. */
 		for(size_t i = (l1_slot_idx + 1); i < l1_cache.size(); ++i)
 		{
 			l1_cache[i].offset += event.length;
 		}
 		
-		/* Grow range_length to new file size. */
-		range_length += event.length;
+		l1_counted.data_inserted(event.offset, event.length);
+		
+		l1_cache[l1_slot_idx].accumulator->reset();
+		l1_counted.clear_range(l1_cache[l1_slot_idx].offset, l1_cache[l1_slot_idx].length);
 		
 		/* Repopulate the work queue, adjusting the offset of any previously queued ranges
 		 * at/after the insertion point to be correct.

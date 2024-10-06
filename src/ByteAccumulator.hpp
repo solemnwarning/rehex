@@ -19,6 +19,7 @@
 #define REHEX_BYTEACCUMULATOR_HPP
 
 #include <algorithm>
+#include <assert.h>
 #include <stdint.h>
 
 namespace REHex
@@ -183,6 +184,20 @@ namespace REHex
 			{
 				assert(count > 0);
 				return max;
+			}
+			
+			bool operator==(const ByteAccumulator &rhs) const
+			{
+				return count == rhs.count
+					&& memcmp(byte_counts, rhs.byte_counts, sizeof(byte_counts)) == 0
+					&& sum == rhs.sum
+					&& min == rhs.min
+					&& max == rhs.max;
+			}
+			
+			bool operator!=(const ByteAccumulator &rhs) const
+			{
+				return !(*this == rhs);
 			}
 	};
 }

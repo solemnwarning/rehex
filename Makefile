@@ -694,6 +694,105 @@ help/rehex.htb:
 online-help:
 	$(MAKE) -C help/ online-help
 
+tools/hba-fuzz-frontend: \
+	tools/hba-fuzz-frontend.$(BUILD_TYPE).o \
+	res/actual_size16.o \
+	res/ascii16.o \
+	res/ascii24.o \
+	res/ascii32.o \
+	res/ascii48.o \
+	res/diff_fold16.o \
+	res/diff_fold24.o \
+	res/diff_fold32.o \
+	res/diff_fold48.o \
+	res/fit_to_screen16.o \
+	res/icon16.o \
+	res/icon32.o \
+	res/icon48.o \
+	res/icon64.o \
+	res/icon128.o \
+	res/license.o \
+	res/offsets16.o \
+	res/offsets24.o \
+	res/offsets32.o \
+	res/offsets48.o \
+	res/shortcut48.o \
+	res/spinner24.o \
+	res/swap_horiz16.o \
+	res/swap_vert16.o \
+	res/zoom_in16.o \
+	res/zoom_out16.o \
+	src/AboutDialog.$(BUILD_TYPE).o \
+	src/AppSettings.$(BUILD_TYPE).o \
+	src/AppTestable.$(BUILD_TYPE).o \
+	src/ArtProvider.$(BUILD_TYPE).o \
+	src/BasicDataTypes.$(BUILD_TYPE).o \
+	src/BitArray.$(BUILD_TYPE).o \
+	src/BitOffset.$(BUILD_TYPE).o \
+	src/BitmapTool.$(BUILD_TYPE).o \
+	src/buffer.$(BUILD_TYPE).o \
+	src/ByteColourMap.$(BUILD_TYPE).o \
+	src/ByteRangeSet.$(BUILD_TYPE).o \
+	src/BytesPerLineDialog.$(BUILD_TYPE).o \
+	src/CharacterEncoder.$(BUILD_TYPE).o \
+	src/CharacterFinder.$(BUILD_TYPE).o \
+	src/Checksum.$(BUILD_TYPE).o \
+	src/ChecksumImpl.$(BUILD_TYPE).o \
+	src/ClickText.$(BUILD_TYPE).o \
+	src/ColourPickerCtrl.$(BUILD_TYPE).o \
+	src/CommentTree.$(BUILD_TYPE).o \
+	src/ConsoleBuffer.$(BUILD_TYPE).o \
+	src/CustomMessageDialog.$(BUILD_TYPE).o \
+	src/CustomNumericType.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
+	src/DataType.$(BUILD_TYPE).o \
+	src/DetachableNotebook.$(BUILD_TYPE).o \
+	src/DiffWindow.$(BUILD_TYPE).o \
+	src/DisassemblyRegion.$(BUILD_TYPE).o \
+	src/document.$(BUILD_TYPE).o \
+	src/DocumentCtrl.$(BUILD_TYPE).o \
+	src/EditCommentDialog.$(BUILD_TYPE).o \
+	src/Events.$(BUILD_TYPE).o \
+	src/FileWriter.$(BUILD_TYPE).o \
+	src/FillRangeDialog.$(BUILD_TYPE).o \
+	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
+	src/HighlightColourMap.$(BUILD_TYPE).o \
+	src/HSVColour.$(BUILD_TYPE).o \
+	src/IntelHexExport.$(BUILD_TYPE).o \
+	src/IntelHexImport.$(BUILD_TYPE).o \
+	src/LicenseDialog.$(BUILD_TYPE).o \
+	src/LoadingSpinner.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_bind.$(BUILD_TYPE).o \
+	src/lua-plugin-preload.$(BUILD_TYPE).o \
+	src/LuaPluginLoader.$(BUILD_TYPE).o \
+	src/mainwindow.$(BUILD_TYPE).o \
+	src/Palette.$(BUILD_TYPE).o \
+	src/RangeDialog.$(BUILD_TYPE).o \
+	src/RangeProcessor.$(BUILD_TYPE).o \
+	src/search.$(BUILD_TYPE).o \
+	src/SettingsDialog.$(BUILD_TYPE).o \
+	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
+	src/SettingsDialogGeneral.$(BUILD_TYPE).o \
+	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
+	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
+	src/StringPanel.$(BUILD_TYPE).o \
+	src/Tab.$(BUILD_TYPE).o \
+	src/textentrydialog.$(BUILD_TYPE).o \
+	src/ThreadPool.$(BUILD_TYPE).o \
+	src/ToolPanel.$(BUILD_TYPE).o \
+	src/util.$(BUILD_TYPE).o \
+	src/VirtualMappingDialog.$(BUILD_TYPE).o \
+	src/win32lib.$(BUILD_TYPE).o \
+	src/WindowCommands.$(BUILD_TYPE).o \
+	$(WXLUA_OBJS) \
+	$(WXBIND_OBJS) \
+	$(EXTRA_TEST_OBJS)
+	
+	$(CXX) $(CXXFLAGS) -o $@ $^ res/version.o $(LDFLAGS) $(LDLIBS)
+
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)
 
 prefix      ?= /usr/local

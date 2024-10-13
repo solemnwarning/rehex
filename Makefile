@@ -388,6 +388,7 @@ APP_OBJS := \
 	src/DataMapScrollbar.$(BUILD_TYPE).o \
 	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/decodepanel.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
@@ -496,6 +497,7 @@ TEST_OBJS := \
 	src/DataMapScrollbar.$(BUILD_TYPE).o \
 	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
 	src/DisassemblyRegion.$(BUILD_TYPE).o \
@@ -554,6 +556,7 @@ TEST_OBJS := \
 	tests/ConsoleBuffer.o \
 	tests/CustomNumericType.o \
 	tests/DataType.o \
+	tests/DataView.o \
 	tests/DataHistogramAccumulator.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \

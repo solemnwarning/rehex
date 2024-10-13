@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <wx/control.h>
+#include <wx/tipwin.h>
 
 #include "DataMapSource.hpp"
 #include "DocumentCtrl.hpp"
@@ -30,11 +31,11 @@
 namespace REHex {
 	class DataMapScrollbar: public wxControl {
 		public:
-			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, DocumentCtrl *document_ctrl);
 			~DataMapScrollbar();
 			
 		private:
-			SharedDocumentPointer document;
+			SharedEvtHandler<DataView> view;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			int client_height;
@@ -43,6 +44,8 @@ namespace REHex {
 			std::unique_ptr<EntropyDataMapSource> source;
 			
 			bool mouse_dragging;
+			
+			wxTipWindow *tip_window;
 			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent &event);

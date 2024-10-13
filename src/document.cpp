@@ -1734,6 +1734,9 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		}
 		
 		_update_mappings_data_inserted(offset, length);
+		
+		OffsetLengthEvent data_insert_done_event(this, DATA_INSERT_DONE, offset, length);
+		ProcessEvent(data_insert_done_event);
 	}
 	else{
 		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
@@ -1847,6 +1850,9 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		{
 			_raise_mappings_changed();
 		}
+		
+		OffsetLengthEvent data_erase_done_event(this, DATA_ERASE_DONE, offset, length);
+		ProcessEvent(data_erase_done_event);
 	}
 	else{
 		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);

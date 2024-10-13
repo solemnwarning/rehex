@@ -56,8 +56,13 @@ namespace REHex
 				});
 			}
 			
-			SharedDocumentPointerImpl(const SharedDocumentPointerImpl<T> &document):
-				document(document.document) {}
+			const std::shared_ptr<T> &_get_shared_ptr() const
+			{
+				return document;
+			}
+			
+			template<typename U> SharedDocumentPointerImpl(const SharedDocumentPointerImpl<U> &document):
+				document(document._get_shared_ptr()) {}
 			
 			~SharedDocumentPointerImpl()
 			{
@@ -84,6 +89,7 @@ namespace REHex
 				return document == rhs.document;
 			}
 			
+			#if 0
 			/**
 			 * @brief Construct a new Document and return a SharedDocumentPointer.
 			*/
@@ -101,9 +107,21 @@ namespace REHex
 				std::shared_ptr<T> s = std::make_shared<T>(filename);
 				return SharedDocumentPointerImpl<T>(s);
 			}
+			#endif
+			
+			/**
+			 * @brief Construct a new Document and return a SharedDocumentPointer.
+			*/
+			template<typename... Args> static SharedDocumentPointerImpl<T> make(Args&&... args)
+			{
+				std::shared_ptr<T> s = std::make_shared<T>(std::forward<Args>(args)...);
+				return SharedDocumentPointerImpl<T>(s);
+			}
 	};
 	
 	using SharedDocumentPointer = SharedDocumentPointerImpl<Document>;
+	
+	template<typename T> using SharedEvtHandler = SharedDocumentPointerImpl<T>;
 }
 
 #endif /* !REHEX_SHAREDDOCUMENTPOINTER_HPP */

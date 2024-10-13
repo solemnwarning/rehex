@@ -125,6 +125,7 @@ namespace REHex {
 			void OnInlineCommentsMode(wxCommandEvent &event);
 			void OnAsmSyntax(wxCommandEvent &event);
 			void OnDocumentDisplayMode(wxCommandEvent &event);
+			void OnDataMapScrollbar(wxCommandEvent &event);
 			void OnHighlightSelectionMatch(wxCommandEvent &event);
 			void OnColourMap(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
@@ -292,6 +293,7 @@ namespace REHex {
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
 			
 			wxMenu *inline_comments_menu;
+			wxMenu *data_map_scrollbar_menu;
 			wxMenu *asm_syntax_menu;
 			
 			void _update_status_offset(Tab *tab);

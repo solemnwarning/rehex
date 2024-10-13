@@ -24,9 +24,11 @@ wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);
 
 wxDEFINE_EVENT(REHex::DATA_ERASING,              REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_ERASE,                REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::DATA_ERASE_DONE,           REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_ERASE_ABORTED,        REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERTING,            REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERT,               REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::DATA_INSERT_DONE,          REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERT_ABORTED,       REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITING,          REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITE,            REHex::OffsetLengthEvent);

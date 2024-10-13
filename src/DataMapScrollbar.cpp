@@ -33,16 +33,17 @@ BEGIN_EVENT_TABLE(REHex::DataMapScrollbar, wxControl)
 	EVT_MOUSE_CAPTURE_LOST(REHex::DataMapScrollbar::OnMouseCaptureLost)
 END_EVENT_TABLE()
 
-REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
+REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, DocumentCtrl *document_ctrl):
 	wxControl(parent, id),
-	document(document),
+	view(view),
 	document_ctrl(document_ctrl),
-	mouse_dragging(false)
+	mouse_dragging(false),
+	tip_window(NULL)
 {
 	wxSize client_size = GetClientSize();
 	client_height = std::max(client_size.GetHeight(), 1);
 	
-	source.reset(new EntropyDataMapSource(document, client_height));
+	source.reset(new EntropyDataMapSource(view, client_height));
 	
 	redraw_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 	{
@@ -74,7 +75,7 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	
 	dc.Clear();
 	
-	off_t bytes_per_y = document->buffer_length() / client_size.GetHeight();
+	off_t bytes_per_y = view->view_length() / client_size.GetHeight();
 	off_t next_off = 0;
 	
 	for(int y = 0; y < client_size.GetHeight(); ++y)
@@ -134,7 +135,7 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 	if(client_height != new_height)
 	{
 		client_height = new_height;
-		source.reset(new EntropyDataMapSource(document, client_height));
+		source.reset(new EntropyDataMapSource(view, client_height));
 	}
 	
 	Refresh();
@@ -142,12 +143,40 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 
 void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 {
-	if(mouse_dragging && document_ctrl)
+	if(tip_window != NULL)
 	{
-		int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max() + document_ctrl->get_visible_lines() - 1;
-		document_ctrl->set_scroll_yoff(((double)(scroll_yoff_max) * ((double)(event.GetY()) / (double)(GetClientSize().GetHeight()))) - (document_ctrl->get_visible_lines() / 2));
+		tip_window->Destroy();
+		tip_window = NULL;
+	}
+	
+	if(document_ctrl)
+	{
+		if(mouse_dragging)
+		{
+			int64_t scroll_yoff_max = document_ctrl->get_scroll_yoff_max() + document_ctrl->get_visible_lines() - 1;
+			document_ctrl->set_scroll_yoff(((double)(scroll_yoff_max) * ((double)(event.GetY()) / (double)(GetClientSize().GetHeight()))) - (document_ctrl->get_visible_lines() / 2));
+			
+			Refresh();
+		}
 		
-		Refresh();
+		BitRangeMap<wxColour> data_map = source->get_data_map();
+		
+		off_t bytes_per_y = view->view_length() / GetClientSize().GetHeight();
+		auto dm_it = data_map.get_range(BitOffset((bytes_per_y * (off_t)(event.GetY())), 0));
+		
+		if(dm_it != data_map.end())
+		{
+			off_t first = dm_it->first.offset.byte();
+			off_t last = first + dm_it->first.length.byte() - 1;
+			
+			tip_window = new wxTipWindow(this, format_offset(first, document_ctrl->get_offset_display_base()) + " - " + format_offset(last, document_ctrl->get_offset_display_base()));
+			tip_window->SetTipWindowPtr(&tip_window);
+			
+			wxPoint p = ClientToScreen(wxPoint(event.GetX(), event.GetY()));
+			wxRect b(p, p);
+			
+			tip_window->SetBoundingRect(b);
+		}
 	}
 }
 

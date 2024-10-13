@@ -23,6 +23,7 @@
 
 #include "BitOffset.hpp"
 #include "ByteRangeMap.hpp"
+#include "DataView.hpp"
 #include "HierarchicalByteAccumulator.hpp"
 #include "SharedDocumentPointer.hpp"
 
@@ -36,10 +37,32 @@ namespace REHex
 	class DataMapSource: public wxEvtHandler
 	{
 		public:
+			struct MapValue
+			{
+				wxColour colour;
+				std::string description;
+				
+				MapValue() = default;
+				
+				MapValue(const wxColour &colour, const std::string &description):
+					colour(colour),
+					description(description) {}
+				
+				bool operator==(const MapValue &rhs) const
+				{
+					return colour == rhs.colour && description == rhs.description;
+				}
+				
+				bool operator!=(const MapValue &rhs) const
+				{
+					return !(*this == rhs);
+				}
+			};
+			
 			/**
 			 * @brief Get the bit range to colour mapping.
 			*/
-			virtual BitRangeMap<wxColour> get_data_map() = 0;
+			virtual BitRangeMap<MapValue> get_data_map() = 0;
 	};
 	
 	/**
@@ -54,7 +77,7 @@ namespace REHex
 			 * @param document    Document to accumulate data from.
 			 * @param max_points  Maximum number of data points to output.
 			*/
-			EntropyDataMapSource(const SharedDocumentPointer &document, size_t max_points);
+			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points);
 			
 			/**
 			 * @brief Construct an EntropyDataMapSource covering a range within a file.
@@ -64,20 +87,47 @@ namespace REHex
 			 * @param range_length  Length of range to accumulate data from.
 			 * @param max_points    Maximum number of data points to output.
 			*/
-			EntropyDataMapSource(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t max_points);
+			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points);
 			
 			virtual ~EntropyDataMapSource() = default;
 			
-			virtual BitRangeMap<wxColour> get_data_map() override;
+			virtual BitRangeMap<MapValue> get_data_map() override;
 			
 		private:
-			SharedDocumentPointer document;
-			
-			BitOffset range_offset;
-			off_t range_length;
-			
 			size_t max_points;
 			
+			std::unique_ptr<HierarchicalByteAccumulator> accumulator;
+	};
+	
+	/**
+	 * @brief DataMapSource implementation for displaying data entropy.
+	*/
+	class BasicStatDataMapSource: public DataMapSource
+	{
+		public:
+			/**
+			 * @brief Construct an EntropyDataMapSource covering a whole file.
+			 *
+			 * @param document    Document to accumulate data from.
+			 * @param max_points  Maximum number of data points to output.
+			*/
+			BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points);
+			
+			/**
+			 * @brief Construct an EntropyDataMapSource covering a range within a file.
+			 *
+			 * @param document      Document to accumulate data from.
+			 * @param range_offset  Offset within file to accumulate data from.
+			 * @param range_length  Length of range to accumulate data from.
+			 * @param max_points    Maximum number of data points to output.
+			*/
+			BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points);
+			
+			virtual ~BasicStatDataMapSource() = default;
+			
+			virtual BitRangeMap<MapValue> get_data_map() override;
+			
+		private:
 			std::unique_ptr<HierarchicalByteAccumulator> accumulator;
 	};
 }

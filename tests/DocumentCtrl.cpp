@@ -96,6 +96,11 @@ class FixedHeightRegion: public DocumentCtrl::Region
 		
 		virtual void draw(DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override {}
 		
+		virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel) override
+		{
+			return std::make_pair(indent_offset, indent_offset);
+		}
+		
 		int64_t get_y_position() const { return y_offset; }
 		int64_t get_height() const { return y_lines; }
 		

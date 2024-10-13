@@ -87,6 +87,8 @@ enum {
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
+	ID_DATA_MAP_SCROLLBAR_HIDDEN,
+	ID_DATA_MAP_SCROLLBAR_ENTROPY,
 	ID_ASM_SYNTAX_INTEL,
 	ID_ASM_SYNTAX_ATT,
 	ID_HIGHLIGHT_SELECTION_MATCH,
@@ -192,6 +194,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
+	
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_HIDDEN,   REHex::MainWindow::OnDataMapScrollbar)
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_ENTROPY,  REHex::MainWindow::OnDataMapScrollbar)
 	
 	EVT_MENU(ID_ASM_SYNTAX_INTEL, REHex::MainWindow::OnAsmSyntax)
 	EVT_MENU(ID_ASM_SYNTAX_ATT,   REHex::MainWindow::OnAsmSyntax)
@@ -384,6 +389,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		inline_comments_menu = new wxMenu;
 		view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
 		
+		data_map_scrollbar_menu = new wxMenu;
+		view_menu->AppendSubMenu(data_map_scrollbar_menu, "Visual scrollbar");
+		
 		view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
 		
 		colour_map_menu = new wxMenu;
@@ -394,6 +402,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		inline_comments_menu->AppendRadioItem(ID_INLINE_COMMENTS_FULL,   "Full");
 		inline_comments_menu->AppendSeparator();
 		inline_comments_menu->AppendCheckItem(ID_INLINE_COMMENTS_INDENT, "Nest comments");
+		
+		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_HIDDEN, "Hidden");
+		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_ENTROPY, "Entropy");
 		
 		tool_panels_menu = new wxMenu;
 		view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
@@ -1659,6 +1670,20 @@ void REHex::MainWindow::OnDocumentDisplayMode(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnDataMapScrollbar(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	if(data_map_scrollbar_menu->IsChecked(ID_DATA_MAP_SCROLLBAR_HIDDEN))
+	{
+		tab->set_dsm_type(Tab::DataMapScrollbarType::NONE);
+	}
+	else if(data_map_scrollbar_menu->IsChecked(ID_DATA_MAP_SCROLLBAR_ENTROPY))
+	{
+		tab->set_dsm_type(Tab::DataMapScrollbarType::ENTROPY);
+	}
+}
+
 void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1881,6 +1906,18 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			inline_comments_menu->Enable(ID_INLINE_COMMENTS_INDENT, true);
 			break;
 	};
+	
+	Tab::DataMapScrollbarType dsm = tab->get_dsm_type();
+	switch(dsm)
+	{
+		case Tab::DataMapScrollbarType::NONE:
+			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_HIDDEN, true);
+			break;
+			
+		case Tab::DataMapScrollbarType::ENTROPY:
+			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_ENTROPY, true);
+			break;
+	}
 	
 	DocumentDisplayMode ddm = tab->get_document_display_mode();
 	switch(ddm)

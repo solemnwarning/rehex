@@ -24,6 +24,7 @@
 
 #include "BitOffset.hpp"
 #include "ByteAccumulator.hpp"
+#include "DataView.hpp"
 #include "Events.hpp"
 #include "LRUCache.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -72,7 +73,7 @@ namespace REHex
 				}
 			};
 			
-			SharedDocumentPointer document;
+			SharedEvtHandler<DataView> view;
 			
 			BitOffset range_offset;
 			off_t range_length;
@@ -131,7 +132,7 @@ namespace REHex
 			 * @param document    Document to accumulate data from.
 			 * @param num_shards  Number of shards to divide range into.
 			*/
-			HierarchicalByteAccumulator(const SharedDocumentPointer &document, size_t num_shards = 1);
+			HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards = 1);
 			
 			/**
 			 * @brief Construct a HierarchicalByteAccumulator to accumulate a range of bytes.
@@ -141,7 +142,7 @@ namespace REHex
 			 * @param range_length  Length of range to accumulate data from, in bytes.
 			 * @param num_shards    Number of shards to divide range into.
 			*/
-			HierarchicalByteAccumulator(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t num_shards = 1);
+			HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t num_shards = 1);
 			
 			~HierarchicalByteAccumulator();
 			
@@ -188,8 +189,8 @@ namespace REHex
 			*/
 			size_t relative_offset_to_l1_cache_idx(off_t relative_offset);
 			
-			void OnDataModifying(OffsetLengthEvent &event);
-			void OnDataModifyAborted(OffsetLengthEvent &event);
+			void OnDataModifying(wxCommandEvent &event);
+			void OnDataModifyDone(wxCommandEvent &event);
 			void OnDataErase(OffsetLengthEvent &event);
 			void OnDataInsert(OffsetLengthEvent &event);
 			void OnDataOverwrite(OffsetLengthEvent &event);

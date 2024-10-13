@@ -1129,6 +1129,8 @@ REHex::BitOffset REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, i
 		off_t up_base = unprocessed_offset_rel();
 		int64_t up_row = row - processed_lines;
 		
+		column = std::min<int>(column, max_bytes_per_line() - 1);
+		
 		return std::min(
 			d_offset + BitOffset((up_base + (up_row * max_bytes_per_line()) + column), 0),
 			(d_offset + d_length - 1));

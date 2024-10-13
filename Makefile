@@ -388,6 +388,7 @@ APP_OBJS := \
 	src/DataMapScrollbar.$(BUILD_TYPE).o \
 	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/decodepanel.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
@@ -414,6 +415,7 @@ APP_OBJS := \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
+	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/profile.$(BUILD_TYPE).o \
 	src/RangeChoiceLinear.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
@@ -496,6 +498,7 @@ TEST_OBJS := \
 	src/DataMapScrollbar.$(BUILD_TYPE).o \
 	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
 	src/DisassemblyRegion.$(BUILD_TYPE).o \
@@ -519,6 +522,7 @@ TEST_OBJS := \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
+	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
@@ -554,6 +558,7 @@ TEST_OBJS := \
 	tests/ConsoleBuffer.o \
 	tests/CustomNumericType.o \
 	tests/DataType.o \
+	tests/DataView.o \
 	tests/DataHistogramAccumulator.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \

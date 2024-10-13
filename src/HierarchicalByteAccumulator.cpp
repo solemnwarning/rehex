@@ -23,24 +23,22 @@
 
 constexpr size_t REHex::HierarchicalByteAccumulator::L2_CACHE_SIZE;
 
-REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocumentPointer &document, size_t num_shards):
-	document(document),
+REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards):
+	view(view),
 	range_offset(BitOffset::ZERO),
-	range_length(document->buffer_length()),
+	range_length(view->view_length()),
 	whole_file(true),
 	target_num_shards(num_shards),
 	chunk_size(0),
 	l2_cache(L2_CACHE_SIZE),
 	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1))
 {
-	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
-	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
-	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::HierarchicalByteAccumulator::OnDataOverwrite, this);
+	this->view.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
+	this->view.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
+	this->view.auto_cleanup_bind(DATA_OVERWRITE, &REHex::HierarchicalByteAccumulator::OnDataOverwrite, this);
 	
-	this->document.auto_cleanup_bind(DATA_ERASING,              &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
-	this->document.auto_cleanup_bind(DATA_ERASE_ABORTED,        &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
-	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
-	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
+	this->view.auto_cleanup_bind(DATA_MODIFY_BEGIN, &REHex::HierarchicalByteAccumulator::OnDataModifying,  this);
+	this->view.auto_cleanup_bind(DATA_MODIFY_END,   &REHex::HierarchicalByteAccumulator::OnDataModifyDone, this);
 	
 	/* Initialise chunk_size, populate l1 cache and queue up work. */
 	task.pause();
@@ -48,8 +46,8 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	task.resume();
 }
 
-REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t num_shards):
-	document(document),
+REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t num_shards):
+	view(view),
 	range_offset(range_offset),
 	range_length(range_length),
 	whole_file(false),
@@ -58,14 +56,12 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedDocu
 	l2_cache(L2_CACHE_SIZE),
 	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1))
 {
-	this->document.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
-	this->document.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
-	this->document.auto_cleanup_bind(DATA_OVERWRITE, &REHex::HierarchicalByteAccumulator::OnDataOverwrite, this);
+	this->view.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
+	this->view.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
+	this->view.auto_cleanup_bind(DATA_OVERWRITE, &REHex::HierarchicalByteAccumulator::OnDataOverwrite, this);
 	
-	this->document.auto_cleanup_bind(DATA_ERASING,              &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
-	this->document.auto_cleanup_bind(DATA_ERASE_ABORTED,        &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
-	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
-	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::HierarchicalByteAccumulator::OnDataModifyAborted,    this);
+	this->view.auto_cleanup_bind(DATA_MODIFY_BEGIN, &REHex::HierarchicalByteAccumulator::OnDataModifying,        this);
+	this->view.auto_cleanup_bind(DATA_MODIFY_END,   &REHex::HierarchicalByteAccumulator::OnDataModifyDone,    this);
 	
 	/* Initialise chunk_size, populate l1 cache and queue up work. */
 	task.pause();
@@ -419,7 +415,7 @@ void REHex::HierarchicalByteAccumulator::process_chunk(off_t chunk_offset, off_t
 	
 	std::vector<unsigned char> data;
 	try {
-		data = document->read_data((range_offset + BitOffset(chunk_offset, 0)), chunk_length);
+		data = view->read_data((range_offset + BitOffset(chunk_offset, 0)), chunk_length);
 	}
 	catch(const std::exception &e)
 	{
@@ -469,7 +465,7 @@ size_t REHex::HierarchicalByteAccumulator::relative_offset_to_l1_cache_idx(off_t
 	return (--it) - l1_cache.begin();
 }
 
-void REHex::HierarchicalByteAccumulator::OnDataModifying(OffsetLengthEvent &event)
+void REHex::HierarchicalByteAccumulator::OnDataModifying(wxCommandEvent &event)
 {
 	task.pause();
 	
@@ -477,7 +473,7 @@ void REHex::HierarchicalByteAccumulator::OnDataModifying(OffsetLengthEvent &even
 	event.Skip();
 }
 
-void REHex::HierarchicalByteAccumulator::OnDataModifyAborted(OffsetLengthEvent &event)
+void REHex::HierarchicalByteAccumulator::OnDataModifyDone(wxCommandEvent &event)
 {
 	task.resume();
 	
@@ -526,7 +522,6 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 						range_length -= event.length;
 						
 						update_chunk_size();
-						task.resume();
 						
 						event.Skip(); /* Continue propogation. */
 						return;
@@ -582,8 +577,6 @@ void REHex::HierarchicalByteAccumulator::OnDataErase(OffsetLengthEvent &event)
 		}
 	}
 	
-	task.resume();
-	
 	/* Continue propogation. */
 	event.Skip();
 }
@@ -613,7 +606,6 @@ void REHex::HierarchicalByteAccumulator::OnDataInsert(OffsetLengthEvent &event)
 		if(l1_cache[l1_slot_idx].length > (2 * l1_slot_base_size))
 		{
 			update_chunk_size();
-			task.resume();
 			
 			event.Skip(); /* Continue propogation */
 			return;
@@ -660,8 +652,6 @@ void REHex::HierarchicalByteAccumulator::OnDataInsert(OffsetLengthEvent &event)
 			task.restart();
 		}
 	}
-	
-	task.resume();
 	
 	/* Continue propogation. */
 	event.Skip();

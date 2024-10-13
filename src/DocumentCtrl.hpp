@@ -91,6 +91,11 @@ namespace REHex {
 					
 					virtual unsigned int check();
 					
+					/**
+					 * @brief Get the first and last ["indent"] offset visible on a specific line.
+					*/
+					virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel) = 0;
+					
 				protected:
 					Region(BitOffset indent_offset, BitOffset indent_length);
 					
@@ -315,6 +320,8 @@ namespace REHex {
 					 * will be invoked.
 					*/
 					virtual bool OnPaste(DocumentCtrl *doc_ctrl);
+					
+					virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel) override;
 			};
 			
 			class DataRegion: public GenericDataRegion
@@ -395,6 +402,7 @@ namespace REHex {
 				virtual void calc_height(REHex::DocumentCtrl &doc) override;
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
+				virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel) override;
 				
 				CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length);
 				
@@ -523,6 +531,8 @@ namespace REHex {
 			GenericDataRegion *data_region_by_offset(BitOffset offset);
 			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
+			std::pair<BitOffset, BitOffset> get_indent_offset_at_line(int64_t line);
+			
 			/**
 			 * @brief Compare two offsets in the address space defined by the regions.
 			 *
@@ -598,6 +608,8 @@ namespace REHex {
 			int64_t get_scroll_yoff_max() const;
 			
 			unsigned int get_visible_lines() const;
+			
+			int64_t get_total_lines() const;
 			
 			/**
 			 * @brief Set the vertical scroll position, in lines.

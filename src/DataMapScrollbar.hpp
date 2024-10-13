@@ -24,17 +24,18 @@
 #include "DataMapSource.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "PopupTipWindow.hpp"
 #include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 
 namespace REHex {
 	class DataMapScrollbar: public wxControl {
 		public:
-			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, DocumentCtrl *document_ctrl);
 			~DataMapScrollbar();
 			
 		private:
-			SharedDocumentPointer document;
+			SharedEvtHandler<DataView> view;
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			int client_height;
@@ -44,13 +45,17 @@ namespace REHex {
 			
 			bool mouse_dragging;
 			
+			SafeWindowPointer<PopupTipWindow> tip_window;
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnErase(wxEraseEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnMotion(wxMouseEvent &event);
+			void OnMouseLeave(wxMouseEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
+			void OnDocumentCtrlScroll(ScrollUpdateEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

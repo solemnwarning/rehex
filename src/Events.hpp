@@ -136,9 +136,11 @@ namespace REHex
 	
 	wxDECLARE_EVENT(DATA_ERASING,              OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_ERASE,                OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_ERASE_DONE,           OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_ERASE_ABORTED,        OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERTING,            OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERT,               OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_INSERT_DONE,          OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERT_ABORTED,       OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_OVERWRITING,          OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_OVERWRITE,            OffsetLengthEvent);

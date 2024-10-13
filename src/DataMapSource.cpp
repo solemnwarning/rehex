@@ -21,27 +21,21 @@
 
 #include "DataMapSource.hpp"
 
-REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedDocumentPointer &document, size_t max_points):
-	document(document),
-	range_offset(BitOffset::ZERO),
-	range_length(-1),
+REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points):
 	max_points(max_points)
 {
-	accumulator.reset(new HierarchicalByteAccumulator(document, max_points));
+	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
 }
 
-REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedDocumentPointer &document, BitOffset range_offset, off_t range_length, size_t max_points):
-	document(document),
-	range_offset(range_offset),
-	range_length(range_length),
+REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points):
 	max_points(max_points)
 {
-	accumulator.reset(new HierarchicalByteAccumulator(document, range_offset, range_length, max_points));
+	accumulator.reset(new HierarchicalByteAccumulator(view, range_offset, range_length, max_points));
 }
 
-REHex::BitRangeMap<wxColour> REHex::EntropyDataMapSource::get_data_map()
+REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::get_data_map()
 {
-	BitRangeMap<wxColour> result;
+	BitRangeMap<MapValue> result;
 	
 	std::vector<HierarchicalByteAccumulator::Shard> shards = accumulator->get_shards();
 	
@@ -68,7 +62,38 @@ REHex::BitRangeMap<wxColour> REHex::EntropyDataMapSource::get_data_map()
 		int entropy_8bit = (int)(entropy * 255.0f);
 		wxColour colour(255, (255 - entropy_8bit), (255 - entropy_8bit));
 		
-		result.set_range(it->offset, it->length, colour);
+		char s[128];
+		snprintf(s, sizeof(s), "Entropy: %d%%\n", (int)(entropy * 100.0f));
+		result.set_range(it->offset, it->length, MapValue(colour, s));
+	}
+	
+	return result;
+}
+
+REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points)
+{
+	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+}
+
+REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points)
+{
+	accumulator.reset(new HierarchicalByteAccumulator(view, range_offset, range_length, max_points));
+}
+
+REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::BasicStatDataMapSource::get_data_map()
+{
+	BitRangeMap<MapValue> result;
+	
+	std::vector<HierarchicalByteAccumulator::Shard> shards = accumulator->get_shards();
+	
+	for(auto it = shards.begin(); it != shards.end(); ++it)
+	{
+		const ByteAccumulator &sub_range_result = it->result;
+		
+		int value = sub_range_result.get_min_byte();
+		wxColour colour(255, (255 - value), (255 - value));
+		
+		result.set_range(it->offset, it->length, MapValue(colour, ""));
 	}
 	
 	return result;

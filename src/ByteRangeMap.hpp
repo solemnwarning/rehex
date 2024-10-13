@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "BitOffset.hpp"
+#include "shared_mutex.hpp"
 
 namespace REHex
 {
@@ -101,6 +102,7 @@ namespace REHex
 			 * scratch when a nearby offset is requested again.
 			*/
 			mutable typename std::vector< std::pair<Range, T> >::const_iterator last_get_iter;
+			mutable shared_mutex lgi_mutex;
 			
 		public:
 			/**
@@ -285,9 +287,13 @@ namespace REHex
 
 template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::get_range(OT offset) const
 {
-	if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
 	{
-		return last_get_iter;
+		shared_lock lock_guard(lgi_mutex);
+		
+		if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
+		{
+			return last_get_iter;
+		}
 	}
 	
 	/* Starting from the first element after us (or the end of the vector)... */
@@ -302,7 +308,12 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 		if(i->first.offset <= offset && (i->first.offset + i->first.length) > offset)
 		{
 			/* ...it does, return it. */
-			last_get_iter = i;
+			
+			{
+				std::unique_lock<shared_mutex> lock_guard(lgi_mutex);
+				last_get_iter = i;
+			}
+			
 			return i;
 		}
 	}

@@ -248,6 +248,7 @@
     <ClCompile Include="..\..\src\DataMapScrollbar.cpp" />
     <ClCompile Include="..\..\src\DataMapSource.cpp" />
     <ClCompile Include="..\..\src\DataType.cpp" />
+    <ClCompile Include="..\..\src\DataView.cpp" />
     <ClCompile Include="..\..\src\DetachableNotebook.cpp" />
     <ClCompile Include="..\..\src\DiffWindow.cpp" />
     <ClCompile Include="..\..\src\DisassemblyRegion.cpp" />
@@ -271,6 +272,7 @@
     <ClCompile Include="..\..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\src\mainwindow.cpp" />
     <ClCompile Include="..\..\src\Palette.cpp" />
+    <ClCompile Include="..\..\src\PopupTipWindow.cpp" />
     <ClCompile Include="..\..\src\RangeDialog.cpp" />
     <ClCompile Include="..\..\src\RangeProcessor.cpp" />
     <ClCompile Include="..\..\src\search.cpp" />
@@ -306,6 +308,7 @@
     <ClCompile Include="..\..\tests\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\tests\DataHistogramAccumulator.cpp" />
     <ClCompile Include="..\..\tests\DataType.cpp" />
+    <ClCompile Include="..\..\tests\DataView.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
     <ClCompile Include="..\..\tests\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />

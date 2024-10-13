@@ -132,6 +132,8 @@ namespace REHex {
 				public:
 					MessageRegion(Document *document, off_t data_offset, const std::string &message);
 					
+					virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc, int64_t y_lines_rel) override;
+					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc_ctrl) override;
 					virtual void calc_height(DocumentCtrl &doc_ctrl) override;

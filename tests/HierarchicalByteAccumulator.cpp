@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "testutil.hpp"
+#include "../src/DataView.hpp"
 #include "../src/HierarchicalByteAccumulator.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 
@@ -41,7 +42,7 @@ TEST(HierarchicalByteAccumulator, SmallFile)
 	append_block(document, 1024, { 4, 2, 1 });
 	append_block(document, 1024, { 4, 10 });
 	
-	HierarchicalByteAccumulator hba(document);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document));
 	
 	hba.wait_for_completion();
 	ByteAccumulator result = hba.get_result();
@@ -96,7 +97,7 @@ TEST(HierarchicalByteAccumulator, BigFile)
 		byte_sum += (1024 * 1024 * i);
 	}
 	
-	HierarchicalByteAccumulator hba(document);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document));
 	hba.wait_for_completion();
 	
 	ByteAccumulator result = hba.get_result();
@@ -140,7 +141,7 @@ TEST(HierarchicalByteAccumulator, SmallFileFullRange)
 	append_block(document, 1024, { 4, 2, 1 });
 	append_block(document, 1024, { 4, 10 });
 	
-	HierarchicalByteAccumulator hba(document, BitOffset(0, 0), 2048);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), BitOffset(0, 0), 2048);
 	
 	hba.wait_for_completion();
 	ByteAccumulator result = hba.get_result();
@@ -167,7 +168,7 @@ TEST(HierarchicalByteAccumulator, SmallFilePartialRange)
 	append_block(document, 1024, { 4, 10 });
 	
 	{
-		HierarchicalByteAccumulator hba(document, BitOffset(1, 0), 100);
+		HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), BitOffset(1, 0), 100);
 		
 		hba.wait_for_completion();
 		ByteAccumulator result = hba.get_result();
@@ -209,7 +210,7 @@ TEST(HierarchicalByteAccumulator, SmallFilePartialRange)
 	}
 	
 	{
-		HierarchicalByteAccumulator hba(document, BitOffset(1024, 0), 2);
+		HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), BitOffset(1024, 0), 2);
 		
 		hba.wait_for_completion();
 		ByteAccumulator result = hba.get_result();
@@ -259,7 +260,7 @@ TEST(HierarchicalByteAccumulator, BitAlignment)
 	append_block(document, 1024, { 4, 10 });
 	
 	{
-		HierarchicalByteAccumulator hba(document, BitOffset(1024, 2), 100);
+		HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), BitOffset(1024, 2), 100);
 		
 		hba.wait_for_completion();
 		ByteAccumulator result = hba.get_result();
@@ -286,7 +287,7 @@ TEST(HierarchicalByteAccumulator, SmallFileEvenShards)
 	append_block(document, 1024, { 4, 2, 1 });
 	append_block(document, 1024, { 4, 10 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	
 	hba.wait_for_completion();
 	ByteAccumulator result = hba.get_result();
@@ -391,7 +392,7 @@ TEST(HierarchicalByteAccumulator, SmallFileMaxShards)
 	append_block(document, 1024, { 4, 2, 1 });
 	append_block(document, 1024, { 4, 10 });
 	
-	HierarchicalByteAccumulator hba(document, 4000);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4000);
 	
 	hba.wait_for_completion();
 	ByteAccumulator result = hba.get_result();
@@ -453,7 +454,7 @@ TEST(HierarchicalByteAccumulator, BigFileEvenShards)
 		byte_sum += (1024 * 1024 * i);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 100);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 100);
 	hba.wait_for_completion();
 	
 	ByteAccumulator result = hba.get_result();
@@ -518,7 +519,7 @@ TEST(HierarchicalByteAccumulator, BigFileUnalignedShards)
 		byte_sum += 0xFE;
 	}
 	
-	HierarchicalByteAccumulator hba(document, 100);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 100);
 	hba.wait_for_completion();
 	
 	ByteAccumulator result = hba.get_result();
@@ -594,7 +595,7 @@ TEST(HierarchicalByteAccumulator, OverwriteData)
 	SharedDocumentPointer document = SharedDocumentPointer::make();
 	append_block(document, 1024, { 4 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	{
@@ -692,7 +693,7 @@ TEST(HierarchicalByteAccumulator, OverwriteDataBeforeFixedRange)
 		document->overwrite_data(511, &b3, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	{
@@ -809,7 +810,7 @@ TEST(HierarchicalByteAccumulator, OverwriteDataInFixedRange)
 		document->overwrite_data(511, &b3, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	{
@@ -926,7 +927,7 @@ TEST(HierarchicalByteAccumulator, OverwriteDataAfterFixedRange)
 		document->overwrite_data(511, &b3, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1032,7 +1033,7 @@ TEST(HierarchicalByteAccumulator, OverwriteDataCacheMiss)
 	SharedDocumentPointer document = SharedDocumentPointer::make();
 	append_block(document, 1024, { 4 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1121,7 +1122,7 @@ TEST(HierarchicalByteAccumulator, InsertData)
 	SharedDocumentPointer document = SharedDocumentPointer::make();
 	append_block(document, 1024, { 4 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1208,7 +1209,7 @@ TEST(HierarchicalByteAccumulator, InsertDataEmptyFile)
 	SharedDocumentPointer document = SharedDocumentPointer::make();
 	append_block(document, 1024, { 4 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1295,7 +1296,7 @@ TEST(HierarchicalByteAccumulator, InsertDataCacheMiss)
 	SharedDocumentPointer document = SharedDocumentPointer::make();
 	append_block(document, 1024, { 4 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1395,7 +1396,7 @@ TEST(HierarchicalByteAccumulator, InsertDataBeforeFixedRange)
 		document->overwrite_data(511, &b3, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1507,7 +1508,7 @@ TEST(HierarchicalByteAccumulator, InsertDataInFixedRange)
 		document->overwrite_data(511, &b3, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1624,7 +1625,7 @@ TEST(HierarchicalByteAccumulator, InsertDataAfterFixedRange)
 		document->overwrite_data(511, &b3, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	{
@@ -1731,7 +1732,7 @@ TEST(HierarchicalByteAccumulator, EraseData)
 	append_block(document, 600, { 1, 2, 4 });
 	append_block(document, 424, { 6 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	document->erase_data(2, 2);
@@ -1836,7 +1837,7 @@ TEST(HierarchicalByteAccumulator, EraseDataCacheMiss)
 	append_block(document, 600, { 1, 2, 4 });
 	append_block(document, 424, { 6 });
 	
-	HierarchicalByteAccumulator hba(document, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 4);
 	hba.wait_for_completion();
 	
 	hba.flush_l2_cache();
@@ -1956,7 +1957,7 @@ TEST(HierarchicalByteAccumulator, EraseDataBeforeFixedRange)
 		document->overwrite_data(768, &b4, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	document->erase_data(0, 1);
@@ -2073,7 +2074,7 @@ TEST(HierarchicalByteAccumulator, EraseDataInFixedRange)
 		document->overwrite_data(768, &b4, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	document->erase_data(600, 1);
@@ -2190,7 +2191,7 @@ TEST(HierarchicalByteAccumulator, EraseDataAfterFixedRange)
 		document->overwrite_data(768, &b4, 1);
 	}
 	
-	HierarchicalByteAccumulator hba(document, 512, 256, 4);
+	HierarchicalByteAccumulator hba(SharedEvtHandler<FlatDocumentView>::make(document), 512, 256, 4);
 	hba.wait_for_completion();
 	
 	document->erase_data(800, 1);

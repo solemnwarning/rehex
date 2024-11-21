@@ -17,18 +17,23 @@
 
 #include "platform.hpp"
 
+#include <math.h>
 #include <stdint.h>
 
 #include "DataMapSource.hpp"
 
-REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points):
-	max_points(max_points)
+REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi):
+	view(view),
+	max_points(max_points),
+	log_multi(log_multi)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
 }
 
 REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points):
-	max_points(max_points)
+	view(view),
+	max_points(max_points),
+	log_multi(1.0f)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, range_offset, range_length, max_points));
 }
@@ -59,6 +64,8 @@ REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::
 		
 		entropy = abs(entropy / 8.0f);
 		
+		entropy = log(entropy * log_multi + 1.0f) / log(log_multi + 1.0f);
+		
 		int entropy_8bit = (int)(entropy * 255.0f);
 		wxColour colour(255, (255 - entropy_8bit), (255 - entropy_8bit));
 		
@@ -68,6 +75,11 @@ REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::
 	}
 	
 	return result;
+}
+
+void REHex::EntropyDataMapSource::reset_max_points(size_t max_points)
+{
+	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
 }
 
 REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points)

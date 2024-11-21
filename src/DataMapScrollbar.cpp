@@ -35,17 +35,18 @@ BEGIN_EVENT_TABLE(REHex::DataMapScrollbar, wxControl)
 	EVT_MOUSE_CAPTURE_LOST(REHex::DataMapScrollbar::OnMouseCaptureLost)
 END_EVENT_TABLE()
 
-REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, DocumentCtrl *document_ctrl):
+REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, std::unique_ptr<EntropyDataMapSource> &&source, DocumentCtrl *document_ctrl):
 	wxControl(parent, id),
 	view(view),
 	document_ctrl(document_ctrl),
+	source(std::move(source)),
 	mouse_dragging(false),
 	tip_window(NULL)
 {
 	wxSize client_size = GetClientSize();
 	client_height = std::max(client_size.GetHeight(), 1);
 	
-	source.reset(new EntropyDataMapSource(view, client_height));
+	this->source->reset_max_points(client_height);
 	
 	redraw_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 	{
@@ -163,7 +164,7 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 	if(client_height != new_height)
 	{
 		client_height = new_height;
-		source.reset(new EntropyDataMapSource(view, client_height));
+		source->reset_max_points(client_height);
 	}
 	
 	Refresh();

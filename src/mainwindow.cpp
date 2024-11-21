@@ -89,6 +89,8 @@ enum {
 	ID_INLINE_COMMENTS_INDENT,
 	ID_DATA_MAP_SCROLLBAR_HIDDEN,
 	ID_DATA_MAP_SCROLLBAR_ENTROPY,
+	ID_DATA_MAP_SCROLLBAR_ENTROPYX10,
+	ID_DATA_MAP_SCROLLBAR_ENTROPYX100,
 	ID_ASM_SYNTAX_INTEL,
 	ID_ASM_SYNTAX_ATT,
 	ID_HIGHLIGHT_SELECTION_MATCH,
@@ -195,8 +197,10 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
 	
-	EVT_MENU(ID_DATA_MAP_SCROLLBAR_HIDDEN,   REHex::MainWindow::OnDataMapScrollbar)
-	EVT_MENU(ID_DATA_MAP_SCROLLBAR_ENTROPY,  REHex::MainWindow::OnDataMapScrollbar)
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_HIDDEN,       REHex::MainWindow::OnDataMapScrollbar)
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_ENTROPY,      REHex::MainWindow::OnDataMapScrollbar)
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_ENTROPYX10,   REHex::MainWindow::OnDataMapScrollbar)
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_ENTROPYX100,  REHex::MainWindow::OnDataMapScrollbar)
 	
 	EVT_MENU(ID_ASM_SYNTAX_INTEL, REHex::MainWindow::OnAsmSyntax)
 	EVT_MENU(ID_ASM_SYNTAX_ATT,   REHex::MainWindow::OnAsmSyntax)
@@ -405,6 +409,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_HIDDEN, "Hidden");
 		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_ENTROPY, "Entropy");
+		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_ENTROPYX10, "Entropy (x10 log)");
+		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_ENTROPYX100, "Entropy (x100 log)");
 		
 		tool_panels_menu = new wxMenu;
 		view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
@@ -1682,6 +1688,14 @@ void REHex::MainWindow::OnDataMapScrollbar(wxCommandEvent &event)
 	{
 		tab->set_dsm_type(Tab::DataMapScrollbarType::ENTROPY);
 	}
+	else if(data_map_scrollbar_menu->IsChecked(ID_DATA_MAP_SCROLLBAR_ENTROPYX10))
+	{
+		tab->set_dsm_type(Tab::DataMapScrollbarType::ENTROPY_LOGX10);
+	}
+	else if(data_map_scrollbar_menu->IsChecked(ID_DATA_MAP_SCROLLBAR_ENTROPYX100))
+	{
+		tab->set_dsm_type(Tab::DataMapScrollbarType::ENTROPY_LOGX100);
+	}
 }
 
 void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
@@ -1916,6 +1930,14 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			
 		case Tab::DataMapScrollbarType::ENTROPY:
 			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_ENTROPY, true);
+			break;
+			
+		case Tab::DataMapScrollbarType::ENTROPY_LOGX10:
+			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_ENTROPYX10, true);
+			break;
+			
+		case Tab::DataMapScrollbarType::ENTROPY_LOGX100:
+			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_ENTROPYX100, true);
 			break;
 	}
 	

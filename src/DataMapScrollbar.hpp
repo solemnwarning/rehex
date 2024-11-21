@@ -31,7 +31,7 @@
 namespace REHex {
 	class DataMapScrollbar: public wxControl {
 		public:
-			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, DocumentCtrl *document_ctrl);
+			DataMapScrollbar(wxWindow *parent, wxWindowID id, const SharedEvtHandler<DataView> &view, std::unique_ptr<EntropyDataMapSource> &&source, DocumentCtrl *document_ctrl);
 			~DataMapScrollbar();
 			
 		private:

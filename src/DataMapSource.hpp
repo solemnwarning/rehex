@@ -63,6 +63,8 @@ namespace REHex
 			 * @brief Get the bit range to colour mapping.
 			*/
 			virtual BitRangeMap<MapValue> get_data_map() = 0;
+			
+			virtual void reset_max_points(size_t max_points) = 0;
 	};
 	
 	/**
@@ -77,7 +79,7 @@ namespace REHex
 			 * @param document    Document to accumulate data from.
 			 * @param max_points  Maximum number of data points to output.
 			*/
-			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points);
+			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi = 1.0f);
 			
 			/**
 			 * @brief Construct an EntropyDataMapSource covering a range within a file.
@@ -93,8 +95,13 @@ namespace REHex
 			
 			virtual BitRangeMap<MapValue> get_data_map() override;
 			
+			virtual void reset_max_points(size_t max_points) override;
+			
 		private:
+			SharedEvtHandler<DataView> view;
+			
 			size_t max_points;
+			double log_multi;
 			
 			std::unique_ptr<HierarchicalByteAccumulator> accumulator;
 	};

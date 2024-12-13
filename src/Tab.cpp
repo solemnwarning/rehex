@@ -762,7 +762,9 @@ void REHex::Tab::set_dsm_type(DataMapScrollbarType dsm_type)
 		data_map_scrollbar = NULL;
 	}
 	
-	SharedEvtHandler<DataView> view = (document_display_mode == DDM_VIRTUAL)
+	const ByteRangeMap<off_t> &virt_to_real_segs = doc->get_virt_to_real_segs();
+	
+	SharedEvtHandler<DataView> view = (document_display_mode == DDM_VIRTUAL && !(virt_to_real_segs.empty()))
 		? (SharedEvtHandler<DataView>)(SharedEvtHandler<LinearVirtualDocumentView>::make(doc))
 		: (SharedEvtHandler<DataView>)(SharedEvtHandler<FlatDocumentView>::make(doc));
 	
@@ -1569,6 +1571,7 @@ void REHex::Tab::OnDocumentMappingsChanged(wxCommandEvent &event)
 	if(document_display_mode == DDM_VIRTUAL)
 	{
 		repopulate_regions();
+		set_dsm_type(data_map_scrollbar_type);
 	}
 	
 	event.Skip();

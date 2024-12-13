@@ -176,7 +176,7 @@ void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 	{
 		BitRangeMap<DataMapSource::MapValue> data_map = source->get_data_map();
 		
-		off_t bytes_per_y = view->view_length() / client_height;
+		off_t bytes_per_y = std::max<off_t>((view->view_length() / client_height), 1);
 		BitOffset y_offset = BitOffset((bytes_per_y * (off_t)(event.GetY())), 0);
 		
 		if(mouse_dragging && y_offset >= BitOffset::ZERO && y_offset < BitOffset(view->view_length(), 0))

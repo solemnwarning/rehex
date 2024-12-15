@@ -777,16 +777,6 @@ void REHex::Tab::set_dsm_type(DataMapScrollbarType dsm_type)
 			data_map_scrollbar = new DataMapScrollbar(doc_ctrl_panel, wxID_ANY, view, std::unique_ptr<EntropyDataMapSource>(new EntropyDataMapSource(view, 1, 1.0f)), doc_ctrl);
 			data_map_scrollbar_sizer->Add(data_map_scrollbar, 0, wxEXPAND);
 			break;
-		
-		case DataMapScrollbarType::ENTROPY_LOGX10:
-			data_map_scrollbar = new DataMapScrollbar(doc_ctrl_panel, wxID_ANY, view, std::unique_ptr<EntropyDataMapSource>(new EntropyDataMapSource(view, 1, 10.0f)), doc_ctrl);
-			data_map_scrollbar_sizer->Add(data_map_scrollbar, 0, wxEXPAND);
-			break;
-			
-		case DataMapScrollbarType::ENTROPY_LOGX100:
-			data_map_scrollbar = new DataMapScrollbar(doc_ctrl_panel, wxID_ANY, view, std::unique_ptr<EntropyDataMapSource>(new EntropyDataMapSource(view, 1, 100.0f)), doc_ctrl);
-			data_map_scrollbar_sizer->Add(data_map_scrollbar, 0, wxEXPAND);
-			break;
 	}
 	
 	data_map_scrollbar_sizer->Layout();

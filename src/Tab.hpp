@@ -108,8 +108,6 @@ namespace REHex
 			{
 				NONE,
 				ENTROPY,
-				ENTROPY_LOGX10,
-				ENTROPY_LOGX100,
 			};
 			
 			DataMapScrollbarType get_dsm_type() const;

@@ -3731,7 +3731,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc.hex_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
-			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
+			: active_palette->blend_colours(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	bool selection_hidden = doc.is_selection_hidden();
 	
@@ -3750,7 +3750,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc.ascii_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
-			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
+			: active_palette->blend_colours(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	auto ascii_highlight_func = [&](BitOffset offset)
 	{

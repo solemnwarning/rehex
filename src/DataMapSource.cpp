@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include "DataMapSource.hpp"
+#include "Palette.hpp"
 
 REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi):
 	view(view),
@@ -66,8 +67,7 @@ REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::
 		
 		entropy = log(entropy * log_multi + 1.0f) / log(log_multi + 1.0f);
 		
-		int entropy_8bit = (int)(entropy * 255.0f);
-		wxColour colour(255, (255 - entropy_8bit), (255 - entropy_8bit));
+		wxColour colour = active_palette->blend_colours(Palette::PAL_NORMAL_TEXT_BG, *wxBLUE, entropy);
 		
 		char s[128];
 		snprintf(s, sizeof(s), "Entropy: %d%%\n", (int)(entropy * 100.0f));

@@ -21,6 +21,7 @@
 #include <wx/dcbuffer.h>
 
 #include "DataMapScrollbar.hpp"
+#include "Palette.hpp"
 #include "profile.hpp"
 
 BEGIN_EVENT_TABLE(REHex::DataMapScrollbar, wxControl)
@@ -75,7 +76,7 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	
 	BitRangeMap<DataMapSource::MapValue> data_map = source->get_data_map();
 	
-	dc.SetBackground(*wxWHITE_BRUSH);
+	dc.SetBackground(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.SetBackgroundMode(wxTRANSPARENT);
 	
 	dc.Clear();

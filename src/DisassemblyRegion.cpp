@@ -235,7 +235,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.hex_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
-			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
+			: active_palette->blend_colours(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	auto hex_highlight_func = [&](BitOffset offset)
 	{
@@ -252,7 +252,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.ascii_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
-			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
+			: active_palette->blend_colours(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	auto ascii_highlight_func = [&](BitOffset offset)
 	{
@@ -280,7 +280,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		{
 			wxColour selected_bg_colour = doc_ctrl.special_view_active()
 				? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
-				: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG);
+				: active_palette->blend_colours(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG);
 			
 			dc.SetTextForeground((*active_palette)[Palette::PAL_SELECTED_TEXT_FG]);
 			dc.SetTextBackground(selected_bg_colour);

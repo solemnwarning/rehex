@@ -670,6 +670,46 @@ googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
 wxLua/%.cpp: $(WXLUA_BINDINGS)
 	@true
 
+# We can generate a compile_commands.json for use by source checkers and IDEs which know how to
+# parse it such as clangd and JetBrains Fleet.
+#
+# The compile_commands.json fragment for each file is written out under .cc/ and then merged into
+# the top-level compile_commands.json, all are rebuilt when the Makefile(s) are changed.
+
+COMPILE_COMMAND_DEPENDENCIES := $(wildcard Makefile Makefile.*)
+COMPILE_COMMAND_INTERMEDIATE_DIR := .cc
+
+.PHONY: compile_commands.json
+compile_commands.json: $(addprefix $(COMPILE_COMMAND_INTERMEDIATE_DIR)/,$(addsuffix .compile_command.json,$(APP_OBJS) $(TEST_OBJS)))
+	cat $^ | jq -s . > $@
+
+# $(call emit-compile-command,$(COMPILE_COMMAND_INTERMEDIATE_DIR)/foo.o.compile_command.json,foo.c,$(CC) $(CFLAGS))
+define emit-compile-command
+	@mkdir -p $(dir $(1))
+	echo "{ \"directory\": $$(pwd | jq -R .), \"file\": $$(echo "$(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | jq -R .), \"command\": $$(echo "$(3) -o $(2) $(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | jq -R .) }" > $(1)
+endef
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/googletest/src/%.o.compile_command.json: googletest/src/%.cc $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.$(BUILD_TYPE).o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+
 .PHONY: help/rehex.chm
 help/rehex.chm:
 	$(MAKE) -C help/ rehex.chm

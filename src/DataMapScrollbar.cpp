@@ -128,23 +128,7 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 		next_off += bytes_per_y;
 	}
 	
-	// int box_top_y    = ((double)(first_visible_line) / (double)(max_visible_line)) * (double)(max_y);
-	// int box_bottom_y = ((double)(last_visible_line)  / (double)(max_visible_line)) * (double)(max_y);
-	
-	/*
-	dc.SetPen(wxPen(*wxBLACK, 1));
-	dc.SetBrush(*wxBLACK_BRUSH);
-	
-	wxPoint points[] = {
-		{ 0, -4 },
-		{ 8,  0 },
-		{ 0,  4 },
-	};
-	
-	dc.DrawPolygon(3, points, 0, arrow_y);
-	*/
-	
-	dc.SetBrush(wxNullBrush);
+	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	dc.SetPen(wxPen(*wxBLUE, 1));
 	
 	dc.DrawRectangle(0, box_top_y, client_size.GetWidth(), ((box_bottom_y - box_top_y) + 1));

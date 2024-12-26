@@ -1896,7 +1896,7 @@ void REHex::Tab::htools_adjust(bool force_resize)
 	else{
 		if(!h_splitter->IsSplit())
 		{
-			h_splitter->SplitHorizontally(doc_ctrl, h_tools);
+			h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
 			
 			htools_adjust_on_idle(true);
 			return;

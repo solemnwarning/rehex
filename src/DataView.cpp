@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -115,6 +115,8 @@ REHex::LinearVirtualDocumentView::LinearVirtualDocumentView(const SharedDocument
 	this->document.auto_cleanup_bind(DATA_OVERWRITE_ABORTED, &REHex::LinearVirtualDocumentView::OnDataOverwriteAborted, this);
 	this->document.auto_cleanup_bind(DATA_OVERWRITE,         &REHex::LinearVirtualDocumentView::OnDataOverwrite,        this);
 	
+	this->document.auto_cleanup_bind(EV_MAPPINGS_CHANGED,    &REHex::LinearVirtualDocumentView::OnMappingsChanged,      this);
+	
 	load_segments(document->get_virt_to_real_segs(), std::unique_lock<shared_mutex>(mutex));
 }
 
@@ -144,12 +146,13 @@ void REHex::LinearVirtualDocumentView::check_segments()
 	
 	if(virt_to_real_segs != new_virt_to_real_segs)
 	{
-		off_t old_view_length = total_view_length;
-		
 		{
-			OffsetLengthEvent data_event(this, DATA_ERASING, 0, old_view_length);
-			ProcessEvent(data_event);
+			wxCommandEvent dmb_event(DATA_MODIFY_BEGIN);
+			dmb_event.SetEventObject(this);
+			ProcessEvent(dmb_event);
 		}
+		
+		off_t old_view_length = total_view_length;
 		
 		load_segments(new_virt_to_real_segs, std::unique_lock<shared_mutex>(mutex));
 		
@@ -166,6 +169,12 @@ void REHex::LinearVirtualDocumentView::check_segments()
 		{
 			OffsetLengthEvent data_event(this, DATA_INSERT, 0, total_view_length);
 			ProcessEvent(data_event);
+		}
+		
+		{
+			wxCommandEvent dme_event(DATA_MODIFY_END);
+			dme_event.SetEventObject(this);
+			ProcessEvent(dme_event);
 		}
 	}
 }
@@ -410,5 +419,11 @@ void REHex::LinearVirtualDocumentView::OnDataOverwrite(OffsetLengthEvent &event)
 		ProcessEvent(dme_event);
 	}
 	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+void REHex::LinearVirtualDocumentView::OnMappingsChanged(wxCommandEvent &event)
+{
+	check_segments();
 	event.Skip(); /* Continue original event propagation. */
 }

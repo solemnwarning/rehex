@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -268,4 +268,40 @@ TEST_F(LinearVirtualDocumentViewTest, EraseDataInSegment)
 	EXPECT_EQ(
 		view->read_data(BitOffset(0, 0), 20),
 		std::vector<unsigned char>({ 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78 }));
+}
+
+TEST_F(LinearVirtualDocumentViewTest, UnmapBytes)
+{
+	document->clear_virt_mapping_v(0x100, 2);
+	
+	EXPECT_EQ(events, std::vector<std::string>({
+		"DATA_MODIFY_BEGIN()",
+		"DATA_ERASE(0, 14)",
+		"DATA_INSERT(0, 12)",
+		"DATA_MODIFY_END()",
+	}));
+	
+	EXPECT_EQ(view->view_length(), 12);
+	
+	EXPECT_EQ(
+		view->read_data(BitOffset(0, 0), 20),
+		std::vector<unsigned char>({ 0xCD, 0xEF, 0xFE, 0xDC, 0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78 }));
+}
+
+TEST_F(LinearVirtualDocumentViewTest, MapBytes)
+{
+	document->set_virt_mapping(4, 0x120, 4);
+	
+	EXPECT_EQ(events, std::vector<std::string>({
+		"DATA_MODIFY_BEGIN()",
+		"DATA_ERASE(0, 14)",
+		"DATA_INSERT(0, 18)",
+		"DATA_MODIFY_END()",
+	}));
+	
+	EXPECT_EQ(view->view_length(), 18);
+	
+	EXPECT_EQ(
+		view->read_data(BitOffset(0, 0), 20),
+		std::vector<unsigned char>({ 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xAA, 0xAA, 0xAA, 0xAA, 0x01, 0x23, 0x45, 0x67, 0x12, 0x34, 0x56, 0x78 }));
 }

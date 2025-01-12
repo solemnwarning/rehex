@@ -4,6 +4,8 @@ Version TBC:
 
  * Add "Repeat last 'Jump to offset'" command (#242).
 
+ * Add "Visual Scrollbar" for high-level overview of file contents.
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

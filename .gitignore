@@ -1,6 +1,8 @@
 *.gcda
 *.gcno
 *.o
+/.cc/
+/compile_commands.json
 /.d/
 /rehex
 

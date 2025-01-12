@@ -179,6 +179,22 @@ TEST_F(LinearVirtualDocumentViewTest, ReadBitsBitAligned)
 		}));
 }
 
+TEST_F(LinearVirtualDocumentViewTest, ViewToRealOffset)
+{
+	EXPECT_EQ(view->view_offset_to_real_offset(BitOffset(0, 0)), BitOffset(8, 0));
+	EXPECT_EQ(view->view_offset_to_real_offset(BitOffset(5, 7)), BitOffset(13, 7));
+	EXPECT_EQ(view->view_offset_to_real_offset(BitOffset(6, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->view_offset_to_real_offset(BitOffset(10, 0)), BitOffset(14, 0));
+}
+
+TEST_F(LinearVirtualDocumentViewTest, ViewToVirtOffset)
+{
+	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(0, 0)), BitOffset(0x100, 0));
+	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(5, 7)), BitOffset(0x105, 7));
+	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(6, 0)), BitOffset(0x200, 0));
+	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(10, 0)), BitOffset(0x300, 0));
+}
+
 TEST_F(LinearVirtualDocumentViewTest, OverwriteDataUnmapped)
 {
 	const unsigned char data[] = { 0x88, 0x77, 0x66, 0x55 };

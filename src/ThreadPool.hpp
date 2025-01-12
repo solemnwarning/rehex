@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -49,21 +49,25 @@ namespace REHex
 			{
 				std::function<bool()> func;
 				
-				const int max_concurrency;
-				std::atomic<int> available_concurrency;
+				std::atomic<int> max_concurrency;
+				
+				/* TODO: Use a semaphore under C++20. */
+				int current_concurrency;
+				std::mutex concurrency_mutex;
 				
 				shared_mutex task_mutex;
-				std::mutex finished_mutex;
-				std::condition_variable finished_cv;
+				std::condition_variable_any finished_cv;
 				std::atomic<bool> finished;
 				std::atomic<bool> paused;
+				unsigned int restart_count;
 				
 				Task(const std::function<bool()> &func, int max_concurrency):
 					func(func),
 					max_concurrency(max_concurrency),
-					available_concurrency(max_concurrency),
+					current_concurrency(0),
 					finished(false),
-					paused(false) {}
+					paused(false),
+					restart_count(0) {}
 			};
 			
 			shared_mutex task_queues_mutex;
@@ -94,9 +98,17 @@ namespace REHex
 					TaskHandle(Task *task, ThreadPool *pool, TaskPriority priority, size_t task_idx);
 					
 				public:
+					TaskHandle();
+					
 					TaskHandle(TaskHandle&&);
 					TaskHandle(const TaskHandle&) = delete;
+					
+					TaskHandle &operator=(TaskHandle&&);
+					TaskHandle &operator=(const TaskHandle&) = delete;
+					
 					~TaskHandle();
+					
+					operator bool() const;
 					
 					/**
 					 * @brief Wait for the task to finish and clean up.
@@ -135,6 +147,11 @@ namespace REHex
 					void resume();
 					
 					/**
+					 * @brief Check if the task is paused.
+					*/
+					bool paused() const;
+					
+					/**
 					 * @brief Finish the task early.
 					 *
 					 * This method will mark the task as finished, preventing
@@ -145,6 +162,10 @@ namespace REHex
 					 * may still block until any in-progress calls finish.
 					*/
 					void finish();
+					
+					void restart();
+					
+					void change_concurrency(int max_concurrency);
 			};
 			
 			friend TaskHandle;
@@ -217,6 +238,17 @@ namespace REHex
 		private:
 			void worker_main();
 			void clear_threads();
+			
+			#ifndef NDEBUG
+			/**
+			 * @brief Check if the caller is running in a worker thread.
+			 *
+			 * This method returns true if called from one of the worker threads.
+			 *
+			 * This method is only available in debug builds.
+			*/
+			bool in_worker_thread() const;
+			#endif
 	};
 }
 

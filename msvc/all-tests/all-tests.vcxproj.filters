@@ -130,6 +130,9 @@
     <ClCompile Include="..\..\tests\testutil.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\ThreadPool.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\AboutDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -361,6 +364,9 @@
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\HierarchicalByteAccumulator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\SettingsDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -369,6 +375,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\HSVColour.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\HierarchicalByteAccumulator.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\tests\HighlightColourMap.cpp">
       <Filter>tests</Filter>
@@ -416,6 +425,24 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\SettingsDialogGeneral.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\ByteAccumulator.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DataMapScrollbar.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DataMapSource.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DataView.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\DataView.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\PopupTipWindow.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

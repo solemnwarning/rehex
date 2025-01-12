@@ -198,6 +198,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -225,6 +226,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -304,6 +306,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
@@ -334,6 +337,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
@@ -453,7 +457,10 @@
     <ClCompile Include="..\src\CustomMessageDialog.cpp" />
     <ClCompile Include="..\src\CustomNumericType.cpp" />
     <ClCompile Include="..\src\DataHistogramPanel.cpp" />
+    <ClCompile Include="..\src\DataMapScrollbar.cpp" />
+    <ClCompile Include="..\src\DataMapSource.cpp" />
     <ClCompile Include="..\src\DataType.cpp" />
+    <ClCompile Include="..\src\DataView.cpp" />
     <ClCompile Include="..\src\decodepanel.cpp" />
     <ClCompile Include="..\src\DetachableNotebook.cpp" />
     <ClCompile Include="..\src\DiffWindow.cpp" />
@@ -467,6 +474,7 @@
     <ClCompile Include="..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp" />
     <ClCompile Include="..\src\GotoOffsetDialog.cpp" />
+    <ClCompile Include="..\src\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\src\HighlightColourMap.cpp" />
     <ClCompile Include="..\src\HSVColour.cpp" />
     <ClCompile Include="..\src\IntelHexExport.cpp" />
@@ -479,6 +487,7 @@
     <ClCompile Include="..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\src\mainwindow.cpp" />
     <ClCompile Include="..\src\Palette.cpp" />
+    <ClCompile Include="..\src\PopupTipWindow.cpp" />
     <ClCompile Include="..\src\profile.cpp" />
     <ClCompile Include="..\src\RangeChoiceLinear.cpp" />
     <ClCompile Include="..\src\RangeDialog.cpp" />

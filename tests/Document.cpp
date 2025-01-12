@@ -4386,3 +4386,67 @@ TEST(Document, TypeInfoComparison)
 	EXPECT_FALSE(Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json));
 	EXPECT_TRUE( Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json) < Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json));
 }
+
+TEST(OffsetLengthEvent, RangeBeforeClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 90, 10);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_length, 0);
+}
+
+TEST(OffsetLengthEvent, RangeStraddlesStartOfClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 90, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 100);
+	EXPECT_EQ(clamped_length, 5);
+}
+
+TEST(OffsetLengthEvent, RangeInClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 120, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 120);
+	EXPECT_EQ(clamped_length, 15);
+}
+
+TEST(OffsetLengthEvent, RangeStraddlesEndOfClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 190, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 190);
+	EXPECT_EQ(clamped_length, 10);
+}
+
+TEST(OffsetLengthEvent, RangeAfterClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 200, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_length, 0);
+}
+
+TEST(OffsetLengthEvent, RangeContainsClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 90, 200);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 100);
+	EXPECT_EQ(clamped_length, 100);
+}

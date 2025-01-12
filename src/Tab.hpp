@@ -29,6 +29,7 @@
 #include <wx/wx.h>
 
 #include "BitOffset.hpp"
+#include "DataMapScrollbar.hpp"
 #include "DiffWindow.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
@@ -103,6 +104,15 @@ namespace REHex
 			std::pair<BitOffset, bool> get_last_goto_offset() const;
 			void set_last_goto_offset(BitOffset last_goto_offset, bool is_relative);
 			
+			enum class DataMapScrollbarType
+			{
+				NONE,
+				ENTROPY,
+			};
+			
+			DataMapScrollbarType get_dsm_type() const;
+			void set_dsm_type(DataMapScrollbarType dsm_type);
+			
 			/* Public for use by unit tests. */
 			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode);
 			
@@ -122,6 +132,11 @@ namespace REHex
 			SafeWindowPointer<GotoOffsetDialog> goto_offset_dialog;
 			BitOffset last_goto_offset;
 			bool last_goto_offset_relative;
+			
+			wxPanel *doc_ctrl_panel;
+			wxSizer *data_map_scrollbar_sizer;
+			DataMapScrollbarType data_map_scrollbar_type;
+			DataMapScrollbar *data_map_scrollbar;
 			
 			void OnSize(wxSizeEvent &size);
 			

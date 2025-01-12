@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,9 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#undef NDEBUG
 #include "../src/platform.hpp"
-#include <assert.h>
 
 #include <gtest/gtest.h>
 #include <string>
@@ -31,7 +29,7 @@ using namespace REHex;
 static std::string read_file(const char *filename)
 {
 	FILE *fh = fopen(filename, "rb");
-	assert(fh);
+	always_assert(fh);
 	
 	std::string data;
 	
@@ -42,7 +40,7 @@ static std::string read_file(const char *filename)
 		data += std::string((const char*)(buf), len);
 	}
 	
-	assert(!ferror(fh));
+	always_assert(!ferror(fh));
 	
 	fclose(fh);
 	

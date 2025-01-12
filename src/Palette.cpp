@@ -57,20 +57,30 @@ const wxColour &REHex::Palette::operator[](int index) const
 	return palette[index];
 }
 
-wxColour REHex::Palette::get_average_colour(int colour_a_idx, int colour_b_idx) const
+wxColour REHex::Palette::blend_colours(int bg_idx, int fg_idx, float fg_opacity) const
 {
-	const wxColour &colour_a = (*this)[colour_a_idx];
-	const wxColour &colour_b = (*this)[colour_b_idx];
+	const wxColour &bg = (*this)[bg_idx];
+	const wxColour &fg = (*this)[fg_idx];
 	
-	return get_average_colour(colour_a, colour_b);
+	return blend_colours(bg, fg, fg_opacity);
 }
 
-wxColour REHex::Palette::get_average_colour(const wxColour &colour_a, const wxColour &colour_b)
+wxColour REHex::Palette::blend_colours(int bg_idx, const wxColour &fg, float fg_opacity) const
+{
+	return blend_colours((*this)[bg_idx], fg, fg_opacity);
+}
+
+wxColour REHex::Palette::blend_colours(const wxColour &bg, int fg_idx, float fg_opacity) const
+{
+	return blend_colours(bg, (*this)[fg_idx], fg_opacity);
+}
+
+wxColour REHex::Palette::blend_colours(const wxColour &bg, const wxColour &fg, float fg_opacity)
 {
 	return wxColour(
-		(((int)(colour_a.Red())   + (int)(colour_b.Red()))   / 2),
-		(((int)(colour_a.Green()) + (int)(colour_b.Green())) / 2),
-		(((int)(colour_a.Blue())  + (int)(colour_b.Blue()))  / 2));
+		wxColour::AlphaBlend(fg.Red(), bg.Red(), fg_opacity),
+		wxColour::AlphaBlend(fg.Green(), bg.Green(), fg_opacity),
+		wxColour::AlphaBlend(fg.Blue(), bg.Blue(), fg_opacity));
 }
 
 int REHex::Palette::get_default_highlight_lightness() const

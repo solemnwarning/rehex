@@ -385,7 +385,10 @@ APP_OBJS := \
 	src/CustomMessageDialog.$(BUILD_TYPE).o \
 	src/CustomNumericType.$(BUILD_TYPE).o \
 	src/DataHistogramPanel.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/decodepanel.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
@@ -399,6 +402,7 @@ APP_OBJS := \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
 	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
@@ -411,6 +415,7 @@ APP_OBJS := \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
+	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/profile.$(BUILD_TYPE).o \
 	src/RangeChoiceLinear.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
@@ -490,7 +495,10 @@ TEST_OBJS := \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \
 	src/CustomMessageDialog.$(BUILD_TYPE).o \
 	src/CustomNumericType.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
 	src/DisassemblyRegion.$(BUILD_TYPE).o \
@@ -502,6 +510,7 @@ TEST_OBJS := \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
 	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
@@ -513,6 +522,7 @@ TEST_OBJS := \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
+	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
@@ -535,6 +545,7 @@ TEST_OBJS := \
 	tests/BufferTest1.o \
 	tests/BufferTest2.o \
 	tests/BufferTest3.o \
+	tests/ByteAccumulator.o \
 	tests/ByteColourMap.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
@@ -547,6 +558,7 @@ TEST_OBJS := \
 	tests/ConsoleBuffer.o \
 	tests/CustomNumericType.o \
 	tests/DataType.o \
+	tests/DataView.o \
 	tests/DataHistogramAccumulator.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \
@@ -555,6 +567,7 @@ TEST_OBJS := \
 	tests/endian_conv.o \
 	tests/FastRectangleFiller.o \
 	tests/FileWriter.o \
+	tests/HierarchicalByteAccumulator.o \
 	tests/HighlightColourMap.o \
 	tests/HSVColour.o \
 	tests/IntelHexExport.o \
@@ -573,6 +586,7 @@ TEST_OBJS := \
 	tests/StringPanel.o \
 	tests/Tab.o \
 	tests/testutil.o \
+	tests/ThreadPool.o \
 	tests/util.o \
 	tests/WindowCommands.o \
 	$(WXLUA_OBJS) \

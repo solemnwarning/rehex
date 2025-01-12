@@ -282,6 +282,9 @@
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\HierarchicalByteAccumulator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\SettingsDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -319,6 +322,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SettingsDialogGeneral.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DataMapScrollbar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DataMapSource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\DataView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\PopupTipWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

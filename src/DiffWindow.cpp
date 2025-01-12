@@ -1566,6 +1566,11 @@ REHex::DiffWindow::MessageRegion::MessageRegion(Document *document, off_t data_o
 	data_offset(data_offset),
 	message(message) {}
 
+std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DiffWindow::MessageRegion::indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel)
+{
+	return std::make_pair(indent_offset, indent_offset);
+}
+
 int REHex::DiffWindow::MessageRegion::calc_width(REHex::DocumentCtrl &doc_ctrl)
 {
 	int offset_column_width = doc_ctrl.get_show_offsets()

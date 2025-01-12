@@ -29,6 +29,7 @@
 
 #include "App.hpp"
 #include "BitArray.hpp"
+#include "DataMapScrollbar.hpp"
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
@@ -79,6 +80,8 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc_properties(NULL),
 	goto_offset_dialog(NULL),
 	last_goto_offset(BitOffset::MIN),
+	data_map_scrollbar_type(DataMapScrollbarType::NONE),
+	data_map_scrollbar(NULL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -101,7 +104,13 @@ REHex::Tab::Tab(wxWindow *parent):
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
-	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
+	doc_ctrl_panel = new wxPanel(h_splitter);
+	
+	doc_ctrl = new REHex::DocumentCtrl(doc_ctrl_panel, doc);
+	
+	data_map_scrollbar_sizer = new wxBoxSizer(wxHORIZONTAL);
+	data_map_scrollbar_sizer->Add(doc_ctrl, 1, wxEXPAND);
+	doc_ctrl_panel->SetSizerAndFit(data_map_scrollbar_sizer);
 	
 	doc.auto_cleanup_bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
 	doc.auto_cleanup_bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
@@ -136,7 +145,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
 	v_tools->SetFitToCurrentPage(true);
 	
-	h_splitter->SplitHorizontally(doc_ctrl, h_tools);
+	h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
 	v_splitter->SplitVertically(h_splitter, v_tools);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -165,6 +174,8 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	doc_properties(NULL),
 	goto_offset_dialog(NULL),
 	last_goto_offset(BitOffset::MIN),
+	data_map_scrollbar_type(DataMapScrollbarType::NONE),
+	data_map_scrollbar(NULL),
 	vtools_adjust_pending(false),
 	vtools_adjust_force(false),
 	vtools_initial_size(-1),
@@ -187,7 +198,12 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	h_splitter->SetSashGravity(1.0);
 	h_splitter->SetMinimumPaneSize(20);
 	
-	doc_ctrl = new REHex::DocumentCtrl(h_splitter, doc);
+	doc_ctrl_panel = new wxPanel(h_splitter);
+	doc_ctrl = new REHex::DocumentCtrl(doc_ctrl_panel, doc);
+	
+	data_map_scrollbar_sizer = new wxBoxSizer(wxHORIZONTAL);
+	data_map_scrollbar_sizer->Add(doc_ctrl, 1, wxEXPAND);
+	doc_ctrl_panel->SetSizerAndFit(data_map_scrollbar_sizer);
 	
 	doc.auto_cleanup_bind(DATA_ERASE,     &REHex::Tab::OnDocumentDataErase,     this);
 	doc.auto_cleanup_bind(DATA_INSERT,    &REHex::Tab::OnDocumentDataInsert,    this);
@@ -221,7 +237,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
 	v_tools->SetFitToCurrentPage(true);
 	
-	h_splitter->SplitHorizontally(doc_ctrl, h_tools);
+	h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
 	v_splitter->SplitVertically(h_splitter, v_tools);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -429,6 +445,7 @@ void REHex::Tab::save_view(wxConfig *config)
 	config->Write("inline-comments", (int)(inline_comment_mode));
 	config->Write("highlight-selection-match", doc_ctrl->get_highlight_selection_match());
 	config->Write("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
+	config->Write("data-map-scrollbar-type", (int)(data_map_scrollbar_type));
 	
 	wxWindow *ht_current_page = h_tools->GetCurrentPage();
 	if(ht_current_page != NULL)
@@ -680,6 +697,8 @@ void REHex::Tab::set_document_display_mode(DocumentDisplayMode document_display_
 {
 	this->document_display_mode = document_display_mode;
 	repopulate_regions();
+	
+	set_dsm_type(data_map_scrollbar_type);
 }
 
 bool REHex::Tab::get_auto_reload() const
@@ -727,6 +746,42 @@ void REHex::Tab::set_last_goto_offset(BitOffset last_goto_offset, bool is_relati
 	event.SetEventObject(this);
 	
 	ProcessEvent(event);
+}
+
+REHex::Tab::DataMapScrollbarType REHex::Tab::get_dsm_type() const
+{
+	return data_map_scrollbar_type;
+}
+
+void REHex::Tab::set_dsm_type(DataMapScrollbarType dsm_type)
+{
+	if(data_map_scrollbar)
+	{
+		data_map_scrollbar_sizer->Detach(data_map_scrollbar);
+		data_map_scrollbar->Destroy();
+		data_map_scrollbar = NULL;
+	}
+	
+	const ByteRangeMap<off_t> &virt_to_real_segs = doc->get_virt_to_real_segs();
+	
+	SharedEvtHandler<DataView> view = (document_display_mode == DDM_VIRTUAL && !(virt_to_real_segs.empty()))
+		? (SharedEvtHandler<DataView>)(SharedEvtHandler<LinearVirtualDocumentView>::make(doc))
+		: (SharedEvtHandler<DataView>)(SharedEvtHandler<FlatDocumentView>::make(doc));
+	
+	switch(dsm_type)
+	{
+		case DataMapScrollbarType::NONE:
+			break;
+			
+		case DataMapScrollbarType::ENTROPY:
+			data_map_scrollbar = new DataMapScrollbar(doc_ctrl_panel, wxID_ANY, view, std::unique_ptr<EntropyDataMapSource>(new EntropyDataMapSource(view, 1, 1.0f)), doc_ctrl);
+			data_map_scrollbar_sizer->Add(data_map_scrollbar, 0, wxEXPAND);
+			break;
+	}
+	
+	data_map_scrollbar_sizer->Layout();
+	
+	data_map_scrollbar_type = dsm_type;
 }
 
 void REHex::Tab::OnSize(wxSizeEvent &event)
@@ -1506,6 +1561,7 @@ void REHex::Tab::OnDocumentMappingsChanged(wxCommandEvent &event)
 	if(document_display_mode == DDM_VIRTUAL)
 	{
 		repopulate_regions();
+		set_dsm_type(data_map_scrollbar_type);
 	}
 	
 	event.Skip();
@@ -1840,7 +1896,7 @@ void REHex::Tab::htools_adjust(bool force_resize)
 	else{
 		if(!h_splitter->IsSplit())
 		{
-			h_splitter->SplitHorizontally(doc_ctrl, h_tools);
+			h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
 			
 			htools_adjust_on_idle(true);
 			return;
@@ -1991,6 +2047,9 @@ void REHex::Tab::init_default_doc_view()
 	{
 		doc_ctrl->set_offset_display_base((OffsetBase)(offset_display_base));
 	}
+	
+	int dsm_type = config->Read("data-map-scrollbar-type", (int)(data_map_scrollbar_type));
+	set_dsm_type((DataMapScrollbarType)(dsm_type));
 }
 
 void REHex::Tab::init_default_tools()

@@ -414,6 +414,7 @@ APP_OBJS := \
 	src/lua-plugin-preload.$(BUILD_TYPE).o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/profile.$(BUILD_TYPE).o \
@@ -431,6 +432,7 @@ APP_OBJS := \
 	src/Tab.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
+	src/ToolPanelDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/VirtualMappingList.$(BUILD_TYPE).o \
@@ -521,6 +523,7 @@ TEST_OBJS := \
 	src/lua-plugin-preload.$(BUILD_TYPE).o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
@@ -536,6 +539,7 @@ TEST_OBJS := \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
+	src/ToolPanelDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
@@ -576,6 +580,7 @@ TEST_OBJS := \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
+	tests/MultiSplitter.o \
 	tests/RangeProcessor.o \
 	tests/search-bseq.o \
 	tests/search-text.o \

@@ -271,6 +271,7 @@
     <ClCompile Include="..\..\src\lua-plugin-preload.c" />
     <ClCompile Include="..\..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\src\mainwindow.cpp" />
+    <ClCompile Include="..\..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\..\src\Palette.cpp" />
     <ClCompile Include="..\..\src\PopupTipWindow.cpp" />
     <ClCompile Include="..\..\src\RangeDialog.cpp" />
@@ -286,6 +287,7 @@
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
     <ClCompile Include="..\..\src\ThreadPool.cpp" />
     <ClCompile Include="..\..\src\ToolPanel.cpp" />
+    <ClCompile Include="..\..\src\ToolPanelDock.cpp" />
     <ClCompile Include="..\..\src\util.cpp" />
     <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\..\src\win32lib.cpp" />
@@ -323,6 +325,7 @@
     <ClCompile Include="..\..\tests\IntelHexImport.cpp" />
     <ClCompile Include="..\..\tests\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\tests\main.cpp" />
+    <ClCompile Include="..\..\tests\MultiSplitter.cpp" />
     <ClCompile Include="..\..\tests\NestedOffsetLengthMap.cpp" />
     <ClCompile Include="..\..\tests\NumericTextCtrl.cpp" />
     <ClCompile Include="..\..\tests\RangeProcessor.cpp" />

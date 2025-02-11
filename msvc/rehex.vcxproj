@@ -486,6 +486,7 @@
     <ClCompile Include="..\src\lua-plugin-preload.c" />
     <ClCompile Include="..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\src\mainwindow.cpp" />
+    <ClCompile Include="..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\src\Palette.cpp" />
     <ClCompile Include="..\src\PopupTipWindow.cpp" />
     <ClCompile Include="..\src\profile.cpp" />
@@ -503,6 +504,7 @@
     <ClCompile Include="..\src\textentrydialog.cpp" />
     <ClCompile Include="..\src\ThreadPool.cpp" />
     <ClCompile Include="..\src\ToolPanel.cpp" />
+    <ClCompile Include="..\src\ToolPanelDock.cpp" />
     <ClCompile Include="..\src\util.cpp" />
     <ClCompile Include="..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\src\VirtualMappingList.cpp" />

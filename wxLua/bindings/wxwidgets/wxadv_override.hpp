@@ -455,7 +455,7 @@ int wxLua_wxDataViewListCtrl_InsertItem(lua_State *L)
 
     unsigned int row = (unsigned int)lua_tonumber(L, 2);
 
-    wxUIntPtr data = argCount >= 3 ? (wxUIntPtr)wxlua_getnumbertype(L, 4) : NULL;
+    wxUIntPtr data = argCount >= 3 ? (wxUIntPtr)wxlua_getnumbertype(L, 4) : (wxUIntPtr)NULL;
 
     if (!wxlua_iswxluatype(lua_type(L, 3), WXLUA_TTABLE))
         wxlua_argerror(L, 3, wxT("a 'table'"));
@@ -502,7 +502,7 @@ int wxLua_wxDataViewListCtrl_AppendItem(lua_State *L)
     // get number of arguments
     int argCount = lua_gettop(L);
 
-    wxUIntPtr data = argCount >= 2 ? (wxUIntPtr)wxlua_getnumbertype(L, 3) : NULL;
+    wxUIntPtr data = argCount >= 2 ? (wxUIntPtr)wxlua_getnumbertype(L, 3) : (wxUIntPtr)NULL;
 
     if (!wxlua_iswxluatype(lua_type(L, 2), WXLUA_TTABLE))
         wxlua_argerror(L, 2, wxT("a 'table'"));

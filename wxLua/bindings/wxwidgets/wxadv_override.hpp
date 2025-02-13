@@ -445,3 +445,100 @@ int wxLua_wxDataViewEvent_GetDataBuffer(lua_State *L)
     return 1;
 }
 %end
+
+%override wxLua_wxDataViewListCtrl_InsertItem
+// void InsertItem(unsigned int row, LuaTable wxVariantTable, wxUIntPtr data = NULL )
+int wxLua_wxDataViewListCtrl_InsertItem(lua_State *L)
+{
+    // get number of arguments
+    int argCount = lua_gettop(L);
+
+    unsigned int row = (unsigned int)lua_tonumber(L, 2);
+
+    wxUIntPtr data = argCount >= 3 ? (wxUIntPtr)wxlua_getnumbertype(L, 4) : NULL;
+
+    if (!wxlua_iswxluatype(lua_type(L, 3), WXLUA_TTABLE))
+        wxlua_argerror(L, 3, wxT("a 'table'"));
+
+    wxVector<wxVariant> variants;
+    int count = 0;
+
+    while (1)
+    {
+        lua_rawgeti(L, 3, count+1);
+        int stack_type = wxluaT_type(L, -1);
+
+        if (stack_type == *p_wxluatype_wxVariant)
+        {
+            wxVariant* variant = (wxVariant *)wxluaT_getuserdatatype(L, -1, wxluatype_wxVariant);
+            variants.push_back(*variant);
+            ++count;
+            lua_pop(L, 1);
+        }
+        else if (lua_isnil(L, -1))
+        {
+            lua_pop(L, 1);
+            break;
+        }
+        else
+        {
+            wxlua_argerror(L, 3, wxT("a 'wxVector<wxVariant>' or table array of wxVariant"));
+            break;
+        }
+    }
+
+    wxDataViewListCtrl *self = (wxDataViewListCtrl *)wxluaT_getuserdatatype(L, 1, wxluatype_wxDataViewListCtrl);
+
+    self->InsertItem(row, variants, data);
+
+    return 1;
+}
+%end
+
+%override wxLua_wxDataViewListCtrl_AppendItem
+// void AppendItem(LuaTable wxVariantTable, wxUIntPtr data = NULL )
+int wxLua_wxDataViewListCtrl_AppendItem(lua_State *L)
+{
+    // get number of arguments
+    int argCount = lua_gettop(L);
+
+    wxUIntPtr data = argCount >= 2 ? (wxUIntPtr)wxlua_getnumbertype(L, 3) : NULL;
+
+    if (!wxlua_iswxluatype(lua_type(L, 2), WXLUA_TTABLE))
+        wxlua_argerror(L, 2, wxT("a 'table'"));
+
+    wxVector<wxVariant> variants;
+
+    int count = 0;
+
+    while (1)
+    {
+        lua_rawgeti(L, 2, count+1);
+        int stack_type = wxluaT_type(L, -1);
+
+        if (stack_type == *p_wxluatype_wxVariant)
+        {
+            wxVariant* variant = (wxVariant *)wxluaT_getuserdatatype(L, -1, wxluatype_wxVariant);
+            variants.push_back(*variant);
+            ++count;
+            lua_pop(L, 1);
+        }
+        else if (lua_isnil(L, -1))
+        {
+            lua_pop(L, 1);
+            break;
+        }
+        else
+        {
+            wxlua_argerror(L, 2, wxT("a 'wxVector<wxVariant>' or table array of wxVariant"));
+            break;
+        }
+    }
+
+    wxDataViewListCtrl *self = (wxDataViewListCtrl *)wxluaT_getuserdatatype(L, 1, wxluatype_wxDataViewListCtrl);
+
+    self->AppendItem(variants, data);
+
+    return 1;
+}
+%end

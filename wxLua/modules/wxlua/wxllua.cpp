@@ -879,7 +879,7 @@ int LUACALL wxluaT_type(lua_State *L, int stack_idx)
 wxString LUACALL wxluaT_typename(lua_State* L, int wxl_type)
 {
     // try to use wxString's ref counting and return this existing copy
-    static wxString s[14] = {
+    static wxString s[15] = {
         wxT("unknown"),
         wxT("none"),
         wxT("nil"),
@@ -893,7 +893,7 @@ wxString LUACALL wxluaT_typename(lua_State* L, int wxl_type)
         wxT("thread"),
         wxT("integer"),
         wxT("cfunction"),
-        wxT("pointer")
+        wxT("pointer"),
         wxT("any")
     };
 

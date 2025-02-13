@@ -2356,20 +2356,6 @@ void wxLuaState::AddLuaPath(const wxFileName& filename)
 // wxLuaEvent
 //-----------------------------------------------------------------------------
 
-#if wxCHECK_VERSION(3,0,0)
-wxDEFINE_EVENT(wxEVT_LUA_CREATION, wxLuaEvent);
-wxDEFINE_EVENT(wxEVT_LUA_PRINT, wxLuaEvent);
-wxDEFINE_EVENT(wxEVT_LUA_ERROR, wxLuaEvent);
-wxDEFINE_EVENT(wxEVT_LUA_DEBUG_HOOK, wxLuaEvent);
-#else
-DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_CREATION)
-DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_PRINT)
-DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_ERROR)
-DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_DEBUG_HOOK)
-//DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_INIT)
-//DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_DEBUGGERATTACHED)
-#endif
-
 wxLuaEvent::wxLuaEvent(wxEventType commandType, wxWindowID id, const wxLuaState& wxlState)
            :wxNotifyEvent(commandType, id),  m_wxlState(wxlState),
             m_debug_hook_break(false),

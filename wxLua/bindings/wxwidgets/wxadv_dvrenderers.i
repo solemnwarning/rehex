@@ -23,8 +23,8 @@ class wxDataViewIconText : public wxObject
     void SetText( const wxString &text );
     wxString GetText() const;
     void SetIcon( const wxIcon &icon );
-    !%wxchkver_3_2_0 const wxIcon &GetIcon() const;
-    %wxchkver_3_2_0 wxIcon GetIcon() const;
+    !%wxchkver_3_1_6 const wxIcon &GetIcon() const;
+    %wxchkver_3_1_6 wxIcon GetIcon() const;
 };
 
 

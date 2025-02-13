@@ -793,6 +793,18 @@ public:
 };
 
 #if wxCHECK_VERSION(3,0,0)
+wxDEFINE_EVENT(wxEVT_LUA_CREATION, wxLuaEvent);
+wxDEFINE_EVENT(wxEVT_LUA_PRINT, wxLuaEvent);
+wxDEFINE_EVENT(wxEVT_LUA_ERROR, wxLuaEvent);
+wxDEFINE_EVENT(wxEVT_LUA_DEBUG_HOOK, wxLuaEvent);
+#else
+DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_CREATION)
+DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_PRINT)
+DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_ERROR)
+DEFINE_LOCAL_EVENT_TYPE(wxEVT_LUA_DEBUG_HOOK)
+#endif
+
+#if wxCHECK_VERSION(3,0,0)
 // A wxLuaState is being created, sent at the end of
 //   wxLuaState(wxEvtHandler, win id) or Create(wxEvtHandler, win id)
 wxDECLARE_EVENT(wxEVT_LUA_CREATION, wxLuaEvent);

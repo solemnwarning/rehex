@@ -31,19 +31,19 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	m_drag_pending(false),
 	m_drag_active(NULL)
 {
-	m_left_notebook = new Notebook(this, wxID_ANY, wxNB_LEFT);
+	m_left_notebook = new ToolNotebook(this, wxID_ANY, wxNB_LEFT);
 	m_left_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_left_notebook->Hide();
 	
-	m_right_notebook = new Notebook(this, wxID_ANY, wxNB_RIGHT);
+	m_right_notebook = new ToolNotebook(this, wxID_ANY, wxNB_RIGHT);
 	m_right_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_right_notebook->Hide();
 	
-	m_top_notebook = new Notebook(this, wxID_ANY, wxNB_TOP);
+	m_top_notebook = new ToolNotebook(this, wxID_ANY, wxNB_TOP);
 	m_top_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_top_notebook->Hide();
 	
-	m_bottom_notebook = new Notebook(this, wxID_ANY, wxNB_BOTTOM);
+	m_bottom_notebook = new ToolNotebook(this, wxID_ANY, wxNB_BOTTOM);
 	m_bottom_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_bottom_notebook->Hide();
 }
@@ -85,7 +85,7 @@ void REHex::ToolDock::AddMainPanel(wxWindow *main_panel)
 
 void REHex::ToolDock::DestroyTool(ToolPanel *tool)
 {
-	Notebook *notebook;
+	ToolNotebook *notebook;
 	int page_idx = m_right_notebook->FindPage(tool);
 	
 	if(page_idx != wxNOT_FOUND)
@@ -123,7 +123,7 @@ void REHex::ToolDock::CreateTool(const std::string &name, SharedDocumentPointer 
 		return;
 	}
 	
-	Notebook *target_notebook = NULL;
+	ToolNotebook *target_notebook = NULL;
 	
 	if(tpr->shape == ToolPanel::TPS_TALL)
 	{
@@ -194,7 +194,7 @@ void REHex::ToolDock::SaveTools(wxConfig *config) const
 	}
 }
 
-void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, Notebook *notebook)
+void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, ToolNotebook *notebook)
 {
 	size_t num_pages = notebook->GetPageCount();
 	
@@ -244,7 +244,7 @@ void REHex::ToolDock::LoadTools(wxConfig *config, SharedDocumentPointer &documen
 	}
 }
 
-void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, Notebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
+void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
 {
 	for(size_t i = 0;; ++i)
 	{
@@ -294,7 +294,7 @@ void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, Notebook *notebook
 	}
 }
 
-void REHex::ToolDock::ResetNotebookSize(Notebook *notebook)
+void REHex::ToolDock::ResetNotebookSize(ToolNotebook *notebook)
 {
 	wxSize min_size = notebook->GetEffectiveMinSize();
 	wxSize best_size = notebook->GetBestSize();
@@ -316,7 +316,7 @@ REHex::ToolDock::ToolFrame *REHex::ToolDock::FindFrameByTool(ToolPanel *tool)
 	return frame_it != m_tool_frames.end() ? frame_it->second : NULL;
 }
 
-REHex::ToolDock::Notebook *REHex::ToolDock::FindNotebookByTool(ToolPanel *tool)
+REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindNotebookByTool(ToolPanel *tool)
 {
 	if(m_left_notebook->FindPage(tool) != wxNOT_FOUND)
 	{
@@ -353,7 +353,7 @@ REHex::ToolPanel *REHex::ToolDock::FindToolByName(const std::string &name) const
 	
 	/* Search for any instances of the tool in a notebook... */
 	
-	auto find_in_notebook = [&](Notebook *notebook)
+	auto find_in_notebook = [&](ToolNotebook *notebook)
 	{
 		size_t num_pages = notebook->GetPageCount();
 		
@@ -382,7 +382,7 @@ REHex::ToolPanel *REHex::ToolDock::FindToolByName(const std::string &name) const
 
 void REHex::ToolDock::OnNotebookLeftDown(wxMouseEvent &event)
 {
-	Notebook *notebook = (Notebook*)(event.GetEventObject());
+	ToolNotebook *notebook = (ToolNotebook*)(event.GetEventObject());
 	assert(notebook == m_left_notebook || notebook == m_right_notebook || notebook == m_top_notebook || notebook == m_bottom_notebook);
 	
 	long hit_flags;
@@ -458,11 +458,11 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 	if(m_drag_active)
 	{
 		ToolFrame *frame = FindFrameByTool(m_left_down_tool);
-		Notebook *notebook = FindNotebookByTool(m_left_down_tool);
+		ToolNotebook *notebook = FindNotebookByTool(m_left_down_tool);
 		
 		assert(frame == NULL || notebook == NULL);
 		
-		Notebook *dest_notebook = (Notebook*)(FindChildByPoint(event.GetPosition()));
+		ToolNotebook *dest_notebook = (ToolNotebook*)(FindChildByPoint(event.GetPosition()));
 		if(dest_notebook == m_main_panel)
 		{
 			wxRect mp_all = m_main_panel->GetRect();
@@ -591,8 +591,101 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 	event.Skip();
 }
 
-REHex::ToolDock::Notebook::Notebook(wxWindow *parent, wxWindowID id, long style):
+BEGIN_EVENT_TABLE(REHex::ToolDock::ToolNotebook, wxNotebook)
+	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::ToolDock::ToolNotebook::OnPageChanged)
+END_EVENT_TABLE()
+
+REHex::ToolDock::ToolNotebook::ToolNotebook(wxWindow *parent, wxWindowID id, long style):
 	wxNotebook(parent, id, wxDefaultPosition, wxDefaultSize, style) {}
+
+bool REHex::ToolDock::ToolNotebook::AddPage(wxWindow *page, const wxString &text, bool select, int imageId)
+{
+	bool res = wxNotebook::AddPage(page, text, select, imageId);
+	UpdateToolVisibility();
+	
+	return res;
+}
+
+bool REHex::ToolDock::ToolNotebook::DeletePage(size_t page)
+{
+	bool res = wxNotebook::DeletePage(page);
+	UpdateToolVisibility();
+	
+	return res;
+}
+
+bool REHex::ToolDock::ToolNotebook::InsertPage(size_t index, wxWindow *page, const wxString &text, bool select, int imageId)
+{
+	bool res = wxNotebook::InsertPage(index, page, text, select, imageId);
+	UpdateToolVisibility();
+	
+	return res;
+}
+
+bool REHex::ToolDock::ToolNotebook::RemovePage(size_t page)
+{
+	bool res = wxNotebook::RemovePage(page);
+	UpdateToolVisibility();
+	
+	return res;
+}
+
+int REHex::ToolDock::ToolNotebook::ChangeSelection(size_t page)
+{
+	int old_page = wxNotebook::ChangeSelection(page);
+	
+	if (old_page != wxNOT_FOUND)
+	{
+		ToolPanel *old_tool = (ToolPanel*)(GetPage(old_page));
+		assert(old_tool != NULL);
+		
+		old_tool->set_visible(false);
+	}
+	
+	ToolPanel *new_tool = (ToolPanel*)(GetPage(page));
+	assert(new_tool != NULL);
+	
+	if(new_tool != NULL)
+	{
+		new_tool->set_visible(true);
+	}
+}
+
+void REHex::ToolDock::ToolNotebook::UpdateToolVisibility()
+{
+	int selected_page = GetSelection();
+	size_t num_pages = GetPageCount();
+	
+	for(size_t i = 0; i < num_pages; ++i)
+	{
+		ToolPanel *tool = (ToolPanel*)(GetPage(i));
+		tool->set_visible((int)(i) == selected_page);
+	}
+}
+
+void REHex::ToolDock::ToolNotebook::OnPageChanged(wxNotebookEvent& event)
+{
+	if(event.GetEventObject() == this)
+	{
+		if (event.GetOldSelection() != wxNOT_FOUND)
+		{
+			ToolPanel *old_tool = (ToolPanel*)(GetPage(event.GetOldSelection()));
+			assert(old_tool != NULL);
+			
+			old_tool->set_visible(false);
+		}
+		
+		if (event.GetSelection() != wxNOT_FOUND)
+		{
+			ToolPanel *new_tool = (ToolPanel*)(GetPage(event.GetSelection()));
+			assert(new_tool != NULL);
+			
+			new_tool->set_visible(true);
+		}
+	}
+	
+	event.Skip();
+}
 
 REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, ToolPanel *tool):
 	wxFrame(parent, wxID_ANY, tool->name(), wxDefaultPosition, wxDefaultSize,

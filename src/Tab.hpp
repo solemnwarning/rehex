@@ -165,22 +165,6 @@ namespace REHex
 				ProcessWindowEvent(event_copy);
 			}
 			
-			bool vtools_adjust_pending;
-			bool vtools_adjust_force;
-			int vtools_initial_size;
-			
-			bool htools_adjust_pending;
-			bool htools_adjust_force;
-			int htools_initial_size;
-			
-			void vtools_adjust(bool force_resize = false);
-			void htools_adjust(bool force_resize = false);
-			void vtools_adjust_on_idle(bool force_resize);
-			void vtools_adjust_now_idle(wxIdleEvent &event);
-			void htools_adjust_on_idle(bool force_resize);
-			void htools_adjust_now_idle(wxIdleEvent &event);
-			void xtools_fix_visibility(wxNotebook *notebook);
-			
 			bool repopulate_regions_frozen;
 			bool repopulate_regions_pending;
 			

@@ -74,12 +74,6 @@ REHex::Tab::Tab(wxWindow *parent):
 	last_goto_offset(BitOffset::MIN),
 	data_map_scrollbar_type(DataMapScrollbarType::NONE),
 	data_map_scrollbar(NULL),
-	vtools_adjust_pending(false),
-	vtools_adjust_force(false),
-	vtools_initial_size(-1),
-	htools_adjust_pending(false),
-	htools_adjust_force(false),
-	htools_initial_size(-1),
 	repopulate_regions_frozen(false),
 	repopulate_regions_pending(false),
 	child_windows_hidden(false),
@@ -151,12 +145,6 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	last_goto_offset(BitOffset::MIN),
 	data_map_scrollbar_type(DataMapScrollbarType::NONE),
 	data_map_scrollbar(NULL),
-	vtools_adjust_pending(false),
-	vtools_adjust_force(false),
-	vtools_initial_size(-1),
-	htools_adjust_pending(false),
-	htools_adjust_force(false),
-	htools_initial_size(-1),
 	repopulate_regions_frozen(false),
 	repopulate_regions_pending(false),
 	child_windows_hidden(false),
@@ -1462,30 +1450,6 @@ void REHex::Tab::OnBulkUpdatesThawed(wxCommandEvent &event)
 	repopulate_regions_thaw();
 	event.Skip();
 }
-
-#if 0
-/* wxEVT_NOTEBOOK_PAGE_CHANGED events aren't generated consistently between platforms and versions
- * of wxWidgets when the selected tab is changed due to adding/removing a page, so this method is
- * used to correct the visible state of all ToolPanel's in a notebook after adding or removing one.
-*/
-void REHex::Tab::xtools_fix_visibility(wxNotebook *notebook)
-{
-	size_t n_pages    = notebook->GetPageCount();
-	int selected_page = notebook->GetSelection();
-	
-	for(size_t i = 0; i < n_pages; ++i)
-	{
-		wxWindow* page = notebook->GetPage(i);
-		assert(page != NULL);
-		
-		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		
-		bool this_tab_is_selected = ((int)(i) == selected_page);
-		tp->set_visible(this_tab_is_selected);
-	}
-}
-#endif
 
 void REHex::Tab::init_default_doc_view()
 {

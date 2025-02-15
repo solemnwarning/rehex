@@ -47,10 +47,31 @@ namespace REHex
 			void LoadTools(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 		private:
-			class Notebook: public wxNotebook
+			class ToolNotebook: public wxNotebook
 			{
 				public:
-					Notebook(wxWindow *parent, wxWindowID id, long style = 0);
+					ToolNotebook(wxWindow *parent, wxWindowID id, long style = 0);
+					
+					virtual bool AddPage(wxWindow *page, const wxString &text, bool select = false, int imageId = NO_IMAGE) override;
+					virtual bool DeletePage(size_t page) override;
+					virtual bool InsertPage(size_t index, wxWindow *page, const wxString &text, bool select = false, int imageId = NO_IMAGE) override;
+					virtual bool RemovePage(size_t page) override;
+					virtual int ChangeSelection(size_t page) override;
+					
+				private:
+					/**
+					 * @brief Update the visible flag of each tool in this notebook.
+					 *
+					 * This is called internally after adding/removing any pages from the notebook
+					 * because wxEVT_NOTEBOOK_PAGE_CHANGED events aren't generated consistently
+					 * between platforms and versions of wxWidgets when the selected tab is changed
+					 * due to adding/removing a page.
+					*/
+					void UpdateToolVisibility();
+					
+					void OnPageChanged(wxNotebookEvent &event);
+					
+				DECLARE_EVENT_TABLE()
 			};
 			
 			class ToolFrame: public wxFrame
@@ -61,10 +82,10 @@ namespace REHex
 			
 			wxWindow *m_main_panel;
 			
-			Notebook *m_left_notebook;
-			Notebook *m_right_notebook;
-			Notebook *m_top_notebook;
-			Notebook *m_bottom_notebook;
+			ToolNotebook *m_left_notebook;
+			ToolNotebook *m_right_notebook;
+			ToolNotebook *m_top_notebook;
+			ToolNotebook *m_bottom_notebook;
 			
 			std::map<ToolPanel*, ToolFrame*> m_tool_frames;
 			
@@ -74,13 +95,13 @@ namespace REHex
 			bool m_drag_active;
 			
 			ToolFrame *FindFrameByTool(ToolPanel *tool);
-			Notebook *FindNotebookByTool(ToolPanel *tool);
+			ToolNotebook *FindNotebookByTool(ToolPanel *tool);
 			ToolPanel *FindToolByName(const std::string &name) const;
 			
 			void DestroyTool(ToolPanel *tool);
 			
-			static void SaveToolsFromNotebook(wxConfig *config, Notebook *notebook);
-			void LoadToolsIntoNotebook(wxConfig *config, Notebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			static void SaveToolsFromNotebook(wxConfig *config, ToolNotebook *notebook);
+			void LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			/**
 			 * @brief Reset the size of a notebook to its default size.
@@ -88,7 +109,7 @@ namespace REHex
 			 * Resets the width/height (as applicable) of a Notebook in the splitter to
 			 * its minimum/best size (whichever is larger).
 			*/
-			void ResetNotebookSize(Notebook *notebook);
+			void ResetNotebookSize(ToolNotebook *notebook);
 			
 			void OnNotebookLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);

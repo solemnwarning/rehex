@@ -649,6 +649,8 @@ int REHex::ToolDock::ToolNotebook::ChangeSelection(size_t page)
 	{
 		new_tool->set_visible(true);
 	}
+
+	return old_page;
 }
 
 void REHex::ToolDock::ToolNotebook::UpdateToolVisibility()

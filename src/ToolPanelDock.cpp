@@ -66,6 +66,21 @@ void REHex::ToolPanelDock::AddMainPanel(wxWindow *main_panel)
 	
 	AddBelow(m_bottom_notebook, m_main_panel);
 	SetWindowWeight(m_bottom_notebook, 0.0f);
+	
+#ifdef __APPLE__
+	/* The default sash size on macOS is ONE pixel wide, and there seems to be several weird
+	 * bugs(?) around the positioning and client area of wxNotebook on macOS, so to get resizing
+	 * working nicely on Mac, we force the sash size to be wider and also capture mouse clicks
+	 * within the unused edge/border space of the wxNotebook.
+	*/
+	
+	SetSashSize(10);
+	
+	SetWindowDragBorder(m_left_notebook, 10);
+	SetWindowDragBorder(m_right_notebook, 10);
+	SetWindowDragBorder(m_top_notebook, 10);
+	SetWindowDragBorder(m_bottom_notebook, 10);
+#endif
 }
 
 void REHex::ToolPanelDock::DestroyTool(ToolPanel *tool)
@@ -243,8 +258,6 @@ void REHex::ToolPanelDock::LoadToolsIntoNotebook(wxConfig *config, Notebook *not
 			std::string name = config->Read    ("name", "").ToStdString();
 			bool selected    = config->ReadBool("selected", false);
 			
-			fprintf(stderr, "name = %s\n", name.c_str());
-			
 			const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
 			if(tpr != NULL)
 			{
@@ -410,9 +423,7 @@ void REHex::ToolPanelDock::OnLeftUp(wxMouseEvent &event)
 		m_drag_active = false;
 	}
 	
-	#ifndef __APPLE__
 	event.Skip();
-	#endif
 }
 
 void REHex::ToolPanelDock::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)

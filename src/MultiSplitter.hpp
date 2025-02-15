@@ -22,6 +22,8 @@
 #include <vector>
 #include <wx/window.h>
 
+#include "util.hpp"
+
 class MultiSplitterTest;
 
 namespace REHex
@@ -32,15 +34,6 @@ namespace REHex
 	class MultiSplitter: public wxWindow
 	{
 		public:
-			enum class CellEdge
-			{
-				NONE,
-				LEFT,
-				RIGHT,
-				TOP,
-				BOTTOM,
-			};
-			
 			/**
 			 * @brief A cell in the wxExSplitter hierarchy.
 			 *
@@ -62,6 +55,11 @@ namespace REHex
 			
 				wxRect m_rect;
 				float m_weight;
+				
+				int m_drag_border_left;
+				int m_drag_border_right;
+				int m_drag_border_top;
+				int m_drag_border_bottom;
 			
 				std::unique_ptr<Cell> m_left;
 				std::unique_ptr<Cell> m_right;
@@ -131,6 +129,36 @@ namespace REHex
 				 * children.
 				*/
 				float GetVerticalWeight() const;
+				
+				/**
+				 * @brief Set the "drag border" of the cell.
+				 * @see REHex::MultiSplitter::SetWindowDragBorder.
+				*/
+				void SetDragBorder(int drag_border_left, int drag_border_right, int drag_border_top, int drag_border_bottom);
+				
+				/**
+				 * @brief Get the size of the "drag border" on the left edge of this cell's window.
+				 * @see REHex::MultiSplitter::SetWindowDragBorder.
+				*/
+				int GetDragBorderLeft() const;
+				
+				/**
+				 * @brief Get the size of the "drag border" on the right edge of this cell's window.
+				 * @see REHex::MultiSplitter::SetWindowDragBorder.
+				*/
+				int GetDragBorderRight() const;
+				
+				/**
+				 * @brief Get the size of the "drag border" on the top edge of this cell's window.
+				 * @see REHex::MultiSplitter::SetWindowDragBorder.
+				*/
+				int GetDragBorderTop() const;
+				
+				/**
+				 * @brief Get the size of the "drag border" on the bottom edge of this cell's window.
+				 * @see REHex::MultiSplitter::SetWindowDragBorder.
+				*/
+				int GetDragBorderBottom() const;
 			
 				/**
 				 * @brief Reposition and resize the cell.
@@ -237,8 +265,6 @@ namespace REHex
 				 * left of it and the other cell is under the top leg.
 				*/
 				bool IsBelow(const Cell *other) const;
-				
-				std::pair<CellEdge, float> GetPointEdge(const wxPoint &point) const;
 				
 				/**
 				 * @brief Get the parent of this cell in the hierarchy.
@@ -401,7 +427,7 @@ namespace REHex
 			
 			bool m_resizing;
 			Cell *m_resizing_cell;
-			CellEdge m_resizing_edge;
+			Edge m_resizing_edge;
 			
 		public:
 			MultiSplitter(wxWindow *parent);
@@ -435,6 +461,32 @@ namespace REHex
 			 * will grow/shrink as necessary.
 			*/
 			void SetWindowWeight(wxWindow *window, float weight);
+			
+			/**
+			 * @brief Set the "drag border" area of a window managed by this splitter.
+			 *
+			 * The drag border of a window is additional area outside of the drag sash but inside
+			 * the area of a child window which the user can also click and drag to resize. This is
+			 * intended to be used with child controls which have a visible border where the user
+			 * may expect to be able to drag to resize the window.
+			 *
+			 * This functionality will only work for area which is occupied by the direct child of
+			 * the splitter, not any of its descendants.
+			*/
+			void SetWindowDragBorder(wxWindow *window, int drag_border_all);
+			
+			/**
+			 * @brief Set the "drag border" area of a window managed by this splitter.
+			 *
+			 * The drag border of a window is additional area outside of the drag sash but inside
+			 * the area of a child window which the user can also click and drag to resize. This is
+			 * intended to be used with child controls which have a visible border where the user
+			 * may expect to be able to drag to resize the window.
+			 *
+			 * This functionality will only work for area which is occupied by the direct child of
+			 * the splitter, not any of its descendants.
+			*/
+			void SetWindowDragBorder(wxWindow *window, int drag_border_left, int drag_border_right, int drag_border_top, int drag_border_bottom);
 			
 			/**
 			 * @brief Set the size of a window managed by this splitter.
@@ -475,6 +527,11 @@ namespace REHex
 			*/
 			void RemoveAllChildren();
 			
+			/**
+			 * @brief Begin resizing a cell by dragging the edge in response to the left mouse button being pressed.
+			*/
+			void BeginResize(Cell *cell, Edge edge);
+			
 			void OnPaint(wxPaintEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnMouseEnter(wxMouseEvent &event);
@@ -485,6 +542,8 @@ namespace REHex
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			
 			void OnChildShowHide(wxShowEvent &event);
+			void OnChildMouseMotion(wxMouseEvent &event);
+			void OnChildMouseLeftDown(wxMouseEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 		
@@ -494,7 +553,7 @@ namespace REHex
 	/**
 	 * @brief Temporarily set all the weight in a cell hierarchy to one edge.
 	 *
-	 * Constructing this object (for example) with CellEdge::LEFT will set the weight of all windows
+	 * Constructing this object (for example) with Edge::LEFT will set the weight of all windows
 	 * against the left edge of the hierarchy under root to 1.0f and all others to 0.0f. Their original
 	 * weights will be restored when the object is destroyed.
 	*/
@@ -504,11 +563,11 @@ namespace REHex
 			std::vector<std::pair<MultiSplitter::Cell*,float>> m_saved_weights;
 			
 		public:
-			MultiSplitterResizeBias(MultiSplitter::Cell *root, MultiSplitter::CellEdge edge);
+			MultiSplitterResizeBias(MultiSplitter::Cell *root, Edge edge);
 			~MultiSplitterResizeBias();
 			
 		private:
-			void walk_tree(MultiSplitter::Cell *cell, MultiSplitter::CellEdge edge, bool force_zero);
+			void walk_tree(MultiSplitter::Cell *cell, Edge edge, bool force_zero);
 	};
 }
 

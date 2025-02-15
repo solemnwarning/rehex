@@ -26,6 +26,7 @@
 #include <wx/settings.h>
 
 #include "MultiSplitter.hpp"
+#include "util.hpp"
 
 BEGIN_EVENT_TABLE(REHex::MultiSplitter, wxWindow)
 	EVT_SIZE(REHex::MultiSplitter::OnSize)
@@ -57,6 +58,8 @@ void REHex::MultiSplitter::AddFirst(wxWindow *window)
 	m_cells->Resize(GetClientSize());
 	
 	window->Bind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
+	window->Bind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
+	window->Bind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
 }
 
 void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base)
@@ -89,6 +92,8 @@ void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base)
 	if(window_cell == NULL)
 	{
 		window->Bind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
+		window->Bind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
+		window->Bind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
 	}
 }
 
@@ -122,6 +127,8 @@ void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base)
 	if(window_cell == NULL)
 	{
 		window->Bind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
+		window->Bind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
+		window->Bind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
 	}
 }
 
@@ -155,6 +162,8 @@ void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base)
 	if(window_cell == NULL)
 	{
 		window->Bind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
+		window->Bind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
+		window->Bind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
 	}
 }
 
@@ -188,6 +197,8 @@ void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base)
 	if(window_cell == NULL)
 	{
 		window->Bind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
+		window->Bind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
+		window->Bind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
 	}
 }
 
@@ -198,6 +209,8 @@ void REHex::MultiSplitter::RemoveChild(wxWindow *window)
 	
 	if(cell != NULL)
 	{
+		window->Unbind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
+		window->Unbind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
 		window->Unbind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
 		
 		if(cell == m_cells.get())
@@ -219,6 +232,8 @@ void REHex::MultiSplitter::RemoveAllChildren()
 		{
 			if(cell->IsWindow())
 			{
+				cell->GetWindow()->Unbind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
+				cell->GetWindow()->Unbind(wxEVT_MOTION, &REHex::MultiSplitter::OnChildMouseMotion, this);
 				cell->GetWindow()->Unbind(wxEVT_SHOW, &REHex::MultiSplitter::OnChildShowHide, this);
 			}
 
@@ -251,6 +266,22 @@ void REHex::MultiSplitter::SetWindowWeight(wxWindow *window, float weight)
 	assert(cell != NULL);
 	
 	cell->SetWeight(weight);
+}
+
+void REHex::MultiSplitter::SetWindowDragBorder(wxWindow *window, int drag_border_all)
+{
+	Cell *cell = FindCellByWindow(window);
+	assert(cell != NULL);
+	
+	cell->SetDragBorder(drag_border_all, drag_border_all, drag_border_all, drag_border_all);
+}
+
+void REHex::MultiSplitter::SetWindowDragBorder(wxWindow *window, int drag_border_left, int drag_border_right, int drag_border_top, int drag_border_bottom)
+{
+	Cell *cell = FindCellByWindow(window);
+	assert(cell != NULL);
+	
+	cell->SetDragBorder(drag_border_left, drag_border_right, drag_border_top, drag_border_bottom);
 }
 
 void REHex::MultiSplitter::SetWindowSize(wxWindow *window, const wxSize &size)
@@ -419,6 +450,17 @@ REHex::MultiSplitter::Cell *REHex::MultiSplitter::FindCellByPoint(const wxPoint 
 	return f(m_cells.get());
 }
 
+void REHex::MultiSplitter::BeginResize(Cell *cell, Edge edge)
+{
+	assert(!m_resizing);
+	
+	m_resizing_cell = cell;
+	m_resizing_edge = edge;
+	m_resizing = true;
+	
+	CaptureMouse();
+}
+
 void REHex::MultiSplitter::OnSize(wxSizeEvent &event)
 {
 	if(m_cells)
@@ -441,42 +483,39 @@ void REHex::MultiSplitter::OnMouseMotion(wxMouseEvent &event)
 	{
 		switch(m_resizing_edge)
 		{
-			case CellEdge::LEFT:
-			case CellEdge::RIGHT:
+			case Edge::LEFT:
+			case Edge::RIGHT:
 			{
-				Cell *common_ancestor = m_resizing_edge == CellEdge::LEFT
+				Cell *common_ancestor = m_resizing_edge == Edge::LEFT
 					? Cell::FindCommonAncestor(m_resizing_cell, m_resizing_cell->GetLeftNeighbor())
 					: Cell::FindCommonAncestor(m_resizing_cell, m_resizing_cell->GetRightNeighbor());
 				
 				assert(common_ancestor != NULL);
 				
-				REHex::MultiSplitterResizeBias a(common_ancestor->GetLeftChild(), CellEdge::RIGHT);
-				REHex::MultiSplitterResizeBias b(common_ancestor->GetRightChild(), CellEdge::LEFT);
+				REHex::MultiSplitterResizeBias a(common_ancestor->GetLeftChild(), Edge::RIGHT);
+				REHex::MultiSplitterResizeBias b(common_ancestor->GetRightChild(), Edge::LEFT);
 				
 				common_ancestor->MoveSplitter(event.GetPosition());
 				
 				break;
 			}
 			
-			case CellEdge::TOP:
-			case CellEdge::BOTTOM:
+			case Edge::TOP:
+			case Edge::BOTTOM:
 			{
-				Cell *common_ancestor = m_resizing_edge == CellEdge::TOP
+				Cell *common_ancestor = m_resizing_edge == Edge::TOP
 					? Cell::FindCommonAncestor(m_resizing_cell, m_resizing_cell->GetTopNeighbor())
 					: Cell::FindCommonAncestor(m_resizing_cell, m_resizing_cell->GetBottomNeighbor());
 				
 				assert(common_ancestor != NULL);
 				
-				REHex::MultiSplitterResizeBias a(common_ancestor->GetTopChild(), CellEdge::BOTTOM);
-				REHex::MultiSplitterResizeBias b(common_ancestor->GetBottomChild(), CellEdge::TOP);
+				REHex::MultiSplitterResizeBias a(common_ancestor->GetTopChild(), Edge::BOTTOM);
+				REHex::MultiSplitterResizeBias b(common_ancestor->GetBottomChild(), Edge::TOP);
 				
 				common_ancestor->MoveSplitter(event.GetPosition());
 				
 				break;
 			}
-			
-			case CellEdge::NONE:
-				abort(); /* Unreachable. */
 		}
 	}
 	else{
@@ -486,17 +525,22 @@ void REHex::MultiSplitter::OnMouseMotion(wxMouseEvent &event)
 		
 		if(cell != NULL)
 		{
-			auto e = cell->GetPointEdge(event.GetPosition());
+			wxRect cell_rect = cell->GetRect();
 			
-			if((e.first == CellEdge::LEFT && cell->GetLeftNeighbor() != NULL)
-				|| (e.first == CellEdge::RIGHT && cell->GetRightNeighbor() != NULL))
+			if(cell_rect.Contains(event.GetPosition()))
 			{
-				cursor = wxCursor(wxCURSOR_SIZEWE);
-			}
-			else if((e.first == CellEdge::TOP && cell->GetTopNeighbor() != NULL)
-				|| (e.first == CellEdge::BOTTOM && cell->GetBottomNeighbor() != NULL))
-			{
-				cursor = wxCursor(wxCURSOR_SIZENS);
+				Edge edge = find_nearest_edge(event.GetPosition(), cell_rect);
+				
+				if((edge == Edge::LEFT && cell->GetLeftNeighbor() != NULL)
+					|| (edge == Edge::RIGHT && cell->GetRightNeighbor() != NULL))
+				{
+					cursor = wxCursor(wxCURSOR_SIZEWE);
+				}
+				else if((edge == Edge::TOP && cell->GetTopNeighbor() != NULL)
+					|| (edge == Edge::BOTTOM && cell->GetBottomNeighbor() != NULL))
+				{
+					cursor = wxCursor(wxCURSOR_SIZENS);
+				}
 			}
 		}
 		
@@ -511,18 +555,20 @@ void REHex::MultiSplitter::OnMouseLeftDown(wxMouseEvent &event)
 	
 	if(cell != NULL)
 	{
-		auto e = cell->GetPointEdge(event.GetPosition());
+		wxRect cell_rect = cell->GetRect();
 		
-		if((e.first == CellEdge::LEFT && cell->GetLeftNeighbor() != NULL)
-			|| (e.first == CellEdge::RIGHT && cell->GetRightNeighbor() != NULL)
-			|| (e.first == CellEdge::TOP && cell->GetTopNeighbor() != NULL)
-			|| (e.first == CellEdge::BOTTOM && cell->GetBottomNeighbor() != NULL))
+		if(cell_rect.Contains(event.GetPosition()))
 		{
-			m_resizing_cell = cell;
-			m_resizing_edge = e.first;
-			m_resizing = true;
+			Edge edge = find_nearest_edge(event.GetPosition(), cell_rect);
 			
-			CaptureMouse();
+			if((edge == Edge::LEFT && cell->GetLeftNeighbor() != NULL)
+				|| (edge == Edge::RIGHT && cell->GetRightNeighbor() != NULL)
+				|| (edge == Edge::TOP && cell->GetTopNeighbor() != NULL)
+				|| (edge == Edge::BOTTOM && cell->GetBottomNeighbor() != NULL))
+			{
+				BeginResize(cell, edge);
+				return;
+			}
 		}
 	}
 	
@@ -549,10 +595,151 @@ void REHex::MultiSplitter::OnChildShowHide(wxShowEvent &event)
 	event.Skip();
 }
 
+void REHex::MultiSplitter::OnChildMouseMotion(wxMouseEvent &event)
+{
+	wxWindow *child_window = (wxWindow*)(event.GetEventObject());
+	
+	Cell *cell = FindCellByWindow(child_window);
+	assert(cell != NULL);
+	
+	if(cell != NULL)
+	{
+		wxSize child_window_size = child_window->GetSize();
+		wxPoint child_mouse_pos = event.GetPosition();
+		
+		bool in_drag_border = child_mouse_pos.x < cell->GetDragBorderLeft()
+			|| child_mouse_pos.x >= (child_window_size.GetWidth() - cell->GetDragBorderRight())
+			|| child_mouse_pos.y < cell->GetDragBorderTop()
+			|| child_mouse_pos.y >= (child_window_size.GetHeight() - cell->GetDragBorderBottom());
+		
+		// fprintf(stderr, "%sin drag border x = %d y = %d\n", (in_drag_border ? "" : "not "), child_mouse_pos.x, child_mouse_pos.y);
+		
+		/* TODO: Save/restore existing cursor on child window. */
+		
+		if(in_drag_border)
+		{
+			wxPoint mouse_pos = ScreenToClient(child_window->ClientToScreen(child_mouse_pos));
+			
+			Edge nearest_cell_edge = find_nearest_edge(mouse_pos, cell->GetRect());
+			
+			switch(nearest_cell_edge)
+			{
+				case Edge::LEFT:
+					if(cell->GetLeftNeighbor() != NULL)
+					{
+						child_window->SetCursor(wxCursor(wxCURSOR_SIZEWE));
+					}
+					
+					break;
+					
+				case Edge::RIGHT:
+					if(cell->GetRightNeighbor() != NULL)
+					{
+						child_window->SetCursor(wxCursor(wxCURSOR_SIZEWE));
+					}
+					
+					break;
+					
+				case Edge::TOP:
+					if(cell->GetTopNeighbor() != NULL)
+					{
+						child_window->SetCursor(wxCursor(wxCURSOR_SIZENS));
+					}
+					
+					break;
+					
+				case Edge::BOTTOM:
+					if(cell->GetBottomNeighbor() != NULL)
+					{
+						child_window->SetCursor(wxCursor(wxCURSOR_SIZENS));
+					}
+					
+					break;
+			}
+		}
+		else{
+			child_window->SetCursor(wxNullCursor);
+		}
+	}
+	
+	event.Skip();
+}
+
+void REHex::MultiSplitter::OnChildMouseLeftDown(wxMouseEvent &event)
+{
+	wxWindow *child_window = (wxWindow*)(event.GetEventObject());
+	
+	Cell *cell = FindCellByWindow(child_window);
+	assert(cell != NULL);
+	
+	if(cell != NULL)
+	{
+		wxSize child_window_size = child_window->GetSize();
+		wxPoint child_mouse_pos = event.GetPosition();
+		
+		bool in_drag_border = child_mouse_pos.x < cell->GetDragBorderLeft()
+			|| child_mouse_pos.x >= (child_window_size.GetWidth() - cell->GetDragBorderRight())
+			|| child_mouse_pos.y < cell->GetDragBorderTop()
+			|| child_mouse_pos.y >= (child_window_size.GetHeight() - cell->GetDragBorderBottom());
+		
+		if(in_drag_border)
+		{
+			wxPoint mouse_pos = ScreenToClient(child_window->ClientToScreen(child_mouse_pos));
+			
+			Edge nearest_cell_edge = find_nearest_edge(mouse_pos, cell->GetRect());
+			
+			switch(nearest_cell_edge)
+			{
+				case Edge::LEFT:
+					if(cell->GetLeftNeighbor() != NULL)
+					{
+						BeginResize(cell, nearest_cell_edge);
+						return;
+					}
+					
+					break;
+					
+				case Edge::RIGHT:
+					if(cell->GetRightNeighbor() != NULL)
+					{
+						BeginResize(cell, nearest_cell_edge);
+						return;
+					}
+					
+					break;
+					
+				case Edge::TOP:
+					if(cell->GetTopNeighbor() != NULL)
+					{
+						BeginResize(cell, nearest_cell_edge);
+						return;
+					}
+					
+					break;
+					
+				case Edge::BOTTOM:
+					if(cell->GetBottomNeighbor() != NULL)
+					{
+						BeginResize(cell, nearest_cell_edge);
+						return;
+					}
+					
+					break;
+			}
+		}
+	}
+	
+	event.Skip();
+}
+
 REHex::MultiSplitter::Cell::Cell(const MultiSplitter *splitter, Cell *parent, wxWindow *window):
 	m_splitter(splitter),
 	m_parent(parent),
 	m_weight(1.0f),
+	m_drag_border_left(0),
+	m_drag_border_right(0),
+	m_drag_border_top(0),
+	m_drag_border_bottom(0),
 	m_window(window) {}
 
 void REHex::MultiSplitter::Cell::SetWeight(float weight)
@@ -593,6 +780,45 @@ float REHex::MultiSplitter::Cell::GetVerticalWeight() const
 	else{
 		return m_weight;
 	}
+}
+
+void REHex::MultiSplitter::Cell::SetDragBorder(int drag_border_left, int drag_border_right, int drag_border_top, int drag_border_bottom)
+{
+	assert(IsWindow());
+	
+	assert(drag_border_left >= 0);
+	assert(drag_border_right >= 0);
+	assert(drag_border_top >= 0);
+	assert(drag_border_bottom >= 0);
+	
+	m_drag_border_left = drag_border_left;
+	m_drag_border_right = drag_border_right;
+	m_drag_border_top = drag_border_top;
+	m_drag_border_bottom = drag_border_bottom;
+}
+
+int REHex::MultiSplitter::Cell::GetDragBorderLeft() const
+{
+	assert(IsWindow());
+	return m_drag_border_left;
+}
+
+int REHex::MultiSplitter::Cell::GetDragBorderRight() const
+{
+	assert(IsWindow());
+	return m_drag_border_right;
+}
+
+int REHex::MultiSplitter::Cell::GetDragBorderTop() const
+{
+	assert(IsWindow());
+	return m_drag_border_top;
+}
+
+int REHex::MultiSplitter::Cell::GetDragBorderBottom() const
+{
+	assert(IsWindow());
+	return m_drag_border_bottom;
 }
 
 void REHex::MultiSplitter::Cell::Resize(const wxRect &new_rect)
@@ -847,13 +1073,18 @@ void REHex::MultiSplitter::Cell::ResizeWindow()
 	{
 		wh -= sash_size1;
 	}
+	
+	// fprintf(stderr, "x = %d, y = %d, w = %d, h = %d (r = %d, b = %d)\n", wx, wy, ww, wh, (wx + ww - 1), (wy + wh - 1));
 
 	m_window->SetPosition(wxPoint(wx, wy));
 	m_window->SetSize(ww, wh);
+	
+	// wxRect ca = m_window->GetClientRect();
+	// fprintf(stderr, "client x = %d, y = %d, w = %d, h = %d (r = %d, b = %d)\n", ca.GetLeft(), ca.GetTop(), ca.GetWidth(), ca.GetHeight(), ca.GetRight(), ca.GetBottom());
 }
 
 template<typename T> T *REHex::MultiSplitter::Cell::_FindCommonAncestor(T *cell1, T *cell2)
-{
+{	
 	for(T *c1 = cell1; c1 != NULL; c1 = c1->GetParent())
 	{
 		for(T *c2 = cell2; c2 != NULL; c2 = c2->GetParent())
@@ -1012,6 +1243,16 @@ void REHex::MultiSplitter::Cell::SplitVertically(wxWindow *window_left, wxWindow
 	std::unique_ptr<Cell> new_left(new Cell(m_splitter, this, window_left));
 	std::unique_ptr<Cell> new_right(new Cell(m_splitter, this, window_right));
 	
+	/* The cell which inherits our window should also inherit the existing weight/etc. */
+	
+	Cell *inheritor = m_window == window_left ? new_left.get() : new_right.get();
+	
+	inheritor->m_weight = m_weight;
+	inheritor->m_drag_border_left = m_drag_border_left;
+	inheritor->m_drag_border_right = m_drag_border_right;
+	inheritor->m_drag_border_top = m_drag_border_top;
+	inheritor->m_drag_border_bottom = m_drag_border_bottom;
+	
 	m_left   = std::move(new_left);
 	m_right  = std::move(new_right);
 	m_window = NULL;
@@ -1046,6 +1287,11 @@ void REHex::MultiSplitter::Cell::RemoveChild(wxWindow *window)
 	{
 		m_rect = cell->m_rect;
 		m_weight = cell->m_weight;
+		
+		m_drag_border_left = cell->m_drag_border_left;
+		m_drag_border_right = cell->m_drag_border_right;
+		m_drag_border_top = cell->m_drag_border_top;
+		m_drag_border_bottom = cell->m_drag_border_bottom;
 		
 		m_left = std::move(cell->m_left);
 		m_right = std::move(cell->m_right);
@@ -1216,35 +1462,6 @@ bool REHex::MultiSplitter::Cell::IsBelow(const Cell *other) const
 	return false;
 }
 
-std::pair<REHex::MultiSplitter::CellEdge, float> REHex::MultiSplitter::Cell::GetPointEdge(const wxPoint &point) const
-{
-	if(!m_rect.Contains(point))
-	{
-		return std::make_pair(CellEdge::NONE, 0.0f);
-	}
-	
-	float left_score = 1.0f - (float)(point.x - m_rect.GetLeft()) / (float)(m_rect.GetWidth());
-	float right_score = 1.0f - (float)(m_rect.GetRight() - point.x) / (float)(m_rect.GetWidth());
-	float top_score = 1.0f - (float)(point.y - m_rect.GetTop()) / (float)(m_rect.GetHeight());
-	float bottom_score = 1.0f - (float)(m_rect.GetBottom() - point.y) / (float)(m_rect.GetBottom());
-	
-	if(left_score >= right_score && left_score >= top_score && left_score >= bottom_score)
-	{
-		return std::make_pair(CellEdge::LEFT, left_score);
-	}
-	else if(right_score >= left_score && right_score >= top_score && right_score >= bottom_score)
-	{
-		return std::make_pair(CellEdge::RIGHT, right_score);
-	}
-	else if(top_score >= left_score && top_score >= top_score && top_score >= bottom_score)
-	{
-		return std::make_pair(CellEdge::TOP, top_score);
-	}
-	else{
-		return std::make_pair(CellEdge::BOTTOM, bottom_score);
-	}
-}
-
 REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetParent()
 {
 	return m_parent;
@@ -1376,7 +1593,7 @@ wxWindow *REHex::MultiSplitter::Cell::GetWindow() const
 	return m_window;
 }
 
-REHex::MultiSplitterResizeBias::MultiSplitterResizeBias(REHex::MultiSplitter::Cell *root, REHex::MultiSplitter::CellEdge edge)
+REHex::MultiSplitterResizeBias::MultiSplitterResizeBias(REHex::MultiSplitter::Cell *root, Edge edge)
 {
 	walk_tree(root, edge, false);
 }
@@ -1389,16 +1606,16 @@ REHex::MultiSplitterResizeBias::~MultiSplitterResizeBias()
 	}
 }
 
-void REHex::MultiSplitterResizeBias::walk_tree(REHex::MultiSplitter::Cell *cell, REHex::MultiSplitter::CellEdge edge, bool force_zero)
+void REHex::MultiSplitterResizeBias::walk_tree(REHex::MultiSplitter::Cell *cell, Edge edge, bool force_zero)
 {
 	if(cell->IsVerticalSplit())
 	{
-		if(edge == REHex::MultiSplitter::CellEdge::LEFT)
+		if(edge == Edge::LEFT)
 		{
 			walk_tree(cell->GetLeftChild(), edge, force_zero);
 			walk_tree(cell->GetRightChild(), edge, true);
 		}
-		else if(edge == REHex::MultiSplitter::CellEdge::RIGHT)
+		else if(edge == Edge::RIGHT)
 		{
 			walk_tree(cell->GetLeftChild(), edge, true);
 			walk_tree(cell->GetRightChild(), edge, force_zero);
@@ -1410,12 +1627,12 @@ void REHex::MultiSplitterResizeBias::walk_tree(REHex::MultiSplitter::Cell *cell,
 	}
 	else if(cell->IsHorizontalSplit())
 	{
-		if(edge == REHex::MultiSplitter::CellEdge::TOP)
+		if(edge == Edge::TOP)
 		{
 			walk_tree(cell->GetTopChild(), edge, force_zero);
 			walk_tree(cell->GetBottomChild(), edge, true);
 		}
-		else if(edge == REHex::MultiSplitter::CellEdge::BOTTOM)
+		else if(edge == Edge::BOTTOM)
 		{
 			walk_tree(cell->GetTopChild(), edge, true);
 			walk_tree(cell->GetBottomChild(), edge, force_zero);

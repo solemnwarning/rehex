@@ -432,7 +432,7 @@ APP_OBJS := \
 	src/Tab.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
-	src/ToolPanelDock.$(BUILD_TYPE).o \
+	src/ToolDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/VirtualMappingList.$(BUILD_TYPE).o \
@@ -539,7 +539,7 @@ TEST_OBJS := \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
-	src/ToolPanelDock.$(BUILD_TYPE).o \
+	src/ToolDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \

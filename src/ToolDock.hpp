@@ -32,10 +32,10 @@ namespace REHex
 	/**
 	 * @brief Splitter window for tiling and detaching/docking tool panels.
 	*/
-	class ToolPanelDock: public MultiSplitter
+	class ToolDock: public MultiSplitter
 	{
 		public:
-			ToolPanelDock(wxWindow *parent);
+			ToolDock(wxWindow *parent);
 			
 			void AddMainPanel(wxWindow *main_panel);
 			

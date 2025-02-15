@@ -37,7 +37,7 @@
 #include "SafeWindowPointer.hpp"
 #include "SettingsDialog.hpp"
 #include "SharedDocumentPointer.hpp"
-#include "ToolPanelDock.hpp"
+#include "ToolDock.hpp"
 
 namespace REHex
 {
@@ -118,7 +118,7 @@ namespace REHex
 			InlineCommentMode inline_comment_mode;
 			DocumentDisplayMode document_display_mode;
 			
-			ToolPanelDock *tool_dock;
+			ToolDock *tool_dock;
 			
 			std::set<wxDialog*> search_dialogs;
 			

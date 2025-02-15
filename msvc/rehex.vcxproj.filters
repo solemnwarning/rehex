@@ -339,7 +339,7 @@
     <ClCompile Include="..\src\MultiSplitter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ToolPanelDock.cpp">
+    <ClCompile Include="..\src\ToolDock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

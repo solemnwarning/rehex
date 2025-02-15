@@ -448,7 +448,7 @@
     <ClCompile Include="..\..\src\MultiSplitter.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\ToolPanelDock.cpp">
+    <ClCompile Include="..\..\src\ToolDock.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\tests\MultiSplitter.cpp">

@@ -88,7 +88,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	file_modified_dialog_pending(false),
 	auto_reload(false)
 {
-	tool_dock = new ToolPanelDock(this);
+	tool_dock = new ToolDock(this);
 	
 	doc_ctrl_panel = new wxPanel(tool_dock);
 	tool_dock->AddMainPanel(doc_ctrl_panel);
@@ -165,7 +165,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	file_modified_dialog_pending(false),
 	auto_reload(false)
 {
-	tool_dock = new ToolPanelDock(this);
+	tool_dock = new ToolDock(this);
 	
 	doc_ctrl_panel = new wxPanel(tool_dock);
 	tool_dock->AddMainPanel(doc_ctrl_panel);

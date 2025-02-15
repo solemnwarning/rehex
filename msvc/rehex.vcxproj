@@ -504,7 +504,7 @@
     <ClCompile Include="..\src\textentrydialog.cpp" />
     <ClCompile Include="..\src\ThreadPool.cpp" />
     <ClCompile Include="..\src\ToolPanel.cpp" />
-    <ClCompile Include="..\src\ToolPanelDock.cpp" />
+    <ClCompile Include="..\src\ToolDock.cpp" />
     <ClCompile Include="..\src\util.cpp" />
     <ClCompile Include="..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\src\VirtualMappingList.cpp" />

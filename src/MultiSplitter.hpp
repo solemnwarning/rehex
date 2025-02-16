@@ -78,7 +78,7 @@ namespace REHex
 				bool m_hidden_rb;
 			
 			public:
-				Cell(const MultiSplitter *splitter, Cell *parent, wxWindow *window);
+				Cell(const MultiSplitter *splitter, Cell *parent, wxWindow *window, float weight);
 				
 				/**
 				 * @brief Set the "weight" of the cell.
@@ -194,7 +194,7 @@ namespace REHex
 				 * this cell and the other one should not be in the wxExSplitter cell
 				 * hierarchy.
 				*/
-				void SplitHorizontally(wxWindow *window_top, wxWindow *window_bottom);
+				void SplitHorizontally(wxWindow *window_top, wxWindow *window_bottom, float new_window_weight);
 				
 				/**
 				 * @brief Split the cell vertically.
@@ -205,7 +205,7 @@ namespace REHex
 				 * this cell and the other one should not be in the wxExSplitter cell
 				 * hierarchy.
 				*/
-				void SplitVertically(wxWindow *window_left, wxWindow *window_right);
+				void SplitVertically(wxWindow *window_left, wxWindow *window_right, float new_window_weight);
 				
 				/**
 				 * @brief Remove one of the immediate child cells from a split cell.
@@ -484,11 +484,58 @@ namespace REHex
 			MultiSplitter(wxWindow *parent);
 			virtual ~MultiSplitter();
 			
-			void AddFirst(wxWindow *window);
-			void AddLeftOf(wxWindow *window, wxWindow *base);
-			void AddRightOf(wxWindow *window, wxWindow *base);
-			void AddAbove(wxWindow *window, wxWindow *base);
-			void AddBelow(wxWindow *window, wxWindow *base);
+			/**
+			 * @brief Add the first window to the splitter.
+			*/
+			void AddFirst(wxWindow *window, float weight = 1.0f);
+			
+			/**
+			 * @brief Split an existing cell, inserting a new window to the left.
+			 *
+			 * @param window  New window to be added to the splitter.
+			 * @param base    Existing window in the splitter.
+			 * @param weight  Weight of the new window.
+			 *
+			 * The width of the existing cell will be proportionally split between the
+			 * new and existing windows based on their weight.
+			*/
+			void AddLeftOf(wxWindow *window, wxWindow *base, float weight = 1.0f);
+			
+			/**
+			 * @brief Split an existing cell, inserting a new window to the right.
+			 *
+			 * @param window  New window to be added to the splitter.
+			 * @param base    Existing window in the splitter.
+			 * @param weight  Weight of the new window.
+			 *
+			 * The width of the existing cell will be proportionally split between the
+			 * new and existing windows based on their weight.
+			*/
+			void AddRightOf(wxWindow *window, wxWindow *base, float weight = 1.0f);
+			
+			/**
+			 * @brief Split an existing cell, inserting a new window above.
+			 *
+			 * @param window  New window to be added to the splitter.
+			 * @param base    Existing window in the splitter.
+			 * @param weight  Weight of the new window.
+			 *
+			 * The height of the existing cell will be proportionally split between the
+			 * new and existing windows based on their weight.
+			*/
+			void AddAbove(wxWindow *window, wxWindow *base, float weight = 1.0f);
+			
+			/**
+			 * @brief Split an existing cell, inserting a new window below.
+			 *
+			 * @param window  New window to be added to the splitter.
+			 * @param base    Existing window in the splitter.
+			 * @param weight  Weight of the new window.
+			 *
+			 * The height of the existing cell will be proportionally split between the
+			 * new and existing windows based on their weight.
+			*/
+			void AddBelow(wxWindow *window, wxWindow *base, float weight = 1.0f);
 			
 			/**
 			 * @brief Remove a child window from the splitter without destroying it.

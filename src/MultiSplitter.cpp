@@ -48,12 +48,12 @@ REHex::MultiSplitter::~MultiSplitter()
 	RemoveAllChildren();
 }
 
-void REHex::MultiSplitter::AddFirst(wxWindow *window)
+void REHex::MultiSplitter::AddFirst(wxWindow *window, float weight)
 {
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	
 	assert(!m_cells);
-	m_cells.reset(new Cell(this, NULL, window));
+	m_cells.reset(new Cell(this, NULL, window, weight));
 	
 	m_cells->Resize(GetClientSize());
 	
@@ -62,7 +62,7 @@ void REHex::MultiSplitter::AddFirst(wxWindow *window)
 	window->Bind(wxEVT_LEFT_DOWN, &REHex::MultiSplitter::OnChildMouseLeftDown, this);
 }
 
-void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base)
+void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base, float weight)
 {
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddLeftOf() must be different windows");
@@ -87,7 +87,7 @@ void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base)
 		assert(base_cell != NULL);
 	}
 	
-	base_cell->SplitVertically(window, base);
+	base_cell->SplitVertically(window, base, weight);
 	
 	if(window_cell == NULL)
 	{
@@ -97,7 +97,7 @@ void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base)
 	}
 }
 
-void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base)
+void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base, float weight)
 {
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddRightOf() must be different windows");
@@ -122,7 +122,7 @@ void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base)
 		assert(base_cell != NULL);
 	}
 	
-	base_cell->SplitVertically(base, window);
+	base_cell->SplitVertically(base, window, weight);
 	
 	if(window_cell == NULL)
 	{
@@ -132,7 +132,7 @@ void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base)
 	}
 }
 
-void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base)
+void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base, float weight)
 {
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddAbove() must be different windows");
@@ -157,7 +157,7 @@ void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base)
 		assert(base_cell != NULL);
 	}
 	
-	base_cell->SplitHorizontally(window, base);
+	base_cell->SplitHorizontally(window, base, weight);
 	
 	if(window_cell == NULL)
 	{
@@ -167,7 +167,7 @@ void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base)
 	}
 }
 
-void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base)
+void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base, float weight)
 {
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddBelow() must be different windows");
@@ -192,7 +192,7 @@ void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base)
 		assert(base_cell != NULL);
 	}
 	
-	base_cell->SplitHorizontally(base, window);
+	base_cell->SplitHorizontally(base, window, weight);
 	
 	if(window_cell == NULL)
 	{
@@ -740,10 +740,10 @@ void REHex::MultiSplitter::OnChildMouseLeftDown(wxMouseEvent &event)
 	event.Skip();
 }
 
-REHex::MultiSplitter::Cell::Cell(const MultiSplitter *splitter, Cell *parent, wxWindow *window):
+REHex::MultiSplitter::Cell::Cell(const MultiSplitter *splitter, Cell *parent, wxWindow *window, float weight):
 	m_splitter(splitter),
 	m_parent(parent),
-	m_weight(1.0f),
+	m_weight(weight),
 	m_drag_border_left(0),
 	m_drag_border_right(0),
 	m_drag_border_top(0),
@@ -1420,13 +1420,13 @@ void REHex::MultiSplitter::Cell::MoveSplitter(const wxPoint &point, bool force)
 	}
 }
 
-void REHex::MultiSplitter::Cell::SplitHorizontally(wxWindow *window_top, wxWindow *window_bottom)
+void REHex::MultiSplitter::Cell::SplitHorizontally(wxWindow *window_top, wxWindow *window_bottom, float new_window_weight)
 {
 	assert(!m_left && !m_right && !m_top && !m_bottom);
 	assert(m_window == window_top || m_window == window_bottom);
 	
-	std::unique_ptr<Cell> new_top(new Cell(m_splitter, this, window_top));
-	std::unique_ptr<Cell> new_bottom(new Cell(m_splitter, this, window_bottom));
+	std::unique_ptr<Cell> new_top(new Cell(m_splitter, this, window_top, new_window_weight));
+	std::unique_ptr<Cell> new_bottom(new Cell(m_splitter, this, window_bottom, new_window_weight));
 	
 	m_top    = std::move(new_top);
 	m_bottom = std::move(new_bottom);
@@ -1441,20 +1441,24 @@ void REHex::MultiSplitter::Cell::SplitHorizontally(wxWindow *window_top, wxWindo
 	m_hidden_lt = false;
 	m_hidden_rb = false;
 	
-	int t_height = m_rect.height / 2;
+	/* Avoid division by zero if both weights are zero. */
+	int t_height = m_top->m_weight == m_bottom->m_weight
+		? m_rect.height / 2
+		: ((float)(m_rect.height) / (m_top->m_weight + m_bottom->m_weight)) * m_top->m_weight;
+	
 	int b_height = m_rect.height - t_height;
 	
 	m_top->Resize(wxRect(m_rect.x, m_rect.y, m_rect.width, t_height));
 	m_bottom->Resize(wxRect(m_rect.x, (m_rect.y + t_height), m_rect.width, b_height));
 }
 
-void REHex::MultiSplitter::Cell::SplitVertically(wxWindow *window_left, wxWindow *window_right)
+void REHex::MultiSplitter::Cell::SplitVertically(wxWindow *window_left, wxWindow *window_right, float new_window_weight)
 {
 	assert(!m_left && !m_right && !m_top && !m_bottom);
 	assert(m_window == window_left || m_window == window_right);
 	
-	std::unique_ptr<Cell> new_left(new Cell(m_splitter, this, window_left));
-	std::unique_ptr<Cell> new_right(new Cell(m_splitter, this, window_right));
+	std::unique_ptr<Cell> new_left(new Cell(m_splitter, this, window_left, new_window_weight));
+	std::unique_ptr<Cell> new_right(new Cell(m_splitter, this, window_right, new_window_weight));
 	
 	/* The cell which inherits our window should also inherit the existing weight/etc. */
 	
@@ -1479,7 +1483,11 @@ void REHex::MultiSplitter::Cell::SplitVertically(wxWindow *window_left, wxWindow
 	m_hidden_lt = false;
 	m_hidden_rb = false;
 	
-	int l_width = m_rect.width / 2;
+	/* Avoid division by zero if both weights are zero. */
+	int l_width = m_left->m_weight == m_right->m_weight
+		? m_rect.width / 2
+		: ((float)(m_rect.width) / (m_left->m_weight + m_right->m_weight)) * m_left->m_weight;
+	
 	int r_width = m_rect.width - l_width;
 	
 	m_left->Resize(wxRect(m_rect.x, m_rect.y, l_width, m_rect.height));

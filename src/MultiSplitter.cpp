@@ -1350,9 +1350,17 @@ wxSize REHex::MultiSplitter::Cell::GetMaxSize() const
 		{
 			wxSize window_max_size = m_window->GetMaxSize();
 			
-			return wxSize(
-				ConstraintAdd(window_max_size.GetWidth(), (GetLeftSashWidth() + GetRightSashWidth())),
-				ConstraintAdd(window_max_size.GetHeight(), (GetTopSashHeight() + GetBottomSashHeight())));
+			if(window_max_size.GetWidth() >= 0)
+			{
+				window_max_size.SetWidth(window_max_size.GetWidth() + GetLeftSashWidth() + GetRightSashWidth());
+			}
+			
+			if(window_max_size.GetHeight() >= 0)
+			{
+				window_max_size.SetHeight(window_max_size.GetHeight() + GetTopSashHeight() + GetBottomSashHeight());
+			}
+			
+			return wxSize(window_max_size);
 		}
 		else{
 			/* Window is hidden, no space required. */

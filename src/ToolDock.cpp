@@ -653,6 +653,37 @@ int REHex::ToolDock::ToolNotebook::ChangeSelection(size_t page)
 	return old_page;
 }
 
+wxSize REHex::ToolDock::ToolNotebook::GetMinSize() const
+{
+	wxWindow *current_page = GetCurrentPage();
+	if(current_page != NULL)
+	{
+		/* We compare the current size of the notebook to the current size of the current
+		 * page to calculate the additional size required for the notebook control itself.
+		 *
+		 * This isn't entirely reliable - on some platforms there is a delay between the
+		 * notebook resizing and the page content being resized, but I can't come up with
+		 * anything more reliable and this is only used for size validation when the user
+		 * is dragging the sash, by which point the window size should be updated.
+		*/
+		
+		wxSize current_notebook_size = GetSize();
+		wxSize current_page_size = current_page->GetSize();
+		
+		int notebook_width_overhead = current_notebook_size.GetWidth() - current_page_size.GetWidth();
+		int notebook_height_overhead = current_notebook_size.GetHeight() - current_page_size.GetHeight();
+		
+		wxSize current_page_min_size = current_page->GetMinSize();
+		
+		return wxSize(
+			(current_page_min_size.GetWidth() + notebook_width_overhead),
+			(current_page_min_size.GetHeight() + notebook_height_overhead));
+	}
+	else{
+		return wxDefaultSize;
+	}
+}
+
 void REHex::ToolDock::ToolNotebook::UpdateToolVisibility()
 {
 	int selected_page = GetSelection();

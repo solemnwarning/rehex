@@ -289,8 +289,8 @@ void REHex::MultiSplitter::SetWindowSize(wxWindow *window, const wxSize &size)
 	Cell *cell = FindCellByWindow(window);
 	assert(cell != NULL);
 	
-	int sash_size1 = m_sash_size / 2;
-	int sash_size2 = (m_sash_size / 2) + (m_sash_size % 2);
+	int sash_size1, sash_size2;
+	std::tie(sash_size1, sash_size2) = GetDividedSashSize();
 	
 	if(size.GetWidth() >= 0)
 	{
@@ -316,10 +316,10 @@ void REHex::MultiSplitter::SetWindowSize(wxWindow *window, const wxSize &size)
 			
 			if(child_is_right)
 			{
-				vsplit->MoveSplitter(wxPoint((vsplit_rect.x + vsplit_rect.GetWidth() - cell_width), 0));
+				vsplit->MoveSplitter(wxPoint((vsplit_rect.x + vsplit_rect.GetWidth() - cell_width), 0), true);
 			}
 			else{
-				vsplit->MoveSplitter(wxPoint((vsplit_rect.x + cell_width), 0));
+				vsplit->MoveSplitter(wxPoint((vsplit_rect.x + cell_width), 0), true);
 			}
 		}
 	}
@@ -348,10 +348,10 @@ void REHex::MultiSplitter::SetWindowSize(wxWindow *window, const wxSize &size)
 
 			if(child_is_bottom)
 			{
-				hsplit->MoveSplitter(wxPoint(0, (hsplit_rect.y + hsplit_rect.GetHeight() - cell_height)));
+				hsplit->MoveSplitter(wxPoint(0, (hsplit_rect.y + hsplit_rect.GetHeight() - cell_height)), true);
 			}
 			else{
-				hsplit->MoveSplitter(wxPoint(0, (hsplit_rect.y + cell_height)));
+				hsplit->MoveSplitter(wxPoint(0, (hsplit_rect.y + cell_height)), true);
 			}
 		}
 	}
@@ -366,6 +366,14 @@ int REHex::MultiSplitter::GetDefaultSashSize() const
 int REHex::MultiSplitter::GetSashSize() const
 {
 	return m_sash_size;
+}
+
+std::pair<int, int> REHex::MultiSplitter::GetDividedSashSize() const
+{
+	int sash_size1 = m_sash_size / 2;
+	int sash_size2 = (m_sash_size / 2) + (m_sash_size % 2);
+	
+	return std::make_pair(sash_size1, sash_size2);
 }
 
 void REHex::MultiSplitter::SetSashSize(int sash_size)
@@ -495,7 +503,7 @@ void REHex::MultiSplitter::OnMouseMotion(wxMouseEvent &event)
 				REHex::MultiSplitterResizeBias a(common_ancestor->GetLeftChild(), Edge::RIGHT);
 				REHex::MultiSplitterResizeBias b(common_ancestor->GetRightChild(), Edge::LEFT);
 				
-				common_ancestor->MoveSplitter(event.GetPosition());
+				common_ancestor->MoveSplitter(event.GetPosition(), false);
 				
 				break;
 			}
@@ -512,7 +520,7 @@ void REHex::MultiSplitter::OnMouseMotion(wxMouseEvent &event)
 				REHex::MultiSplitterResizeBias a(common_ancestor->GetTopChild(), Edge::BOTTOM);
 				REHex::MultiSplitterResizeBias b(common_ancestor->GetBottomChild(), Edge::TOP);
 				
-				common_ancestor->MoveSplitter(event.GetPosition());
+				common_ancestor->MoveSplitter(event.GetPosition(), false);
 				
 				break;
 			}
@@ -1042,10 +1050,8 @@ void REHex::MultiSplitter::Cell::ResizeWindow()
 {
 	assert(m_window != NULL);
 
-	int sash_size = m_splitter->GetSashSize();
-	
-	int sash_size1 = sash_size / 2;
-	int sash_size2 = (sash_size / 2) + (sash_size % 2);
+	int sash_size1, sash_size2;
+	std::tie(sash_size1, sash_size2) = m_splitter->GetDividedSashSize();
 	
 	int wx = m_rect.x;
 	int wy = m_rect.y;
@@ -1081,6 +1087,50 @@ void REHex::MultiSplitter::Cell::ResizeWindow()
 	
 	// wxRect ca = m_window->GetClientRect();
 	// fprintf(stderr, "client x = %d, y = %d, w = %d, h = %d (r = %d, b = %d)\n", ca.GetLeft(), ca.GetTop(), ca.GetWidth(), ca.GetHeight(), ca.GetRight(), ca.GetBottom());
+}
+
+int REHex::MultiSplitter::Cell::GetLeftSashWidth() const
+{
+	if(GetLeftNeighbor() != NULL)
+	{
+		return m_splitter->GetDividedSashSize().second;
+	}
+	else{
+		return 0;
+	}
+}
+
+int REHex::MultiSplitter::Cell::GetRightSashWidth() const
+{
+	if(GetRightNeighbor() != NULL)
+	{
+		return m_splitter->GetDividedSashSize().first;
+	}
+	else{
+		return 0;
+	}
+}
+
+int REHex::MultiSplitter::Cell::GetTopSashHeight() const
+{
+	if(GetTopNeighbor() != NULL)
+	{
+		return m_splitter->GetDividedSashSize().second;
+	}
+	else{
+		return 0;
+	}
+}
+
+int REHex::MultiSplitter::Cell::GetBottomSashHeight() const
+{
+	if(GetBottomNeighbor() != NULL)
+	{
+		return m_splitter->GetDividedSashSize().first;
+	}
+	else{
+		return 0;
+	}
 }
 
 template<typename T> T *REHex::MultiSplitter::Cell::_FindCommonAncestor(T *cell1, T *cell2)
@@ -1182,17 +1232,163 @@ bool REHex::MultiSplitter::Cell::IsHidden() const
 	}
 }
 
+static int ConstraintAdd(int size1, int size2)
+{
+	if(size1 >= 0 && size2 >= 0)
+	{
+		return size1 + size2;
+	}
+	else if(size1 >= 0)
+	{
+		return size1;
+	}
+	else if(size2 >= 0)
+	{
+		return size2;
+	}
+	else{
+		return -1;
+	}
+}
+
+static int ConstraintMin(int size1, int size2)
+{
+	if(size1 >= 0 && size2 >= 0)
+	{
+		return std::min(size1, size2);
+	}
+	else if(size1 >= 0)
+	{
+		return size1;
+	}
+	else if(size2 >= 0)
+	{
+		return size2;
+	}
+	else{
+		return -1;
+	}
+}
+
+static int ConstraintMax(int size1, int size2)
+{
+	if(size1 >= 0 && size2 >= 0)
+	{
+		return std::max(size1, size2);
+	}
+	else if(size1 >= 0)
+	{
+		return size1;
+	}
+	else if(size2 >= 0)
+	{
+		return size2;
+	}
+	else{
+		return -1;
+	}
+}
+
+wxSize REHex::MultiSplitter::Cell::GetMinSize() const
+{
+	if(IsVerticalSplit())
+	{
+		wxSize left_size = m_left->GetMinSize();
+		wxSize right_size = m_right->GetMinSize();
+		
+		return wxSize(
+			ConstraintAdd(left_size.GetWidth(), right_size.GetWidth()),
+			ConstraintMax(left_size.GetHeight(), right_size.GetHeight()));
+	}
+	else if(IsHorizontalSplit())
+	{
+		wxSize top_size = m_top->GetMinSize();
+		wxSize bottom_size = m_bottom->GetMinSize();
+		
+		return wxSize(
+			ConstraintMax(top_size.GetWidth(), bottom_size.GetWidth()),
+			ConstraintAdd(top_size.GetHeight(), bottom_size.GetHeight()));
+	}
+	else{
+		if(m_window->IsShown())
+		{
+			wxSize window_min_size = m_window->GetMinSize();
+			
+			return wxSize(
+				ConstraintAdd(window_min_size.GetWidth(), (GetLeftSashWidth() + GetRightSashWidth())),
+				ConstraintAdd(window_min_size.GetHeight(), (GetTopSashHeight() + GetBottomSashHeight())));
+		}
+		else{
+			/* Window is hidden, no space required. */
+			return wxDefaultSize;
+		}
+	}
+}
+
+wxSize REHex::MultiSplitter::Cell::GetMaxSize() const
+{
+	if(IsVerticalSplit())
+	{
+		wxSize left_size = m_left->GetMaxSize();
+		wxSize right_size = m_right->GetMaxSize();
+		
+		return wxSize(
+			ConstraintAdd(left_size.GetWidth(), right_size.GetWidth()),
+			ConstraintMin(left_size.GetHeight(), right_size.GetHeight()));
+	}
+	else if(IsHorizontalSplit())
+	{
+		wxSize top_size = m_top->GetMaxSize();
+		wxSize bottom_size = m_bottom->GetMaxSize();
+		
+		return wxSize(
+			ConstraintMin(top_size.GetWidth(), bottom_size.GetWidth()),
+			ConstraintAdd(top_size.GetHeight(), bottom_size.GetHeight()));
+	}
+	else{
+		if(m_window->IsShown())
+		{
+			wxSize window_max_size = m_window->GetMaxSize();
+			
+			return wxSize(
+				ConstraintAdd(window_max_size.GetWidth(), (GetLeftSashWidth() + GetRightSashWidth())),
+				ConstraintAdd(window_max_size.GetHeight(), (GetTopSashHeight() + GetBottomSashHeight())));
+		}
+		else{
+			/* Window is hidden, no space required. */
+			return wxDefaultSize;
+		}
+	}
+}
+
 wxRect REHex::MultiSplitter::Cell::GetRect() const
 {
 	return m_rect;
 }
 
-void REHex::MultiSplitter::Cell::MoveSplitter(const wxPoint &point)
+void REHex::MultiSplitter::Cell::MoveSplitter(const wxPoint &point, bool force)
 {
 	if(IsHorizontalSplit())
 	{
 		int top_height = point.y - m_rect.y;
 		int bottom_height = m_rect.GetHeight() - top_height;
+		
+		if(!force)
+		{
+			wxSize top_min_size = m_top->GetMinSize();
+			wxSize bottom_min_size = m_bottom->GetMinSize();
+			
+			wxSize top_max_size = m_top->GetMaxSize();
+			wxSize bottom_max_size = m_bottom->GetMaxSize();
+			
+			if((top_min_size.GetHeight() >= 0 && top_height < top_min_size.GetHeight())
+				|| (bottom_min_size.GetHeight() >= 0 && bottom_height < bottom_min_size.GetHeight())
+				|| (top_max_size.GetHeight() >= 0 && top_height > top_max_size.GetHeight())
+				|| (bottom_max_size.GetHeight() >= 0 && bottom_height > bottom_max_size.GetHeight()))
+			{
+				return;
+			}
+		}
 		
 		m_top->Resize(wxRect(m_rect.x, m_rect.y, m_rect.width, top_height));
 		m_bottom->Resize(wxRect(m_rect.x, (m_rect.y + top_height), m_rect.width, bottom_height));
@@ -1201,6 +1397,23 @@ void REHex::MultiSplitter::Cell::MoveSplitter(const wxPoint &point)
 	{
 		int left_width = point.x - m_rect.x;
 		int right_width = m_rect.GetWidth() - left_width;
+		
+		if(!force)
+		{
+			wxSize left_min_size = m_left->GetMinSize();
+			wxSize right_min_size = m_right->GetMinSize();
+			
+			wxSize left_max_size = m_left->GetMaxSize();
+			wxSize right_max_size = m_right->GetMaxSize();
+			
+			if((left_min_size.GetWidth() >= 0 && left_width < left_min_size.GetWidth())
+				|| (right_min_size.GetWidth() >= 0 && right_width < right_min_size.GetWidth())
+				|| (left_max_size.GetWidth() >= 0 && left_width > left_max_size.GetWidth())
+				|| (right_max_size.GetWidth() >= 0 && right_width > right_max_size.GetWidth()))
+			{
+				return;
+			}
+		}
 		
 		m_left->Resize(wxRect(m_rect.x, m_rect.y, left_width, m_rect.height));
 		m_right->Resize(wxRect((m_rect.x + left_width), m_rect.y, right_width, m_rect.height));
@@ -1514,8 +1727,18 @@ const REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetBottomChild() c
 
 REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetLeftNeighbor()
 {
-	const Cell *child = this;
-	const Cell *parent = GetParent();
+	return _GetLeftNeighbor(this);
+}
+
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetLeftNeighbor() const
+{
+	return _GetLeftNeighbor(this);
+}
+
+template<typename T> T *REHex::MultiSplitter::Cell::_GetLeftNeighbor(T *cell)
+{
+	T *child = cell;
+	T *parent = cell->GetParent();
 
 	while(parent != NULL)
 	{
@@ -1533,8 +1756,18 @@ REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetLeftNeighbor()
 
 REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetRightNeighbor()
 {
-	const Cell *child = this;
-	const Cell *parent = GetParent();
+	return _GetRightNeighbor(this);
+}
+
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetRightNeighbor() const
+{
+	return _GetRightNeighbor(this);
+}
+
+template<typename T> T *REHex::MultiSplitter::Cell::_GetRightNeighbor(T *cell)
+{
+	T *child = cell;
+	T *parent = cell->GetParent();
 
 	while(parent != NULL)
 	{
@@ -1552,8 +1785,18 @@ REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetRightNeighbor()
 
 REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetTopNeighbor()
 {
-	const Cell *child = this;
-	const Cell *parent = GetParent();
+	return _GetTopNeighbor(this);
+}
+
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetTopNeighbor() const
+{
+	return _GetTopNeighbor(this);
+}
+
+template<typename T> T *REHex::MultiSplitter::Cell::_GetTopNeighbor(T *cell)
+{
+	T *child = cell;
+	T *parent = cell->GetParent();
 
 	while(parent != NULL)
 	{
@@ -1571,8 +1814,18 @@ REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetTopNeighbor()
 
 REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetBottomNeighbor()
 {
-	const Cell *child = this;
-	const Cell *parent = GetParent();
+	return _GetBottomNeighbor(this);
+}
+
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::Cell::GetBottomNeighbor() const
+{
+	return _GetBottomNeighbor(this);
+}
+
+template<typename T> T *REHex::MultiSplitter::Cell::_GetBottomNeighbor(T *cell)
+{
+	T *child = cell;
+	T *parent = cell->GetParent();
 
 	while(parent != NULL)
 	{

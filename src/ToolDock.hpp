@@ -58,6 +58,8 @@ namespace REHex
 					virtual bool RemovePage(size_t page) override;
 					virtual int ChangeSelection(size_t page) override;
 					
+					virtual wxSize GetMinSize() const override;
+					
 				private:
 					/**
 					 * @brief Update the visible flag of each tool in this notebook.

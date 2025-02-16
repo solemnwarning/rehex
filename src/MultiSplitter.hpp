@@ -79,7 +79,7 @@ namespace REHex
 			
 			public:
 				Cell(const MultiSplitter *splitter, Cell *parent, wxWindow *window);
-			
+				
 				/**
 				 * @brief Set the "weight" of the cell.
 				 *
@@ -93,12 +93,12 @@ namespace REHex
 				 * other cells will grow/shrink as necessary.
 				*/
 				void SetWeight(float weight);
-			
+				
 				/**
 				 * @brief Get the weight of the cell.
 				*/
 				float GetWeight() const;
-			
+				
 				/**
 				 * @brief Get the effective horizontal weight of the cell.
 				 *
@@ -159,31 +159,32 @@ namespace REHex
 				 * @see REHex::MultiSplitter::SetWindowDragBorder.
 				*/
 				int GetDragBorderBottom() const;
-			
+				
 				/**
 				 * @brief Reposition and resize the cell.
 				 *
 				 * @param rect New screen area within the wxExSplitter
 				*/
 				void Resize(const wxRect &rect);
-			
+				
 				/**
 				 * @brief Get the screen area of the cell.
 				 *
 				 * @return Screen area of the cell relative to the wxExSplitter window.
 				*/
 				wxRect GetRect() const;
-			
+				
 				/**
 				 * @brief Move the splitter of a split cell.
 				 *
 				 * @brief point  Point within the wxExSplitter window.
+				 * @brief force  Override window size constraints.
 				 *
 				 * Moves the splitter of a split cell by repositioning and resizing
 				 * the cells on each side of the split.
 				*/
-				void MoveSplitter(const wxPoint &point);
-			
+				void MoveSplitter(const wxPoint &point, bool force);
+				
 				/**
 				 * @brief Split the cell horizontally.
 				 *
@@ -194,7 +195,7 @@ namespace REHex
 				 * hierarchy.
 				*/
 				void SplitHorizontally(wxWindow *window_top, wxWindow *window_bottom);
-			
+				
 				/**
 				 * @brief Split the cell vertically.
 				 *
@@ -205,7 +206,7 @@ namespace REHex
 				 * hierarchy.
 				*/
 				void SplitVertically(wxWindow *window_left, wxWindow *window_right);
-			
+				
 				/**
 				 * @brief Remove one of the immediate child cells from a split cell.
 				 *
@@ -399,8 +400,38 @@ namespace REHex
 				 * @brief Check if all windows under this cell are hidden.
 				*/
 				bool IsHidden() const;
-			
+				
+				/**
+				 * @brief Get the minimum screen size for this cell and any children.
+				*/
+				wxSize GetMinSize() const;
+				
+				/**
+				 * @brief Get the maximum screen size for this cell and any children.
+				*/
+				wxSize GetMaxSize() const;
+				
 			private:
+				/**
+				 * @brief const-agnostic implementation of GetLeftNeighbor().
+				*/
+				template<typename T> static T *_GetLeftNeighbor(T *cell);
+				
+				/**
+				 * @brief const-agnostic implementation of GetRightNeighbor().
+				*/
+				template<typename T> static T *_GetRightNeighbor(T *cell);
+				
+				/**
+				 * @brief const-agnostic implementation of GetTopNeighbor().
+				*/
+				template<typename T> static T *_GetTopNeighbor(T *cell);
+				
+				/**
+				 * @brief const-agnostic implementation of GetBottomNeighbor().
+				*/
+				template<typename T> static T *_GetBottomNeighbor(T *cell);
+				
 				/**
 				 * @brief const-agnostic implementation of FindCommonAncestor().
 				*/
@@ -418,6 +449,26 @@ namespace REHex
 				
 				void CalculateResize(int *size_lt, int *size_rb, float weight_lt, float weight_rb, int delta, int target);
 				void ResizeWindow();
+				
+				/**
+				 * @brief Get the space inside the left edge of this cell for the sash.
+				*/
+				int GetLeftSashWidth() const;
+				
+				/**
+				 * @brief Get the space inside the right edge of this cell for the sash.
+				*/
+				int GetRightSashWidth() const;
+				
+				/**
+				 * @brief Get the space inside the top edge of this cell for the sash.
+				*/
+				int GetTopSashHeight() const;
+				
+				/**
+				 * @brief Get the space inside the bottom edge of this cell for the sash.
+				*/
+				int GetBottomSashHeight() const;
 			};
 			
 		private:
@@ -512,6 +563,14 @@ namespace REHex
 			 * @brief Get the configured sash size in pixels.
 			*/
 			int GetSashSize() const;
+			
+			/**
+			 * @brief Get the sash size in two halves.
+			 *
+			 * This method returns the sash size divided into two not necessarily
+			 * equal halves to account for truncation.
+			*/
+			std::pair<int, int> GetDividedSashSize() const;
 	
 			/**
 			 * @brief Set the configured sash size in pixels.

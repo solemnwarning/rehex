@@ -624,9 +624,36 @@ namespace REHex
 			*/
 			void SetSashSize(int sash_size);
 			
+			/**
+			 * @brief Find the Cell object for a child of the splitter.
+			*/
+			const Cell *FindCellByWindow(wxWindow *window) const;
+			
+			/**
+			 * @brief Find the deepest cell covering a point in the splitter's client area.
+			*/
+			const Cell *FindCellByPoint(const wxPoint &point) const;
+			
 		private:
-			Cell *FindCellByWindow(wxWindow *window);
-			Cell *FindCellByPoint(const wxPoint &point);
+			/**
+			 * @brief Find the Cell object for a child of the splitter.
+			*/
+			Cell *_FindCellByWindow(wxWindow *window);
+			
+			/**
+			 * @brief const-agnostic implementation of FindCellByWindow().
+			*/
+			template<typename T> static T *_FindCellByWindow(T *cell, wxWindow *window);
+			
+			/**
+			 * @brief Find the deepest cell covering a point in the splitter's client area.
+			*/
+			Cell *_FindCellByPoint(const wxPoint &point);
+			
+			/**
+			 * @brief const-agnostic implementation of FindCellByPoint().
+			*/
+			template<typename T> static T *_FindCellByPoint(T *cell, const wxPoint &point);
 			
 			/**
 			 * @brief Remove all child windows from the splitter without destroying them.

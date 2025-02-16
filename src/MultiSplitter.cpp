@@ -67,10 +67,10 @@ void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base, float wei
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddLeftOf() must be different windows");
 	
-	Cell *base_cell = FindCellByWindow(base);
+	Cell *base_cell = _FindCellByWindow(base);
 	wxASSERT_MSG((base_cell != NULL), "Base window passed to REHex::MultiSplitter::AddLeftOf() has not been added to MultiSplitter");
 	
-	Cell *window_cell = FindCellByWindow(window);
+	Cell *window_cell = _FindCellByWindow(window);
 	assert(window_cell == NULL || window_cell != base_cell);
 	
 	if(window_cell != NULL)
@@ -83,7 +83,7 @@ void REHex::MultiSplitter::AddLeftOf(wxWindow *window, wxWindow *base, float wei
 		window_parent_cell->RemoveChild(window);
 		
 		/* base_cell may be invalid now. */
-		base_cell = FindCellByWindow(base);
+		base_cell = _FindCellByWindow(base);
 		assert(base_cell != NULL);
 	}
 	
@@ -102,10 +102,10 @@ void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base, float we
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddRightOf() must be different windows");
 	
-	Cell *base_cell = FindCellByWindow(base);
+	Cell *base_cell = _FindCellByWindow(base);
 	wxASSERT_MSG((base_cell != NULL), "Base window passed to REHex::MultiSplitter::AddRightOf() has not been added to MultiSplitter");
 	
-	Cell *window_cell = FindCellByWindow(window);
+	Cell *window_cell = _FindCellByWindow(window);
 	assert(window_cell == NULL || window_cell != base_cell);
 	
 	if(window_cell != NULL)
@@ -118,7 +118,7 @@ void REHex::MultiSplitter::AddRightOf(wxWindow *window, wxWindow *base, float we
 		window_parent_cell->RemoveChild(window);
 		
 		/* base_cell may be invalid now. */
-		base_cell = FindCellByWindow(base);
+		base_cell = _FindCellByWindow(base);
 		assert(base_cell != NULL);
 	}
 	
@@ -137,10 +137,10 @@ void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base, float weig
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddAbove() must be different windows");
 	
-	Cell *base_cell = FindCellByWindow(base);
+	Cell *base_cell = _FindCellByWindow(base);
 	wxASSERT_MSG((base_cell != NULL), "Base window passed to REHex::MultiSplitter::AddAbove() has not been added to MultiSplitter");
 	
-	Cell *window_cell = FindCellByWindow(window);
+	Cell *window_cell = _FindCellByWindow(window);
 	assert(window_cell == NULL || window_cell != base_cell);
 	
 	if(window_cell != NULL)
@@ -153,7 +153,7 @@ void REHex::MultiSplitter::AddAbove(wxWindow *window, wxWindow *base, float weig
 		window_parent_cell->RemoveChild(window);
 		
 		/* base_cell may be invalid now. */
-		base_cell = FindCellByWindow(base);
+		base_cell = _FindCellByWindow(base);
 		assert(base_cell != NULL);
 	}
 	
@@ -172,10 +172,10 @@ void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base, float weig
 	wxASSERT_MSG((window->GetParent() == this), "Windows added to a MultiSplitter must be direct children");
 	wxASSERT_MSG((window != base), "window and base passed to REHex::MultiSplitter::AddBelow() must be different windows");
 	
-	Cell *base_cell = FindCellByWindow(base);
+	Cell *base_cell = _FindCellByWindow(base);
 	wxASSERT_MSG((base_cell != NULL), "Base window passed to REHex::MultiSplitter::AddBelow() has not been added to MultiSplitter");
 	
-	Cell *window_cell = FindCellByWindow(window);
+	Cell *window_cell = _FindCellByWindow(window);
 	assert(window_cell == NULL || window_cell != base_cell);
 	
 	if(window_cell != NULL)
@@ -188,7 +188,7 @@ void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base, float weig
 		window_parent_cell->RemoveChild(window);
 		
 		/* base_cell may be invalid now. */
-		base_cell = FindCellByWindow(base);
+		base_cell = _FindCellByWindow(base);
 		assert(base_cell != NULL);
 	}
 	
@@ -204,7 +204,7 @@ void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base, float weig
 
 void REHex::MultiSplitter::RemoveChild(wxWindow *window)
 {
-	Cell *cell = FindCellByWindow(window);
+	Cell *cell = _FindCellByWindow(window);
 	wxASSERT_MSG((cell != NULL), "Unknown window passed to REHex::MultiSplitter::RemoveChild()");
 	
 	if(cell != NULL)
@@ -256,13 +256,13 @@ void REHex::MultiSplitter::DestroyChild(wxWindow *window)
 
 wxWindow *REHex::MultiSplitter::FindChildByPoint(const wxPoint &point)
 {
-	Cell *cell = FindCellByPoint(point);
+	Cell *cell = _FindCellByPoint(point);
 	return cell != NULL ? cell->GetWindow() : NULL;
 }
 
 void REHex::MultiSplitter::SetWindowWeight(wxWindow *window, float weight)
 {
-	Cell *cell = FindCellByWindow(window);
+	Cell *cell = _FindCellByWindow(window);
 	assert(cell != NULL);
 	
 	cell->SetWeight(weight);
@@ -270,7 +270,7 @@ void REHex::MultiSplitter::SetWindowWeight(wxWindow *window, float weight)
 
 void REHex::MultiSplitter::SetWindowDragBorder(wxWindow *window, int drag_border_all)
 {
-	Cell *cell = FindCellByWindow(window);
+	Cell *cell = _FindCellByWindow(window);
 	assert(cell != NULL);
 	
 	cell->SetDragBorder(drag_border_all, drag_border_all, drag_border_all, drag_border_all);
@@ -278,7 +278,7 @@ void REHex::MultiSplitter::SetWindowDragBorder(wxWindow *window, int drag_border
 
 void REHex::MultiSplitter::SetWindowDragBorder(wxWindow *window, int drag_border_left, int drag_border_right, int drag_border_top, int drag_border_bottom)
 {
-	Cell *cell = FindCellByWindow(window);
+	Cell *cell = _FindCellByWindow(window);
 	assert(cell != NULL);
 	
 	cell->SetDragBorder(drag_border_left, drag_border_right, drag_border_top, drag_border_bottom);
@@ -286,7 +286,7 @@ void REHex::MultiSplitter::SetWindowDragBorder(wxWindow *window, int drag_border
 
 void REHex::MultiSplitter::SetWindowSize(wxWindow *window, const wxSize &size)
 {
-	Cell *cell = FindCellByWindow(window);
+	Cell *cell = _FindCellByWindow(window);
 	assert(cell != NULL);
 	
 	int sash_size1, sash_size2;
@@ -387,75 +387,89 @@ void REHex::MultiSplitter::SetSashSize(int sash_size)
 	}
 }
 
-REHex::MultiSplitter::Cell *REHex::MultiSplitter::FindCellByWindow(wxWindow *window)
+REHex::MultiSplitter::Cell *REHex::MultiSplitter::_FindCellByWindow(wxWindow *window)
 {
-	std::function<Cell*(Cell*)> f;
-	f = [&](Cell *cell)
-	{
-		if(cell == NULL)
-		{
-			return (Cell*)(NULL);
-		}
-		
-		if(cell->GetWindow() == window)
-		{
-			return cell;
-		}
-		
-		Cell *c = f(cell->GetLeftChild());
-		if(c != NULL) return c;
-		
-		c = f(cell->GetRightChild());
-		if(c != NULL) return c;
-		
-		c = f(cell->GetTopChild());
-		if(c != NULL) return c;
-		
-		c = f(cell->GetBottomChild());
-		if(c != NULL) return c;
-		
-		return (Cell*)(NULL);
-	};
-	
-	return f(m_cells.get());
+	return _FindCellByWindow(m_cells.get(), window);
 }
 
-REHex::MultiSplitter::Cell *REHex::MultiSplitter::FindCellByPoint(const wxPoint &point)
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::FindCellByWindow(wxWindow *window) const
 {
-	std::function<Cell*(Cell*)> f;
-	f = [&](Cell *cell)
+	return _FindCellByWindow(m_cells.get(), window);
+}
+
+template<typename T> T *REHex::MultiSplitter::_FindCellByWindow(T *cell, wxWindow *window)
+{
+	if(cell == NULL)
 	{
-		if(cell == NULL)
-		{
-			return (Cell*)(NULL);
-		}
-		
-		if(!cell->GetRect().Contains(point))
-		{
-			return (Cell*)(NULL);
-		}
-		
-		if(cell->GetWindow() != NULL)
+		return NULL;
+	}
+	
+	if(cell->IsWindow() && cell->GetWindow() == window)
+	{
+		return cell;
+	}
+	
+	Cell *c = _FindCellByWindow(cell->GetLeftChild(), window);
+	if(c != NULL) return c;
+	
+	c = _FindCellByWindow(cell->GetRightChild(), window);
+	if(c != NULL) return c;
+	
+	c = _FindCellByWindow(cell->GetTopChild(), window);
+	if(c != NULL) return c;
+	
+	c = _FindCellByWindow(cell->GetBottomChild(), window);
+	if(c != NULL) return c;
+	
+	return NULL;
+}
+
+REHex::MultiSplitter::Cell *REHex::MultiSplitter::_FindCellByPoint(const wxPoint &point)
+{
+	return _FindCellByPoint(m_cells.get(), point);
+}
+
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::FindCellByPoint(const wxPoint &point) const
+{
+	return _FindCellByPoint(m_cells.get(), point);
+}
+
+template<typename T> T *REHex::MultiSplitter::_FindCellByPoint(T *cell, const wxPoint &point)
+{
+	if(cell == NULL)
+	{
+		return NULL;
+	}
+	
+	if(!cell->GetRect().Contains(point))
+	{
+		return NULL;
+	}
+	
+	if(cell->IsWindow())
+	{
+		if(cell->GetWindow()->IsShown())
 		{
 			return cell;
 		}
-		
-		Cell *c = f(cell->GetLeftChild());
-		if(c != NULL) return c;
-		
-		c = f(cell->GetRightChild());
-		if(c != NULL) return c;
-		
-		c = f(cell->GetTopChild());
-		if(c != NULL) return c;
-		
-		c = f(cell->GetBottomChild());
-		if(c != NULL) return c;
-		
-		return (Cell*)(NULL);
-	};
+		else{
+			return NULL;
+		}
+	}
 	
-	return f(m_cells.get());
+	Cell *c = _FindCellByPoint(cell->GetLeftChild(), point);
+	if(c != NULL) return c;
+	
+	c = _FindCellByPoint(cell->GetRightChild(), point);
+	if(c != NULL) return c;
+	
+	c = _FindCellByPoint(cell->GetTopChild(), point);
+	if(c != NULL) return c;
+	
+	c = _FindCellByPoint(cell->GetBottomChild(), point);
+	if(c != NULL) return c;
+	
+	return NULL;
 }
 
 void REHex::MultiSplitter::BeginResize(Cell *cell, Edge edge)
@@ -527,7 +541,7 @@ void REHex::MultiSplitter::OnMouseMotion(wxMouseEvent &event)
 		}
 	}
 	else{
-		Cell *cell = FindCellByPoint(event.GetPosition());
+		Cell *cell = _FindCellByPoint(event.GetPosition());
 		
 		wxCursor cursor = wxNullCursor;
 		
@@ -558,7 +572,7 @@ void REHex::MultiSplitter::OnMouseMotion(wxMouseEvent &event)
 
 void REHex::MultiSplitter::OnMouseLeftDown(wxMouseEvent &event)
 {
-	Cell *cell = FindCellByPoint(event.GetPosition());
+	Cell *cell = _FindCellByPoint(event.GetPosition());
 	assert(cell != NULL);
 	
 	if(cell != NULL)
@@ -607,7 +621,7 @@ void REHex::MultiSplitter::OnChildMouseMotion(wxMouseEvent &event)
 {
 	wxWindow *child_window = (wxWindow*)(event.GetEventObject());
 	
-	Cell *cell = FindCellByWindow(child_window);
+	Cell *cell = _FindCellByWindow(child_window);
 	assert(cell != NULL);
 	
 	if(cell != NULL)
@@ -677,7 +691,7 @@ void REHex::MultiSplitter::OnChildMouseLeftDown(wxMouseEvent &event)
 {
 	wxWindow *child_window = (wxWindow*)(event.GetEventObject());
 	
-	Cell *cell = FindCellByWindow(child_window);
+	Cell *cell = _FindCellByWindow(child_window);
 	assert(cell != NULL);
 	
 	if(cell != NULL)

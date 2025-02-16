@@ -305,6 +305,54 @@ TEST_F(MultiSplitterTestHorizontalLayout, NeighborSearchHidden)
 	EXPECT_EQ(left_cell->GetRightNeighbor(), nullptr);
 }
 
+TEST_F(MultiSplitterTestHorizontalLayout, FindCellByWindow)
+{
+	EXPECT_EQ(m_splitter->FindCellByWindow(left_panel), left_cell);
+	EXPECT_EQ(m_splitter->FindCellByWindow(middle_panel), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByWindow(right_panel), right_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByWindow(NULL), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByWindow(m_frame), nullptr);
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, FindCellByPoint)
+{
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 0)), left_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(511, 0)), left_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 767)), left_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(511, 767)), left_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(512, 0)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(767, 0)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(512, 767)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(767, 767)), middle_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(768, 0)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 0)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(768, 767)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 767)), right_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(-1, 0)), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, -1)), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1024, 0)), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 768)), nullptr);
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, FindCellByPointHiddenWindow)
+{
+	middle_panel->Hide();
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(512, 0)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(767, 0)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(512, 767)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(767, 767)), right_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(768, 0)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 0)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(768, 767)), right_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 767)), right_cell);
+}
+
 TEST_F(MultiSplitterTestVerticalLayout, NeighborSearch)
 {
 	/* Test the neighbor search methods. */
@@ -395,4 +443,52 @@ TEST_F(MultiSplitterTestVerticalLayout, NeighborSearchHidden)
 	bottom_panel->Hide();
 	
 	EXPECT_EQ(top_cell->GetBottomNeighbor(), nullptr);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, FindCellByWindow)
+{
+	EXPECT_EQ(m_splitter->FindCellByWindow(top_panel), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByWindow(middle_panel), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByWindow(bottom_panel), bottom_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByWindow(NULL), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByWindow(m_frame), nullptr);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, FindCellByPoint)
+{
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 0)), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 0)), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 191)), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 191)), top_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 192)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 192)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 383)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 383)), middle_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 384)), bottom_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 384)), bottom_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 767)), bottom_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 767)), bottom_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(-1, 0)), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, -1)), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1024, 0)), nullptr);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 768)), nullptr);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, FindCellByPointHiddenWindow)
+{
+	bottom_panel->Hide();
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 0)), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 0)), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 383)), top_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 383)), top_cell);
+	
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 384)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 384)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(0, 767)), middle_cell);
+	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 767)), middle_cell);
 }

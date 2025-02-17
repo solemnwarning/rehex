@@ -625,6 +625,11 @@ namespace REHex
 			void SetSashSize(int sash_size);
 			
 			/**
+			 * @brief Get the Cell at the root of the splitter hierarchy.
+			*/
+			const Cell *GetRootCell() const;
+			
+			/**
 			 * @brief Find the Cell object for a child of the splitter.
 			*/
 			const Cell *FindCellByWindow(wxWindow *window) const;

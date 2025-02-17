@@ -387,6 +387,11 @@ void REHex::MultiSplitter::SetSashSize(int sash_size)
 	}
 }
 
+const REHex::MultiSplitter::Cell *REHex::MultiSplitter::GetRootCell() const
+{
+	return m_cells.get();
+}
+
 REHex::MultiSplitter::Cell *REHex::MultiSplitter::_FindCellByWindow(wxWindow *window)
 {
 	return _FindCellByWindow(m_cells.get(), window);
@@ -1334,7 +1339,7 @@ wxSize REHex::MultiSplitter::Cell::GetMinSize() const
 		}
 		else{
 			/* Window is hidden, no space required. */
-			return wxDefaultSize;
+			return wxSize(0, 0);
 		}
 	}
 }
@@ -1343,21 +1348,47 @@ wxSize REHex::MultiSplitter::Cell::GetMaxSize() const
 {
 	if(IsVerticalSplit())
 	{
+		if(m_left->IsHidden())
+		{
+			return m_right->GetMaxSize();
+		}
+		else if(m_right->IsHidden())
+		{
+			return m_left->GetMaxSize();
+		}
+		
 		wxSize left_size = m_left->GetMaxSize();
 		wxSize right_size = m_right->GetMaxSize();
 		
-		return wxSize(
-			ConstraintAdd(left_size.GetWidth(), right_size.GetWidth()),
-			ConstraintMin(left_size.GetHeight(), right_size.GetHeight()));
+		int max_width = left_size.GetWidth() >= 0 && right_size.GetWidth() >= 0
+			? left_size.GetWidth() + right_size.GetWidth()
+			: -1;
+		
+		int max_height = ConstraintMin(left_size.GetHeight(), right_size.GetHeight());
+		
+		return wxSize(max_width, max_height);
 	}
 	else if(IsHorizontalSplit())
 	{
+		if(m_top->IsHidden())
+		{
+			return m_bottom->GetMaxSize();
+		}
+		else if(m_bottom->IsHidden())
+		{
+			return m_top->GetMaxSize();
+		}
+		
 		wxSize top_size = m_top->GetMaxSize();
 		wxSize bottom_size = m_bottom->GetMaxSize();
 		
-		return wxSize(
-			ConstraintMin(top_size.GetWidth(), bottom_size.GetWidth()),
-			ConstraintAdd(top_size.GetHeight(), bottom_size.GetHeight()));
+		int max_width = ConstraintMin(top_size.GetWidth(), bottom_size.GetWidth());
+		
+		int max_height = top_size.GetHeight() >= 0 && bottom_size.GetHeight() >= 0
+			? top_size.GetHeight() + bottom_size.GetHeight()
+			: -1;
+		
+		return wxSize(max_width, max_height);
 	}
 	else{
 		if(m_window->IsShown())
@@ -1374,7 +1405,7 @@ wxSize REHex::MultiSplitter::Cell::GetMaxSize() const
 				window_max_size.SetHeight(window_max_size.GetHeight() + GetTopSashHeight() + GetBottomSashHeight());
 			}
 			
-			return wxSize(window_max_size);
+			return window_max_size;
 		}
 		else{
 			/* Window is hidden, no space required. */

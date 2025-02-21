@@ -74,9 +74,9 @@ protected:
 	wxPanel *middle_panel;
 	wxPanel *right_panel;
 	
-	Cell *left_cell;
-	Cell *middle_cell;
-	Cell *right_cell;
+	const Cell *left_cell;
+	const Cell *middle_cell;
+	const Cell *right_cell;
 	
 public:
 	virtual void SetUp() override
@@ -153,9 +153,9 @@ protected:
 	wxPanel *middle_panel;
 	wxPanel *bottom_panel;
 	
-	Cell *top_cell;
-	Cell *middle_cell;
-	Cell *bottom_cell;
+	const Cell *top_cell;
+	const Cell *middle_cell;
+	const Cell *bottom_cell;
 	
 public:
 	virtual void SetUp() override
@@ -393,6 +393,102 @@ TEST_F(MultiSplitterTestHorizontalLayout, GetMinSize)
 	EXPECT_EQ(m_splitter->GetRootCell()->GetMinSize(), wxSize(205, 300));
 }
 
+TEST_F(MultiSplitterTestHorizontalLayout, GetMaxSize)
+{
+	/* With no maximum sizes set, each cell should have an unlimited max size. */
+	
+	left_panel->SetMaxSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	right_panel->SetMaxSize(wxDefaultSize);
+	
+	EXPECT_EQ(left_cell->GetMaxSize(), wxDefaultSize);
+	EXPECT_EQ(middle_cell->GetMaxSize(), wxDefaultSize);
+	EXPECT_EQ(right_cell->GetMaxSize(), wxDefaultSize);
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMaxSize(), wxDefaultSize);
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMaxSize(), wxDefaultSize);
+	
+	/* Now we set a maximum size on two siblings, they have a maximum size of their windows
+	 * plus sash, the direct parent has a maximum size of their sum and the root cell only has
+	 * to limit size on the non-resizable axis because the remaining unconstrained window can
+	 * take any extra height.
+	*/
+	
+	middle_panel->SetMaxSize(wxSize(100, 300));
+	right_panel->SetMaxSize(wxSize(200, 200));
+	
+	EXPECT_EQ(left_cell->GetMaxSize(), wxDefaultSize);
+	EXPECT_EQ(middle_cell->GetMaxSize(), wxSize(105, 300));
+	EXPECT_EQ(right_cell->GetMaxSize(), wxSize(203, 200));
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMaxSize(), wxSize(308, 200));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMaxSize(), wxSize(-1, 200));
+	
+	/* Constrain the width of the remaining window, the root cell should then have a max size
+	 * of all windows and sashes combined but no additional constraint on the width.
+	*/
+	
+	left_panel->SetMaxSize(wxSize(50, -1));
+	
+	EXPECT_EQ(left_cell->GetMaxSize(), wxSize(52, -1));
+	EXPECT_EQ(middle_cell->GetMaxSize(), wxSize(105, 300));
+	EXPECT_EQ(right_cell->GetMaxSize(), wxSize(203, 200));
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMaxSize(), wxSize(308, 200));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMaxSize(), wxSize(360, 200));
+	
+	/* Constrain the height of left_panel and unconstrain the height of the others. */
+	
+	left_panel->SetMaxSize(wxSize(50, 300));
+	middle_panel->SetMaxSize(wxSize(100, -1));
+	right_panel->SetMaxSize(wxSize(200, -1));
+	
+	EXPECT_EQ(left_cell->GetMaxSize(), wxSize(52, 300));
+	EXPECT_EQ(middle_cell->GetMaxSize(), wxSize(105, -1));
+	EXPECT_EQ(right_cell->GetMaxSize(), wxSize(203, -1));
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMaxSize(), wxSize(308, -1));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMaxSize(), wxSize(360, 300));
+	
+	/* Check hiding a window takes it out of play. */
+	
+	right_panel->Hide();
+	
+	EXPECT_EQ(left_cell->GetMaxSize(), wxSize(52, 300));
+	EXPECT_EQ(middle_cell->GetMaxSize(), wxSize(103, -1));
+	EXPECT_EQ(right_cell->GetMaxSize(), wxDefaultSize);
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMaxSize(), wxSize(103, -1));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMaxSize(), wxSize(155, 300));
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ReAddChild)
+{
+	m_splitter->AddLeftOf(right_panel, left_panel);
+	m_splitter->AddRightOf(left_panel, middle_panel);
+	
+	left_cell = m_splitter->FindCellByWindow(left_panel);
+	middle_cell = m_splitter->FindCellByWindow(middle_panel);
+	right_cell = m_splitter->FindCellByWindow(right_panel);
+	
+	/* New layout:
+	 *
+	 * +-------------+--------------------------------+
+	 * |             | +---------------+------------+ |
+	 * | right_panel | |  middle_panel | left_panel | |
+	 * |             | +---------------+------------+ |
+	 * +-------------+--------------------------------+
+	*/
+	
+	const Cell *root = m_splitter->GetRootCell();
+	
+	EXPECT_EQ(root->GetLeftChild(), right_cell);
+	
+	ASSERT_NE(root->GetRightChild(), nullptr);
+	EXPECT_EQ(root->GetRightChild()->GetLeftChild(), middle_cell);
+	EXPECT_EQ(root->GetRightChild()->GetRightChild(), left_cell);
+}
+
 TEST_F(MultiSplitterTestVerticalLayout, NeighborSearch)
 {
 	/* Test the neighbor search methods. */
@@ -533,6 +629,46 @@ TEST_F(MultiSplitterTestVerticalLayout, FindCellByPointHiddenWindow)
 	EXPECT_EQ(m_splitter->FindCellByPoint(wxPoint(1023, 767)), middle_cell);
 }
 
+TEST_F(MultiSplitterTestVerticalLayout, GetMinSize)
+{
+	/* With no minimum sizes set, each cell's minimum size accomodate the sashes. */
+	
+	top_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMinSize(wxDefaultSize);
+	bottom_panel->SetMinSize(wxDefaultSize);
+	
+	EXPECT_EQ(top_cell->GetMinSize(), wxSize(0, 2));
+	EXPECT_EQ(middle_cell->GetMinSize(), wxSize(0, 5));
+	EXPECT_EQ(bottom_cell->GetMinSize(), wxSize(0, 3));
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMinSize(), wxSize(0, 7));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMinSize(), wxSize(0, 10));
+	
+	/* Now try with minimum sizes on the windows... */
+	
+	top_panel->SetMinSize(wxSize(100, 300));
+	middle_panel->SetMinSize(wxSize(200, 200));
+	bottom_panel->SetMinSize(wxSize(100, 100));
+	
+	EXPECT_EQ(top_cell->GetMinSize(), wxSize(100, 302));
+	EXPECT_EQ(middle_cell->GetMinSize(), wxSize(200, 205));
+	EXPECT_EQ(bottom_cell->GetMinSize(), wxSize(100, 103));
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMinSize(), wxSize(200, 507));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMinSize(), wxSize(200, 610));
+	
+	/* Check hiding a window takes it out of play. */
+	
+	middle_panel->Hide();
+	
+	EXPECT_EQ(top_cell->GetMinSize(), wxSize(100, 302));
+	EXPECT_EQ(middle_cell->GetMinSize(), wxSize(0, 0));
+	EXPECT_EQ(bottom_cell->GetMinSize(), wxSize(100, 103));
+	
+	EXPECT_EQ(middle_cell->GetParent()->GetMinSize(), wxSize(100, 302));
+	EXPECT_EQ(m_splitter->GetRootCell()->GetMinSize(), wxSize(100, 405));
+}
+
 TEST_F(MultiSplitterTestVerticalLayout, GetMaxSize)
 {
 	/* With no maximum sizes set, each cell should have an unlimited max size. */
@@ -600,4 +736,35 @@ TEST_F(MultiSplitterTestVerticalLayout, GetMaxSize)
 	
 	EXPECT_EQ(middle_cell->GetParent()->GetMaxSize(), wxSize(-1, 202));
 	EXPECT_EQ(m_splitter->GetRootCell()->GetMaxSize(), wxSize(60, 255));
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ReAddChild)
+{
+	m_splitter->AddAbove(middle_panel, top_panel);
+	m_splitter->AddBelow(top_panel, bottom_panel);
+	
+	top_cell = m_splitter->FindCellByWindow(top_panel);
+	middle_cell = m_splitter->FindCellByWindow(middle_panel);
+	bottom_cell = m_splitter->FindCellByWindow(bottom_panel);
+	
+	/* New layout:
+	 *
+	 * +------------------+
+	 * |   middle_panel   |
+	 * +------------------+
+	 * | +--------------+ |
+	 * | | bottom_panel | |
+	 * | +--------------+ |
+	 * | |   top_panel  | |
+	 * | +--------------+ |
+	 * +------------------+
+	*/
+	
+	const Cell *root = m_splitter->GetRootCell();
+	
+	EXPECT_EQ(root->GetTopChild(), middle_cell);
+	
+	ASSERT_NE(root->GetBottomChild(), nullptr);
+	EXPECT_EQ(root->GetBottomChild()->GetTopChild(), bottom_cell);
+	EXPECT_EQ(root->GetBottomChild()->GetBottomChild(), top_cell);
 }

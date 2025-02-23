@@ -489,6 +489,89 @@ TEST_F(MultiSplitterTestHorizontalLayout, ReAddChild)
 	EXPECT_EQ(root->GetRightChild()->GetRightChild(), left_cell);
 }
 
+TEST_F(MultiSplitterTestHorizontalLayout, ResizeEqualWeights)
+{
+	m_splitter->SetClientSize(wxSize(724, 384));
+	
+	EXPECT_EQ(left_cell->GetRect(), wxRect(0, 0, 412, 384));
+	EXPECT_EQ(left_panel->GetRect(), wxRect(0, 0, 410, 384));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(412, 0, 156, 384));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(415, 0, 151, 384));
+	
+	EXPECT_EQ(right_cell->GetRect(), wxRect(568, 0, 156, 384));
+	EXPECT_EQ(right_panel->GetRect(), wxRect(571, 0, 153, 384));
+	
+	m_splitter->SetClientSize(wxSize(1024, 768));
+	
+	EXPECT_EQ(left_cell->GetRect(), wxRect(0, 0, 512, 768));
+	EXPECT_EQ(left_panel->GetRect(), wxRect(0, 0, 510, 768));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(512, 0, 256, 768));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(515, 0, 251, 768));
+	
+	EXPECT_EQ(right_cell->GetRect(), wxRect(768, 0, 256, 768));
+	EXPECT_EQ(right_panel->GetRect(), wxRect(771, 0, 253, 768));
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ResizeDifferentWeights)
+{
+	m_splitter->SetWindowWeight(left_panel, 0.5f);
+	m_splitter->SetWindowWeight(middle_panel, 0.5f);
+	m_splitter->SetWindowWeight(right_panel, 1.0f);
+	
+	m_splitter->SetClientSize(wxSize(824, 384));
+	
+	EXPECT_EQ(left_cell->GetRect(), wxRect(0, 0, 462, 384));
+	EXPECT_EQ(left_panel->GetRect(), wxRect(0, 0, 460, 384));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(462, 0, 206, 384));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(465, 0, 201, 384));
+	
+	EXPECT_EQ(right_cell->GetRect(), wxRect(668, 0, 156, 384));
+	EXPECT_EQ(right_panel->GetRect(), wxRect(671, 0, 153, 384));
+	
+	m_splitter->SetClientSize(wxSize(1024, 768));
+	
+	EXPECT_EQ(left_cell->GetRect(), wxRect(0, 0, 512, 768));
+	EXPECT_EQ(left_panel->GetRect(), wxRect(0, 0, 510, 768));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(512, 0, 256, 768));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(515, 0, 251, 768));
+	
+	EXPECT_EQ(right_cell->GetRect(), wxRect(768, 0, 256, 768));
+	EXPECT_EQ(right_panel->GetRect(), wxRect(771, 0, 253, 768));
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ResizeZeroWeights)
+{
+	m_splitter->SetWindowWeight(left_panel, 0.0f);
+	m_splitter->SetWindowWeight(middle_panel, 1.0f);
+	m_splitter->SetWindowWeight(right_panel, 1.0f);
+	
+	m_splitter->SetClientSize(wxSize(824, 384));
+	
+	EXPECT_EQ(left_cell->GetRect(), wxRect(0, 0, 512, 384));
+	EXPECT_EQ(left_panel->GetRect(), wxRect(0, 0, 510, 384));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(512, 0, 156, 384));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(515, 0, 151, 384));
+	
+	EXPECT_EQ(right_cell->GetRect(), wxRect(668, 0, 156, 384));
+	EXPECT_EQ(right_panel->GetRect(), wxRect(671, 0, 153, 384));
+	
+	m_splitter->SetClientSize(wxSize(1024, 768));
+	
+	EXPECT_EQ(left_cell->GetRect(), wxRect(0, 0, 512, 768));
+	EXPECT_EQ(left_panel->GetRect(), wxRect(0, 0, 510, 768));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(512, 0, 256, 768));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(515, 0, 251, 768));
+	
+	EXPECT_EQ(right_cell->GetRect(), wxRect(768, 0, 256, 768));
+	EXPECT_EQ(right_panel->GetRect(), wxRect(771, 0, 253, 768));
+}
+
 TEST_F(MultiSplitterTestVerticalLayout, NeighborSearch)
 {
 	/* Test the neighbor search methods. */
@@ -767,4 +850,87 @@ TEST_F(MultiSplitterTestVerticalLayout, ReAddChild)
 	ASSERT_NE(root->GetBottomChild(), nullptr);
 	EXPECT_EQ(root->GetBottomChild()->GetTopChild(), bottom_cell);
 	EXPECT_EQ(root->GetBottomChild()->GetBottomChild(), top_cell);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ResizeEqualWeights)
+{
+	m_splitter->SetClientSize(wxSize(1000, 618));
+	
+	EXPECT_EQ(top_cell->GetRect(), wxRect(0, 0, 1000, 142));
+	EXPECT_EQ(top_panel->GetRect(), wxRect(0, 0, 1000, 140));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(0, 142, 1000, 142));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(0, 145, 1000, 137));
+	
+	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 284, 1000, 334));
+	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 287, 1000, 331));
+	
+	m_splitter->SetClientSize(wxSize(1024, 768));
+	
+	EXPECT_EQ(top_cell->GetRect(), wxRect(0, 0, 1024, 192));
+	EXPECT_EQ(top_panel->GetRect(), wxRect(0, 0, 1024, 190));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(0, 192, 1024, 192));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(0, 195, 1024, 187));
+	
+	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 384, 1024, 384));
+	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 387, 1024, 381));
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ResizeDifferentWeights)
+{
+	m_splitter->SetWindowWeight(top_panel, 0.5f);
+	m_splitter->SetWindowWeight(middle_panel, 0.5f);
+	m_splitter->SetWindowWeight(bottom_panel, 1.0f);
+	
+	m_splitter->SetClientSize(wxSize(1000, 568));
+	
+	EXPECT_EQ(top_cell->GetRect(), wxRect(0, 0, 1000, 142));
+	EXPECT_EQ(top_panel->GetRect(), wxRect(0, 0, 1000, 140));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(0, 142, 1000, 142));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(0, 145, 1000, 137));
+	
+	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 284, 1000, 284));
+	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 287, 1000, 281));
+	
+	m_splitter->SetClientSize(wxSize(1024, 768));
+	
+	EXPECT_EQ(top_cell->GetRect(), wxRect(0, 0, 1024, 192));
+	EXPECT_EQ(top_panel->GetRect(), wxRect(0, 0, 1024, 190));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(0, 192, 1024, 192));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(0, 195, 1024, 187));
+	
+	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 384, 1024, 384));
+	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 387, 1024, 381));
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ResizeZeroWeights)
+{
+	m_splitter->SetWindowWeight(top_panel, 0.0f);
+	m_splitter->SetWindowWeight(middle_panel, 1.0f);
+	m_splitter->SetWindowWeight(bottom_panel, 1.0f);
+	
+	m_splitter->SetClientSize(wxSize(1000, 600));
+	
+	EXPECT_EQ(top_cell->GetRect(), wxRect(0, 0, 1000, 192));
+	EXPECT_EQ(top_panel->GetRect(), wxRect(0, 0, 1000, 190));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(0, 192, 1000, 108));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(0, 195, 1000, 103));
+	
+	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 300, 1000, 300));
+	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 303, 1000, 297));
+	
+	m_splitter->SetClientSize(wxSize(1024, 768));
+	
+	EXPECT_EQ(top_cell->GetRect(), wxRect(0, 0, 1024, 192));
+	EXPECT_EQ(top_panel->GetRect(), wxRect(0, 0, 1024, 190));
+	
+	EXPECT_EQ(middle_cell->GetRect(), wxRect(0, 192, 1024, 192));
+	EXPECT_EQ(middle_panel->GetRect(), wxRect(0, 195, 1024, 187));
+	
+	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 384, 1024, 384));
+	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 387, 1024, 381));
 }

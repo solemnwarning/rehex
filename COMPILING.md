@@ -20,7 +20,7 @@ The following libraries are required for building/running REHex:
  - [Jansson](https://www.digip.org/jansson/)
  - libunistring
  - Lua (5.3+)
- - Template Toolkit (unless help is disabled)
+ - [Template Toolkit](https://template-toolkit.org/) (unless help is disabled)
  - wxWidgets
 
 ## Makefile environment variables

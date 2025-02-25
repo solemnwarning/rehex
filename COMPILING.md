@@ -16,7 +16,7 @@ REHex is compiled using a (GNU) Makefile, most of the common targets (e.g. `all`
 The following libraries are required for building/running REHex:
 
  - [Botan](https://botan.randombit.net/)
- - Capstone
+ - [Capstone](https://www.capstone-engine.org/)
  - Jansson
  - libunistring
  - Lua (5.3+)

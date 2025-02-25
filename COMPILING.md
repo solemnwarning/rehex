@@ -17,7 +17,7 @@ The following libraries are required for building/running REHex:
 
  - [Botan](https://botan.randombit.net/)
  - [Capstone](https://www.capstone-engine.org/)
- - Jansson
+ - [Jansson](https://www.digip.org/jansson/)
  - libunistring
  - Lua (5.3+)
  - Template Toolkit (unless help is disabled)

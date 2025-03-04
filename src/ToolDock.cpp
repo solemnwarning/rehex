@@ -518,7 +518,6 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 				if(dest_notebook->GetPageCount() == 1)
 				{
 					ResetNotebookSize(dest_notebook);
-					dest_notebook->Show();
 				}
 				
 				if(frame != NULL)
@@ -550,38 +549,7 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 				frame->SetPosition(frame_pos);
 				frame->Show();
 				
-				ToolPanel *tool = m_left_down_tool;
-				
-				#if 0
-				frame->Bind(wxEVT_ICONIZE, [this, frame, tool](wxIconizeEvent &event)
-				{
-					if(event.IsIconized())
-					{
-						tool->Reparent(m_right_notebook);
-						m_right_notebook->AddPage(tool, tool->name(), true);
-						
-						m_tool_frames.erase(tool);
-						frame->Destroy();
-					}
-				});
-				#endif
-				
-				frame->Bind(wxEVT_CLOSE_WINDOW, [this, frame, tool](wxCloseEvent &event)
-				{
-					frame->GetSizer()->Detach(tool);
-					tool->Reparent(m_right_notebook);
-
-					m_right_notebook->AddPage(tool, tool->name(), true);
-
-					if(m_right_notebook->GetPageCount() == 1)
-					{
-						ResetNotebookSize(m_right_notebook);
-						m_right_notebook->Show();
-					}
-					
-					m_tool_frames.erase(tool);
-					frame->Destroy();
-				});
+				frame->Bind(wxEVT_CLOSE_WINDOW, &REHex::ToolDock::OnFrameClose, this);
 				
 				m_tool_frames.emplace(m_left_down_tool, frame);
 			}
@@ -589,6 +557,56 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 	}
 	
 	event.Skip();
+}
+
+void REHex::ToolDock::OnFrameClose(wxCloseEvent &event)
+{
+	ToolFrame *frame = (ToolFrame*)(event.GetEventObject());
+	
+	ToolPanel *tool = frame->GetTool();
+	if(tool != NULL)
+	{
+		frame->RemoveTool(tool);
+		
+		ToolNotebook *dest_notebook = NULL;
+		
+		switch(tool->shape())
+		{
+			case ToolPanel::Shape::TPS_WIDE:
+				if(m_bottom_notebook->GetPageCount() > 0 || m_top_notebook->GetPageCount() == 0)
+				{
+					dest_notebook = m_bottom_notebook;
+				}
+				else{
+					dest_notebook = m_top_notebook;
+				}
+				
+				break;
+				
+			case ToolPanel::Shape::TPS_TALL:
+				if(m_right_notebook->GetPageCount() > 0 || m_left_notebook->GetPageCount() == 0)
+				{
+					dest_notebook = m_right_notebook;
+				}
+				else{
+					dest_notebook = m_left_notebook;
+				}
+				
+				break;
+		}
+		
+		tool->Reparent(dest_notebook);
+		dest_notebook->AddPage(tool, tool->label(), true);
+		
+		if(dest_notebook->GetPageCount() == 1)
+		{
+			ResetNotebookSize(dest_notebook);
+		}
+		
+		m_tool_frames.erase(tool);
+	}
+	
+	frame->Destroy();
 }
 
 BEGIN_EVENT_TABLE(REHex::ToolDock::ToolNotebook, wxNotebook)
@@ -603,6 +621,11 @@ bool REHex::ToolDock::ToolNotebook::AddPage(wxWindow *page, const wxString &text
 	bool res = wxNotebook::AddPage(page, text, select, imageId);
 	UpdateToolVisibility();
 	
+	if(GetPageCount() == 1)
+	{
+		Show();
+	}
+	
 	return res;
 }
 
@@ -610,6 +633,11 @@ bool REHex::ToolDock::ToolNotebook::DeletePage(size_t page)
 {
 	bool res = wxNotebook::DeletePage(page);
 	UpdateToolVisibility();
+	
+	if(GetPageCount() == 0)
+	{
+		Hide();
+	}
 	
 	return res;
 }
@@ -619,6 +647,11 @@ bool REHex::ToolDock::ToolNotebook::InsertPage(size_t index, wxWindow *page, con
 	bool res = wxNotebook::InsertPage(index, page, text, select, imageId);
 	UpdateToolVisibility();
 	
+	if(GetPageCount() == 1)
+	{
+		Show();
+	}
+	
 	return res;
 }
 
@@ -626,6 +659,11 @@ bool REHex::ToolDock::ToolNotebook::RemovePage(size_t page)
 {
 	bool res = wxNotebook::RemovePage(page);
 	UpdateToolVisibility();
+	
+	if(GetPageCount() == 0)
+	{
+		Hide();
+	}
 	
 	return res;
 }
@@ -721,15 +759,44 @@ void REHex::ToolDock::ToolNotebook::OnPageChanged(wxNotebookEvent& event)
 }
 
 REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, ToolPanel *tool):
-	wxFrame(parent, wxID_ANY, tool->name(), wxDefaultPosition, wxDefaultSize,
-		(wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW | wxFRAME_FLOAT_ON_PARENT))
+	wxFrame(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		(wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW | wxFRAME_FLOAT_ON_PARENT)),
+	m_tool(NULL)
 {
-	SetClientSize(tool->GetSize());
+	m_sizer = new wxBoxSizer(wxHORIZONTAL);
+	SetSizer(m_sizer);
+	
+	if(tool != NULL)
+	{
+		AdoptTool(tool);
+	}
+}
 
+void REHex::ToolDock::ToolFrame::AdoptTool(ToolPanel *tool)
+{
+	assert(m_tool == NULL);
+	
+	m_tool = tool;
+	
+	SetClientSize(tool->GetSize());
+	
 	tool->Reparent(this);
 	tool->Show();
+	
+	SetTitle(tool->label());
+	m_sizer->Add(tool, 1, wxEXPAND);
+}
 
-	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(tool, 1, wxEXPAND);
-	SetSizer(sizer);
+void REHex::ToolDock::ToolFrame::RemoveTool(ToolPanel *tool)
+{
+	assert(m_tool == tool);
+	
+	m_tool = NULL;
+	
+	m_sizer->Detach(tool);
+}
+
+REHex::ToolPanel *REHex::ToolDock::ToolFrame::GetTool() const
+{
+	return m_tool;
 }

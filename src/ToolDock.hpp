@@ -23,6 +23,7 @@
 #include <wx/config.h>
 #include <wx/event.h>
 #include <wx/notebook.h>
+#include <wx/sizer.h>
 
 #include "MultiSplitter.hpp"
 #include "ToolPanel.hpp"
@@ -47,6 +48,9 @@ namespace REHex
 			void LoadTools(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 		private:
+			/**
+			 * @brief wxNotebook specialisation for holding any tools docked to the main window.
+			*/
 			class ToolNotebook: public wxNotebook
 			{
 				public:
@@ -76,10 +80,30 @@ namespace REHex
 				DECLARE_EVENT_TABLE()
 			};
 			
+			/**
+			 * @brief wxFrame specialisation for holding a detached/floating tool.
+			*/
 			class ToolFrame: public wxFrame
 			{
 				public:
-					ToolFrame(wxWindow *parent, ToolPanel *tool);
+					ToolFrame(wxWindow *parent, ToolPanel *tool = NULL);
+					
+					void AdoptTool(ToolPanel *tool);
+					
+					/**
+					 * @brief Remove the owned tool.
+					 *
+					 * This method must be called to detach the tool from the
+					 * floating frame before it can be re-inserted elsewhere in
+					 * the window heierarchy.
+					*/
+					void RemoveTool(ToolPanel *tool);
+					
+					ToolPanel *GetTool() const;
+					
+				private:
+					wxBoxSizer *m_sizer;
+					ToolPanel *m_tool;
 			};
 			
 			wxWindow *m_main_panel;
@@ -117,6 +141,7 @@ namespace REHex
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			void OnMotion(wxMouseEvent &event);
+			void OnFrameClose(wxCloseEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -109,6 +109,16 @@ REHex::ChecksumPanel::~ChecksumPanel()
 std::string REHex::ChecksumPanel::name() const
 {
 	return "ChecksumPanel";
+}
+
+std::string REHex::ChecksumPanel::label() const
+{
+	return "Checksum";
+}
+
+REHex::ToolPanel::Shape REHex::ChecksumPanel::shape() const
+{
+	return ToolPanel::TPS_WIDE;
 }
 
 void REHex::ChecksumPanel::save_state(wxConfig *config) const {}

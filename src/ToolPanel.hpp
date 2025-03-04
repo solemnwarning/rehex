@@ -73,8 +73,8 @@ namespace REHex {
 			 * to re-create the tool later via the ToolPanelRegistry.
 			*/
 			virtual std::string name() const = 0;
-// 			virtual std::string label() const = 0;
-// 			virtual Shape shape() const = 0;
+			virtual std::string label() const = 0;
+			virtual Shape shape() const = 0;
 			
 			/**
 			 * @brief Save the state of the ToolPanel.

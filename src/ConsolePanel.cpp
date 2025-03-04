@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  * Copyright (C) 2020 Mark Jansen <mark.jansen@reactos.org>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -64,6 +64,16 @@ REHex::ConsolePanel::~ConsolePanel()
 std::string REHex::ConsolePanel::name() const
 {
 	return panel_name;
+}
+
+std::string REHex::ConsolePanel::label() const
+{
+	return "Console";
+}
+
+REHex::ToolPanel::Shape REHex::ConsolePanel::shape() const
+{
+	return ToolPanel::TPS_WIDE;
 }
 
 void REHex::ConsolePanel::save_state(wxConfig *config) const {}

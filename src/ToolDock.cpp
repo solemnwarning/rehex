@@ -148,7 +148,7 @@ void REHex::ToolDock::CreateTool(const std::string &name, SharedDocumentPointer 
 	
 	tool = tpr->factory(target_notebook, document, document_ctrl);
 	
-	target_notebook->AddPage(tool, tool->name(), true);
+	target_notebook->AddPage(tool, tool->label(), true);
 	
 	if(target_notebook->GetPageCount() == 1)
 	{
@@ -513,7 +513,7 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 				}
 				
 				m_left_down_tool->Reparent(dest_notebook);
-				dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->name(), true);
+				dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->label(), true);
 				
 				if(dest_notebook->GetPageCount() == 1)
 				{

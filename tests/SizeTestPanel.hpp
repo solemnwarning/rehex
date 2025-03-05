@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,6 +26,8 @@ class SizeTestPanel: public REHex::ToolPanel
 {
 	private:
 		const std::string name_s;
+		const std::string label_s;
+		const Shape shape_;
 		
 		const int min_width, min_height;
 		const int best_width, best_height;
@@ -34,10 +36,12 @@ class SizeTestPanel: public REHex::ToolPanel
 		void OnPaint(wxPaintEvent &event);
 		
 	public:
-		SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height, const std::string &name_s);
+		SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height, const std::string &name_s, const std::string &label_s, Shape shape);
 		virtual wxSize DoGetBestClientSize() const override;
 		
 		virtual std::string name() const override { return name_s; }
+		virtual std::string label() const override { return label_s; }
+		virtual Shape shape() const override { return shape_; }
 		
 		virtual void save_state(wxConfig *config) const override {}
 		virtual void load_state(wxConfig *config) override {}

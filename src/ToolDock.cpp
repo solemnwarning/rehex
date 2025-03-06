@@ -170,6 +170,22 @@ bool REHex::ToolDock::ToolExists(const std::string &name) const
 	return FindToolByName(name) != NULL;
 }
 
+void REHex::ToolDock::HideFrames()
+{
+	for(auto it = m_tool_frames.begin(); it != m_tool_frames.end(); ++it)
+	{
+		it->second->Hide();
+	}
+}
+
+void REHex::ToolDock::UnhideFrames()
+{
+	for(auto it = m_tool_frames.begin(); it != m_tool_frames.end(); ++it)
+	{
+		it->second->ShowWithoutActivating();
+	}
+}
+
 void REHex::ToolDock::SaveTools(wxConfig *config) const
 {
 	{

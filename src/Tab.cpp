@@ -241,6 +241,8 @@ void REHex::Tab::hide_child_windows()
 {
 	child_windows_hidden = true;
 	
+	tool_dock->HideFrames();
+	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
 		(*sdi)->Hide();
@@ -260,6 +262,8 @@ void REHex::Tab::hide_child_windows()
 void REHex::Tab::unhide_child_windows()
 {
 	child_windows_hidden = false;
+	
+	tool_dock->UnhideFrames();
 	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{

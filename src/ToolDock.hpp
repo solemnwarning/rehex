@@ -47,6 +47,16 @@ namespace REHex
 			void SaveTools(wxConfig *config) const;
 			void LoadTools(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
+			/**
+			 * @brief Hide any detached tools.
+			*/
+			void HideFrames();
+			
+			/**
+			 * @brief Unhide any detached tools.
+			*/
+			void UnhideFrames();
+			
 		private:
 			/**
 			 * @brief wxNotebook specialisation for holding any tools docked to the main window.

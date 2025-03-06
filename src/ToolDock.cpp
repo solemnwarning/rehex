@@ -153,7 +153,6 @@ void REHex::ToolDock::CreateTool(const std::string &name, SharedDocumentPointer 
 	if(target_notebook->GetPageCount() == 1)
 	{
 		ResetNotebookSize(target_notebook);
-		target_notebook->Show();
 	}
 }
 
@@ -296,18 +295,21 @@ void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *note
 
 void REHex::ToolDock::ResetNotebookSize(ToolNotebook *notebook)
 {
-	wxSize min_size = notebook->GetEffectiveMinSize();
-	wxSize best_size = notebook->GetBestSize();
-	
-	if(notebook == m_top_notebook || notebook == m_bottom_notebook)
+	CallAfter([this, notebook]()
 	{
-		int height = std::max(min_size.GetHeight(), best_size.GetHeight());
-		SetWindowSize(notebook, wxSize(-1, height));
-	}
-	else{
-		int width = std::max(min_size.GetWidth(), best_size.GetWidth());
-		SetWindowSize(notebook, wxSize(width, -1));
-	}
+		wxSize min_size = notebook->GetEffectiveMinSize();
+		wxSize best_size = notebook->GetBestSize();
+		
+		if(notebook == m_top_notebook || notebook == m_bottom_notebook)
+		{
+			int height = std::max(min_size.GetHeight(), best_size.GetHeight());
+			SetWindowSize(notebook, wxSize(-1, height));
+		}
+		else{
+			int width = std::max(min_size.GetWidth(), best_size.GetWidth());
+			SetWindowSize(notebook, wxSize(width, -1));
+		}
+	});
 }
 
 REHex::ToolDock::ToolFrame *REHex::ToolDock::FindFrameByTool(ToolPanel *tool)

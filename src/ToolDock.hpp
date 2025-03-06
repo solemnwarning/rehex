@@ -86,9 +86,9 @@ namespace REHex
 			class ToolFrame: public wxFrame
 			{
 				public:
-					ToolFrame(wxWindow *parent, ToolPanel *tool = NULL);
+					ToolFrame(wxWindow *parent, wxPoint position = wxDefaultPosition, wxSize size = wxDefaultSize, ToolPanel *tool = NULL);
 					
-					void AdoptTool(ToolPanel *tool);
+					void AdoptTool(ToolPanel *tool, bool resize = true);
 					
 					/**
 					 * @brief Remove the owned tool.
@@ -128,6 +128,9 @@ namespace REHex
 			
 			static void SaveToolsFromNotebook(wxConfig *config, ToolNotebook *notebook);
 			void LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			
+			void SaveToolFrames(wxConfig *config) const;
+			void LoadToolFrames(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			/**
 			 * @brief Reset the size of a notebook to its default size.

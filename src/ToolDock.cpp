@@ -191,6 +191,11 @@ void REHex::ToolDock::SaveTools(wxConfig *config) const
 		wxConfigPathChanger scoped_path(config, "bottom/");
 		SaveToolsFromNotebook(config, m_bottom_notebook);
 	}
+	
+	{
+		wxConfigPathChanger scoped_path(config, "frames/");
+		SaveToolFrames(config);
+	}
 }
 
 void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, ToolNotebook *notebook)
@@ -220,6 +225,30 @@ void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, ToolNotebook *note
 	}
 }
 
+void REHex::ToolDock::SaveToolFrames(wxConfig *config) const
+{
+	size_t i = 0;
+	for(auto it = m_tool_frames.begin(); it != m_tool_frames.end(); ++it, ++i)
+	{
+		char i_path[32];
+		snprintf(i_path, sizeof(i_path), "%zu/", i);
+		
+		wxConfigPathChanger scoped_path(config, i_path);
+		
+		ToolPanel *tool = it->first;
+		ToolFrame *frame = it->second;
+		
+		config->Write("frame/x", frame->GetPosition().x);
+		config->Write("frame/y", frame->GetPosition().y);
+		
+		config->Write("frame/width", frame->GetSize().GetWidth());
+		config->Write("frame/height", frame->GetSize().GetHeight());
+		
+		config->Write("name", wxString(tool->name()));
+		tool->save_state(config);
+	}
+}
+
 void REHex::ToolDock::LoadTools(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
 {
 	{
@@ -240,6 +269,11 @@ void REHex::ToolDock::LoadTools(wxConfig *config, SharedDocumentPointer &documen
 	{
 		wxConfigPathChanger scoped_path(config, "bottom/");
 		LoadToolsIntoNotebook(config, m_bottom_notebook, document, document_ctrl);
+	}
+	
+	{
+		wxConfigPathChanger scoped_path(config, "frames/");
+		LoadToolFrames(config, document, document_ctrl);
 	}
 }
 
@@ -289,6 +323,51 @@ void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *note
 		else{
 			wxSize size(config->ReadLong("width", -1), -1);
 			SetWindowSize(notebook, size);
+		}
+	}
+}
+
+void REHex::ToolDock::LoadToolFrames(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
+{
+	for(size_t i = 0;; ++i)
+	{
+		char i_path[64];
+		snprintf(i_path, sizeof(i_path), "%zu/", i);
+		
+		if(config->HasGroup(i_path))
+		{
+			wxConfigPathChanger scoped_path(config, i_path);
+			
+			wxPoint frame_position(
+				config->ReadLong("frame/x", wxDefaultPosition.x),
+				config->ReadLong("frame/y", wxDefaultPosition.y));
+			
+			wxSize frame_size(
+				config->ReadLong("frame/width", wxDefaultSize.GetWidth()),
+				config->ReadLong("frame/height", wxDefaultSize.GetHeight()));
+			
+			std::string name = config->Read("name", "").ToStdString();
+			
+			const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
+			if(tpr != NULL)
+			{
+				ToolFrame *frame = new ToolFrame(this, frame_position, frame_size);
+				
+				ToolPanel *tool = tpr->factory(frame, document, document_ctrl);
+				tool->load_state(config);
+				
+				frame->AdoptTool(tool, false);
+				
+				frame->Show();
+				
+				m_tool_frames.emplace(tool, frame);
+			}
+			else{
+				/* TODO: Some kind of warning? */
+			}
+		}
+		else{
+			break;
 		}
 	}
 }
@@ -547,7 +626,7 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 				frame->SetPosition(frame_pos);
 			}
 			else{
-				frame = new ToolFrame(this, m_left_down_tool);
+				frame = new ToolFrame(this, wxDefaultPosition, wxDefaultSize, m_left_down_tool);
 				frame->SetPosition(frame_pos);
 				frame->Show();
 				
@@ -760,8 +839,8 @@ void REHex::ToolDock::ToolNotebook::OnPageChanged(wxNotebookEvent& event)
 	event.Skip();
 }
 
-REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, ToolPanel *tool):
-	wxFrame(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, wxPoint position, wxSize size, ToolPanel *tool):
+	wxFrame(parent, wxID_ANY, wxEmptyString, position, size,
 		(wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW | wxFRAME_FLOAT_ON_PARENT)),
 	m_tool(NULL)
 {
@@ -774,13 +853,16 @@ REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, ToolPanel *tool):
 	}
 }
 
-void REHex::ToolDock::ToolFrame::AdoptTool(ToolPanel *tool)
+void REHex::ToolDock::ToolFrame::AdoptTool(ToolPanel *tool, bool resize)
 {
 	assert(m_tool == NULL);
 	
 	m_tool = tool;
 	
-	SetClientSize(tool->GetSize());
+	if(resize)
+	{
+		SetClientSize(tool->GetSize());
+	}
 	
 	tool->Reparent(this);
 	tool->Show();

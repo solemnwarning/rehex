@@ -534,4 +534,9 @@
       <Filter>src</Filter>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\res\winres.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
+  </ItemGroup>
 </Project>

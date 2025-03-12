@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Combined|Win32">
@@ -14,7 +14,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{73DF1FFB-1C5E-409E-A309-83934640CCB8}</ProjectGuid>
     <RootNamespace>vcpkgdeploy</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Combined|Win32'" Label="Configuration">
@@ -22,6 +22,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Combined|x64'" Label="Configuration">
     <ConfigurationType>Utility</ConfigurationType>
@@ -76,7 +77,9 @@
     </Link>
     <PreBuildEvent>
       <Command>set REHEX_SOLUTION_DIR=$(SolutionDir)
-set VCPKG_KEEP_ENV_VARS=REHEX_SOLUTION_DIR
+set REHEX_WINSDK_INCLUDES=$(WindowsSDK_IncludePath)
+set REHEX_WINSDK_LIBDIRS=$(UniversalCRT_LibraryPath_x86)$(WindowsSDK_LibraryPath_x86)
+set VCPKG_KEEP_ENV_VARS=REHEX_SOLUTION_DIR;REHEX_WINSDK_INCLUDES;REHEX_WINSDK_LIBDIRS
 
 cd "$(SolutionDir)"
 "$(ProjectDir)install_vcpkg_dependencies.bat" x86-windows-static-enlyze
@@ -84,6 +87,7 @@ cd "$(SolutionDir)"
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="install_vcpkg_dependencies.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

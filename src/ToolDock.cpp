@@ -376,6 +376,8 @@ void REHex::ToolDock::LoadToolFrames(wxConfig *config, SharedDocumentPointer &do
 				
 				frame->Show();
 				
+				frame->Bind(wxEVT_CLOSE_WINDOW, &REHex::ToolDock::OnFrameClose, this);
+				
 				m_tool_frames.emplace(tool, frame);
 			}
 			else{

@@ -22,3 +22,10 @@
 - forward32.png
 - shortcut48.png
 - up32.png
+
+### GNOME Desktop Icons
+
+- Elements of dock_bottom.png
+- Elements of dock_left.png
+- Elements of dock_right.png
+- Elements of dock_top.png

@@ -23,6 +23,7 @@
 #include <wx/config.h>
 #include <wx/event.h>
 #include <wx/notebook.h>
+#include <wx/popupwin.h>
 #include <wx/sizer.h>
 
 #include "MultiSplitter.hpp"
@@ -116,6 +117,20 @@ namespace REHex
 					ToolPanel *m_tool;
 			};
 			
+			enum class Anchor
+			{
+				LEFT,
+				RIGHT,
+				TOP,
+				BOTTOM,
+			};
+			
+			class DockSite: public wxPopupWindow
+			{
+				public:
+					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor);
+			};
+			
 			wxWindow *m_main_panel;
 			
 			ToolNotebook *m_left_notebook;
@@ -129,6 +144,11 @@ namespace REHex
 			wxPoint m_left_down_point;
 			ToolPanel *m_left_down_tool;
 			bool m_drag_active;
+			
+			DockSite *m_left_dock_site;
+			DockSite *m_right_dock_site;
+			DockSite *m_top_dock_site;
+			DockSite *m_bottom_dock_site;
 			
 			ToolFrame *FindFrameByTool(ToolPanel *tool);
 			ToolNotebook *FindNotebookByTool(ToolPanel *tool);
@@ -149,6 +169,9 @@ namespace REHex
 			 * its minimum/best size (whichever is larger).
 			*/
 			void ResetNotebookSize(ToolNotebook *notebook);
+			
+			void SetupDockSites();
+			void DestroyDockSites();
 			
 			void OnNotebookLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);

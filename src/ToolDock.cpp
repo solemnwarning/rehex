@@ -17,7 +17,15 @@
 
 #include "platform.hpp"
 
+#include <wx/bitmap.h>
+#include <wx/statbmp.h>
+
 #include "ToolDock.hpp"
+
+#include "../res/dock_bottom.h"
+#include "../res/dock_left.h"
+#include "../res/dock_right.h"
+#include "../res/dock_top.h"
 
 BEGIN_EVENT_TABLE(REHex::ToolDock, REHex::MultiSplitter)
 	EVT_LEFT_UP(REHex::ToolDock::OnLeftUp)
@@ -29,7 +37,11 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	MultiSplitter(parent),
 	m_main_panel(NULL),
 	m_drag_pending(false),
-	m_drag_active(NULL)
+	m_drag_active(NULL),
+	m_left_dock_site(NULL),
+	m_right_dock_site(NULL),
+	m_top_dock_site(NULL),
+	m_bottom_dock_site(NULL)
 {
 	m_left_notebook = new ToolNotebook(this, wxID_ANY, wxNB_LEFT);
 	m_left_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
@@ -409,6 +421,60 @@ void REHex::ToolDock::ResetNotebookSize(ToolNotebook *notebook)
 	});
 }
 
+void REHex::ToolDock::SetupDockSites()
+{
+	if(m_left_dock_site == NULL)
+	{
+		m_left_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_left), Anchor::LEFT);
+		m_left_dock_site->Show();
+	}
+	
+	if(m_right_dock_site == NULL)
+	{
+		m_right_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_right), Anchor::RIGHT);
+		m_right_dock_site->Show();
+	}
+	
+	if(m_top_dock_site == NULL)
+	{
+		m_top_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP);
+		m_top_dock_site->Show();
+	}
+	
+	if(m_bottom_dock_site == NULL)
+	{
+		m_bottom_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM);
+		m_bottom_dock_site->Show();
+	}
+}
+
+void REHex::ToolDock::DestroyDockSites()
+{
+	if(m_left_dock_site != NULL)
+	{
+		m_left_dock_site->Destroy();
+		m_left_dock_site = NULL;
+	}
+	
+	if(m_right_dock_site != NULL)
+	{
+		m_right_dock_site->Destroy();
+		m_right_dock_site = NULL;
+	}
+	
+	if(m_top_dock_site != NULL)
+	{
+		m_top_dock_site->Destroy();
+		m_top_dock_site = NULL;
+	}
+	
+	if(m_bottom_dock_site != NULL)
+	{
+		m_bottom_dock_site->Destroy();
+		m_bottom_dock_site = NULL;
+	}
+}
+
 REHex::ToolDock::ToolFrame *REHex::ToolDock::FindFrameByTool(ToolPanel *tool)
 {
 	auto frame_it = m_tool_frames.find(tool);
@@ -520,6 +586,8 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 		
 		m_drag_pending = false;
 		m_drag_active = false;
+		
+		DestroyDockSites();
 	}
 	
 	event.Skip();
@@ -531,6 +599,8 @@ void REHex::ToolDock::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 	{
 		m_drag_pending = false;
 		m_drag_active = false;
+		
+		DestroyDockSites();
 	}
 	else{
 		event.Skip();
@@ -562,28 +632,23 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 		assert(frame == NULL || notebook == NULL);
 		
 		ToolNotebook *dest_notebook = (ToolNotebook*)(FindChildByPoint(event.GetPosition()));
-		if(dest_notebook == m_main_panel)
+		if(dest_notebook == NULL || dest_notebook != notebook)
 		{
-			wxRect mp_all = m_main_panel->GetRect();
+			wxPoint screen_mouse_point = ClientToScreen(event.GetPosition());
 			
-			wxRect mp_left(mp_all.GetLeft(), mp_all.GetTop() + 10, 10, mp_all.GetHeight() - 20);
-			wxRect mp_right(mp_all.GetRight() - 10, mp_all.GetTop() + 10, 10, mp_all.GetHeight() - 20);
-			wxRect mp_top(mp_all.GetLeft() + 10, mp_all.GetTop(), mp_all.GetWidth() - 20, 10);
-			wxRect mp_bottom(mp_all.GetLeft() + 10, mp_all.GetBottom() - 10, mp_all.GetWidth() - 20, 10);
-			
-			if(m_left_notebook->GetPageCount() == 0 && mp_left.Contains(event.GetPosition()))
+			if(m_left_dock_site != NULL && m_left_dock_site->GetScreenRect().Contains(screen_mouse_point))
 			{
 				dest_notebook = m_left_notebook;
 			}
-			else if(m_right_notebook->GetPageCount() == 0 && mp_right.Contains(event.GetPosition()))
+			else if(m_right_dock_site != NULL && m_right_dock_site->GetScreenRect().Contains(screen_mouse_point))
 			{
 				dest_notebook = m_right_notebook;
 			}
-			else if(m_top_notebook->GetPageCount() == 0 && mp_top.Contains(event.GetPosition()))
+			else if(m_top_dock_site != NULL && m_top_dock_site->GetScreenRect().Contains(screen_mouse_point))
 			{
 				dest_notebook = m_top_notebook;
 			}
-			else if(m_bottom_notebook->GetPageCount() == 0 && mp_bottom.Contains(event.GetPosition()))
+			else if(m_bottom_dock_site != NULL && m_bottom_dock_site->GetScreenRect().Contains(screen_mouse_point))
 			{
 				dest_notebook = m_bottom_notebook;
 			}
@@ -625,6 +690,8 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 					m_tool_frames.erase(m_left_down_tool);
 				}
 			}
+			
+			DestroyDockSites();
 		}
 		else{
 			if(notebook != NULL)
@@ -652,6 +719,8 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 				
 				m_tool_frames.emplace(m_left_down_tool, frame);
 			}
+			
+			SetupDockSites();
 		}
 	}
 	
@@ -901,4 +970,46 @@ void REHex::ToolDock::ToolFrame::RemoveTool(ToolPanel *tool)
 REHex::ToolPanel *REHex::ToolDock::ToolFrame::GetTool() const
 {
 	return m_tool;
+}
+
+REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor):
+	wxPopupWindow()
+{
+	static const int MARGIN = 16;
+	
+	SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
+	Create(parent);
+	
+	wxStaticBitmap *sbmp = new wxStaticBitmap(this, wxID_ANY, image);
+	
+	SetClientSize(sbmp->GetSize());
+	
+	wxRect parent_rect = parent->GetScreenRect();
+	wxSize size = GetSize();
+	
+	int x, y;
+	switch(anchor)
+	{
+		case Anchor::LEFT:
+			x = parent_rect.x + MARGIN;
+			y = parent_rect.y + (parent_rect.height / 2) - (size.GetHeight() / 2);
+			break;
+			
+		case Anchor::RIGHT:
+			x = parent_rect.x + parent_rect.width - size.GetWidth() - MARGIN;
+			y = parent_rect.y + (parent_rect.height / 2) - (size.GetHeight() / 2);
+			break;
+			
+		case Anchor::TOP:
+			x = parent_rect.x + (parent_rect.width / 2) - (size.GetWidth() / 2);
+			y = parent_rect.y + MARGIN;
+			break;
+			
+		case Anchor::BOTTOM:
+			x = parent_rect.x + (parent_rect.width / 2) - (size.GetWidth() / 2);
+			y = parent_rect.y + parent_rect.height - size.GetHeight() - MARGIN;
+			break;
+	}
+	
+	SetPosition(wxPoint(x, y));
 }

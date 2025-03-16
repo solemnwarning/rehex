@@ -216,6 +216,10 @@
     <ClCompile Include="..\..\res\diff_fold24.c" />
     <ClCompile Include="..\..\res\diff_fold32.c" />
     <ClCompile Include="..\..\res\diff_fold48.c" />
+    <ClCompile Include="..\..\res\dock_bottom.c" />
+    <ClCompile Include="..\..\res\dock_left.c" />
+    <ClCompile Include="..\..\res\dock_right.c" />
+    <ClCompile Include="..\..\res\dock_top.c" />
     <ClCompile Include="..\..\res\fit_to_screen16.c" />
     <ClCompile Include="..\..\res\icon128.c" />
     <ClCompile Include="..\..\res\icon16.c" />
@@ -368,6 +372,10 @@
     <ClInclude Include="..\..\res\diff_fold24.h" />
     <ClInclude Include="..\..\res\diff_fold32.h" />
     <ClInclude Include="..\..\res\diff_fold48.h" />
+    <ClInclude Include="..\..\res\dock_bottom.h" />
+    <ClInclude Include="..\..\res\dock_left.h" />
+    <ClInclude Include="..\..\res\dock_right.h" />
+    <ClInclude Include="..\..\res\dock_top.h" />
     <ClInclude Include="..\..\res\fit_to_screen16.h" />
     <ClInclude Include="..\..\res\icon128.h" />
     <ClInclude Include="..\..\res\icon16.h" />

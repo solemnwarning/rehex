@@ -58,8 +58,6 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	m_bottom_notebook = new ToolNotebook(this, wxID_ANY, wxNB_BOTTOM);
 	m_bottom_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_bottom_notebook->Hide();
-	
-	m_dock_shadow = new DockShadow(this, wxRect(0, 0, 0, 0));
 }
 
 void REHex::ToolDock::AddMainPanel(wxWindow *main_panel)
@@ -477,6 +475,50 @@ void REHex::ToolDock::DestroyDockSites()
 	}
 }
 
+void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
+{
+	if(notebook == m_left_notebook)
+	{
+		m_left_dock_site->ShowShadow(rect);
+		
+		m_right_dock_site->HideShadow();
+		m_top_dock_site->HideShadow();
+		m_bottom_dock_site->HideShadow();
+	}
+	else if(notebook == m_right_notebook)
+	{
+		m_right_dock_site->ShowShadow(rect);
+		
+		m_left_dock_site->HideShadow();
+		m_top_dock_site->HideShadow();
+		m_bottom_dock_site->HideShadow();
+	}
+	else if(notebook == m_top_notebook)
+	{
+		m_top_dock_site->ShowShadow(rect);
+		
+		m_left_dock_site->HideShadow();
+		m_right_dock_site->HideShadow();
+		m_bottom_dock_site->HideShadow();
+	}
+	else if(notebook == m_bottom_notebook)
+	{
+		m_bottom_dock_site->ShowShadow(rect);
+		
+		m_left_dock_site->HideShadow();
+		m_right_dock_site->HideShadow();
+		m_top_dock_site->HideShadow();
+	}
+}
+
+void REHex::ToolDock::HideShadow()
+{
+	m_left_dock_site->HideShadow();
+	m_right_dock_site->HideShadow();
+	m_top_dock_site->HideShadow();
+	m_bottom_dock_site->HideShadow();
+}
+
 REHex::ToolDock::ToolFrame *REHex::ToolDock::FindFrameByTool(ToolPanel *tool)
 {
 	auto frame_it = m_tool_frames.find(tool);
@@ -554,19 +596,19 @@ REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &
 	{
 		wxPoint screen_point = ClientToScreen(point);
 		
-		if(m_left_dock_site != NULL && m_left_dock_site->GetScreenRect().Contains(screen_point))
+		if(m_left_dock_site != NULL && m_left_dock_site->PointInImage(screen_point))
 		{
 			dest_notebook = m_left_notebook;
 		}
-		else if(m_right_dock_site != NULL && m_right_dock_site->GetScreenRect().Contains(screen_point))
+		else if(m_right_dock_site != NULL && m_right_dock_site->PointInImage(screen_point))
 		{
 			dest_notebook = m_right_notebook;
 		}
-		else if(m_top_dock_site != NULL && m_top_dock_site->GetScreenRect().Contains(screen_point))
+		else if(m_top_dock_site != NULL && m_top_dock_site->PointInImage(screen_point))
 		{
 			dest_notebook = m_top_notebook;
 		}
-		else if(m_bottom_dock_site != NULL && m_bottom_dock_site->GetScreenRect().Contains(screen_point))
+		else if(m_bottom_dock_site != NULL && m_bottom_dock_site->PointInImage(screen_point))
 		{
 			dest_notebook = m_bottom_notebook;
 		}
@@ -663,7 +705,6 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 		m_drag_active = false;
 		
 		DestroyDockSites();
-		m_dock_shadow->Hide();
 	}
 	
 	event.Skip();
@@ -677,7 +718,6 @@ void REHex::ToolDock::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 		m_drag_active = false;
 		
 		DestroyDockSites();
-		m_dock_shadow->Hide();
 	}
 	else{
 		event.Skip();
@@ -716,8 +756,7 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			{
 				if(dest_notebook->IsShown())
 				{
-					m_dock_shadow->Move(dest_notebook->GetScreenRect());
-					m_dock_shadow->Show();
+					ShowShadow(dest_notebook, dest_notebook->GetScreenRect());
 				}
 				else{
 					wxPoint client_base = ClientToScreen(wxPoint(0, 0));
@@ -754,10 +793,9 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 						rect.y = client_base.y + client_size.GetHeight() - rect.height;
 					}
 					
-					m_dock_shadow->Move(rect);
-					m_dock_shadow->Show();
+					ShowShadow(dest_notebook, rect);
 				}
-
+				
 				/* On Windows, the transparent wxPopupWindow isn't redrawn when the frame moves
 				 * around under it and I can't figure out a way to trigger an update that doesn't
 				 * result in the popup drawing over itself until its effectively opaque, so we just
@@ -793,7 +831,7 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			}
 			
 			SetupDockSites();
-			m_dock_shadow->Hide();
+			HideShadow();
 
 			frame->Show();
 		}
@@ -1053,95 +1091,131 @@ REHex::ToolPanel *REHex::ToolDock::ToolFrame::GetTool() const
 	return m_tool;
 }
 
+BEGIN_EVENT_TABLE(REHex::ToolDock::DockSite, wxPopupWindow)
+	EVT_PAINT(REHex::ToolDock::DockSite::OnPaint)
+END_EVENT_TABLE()
+
 REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor):
-	wxPopupWindow()
+	wxPopupWindow(),
+	m_image(image.ConvertToImage()),
+	m_image_bitmap(image),
+	m_anchor(anchor),
+	m_shadow(wxRect(-1, -1, -1, -1))
+{
+	/* We query whether transparency is supported via the parent window because we can't call
+	 * it on our own window before constructing the window... but we need to know up-front
+	 * whether transparency is supported so we know whether to set the background mode before
+	 * constructing the window.
+	*/
+	if(parent->IsTransparentBackgroundSupported())
+	{
+		m_transparency = true;
+		SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
+	}
+	else{
+		m_transparency = false;
+	}
+	
+	Create(parent);
+	
+	Resize();
+}
+
+void REHex::ToolDock::DockSite::ShowShadow(const wxRect &rect)
+{
+	m_shadow = rect;
+	Resize();
+}
+
+void REHex::ToolDock::DockSite::HideShadow()
+{
+	m_shadow = wxRect(-1, -1, -1, -1);
+	Resize();
+}
+
+bool REHex::ToolDock::DockSite::PointInImage(const wxPoint &screen_point) const
+{
+	wxRect screen_rect = GetScreenRect();
+	
+	int image_relative_x = screen_point.x - screen_rect.x - m_image_x;
+	int image_relative_y = screen_point.y - screen_rect.y - m_image_y;
+	
+	wxSize image_size = m_image.GetSize();
+	
+	if(image_relative_x >= 0 && image_relative_x < image_size.GetWidth()
+		&& image_relative_y >= 0 && image_relative_y < image_size.GetHeight())
+	{
+		return m_image.GetAlpha(image_relative_x, image_relative_y) > 0;
+	}
+	else{
+		return false;
+	}
+}
+
+void REHex::ToolDock::DockSite::Resize()
 {
 	static const int MARGIN = 16;
 	
-	SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
-	Create(parent);
+	wxRect parent_rect = GetParent()->GetScreenRect();
 	
-	wxStaticBitmap *sbmp = new wxStaticBitmap(this, wxID_ANY, image);
+	wxSize image_size = m_image.GetSize();
+	wxRect image_rect(-1, -1, image_size.GetWidth(), image_size.GetHeight());
 	
-	SetClientSize(sbmp->GetSize());
-	
-	wxRect parent_rect = parent->GetScreenRect();
-	wxSize size = GetSize();
-	
-	int x, y;
-	switch(anchor)
+	switch(m_anchor)
 	{
 		case Anchor::LEFT:
-			x = parent_rect.x + MARGIN;
-			y = parent_rect.y + (parent_rect.height / 2) - (size.GetHeight() / 2);
+			image_rect.x = parent_rect.x + MARGIN;
+			image_rect.y = parent_rect.y + (parent_rect.height / 2) - (image_size.GetHeight() / 2);
 			break;
 			
 		case Anchor::RIGHT:
-			x = parent_rect.x + parent_rect.width - size.GetWidth() - MARGIN;
-			y = parent_rect.y + (parent_rect.height / 2) - (size.GetHeight() / 2);
+			image_rect.x = parent_rect.x + parent_rect.width - image_size.GetWidth() - MARGIN;
+			image_rect.y = parent_rect.y + (parent_rect.height / 2) - (image_size.GetHeight() / 2);
 			break;
 			
 		case Anchor::TOP:
-			x = parent_rect.x + (parent_rect.width / 2) - (size.GetWidth() / 2);
-			y = parent_rect.y + MARGIN;
+			image_rect.x = parent_rect.x + (parent_rect.width / 2) - (image_size.GetWidth() / 2);
+			image_rect.y = parent_rect.y + MARGIN;
 			break;
 			
 		case Anchor::BOTTOM:
-			x = parent_rect.x + (parent_rect.width / 2) - (size.GetWidth() / 2);
-			y = parent_rect.y + parent_rect.height - size.GetHeight() - MARGIN;
+			image_rect.x = parent_rect.x + (parent_rect.width / 2) - (image_size.GetWidth() / 2);
+			image_rect.y = parent_rect.y + parent_rect.height - image_size.GetHeight() - MARGIN;
 			break;
 	}
 	
-	SetPosition(wxPoint(x, y));
-}
-
-BEGIN_EVENT_TABLE(REHex::ToolDock::DockShadow, wxPopupWindow)
-	EVT_PAINT(REHex::ToolDock::DockShadow::OnPaint)
-END_EVENT_TABLE()
-
-REHex::ToolDock::DockShadow::DockShadow(wxWindow *parent, const wxRect &rect):
-	wxPopupWindow()
-{
-	SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
-	Create(parent);
+	wxRect total_rect = image_rect;
 	
-	Move(rect);
-}
-
-void REHex::ToolDock::DockShadow::Move(const wxRect &rect)
-{
-	/* In wxGTK (at least), changing the wxPopupWindow size/position to one which overlaps
-	 * with the previous position causes some weird bug where the client/paint area only covers
-	 * the intersection between the new/old positions, returning the size/position to the
-	 * previous position restores correct behaviour until you try moving it to overlap again.
-	 *
-	 * So we set the position miles off screen and *then* put it where we need it instead.
-	*/
-	#ifdef __WXGTK__
-	if(GetScreenRect() == rect)
+	if(!(m_shadow.IsEmpty()))
 	{
-		/* Avoid flickering if the window is already in the correct place. */
-		return;
+		total_rect += m_shadow;
 	}
 	
-	SetPosition(wxPoint(999999, 999999));
-	#endif
+	m_image_x = image_rect.x - total_rect.x;
+	m_image_y = image_rect.y - total_rect.y;
 	
-	SetPosition(wxPoint(rect.x, rect.y));
-	SetSize(wxSize(rect.width, rect.height));
+	SetPosition(wxPoint(total_rect.x, total_rect.y));
+	SetSize(wxSize(total_rect.width, total_rect.height));
 }
 
-void REHex::ToolDock::DockShadow::OnPaint(wxPaintEvent &event)
+void REHex::ToolDock::DockSite::OnPaint(wxPaintEvent &event)
 {
 	wxPaintDC dc(this);
 	
 	wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
 	if(gc)
 	{
-		wxSize client_size = GetClientSize();
+		if(!(m_shadow.IsEmpty()))
+		{
+			wxRect screen_rect = GetScreenRect();
+			
+			gc->SetBrush(wxBrush(wxColour(0xF6, 0xD3, 0x2D, 100)));
+			gc->DrawRectangle((m_shadow.x - screen_rect.x), (m_shadow.y - screen_rect.y), m_shadow.width, m_shadow.height);
+		}
 		
-		gc->SetBrush(wxBrush(wxColour(0xF6, 0xD3, 0x2D, 100)));
-		gc->DrawRectangle(0, 0, client_size.GetWidth(), client_size.GetHeight());
+		wxSize image_size = m_image.GetSize();
+		
+		gc->DrawBitmap(m_image_bitmap, m_image_x, m_image_y, image_size.GetWidth(), image_size.GetHeight());
 		
 		delete gc;
 	}

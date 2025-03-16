@@ -20,9 +20,11 @@
 
 #include <map>
 #include <string>
+#include <wx/bitmap.h>
 #include <wx/config.h>
 #include <wx/event.h>
 #include <wx/graphics.h>
+#include <wx/image.h>
 #include <wx/notebook.h>
 #include <wx/popupwin.h>
 #include <wx/sizer.h>
@@ -126,20 +128,56 @@ namespace REHex
 				BOTTOM,
 			};
 			
+			/**
+			 * This is a wxPopupWindow-derived window which is used to draw the
+			 * "dock sites" where the cursor must be positioned when dragging a tool
+			 * window to dock it into one of the notebook controls.
+			 *
+			 * The on-screen image for the dock site is drawn over the parent window
+			 * at a position based on the 'anchor' parameter to the constructor.
+			*/
 			class DockSite: public wxPopupWindow
 			{
 				public:
 					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor);
-			};
-			
-			class DockShadow: public wxPopupWindow
-			{
-				public:
-					DockShadow(wxWindow *parent, const wxRect &rect);
 					
-					void Move(const wxRect &rect);
+					/**
+					 * @brief Enable drawing the shadow.
+					 *
+					 * Calling this method will expand the window's position
+					 * and size to encompass the provided on-screen rectangle
+					 * and enable drawing an (ideally) semi-transparent shadow
+					 * behind the drop site image but over the parent window.
+					*/
+					void ShowShadow(const wxRect &rect);
+					
+					/**
+					 * @brief Disable drawing the shadow.
+					*/
+					void HideShadow();
+					
+					/**
+					 * @brief Check if a screen point is over the drop site image.
+					*/
+					bool PointInImage(const wxPoint &screen_point) const;
 					
 				private:
+					bool m_transparency; /**< Whether transparency is supported/enabled. */
+					
+					wxImage m_image;
+					wxBitmap m_image_bitmap;
+					Anchor m_anchor;
+					
+					int m_image_x; /**< X offset of image within window. */
+					int m_image_y; /**< Y offset of image within window. */
+					
+					wxRect m_shadow; /**< Screen rectangle of shadow. */
+					
+					/**
+					 * @brief Update the window position and size.
+					*/
+					void Resize();
+					
 					void OnPaint(wxPaintEvent &event);
 					
 				DECLARE_EVENT_TABLE()
@@ -163,8 +201,6 @@ namespace REHex
 			DockSite *m_right_dock_site;
 			DockSite *m_top_dock_site;
 			DockSite *m_bottom_dock_site;
-			
-			DockShadow *m_dock_shadow;
 			
 			ToolFrame *FindFrameByTool(ToolPanel *tool);
 			ToolNotebook *FindNotebookByTool(ToolPanel *tool);
@@ -190,6 +226,9 @@ namespace REHex
 			
 			void SetupDockSites();
 			void DestroyDockSites();
+			
+			void ShowShadow(ToolNotebook *notebook, const wxRect &rect);
+			void HideShadow();
 			
 			void OnNotebookLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);

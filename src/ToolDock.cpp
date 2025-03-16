@@ -58,6 +58,8 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	m_bottom_notebook = new ToolNotebook(this, wxID_ANY, wxNB_BOTTOM);
 	m_bottom_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_bottom_notebook->Hide();
+	
+	m_dock_shadow = new DockShadow(this, wxRect(0, 0, 0, 0));
 }
 
 void REHex::ToolDock::AddMainPanel(wxWindow *main_panel)
@@ -545,6 +547,37 @@ REHex::ToolPanel *REHex::ToolDock::FindToolByName(const std::string &name) const
 	return tool;
 }
 
+REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &point, ToolNotebook *current_notebook)
+{
+	ToolNotebook *dest_notebook = (ToolNotebook*)(FindChildByPoint(point));
+	if(dest_notebook == NULL || dest_notebook != current_notebook)
+	{
+		wxPoint screen_point = ClientToScreen(point);
+		
+		if(m_left_dock_site != NULL && m_left_dock_site->GetScreenRect().Contains(screen_point))
+		{
+			dest_notebook = m_left_notebook;
+		}
+		else if(m_right_dock_site != NULL && m_right_dock_site->GetScreenRect().Contains(screen_point))
+		{
+			dest_notebook = m_right_notebook;
+		}
+		else if(m_top_dock_site != NULL && m_top_dock_site->GetScreenRect().Contains(screen_point))
+		{
+			dest_notebook = m_top_notebook;
+		}
+		else if(m_bottom_dock_site != NULL && m_bottom_dock_site->GetScreenRect().Contains(screen_point))
+		{
+			dest_notebook = m_bottom_notebook;
+		}
+		else{
+			dest_notebook = NULL;
+		}
+	}
+	
+	return dest_notebook;
+}
+
 void REHex::ToolDock::OnNotebookLeftDown(wxMouseEvent &event)
 {
 	ToolNotebook *notebook = (ToolNotebook*)(event.GetEventObject());
@@ -580,6 +613,48 @@ void REHex::ToolDock::OnNotebookLeftDown(wxMouseEvent &event)
 
 void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 {
+	if(m_drag_active)
+	{
+		ToolFrame *frame = FindFrameByTool(m_left_down_tool);
+		ToolNotebook *notebook = FindNotebookByTool(m_left_down_tool);
+		
+		assert(frame == NULL || notebook == NULL);
+		
+		ToolNotebook *dest_notebook = FindDockNotebook(event.GetPosition(), notebook);
+		
+		if(dest_notebook != NULL && dest_notebook != notebook)
+		{
+			if(notebook != NULL)
+			{
+				notebook->RemovePage(notebook->FindPage(m_left_down_tool));
+				
+				if(notebook->GetPageCount() == 0)
+				{
+					notebook->Hide();
+				}
+			}
+
+			if(frame != NULL)
+			{
+				frame->GetSizer()->Detach(m_left_down_tool);
+			}
+			
+			m_left_down_tool->Reparent(dest_notebook);
+			dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->label(), true);
+			
+			if(dest_notebook->GetPageCount() == 1)
+			{
+				ResetNotebookSize(dest_notebook);
+			}
+			
+			if(frame != NULL)
+			{
+				frame->Destroy();
+				m_tool_frames.erase(m_left_down_tool);
+			}
+		}
+	}
+	
 	if(m_drag_pending || m_drag_active)
 	{
 		ReleaseMouse();
@@ -588,6 +663,7 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 		m_drag_active = false;
 		
 		DestroyDockSites();
+		m_dock_shadow->Hide();
 	}
 	
 	event.Skip();
@@ -601,6 +677,7 @@ void REHex::ToolDock::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 		m_drag_active = false;
 		
 		DestroyDockSites();
+		m_dock_shadow->Hide();
 	}
 	else{
 		event.Skip();
@@ -631,67 +708,66 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 		
 		assert(frame == NULL || notebook == NULL);
 		
-		ToolNotebook *dest_notebook = (ToolNotebook*)(FindChildByPoint(event.GetPosition()));
-		if(dest_notebook == NULL || dest_notebook != notebook)
-		{
-			wxPoint screen_mouse_point = ClientToScreen(event.GetPosition());
-			
-			if(m_left_dock_site != NULL && m_left_dock_site->GetScreenRect().Contains(screen_mouse_point))
-			{
-				dest_notebook = m_left_notebook;
-			}
-			else if(m_right_dock_site != NULL && m_right_dock_site->GetScreenRect().Contains(screen_mouse_point))
-			{
-				dest_notebook = m_right_notebook;
-			}
-			else if(m_top_dock_site != NULL && m_top_dock_site->GetScreenRect().Contains(screen_mouse_point))
-			{
-				dest_notebook = m_top_notebook;
-			}
-			else if(m_bottom_dock_site != NULL && m_bottom_dock_site->GetScreenRect().Contains(screen_mouse_point))
-			{
-				dest_notebook = m_bottom_notebook;
-			}
-			else{
-				dest_notebook = NULL;
-			}
-		}
+		ToolNotebook *dest_notebook = FindDockNotebook(event.GetPosition(), notebook);
 		
 		if(dest_notebook != NULL)
 		{
 			if(dest_notebook != notebook)
 			{
-				if(notebook != NULL)
+				if(dest_notebook->IsShown())
 				{
-					notebook->RemovePage(notebook->FindPage(m_left_down_tool));
+					m_dock_shadow->Move(dest_notebook->GetScreenRect());
+					m_dock_shadow->Show();
+				}
+				else{
+					wxPoint client_base = ClientToScreen(wxPoint(0, 0));
+					wxSize client_size = GetClientSize();
 					
-					if(notebook->GetPageCount() == 0)
+					wxSize min_size = m_left_down_tool->GetEffectiveMinSize();
+					wxSize best_size = m_left_down_tool->GetBestSize();
+					
+					wxRect rect;
+					
+					if(dest_notebook == m_top_notebook || dest_notebook == m_bottom_notebook)
 					{
-						notebook->Hide();
+						rect.width = client_size.GetWidth();
+						rect.height = std::max(min_size.GetHeight(), best_size.GetHeight());
 					}
+					else{
+						rect.width = std::max(min_size.GetWidth(), best_size.GetWidth());
+						rect.height = client_size.GetHeight();
+					}
+					
+					if(dest_notebook == m_left_notebook || dest_notebook == m_top_notebook)
+					{
+						rect.x = client_base.x;
+						rect.y = client_base.y;
+					}
+					else if(dest_notebook == m_right_notebook)
+					{
+						rect.x = client_base.x + client_size.GetWidth() - rect.width;
+						rect.y = client_base.y;
+					}
+					else if(dest_notebook == m_bottom_notebook)
+					{
+						rect.x = client_base.x;
+						rect.y = client_base.y + client_size.GetHeight() - rect.height;
+					}
+					
+					m_dock_shadow->Move(rect);
+					m_dock_shadow->Show();
 				}
 
-				if(frame != NULL)
-				{
-					frame->GetSizer()->Detach(m_left_down_tool);
-				}
-				
-				m_left_down_tool->Reparent(dest_notebook);
-				dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->label(), true);
-				
-				if(dest_notebook->GetPageCount() == 1)
-				{
-					ResetNotebookSize(dest_notebook);
-				}
-				
-				if(frame != NULL)
-				{
-					frame->Destroy();
-					m_tool_frames.erase(m_left_down_tool);
-				}
+				/* On Windows, the transparent wxPopupWindow isn't redrawn when the frame moves
+				 * around under it and I can't figure out a way to trigger an update that doesn't
+				 * result in the popup drawing over itself until its effectively opaque, so we just
+				 * hide the frame when the cursor is over a dock site on Windows.
+				*/
+				#ifdef _WIN32
+				assert(frame != NULL);
+				frame->Hide();
+				#endif
 			}
-			
-			DestroyDockSites();
 		}
 		else{
 			if(notebook != NULL)
@@ -706,14 +782,10 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			
 			wxPoint frame_pos = ClientToScreen(event.GetPosition());
 			
-			if(frame != NULL)
+			if(frame == NULL)
 			{
-				frame->SetPosition(frame_pos);
-			}
-			else{
 				frame = new ToolFrame(this, wxDefaultPosition, wxDefaultSize, m_left_down_tool);
 				frame->SetPosition(frame_pos);
-				frame->Show();
 				
 				frame->Bind(wxEVT_CLOSE_WINDOW, &REHex::ToolDock::OnFrameClose, this);
 				
@@ -721,6 +793,15 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			}
 			
 			SetupDockSites();
+			m_dock_shadow->Hide();
+
+			frame->Show();
+		}
+		
+		if(frame != NULL)
+		{
+			wxPoint frame_pos = ClientToScreen(event.GetPosition());
+			frame->SetPosition(frame_pos);
 		}
 	}
 	
@@ -1012,4 +1093,56 @@ REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anc
 	}
 	
 	SetPosition(wxPoint(x, y));
+}
+
+BEGIN_EVENT_TABLE(REHex::ToolDock::DockShadow, wxPopupWindow)
+	EVT_PAINT(REHex::ToolDock::DockShadow::OnPaint)
+END_EVENT_TABLE()
+
+REHex::ToolDock::DockShadow::DockShadow(wxWindow *parent, const wxRect &rect):
+	wxPopupWindow()
+{
+	SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
+	Create(parent);
+	
+	Move(rect);
+}
+
+void REHex::ToolDock::DockShadow::Move(const wxRect &rect)
+{
+	/* In wxGTK (at least), changing the wxPopupWindow size/position to one which overlaps
+	 * with the previous position causes some weird bug where the client/paint area only covers
+	 * the intersection between the new/old positions, returning the size/position to the
+	 * previous position restores correct behaviour until you try moving it to overlap again.
+	 *
+	 * So we set the position miles off screen and *then* put it where we need it instead.
+	*/
+	#ifdef __WXGTK__
+	if(GetScreenRect() == rect)
+	{
+		/* Avoid flickering if the window is already in the correct place. */
+		return;
+	}
+	
+	SetPosition(wxPoint(999999, 999999));
+	#endif
+	
+	SetPosition(wxPoint(rect.x, rect.y));
+	SetSize(wxSize(rect.width, rect.height));
+}
+
+void REHex::ToolDock::DockShadow::OnPaint(wxPaintEvent &event)
+{
+	wxPaintDC dc(this);
+	
+	wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+	if(gc)
+	{
+		wxSize client_size = GetClientSize();
+		
+		gc->SetBrush(wxBrush(wxColour(0xF6, 0xD3, 0x2D, 100)));
+		gc->DrawRectangle(0, 0, client_size.GetWidth(), client_size.GetHeight());
+		
+		delete gc;
+	}
 }

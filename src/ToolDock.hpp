@@ -22,6 +22,7 @@
 #include <string>
 #include <wx/config.h>
 #include <wx/event.h>
+#include <wx/graphics.h>
 #include <wx/notebook.h>
 #include <wx/popupwin.h>
 #include <wx/sizer.h>
@@ -131,6 +132,19 @@ namespace REHex
 					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor);
 			};
 			
+			class DockShadow: public wxPopupWindow
+			{
+				public:
+					DockShadow(wxWindow *parent, const wxRect &rect);
+					
+					void Move(const wxRect &rect);
+					
+				private:
+					void OnPaint(wxPaintEvent &event);
+					
+				DECLARE_EVENT_TABLE()
+			};
+			
 			wxWindow *m_main_panel;
 			
 			ToolNotebook *m_left_notebook;
@@ -150,9 +164,13 @@ namespace REHex
 			DockSite *m_top_dock_site;
 			DockSite *m_bottom_dock_site;
 			
+			DockShadow *m_dock_shadow;
+			
 			ToolFrame *FindFrameByTool(ToolPanel *tool);
 			ToolNotebook *FindNotebookByTool(ToolPanel *tool);
 			ToolPanel *FindToolByName(const std::string &name) const;
+			
+			ToolNotebook *FindDockNotebook(const wxPoint &point, ToolNotebook *current);
 			
 			void DestroyTool(ToolPanel *tool);
 			

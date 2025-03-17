@@ -1159,10 +1159,11 @@ REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anc
 	 * constructing the window.
 	 *
 	 * ...except on Windows, where IsTransparentBackgroundSupported() will always return false, but
-	 * transparency works well enough for our purposes so we just force it.
+	 * transparency works well enough for our purposes on Windows 8 and later.
 	*/
 #ifdef _WIN32
-	if(true)
+	OSVERSIONINFO version = { sizeof(OSVERSIONINFOA) };
+	if(GetVersionEx(&version) && ((version.dwMajorVersion == 6 && version.dwMinorVersion >= 2) || version.dwMajorVersion > 6))
 #else
 	if(parent->IsTransparentBackgroundSupported())
 #endif

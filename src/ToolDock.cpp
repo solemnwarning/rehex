@@ -42,6 +42,10 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	m_right_dock_site(NULL),
 	m_top_dock_site(NULL),
 	m_bottom_dock_site(NULL)
+
+#ifdef _WIN32
+	, m_shadow_site(NULL)
+#endif
 {
 	m_left_notebook = new ToolNotebook(this, wxID_ANY, wxNB_LEFT);
 	m_left_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
@@ -477,46 +481,91 @@ void REHex::ToolDock::DestroyDockSites()
 
 void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 {
+#ifdef _WIN32
+	if(m_shadow_site != NULL)
+	{
+		if(m_shadow_site->GetShadowRect() == rect)
+		{
+			return;
+		}
+
+		m_shadow_site->Destroy();
+	}
+#endif
+
 	if(notebook == m_left_notebook)
 	{
+#ifdef _WIN32
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_left), Anchor::LEFT, rect);
+		m_shadow_site->Show();
+		
+#else
 		m_left_dock_site->ShowShadow(rect);
 		
 		m_right_dock_site->HideShadow();
 		m_top_dock_site->HideShadow();
 		m_bottom_dock_site->HideShadow();
+#endif
 	}
 	else if(notebook == m_right_notebook)
 	{
+#ifdef _WIN32
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_right), Anchor::RIGHT, rect);
+		m_shadow_site->Show();
+
+#else
 		m_right_dock_site->ShowShadow(rect);
 		
 		m_left_dock_site->HideShadow();
 		m_top_dock_site->HideShadow();
 		m_bottom_dock_site->HideShadow();
+#endif
 	}
 	else if(notebook == m_top_notebook)
 	{
+#ifdef _WIN32
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP, rect);
+		m_shadow_site->Show();
+
+#else
 		m_top_dock_site->ShowShadow(rect);
 		
 		m_left_dock_site->HideShadow();
 		m_right_dock_site->HideShadow();
 		m_bottom_dock_site->HideShadow();
+#endif
 	}
 	else if(notebook == m_bottom_notebook)
 	{
+#ifdef _WIN32
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM, rect);
+		m_shadow_site->Show();
+
+#else
 		m_bottom_dock_site->ShowShadow(rect);
 		
 		m_left_dock_site->HideShadow();
 		m_right_dock_site->HideShadow();
 		m_top_dock_site->HideShadow();
+#endif
 	}
 }
 
 void REHex::ToolDock::HideShadow()
 {
+#ifdef _WIN32
+	if(m_shadow_site != NULL)
+	{
+		m_shadow_site->Destroy();
+		m_shadow_site = NULL;
+	}
+
+#else
 	m_left_dock_site->HideShadow();
 	m_right_dock_site->HideShadow();
 	m_top_dock_site->HideShadow();
 	m_bottom_dock_site->HideShadow();
+#endif
 }
 
 REHex::ToolDock::ToolFrame *REHex::ToolDock::FindFrameByTool(ToolPanel *tool)
@@ -704,6 +753,7 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 		m_drag_pending = false;
 		m_drag_active = false;
 		
+		HideShadow();
 		DestroyDockSites();
 	}
 	
@@ -717,6 +767,7 @@ void REHex::ToolDock::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 		m_drag_pending = false;
 		m_drag_active = false;
 		
+		HideShadow();
 		DestroyDockSites();
 	}
 	else{
@@ -1095,19 +1146,26 @@ BEGIN_EVENT_TABLE(REHex::ToolDock::DockSite, wxPopupWindow)
 	EVT_PAINT(REHex::ToolDock::DockSite::OnPaint)
 END_EVENT_TABLE()
 
-REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor):
+REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor, const wxRect &shadow_rect):
 	wxPopupWindow(),
 	m_image(image.ConvertToImage()),
 	m_image_bitmap(image),
 	m_anchor(anchor),
-	m_shadow(wxRect(-1, -1, -1, -1))
+	m_shadow(shadow_rect)
 {
 	/* We query whether transparency is supported via the parent window because we can't call
 	 * it on our own window before constructing the window... but we need to know up-front
 	 * whether transparency is supported so we know whether to set the background mode before
 	 * constructing the window.
+	 *
+	 * ...except on Windows, where IsTransparentBackgroundSupported() will always return false, but
+	 * transparency works well enough for our purposes so we just force it.
 	*/
+#ifdef _WIN32
+	if(true)
+#else
 	if(parent->IsTransparentBackgroundSupported())
+#endif
 	{
 		m_transparency = true;
 		SetBackgroundStyle(wxBG_STYLE_TRANSPARENT);
@@ -1121,6 +1179,7 @@ REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anc
 	Resize();
 }
 
+#ifndef _WIN32
 void REHex::ToolDock::DockSite::ShowShadow(const wxRect &rect)
 {
 	m_shadow = rect;
@@ -1131,6 +1190,12 @@ void REHex::ToolDock::DockSite::HideShadow()
 {
 	m_shadow = wxRect(-1, -1, -1, -1);
 	Resize();
+}
+#endif
+
+wxRect REHex::ToolDock::DockSite::GetShadowRect() const
+{
+	return m_shadow;
 }
 
 bool REHex::ToolDock::DockSite::PointInImage(const wxPoint &screen_point) const

@@ -139,8 +139,9 @@ namespace REHex
 			class DockSite: public wxPopupWindow
 			{
 				public:
-					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor);
+					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor, const wxRect &shadow_rect = wxRect(-1, -1, -1, -1));
 					
+#ifndef _WIN32
 					/**
 					 * @brief Enable drawing the shadow.
 					 *
@@ -155,6 +156,12 @@ namespace REHex
 					 * @brief Disable drawing the shadow.
 					*/
 					void HideShadow();
+#endif
+
+					/**
+					 * @brief Get the on-screen shadow rectangle.
+					*/
+					wxRect GetShadowRect() const;
 					
 					/**
 					 * @brief Check if a screen point is over the drop site image.
@@ -201,6 +208,18 @@ namespace REHex
 			DockSite *m_right_dock_site;
 			DockSite *m_top_dock_site;
 			DockSite *m_bottom_dock_site;
+
+#ifdef _WIN32
+			/**
+			 * @brief DockSite instance for displaying shadow on Windows.
+			 *
+			 * Anything which updates a transparent wxPopupWindow on Windows doesn't work correctly
+			 * (the draws overlay and blend together), so on Windows we instead use the main
+			 * DockSite instances only for displaying the dock site image and construct another
+			 * instance whenever we want to display the shadow.
+			*/
+			DockSite *m_shadow_site;
+#endif
 			
 			ToolFrame *FindFrameByTool(ToolPanel *tool);
 			ToolNotebook *FindNotebookByTool(ToolPanel *tool);

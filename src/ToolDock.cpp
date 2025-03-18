@@ -760,6 +760,9 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 				m_tool_frames.erase(m_left_down_tool);
 			}
 		}
+		
+		HideShadow();
+		DestroyDockSites();
 	}
 	
 	if(m_drag_pending || m_drag_active)
@@ -768,9 +771,6 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 		
 		m_drag_pending = false;
 		m_drag_active = false;
-		
-		HideShadow();
-		DestroyDockSites();
 	}
 	
 	event.Skip();
@@ -778,13 +778,16 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 
 void REHex::ToolDock::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 {
+	if(m_drag_active)
+	{
+		HideShadow();
+		DestroyDockSites();
+	}
+	
 	if(m_drag_pending || m_drag_active)
 	{
 		m_drag_pending = false;
 		m_drag_active = false;
-		
-		HideShadow();
-		DestroyDockSites();
 	}
 	else{
 		event.Skip();

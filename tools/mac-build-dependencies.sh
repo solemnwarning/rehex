@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2021-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -59,6 +59,7 @@ _rehex_cpanm_sha256="9b60767fe40752ef7a9d3f13f19060a63389a5c23acc3e9827e19b75500
 _rehex_perl_libs_build_ident="2"
 
 _rehex_macos_version_min=10.13
+_rehex_arch_flags="-arch arm64 -arch x86_64"
 
 _rehex_ok=1
 
@@ -129,23 +130,93 @@ then
 		fi
 
 		echo "${_rehex_botan_sha256}  ${_rehex_botan_tar}" | shasum -c
+		
+		# Build Botan for x86_64
+		
+		echo "Building Botan for x86_64"
 
-		mkdir -p "botan-${_rehex_botan_build_ident}"
+		mkdir -p "botan-${_rehex_botan_build_ident}-x86_64"
 
-		tar -xf "${_rehex_botan_tar}" -C "botan-${_rehex_botan_build_ident}"
-		cd "botan-${_rehex_botan_build_ident}/Botan-${_rehex_botan_version}"
+		tar -xf "${_rehex_botan_tar}" -C "botan-${_rehex_botan_build_ident}-x86_64"
+		pushd "botan-${_rehex_botan_build_ident}-x86_64/Botan-${_rehex_botan_version}"
 
 		python3 configure.py \
 			--minimized-build \
 			--enable-modules=md5,sha1,sha2_32,sha2_64 \
-			--cc-abi-flags="-mmacosx-version-min=${_rehex_macos_version_min}" \
+			--cpu=x86_64 \
+			--cc-abi-flags="-arch x86_64 -mmacosx-version-min=${_rehex_macos_version_min}" \
 			--prefix="${_rehex_botan_target_dir}" \
 			--disable-shared-library \
 			--without-documentation
 
 		make -j$(sysctl -n hw.logicalcpu)
-		make -j$(sysctl -n hw.logicalcpu) check
-		make -j$(sysctl -n hw.logicalcpu) install
+		
+		if [ "$(uname -m)" != "arm64" ]
+		then
+			make -j$(sysctl -n hw.logicalcpu) check
+		fi
+		
+		make -j$(sysctl -n hw.logicalcpu) DESTDIR=tmp install
+		
+		popd
+		
+		# Build Botan for ARM64 ("Apple Silicon")
+		
+		echo "Building Botan for ARM64"
+		
+		mkdir -p "botan-${_rehex_botan_build_ident}-arm64"
+
+		tar -xf "${_rehex_botan_tar}" -C "botan-${_rehex_botan_build_ident}-arm64"
+		pushd "botan-${_rehex_botan_build_ident}-arm64/Botan-${_rehex_botan_version}"
+
+		python3 configure.py \
+			--minimized-build \
+			--enable-modules=md5,sha1,sha2_32,sha2_64 \
+			--cpu=arm64 \
+			--cc-abi-flags="-arch arm64 -mmacosx-version-min=${_rehex_macos_version_min}" \
+			--prefix="${_rehex_botan_target_dir}" \
+			--disable-shared-library \
+			--without-documentation
+
+		make -j$(sysctl -n hw.logicalcpu)
+		
+		if [ "$(uname -m)" != "x86_64" ]
+		then
+			make -j$(sysctl -n hw.logicalcpu) check
+		fi
+		
+		make -j$(sysctl -n hw.logicalcpu) DESTDIR=tmp install
+		
+		popd
+		
+		# Build combined library
+		# (See https://github.com/randombit/botan/issues/2896#issuecomment-1478157486)
+		
+		echo "Building combined Botan library"
+		
+		mkdir -p "botan-${_rehex_botan_build_ident}/"
+		
+		cp -a "botan-${_rehex_botan_build_ident}-x86_64/Botan-${_rehex_botan_version}/tmp/${_rehex_botan_target_dir}/include" "botan-${_rehex_botan_build_ident}/"
+		cp "botan-${_rehex_botan_build_ident}-x86_64/Botan-${_rehex_botan_version}/tmp/${_rehex_botan_target_dir}/include/botan-2/botan/build.h" "botan-${_rehex_botan_build_ident}/include/botan-2/botan/build_x86_64.h"
+		cp "botan-${_rehex_botan_build_ident}-arm64/Botan-${_rehex_botan_version}/tmp/${_rehex_botan_target_dir}/include/botan-2/botan/build.h" "botan-${_rehex_botan_build_ident}/include/botan-2/botan/build_arm64.h"
+		
+		cat > "botan-${_rehex_botan_build_ident}/include/botan-2/botan/build.h" <<'EOF'
+#if defined(__x86_64__)
+    #include "build_x86_64.h"
+#elif defined(__aarch64__)
+    #include "build_arm64.h"
+#else
+    #error Unsupported architecture for botan
+#endif
+EOF
+		
+		mkdir -p "botan-${_rehex_botan_build_ident}/lib/"
+		lipo -create -output "botan-${_rehex_botan_build_ident}/lib/libbotan-2.a" \
+			"botan-${_rehex_botan_build_ident}-x86_64/Botan-${_rehex_botan_version}/tmp/${_rehex_botan_target_dir}/lib/libbotan-2.a" \
+			"botan-${_rehex_botan_build_ident}-arm64/Botan-${_rehex_botan_version}/tmp/${_rehex_botan_target_dir}/lib/libbotan-2.a"
+		
+		mkdir -p "$(dirname "${_rehex_botan_target_dir}")"
+		cp -a "botan-${_rehex_botan_build_ident}" "${_rehex_botan_target_dir}"
 	)
 
 	[ $? -ne 0 ] && _rehex_ok=0
@@ -176,7 +247,7 @@ then
 		cd "capstone-${_rehex_capstone_build_ident}/capstone-${_rehex_capstone_version}"
 		
 		PREFIX="${_rehex_capstone_target_dir}" \
-			CFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}" \
+			CFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}" \
 			CAPSTONE_STATIC=yes \
 			CAPSTONE_SHARED=no \
 			CAPSTONE_BUILD_CORE_ONLY=yes \
@@ -214,7 +285,7 @@ then
 			--prefix="${_rehex_jansson_target_dir}" \
 			--enable-shared=no \
 			--enable-static=yes \
-			CFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
+			CFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
 		
 		make -j$(sysctl -n hw.logicalcpu)
 		make -j$(sysctl -n hw.logicalcpu) check
@@ -252,7 +323,7 @@ then
 			--prefix="${_rehex_libiconv_target_dir}" \
 			--enable-shared=no \
 			--enable-static=yes \
-			CFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
+			CFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
 
 		make -j$(sysctl -n hw.logicalcpu)
 		make -j$(sysctl -n hw.logicalcpu) check
@@ -291,7 +362,7 @@ then
 			--with-libiconv-prefix="${_rehex_libiconv_target_dir}" \
 			--enable-shared=no \
 			--enable-static=yes \
-			CFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
+			CFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
 		
 		make -j$(sysctl -n hw.logicalcpu)
 		make -j$(sysctl -n hw.logicalcpu) check
@@ -325,7 +396,7 @@ then
 		tar -xf "${_rehex_lua_tar}" -C "lua-${_rehex_lua_build_ident}"
 		cd "lua-${_rehex_lua_build_ident}/lua-${_rehex_lua_version}"
 		
-		make -j$(sysctl -n hw.logicalcpu) macosx MYCFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
+		make -j$(sysctl -n hw.logicalcpu) macosx MYCFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
 		make -j$(sysctl -n hw.logicalcpu) test
 		make -j$(sysctl -n hw.logicalcpu) install INSTALL_TOP="${_rehex_lua_target_dir}"
 		
@@ -521,6 +592,7 @@ EOF
 			--with-libtiff=no \
 			--with-regex=builtin \
 			--with-liblzma=no \
+			--enable-universal_binary=x86_64,arm64 \
 			-enable-cxx11 \
 			-with-macosx-version-min="${_rehex_macos_version_min}" \
 			CXXFLAGS="-stdlib=libc++" \
@@ -599,8 +671,8 @@ EOF
 	
 	export WX_CONFIG="${_rehex_wxwidgets_target_dir}/bin/wx-config"
 	
-	export CFLAGS="-mmacosx-version-min=${_rehex_macos_version_min}"
-	export CXXFLAGS="-I${_rehex_libiconv_target_dir}/include/ -I${_rehex_libunistring_target_dir}/include/ -mmacosx-version-min=${_rehex_macos_version_min}"
+	export CFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
+	export CXXFLAGS="-I${_rehex_libiconv_target_dir}/include/ -I${_rehex_libunistring_target_dir}/include/ ${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
 	export LDFLAGS="-L${_rehex_libiconv_target_dir}/lib/ -L${_rehex_libunistring_target_dir}/lib/"
 	export LDLIBS="-liconv -lunistring"
 	
@@ -619,6 +691,7 @@ unset _rehex_botan_target_dir
 unset _rehex_dep_target_dir
 unset _rehex_dep_build_dir
 unset _rehex_ok
+unset _rehex_arch_flags
 unset _rehex_macos_version_min
 
 unset _rehex_perl_libs_build_ident

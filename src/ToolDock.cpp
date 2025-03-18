@@ -349,12 +349,28 @@ void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *note
 		
 		if(notebook == m_top_notebook || notebook == m_bottom_notebook)
 		{
-			wxSize size(-1, config->ReadLong("height", -1));
-			SetWindowSize(notebook, size);
+			int height = config->ReadLong("height", -1);
+			
+			if(height > 0)
+			{
+				wxSize size(-1, height);
+				SetWindowSize(notebook, size);
+			}
+			else{
+				ResetNotebookSize(notebook);
+			}
 		}
 		else{
-			wxSize size(config->ReadLong("width", -1), -1);
-			SetWindowSize(notebook, size);
+			int width = config->ReadLong("width", -1);
+			
+			if(width > 0)
+			{
+				wxSize size(width, -1);
+				SetWindowSize(notebook, size);
+			}
+			else{
+				ResetNotebookSize(notebook);
+			}
 		}
 	}
 }

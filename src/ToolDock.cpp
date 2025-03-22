@@ -37,7 +37,7 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	MultiSplitter(parent),
 	m_main_panel(NULL),
 	m_drag_pending(false),
-	m_drag_active(NULL),
+	m_drag_active(false),
 	m_left_dock_site(NULL),
 	m_right_dock_site(NULL),
 	m_top_dock_site(NULL),
@@ -577,10 +577,10 @@ void REHex::ToolDock::HideShadow()
 	}
 
 #else
-	m_left_dock_site->HideShadow();
-	m_right_dock_site->HideShadow();
-	m_top_dock_site->HideShadow();
-	m_bottom_dock_site->HideShadow();
+	if(m_left_dock_site != NULL)   { m_left_dock_site  ->HideShadow(); }
+	if(m_right_dock_site != NULL)  { m_right_dock_site ->HideShadow(); }
+	if(m_top_dock_site != NULL)    { m_top_dock_site   ->HideShadow(); }
+	if(m_bottom_dock_site != NULL) { m_bottom_dock_site->HideShadow(); }
 #endif
 }
 

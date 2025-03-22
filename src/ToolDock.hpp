@@ -113,10 +113,13 @@ namespace REHex
 					*/
 					void RemoveTool(ToolPanel *tool);
 					
+					ToolNotebook *GetNotebook() const;
+					
 					ToolPanel *GetTool() const;
 					
 				private:
 					wxBoxSizer *m_sizer;
+					ToolNotebook *m_notebook;
 					ToolPanel *m_tool;
 			};
 			

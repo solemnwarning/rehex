@@ -15,10 +15,17 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// Enable (experimental) custom styling of ToolNotebook under GTK
+// #define REHEX_TOOLNOTEBOOK_CUSTOM_CSS
+
 #include "platform.hpp"
 
 #include <wx/bitmap.h>
 #include <wx/statbmp.h>
+
+#if defined(__WXGTK__) && defined(REHEX_TOOLNOTEBOOK_CUSTOM_CSS)
+#include <gtk/gtk.h>
+#endif
 
 #include "ToolDock.hpp"
 
@@ -973,7 +980,82 @@ BEGIN_EVENT_TABLE(REHex::ToolDock::ToolNotebook, wxNotebook)
 END_EVENT_TABLE()
 
 REHex::ToolDock::ToolNotebook::ToolNotebook(wxWindow *parent, wxWindowID id, long style):
-	wxNotebook(parent, id, wxDefaultPosition, wxDefaultSize, style) {}
+	wxNotebook(parent, id, wxDefaultPosition, wxDefaultSize, style)
+{
+#if defined(__WXGTK__) && defined(REHEX_TOOLNOTEBOOK_CUSTOM_CSS)
+	GtkNotebook *gtk_notebook = (GtkNotebook*)(GetHandle());
+	
+	/* The radius of the border around the "top" edge of each tool tab. */
+	#define TAB_BORDER_RADIUS "0.25em"
+	
+	char stylesheet[256];
+	int stylesheet_len;
+	
+	if((style & wxNB_LEFT) != 0)
+	{
+		stylesheet_len = snprintf(stylesheet, sizeof(stylesheet),
+			"notebook tab {"
+			"  padding: 0.5em 0.5em 0.5em 0px;"
+			"  border: 1px solid #000000;"
+			"  border-radius: " TAB_BORDER_RADIUS " 0px 0px " TAB_BORDER_RADIUS ";"
+			"  margin: 0.5em 0px 0px 0.5em;"
+			"}"
+			"notebook tab:checked {"
+			"  background-color: #f6f5f4;"
+			"}"
+		);
+	}
+	else if((style & wxNB_RIGHT) != 0)
+	{
+		stylesheet_len = snprintf(stylesheet, sizeof(stylesheet),
+			"notebook tab {"
+			"  padding: 0.5em 0.1em 0.5em 0px;"
+			"  border: 1px solid #000000;"
+			"  border-radius: 0px " TAB_BORDER_RADIUS " " TAB_BORDER_RADIUS " 0px;"
+			"  margin: 0.5em 0.5em 0px 0px;"
+			"}"
+			"notebook tab:checked {"
+			"  background-color: #f6f5f4;"
+			"}"
+		);
+	}
+	else if((style & wxNB_BOTTOM) != 0)
+	{
+		stylesheet_len = snprintf(stylesheet, sizeof(stylesheet),
+			"notebook tab {"
+			"  padding: 0px 0.5em;"
+			"  border: 1px solid #000000;"
+			"  border-radius: 0px 0px " TAB_BORDER_RADIUS " " TAB_BORDER_RADIUS ";"
+			"  margin: 0px 0px 0.5em 0.5em;"
+			"}"
+			"notebook tab:checked {"
+			"  background-color: #f6f5f4;"
+			"}"
+		);
+	}
+	else{
+		stylesheet_len = snprintf(stylesheet, sizeof(stylesheet),
+			"notebook tab {"
+			"  padding: 0px 0.5em;"
+			"  border: 1px solid #000000;"
+			"  border-radius: " TAB_BORDER_RADIUS " " TAB_BORDER_RADIUS " 0px 0px;"
+			"  margin: 0.5em 0px 0px 0.5em;"
+			"}"
+			"notebook tab:checked {"
+			"  background-color: #f6f5f4;"
+			"}"
+		);
+	}
+	
+	assert((stylesheet_len + 1) < (int)(sizeof(stylesheet)));
+	
+	GtkCssProvider *provider = gtk_css_provider_new();
+	gtk_css_provider_load_from_data(provider, stylesheet, -1, NULL);
+	
+	GtkStyleContext *context = gtk_widget_get_style_context((GtkWidget*)(gtk_notebook));
+	gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+#endif
+}
 
 bool REHex::ToolDock::ToolNotebook::AddPage(wxWindow *page, const wxString &text, bool select, int imageId)
 {

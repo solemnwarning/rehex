@@ -1278,8 +1278,17 @@ REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anc
 	 * transparency works well enough for our purposes on Windows 8 and later.
 	*/
 #ifdef _WIN32
+#	if defined(_MSC_VER)
+#	pragma warning( push )
+#	pragma warning( disable : 4996 ) /* Suppress error due to GetVersionEx() being deprecated. */
+#	endif
+
 	OSVERSIONINFO version = { sizeof(OSVERSIONINFOA) };
 	if(GetVersionEx(&version) && ((version.dwMajorVersion == 6 && version.dwMinorVersion >= 2) || version.dwMajorVersion > 6))
+
+#	if defined(_MSC_VER)
+#	pragma warning( pop )
+#	endif
 #else
 	if(parent->IsTransparentBackgroundSupported())
 #endif

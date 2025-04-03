@@ -543,6 +543,11 @@ namespace REHex
 			void RemoveChild(wxWindow *window);
 			
 			/**
+			 * @brief Remove all child windows from the splitter without destroying them.
+			*/
+			void RemoveAllChildren();
+			
+			/**
 			 * @brief Remove a child window from the splitter and destroy it.
 			*/
 			void DestroyChild(wxWindow *window);
@@ -659,11 +664,6 @@ namespace REHex
 			 * @brief const-agnostic implementation of FindCellByPoint().
 			*/
 			template<typename T> static T *_FindCellByPoint(T *cell, const wxPoint &point);
-			
-			/**
-			 * @brief Remove all child windows from the splitter without destroying them.
-			*/
-			void RemoveAllChildren();
 			
 			/**
 			 * @brief Begin resizing a cell by dragging the edge in response to the left mouse button being pressed.

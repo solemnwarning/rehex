@@ -20,6 +20,7 @@
 
 #include "platform.hpp"
 
+#include <algorithm>
 #include <wx/bitmap.h>
 #include <wx/statbmp.h>
 
@@ -69,6 +70,12 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	m_bottom_notebook = new ToolNotebook(this, wxID_ANY, wxNB_BOTTOM);
 	m_bottom_notebook->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
 	m_bottom_notebook->Hide();
+}
+
+REHex::ToolDock::~ToolDock()
+{
+	RemoveAllChildren();
+	DestroyChildren();
 }
 
 void REHex::ToolDock::AddMainPanel(wxWindow *main_panel)
@@ -195,17 +202,17 @@ bool REHex::ToolDock::ToolExists(const std::string &name) const
 
 void REHex::ToolDock::HideFrames()
 {
-	for(auto it = m_tool_frames.begin(); it != m_tool_frames.end(); ++it)
+	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
 	{
-		it->second->Hide();
+		(*it)->Hide();
 	}
 }
 
 void REHex::ToolDock::UnhideFrames()
 {
-	for(auto it = m_tool_frames.begin(); it != m_tool_frames.end(); ++it)
+	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
 	{
-		it->second->ShowWithoutActivating();
+		(*it)->ShowWithoutActivating();
 	}
 }
 
@@ -266,16 +273,15 @@ void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, ToolNotebook *note
 
 void REHex::ToolDock::SaveToolFrames(wxConfig *config) const
 {
-	size_t i = 0;
-	for(auto it = m_tool_frames.begin(); it != m_tool_frames.end(); ++it, ++i)
+	size_t fi = 0;
+	for(auto fit = m_frames.begin(); fit != m_frames.end(); ++fit, ++fi)
 	{
-		char i_path[32];
-		snprintf(i_path, sizeof(i_path), "%zu/", i);
+		char fi_path[32];
+		snprintf(fi_path, sizeof(fi_path), "%zu/", fi);
 		
-		wxConfigPathChanger scoped_path(config, i_path);
+		wxConfigPathChanger f_scoped_path(config, fi_path);
 		
-		ToolPanel *tool = it->first;
-		ToolFrame *frame = it->second;
+		ToolFrame *frame = *fit;
 		
 		config->Write("frame/x", frame->GetPosition().x);
 		config->Write("frame/y", frame->GetPosition().y);
@@ -283,8 +289,21 @@ void REHex::ToolDock::SaveToolFrames(wxConfig *config) const
 		config->Write("frame/width", frame->GetSize().GetWidth());
 		config->Write("frame/height", frame->GetSize().GetHeight());
 		
-		config->Write("name", wxString(tool->name()));
-		tool->save_state(config);
+		std::vector<ToolPanel*> tools = frame->GetTools();
+		
+		size_t ti = 0;
+		for(auto tit = tools.begin(); tit != tools.end(); ++tit, ++ti)
+		{
+			char ti_path[32];
+			snprintf(ti_path, sizeof(ti_path), "%zu/", ti);
+			
+			wxConfigPathChanger t_scoped_path(config, ti_path);
+			
+			ToolPanel *tool = *tit;
+			
+			config->Write("name", wxString(tool->name()));
+			tool->save_state(config);
+		}
 	}
 }
 
@@ -384,14 +403,14 @@ void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *note
 
 void REHex::ToolDock::LoadToolFrames(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
 {
-	for(size_t i = 0;; ++i)
+	for(size_t fi = 0;; ++fi)
 	{
-		char i_path[64];
-		snprintf(i_path, sizeof(i_path), "%zu/", i);
+		char fi_path[64];
+		snprintf(fi_path, sizeof(fi_path), "%zu/", fi);
 		
-		if(config->HasGroup(i_path))
+		if(config->HasGroup(fi_path))
 		{
-			wxConfigPathChanger scoped_path(config, i_path);
+			wxConfigPathChanger scoped_path(config, fi_path);
 			
 			wxPoint frame_position(
 				config->ReadLong("frame/x", wxDefaultPosition.x),
@@ -401,26 +420,42 @@ void REHex::ToolDock::LoadToolFrames(wxConfig *config, SharedDocumentPointer &do
 				config->ReadLong("frame/width", wxDefaultSize.GetWidth()),
 				config->ReadLong("frame/height", wxDefaultSize.GetHeight()));
 			
-			std::string name = config->Read("name", "").ToStdString();
+			ToolFrame *frame = NULL;
 			
-			const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
-			if(tpr != NULL)
+			for(size_t ti = 0;; ++ti)
 			{
-				ToolFrame *frame = new ToolFrame(this, frame_position, frame_size);
+				char ti_path[64];
+				snprintf(ti_path, sizeof(ti_path), "%zu/", ti);
 				
-				ToolPanel *tool = tpr->factory(frame, document, document_ctrl);
-				tool->load_state(config);
-				
-				frame->AdoptTool(tool, false);
-				
-				frame->Show();
-				
-				frame->Bind(wxEVT_CLOSE_WINDOW, &REHex::ToolDock::OnFrameClose, this);
-				
-				m_tool_frames.emplace(tool, frame);
-			}
-			else{
-				/* TODO: Some kind of warning? */
+				if(config->HasGroup(ti_path))
+				{
+					wxConfigPathChanger scoped_path(config, ti_path);
+					
+					std::string name = config->Read("name", "").ToStdString();
+					
+					const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
+					if(tpr != NULL)
+					{
+						if(frame == NULL)
+						{
+							frame = new ToolFrame(this, &m_frames, frame_position, frame_size);
+							frame->GetNotebook()->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
+						}
+						
+						ToolPanel *tool = tpr->factory(frame, document, document_ctrl);
+						tool->load_state(config);
+						
+						frame->AdoptTool(tool, false);
+						
+						frame->Show();
+					}
+					else{
+						/* TODO: Some kind of warning? */
+					}
+				}
+				else{
+					break;
+				}
 			}
 		}
 		else{
@@ -450,27 +485,39 @@ void REHex::ToolDock::ResetNotebookSize(ToolNotebook *notebook)
 
 void REHex::ToolDock::SetupDockSites()
 {
+	std::vector<wxRect> mask_regions;
+	mask_regions.reserve(m_frames.size());
+	
+	for(auto f_it = m_frames.begin(); f_it != m_frames.end(); ++f_it)
+	{
+		if(*f_it != m_drag_frame)
+		{
+			(*f_it)->SetupDockSite(mask_regions);
+			mask_regions.push_back((*f_it)->GetScreenRect());
+		}
+	}
+	
 	if(m_left_dock_site == NULL)
 	{
-		m_left_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_left), Anchor::LEFT);
+		m_left_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_left), Anchor::LEFT, mask_regions);
 		m_left_dock_site->Show();
 	}
 	
 	if(m_right_dock_site == NULL)
 	{
-		m_right_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_right), Anchor::RIGHT);
+		m_right_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_right), Anchor::RIGHT, mask_regions);
 		m_right_dock_site->Show();
 	}
 	
 	if(m_top_dock_site == NULL)
 	{
-		m_top_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP);
+		m_top_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP, mask_regions);
 		m_top_dock_site->Show();
 	}
 	
 	if(m_bottom_dock_site == NULL)
 	{
-		m_bottom_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM);
+		m_bottom_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM, mask_regions);
 		m_bottom_dock_site->Show();
 	}
 }
@@ -500,6 +547,11 @@ void REHex::ToolDock::DestroyDockSites()
 		m_bottom_dock_site->Destroy();
 		m_bottom_dock_site = NULL;
 	}
+	
+	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+	{
+		(*it)->DestroyDockSite();
+	}
 }
 
 void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
@@ -513,13 +565,14 @@ void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 		}
 
 		m_shadow_site->Destroy();
+		m_shadow_site = NULL;
 	}
 #endif
 
 	if(notebook == m_left_notebook)
 	{
 #ifdef _WIN32
-		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_left), Anchor::LEFT, rect);
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_left), Anchor::LEFT, {}, rect);
 		m_shadow_site->Show();
 		
 #else
@@ -529,11 +582,17 @@ void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 		m_top_dock_site->HideShadow();
 		m_bottom_dock_site->HideShadow();
 #endif
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			(*it)->HideShadow();
+		}
+		
 	}
 	else if(notebook == m_right_notebook)
 	{
 #ifdef _WIN32
-		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_right), Anchor::RIGHT, rect);
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_right), Anchor::RIGHT, {}, rect);
 		m_shadow_site->Show();
 
 #else
@@ -543,11 +602,16 @@ void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 		m_top_dock_site->HideShadow();
 		m_bottom_dock_site->HideShadow();
 #endif
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			(*it)->HideShadow();
+		}
 	}
 	else if(notebook == m_top_notebook)
 	{
 #ifdef _WIN32
-		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP, rect);
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP, {}, rect);
 		m_shadow_site->Show();
 
 #else
@@ -557,11 +621,16 @@ void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 		m_right_dock_site->HideShadow();
 		m_bottom_dock_site->HideShadow();
 #endif
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			(*it)->HideShadow();
+		}
 	}
 	else if(notebook == m_bottom_notebook)
 	{
 #ifdef _WIN32
-		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM, rect);
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM, {}, rect);
 		m_shadow_site->Show();
 
 #else
@@ -571,6 +640,30 @@ void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 		m_right_dock_site->HideShadow();
 		m_top_dock_site->HideShadow();
 #endif
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			(*it)->HideShadow();
+		}
+	}
+	else{
+#ifndef _WIN32
+		m_left_dock_site->HideShadow();
+		m_right_dock_site->HideShadow();
+		m_top_dock_site->HideShadow();
+		m_bottom_dock_site->HideShadow();
+#endif
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			if((*it)->GetNotebook() == notebook)
+			{
+				(*it)->ShowShadow();
+			}
+			else{
+				(*it)->HideShadow();
+			}
+		}
 	}
 }
 
@@ -589,12 +682,24 @@ void REHex::ToolDock::HideShadow()
 	if(m_top_dock_site != NULL)    { m_top_dock_site   ->HideShadow(); }
 	if(m_bottom_dock_site != NULL) { m_bottom_dock_site->HideShadow(); }
 #endif
+	
+	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+	{
+		(*it)->HideShadow();
+	}
 }
 
 REHex::ToolDock::ToolFrame *REHex::ToolDock::FindFrameByTool(ToolPanel *tool)
 {
-	auto frame_it = m_tool_frames.find(tool);
-	return frame_it != m_tool_frames.end() ? frame_it->second : NULL;
+	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+	{
+		if((*it)->GetNotebook()->FindPage(tool) != wxNOT_FOUND)
+		{
+			return *it;
+		}
+	}
+	
+	return NULL;
 }
 
 REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindNotebookByTool(ToolPanel *tool)
@@ -624,11 +729,16 @@ REHex::ToolPanel *REHex::ToolDock::FindToolByName(const std::string &name) const
 {
 	/* Search for any instances of the tool floating in a tool window... */
 	
-	for(auto frame_it = m_tool_frames.begin(); frame_it != m_tool_frames.end(); ++frame_it)
+	for(auto frame_it = m_frames.begin(); frame_it != m_frames.end(); ++frame_it)
 	{
-		if(frame_it->first->name() == name)
+		std::vector<ToolPanel*> frame_tools = (*frame_it)->GetTools();
+		
+		for(auto tool_it = frame_tools.begin(); tool_it != frame_tools.end(); ++tool_it)
 		{
-			return frame_it->first;
+			if((*tool_it)->name() == name)
+			{
+				return *tool_it;
+			}
 		}
 	}
 	
@@ -663,25 +773,75 @@ REHex::ToolPanel *REHex::ToolDock::FindToolByName(const std::string &name) const
 
 REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &point, ToolNotebook *current_notebook)
 {
+	wxPoint screen_point = ClientToScreen(point);
+	
+	if(m_dock_frame != NULL)
+	{
+		if(m_dock_frame->ScreenPointInDockImage(screen_point))
+		{
+			return m_dock_frame->GetNotebook();
+		}
+		else{
+			m_dock_frame = NULL;
+		}
+	}
+	else if(m_dock_notebook != NULL)
+	{
+		assert(m_dock_site != NULL);
+		
+		if(m_dock_site->PointInImage(screen_point))
+		{
+			return m_dock_notebook;
+		}
+		else{
+			m_dock_notebook = NULL;
+		}
+	}
+	
+	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+	{
+		if((*it)->GetScreenRect().Contains(screen_point) && (*it)->GetNotebook()->FindPage(m_left_down_tool) == wxNOT_FOUND)
+		{
+			if((*it)->ScreenPointInDockImage(screen_point))
+			{
+				m_dock_frame = *it;
+				return (*it)->GetNotebook();
+			}
+			else{
+				return NULL;
+			}
+		}
+	}
+	
 	ToolNotebook *dest_notebook = (ToolNotebook*)(FindChildByPoint(point));
 	if(dest_notebook == NULL || dest_notebook != current_notebook)
 	{
-		wxPoint screen_point = ClientToScreen(point);
-		
 		if(m_left_dock_site != NULL && m_left_dock_site->PointInImage(screen_point))
 		{
+			m_dock_notebook = m_left_notebook;
+			m_dock_site = m_left_dock_site;
+			
 			dest_notebook = m_left_notebook;
 		}
 		else if(m_right_dock_site != NULL && m_right_dock_site->PointInImage(screen_point))
 		{
+			m_dock_notebook = m_right_notebook;
+			m_dock_site = m_right_dock_site;
+			
 			dest_notebook = m_right_notebook;
 		}
 		else if(m_top_dock_site != NULL && m_top_dock_site->PointInImage(screen_point))
 		{
+			m_dock_notebook = m_top_notebook;
+			m_dock_site = m_top_dock_site;
+			
 			dest_notebook = m_top_notebook;
 		}
 		else if(m_bottom_dock_site != NULL && m_bottom_dock_site->PointInImage(screen_point))
 		{
+			m_dock_notebook = m_bottom_notebook;
+			m_dock_site = m_bottom_dock_site;
+			
 			dest_notebook = m_bottom_notebook;
 		}
 		else{
@@ -738,19 +898,18 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 		
 		if(dest_notebook != NULL && dest_notebook != notebook)
 		{
-			if(notebook != NULL)
-			{
-				notebook->RemovePage(notebook->FindPage(m_left_down_tool));
-				
-				if(notebook->GetPageCount() == 0)
-				{
-					notebook->Hide();
-				}
-			}
-
 			if(frame != NULL)
 			{
 				frame->RemoveTool(m_left_down_tool);
+				
+				if(frame->GetTools().empty())
+				{
+					frame->Destroy();
+				}
+			}
+			else if(notebook != NULL)
+			{
+				notebook->RemovePage(notebook->FindPage(m_left_down_tool));
 			}
 			
 			m_left_down_tool->Reparent(dest_notebook);
@@ -764,7 +923,6 @@ void REHex::ToolDock::OnLeftUp(wxMouseEvent &event)
 			if(frame != NULL)
 			{
 				frame->Destroy();
-				m_tool_frames.erase(m_left_down_tool);
 			}
 		}
 		
@@ -815,6 +973,10 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 		{
 			m_drag_pending = false;
 			m_drag_active = true;
+			
+			m_drag_frame = NULL;
+			m_dock_notebook = NULL;
+			m_dock_frame = NULL;
 		}
 	}
 	
@@ -885,28 +1047,28 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			}
 		}
 		else{
-			if(notebook != NULL)
-			{
-				notebook->RemovePage(notebook->FindPage(m_left_down_tool));
-				
-				if(notebook->GetPageCount() == 0)
-				{
-					notebook->Hide();
-				}
-			}
-			
 			wxPoint frame_pos = ClientToScreen(event.GetPosition());
 			
-			if(frame == NULL)
+			if(m_drag_frame == NULL)
 			{
-				frame = new ToolFrame(this, wxDefaultPosition, wxDefaultSize, m_left_down_tool);
+				if(frame != NULL)
+				{
+					frame->RemoveTool(m_left_down_tool);
+					
+					if(frame->GetTools().empty())
+					{
+						frame->Destroy();
+					}
+				}
+				else if(notebook != NULL)
+				{
+					notebook->RemovePage(notebook->FindPage(m_left_down_tool));
+				}
+				
+				frame = m_drag_frame = new ToolFrame(this, &m_frames, wxDefaultPosition, wxDefaultSize, m_left_down_tool);
 				frame->SetPosition(frame_pos);
 				
-				frame->Bind(wxEVT_CLOSE_WINDOW, &REHex::ToolDock::OnFrameClose, this);
-				
 				frame->GetNotebook()->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
-				
-				m_tool_frames.emplace(m_left_down_tool, frame);
 			}
 			
 			SetupDockSites();
@@ -923,56 +1085,6 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 	}
 	
 	event.Skip();
-}
-
-void REHex::ToolDock::OnFrameClose(wxCloseEvent &event)
-{
-	ToolFrame *frame = (ToolFrame*)(event.GetEventObject());
-	
-	ToolPanel *tool = frame->GetTool();
-	if(tool != NULL)
-	{
-		frame->RemoveTool(tool);
-		
-		ToolNotebook *dest_notebook = NULL;
-		
-		switch(tool->shape())
-		{
-			case ToolPanel::Shape::TPS_WIDE:
-				if(m_bottom_notebook->GetPageCount() > 0 || m_top_notebook->GetPageCount() == 0)
-				{
-					dest_notebook = m_bottom_notebook;
-				}
-				else{
-					dest_notebook = m_top_notebook;
-				}
-				
-				break;
-				
-			case ToolPanel::Shape::TPS_TALL:
-				if(m_right_notebook->GetPageCount() > 0 || m_left_notebook->GetPageCount() == 0)
-				{
-					dest_notebook = m_right_notebook;
-				}
-				else{
-					dest_notebook = m_left_notebook;
-				}
-				
-				break;
-		}
-		
-		tool->Reparent(dest_notebook);
-		dest_notebook->AddPage(tool, tool->label(), true);
-		
-		if(dest_notebook->GetPageCount() == 1)
-		{
-			ResetNotebookSize(dest_notebook);
-		}
-		
-		m_tool_frames.erase(tool);
-	}
-	
-	frame->Destroy();
 }
 
 BEGIN_EVENT_TABLE(REHex::ToolDock::ToolNotebook, wxNotebook)
@@ -1199,10 +1311,19 @@ void REHex::ToolDock::ToolNotebook::OnPageChanged(wxNotebookEvent& event)
 	event.Skip();
 }
 
-REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, wxPoint position, wxSize size, ToolPanel *tool):
+BEGIN_EVENT_TABLE(REHex::ToolDock::ToolFrame, wxFrame)
+	EVT_ACTIVATE(REHex::ToolDock::ToolFrame::OnWindowActivate)
+END_EVENT_TABLE()
+
+REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, std::list<ToolFrame*> *frame_order, wxPoint position, wxSize size, ToolPanel *tool):
 	wxFrame(parent, wxID_ANY, wxEmptyString, position, size,
 		(wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW | wxFRAME_FLOAT_ON_PARENT)),
-	m_tool(NULL)
+	m_frames(frame_order),
+	m_dock_site(NULL)
+	
+#ifdef _WIN32
+	, m_shadow_site(NULL)
+#endif
 {
 	m_sizer = new wxBoxSizer(wxHORIZONTAL);
 	
@@ -1215,14 +1336,20 @@ REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, wxPoint position, wxSize
 	{
 		AdoptTool(tool);
 	}
+	
+	m_frames->push_front(this);
+}
+
+REHex::ToolDock::ToolFrame::~ToolFrame()
+{
+	auto it = std::find(m_frames->begin(), m_frames->end(), this);
+	assert(it != m_frames->end());
+	
+	m_frames->erase(it);
 }
 
 void REHex::ToolDock::ToolFrame::AdoptTool(ToolPanel *tool, bool resize)
 {
-	assert(m_tool == NULL);
-	
-	m_tool = tool;
-	
 	if(resize)
 	{
 		SetClientSize(tool->GetSize());
@@ -1230,22 +1357,14 @@ void REHex::ToolDock::ToolFrame::AdoptTool(ToolPanel *tool, bool resize)
 	
 	SetTitle(tool->label());
 	
-	// tool->Reparent(this);
-	// tool->Show();
 	tool->Reparent(m_notebook);
 	
-	// m_sizer->Add(tool, 1, wxEXPAND);
 	m_notebook->AddPage(tool, tool->label(), true);
 }
 
 void REHex::ToolDock::ToolFrame::RemoveTool(ToolPanel *tool)
 {
-	assert(m_tool == tool);
-	
-	m_tool = NULL;
-	
-	// m_sizer->Detach(tool);
-	m_notebook->RemovePage(0);
+	m_notebook->RemovePage(m_notebook->FindPage(tool));
 }
 
 REHex::ToolDock::ToolNotebook *REHex::ToolDock::ToolFrame::GetNotebook() const
@@ -1253,20 +1372,98 @@ REHex::ToolDock::ToolNotebook *REHex::ToolDock::ToolFrame::GetNotebook() const
 	return m_notebook;
 }
 
-REHex::ToolPanel *REHex::ToolDock::ToolFrame::GetTool() const
+std::vector<REHex::ToolPanel*> REHex::ToolDock::ToolFrame::GetTools() const
 {
-	return m_tool;
+	size_t num_pages = m_notebook->GetPageCount();
+	
+	std::vector<ToolPanel*> tools;
+	tools.reserve(num_pages);
+	
+	for(size_t i = 0; i < num_pages; ++i)
+	{
+		tools.push_back((ToolPanel*)(m_notebook->GetPage(i)));
+	}
+	
+	return tools;
+}
+
+void REHex::ToolDock::ToolFrame::SetupDockSite(const std::vector<wxRect> &mask_regions)
+{
+	if(m_dock_site == NULL)
+	{
+		m_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP, mask_regions);
+		m_dock_site->Show();
+	}
+}
+
+void REHex::ToolDock::ToolFrame::DestroyDockSite()
+{
+	if(m_dock_site != NULL)
+	{
+		m_dock_site->Destroy();
+		m_dock_site = NULL;
+	}
+}
+
+void REHex::ToolDock::ToolFrame::ShowShadow()
+{
+	wxRect shadow_rect = m_notebook->GetScreenRect();
+	
+#ifdef _WIN32
+	if(m_shadow_site == NULL)
+	{
+		m_shadow_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_top), Anchor::TOP, {}, shadow_rect);
+		m_shadow_site->Show();
+	}
+#else
+	if(m_dock_site != NULL)
+	{
+		m_dock_site->ShowShadow(shadow_rect);
+	}
+#endif
+}
+
+void REHex::ToolDock::ToolFrame::HideShadow()
+{
+#ifdef _WIN32
+	if(m_shadow_site != NULL)
+	{
+		m_shadow_site->Destroy();
+		m_shadow_site = NULL;
+	}
+#else
+	if(m_dock_site != NULL)
+	{
+		m_dock_site->HideShadow();
+	}
+#endif
+}
+
+bool REHex::ToolDock::ToolFrame::ScreenPointInDockImage(const wxPoint &screen_point) const
+{
+	return m_dock_site != NULL && m_dock_site->PointInImage(screen_point);
+}
+
+void REHex::ToolDock::ToolFrame::OnWindowActivate(wxActivateEvent &event)
+{
+	auto it = std::find(m_frames->begin(), m_frames->end(), this);
+	assert(it != m_frames->end());
+	
+	m_frames->erase(it);
+	m_frames->push_front(this);
 }
 
 BEGIN_EVENT_TABLE(REHex::ToolDock::DockSite, wxPopupWindow)
 	EVT_PAINT(REHex::ToolDock::DockSite::OnPaint)
 END_EVENT_TABLE()
 
-REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor, const wxRect &shadow_rect):
+REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor, const std::vector<wxRect> &mask_regions, const wxRect &shadow_rect):
 	wxPopupWindow(),
 	m_image(image.ConvertToImage()),
 	m_image_bitmap(image),
 	m_anchor(anchor),
+	m_mask_regions(mask_regions),
+	m_mask_enabled(shadow_rect.IsEmpty()),
 	m_shadow(shadow_rect)
 {
 	/* We query whether transparency is supported via the parent window because we can't call
@@ -1310,12 +1507,24 @@ void REHex::ToolDock::DockSite::ShowShadow(const wxRect &rect)
 {
 	m_shadow = rect;
 	Resize();
+	
+	if(m_mask_enabled)
+	{
+		m_mask_enabled = false;
+		Refresh();
+	}
 }
 
 void REHex::ToolDock::DockSite::HideShadow()
 {
 	m_shadow = wxRect(-1, -1, -1, -1);
 	Resize();
+	
+	if(!m_mask_enabled)
+	{
+		m_mask_enabled = true;
+		Refresh();
+	}
 }
 #endif
 
@@ -1396,6 +1605,24 @@ void REHex::ToolDock::DockSite::OnPaint(wxPaintEvent &event)
 	wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
 	if(gc)
 	{
+		if(m_mask_enabled)
+		{
+			wxSize size = GetSize();
+			wxRegion clip_region(0, 0, size.GetWidth(), size.GetHeight());
+			
+			for(auto it = m_mask_regions.begin(); it != m_mask_regions.end(); ++it)
+			{
+				wxPoint local_top_left = ScreenToClient(it->GetTopLeft());
+				wxPoint local_bottom_right = ScreenToClient(it->GetBottomRight());
+				
+				wxRect local_mask(local_top_left, local_bottom_right);
+				
+				clip_region.Subtract(local_mask);
+			}
+			
+			gc->Clip(clip_region);
+		}
+		
 		if(!(m_shadow.IsEmpty()))
 		{
 			wxRect screen_rect = GetScreenRect();

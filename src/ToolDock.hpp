@@ -18,7 +18,7 @@
 #ifndef REHEX_TOOLPANELDOCK_HPP
 #define REHEX_TOOLPANELDOCK_HPP
 
-#include <map>
+#include <list>
 #include <string>
 #include <wx/bitmap.h>
 #include <wx/config.h>
@@ -41,6 +41,7 @@ namespace REHex
 	{
 		public:
 			ToolDock(wxWindow *parent);
+			virtual ~ToolDock() override;
 			
 			void AddMainPanel(wxWindow *main_panel);
 			
@@ -94,13 +95,16 @@ namespace REHex
 				DECLARE_EVENT_TABLE()
 			};
 			
+			class DockSite;
+			
 			/**
 			 * @brief wxFrame specialisation for holding a detached/floating tool.
 			*/
 			class ToolFrame: public wxFrame
 			{
 				public:
-					ToolFrame(wxWindow *parent, wxPoint position = wxDefaultPosition, wxSize size = wxDefaultSize, ToolPanel *tool = NULL);
+					ToolFrame(wxWindow *parent, std::list<ToolFrame*> *frame_order, wxPoint position = wxDefaultPosition, wxSize size = wxDefaultSize, ToolPanel *tool = NULL);
+					virtual ~ToolFrame() override;
 					
 					void AdoptTool(ToolPanel *tool, bool resize = true);
 					
@@ -115,12 +119,31 @@ namespace REHex
 					
 					ToolNotebook *GetNotebook() const;
 					
-					ToolPanel *GetTool() const;
+					std::vector<ToolPanel*> GetTools() const;
+					
+					void SetupDockSite(const std::vector<wxRect> &mask_regions);
+					void DestroyDockSite();
+					
+					void ShowShadow();
+					void HideShadow();
+					
+					bool ScreenPointInDockImage(const wxPoint &screen_point) const;
 					
 				private:
 					wxBoxSizer *m_sizer;
 					ToolNotebook *m_notebook;
-					ToolPanel *m_tool;
+					
+					std::list<ToolFrame*> *m_frames;
+					
+					DockSite *m_dock_site;
+					
+#ifdef _WIN32
+					DockSite *m_shadow_site;
+#endif
+					
+					void OnWindowActivate(wxActivateEvent &event);
+					
+				DECLARE_EVENT_TABLE()
 			};
 			
 			enum class Anchor
@@ -142,7 +165,7 @@ namespace REHex
 			class DockSite: public wxPopupWindow
 			{
 				public:
-					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor, const wxRect &shadow_rect = wxRect(-1, -1, -1, -1));
+					DockSite(wxWindow *parent, const wxBitmap &image, Anchor anchor, const std::vector<wxRect> &mask_regions, const wxRect &shadow_rect = wxRect(-1, -1, -1, -1));
 					
 #ifndef _WIN32
 					/**
@@ -178,6 +201,9 @@ namespace REHex
 					wxBitmap m_image_bitmap;
 					Anchor m_anchor;
 					
+					std::vector<wxRect> m_mask_regions;
+					bool m_mask_enabled;
+					
 					int m_image_x; /**< X offset of image within window. */
 					int m_image_y; /**< Y offset of image within window. */
 					
@@ -200,12 +226,17 @@ namespace REHex
 			ToolNotebook *m_top_notebook;
 			ToolNotebook *m_bottom_notebook;
 			
-			std::map<ToolPanel*, ToolFrame*> m_tool_frames;
+			std::list<ToolFrame*> m_frames;
 			
 			bool m_drag_pending;
 			wxPoint m_left_down_point;
 			ToolPanel *m_left_down_tool;
 			bool m_drag_active;
+			ToolFrame *m_drag_frame;
+			
+			ToolNotebook *m_dock_notebook; /**< Notebook the cursor was last seen hovering to dock to. */
+			DockSite *m_dock_site;         /**< DockSite of m_dock_notebook. */
+			ToolFrame *m_dock_frame;       /**< Frame the cursor was last seen hovering to dock to. */
 			
 			DockSite *m_left_dock_site;
 			DockSite *m_right_dock_site;
@@ -256,7 +287,6 @@ namespace REHex
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			void OnMotion(wxMouseEvent &event);
-			void OnFrameClose(wxCloseEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

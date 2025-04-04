@@ -1480,7 +1480,7 @@ REHex::ToolDock::DockSite::DockSite(wxWindow *parent, const wxBitmap &image, Anc
 #	pragma warning( disable : 4996 ) /* Suppress error due to GetVersionEx() being deprecated. */
 #	endif
 
-	OSVERSIONINFO version = { sizeof(OSVERSIONINFOA) };
+	OSVERSIONINFO version = { sizeof(OSVERSIONINFO) };
 	if(GetVersionEx(&version) && ((version.dwMajorVersion == 6 && version.dwMinorVersion >= 2) || version.dwMajorVersion > 6))
 
 #	if defined(_MSC_VER)

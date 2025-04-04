@@ -1053,11 +1053,12 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			{
 				if(frame != NULL)
 				{
-					frame->RemoveTool(m_left_down_tool);
-					
-					if(frame->GetTools().empty())
+					if(frame->GetTools().size() == 1U)
 					{
-						frame->Destroy();
+						m_drag_frame = frame;
+					}
+					else{
+						frame->RemoveTool(m_left_down_tool);
 					}
 				}
 				else if(notebook != NULL)
@@ -1065,10 +1066,13 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 					notebook->RemovePage(notebook->FindPage(m_left_down_tool));
 				}
 				
-				frame = m_drag_frame = new ToolFrame(this, &m_frames, wxDefaultPosition, wxDefaultSize, m_left_down_tool);
-				frame->SetPosition(frame_pos);
-				
-				frame->GetNotebook()->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
+				if(m_drag_frame == NULL)
+				{
+					frame = m_drag_frame = new ToolFrame(this, &m_frames, wxDefaultPosition, wxDefaultSize, m_left_down_tool);
+					frame->SetPosition(frame_pos);
+
+					frame->GetNotebook()->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
+				}
 			}
 			
 			SetupDockSites();

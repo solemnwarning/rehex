@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -58,14 +58,6 @@ enum {
 wxDEFINE_EVENT(REHex::LAST_GOTO_OFFSET_CHANGED, wxCommandEvent);
 
 BEGIN_EVENT_TABLE(REHex::Tab, wxPanel)
-	EVT_SIZE(REHex::Tab::OnSize)
-	
-	EVT_NOTEBOOK_PAGE_CHANGED(ID_HTOOLS, REHex::Tab::OnHToolChange)
-	EVT_NOTEBOOK_PAGE_CHANGED(ID_VTOOLS, REHex::Tab::OnVToolChange)
-	
-	EVT_SPLITTER_SASH_POS_CHANGING(ID_HSPLITTER, REHex::Tab::OnHSplitterSashPosChanging)
-	EVT_SPLITTER_SASH_POS_CHANGING(ID_VSPLITTER, REHex::Tab::OnVSplitterSashPosChanging)
-	
 	EVT_BITRANGE(wxID_ANY, REHex::COMMENT_LEFT_CLICK,  REHex::Tab::OnCommentLeftClick)
 	EVT_BITRANGE(wxID_ANY, REHex::COMMENT_RIGHT_CLICK, REHex::Tab::OnCommentRightClick)
 	
@@ -82,12 +74,6 @@ REHex::Tab::Tab(wxWindow *parent):
 	last_goto_offset(BitOffset::MIN),
 	data_map_scrollbar_type(DataMapScrollbarType::NONE),
 	data_map_scrollbar(NULL),
-	vtools_adjust_pending(false),
-	vtools_adjust_force(false),
-	vtools_initial_size(-1),
-	htools_adjust_pending(false),
-	htools_adjust_force(false),
-	htools_initial_size(-1),
 	repopulate_regions_frozen(false),
 	repopulate_regions_pending(false),
 	child_windows_hidden(false),
@@ -96,15 +82,10 @@ REHex::Tab::Tab(wxWindow *parent):
 	file_modified_dialog_pending(false),
 	auto_reload(false)
 {
-	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	v_splitter->SetSashGravity(1.0);
-	v_splitter->SetMinimumPaneSize(20);
+	tool_dock = new ToolDock(this);
 	
-	h_splitter = new wxSplitterWindow(v_splitter, ID_HSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	h_splitter->SetSashGravity(1.0);
-	h_splitter->SetMinimumPaneSize(20);
-	
-	doc_ctrl_panel = new wxPanel(h_splitter);
+	doc_ctrl_panel = new wxPanel(tool_dock);
+	tool_dock->AddMainPanel(doc_ctrl_panel);
 	
 	doc_ctrl = new REHex::DocumentCtrl(doc_ctrl_panel, doc);
 	
@@ -139,21 +120,9 @@ REHex::Tab::Tab(wxWindow *parent):
 	init_default_doc_view();
 	doc_ctrl->set_insert_mode(true);
 	
-	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
-	h_tools->SetFitToCurrentPage(true);
-	
-	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
-	v_tools->SetFitToCurrentPage(true);
-	
-	h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
-	v_splitter->SplitVertically(h_splitter, v_tools);
-	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(v_splitter, 1, wxEXPAND);
+	sizer->Add(tool_dock, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
-	
-	htools_adjust_on_idle(true);
-	vtools_adjust_on_idle(true);
 	
 	init_default_tools();
 	
@@ -176,12 +145,6 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	last_goto_offset(BitOffset::MIN),
 	data_map_scrollbar_type(DataMapScrollbarType::NONE),
 	data_map_scrollbar(NULL),
-	vtools_adjust_pending(false),
-	vtools_adjust_force(false),
-	vtools_initial_size(-1),
-	htools_adjust_pending(false),
-	htools_adjust_force(false),
-	htools_initial_size(-1),
 	repopulate_regions_frozen(false),
 	repopulate_regions_pending(false),
 	child_windows_hidden(false),
@@ -190,15 +153,11 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	file_modified_dialog_pending(false),
 	auto_reload(false)
 {
-	v_splitter = new wxSplitterWindow(this, ID_VSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	v_splitter->SetSashGravity(1.0);
-	v_splitter->SetMinimumPaneSize(20);
+	tool_dock = new ToolDock(this);
 	
-	h_splitter = new wxSplitterWindow(v_splitter, ID_HSPLITTER, wxDefaultPosition, wxDefaultSize, (wxSP_3D | wxSP_LIVE_UPDATE));
-	h_splitter->SetSashGravity(1.0);
-	h_splitter->SetMinimumPaneSize(20);
+	doc_ctrl_panel = new wxPanel(tool_dock);
+	tool_dock->AddMainPanel(doc_ctrl_panel);
 	
-	doc_ctrl_panel = new wxPanel(h_splitter);
 	doc_ctrl = new REHex::DocumentCtrl(doc_ctrl_panel, doc);
 	
 	data_map_scrollbar_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -231,21 +190,9 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	
 	init_default_doc_view();
 	
-	h_tools = new wxNotebook(h_splitter, ID_HTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM);
-	h_tools->SetFitToCurrentPage(true);
-	
-	v_tools = new wxNotebook(v_splitter, ID_VTOOLS, wxDefaultPosition, wxDefaultSize, wxNB_RIGHT);
-	v_tools->SetFitToCurrentPage(true);
-	
-	h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
-	v_splitter->SplitVertically(h_splitter, v_tools);
-	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(v_splitter, 1, wxEXPAND);
+	sizer->Add(tool_dock, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
-	
-	vtools_adjust_on_idle(true);
-	htools_adjust_on_idle(true);
 	
 	init_default_tools();
 	
@@ -271,92 +218,17 @@ REHex::Tab::~Tab()
 
 bool REHex::Tab::tool_active(const std::string &name)
 {
-	return tools.find(name) != tools.end();
+	return tool_dock->ToolExists(name);
 }
 
 void REHex::Tab::tool_create(const std::string &name, bool switch_to, wxConfig *config)
 {
-	if(tool_active(name))
-	{
-		return;
-	}
-	
-	const ToolPanelRegistration *tpr = ToolPanelRegistry::by_name(name);
-	assert(tpr != NULL);
-	
-	if(tpr->shape == ToolPanel::TPS_TALL)
-	{
-		ToolPanel *tool_window = tpr->factory(v_tools, doc, doc_ctrl);
-		if(config)
-		{
-			tool_window->load_state(config);
-		}
-		
-		v_tools->AddPage(tool_window, tpr->label, switch_to);
-		
-		tools.insert(std::make_pair(name, tool_window));
-		
-		xtools_fix_visibility(v_tools);
-		vtools_adjust_on_idle(false);
-	}
-	else if(tpr->shape == ToolPanel::TPS_WIDE)
-	{
-		ToolPanel *tool_window = tpr->factory(h_tools, doc, doc_ctrl);
-		if(config)
-		{
-			tool_window->load_state(config);
-		}
-		
-		h_tools->AddPage(tool_window, tpr->label, switch_to);
-		
-		tools.insert(std::make_pair(name, tool_window));
-		
-		xtools_fix_visibility(h_tools);
-		htools_adjust_on_idle(false);
-	}
+	tool_dock->CreateTool(name, doc, doc_ctrl);
 }
 
 void REHex::Tab::tool_destroy(const std::string &name)
 {
-	auto ti = tools.find(name);
-	if(ti == tools.end())
-	{
-		return;
-	}
-	
-	wxWindow *tool_window = ti->second;
-	tools.erase(ti);
-	
-	wxNotebook *notebook = dynamic_cast<wxNotebook*>(tool_window->GetParent());
-	assert(notebook != NULL);
-	
-	int page_idx = notebook->FindPage(tool_window);
-	assert(page_idx != wxNOT_FOUND);
-	
-	notebook->DeletePage(page_idx);
-	
-	xtools_fix_visibility(notebook);
-	
-	if(notebook == v_tools)
-	{
-		vtools_adjust();
-	}
-	else if(notebook == h_tools)
-	{
-		htools_adjust();
-	}
-}
-
-REHex::ToolPanel *REHex::Tab::tool_get(const std::string &name)
-{
-	auto t = tools.find(name);
-	if(t != tools.end())
-	{
-		return t->second;
-	}
-	else{
-		return NULL;
-	}
+	tool_dock->DestroyTool(name);
 }
 
 void REHex::Tab::search_dialog_register(wxDialog *search_dialog)
@@ -368,6 +240,8 @@ void REHex::Tab::search_dialog_register(wxDialog *search_dialog)
 void REHex::Tab::hide_child_windows()
 {
 	child_windows_hidden = true;
+	
+	tool_dock->HideFrames();
 	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
@@ -388,6 +262,8 @@ void REHex::Tab::hide_child_windows()
 void REHex::Tab::unhide_child_windows()
 {
 	child_windows_hidden = false;
+	
+	tool_dock->UnhideFrames();
 	
 	for(auto sdi = search_dialogs.begin(); sdi != search_dialogs.end(); ++sdi)
 	{
@@ -447,55 +323,8 @@ void REHex::Tab::save_view(wxConfig *config)
 	config->Write("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	config->Write("data-map-scrollbar-type", (int)(data_map_scrollbar_type));
 	
-	wxWindow *ht_current_page = h_tools->GetCurrentPage();
-	if(ht_current_page != NULL)
-	{
-		config->SetPath("/default-view/htools/");
-		config->Write("height", ht_current_page->GetSize().y);
-	}
-	
-	for(size_t i = 0; i < h_tools->GetPageCount(); ++i)
-	{
-		char path[64];
-		snprintf(path, sizeof(path), "/default-view/htools/panels/0/tab/%u/", (unsigned)(i));
-		
-		config->SetPath(path);
-		
-		wxWindow *page = h_tools->GetPage(i);
-		assert(page != NULL);
-		
-		ToolPanel *tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		
-		config->Write("name", wxString(tp->name()));
-		config->Write("selected", (page == h_tools->GetCurrentPage()));
-		tp->save_state(config);
-	}
-	
-	wxWindow *vt_current_page = v_tools->GetCurrentPage();
-	if(vt_current_page != NULL)
-	{
-		config->SetPath("/default-view/vtools/");
-		config->Write("width", vt_current_page->GetSize().x);
-	}
-	
-	for(size_t i = 0; i < v_tools->GetPageCount(); ++i)
-	{
-		char path[64];
-		snprintf(path, sizeof(path), "/default-view/vtools/panels/0/tab/%u/", (unsigned)(i));
-		
-		config->SetPath(path);
-		
-		wxWindow *page = v_tools->GetPage(i);
-		assert(page != NULL);
-		
-		ToolPanel *tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		
-		config->Write("name", wxString(tp->name()));
-		config->Write("selected", (page == v_tools->GetCurrentPage()));
-		tp->save_state(config);
-	}
+	config->SetPath("tools/");
+	tool_dock->SaveTools(config);
 }
 
 void REHex::Tab::handle_copy(bool cut)
@@ -782,106 +611,6 @@ void REHex::Tab::set_dsm_type(DataMapScrollbarType dsm_type)
 	data_map_scrollbar_sizer->Layout();
 	
 	data_map_scrollbar_type = dsm_type;
-}
-
-void REHex::Tab::OnSize(wxSizeEvent &event)
-{
-	if(h_splitter->IsSplit())
-	{
-		int hs_sp = h_splitter->GetSashPosition();
-		int hs_cp = hsplit_clamp_sash(hs_sp);
-		
-		if(hs_sp != hs_cp)
-		{
-			h_splitter->SetSashPosition(hs_cp);
-		}
-	}
-	
-	if(v_splitter->IsSplit())
-	{
-		int vs_sp = v_splitter->GetSashPosition();
-		int vs_cp = vsplit_clamp_sash(vs_sp);
-		
-		if(vs_sp != vs_cp)
-		{
-			v_splitter->SetSashPosition(vs_cp);
-		}
-	}
-	
-	/* Continue propogation of EVT_SIZE event. */
-	event.Skip();
-}
-
-void REHex::Tab::OnHToolChange(wxNotebookEvent& event)
-{
-	if (event.GetOldSelection() != wxNOT_FOUND)
-	{
-		wxWindow* page = h_tools->GetPage(event.GetOldSelection());
-		assert(page != NULL);
-		
-		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		tp->set_visible(false);
-	}
-	
-	if (event.GetSelection() != wxNOT_FOUND)
-	{
-		wxWindow* page = h_tools->GetPage(event.GetSelection());
-		assert(page != NULL);
-		
-		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		tp->set_visible(true);
-	}
-	
-	htools_adjust_on_idle(false);
-}
-
-void REHex::Tab::OnVToolChange(wxBookCtrlEvent &event)
-{
-	if (event.GetOldSelection() != wxNOT_FOUND)
-	{
-		wxWindow* page = v_tools->GetPage(event.GetOldSelection());
-		assert(page != NULL);
-
-		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		tp->set_visible(false);
-	}
-	
-	if (event.GetSelection() != wxNOT_FOUND)
-	{
-		wxWindow* page = v_tools->GetPage(event.GetSelection());
-		assert(page != NULL);
-
-		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		tp->set_visible(true);
-	}
-	
-	vtools_adjust_on_idle(false);
-}
-
-void REHex::Tab::OnHSplitterSashPosChanging(wxSplitterEvent &event)
-{
-	int pos = event.GetSashPosition();
-	int clamp = hsplit_clamp_sash(pos);
-	
-	if(pos != clamp)
-	{
-		event.SetSashPosition(clamp);
-	}
-}
-
-void REHex::Tab::OnVSplitterSashPosChanging(wxSplitterEvent &event)
-{
-	int pos = event.GetSashPosition();
-	int clamp = vsplit_clamp_sash(pos);
-	
-	if(pos != clamp)
-	{
-		event.SetSashPosition(clamp);
-	}
 }
 
 void REHex::Tab::OnSearchDialogDestroy(wxWindowDestroyEvent &event)
@@ -1726,304 +1455,6 @@ void REHex::Tab::OnBulkUpdatesThawed(wxCommandEvent &event)
 	event.Skip();
 }
 
-int REHex::Tab::hsplit_clamp_sash(int sash_position)
-{
-	/* Prevent the user resizing a tool panel beyond its min/max size.
-	 * NOTE: Minimuim size is clamped >= 0 to prevent the size shrinking past the wxNotebook
-	 * control itself, else weird rendering/input glitches happen.
-	*/
-	
-	wxWindow *ht_current_page = h_tools->GetCurrentPage();
-	if(ht_current_page == NULL)
-	{
-		/* No active page to reference. */
-		return sash_position;
-	}
-	
-	int htp_mh = std::max(ht_current_page->GetMinSize().GetHeight(), 0);
-	int htp_Mh = ht_current_page->GetMaxSize().GetHeight();
-	
-	int hs_ch = h_splitter->GetClientSize().GetHeight();
-	int hs_ss = h_splitter->GetSashSize();
-	
-	/* Size oherhead added by h_tools wxNotebook. */
-	int extra_h = h_tools->GetSize().GetHeight() - ht_current_page->GetSize().GetHeight();
-	
-	int sash_max = hs_ch - (htp_mh + extra_h + hs_ss);
-	if(sash_position > sash_max)
-	{
-		return sash_max;
-	}
-	
-	if(htp_Mh > 0)
-	{
-		int sash_min = hs_ch - (htp_Mh + extra_h + hs_ss);
-		if(sash_position < sash_min)
-		{
-			return sash_min;
-		}
-	}
-	
-	return sash_position;
-}
-
-int REHex::Tab::vsplit_clamp_sash(int sash_position)
-{
-	/* Prevent the user resizing a tool panel beyond its min/max size.
-	 * NOTE: Minimuim size is clamped >= 0 to prevent the size shrinking past the wxNotebook
-	 * control itself, else weird rendering/input glitches happen.
-	*/
-	
-	wxWindow *vt_current_page = v_tools->GetCurrentPage();
-	if(vt_current_page == NULL)
-	{
-		/* No active page to reference. */
-		return sash_position;
-	}
-	
-	int vtp_mw = std::max(vt_current_page->GetMinSize().GetWidth(), 0);
-	int vtp_Mw = vt_current_page->GetMaxSize().GetWidth();
-	
-	int vs_cw = v_splitter->GetClientSize().GetWidth();
-	int vs_ss = v_splitter->GetSashSize();
-	
-	/* Size overhead added by v_tools wxNotebook. */
-	int extra_w = v_tools->GetSize().GetWidth() - vt_current_page->GetSize().GetWidth();
-	
-	int sash_max = vs_cw - (vtp_mw + extra_w + vs_ss);
-	if(sash_position > sash_max)
-	{
-		return sash_max;
-	}
-	
-	if(vtp_Mw > 0)
-	{
-		int sash_min = vs_cw - (vtp_Mw + extra_w + vs_ss);
-		if(sash_position < sash_min)
-		{
-			return sash_min;
-		}
-	}
-	
-	return sash_position;
-}
-
-void REHex::Tab::vtools_adjust(bool force_resize)
-{
-	if(vtools_adjust_pending)
-	{
-		vtools_adjust_on_idle(force_resize);
-		return;
-	}
-	
-	wxWindow *vt_current_page = v_tools->GetCurrentPage();
-	
-	if(vt_current_page == NULL || !vt_current_page->IsShown())
-	{
-		/* Vertical tool pane has no pages, or the page is hidden. Hide it. */
-		if(v_splitter->IsSplit())
-		{
-			v_splitter->Unsplit();
-		}
-	}
-	else{
-		if(!v_splitter->IsSplit())
-		{
-			v_splitter->SplitVertically(h_splitter, v_tools);
-			
-			vtools_adjust_on_idle(true);
-			return;
-		}
-		
-		int vtp_bw = std::max(vt_current_page->GetBestSize().GetWidth(), 0);
-		int vtp_mw = vt_current_page->GetMinSize().GetWidth();
-		int vtp_Mw = vt_current_page->GetMaxSize().GetWidth();
-		
-		int vtp_cw = vt_current_page->GetSize().GetWidth();
-		
-		if(vtools_initial_size > 0)
-		{
-			/* Adjust sash to fit saved ToolPanel size. */
-			
-			int adj_width = vtools_initial_size - vtp_cw;
-			v_splitter->SetSashPosition(v_splitter->GetSashPosition() - adj_width);
-		}
-		else if(force_resize)
-		{
-			/* Adjust sash to fit ToolPanel best size. */
-			
-			int adj_width = vtp_bw - vtp_cw;
-			v_splitter->SetSashPosition(v_splitter->GetSashPosition() - adj_width);
-		}
-		else if(vtp_mw > 0 && vtp_cw < vtp_mw)
-		{
-			/* Adjust sash to fit ToolPanel minimum size. */
-			
-			int adj_width = vtp_mw - vtp_cw;
-			v_splitter->SetSashPosition(v_splitter->GetSashPosition() - adj_width);
-		}
-		else if(vtp_Mw > 0 && vtp_cw > vtp_Mw)
-		{
-			/* Adjust sash to fit ToolPanel maximum size. */
-			
-			int adj_width = vtp_Mw - vtp_cw;
-			v_splitter->SetSashPosition(v_splitter->GetSashPosition() - adj_width);
-		}
-	}
-	
-	vtools_adjust_force = false;
-	vtools_initial_size = -1;
-}
-
-void REHex::Tab::htools_adjust(bool force_resize)
-{
-	if(htools_adjust_pending)
-	{
-		htools_adjust_on_idle(force_resize);
-		return;
-	}
-	
-	wxWindow *ht_current_page = h_tools->GetCurrentPage();
-	
-	if(ht_current_page == NULL || !ht_current_page->IsShown())
-	{
-		/* Horizontal tool pane has no pages, or the page is hidden. Hide it. */
-		if(h_splitter->IsSplit())
-		{
-			h_splitter->Unsplit();
-		}
-	}
-	else{
-		if(!h_splitter->IsSplit())
-		{
-			h_splitter->SplitHorizontally(doc_ctrl_panel, h_tools);
-			
-			htools_adjust_on_idle(true);
-			return;
-		}
-		
-		int htp_bh = std::max(ht_current_page->GetBestSize().GetHeight(), 0);
-		int htp_mh = ht_current_page->GetMinSize().GetHeight();
-		int htp_Mh = ht_current_page->GetMaxSize().GetHeight();
-		
-		int htp_ch = ht_current_page->GetSize().GetHeight();
-		
-		if(htools_initial_size > 0)
-		{
-			/* Adjust sash to fit saved ToolPanel size. */
-			
-			int adj_height = htools_initial_size - htp_ch;
-			h_splitter->SetSashPosition(h_splitter->GetSashPosition() - adj_height);
-		}
-		else if(force_resize)
-		{
-			/* Adjust sash to fit ToolPanel best size. */
-			
-			int adj_height = htp_bh - htp_ch;
-			h_splitter->SetSashPosition(h_splitter->GetSashPosition() - adj_height);
-		}
-		else if(htp_mh > 0 && htp_ch < htp_mh)
-		{
-			/* Adjust sash to fit ToolPanel minimum size. */
-			
-			int adj_height = htp_mh - htp_ch;
-			h_splitter->SetSashPosition(h_splitter->GetSashPosition() - adj_height);
-		}
-		else if(htp_Mh > 0 && htp_ch > htp_Mh)
-		{
-			/* Adjust sash to fit ToolPanel maximum size. */
-			
-			int adj_height = htp_Mh - htp_ch;
-			h_splitter->SetSashPosition(h_splitter->GetSashPosition() - adj_height);
-		}
-	}
-	
-	htools_initial_size = -1;
-}
-
-/* The size of a wxNotebook page doesn't seem to be set correctly during
- * initialisation (or immediately after adding a page), so we can't use it to
- * determine how much size overhead the wxNotebook adds at that point. Instead
- * we defer setting of the tool pane sizes until the first idle tick, by which
- * point the sizes seem to have been set up properly (on GTK anyway).
-*/
-
-void REHex::Tab::vtools_adjust_on_idle(bool force_resize)
-{
-	if(force_resize)
-	{
-		vtools_adjust_force = true;
-	}
-	
-	if(!vtools_adjust_pending)
-	{
-		Bind(wxEVT_IDLE, &REHex::Tab::vtools_adjust_now_idle, this);
-		vtools_adjust_pending = true;
-	}
-}
-
-void REHex::Tab::vtools_adjust_now_idle(wxIdleEvent &event)
-{
-	Unbind(wxEVT_IDLE, &REHex::Tab::vtools_adjust_now_idle, this);
-	event.Skip();
-	
-	bool force_resize = vtools_adjust_force;
-	
-	vtools_adjust_pending = false;
-	vtools_adjust_force = false;
-	
-	vtools_adjust(force_resize);
-}
-
-void REHex::Tab::htools_adjust_on_idle(bool force_resize)
-{
-	if(force_resize)
-	{
-		htools_adjust_force = true;
-	}
-	
-	if(!htools_adjust_pending)
-	{
-		Bind(wxEVT_IDLE, &REHex::Tab::htools_adjust_now_idle, this);
-		htools_adjust_pending = true;
-	}
-}
-
-void REHex::Tab::htools_adjust_now_idle(wxIdleEvent &event)
-{
-	Unbind(wxEVT_IDLE, &REHex::Tab::htools_adjust_now_idle, this);
-	event.Skip();
-	
-	bool force_resize = htools_adjust_force;
-	
-	htools_adjust_pending = false;
-	htools_adjust_force = false;
-	
-	htools_adjust(force_resize);
-}
-
-/* wxEVT_NOTEBOOK_PAGE_CHANGED events aren't generated consistently between platforms and versions
- * of wxWidgets when the selected tab is changed due to adding/removing a page, so this method is
- * used to correct the visible state of all ToolPanel's in a notebook after adding or removing one.
-*/
-void REHex::Tab::xtools_fix_visibility(wxNotebook *notebook)
-{
-	size_t n_pages    = notebook->GetPageCount();
-	int selected_page = notebook->GetSelection();
-	
-	for(size_t i = 0; i < n_pages; ++i)
-	{
-		wxWindow* page = notebook->GetPage(i);
-		assert(page != NULL);
-		
-		ToolPanel* tp = dynamic_cast<ToolPanel*>(page);
-		assert(tp != NULL);
-		
-		bool this_tab_is_selected = ((int)(i) == selected_page);
-		tp->set_visible(this_tab_is_selected);
-	}
-}
-
 void REHex::Tab::init_default_doc_view()
 {
 	wxConfig *config = wxGetApp().config;
@@ -2056,58 +1487,8 @@ void REHex::Tab::init_default_tools()
 {
 	wxConfig *config = wxGetApp().config;
 	
-	htools_initial_size = config->ReadLong("/default-view/htools/height", -1);
-	vtools_initial_size = config->ReadLong("/default-view/vtools/width", -1);
-	
-	for(unsigned int i = 0;; ++i)
-	{
-		char base_p[64];
-		snprintf(base_p, sizeof(base_p), "/default-view/htools/panels/0/tab/%u/", i);
-		
-		if(config->HasGroup(base_p))
-		{
-			config->SetPath(base_p);
-			
-			std::string name = config->Read    ("name", "").ToStdString();
-			bool selected    = config->ReadBool("selected", false);
-			
-			if(ToolPanelRegistry::by_name(name) != NULL)
-			{
-				tool_create(name, selected, config);
-			}
-			else{
-				/* TODO: Some kind of warning? */
-			}
-		}
-		else{
-			break;
-		}
-	}
-	
-	for(unsigned int i = 0;; ++i)
-	{
-		char base_p[64];
-		snprintf(base_p, sizeof(base_p), "/default-view/vtools/panels/0/tab/%u/", i);
-		
-		if(config->HasGroup(base_p))
-		{
-			config->SetPath(base_p);
-			
-			std::string name = config->Read    ("name", "").ToStdString();
-			bool selected    = config->ReadBool("selected", false);
-			
-			if(ToolPanelRegistry::by_name(name) != NULL)
-			{
-				tool_create(name, selected, config);
-			}
-			else{
-				/* TODO: Some kind of warning? */
-			}
-		}
-		else{
-			break;
-		}
-	}
+	wxConfigPathChanger scoped_path(config, "/default-view/tools/");
+	tool_dock->LoadTools(config, doc, doc_ctrl);
 }
 
 void REHex::Tab::repopulate_regions()

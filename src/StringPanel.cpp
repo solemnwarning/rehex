@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -172,6 +172,16 @@ REHex::StringPanel::~StringPanel()
 std::string REHex::StringPanel::name() const
 {
 	return "StringPanel";
+}
+
+std::string REHex::StringPanel::label() const
+{
+	return "Strings";
+}
+
+REHex::ToolPanel::Shape REHex::StringPanel::shape() const
+{
+	return ToolPanel::TPS_TALL;
 }
 
 void REHex::StringPanel::save_state(wxConfig *config) const

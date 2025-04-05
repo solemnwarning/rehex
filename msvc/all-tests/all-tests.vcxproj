@@ -30,6 +30,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -37,12 +38,14 @@
     <PlatformToolset>ClangCL</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -50,6 +53,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -212,6 +216,10 @@
     <ClCompile Include="..\..\res\diff_fold24.c" />
     <ClCompile Include="..\..\res\diff_fold32.c" />
     <ClCompile Include="..\..\res\diff_fold48.c" />
+    <ClCompile Include="..\..\res\dock_bottom.c" />
+    <ClCompile Include="..\..\res\dock_left.c" />
+    <ClCompile Include="..\..\res\dock_right.c" />
+    <ClCompile Include="..\..\res\dock_top.c" />
     <ClCompile Include="..\..\res\fit_to_screen16.c" />
     <ClCompile Include="..\..\res\icon128.c" />
     <ClCompile Include="..\..\res\icon16.c" />
@@ -277,6 +285,7 @@
     <ClCompile Include="..\..\src\lua-plugin-preload.c" />
     <ClCompile Include="..\..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\src\mainwindow.cpp" />
+    <ClCompile Include="..\..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\..\src\Palette.cpp" />
     <ClCompile Include="..\..\src\PopupTipWindow.cpp" />
     <ClCompile Include="..\..\src\RangeDialog.cpp" />
@@ -292,6 +301,7 @@
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
     <ClCompile Include="..\..\src\ThreadPool.cpp" />
     <ClCompile Include="..\..\src\ToolPanel.cpp" />
+    <ClCompile Include="..\..\src\ToolDock.cpp" />
     <ClCompile Include="..\..\src\util.cpp" />
     <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\..\src\win32lib.cpp" />
@@ -329,6 +339,7 @@
     <ClCompile Include="..\..\tests\IntelHexImport.cpp" />
     <ClCompile Include="..\..\tests\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\tests\main.cpp" />
+    <ClCompile Include="..\..\tests\MultiSplitter.cpp" />
     <ClCompile Include="..\..\tests\NestedOffsetLengthMap.cpp" />
     <ClCompile Include="..\..\tests\NumericTextCtrl.cpp" />
     <ClCompile Include="..\..\tests\RangeProcessor.cpp" />
@@ -361,6 +372,10 @@
     <ClInclude Include="..\..\res\diff_fold24.h" />
     <ClInclude Include="..\..\res\diff_fold32.h" />
     <ClInclude Include="..\..\res\diff_fold48.h" />
+    <ClInclude Include="..\..\res\dock_bottom.h" />
+    <ClInclude Include="..\..\res\dock_left.h" />
+    <ClInclude Include="..\..\res\dock_right.h" />
+    <ClInclude Include="..\..\res\dock_top.h" />
     <ClInclude Include="..\..\res\fit_to_screen16.h" />
     <ClInclude Include="..\..\res\icon128.h" />
     <ClInclude Include="..\..\res\icon16.h" />

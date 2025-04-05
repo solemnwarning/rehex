@@ -229,12 +229,12 @@ bool REHex::App::OnInit()
 	/* Display default tool panels if a default view hasn't been configured. */
 	if(!config->HasGroup("/default-view/"))
 	{
-		config->SetPath("/default-view/vtools/panels/0/tab/0");
+		config->SetPath("/default-view/tools/right/0");
 		config->Write("name", "DecodePanel");
 		config->Write("selected", true);
 		config->Write("big-endian", false);
 		
-		config->SetPath("/default-view/vtools/panels/0/tab/1");
+		config->SetPath("/default-view/tools/right/1");
 		config->Write("name", "CommentTree");
 		config->Write("selected", false);
 	}

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -726,4 +726,28 @@ wxColour REHex::colour_from_string(const std::string &s)
 	int blue = strtol(bs, NULL, 16);
 	
 	return wxColour(red, green, blue);
+}
+
+REHex::Edge REHex::find_nearest_edge(const wxPoint &point, const wxRect &rect)
+{
+	int left_dist = abs(point.x - rect.GetLeft());
+	int right_dist = abs(point.x - rect.GetRight());
+	int top_dist = abs(point.y - rect.GetTop());
+	int bottom_dist = abs(point.y - rect.GetBottom());
+	
+	if(left_dist <= right_dist && left_dist <= top_dist && left_dist <= bottom_dist)
+	{
+		return Edge::LEFT;
+	}
+	else if(right_dist <= left_dist && right_dist <= top_dist && right_dist <= bottom_dist)
+	{
+		return Edge::RIGHT;
+	}
+	else if(top_dist <= left_dist && top_dist <= right_dist && top_dist <= bottom_dist)
+	{
+		return Edge::TOP;
+	}
+	else{
+		return Edge::BOTTOM;
+	}
 }

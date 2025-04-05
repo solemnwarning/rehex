@@ -32,6 +32,15 @@
 /res/diff_fold48.c
 /res/diff_fold48.h
 
+/res/dock_bottom.c
+/res/dock_bottom.h
+/res/dock_left.c
+/res/dock_left.h
+/res/dock_right.c
+/res/dock_right.h
+/res/dock_top.c
+/res/dock_top.h
+
 /res/document_new32.c
 /res/document_new32.h
 

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -312,6 +312,19 @@ namespace REHex {
 	
 	std::string colour_to_string(const wxColour &colour);
 	wxColour colour_from_string(const std::string &s);
+	
+	enum class Edge
+	{
+		LEFT,
+		RIGHT,
+		TOP,
+		BOTTOM,
+	};
+	
+	/**
+	 * @brief Find the nearest edge to a point specified in a rectangle.
+	*/
+	Edge find_nearest_edge(const wxPoint &point, const wxRect &rect);
 }
 
 #endif /* !REHEX_UTIL_HPP */

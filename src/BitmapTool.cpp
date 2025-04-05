@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -282,6 +282,16 @@ REHex::BitmapTool::~BitmapTool() {}
 std::string REHex::BitmapTool::name() const
 {
 	return "BitmapTool";
+}
+
+std::string REHex::BitmapTool::label() const
+{
+	return "Bitmap visualisation";
+}
+
+REHex::ToolPanel::Shape REHex::BitmapTool::shape() const
+{
+	return ToolPanel::TPS_TALL;
 }
 
 void REHex::BitmapTool::save_state(wxConfig *config) const

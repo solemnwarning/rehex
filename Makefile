@@ -190,6 +190,10 @@ clean:
 	      res/diff_fold24.c res/diff_fold24.h \
 	      res/diff_fold32.c res/diff_fold32.h \
 	      res/diff_fold48.c res/diff_fold48.h \
+	      res/dock_bottom.c res/dock_bottom.h \
+	      res/dock_left.c   res/dock_left.h \
+	      res/dock_right.c  res/dock_right.h \
+	      res/dock_top.c    res/dock_top.h \
 	      res/icon16.c    res/icon16.h \
 	      res/icon32.c    res/icon32.h \
 	      res/icon48.c    res/icon48.h \
@@ -340,6 +344,10 @@ APP_OBJS := \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
 	res/diff_fold48.o \
+	res/dock_bottom.o \
+	res/dock_left.o \
+	res/dock_right.o \
+	res/dock_top.o \
 	res/fit_to_screen16.o \
 	res/icon16.o \
 	res/icon32.o \
@@ -414,6 +422,7 @@ APP_OBJS := \
 	src/lua-plugin-preload.$(BUILD_TYPE).o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/profile.$(BUILD_TYPE).o \
@@ -431,6 +440,7 @@ APP_OBJS := \
 	src/Tab.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
+	src/ToolDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/VirtualMappingList.$(BUILD_TYPE).o \
@@ -456,6 +466,10 @@ TEST_OBJS := \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
 	res/diff_fold48.o \
+	res/dock_bottom.o \
+	res/dock_left.o \
+	res/dock_right.o \
+	res/dock_top.o \
 	res/fit_to_screen16.o \
 	res/icon16.o \
 	res/icon32.o \
@@ -521,6 +535,7 @@ TEST_OBJS := \
 	src/lua-plugin-preload.$(BUILD_TYPE).o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
@@ -536,6 +551,7 @@ TEST_OBJS := \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
+	src/ToolDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
@@ -576,6 +592,7 @@ TEST_OBJS := \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
+	tests/MultiSplitter.o \
 	tests/RangeProcessor.o \
 	tests/search-bseq.o \
 	tests/search-text.o \
@@ -619,6 +636,7 @@ src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_bind.h src/lua-plugi
 src/mainwindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/SettingsDialogKeyboard.$(BUILD_TYPE).o: res/shortcut48.h
 src/StringPanel.$(BUILD_TYPE).o: res/spinner24.h
+src/ToolDock.$(BUILD_TYPE).o: res/dock_bottom.h res/dock_left.h res/dock_right.h res/dock_top.h
 
 res/license.done: LICENSE.txt $(EMBED_EXE)
 	$(EMBED_EXE) $< LICENSE_TXT res/license.c res/license.h

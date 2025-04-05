@@ -42,7 +42,7 @@
 
 static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new REHex::BitmapTool(parent, document);
+	return new REHex::BitmapTool(parent, document, document_ctrl);
 }
 
 static REHex::ToolPanelRegistration tpr("BitmapTool", "Bitmap visualisation", REHex::ToolPanel::TPS_TALL, &BitmapTool_factory);
@@ -135,9 +135,10 @@ static const int ZOOM_LEVELS[] = {
 
 static const int LAST_ZOOM_LEVEL_IDX = sizeof(ZOOM_LEVELS) / sizeof(*ZOOM_LEVELS) - 1;
 
-REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document):
+REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):
 	ToolPanel(parent),
 	document(document),
+	document_ctrl(document_ctrl),
 	image_offset(document->get_cursor_position()),
 	image_width(256),
 	image_height(256),
@@ -167,7 +168,8 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document)
 	wxSize text_size = offset_textctrl->GetTextExtent("0x0000000000000000+0b");
 	offset_textctrl->SetMinSize(wxSize(((float)(text_size.GetWidth()) * 1.2f), initial_size.GetHeight()));
 	
-	offset_textctrl->ChangeValue(format_offset(image_offset, OFFSET_BASE_DEC, BitOffset::ZERO));
+	OffsetBase base = document_ctrl->get_offset_display_base();
+	offset_textctrl->ChangeValue(image_offset.to_string((base == OFFSET_BASE_HEX ? NumBase::HEX : NumBase::DEC), NumFormat::PREFIX));
 	offset_follow_cb->SetValue(true);
 	
 	sizer_add_pair("Image width:",  (width_textctrl = new wxSpinCtrl(this, ID_IMAGE_WIDTH, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10240, image_width)));
@@ -973,7 +975,8 @@ void REHex::BitmapTool::OnCursorUpdate(CursorUpdateEvent &event)
 {
 	if(offset_follow_cb->GetValue())
 	{
-		offset_textctrl->ChangeValue(format_offset(event.cursor_pos, OFFSET_BASE_DEC, BitOffset::ZERO));
+		OffsetBase base = document_ctrl->get_offset_display_base();
+		offset_textctrl->ChangeValue(event.cursor_pos.to_string((base == OFFSET_BASE_HEX ? NumBase::HEX : NumBase::DEC), NumFormat::PREFIX));
 		update();
 	}
 	
@@ -999,7 +1002,8 @@ void REHex::BitmapTool::OnFollowCursor(wxCommandEvent &event)
 {
 	if(offset_follow_cb->GetValue())
 	{
-		offset_textctrl->ChangeValue(format_offset(document->get_cursor_position(), OFFSET_BASE_DEC, BitOffset::ZERO));
+		OffsetBase base = document_ctrl->get_offset_display_base();
+		offset_textctrl->ChangeValue(document->get_cursor_position().to_string((base == OFFSET_BASE_HEX ? NumBase::HEX : NumBase::DEC), NumFormat::PREFIX));
 		update();
 	}
 	else{

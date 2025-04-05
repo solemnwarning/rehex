@@ -29,6 +29,7 @@
 #include "BitOffset.hpp"
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
+#include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
 
@@ -57,7 +58,7 @@ namespace REHex {
 				PIXEL_FMT_32BPP_RGBA8888,
 			};
 			
-			BitmapTool(wxWindow *parent, SharedDocumentPointer &document);
+			BitmapTool(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			virtual ~BitmapTool();
 			
 			virtual std::string name() const override;
@@ -82,6 +83,7 @@ namespace REHex {
 			
 		private:
 			SharedDocumentPointer document;
+			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			NumericTextCtrl *offset_textctrl;
 			wxCheckBox *offset_follow_cb;

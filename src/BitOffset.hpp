@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <jansson.h>
 #include <stdint.h>
+#include <string>
 
 #ifdef MAX
 #undef MAX /* Fuck you GLib */
@@ -28,6 +29,30 @@
 
 namespace REHex
 {
+	enum class NumBase
+	{
+		BIN,
+		OCT,
+		DEC,
+		HEX,
+	};
+	
+	enum class NumFormat
+	{
+		NONE = 0,    /**< No special formatting, just a number. */
+		PREFIX = 1,  /**< Include base prefix (where applicable). */
+	};
+	
+	inline constexpr NumFormat operator|(NumFormat lhs, NumFormat rhs)
+	{
+		return (NumFormat)((unsigned)(lhs) | (unsigned)(rhs));
+	}
+	
+	inline constexpr NumFormat operator&(NumFormat lhs, NumFormat rhs)
+	{
+		return (NumFormat)((unsigned)(lhs) & (unsigned)(rhs));
+	}
+	
 	/**
 	 * @brief Stores an offset/length with bit resolution.
 	 *
@@ -88,6 +113,8 @@ namespace REHex
 			{
 				return value;
 			}
+			
+			std::string to_string(NumBase base, NumFormat format) const;
 			
 			static inline BitOffset BITS(int bits)
 			{

@@ -138,6 +138,10 @@ void REHex::ProfilingCollector::record_time(uint64_t begin_time, uint64_t durati
 	{
 		abort();
 	}
+	else if(thread_group == ThreadGroup::NONE)
+	{
+		return;
+	}
 	
 	ThreadGroupStats &tgs = tg_stats[ (size_t)(thread_group) ];
 	std::unique_lock<std::mutex> tgs_lock(tgs.mutex);

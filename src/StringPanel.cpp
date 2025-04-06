@@ -32,6 +32,7 @@
 #include "App.hpp"
 #include "CharacterEncoder.hpp"
 #include "FileWriter.hpp"
+#include "profile.hpp"
 #include "StringPanel.hpp"
 #include "util.hpp"
 
@@ -467,6 +468,8 @@ void REHex::StringPanel::do_copy(wxString (*get_item_func)(StringPanelListCtrl*,
 
 void REHex::StringPanel::thread_main()
 {
+	PROFILE_SET_THREAD_GROUP(NONE);
+	
 	std::unique_lock<std::mutex> pl(pause_lock);
 	
 	ByteRangeSet set_ranges;

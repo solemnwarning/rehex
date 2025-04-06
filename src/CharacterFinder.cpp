@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,6 +23,7 @@
 #include "CharacterEncoder.hpp"
 #include "CharacterFinder.hpp"
 #include "DataType.hpp"
+#include "profile.hpp"
 
 REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, BitOffset base, off_t length, size_t chunk_size, size_t lru_cache_size):
 	document(document),
@@ -90,6 +91,8 @@ void REHex::CharacterFinder::start_worker()
 		
 		t1_worker = std::thread([this, encoding_base, encoder]()
 		{
+			PROFILE_SET_THREAD_GROUP(NONE);
+			
 			size_t idx = 0;
 			BitOffset base_off = base, target_off = base + BitOffset(chunk_size, 0);
 			

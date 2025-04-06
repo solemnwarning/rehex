@@ -53,7 +53,8 @@ namespace REHex
 				MAIN,
 				POOL,
 				
-				UNKNOWN, /* This must remain at the end. */
+				UNKNOWN, /* This must remain at the end of the valid groups. */
+				NONE, /**< Thread is excluded from profiling. */
 			};
 			
 			struct Stats

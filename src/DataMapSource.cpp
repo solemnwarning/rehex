@@ -79,7 +79,10 @@ REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::
 
 void REHex::EntropyDataMapSource::reset_max_points(size_t max_points)
 {
-	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+	if(accumulator->get_requested_num_shards() != max_points)
+	{
+		accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+	}
 }
 
 REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points)

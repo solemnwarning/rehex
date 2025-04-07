@@ -121,6 +121,11 @@ std::vector<REHex::HierarchicalByteAccumulator::Shard> REHex::HierarchicalByteAc
 	return shards;
 }
 
+size_t REHex::HierarchicalByteAccumulator::get_requested_num_shards() const
+{
+	return target_num_shards;
+}
+
 void REHex::HierarchicalByteAccumulator::wait_for_completion()
 {
 	/* Crappy spinloop as its only used by the unit tests... */

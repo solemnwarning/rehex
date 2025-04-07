@@ -164,6 +164,11 @@ namespace REHex
 			std::vector<Shard> get_shards();
 			
 			/**
+			 * @brief Get the requested num_shards passed to the constructor.
+			*/
+			size_t get_requested_num_shards() const;
+			
+			/**
 			 * @brief Wait for work queue to be empty.
 			 *
 			 * This is mostly intended for unit tests. This should not be used from the

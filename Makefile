@@ -395,6 +395,7 @@ APP_OBJS := \
 	src/DataHistogramPanel.$(BUILD_TYPE).o \
 	src/DataMapScrollbar.$(BUILD_TYPE).o \
 	src/DataMapSource.$(BUILD_TYPE).o \
+	src/DataMapTool.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
 	src/DataView.$(BUILD_TYPE).o \
 	src/decodepanel.$(BUILD_TYPE).o \

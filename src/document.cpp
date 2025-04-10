@@ -97,8 +97,8 @@ REHex::Document::Document(const std::string &filename):
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	std::string meta_filename = filename + ".rehex-meta";
-	if(wxFileExists(meta_filename))
+	std::string meta_filename = find_metadata(filename);
+	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
 	}
@@ -222,8 +222,8 @@ void REHex::Document::reload()
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	std::string meta_filename = filename + ".rehex-meta";
-	if(wxFileExists(meta_filename))
+	std::string meta_filename = find_metadata(filename);
+	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
 	}
@@ -252,7 +252,7 @@ void REHex::Document::save()
 		buffer->write_inplace();
 	}
 	
-	_save_metadata(filename + ".rehex-meta");
+	save_metadata_for(filename);
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -274,7 +274,7 @@ void REHex::Document::save(const std::string &filename)
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	_save_metadata(filename + ".rehex-meta");
+	save_metadata_for(filename);
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -2061,7 +2061,7 @@ json_t *REHex::Document::serialise_metadata() const
 	return root;
 }
 
-void REHex::Document::_save_metadata(const std::string &filename)
+void REHex::Document::save_metadata_for(const std::string &filename)
 {
 	/* TODO: Atomically replace file. */
 	
@@ -2069,11 +2069,42 @@ void REHex::Document::_save_metadata(const std::string &filename)
 	int res = 0;
 	if (meta != NULL)
 	{
-		res = json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
+		res = json_dump_file(meta, (filename + ".rehex-meta").c_str(), JSON_INDENT(2));
+		
+#ifdef __APPLE__
+		std::string sandbox = App::get_home_directory();
+		
+		wxFileName fn(filename);
+		
+		fn.MakeAbsolute();
+		
+		fn.SetPath(sandbox + fn.GetPath());
+		fn.SetFullName(fn.GetFullName() + ".rehex-meta");
+		
+		if(res == 0)
+		{
+			/* We managed to save the rehex-meta alongside the actual file, delete any
+			 * file within the application sandbox.
+			*/
+			wxRemoveFile(fn.GetFullPath());
+		}
+		else if(wxDirExists(sandbox))
+		{
+			/* Couldn't save the rehex-meta file, probably because we're sandboxed.
+			 * Save the rehex-meta within the application sandbox directory.
+			*/
+			
+			recursive_mkdir(fn.GetPath().ToStdString());
+			res = json_dump_file(meta, fn.GetFullPath().ToStdString().c_str(), JSON_INDENT(2));
+		}
+#endif
 	}
-	else if(wxFileExists(filename))
-	{
-		wxRemoveFile(filename);
+	else{
+		std::string meta_filename = find_metadata(filename);
+		if(!(meta_filename.empty()))
+		{
+			wxRemoveFile(meta_filename);
+		}
 	}
 	json_decref(meta);
 	
@@ -2222,6 +2253,38 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	load_metadata(meta);
 	
 	json_decref(meta);
+}
+
+std::string REHex::Document::find_metadata(const std::string &filename)
+{
+#ifdef __APPLE__
+	{
+		wxFileName fn(filename);
+		
+		fn.MakeAbsolute();
+		
+		fn.SetPath(App::get_home_directory() + fn.GetPath());
+		fn.SetFullName(fn.GetFullName() + ".rehex-meta");
+		
+		if(fn.FileExists())
+		{
+			return fn.GetFullPath().ToStdString();
+		}
+	}
+#endif
+	
+	{
+		wxFileName fn(filename);
+		
+		fn.SetFullName(fn.GetFullName() + ".rehex-meta");
+		
+		if(fn.FileExists())
+		{
+			return fn.GetFullPath().ToStdString();
+		}
+	}
+	
+	return std::string();
 }
 
 void REHex::Document::load_metadata(const json_t *metadata)

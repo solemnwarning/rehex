@@ -338,6 +338,8 @@ namespace REHex {
 			json_t *serialise_metadata() const;
 			void load_metadata(const json_t *metadata);
 			
+			static std::string find_metadata(const std::string &filename);
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif
@@ -444,7 +446,7 @@ namespace REHex {
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
 			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
 			
-			void _save_metadata(const std::string &filename);
+			void save_metadata_for(const std::string &filename);
 			
 			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static BitRangeMap<int> _load_highlights(const json_t *meta, off_t buffer_length, const HighlightColourMap &highlight_colour_map);

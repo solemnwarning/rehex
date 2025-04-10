@@ -231,6 +231,16 @@ namespace REHex {
 			void bulk_updates_thaw();
 			bool bulk_updates_frozen();
 			
+			#ifdef __APPLE__
+			/**
+			 * @brief Wrapper around the NSHomeDirectory() function.
+			 *
+			 * This function returns the application sandbox directory, or the user's
+			 * home directory if not sandboxed.
+			*/
+			static std::string get_home_directory();
+			#endif
+			
 		private:
 			std::string last_directory;
 			int font_size_adjustment;

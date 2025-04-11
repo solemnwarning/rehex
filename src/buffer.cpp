@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -85,7 +85,15 @@ REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 
 REHex::Buffer::BlockPtr REHex::Buffer::load_block(Block *block)
 {
+	/* We must hold lab_mutex before we increment the block refcount to ensure another thread
+	 * doesn't concurrently call release_block() for another block and unload a clean block as
+	 * we are loading it.
+	*/
+	
+	std::unique_lock<std::mutex> lab_guard(lab_mutex);
+	
 	int my_refcount = ++(block->refcount);
+	assert(my_refcount > 0);
 	
 	if(my_refcount > 1)
 	{
@@ -95,14 +103,13 @@ REHex::Buffer::BlockPtr REHex::Buffer::load_block(Block *block)
 		 * TODO: Use a condition variable to signal wakeup?
 		*/
 		
+		lab_guard.unlock();
+		
 		while(block->state == Block::UNLOADED) {}
 		
 		return BlockPtr(this, block);
 	}
-	
-	{
-		std::unique_lock<std::mutex> lab_guard(lab_mutex);
-		
+	else{
 		if(block->state == Block::CLEAN)
 		{
 			auto lab_it = std::find(last_accessed_blocks.begin(), last_accessed_blocks.end(), block);
@@ -113,6 +120,8 @@ REHex::Buffer::BlockPtr REHex::Buffer::load_block(Block *block)
 				last_accessed_blocks.erase(lab_it);
 			}
 		}
+		
+		lab_guard.unlock();
 	}
 	
 	if(block->state == Block::UNLOADED)
@@ -158,6 +167,8 @@ void REHex::Buffer::release_block(Block *block)
 		if(last_accessed_blocks.size() > MAX_CLEAN_BLOCKS)
 		{
 			Block *unload_me = last_accessed_blocks.front();
+			
+			assert(unload_me->refcount == 0);
 			
 			unload_me->state = Block::UNLOADED;
 			
@@ -533,6 +544,8 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 				
 				(*b)->real_offset = (*b)->virt_offset;
 				(*b)->state       = Block::CLEAN;
+				
+				last_accessed_blocks.push_back(*b);
 			}
 		}
 		
@@ -570,6 +583,18 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 		_file_deleted  = false;
 		_file_modified = false;
 		last_mtime     = _get_file_mtime(handles[0].fh, filename);
+		
+		while(last_accessed_blocks.size() > MAX_CLEAN_BLOCKS)
+		{
+			Block *unload_me = last_accessed_blocks.front();
+			
+			unload_me->state = Block::UNLOADED;
+			
+			unload_me->data.clear();
+			unload_me->data.shrink_to_fit();
+			
+			last_accessed_blocks.erase(last_accessed_blocks.begin());
+		}
 	}
 	else{
 		/* We've written out a complete new file, and it is now the backing store for this

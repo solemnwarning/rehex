@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -107,6 +107,40 @@ REHex::Document::Document(const std::string &filename):
 	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
+
+#ifdef __APPLE__
+REHex::Document::Document(MacFileName &&filename):
+	filename(filename.GetFileName().GetFullPath().ToStdString()),
+	write_protect(false),
+	current_seq(0),
+	buffer_seq(0),
+	saved_seq(0),
+	highlight_colour_map(HighlightColourMap::defaults()),
+	cursor_state(CSTATE_HEX),
+	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
+	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
+	types_changed_buffer(this, EV_TYPES_CHANGED),
+	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
+{
+	buffer = new Buffer(std::move(filename));
+	
+	data_seq.set_range   (0, buffer->length(), 0);
+	types.set_range      (0, buffer->length(), TypeInfo(""));
+	
+	size_t last_slash = this->filename.find_last_of("/\\");
+	title = (last_slash != std::string::npos ? this->filename.substr(last_slash + 1) : this->filename);
+	
+	std::string meta_filename = find_metadata(this->filename);
+	if(!(meta_filename.empty()))
+	{
+		_load_metadata(meta_filename);
+	}
+	
+	_forward_buffer_events();
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
+}
+#endif /* __APPLE__ */
 
 void REHex::Document::_forward_buffer_events()
 {

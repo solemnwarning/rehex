@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,6 +31,7 @@
 #endif
 
 #include "BitOffset.hpp"
+#include "MacFileName.hpp"
 #include "shared_mutex.hpp"
 
 namespace REHex {
@@ -100,6 +101,10 @@ namespace REHex {
 			std::condition_variable handle_released;
 			
 			std::string filename;
+			
+			#ifdef __APPLE__
+			MacFileName file_access_guard;
+			#endif
 			
 			/**
 			 * All public APIs synchronise access using the general_lock mutex.
@@ -248,6 +253,13 @@ namespace REHex {
 			 * @brief Create a Buffer with a backing file on disk.
 			*/
 			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
+			
+			#ifdef __APPLE__
+			/**
+			 * @brief Create a Buffer with a backing file on disk.
+			*/
+			Buffer(MacFileName &&filename, off_t block_size = DEFAULT_BLOCK_SIZE);
+			#endif
 			
 			~Buffer();
 			

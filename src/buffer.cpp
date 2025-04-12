@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "MacFileName.hpp"
 #include "platform.hpp"
 
 #ifdef _WIN32
@@ -316,6 +317,12 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	}
 	
 	reload();
+}
+
+REHex::Buffer::Buffer(MacFileName &&filename, off_t block_size):
+	Buffer(filename.GetFileName().GetFullPath().ToStdString())
+{
+	file_access_guard = std::move(filename);
 }
 
 REHex::Buffer::~Buffer()

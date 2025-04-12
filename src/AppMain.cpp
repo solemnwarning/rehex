@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -239,7 +239,11 @@ bool REHex::App::OnInit()
 		config->Write("selected", false);
 	}
 	
+	#ifdef __APPLE__
+	recent_files = new MacFileHistory();
+	#else
 	recent_files = new wxFileHistory();
+	#endif
 	
 	config->SetPath("/recent-files/");
 	recent_files->Load(*config);

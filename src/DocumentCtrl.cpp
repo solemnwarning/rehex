@@ -963,11 +963,15 @@ void REHex::DocumentCtrl::_handle_width_change()
 		}
 	}
 
-	/* TODO: Preserve/scale the position as the window size changes. */
+	/* Clamp scroll X offset to (new) valid range. */
+	if(scroll_xoff > (virtual_width - client_width))
+	{
+		scroll_xoff = virtual_width - client_width;
+	}
 	
 	if((GetWindowStyle() & DCTRL_LOCK_SCROLL) == 0)
 	{
-		SetScrollbar(wxHORIZONTAL, 0, client_width, virtual_width);
+		SetScrollbar(wxHORIZONTAL, scroll_xoff, client_width, virtual_width);
 	}
 	else{
 		SetScrollbar(wxHORIZONTAL, 0, 0, 0);

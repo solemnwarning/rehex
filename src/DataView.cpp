@@ -23,6 +23,7 @@
 
 #include "ByteRangeSet.hpp"
 #include "DataView.hpp"
+#include "Range.hpp"
 #include "util.hpp"
 
 wxDEFINE_EVENT(REHex::DATA_MODIFY_BEGIN, wxCommandEvent);
@@ -95,6 +96,208 @@ void REHex::FlatDocumentView::OnDataEvent(OffsetLengthEvent &event)
 	wxCommandEvent dme_event(DATA_MODIFY_END);
 	dme_event.SetEventObject(this);
 	ProcessEvent(dme_event);
+	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+REHex::FlatRangeView::FlatRangeView(const SharedDocumentPointer &document, BitOffset base_offset, off_t max_length):
+	document(document),
+	m_base_offset(base_offset),
+	m_max_length(max_length)
+{
+	assert(base_offset >= BitOffset::ZERO);
+	assert(max_length >= 0);
+	
+	m_length = std::max<off_t>(0, std::min((document->buffer_length() - m_base_offset.byte_round_up()), m_max_length));
+	
+	this->document.auto_cleanup_bind(DATA_ERASING,           &REHex::FlatRangeView::OnBeginIEEvent, this);
+	this->document.auto_cleanup_bind(DATA_ERASE_ABORTED,     &REHex::FlatRangeView::OnAbortIEEvent, this);
+	this->document.auto_cleanup_bind(DATA_ERASE,             &REHex::FlatRangeView::OnDataIEEvent,  this);
+	
+	this->document.auto_cleanup_bind(DATA_INSERTING,         &REHex::FlatRangeView::OnBeginIEEvent, this);
+	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,    &REHex::FlatRangeView::OnAbortIEEvent, this);
+	this->document.auto_cleanup_bind(DATA_INSERT,            &REHex::FlatRangeView::OnDataIEEvent,  this);
+	
+	this->document.auto_cleanup_bind(DATA_OVERWRITING,       &REHex::FlatRangeView::OnBeginOEvent, this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE_ABORTED, &REHex::FlatRangeView::OnAbortOEvent, this);
+	this->document.auto_cleanup_bind(DATA_OVERWRITE,         &REHex::FlatRangeView::OnDataOEvent,  this);
+}
+
+off_t REHex::FlatRangeView::view_length() const
+{
+	off_t buffer_length_from_base = std::max<off_t>((document->buffer_length() - m_base_offset.byte_round_up()), 0);
+	return std::min(buffer_length_from_base, m_max_length);
+}
+
+std::vector<unsigned char> REHex::FlatRangeView::read_data(BitOffset view_offset, off_t max_length) const
+{
+	assert(view_offset >= BitOffset::ZERO);
+	
+	off_t clamped_length = std::min(max_length, (m_max_length - view_offset.byte_round_up()));
+	return document->read_data((m_base_offset + view_offset), clamped_length);
+}
+
+std::vector<bool> REHex::FlatRangeView::read_bits(BitOffset view_offset, size_t max_length) const
+{
+	assert(view_offset >= BitOffset::ZERO);
+	
+	BitOffset buffer_length_from_offset = std::max((BitOffset(view_length(), 0) - view_offset), BitOffset::ZERO);
+	int64_t blfo_bits = buffer_length_from_offset.total_bits();
+	
+	if(blfo_bits < std::numeric_limits<size_t>::max() && max_length > (size_t)(blfo_bits))
+	{
+		max_length = blfo_bits;
+	}
+	
+	return document->read_bits((m_base_offset + view_offset), max_length);
+}
+
+REHex::BitOffset REHex::FlatRangeView::view_offset_to_real_offset(BitOffset view_offset) const
+{
+	return m_base_offset + view_offset;
+}
+
+REHex::BitOffset REHex::FlatRangeView::view_offset_to_virt_offset(BitOffset view_offset) const
+{
+	return m_base_offset + view_offset;
+}
+
+void REHex::FlatRangeView::OnBeginOEvent(OffsetLengthEvent &event)
+{
+	BitRange event_range(BitOffset(event.offset, 0), BitOffset(event.length, 0));
+	BitRange our_range(m_base_offset, BitOffset(view_length(), 0));
+	
+	if(event_range.overlaps(our_range))
+	{
+		wxCommandEvent dmb_event(DATA_MODIFY_BEGIN);
+		dmb_event.SetEventObject(this);
+		ProcessEvent(dmb_event);
+	}
+	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+void REHex::FlatRangeView::OnAbortOEvent(OffsetLengthEvent &event)
+{
+	BitRange event_range(BitOffset(event.offset, 0), BitOffset(event.length, 0));
+	BitRange our_range(m_base_offset, BitOffset(view_length(), 0));
+	
+	if(event_range.overlaps(our_range))
+	{
+		wxCommandEvent dme_event(DATA_MODIFY_END);
+		dme_event.SetEventObject(this);
+		ProcessEvent(dme_event);
+	}
+	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+void REHex::FlatRangeView::OnDataOEvent(OffsetLengthEvent &event)
+{
+	BitRange event_range(BitOffset(event.offset, 0), BitOffset(event.length, 0));
+	BitRange our_range(m_base_offset, BitOffset(view_length(), 0));
+	
+	BitRange intersection = BitRange::intersection(event_range, our_range);
+	
+	assert(intersection.offset.byte_aligned());
+	assert(intersection.length.byte_aligned());
+	
+	if(!(intersection.empty()))
+	{
+		OffsetLengthEvent our_event(this, event.GetEventType(),
+			(intersection.offset - m_base_offset).byte(), intersection.length.byte());
+		ProcessEvent(our_event);
+		
+		wxCommandEvent dme_event(DATA_MODIFY_END);
+		dme_event.SetEventObject(this);
+		ProcessEvent(dme_event);
+	}
+	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+void REHex::FlatRangeView::OnBeginIEEvent(OffsetLengthEvent &event)
+{
+	if(event.offset < (m_base_offset.byte_round_up() + m_max_length))
+	{
+		wxCommandEvent dmb_event(DATA_MODIFY_BEGIN);
+		dmb_event.SetEventObject(this);
+		ProcessEvent(dmb_event);
+	}
+	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+void REHex::FlatRangeView::OnAbortIEEvent(OffsetLengthEvent &event)
+{
+	if(event.offset < (m_base_offset.byte_round_up() + m_max_length))
+	{
+		wxCommandEvent dme_event(DATA_MODIFY_END);
+		dme_event.SetEventObject(this);
+		ProcessEvent(dme_event);
+	}
+	
+	event.Skip(); /* Continue original event propagation. */
+}
+
+void REHex::FlatRangeView::OnDataIEEvent(OffsetLengthEvent &event)
+{
+	if(event.offset < (m_base_offset.byte_round_up() + m_max_length))
+	{
+		off_t translated_offset = event.offset > m_base_offset.byte() ? (event.offset - m_base_offset.byte_round_up()) : 0;
+		
+		if(event.GetEventType() == DATA_ERASE)
+		{
+			off_t num_erase = std::min(event.length, (m_length - translated_offset));
+			
+			if(num_erase > 0)
+			{
+				
+				m_length -= num_erase;
+				
+				OffsetLengthEvent erase_event(this, DATA_ERASE, translated_offset, num_erase);
+				ProcessEvent(erase_event);
+			}
+			
+			off_t grow_available = document->buffer_length() - m_base_offset.byte_round_up() - m_length;
+			
+			if(m_length < m_max_length && grow_available > 0)
+			{
+				off_t num_insert = std::min((m_max_length - m_length), grow_available);
+				m_length += num_insert;
+				
+				OffsetLengthEvent insert_event(this, DATA_INSERT, (m_length - num_insert), num_insert);
+				ProcessEvent(insert_event);
+			}
+		}
+		else{
+			assert(event.GetEventType() == DATA_INSERT);
+			
+			BitOffset length_from_base = std::min((BitOffset(document->buffer_length(), 0) - m_base_offset), BitOffset(event.length, 0));
+			
+			if(length_from_base >= BitOffset(1, 0))
+			{
+				off_t num_insert = std::min(length_from_base.byte(), (m_max_length - translated_offset));
+				m_length += num_insert;
+				
+				OffsetLengthEvent insert_event(this, DATA_INSERT, translated_offset, num_insert);
+				ProcessEvent(insert_event);
+			}
+			
+			if(m_length > m_max_length)
+			{
+				off_t excess = m_length - m_max_length;
+				m_length -= excess;
+				
+				OffsetLengthEvent erase_event(this, DATA_ERASE, m_length, excess);
+				ProcessEvent(erase_event);
+			}
+		}
+		
+		wxCommandEvent dme_event(DATA_MODIFY_END);
+		dme_event.SetEventObject(this);
+		ProcessEvent(dme_event);
+	}
 	
 	event.Skip(); /* Continue original event propagation. */
 }

@@ -120,6 +120,42 @@ namespace REHex
 	};
 	
 	/**
+	 * @brief DataView for access to a range in a Document.
+	*/
+	class FlatRangeView: public DataView
+	{
+		private:
+			SharedDocumentPointer document;
+			
+			BitOffset m_base_offset;
+			off_t m_max_length;
+			
+			off_t m_length;
+			
+		public:
+			FlatRangeView(const SharedDocumentPointer &document, BitOffset base_offset, off_t max_length);
+			
+			virtual off_t view_length() const override;
+			
+			virtual std::vector<unsigned char> read_data(BitOffset view_offset, off_t max_length) const override;
+			
+			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
+			
+			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
+			
+			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			
+		private:
+			void OnBeginOEvent(OffsetLengthEvent &event);
+			void OnAbortOEvent(OffsetLengthEvent &event);
+			void OnDataOEvent(OffsetLengthEvent &event);
+			
+			void OnBeginIEEvent(OffsetLengthEvent &event);
+			void OnAbortIEEvent(OffsetLengthEvent &event);
+			void OnDataIEEvent(OffsetLengthEvent &event);
+	};
+	
+	/**
 	 * @brief DataView for access to a Document's virtual sections.
 	*/
 	class LinearVirtualDocumentView: public DataView

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -204,6 +204,50 @@ TEST(Util, add_clamp_overflow_BitOffset)
 	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN,      BitOffset::MIN,  BitOffset::MIN,      true);
 	
 	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, false);
+}
+
+#define TEST_MULTIPLY_CLAMP_OVERFLOW(T, a, b, result, expect_overflow) \
+{ \
+	bool overflow_detected = !expect_overflow; \
+	\
+	EXPECT_EQ(multiply_clamp_overflow<T>(a, b), result); \
+	EXPECT_EQ(multiply_clamp_overflow<T>(a, b, &overflow_detected), result); \
+	EXPECT_EQ(overflow_detected, expect_overflow);\
+	\
+	EXPECT_EQ(multiply_clamp_overflow<T>(b, a), result); \
+	EXPECT_EQ(multiply_clamp_overflow<T>(b, a, &overflow_detected), result); \
+	EXPECT_EQ(overflow_detected, expect_overflow); \
+}
+
+TEST(Util, multiply_clamp_overflow)
+{
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t,  5, 10,  50, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 10, 10, 100, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 20, 10, 127, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1,  64,  64, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2,  64, 127, true);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1, 127, 127, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2, 127, 127, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -1,  -64,  64, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -2,  -64, 127, true);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -1, -127, 127, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -2, -127, 127, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t,  5, -10,  -50, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 10, -10, -100, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 20, -10, -128, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t,  -5, 10,  -50, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -10, 10, -100, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -20, 10, -128, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1,  -64,  -64, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2,  -64, -128, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 3,  -64, -128, true);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1, -128, -128, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2, -128, -128, true);
 }
 
 TEST(Util, memcpy_left)

@@ -307,6 +307,79 @@ namespace REHex {
 	*/
 	template<> BitOffset add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow);
 	
+	/**
+	 * @brief Multiply two integers together, clamping to the range of the type.
+	 *
+	 * This function multiplies two integer-type values together, if the result would overflow
+	 * or underflow, the result is clamped to the maximum or minimum value representable by the
+	 * type T.
+	 *
+	 * If the "overflow" parameter is non-NULL, whether or not an overflow (or underflow) was
+	 * detected is stored there.
+	*/
+	template<typename T> T multiply_clamp_overflow(T a, T b, bool *overflow = NULL)
+	{
+		constexpr T MAX = std::numeric_limits<T>::max();
+		constexpr T MIN = std::numeric_limits<T>::min();
+		
+		if(a == 0 || b == 0)
+		{
+			return 0;
+		}
+		
+		if(a < 0 && b < 0)
+		{
+			a *= -1;
+			b *= -1;
+		}
+		
+		bool did_overflow;
+		T result;
+		
+		if(a > 0 && b > 0)
+		{
+			if((MAX / a) < b)
+			{
+				result = MAX;
+				did_overflow = true;
+			}
+			else{
+				result = a * b;
+				did_overflow = false;
+			}
+		}
+		else if(a > 0)
+		{
+			if((MIN / a) > b)
+			{
+				result = MIN;
+				did_overflow = true;
+			}
+			else{
+				result = a * b;
+				did_overflow = false;
+			}
+		}
+		else{
+			if((MIN / b) > a)
+			{
+				result = MIN;
+				did_overflow = true;
+			}
+			else{
+				result = a * b;
+				did_overflow = false;
+			}
+		}
+		
+		if(overflow != NULL)
+		{
+			*overflow = did_overflow;
+		}
+		
+		return result;
+	}
+	
 	json_t *colour_to_json(const wxColour &colour);
 	wxColour colour_from_json(const json_t *json);
 	

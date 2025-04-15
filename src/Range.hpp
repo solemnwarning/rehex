@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -62,6 +62,23 @@ namespace REHex
 		inline bool contains(const Range &other) const
 		{
 			return other.offset >= offset && other.end() <= end();
+		}
+		
+		/**
+		 * @brief Get the intersection of two ranges.
+		*/
+		static Range intersection(const Range &a, const Range &b)
+		{
+			OT i_offset = std::max(a.offset, b.offset);
+			OT i_end = std::min(a.end(), b.end());
+			
+			if(i_offset < i_end)
+			{
+				return Range(i_offset, (i_end - i_offset));
+			}
+			else{
+				return Range(i_offset, (i_offset - i_offset));
+			}
 		}
 		
 		/**

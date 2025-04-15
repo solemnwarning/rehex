@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -118,4 +118,21 @@ TEST(ByteRange, TestContains)
 	
 	EXPECT_FALSE(ByteRange(10, 5).contains(ByteRange(15, 5)));
 	EXPECT_FALSE(ByteRange(15, 5).contains(ByteRange(10, 5)));
+}
+
+TEST(ByteRange, TestIntersection)
+{
+	/* Overlapping adjacent ranges. */
+	EXPECT_EQ(ByteRange::intersection(ByteRange(10, 50), ByteRange(20, 80)), ByteRange(20, 40));
+	EXPECT_EQ(ByteRange::intersection(ByteRange(20, 80), ByteRange(10, 50)), ByteRange(20, 40));
+	
+	/* Nested ranges. */
+	EXPECT_EQ(ByteRange::intersection(ByteRange(10, 50), ByteRange(20, 10)), ByteRange(20, 10));
+	EXPECT_EQ(ByteRange::intersection(ByteRange(20, 10), ByteRange(10, 50)), ByteRange(20, 10));
+	
+	/* No overlap. */
+	EXPECT_EQ(ByteRange::intersection(ByteRange(10, 10), ByteRange(20, 10)), ByteRange(20, 0));
+	EXPECT_EQ(ByteRange::intersection(ByteRange(20, 10), ByteRange(10, 10)), ByteRange(20, 0));
+	EXPECT_EQ(ByteRange::intersection(ByteRange(10, 10), ByteRange(70, 10)), ByteRange(70, 0));
+	EXPECT_EQ(ByteRange::intersection(ByteRange(70, 10), ByteRange(10, 10)), ByteRange(70, 0));
 }

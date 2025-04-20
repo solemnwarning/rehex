@@ -48,10 +48,10 @@ _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a6323a06d923"
 
-_rehex_wxwidgets_version="3.2.5"
+_rehex_wxwidgets_version="3.2.7"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_sha256="0ad86a3ad3e2e519b6a705248fc9226e3a09bbf069c6c692a02acf7c2d1c6b51"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
+_rehex_wxwidgets_sha256="69a1722f874d91cd1c9e742b72df49e0fab02890782cf794791c3104cee868c6"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
@@ -758,115 +758,6 @@ then
  
              GetPeer()->Move(0,0,0,0 );
              SetSize( wxSIZE_AUTO_WIDTH, 0 );
-EOF
-		
-		# https://github.com/wxWidgets/wxWidgets/pull/24961
-		patch <<'EOF'
---- include/wx/osx/cocoa/private.h
-+++ include/wx/osx/cocoa/private.h
-@@ -546,6 +546,7 @@ WX_NSCursor  wxMacCocoaCreateCursorFromCGImage( CGImageRef cgImageRef, float hot
- void  wxMacCocoaSetCursor( WX_NSCursor cursor );
- void  wxMacCocoaHideCursor();
- void  wxMacCocoaShowCursor();
-+wxPoint  wxMacCocoaGetCursorHotSpot( WX_NSCursor cursor );
- 
- typedef struct tagClassicCursor
- {
---- include/wx/osx/cursor.h
-+++ include/wx/osx/cursor.h
-@@ -33,6 +33,8 @@ public:
-     void SetHCURSOR(WXHCURSOR cursor);
-     WXHCURSOR GetHCURSOR() const;
- 
-+    virtual wxPoint GetHotSpot() const override;
-+
- protected:
-     virtual wxGDIRefData *CreateGDIRefData() const override;
-     virtual wxGDIRefData *CloneGDIRefData(const wxGDIRefData *data) const override;
---- src/osx/carbon/cursor.cpp
-+++ src/osx/carbon/cursor.cpp
-@@ -341,6 +341,16 @@ void wxCursor::MacInstall() const
- #endif
- }
- 
-+wxPoint wxCursor::GetHotSpot() const
-+{
-+#if wxOSX_USE_COCOA
-+    if ( IsOk() )
-+        return wxMacCocoaGetCursorHotSpot( M_CURSORDATA->m_hCursor );
-+#endif
-+
-+    return wxDefaultPosition;
-+}
-+
- // Global cursor setting
- wxCursor gGlobalCursor;
- void wxSetCursor(const wxCursor& cursor)
-diff --git a/src/osx/carbon/utilscocoa.mm b/src/osx/carbon/utilscocoa.mm
-index dc24410d7f..ab963937d0 100644
---- src/osx/carbon/utilscocoa.mm
-+++ src/osx/carbon/utilscocoa.mm
-@@ -671,6 +671,11 @@ void  wxMacCocoaShowCursor()
- {
-     [NSCursor unhide];
- }
-+
-+wxPoint wxMacCocoaGetCursorHotSpot(WX_NSCursor cursor)
-+{
-+    return wxPoint([cursor hotSpot].x, [cursor hotSpot].y);
-+}
- #endif
- 
- //---------------------------------------------------------
-EOF
-		
-		# https://github.com/wxWidgets/wxWidgets/pull/24962
-		patch <<'EOF'
---- src/osx/cocoa/settings.mm
-+++ src/osx/cocoa/settings.mm
-@@ -221,6 +221,21 @@ wxFont wxSystemSettingsNative::GetFont(wxSystemFont index)
- // system metrics/features
- // ----------------------------------------------------------------------------
- 
-+static float GetCursorScale()
-+{
-+    NSDictionary *dict = [[NSUserDefaults standardUserDefaults] persistentDomainForName:@"com.apple.universalaccess"];
-+
-+    /* https://developer.apple.com/documentation/devicemanagement/accessibility?language=objc */
-+    if([dict objectForKey: @"mouseDriverCursorSize"])
-+    {
-+        return [dict[@"mouseDriverCursorSize"] floatValue];
-+    }
-+    else
-+    {
-+        return 1.0f;
-+    }
-+}
-+
- // Get a system metric, e.g. scrollbar size
- int wxSystemSettingsNative::GetMetric(wxSystemMetric index, const wxWindow* WXUNUSED(win))
- {
-@@ -233,8 +248,6 @@ int wxSystemSettingsNative::GetMetric(wxSystemMetric index, const wxWindow* WXUN
- 
-         // TODO case wxSYS_BORDER_X:
-         // TODO case wxSYS_BORDER_Y:
--        // TODO case wxSYS_CURSOR_X:
--        // TODO case wxSYS_CURSOR_Y:
-         // TODO case wxSYS_DCLICK_X:
-         // TODO case wxSYS_DCLICK_Y:
-         // TODO case wxSYS_DRAG_X:
-@@ -242,6 +255,11 @@ int wxSystemSettingsNative::GetMetric(wxSystemMetric index, const wxWindow* WXUN
-         // TODO case wxSYS_EDGE_X:
-         // TODO case wxSYS_EDGE_Y:
- 
-+        case wxSYS_CURSOR_X:
-+            return wxRound((float)([[[NSCursor arrowCursor] image] size].width) * GetCursorScale());
-+        case wxSYS_CURSOR_Y:
-+            return wxRound((float)([[[NSCursor arrowCursor] image] size].height) * GetCursorScale());
-+
-         case wxSYS_HSCROLL_ARROW_X:
-             return 16;
-         case wxSYS_HSCROLL_ARROW_Y:
 EOF
 		
 		./configure \

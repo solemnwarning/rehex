@@ -51,7 +51,7 @@ _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a632
 _rehex_wxwidgets_version="3.2.7"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
 _rehex_wxwidgets_sha256="69a1722f874d91cd1c9e742b72df49e0fab02890782cf794791c3104cee868c6"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
@@ -758,6 +758,35 @@ then
  
              GetPeer()->Move(0,0,0,0 );
              SetSize( wxSIZE_AUTO_WIDTH, 0 );
+EOF
+		
+		# https://github.com/wxWidgets/wxWidgets/issues/24590
+		# https://github.com/pnggroup/libpng/commit/893b8113f04d408cc6177c6de19c9889a48faa24
+		patch <<'EOF'
+diff -ru src/png/pngpriv.h src/png/pngpriv.h
+--- src/png/pngpriv.h	2022-03-20 14:58:34.000000000 +0000
++++ src/png/pngpriv.h	2025-04-20 01:07:27.853646003 +0100
+@@ -526,18 +526,8 @@
+     */
+ #  include <float.h>
+ 
+-#  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
+-    defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
+-   /* We need to check that <math.h> hasn't already been included earlier
+-    * as it seems it doesn't agree with <fp.h>, yet we should really use
+-    * <fp.h> if possible.
+-    */
+-#    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
+-#      include <fp.h>
+-#    endif
+-#  else
+-#    include <math.h>
+-#  endif
++#  include <math.h>
++
+ #  if defined(_AMIGA) && defined(__SASC) && defined(_M68881)
+    /* Amiga SAS/C: We must include builtin FPU functions when compiling using
+     * MATH=68881
 EOF
 		
 		./configure \

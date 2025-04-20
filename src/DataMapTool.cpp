@@ -179,7 +179,7 @@ void REHex::DataMapTool::update()
 	
 	if(is_visible)
 	{
-		switch(update_stage)
+		switch(update_stage.load())
 		{
 			case UpdateStage::IDLE:
 				if(m_source_reset_pending)

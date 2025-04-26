@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -163,6 +163,21 @@ namespace REHex
 					*/
 					void finish();
 					
+					/**
+					 * @brief Restart the task.
+					 *
+					 * This method will ensure the task is eligible to run,
+					 * even if it has finished.
+					 *
+					 * When this method is called, any already-active task
+					 * functions returning true will be ignored - this is to
+					 * avoid any race conditions between the main thread
+					 * restarting a task and the task finishing, tasks must be
+					 * safe to call again after returning true if you use this
+					 * method.
+					 *
+					 * Paused tasks will remain paused.
+					*/
 					void restart();
 					
 					void change_concurrency(int max_concurrency);

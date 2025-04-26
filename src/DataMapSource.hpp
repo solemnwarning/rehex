@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -74,22 +74,12 @@ namespace REHex
 	{
 		public:
 			/**
-			 * @brief Construct an EntropyDataMapSource covering a whole file.
+			 * @brief Construct an EntropyDataMapSource covering a whole view.
 			 *
-			 * @param document    Document to accumulate data from.
+			 * @param view        DataView to accumulate data from.
 			 * @param max_points  Maximum number of data points to output.
 			*/
 			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi = 1.0f);
-			
-			/**
-			 * @brief Construct an EntropyDataMapSource covering a range within a file.
-			 *
-			 * @param document      Document to accumulate data from.
-			 * @param range_offset  Offset within file to accumulate data from.
-			 * @param range_length  Length of range to accumulate data from.
-			 * @param max_points    Maximum number of data points to output.
-			*/
-			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points);
 			
 			virtual ~EntropyDataMapSource() = default;
 			
@@ -113,22 +103,12 @@ namespace REHex
 	{
 		public:
 			/**
-			 * @brief Construct an EntropyDataMapSource covering a whole file.
+			 * @brief Construct an EntropyDataMapSource covering a whole view.
 			 *
-			 * @param document    Document to accumulate data from.
+			 * @param view        DataView to accumulate data from.
 			 * @param max_points  Maximum number of data points to output.
 			*/
 			BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points);
-			
-			/**
-			 * @brief Construct an EntropyDataMapSource covering a range within a file.
-			 *
-			 * @param document      Document to accumulate data from.
-			 * @param range_offset  Offset within file to accumulate data from.
-			 * @param range_length  Length of range to accumulate data from.
-			 * @param max_points    Maximum number of data points to output.
-			*/
-			BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points);
 			
 			virtual ~BasicStatDataMapSource() = default;
 			

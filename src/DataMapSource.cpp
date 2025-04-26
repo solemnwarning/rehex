@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,14 +29,6 @@ REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataVie
 	log_multi(log_multi)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
-}
-
-REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points):
-	view(view),
-	max_points(max_points),
-	log_multi(1.0f)
-{
-	accumulator.reset(new HierarchicalByteAccumulator(view, range_offset, range_length, max_points));
 }
 
 REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::get_data_map()
@@ -88,11 +80,6 @@ void REHex::EntropyDataMapSource::reset_max_points(size_t max_points)
 REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
-}
-
-REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t max_points)
-{
-	accumulator.reset(new HierarchicalByteAccumulator(view, range_offset, range_length, max_points));
 }
 
 REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::BasicStatDataMapSource::get_data_map()

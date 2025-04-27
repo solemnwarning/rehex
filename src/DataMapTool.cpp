@@ -442,7 +442,14 @@ void REHex::DataMapTool::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 void REHex::DataMapTool::OnSourceProcessing(wxCommandEvent &event)
 {
 	m_update_pending = true;
-	update();
+	
+	/* We can't call update() within this handler as it may destroy the DataMapSource while it
+	 * is still dispatching this event, causing a crash.
+	*/
+	CallAfter([this]()
+	{
+		update();
+	});
 	
 	event.Skip(); /* Continue propogation */
 }

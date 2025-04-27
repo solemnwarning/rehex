@@ -76,7 +76,8 @@ REHex::DataMapTool::DataMapTool(wxWindow *parent, SharedDocumentPointer &documen
 	m_source_reset_pending(false),
 	m_update_pending(false),
 	update_timer(this, ID_UPDATE_TIMER),
-	m_dragging(false)
+	m_dragging(false),
+	m_tip_window(NULL)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -105,6 +106,8 @@ REHex::DataMapTool::DataMapTool(wxWindow *parent, SharedDocumentPointer &documen
 	
 	s_bitmap->Bind(wxEVT_SIZE, &REHex::DataMapTool::OnBitmapSize, this);
 	s_bitmap->Bind(wxEVT_LEFT_DOWN, &REHex::DataMapTool::OnBitmapLeftDown, this);
+	s_bitmap->Bind(wxEVT_MOTION, &REHex::DataMapTool::OnBitmapMotion, this);
+	s_bitmap->Bind(wxEVT_LEAVE_WINDOW, &REHex::DataMapTool::OnBitmapLeaveWindow, this);
 	
 	SetSizerAndFit(sizer);
 	
@@ -122,7 +125,7 @@ REHex::DataMapTool::DataMapTool(wxWindow *parent, SharedDocumentPointer &documen
 		
 		m_update_pending = source->processing();
 		
-		update_data = source->get_data_map();
+		m_new_map = source->get_data_map();
 		update_stage = UpdateStage::REDRAW;
 	});
 	
@@ -213,6 +216,9 @@ void REHex::DataMapTool::update()
 				
 			case UpdateStage::REDRAW:
 			{
+				m_map = std::move(m_new_map);
+				m_new_map.clear();
+				
 				wxColour bg = wxSystemSettings::GetColour(wxSYS_COLOUR_BACKGROUND);
 				
 				BitOffset range_offset, range_length;
@@ -235,8 +241,8 @@ void REHex::DataMapTool::update()
 						
 						BitOffset data_offset((((off_t)(scaled_y * m_data_width) + (off_t)(scaled_x)) * m_bytes_per_point), 0);
 						
-						auto dm_it = update_data.get_range(data_offset);
-						if(dm_it != update_data.end())
+						auto dm_it = m_map.get_range(data_offset);
+						if(dm_it != m_map.end())
 						{
 							output_col_ptr.Red() = dm_it->second.colour.Red();
 							output_col_ptr.Green() = dm_it->second.colour.Green();
@@ -264,8 +270,6 @@ void REHex::DataMapTool::update()
 				break;
 			}
 		}
-		
-		
 	}
 	else{
 		update_timer.Stop();
@@ -328,6 +332,42 @@ void REHex::DataMapTool::update_output_bitmap()
 	s_bitmap->Refresh();
 }
 
+void REHex::DataMapTool::update_tip(const wxPoint &bitmap_mouse_point)
+{
+	int point_x = bitmap_mouse_point.x / PIXELS_PER_POINT;
+	int point_y = bitmap_mouse_point.y / PIXELS_PER_POINT;
+	
+	off_t rel_offset_bytes = ((off_t)(point_y) * m_bytes_per_row) + ((off_t)(point_x) * m_bytes_per_point);
+	
+	auto dm_it = m_map.get_range(BitOffset(rel_offset_bytes, 0));
+	if(dm_it != m_map.end())
+	{
+		BitOffset range_offset, range_length;
+		std::tie(range_offset, range_length) = range_choice->get_range();
+		
+		BitOffset elem_first_off = range_offset + dm_it->first.offset;
+		BitOffset elem_last_off = elem_first_off + dm_it->first.length - BitOffset(0, 1);
+		
+		wxString tip_text = format_offset(elem_first_off, document_ctrl->get_offset_display_base()) + " - "
+			+ format_offset(elem_last_off, document_ctrl->get_offset_display_base()) + "\n"
+			+ dm_it->second.description;
+		
+		if(m_tip_window != NULL)
+		{
+			m_tip_window->set_text(tip_text);
+			m_tip_window->move_to_cursor_window_position(s_bitmap, bitmap_mouse_point);
+		}
+		else{
+			m_tip_window.reset(new PopupTipWindow(this, tip_text, s_bitmap, bitmap_mouse_point));
+		}
+	}
+	else if(m_tip_window != NULL)
+	{
+		m_tip_window->Destroy();
+		m_tip_window.reset(NULL);
+	}
+}
+
 void REHex::DataMapTool::OnSize(wxSizeEvent &event)
 {
 	update();
@@ -379,6 +419,9 @@ void REHex::DataMapTool::OnBitmapSize(wxSizeEvent &event)
 		}
 		
 		m_bytes_per_row = m_bytes_per_point * m_data_width;
+		
+		m_source_reset_pending = true;
+		update();
 	}
 	
 	event.Skip(); /* Continue propogation. */
@@ -404,15 +447,32 @@ void REHex::DataMapTool::OnBitmapLeftDown(wxMouseEvent &event)
 	CaptureMouse();
 }
 
+void REHex::DataMapTool::OnBitmapMotion(wxMouseEvent &event)
+{
+	update_tip(event.GetPosition());
+}
+
+void REHex::DataMapTool::OnBitmapLeaveWindow(wxMouseEvent &event)
+{
+	if(m_tip_window != NULL)
+	{
+		m_tip_window->Destroy();
+		m_tip_window.reset(NULL);
+	}
+}
+
 void REHex::DataMapTool::OnMotion(wxMouseEvent &event)
 {
+	wxPoint screen_mouse_point = ClientToScreen(event.GetPosition());
+	wxPoint bitmap_mouse_point = s_bitmap->ScreenToClient(screen_mouse_point);
+	
 	if(m_dragging)
 	{
-		wxPoint screen_mouse_point = ClientToScreen(event.GetPosition());
-		wxPoint bitmap_mouse_point = s_bitmap->ScreenToClient(screen_mouse_point);
+		int max_w = (m_data_width * PIXELS_PER_POINT) - 1;
+		int max_h = (m_data_height * PIXELS_PER_POINT) - 1;
 		
-		int point_x = bitmap_mouse_point.x / PIXELS_PER_POINT;
-		int point_y = bitmap_mouse_point.y / PIXELS_PER_POINT;
+		int point_x = std::max(0, std::min(bitmap_mouse_point.x, max_w)) / PIXELS_PER_POINT;
+		int point_y = std::max(0, std::min(bitmap_mouse_point.y, max_h)) / PIXELS_PER_POINT;
 		
 		off_t rel_offset_bytes = ((off_t)(point_y) * m_bytes_per_row) + ((off_t)(point_x) * m_bytes_per_point);
 		
@@ -422,6 +482,16 @@ void REHex::DataMapTool::OnMotion(wxMouseEvent &event)
 		document->set_cursor_position((range_offset + BitOffset(rel_offset_bytes, 0)));
 		
 		update_output_bitmap();
+	}
+	
+	if(s_bitmap->GetScreenRect().Contains(screen_mouse_point))
+	{
+		update_tip(bitmap_mouse_point);
+	}
+	else if(m_tip_window != NULL)
+	{
+		m_tip_window->Destroy();
+		m_tip_window.reset(NULL);
 	}
 }
 

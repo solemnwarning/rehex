@@ -27,6 +27,7 @@
 #include "BitOffset.hpp"
 #include "DataMapSource.hpp"
 #include "document.hpp"
+#include "PopupTipWindow.hpp"
 #include "RangeChoiceLinear.hpp"
 #include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -79,8 +80,10 @@ namespace REHex {
 			};
 			
 			std::atomic<UpdateStage> update_stage;
-			BitRangeMap<DataMapSource::MapValue> update_data;
+			BitRangeMap<DataMapSource::MapValue> m_new_map;
 			ThreadPool::TaskHandle update_get_data_task;
+			
+			BitRangeMap<DataMapSource::MapValue> m_map;
 			
 			wxBitmap m_base_bitmap;
 			
@@ -92,10 +95,14 @@ namespace REHex {
 			
 			bool m_dragging;
 			
+			SafeWindowPointer<PopupTipWindow> m_tip_window;
+			
 			void reset_view();
 			
 			virtual void update() override;
 			void update_output_bitmap();
+			
+			void update_tip(const wxPoint &bitmap_mouse_point);
 			
 			void OnModeChanged(wxCommandEvent &event);
 			void OnRangeChanged(wxCommandEvent &event);
@@ -103,6 +110,8 @@ namespace REHex {
 			void OnSize(wxSizeEvent &event);
 			void OnBitmapSize(wxSizeEvent &event);
 			void OnBitmapLeftDown(wxMouseEvent &event);
+			void OnBitmapMotion(wxMouseEvent &event);
+			void OnBitmapLeaveWindow(wxMouseEvent &event);
 			void OnMotion(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);

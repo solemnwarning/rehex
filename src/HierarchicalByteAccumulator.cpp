@@ -29,7 +29,8 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedEvtH
 	target_num_shards(num_shards),
 	chunk_size(0),
 	l2_cache(L2_CACHE_SIZE),
-	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1))
+	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1)),
+	m_processing(false)
 {
 	this->view.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
 	this->view.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
@@ -99,6 +100,12 @@ std::vector<REHex::HierarchicalByteAccumulator::Shard> REHex::HierarchicalByteAc
 size_t REHex::HierarchicalByteAccumulator::get_requested_num_shards() const
 {
 	return target_num_shards;
+}
+
+bool REHex::HierarchicalByteAccumulator::processing()
+{
+	std::unique_lock<std::mutex> queue_lock_guard(queue_mutex);
+	return m_processing;
 }
 
 void REHex::HierarchicalByteAccumulator::wait_for_completion()
@@ -323,8 +330,28 @@ bool REHex::HierarchicalByteAccumulator::task_func()
 			working.set_range(chunk_offset, chunk_length);
 		}
 		else{
-			return pending.empty() && blocked.empty();
+			bool finished = pending.empty() && blocked.empty();
+			
+			if(finished && m_processing)
+			{
+				m_processing = false;
+				
+				wxCommandEvent *stop_event = new wxCommandEvent(PROCESSING_STOP);
+				stop_event->SetEventObject(this);
+				QueueEvent(stop_event);
+			}
+			
+			return finished;
 		}
+	}
+	
+	if(!m_processing)
+	{
+		m_processing = true;
+		
+		wxCommandEvent *start_event = new wxCommandEvent(PROCESSING_START);
+		start_event->SetEventObject(this);
+		QueueEvent(start_event);
 	}
 	
 	process_chunk(chunk_offset, chunk_length, l1_slot_idx);
@@ -342,7 +369,18 @@ bool REHex::HierarchicalByteAccumulator::task_func()
 		blocked.clear_ranges(unblocked.begin(), unblocked.end());
 		pending.set_ranges(unblocked.begin(), unblocked.end());
 		
-		return pending.empty() && blocked.empty();
+		bool finished = pending.empty() && blocked.empty();
+		
+		if(finished && m_processing)
+		{
+			m_processing = false;
+			
+			wxCommandEvent *stop_event = new wxCommandEvent(PROCESSING_STOP);
+			stop_event->SetEventObject(this);
+			QueueEvent(stop_event);
+		}
+		
+		return finished;
 	}
 }
 
@@ -448,6 +486,16 @@ size_t REHex::HierarchicalByteAccumulator::relative_offset_to_l1_cache_idx(off_t
 void REHex::HierarchicalByteAccumulator::OnDataModifying(wxCommandEvent &event)
 {
 	task.pause();
+	
+	/* Workers are stopped now, we won't race on m_processing. */
+	if(m_processing)
+	{
+		m_processing = false;
+		
+		wxCommandEvent *stop_event = new wxCommandEvent(PROCESSING_STOP);
+		stop_event->SetEventObject(this);
+		QueueEvent(stop_event);
+	}
 	
 	/* Continue propogation. */
 	event.Skip();

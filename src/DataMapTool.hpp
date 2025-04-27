@@ -62,6 +62,7 @@ namespace REHex {
 			std::shared_ptr<DataView> m_view;
 			std::unique_ptr<DataMapSource> source;
 			bool m_source_reset_pending;
+			bool m_update_pending;
 			
 			wxChoice *mode_choice;
 			RangeChoiceLinear *range_choice;
@@ -105,6 +106,7 @@ namespace REHex {
 			void OnMotion(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
+			void OnSourceProcessing(wxCommandEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

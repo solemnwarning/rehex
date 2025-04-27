@@ -74,6 +74,7 @@ REHex::DataMapTool::DataMapTool(wxWindow *parent, SharedDocumentPointer &documen
 	document(document),
 	document_ctrl(document_ctrl),
 	m_source_reset_pending(false),
+	m_update_pending(false),
 	update_timer(this, ID_UPDATE_TIMER),
 	m_dragging(false)
 {
@@ -108,11 +109,19 @@ REHex::DataMapTool::DataMapTool(wxWindow *parent, SharedDocumentPointer &documen
 	SetSizerAndFit(sizer);
 	
 	m_view.reset(new FlatDocumentView(document));
+	
 	source.reset(new EntropyDataMapSource(m_view, 1));
+	source->Bind(PROCESSING_START, &REHex::DataMapTool::OnSourceProcessing, this);
 	
 	update_stage = UpdateStage::GETTING_DATA;
 	update_get_data_task = wxGetApp().thread_pool->queue_task([this]()
 	{
+		/* If the source isn't processing any data, then we will stop updating after this
+		 * (until a PROCESSING_START event is raised).
+		*/
+		
+		m_update_pending = source->processing();
+		
 		update_data = source->get_data_map();
 		update_stage = UpdateStage::REDRAW;
 	});
@@ -171,6 +180,7 @@ void REHex::DataMapTool::reset_view()
 	}
 	
 	m_source_reset_pending = true;
+	m_update_pending = true;
 }
 
 void REHex::DataMapTool::update()
@@ -185,6 +195,8 @@ void REHex::DataMapTool::update()
 				if(m_source_reset_pending)
 				{
 					source.reset(new EntropyDataMapSource(m_view, ((size_t)(m_data_width) * (size_t)(m_data_height))));
+					source->Bind(PROCESSING_START, &REHex::DataMapTool::OnSourceProcessing, this);
+					
 					m_source_reset_pending = false;
 				}
 				
@@ -192,9 +204,11 @@ void REHex::DataMapTool::update()
 				
 				source->reset_max_points((size_t)(m_data_width) * (size_t)(m_data_height));
 				update_get_data_task.restart();
-				break;
+				
+				/* Fall through. */
 				
 			case UpdateStage::GETTING_DATA:
+				update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
 				break;
 				
 			case UpdateStage::REDRAW:
@@ -242,11 +256,16 @@ void REHex::DataMapTool::update()
 				
 				update_output_bitmap();
 				
+				if(m_update_pending)
+				{
+					update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
+				}
+				
 				break;
 			}
 		}
 		
-		update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
+		
 	}
 	else{
 		update_timer.Stop();
@@ -286,7 +305,7 @@ void REHex::DataMapTool::update_output_bitmap()
 		wxNativePixelData::Iterator output_col_ptr = output_ptr;
 		wxNativePixelData::Iterator base_col_ptr = base_ptr;
 		
-		for(int x = 0; x <= output_bitmap.GetWidth(); ++x, ++output_col_ptr, ++base_col_ptr)
+		for(int x = 0; x < output_bitmap.GetWidth(); ++x, ++output_col_ptr, ++base_col_ptr)
 		{
 			if((x >= cursor_x_min && x <= cursor_x_max) || (y >= cursor_y_min && y <= cursor_y_max))
 			{
@@ -418,4 +437,12 @@ void REHex::DataMapTool::OnLeftUp(wxMouseEvent &event)
 void REHex::DataMapTool::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 {
 	m_dragging = false;
+}
+
+void REHex::DataMapTool::OnSourceProcessing(wxCommandEvent &event)
+{
+	m_update_pending = true;
+	update();
+	
+	event.Skip(); /* Continue propogation */
 }

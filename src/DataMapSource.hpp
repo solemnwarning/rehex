@@ -64,6 +64,17 @@ namespace REHex
 			*/
 			virtual BitRangeMap<MapValue> get_data_map() = 0;
 			
+			/**
+			 * @brief Check if data is being processed in the background.
+			 *
+			 * Checks if this DataMapSource is currently accumulating data.
+			 *
+			 * NOTE: This method may return false when there is still data pending to
+			 * be processed (e.g. due to data being modified), it should be used in
+			 * tandem with the PROCESSING_START and/or PROCESSING_END events.
+			*/
+			virtual bool processing() = 0;
+			
 			virtual void reset_max_points(size_t max_points) = 0;
 	};
 	
@@ -81,9 +92,10 @@ namespace REHex
 			*/
 			EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi = 1.0f);
 			
-			virtual ~EntropyDataMapSource() = default;
+			virtual ~EntropyDataMapSource();
 			
 			virtual BitRangeMap<MapValue> get_data_map() override;
+			virtual bool processing() override;
 			
 			virtual void reset_max_points(size_t max_points) override;
 			
@@ -94,6 +106,9 @@ namespace REHex
 			double log_multi;
 			
 			std::unique_ptr<HierarchicalByteAccumulator> accumulator;
+			
+			void OnProcessingStart(wxCommandEvent &event);
+			void OnProcessingStop(wxCommandEvent &event);
 	};
 	
 	/**
@@ -110,12 +125,16 @@ namespace REHex
 			*/
 			BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points);
 			
-			virtual ~BasicStatDataMapSource() = default;
+			virtual ~BasicStatDataMapSource();
 			
 			virtual BitRangeMap<MapValue> get_data_map() override;
+			virtual bool processing() override;
 			
 		private:
 			std::unique_ptr<HierarchicalByteAccumulator> accumulator;
+			
+			void OnProcessingStart(wxCommandEvent &event);
+			void OnProcessingStop(wxCommandEvent &event);
 	};
 }
 

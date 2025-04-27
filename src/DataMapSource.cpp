@@ -29,6 +29,17 @@ REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataVie
 	log_multi(log_multi)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+	
+	accumulator->Bind(PROCESSING_START, &REHex::EntropyDataMapSource::OnProcessingStart, this);
+	accumulator->Bind(PROCESSING_STOP, &REHex::EntropyDataMapSource::OnProcessingStop, this);
+}
+
+REHex::EntropyDataMapSource::~EntropyDataMapSource()
+{
+	/* Ensure accumulator won't raise any processing start/stop events while we aren't fully
+	 * constructed.
+	*/
+	accumulator.reset(nullptr);
 }
 
 REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::get_data_map()
@@ -69,17 +80,54 @@ REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::EntropyDataMapSource::
 	return result;
 }
 
+bool REHex::EntropyDataMapSource::processing()
+{
+	return accumulator->processing();
+}
+
 void REHex::EntropyDataMapSource::reset_max_points(size_t max_points)
 {
 	if(accumulator->get_requested_num_shards() != max_points)
 	{
 		accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+		
+		accumulator->Bind(PROCESSING_START, &REHex::EntropyDataMapSource::OnProcessingStart, this);
+		accumulator->Bind(PROCESSING_STOP, &REHex::EntropyDataMapSource::OnProcessingStop, this);
 	}
+}
+
+void REHex::EntropyDataMapSource::OnProcessingStart(wxCommandEvent &event)
+{
+	wxCommandEvent my_event(PROCESSING_START);
+	my_event.SetEventObject(this);
+	ProcessEvent(my_event);
+	
+	event.Skip();
+}
+
+void REHex::EntropyDataMapSource::OnProcessingStop(wxCommandEvent &event)
+{
+	wxCommandEvent my_event(PROCESSING_STOP);
+	my_event.SetEventObject(this);
+	ProcessEvent(my_event);
+	
+	event.Skip();
 }
 
 REHex::BasicStatDataMapSource::BasicStatDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+	
+	accumulator->Bind(PROCESSING_START, &REHex::BasicStatDataMapSource::OnProcessingStart, this);
+	accumulator->Bind(PROCESSING_STOP, &REHex::BasicStatDataMapSource::OnProcessingStop, this);
+}
+
+REHex::BasicStatDataMapSource::~BasicStatDataMapSource()
+{
+	/* Ensure accumulator won't raise any processing start/stop events while we aren't fully
+	 * constructed.
+	*/
+	accumulator.reset(nullptr);
 }
 
 REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::BasicStatDataMapSource::get_data_map()
@@ -99,4 +147,27 @@ REHex::BitRangeMap<REHex::DataMapSource::MapValue> REHex::BasicStatDataMapSource
 	}
 	
 	return result;
+}
+
+bool REHex::BasicStatDataMapSource::processing()
+{
+	return accumulator->processing();
+}
+
+void REHex::BasicStatDataMapSource::OnProcessingStart(wxCommandEvent &event)
+{
+	wxCommandEvent my_event(PROCESSING_START);
+	my_event.SetEventObject(this);
+	ProcessEvent(my_event);
+	
+	event.Skip();
+}
+
+void REHex::BasicStatDataMapSource::OnProcessingStop(wxCommandEvent &event)
+{
+	wxCommandEvent my_event(PROCESSING_STOP);
+	my_event.SetEventObject(this);
+	ProcessEvent(my_event);
+	
+	event.Skip();
 }

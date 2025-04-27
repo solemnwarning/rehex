@@ -21,6 +21,7 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <wx/event.h>
 
 #include "BitOffset.hpp"
 #include "ByteAccumulator.hpp"
@@ -38,7 +39,7 @@ namespace REHex
 	 * This class accumulates data from a specified byte range in a Document into a
 	 * ByteAccumulator using background worker threads.
 	*/
-	class HierarchicalByteAccumulator
+	class HierarchicalByteAccumulator: public wxEvtHandler
 	{
 		public:
 			static constexpr size_t L2_CACHE_SIZE = 512; /* Up to ~1MiB */
@@ -121,6 +122,7 @@ namespace REHex
 			ByteRangeSet blocked;  /**< Ranges which are queued, but already being worked. */
 			
 			ThreadPool::TaskHandle task;
+			bool m_processing;
 			
 		public:
 			/**
@@ -154,6 +156,18 @@ namespace REHex
 			 * @brief Get the requested num_shards passed to the constructor.
 			*/
 			size_t get_requested_num_shards() const;
+			
+			/**
+			 * @brief Check if data is being processed in the background.
+			 *
+			 * Checks if this HierarchicalByteAccumulator is currently accumulating
+			 * data in the background.
+			 *
+			 * NOTE: This method may return false when there is still data pending to
+			 * be processed (e.g. due to data being modified), it should be used in
+			 * tandem with the PROCESSING_START and/or PROCESSING_END events.
+			*/
+			bool processing();
 			
 			/**
 			 * @brief Wait for work queue to be empty.

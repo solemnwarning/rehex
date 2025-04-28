@@ -76,6 +76,10 @@ REHex::DataMapTool::DataMapTool(wxWindow *parent, SharedDocumentPointer &documen
 	m_source_reset_pending(false),
 	m_update_pending(false),
 	update_timer(this, ID_UPDATE_TIMER),
+	m_data_width(-1),
+	m_data_height(-1),
+	m_bytes_per_row(-1),
+	m_bytes_per_point(-1),
 	m_dragging(false),
 	m_tip_window(NULL)
 {
@@ -311,7 +315,8 @@ void REHex::DataMapTool::update_output_bitmap()
 		
 		for(int x = 0; x < output_bitmap.GetWidth(); ++x, ++output_col_ptr, ++base_col_ptr)
 		{
-			if((x >= cursor_x_min && x <= cursor_x_max) || (y >= cursor_y_min && y <= cursor_y_max))
+			if(range_length > BitOffset::ZERO
+				&& ((x >= cursor_x_min && x <= cursor_x_max) || (y >= cursor_y_min && y <= cursor_y_max)))
 			{
 				output_col_ptr.Red() = 255;
 				output_col_ptr.Green() = 0;
@@ -416,6 +421,12 @@ void REHex::DataMapTool::OnBitmapSize(wxSizeEvent &event)
 		if((range_length.byte() % (off_t)(max_points)) != 0)
 		{
 			++m_bytes_per_point;
+		}
+		
+		/* Avoid division by zero crashes when range is empty. */
+		if(m_bytes_per_point == 0)
+		{
+			m_bytes_per_point = -1;
 		}
 		
 		m_bytes_per_row = m_bytes_per_point * m_data_width;

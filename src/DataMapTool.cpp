@@ -347,11 +347,11 @@ void REHex::DataMapTool::update_tip(const wxPoint &bitmap_mouse_point)
 	auto dm_it = m_map.get_range(BitOffset(rel_offset_bytes, 0));
 	if(dm_it != m_map.end())
 	{
-		BitOffset range_offset, range_length;
-		std::tie(range_offset, range_length) = range_choice->get_range();
+		BitOffset point_end(std::min((rel_offset_bytes + m_bytes_per_point), m_view->view_length()), 0);
+		point_end -= BitOffset(0, 1);
 		
-		BitOffset elem_first_off = range_offset + dm_it->first.offset;
-		BitOffset elem_last_off = elem_first_off + dm_it->first.length - BitOffset(0, 1);
+		BitOffset elem_first_off = m_view->view_offset_to_virt_offset(BitOffset(rel_offset_bytes, 0));
+		BitOffset elem_last_off = m_view->view_offset_to_virt_offset(point_end);
 		
 		wxString tip_text = format_offset(elem_first_off, document_ctrl->get_offset_display_base()) + " - "
 			+ format_offset(elem_last_off, document_ctrl->get_offset_display_base()) + "\n"

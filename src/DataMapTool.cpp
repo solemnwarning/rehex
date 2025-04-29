@@ -447,10 +447,7 @@ void REHex::DataMapTool::OnBitmapLeftDown(wxMouseEvent &event)
 	
 	off_t rel_offset_bytes = ((off_t)(point_y) * m_bytes_per_row) + ((off_t)(point_x) * m_bytes_per_point);
 	
-	BitOffset range_offset, range_length;
-	std::tie(range_offset, range_length) = range_choice->get_range();
-	
-	document->set_cursor_position((range_offset + BitOffset(rel_offset_bytes, 0)));
+	document->set_cursor_position(m_view->view_offset_to_virt_offset(BitOffset(rel_offset_bytes, 0)));
 	
 	update_output_bitmap();
 	
@@ -487,10 +484,7 @@ void REHex::DataMapTool::OnMotion(wxMouseEvent &event)
 		
 		off_t rel_offset_bytes = ((off_t)(point_y) * m_bytes_per_row) + ((off_t)(point_x) * m_bytes_per_point);
 		
-		BitOffset range_offset, range_length;
-		std::tie(range_offset, range_length) = range_choice->get_range();
-		
-		document->set_cursor_position((range_offset + BitOffset(rel_offset_bytes, 0)));
+		document->set_cursor_position(m_view->view_offset_to_virt_offset(BitOffset(rel_offset_bytes, 0)));
 		
 		update_output_bitmap();
 	}

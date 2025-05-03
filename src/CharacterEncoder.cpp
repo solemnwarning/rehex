@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -319,6 +319,11 @@ void IconvCharacterEncodingRegistrationHelper::deferred_init(const char *encodin
 
 const REHex::CharacterEncoderASCII REHex::ascii_encoder;
 static REHex::CharacterEncoding ascii_encoding("ASCII", "US-ASCII (7-bit)", &REHex::ascii_encoder);
+
+static REHex::StaticDataTypeRegistration ascii_dt("text:ASCII", "US-ASCII (7-bit)", { "Text", "8-bit code pages" },
+	REHex::DataType()
+		.WithWordSize(REHex::BitOffset(1, 0))
+		.WithCharacterEncoder(&REHex::ascii_encoder));
 
 static REHex::CharacterEncoderIconv utf8_enc_impl("UTF-8", 1, true);
 const REHex::CharacterEncoder *REHex::utf8_encoder = &utf8_enc_impl;

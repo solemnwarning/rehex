@@ -28,6 +28,16 @@
 #include "BitOffset.hpp"
 
 namespace REHex {
+	static constexpr off_t BYTES_PER_KiB = 1024;
+	static constexpr off_t BYTES_PER_MiB = 1024 * BYTES_PER_KiB;
+	static constexpr off_t BYTES_PER_GiB = 1024 * BYTES_PER_MiB;
+	static constexpr off_t BYTES_PER_TiB = 1024 * BYTES_PER_GiB;
+	
+	static constexpr off_t BYTES_PER_kB = 1000;
+	static constexpr off_t BYTES_PER_MB = 1000 * BYTES_PER_kB;
+	static constexpr off_t BYTES_PER_GB = 1000 * BYTES_PER_MB;
+	static constexpr off_t BYTES_PER_TB = 1000 * BYTES_PER_GB;
+	
 	class ParseError: public std::runtime_error
 	{
 		public:
@@ -106,6 +116,34 @@ namespace REHex {
 	
 	std::string format_offset(off_t offset, OffsetBase base, off_t upper_bound = -1);
 	std::string format_offset(BitOffset offset, OffsetBase base, BitOffset upper_bound = BitOffset::INVALID);
+	
+	enum class SizeUnit
+	{
+		B = 1,    /**< Byte (8 bits) */
+		
+		KiB = 11, /**< Kibibyte (1,024 bytes) */
+		MiB,      /**< Mebibyte (1,024 KiB) */
+		GiB,      /**< Gibibyte (1,024 MiB) */
+		TiB,      /**< Tebibyte (1,024 GiB) */
+		
+		kB = 21,  /**< Kilobyte (1,000 bytes) */
+		MB,       /**< Megabyte (1,000 kB) */
+		GB,       /**< Gigabyte (1,000 MB) */
+		TB,       /**< Terabyte (1,000 GB) */
+		
+		AUTO_XiB = 31,  /**< Appropriate "binary" unit (B, KiB, MiB, etc) */
+		AUTO_XB,        /**< Appropriate "decimal" unit (B, kB, MB, etc) */
+	};
+	
+	/**
+	 * @brief Format a size in bytes for display with the users selected units.
+	*/
+	std::string format_size(off_t size_bytes);
+	
+	/**
+	 * @brief Format a size in bytes for display in a specific unit.
+	*/
+	std::string format_size(off_t size_bytes, SizeUnit unit);
 	
 	template<typename T> typename T::iterator const_iterator_to_iterator(typename T::const_iterator &const_iter, T &container)
 	{

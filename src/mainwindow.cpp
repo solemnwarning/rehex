@@ -2386,7 +2386,8 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 		BitOffset selection_total = selection.total_bytes();
 		
 		std::string len_text = selection_total.byte_aligned()
-			? (std::to_string(selection_total.byte()) + " bytes")
+			//? (std::to_string(selection_total.byte()) + " bytes")
+			? format_size(selection_total.byte())
 			: (std::to_string(selection_total.byte()) + " bytes, " + std::to_string(selection_total.bit()) + " bits");
 		
 		std::string text = "Selection: " + from_text + " - " + to_text + " (" + len_text + ")";

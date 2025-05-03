@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,6 +26,7 @@
 #include "BitOffset.hpp"
 #include "ByteColourMap.hpp"
 #include "HighlightColourMap.hpp"
+#include "util.hpp"
 #include "WindowCommands.hpp"
 
 namespace REHex
@@ -82,6 +83,9 @@ namespace REHex
 			bool get_goto_offset_modal() const;
 			void set_goto_offset_modal(bool goto_offset_modal);
 			
+			SizeUnit get_size_unit() const;
+			void set_size_unit(SizeUnit unit);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
@@ -90,6 +94,7 @@ namespace REHex
 			WindowCommandTable main_window_commands;
 			CursorNavMode cursor_nav_mode;
 			bool goto_offset_modal;
+			SizeUnit size_unit;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

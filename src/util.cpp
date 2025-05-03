@@ -23,6 +23,7 @@
 #include <vector>
 #include <wx/clipbrd.h>
 #include <wx/filename.h>
+#include <wx/numformatter.h>
 #include <wx/utils.h>
 
 #include "App.hpp"
@@ -197,6 +198,91 @@ std::string REHex::format_offset(BitOffset offset, OffsetBase base, BitOffset up
 	}
 	
 	return fmt_out;
+}
+
+std::string REHex::format_size(off_t size_bytes)
+{
+	return format_size(size_bytes, wxGetApp().settings->get_size_unit());
+}
+
+std::string REHex::format_size(off_t size_bytes, SizeUnit unit)
+{
+	const char *unit_sym = NULL;
+	off_t unit_div = 0;
+	
+	switch(unit)
+	{
+		case SizeUnit::B: B:
+			return (wxNumberFormatter::ToString(size_bytes) + " bytes").ToStdString();
+			
+		case SizeUnit::KiB: KiB:
+			unit_sym = "KiB";
+			unit_div = BYTES_PER_KiB;
+			break;
+			
+		case SizeUnit::MiB: MiB:
+			unit_sym = "MiB";
+			unit_div = BYTES_PER_MiB;
+			break;
+			
+		case SizeUnit::GiB: GiB:
+			unit_sym = "GiB";
+			unit_div = BYTES_PER_GiB;
+			break;
+			
+		case SizeUnit::TiB: TiB:
+			unit_sym = "TiB";
+			unit_div = BYTES_PER_TiB;
+			break;
+			
+		case SizeUnit::AUTO_XiB:
+			if(size_bytes >= BYTES_PER_TiB || size_bytes <= -BYTES_PER_TiB)       goto TiB;
+			else if(size_bytes >= BYTES_PER_GiB || size_bytes <= -BYTES_PER_GiB)  goto GiB;
+			else if(size_bytes >= BYTES_PER_MiB || size_bytes <= -BYTES_PER_MiB)  goto MiB;
+			else if(size_bytes >= BYTES_PER_KiB || size_bytes <= -BYTES_PER_KiB)  goto KiB;
+			else                                                                  goto B;
+			
+		case SizeUnit::kB: kB:
+			unit_sym = "kB";
+			unit_div = BYTES_PER_kB;
+			break;
+			
+		case SizeUnit::MB: MB:
+			unit_sym = "MB";
+			unit_div = BYTES_PER_MB;
+			break;
+			
+		case SizeUnit::GB: GB:
+			unit_sym = "GB";
+			unit_div = BYTES_PER_GB;
+			break;
+			
+		case SizeUnit::TB: TB:
+			unit_sym = "TB";
+			unit_div = BYTES_PER_TB;
+			break;
+			
+		case SizeUnit::AUTO_XB:
+			if(size_bytes >= BYTES_PER_TB || size_bytes <= -BYTES_PER_TB)       goto TB;
+			else if(size_bytes >= BYTES_PER_GB || size_bytes <= -BYTES_PER_GB)  goto GB;
+			else if(size_bytes >= BYTES_PER_MB || size_bytes <= -BYTES_PER_MB)  goto MB;
+			else if(size_bytes >= BYTES_PER_kB || size_bytes <= -BYTES_PER_kB)  goto kB;
+			else                                                                goto B;
+	};
+	
+	#if 0
+	snprintf(size_s, sizeof(size_s), "%zd.%02d %s",
+		(size_bytes / unit_div),
+		(int)(abs(((size_bytes % unit_div) * 100) / unit_div)),
+		unit_sym);
+	snprintf(size_s, sizeof(size_s), "%s%s%02d %s",
+		wxNumberFormatter::ToString(size_bytes / unit_div).mb_str().data(),
+		wxString(wxNumberFormatter::GetDecimalSeparator()).mb_str().data(),
+		(int)(abs(((size_bytes % unit_div) * 100) / unit_div)),
+		unit_sym);
+	#endif
+	
+	return (wxNumberFormatter::ToString(((double)(size_bytes) / (double)(unit_div)), 2) + " " + unit_sym).ToStdString();
 }
 
 void REHex::copy_from_doc(REHex::Document *doc, REHex::DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut)

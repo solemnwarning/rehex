@@ -186,8 +186,26 @@ void REHex::DataMapTool::reset_view()
 		m_view.reset(new FlatRangeView(document, range_offset, range_length.byte()));
 	}
 	
+	int max_points = m_data_width * m_data_height;
+	
+	m_bytes_per_point = m_view->view_length() / (off_t)(max_points);
+	if((m_view->view_length() % (off_t)(max_points)) != 0)
+	{
+		++m_bytes_per_point;
+	}
+	
+	/* Avoid division by zero crashes when range is empty. */
+	if(m_bytes_per_point == 0)
+	{
+		m_bytes_per_point = -1;
+	}
+	
+	m_bytes_per_row = m_bytes_per_point * m_data_width;
+	
 	m_source_reset_pending = true;
 	m_update_pending = true;
+	
+	update();
 }
 
 void REHex::DataMapTool::update()
@@ -224,9 +242,6 @@ void REHex::DataMapTool::update()
 				m_new_map.clear();
 				
 				wxColour bg = wxSystemSettings::GetColour(wxSYS_COLOUR_BACKGROUND);
-				
-				BitOffset range_offset, range_length;
-				std::tie(range_offset, range_length) = range_choice->get_range();
 				
 				wxNativePixelData bmp_data(m_base_bitmap);
 				assert(bmp_data);
@@ -283,10 +298,7 @@ void REHex::DataMapTool::update()
 
 void REHex::DataMapTool::update_output_bitmap()
 {
-	BitOffset range_offset, range_length;
-	std::tie(range_offset, range_length) = range_choice->get_range();
-	
-	off_t rel_cursor_position = (document->get_cursor_position() - range_offset).byte();
+	off_t rel_cursor_position = m_view->real_offset_to_view_offset(document->get_cursor_position()).byte();
 	
 	int cursor_y = rel_cursor_position / m_bytes_per_row;
 	int cursor_x = (rel_cursor_position % m_bytes_per_row) / m_bytes_per_point;
@@ -315,7 +327,7 @@ void REHex::DataMapTool::update_output_bitmap()
 		
 		for(int x = 0; x < output_bitmap.GetWidth(); ++x, ++output_col_ptr, ++base_col_ptr)
 		{
-			if(range_length > BitOffset::ZERO
+			if(m_view->view_length() > 0 && rel_cursor_position >= 0
 				&& ((x >= cursor_x_min && x <= cursor_x_max) || (y >= cursor_y_min && y <= cursor_y_max)))
 			{
 				output_col_ptr.Red() = 255;
@@ -347,14 +359,14 @@ void REHex::DataMapTool::update_tip(const wxPoint &bitmap_mouse_point)
 	auto dm_it = m_map.get_range(BitOffset(rel_offset_bytes, 0));
 	if(dm_it != m_map.end())
 	{
-		BitOffset point_len(std::min((rel_offset_bytes + m_bytes_per_point), m_view->view_length()), 0);
+		BitOffset point_end(std::min((rel_offset_bytes + m_bytes_per_point), m_view->view_length()), 0);
 		
 		BitOffset elem_first_off = m_view->view_offset_to_virt_offset(BitOffset(rel_offset_bytes, 0));
-		BitOffset elem_last_off = m_view->view_offset_to_virt_offset(point_len - BitOffset(0, 1));
+		BitOffset elem_last_off = m_view->view_offset_to_virt_offset(point_end - BitOffset(0, 1));
 		
 		wxString tip_text = format_offset(elem_first_off, document_ctrl->get_offset_display_base()) + " - "
 			+ format_offset(elem_last_off, document_ctrl->get_offset_display_base())
-			+ " (" + format_size(point_len.byte()) + ")\n"
+			+ " (" + format_size(point_end.byte() - rel_offset_bytes) + ")\n"
 			+ dm_it->second.description;
 		
 		if(m_tip_window != NULL)
@@ -415,24 +427,7 @@ void REHex::DataMapTool::OnBitmapSize(wxSizeEvent &event)
 		BitOffset range_offset, range_length;
 		std::tie(range_offset, range_length) = range_choice->get_range();
 		
-		int max_points = m_data_width * m_data_height;
-		
-		m_bytes_per_point = range_length.byte() / (off_t)(max_points);
-		if((range_length.byte() % (off_t)(max_points)) != 0)
-		{
-			++m_bytes_per_point;
-		}
-		
-		/* Avoid division by zero crashes when range is empty. */
-		if(m_bytes_per_point == 0)
-		{
-			m_bytes_per_point = -1;
-		}
-		
-		m_bytes_per_row = m_bytes_per_point * m_data_width;
-		
-		m_source_reset_pending = true;
-		update();
+		reset_view();
 	}
 	
 	event.Skip(); /* Continue propogation. */

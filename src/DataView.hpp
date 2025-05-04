@@ -87,9 +87,19 @@ namespace REHex
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const = 0;
 			
 			/**
+			 * @brief Convert a file offset to a view offset.
+			*/
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const = 0;
+			
+			/**
 			 * @brief Convert a view offset into the appropriate virtual offset in the backing file.
 			*/
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const = 0;
+			
+			/**
+			 * @brief Convert a virtual offset to a view offset.
+			*/
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const = 0;
 	};
 	
 	/**
@@ -110,8 +120,9 @@ namespace REHex
 			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
 			
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
-			
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const override;
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const override;
 			
 		private:
 			void OnBeginEvent(OffsetLengthEvent &event);
@@ -142,8 +153,9 @@ namespace REHex
 			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
 			
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
-			
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const override;
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const override;
 			
 		private:
 			void OnBeginOEvent(OffsetLengthEvent &event);
@@ -182,8 +194,9 @@ namespace REHex
 			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
 			
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
-			
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const override;
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const override;
 			
 		private:
 			void load_segments(const ByteRangeMap<off_t> &virt_to_real_segs, const std::unique_lock<shared_mutex> &lock_guard);

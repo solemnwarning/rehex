@@ -65,9 +65,19 @@ REHex::BitOffset REHex::FlatDocumentView::view_offset_to_real_offset(BitOffset v
 	return view_offset;
 }
 
+REHex::BitOffset REHex::FlatDocumentView::real_offset_to_view_offset(BitOffset real_offset) const
+{
+	return real_offset;
+}
+
 REHex::BitOffset REHex::FlatDocumentView::view_offset_to_virt_offset(BitOffset view_offset) const
 {
 	return view_offset;
+}
+
+REHex::BitOffset REHex::FlatDocumentView::virt_offset_to_view_offset(BitOffset virt_offset) const
+{
+	return virt_offset;
 }
 
 void REHex::FlatDocumentView::OnBeginEvent(OffsetLengthEvent &event)
@@ -157,9 +167,25 @@ REHex::BitOffset REHex::FlatRangeView::view_offset_to_real_offset(BitOffset view
 	return m_base_offset + view_offset;
 }
 
+REHex::BitOffset REHex::FlatRangeView::real_offset_to_view_offset(BitOffset real_offset) const
+{
+	if(real_offset >= m_base_offset && real_offset < (m_base_offset + BitOffset(m_length, 0)))
+	{
+		return real_offset - m_base_offset;
+	}
+	else{
+		return BitOffset::INVALID;
+	}
+}
+
 REHex::BitOffset REHex::FlatRangeView::view_offset_to_virt_offset(BitOffset view_offset) const
 {
 	return m_base_offset + view_offset;
+}
+
+REHex::BitOffset REHex::FlatRangeView::virt_offset_to_view_offset(BitOffset virt_offset) const
+{
+	return real_offset_to_view_offset(virt_offset);
 }
 
 void REHex::FlatRangeView::OnBeginOEvent(OffsetLengthEvent &event)
@@ -460,11 +486,44 @@ REHex::BitOffset REHex::LinearVirtualDocumentView::view_offset_to_real_offset(Bi
 	return BitOffset((it->second + (view_offset.byte() - it->first.offset)), view_offset.bit());
 }
 
+REHex::BitOffset REHex::LinearVirtualDocumentView::real_offset_to_view_offset(BitOffset real_offset) const
+{
+	shared_lock lock_guard(mutex);
+	
+	auto it = real_to_view_segs.get_range(real_offset.byte());
+	
+	if(it != real_to_view_segs.end())
+	{
+		return BitOffset((it->second + (real_offset.byte() - it->first.offset)), real_offset.bit());
+	}
+	else{
+		return BitOffset::INVALID;
+	}
+}
+
 REHex::BitOffset REHex::LinearVirtualDocumentView::view_offset_to_virt_offset(BitOffset view_offset) const
 {
 	BitOffset real_offset = view_offset_to_real_offset(view_offset);
 	
 	return BitOffset(document->real_to_virt_offset(real_offset.byte()), view_offset.bit());
+}
+
+REHex::BitOffset REHex::LinearVirtualDocumentView::virt_offset_to_view_offset(BitOffset virt_offset) const
+{
+	shared_lock lock_guard(mutex);
+	
+	auto it = virt_to_real_segs.get_range(virt_offset.byte());
+	
+	if(it != virt_to_real_segs.end())
+	{
+		BitOffset real_offset = BitOffset((it->second + (virt_offset.byte() - it->first.offset)), virt_offset.bit());
+		mutex.unlock();
+		
+		return real_offset_to_view_offset(real_offset);
+	}
+	else{
+		return BitOffset::INVALID;
+	}
 }
 
 REHex::ByteRangeSet REHex::LinearVirtualDocumentView::find_event_ranges(const OffsetLengthEvent &event, const std::unique_lock<shared_mutex> &lock_guard)

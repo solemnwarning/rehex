@@ -289,12 +289,28 @@ TEST_F(FlatDocumentViewTest, ViewToRealOffset)
 	EXPECT_EQ(view->view_offset_to_real_offset(BitOffset(10, 0)), BitOffset(10, 0));
 }
 
+TEST_F(FlatDocumentViewTest, RealToViewOffset)
+{
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(0, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(5, 7)), BitOffset(5, 7));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(6, 0)), BitOffset(6, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(10, 0)), BitOffset(10, 0));
+}
+
 TEST_F(FlatDocumentViewTest, ViewToVirtOffset)
 {
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(0, 0)), BitOffset(0, 0));
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(5, 7)), BitOffset(5, 7));
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(6, 0)), BitOffset(6, 0));
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(10, 0)), BitOffset(10, 0));
+}
+
+TEST_F(FlatDocumentViewTest, VirtToViewOffset)
+{
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(5, 7)), BitOffset(5, 7));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(6, 0)), BitOffset(6, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(10, 0)), BitOffset(10, 0));
 }
 
 class FlatRangeViewTest: public DataViewTest
@@ -652,6 +668,28 @@ TEST_F(FlatRangeViewTest, ReadBitsBitAligned)
 			            0, 1, 1, 0, /* 0xX6  */
 			0, 1, 1, 1, 1, 0, 0, 0, /* 0x78 */
 		}));
+}
+
+TEST_F(FlatRangeViewTest, RealToViewOffset)
+{
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(0, 0)), BitOffset::INVALID);
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(5, 7)), BitOffset::INVALID);
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(6, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(6, 4)), BitOffset(0, 4));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(10, 0)), BitOffset(4, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(17, 7)), BitOffset(11, 7));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(18, 0)), BitOffset::INVALID);
+}
+
+TEST_F(FlatRangeViewTest, VirtToViewOffset)
+{
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0, 0)), BitOffset::INVALID);
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(5, 7)), BitOffset::INVALID);
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(6, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(6, 4)), BitOffset(0, 4));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(10, 0)), BitOffset(4, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(17, 7)), BitOffset(11, 7));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(18, 0)), BitOffset::INVALID);
 }
 
 class FlatDocumentViewEmptyTest: public DataViewTest
@@ -1180,12 +1218,51 @@ TEST_F(LinearVirtualDocumentViewTest, ViewToRealOffset)
 	EXPECT_EQ(view->view_offset_to_real_offset(BitOffset(10, 0)), BitOffset(14, 0));
 }
 
+TEST_F(LinearVirtualDocumentViewTest, RealToViewOffset)
+{
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(0, 0)), BitOffset(6, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(3, 7)), BitOffset(9, 7));
+	
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(4, 0)), BitOffset::INVALID);
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(7, 7)), BitOffset::INVALID);
+	
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(8, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(13, 7)), BitOffset(5, 7));
+	
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(14, 0)), BitOffset(10, 0));
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(17, 7)), BitOffset(13, 7));
+	
+	EXPECT_EQ(view->real_offset_to_view_offset(BitOffset(20, 0)), BitOffset::INVALID);
+}
+
 TEST_F(LinearVirtualDocumentViewTest, ViewToVirtOffset)
 {
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(0, 0)), BitOffset(0x100, 0));
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(5, 7)), BitOffset(0x105, 7));
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(6, 0)), BitOffset(0x200, 0));
 	EXPECT_EQ(view->view_offset_to_virt_offset(BitOffset(10, 0)), BitOffset(0x300, 0));
+}
+
+TEST_F(LinearVirtualDocumentViewTest, VirtToViewOffset)
+{
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x99, 0)), BitOffset::INVALID);
+	
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x100, 0)), BitOffset(0, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x105, 7)), BitOffset(5, 7));
+	
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x106, 0)), BitOffset::INVALID);
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x199, 7)), BitOffset::INVALID);
+	
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x200, 0)), BitOffset(6, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x203, 7)), BitOffset(9, 7));
+	
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x204, 0)), BitOffset::INVALID);
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x299, 7)), BitOffset::INVALID);
+	
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x300, 0)), BitOffset(10, 0));
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x303, 7)), BitOffset(13, 7));
+	
+	EXPECT_EQ(view->virt_offset_to_view_offset(BitOffset(0x304, 0)), BitOffset::INVALID);
 }
 
 TEST_F(LinearVirtualDocumentViewTest, OverwriteDataUnmapped)

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -195,7 +195,7 @@ std::shared_ptr<const REHex::DataType> REHex::StaticDataTypeRegistration::get_ty
 {
 	if(options != NULL)
 	{
-		throw std::logic_error("Attempt to construct a static DataType with options");
+		throw std::invalid_argument("Attempt to construct a static DataType with options");
 	}
 	
 	return m_type;

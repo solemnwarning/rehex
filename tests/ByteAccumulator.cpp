@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -103,8 +103,46 @@ TEST(ByteAccumulator, AddAccumulator)
 		a1 += a2;
 	}
 	
+	EXPECT_EQ(a1.get_total_bytes(),   6U) << "ByteAccumulator counts combined bytes after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count( 5),  1U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(10),  2U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(20),  2U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(30),  1U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_sum(),     95U) << "ByteAccumulator counts combined byte sum after adding a ByteAccumulator object";
+	
 	EXPECT_EQ(a1.get_min_byte(),  5U) << "ByteAccumulator has correct min byte after adding a ByteAccumulator object";
 	EXPECT_EQ(a1.get_max_byte(), 30U) << "ByteAccumulator has correct min byte after adding a ByteAccumulator object";
+	
+	{
+		ByteAccumulator a2;
+		a2.add_byte(40);
+		
+		a1 += a2;
+	}
+	
+	EXPECT_EQ(a1.get_total_bytes(),   7U) << "ByteAccumulator counts combined bytes after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count( 5),  1U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(10),  2U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(20),  2U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(30),  1U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(40),  1U) << "ByteAccumulator counts combined byte counts after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_sum(),    135U) << "ByteAccumulator counts combined byte sum after adding a ByteAccumulator object";
+	
+	EXPECT_EQ(a1.get_min_byte(),  5U) << "ByteAccumulator has correct min byte after adding a ByteAccumulator object";
+	EXPECT_EQ(a1.get_max_byte(), 40U) << "ByteAccumulator has correct min byte after adding a ByteAccumulator object";
+	
+	a1 += ByteAccumulator();
+	
+	EXPECT_EQ(a1.get_total_bytes(),   7U) << "ByteAccumulator counts combined bytes after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count( 5),  1U) << "ByteAccumulator counts combined byte counts after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(10),  2U) << "ByteAccumulator counts combined byte counts after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(20),  2U) << "ByteAccumulator counts combined byte counts after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(30),  1U) << "ByteAccumulator counts combined byte counts after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_count(40),  1U) << "ByteAccumulator counts combined byte counts after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_byte_sum(),    135U) << "ByteAccumulator counts combined byte sum after adding a empty ByteAccumulator object";
+	
+	EXPECT_EQ(a1.get_min_byte(),  5U) << "ByteAccumulator has correct min byte after adding a empty ByteAccumulator object";
+	EXPECT_EQ(a1.get_max_byte(), 40U) << "ByteAccumulator has correct min byte after adding a empty ByteAccumulator object";
 }
 
 TEST(ByteAccumulator, SubtractAccumulator)

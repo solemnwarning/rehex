@@ -87,9 +87,19 @@ namespace REHex
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const = 0;
 			
 			/**
+			 * @brief Convert a file offset to a view offset.
+			*/
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const = 0;
+			
+			/**
 			 * @brief Convert a view offset into the appropriate virtual offset in the backing file.
 			*/
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const = 0;
+			
+			/**
+			 * @brief Convert a virtual offset to a view offset.
+			*/
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const = 0;
 	};
 	
 	/**
@@ -110,13 +120,51 @@ namespace REHex
 			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
 			
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
-			
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const override;
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const override;
 			
 		private:
 			void OnBeginEvent(OffsetLengthEvent &event);
 			void OnAbortEvent(OffsetLengthEvent &event);
 			void OnDataEvent(OffsetLengthEvent &event);
+	};
+	
+	/**
+	 * @brief DataView for access to a range in a Document.
+	*/
+	class FlatRangeView: public DataView
+	{
+		private:
+			SharedDocumentPointer document;
+			
+			BitOffset m_base_offset;
+			off_t m_max_length;
+			
+			off_t m_length;
+			
+		public:
+			FlatRangeView(const SharedDocumentPointer &document, BitOffset base_offset, off_t max_length);
+			
+			virtual off_t view_length() const override;
+			
+			virtual std::vector<unsigned char> read_data(BitOffset view_offset, off_t max_length) const override;
+			
+			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
+			
+			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const override;
+			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const override;
+			
+		private:
+			void OnBeginOEvent(OffsetLengthEvent &event);
+			void OnAbortOEvent(OffsetLengthEvent &event);
+			void OnDataOEvent(OffsetLengthEvent &event);
+			
+			void OnBeginIEEvent(OffsetLengthEvent &event);
+			void OnAbortIEEvent(OffsetLengthEvent &event);
+			void OnDataIEEvent(OffsetLengthEvent &event);
 	};
 	
 	/**
@@ -146,8 +194,9 @@ namespace REHex
 			virtual std::vector<bool> read_bits(BitOffset view_offset, size_t max_length) const override;
 			
 			virtual BitOffset view_offset_to_real_offset(BitOffset view_offset) const override;
-			
+			virtual BitOffset real_offset_to_view_offset(BitOffset real_offset) const override;
 			virtual BitOffset view_offset_to_virt_offset(BitOffset view_offset) const override;
+			virtual BitOffset virt_offset_to_view_offset(BitOffset virt_offset) const override;
 			
 		private:
 			void load_segments(const ByteRangeMap<off_t> &virt_to_real_segs, const std::unique_lock<shared_mutex> &lock_guard);

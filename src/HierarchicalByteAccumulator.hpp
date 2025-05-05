@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,7 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <wx/event.h>
 
 #include "BitOffset.hpp"
 #include "ByteAccumulator.hpp"
@@ -38,7 +39,7 @@ namespace REHex
 	 * This class accumulates data from a specified byte range in a Document into a
 	 * ByteAccumulator using background worker threads.
 	*/
-	class HierarchicalByteAccumulator
+	class HierarchicalByteAccumulator: public wxEvtHandler
 	{
 		public:
 			static constexpr size_t L2_CACHE_SIZE = 512; /* Up to ~1MiB */
@@ -74,10 +75,7 @@ namespace REHex
 			};
 			
 			SharedEvtHandler<DataView> view;
-			
-			BitOffset range_offset;
 			off_t range_length;
-			bool whole_file;
 			
 			size_t target_num_shards;
 			
@@ -124,25 +122,16 @@ namespace REHex
 			ByteRangeSet blocked;  /**< Ranges which are queued, but already being worked. */
 			
 			ThreadPool::TaskHandle task;
+			bool m_processing;
 			
 		public:
 			/**
-			 * @brief Construct a HierarchicalByteAccumulator to accumulate a whole file.
+			 * @brief Construct a HierarchicalByteAccumulator to accumulate a view.
 			 *
-			 * @param document    Document to accumulate data from.
+			 * @param view        DataView to accumulate data from.
 			 * @param num_shards  Number of shards to divide range into.
 			*/
 			HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards = 1);
-			
-			/**
-			 * @brief Construct a HierarchicalByteAccumulator to accumulate a range of bytes.
-			 *
-			 * @param document      Document to accumulate data from.
-			 * @param range_offset  Start offset of range to accumulate data from.
-			 * @param range_length  Length of range to accumulate data from, in bytes.
-			 * @param num_shards    Number of shards to divide range into.
-			*/
-			HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, BitOffset range_offset, off_t range_length, size_t num_shards = 1);
 			
 			~HierarchicalByteAccumulator();
 			
@@ -162,6 +151,23 @@ namespace REHex
 			 * so far, which may or may not yet have all data.
 			*/
 			std::vector<Shard> get_shards();
+			
+			/**
+			 * @brief Get the requested num_shards passed to the constructor.
+			*/
+			size_t get_requested_num_shards() const;
+			
+			/**
+			 * @brief Check if data is being processed in the background.
+			 *
+			 * Checks if this HierarchicalByteAccumulator is currently accumulating
+			 * data in the background.
+			 *
+			 * NOTE: This method may return false when there is still data pending to
+			 * be processed (e.g. due to data being modified), it should be used in
+			 * tandem with the PROCESSING_START and/or PROCESSING_END events.
+			*/
+			bool processing();
 			
 			/**
 			 * @brief Wait for work queue to be empty.

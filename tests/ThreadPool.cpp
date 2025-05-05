@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -271,6 +271,86 @@ TEST(ThreadPool, RestartTask)
 	
 	/* Restart the task. */
 	task.restart();
+	
+	/* Yield for a moment so the workers can wake up. */
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	
+	mutex.lock();
+	EXPECT_EQ(times_called, 2U) << "Task function was called";
+	EXPECT_EQ(num_active, 0U) << "Task function is not running";
+	EXPECT_TRUE(task.finished()) << "Task is finished";
+	mutex.unlock();
+	
+	/* Yield for a moment in case the workers are still running. */
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	
+	mutex.lock();
+	EXPECT_EQ(times_called, 2U) << "Task function was called";
+	EXPECT_EQ(num_active, 0U) << "Task function is not running";
+	EXPECT_TRUE(task.finished()) << "Task is finished";
+	mutex.unlock();
+	
+	task.join(); /* Wait for task to complete. */
+}
+
+TEST(ThreadPool, RestartPausedTask)
+{
+	ThreadPool pool(8);
+	
+	std::mutex mutex;
+	unsigned int times_called = 0;
+	unsigned int num_active = 0;
+	
+	ThreadPool::TaskHandle task = pool.queue_task([&]()
+	{
+		std::unique_lock<std::mutex> lock(mutex);
+		
+		++times_called;
+		++num_active;
+		
+		lock.unlock();
+		
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		
+		lock.lock();
+		
+		--num_active;
+		return true;
+	}, 1);
+	
+	/* Yield for a moment so the workers can wake up. */
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	
+	mutex.lock();
+	EXPECT_EQ(times_called, 1U) << "Task function was called";
+	EXPECT_EQ(num_active, 0U) << "Task function is not running";
+	EXPECT_TRUE(task.finished()) << "Task is finished";
+	mutex.unlock();
+	
+	/* Yield for a moment in case the workers are still running. */
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	
+	mutex.lock();
+	EXPECT_EQ(times_called, 1U) << "Task function was called";
+	EXPECT_EQ(num_active, 0U) << "Task function is not running";
+	EXPECT_TRUE(task.finished()) << "Task is finished";
+	mutex.unlock();
+	
+	/* Pause and restart the task. */
+	task.pause();
+	task.restart();
+	
+	/* Yield for a moment so the workers can wake up. */
+	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	
+	mutex.lock();
+	EXPECT_EQ(times_called, 1U) << "Task function was called";
+	EXPECT_EQ(num_active, 0U) << "Task function is not running";
+	EXPECT_FALSE(task.finished()) << "Task is not finished";
+	mutex.unlock();
+	
+	/* Resume the restarted task, execution will finally resume. */
+	task.resume();
 	
 	/* Yield for a moment so the workers can wake up. */
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));

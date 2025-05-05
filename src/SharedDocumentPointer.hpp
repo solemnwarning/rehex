@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -37,9 +37,6 @@ namespace REHex
 			
 			std::stack< std::function<void()> > cleanups;
 			
-			SharedDocumentPointerImpl(std::shared_ptr<T> &document):
-				document(document) {}
-			
 		public:
 			/**
 			 * Sets up a binding with document->Bind() that is automatically undone
@@ -63,6 +60,9 @@ namespace REHex
 			
 			SharedDocumentPointerImpl(const SharedDocumentPointerImpl<T> &document):
 				document(document.document) {}
+			
+			SharedDocumentPointerImpl(const std::shared_ptr<T> &document):
+				document(document) {}
 			
 			SharedDocumentPointerImpl &operator=(const SharedDocumentPointerImpl<T>&) = delete;
 			

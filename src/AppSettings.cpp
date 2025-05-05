@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,7 +31,8 @@ REHex::AppSettings::AppSettings():
 	highlight_colours(HighlightColourMap::defaults()),
 	main_window_commands(MainWindow::get_template_commands()),
 	cursor_nav_mode(CursorNavMode::BYTE),
-	goto_offset_modal(true)
+	goto_offset_modal(true),
+	size_unit(SizeUnit::AUTO_XiB)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -172,6 +173,26 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 	
 	goto_offset_modal = config->ReadBool("goto-offset-modal", goto_offset_modal);
 	
+	long size_unit = config->ReadLong("size-unit", -1);
+	switch(size_unit)
+	{
+		case (long)(SizeUnit::B):
+		case (long)(SizeUnit::KiB):
+		case (long)(SizeUnit::MiB):
+		case (long)(SizeUnit::GiB):
+		case (long)(SizeUnit::TiB):
+		case (long)(SizeUnit::kB):
+		case (long)(SizeUnit::MB):
+		case (long)(SizeUnit::GB):
+		case (long)(SizeUnit::TB):
+		case (long)(SizeUnit::AUTO_XiB):
+		case (long)(SizeUnit::AUTO_XB):
+			this->size_unit = (SizeUnit)(size_unit);
+			
+		default:
+			break;
+	}
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -218,6 +239,7 @@ void REHex::AppSettings::write(wxConfig *config)
 	}
 	
 	config->Write("goto-offset-modal", goto_offset_modal);
+	config->Write("size-unit", (long)(size_unit));
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -339,6 +361,16 @@ bool REHex::AppSettings::get_goto_offset_modal() const
 void REHex::AppSettings::set_goto_offset_modal(bool goto_offset_modal)
 {
 	this->goto_offset_modal = goto_offset_modal;
+}
+
+REHex::SizeUnit REHex::AppSettings::get_size_unit() const
+{
+	return size_unit;
+}
+
+void REHex::AppSettings::set_size_unit(SizeUnit unit)
+{
+	size_unit = unit;
 }
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)

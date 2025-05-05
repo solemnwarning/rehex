@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -135,6 +135,74 @@ TEST(Util, format_offset)
 	EXPECT_EQ(format_offset(4294967296LL, OFFSET_BASE_DEC,          0LL), "0000000004294967296");
 }
 
+TEST(Util, format_size)
+{
+	/* 100B */
+	EXPECT_EQ(format_size(100, SizeUnit::B),        "100 bytes");
+	EXPECT_EQ(format_size(100, SizeUnit::KiB),      "0.10 KiB");
+	EXPECT_EQ(format_size(100, SizeUnit::MiB),      "0.00 MiB");
+	EXPECT_EQ(format_size(100, SizeUnit::GiB),      "0.00 GiB");
+	EXPECT_EQ(format_size(100, SizeUnit::TiB),      "0.00 TiB");
+	EXPECT_EQ(format_size(100, SizeUnit::kB),       "0.10 kB");
+	EXPECT_EQ(format_size(100, SizeUnit::MB),       "0.00 MB");
+	EXPECT_EQ(format_size(100, SizeUnit::GB),       "0.00 GB");
+	EXPECT_EQ(format_size(100, SizeUnit::TB),       "0.00 TB");
+	EXPECT_EQ(format_size(100, SizeUnit::AUTO_XiB), "100 bytes");
+	EXPECT_EQ(format_size(100, SizeUnit::AUTO_XB),  "100 bytes");
+	
+	/* 1.00 MiB */
+	EXPECT_EQ(format_size(1048576, SizeUnit::B),        "1048576 bytes");
+	EXPECT_EQ(format_size(1048576, SizeUnit::KiB),      "1024.00 KiB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::MiB),      "1.00 MiB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::GiB),      "0.00 GiB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::TiB),      "0.00 TiB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::kB),       "1048.58 kB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::MB),       "1.05 MB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::GB),       "0.00 GB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::TB),       "0.00 TB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::AUTO_XiB), "1.00 MiB");
+	EXPECT_EQ(format_size(1048576, SizeUnit::AUTO_XB),  "1.05 MB");
+	
+	/* 1.50 MiB */
+	EXPECT_EQ(format_size(1572864, SizeUnit::B),        "1572864 bytes");
+	EXPECT_EQ(format_size(1572864, SizeUnit::KiB),      "1536.00 KiB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::MiB),      "1.50 MiB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::GiB),      "0.00 GiB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::TiB),      "0.00 TiB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::kB),       "1572.86 kB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::MB),       "1.57 MB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::GB),       "0.00 GB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::TB),       "0.00 TB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::AUTO_XiB), "1.50 MiB");
+	EXPECT_EQ(format_size(1572864, SizeUnit::AUTO_XB),  "1.57 MB");
+	
+	/* 1GB */
+	EXPECT_EQ(format_size(1000000000, SizeUnit::B),        "1000000000 bytes");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::KiB),      "976562.50 KiB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::MiB),      "953.67 MiB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::GiB),      "0.93 GiB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::TiB),      "0.00 TiB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::kB),       "1000000.00 kB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::MB),       "1000.00 MB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::GB),       "1.00 GB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::TB),       "0.00 TB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::AUTO_XiB), "953.67 MiB");
+	EXPECT_EQ(format_size(1000000000, SizeUnit::AUTO_XB),  "1.00 GB");
+	
+	/* 1.5TB */
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::B),        "1500000000000 bytes");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::KiB),      "1464843750.00 KiB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::MiB),      "1430511.47 MiB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::GiB),      "1396.98 GiB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::TiB),      "1.36 TiB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::kB),       "1500000000.00 kB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::MB),       "1500000.00 MB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::GB),       "1500.00 GB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::TB),       "1.50 TB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::AUTO_XiB), "1.36 TiB");
+	EXPECT_EQ(format_size(1500000000000, SizeUnit::AUTO_XB),  "1.50 TB");
+}
+
 #define TEST_ADD_CLAMP_OVERFLOW(T, a, b, result, expect_overflow) \
 	EXPECT_EQ(add_clamp_overflow<T>(a, b), result); \
 	EXPECT_EQ(add_clamp_overflow<T>(a, b, &overflow_detected), result); \
@@ -204,6 +272,50 @@ TEST(Util, add_clamp_overflow_BitOffset)
 	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN,      BitOffset::MIN,  BitOffset::MIN,      true);
 	
 	TEST_ADD_CLAMP_OVERFLOW(BitOffset, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, false);
+}
+
+#define TEST_MULTIPLY_CLAMP_OVERFLOW(T, a, b, result, expect_overflow) \
+{ \
+	bool overflow_detected = !expect_overflow; \
+	\
+	EXPECT_EQ(multiply_clamp_overflow<T>(a, b), result); \
+	EXPECT_EQ(multiply_clamp_overflow<T>(a, b, &overflow_detected), result); \
+	EXPECT_EQ(overflow_detected, expect_overflow);\
+	\
+	EXPECT_EQ(multiply_clamp_overflow<T>(b, a), result); \
+	EXPECT_EQ(multiply_clamp_overflow<T>(b, a, &overflow_detected), result); \
+	EXPECT_EQ(overflow_detected, expect_overflow); \
+}
+
+TEST(Util, multiply_clamp_overflow)
+{
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t,  5, 10,  50, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 10, 10, 100, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 20, 10, 127, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1,  64,  64, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2,  64, 127, true);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1, 127, 127, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2, 127, 127, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -1,  -64,  64, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -2,  -64, 127, true);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -1, -127, 127, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -2, -127, 127, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t,  5, -10,  -50, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 10, -10, -100, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 20, -10, -128, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t,  -5, 10,  -50, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -10, 10, -100, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, -20, 10, -128, true);
+	
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1,  -64,  -64, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2,  -64, -128, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 3,  -64, -128, true);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 1, -128, -128, false);
+	TEST_MULTIPLY_CLAMP_OVERFLOW(int8_t, 2, -128, -128, true);
 }
 
 TEST(Util, memcpy_left)

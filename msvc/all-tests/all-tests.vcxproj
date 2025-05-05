@@ -343,6 +343,7 @@
     <ClCompile Include="..\..\tests\MultiSplitter.cpp" />
     <ClCompile Include="..\..\tests\NestedOffsetLengthMap.cpp" />
     <ClCompile Include="..\..\tests\NumericTextCtrl.cpp" />
+    <ClCompile Include="..\..\tests\Range.cpp" />
     <ClCompile Include="..\..\tests\RangeProcessor.cpp" />
     <ClCompile Include="..\..\tests\SafeWindowPointer.cpp" />
     <ClCompile Include="..\..\tests\search-bseq.cpp" />

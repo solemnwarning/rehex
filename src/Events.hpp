@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -157,6 +157,9 @@ namespace REHex
 	
 	wxDECLARE_EVENT(BULK_UPDATES_FROZEN, wxCommandEvent);
 	wxDECLARE_EVENT(BULK_UPDATES_THAWED, wxCommandEvent);
+	
+	wxDECLARE_EVENT(PROCESSING_START, wxCommandEvent);
+	wxDECLARE_EVENT(PROCESSING_STOP,  wxCommandEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

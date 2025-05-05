@@ -2401,6 +2401,8 @@ REHex::Document::TypeInfo &REHex::Document::TypeInfo::operator=(const TypeInfo &
 	{
 		json_incref(options);
 	}
+	
+	return *this;
 }
 
 REHex::Document::TypeInfo::~TypeInfo()

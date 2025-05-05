@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -3889,7 +3889,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypes)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "s8");
-	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16");
+	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16be");
 	
 	AutoJSON got(doc->serialise_metadata());
 	
@@ -3904,7 +3904,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypes)
 			{
 				"length": 10,
 				"offset": 20,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlight-colours": [
@@ -3939,7 +3939,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypes)
 			{
 				"length": 10,
 				"offset": 20,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -3954,7 +3954,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypes)
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("s8", NULL));
 	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -3974,7 +3974,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 			},
 			{
 				"length": 10,
-				"type": "u16"
+				"type": "u16le"
 			},
 			{
 				"length": 10,
@@ -3983,7 +3983,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 			{
 				"length": 10,
 				"offset": 40,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -3997,7 +3997,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 	
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -4034,7 +4034,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
 			{
 				"length": 10,
 				"offset": 40,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -4048,7 +4048,63 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
 	
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidTypes)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 4,
+				"offset": -10,
+				"type": "s8"
+			},
+			{
+				"length": -4,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 4,
+				"offset": 1024,
+				"type": "s8"
+			},
+			{
+				"length": 1000,
+				"offset": 100,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 40,
+				"type": "u16be"
+			},
+			{
+				"length": 10,
+				"offset": 60,
+				"type": "badtype"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -4060,7 +4116,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 2), "s8");
-	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16");
+	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16be");
 	
 	AutoJSON got(doc->serialise_metadata());
 	
@@ -4075,7 +4131,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
 			{
 				"length": 10,
 				"offset": [ 20, 6 ],
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlight-colours": [
@@ -4110,7 +4166,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 			{
 				"length": 10,
 				"offset": [ 20, 6 ],
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -4125,7 +4181,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 2), Document::TypeInfo("s8", NULL));
 	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -4188,17 +4244,21 @@ TEST_F(DocumentTest, LoadMetadataDataTypesWithOptions)
 			{
 				"length": 10,
 				"offset": 0,
-				"type": "type1",
+				"type": "custom-number",
 				"options": {
-					"foo": 1
+					"base-type": "UNSIGNED_INT",
+					"endianness": "BIG",
+					"bits": 2
 				}
 			},
 			{
 				"length": 10,
 				"offset": 20,
-				"type": "type2",
+				"type": "custom-number",
 				"options": {
-					"foo": 2
+					"base-type": "UNSIGNED_INT",
+					"endianness": "BIG",
+					"bits": 4
 				}
 			}
 		],
@@ -4212,10 +4272,55 @@ TEST_F(DocumentTest, LoadMetadataDataTypesWithOptions)
 	auto &got = doc->get_data_types();
 	
 	BitRangeMap<Document::TypeInfo> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("type1", AutoJSON("{ \"foo\": 1 }").json));
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("custom-number", AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 2 }").json));
 	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("type2", AutoJSON("{ \"foo\": 2 }").json));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("custom-number", AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 4 }").json));
 	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataSkipDataTypesWithInvalidOptions)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "custom-number",
+				"options": {
+					"base-type": "UNSIGNED_INT",
+					"endianness": "BIG",
+					"bits": 2
+				}
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "custom-number",
+				"options": {
+					"base-type": "POTATO",
+					"endianness": "BIG",
+					"bits": 4
+				}
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("custom-number", AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 2 }").json));
+	expect.set_range(BitOffset(10, 0), BitOffset(1014, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
 }

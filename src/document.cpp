@@ -2153,14 +2153,30 @@ REHex::BitRangeMap<REHex::Document::TypeInfo> REHex::Document::_load_types(const
 	{
 		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
 		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
-		const char *type = json_string_value(json_object_get(value, "type"));
+		const char *type_name = json_string_value(json_object_get(value, "type"));
 		json_t *options  = json_object_get(value, "options");
 		
 		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
 			&& length > BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0)
-			&& type != NULL)
+			&& type_name != NULL)
 		{
-			types.set_range(offset, length, TypeInfo(type, options));
+			std::shared_ptr<const DataType> type;
+			try {
+				type = DataTypeRegistry::get_type(type_name, options);
+				if(type == NULL)
+				{
+					wxGetApp().printf_error("Ignoring unknown data type '%s' in metadata\n", type_name);
+				}
+			}
+			catch(const std::invalid_argument &e)
+			{
+				wxGetApp().printf_error("Ignoring data type with invalid options (%s) in metadata\n", e.what());
+			}
+			
+			if(type)
+			{
+				types.set_range(offset, length, TypeInfo(type_name, options));
+			}
 		}
 	}
 	
@@ -2369,11 +2385,24 @@ REHex::Document::TypeInfo::TypeInfo(const std::string &name, const json_t *optio
 	}
 }
 
-REHex::Document::TypeInfo::TypeInfo(const TypeInfo &src):
-	name(src.name),
-	options(src.options)
+REHex::Document::TypeInfo::TypeInfo(const TypeInfo &typeinfo):
+	name(typeinfo.name),
+	options(typeinfo.options)
 {
 	json_incref(options);
+}
+
+REHex::Document::TypeInfo &REHex::Document::TypeInfo::operator=(const TypeInfo &rhs)
+{
+	name = rhs.name;
+	options = rhs.options;
+	
+	if(options != NULL)
+	{
+		json_incref(options);
+	}
+	
+	return *this;
 }
 
 REHex::Document::TypeInfo::~TypeInfo()

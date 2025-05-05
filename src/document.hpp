@@ -115,7 +115,13 @@ namespace REHex {
 				
 				TypeInfo();
 				TypeInfo(const std::string &name, const json_t *options = NULL);
-				TypeInfo(const TypeInfo &src);
+				
+				TypeInfo(const TypeInfo &typeinfo);
+				TypeInfo &operator=(const TypeInfo &rhs);
+				
+				TypeInfo(TypeInfo &&typeinfo) = delete;
+				TypeInfo &operator=(TypeInfo &&rhs) = delete;
+				
 				~TypeInfo();
 				
 				bool operator==(const TypeInfo &rhs) const;

@@ -469,6 +469,9 @@
     <ClCompile Include="..\..\tests\Range.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\CustomNumericType.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\res\ascii16.h">

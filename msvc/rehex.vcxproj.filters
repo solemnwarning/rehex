@@ -582,6 +582,9 @@
     <ResourceCompile Include="..\res\winres.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="..\res\version-res.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\src\lua-bindings\rehex_rules.lua" />

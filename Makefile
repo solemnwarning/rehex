@@ -135,6 +135,8 @@ endif
 LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 # Define this for releases
+# NOTE: This *MUST* be of the form a.b.c where each component is an integer to fit the format of
+# macOS version numbers and Windows version info resources.
 # VERSION := x
 
 ifdef VERSION
@@ -453,8 +455,9 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(DEFAULT_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+	$(EXTRA_APP_BUILD_COMMAND)
 	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \

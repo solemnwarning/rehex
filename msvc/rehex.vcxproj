@@ -209,7 +209,7 @@
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
     <PreLinkEvent>
@@ -237,7 +237,7 @@
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
     <PreLinkEvent>
@@ -261,7 +261,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
     <PreLinkEvent>
@@ -285,7 +285,7 @@
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
     <PreLinkEvent>
@@ -318,7 +318,7 @@
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
@@ -349,7 +349,7 @@
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
@@ -376,7 +376,7 @@
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
@@ -403,7 +403,7 @@
     </Link>
     <PreBuildEvent />
     <PreBuildEvent>
-      <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
+      <Command>$(SolutionDir)gen_content.bat $(Configuration)</Command>
     </PreBuildEvent>
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
@@ -601,6 +601,7 @@
     <Image Include="..\res\icon.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="..\res\version-res.rc" />
     <ResourceCompile Include="..\res\winres.rc" />
   </ItemGroup>
   <ItemGroup>

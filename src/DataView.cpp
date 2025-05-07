@@ -517,7 +517,7 @@ REHex::BitOffset REHex::LinearVirtualDocumentView::virt_offset_to_view_offset(Bi
 	if(it != virt_to_real_segs.end())
 	{
 		BitOffset real_offset = BitOffset((it->second + (virt_offset.byte() - it->first.offset)), virt_offset.bit());
-		mutex.unlock();
+		lock_guard.unlock();
 		
 		return real_offset_to_view_offset(real_offset);
 	}

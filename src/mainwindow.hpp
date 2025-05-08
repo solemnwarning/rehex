@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -91,6 +91,8 @@ namespace REHex {
 			void OnAutoReload(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
+			void OnImportMetadata(wxCommandEvent &event);
+			void OnExportMetadata(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);
 			void OnCloseAll(wxCommandEvent &event);
 			void OnCloseOthers(wxCommandEvent &event);

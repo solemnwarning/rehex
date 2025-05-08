@@ -252,7 +252,7 @@ void REHex::Document::save()
 		buffer->write_inplace();
 	}
 	
-	_save_metadata(filename + ".rehex-meta");
+	save_metadata(filename + ".rehex-meta");
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -274,7 +274,7 @@ void REHex::Document::save(const std::string &filename)
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	_save_metadata(filename + ".rehex-meta");
+	save_metadata(filename + ".rehex-meta");
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -1930,9 +1930,10 @@ REHex::Document::TransOpFunc REHex::Document::_op_tracked_change(const std::func
 	});
 }
 
-json_t *REHex::Document::serialise_metadata() const
+json_t *REHex::Document::serialise_metadata(bool even_if_empty) const
 {
-	bool has_data = false;
+	bool has_data = even_if_empty;
+	
 	json_t *root = json_object();
 	if(root == NULL)
 	{
@@ -2061,11 +2062,11 @@ json_t *REHex::Document::serialise_metadata() const
 	return root;
 }
 
-void REHex::Document::_save_metadata(const std::string &filename)
+void REHex::Document::save_metadata(const std::string &filename, bool even_if_empty) const
 {
 	/* TODO: Atomically replace file. */
 	
-	json_t *meta = serialise_metadata();
+	json_t *meta = serialise_metadata(even_if_empty);
 	int res = 0;
 	if (meta != NULL)
 	{
@@ -2210,6 +2211,35 @@ std::pair< REHex::ByteRangeMap<off_t>, REHex::ByteRangeMap<off_t> > REHex::Docum
 	}
 	
 	return std::make_pair(real_to_virt_segs, virt_to_real_segs);
+}
+
+void REHex::Document::load_metadata(const std::string &filename)
+{
+	json_error_t json_err;
+	json_t *meta = json_load_file(filename.c_str(), 0, &json_err);
+	if(meta == NULL)
+	{
+		throw std::runtime_error(json_err.text);
+	}
+	
+	wxGetApp().bulk_updates_freeze();
+	
+	ScopedTransaction t(this, "Import metadata");
+	load_metadata(meta);
+	t.commit();
+	
+	/* Fire off every metadata change signal. This will trigger an unnecessary amount of
+	 * processing, but there's no way to coalesce these together (yet).
+	*/
+	
+	_raise_comment_modified();
+	_raise_highlights_changed();
+	_raise_types_changed();
+	_raise_mappings_changed();
+	
+	wxGetApp().bulk_updates_thaw();
+	
+	json_decref(meta);
 }
 
 void REHex::Document::_load_metadata(const std::string &filename)

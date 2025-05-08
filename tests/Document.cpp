@@ -3616,7 +3616,7 @@ TEST_F(DocumentTest, ReplaceTextMixed)
 
 TEST_F(DocumentTest, SerialiseMetadataEmptyFile)
 {
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	AutoJSON expect;
 	
 	EXPECT_EQ(got, expect);
@@ -3627,7 +3627,7 @@ TEST_F(DocumentTest, SerialiseMetadataNoMetadata)
 	std::vector<unsigned char> zero_1k(1024, 0);
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	AutoJSON expect;
 	
 	EXPECT_EQ(got, expect);
@@ -3639,7 +3639,7 @@ TEST_F(DocumentTest, SerialiseMetadataWriteProtectedFile)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	doc->set_write_protect(true);
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -3670,7 +3670,7 @@ TEST_F(DocumentTest, SerialiseMetadataComments)
 	doc->set_comment(20,  5, REHex::Document::Comment("industrious"));
 	doc->set_comment(25,  5, REHex::Document::Comment("bury"));
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [
@@ -3766,7 +3766,7 @@ TEST_F(DocumentTest, SerialiseMetadataCommentUnicode)
 	
 	doc->set_comment(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect((const char*)(u8R"({
 		"comments": [
@@ -3891,7 +3891,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypes)
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "s8");
 	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16be");
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -4118,7 +4118,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 2), "s8");
 	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16be");
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -4195,7 +4195,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesWithOptions)
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "type1", AutoJSON("{ \"foo\": 1 }").json);
 	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "type2", AutoJSON("{ \"foo\": 2 }").json);
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -4333,7 +4333,7 @@ TEST_F(DocumentTest, SerialiseMetadataHighlights)
 	doc->set_highlight(BitOffset( 0, 0), BitOffset(10, 0), 1);
 	doc->set_highlight(BitOffset(20, 2), BitOffset( 0, 4), 2);
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],

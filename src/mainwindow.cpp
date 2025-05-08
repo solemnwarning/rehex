@@ -111,6 +111,8 @@ enum {
 	ID_IMPORT_HEX,
 	ID_EXPORT_HEX,
 	ID_AUTO_RELOAD,
+	ID_IMPORT_METADATA,
+	ID_EXPORT_METADATA,
 	
 	ID_SET_COMMENT_CURSOR,
 	ID_SET_COMMENT_SELECTION,
@@ -132,18 +134,20 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_ACTIVATE(REHex::MainWindow::OnWindowActivate)
 	EVT_CHAR_HOOK(REHex::MainWindow::OnCharHook)
 	
-	EVT_MENU(wxID_NEW,        REHex::MainWindow::OnNew)
-	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
-	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
-	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
-	EVT_MENU(wxID_REFRESH,    REHex::MainWindow::OnReload)
-	EVT_MENU(ID_AUTO_RELOAD,  REHex::MainWindow::OnAutoReload)
-	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
-	EVT_MENU(ID_EXPORT_HEX,   REHex::MainWindow::OnExportHex)
-	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
-	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
-	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
-	EVT_MENU(wxID_EXIT,       REHex::MainWindow::OnExit)
+	EVT_MENU(wxID_NEW,            REHex::MainWindow::OnNew)
+	EVT_MENU(wxID_OPEN,           REHex::MainWindow::OnOpen)
+	EVT_MENU(wxID_SAVE,           REHex::MainWindow::OnSave)
+	EVT_MENU(wxID_SAVEAS,         REHex::MainWindow::OnSaveAs)
+	EVT_MENU(wxID_REFRESH,        REHex::MainWindow::OnReload)
+	EVT_MENU(ID_AUTO_RELOAD,      REHex::MainWindow::OnAutoReload)
+	EVT_MENU(ID_IMPORT_HEX,       REHex::MainWindow::OnImportHex)
+	EVT_MENU(ID_EXPORT_HEX,       REHex::MainWindow::OnExportHex)
+	EVT_MENU(ID_IMPORT_METADATA,  REHex::MainWindow::OnImportMetadata)
+	EVT_MENU(ID_EXPORT_METADATA,  REHex::MainWindow::OnExportMetadata)
+	EVT_MENU(wxID_CLOSE,          REHex::MainWindow::OnClose)
+	EVT_MENU(ID_CLOSE_ALL,        REHex::MainWindow::OnCloseAll)
+	EVT_MENU(ID_CLOSE_OTHERS,     REHex::MainWindow::OnCloseOthers)
+	EVT_MENU(wxID_EXIT,           REHex::MainWindow::OnExit)
 	
 	EVT_MENU(wxID_BACKWARD, REHex::MainWindow::OnCursorPrev)
 	EVT_MENU(wxID_FORWARD,  REHex::MainWindow::OnCursorNext)
@@ -296,6 +300,11 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->Append(ID_IMPORT_HEX, "&Import Intel Hex File");
 		file_menu->Append(ID_EXPORT_HEX, "E&xport Intel Hex File");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(ID_IMPORT_METADATA, "Import Metadata");
+		file_menu->Append(ID_EXPORT_METADATA, "Export Metadata");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -1259,6 +1268,98 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 			std::string("Error exporting ") + tab->doc->get_title() + ":\n" + e.what(),
 			"Error", wxICON_ERROR, this);
 		return;
+	}
+}
+
+void REHex::MainWindow::OnImportMetadata(wxCommandEvent &event)
+{
+	std::string dir;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir = wxfn.GetPath();
+	}
+	else{
+		dir = wxGetApp().get_last_directory();
+	}
+	
+	wxFileDialog openFileDialog(this, "Import Metadata", dir, "", "REHex metadata files (*.rehex-meta)|*.rehex-meta", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = openFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	std::string msg
+		= "Any existing metadata (comments, types, etc) will be replaced.\n"
+		"Proceed with import?";
+	
+	int res = wxMessageBox(msg, "Import Metadata", (wxYES_NO | wxICON_EXCLAMATION), this);
+	if(res == wxNO)
+	{
+		return;
+	}
+	
+	try {
+		active_document()->load_metadata(filename);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error importing metadata:\n") + e.what(),
+			"Error", wxICON_ERROR, this);
+	}
+}
+
+void REHex::MainWindow::OnExportMetadata(wxCommandEvent &event)
+{
+	std::string dir, name;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+		name = wxfn.GetName();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+		name = "";
+	}
+	
+	wxFileDialog saveFileDialog(this, "Export Metadata", dir, name, "REHex metadata files (*.rehex-meta)|*.rehex-meta", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = saveFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	try {
+		active_document()->save_metadata(filename);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error exporting metadata:\n") + e.what(),
+			"Error", wxICON_ERROR, this);
 	}
 }
 

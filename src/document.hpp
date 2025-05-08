@@ -343,7 +343,17 @@ namespace REHex {
 			*/
 			void reset_to_clean();
 			
-			json_t *serialise_metadata() const;
+			/**
+			 * @brief Write the metadata (comments, highlights, etc) to a file.
+			*/
+			void save_metadata(const std::string &filename) const;
+			
+			/**
+			 * @brief Replace the document's metadata from a file.
+			*/
+			void load_metadata(const std::string &filename);
+			
+			json_t *serialise_metadata(bool even_if_empty) const;
 			void load_metadata(const json_t *metadata);
 			
 			static std::string find_metadata(const std::string &filename);

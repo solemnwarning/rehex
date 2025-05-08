@@ -6,6 +6,11 @@ Version TBC:
 
  * Add "Visual Scrollbar" for high-level overview of file contents.
 
+ * Add "Data visualisation" tool for overfiew of file/selection
+   contents (#230).
+
+ * Add metadata import/export commands (#248).
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

@@ -837,3 +837,17 @@ REHex::Edge REHex::find_nearest_edge(const wxPoint &point, const wxRect &rect)
 		return Edge::BOTTOM;
 	}
 }
+
+bool REHex::recursive_mkdir(const std::string &path)
+{
+	wxFileName fn(path, wxEmptyString);
+	
+	if(fn.DirExists())
+	{
+		return true;
+	}
+	
+	fn.RemoveLastDir();
+	
+	return recursive_mkdir(fn.GetPath().ToStdString()) && wxMkdir(path);
+}

@@ -436,6 +436,14 @@ namespace REHex {
 	 * @brief Find the nearest edge to a point specified in a rectangle.
 	*/
 	Edge find_nearest_edge(const wxPoint &point, const wxRect &rect);
+	
+	/**
+	 * @brief Create directory and any missing path components.
+	 *
+	 * Creates the directory and any parent directories which don't exist. Returns true if
+	 * the directory now exists (or aready did), false on error.
+	*/
+	bool recursive_mkdir(const std::string &path);
 }
 
 #endif /* !REHEX_UTIL_HPP */

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -694,7 +694,8 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	
 	wxFileName wxfn(filename);
 	wxfn.MakeAbsolute();
-	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
+	
+	wxGetApp().recent_files->AddFileToHistory(filename);
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
@@ -704,6 +705,51 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	
 	return tab;
 }
+
+#ifdef __APPLE__
+REHex::Tab *REHex::MainWindow::open_file(MacFileName &&macfn)
+{
+	std::string filename = macfn.GetFileName().GetFullPath().ToStdString();
+	
+	wxGetApp().recent_files->AddFileToHistory(macfn);
+	
+	Tab *tab;
+	try {
+		SharedDocumentPointer doc(SharedDocumentPointer::make(std::move(macfn)));
+		tab = new Tab(notebook, doc);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + filename + ":\n" + e.what(),
+					 "Error", wxICON_ERROR, this);
+		return NULL;
+	}
+	
+	/* Discard default "Untitled" tab if not modified. */
+	if(notebook->GetPageCount() == 1)
+	{
+		wxWindow *page = notebook->GetPage(0);
+		assert(page != NULL);
+		
+		auto page_tab = dynamic_cast<Tab*>(page);
+		assert(page_tab != NULL);
+		
+		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
+		{
+			notebook->DeletePage(0);
+		}
+	}
+	
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
+	
+	return tab;
+}
+#endif /* __APPLE__ */
 
 REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
 {
@@ -856,10 +902,17 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 
 void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
 {
-	wxFileHistory *recent_files = wxGetApp().recent_files;
-	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
+	auto *recent_files = wxGetApp().recent_files;
 	
+	#ifdef __APPLE__
+	MacFileName macfn = recent_files->GetHistoryMacFile(event.GetId() - recent_files->GetBaseId());
+	open_file(std::move(macfn));
+	
+	#else
+	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
 	open_file(file.ToStdString());
+	
+	#endif
 }
 
 void REHex::MainWindow::OnSave(wxCommandEvent &event)

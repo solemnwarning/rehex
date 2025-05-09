@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -34,6 +34,7 @@
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
 #include "HighlightColourMap.hpp"
+#include "MacFileName.hpp"
 #include "util.hpp"
 
 namespace REHex {
@@ -138,6 +139,13 @@ namespace REHex {
 			 * @brief Create a Document for an existing file on disk.
 			*/
 			Document(const std::string &filename);
+			
+			#ifdef __APPLE__
+			/**
+			 * @brief Create a Document for an existing file on disk.
+			*/
+			Document(MacFileName &&filename);
+			#endif
 			
 			~Document();
 			
@@ -338,6 +346,8 @@ namespace REHex {
 			json_t *serialise_metadata() const;
 			void load_metadata(const json_t *metadata);
 			
+			static std::string find_metadata(const std::string &filename);
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif
@@ -444,7 +454,7 @@ namespace REHex {
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
 			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
 			
-			void _save_metadata(const std::string &filename);
+			void save_metadata_for(const std::string &filename);
 			
 			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static BitRangeMap<int> _load_highlights(const json_t *meta, off_t buffer_length, const HighlightColourMap &highlight_colour_map);

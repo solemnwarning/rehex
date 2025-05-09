@@ -65,10 +65,10 @@ ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns
 DMGTMP  := tmp/dmg
 
-REHex.app: res/Info.plist $(EXE) $(ICNS) $(HELP_TARGET)
+REHex.app: tools/mac-info-plist.sh $(EXE) $(ICNS) $(HELP_TARGET)
 	mkdir -p                  $@/
 	mkdir -p                  $@/Contents/
-	cp        res/Info.plist  $@/Contents/Info.plist
+	GIT_COMMIT_SHA=$(GIT_COMMIT_SHA) VERSION=$(VERSION) ./tools/mac-info-plist.sh > $@/Contents/Info.plist
 	mkdir -p                  $@/Contents/MacOS/
 	cp        $(EXE)          $@/Contents/MacOS/REHex
 	mkdir -p                  $@/Contents/Resources/

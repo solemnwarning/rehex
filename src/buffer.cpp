@@ -15,7 +15,6 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "MacFileName.hpp"
 #include "platform.hpp"
 
 #ifdef _WIN32
@@ -43,6 +42,7 @@
 
 #include "App.hpp"
 #include "buffer.hpp"
+#include "MacFileName.hpp"
 #include "profile.hpp"
 #include "win32lib.hpp"
 

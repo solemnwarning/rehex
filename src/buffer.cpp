@@ -319,11 +319,13 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	reload();
 }
 
+#ifdef __APPLE__
 REHex::Buffer::Buffer(MacFileName &&filename, off_t block_size):
 	Buffer(filename.GetFileName().GetFullPath().ToStdString())
 {
 	file_access_guard = std::move(filename);
 }
+#endif
 
 REHex::Buffer::~Buffer()
 {

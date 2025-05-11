@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -3654,10 +3654,10 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	hsm_pre = std::min<off_t>(hsm_pre, (d_offset + skip_bytes).byte()); /* Clamp to avoid offset going negative. */
 	
 	off_t hsm_post = std::max<off_t>(selection_data.size(), MAX_CHAR_SIZE);
+	off_t data_to_draw = std::min(max_bytes, (d_length.byte() - std::min(skip_bytes, d_length.byte())));
 	
 	try {
 		data_base = d_offset + BitOffset::BYTES(skip_bytes - hsm_pre);
-		off_t data_to_draw = std::min(max_bytes, (d_length.byte() - std::min(skip_bytes, d_length.byte())));
 		
 		data = doc.doc->read_data(data_base, data_to_draw + hsm_pre + hsm_post);
 		
@@ -3686,6 +3686,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		data.insert(data.end(), std::min(max_bytes, (d_length.byte() - std::min(skip_bytes, d_length.byte()))), '?');
 		data_err = true;
 		data_p = NULL;
+		data_remain = data_to_draw;
 	}
 	
 	/* The offset of the character in the Buffer currently being drawn. */
@@ -3714,7 +3715,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				BitOffset offset_within_data = offset - data_base;
 				assert(offset_within_data >= BitOffset::ZERO);
 				
-				if(offset_within_data.byte() < data.size())
+				if(offset_within_data.byte() < (off_t)(data.size()))
 				{
 					unsigned char byte = data[offset_within_data.byte()];
 					
@@ -4352,7 +4353,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		frf.fill_rectangle(char_bbox, bg_colour);
 	};
 	
-	for(size_t c = pad_bytes, i = 0; i < data_len; ++c, ++i)
+	for(size_t i = 0; i < data_len; ++i)
 	{
 		const void *c_data = (data != NULL) ? (const void*)(data + i)          : (const void*)("?");
 		size_t c_data_len  = (data != NULL) ? (data_len - i) + data_extra_post : 1;

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -335,7 +335,10 @@ void REHex::DetachableNotebook::DragFrame::drop()
 	if(window == NULL)
 	{
 		DetachedPageEvent e(page, EVT_PAGE_DROPPED);
-		bool e_handled = detached_page_handler->ProcessEvent(e);
+		#ifndef NDEBUG
+		bool e_handled =
+		#endif
+			detached_page_handler->ProcessEvent(e);
 		assert(e_handled);
 	}
 	else{

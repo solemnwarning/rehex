@@ -84,13 +84,10 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	off_t bytes_per_y = view->view_length() / client_size.GetHeight();
 	off_t next_off = 0;
 	
-	int max_y = client_size.GetHeight() - 1;
-	
 	uint64_t num_visible_lines = document_ctrl->get_visible_lines();
 	
 	int64_t first_visible_line = document_ctrl->get_scroll_yoff();
 	int64_t last_visible_line  = std::min<int64_t>((first_visible_line + num_visible_lines), document_ctrl->get_total_lines()) - 1;
-	int64_t max_visible_line   = document_ctrl->get_scroll_yoff_max() + num_visible_lines - 1;
 	
 	BitOffset first_visible_offset, last_visible_offset;
 	

@@ -422,6 +422,17 @@ std::vector<bool> REHex::Document::read_bits(BitOffset offset, size_t max_length
 	return buffer->read_bits(offset, max_length);
 }
 
+/* GCC (and Clang) whinge about the below pattern of creating a heap-allocated std::vector from the
+ * return value of Buffer::read_data() preventing copy elison and state the std::move should be
+ * removed, however, in my testing, removing the std::move leads to the data being copied, which is
+ * unnecessarily expensive in terms of CPU time and (momentary) memory usage, while std::move does
+ * the right thing.
+*/
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpessimizing-move"
+#endif
+
 void REHex::Document::overwrite_data(BitOffset offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
 	if(write_protect)
@@ -751,6 +762,10 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 		return _op_replace_undo(offset, old_data, new_data->size(), new_cursor_pos, new_cursor_state, undo_data_seq_slice);
 	});
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 int REHex::Document::overwrite_text(BitOffset offset, const std::string &utf8_text, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
@@ -2654,7 +2669,10 @@ REHex::BitRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_com
 	{
 		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
 		
-		bool x = comments.set(BitOffset::from_int64(header->file_offset), BitOffset::from_int64(header->file_length), REHex::Document::Comment(text));
+		#ifndef NDEBUG
+		bool x =
+		#endif
+			comments.set(BitOffset::from_int64(header->file_offset), BitOffset::from_int64(header->file_length), REHex::Document::Comment(text));
 		assert(x); /* TODO: Raise some kind of error. Beep? */
 		
 		data += sizeof(Header) + header->text_length;

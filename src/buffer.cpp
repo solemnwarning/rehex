@@ -778,7 +778,7 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 	
 	if(offset.bit() > 0)
 	{
-		if(data.size() == max_length)
+		if((off_t)(data.size()) == max_length)
 		{
 			/* Pop off the extra partial byte we read to fill in the previous byte. */
 			data.pop_back();

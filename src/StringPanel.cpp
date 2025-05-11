@@ -40,7 +40,7 @@
 
 static const size_t WINDOW_SIZE = 2 * 1024 * 1024; /* 2MiB */
 static const size_t MAX_STRINGS = 1000000;
-static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
+// static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
 
 static const size_t MAX_STRINGS_BATCH = 64;
 

@@ -2409,8 +2409,10 @@ void REHex::MainWindow::OnSetHighlight(wxCommandEvent &event)
 	int command_id = event.GetId();
 	int highlight_num = command_id - ID_SET_HIGHLIGHT_1;
 	
+	assert(highlight_num >= 0);
+	
 	const HighlightColourMap highlight_colours = tab->doc->get_highlight_colours();
-	if(highlight_colours.size() < highlight_num)
+	if(highlight_colours.size() < (size_t)(highlight_num))
 	{
 		return;
 	}

@@ -189,7 +189,7 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	colour2_picker->Disable();
 	colour_sizer->Add(colour2_picker);
 	
-	dummy_doc_ctrl->Bind(EV_SELECTION_CHANGED, [=](wxCommandEvent &event)
+	dummy_doc_ctrl->Bind(EV_SELECTION_CHANGED, [=,this](wxCommandEvent &event)
 	{
 		BitOffset selection_begin, selection_last;
 		std::tie(selection_begin, selection_last) = dummy_doc_ctrl->get_selection_raw();

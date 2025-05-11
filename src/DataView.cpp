@@ -152,9 +152,14 @@ std::vector<bool> REHex::FlatRangeView::read_bits(BitOffset view_offset, size_t 
 	assert(view_offset >= BitOffset::ZERO);
 	
 	BitOffset buffer_length_from_offset = std::max((BitOffset(view_length(), 0) - view_offset), BitOffset::ZERO);
+	if(buffer_length_from_offset < BitOffset::ZERO)
+	{
+		return std::vector<bool>();
+	}
+	
 	int64_t blfo_bits = buffer_length_from_offset.total_bits();
 	
-	if(blfo_bits < std::numeric_limits<size_t>::max() && max_length > (size_t)(blfo_bits))
+	if((uint64_t)(blfo_bits) <= (uint64_t)(std::numeric_limits<size_t>::max()) && max_length > (size_t)(blfo_bits))
 	{
 		max_length = blfo_bits;
 	}
@@ -428,7 +433,7 @@ std::vector<unsigned char> REHex::LinearVirtualDocumentView::read_data(BitOffset
 		off_t seg_read = std::min(max_length, ((it->first.offset + it->first.length) - view_offset.byte_round_up()));
 		
 		std::vector<unsigned char> seg_data = document->read_data((it->second + seg_offset.byte()), (seg_read + !seg_offset.byte_aligned()));
-		assert(seg_data.size() >= seg_read);
+		assert((off_t)(seg_data.size()) >= seg_read);
 		
 		size_t insertion_point = data.size();
 		data.resize(insertion_point + seg_data.size());

@@ -66,7 +66,7 @@ REHex::BitOffset REHex::BitOffset::from_json(json_t *json)
 		if(json_is_integer(json_byte) && json_is_integer(json_bit))
 		{
 			int64_t byte = json_integer_value(json_byte);
-			int bit      = json_integer_value(json_bit);
+			int bit      = (int)(json_integer_value(json_bit));
 			
 			if(byte >= INT61_MIN && byte <= 0 && bit >= -7 && bit <= 0)
 			{

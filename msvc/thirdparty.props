@@ -27,6 +27,9 @@
     <ClCompile>
       <AdditionalIncludeDirectories>$(vcpkgInstallDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 
+      <!-- Use "/external:I" to suppress warnings from upstream headers. -->
+      <AdditionalOptions>/external:I"$(vcpkgInstallDir)/include/" %(AdditionalOptions)</AdditionalOptions>
+
       <!-- Tell wxWidgets what we are -->
       <PreprocessorDefinitions>__WXMSW__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

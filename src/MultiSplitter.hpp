@@ -537,10 +537,12 @@ namespace REHex
 			*/
 			void AddBelow(wxWindow *window, wxWindow *base, float weight = 1.0f);
 			
+#if 0 /* NOTE: Disabled due to collision with wxWindow::RemoveChild(), and not used. */
 			/**
 			 * @brief Remove a child window from the splitter without destroying it.
 			*/
 			void RemoveChild(wxWindow *window);
+#endif
 			
 			/**
 			 * @brief Remove all child windows from the splitter without destroying them.

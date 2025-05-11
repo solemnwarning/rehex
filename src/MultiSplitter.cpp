@@ -202,6 +202,7 @@ void REHex::MultiSplitter::AddBelow(wxWindow *window, wxWindow *base, float weig
 	}
 }
 
+#if 0
 void REHex::MultiSplitter::RemoveChild(wxWindow *window)
 {
 	Cell *cell = _FindCellByWindow(window);
@@ -222,6 +223,7 @@ void REHex::MultiSplitter::RemoveChild(wxWindow *window)
 		}
 	}
 }
+#endif
 
 void REHex::MultiSplitter::RemoveAllChildren()
 {

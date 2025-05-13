@@ -316,6 +316,19 @@ void REHex::HighlightColourMap::set_default_lightness(int lightness)
 	}
 }
 
+int REHex::HighlightColourMap::next_free_idx() const
+{
+	for(size_t i = 0; i < MAX_NUM; ++i)
+	{
+		if(colours.find(i) == colours.end())
+		{
+			return i;
+		}
+	}
+	
+	return -1;
+}
+
 REHex::HighlightColourMap::HighlightColour REHex::HighlightColourMap::make_default_highlight(size_t highlight_idx, int lightness)
 {
 	HighlightColour hc;

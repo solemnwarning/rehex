@@ -253,6 +253,17 @@ namespace REHex {
 			void set_highlight_colours(const HighlightColourMap &highlight_colours);
 			
 			/**
+			 * @brief Find or add the described highlight colour.
+			 *
+			 * @param label             Descriptive label for the highlight colour.
+			 * @param primary_colour    Primary colour (wxNullColour for default).
+			 * @param secondary_colour  Secondary colour (wxNullColour for default).
+			 *
+			 * @return ID of existing/created highlight colour, -1 if no slots available.
+			*/
+			int allocate_highlight_colour(const wxString &label, const wxColour &primary_colour = wxNullColour, const wxColour &secondary_colour = wxNullColour);
+			
+			/**
 			 * @brief Get the highlighted byte ranges in the file.
 			*/
 			const BitRangeMap<int> &get_highlights() const;

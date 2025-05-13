@@ -1092,6 +1092,151 @@ TEST_F(DocumentTest, EraseHighlightUndo)
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
 }
 
+TEST_F(DocumentTest, AllocateNewHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("soda"), 3);
+	
+	{
+		HighlightColourMap expect_highlight_colours = initial_highlight_colours;
+		
+		auto it1 = expect_highlight_colours.add();
+		it1->second.set_label("soda");
+		
+		EXPECT_EQ(doc->get_highlight_colours(), expect_highlight_colours);
+	}
+}
+
+TEST_F(DocumentTest, AllocateNewExactHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("soda", *wxRED, *wxBLUE), 3);
+	
+	{
+		HighlightColourMap expect_highlight_colours = initial_highlight_colours;
+		
+		auto it1 = expect_highlight_colours.add();
+		it1->second.set_label("soda");
+		it1->second.set_primary_colour(*wxRED);
+		it1->second.set_secondary_colour(*wxBLUE);
+		
+		EXPECT_EQ(doc->get_highlight_colours(), expect_highlight_colours);
+	}
+}
+
+TEST_F(DocumentTest, AllocateExistingHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("expect"), 0);
+	
+	EXPECT_EQ(doc->get_highlight_colours(), initial_highlight_colours);
+}
+
+TEST_F(DocumentTest, AllocateExistingExactHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("chunky", *wxGREEN, *wxWHITE), 1);
+	ASSERT_EQ(doc->allocate_highlight_colour("chunky", *wxBLUE, *wxWHITE), 2);
+	
+	EXPECT_EQ(doc->get_highlight_colours(), initial_highlight_colours);
+}
+
 TEST_F(DocumentTest, SetVirtMapping)
 {
 	/* Preload document with data. */

@@ -112,6 +112,9 @@ class REHex::Document: public wxEvtHandler
 	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
 	bool set_data_type(REHex::BitOffset offset, REHex::BitOffset length, const wxString &type);
 	bool set_data_type(off_t offset, off_t length, const wxString &type);
+	bool set_highlight(REHex::BitOffset offset, REHex::BitOffset length, int colour);
+	
+	int allocate_highlight_colour(const wxString &label, const wxColour &primary_colour = wxNullColour, const wxColour &secondary_colour = wxNullColour);
 	
 	bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
 	void clear_virt_mapping_r(off_t real_offset, off_t length);

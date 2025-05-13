@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,10 @@ local function test_interface(data)
 		
 		set_comment = function(offset, length, comment_text)
 			table.insert(log, "set_comment(" .. offset .. ", " .. length .. ", " .. comment_text .. ")")
+		end,
+		
+		set_highlight = function(offset, length, highlight_idx)
+			table.insert(log, "set_highlight(" .. offset .. ", " .. length .. ", " .. highlight_idx .. ")")
 		end,
 		
 		yield = function()
@@ -7028,6 +7032,208 @@ describe("executor", function()
 				} },
 			})
 			end, "Unrecognised character set 'UTF-64' specified at test.bt:1")
+	end)
+	
+	it("allows specifying a highlight on a plain variable", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "int", "s", nil, nil,
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 1 } },
+				} },
+			
+			{ "test.bt", 2, "function", "int", "xfunc", {},
+			{
+				{ "test.bt", 2, "return",
+					{ "test.bt", 2, "num", 2 } },
+			} },
+			
+			{ "test.bt", 3, "variable", "int", "t", nil, nil,
+				-- attributes
+				{
+					{ "test.bt", 3, "highlight", { "test.bt", 3, "call", "xfunc", {} } },
+				} },
+		})
+		
+		local expect_log = {
+			"set_comment(0, 4, s)",
+			"set_data_type(0, 4, s32le)",
+			"set_highlight(0, 4, 1)",
+			"set_comment(4, 4, t)",
+			"set_data_type(4, 4, s32le)",
+			"set_highlight(4, 4, 2)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows specifying a highlight on an array", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "variable", "int", "arr", nil,
+				-- array length
+				{ "test.bt", 1, "num", 4 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 1 } },
+				} },
+		})
+		
+		local expect_log = {
+			"set_comment(0, 16, arr)",
+			"set_data_type(0, 16, s32le)",
+			"set_highlight(0, 16, 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows specifying a highlight on a struct", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "s", nil, nil,
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 1 } },
+				} },
+		})
+		
+		local expect_log = {
+			"set_comment(0, 4, x)",
+			"set_comment(4, 4, y)",
+			"set_comment(0, 8, s)",
+			"set_data_type(0, 4, s32le)",
+			"set_data_type(4, 4, s32le)",
+			"set_highlight(0, 8, 1)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("allows specifying a highlight on a struct and members", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "struct", "mystruct", {},
+			{
+				{ "test.bt", 1, "variable", "int", "x", nil, nil,
+					-- attributes
+					{
+						{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 4 } },
+					} },
+				{ "test.bt", 1, "variable", "int", "y", nil, nil },
+			} },
+			
+			{ "test.bt", 1, "variable", "struct mystruct", "s", nil, nil,
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 1 } },
+				} },
+		})
+		
+		local expect_log = {
+			"set_comment(0, 4, x)",
+			"set_comment(4, 4, y)",
+			"set_comment(0, 8, s)",
+			"set_data_type(0, 4, s32le)",
+			"set_data_type(4, 4, s32le)",
+			"set_highlight(0, 8, 1)",
+			"set_highlight(0, 4, 4)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("doesn't allow specifying highlight multiple times", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "char", "s", nil,
+				
+				-- array length
+				{ "test.bt", 1, "num", 8 },
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 1 } },
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "num", 2 } },
+				} },
+			})
+			end, "Attribute 'highlight' specified multiple times at test.bt:1")
+	end)
+	
+	it("doesn't allow specifying highlight set as non-number types", function()
+		local interface, log = test_interface(string.char(
+			0xD2, 0x04, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "int", "s", nil, nil,
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight", { "test.bt", 1, "str", "hello" } },
+				} },
+			})
+			end, "Unexpected type 'const string' used as value for 'highlight' attribute (expected int) at test.bt:1")
+		
+		assert.has_error(function()
+			executor.execute(interface, {
+				{ "test.bt", 1, "variable", "int", "s", nil, nil,
+				
+				-- attributes
+				{
+					{ "test.bt", 1, "highlight" }, -- void / no value
+				} },
+			})
+			end, "Unexpected type 'void' used as value for 'highlight' attribute (expected int) at test.bt:1")
 	end)
 	
 	describe("ReadString", function()

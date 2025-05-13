@@ -231,6 +231,34 @@ static int LUACALL wxLua_REHex_Document_set_data_type1(lua_State *L)
 }
 %end
 
+%override wxLua_REHex_Document_set_highlight
+static int LUACALL wxLua_REHex_Document_set_highlight(lua_State *L)
+{
+	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
+	
+	REHex::BitOffset offset = *(REHex::BitOffset*)(wxluaT_getuserdatatype(L, 2, wxluatype_REHex_BitOffset));
+	REHex::BitOffset length = *(REHex::BitOffset*)(wxluaT_getuserdatatype(L, 3, wxluatype_REHex_BitOffset));
+	int colour = (int)wxlua_getnumbertype(L, 4);
+	
+	if(colour == -1)
+	{
+		bool returns = self->erase_highlight(offset, length);
+		lua_pushboolean(L, returns);
+	}
+	else if(colour >= 0)
+	{
+		bool returns = self->set_highlight(offset, length, colour);
+		lua_pushboolean(L, returns);
+	}
+	else{
+		wxlua_argerror(L, 4, wxT("a highlight colour index (or -1)"));
+		return 0;
+	}
+	
+	return 1;
+}
+%end
+
 %override wxLua_REHex_Document_transact_begin
 static int LUACALL wxLua_REHex_Document_transact_begin(lua_State *L)
 {

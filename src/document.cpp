@@ -1132,6 +1132,47 @@ void REHex::Document::set_highlight_colours(const HighlightColourMap &highlight_
 		});
 }
 
+int REHex::Document::allocate_highlight_colour(const wxString &label, const wxColour &primary_colour, const wxColour &secondary_colour)
+{
+	for(auto it = highlight_colour_map.begin(); it != highlight_colour_map.end(); ++it)
+	{
+		if(it->second.label == label
+			&& (primary_colour == wxNullColour || it->second.primary_colour == primary_colour)
+			&& (secondary_colour == wxNullColour || it->second.secondary_colour == secondary_colour))
+		{
+			return it->first;
+		}
+	}
+	
+	int next_highlight_idx = highlight_colour_map.next_free_idx();
+	if(next_highlight_idx == -1)
+	{
+		return -1;
+	}
+	
+	_tracked_change("change highlight colours",
+		[=, this]()
+		{
+			auto new_colour_it = highlight_colour_map.add();
+			assert(new_colour_it != highlight_colour_map.end());
+			assert(new_colour_it->first == next_highlight_idx);
+			
+			new_colour_it->second.set_label(label);
+			if(primary_colour != wxNullColour) { new_colour_it->second.set_primary_colour(primary_colour); }
+			if(secondary_colour != wxNullColour) { new_colour_it->second.set_secondary_colour(secondary_colour); }
+			
+			_raise_highlights_changed();
+		},
+		
+		[this]()
+		{
+			/* Highlight changes are undone implicitly. */
+			_raise_highlights_changed();
+		});
+	
+	return next_highlight_idx;
+}
+
 const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 {
 	return highlights;
@@ -1139,7 +1180,8 @@ const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 
 bool REHex::Document::set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx)
 {
-	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0))
+	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0)
+		|| highlight_colour_map.find(highlight_colour_idx) == highlight_colour_map.end())
 	{
 		return false;
 	}

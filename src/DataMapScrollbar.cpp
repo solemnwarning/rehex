@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,9 +20,13 @@
 #include <assert.h>
 #include <wx/dcbuffer.h>
 
+#include "App.hpp"
 #include "DataMapScrollbar.hpp"
 #include "Palette.hpp"
 #include "profile.hpp"
+
+/* Interval between screen updates while data is processing. */
+static constexpr int REDRAW_INTERVAL = 250;
 
 BEGIN_EVENT_TABLE(REHex::DataMapScrollbar, wxControl)
 	EVT_PAINT(REHex::DataMapScrollbar::OnPaint)
@@ -40,21 +44,28 @@ REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const
 	wxControl(parent, id),
 	view(view),
 	document_ctrl(document_ctrl),
-	source(std::move(source)),
+	m_source(std::move(source)),
 	mouse_dragging(false),
 	tip_window(NULL)
 {
 	wxSize client_size = GetClientSize();
 	client_height = std::max(client_size.GetHeight(), 1);
 	
-	this->source->reset_max_points(client_height);
+	m_source->reset_max_points(client_height);
+	m_source->Bind(PROCESSING_START, &REHex::DataMapScrollbar::OnSourceProcessing, this);
 	
-	redraw_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
+	m_data_update_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 	{
+		if(!(m_source->processing()))
+		{
+			m_data_update_timer.Stop();
+		}
+		
+		m_data = m_source->get_data_map();
 		Refresh();
 	});
 	
-	redraw_timer.Start(1000, wxTIMER_CONTINUOUS);
+	m_data_update_timer.Start(REDRAW_INTERVAL, wxTIMER_CONTINUOUS);
 	
 	this->document_ctrl.auto_cleanup_bind(SCROLL_UPDATE, &REHex::DataMapScrollbar::OnDocumentCtrlScroll, this);
 	
@@ -73,8 +84,6 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	wxSize client_size = GetClientSize();
 	
 	wxBufferedPaintDC dc(this);
-	
-	BitRangeMap<DataMapSource::MapValue> data_map = source->get_data_map();
 	
 	dc.SetBackground(wxBrush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]));
 	dc.SetBackgroundMode(wxTRANSPARENT);
@@ -99,8 +108,8 @@ void REHex::DataMapScrollbar::OnPaint(wxPaintEvent &event)
 	
 	for(int y = 0; y < client_size.GetHeight(); ++y)
 	{
-		auto dm_it = data_map.get_range(BitOffset(next_off, 0));
-		if(dm_it != data_map.end())
+		auto dm_it = m_data.get_range(BitOffset(next_off, 0));
+		if(dm_it != m_data.end())
 		{
 			dc.SetPen(wxPen(dm_it->second.colour, 1));
 			dc.DrawLine(4, y, (client_size.GetWidth() - 4), y);
@@ -146,7 +155,12 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 	if(client_height != new_height)
 	{
 		client_height = new_height;
-		source->reset_max_points(client_height);
+		m_source->reset_max_points(client_height);
+		
+		if(!(m_data_update_timer.IsRunning()))
+		{
+			m_data_update_timer.Start(REDRAW_INTERVAL, wxTIMER_CONTINUOUS);
+		}
 	}
 	
 	Refresh();
@@ -156,8 +170,6 @@ void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 {
 	if(document_ctrl)
 	{
-		BitRangeMap<DataMapSource::MapValue> data_map = source->get_data_map();
-		
 		off_t bytes_per_y = std::max<off_t>((view->view_length() / client_height), 1);
 		BitOffset y_offset = BitOffset((bytes_per_y * (off_t)(event.GetY())), 0);
 		
@@ -175,8 +187,8 @@ void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 			Refresh();
 		}
 		
-		auto dm_it = data_map.get_range(y_offset);
-		if(dm_it != data_map.end())
+		auto dm_it = m_data.get_range(y_offset);
+		if(dm_it != m_data.end())
 		{
 			off_t y_offset_view_last = std::min((y_offset.byte() + bytes_per_y), view->view_length()) - 1;
 			
@@ -250,5 +262,15 @@ void REHex::DataMapScrollbar::OnMouseCaptureLost(wxMouseCaptureLostEvent &event)
 void REHex::DataMapScrollbar::OnDocumentCtrlScroll(ScrollUpdateEvent &event)
 {
 	Refresh();
+	event.Skip(); /* Continue propagation. */
+}
+
+void REHex::DataMapScrollbar::OnSourceProcessing(wxCommandEvent &event)
+{
+	if(!(m_data_update_timer.IsRunning()))
+	{
+		m_data_update_timer.Start(REDRAW_INTERVAL, wxTIMER_CONTINUOUS);
+	}
+	
 	event.Skip(); /* Continue propagation. */
 }

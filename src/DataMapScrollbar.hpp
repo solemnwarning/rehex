@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -39,9 +39,11 @@ namespace REHex {
 			SafeWindowPointer<DocumentCtrl> document_ctrl;
 			
 			int client_height;
-			wxTimer redraw_timer;
 			
-			std::unique_ptr<EntropyDataMapSource> source;
+			std::unique_ptr<EntropyDataMapSource> m_source;
+			
+			BitRangeMap<DataMapSource::MapValue> m_data;
+			wxTimer m_data_update_timer;
 			
 			bool mouse_dragging;
 			
@@ -56,6 +58,7 @@ namespace REHex {
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			void OnDocumentCtrlScroll(ScrollUpdateEvent &event);
+			void OnSourceProcessing(wxCommandEvent &event);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

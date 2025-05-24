@@ -23,12 +23,14 @@
 #include "DataMapSource.hpp"
 #include "Palette.hpp"
 
+static constexpr off_t MIN_SHARD_SIZE = 100;
+
 REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi):
 	view(view),
 	max_points(max_points),
 	log_multi(log_multi)
 {
-	accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+	accumulator.reset(new HierarchicalByteAccumulator(view, max_points, MIN_SHARD_SIZE));
 	
 	accumulator->Bind(PROCESSING_START, &REHex::EntropyDataMapSource::OnProcessingStart, this);
 	accumulator->Bind(PROCESSING_STOP, &REHex::EntropyDataMapSource::OnProcessingStop, this);
@@ -89,7 +91,7 @@ void REHex::EntropyDataMapSource::reset_max_points(size_t max_points)
 {
 	if(accumulator->get_requested_num_shards() != max_points)
 	{
-		accumulator.reset(new HierarchicalByteAccumulator(view, max_points));
+		accumulator.reset(new HierarchicalByteAccumulator(view, max_points, MIN_SHARD_SIZE));
 		
 		accumulator->Bind(PROCESSING_START, &REHex::EntropyDataMapSource::OnProcessingStart, this);
 		accumulator->Bind(PROCESSING_STOP, &REHex::EntropyDataMapSource::OnProcessingStop, this);

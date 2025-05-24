@@ -78,6 +78,7 @@ namespace REHex
 			off_t range_length;
 			
 			size_t target_num_shards;
+			off_t min_shard_size;
 			
 			size_t chunk_size;
 			
@@ -131,7 +132,7 @@ namespace REHex
 			 * @param view        DataView to accumulate data from.
 			 * @param num_shards  Number of shards to divide range into.
 			*/
-			HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards = 1);
+			HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards = 1, off_t min_shard_size = 1);
 			
 			~HierarchicalByteAccumulator();
 			

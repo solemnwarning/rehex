@@ -85,6 +85,8 @@ void REHex::PopupTipWindow::set_text(const wxString &text)
 	this->text = text;
 	
 	SetSize(wxSize((text_width + (2 * TEXT_MARGIN_X)), (text_height + (2 * TEXT_MARGIN_Y))));
+	
+	Refresh();
 }
 
 void REHex::PopupTipWindow::move_to_cursor_screen_position(const wxPoint &cursor_screen_pos)

@@ -23,10 +23,11 @@
 
 constexpr size_t REHex::HierarchicalByteAccumulator::L2_CACHE_SIZE;
 
-REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards):
+REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedEvtHandler<DataView> &view, size_t num_shards, off_t min_shard_size):
 	view(view),
 	range_length(view->view_length()),
 	target_num_shards(num_shards),
+	min_shard_size(min_shard_size),
 	chunk_size(0),
 	l2_cache(L2_CACHE_SIZE),
 	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1)),
@@ -78,13 +79,25 @@ std::vector<REHex::HierarchicalByteAccumulator::Shard> REHex::HierarchicalByteAc
 	{
 		std::unique_lock<std::mutex> l1_lock_guard(l1_mutex);
 		
-		size_t l1_slots_per_shard = std::max<size_t>((l1_cache.size() / target_num_shards), 1);
+		off_t avg_target_shard_size = range_length / target_num_shards;
 		
-		for(size_t i = 0, j = 0; i < l1_cache.size() && j < target_num_shards; ++j)
+		size_t l1_slots_per_shard, max_shards;
+		if(avg_target_shard_size < min_shard_size)
+		{
+			size_t max_num_shards = (range_length / (off_t)(min_shard_size)) + 1;
+			l1_slots_per_shard = std::max<size_t>((l1_cache.size() / max_num_shards), 1);
+			max_shards = max_num_shards;
+		}
+		else{
+			l1_slots_per_shard = std::max<size_t>((l1_cache.size() / target_num_shards), 1);
+			max_shards = target_num_shards;
+		}
+		
+		for(size_t i = 0, j = 0; i < l1_cache.size(); ++j)
 		{
 			Shard shard(BitOffset(l1_cache[i].offset, 0), 0);
 			
-			for(size_t k = 0; (k < l1_slots_per_shard || (j + 1) == target_num_shards) && i < l1_cache.size(); ++k, ++i)
+			for(size_t k = 0; (k < l1_slots_per_shard || (j + 1) == max_shards) && i < l1_cache.size(); ++k, ++i)
 			{
 				shard.length += l1_cache[i].length;
 				shard.result += *(l1_cache[i].accumulator);
@@ -202,7 +215,7 @@ std::pair<size_t, size_t> REHex::HierarchicalByteAccumulator::calc_chunk_size()
 	 * >= 0    -> 16KiB
 	*/
 	
-	if(num_l1_slots <= 32768) { chunk_size *= 2; }
+	//if(num_l1_slots <= 32768) { chunk_size *= 2; }
 	if(num_l1_slots <= 16384) { chunk_size *= 2; }
 	if(num_l1_slots <= 8192)  { chunk_size *= 2; }
 	if(num_l1_slots <= 4096)  { chunk_size *= 2; }
@@ -231,7 +244,7 @@ void REHex::HierarchicalByteAccumulator::update_chunk_size()
 	std::vector<L1CacheNode> new_l1_cache;
 	new_l1_cache.reserve(l1_slot_count);
 	
-	l1_slot_base_size = range_length / l1_slot_count;
+	l1_slot_base_size = range_length / (l1_slot_count - 1);
 	
 	if(l1_slot_base_size == 0)
 	{

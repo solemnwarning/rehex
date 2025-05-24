@@ -395,40 +395,71 @@ TEST(HierarchicalByteAccumulator, BigFileUnalignedShards)
 	
 	for(size_t i = 0; i < std::min<size_t>(shards.size(), 99U); ++i)
 	{
-		EXPECT_EQ(shards[i].offset, BitOffset((i * 1024 * 1024), 0));
-		EXPECT_EQ(shards[i].length, (1024 * 1024));
+		EXPECT_EQ(shards[i].offset, BitOffset((i * 1048578), 0));
+		EXPECT_EQ(shards[i].length, 1048578);
 		
-		EXPECT_EQ(shards[i].result.get_total_bytes(), (1024U * 1024U));
-		EXPECT_EQ(shards[i].result.get_byte_sum(), (1024 * 1024 * i));
-		
-		for(size_t j = 0; j < 256; ++j)
+		EXPECT_EQ(shards[i].result.get_total_bytes(), 1048578U);
+	}
+	
+	if(shards.size() >= 1)
+	{
+		for(size_t i = 0; i < 256; ++i)
 		{
-			if(i == j)
+			if(i == 0)
 			{
-				EXPECT_EQ(shards[i].result.get_byte_count(j), (1024U * 1024U));
+				EXPECT_EQ(shards[0].result.get_byte_count(i), (1024U * 1024U));
+			}
+			else if(i == 1)
+			{
+				EXPECT_EQ(shards[0].result.get_byte_count(i), 2U);
 			}
 			else{
-				EXPECT_EQ(shards[i].result.get_byte_count(j), 0U);
+				EXPECT_EQ(shards[0].result.get_byte_count(i), 0U);
 			}
 		}
 		
-		EXPECT_EQ(shards[i].result.get_min_byte(), i);
-		EXPECT_EQ(shards[i].result.get_max_byte(), i);
+		EXPECT_EQ(shards[0].result.get_min_byte(), 0);
+		EXPECT_EQ(shards[0].result.get_max_byte(), 1);
+		
+		EXPECT_EQ(shards[0].result.get_byte_sum(), 2U);
+	}
+	
+	if(shards.size() >= 2)
+	{
+		for(size_t i = 0; i < 256; ++i)
+		{
+			if(i == 1)
+			{
+				EXPECT_EQ(shards[1].result.get_byte_count(i), (1024U * 1024U - 2));
+			}
+			else if(i == 2)
+			{
+				EXPECT_EQ(shards[1].result.get_byte_count(i), 4U);
+			}
+			else{
+				EXPECT_EQ(shards[1].result.get_byte_count(i), 0U);
+			}
+		}
+		
+		EXPECT_EQ(shards[1].result.get_min_byte(), 1);
+		EXPECT_EQ(shards[1].result.get_max_byte(), 2);
+		
+		EXPECT_EQ(shards[1].result.get_byte_sum(), ((1024U * 1024U - 2) + (4 * 2)));
 	}
 	
 	if(shards.size() >= 100)
 	{
-		EXPECT_EQ(shards[99].offset, BitOffset((99 * 1024 * 1024), 0));
-		EXPECT_EQ(shards[99].length, ((1024 * 1024) + 1));
+		EXPECT_EQ(shards[99].offset, BitOffset((99 * 1048578), 0));
+		EXPECT_EQ(shards[99].length, 1048379);
 		
-		EXPECT_EQ(shards[99].result.get_total_bytes(), ((1024U * 1024U) + 1U));
-		EXPECT_EQ(shards[99].result.get_byte_sum(), ((1024 * 1024 * 99U) + 0xFE));
+		EXPECT_EQ(shards[99].result.get_total_bytes(), 1048379U);
+		EXPECT_EQ(shards[99].result.get_byte_sum(), ((1048378U * 99U) + 0xFE));
 		
 		for(size_t j = 0; j < 256; ++j)
 		{
 			if(j == 99)
 			{
-				EXPECT_EQ(shards[99].result.get_byte_count(j), (1024U * 1024U));
+				EXPECT_EQ(shards[99].result.get_byte_count(j), 1048378U);
 			}
 			else if(j == 0xFE)
 			{
@@ -918,12 +949,12 @@ TEST(HierarchicalByteAccumulator, EraseData)
 	if(shards.size() >= 1)
 	{
 		EXPECT_EQ(shards[0].offset, BitOffset(0, 0));
-		EXPECT_EQ(shards[0].length, 246);
+		EXPECT_EQ(shards[0].length, 250);
 		
-		EXPECT_EQ(shards[0].result.get_total_bytes(), 246U);
+		EXPECT_EQ(shards[0].result.get_total_bytes(), 250U);
 		EXPECT_EQ(shards[0].result.get_byte_sum(), 3U);
 		
-		EXPECT_EQ(shards[0].result.get_byte_count(0), 244U);
+		EXPECT_EQ(shards[0].result.get_byte_count(0), 248U);
 		EXPECT_EQ(shards[0].result.get_byte_count(1), 1U);
 		EXPECT_EQ(shards[0].result.get_byte_count(2), 1U);
 		EXPECT_EQ(shards[0].result.get_byte_count(4), 0U);
@@ -935,13 +966,13 @@ TEST(HierarchicalByteAccumulator, EraseData)
 	
 	if(shards.size() >= 2)
 	{
-		EXPECT_EQ(shards[1].offset, BitOffset(246, 0));
-		EXPECT_EQ(shards[1].length, 248);
+		EXPECT_EQ(shards[1].offset, BitOffset(250, 0));
+		EXPECT_EQ(shards[1].length, 252);
 		
-		EXPECT_EQ(shards[1].result.get_total_bytes(), 248U);
+		EXPECT_EQ(shards[1].result.get_total_bytes(), 252U);
 		EXPECT_EQ(shards[1].result.get_byte_sum(), 0U);
 		
-		EXPECT_EQ(shards[1].result.get_byte_count(0), 248U);
+		EXPECT_EQ(shards[1].result.get_byte_count(0), 252U);
 		EXPECT_EQ(shards[1].result.get_byte_count(1), 0U);
 		EXPECT_EQ(shards[1].result.get_byte_count(2), 0U);
 		EXPECT_EQ(shards[1].result.get_byte_count(4), 0U);
@@ -953,13 +984,13 @@ TEST(HierarchicalByteAccumulator, EraseData)
 	
 	if(shards.size() >= 3)
 	{
-		EXPECT_EQ(shards[2].offset, BitOffset(494, 0));
-		EXPECT_EQ(shards[2].length, 246);
+		EXPECT_EQ(shards[2].offset, BitOffset(502, 0));
+		EXPECT_EQ(shards[2].length, 250);
 		
-		EXPECT_EQ(shards[2].result.get_total_bytes(), 246U);
+		EXPECT_EQ(shards[2].result.get_total_bytes(), 250U);
 		EXPECT_EQ(shards[2].result.get_byte_sum(), 0U);
 		
-		EXPECT_EQ(shards[2].result.get_byte_count(0), 246U);
+		EXPECT_EQ(shards[2].result.get_byte_count(0), 250U);
 		EXPECT_EQ(shards[2].result.get_byte_count(1), 0U);
 		EXPECT_EQ(shards[2].result.get_byte_count(2), 0U);
 		EXPECT_EQ(shards[2].result.get_byte_count(4), 0U);
@@ -971,13 +1002,13 @@ TEST(HierarchicalByteAccumulator, EraseData)
 	
 	if(shards.size() >= 4)
 	{
-		EXPECT_EQ(shards[3].offset, BitOffset(740, 0));
-		EXPECT_EQ(shards[3].length, 260);
+		EXPECT_EQ(shards[3].offset, BitOffset(752, 0));
+		EXPECT_EQ(shards[3].length, 248);
 		
-		EXPECT_EQ(shards[3].result.get_total_bytes(), 260U);
+		EXPECT_EQ(shards[3].result.get_total_bytes(), 248U);
 		EXPECT_EQ(shards[3].result.get_byte_sum(), 0U);
 		
-		EXPECT_EQ(shards[3].result.get_byte_count(0), 260U);
+		EXPECT_EQ(shards[3].result.get_byte_count(0), 248U);
 		EXPECT_EQ(shards[3].result.get_byte_count(1), 0U);
 		EXPECT_EQ(shards[3].result.get_byte_count(2), 0U);
 		EXPECT_EQ(shards[3].result.get_byte_count(4), 0U);
@@ -1025,12 +1056,12 @@ TEST(HierarchicalByteAccumulator, EraseDataCacheMiss)
 	if(shards.size() >= 1)
 	{
 		EXPECT_EQ(shards[0].offset, BitOffset(0, 0));
-		EXPECT_EQ(shards[0].length, 246);
+		EXPECT_EQ(shards[0].length, 250);
 		
-		EXPECT_EQ(shards[0].result.get_total_bytes(), 246U);
+		EXPECT_EQ(shards[0].result.get_total_bytes(), 250U);
 		EXPECT_EQ(shards[0].result.get_byte_sum(), 3U);
 		
-		EXPECT_EQ(shards[0].result.get_byte_count(0), 244U);
+		EXPECT_EQ(shards[0].result.get_byte_count(0), 248U);
 		EXPECT_EQ(shards[0].result.get_byte_count(1), 1U);
 		EXPECT_EQ(shards[0].result.get_byte_count(2), 1U);
 		EXPECT_EQ(shards[0].result.get_byte_count(4), 0U);
@@ -1042,13 +1073,13 @@ TEST(HierarchicalByteAccumulator, EraseDataCacheMiss)
 	
 	if(shards.size() >= 2)
 	{
-		EXPECT_EQ(shards[1].offset, BitOffset(246, 0));
-		EXPECT_EQ(shards[1].length, 248);
+		EXPECT_EQ(shards[1].offset, BitOffset(250, 0));
+		EXPECT_EQ(shards[1].length, 252);
 		
-		EXPECT_EQ(shards[1].result.get_total_bytes(), 248U);
+		EXPECT_EQ(shards[1].result.get_total_bytes(), 252U);
 		EXPECT_EQ(shards[1].result.get_byte_sum(), 0U);
 		
-		EXPECT_EQ(shards[1].result.get_byte_count(0), 248U);
+		EXPECT_EQ(shards[1].result.get_byte_count(0), 252U);
 		EXPECT_EQ(shards[1].result.get_byte_count(1), 0U);
 		EXPECT_EQ(shards[1].result.get_byte_count(2), 0U);
 		EXPECT_EQ(shards[1].result.get_byte_count(4), 0U);
@@ -1060,13 +1091,13 @@ TEST(HierarchicalByteAccumulator, EraseDataCacheMiss)
 	
 	if(shards.size() >= 3)
 	{
-		EXPECT_EQ(shards[2].offset, BitOffset(494, 0));
-		EXPECT_EQ(shards[2].length, 246);
+		EXPECT_EQ(shards[2].offset, BitOffset(502, 0));
+		EXPECT_EQ(shards[2].length, 250);
 		
-		EXPECT_EQ(shards[2].result.get_total_bytes(), 246U);
+		EXPECT_EQ(shards[2].result.get_total_bytes(), 250U);
 		EXPECT_EQ(shards[2].result.get_byte_sum(), 0U);
 		
-		EXPECT_EQ(shards[2].result.get_byte_count(0), 246U);
+		EXPECT_EQ(shards[2].result.get_byte_count(0), 250U);
 		EXPECT_EQ(shards[2].result.get_byte_count(1), 0U);
 		EXPECT_EQ(shards[2].result.get_byte_count(2), 0U);
 		EXPECT_EQ(shards[2].result.get_byte_count(4), 0U);
@@ -1078,13 +1109,13 @@ TEST(HierarchicalByteAccumulator, EraseDataCacheMiss)
 	
 	if(shards.size() >= 4)
 	{
-		EXPECT_EQ(shards[3].offset, BitOffset(740, 0));
-		EXPECT_EQ(shards[3].length, 260);
+		EXPECT_EQ(shards[3].offset, BitOffset(752, 0));
+		EXPECT_EQ(shards[3].length, 248);
 		
-		EXPECT_EQ(shards[3].result.get_total_bytes(), 260U);
+		EXPECT_EQ(shards[3].result.get_total_bytes(), 248U);
 		EXPECT_EQ(shards[3].result.get_byte_sum(), 0U);
 		
-		EXPECT_EQ(shards[3].result.get_byte_count(0), 260U);
+		EXPECT_EQ(shards[3].result.get_byte_count(0), 248U);
 		EXPECT_EQ(shards[3].result.get_byte_count(1), 0U);
 		EXPECT_EQ(shards[3].result.get_byte_count(2), 0U);
 		EXPECT_EQ(shards[3].result.get_byte_count(4), 0U);

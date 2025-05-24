@@ -85,12 +85,20 @@ std::vector<REHex::HierarchicalByteAccumulator::Shard> REHex::HierarchicalByteAc
 		if(avg_target_shard_size < min_shard_size)
 		{
 			size_t max_num_shards = (range_length / (off_t)(min_shard_size)) + 1;
-			l1_slots_per_shard = std::max<size_t>((l1_cache.size() / max_num_shards), 1);
 			max_shards = max_num_shards;
 		}
 		else{
-			l1_slots_per_shard = std::max<size_t>((l1_cache.size() / target_num_shards), 1);
 			max_shards = target_num_shards;
+		}
+		
+		l1_slots_per_shard = l1_cache.size() / max_shards;
+		if(l1_slots_per_shard == 0)
+		{
+			l1_slots_per_shard = 1;
+		}
+		else if((l1_cache.size() % max_shards) != 0)
+		{
+			++l1_slots_per_shard;
 		}
 		
 		for(size_t i = 0, j = 0; i < l1_cache.size(); ++j)
@@ -244,15 +252,11 @@ void REHex::HierarchicalByteAccumulator::update_chunk_size()
 	std::vector<L1CacheNode> new_l1_cache;
 	new_l1_cache.reserve(l1_slot_count);
 	
-	l1_slot_base_size = range_length / (l1_slot_count - 1);
+	l1_slot_base_size = range_length / l1_slot_count + (off_t)((range_length % l1_slot_count) != 0);
 	
 	if(l1_slot_base_size == 0)
 	{
 		l1_slot_base_size = 1;
-	}
-	else if(l1_slot_base_size > (off_t)(new_chunk_size) && (l1_slot_base_size % new_chunk_size) != 0)
-	{
-		l1_slot_base_size -= l1_slot_base_size % new_chunk_size;
 	}
 	
 	off_t next_l1_offset = 0;

@@ -89,6 +89,12 @@ Finally, you can install the package:
 ### FreeBSD
     $ pkg install rehex
 
+### Gentoo (pentoo-overlay)
+    $ USE="git" emerge eselect-repository -av
+    $ eselect repository enable pentoo
+    $ emaint -a sync
+    $ emerge app-editors/rehex -va
+    
 ## Building
 
 Compiling REHex from source is described in [COMPILING.md](COMPILING.md).

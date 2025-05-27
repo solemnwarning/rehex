@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -63,6 +63,11 @@ namespace REHex
 			ByteRangeSet get_queue() const;
 			
 			/**
+			 * @brief Check if any ranges are queued or processing.
+			*/
+			REHEX_NODISCARD bool queue_empty() const;
+			
+			/**
 			 * @brief Add a range of bytes to the work queue.
 			 *
 			 * If the given range intersects with a range that is already being
@@ -99,6 +104,28 @@ namespace REHex
 			void clear_queue();
 			
 			/**
+			 * @brief Adjust the queue for data being erased from file.
+			 *
+			 * Ranges after the section erased will be moved back by the size of the
+			 * insertion. Ranges wholly within the erased section will be lost. Ranges
+			 * on either side of the erase will be truncated and merged as necessary.
+			 *
+			 * NOTE: The RangeProcessor *MUST* be paused before calling this method.
+			*/
+			void data_inserted(off_t offset, off_t length);
+			
+			/**
+			 * @brief Adjust the queue for data being erased from file.
+			 *
+			 * Ranges after the section erased will be moved back by the size of the
+			 * insertion. Ranges wholly within the erased section will be lost. Ranges
+			 * on either side of the erase will be truncated and merged as necessary.
+			 *
+			 * NOTE: The RangeProcessor *MUST* be paused before calling this method.
+			*/
+			void data_erased(off_t offset, off_t length);
+			
+			/**
 			 * @brief Pause worker threads.
 			 *
 			 * Pauses any worker threads. Will not return until any work functions
@@ -110,6 +137,11 @@ namespace REHex
 			 * @brief Resume paused worker threads.
 			*/
 			void resume_threads();
+			
+			/**
+			 * @brief Check if this RangeProcessor is paused.
+			*/
+			REHEX_NODISCARD bool paused() const;
 			
 			/**
 			 * @brief Wait for work queue to be empty.

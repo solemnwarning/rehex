@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -55,6 +55,14 @@ REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 	return merged;
 }
 
+bool REHex::RangeProcessor::queue_empty() const
+{
+	assert(!in_work_func);
+	
+	std::lock_guard<std::mutex> pl(pause_lock);
+	return queued.empty() && pending.empty() && working.empty();
+}
+
 void REHex::RangeProcessor::queue_range(off_t offset, off_t length)
 {
 	assert(!in_work_func);
@@ -97,6 +105,18 @@ void REHex::RangeProcessor::clear_queue()
 	std::lock_guard<std::mutex> pl(pause_lock);
 	pending.clear_all();
 	queued.clear_all();
+}
+
+void REHex::RangeProcessor::data_inserted(off_t offset, off_t length)
+{
+	assert(task_paused);
+	pending.data_inserted(offset, length);
+}
+
+void REHex::RangeProcessor::data_erased(off_t offset, off_t length)
+{
+	assert(task_paused);
+	pending.data_erased(offset, length);
 }
 
 void REHex::RangeProcessor::queue_range_locked(off_t offset, off_t length)
@@ -273,6 +293,12 @@ void REHex::RangeProcessor::resume_threads()
 			start_threads();
 		}
 	}
+}
+
+bool REHex::RangeProcessor::paused() const
+{
+	assert(!in_work_func);
+	return task_paused;
 }
 
 void REHex::RangeProcessor::wait_for_completion()

@@ -62,7 +62,7 @@ class StringPanelTest: public ::testing::Test
 			
 			frame.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 			{
-				if(string_panel->get_num_threads() == 0)
+				if(!string_panel->search_pending())
 				{
 					wxTheApp->ExitMainLoop();
 				}
@@ -92,8 +92,6 @@ TEST_F(StringPanelTest, EmptyFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel doesn't spawn workers for an empty file";
-	
 	ByteRangeSet strings = string_panel->get_strings();
 	std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
 	
@@ -111,12 +109,9 @@ TEST_F(StringPanelTest, TextOnlyFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (1024 * 1024)) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	ByteRangeSet strings = string_panel->get_strings();
 	std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
@@ -137,12 +132,9 @@ TEST_F(StringPanelTest, BinaryOnlyFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	EXPECT_TRUE(string_panel->get_num_threads() > 0U) << "StringPanel spawns workers for non-empty file";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (1024 * 1024)) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	ByteRangeSet strings = string_panel->get_strings();
 	std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
@@ -167,12 +159,9 @@ TEST_F(StringPanelTest, MixedFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	ByteRangeSet strings = string_panel->get_strings();
 	std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
@@ -203,7 +192,6 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -219,12 +207,9 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	
 	doc->overwrite_data(150, BIN_DATA.data(), 4);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an overwrite";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -255,7 +240,6 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -271,12 +255,9 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	
 	doc->overwrite_data(132, BIN_DATA.data(), 7);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an overwrite";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -308,7 +289,6 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -324,12 +304,9 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	
 	doc->overwrite_data(131, BIN_DATA.data(), 8);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an overwrite";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -359,7 +336,6 @@ TEST_F(StringPanelTest, OverwriteDataCompletesString)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -373,12 +349,9 @@ TEST_F(StringPanelTest, OverwriteDataCompletesString)
 	unsigned const char DATA[] = { 'd' };
 	doc->overwrite_data(131, DATA, 1);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an overwrite";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -409,7 +382,6 @@ TEST_F(StringPanelTest, InsertData)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -428,12 +400,9 @@ TEST_F(StringPanelTest, InsertData)
 	
 	doc->insert_data(259, INSERT_DATA, 7);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an insert";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1031U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -465,7 +434,6 @@ TEST_F(StringPanelTest, InsertDataCompletesString)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -480,12 +448,9 @@ TEST_F(StringPanelTest, InsertDataCompletesString)
 	
 	doc->insert_data(131, INSERT_DATA, 1);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an insert";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1025U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -516,7 +481,6 @@ TEST_F(StringPanelTest, EraseData)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -533,12 +497,9 @@ TEST_F(StringPanelTest, EraseData)
 	
 	doc->erase_data(260, 6);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an erase";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1018U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -570,7 +531,6 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -586,12 +546,9 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	
 	doc->erase_data(259, 16);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an erase";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1008U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -621,7 +578,6 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -637,12 +593,9 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	
 	doc->erase_data(142, 114);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an erase";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 910U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -672,7 +625,6 @@ TEST_F(StringPanelTest, EraseDataCompletesString)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -685,12 +637,9 @@ TEST_F(StringPanelTest, EraseDataCompletesString)
 	
 	doc->erase_data(131, 1);
 	
-	EXPECT_EQ(string_panel->get_num_threads(), 1U) << "StringPanel spawns a worker for an erase";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1023U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -725,7 +674,6 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	wait_for_idle(20000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), (off_t)(16 * MiB));
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -747,12 +695,9 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	doc->insert_data(1 * MiB, BIN_DATA.data(), 16 * MiB);
 	doc->erase_data(41 * MiB, 1 * MiB);
 	
-	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawned worker threads";
-	
 	wait_for_idle(30000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (off_t)(49 * MiB + 320 * kiB)) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -814,7 +759,6 @@ TEST_F(StringPanelTest, UTF8)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 0x50U);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -864,7 +808,6 @@ TEST_F(StringPanelTest, UTF16)
 	wait_for_idle(10000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 0x38);
-	ASSERT_EQ(string_panel->get_num_threads(), 0U);
 	
 	{
 		ByteRangeSet strings = string_panel->get_strings();
@@ -893,12 +836,9 @@ TEST_F(StringPanelTest, SelectAllCopyText)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	ByteRangeSet strings = string_panel->get_strings();
 	std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());
@@ -938,12 +878,9 @@ TEST_F(StringPanelTest, SelectSomeCopyOffsetAndText)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	EXPECT_NE(string_panel->get_num_threads(), 0U) << "StringPanel spawns workers for non-empty file";
-	
 	wait_for_idle(10000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
-	EXPECT_EQ(string_panel->get_num_threads(), 0U) << "StringPanel workers exited";
 	
 	ByteRangeSet strings = string_panel->get_strings();
 	std::vector<ByteRangeSet::Range> got_strings(strings.begin(), strings.end());

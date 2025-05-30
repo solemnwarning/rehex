@@ -60,6 +60,13 @@ _rehex_perl_libs_build_ident="2"
 
 _rehex_macos_version_min=10.13
 
+if which python3 > /dev/null 2>&1
+then
+	_rehex_python=python3
+else
+	_rehex_python=python
+fi
+
 _rehex_ok=1
 
 # https://stackoverflow.com/a/28776166
@@ -156,7 +163,7 @@ then
 			tar -xf "${_rehex_botan_tar}" -C "botan-${_rehex_botan_build_ident}-x86_64"
 			pushd "botan-${_rehex_botan_build_ident}-x86_64/Botan-${_rehex_botan_version}"
 	
-			python configure.py \
+			"${_rehex_python}" configure.py \
 				--minimized-build \
 				--enable-modules=md5,sha1,sha2_32,sha2_64 \
 				--cpu=x86_64 \
@@ -193,7 +200,7 @@ then
 			tar -xf "${_rehex_botan_tar}" -C "botan-${_rehex_botan_build_ident}-arm64"
 			pushd "botan-${_rehex_botan_build_ident}-arm64/Botan-${_rehex_botan_version}"
 	
-			python configure.py \
+			"${_rehex_python}" configure.py \
 				--minimized-build \
 				--enable-modules=md5,sha1,sha2_32,sha2_64 \
 				--cpu=arm64 \
@@ -939,6 +946,7 @@ unset _rehex_ok
 unset _rehex_arch_suffix
 unset _rehex_arch_flags
 unset _rehex_macos_version_min
+unset _rehex_python
 
 unset _rehex_perl_libs_build_ident
 unset _rehex_cpanm_sha256

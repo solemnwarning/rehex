@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,7 +33,7 @@ TEST(Checksum, MD5)
 	ASSERT_NE(md5_algo, nullptr) << "MD5 algorithm is registered";
 	
 	{
-		ChecksumGenerator *md5_gen = md5_algo->factory();
+		std::unique_ptr<ChecksumGenerator> md5_gen(md5_algo->factory());
 		
 		md5_gen->add_data("The quick brown fox jumps over the lazy dog", strlen("The quick brown fox jumps over the lazy dog"));
 		md5_gen->finish();
@@ -48,7 +48,7 @@ TEST(Checksum, MD5)
 	}
 	
 	{
-		ChecksumGenerator *md5_gen = md5_algo->factory();
+		std::unique_ptr<ChecksumGenerator> md5_gen(md5_algo->factory());
 		
 		md5_gen->add_data("The quick brown fox", strlen("The quick brown fox"));
 		md5_gen->add_data(" jumps over the lazy dog", strlen(" jumps over the lazy dog"));
@@ -66,7 +66,7 @@ TEST(Checksum, SHA1)
 	ASSERT_NE(sha1_algo, nullptr) << "SHA-1 algorithm is registered";
 	
 	{
-		ChecksumGenerator *sha1_gen = sha1_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha1_gen(sha1_algo->factory());
 		
 		sha1_gen->add_data("abc", strlen("abc"));
 		sha1_gen->finish();
@@ -81,7 +81,7 @@ TEST(Checksum, SHA1)
 	}
 	
 	{
-		ChecksumGenerator *sha1_gen = sha1_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha1_gen(sha1_algo->factory());
 		
 		sha1_gen->add_data("abcdbcdecdef", strlen("abcdbcdecdef"));
 		sha1_gen->add_data("defgefghfghighi", strlen("defgefghfghighi"));
@@ -101,7 +101,7 @@ TEST(Checksum, SHA224)
 	ASSERT_NE(sha224_algo, nullptr) << "SHA-224 algorithm is registered";
 	
 	{
-		ChecksumGenerator *sha224_gen = sha224_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha224_gen(sha224_algo->factory());
 		
 		sha224_gen->add_data("The quick brown fox jumps over the lazy dog", strlen("The quick brown fox jumps over the lazy dog"));
 		sha224_gen->finish();
@@ -116,7 +116,7 @@ TEST(Checksum, SHA224)
 	}
 	
 	{
-		ChecksumGenerator *sha224_gen = sha224_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha224_gen(sha224_algo->factory());
 		
 		sha224_gen->add_data("The quick brown fox jumps ", strlen("The quick brown fox jumps "));
 		sha224_gen->add_data("over the lazy dog", strlen("over the lazy dog"));
@@ -134,7 +134,7 @@ TEST(Checksum, SHA256)
 	ASSERT_NE(sha256_algo, nullptr) << "SHA-256 algorithm is registered";
 	
 	{
-		ChecksumGenerator *sha256_gen = sha256_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha256_gen(sha256_algo->factory());
 		
 		sha256_gen->add_data("The quick brown fox jumps over the lazy dog", strlen("The quick brown fox jumps over the lazy dog"));
 		sha256_gen->finish();
@@ -149,7 +149,7 @@ TEST(Checksum, SHA256)
 	}
 	
 	{
-		ChecksumGenerator *sha256_gen = sha256_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha256_gen(sha256_algo->factory());
 		
 		sha256_gen->add_data("The quick brown fox jumps ", strlen("The quick brown fox jumps "));
 		sha256_gen->add_data("over the lazy dog", strlen("over the lazy dog"));
@@ -167,7 +167,7 @@ TEST(Checksum, SHA384)
 	ASSERT_NE(sha384_algo, nullptr) << "SHA-384 algorithm is registered";
 	
 	{
-		ChecksumGenerator *sha384_gen = sha384_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha384_gen(sha384_algo->factory());
 		
 		sha384_gen->add_data("The quick brown fox jumps over the lazy dog", strlen("The quick brown fox jumps over the lazy dog"));
 		sha384_gen->finish();
@@ -182,7 +182,7 @@ TEST(Checksum, SHA384)
 	}
 	
 	{
-		ChecksumGenerator *sha384_gen = sha384_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha384_gen(sha384_algo->factory());
 		
 		sha384_gen->add_data("The quick brown fox jumps ", strlen("The quick brown fox jumps "));
 		sha384_gen->add_data("over the lazy dog", strlen("over the lazy dog"));
@@ -200,7 +200,7 @@ TEST(Checksum, SHA512)
 	ASSERT_NE(sha512_algo, nullptr) << "SHA-512 algorithm is registered";
 	
 	{
-		ChecksumGenerator *sha512_gen = sha512_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha512_gen(sha512_algo->factory());
 		
 		sha512_gen->add_data("The quick brown fox jumps over the lazy dog", strlen("The quick brown fox jumps over the lazy dog"));
 		sha512_gen->finish();
@@ -215,7 +215,7 @@ TEST(Checksum, SHA512)
 	}
 	
 	{
-		ChecksumGenerator *sha512_gen = sha512_algo->factory();
+		std::unique_ptr<ChecksumGenerator> sha512_gen(sha512_algo->factory());
 		
 		sha512_gen->add_data("The quick brown fox jumps ", strlen("The quick brown fox jumps "));
 		sha512_gen->add_data("over the lazy dog", strlen("over the lazy dog"));
@@ -233,7 +233,7 @@ TEST(Checksum, CRC8)
 	ASSERT_NE(crc_algo, nullptr) << "CRC-8 algorithm is registered";
 	
 	{
-		ChecksumGenerator *crc_gen = crc_algo->factory();
+		std::unique_ptr<ChecksumGenerator> crc_gen(crc_algo->factory());
 		
 		crc_gen->add_data("123456789", strlen("123456789"));
 		crc_gen->finish();
@@ -254,7 +254,7 @@ TEST(Checksum, CRC8)
 	}
 	
 	{
-		ChecksumGenerator *crc_gen = crc_algo->factory();
+		std::unique_ptr<ChecksumGenerator> crc_gen(crc_algo->factory());
 		
 		crc_gen->add_data("123456", strlen("123456"));
 		crc_gen->add_data("789", strlen("789"));
@@ -272,7 +272,7 @@ TEST(Checksum, CRC32)
 	ASSERT_NE(crc_algo, nullptr) << "CRC-32 algorithm is registered";
 	
 	{
-		ChecksumGenerator *crc_gen = crc_algo->factory();
+		std::unique_ptr<ChecksumGenerator> crc_gen(crc_algo->factory());
 		
 		crc_gen->add_data("123456789", strlen("123456789"));
 		crc_gen->finish();
@@ -293,7 +293,7 @@ TEST(Checksum, CRC32)
 	}
 	
 	{
-		ChecksumGenerator *crc_gen = crc_algo->factory();
+		std::unique_ptr<ChecksumGenerator> crc_gen(crc_algo->factory());
 		
 		crc_gen->add_data("12", strlen("12"));
 		crc_gen->add_data("3456789", strlen("3456789"));
@@ -311,7 +311,7 @@ TEST(Checksum, Alder32)
 	ASSERT_NE(a32_algo, nullptr) << "Adler-32 algorithm is registered";
 	
 	{
-		ChecksumGenerator *a32_gen = a32_algo->factory();
+		std::unique_ptr<ChecksumGenerator> a32_gen(a32_algo->factory());
 		
 		a32_gen->add_data("test", strlen("test"));
 		a32_gen->finish();
@@ -326,7 +326,7 @@ TEST(Checksum, Alder32)
 	}
 	
 	{
-		ChecksumGenerator *a32_gen = a32_algo->factory();
+		std::unique_ptr<ChecksumGenerator> a32_gen(a32_algo->factory());
 		
 		a32_gen->add_data("The quick", strlen("The quick"));
 		a32_gen->add_data(" brown fox", strlen(" brown fox"));

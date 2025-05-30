@@ -73,6 +73,11 @@ class AutoJSON
 		AutoJSON(const char *json_text);
 		~AutoJSON();
 		
+		AutoJSON(const AutoJSON&) = delete;
+		AutoJSON &operator=(const AutoJSON&) = delete;
+		AutoJSON(AutoJSON&&) = delete;
+		AutoJSON &operator=(AutoJSON&&) = delete;
+		
 		std::string serialise() const;
 		
 		bool operator==(const AutoJSON &rhs) const;

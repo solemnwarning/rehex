@@ -2054,7 +2054,7 @@ json_t *REHex::Document::serialise_metadata(bool even_if_empty) const
 		const wxScopedCharBuffer utf8_text = c->second.text->utf8_str();
 		
 		json_t *comment = json_object();
-		if(json_array_append(comments, comment) == -1
+		if(json_array_append_new(comments, comment) == -1
 			|| json_object_set_new(comment, "offset", c->first.offset.to_json()) == -1
 			|| json_object_set_new(comment, "length", c->first.length.to_json()) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
@@ -2082,7 +2082,7 @@ json_t *REHex::Document::serialise_metadata(bool even_if_empty) const
 	for(auto h = this->highlights.begin(); h != this->highlights.end(); ++h)
 	{
 		json_t *highlight = json_object();
-		if(json_array_append(highlights, highlight) == -1
+		if(json_array_append_new(highlights, highlight) == -1
 			|| json_object_set_new(highlight, "offset",     h->first.offset.to_json()) == -1
 			|| json_object_set_new(highlight, "length",     h->first.length.to_json()) == -1
 			|| json_object_set_new(highlight, "colour-idx", json_integer(h->second)) == -1)
@@ -2132,7 +2132,7 @@ json_t *REHex::Document::serialise_metadata(bool even_if_empty) const
 	for(auto r2v = real_to_virt_segs.begin(); r2v != real_to_virt_segs.end(); ++r2v)
 	{
 		json_t *mapping = json_object();
-		if(json_array_append(virt_mappings, mapping) == -1
+		if(json_array_append_new(virt_mappings, mapping) == -1
 			|| json_object_set_new(mapping, "real_offset", json_integer(r2v->first.offset)) == -1
 			|| json_object_set_new(mapping, "virt_offset", json_integer(r2v->second)) == -1
 			|| json_object_set_new(mapping, "length",      json_integer(r2v->first.length)) == -1)
@@ -2705,19 +2705,27 @@ REHex::BitRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_com
 	
 	const unsigned char *data = (const unsigned char*)(GetData());
 	const unsigned char *end = data + GetSize();
-	const Header *header = nullptr;
 	
-	while(data + sizeof(Header) < end && (header = (const Header*)(data)), (data + sizeof(Header) + header->text_length <= end))
+	while(data + sizeof(Header) < end)
 	{
-		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
+		Header header;
+		memcpy(&header, data, sizeof(Header));
 		
-		#ifndef NDEBUG
-		bool x =
-		#endif
-			comments.set(BitOffset::from_int64(header->file_offset), BitOffset::from_int64(header->file_length), REHex::Document::Comment(text));
-		assert(x); /* TODO: Raise some kind of error. Beep? */
-		
-		data += sizeof(Header) + header->text_length;
+		if((data + sizeof(Header) + header.text_length) <= end)
+		{
+			wxString text(wxString::FromUTF8((const char*)(data + sizeof(Header)), header.text_length));
+			
+			#ifndef NDEBUG
+			bool x =
+			#endif
+				comments.set(BitOffset::from_int64(header.file_offset), BitOffset::from_int64(header.file_length), REHex::Document::Comment(text));
+			assert(x); /* TODO: Raise some kind of error. Beep? */
+			
+			data += sizeof(Header) + header.text_length;
+		}
+		else{
+			break;
+		}
 	}
 	
 	return comments;
@@ -2738,14 +2746,17 @@ void REHex::CommentsDataObject::set_comments(const std::list<BitRangeTree<Docume
 	
 	for(auto i = comments.begin(); i != comments.end(); ++i)
 	{
-		Header *header = (Header*)(outp);
-		outp += sizeof(Header);
-		
 		const wxScopedCharBuffer utf8_text = (*i)->value.text->utf8_str();
 		
-		header->file_offset = ((*i)->key.offset - base).to_int64();
-		header->file_length = (*i)->key.length.to_int64();
-		header->text_length = utf8_text.length();
+		Header header;
+		memset(&header, 0, sizeof(header));
+		
+		header.file_offset = ((*i)->key.offset - base).to_int64();
+		header.file_length = (*i)->key.length.to_int64();
+		header.text_length = utf8_text.length();
+		
+		memcpy(outp, &header, sizeof(Header));
+		outp += sizeof(Header);
 		
 		memcpy(outp, utf8_text.data(), utf8_text.length());
 		outp += utf8_text.length();

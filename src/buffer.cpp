@@ -759,16 +759,19 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 		off_t block_rel_len = block->virt_length - block_rel_off;
 		off_t to_copy = std::min(block_rel_len, (max_length - (off_t)(data.size())));
 		
-		const unsigned char *base = block->data.data() + block_rel_off;
-		
-		size_t dst_off = data.size();
-		data.resize(data.size() + to_copy);
-		
-		CarryBits carry = memcpy_left(data.data() + dst_off, base, to_copy, offset.bit());
-		if(dst_off > 0)
+		if(to_copy > 0)
 		{
-			assert((data[dst_off - 1] & carry.mask) == 0);
-			data[dst_off - 1] |= carry.value;
+			const unsigned char *base = block->data.data() + block_rel_off;
+			
+			size_t dst_off = data.size();
+			data.resize(data.size() + to_copy);
+			
+			CarryBits carry = memcpy_left(data.data() + dst_off, base, to_copy, offset.bit());
+			if(dst_off > 0)
+			{
+				assert((data[dst_off - 1] & carry.mask) == 0);
+				data[dst_off - 1] |= carry.value;
+			}
 		}
 		
 		++block;

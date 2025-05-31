@@ -287,6 +287,7 @@ namespace REHex
 			void OnLeftUp(wxMouseEvent &event);
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			void OnMotion(wxMouseEvent &event);
+			void OnNotebookPageChanged(wxNotebookEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

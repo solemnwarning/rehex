@@ -39,6 +39,7 @@ BEGIN_EVENT_TABLE(REHex::ToolDock, REHex::MultiSplitter)
 	EVT_LEFT_UP(REHex::ToolDock::OnLeftUp)
 	EVT_MOUSE_CAPTURE_LOST(REHex::ToolDock::OnMouseCaptureLost)
 	EVT_MOTION(REHex::ToolDock::OnMotion)
+	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::ToolDock::OnNotebookPageChanged)
 END_EVENT_TABLE()
 
 REHex::ToolDock::ToolDock(wxWindow *parent):
@@ -1089,6 +1090,14 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 	}
 	
 	event.Skip();
+}
+
+void REHex::ToolDock::OnNotebookPageChanged(wxNotebookEvent &event)
+{
+	CallAfter([this]()
+	{
+		ApplySizeConstraints();
+	});
 }
 
 BEGIN_EVENT_TABLE(REHex::ToolDock::ToolNotebook, wxNotebook)

@@ -186,6 +186,14 @@ namespace REHex
 				void MoveSplitter(const wxPoint &point, bool force);
 				
 				/**
+				 * @brief Apply size constraints of child cells.
+				 *
+				 * Moves the splitter of a split cell as required to honor the
+				 * current size constraints of any children.
+				*/
+				void ApplySizeConstraints();
+				
+				/**
 				 * @brief Split the cell horizontally.
 				 *
 				 * Splits a cell which is not split into a top and bottom window.
@@ -606,6 +614,14 @@ namespace REHex
 			 * If either the width or height is negative, it will not be changed.
 			*/
 			void SetWindowSize(wxWindow *window, const wxSize &size);
+			
+			/**
+			 * @brief Apply size constraints of child windows.
+			 *
+			 * Moves the splitters as required to honor the current size constraints of
+			 * any child windows.
+			*/
+			void ApplySizeConstraints();
 			
 			/**
 			 * @brief Returns the default sash size in pixels.

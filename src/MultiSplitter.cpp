@@ -359,6 +359,14 @@ void REHex::MultiSplitter::SetWindowSize(wxWindow *window, const wxSize &size)
 	}
 }
 
+void REHex::MultiSplitter::ApplySizeConstraints()
+{
+	if(m_cells)
+	{
+		m_cells->ApplySizeConstraints();
+	}
+}
+
 int REHex::MultiSplitter::GetDefaultSashSize() const
 {
 	wxRendererNative &renderer = wxRendererNative::Get();
@@ -1472,6 +1480,84 @@ void REHex::MultiSplitter::Cell::MoveSplitter(const wxPoint &point, bool force)
 		
 		m_left->Resize(wxRect(m_rect.x, m_rect.y, left_width, m_rect.height));
 		m_right->Resize(wxRect((m_rect.x + left_width), m_rect.y, right_width, m_rect.height));
+	}
+}
+
+void REHex::MultiSplitter::Cell::ApplySizeConstraints()
+{
+	if(IsHorizontalSplit())
+	{
+		if(!(m_top->IsHidden() || m_bottom->IsHidden()))
+		{
+			int top_height = m_bottom->GetRect().y - m_rect.y;
+			
+			int top_min_height = m_top->GetMinSize().GetHeight();
+			int bottom_min_height = m_bottom->GetMinSize().GetHeight();
+			
+			if(top_min_height > 0 && top_height < top_min_height)
+			{
+				top_height = top_min_height;
+			}
+			else if(bottom_min_height > 0 && (m_rect.height - top_height) < bottom_min_height)
+			{
+				top_height = m_rect.height - bottom_min_height;
+			}
+			
+			int top_max_height = m_top->GetMaxSize().GetHeight();
+			int bottom_max_height = m_bottom->GetMaxSize().GetHeight();
+			
+			if(top_max_height > 0 && top_height > top_max_height)
+			{
+				top_height = top_max_height;
+			}
+			else if(bottom_max_height > 0 && (m_rect.height - top_height) > bottom_max_height)
+			{
+				top_height = m_rect.height - bottom_max_height;
+			}
+			
+			m_top->Resize(wxRect(m_rect.x, m_rect.y, m_rect.width, top_height));
+			m_bottom->Resize(wxRect(m_rect.x, (m_rect.y + top_height), m_rect.width, (m_rect.height - top_height)));
+		}
+		
+		m_top->ApplySizeConstraints();
+		m_bottom->ApplySizeConstraints();
+	}
+	else if(IsVerticalSplit())
+	{
+		if(!(m_left->IsHidden() || m_right->IsHidden()))
+		{
+			int left_width = m_right->GetRect().x - m_rect.x;
+			
+			int left_min_width = m_left->GetMinSize().GetWidth();
+			int right_min_width = m_right->GetMinSize().GetWidth();
+			
+			if(left_min_width > 0 && left_width < left_min_width)
+			{
+				left_width = left_min_width;
+			}
+			else if(right_min_width > 0 && (m_rect.width - left_width) < right_min_width)
+			{
+				left_width = m_rect.width - right_min_width;
+			}
+			
+			int left_max_width = m_left->GetMaxSize().GetWidth();
+			int right_max_width = m_right->GetMaxSize().GetWidth();
+			
+			if(left_max_width > 0 && left_width > left_max_width)
+			{
+				left_width = left_max_width;
+			}
+			else if(right_max_width > 0 && (m_rect.width - left_width) > right_max_width)
+			{
+				left_width = m_rect.width - right_max_width;
+			}
+			
+			m_left->Resize(wxRect(m_rect.x, m_rect.y, left_width, m_rect.height));
+			m_right->Resize(wxRect((m_rect.x + left_width), m_rect.y, (m_rect.width - left_width), m_rect.height));
+		}
+		
+		m_left->ApplySizeConstraints();
+		m_right->ApplySizeConstraints();
 	}
 }
 

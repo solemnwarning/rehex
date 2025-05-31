@@ -572,6 +572,171 @@ TEST_F(MultiSplitterTestHorizontalLayout, ResizeZeroWeights)
 	EXPECT_EQ(right_panel->GetRect(), wxRect(771, 0, 253, 768));
 }
 
+TEST_F(MultiSplitterTestHorizontalLayout, ApplySizeConstraintsNone)
+{
+	left_panel->SetMinSize(wxDefaultSize);
+	left_panel->SetMaxSize(wxDefaultSize);
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	right_panel->SetMinSize(wxDefaultSize);
+	right_panel->SetMaxSize(wxDefaultSize);
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect left_panel_rect = left_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect right_panel_rect = right_panel->GetRect();
+	
+	EXPECT_EQ(left_panel_rect.x, 0);
+	EXPECT_EQ(left_panel_rect.y, 0);
+	EXPECT_EQ(left_panel_rect.width, 510);
+	EXPECT_EQ(left_panel_rect.height, 768);
+	
+	EXPECT_EQ(middle_panel_rect.x, 515);
+	EXPECT_EQ(middle_panel_rect.y, 0);
+	EXPECT_EQ(middle_panel_rect.width, 251);
+	EXPECT_EQ(middle_panel_rect.height, 768);
+	
+	EXPECT_EQ(right_panel_rect.x, 771);
+	EXPECT_EQ(right_panel_rect.y, 0);
+	EXPECT_EQ(right_panel_rect.width, 253);
+	EXPECT_EQ(right_panel_rect.height, 768);
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ApplySizeConstraintsMinWidth)
+{
+	left_panel->SetMinSize(wxSize(600, 1000));
+	left_panel->SetMaxSize(wxDefaultSize);
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	right_panel->SetMinSize(wxSize(300, -1));
+	right_panel->SetMaxSize(wxDefaultSize);
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect left_panel_rect = left_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect right_panel_rect = right_panel->GetRect();
+	
+	EXPECT_EQ(left_panel_rect.x, 0);
+	EXPECT_EQ(left_panel_rect.y, 0);
+	EXPECT_EQ(left_panel_rect.width, 600);
+	EXPECT_EQ(left_panel_rect.height, 768);
+	
+	EXPECT_EQ(middle_panel_rect.x, 605);
+	EXPECT_EQ(middle_panel_rect.y, 0);
+	EXPECT_EQ(middle_panel_rect.width, 114);
+	EXPECT_EQ(middle_panel_rect.height, 768);
+	
+	EXPECT_EQ(right_panel_rect.x, 724);
+	EXPECT_EQ(right_panel_rect.y, 0);
+	EXPECT_EQ(right_panel_rect.width, 300);
+	EXPECT_EQ(right_panel_rect.height, 768);
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ApplySizeConstraintsMinWidthAlreadySatisfied)
+{
+	left_panel->SetMinSize(wxSize(200, 1000));
+	left_panel->SetMaxSize(wxDefaultSize);
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	right_panel->SetMinSize(wxSize(100, -1));
+	right_panel->SetMaxSize(wxDefaultSize);
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect left_panel_rect = left_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect right_panel_rect = right_panel->GetRect();
+	
+	EXPECT_EQ(left_panel_rect.x, 0);
+	EXPECT_EQ(left_panel_rect.y, 0);
+	EXPECT_EQ(left_panel_rect.width, 510);
+	EXPECT_EQ(left_panel_rect.height, 768);
+	
+	EXPECT_EQ(middle_panel_rect.x, 515);
+	EXPECT_EQ(middle_panel_rect.y, 0);
+	EXPECT_EQ(middle_panel_rect.width, 251);
+	EXPECT_EQ(middle_panel_rect.height, 768);
+	
+	EXPECT_EQ(right_panel_rect.x, 771);
+	EXPECT_EQ(right_panel_rect.y, 0);
+	EXPECT_EQ(right_panel_rect.width, 253);
+	EXPECT_EQ(right_panel_rect.height, 768);
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ApplySizeConstraintsMaxWidth)
+{
+	left_panel->SetMinSize(wxDefaultSize);
+	left_panel->SetMaxSize(wxSize(500, 1000));
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	right_panel->SetMinSize(wxDefaultSize);
+	right_panel->SetMaxSize(wxSize(200, -1));
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect left_panel_rect = left_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect right_panel_rect = right_panel->GetRect();
+	
+	EXPECT_EQ(left_panel_rect.x, 0);
+	EXPECT_EQ(left_panel_rect.y, 0);
+	EXPECT_EQ(left_panel_rect.width, 500);
+	EXPECT_EQ(left_panel_rect.height, 768);
+	
+	EXPECT_EQ(middle_panel_rect.x, 505);
+	EXPECT_EQ(middle_panel_rect.y, 0);
+	EXPECT_EQ(middle_panel_rect.width, 314);
+	EXPECT_EQ(middle_panel_rect.height, 768);
+	
+	EXPECT_EQ(right_panel_rect.x, 824);
+	EXPECT_EQ(right_panel_rect.y, 0);
+	EXPECT_EQ(right_panel_rect.width, 200);
+	EXPECT_EQ(right_panel_rect.height, 768);
+}
+
+TEST_F(MultiSplitterTestHorizontalLayout, ApplySizeConstraintsMaxWidthAlreadySatisfied)
+{
+	left_panel->SetMinSize(wxDefaultSize);
+	left_panel->SetMaxSize(wxSize(600, 1000));
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	right_panel->SetMinSize(wxDefaultSize);
+	right_panel->SetMaxSize(wxSize(300, -1));
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect left_panel_rect = left_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect right_panel_rect = right_panel->GetRect();
+	
+	EXPECT_EQ(left_panel_rect.x, 0);
+	EXPECT_EQ(left_panel_rect.y, 0);
+	EXPECT_EQ(left_panel_rect.width, 510);
+	EXPECT_EQ(left_panel_rect.height, 768);
+	
+	EXPECT_EQ(middle_panel_rect.x, 515);
+	EXPECT_EQ(middle_panel_rect.y, 0);
+	EXPECT_EQ(middle_panel_rect.width, 251);
+	EXPECT_EQ(middle_panel_rect.height, 768);
+	
+	EXPECT_EQ(right_panel_rect.x, 771);
+	EXPECT_EQ(right_panel_rect.y, 0);
+	EXPECT_EQ(right_panel_rect.width, 253);
+	EXPECT_EQ(right_panel_rect.height, 768);
+}
+
 TEST_F(MultiSplitterTestVerticalLayout, NeighborSearch)
 {
 	/* Test the neighbor search methods. */
@@ -933,4 +1098,169 @@ TEST_F(MultiSplitterTestVerticalLayout, ResizeZeroWeights)
 	
 	EXPECT_EQ(bottom_cell->GetRect(), wxRect(0, 384, 1024, 384));
 	EXPECT_EQ(bottom_panel->GetRect(), wxRect(0, 387, 1024, 381));
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ApplySizeConstraintsNone)
+{
+	top_panel->SetMinSize(wxDefaultSize);
+	top_panel->SetMaxSize(wxDefaultSize);
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	bottom_panel->SetMinSize(wxDefaultSize);
+	bottom_panel->SetMaxSize(wxDefaultSize);
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect top_panel_rect = top_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect bottom_panel_rect = bottom_panel->GetRect();
+	
+	EXPECT_EQ(top_panel_rect.x, 0);
+	EXPECT_EQ(top_panel_rect.y, 0);
+	EXPECT_EQ(top_panel_rect.width, 1024);
+	EXPECT_EQ(top_panel_rect.height, 190);
+	
+	EXPECT_EQ(middle_panel_rect.x, 0);
+	EXPECT_EQ(middle_panel_rect.y, 195);
+	EXPECT_EQ(middle_panel_rect.width, 1024);
+	EXPECT_EQ(middle_panel_rect.height, 187);
+	
+	EXPECT_EQ(bottom_panel_rect.x, 0);
+	EXPECT_EQ(bottom_panel_rect.y, 387);
+	EXPECT_EQ(bottom_panel_rect.width, 1024);
+	EXPECT_EQ(bottom_panel_rect.height, 381);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ApplySizeConstraintsMinHeight)
+{
+	top_panel->SetMinSize(wxSize(1000, 250));
+	top_panel->SetMaxSize(wxDefaultSize);
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	bottom_panel->SetMinSize(wxSize(-1, 400));
+	bottom_panel->SetMaxSize(wxDefaultSize);
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect top_panel_rect = top_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect bottom_panel_rect = bottom_panel->GetRect();
+	
+	EXPECT_EQ(top_panel_rect.x, 0);
+	EXPECT_EQ(top_panel_rect.y, 0);
+	EXPECT_EQ(top_panel_rect.width, 1024);
+	EXPECT_EQ(top_panel_rect.height, 250);
+	
+	EXPECT_EQ(middle_panel_rect.x, 0);
+	EXPECT_EQ(middle_panel_rect.y, 255);
+	EXPECT_EQ(middle_panel_rect.width, 1024);
+	EXPECT_EQ(middle_panel_rect.height, 108);
+	
+	EXPECT_EQ(bottom_panel_rect.x, 0);
+	EXPECT_EQ(bottom_panel_rect.y, 368);
+	EXPECT_EQ(bottom_panel_rect.width, 1024);
+	EXPECT_EQ(bottom_panel_rect.height, 400);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ApplySizeConstraintsMinHeightAlreadySatisfied)
+{
+	top_panel->SetMinSize(wxSize(1000, 180));
+	top_panel->SetMaxSize(wxDefaultSize);
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	bottom_panel->SetMinSize(wxSize(-1, 200));
+	bottom_panel->SetMaxSize(wxDefaultSize);
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect top_panel_rect = top_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect bottom_panel_rect = bottom_panel->GetRect();
+	
+	EXPECT_EQ(top_panel_rect.x, 0);
+	EXPECT_EQ(top_panel_rect.y, 0);
+	EXPECT_EQ(top_panel_rect.width, 1024);
+	EXPECT_EQ(top_panel_rect.height, 190);
+	
+	EXPECT_EQ(middle_panel_rect.x, 0);
+	EXPECT_EQ(middle_panel_rect.y, 195);
+	EXPECT_EQ(middle_panel_rect.width, 1024);
+	EXPECT_EQ(middle_panel_rect.height, 187);
+	
+	EXPECT_EQ(bottom_panel_rect.x, 0);
+	EXPECT_EQ(bottom_panel_rect.y, 387);
+	EXPECT_EQ(bottom_panel_rect.width, 1024);
+	EXPECT_EQ(bottom_panel_rect.height, 381);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ApplySizeConstraintsMaxHeight)
+{
+	top_panel->SetMinSize(wxDefaultSize);
+	top_panel->SetMaxSize(wxSize(1000, 170));
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	bottom_panel->SetMinSize(wxDefaultSize);
+	bottom_panel->SetMaxSize(wxSize(-1, 350));
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect top_panel_rect = top_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect bottom_panel_rect = bottom_panel->GetRect();
+	
+	EXPECT_EQ(top_panel_rect.x, 0);
+	EXPECT_EQ(top_panel_rect.y, 0);
+	EXPECT_EQ(top_panel_rect.width, 1024);
+	EXPECT_EQ(top_panel_rect.height, 170);
+	
+	EXPECT_EQ(middle_panel_rect.x, 0);
+	EXPECT_EQ(middle_panel_rect.y, 175);
+	EXPECT_EQ(middle_panel_rect.width, 1024);
+	EXPECT_EQ(middle_panel_rect.height, 238);
+	
+	EXPECT_EQ(bottom_panel_rect.x, 0);
+	EXPECT_EQ(bottom_panel_rect.y, 418);
+	EXPECT_EQ(bottom_panel_rect.width, 1024);
+	EXPECT_EQ(bottom_panel_rect.height, 350);
+}
+
+TEST_F(MultiSplitterTestVerticalLayout, ApplySizeConstraintsMaxHeightAlreadySatisfied)
+{
+	top_panel->SetMinSize(wxDefaultSize);
+	top_panel->SetMaxSize(wxSize(1000, 200));
+	
+	middle_panel->SetMinSize(wxDefaultSize);
+	middle_panel->SetMaxSize(wxDefaultSize);
+	
+	bottom_panel->SetMinSize(wxDefaultSize);
+	bottom_panel->SetMaxSize(wxSize(-1, 400));
+	
+	m_splitter->ApplySizeConstraints();
+	
+	wxRect top_panel_rect = top_panel->GetRect();
+	wxRect middle_panel_rect = middle_panel->GetRect();
+	wxRect bottom_panel_rect = bottom_panel->GetRect();
+	
+	EXPECT_EQ(top_panel_rect.x, 0);
+	EXPECT_EQ(top_panel_rect.y, 0);
+	EXPECT_EQ(top_panel_rect.width, 1024);
+	EXPECT_EQ(top_panel_rect.height, 190);
+	
+	EXPECT_EQ(middle_panel_rect.x, 0);
+	EXPECT_EQ(middle_panel_rect.y, 195);
+	EXPECT_EQ(middle_panel_rect.width, 1024);
+	EXPECT_EQ(middle_panel_rect.height, 187);
+	
+	EXPECT_EQ(bottom_panel_rect.x, 0);
+	EXPECT_EQ(bottom_panel_rect.y, 387);
+	EXPECT_EQ(bottom_panel_rect.width, 1024);
+	EXPECT_EQ(bottom_panel_rect.height, 381);
 }

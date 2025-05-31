@@ -11,6 +11,26 @@ Version TBC:
 
  * Add metadata import/export commands (#248).
 
+ * Fix crash when <charset = "US-ASCII"> is specified for a file variable
+   in a template (#246).
+
+ * Add highlight functions to scripting API and template language (#247).
+
+ * Fix memory leaks in bitmap preview tool and metadata serialisation.
+
+ * Suspend scanning for strings when the strings tool is hidden.
+
+ * Fix the continue/reset buttons in the strings tool not working
+   correctly.
+
+ * Fix horizontal scroll position being set out-of-range when the window is
+   resized in some situations.
+
+ * Fix bitmap preview tool not following cursor correctly (#244).
+
+ * Allow detaching tool panels to floating windows or docking them to any
+   side of the main window (#229).
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

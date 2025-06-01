@@ -46,6 +46,7 @@ namespace REHex {
 			wxTimer m_data_update_timer;
 			
 			bool mouse_dragging;
+			bool mouse_in_window;
 			
 			SafeWindowPointer<PopupTipWindow> tip_window;
 			
@@ -53,6 +54,7 @@ namespace REHex {
 			void OnErase(wxEraseEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnMotion(wxMouseEvent &event);
+			void OnMouseEnter(wxMouseEvent &event);
 			void OnMouseLeave(wxMouseEvent &event);
 			void OnLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);

@@ -33,7 +33,7 @@ BEGIN_EVENT_TABLE(REHex::DataMapScrollbar, wxControl)
 	EVT_ERASE_BACKGROUND(REHex::DataMapScrollbar::OnErase)
 	EVT_SIZE(REHex::DataMapScrollbar::OnSize)
 	EVT_MOTION(REHex::DataMapScrollbar::OnMotion)
-	EVT_ENTER_WINDOW(REHex::DataMapScrollbar::OnMotion)
+	EVT_ENTER_WINDOW(REHex::DataMapScrollbar::OnMouseEnter)
 	EVT_LEAVE_WINDOW(REHex::DataMapScrollbar::OnMouseLeave)
 	EVT_LEFT_DOWN(REHex::DataMapScrollbar::OnLeftDown)
 	EVT_LEFT_UP(REHex::DataMapScrollbar::OnLeftUp)
@@ -46,6 +46,7 @@ REHex::DataMapScrollbar::DataMapScrollbar(wxWindow *parent, wxWindowID id, const
 	document_ctrl(document_ctrl),
 	m_source(std::move(source)),
 	mouse_dragging(false),
+	mouse_in_window(false),
 	tip_window(NULL)
 {
 	wxSize client_size = GetClientSize();
@@ -168,6 +169,16 @@ void REHex::DataMapScrollbar::OnSize(wxSizeEvent &event)
 
 void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 {
+	if(!mouse_in_window && !mouse_dragging)
+	{
+		if(tip_window != NULL)
+		{
+			tip_window->Destroy();
+		}
+		
+		return;
+	}
+	
 	if(document_ctrl)
 	{
 		off_t bytes_per_y = std::max<off_t>((view->view_length() / client_height), 1);
@@ -208,11 +219,23 @@ void REHex::DataMapScrollbar::OnMotion(wxMouseEvent &event)
 				tip_window.reset(new PopupTipWindow(this, tip_text, this, event.GetPosition()));
 			}
 		}
+		else if(tip_window != NULL)
+		{
+			tip_window->move_to_cursor_window_position(this, event.GetPosition());
+		}
 	}
+}
+
+void REHex::DataMapScrollbar::OnMouseEnter(wxMouseEvent &event)
+{
+	mouse_in_window = true;
+	OnMotion(event);
 }
 
 void REHex::DataMapScrollbar::OnMouseLeave(wxMouseEvent &event)
 {
+	mouse_in_window = false;
+	
 	if(tip_window != NULL)
 	{
 		tip_window->Destroy();
@@ -251,6 +274,11 @@ void REHex::DataMapScrollbar::OnLeftUp(wxMouseEvent &event)
 	{
 		ReleaseMouse();
 		mouse_dragging = false;
+	}
+	
+	if(!mouse_in_window && tip_window != NULL)
+	{
+		tip_window->Destroy();
 	}
 }
 

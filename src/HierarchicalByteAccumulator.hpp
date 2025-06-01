@@ -122,8 +122,8 @@ namespace REHex
 			ByteRangeSet working;  /**< Ranges currently being processed. */
 			ByteRangeSet blocked;  /**< Ranges which are queued, but already being worked. */
 			
-			ThreadPool::TaskHandle task;
 			bool m_processing;
+			ThreadPool::TaskHandle task;
 			
 		public:
 			/**

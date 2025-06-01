@@ -30,8 +30,8 @@ REHex::HierarchicalByteAccumulator::HierarchicalByteAccumulator(const SharedEvtH
 	min_shard_size(min_shard_size),
 	chunk_size(0),
 	l2_cache(L2_CACHE_SIZE),
-	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1)),
-	m_processing(false)
+	m_processing(false),
+	task(wxGetApp().thread_pool->queue_task([&]() { return task_func(); }, -1))
 {
 	this->view.auto_cleanup_bind(DATA_ERASE,     &REHex::HierarchicalByteAccumulator::OnDataErase,     this);
 	this->view.auto_cleanup_bind(DATA_INSERT,    &REHex::HierarchicalByteAccumulator::OnDataInsert,    this);
@@ -345,10 +345,18 @@ bool REHex::HierarchicalByteAccumulator::task_func()
 		{
 			pending.clear_range(chunk_offset, chunk_length);
 			working.set_range(chunk_offset, chunk_length);
+			
+			if(!m_processing)
+			{
+				m_processing = true;
+				
+				wxCommandEvent *start_event = new wxCommandEvent(PROCESSING_START);
+				start_event->SetEventObject(this);
+				QueueEvent(start_event);
+			}
 		}
 		else{
 			bool finished = pending.empty() && blocked.empty();
-			
 			if(finished && m_processing)
 			{
 				m_processing = false;
@@ -360,15 +368,6 @@ bool REHex::HierarchicalByteAccumulator::task_func()
 			
 			return finished;
 		}
-	}
-	
-	if(!m_processing)
-	{
-		m_processing = true;
-		
-		wxCommandEvent *start_event = new wxCommandEvent(PROCESSING_START);
-		start_event->SetEventObject(this);
-		QueueEvent(start_event);
 	}
 	
 	process_chunk(chunk_offset, chunk_length, l1_slot_idx);

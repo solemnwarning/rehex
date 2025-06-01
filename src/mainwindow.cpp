@@ -418,9 +418,21 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		tool_panels_menu = new wxMenu;
 		view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
 		
+		std::vector<const ToolPanelRegistration*> tools;
+		
 		for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 		{
-			const ToolPanelRegistration *tpr = i->second;
+			tools.emplace_back(i->second);
+		}
+		
+		std::sort(tools.begin(), tools.end(), [](const ToolPanelRegistration *a, const ToolPanelRegistration *b)
+		{
+			return a->label < b->label;
+		});
+		
+		for(auto i = tools.begin(); i != tools.end(); ++i)
+		{
+			const ToolPanelRegistration *tpr = *i;
 			wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->label);
 			
 			Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)

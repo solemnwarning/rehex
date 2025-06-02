@@ -40,6 +40,9 @@ CXXFLAGS += -Iinclude/gcc-win-include/
 CFLAGS   += -DREHEX_CACHE_STRING_BITMAPS
 CXXFLAGS += -DREHEX_CACHE_STRING_BITMAPS
 
+CFLAGS   += -D_FILE_OFFSET_BITS=64
+CXXFLAGS += -D_FILE_OFFSET_BITS=64
+
 include Makefile
 
 # Any embedded quotes passed to windres via -D are lost, so we need to write the version string to

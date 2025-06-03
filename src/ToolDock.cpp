@@ -116,25 +116,27 @@ void REHex::ToolDock::AddMainPanel(wxWindow *main_panel)
 
 void REHex::ToolDock::DestroyTool(ToolPanel *tool)
 {
-	ToolNotebook *notebook;
-	int page_idx = m_right_notebook->FindPage(tool);
+	ToolFrame *frame = FindFrameByTool(tool);
+	ToolNotebook *notebook = FindNotebookByTool(tool);
 	
-	if(page_idx != wxNOT_FOUND)
+	assert(frame != NULL || notebook != NULL);
+	
+	if(frame != NULL)
 	{
-		notebook = m_right_notebook;
+		frame->RemoveTool(tool);
+		tool->Destroy();
+		
+		if(frame->GetTools().empty())
+		{
+			frame->Destroy();
+		}
 	}
-	else{
-		page_idx = m_bottom_notebook->FindPage(tool);
-		notebook = m_bottom_notebook;
-	}
-	
-	assert(page_idx != wxNOT_FOUND);
-	
-	notebook->DeletePage(page_idx);
-	
-	if(notebook->GetPageCount() == 0)
+	else if(notebook != NULL)
 	{
-		notebook->Hide();
+		int page_idx = notebook->FindPage(tool);
+		assert(page_idx != wxNOT_FOUND);
+		
+		notebook->DeletePage(page_idx);
 	}
 }
 

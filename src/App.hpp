@@ -247,6 +247,13 @@ namespace REHex {
 			static std::string get_home_directory();
 			#endif
 			
+			#ifdef REHEX_ENABLE_WAYLAND_HACKS
+			/**
+			 * @brief Check if the application is running under Wayland.
+			*/
+			static bool is_wayland_session();
+			#endif
+			
 		private:
 			std::string last_directory;
 			int font_size_adjustment;

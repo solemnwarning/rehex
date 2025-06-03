@@ -35,3 +35,7 @@ typedef int ssize_t;
 #else
 #define REHEX_NODISCARD
 #endif
+
+#if defined(__linux__) || defined(__FreeBSD__)
+#define REHEX_ENABLE_WAYLAND_HACKS
+#endif

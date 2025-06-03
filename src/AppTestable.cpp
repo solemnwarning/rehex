@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -509,3 +509,19 @@ bool REHex::App::bulk_updates_frozen()
 {
 	return bulk_updates_freeze_count > 0;
 }
+
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+bool REHex::App::is_wayland_session()
+{
+	static bool is_wayland;
+	static std::once_flag flag;
+	
+	std::call_once(flag, [&]()
+	{
+		const char *XDG_SESSION_TYPE = getenv("XDG_SESSION_TYPE");
+		is_wayland = XDG_SESSION_TYPE != NULL && strcmp(XDG_SESSION_TYPE, "wayland") == 0;
+	});
+	
+	return is_wayland;
+}
+#endif

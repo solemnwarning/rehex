@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,6 +20,7 @@
 #include <wx/dcclient.h>
 #include <wx/settings.h>
 
+#include "App.hpp"
 #include "PopupTipWindow.hpp"
 
 static const wxCoord TEXT_MARGIN_X = 3;
@@ -103,6 +104,19 @@ void REHex::PopupTipWindow::move_to_cursor_screen_position(const wxPoint &cursor
 	#endif
 	
 	SetPosition(tip_pos);
+	
+	/* Wayland doesn't allow setting the position of a window, however if we hide the window and
+	 * then re-show it, it gets re-created with a hint on where it should be placed within the
+	 * co-ordinate space of its parent top-level window.
+	*/
+	
+	#ifdef REHEX_ENABLE_WAYLAND_HACKS
+	if(IsShown() && REHex::App::is_wayland_session())
+	{
+		Hide();
+		Show();
+	}
+	#endif
 }
 
 void REHex::PopupTipWindow::move_to_cursor_window_position(wxWindow *cursor_window, const wxPoint &cursor_window_pos)
@@ -119,6 +133,19 @@ void REHex::PopupTipWindow::move_to_cursor_window_position(wxWindow *cursor_wind
 	#endif
 	
 	SetPosition(tip_pos);
+	
+	/* Wayland doesn't allow setting the position of a window, however if we hide the window and
+	 * then re-show it, it gets re-created with a hint on where it should be placed within the
+	 * co-ordinate space of its parent top-level window.
+	*/
+	
+	#ifdef REHEX_ENABLE_WAYLAND_HACKS
+	if(IsShown() && REHex::App::is_wayland_session())
+	{
+		Hide();
+		Show();
+	}
+	#endif
 }
 
 void REHex::PopupTipWindow::OnPaint(wxPaintEvent &event)

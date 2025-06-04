@@ -35,6 +35,8 @@
 #include "../res/dock_right.h"
 #include "../res/dock_top.h"
 
+wxDEFINE_EVENT(REHex::TOOLPANEL_CLOSED, wxCommandEvent);
+
 BEGIN_EVENT_TABLE(REHex::ToolDock, REHex::MultiSplitter)
 	EVT_LEFT_UP(REHex::ToolDock::OnLeftUp)
 	EVT_MOUSE_CAPTURE_LOST(REHex::ToolDock::OnMouseCaptureLost)
@@ -1357,6 +1359,24 @@ REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, std::list<ToolFrame*> *f
 
 REHex::ToolDock::ToolFrame::~ToolFrame()
 {
+	/* Raise a TOOLPANEL_CLOSED event for each tool attached to the frame so that the
+	 * corresponding MainWindow menu item for the tool can be un-checked.
+	*/
+	
+	while(m_notebook->GetPageCount() > 0)
+	{
+		std::string name = ((ToolPanel*)(m_notebook->GetPage(0)))->name();
+		m_notebook->DeletePage(0);
+		
+		/* Raise the event as if our parent (the ToolDock) generated it. */
+		
+		wxCommandEvent tpc_event(TOOLPANEL_CLOSED, GetParent()->GetId());
+		tpc_event.SetEventObject(GetParent());
+		tpc_event.SetString(name);
+		
+		GetParent()->ProcessWindowEvent(tpc_event);
+	}
+	
 	auto it = std::find(m_frames->begin(), m_frames->end(), this);
 	assert(it != m_frames->end());
 	

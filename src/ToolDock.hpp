@@ -34,6 +34,8 @@
 
 namespace REHex
 {
+	wxDECLARE_EVENT(TOOLPANEL_CLOSED, wxCommandEvent);
+	
 	/**
 	 * @brief Splitter window for tiling and detaching/docking tool panels.
 	*/

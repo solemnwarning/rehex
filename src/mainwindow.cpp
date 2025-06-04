@@ -252,6 +252,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::BACKING_FILE_DELETED, REHex::MainWindow::OnFileDeleted)
 	EVT_COMMAND(wxID_ANY, REHex::BACKING_FILE_MODIFIED, REHex::MainWindow::OnFileModified)
 	EVT_COMMAND(wxID_ANY, REHex::LAST_GOTO_OFFSET_CHANGED,  REHex::MainWindow::OnLastGotoOffsetChanged)
+	EVT_COMMAND(wxID_ANY, REHex::TOOLPANEL_CLOSED, REHex::MainWindow::OnToolPanelClosed)
 	
 	EVT_DOCUMENTTITLE(wxID_ANY, REHex::MainWindow::OnTitleChanged)
 END_EVENT_TABLE()
@@ -1887,11 +1888,14 @@ void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::Tool
 	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
+	
 	if(event.IsChecked())
 	{
+		assert(!(tab->tool_active(tpr->name)));
 		tab->tool_create(tpr->name, true);
 	}
 	else{
+		assert(tab->tool_active(tpr->name));
 		tab->tool_destroy(tpr->name);
 	}
 }
@@ -2374,6 +2378,17 @@ void REHex::MainWindow::OnLastGotoOffsetChanged(wxCommandEvent &event)
 		std::tie(last_goto_offset, is_relative) = active_tab->get_last_goto_offset();
 		
 		edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
+	}
+}
+
+void REHex::MainWindow::OnToolPanelClosed(wxCommandEvent &event)
+{
+	auto id_it = tool_panel_name_to_tpm_id.find(event.GetString().ToStdString());
+	assert(id_it != tool_panel_name_to_tpm_id.end());
+	
+	if(id_it != tool_panel_name_to_tpm_id.end())
+	{
+		tool_panels_menu->Check(id_it->second, false);
 	}
 }
 

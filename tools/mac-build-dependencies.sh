@@ -19,9 +19,9 @@ _rehex_botan_url="https://botan.randombit.net/releases/Botan-${_rehex_botan_vers
 _rehex_botan_sha256="5a3a88ef6433e97bcab0efa1ed60c6197e4ada9d9d30bc1c47437bf89b97f276"
 _rehex_botan_build_ident="${_rehex_botan_version}-2"
 
-_rehex_capstone_version="5.0"
-_rehex_capstone_url="https://github.com/capstone-engine/capstone/archive/refs/tags/${_rehex_capstone_version}.tar.gz"
-_rehex_capstone_sha256="df24344407baa7415eeb006f742afc9b92cd33abf2c4c120a6e97cfb376882dc"
+_rehex_capstone_version="5.0.6"
+_rehex_capstone_url="https://github.com/capstone-engine/capstone/releases/download/${_rehex_capstone_version}/capstone-${_rehex_capstone_version}.tar.xz"
+_rehex_capstone_sha256="98773eea590f19355fa7e41157109eaad9771d771f426f276b06eaed40d1e47d"
 _rehex_capstone_build_ident="${_rehex_capstone_version}-1"
 
 _rehex_jansson_version="2.14"
@@ -29,9 +29,9 @@ _rehex_jansson_url="https://github.com/akheron/jansson/releases/download/v${_reh
 _rehex_jansson_sha256="5798d010e41cf8d76b66236cfb2f2543c8d082181d16bc3085ab49538d4b9929"
 _rehex_jansson_build_ident="${_rehex_jansson_version}-2"
 
-_rehex_libiconv_version="1.17"
+_rehex_libiconv_version="1.18"
 _rehex_libiconv_url="https://ftp.gnu.org/pub/gnu/libiconv/libiconv-${_rehex_libiconv_version}.tar.gz"
-_rehex_libiconv_sha256="8f74213b56238c85a50a5329f77e06198771e70dd9a739779f4c02f65d971313"
+_rehex_libiconv_sha256="3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8"
 _rehex_libiconv_build_ident="${_rehex_libiconv_version}-1"
 
 _rehex_libunistring_version="1.3"
@@ -48,10 +48,10 @@ _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
 _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a6323a06d923"
 
-_rehex_wxwidgets_version="3.2.7"
+_rehex_wxwidgets_version="3.2.8.1"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
-_rehex_wxwidgets_sha256="69a1722f874d91cd1c9e742b72df49e0fab02890782cf794791c3104cee868c6"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
+_rehex_wxwidgets_sha256="ad0cf6c18815dcf1a6a89ad3c3d21a306cd7b5d99a602f77372ef1d92cb7d756"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
@@ -800,34 +800,6 @@ then
              SetSize( wxSIZE_AUTO_WIDTH, 0 );
 EOF
 		
-		# https://github.com/wxWidgets/wxWidgets/issues/24590
-		# https://github.com/pnggroup/libpng/commit/893b8113f04d408cc6177c6de19c9889a48faa24
-		patch -p0 <<'EOF'
-diff -ru src/png/pngpriv.h src/png/pngpriv.h
---- src/png/pngpriv.h	2022-03-20 14:58:34.000000000 +0000
-+++ src/png/pngpriv.h	2025-04-20 01:07:27.853646003 +0100
-@@ -526,18 +526,8 @@
-     */
- #  include <float.h>
- 
--#  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
--    defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
--   /* We need to check that <math.h> hasn't already been included earlier
--    * as it seems it doesn't agree with <fp.h>, yet we should really use
--    * <fp.h> if possible.
--    */
--#    if !defined(__MATH_H__) && !defined(__MATH_H) && !defined(__cmath__)
--#      include <fp.h>
--#    endif
--#  else
--#    include <math.h>
--#  endif
-+#  include <math.h>
-+
- #  if defined(_AMIGA) && defined(__SASC) && defined(_M68881)
-    /* Amiga SAS/C: We must include builtin FPU functions when compiling using
-     * MATH=68881
-EOF
 		_rehex_wxwidgets_arch_flag=
 		if [ -z "${_rehex_arch_suffix}" ]
 		then

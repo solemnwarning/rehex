@@ -28,6 +28,7 @@
 #include <gtk/gtk.h>
 #endif
 
+#include "App.hpp"
 #include "ToolDock.hpp"
 
 #include "../res/dock_bottom.h"
@@ -859,6 +860,15 @@ REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &
 
 void REHex::ToolDock::OnNotebookLeftDown(wxMouseEvent &event)
 {
+	#ifdef REHEX_ENABLE_WAYLAND_HACKS
+	if(REHex::App::is_wayland_session())
+	{
+		/* Skip toolpanel detaching under Wayland :( */
+		event.Skip();
+		return;
+	}
+	#endif
+	
 	ToolNotebook *notebook = (ToolNotebook*)(event.GetEventObject());
 	// assert(notebook == m_left_notebook || notebook == m_right_notebook || notebook == m_top_notebook || notebook == m_bottom_notebook);
 	

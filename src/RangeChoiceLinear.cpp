@@ -53,6 +53,15 @@ REHex::RangeChoiceLinear::RangeChoiceLinear(wxWindow *parent, wxWindowID id, Sha
 	{
 		wxSize this_size = GetSizeFromTextSize(GetTextExtent(GetString(i)));
 		
+		/* GetSizeFromTextSize() isn't implemented on macOS, so handle that case and fall back to
+		 * using the system-provided "best" size as the target size.
+		*/
+		if(this_size.GetWidth() <= 0 || this_size.GetHeight() <= 0)
+		{
+			max_size = GetBestSize();
+			break;
+		}
+		
 		if(this_size.GetWidth() > max_size.GetWidth())
 		{
 			max_size.SetWidth(this_size.GetWidth());

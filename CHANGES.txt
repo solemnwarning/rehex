@@ -33,6 +33,8 @@ Version TBC:
 
  * Reduce unnecessary padding in decimal offsets (#235).
 
+ * Fix range selection input for checksum/histogram on macOS.
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

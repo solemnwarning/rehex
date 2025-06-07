@@ -417,8 +417,8 @@ void REHex::DataMapTool::OnBitmapSize(wxSizeEvent &event)
 	if((old_size.GetWidth() / PIXELS_PER_POINT) != (new_size.GetWidth() / PIXELS_PER_POINT)
 		|| (old_size.GetHeight() / PIXELS_PER_POINT) != (new_size.GetHeight() / PIXELS_PER_POINT))
 	{
-		m_data_width = new_size.GetWidth() / PIXELS_PER_POINT;
-		m_data_height = new_size.GetHeight() / PIXELS_PER_POINT;
+		m_data_width = std::max(1, (new_size.GetWidth() / PIXELS_PER_POINT));
+		m_data_height = std::max(1, (new_size.GetHeight() / PIXELS_PER_POINT));
 		
 		int bitmap_width = m_data_width * PIXELS_PER_POINT;
 		int bitmap_height = m_data_height * PIXELS_PER_POINT;

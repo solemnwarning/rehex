@@ -159,30 +159,66 @@ std::string REHex::format_offset(off_t offset, OffsetBase base, off_t upper_boun
 {
 	char fmt_out[24];
 	
-	if(upper_bound > 0xFFFFFFFF || offset > 0xFFFFFFFF)
+    if(base == OFFSET_BASE_HEX)
 	{
-		if(base == OFFSET_BASE_HEX)
-		{
+        if(upper_bound > 0xFFFFFFFF || offset > 0xFFFFFFFF)
+        {
 			snprintf(fmt_out, sizeof(fmt_out), "%08X:%08X",
 				(unsigned int)((offset & 0xFFFFFFFF00000000) >> 32),
 				(unsigned int)((offset & 0x00000000FFFFFFFF)));
-		}
-		else if(base == OFFSET_BASE_DEC)
-		{
-			snprintf(fmt_out, sizeof(fmt_out), "%019" PRId64, (int64_t)(offset));
-		}
-	}
-	else{
-		if(base == OFFSET_BASE_HEX)
-		{
+        }
+        else{
 			snprintf(fmt_out, sizeof(fmt_out), "%04X:%04X",
 				(unsigned int)((offset & 0xFFFF0000) >> 16),
 				(unsigned int)((offset & 0x0000FFFF)));
-		}
-		else if(base == OFFSET_BASE_DEC)
-		{
+        }
+	}
+
+    if(base == OFFSET_BASE_DEC)
+    {
+        if(upper_bound > 0xFFFFFFFF || offset > 0xFFFFFFFF)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%019" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 999999999 || offset > 999999999)
+        {
 			snprintf(fmt_out, sizeof(fmt_out), "%010" PRId64, (int64_t)(offset));
-		}
+        }
+        else if(upper_bound > 99999999 || offset > 99999999)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%09" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 9999999 || offset > 9999999)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%08" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 999999 || offset > 999999)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%07" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 99999 || offset > 99999)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%06" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 9999 || offset > 9999)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%05" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 999 || offset > 999)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%04" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 99 || offset > 99)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%03" PRId64, (int64_t)(offset));
+        }
+        else if(upper_bound > 9 || offset > 9)
+        {
+			snprintf(fmt_out, sizeof(fmt_out), "%02" PRId64, (int64_t)(offset));
+        }
+        else{
+			snprintf(fmt_out, sizeof(fmt_out), "%01" PRId64, (int64_t)(offset));
+        }
 	}
 	
 	return fmt_out;

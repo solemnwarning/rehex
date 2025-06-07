@@ -896,7 +896,8 @@ void REHex::DocumentCtrl::_handle_width_change()
 				offset_column_width = hf_string_width(10 + 3);
 			}
 			else{
-				offset_column_width = hf_string_width(11 + 3);
+				int offWidth = snprintf(nullptr, 0, "%" PRId64, (int64_t)(end_virt_offset.byte()));
+				offset_column_width = hf_string_width(offWidth + 3);
 			}
 		}
 	}

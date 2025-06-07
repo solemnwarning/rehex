@@ -31,6 +31,8 @@ Version TBC:
  * Allow detaching tool panels to floating windows or docking them to any
    side of the main window (#229).
 
+ * Reduce unnecessary padding in decimal offsets (#235).
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

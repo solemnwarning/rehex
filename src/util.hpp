@@ -23,6 +23,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <wx/config.h>
 #include <wx/window.h>
 
 #include "BitOffset.hpp"
@@ -444,6 +445,21 @@ namespace REHex {
 	 * the directory now exists (or aready did), false on error.
 	*/
 	bool recursive_mkdir(const std::string &path);
+	
+	/**
+	 * @brief Recursively copy values between wxConfig objects.
+	 *
+	 * @param dst       Destination wxConfig object to write to.
+	 * @param dst_path  Path to write copied groups/entries under.
+	 * @param src       Source wxConfig object to read from.
+	 * @param src_path  Path to read groups/entries from.
+	 *
+	 * This function copies all entries/groups under src_path in src to dst_path in dst.
+	 *
+	 * Both paths may be relative (to the current wxConfig path) or absolute, dst/src may be
+	 * the same or different wxConfig objects.
+	*/
+	void config_copy(wxConfig *dst, const wxString &dst_path, const wxConfig &src, const wxString &src_path);
 }
 
 #endif /* !REHEX_UTIL_HPP */

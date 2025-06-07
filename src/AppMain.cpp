@@ -239,6 +239,20 @@ bool REHex::App::OnInit()
 		config->Write("selected", false);
 	}
 	
+	/* Migrate open tools from the saved default view of rehex <0.63.0 */
+	
+	if(config->HasGroup("/default-view/htools/panels/0"))
+	{
+		config_copy(config, "/default-view/tools/bottom", *config, "/default-view/htools/panels/0/tab");
+		config->DeleteGroup("/default-view/htools/panels/0");
+	}
+	
+	if(config->HasGroup("/default-view/vtools/panels/0"))
+	{
+		config_copy(config, "/default-view/tools/right", *config, "/default-view/vtools/panels/0/tab");
+		config->DeleteGroup("/default-view/vtools/panels/0");
+	}
+	
 	#ifdef __APPLE__
 	recent_files = new MacFileHistory();
 	#else

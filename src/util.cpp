@@ -887,3 +887,89 @@ bool REHex::recursive_mkdir(const std::string &path)
 	
 	return recursive_mkdir(fn.GetPath().ToStdString()) && wxMkdir(path);
 }
+
+void REHex::config_copy(wxConfig *dst, const wxString &dst_path, const wxConfig &src, const wxString &src_path)
+{
+	wxString dst_path_abs = dst_path.StartsWith("/") ? dst_path : (dst->GetPath() + "/" + dst_path);
+	wxString src_path_abs = src_path.StartsWith("/") ? src_path : (src.GetPath() + "/" + src_path);
+	
+	if(src.HasEntry(src_path))
+	{
+		wxConfigBase::EntryType type = src.GetEntryType(src_path);
+		
+		switch(type)
+		{
+			case wxConfigBase::EntryType::Type_String:
+			{
+				wxString value;
+				if(src.Read(src_path, &value))
+				{
+					dst->Write(dst_path_abs, value);
+				}
+				
+				break;
+			}
+			
+			case wxConfigBase::EntryType::Type_Boolean:
+			{
+				bool value;
+				if(src.Read(src_path, &value))
+				{
+					dst->Write(dst_path_abs, value);
+				}
+				
+				break;
+			}
+				
+			case wxConfigBase::EntryType::Type_Integer:
+			{
+				long value;
+				if(src.Read(src_path, &value))
+				{
+					dst->Write(dst_path_abs, value);
+				}
+				
+				break;
+			}
+			
+			case wxConfigBase::EntryType::Type_Float:
+			{
+				double value;
+				if(src.Read(src_path, &value))
+				{
+					dst->Write(dst_path_abs, value);
+				}
+				
+				break;
+			}
+			
+			default:
+				wxGetApp().printf_debug("Unknown entry type %d at %s in REHex::config_copy()\n",
+					(int)(type),
+					src_path_abs.ToStdString().c_str());
+				break;
+		}
+	}
+	else if(src.HasGroup(src_path))
+	{
+		wxConfigPathChanger src_scoped_path(&src, (src_path.EndsWith("/") ? src_path : (src_path + "/")));
+		
+		long iter;
+		wxString name;
+		bool cont;
+		
+		cont = src.GetFirstGroup(name, iter);
+		while(cont)
+		{
+			config_copy(dst, (dst_path_abs + "/" + name), src, name);
+			cont = src.GetNextGroup(name, iter);
+		}
+		
+		cont = src.GetFirstEntry(name, iter);
+		while(cont)
+		{
+			config_copy(dst, (dst_path_abs + "/" + name), src, name);
+			cont = src.GetNextEntry(name, iter);
+		}
+	}
+}

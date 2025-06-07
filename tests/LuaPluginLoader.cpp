@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -127,8 +127,8 @@ TEST(LuaPluginLoader, ReadData)
 		char expect[2048] = "Warning: Calling rehex.Document:read_data() with a numeric offset is deprecated\n";
 		size_t x = strlen(expect);
 		
-		for(unsigned i = 0; i < 256; ++i) { sprintf(expect + x, "%02x\n", i); x += 3; }
-		for(unsigned i = 0; i < 256; ++i) { sprintf(expect + x, "%02x\n", i); x += 3; }
+		for(unsigned i = 0; i < 256; ++i) { snprintf((expect + x), (sizeof(expect) - x), "%02x\n", i); x += 3; }
+		for(unsigned i = 0; i < 256; ++i) { snprintf((expect + x), (sizeof(expect) - x), "%02x\n", i); x += 3; }
 		
 		EXPECT_EQ(app.console->get_messages_text(), expect);
 	}
@@ -152,8 +152,8 @@ TEST(LuaPluginLoader, ReadDataOffset)
 		char expect[2048];
 		size_t x = 0;
 		
-		for(unsigned i = 128; i < 256; ++i) { sprintf(expect + x, "%02x\n", i); x += 3; }
-		for(unsigned i = 0; i < 256; ++i) { sprintf(expect + x, "%02x\n", i); x += 3; }
+		for(unsigned i = 128; i < 256; ++i) { snprintf((expect + x), (sizeof(expect) - x), "%02x\n", i); x += 3; }
+		for(unsigned i = 0; i < 256; ++i) { snprintf((expect + x), (sizeof(expect) - x), "%02x\n", i); x += 3; }
 		
 		EXPECT_EQ(app.console->get_messages_text(), expect);
 	}
@@ -177,7 +177,7 @@ TEST(LuaPluginLoader, ReadDataLimitLength)
 		char expect[2048];
 		size_t x = 0;
 		
-		for(unsigned i = 0; i < 128; ++i) { sprintf(expect + x, "%02x\n", i); x += 3; }
+		for(unsigned i = 0; i < 128; ++i) { snprintf((expect + x), (sizeof(expect) - x), "%02x\n", i); x += 3; }
 		
 		EXPECT_EQ(app.console->get_messages_text(), expect);
 	}

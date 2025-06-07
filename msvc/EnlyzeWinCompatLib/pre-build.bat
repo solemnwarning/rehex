@@ -4,5 +4,5 @@ rem if not exist EnlyzeWinCompatLib git clone --recursive https://github.com/enl
 if not exist EnlyzeWinCompatLib git clone --recursive https://github.com/solemnwarning/EnlyzeWinCompatLib.git
 
 cd EnlyzeWinCompatLib\src || EXIT /B
-msbuild EnlyzeWinCompatLib.sln /p:Configuration="Release" /p:Platform="x86" || EXIT /B
-msbuild EnlyzeWinCompatLib.sln /p:Configuration="Debug"   /p:Platform="x86" || EXIT /B
+msbuild EnlyzeWinCompatLib.sln /p:Configuration="Release" /p:Platform="x86" /p:DebugInformationFormat=OldStyle /p:WindowsTargetPlatformVersion=%REHEX_WINSDK_VERSION% || EXIT /B
+msbuild EnlyzeWinCompatLib.sln /p:Configuration="Debug"   /p:Platform="x86" /p:DebugInformationFormat=OldStyle /p:WindowsTargetPlatformVersion=%REHEX_WINSDK_VERSION% || EXIT /B

@@ -262,10 +262,13 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 	try {
 		data.reserve(selection_length);
 		
+		off_t insert_len = std::min<off_t>(data_pattern.size(), (selection_length - data.size()));
+		data.insert(data.end(), data_pattern.begin(), std::next(data_pattern.begin(), insert_len));
+		
 		while((off_t)(data.size()) < selection_length)
 		{
-			off_t insert_len = std::min<off_t>(data_pattern.size(), (selection_length - data.size()));
-			data.insert(data.end(), data_pattern.begin(), std::next(data_pattern.begin(), insert_len));
+			insert_len = std::min<off_t>(data.size(), (selection_length - data.size()));
+			data.insert(data.end(), data.begin(), std::next(data.begin(), insert_len));
 		}
 		
 		assert((off_t)(data.size()) == selection_length);

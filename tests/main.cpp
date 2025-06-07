@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -67,10 +67,15 @@ int main(int argc, char **argv)
 	
 	app->bulk_updates_freeze_count = 0;
 	app->console = new REHex::ConsoleBuffer();
-	app->thread_pool = new REHex::ThreadPool(std::thread::hardware_concurrency());
+	app->thread_pool = new REHex::ThreadPool(8);
 	app->config = new wxConfig("REHex-qwertyuiop"); /* Should be a name that won't load anything. */
 	app->settings = new REHex::AppSettings();
+	
+	#ifdef __APPLE__
+	app->recent_files = new REHex::MacFileHistory();
+	#else
 	app->recent_files = new wxFileHistory();
+	#endif
 	
 	app->_test_setup_hooks(REHex::App::SetupPhase::EARLY);
 	

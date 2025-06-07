@@ -24,7 +24,7 @@
 
 float REHex::HSVColour::wrap_h(float h)
 {
-	return h - (360.0f * floorf(h / 360.f));
+	return fmodf(h, 360.0f);
 }
 
 float REHex::HSVColour::clamp_sv(float sv)

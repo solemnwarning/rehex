@@ -8,7 +8,7 @@
   <PropertyGroup Label="UserMacros">
     <!-- Define the root directory where all vcpkg stuff is installed -->
     <vcpkgInstallDir Condition="'$(Platform)'=='Win32'">$(MSBuildThisFileDirectory)vcpkg\installed\x86-windows-static-enlyze</vcpkgInstallDir>
-    <vcpkgInstallDir Condition="'$(Platform)'=='x64'">$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static-v142</vcpkgInstallDir>
+    <vcpkgInstallDir Condition="'$(Platform)'=='x64'">$(MSBuildThisFileDirectory)vcpkg\installed\x64-windows-static-v143</vcpkgInstallDir>
 
     <!-- Define the root directory where all vcpkg stuff is installed -->
     <vcpkgDebugFolder Condition="'$(Configuration)'=='Debug' Or '$(Configuration)'=='Profile (Debug)'">\debug</vcpkgDebugFolder>
@@ -26,6 +26,9 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(vcpkgInstallDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <!-- Use "/external:I" to suppress warnings from upstream headers. -->
+      <AdditionalOptions>/external:I"$(vcpkgInstallDir)/include/" %(AdditionalOptions)</AdditionalOptions>
 
       <!-- Tell wxWidgets what we are -->
       <PreprocessorDefinitions>__WXMSW__;%(PreprocessorDefinitions)</PreprocessorDefinitions>

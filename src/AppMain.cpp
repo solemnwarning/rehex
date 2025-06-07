@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <wx/event.h>
+#include <wx/filename.h>
 #include <wx/filesys.h>
 #include <wx/fontutil.h>
 #include <wx/fs_zip.h>
@@ -44,6 +45,10 @@ IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::OnInit()
 {
+	#ifdef REHEX_PROFILE
+	ProfilingCollector::set_thread_group(ProfilingCollector::ThreadGroup::MAIN);
+	#endif
+	
 	bulk_updates_freeze_count = 0;
 	quick_exit = false;
 	
@@ -90,22 +95,26 @@ bool REHex::App::OnInit()
 			}
 		}
 		
+		wxFileName filename(argv[i]);
+		filename.MakeAbsolute();
+		
 		/* If the filename ends in .rehex-meta and stripping it off points to an existing
 		 * file, then assume they mean to open that file - the meta file being considered
 		 * like a "project".
 		*/
 		
-		std::string filename = argv[i].ToStdString();
-		std::string meta_extension = ".rehex-meta";
-		
-		if(filename.length() >= meta_extension.length()
-			&& filename.substr(filename.length() - meta_extension.length()) == meta_extension
-			&& wxFileExists(filename.substr(0, filename.length() - meta_extension.length())))
+		if(filename.GetExt() == "rehex-meta")
 		{
-			filename = filename.substr(0, filename.length() - meta_extension.length());
+			wxFileName nometa_fn(filename);
+			nometa_fn.ClearExt();
+			
+			if(nometa_fn.FileExists())
+			{
+				filename = nometa_fn;
+			}
 		}
 		
-		open_filenames.push_back(filename);
+		open_filenames.push_back(filename.GetFullPath().ToStdString());
 	}
 	
 	if(compare_mode && open_filenames.size() < 2)
@@ -220,17 +229,21 @@ bool REHex::App::OnInit()
 	/* Display default tool panels if a default view hasn't been configured. */
 	if(!config->HasGroup("/default-view/"))
 	{
-		config->SetPath("/default-view/vtools/panels/0/tab/0");
+		config->SetPath("/default-view/tools/right/0");
 		config->Write("name", "DecodePanel");
 		config->Write("selected", true);
 		config->Write("big-endian", false);
 		
-		config->SetPath("/default-view/vtools/panels/0/tab/1");
+		config->SetPath("/default-view/tools/right/1");
 		config->Write("name", "CommentTree");
 		config->Write("selected", false);
 	}
 	
+	#ifdef __APPLE__
+	recent_files = new MacFileHistory();
+	#else
 	recent_files = new wxFileHistory();
+	#endif
 	
 	config->SetPath("/recent-files/");
 	recent_files->Load(*config);

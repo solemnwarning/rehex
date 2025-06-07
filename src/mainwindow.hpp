@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,6 +27,7 @@
 
 #include "DetachableNotebook.hpp"
 #include "Events.hpp"
+#include "MacFileName.hpp"
 #include "Tab.hpp"
 #include "ToolPanel.hpp"
 #include "WindowCommands.hpp"
@@ -50,6 +51,13 @@ namespace REHex {
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
 			Tab *open_file(const std::string &filename);
+			
+			#ifdef __APPLE__
+			/**
+			 * @brief Create a new tab with a file loaded from disk.
+			*/
+			Tab *open_file(MacFileName &&filename);
+			#endif
 			
 			Tab *import_hex_file(const std::string &filename);
 			
@@ -91,6 +99,8 @@ namespace REHex {
 			void OnAutoReload(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
+			void OnImportMetadata(wxCommandEvent &event);
+			void OnExportMetadata(wxCommandEvent &event);
 			void OnClose(wxCommandEvent &event);
 			void OnCloseAll(wxCommandEvent &event);
 			void OnCloseOthers(wxCommandEvent &event);
@@ -105,6 +115,7 @@ namespace REHex {
 			void OnCompareFile(wxCommandEvent &event);
 			void OnCompareSelection(wxCommandEvent &event);
 			void OnGotoOffset(wxCommandEvent &event);
+			void OnRepeatGotoOffset(wxCommandEvent &event);
 			void OnCut(wxCommandEvent &event);
 			void OnCopy(wxCommandEvent &event);
 			void OnPaste(wxCommandEvent &event);
@@ -124,6 +135,7 @@ namespace REHex {
 			void OnInlineCommentsMode(wxCommandEvent &event);
 			void OnAsmSyntax(wxCommandEvent &event);
 			void OnDocumentDisplayMode(wxCommandEvent &event);
+			void OnDataMapScrollbar(wxCommandEvent &event);
 			void OnHighlightSelectionMatch(wxCommandEvent &event);
 			void OnColourMap(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
@@ -155,6 +167,8 @@ namespace REHex {
 			void OnFileDeleted(wxCommandEvent &event);
 			void OnFileModified(wxCommandEvent &event);
 			void OnTitleChanged(DocumentTitleEvent &event);
+			void OnLastGotoOffsetChanged(wxCommandEvent &event);
+			void OnToolPanelClosed(wxCommandEvent &event);
 			
 			void OnByteColourMapsChanged(wxCommandEvent &event);
 			void OnAcceleratorsChanged(wxCommandEvent &event);
@@ -290,6 +304,7 @@ namespace REHex {
 			std::map<std::string, int> tool_panel_name_to_tpm_id;
 			
 			wxMenu *inline_comments_menu;
+			wxMenu *data_map_scrollbar_menu;
 			wxMenu *asm_syntax_menu;
 			
 			void _update_status_offset(Tab *tab);

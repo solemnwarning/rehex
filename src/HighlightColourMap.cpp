@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,7 +31,10 @@ REHex::HighlightColourMap REHex::HighlightColourMap::defaults(int default_colour
 	
 	for(size_t i = 0; i < DEFAULT_NUM; ++i)
 	{
-		auto it = map.add();
+		#ifndef NDEBUG
+		auto it =
+		#endif
+			map.add();
 		assert(it->first == i);
 	}
 	
@@ -311,6 +314,19 @@ void REHex::HighlightColourMap::set_default_lightness(int lightness)
 			it->second.primary_colour = default_hc.primary_colour;
 		}
 	}
+}
+
+int REHex::HighlightColourMap::next_free_idx() const
+{
+	for(size_t i = 0; i < MAX_NUM; ++i)
+	{
+		if(colours.find(i) == colours.end())
+		{
+			return i;
+		}
+	}
+	
+	return -1;
 }
 
 REHex::HighlightColourMap::HighlightColour REHex::HighlightColourMap::make_default_highlight(size_t highlight_idx, int lightness)

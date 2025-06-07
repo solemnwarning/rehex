@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,15 +24,18 @@ wxDEFINE_EVENT(REHex::DATA_RIGHT_CLICK,       wxCommandEvent);
 
 wxDEFINE_EVENT(REHex::DATA_ERASING,              REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_ERASE,                REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::DATA_ERASE_DONE,           REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_ERASE_ABORTED,        REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERTING,            REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERT,               REHex::OffsetLengthEvent);
+wxDEFINE_EVENT(REHex::DATA_INSERT_DONE,          REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_INSERT_ABORTED,       REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITING,          REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITE,            REHex::OffsetLengthEvent);
 wxDEFINE_EVENT(REHex::DATA_OVERWRITE_ABORTED,    REHex::OffsetLengthEvent);
 
 wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
+wxDEFINE_EVENT(REHex::SCROLL_UPDATE,    REHex::ScrollUpdateEvent);
 
 wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
 
@@ -42,6 +45,9 @@ wxDEFINE_EVENT(REHex::PALETTE_CHANGED, wxCommandEvent);
 
 wxDEFINE_EVENT(REHex::BULK_UPDATES_FROZEN, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BULK_UPDATES_THAWED, wxCommandEvent);
+
+wxDEFINE_EVENT(REHex::PROCESSING_START, wxCommandEvent);
+wxDEFINE_EVENT(REHex::PROCESSING_STOP,  wxCommandEvent);
 
 REHex::OffsetLengthEvent::OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length):
 	wxEvent(source->GetId(), event), offset(offset), length(length)
@@ -55,6 +61,16 @@ REHex::OffsetLengthEvent::OffsetLengthEvent(wxObject *source, wxEventType event,
 {
 	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
 	SetEventObject(source);
+}
+
+std::pair<off_t, off_t> REHex::OffsetLengthEvent::get_clamped_range(off_t clamp_offset, off_t clamp_length) const
+{
+	off_t clamped_offset = std::max(offset, clamp_offset);
+	off_t clamped_end    = std::min((offset + length), (clamp_offset + clamp_length));
+	
+	off_t clamped_length = clamped_end - clamped_offset;
+	
+	return std::make_pair(clamped_offset, clamped_length);
 }
 
 wxEvent *REHex::OffsetLengthEvent::Clone() const
@@ -132,4 +148,19 @@ REHex::FontSizeAdjustmentEvent::FontSizeAdjustmentEvent(int font_size_adjustment
 wxEvent *REHex::FontSizeAdjustmentEvent::Clone() const
 {
 	return new FontSizeAdjustmentEvent(font_size_adjustment);
+}
+
+REHex::ScrollUpdateEvent::ScrollUpdateEvent(wxWindow *source, int64_t pos, int64_t max, int orientation):
+	wxEvent(wxID_NONE, SCROLL_UPDATE),
+	pos(pos),
+	max(max),
+	orientation(orientation)
+{
+	m_propagationLevel = wxEVENT_PROPAGATE_MAX;
+	SetEventObject(source);
+}
+
+wxEvent *REHex::ScrollUpdateEvent::Clone() const
+{
+	return new ScrollUpdateEvent(*this);
 }

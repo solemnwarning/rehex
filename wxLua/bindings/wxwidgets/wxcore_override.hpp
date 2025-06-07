@@ -2501,6 +2501,37 @@ static int LUACALL wxLua_wxMenuItem_constructor(lua_State *L)
 }
 %end
 
+%override wxLua_wxToolBarBase_AddTool1
+//     wxToolBarToolBase* AddTool(int toolId, const wxString& label, const wxBitmap& bitmap1, const wxString& shortHelpString = "", wxItemKind kind = wxITEM_NORMAL);
+static int LUACALL wxLua_wxToolBarBase_AddTool1(lua_State *L)
+{
+    // get number of arguments
+    int argCount = lua_gettop(L);
+    // wxItemKind kind = wxITEM_NORMAL
+    wxItemKind kind = (argCount >= 6 ? (wxItemKind)wxlua_getenumtype(L, 6) : wxITEM_NORMAL);
+    // const wxString shortHelpString = ""
+    const wxString shortHelpString = (argCount >= 5 ? wxlua_getwxStringtype(L, 5) : wxString(wxEmptyString));
+    // const wxBitmap bitmap1
+    const wxBitmap * bitmap1 = (const wxBitmap *)wxluaT_getuserdatatype(L, 4, wxluatype_wxBitmap);
+    // const wxString label
+    const wxString label = wxlua_getwxStringtype(L, 3);
+    // int toolId
+    int toolId = (int)wxlua_getnumbertype(L, 2);
+    // get this
+    wxToolBarBase * self = (wxToolBarBase *)wxluaT_getuserdatatype(L, 1, wxluatype_wxToolBarBase);
+    // call AddTool
+#if wxCHECK_VERSION(3, 1, 6)
+    wxToolBarToolBase* returns = (wxToolBarToolBase*)self->AddTool(toolId, label, wxBitmapBundle(*bitmap1), shortHelpString, kind);
+#else
+    wxToolBarToolBase* returns = (wxToolBarToolBase*)self->AddTool(toolId, label, *bitmap1, shortHelpString, kind);
+#endif
+    // push the result datatype
+    wxluaT_pushuserdatatype(L, returns, wxluatype_wxToolBarToolBase);
+
+    return 1;
+}
+%end
+
 // ----------------------------------------------------------------------------
 // Overrides for print.i
 // ----------------------------------------------------------------------------

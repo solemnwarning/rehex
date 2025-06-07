@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,8 +18,7 @@
 #ifndef REHEX_BUFFER_HPP
 #define REHEX_BUFFER_HPP
 
-#include <list>
-#include <map>
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <time.h>
@@ -32,6 +31,8 @@
 #endif
 
 #include "BitOffset.hpp"
+#include "MacFileName.hpp"
+#include "shared_mutex.hpp"
 
 namespace REHex {
 	wxDECLARE_EVENT(BACKING_FILE_DELETED, wxCommandEvent);
@@ -49,9 +50,70 @@ namespace REHex {
 	class Buffer: public wxEvtHandler
 	{
 		private:
-			FILE *fh;
+			struct Handle
+			{
+				bool locked;  /**< Whether this handle is locked for use by a thread. */
+				FILE *fh;     /**< FILE handle with read access, may be NULL. */
+				
+				Handle():
+					locked(false),
+					fh(NULL) {}
+			};
+			
+			class HandlePtr
+			{
+				private:
+					Buffer *buffer;
+					Handle *handle;
+					
+				public:
+					HandlePtr(Buffer *buffer, Handle *handle, const std::unique_lock<std::mutex> &hm_guard);
+					~HandlePtr();
+					
+					HandlePtr(const HandlePtr&) = delete;
+					HandlePtr &operator=(const HandlePtr&) = delete;
+					
+					HandlePtr(HandlePtr&&);
+					HandlePtr &operator=(HandlePtr&&);
+					
+					operator FILE*() const;
+			};
+			
+			/**
+			 * @brief Maximum number of handles that may be opened for parallel read operations.
+			*/
+			static constexpr size_t MAX_READ_HANDLES = 8;
+			
+			/**
+			 * List of open file handles used for reading.
+			 *
+			 * If the Buffer has a backing file, there will be at least one FILE
+			 * handle opened to it, stored in handles[0].fh, additional handles may be
+			 * opened as necessary for parallel read operations in different threads.
+			 *
+			 * All accesses to the handles array are serialised using handles_mutex.
+			 *
+			 * When a handle being used for a read operation is released, the
+			 * handle_released condition_variable will notify one waiting thread.
+			*/
+			Handle handles[MAX_READ_HANDLES];
+			std::mutex handles_mutex;
+			std::condition_variable handle_released;
+			
 			std::string filename;
-			std::mutex lock;
+			
+			#ifdef __APPLE__
+			MacFileName file_access_guard;
+			#endif
+			
+			/**
+			 * All public APIs synchronise access using the general_lock mutex.
+			 *
+			 * general_lock is a shared mutex which is used to allow multiple threads
+			 * to read from the Buffer object concurrently, but only one thread may
+			 * perform any kind of write operation at a time.
+			*/
+			shared_mutex general_lock;
 			
 			struct FileTime: public timespec
 			{
@@ -88,14 +150,41 @@ namespace REHex {
 						DIRTY,
 					};
 					
-					State state;
+					/* NOTE: volatile for load_block() to spin on it. */
+					volatile State state;
 					
 					std::vector<unsigned char> data;
 					
+					/**
+					 * @brief Number of active references to this block.
+					*/
+					std::atomic<int> refcount;
+					
 					Block(off_t offset, off_t length);
+					Block(Block&&);
 					
 					void grow(size_t min_size);
 					void trim();
+			};
+			
+			/**
+			 * @brief Reference-counting Block reference class.
+			 *
+			 * This class provides RAII-style locking and shared access to individual
+			 * Block objects. Call Buffer::load_block() to acquire one.
+			*/
+			class BlockPtr
+			{
+				private:
+					Buffer *buffer;
+					Block *block;
+					
+				public:
+					BlockPtr(Buffer *buffer, Block *block);
+					~BlockPtr();
+					
+					BlockPtr(const BlockPtr&);
+					BlockPtr &operator=(const BlockPtr&);
 			};
 			
 			std::vector<Block> blocks;
@@ -104,10 +193,8 @@ namespace REHex {
 			FileTime last_mtime;
 			wxTimer timer;
 			
-			/* last_accessed_blocks is a list of the most recently loaded CLEAN blocks.
-			 *
-			 * last_accessed_blocks_map is a map of Block* pointers to iterators within
-			 * last_accessed_blocks.
+			/* last_accessed_blocks is a list of recently released CLEAN blocks, sorted
+			 * from oldest to newest.
 			 *
 			 * When the number of loaded clean blocks in last_accessed_blocks exceeds
 			 * MAX_CLEAN_BLOCKS, the oldest block in last_accessed_blocks is unloaded to
@@ -117,16 +204,28 @@ namespace REHex {
 			 * to make it no longer eligible for unloading.
 			*/
 			
-			std::list<Block*> last_accessed_blocks;
-			std::map< Block*, std::list<Block*>::iterator > last_accessed_blocks_map;
+			std::vector<Block*> last_accessed_blocks;
+			std::mutex lab_mutex;
 			
 		private:
 			Block *_block_by_virt_offset(off_t virt_offset);
-			void _load_block(Block *block);
+			
+			/**
+			 * @brief Ensure a Block is loaded and locked into memory.
+			 *
+			 * This method loads the block into memory (if not already loaded) and
+			 * returns a reference object which can be held to prevent it from being
+			 * paged out.
+			*/
+			BlockPtr load_block(Block *block);
+			
+			void release_block(Block *block);
+			
+			HandlePtr acquire_read_handle();
+			void close_handles();
 			
 			off_t _length();
 			
-			void _last_access_bump(Block *block);
 			void _last_access_remove(Block *block);
 			
 			void _reinit_blocks(off_t file_length);
@@ -135,6 +234,7 @@ namespace REHex {
 			
 			static bool _same_file(FILE *file1, const std::string &name1, FILE *file2, const std::string &name2);
 			static FileTime _get_file_mtime(FILE *fh, const std::string &filename);
+			static FILE *reopen_file(FILE *fh, const std::string &name);
 			
 		public:
 			static const unsigned int DEFAULT_BLOCK_SIZE = 4194304; /* 4MiB */
@@ -153,6 +253,13 @@ namespace REHex {
 			 * @brief Create a Buffer with a backing file on disk.
 			*/
 			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
+			
+			#ifdef __APPLE__
+			/**
+			 * @brief Create a Buffer with a backing file on disk.
+			*/
+			Buffer(MacFileName &&filename, off_t block_size = DEFAULT_BLOCK_SIZE);
+			#endif
 			
 			~Buffer();
 			

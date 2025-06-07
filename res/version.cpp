@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,7 +17,7 @@
 
 #include "version.h"
 #ifdef _MSC_VER
-#include "version_msvc.h"
+#include "version-defs.h"
 #endif
 
 extern "C" {

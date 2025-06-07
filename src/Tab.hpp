@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,18 +25,19 @@
 #include <wx/dialog.h>
 #include <wx/notebook.h>
 #include <wx/panel.h>
-#include <wx/splitter.h>
 #include <wx/wx.h>
 
 #include "BitOffset.hpp"
+#include "DataMapScrollbar.hpp"
 #include "DiffWindow.hpp"
 #include "document.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
+#include "GotoOffsetDialog.hpp"
 #include "SafeWindowPointer.hpp"
 #include "SettingsDialog.hpp"
 #include "SharedDocumentPointer.hpp"
-#include "ToolPanel.hpp"
+#include "ToolDock.hpp"
 
 namespace REHex
 {
@@ -56,6 +57,8 @@ namespace REHex
 		DDM_MAX = 2,
 	};
 	
+	wxDECLARE_EVENT(LAST_GOTO_OFFSET_CHANGED, wxCommandEvent);
+	
 	class Tab: public wxPanel
 	{
 		public:
@@ -70,7 +73,6 @@ namespace REHex
 			bool tool_active(const std::string &name);
 			void tool_create(const std::string &name, bool switch_to, wxConfig *config = NULL);
 			void tool_destroy(const std::string &name);
-			ToolPanel *tool_get(const std::string &name);
 			
 			void search_dialog_register(wxDialog *search_dialog);
 			
@@ -95,6 +97,20 @@ namespace REHex
 			bool get_auto_reload() const;
 			void set_auto_reload(bool auto_reload);
 			
+			void show_goto_offset_dialog();
+			
+			std::pair<BitOffset, bool> get_last_goto_offset() const;
+			void set_last_goto_offset(BitOffset last_goto_offset, bool is_relative);
+			
+			enum class DataMapScrollbarType
+			{
+				NONE,
+				ENTROPY,
+			};
+			
+			DataMapScrollbarType get_dsm_type() const;
+			void set_dsm_type(DataMapScrollbarType dsm_type);
+			
 			/* Public for use by unit tests. */
 			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode);
 			
@@ -102,22 +118,20 @@ namespace REHex
 			InlineCommentMode inline_comment_mode;
 			DocumentDisplayMode document_display_mode;
 			
-			wxSplitterWindow   *v_splitter;
-			wxSplitterWindow   *h_splitter;
-			wxNotebook         *v_tools;
-			wxNotebook         *h_tools;
+			ToolDock *tool_dock;
 			
-			std::map<std::string, ToolPanel*> tools;
 			std::set<wxDialog*> search_dialogs;
 			
 			SafeWindowPointer<SettingsDialog> doc_properties;
+			SafeWindowPointer<GotoOffsetDialog> goto_offset_dialog;
+			BitOffset last_goto_offset;
+			bool last_goto_offset_relative;
 			
-			void OnSize(wxSizeEvent &size);
+			wxPanel *doc_ctrl_panel;
+			wxSizer *data_map_scrollbar_sizer;
+			DataMapScrollbarType data_map_scrollbar_type;
+			DataMapScrollbar *data_map_scrollbar;
 			
-			void OnHToolChange(wxBookCtrlEvent &event);
-			void OnVToolChange(wxBookCtrlEvent &event);
-			void OnHSplitterSashPosChanging(wxSplitterEvent &event);
-			void OnVSplitterSashPosChanging(wxSplitterEvent &event);
 			void OnSearchDialogDestroy(wxWindowDestroyEvent &event);
 			
 			void OnDocumentCtrlChar(wxKeyEvent &key);
@@ -150,22 +164,6 @@ namespace REHex
 				T event_copy(event);
 				ProcessWindowEvent(event_copy);
 			}
-			
-			bool vtools_adjust_pending;
-			bool vtools_adjust_force;
-			int vtools_initial_size;
-			
-			bool htools_adjust_pending;
-			bool htools_adjust_force;
-			int htools_initial_size;
-			
-			void vtools_adjust(bool force_resize = false);
-			void htools_adjust(bool force_resize = false);
-			void vtools_adjust_on_idle(bool force_resize);
-			void vtools_adjust_now_idle(wxIdleEvent &event);
-			void htools_adjust_on_idle(bool force_resize);
-			void htools_adjust_now_idle(wxIdleEvent &event);
-			void xtools_fix_visibility(wxNotebook *notebook);
 			
 			bool repopulate_regions_frozen;
 			bool repopulate_regions_pending;

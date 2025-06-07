@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,16 +20,18 @@
 #include <assert.h>
 #include <numeric>
 
+#include "App.hpp"
 #include "RangeProcessor.hpp"
+
+#ifndef NDEBUG
+thread_local bool REHex::RangeProcessor::in_work_func = false;
+#endif
 
 REHex::RangeProcessor::RangeProcessor(const std::function<void(off_t, off_t)> &work_func, size_t max_window_size):
 	work_func(work_func),
 	max_window_size(max_window_size),
 	max_threads(0),
-	threads_exit(false),
-	threads_pause(false),
-	spawned_threads(0),
-	running_threads(0)
+	task_paused(false)
 {}
 
 REHex::RangeProcessor::~RangeProcessor()
@@ -39,6 +41,8 @@ REHex::RangeProcessor::~RangeProcessor()
 
 REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	
 	/* Merge the all the ranges in queued, pending and working. */
@@ -51,18 +55,44 @@ REHex::ByteRangeSet REHex::RangeProcessor::get_queue() const
 	return merged;
 }
 
+bool REHex::RangeProcessor::queue_empty() const
+{
+	assert(!in_work_func);
+	
+	std::lock_guard<std::mutex> pl(pause_lock);
+	return queued.empty() && pending.empty() && working.empty();
+}
+
 void REHex::RangeProcessor::queue_range(off_t offset, off_t length)
 {
+	assert(!in_work_func);
+	
+	std::lock_guard<std::mutex> pl(pause_lock);
+	
+	queue_range_locked(offset, length);
+	
+	if(!pending.empty() && task)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		queue_range_locked(offset, length);
+		/* Notify any sleeping workers that there is now work to be done. */
+		task.restart();
 	}
 	
 	start_threads();
 }
 
+void REHex::RangeProcessor::queue_range_in_worker(off_t offset, off_t length)
+{
+	assert(in_work_func);
+	
+	std::lock_guard<std::mutex> pl(pause_lock);
+	
+	queue_range_locked(offset, length);
+}
+
 void REHex::RangeProcessor::unqueue_range(off_t offset, off_t length)
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	pending.clear_range(offset, length);
 	queued.clear_range(offset, length);
@@ -70,9 +100,23 @@ void REHex::RangeProcessor::unqueue_range(off_t offset, off_t length)
 
 void REHex::RangeProcessor::clear_queue()
 {
+	assert(!in_work_func);
+	
 	std::lock_guard<std::mutex> pl(pause_lock);
 	pending.clear_all();
 	queued.clear_all();
+}
+
+void REHex::RangeProcessor::data_inserted(off_t offset, off_t length)
+{
+	assert(task_paused);
+	pending.data_inserted(offset, length);
+}
+
+void REHex::RangeProcessor::data_erased(off_t offset, off_t length)
+{
+	assert(task_paused);
+	pending.data_erased(offset, length);
 }
 
 void REHex::RangeProcessor::queue_range_locked(off_t offset, off_t length)
@@ -86,12 +130,6 @@ void REHex::RangeProcessor::queue_range_locked(off_t offset, off_t length)
 	
 	queued .set_ranges( to_queued.begin(),  to_queued.end());
 	pending.set_ranges(to_pending.begin(), to_pending.end());
-	
-	if(!pending.empty())
-	{
-		/* Notify any sleeping workers that there is now work to be done. */
-		resume_cv.notify_all();
-	}
 }
 
 void REHex::RangeProcessor::mark_work_done(off_t offset, off_t length)
@@ -105,80 +143,63 @@ void REHex::RangeProcessor::mark_work_done(off_t offset, off_t length)
 	
 	queued.clear_ranges(to_pending.begin(), to_pending.end());
 	pending.set_ranges(to_pending.begin(), to_pending.end());
-	
-	if(!pending.empty())
-	{
-		/* Notify any sleeping workers that there is now work to be done. */
-		resume_cv.notify_all();
-	}
 }
 
-void REHex::RangeProcessor::thread_main()
+bool REHex::RangeProcessor::task_function()
 {
 	std::unique_lock<std::mutex> pl(pause_lock);
 	
-	while(!threads_exit)
+	/* Take up to WINDOW_SIZE bytes from the next range in the pending pool to be
+	 * processed in this thread.
+	*/
+	
+	auto next_dirty_range = pending.begin();
+	if(next_dirty_range == pending.end())
 	{
-		if(threads_pause)
+		if(queued.empty())
 		{
-			--running_threads;
-			
-			paused_cv.notify_all();
-			resume_cv.wait(pl, [this]() { return !threads_pause; });
-			
-			++running_threads;
+			/* All ranges processed. */
+			idle_cv.notify_all();
+			return true;
 		}
-		
-		/* Take up to WINDOW_SIZE bytes from the next range in the pending pool to be
-		 * processed in this thread.
-		*/
-		
-		auto next_dirty_range = pending.begin();
-		if(next_dirty_range == pending.end())
-		{
-			/* Nothing to do.
-			 * Wait until some work is available or we need to pause/stop the thread.
+		else{
+			/* A range currently being processed in another thread has been queued
+			 * for processing again, don't let the task go to sleep.
 			*/
 			
-			idle_cv.notify_all();
-			resume_cv.wait(pl, [&]() { return !pending.empty() || threads_pause || threads_exit; });
-			
-			if(threads_pause)
-			{
-				--running_threads;
-				
-				paused_cv.notify_all();
-				resume_cv.wait(pl, [this]() { return !threads_pause; });
-				
-				++running_threads;
-			}
-			
-			continue;
+			return false;
 		}
-		
-		off_t  window_base   = next_dirty_range->offset;
-		size_t window_length = next_dirty_range->length;
-		
-		window_length = std::min<off_t>(window_length, max_window_size);
-		
-		pending.clear_range(window_base, window_length);
-		working.set_range(  window_base, window_length);
-		
-		pl.unlock();
-		work_func(window_base, window_length);
-		pl.lock();
-		
-		mark_work_done(window_base, window_length);
 	}
 	
-	--running_threads;
-	--spawned_threads;
+	off_t  window_base   = next_dirty_range->offset;
+	size_t window_length = next_dirty_range->length;
+	
+	window_length = std::min<off_t>(window_length, max_window_size);
+	
+	pending.clear_range(window_base, window_length);
+	working.set_range(  window_base, window_length);
+	
+	#ifndef NDEBUG
+	in_work_func = true;
+	#endif
+	
+	pl.unlock();
+	work_func(window_base, window_length);
+	pl.lock();
+	
+	#ifndef NDEBUG
+	in_work_func = false;
+	#endif
+	
+	mark_work_done(window_base, window_length);
+	
+	idle_cv.notify_all();
+	
+	return pending.empty() && queued.empty();
 }
 
 void REHex::RangeProcessor::start_threads()
 {
-	std::lock_guard<std::mutex> pl(pause_lock);
-	
 	ByteRangeSet merged;
 	merged.set_ranges(queued.begin(),  queued.end());
 	merged.set_ranges(pending.begin(), pending.end());
@@ -188,8 +209,6 @@ void REHex::RangeProcessor::start_threads()
 	
 	if(working_total > 0)
 	{
-		threads_exit = false;
-		
 		#if 0
 		if(dirty_total >= (off_t)(UI_THREAD_THRESH))
 		{
@@ -211,12 +230,14 @@ void REHex::RangeProcessor::start_threads()
 				want_threads = max_threads;
 			}
 			
-			while(spawned_threads < want_threads)
+			if(task)
 			{
-				threads.emplace_back(&REHex::RangeProcessor::thread_main, this);
-				
-				++spawned_threads;
-				++running_threads;
+				task.change_concurrency(want_threads);
+				task.restart();
+			}
+			else if(!task_paused)
+			{
+				task = wxGetApp().thread_pool->queue_task([this]() { return task_function(); }, want_threads);
 			}
 		#if 0
 		}
@@ -235,42 +256,49 @@ void REHex::RangeProcessor::start_threads()
 
 void REHex::RangeProcessor::stop_threads()
 {
+	if(task)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		threads_exit = true;
-	}
-	
-	/* Wake any threads that are paused so they can exit. */
-	resume_threads();
-	
-	while(!threads.empty())
-	{
-		threads.front().join();
-		threads.pop_front();
+		task.finish();
+		task.join();
 	}
 }
 
 void REHex::RangeProcessor::pause_threads()
 {
-	std::unique_lock<std::mutex> pl(pause_lock);
+	assert(!in_work_func);
 	
-	threads_pause = true;
+	if(task && !task_paused)
+	{
+		task.pause();
+	}
 	
-	/* Wake any threads that are waiting for work so they can be paused. */
-	resume_cv.notify_all();
-	
-	/* Wait for all threads to pause. */
-	paused_cv.wait(pl, [this]() { return running_threads == 0; });
+	task_paused = true;
 }
 
 void REHex::RangeProcessor::resume_threads()
 {
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		threads_pause = false;
-	}
+	assert(!in_work_func);
 	
-	resume_cv.notify_all();
+	std::unique_lock<std::mutex> pl(pause_lock);
+	
+	if(task_paused)
+	{
+		task_paused = false;
+		
+		if(task)
+		{
+			task.resume();
+		}
+		else{
+			start_threads();
+		}
+	}
+}
+
+bool REHex::RangeProcessor::paused() const
+{
+	assert(!in_work_func);
+	return task_paused;
 }
 
 void REHex::RangeProcessor::wait_for_completion()

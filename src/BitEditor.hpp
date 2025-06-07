@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -40,8 +40,8 @@ namespace REHex {
 			BitEditor(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			virtual std::string name() const override;
-// 			virtual std::string label() const override;
-// 			virtual Shape shape() const override;
+			virtual std::string label() const override;
+			virtual Shape shape() const override;
 			
 			virtual void save_state(wxConfig *config) const override;
 			virtual void load_state(wxConfig *config) override;

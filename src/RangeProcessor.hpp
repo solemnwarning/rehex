@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -27,6 +27,7 @@
 #include <thread>
 
 #include "ByteRangeSet.hpp"
+#include "ThreadPool.hpp"
 
 namespace REHex
 {
@@ -62,6 +63,11 @@ namespace REHex
 			ByteRangeSet get_queue() const;
 			
 			/**
+			 * @brief Check if any ranges are queued or processing.
+			*/
+			REHEX_NODISCARD bool queue_empty() const;
+			
+			/**
 			 * @brief Add a range of bytes to the work queue.
 			 *
 			 * If the given range intersects with a range that is already being
@@ -70,6 +76,15 @@ namespace REHex
 			 * will be dispatched as soon as a worker is free.
 			*/
 			void queue_range(off_t offset, off_t length);
+			
+			/**
+			 * @brief Add a range of bytes to the work queue.
+			 *
+			 * This is basically the same as queue_range(), except this one should be
+			 * called from within the work callback function rather than from the main
+			 * thread.
+			*/
+			void queue_range_in_worker(off_t offset, off_t length);
 			
 			/**
 			 * @brief Remove a range of bytes from the work queue.
@@ -89,6 +104,28 @@ namespace REHex
 			void clear_queue();
 			
 			/**
+			 * @brief Adjust the queue for data being erased from file.
+			 *
+			 * Ranges after the section erased will be moved back by the size of the
+			 * insertion. Ranges wholly within the erased section will be lost. Ranges
+			 * on either side of the erase will be truncated and merged as necessary.
+			 *
+			 * NOTE: The RangeProcessor *MUST* be paused before calling this method.
+			*/
+			void data_inserted(off_t offset, off_t length);
+			
+			/**
+			 * @brief Adjust the queue for data being erased from file.
+			 *
+			 * Ranges after the section erased will be moved back by the size of the
+			 * insertion. Ranges wholly within the erased section will be lost. Ranges
+			 * on either side of the erase will be truncated and merged as necessary.
+			 *
+			 * NOTE: The RangeProcessor *MUST* be paused before calling this method.
+			*/
+			void data_erased(off_t offset, off_t length);
+			
+			/**
 			 * @brief Pause worker threads.
 			 *
 			 * Pauses any worker threads. Will not return until any work functions
@@ -100,6 +137,11 @@ namespace REHex
 			 * @brief Resume paused worker threads.
 			*/
 			void resume_threads();
+			
+			/**
+			 * @brief Check if this RangeProcessor is paused.
+			*/
+			REHEX_NODISCARD bool paused() const;
 			
 			/**
 			 * @brief Wait for work queue to be empty.
@@ -116,13 +158,10 @@ namespace REHex
 			const size_t max_window_size;
 			unsigned int max_threads;
 			
-			std::list<std::thread> threads;  /**< List of threads created and not yet reaped. */
-			std::atomic<bool> threads_exit;  /**< Threads should exit. */
+			ThreadPool::TaskHandle task;
+			bool task_paused;
 			
 			mutable std::mutex pause_lock;      /**< Mutex protecting access to this block of members: */
-			std::atomic<bool> threads_pause;    /**< Running threads should enter paused state. */
-			unsigned int spawned_threads;       /**< Number of threads created. */
-			unsigned int running_threads;       /**< Number of threads not paused. */
 			std::condition_variable paused_cv;  /**< Notifies pause_threads() that a thread has paused. */
 			std::condition_variable resume_cv;  /**< Notifies paused threads that they should resume. */
 			std::condition_variable idle_cv;    /**< Notifies wait_for_completion() that a thread has gone idle. */
@@ -130,10 +169,14 @@ namespace REHex
 			ByteRangeSet pending;               /**< Ranges waiting to be processed. */
 			ByteRangeSet working;               /**< Ranges currently being processed. */
 			
+			#ifndef NDEBUG
+			static thread_local bool in_work_func;
+			#endif
+			
 			void queue_range_locked(off_t offset, off_t length);
 			void mark_work_done(off_t offset, off_t length);
 			
-			void thread_main();
+			bool task_function();
 			void start_threads();
 			void stop_threads();
 			

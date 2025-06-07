@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -54,6 +54,8 @@ wxDEFINE_EVENT(REHex::EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_TYPES_CHANGED,       wxCommandEvent);
 wxDEFINE_EVENT(REHex::EV_MAPPINGS_CHANGED,    wxCommandEvent);
 
+wxDEFINE_EVENT(REHex::EVENT_RECURSION_FIXUP, wxCommandEvent);
+
 REHex::Document::Document():
 	write_protect(false),
 	current_seq(0),
@@ -95,8 +97,8 @@ REHex::Document::Document(const std::string &filename):
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	std::string meta_filename = filename + ".rehex-meta";
-	if(wxFileExists(meta_filename))
+	std::string meta_filename = find_metadata(filename);
+	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
 	}
@@ -105,6 +107,40 @@ REHex::Document::Document(const std::string &filename):
 	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
+
+#ifdef __APPLE__
+REHex::Document::Document(MacFileName &&filename):
+	filename(filename.GetFileName().GetFullPath().ToStdString()),
+	write_protect(false),
+	current_seq(0),
+	buffer_seq(0),
+	saved_seq(0),
+	highlight_colour_map(HighlightColourMap::defaults()),
+	cursor_state(CSTATE_HEX),
+	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
+	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
+	types_changed_buffer(this, EV_TYPES_CHANGED),
+	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
+{
+	buffer = new Buffer(std::move(filename));
+	
+	data_seq.set_range   (0, buffer->length(), 0);
+	types.set_range      (0, buffer->length(), TypeInfo(""));
+	
+	size_t last_slash = this->filename.find_last_of("/\\");
+	title = (last_slash != std::string::npos ? this->filename.substr(last_slash + 1) : this->filename);
+	
+	std::string meta_filename = find_metadata(this->filename);
+	if(!(meta_filename.empty()))
+	{
+		_load_metadata(meta_filename);
+	}
+	
+	_forward_buffer_events();
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
+}
+#endif /* __APPLE__ */
 
 void REHex::Document::_forward_buffer_events()
 {
@@ -220,8 +256,8 @@ void REHex::Document::reload()
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	std::string meta_filename = filename + ".rehex-meta";
-	if(wxFileExists(meta_filename))
+	std::string meta_filename = find_metadata(filename);
+	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
 	}
@@ -250,7 +286,7 @@ void REHex::Document::save()
 		buffer->write_inplace();
 	}
 	
-	_save_metadata(filename + ".rehex-meta");
+	save_metadata_for(filename);
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -272,7 +308,7 @@ void REHex::Document::save(const std::string &filename)
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
 	
-	_save_metadata(filename + ".rehex-meta");
+	save_metadata_for(filename);
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -385,6 +421,17 @@ std::vector<bool> REHex::Document::read_bits(BitOffset offset, size_t max_length
 {
 	return buffer->read_bits(offset, max_length);
 }
+
+/* GCC (and Clang) whinge about the below pattern of creating a heap-allocated std::vector from the
+ * return value of Buffer::read_data() preventing copy elison and state the std::move should be
+ * removed, however, in my testing, removing the std::move leads to the data being copied, which is
+ * unnecessarily expensive in terms of CPU time and (momentary) memory usage, while std::move does
+ * the right thing.
+*/
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpessimizing-move"
+#endif
 
 void REHex::Document::overwrite_data(BitOffset offset, const void *data, off_t length, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
@@ -715,6 +762,10 @@ REHex::Document::TransOpFunc REHex::Document::_op_replace_redo(off_t offset, off
 		return _op_replace_undo(offset, old_data, new_data->size(), new_cursor_pos, new_cursor_state, undo_data_seq_slice);
 	});
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 int REHex::Document::overwrite_text(BitOffset offset, const std::string &utf8_text, BitOffset new_cursor_pos, CursorState new_cursor_state, const char *change_desc)
 {
@@ -1081,6 +1132,47 @@ void REHex::Document::set_highlight_colours(const HighlightColourMap &highlight_
 		});
 }
 
+int REHex::Document::allocate_highlight_colour(const wxString &label, const wxColour &primary_colour, const wxColour &secondary_colour)
+{
+	for(auto it = highlight_colour_map.begin(); it != highlight_colour_map.end(); ++it)
+	{
+		if(it->second.label == label
+			&& (primary_colour == wxNullColour || it->second.primary_colour == primary_colour)
+			&& (secondary_colour == wxNullColour || it->second.secondary_colour == secondary_colour))
+		{
+			return it->first;
+		}
+	}
+	
+	int next_highlight_idx = highlight_colour_map.next_free_idx();
+	if(next_highlight_idx == -1)
+	{
+		return -1;
+	}
+	
+	_tracked_change("change highlight colours",
+		[=, this]()
+		{
+			auto new_colour_it = highlight_colour_map.add();
+			assert(new_colour_it != highlight_colour_map.end());
+			assert(new_colour_it->first == next_highlight_idx);
+			
+			new_colour_it->second.set_label(label);
+			if(primary_colour != wxNullColour) { new_colour_it->second.set_primary_colour(primary_colour); }
+			if(secondary_colour != wxNullColour) { new_colour_it->second.set_secondary_colour(secondary_colour); }
+			
+			_raise_highlights_changed();
+		},
+		
+		[this]()
+		{
+			/* Highlight changes are undone implicitly. */
+			_raise_highlights_changed();
+		});
+	
+	return next_highlight_idx;
+}
+
 const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 {
 	return highlights;
@@ -1088,7 +1180,8 @@ const REHex::BitRangeMap<int> &REHex::Document::get_highlights() const
 
 bool REHex::Document::set_highlight(BitOffset off, BitOffset length, int highlight_colour_idx)
 {
-	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0))
+	if(off < BitOffset::ZERO || length < BitOffset(0, 1) || (off + length) > BitOffset(buffer_length(), 0)
+		|| highlight_colour_map.find(highlight_colour_idx) == highlight_colour_map.end())
 	{
 		return false;
 	}
@@ -1732,6 +1825,9 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		}
 		
 		_update_mappings_data_inserted(offset, length);
+		
+		OffsetLengthEvent data_insert_done_event(this, DATA_INSERT_DONE, offset, length);
+		ProcessEvent(data_insert_done_event);
 	}
 	else{
 		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
@@ -1845,6 +1941,9 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		{
 			_raise_mappings_changed();
 		}
+		
+		OffsetLengthEvent data_erase_done_event(this, DATA_ERASE_DONE, offset, length);
+		ProcessEvent(data_erase_done_event);
 	}
 	else{
 		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);
@@ -1922,9 +2021,10 @@ REHex::Document::TransOpFunc REHex::Document::_op_tracked_change(const std::func
 	});
 }
 
-json_t *REHex::Document::serialise_metadata() const
+json_t *REHex::Document::serialise_metadata(bool even_if_empty) const
 {
-	bool has_data = false;
+	bool has_data = even_if_empty;
+	
 	json_t *root = json_object();
 	if(root == NULL)
 	{
@@ -1954,7 +2054,7 @@ json_t *REHex::Document::serialise_metadata() const
 		const wxScopedCharBuffer utf8_text = c->second.text->utf8_str();
 		
 		json_t *comment = json_object();
-		if(json_array_append(comments, comment) == -1
+		if(json_array_append_new(comments, comment) == -1
 			|| json_object_set_new(comment, "offset", c->first.offset.to_json()) == -1
 			|| json_object_set_new(comment, "length", c->first.length.to_json()) == -1
 			|| json_object_set_new(comment, "text",   json_stringn(utf8_text.data(), utf8_text.length())) == -1)
@@ -1982,7 +2082,7 @@ json_t *REHex::Document::serialise_metadata() const
 	for(auto h = this->highlights.begin(); h != this->highlights.end(); ++h)
 	{
 		json_t *highlight = json_object();
-		if(json_array_append(highlights, highlight) == -1
+		if(json_array_append_new(highlights, highlight) == -1
 			|| json_object_set_new(highlight, "offset",     h->first.offset.to_json()) == -1
 			|| json_object_set_new(highlight, "length",     h->first.length.to_json()) == -1
 			|| json_object_set_new(highlight, "colour-idx", json_integer(h->second)) == -1)
@@ -2032,7 +2132,7 @@ json_t *REHex::Document::serialise_metadata() const
 	for(auto r2v = real_to_virt_segs.begin(); r2v != real_to_virt_segs.end(); ++r2v)
 	{
 		json_t *mapping = json_object();
-		if(json_array_append(virt_mappings, mapping) == -1
+		if(json_array_append_new(virt_mappings, mapping) == -1
 			|| json_object_set_new(mapping, "real_offset", json_integer(r2v->first.offset)) == -1
 			|| json_object_set_new(mapping, "virt_offset", json_integer(r2v->second)) == -1
 			|| json_object_set_new(mapping, "length",      json_integer(r2v->first.length)) == -1)
@@ -2053,19 +2153,69 @@ json_t *REHex::Document::serialise_metadata() const
 	return root;
 }
 
-void REHex::Document::_save_metadata(const std::string &filename)
+void REHex::Document::save_metadata(const std::string &filename) const
 {
 	/* TODO: Atomically replace file. */
 	
-	json_t *meta = serialise_metadata();
+	json_t *meta = serialise_metadata(true);
+	if(meta == NULL)
+	{
+		throw std::bad_alloc();
+	}
+	
+	int res = json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
+	json_decref(meta);
+	
+	if(res != 0)
+	{
+		throw std::runtime_error("Unable to write " + filename);
+	}
+}
+
+void REHex::Document::save_metadata_for(const std::string &filename)
+{
+	/* TODO: Atomically replace file. */
+	
+	json_t *meta = serialise_metadata(false);
 	int res = 0;
 	if (meta != NULL)
 	{
-		res = json_dump_file(meta, filename.c_str(), JSON_INDENT(2));
+		res = json_dump_file(meta, (filename + ".rehex-meta").c_str(), JSON_INDENT(2));
+		
+#ifdef __APPLE__
+		std::string sandbox = App::get_home_directory();
+		
+		wxFileName fn(filename);
+		
+		fn.MakeAbsolute();
+		
+		fn.SetPath(sandbox + fn.GetPath());
+		fn.SetFullName(fn.GetFullName() + ".rehex-meta");
+		
+		if(res == 0)
+		{
+			/* We managed to save the rehex-meta alongside the actual file, delete any
+			 * file within the application sandbox.
+			*/
+			wxRemoveFile(fn.GetFullPath());
+		}
+		else if(wxDirExists(sandbox))
+		{
+			/* Couldn't save the rehex-meta file, probably because we're sandboxed.
+			 * Save the rehex-meta within the application sandbox directory.
+			*/
+			
+			recursive_mkdir(fn.GetPath().ToStdString());
+			res = json_dump_file(meta, fn.GetFullPath().ToStdString().c_str(), JSON_INDENT(2));
+		}
+#endif
 	}
-	else if(wxFileExists(filename))
-	{
-		wxRemoveFile(filename);
+	else{
+		std::string meta_filename = find_metadata(filename);
+		if(!(meta_filename.empty()))
+		{
+			wxRemoveFile(meta_filename);
+		}
 	}
 	json_decref(meta);
 	
@@ -2145,14 +2295,30 @@ REHex::BitRangeMap<REHex::Document::TypeInfo> REHex::Document::_load_types(const
 	{
 		BitOffset offset = BitOffset::from_json(json_object_get(value, "offset"));
 		BitOffset length = BitOffset::from_json(json_object_get(value, "length"));
-		const char *type = json_string_value(json_object_get(value, "type"));
+		const char *type_name = json_string_value(json_object_get(value, "type"));
 		json_t *options  = json_object_get(value, "options");
 		
 		if(offset >= BitOffset::ZERO && offset < BitOffset(buffer_length, 0)
 			&& length > BitOffset::ZERO && (offset + length) <= BitOffset(buffer_length, 0)
-			&& type != NULL)
+			&& type_name != NULL)
 		{
-			types.set_range(offset, length, TypeInfo(type, options));
+			std::shared_ptr<const DataType> type;
+			try {
+				type = DataTypeRegistry::get_type(type_name, options);
+				if(type == NULL)
+				{
+					wxGetApp().printf_error("Ignoring unknown data type '%s' in metadata\n", type_name);
+				}
+			}
+			catch(const std::invalid_argument &e)
+			{
+				wxGetApp().printf_error("Ignoring data type with invalid options (%s) in metadata\n", e.what());
+			}
+			
+			if(type)
+			{
+				types.set_range(offset, length, TypeInfo(type_name, options));
+			}
 		}
 	}
 	
@@ -2188,6 +2354,35 @@ std::pair< REHex::ByteRangeMap<off_t>, REHex::ByteRangeMap<off_t> > REHex::Docum
 	return std::make_pair(real_to_virt_segs, virt_to_real_segs);
 }
 
+void REHex::Document::load_metadata(const std::string &filename)
+{
+	json_error_t json_err;
+	json_t *meta = json_load_file(filename.c_str(), 0, &json_err);
+	if(meta == NULL)
+	{
+		throw std::runtime_error(json_err.text);
+	}
+	
+	wxGetApp().bulk_updates_freeze();
+	
+	ScopedTransaction t(this, "Import metadata");
+	load_metadata(meta);
+	t.commit();
+	
+	/* Fire off every metadata change signal. This will trigger an unnecessary amount of
+	 * processing, but there's no way to coalesce these together (yet).
+	*/
+	
+	_raise_comment_modified();
+	_raise_highlights_changed();
+	_raise_types_changed();
+	_raise_mappings_changed();
+	
+	wxGetApp().bulk_updates_thaw();
+	
+	json_decref(meta);
+}
+
 void REHex::Document::_load_metadata(const std::string &filename)
 {
 	/* TODO: Report errors */
@@ -2198,6 +2393,38 @@ void REHex::Document::_load_metadata(const std::string &filename)
 	load_metadata(meta);
 	
 	json_decref(meta);
+}
+
+std::string REHex::Document::find_metadata(const std::string &filename)
+{
+#ifdef __APPLE__
+	{
+		wxFileName fn(filename);
+		
+		fn.MakeAbsolute();
+		
+		fn.SetPath(App::get_home_directory() + fn.GetPath());
+		fn.SetFullName(fn.GetFullName() + ".rehex-meta");
+		
+		if(fn.FileExists())
+		{
+			return fn.GetFullPath().ToStdString();
+		}
+	}
+#endif
+	
+	{
+		wxFileName fn(filename);
+		
+		fn.SetFullName(fn.GetFullName() + ".rehex-meta");
+		
+		if(fn.FileExists())
+		{
+			return fn.GetFullPath().ToStdString();
+		}
+	}
+	
+	return std::string();
 }
 
 void REHex::Document::load_metadata(const json_t *metadata)
@@ -2274,6 +2501,31 @@ void REHex::Document::OnColourPaletteChanged(wxCommandEvent &event)
 	event.Skip();
 }
 
+bool REHex::Document::ProcessEvent(wxEvent &event)
+{
+	/* When a handler is removed from a wxEvtHandler object, the slot is cleared but the array
+	 * doesn't get compacted until the next time an event is dispatched.
+	 *
+	 * If the next event dispatched on that wxEvtHandler happens to recurse, it triggers an
+	 * assertion failure in wxEvtHandler::SearchDynamicEventTable() and may cause handlers on
+	 * that event to be skipped.
+	 *
+	 * To work around this, we always raise a stub event which should have no handlers bound to
+	 * it before each real event, which causes the handler table compaction to run sooner.
+	 *
+	 * This won't fix all cases - if the handler callback removes a handler from the
+	 * wxEvtHandler before further recursion happens then we are still screwed, but hopefully
+	 * that condition won't ever happen...
+	 *
+	 * See https://github.com/wxWidgets/wxWidgets/issues/24803 for more details.
+	*/
+	
+	wxCommandEvent stub_event(EVENT_RECURSION_FIXUP);
+	wxEvtHandler::ProcessEvent(stub_event);
+	
+	return wxEvtHandler::ProcessEvent(event);
+}
+
 REHex::Document::Comment::Comment(const wxString &text):
 	text(new wxString(text)) {}
 
@@ -2336,11 +2588,24 @@ REHex::Document::TypeInfo::TypeInfo(const std::string &name, const json_t *optio
 	}
 }
 
-REHex::Document::TypeInfo::TypeInfo(const TypeInfo &src):
-	name(src.name),
-	options(src.options)
+REHex::Document::TypeInfo::TypeInfo(const TypeInfo &typeinfo):
+	name(typeinfo.name),
+	options(typeinfo.options)
 {
 	json_incref(options);
+}
+
+REHex::Document::TypeInfo &REHex::Document::TypeInfo::operator=(const TypeInfo &rhs)
+{
+	name = rhs.name;
+	options = rhs.options;
+	
+	if(options != NULL)
+	{
+		json_incref(options);
+	}
+	
+	return *this;
 }
 
 REHex::Document::TypeInfo::~TypeInfo()
@@ -2440,16 +2705,27 @@ REHex::BitRangeTree<REHex::Document::Comment> REHex::CommentsDataObject::get_com
 	
 	const unsigned char *data = (const unsigned char*)(GetData());
 	const unsigned char *end = data + GetSize();
-	const Header *header = nullptr;
 	
-	while(data + sizeof(Header) < end && (header = (const Header*)(data)), (data + sizeof(Header) + header->text_length <= end))
+	while(data + sizeof(Header) < end)
 	{
-		wxString text(wxString::FromUTF8((const char*)(header + 1), header->text_length));
+		Header header;
+		memcpy(&header, data, sizeof(Header));
 		
-		bool x = comments.set(BitOffset::from_int64(header->file_offset), BitOffset::from_int64(header->file_length), REHex::Document::Comment(text));
-		assert(x); /* TODO: Raise some kind of error. Beep? */
-		
-		data += sizeof(Header) + header->text_length;
+		if((data + sizeof(Header) + header.text_length) <= end)
+		{
+			wxString text(wxString::FromUTF8((const char*)(data + sizeof(Header)), header.text_length));
+			
+			#ifndef NDEBUG
+			bool x =
+			#endif
+				comments.set(BitOffset::from_int64(header.file_offset), BitOffset::from_int64(header.file_length), REHex::Document::Comment(text));
+			assert(x); /* TODO: Raise some kind of error. Beep? */
+			
+			data += sizeof(Header) + header.text_length;
+		}
+		else{
+			break;
+		}
 	}
 	
 	return comments;
@@ -2470,14 +2746,17 @@ void REHex::CommentsDataObject::set_comments(const std::list<BitRangeTree<Docume
 	
 	for(auto i = comments.begin(); i != comments.end(); ++i)
 	{
-		Header *header = (Header*)(outp);
-		outp += sizeof(Header);
-		
 		const wxScopedCharBuffer utf8_text = (*i)->value.text->utf8_str();
 		
-		header->file_offset = ((*i)->key.offset - base).to_int64();
-		header->file_length = (*i)->key.length.to_int64();
-		header->text_length = utf8_text.length();
+		Header header;
+		memset(&header, 0, sizeof(header));
+		
+		header.file_offset = ((*i)->key.offset - base).to_int64();
+		header.file_length = (*i)->key.length.to_int64();
+		header.text_length = utf8_text.length();
+		
+		memcpy(outp, &header, sizeof(Header));
+		outp += sizeof(Header);
 		
 		memcpy(outp, utf8_text.data(), utf8_text.length());
 		outp += utf8_text.length();

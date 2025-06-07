@@ -1,6 +1,6 @@
 #!/bin/bash
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -17,27 +17,28 @@
 
 MAKEFLAGS="LUA=lua5.3 -j$(nproc)"
 
-[ -z "$I386_CHROOT" ]      && I386_CHROOT="bionic-i386-sbuild"
+[ -z "$I386_CHROOT" ]      && I386_CHROOT="bullseye-i386-sbuild"
 [ -z "$I386_LINUXDEPLOY" ] && I386_LINUXDEPLOY="https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-i386.AppImage"
 [ -z "$I386_RUNTIME" ]     && I386_RUNTIME="https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-i686"
 
-[ -z "$AMD64_CHROOT" ]      && AMD64_CHROOT="bionic-amd64-sbuild"
+[ -z "$AMD64_CHROOT" ]      && AMD64_CHROOT="bullseye-amd64-sbuild"
 [ -z "$AMD64_LINUXDEPLOY" ] && AMD64_LINUXDEPLOY="https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
 [ -z "$AMD64_RUNTIME" ]     && AMD64_RUNTIME="https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64"
 
 DEPENDS="
 	libbotan-2-dev
 	libcapstone-dev
-	libgtk2.0-dev
+	libgtk-3-dev
 	libjansson-dev
 	liblua5.3-dev
 	libtemplate-perl
 	libunistring-dev
-	libwxgtk3.0-dev
+	libwxgtk3.0-gtk3-dev
 	lua-busted
-	lua5.1
 	lua5.3
 	pkg-config
+	xauth
+	xvfb
 	wx3.0-headers
 	zip
 	zlib1g-dev
@@ -101,6 +102,8 @@ function build-appimage()
 	
 	echo "Started schroot session $SESSION"
 	
+	LINUXDEPLOY_CMD="LDAI_RUNTIME_FILE=AppImage-runtime DEPLOY_GTK_VERSION=3 ./linuxdeploy.AppImage --appimage-extract-and-run"
+	
 	tar --strip-components=1 -xf "$dist" -C "$tmpdir" \
 		&& schroot -c "$SESSION" -r -u root -- apt-get update \
 		&& schroot -c "$SESSION" -r -u root -- apt-get -y install $DEPENDS \
@@ -108,7 +111,8 @@ function build-appimage()
 		&& wget -O "$tmpdir/linuxdeploy-plugin-gtk.sh" "https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" \
 		&& chmod +x "$tmpdir/linuxdeploy.AppImage" "$tmpdir/linuxdeploy-plugin-gtk.sh" \
 		&& wget -O "$tmpdir/AppImage-runtime" "$5" \
-		&& schroot -c "$SESSION" -d "$tmpdir" -r -- make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="LDAI_RUNTIME_FILE=AppImage-runtime DEPLOY_GTK_VERSION=2 ./linuxdeploy.AppImage --appimage-extract-and-run" \
+		&& schroot -c "$SESSION" -d "$tmpdir" -r -- make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="$LINUXDEPLOY_CMD" \
+		&& schroot -c "$SESSION" -d "$tmpdir" -r -- xvfb-run -a -e /dev/stdout make -f Makefile.AppImage $MAKEFLAGS LINUXDEPLOY="$LINUXDEPLOY_CMD" check \
 		&& cp "$tmpdir/rehex.AppImage" "$3"
 	
 	status=$?

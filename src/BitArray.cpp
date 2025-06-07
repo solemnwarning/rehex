@@ -148,7 +148,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.special_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
-			: active_palette->get_average_colour(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
+			: active_palette->blend_colours(Palette::PAL_SELECTED_TEXT_BG, Palette::PAL_NORMAL_TEXT_BG)));
 	
 	auto highlight_func = [&](BitOffset offset)
 	{

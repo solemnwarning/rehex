@@ -42,7 +42,7 @@ namespace REHex {
 				OCT,
 			};
 			
-		private:
+		protected:
 			const T min_value;
 			const T max_value;
 			const T rel_base;

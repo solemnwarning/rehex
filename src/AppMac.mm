@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -74,3 +74,9 @@ int REHex::App::get_caret_off_time_ms()
 	return FALLBACK_CARET_BLINK;
 }
 #endif
+
+std::string REHex::App::get_home_directory()
+{
+	NSString *home_directory = NSHomeDirectory();
+	return [home_directory cStringUsingEncoding:[NSString defaultCStringEncoding]];
+}

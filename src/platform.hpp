@@ -25,3 +25,17 @@ typedef int ssize_t;
 #endif
 
 #endif // _MSC_VER
+
+#if __cplusplus >= 201703L
+#define REHEX_NODISCARD [[nodiscard]]
+#elif defined(_MSC_VER)
+#define REHEX_NODISCARD _Check_return_
+#elif defined(__GNUC__)
+#define REHEX_NODISCARD __attribute__((__warn_unused_result__))
+#else
+#define REHEX_NODISCARD
+#endif
+
+#if defined(__linux__) || defined(__FreeBSD__)
+#define REHEX_ENABLE_WAYLAND_HACKS
+#endif

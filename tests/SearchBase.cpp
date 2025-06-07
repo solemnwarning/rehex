@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,9 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#undef NDEBUG
 #include "../src/platform.hpp"
-#include <assert.h>
 
 #include <gtest/gtest.h>
 #include <wx/evtloop.h>
@@ -56,7 +54,7 @@ class SearchBaseDummy: public Search
 			}
 		}
 		
-		virtual bool test(const void *data, size_t data_size)
+		virtual bool test(const void *data, size_t data_size) override
 		{
 			return (data_size >= 6 && memcmp(data, "foobar", 6) == 0)
 				|| (data_size >= 3 && memcmp(data, "baz", 3) == 0);
@@ -133,7 +131,7 @@ class SearchBaseTest: public ::testing::Test {
 				}
 			}, ID_CHECK_TIMER, ID_CHECK_TIMER);
 			
-			frame.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
+			frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 			{
 				wxTheApp->GetMainLoop()->ScheduleExit();
 			}, ID_TIMEOUT_TIMER, ID_TIMEOUT_TIMER);

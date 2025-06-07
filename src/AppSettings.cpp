@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,7 +29,10 @@ REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
 	goto_offset_base(GotoOffsetBase::AUTO),
 	highlight_colours(HighlightColourMap::defaults()),
-	main_window_commands(MainWindow::get_template_commands())
+	main_window_commands(MainWindow::get_template_commands()),
+	cursor_nav_mode(CursorNavMode::BYTE),
+	goto_offset_modal(true),
+	size_unit(SizeUnit::AUTO_XiB)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -157,6 +160,39 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 		main_window_commands.load_accelerators(config);
 	}
 	
+	long cursor_nav_mode = config->ReadLong("cursor-nav-mode", -1);
+	switch(cursor_nav_mode)
+	{
+		case (long)(CursorNavMode::BYTE):
+		case (long)(CursorNavMode::NIBBLE):
+			this->cursor_nav_mode = (CursorNavMode)(cursor_nav_mode);
+			
+		default:
+			break;
+	}
+	
+	goto_offset_modal = config->ReadBool("goto-offset-modal", goto_offset_modal);
+	
+	long size_unit = config->ReadLong("size-unit", -1);
+	switch(size_unit)
+	{
+		case (long)(SizeUnit::B):
+		case (long)(SizeUnit::KiB):
+		case (long)(SizeUnit::MiB):
+		case (long)(SizeUnit::GiB):
+		case (long)(SizeUnit::TiB):
+		case (long)(SizeUnit::kB):
+		case (long)(SizeUnit::MB):
+		case (long)(SizeUnit::GB):
+		case (long)(SizeUnit::TB):
+		case (long)(SizeUnit::AUTO_XiB):
+		case (long)(SizeUnit::AUTO_XB):
+			this->size_unit = (SizeUnit)(size_unit);
+			
+		default:
+			break;
+	}
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -167,6 +203,7 @@ REHex::AppSettings::~AppSettings()
 
 void REHex::AppSettings::write(wxConfig *config)
 {
+	config->Write("cursor-nav-mode", (long)(cursor_nav_mode));
 	config->Write("preferred-asm-syntax", (long)(preferred_asm_syntax));
 	config->Write("goto-offset-base", (long)(goto_offset_base));
 	
@@ -200,6 +237,9 @@ void REHex::AppSettings::write(wxConfig *config)
 		wxConfigPathChanger scoped_path(config, "main-window-accelerators/");
 		main_window_commands.save_accelerators(config);
 	}
+	
+	config->Write("goto-offset-modal", goto_offset_modal);
+	config->Write("size-unit", (long)(size_unit));
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -290,6 +330,47 @@ void REHex::AppSettings::set_main_window_accelerators(const WindowCommandTable &
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+REHex::CursorNavMode REHex::AppSettings::get_cursor_nav_mode() const
+{
+	return cursor_nav_mode;
+}
+
+void REHex::AppSettings::set_cursor_nav_mode(CursorNavMode cursor_nav_mode)
+{
+	this->cursor_nav_mode = cursor_nav_mode;
+}
+
+REHex::BitOffset REHex::AppSettings::get_cursor_nav_alignment() const
+{
+	switch(cursor_nav_mode)
+	{
+		case CursorNavMode::BYTE:    return BitOffset(1, 0);
+		case CursorNavMode::NIBBLE:  return BitOffset(0, 4);
+	}
+	
+	abort(); /* Unreachable. */
+}
+
+bool REHex::AppSettings::get_goto_offset_modal() const
+{
+	return goto_offset_modal;
+}
+
+void REHex::AppSettings::set_goto_offset_modal(bool goto_offset_modal)
+{
+	this->goto_offset_modal = goto_offset_modal;
+}
+
+REHex::SizeUnit REHex::AppSettings::get_size_unit() const
+{
+	return size_unit;
+}
+
+void REHex::AppSettings::set_size_unit(SizeUnit unit)
+{
+	size_unit = unit;
 }
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)

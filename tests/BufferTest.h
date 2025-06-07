@@ -15,9 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#undef NDEBUG
 #include "../src/platform.hpp"
-#include <assert.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -74,7 +72,7 @@
 	write_file(TMPFILE, BEGIN_DATA); \
 	REHex::Buffer b(TMPFILE, 8); \
 	buffer_manip_code; \
-	assert(unlink(TMPFILE2) == 0 || errno == ENOENT);\
+	if(unlink(TMPFILE2) != 0 && errno != ENOENT) { throw std::runtime_error("Unable to unlink temporary file"); } \
 	b.write_inplace(TMPFILE2); \
 	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
 	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<new file>) produces file with correct data"; \

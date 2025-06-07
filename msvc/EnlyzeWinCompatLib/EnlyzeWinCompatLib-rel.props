@@ -12,6 +12,9 @@
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\src\libcxx\src\winpthreads\include;$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\src\libcxx\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+
+      <!-- Use "/external:I" to suppress warnings from upstream headers. -->
+      <AdditionalOptions>/external:I"$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\src\libcxx\src\winpthreads\include" /external:I"$(SolutionDir)EnlyzeWinCompatLib\EnlyzeWinCompatLib\src\libcxx\include" %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

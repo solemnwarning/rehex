@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2019-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -26,7 +26,9 @@ EXTRA_APP_OBJS := \
 	res/down32.o \
 	res/forward32.o \
 	res/up32.o \
-	src/AppMac.o
+	src/AppMac.o \
+	src/MacFileHistory.o \
+	src/MacFileName.o
 
 EXTRA_TEST_OBJS := \
 	res/backward32.o \
@@ -37,7 +39,9 @@ EXTRA_TEST_OBJS := \
 	res/down32.o \
 	res/forward32.o \
 	res/up32.o \
-	src/AppMac.o
+	src/AppMac.o \
+	src/MacFileHistory.o \
+	src/MacFileName.o
 
 # Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
 CAPSTONE_CFLAGS ?=
@@ -61,10 +65,10 @@ ICONSET := res/REHex.iconset
 ICNS    := res/REHex.icns
 DMGTMP  := tmp/dmg
 
-REHex.app: res/Info.plist $(EXE) $(ICNS) $(HELP_TARGET)
+REHex.app: tools/mac-info-plist.sh $(EXE) $(ICNS) $(HELP_TARGET)
 	mkdir -p                  $@/
 	mkdir -p                  $@/Contents/
-	cp        res/Info.plist  $@/Contents/Info.plist
+	GIT_COMMIT_SHA=$(GIT_COMMIT_SHA) VERSION=$(VERSION) ./tools/mac-info-plist.sh > $@/Contents/Info.plist
 	mkdir -p                  $@/Contents/MacOS/
 	cp        $(EXE)          $@/Contents/MacOS/REHex
 	mkdir -p                  $@/Contents/Resources/

@@ -1,5 +1,42 @@
 Version TBC:
 
+ * Add non-modal "Jump to offset" dialog option (#242).
+
+ * Add "Repeat last 'Jump to offset'" command (#242).
+
+ * Add "Visual Scrollbar" for high-level overview of file contents.
+
+ * Add "Data visualisation" tool for overfiew of file/selection
+   contents (#230).
+
+ * Add metadata import/export commands (#248).
+
+ * Fix crash when <charset = "US-ASCII"> is specified for a file variable
+   in a template (#246).
+
+ * Add highlight functions to scripting API and template language (#247).
+
+ * Fix memory leaks in bitmap preview tool and metadata serialisation.
+
+ * Suspend scanning for strings when the strings tool is hidden.
+
+ * Fix the continue/reset buttons in the strings tool not working
+   correctly.
+
+ * Fix horizontal scroll position being set out-of-range when the window is
+   resized in some situations.
+
+ * Fix bitmap preview tool not following cursor correctly (#244).
+
+ * Allow detaching tool panels to floating windows or docking them to any
+   side of the main window (#229).
+
+Version 0.62.1 (2024-07-24):
+
+ * Fix crashes in x86 Windows build on older CPUs.
+
+Version 0.62.0 (2024-07-20):
+
  * Add bit array data type (#167).
 
  * Allow selecting and setting comments/highlights/types on
@@ -21,6 +58,11 @@ Version TBC:
  * Add Shift+Enter shortcut for "OK" in the comment dialog (#226).
 
  * Display offset in both decimal and hexadecimal in status bar (#228).
+
+ * Fix handling of relative paths specified on the command line when
+   opening in an existing instance (#237).
+
+ * Allow navigating hex data by nibbles rather than bytes (#58).
 
 Version 0.61.1 (2024-03-13):
 

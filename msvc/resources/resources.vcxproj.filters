@@ -60,6 +60,18 @@
     <CustomBuild Include="..\..\res\diff_fold48.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_bottom.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_left.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_right.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_top.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="..\..\res\shortcut48.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>

@@ -259,4 +259,44 @@ Returns the number of <b>bytes</b> in the string.
 Sets a comment on a range of bytes in the document.
 </p>
 
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]int[% END %] AllocateHighlightColour([% WRAPPER "code-type.tt" %]string[% END %] label)
+[% WRAPPER "code-type.tt" %]int[% END %] AllocateHighlightColour([% WRAPPER "code-type.tt" %]string[% END %] label, [% WRAPPER "code-type.tt" %]int[% END %] primary_colour, [% WRAPPER "code-type.tt" %]int[% END %] secondary_colour)
+[%- END %]
+
+<p>
+Creates a new highlight colour in the document (or selects any existing one which matches) to be used with the <code>SetHighlight()</code> function.
+</p>
+
+<p>
+The first version of the function uses the default colours from the colour palette, while the second version explicitly defines the primary (background) and secondary (foreground) colours as 24-bit RGB colours (e.g. <code>0xFF0000</code> for red or <code>0x00FF00</code> for green).
+</p>
+
+<p>
+If there are no free slots to define new highlight colours in the document, <code>-1</code> will be returned.
+</p>
+
+<p>
+Highlight colours can be applied directly to file variables using the following syntax:
+</p>
+
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-keyword.tt" %]local[% END %] [% WRAPPER "code-type.tt" %]int[% END %] highlight = AllocateHighlightColour("something descriptive");
+[% WRAPPER "code-type.tt" %]int[% END %] field[32] &lt;highlight = highlight&gt;;
+[%- END %]
+
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] SetHighlight([% WRAPPER "code-type.tt" %]int64_t[% END %] offset, [% WRAPPER "code-type.tt" %]int64_t[% END %] length, [% WRAPPER "code-type.tt" %]int[% END %] colour_idx)
+[%- END %]
+
+<p>
+Sets a highlight colour on a range of bytes in the document. Use the <code>AllocateHighlightColour()</code> function to create a highlight colour for use with this function.
+</p>
+
+<p>
+Specifying <code>-1</code> for the <code>colour_idx</code> parameter will clear an existing highlight.
+</p>
+
 [% END %]

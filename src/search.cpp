@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,6 +31,7 @@
 
 #include "CharacterEncoder.hpp"
 #include "NumericTextCtrl.hpp"
+#include "profile.hpp"
 #include "search.hpp"
 #include "util.hpp"
 
@@ -503,6 +504,8 @@ bool REHex::Search::read_base_window_controls()
 
 void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 {
+	PROFILE_SET_THREAD_GROUP(NONE);
+	
 	while(running && match_found_at < 0)
 	{
 		off_t window_begin, window_end;

@@ -133,6 +133,8 @@ namespace REHex
 			
 			void set_default_lightness(int lightness);
 			
+			int next_free_idx() const;
+			
 			bool operator==(const HighlightColourMap &rhs) const
 			{
 				return colours == rhs.colours;

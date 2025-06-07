@@ -130,6 +130,9 @@
     <ClCompile Include="..\..\tests\testutil.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\tests\ThreadPool.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\AboutDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -361,6 +364,9 @@
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\HierarchicalByteAccumulator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\SettingsDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -369,6 +375,9 @@
     </ClCompile>
     <ClCompile Include="..\..\src\HSVColour.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\HierarchicalByteAccumulator.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\tests\HighlightColourMap.cpp">
       <Filter>tests</Filter>
@@ -411,6 +420,57 @@
     </ClCompile>
     <ClCompile Include="..\..\tests\WindowCommands.cpp">
       <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GotoOffsetDialog.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\SettingsDialogGeneral.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\ByteAccumulator.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DataMapScrollbar.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DataMapSource.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\DataView.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\DataView.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\PopupTipWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MultiSplitter.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ToolDock.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\MultiSplitter.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\dock_bottom.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\dock_left.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\dock_right.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\dock_top.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\tests\Range.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\CustomNumericType.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -495,10 +555,27 @@
     <ClInclude Include="..\..\res\shortcut48.h">
       <Filter>res</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\res\dock_bottom.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\dock_left.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\dock_right.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\dock_top.h">
+      <Filter>res</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\..\src\lua-bindings\rehex_rules.lua">
       <Filter>src</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\res\winres.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

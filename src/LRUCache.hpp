@@ -64,6 +64,16 @@ namespace REHex
 			const V *set(const K &k, const V &v);
 			
 			/**
+			 * @brief Erase a value from the cache.
+			*/
+			void erase(const K &k);
+			
+			/**
+			 * @brief Erase any values in a range from the cache.
+			*/
+			void erase(const K &begin, const K &end);
+			
+			/**
 			 * @brief Remove all values from the cache.
 			*/
 			void clear();
@@ -114,6 +124,31 @@ template<typename K, typename V> const V *REHex::LRUCache<K,V>::set(const K &k, 
 	}
 
 	return &(queue.front().second);
+}
+
+template<typename K, typename V> void REHex::LRUCache<K,V>::erase(const K &k)
+{
+	auto i = map.find(k);
+	
+	if(i != map.end())
+	{
+		queue.erase(i->second);
+		map.erase(i);
+	}
+}
+
+template<typename K, typename V> void REHex::LRUCache<K,V>::erase(const K &begin, const K &end)
+{
+	auto i = map.lower_bound(begin);
+	
+	while(i != map.end() && i->first < end)
+	{
+		auto del = i;
+		++i;
+		
+		queue.erase(del->second);
+		map.erase(del);
+	}
 }
 
 template<typename K, typename V> void REHex::LRUCache<K,V>::clear()

@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{9E3A9219-9E63-4C16-B3A5-93FAC78086D4}</ProjectGuid>
     <RootNamespace>alltests</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -30,6 +30,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>ClangCL</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -37,19 +38,22 @@
     <PlatformToolset>ClangCL</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -86,15 +90,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -107,6 +115,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ObjectFileName>$(IntDir)\%(Directory)</ObjectFileName>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,16 +132,19 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj -march=pentium-mmx %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ObjectFileName>$(IntDir)\%(Directory)</ObjectFileName>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <LargeAddressAware>true</LargeAddressAware>
+      <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -147,11 +159,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/bigobj -march=pentium-mmx %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ObjectFileName>$(IntDir)\%(Directory)</ObjectFileName>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -159,6 +172,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+      <LargeAddressAware>true</LargeAddressAware>
+      <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
     </Link>
     <PreBuildEvent>
       <Command>$(SolutionDir)gen_content.bat $(TargetPath)</Command>
@@ -178,6 +193,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ObjectFileName>$(IntDir)\%(Directory)</ObjectFileName>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -204,6 +220,10 @@
     <ClCompile Include="..\..\res\diff_fold24.c" />
     <ClCompile Include="..\..\res\diff_fold32.c" />
     <ClCompile Include="..\..\res\diff_fold48.c" />
+    <ClCompile Include="..\..\res\dock_bottom.c" />
+    <ClCompile Include="..\..\res\dock_left.c" />
+    <ClCompile Include="..\..\res\dock_right.c" />
+    <ClCompile Include="..\..\res\dock_top.c" />
     <ClCompile Include="..\..\res\fit_to_screen16.c" />
     <ClCompile Include="..\..\res\icon128.c" />
     <ClCompile Include="..\..\res\icon16.c" />
@@ -243,7 +263,11 @@
     <ClCompile Include="..\..\src\CommentTree.cpp" />
     <ClCompile Include="..\..\src\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\src\CustomMessageDialog.cpp" />
+    <ClCompile Include="..\..\src\CustomNumericType.cpp" />
+    <ClCompile Include="..\..\src\DataMapScrollbar.cpp" />
+    <ClCompile Include="..\..\src\DataMapSource.cpp" />
     <ClCompile Include="..\..\src\DataType.cpp" />
+    <ClCompile Include="..\..\src\DataView.cpp" />
     <ClCompile Include="..\..\src\DetachableNotebook.cpp" />
     <ClCompile Include="..\..\src\DiffWindow.cpp" />
     <ClCompile Include="..\..\src\DisassemblyRegion.cpp" />
@@ -254,6 +278,8 @@
     <ClCompile Include="..\..\src\FileWriter.cpp" />
     <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp" />
+    <ClCompile Include="..\..\src\GotoOffsetDialog.cpp" />
+    <ClCompile Include="..\..\src\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\..\src\HighlightColourMap.cpp" />
     <ClCompile Include="..\..\src\HSVColour.cpp" />
     <ClCompile Include="..\..\src\IntelHexExport.cpp" />
@@ -264,12 +290,15 @@
     <ClCompile Include="..\..\src\lua-plugin-preload.c" />
     <ClCompile Include="..\..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\src\mainwindow.cpp" />
+    <ClCompile Include="..\..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\..\src\Palette.cpp" />
+    <ClCompile Include="..\..\src\PopupTipWindow.cpp" />
     <ClCompile Include="..\..\src\RangeDialog.cpp" />
     <ClCompile Include="..\..\src\RangeProcessor.cpp" />
     <ClCompile Include="..\..\src\search.cpp" />
     <ClCompile Include="..\..\src\SettingsDialog.cpp" />
     <ClCompile Include="..\..\src\SettingsDialogByteColour.cpp" />
+    <ClCompile Include="..\..\src\SettingsDialogGeneral.cpp" />
     <ClCompile Include="..\..\src\SettingsDialogHighlights.cpp" />
     <ClCompile Include="..\..\src\SettingsDialogKeyboard.cpp" />
     <ClCompile Include="..\..\src\StringPanel.cpp" />
@@ -277,6 +306,7 @@
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
     <ClCompile Include="..\..\src\ThreadPool.cpp" />
     <ClCompile Include="..\..\src\ToolPanel.cpp" />
+    <ClCompile Include="..\..\src\ToolDock.cpp" />
     <ClCompile Include="..\..\src\util.cpp" />
     <ClCompile Include="..\..\src\VirtualMappingDialog.cpp" />
     <ClCompile Include="..\..\src\win32lib.cpp" />
@@ -286,6 +316,7 @@
     <ClCompile Include="..\..\tests\BufferTest1.cpp" />
     <ClCompile Include="..\..\tests\BufferTest2.cpp" />
     <ClCompile Include="..\..\tests\BufferTest3.cpp" />
+    <ClCompile Include="..\..\tests\ByteAccumulator.cpp" />
     <ClCompile Include="..\..\tests\ByteColourMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeMap.cpp" />
     <ClCompile Include="..\..\tests\ByteRangeSet.cpp" />
@@ -298,6 +329,7 @@
     <ClCompile Include="..\..\tests\ConsoleBuffer.cpp" />
     <ClCompile Include="..\..\tests\DataHistogramAccumulator.cpp" />
     <ClCompile Include="..\..\tests\DataType.cpp" />
+    <ClCompile Include="..\..\tests\DataView.cpp" />
     <ClCompile Include="..\..\tests\DiffWindow.cpp" />
     <ClCompile Include="..\..\tests\DisassemblyRegion.cpp" />
     <ClCompile Include="..\..\tests\Document.cpp" />
@@ -305,14 +337,17 @@
     <ClCompile Include="..\..\tests\endian_conv.cpp" />
     <ClCompile Include="..\..\tests\FastRectangleFiller.cpp" />
     <ClCompile Include="..\..\tests\FileWriter.cpp" />
+    <ClCompile Include="..\..\tests\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\..\tests\HighlightColourMap.cpp" />
     <ClCompile Include="..\..\tests\HSVColour.cpp" />
     <ClCompile Include="..\..\tests\IntelHexExport.cpp" />
     <ClCompile Include="..\..\tests\IntelHexImport.cpp" />
     <ClCompile Include="..\..\tests\LuaPluginLoader.cpp" />
     <ClCompile Include="..\..\tests\main.cpp" />
+    <ClCompile Include="..\..\tests\MultiSplitter.cpp" />
     <ClCompile Include="..\..\tests\NestedOffsetLengthMap.cpp" />
     <ClCompile Include="..\..\tests\NumericTextCtrl.cpp" />
+    <ClCompile Include="..\..\tests\Range.cpp" />
     <ClCompile Include="..\..\tests\RangeProcessor.cpp" />
     <ClCompile Include="..\..\tests\SafeWindowPointer.cpp" />
     <ClCompile Include="..\..\tests\search-bseq.cpp" />
@@ -324,6 +359,7 @@
     <ClCompile Include="..\..\tests\StringPanel.cpp" />
     <ClCompile Include="..\..\tests\Tab.cpp" />
     <ClCompile Include="..\..\tests\testutil.cpp" />
+    <ClCompile Include="..\..\tests\ThreadPool.cpp" />
     <ClCompile Include="..\..\tests\util.cpp" />
     <ClCompile Include="..\..\tests\WindowCommands.cpp" />
   </ItemGroup>
@@ -342,6 +378,10 @@
     <ClInclude Include="..\..\res\diff_fold24.h" />
     <ClInclude Include="..\..\res\diff_fold32.h" />
     <ClInclude Include="..\..\res\diff_fold48.h" />
+    <ClInclude Include="..\..\res\dock_bottom.h" />
+    <ClInclude Include="..\..\res\dock_left.h" />
+    <ClInclude Include="..\..\res\dock_right.h" />
+    <ClInclude Include="..\..\res\dock_top.h" />
     <ClInclude Include="..\..\res\fit_to_screen16.h" />
     <ClInclude Include="..\..\res\icon128.h" />
     <ClInclude Include="..\..\res\icon16.h" />
@@ -381,6 +421,9 @@
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
       <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\res\winres.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

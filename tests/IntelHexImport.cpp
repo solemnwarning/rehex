@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,54 +21,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "testutil.hpp"
 #include "../src/IntelHexImport.hpp"
 
 using namespace REHex;
-
-class HexImportTestFile
-{
-	public:
-		char tmpfile[L_tmpnam];
-		
-		HexImportTestFile(const char *data, int len = -1)
-		{
-			if(tmpnam(tmpfile) == NULL)
-			{
-				throw std::runtime_error("Cannot generate temporary file name");
-			}
-			
-#ifdef _WIN32
-			/* > Note than when a file name is pre-pended with a backslash and no path
-			 * > information, such as \fname21, this indicates that the name is valid
-			 * > for the current working directory.
-			 * - MSDN
-			 *
-			 * Sure, that makes total sense.
-			*/
-			if(tmpfile[0] == '\\' && strchr((tmpfile + 1), '\\') == NULL)
-			{
-				/* Remove the leading slash. */
-				memmove(tmpfile, tmpfile + 1, strlen(tmpfile) - 1);
-			}
-#endif
-			
-			if(len < 0)
-			{
-				len = strlen(data);
-			}
-			
-			FILE *fh = fopen(tmpfile, "wb");
-			if(fh == NULL || fwrite(data, len, 1, fh) != 1 || fclose(fh) != 0)
-			{
-				throw std::runtime_error("Cannot create temporary file");
-			}
-		}
-		
-		~HexImportTestFile()
-		{
-			unlink(tmpfile);
-		}
-};
 
 #define EXPECT_DATA(...) \
 { \
@@ -106,7 +62,7 @@ class HexImportTestFile
 
 TEST(IntelHexImport, LoadsSimpleHexFile)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -159,7 +115,7 @@ TEST(IntelHexImport, LoadsHexFileWithNulBytes)
 	 * https://en.wikipedia.org/wiki/Intel_HEX
 	*/
 	
-	HexImportTestFile file(
+	TempFile file(
 		"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0" /* 25x */
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
@@ -209,7 +165,7 @@ TEST(IntelHexImport, LoadsHexFileWithNulBytes)
 
 TEST(IntelHexImport, LoadsHexFileWithNoWhitespace)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78"
 		":10001000101112131415161718191A1B1C1D1E1F68"
 		":10002000202122232425262728292A2B2C2D2E2F58"
@@ -240,7 +196,7 @@ TEST(IntelHexImport, LoadsHexFileWithNoWhitespace)
 
 TEST(IntelHexImport, LoadsHexFileWithStuffBetweenRecords)
 {
-	HexImportTestFile file(
+	TempFile file(
 		"safari :10000000000102030405060708090A0B0C0D0E0F78 burial\n"
 		"administration:10001000101112131415161718191A1B1C1D1E1F68environment\n"
 		"\t:10002000202122232425262728292A2B2C2D2E2F58$\n"
@@ -271,7 +227,7 @@ TEST(IntelHexImport, LoadsHexFileWithStuffBetweenRecords)
 
 TEST(IntelHexImport, LoadsHexFileWithHoles)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -313,7 +269,7 @@ TEST(IntelHexImport, LoadsHexFileWithHoles)
 
 TEST(IntelHexImport, LoadsHexFileWithExtendedSegmentAddressing)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -369,7 +325,7 @@ TEST(IntelHexImport, LoadsHexFileWithExtendedSegmentAddressing)
 
 TEST(IntelHexImport, LoadsHexFileWithExtendedLinearAddressing)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -425,7 +381,7 @@ TEST(IntelHexImport, LoadsHexFileWithExtendedLinearAddressing)
 
 TEST(IntelHexImport, ErrorsOnBadChecksum)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F69\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -451,7 +407,7 @@ TEST(IntelHexImport, ErrorsOnBadChecksum)
 
 TEST(IntelHexImport, ErrorsOnTruncatedFile)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":1000100010111213141516");
 	
@@ -470,7 +426,7 @@ TEST(IntelHexImport, ErrorsOnTruncatedFile)
 
 TEST(IntelHexImport, ErrorsOnTruncatedRecord)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":1000100010111213141516\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -496,7 +452,7 @@ TEST(IntelHexImport, ErrorsOnTruncatedRecord)
 
 TEST(IntelHexImport, ErrorsOnNoEndOfFileRecord)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
 		":10002000202122232425262728292A2B2C2D2E2F58\n"
@@ -521,7 +477,7 @@ TEST(IntelHexImport, ErrorsOnNoEndOfFileRecord)
 
 TEST(IntelHexImport, ErrorsOnGarbageInRecord)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
 		":10002000~^%*^*((*&25262728292A2B2C2D2E2F58\n"
@@ -547,7 +503,7 @@ TEST(IntelHexImport, ErrorsOnGarbageInRecord)
 
 TEST(IntelHexImport, LoadsHexFileWithExtendedSegmentAddressingAndStartAddress)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":0400000312345678E5\n"
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
@@ -605,7 +561,7 @@ TEST(IntelHexImport, LoadsHexFileWithExtendedSegmentAddressingAndStartAddress)
 
 TEST(IntelHexImport, LoadsHexFileWithExtendedLinearAddressingAndStartAddress)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":0400000512345678E3"
 		":10000000000102030405060708090A0B0C0D0E0F78\n"
 		":10001000101112131415161718191A1B1C1D1E1F68\n"
@@ -663,7 +619,7 @@ TEST(IntelHexImport, LoadsHexFileWithExtendedLinearAddressingAndStartAddress)
 
 TEST(IntelHexImport, ErrorsOnStartSegmentAddressWithWrongDataSize)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":020000031234B5\n");
 	
 	EXPECT_THROW({
@@ -681,7 +637,7 @@ TEST(IntelHexImport, ErrorsOnStartSegmentAddressWithWrongDataSize)
 
 TEST(IntelHexImport, ErrorsOnStartLinearAddressWithWrongDataSize)
 {
-	HexImportTestFile file(
+	TempFile file(
 		":06000005123400000000AF\n");
 	
 	EXPECT_THROW({

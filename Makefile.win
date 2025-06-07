@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2018-2020 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -40,11 +40,36 @@ CXXFLAGS += -Iinclude/gcc-win-include/
 CFLAGS   += -DREHEX_CACHE_STRING_BITMAPS
 CXXFLAGS += -DREHEX_CACHE_STRING_BITMAPS
 
-# Botan 3 requires C++20
-BOTAN_PKG := botan-3
-CXXSTD    := -std=c++20
+CFLAGS   += -D_FILE_OFFSET_BITS=64
+CXXFLAGS += -D_FILE_OFFSET_BITS=64
 
 include Makefile
+
+# Any embedded quotes passed to windres via -D are lost, so we need to write the version string to
+# a header and include it from the resource rather than passing it directly.
+EXTRA_APP_BUILD_COMMAND := echo '\#define SHORT_VERSION "$(VERSION)"' > res/version-defs.h
+VERSION_RES_DEFS :=
+
+ifneq ($(GIT_COMMIT_SHA),)
+	VERSION_RES_DEFS += -DREHEX_GIT
+	VERSION_RES_DEFS += -DVERSION_WORDS=0,0,0,0
+else
+	VERSION_WORDS := $(subst ., ,$(VERSION))
+	
+	VERSION_WORD1 = $(if $(word 1,$(VERSION_WORDS)),$(word 1,$(VERSION_WORDS)),0)
+	VERSION_WORD2 = $(if $(word 2,$(VERSION_WORDS)),$(word 2,$(VERSION_WORDS)),0)
+	VERSION_WORD3 = $(if $(word 3,$(VERSION_WORDS)),$(word 3,$(VERSION_WORDS)),0)
+	VERSION_WORD4 = $(if $(word 4,$(VERSION_WORDS)),$(word 4,$(VERSION_WORDS)),0)
+	
+	VERSION_RES_DEFS += -DVERSION_WORDS=$(VERSION_WORD1),$(VERSION_WORD2),$(VERSION_WORD3),$(VERSION_WORD4)
+endif
+
+ifeq ($(BUILD_TYPE),release)
+	VERSION_RES_DEFS += -DREHEX_RELEASE
+endif
+
+EXTRA_APP_BUILD_COMMAND += && windres $(VERSION_RES_DEFS) res/version-res.rc res/version-res.o
+EXTRA_APP_LINK_OBJS := res/version-res.o
 
 DISTDIR ?= rehex-$(VERSION)
 

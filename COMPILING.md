@@ -15,12 +15,12 @@ REHex is compiled using a (GNU) Makefile, most of the common targets (e.g. `all`
 
 The following libraries are required for building/running REHex:
 
- - Botan
- - Capstone
- - Jansson
+ - [Botan](https://botan.randombit.net/)
+ - [Capstone](https://www.capstone-engine.org/)
+ - [Jansson](https://www.digip.org/jansson/)
  - libunistring
  - Lua (5.3+)
- - Template Toolkit (unless help is disabled)
+ - [Template Toolkit](https://template-toolkit.org/) (unless help is disabled)
  - wxWidgets
 
 ## Makefile environment variables
@@ -81,6 +81,7 @@ The following environment variables can be set before sourcing `mac-build-depend
 |-------------------------|----------------------------------|---------------------------------------|
 | `REHEX_DEP_BUILD_DIR`   | `<cwd>/mac-dependencies-build/`  | Directory to build libraries under.   |
 | `REHEX_DEP_TARGET_DIR`  | `<cwd>/mac-dependencies/`        | Directory to install libraries under. |
+| `REHEX_BUILD_ARCH`      | `<blank>` (x86_64 and arm64)     | Architecture to build for.            |
 
 To build the application:
 

@@ -14,13 +14,19 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+# Returns the first of $(1) or $(2) which is defined in the pkg-config
+# database, or errors if neither are.
+pkg-select-ab = $\
+	$(if $(filter yes,$(shell pkg-config --exists $(1) && echo yes)),$(1),$\
+		$(if $(filter yes,$(shell pkg-config --exists $(2) && echo yes)),$(2),$\
+			$(error Could not find $(1) or $(2) using pkg-config)))
+
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
-BOTAN_PKG    ?= botan-2
+BOTAN_PKG    ?= $(call pkg-select-ab,botan-3,botan-2)
 CAPSTONE_PKG ?= capstone
 JANSSON_PKG  ?= jansson
-LUA_PKG      ?= $(shell pkg-config --exists lua5.3 && echo lua5.3 || echo lua)
-CXXSTD       ?= -std=c++11
+LUA_PKG      ?= $(call pkg-select-ab,lua5.3,lua)
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
@@ -82,6 +88,12 @@ ifeq ($(need_compiler_flags),1)
 	
 	GTK_CFLAGS = $$($(GTKCONFIG_EXE) --cflags)
 	GTK_LIBS   = $$($(GTKCONFIG_EXE) --libs)
+	
+	ifeq ($(BOTAN_PKG),botan-3)
+		CXXSTD ?= -std=c++20
+	else
+		CXXSTD ?= -std=c++11
+	endif
 endif
 
 BASE_CFLAGS := -Wall
@@ -103,7 +115,7 @@ else
 		ifeq ($(BUILD_TYPE),profile)
 			BASE_CFLAGS += $(PROFILE_CFLAGS)
 		else
-			$(error unknown BUILD_TYPE '$(BUILD_TYPE)')
+			X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)' (should be release, debug or profile))
 		endif
 	endif
 endif
@@ -123,6 +135,8 @@ endif
 LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 # Define this for releases
+# NOTE: This *MUST* be of the form a.b.c where each component is an integer to fit the format of
+# macOS version numbers and Windows version info resources.
 # VERSION := x
 
 ifdef VERSION
@@ -178,6 +192,10 @@ clean:
 	      res/diff_fold24.c res/diff_fold24.h \
 	      res/diff_fold32.c res/diff_fold32.h \
 	      res/diff_fold48.c res/diff_fold48.h \
+	      res/dock_bottom.c res/dock_bottom.h \
+	      res/dock_left.c   res/dock_left.h \
+	      res/dock_right.c  res/dock_right.h \
+	      res/dock_top.c    res/dock_top.h \
 	      res/icon16.c    res/icon16.h \
 	      res/icon32.c    res/icon32.h \
 	      res/icon48.c    res/icon48.h \
@@ -328,6 +346,10 @@ APP_OBJS := \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
 	res/diff_fold48.o \
+	res/dock_bottom.o \
+	res/dock_left.o \
+	res/dock_right.o \
+	res/dock_top.o \
 	res/fit_to_screen16.o \
 	res/icon16.o \
 	res/icon32.o \
@@ -373,7 +395,11 @@ APP_OBJS := \
 	src/CustomMessageDialog.$(BUILD_TYPE).o \
 	src/CustomNumericType.$(BUILD_TYPE).o \
 	src/DataHistogramPanel.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
+	src/DataMapTool.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/decodepanel.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
@@ -386,6 +412,8 @@ APP_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
@@ -397,7 +425,9 @@ APP_OBJS := \
 	src/lua-plugin-preload.$(BUILD_TYPE).o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
+	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/profile.$(BUILD_TYPE).o \
 	src/RangeChoiceLinear.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
@@ -405,6 +435,7 @@ APP_OBJS := \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
+	src/SettingsDialogGeneral.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
@@ -412,6 +443,7 @@ APP_OBJS := \
 	src/Tab.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
+	src/ToolDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/VirtualMappingList.$(BUILD_TYPE).o \
@@ -423,8 +455,9 @@ APP_OBJS := \
 	$(EXTRA_APP_OBJS)
 
 $(DEFAULT_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+	$(EXTRA_APP_BUILD_COMMAND)
 	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
@@ -437,6 +470,10 @@ TEST_OBJS := \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
 	res/diff_fold48.o \
+	res/dock_bottom.o \
+	res/dock_left.o \
+	res/dock_right.o \
+	res/dock_top.o \
 	res/fit_to_screen16.o \
 	res/icon16.o \
 	res/icon32.o \
@@ -476,7 +513,10 @@ TEST_OBJS := \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \
 	src/CustomMessageDialog.$(BUILD_TYPE).o \
 	src/CustomNumericType.$(BUILD_TYPE).o \
+	src/DataMapScrollbar.$(BUILD_TYPE).o \
+	src/DataMapSource.$(BUILD_TYPE).o \
 	src/DataType.$(BUILD_TYPE).o \
+	src/DataView.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
 	src/DisassemblyRegion.$(BUILD_TYPE).o \
@@ -487,6 +527,8 @@ TEST_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/GotoOffsetDialog.$(BUILD_TYPE).o \
+	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
@@ -497,12 +539,15 @@ TEST_OBJS := \
 	src/lua-plugin-preload.$(BUILD_TYPE).o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
+	src/PopupTipWindow.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
+	src/SettingsDialogGeneral.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
@@ -510,6 +555,7 @@ TEST_OBJS := \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
+	src/ToolDock.$(BUILD_TYPE).o \
 	src/util.$(BUILD_TYPE).o \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
@@ -519,6 +565,7 @@ TEST_OBJS := \
 	tests/BufferTest1.o \
 	tests/BufferTest2.o \
 	tests/BufferTest3.o \
+	tests/ByteAccumulator.o \
 	tests/ByteColourMap.o \
 	tests/ByteRangeMap.o \
 	tests/ByteRangeSet.o \
@@ -531,6 +578,7 @@ TEST_OBJS := \
 	tests/ConsoleBuffer.o \
 	tests/CustomNumericType.o \
 	tests/DataType.o \
+	tests/DataView.o \
 	tests/DataHistogramAccumulator.o \
 	tests/DiffWindow.o \
 	tests/DisassemblyRegion.o \
@@ -539,6 +587,7 @@ TEST_OBJS := \
 	tests/endian_conv.o \
 	tests/FastRectangleFiller.o \
 	tests/FileWriter.o \
+	tests/HierarchicalByteAccumulator.o \
 	tests/HighlightColourMap.o \
 	tests/HSVColour.o \
 	tests/IntelHexExport.o \
@@ -547,6 +596,8 @@ TEST_OBJS := \
 	tests/main.o \
 	tests/NestedOffsetLengthMap.o \
 	tests/NumericTextCtrl.o \
+	tests/MultiSplitter.o \
+	tests/Range.o \
 	tests/RangeProcessor.o \
 	tests/search-bseq.o \
 	tests/search-text.o \
@@ -557,6 +608,7 @@ TEST_OBJS := \
 	tests/StringPanel.o \
 	tests/Tab.o \
 	tests/testutil.o \
+	tests/ThreadPool.o \
 	tests/util.o \
 	tests/WindowCommands.o \
 	$(WXLUA_OBJS) \
@@ -589,6 +641,7 @@ src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_bind.h src/lua-plugi
 src/mainwindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/SettingsDialogKeyboard.$(BUILD_TYPE).o: res/shortcut48.h
 src/StringPanel.$(BUILD_TYPE).o: res/spinner24.h
+src/ToolDock.$(BUILD_TYPE).o: res/dock_bottom.h res/dock_left.h res/dock_right.h res/dock_top.h
 
 res/license.done: LICENSE.txt $(EMBED_EXE)
 	$(EMBED_EXE) $< LICENSE_TXT res/license.c res/license.h
@@ -653,6 +706,46 @@ googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
 
 wxLua/%.cpp: $(WXLUA_BINDINGS)
 	@true
+
+# We can generate a compile_commands.json for use by source checkers and IDEs which know how to
+# parse it such as clangd and JetBrains Fleet.
+#
+# The compile_commands.json fragment for each file is written out under .cc/ and then merged into
+# the top-level compile_commands.json, all are rebuilt when the Makefile(s) are changed.
+
+COMPILE_COMMAND_DEPENDENCIES := $(wildcard Makefile Makefile.*)
+COMPILE_COMMAND_INTERMEDIATE_DIR := .cc
+
+.PHONY: compile_commands.json
+compile_commands.json: $(addprefix $(COMPILE_COMMAND_INTERMEDIATE_DIR)/,$(addsuffix .compile_command.json,$(APP_OBJS) $(TEST_OBJS)))
+	cat $^ | jq -s . > $@
+
+# $(call emit-compile-command,$(COMPILE_COMMAND_INTERMEDIATE_DIR)/foo.o.compile_command.json,foo.c,$(CC) $(CFLAGS))
+define emit-compile-command
+	@mkdir -p $(dir $(1))
+	echo "{ \"directory\": $$(pwd | jq -R .), \"file\": $$(echo "$(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | jq -R .), \"command\": $$(echo "$(3) -o $(2) $(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | jq -R .) }" > $(1)
+endef
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/googletest/src/%.o.compile_command.json: googletest/src/%.cc $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.$(BUILD_TYPE).o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
 
 .PHONY: help/rehex.chm
 help/rehex.chm:

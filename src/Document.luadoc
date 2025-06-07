@@ -75,6 +75,24 @@
 --    "f32be"      - 32-bit float (big endian)
 --    "code:i386"  - Machine code (X86)
 
+--- Allocate a named highlight colour.
+-- @function allocate_highlight_colour
+--
+-- @param label             Text description of the highlight colour.
+-- @param primary_colour    Primary (background) colour (wx.wxNullColour for default).
+-- @param secondary_colour  Secondary (foreground) colour (wx.wxNullColour for default).
+--
+-- @return Highlight colour index on success, -1 on error
+
+--- Set the highlight colour of a range of bytes (or bits).
+-- @function set_highlight
+--
+-- @param offset  Data offset as a rehex.BitOffset object.
+-- @param length  Data length as a rehex.BitOffset object.
+-- @param colour  Highlight colour index (-1 for none).
+--
+-- @return true on success, false on failure
+
 --- Set up a virtual address mapping in the document.
 -- @function set_virt_mapping
 --

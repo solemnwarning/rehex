@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,6 +23,7 @@
 #include "CharacterEncoder.hpp"
 #include "CharacterFinder.hpp"
 #include "DataType.hpp"
+#include "profile.hpp"
 
 REHex::CharacterFinder::CharacterFinder(SharedDocumentPointer &document, BitOffset base, off_t length, size_t chunk_size, size_t lru_cache_size):
 	document(document),
@@ -72,7 +73,9 @@ void REHex::CharacterFinder::start_worker()
 		BitOffset encoding_base = type_at_base->first.offset;
 		assert(encoding_base <= base);
 		
-		const CharacterEncoder *encoder;
+		static REHex::CharacterEncoderASCII ascii_encoder;
+		const CharacterEncoder *encoder = &ascii_encoder;
+
 		if(type_at_base->second.name != "")
 		{
 			auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);
@@ -83,13 +86,11 @@ void REHex::CharacterFinder::start_worker()
 				encoder = type->encoder;
 			}
 		}
-		else{
-			static REHex::CharacterEncoderASCII ascii_encoder;
-			encoder = &ascii_encoder;
-		}
 		
 		t1_worker = std::thread([this, encoding_base, encoder]()
 		{
+			PROFILE_SET_THREAD_GROUP(NONE);
+			
 			size_t idx = 0;
 			BitOffset base_off = base, target_off = base + BitOffset(chunk_size, 0);
 			
@@ -231,11 +232,9 @@ std::pair<REHex::BitOffset,off_t> REHex::CharacterFinder::get_char_range(BitOffs
 		auto type_at_base = types.get_range(t2_base_offset);
 		assert(type_at_base != types.end());
 		
-		BitOffset encoding_base = type_at_base->first.offset;
-		assert(encoding_base <= t2_base_offset);
-		
 		static REHex::CharacterEncoderASCII ascii_encoder;
 		const CharacterEncoder *encoder = &ascii_encoder;
+
 		if(type_at_base->second.name != "")
 		{
 			auto type = DataTypeRegistry::get_type(type_at_base->second.name, type_at_base->second.options);

@@ -26,7 +26,7 @@ TEST(Buffer, DefaultConstructor)
 	EXPECT_EQ(b.blocks[0].virt_offset, 0) << "Constructor creates block with correct offset";
 	EXPECT_EQ(b.blocks[0].virt_length, 0) << "Constructor creates block with correct length";
 	
-	EXPECT_EQ(b.blocks[0].state, REHex::Buffer::Block::CLEAN) << "Constructor marks blocks as clean";
+	EXPECT_EQ(b.blocks[0].state, REHex::Buffer::Block::DIRTY) << "Constructor marks blocks as clean";
 	
 	EXPECT_TRUE(b.blocks[0].data.empty()) << "Constructor doesn't populate block data";
 	

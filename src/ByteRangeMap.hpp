@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "BitOffset.hpp"
+#include "shared_mutex.hpp"
 
 namespace REHex
 {
@@ -101,6 +102,7 @@ namespace REHex
 			 * scratch when a nearby offset is requested again.
 			*/
 			mutable typename std::vector< std::pair<Range, T> >::const_iterator last_get_iter;
+			mutable shared_mutex lgi_mutex;
 			
 		public:
 			/**
@@ -226,6 +228,8 @@ namespace REHex
 		private:
 			bool data_inserted_impl(OT offset, OT length);
 			bool data_erased_impl(OT offset, OT length);
+
+			static bool elem_key_less(const std::pair<Range, T> &a, const std::pair<Range, T> &b);
 			
 		public:
 			/**
@@ -283,13 +287,17 @@ namespace REHex
 
 template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::get_range(OT offset) const
 {
-	if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
 	{
-		return last_get_iter;
+		shared_lock lock_guard(lgi_mutex);
+		
+		if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
+		{
+			return last_get_iter;
+		}
 	}
 	
 	/* Starting from the first element after us (or the end of the vector)... */
-	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + 1), 0), default_value));
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + 1), 0), default_value), &elem_key_less);
 	
 	/* ...check to see if there is an element prior... */
 	if(i != ranges.begin())
@@ -300,7 +308,12 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 		if(i->first.offset <= offset && (i->first.offset + i->first.length) > offset)
 		{
 			/* ...it does, return it. */
-			last_get_iter = i;
+			
+			{
+				std::unique_lock<shared_mutex> lock_guard(lgi_mutex);
+				last_get_iter = i;
+			}
+			
 			return i;
 		}
 	}
@@ -316,7 +329,7 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 		return ranges.end();
 	}
 	
-	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), default_value));
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), default_value), &elem_key_less);
 	
 	if(i != ranges.begin())
 	{
@@ -353,7 +366,7 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offs
 	*/
 	
 	/* Starting from the first element after us (or the end of the vector)... */
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value), &elem_key_less);
 	
 	typename std::vector< std::pair<Range, T> >::iterator erase_begin = next;
 	typename std::vector< std::pair<Range, T> >::iterator erase_end   = next;
@@ -474,7 +487,7 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::clear_range(OT of
 	*/
 	
 	/* Starting from the first element after us (or the end of the vector)... */
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value), &elem_key_less);
 	
 	typename std::vector< std::pair<Range, T> >::iterator erase_begin = next;
 	typename std::vector< std::pair<Range, T> >::iterator erase_end   = next;
@@ -672,7 +685,7 @@ template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(
 {
 	/* Find the range of elements overlapping the range to be erased. */
 	
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value));
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value), &elem_key_less);
 	
 	typename std::vector< std::pair<Range, T> >::iterator erase_begin = next;
 	typename std::vector< std::pair<Range, T> >::iterator erase_end   = next;
@@ -753,6 +766,11 @@ template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(
 	last_get_iter = ranges.end();
 	
 	return elements_changed;
+}
+
+template<typename OT, typename T> bool REHex::RangeMap<OT, T>::elem_key_less(const std::pair<Range, T> &a, const std::pair<Range, T> &b)
+{
+	return a.first < b.first;
 }
 
 #endif /* !REHEX_BYTERANGEMAP_HPP */

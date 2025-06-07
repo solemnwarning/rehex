@@ -69,10 +69,10 @@ REHex::SharedDocumentPointer REHex::load_hex_file(const std::string &filename)
 	
 	bool uses_segment_addressing = false;
 	bool has_segment_start_address = false;
-	uint32_t segment_start_address;
+	uint32_t segment_start_address = -1;
 	bool uses_linear_addressing = false;
 	bool has_linear_start_address = false;
-	uint32_t linear_start_address;
+	uint32_t linear_start_address = -1;
 	
 	while((read_len = fread((buf + len), 1, (sizeof(buf) - len), fh)) > 0)
 	{

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -42,6 +42,8 @@
 
 #include "App.hpp"
 #include "buffer.hpp"
+#include "MacFileName.hpp"
+#include "profile.hpp"
 #include "win32lib.hpp"
 
 wxDEFINE_EVENT(REHex::BACKING_FILE_DELETED, wxCommandEvent);
@@ -82,12 +84,53 @@ REHex::Buffer::Block *REHex::Buffer::_block_by_virt_offset(off_t virt_offset)
 	}
 }
 
-void REHex::Buffer::_load_block(Block *block)
+REHex::Buffer::BlockPtr REHex::Buffer::load_block(Block *block)
 {
+	/* We must hold lab_mutex before we increment the block refcount to ensure another thread
+	 * doesn't concurrently call release_block() for another block and unload a clean block as
+	 * we are loading it.
+	*/
+	
+	std::unique_lock<std::mutex> lab_guard(lab_mutex);
+	
+	int my_refcount = ++(block->refcount);
+	assert(my_refcount > 0);
+	
+	if(my_refcount > 1)
+	{
+		/* The first thread which attains the lock on a Block is responsible for ensuring
+		 * it is loaded to avoid conflicts, we just spin until it is ready...
+		 *
+		 * TODO: Use a condition variable to signal wakeup?
+		*/
+		
+		lab_guard.unlock();
+		
+		while(block->state == Block::UNLOADED) {}
+		
+		return BlockPtr(this, block);
+	}
+	else{
+		if(block->state == Block::CLEAN)
+		{
+			auto lab_it = std::find(last_accessed_blocks.begin(), last_accessed_blocks.end(), block);
+			assert(lab_it != last_accessed_blocks.end());
+			
+			if(lab_it != last_accessed_blocks.end())
+			{
+				last_accessed_blocks.erase(lab_it);
+			}
+		}
+		
+		lab_guard.unlock();
+	}
+	
 	if(block->state == Block::UNLOADED)
 	{
 		if(block->virt_length > 0)
 		{
+			HandlePtr fh = acquire_read_handle();
+			
 			if(fseeko(fh, block->real_offset, SEEK_SET) != 0)
 			{
 				throw std::runtime_error(std::string("fseeko: ") + strerror(errno));
@@ -111,67 +154,84 @@ void REHex::Buffer::_load_block(Block *block)
 		block->state = Block::CLEAN;
 	}
 	
-	if(block->state == Block::CLEAN && block->virt_length > 0)
+	return BlockPtr(this, block);
+}
+
+void REHex::Buffer::release_block(Block *block)
+{
+	std::unique_lock<std::mutex> lab_guard(lab_mutex);
+	
+	if(--(block->refcount) == 0 && block->state == Block::CLEAN)
 	{
-		/* Mark this block as most-recently-accessed. */
-		_last_access_bump(block);
+		last_accessed_blocks.push_back(block);
 		
 		if(last_accessed_blocks.size() > MAX_CLEAN_BLOCKS)
 		{
-			/* We've gone over the threshold of blocks eligible to be unloaded, unload
-			 * the least-recently accessed one.
-			*/
+			Block *unload_me = last_accessed_blocks.front();
 			
-			Block *unload_me = last_accessed_blocks.back();
-			assert(unload_me->state == Block::CLEAN);
-			
-			_last_access_remove(unload_me);
+			assert(unload_me->refcount == 0);
 			
 			unload_me->state = Block::UNLOADED;
 			
 			unload_me->data.clear();
 			unload_me->data.shrink_to_fit();
+			
+			last_accessed_blocks.erase(last_accessed_blocks.begin());
 		}
 	}
 }
 
-/* Ensure the given Block is at the head of last_accessed_blocks, removing it if it was already
- * inserted at a later point.
-*/
-void REHex::Buffer::_last_access_bump(Block *block)
+REHex::Buffer::HandlePtr REHex::Buffer::acquire_read_handle()
 {
-	assert(block->state == Block::CLEAN);
+	Handle *handles_end = handles + MAX_READ_HANDLES;
 	
-	auto map_it = last_accessed_blocks_map.find(block);
-	if(map_it != last_accessed_blocks_map.end())
+	std::unique_lock<std::mutex> hm_guard(handles_mutex);
+	
+	/* See if there is a free handle in the pool... */
+	
+	Handle *handle = std::find_if(handles, handles_end, [&](const Handle &handle) { return handle.fh != NULL && !(handle.locked); });
+	if(handle != handles_end)
 	{
-		/* Block is in last_accessed_blocks */
+		return HandlePtr(this, handle, hm_guard);
+	}
+	
+	/* Nope, can we clone a new handle? */
+	
+	handle = std::find_if(handles, handles_end, [&](const Handle &handle) { return handle.fh == NULL; });
+	if(handle != handles_end)
+	{
+		assert(handles[0].fh != NULL);
 		
-		if(map_it->second == last_accessed_blocks.begin())
+		handle->fh = reopen_file(handles[0].fh, filename);
+		if(handle->fh != NULL)
 		{
-			/* Block is already at head of last_accessed_blocks */
-			return;
-		}
-		else{
-			/* Block is somewhere beyond the start of last_accessed_blocks */
-			last_accessed_blocks.erase(map_it->second);
+			/* We successfuly opened a new handle to the file. */
+			return HandlePtr(this, handle, hm_guard);
 		}
 	}
 	
-	/* Block isn't in last_accessed_blocks, or it wasn't the first one so we removed it */
+	/* Nope! Wait for one of the existing handles to become free. */
 	
-	last_accessed_blocks.push_front(block);
-	last_accessed_blocks_map[block] = last_accessed_blocks.begin();
+	handle_released.wait(hm_guard, [&]()
+	{
+		handle = std::find_if(handles, handles_end, [&](const Handle &handle) { return handle.fh != NULL && !(handle.locked); });
+		return handle != handles_end;
+	});
+	
+	return HandlePtr(this, handle, hm_guard);
 }
 
-/* Remove the given block from last_accessed_blocks. */
-void REHex::Buffer::_last_access_remove(Block *block)
+void REHex::Buffer::close_handles()
 {
-	auto map_it = last_accessed_blocks_map.find(block);
-	if(map_it != last_accessed_blocks_map.end())
+	for(size_t i = 0; i < MAX_READ_HANDLES; ++i)
 	{
-		last_accessed_blocks.erase(map_it->second);
-		last_accessed_blocks_map.erase(map_it);
+		assert(!(handles[i].locked));
+		
+		if(handles[i].fh != NULL)
+		{
+			fclose(handles[i].fh);
+			handles[i].fh = NULL;
+		}
 	}
 }
 
@@ -225,13 +285,12 @@ bool REHex::Buffer::_same_file(FILE *file1, const std::string &name1, FILE *file
 }
 
 REHex::Buffer::Buffer():
-	fh(nullptr),
 	_file_deleted(false),
 	_file_modified(false),
 	block_size(DEFAULT_BLOCK_SIZE)
 {
 	blocks.push_back(Block(0,0));
-	blocks.back().state = Block::CLEAN;
+	blocks.back().state = Block::DIRTY;
 	
 	timer.Bind(wxEVT_TIMER, &REHex::Buffer::OnTimerTick, this);
 }
@@ -244,34 +303,38 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 {
 	timer.Bind(wxEVT_TIMER, &REHex::Buffer::OnTimerTick, this);
 	
-	fh = fopen(filename.c_str(), "rb");
-	if(fh == NULL)
+	handles[0].fh = fopen(filename.c_str(), "rb");
+	if(handles[0].fh == NULL)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
 	}
 	
 	struct stat st;
-	if(fstat(fileno(fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+	if(fstat(fileno(handles[0].fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
 	{
-		fclose(fh);
+		fclose(handles[0].fh);
 		throw std::runtime_error(std::string("Could not open file: Not a regular file"));
 	}
 	
 	reload();
 }
 
+#ifdef __APPLE__
+REHex::Buffer::Buffer(MacFileName &&filename, off_t block_size):
+	Buffer(filename.GetFileName().GetFullPath().ToStdString())
+{
+	file_access_guard = std::move(filename);
+}
+#endif
+
 REHex::Buffer::~Buffer()
 {
-	if(fh != NULL)
-	{
-		fclose(fh);
-		fh = NULL;
-	}
+	close_handles();
 }
 
 void REHex::Buffer::reload()
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	/* Re-open file (in case file has been replaced) */
 	FILE *inode_fh = fopen(filename.c_str(), "rb");
@@ -279,34 +342,33 @@ void REHex::Buffer::reload()
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
 	}
-	else{
-		struct stat st;
-		if(fstat(fileno(inode_fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
-		{
-			fclose(inode_fh);
-			throw std::runtime_error(std::string("Could not open file: Not a regular file"));
-		}
-		
-		fclose(fh);
-		fh = inode_fh;
+	
+	struct stat st;
+	if(fstat(fileno(inode_fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+	{
+		fclose(inode_fh);
+		throw std::runtime_error(std::string("Could not open file: Not a regular file"));
 	}
 	
 	/* Find out the length of the file. */
 	
-	if(fseeko(fh, 0, SEEK_END) != 0)
+	if(fseeko(inode_fh, 0, SEEK_END) != 0)
 	{
 		int err = errno;
-		fclose(fh);
+		fclose(inode_fh);
 		throw std::runtime_error(std::string("fseeko: ") + strerror(err));
 	}
 	
-	off_t file_length = ftello(fh);
+	off_t file_length = ftello(inode_fh);
 	if(file_length == -1)
 	{
 		int err = errno;
-		fclose(fh);
+		fclose(inode_fh);
 		throw std::runtime_error(std::string("ftello: ") + strerror(err));
 	}
+	
+	close_handles();
+	handles[0].fh = inode_fh;
 	
 	_reinit_blocks(file_length);
 	
@@ -317,12 +379,11 @@ void REHex::Buffer::_reinit_blocks(off_t file_length)
 {
 	_file_deleted  = false;
 	_file_modified = false;
-	last_mtime    = _get_file_mtime(fh, filename);
+	last_mtime     = _get_file_mtime(handles[0].fh, filename);
 	
 	/* Clear any existing blocks and references. */
 	
 	last_accessed_blocks.clear();
-	last_accessed_blocks_map.clear();
 	blocks.clear();
 	
 	/* Populate the blocks list with appropriate offsets and sizes. */
@@ -345,7 +406,7 @@ void REHex::Buffer::write_inplace()
 
 void REHex::Buffer::write_inplace(const std::string &filename)
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	/* Need to open the file with open() since fopen() can't be told to open
 	 * the file, creating it if it doesn't exist, WITHOUT truncating and letting
@@ -420,7 +481,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	}
 	
 	/* Are we updating the file we originally read data in from? */
-	bool updating_file = (fh != NULL && _same_file(fh, this->filename, wfh, filename));
+	bool updating_file = (handles[0].fh != NULL && _same_file(handles[0].fh, this->filename, wfh, filename));
 	
 	std::list<Block*> pending;
 	for(auto b = blocks.begin(); b != blocks.end(); ++b)
@@ -458,7 +519,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 		
 		if((*b)->virt_length > 0)
 		{
-			_load_block(*b);
+			load_block(*b);
 			
 			if(fseeko(wfh, (*b)->virt_offset, SEEK_SET) != 0)
 			{
@@ -492,6 +553,8 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 				
 				(*b)->real_offset = (*b)->virt_offset;
 				(*b)->state       = Block::CLEAN;
+				
+				last_accessed_blocks.push_back(*b);
 			}
 		}
 		
@@ -517,21 +580,30 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 		throw std::runtime_error(std::string("Could not truncate file: ") + strerror(err));
 	}
 	
-	if(fh != NULL)
-	{
-		fclose(fh);
-	}
+	close_handles();
 	
 	/* The Buffer is now backed by the new file (which might be the old one). */
 	
-	fh = wfh;
+	handles[0].fh = wfh;
 	this->filename = filename;
 	
 	if(updating_file)
 	{
 		_file_deleted  = false;
 		_file_modified = false;
-		last_mtime     = _get_file_mtime(fh, filename);
+		last_mtime     = _get_file_mtime(handles[0].fh, filename);
+		
+		while(last_accessed_blocks.size() > MAX_CLEAN_BLOCKS)
+		{
+			Block *unload_me = last_accessed_blocks.front();
+			
+			unload_me->state = Block::UNLOADED;
+			
+			unload_me->data.clear();
+			unload_me->data.shrink_to_fit();
+			
+			last_accessed_blocks.erase(last_accessed_blocks.begin());
+		}
 	}
 	else{
 		/* We've written out a complete new file, and it is now the backing store for this
@@ -546,7 +618,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 
 void REHex::Buffer::write_copy(const std::string &filename)
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	FILE *out = fopen(filename.c_str(), "wb");
 	if(out == NULL)
@@ -568,7 +640,7 @@ void REHex::Buffer::write_copy(const std::string &filename)
 	{
 		if(b->virt_length > 0)
 		{
-			_load_block(&(*b));
+			load_block(&(*b));
 			
 			if(fwrite(b->data.data(), b->virt_length, 1, out) == 0)
 			{
@@ -583,13 +655,22 @@ void REHex::Buffer::write_copy(const std::string &filename)
 
 off_t REHex::Buffer::length()
 {
-	std::unique_lock<std::mutex> l(lock);
+	shared_lock l(general_lock);
 	return _length();
 }
 
 off_t REHex::Buffer::_length()
 {
 	return blocks.back().virt_offset + blocks.back().virt_length;
+}
+
+void REHex::Buffer::_last_access_remove(Block *block)
+{
+	auto lab_it = std::find(last_accessed_blocks.begin(), last_accessed_blocks.end(), block);
+	if(lab_it != last_accessed_blocks.end())
+	{
+		last_accessed_blocks.erase(lab_it);
+	}
 }
 
 REHex::Buffer::FileTime REHex::Buffer::_get_file_mtime(FILE *fh, const std::string &filename)
@@ -623,8 +704,27 @@ REHex::Buffer::FileTime REHex::Buffer::_get_file_mtime(FILE *fh, const std::stri
 	return FileTime();
 }
 
+FILE *REHex::Buffer::reopen_file(FILE *fh, const std::string &filename)
+{
+	FILE *dup_fh = fopen(filename.c_str(), "rb");
+	if(fh == NULL)
+	{
+		return NULL;
+	}
+	
+	if(!_same_file(fh, "file1", dup_fh, "file2"))
+	{
+		fclose(dup_fh);
+		return NULL;
+	}
+	
+	return dup_fh;
+}
+
 std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off_t max_length)
 {
+	PROFILE_BLOCK("REHex::Buffer::read_data");
+	
 	assert(offset.byte() >= 0);
 	assert(max_length >= 0);
 	
@@ -633,7 +733,12 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 		++max_length;
 	}
 	
-	std::unique_lock<std::mutex> l(lock);
+	shared_lock l(general_lock, std::defer_lock);
+	
+	{
+		PROFILE_INNER_BLOCK("waiting for lock");
+		l.lock();
+	}
 	
 	Block *block = _block_by_virt_offset(offset.byte());
 	if(block == nullptr)
@@ -648,22 +753,25 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 	
 	while(block < blocks.data() + blocks.size() && (size_t)(max_length) > data.size())
 	{
-		_load_block(block);
+		BlockPtr bp = load_block(block);
 		
 		off_t block_rel_off = byte_offset - block->virt_offset;
 		off_t block_rel_len = block->virt_length - block_rel_off;
 		off_t to_copy = std::min(block_rel_len, (max_length - (off_t)(data.size())));
 		
-		const unsigned char *base = block->data.data() + block_rel_off;
-		
-		size_t dst_off = data.size();
-		data.resize(data.size() + to_copy);
-		
-		CarryBits carry = memcpy_left(data.data() + dst_off, base, to_copy, offset.bit());
-		if(dst_off > 0)
+		if(to_copy > 0)
 		{
-			assert((data[dst_off - 1] & carry.mask) == 0);
-			data[dst_off - 1] |= carry.value;
+			const unsigned char *base = block->data.data() + block_rel_off;
+			
+			size_t dst_off = data.size();
+			data.resize(data.size() + to_copy);
+			
+			CarryBits carry = memcpy_left(data.data() + dst_off, base, to_copy, offset.bit());
+			if(dst_off > 0)
+			{
+				assert((data[dst_off - 1] & carry.mask) == 0);
+				data[dst_off - 1] |= carry.value;
+			}
 		}
 		
 		++block;
@@ -673,7 +781,7 @@ std::vector<unsigned char> REHex::Buffer::read_data(const BitOffset &offset, off
 	
 	if(offset.bit() > 0)
 	{
-		if(data.size() == max_length)
+		if((off_t)(data.size()) == max_length)
 		{
 			/* Pop off the extra partial byte we read to fill in the previous byte. */
 			data.pop_back();
@@ -715,7 +823,7 @@ std::vector<bool> REHex::Buffer::read_bits(const BitOffset &offset, size_t max_l
 
 bool REHex::Buffer::overwrite_data(BitOffset offset, unsigned const char *data, off_t length)
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	if((offset + BitOffset(length, 0)) > BitOffset(_length(), 0))
 	{
@@ -730,7 +838,7 @@ bool REHex::Buffer::overwrite_data(BitOffset offset, unsigned const char *data, 
 	
 	while(length > 0 || offset.bit() > 0)
 	{
-		_load_block(block);
+		load_block(block);
 		
 		off_t block_rel_off = offset.byte() - block->virt_offset;
 		off_t to_copy = std::min((block->virt_length - block_rel_off), length);
@@ -769,7 +877,7 @@ bool REHex::Buffer::overwrite_data(BitOffset offset, unsigned const char *data, 
 
 bool REHex::Buffer::overwrite_bits(BitOffset offset, const std::vector<bool> &data)
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	if((offset + BitOffset::from_int64(data.size())) > BitOffset(_length(), 0))
 	{
@@ -787,7 +895,7 @@ bool REHex::Buffer::overwrite_bits(BitOffset offset, const std::vector<bool> &da
 	{
 		assert(block != (blocks.data() + blocks.size()));
 		
-		_load_block(block);
+		load_block(block);
 		
 		bool touched_block = false;
 		
@@ -824,7 +932,7 @@ bool REHex::Buffer::overwrite_bits(BitOffset offset, const std::vector<bool> &da
 
 bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t length)
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	if(offset > _length())
 	{
@@ -840,7 +948,7 @@ bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t l
 	
 	assert(block != nullptr);
 	
-	_load_block(block);
+	load_block(block);
 	
 	/* Ensure the block's data buffer is large enough */
 	
@@ -870,7 +978,7 @@ bool REHex::Buffer::insert_data(off_t offset, unsigned const char *data, off_t l
 
 bool REHex::Buffer::erase_data(off_t offset, off_t length)
 {
-	std::unique_lock<std::mutex> l(lock);
+	std::unique_lock<shared_mutex> l(general_lock);
 	
 	if((offset + length) > _length())
 	{
@@ -891,7 +999,7 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 			block->virt_length = 0;
 		}
 		else{
-			_load_block(block);
+			load_block(block);
 			
 			unsigned char *base = block->data.data() + block_rel_off;
 			memmove(base, base + to_erase, (block->virt_length - block_rel_off) - to_erase);
@@ -930,14 +1038,14 @@ bool REHex::Buffer::erase_data(off_t offset, off_t length)
 
 void REHex::Buffer::OnTimerTick(wxTimerEvent &event)
 {
-	assert(fh != NULL);
+	assert(handles[0].fh != NULL);
 	assert(!_file_deleted);
 	assert(!_file_modified);
 	
 	FILE *inode_fh = fopen(filename.c_str(), "rb");
 	if(inode_fh != NULL)
 	{
-		_file_deleted = !_same_file(fh, filename, inode_fh, filename);
+		_file_deleted = !_same_file(handles[0].fh, filename, inode_fh, filename);
 	}
 	else{
 		/* Assume file has been deleted if we can't open it. */
@@ -988,7 +1096,16 @@ REHex::Buffer::Block::Block(off_t offset, off_t length):
 	real_offset(offset),
 	virt_offset(offset),
 	virt_length(length),
-	state(UNLOADED) {}
+	state(UNLOADED),
+	refcount(0) {}
+
+REHex::Buffer::Block::Block(Block &&block):
+	real_offset(block.real_offset),
+	virt_offset(block.virt_offset),
+	virt_length(block.virt_length),
+	state(block.state),
+	data(std::move(block.data)),
+	refcount(block.refcount.load()) {}
 
 void REHex::Buffer::Block::grow(size_t min_size)
 {
@@ -1064,4 +1181,90 @@ bool REHex::Buffer::FileTime::operator==(const FileTime &rhs) const
 bool REHex::Buffer::FileTime::operator!=(const FileTime &rhs) const
 {
 	return tv_sec != rhs.tv_sec || tv_nsec != rhs.tv_nsec;
+}
+
+REHex::Buffer::HandlePtr::HandlePtr(Buffer *buffer, Handle *handle, const std::unique_lock<std::mutex> &hm_guard):
+	buffer(buffer),
+	handle(handle)
+{
+	assert(!(handle->locked));
+	handle->locked = true;
+}
+
+REHex::Buffer::HandlePtr::~HandlePtr()
+{
+	if(handle != NULL)
+	{
+		std::unique_lock<std::mutex> hm_guard(buffer->handles_mutex);
+		handle->locked = false;
+		hm_guard.unlock();
+		
+		buffer->handle_released.notify_one();
+	}
+}
+
+REHex::Buffer::HandlePtr::HandlePtr(HandlePtr &&hp):
+	buffer(hp.buffer),
+	handle(hp.handle)
+{
+	hp.buffer = NULL;
+	hp.handle = NULL;
+}
+
+REHex::Buffer::HandlePtr &REHex::Buffer::HandlePtr::operator=(HandlePtr &&hp)
+{
+	if(this != &hp)
+	{
+		if(handle != NULL)
+		{
+			std::unique_lock<std::mutex> hm_guard(buffer->handles_mutex);
+			handle->locked = false;
+			hm_guard.unlock();
+			
+			buffer->handle_released.notify_one();
+		}
+		
+		buffer = hp.buffer;
+		handle = hp.handle;
+		
+		hp.buffer = NULL;
+		hp.handle = NULL;
+	}
+	
+	return *this;
+}
+
+REHex::Buffer::HandlePtr::operator FILE*() const
+{
+	return handle->fh;
+}
+
+REHex::Buffer::BlockPtr::BlockPtr(Buffer *buffer, Block *block):
+	buffer(buffer),
+	block(block) {}
+
+REHex::Buffer::BlockPtr::~BlockPtr()
+{
+	buffer->release_block(block);
+}
+
+REHex::Buffer::BlockPtr::BlockPtr(const BlockPtr &bp):
+	buffer(bp.buffer),
+	block(bp.block)
+{
+	++(block->refcount);
+}
+
+REHex::Buffer::BlockPtr &REHex::Buffer::BlockPtr::operator=(const BlockPtr &bp)
+{
+	if(block != bp.block)
+	{
+		buffer->release_block(block);
+		
+		buffer = bp.buffer;
+		block = bp.block;
+		++(block->refcount);
+	}
+	
+	return *this;
 }

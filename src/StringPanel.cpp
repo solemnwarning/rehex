@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -32,6 +32,7 @@
 #include "App.hpp"
 #include "CharacterEncoder.hpp"
 #include "FileWriter.hpp"
+#include "profile.hpp"
 #include "StringPanel.hpp"
 #include "util.hpp"
 
@@ -39,9 +40,9 @@
 
 static const size_t WINDOW_SIZE = 2 * 1024 * 1024; /* 2MiB */
 static const size_t MAX_STRINGS = 1000000;
-static const size_t UI_THREAD_THRESH = 256 * 1024; /* 256KiB */
 
 static const size_t MAX_STRINGS_BATCH = 64;
+static const int MAX_CYCLES_BATCH = 16;
 
 static REHex::ToolPanel *StringPanel_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -78,11 +79,10 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	min_string_length(8),
 	ignore_cjk(false),
 	update_needed(false),
-	threads_exit(true),
+	processor([this](off_t window_base, off_t window_length) { work_func(window_base, window_length); }, WINDOW_SIZE),
 	timer(this, wxID_ANY),
-	threads_pause(false),
-	spawned_threads(0),
-	running_threads(0),
+	m_search_pending(false),
+	m_search_running(false),
 	search_base(0)
 {
 	const int MARGIN = 4;
@@ -159,19 +159,28 @@ REHex::StringPanel::StringPanel(wxWindow *parent, SharedDocumentPointer &documen
 	this->document.auto_cleanup_bind(DATA_INSERTING,            &REHex::StringPanel::OnDataModifying,        this);
 	this->document.auto_cleanup_bind(DATA_INSERT_ABORTED,       &REHex::StringPanel::OnDataModifyAborted,    this);
 	
-	mark_dirty(0, document->buffer_length());
-	
-	start_threads();
+	processor.pause_threads();
+	restart_search();
 }
 
 REHex::StringPanel::~StringPanel()
 {
-	stop_threads();
+	suspend_search();
 }
 
 std::string REHex::StringPanel::name() const
 {
 	return "StringPanel";
+}
+
+std::string REHex::StringPanel::label() const
+{
+	return "Strings";
+}
+
+REHex::ToolPanel::Shape REHex::StringPanel::shape() const
+{
+	return ToolPanel::TPS_TALL;
 }
 
 void REHex::StringPanel::save_state(wxConfig *config) const
@@ -198,7 +207,17 @@ void REHex::StringPanel::update()
 		return;
 	}
 	
-	if(update_needed && document_ctrl)
+	if(m_search_pending && !m_search_running)
+	{
+		processor.resume_threads();
+		timer.Start(100, wxTIMER_CONTINUOUS);
+		
+		m_search_running = true;
+	}
+	
+	bool queue_empty = processor.queue_empty();
+	
+	if((update_needed || queue_empty) && document_ctrl)
 	{
 		size_t strings_count;
 		
@@ -209,21 +228,31 @@ void REHex::StringPanel::update()
 			update_needed = false;
 		}
 		
+		ByteRangeSet queue = processor.get_queue();
+		
+		if(m_search_pending && (strings_count >= MAX_STRINGS || queue_empty))
+		{
+			stop_search();
+			flush_all_batches();
+			
+			strings_count = strings.size();
+			update_needed = false;
+			
+			queue_empty = processor.queue_empty();
+		}
+		
 		list_ctrl->SetItemCount(strings_count);
 		
-		bool searching = spawned_threads > 0;
 		std::string status_text = "";
 		
-		if(searching)
+		if(m_search_pending)
 		{
 			status_text += "Searching from " + format_offset(search_base, document_ctrl->get_offset_display_base(), document->buffer_length());
 			continue_button->Disable();
 		}
 		else{
 			status_text += "Searched from " + format_offset(search_base, document_ctrl->get_offset_display_base(), document->buffer_length());
-			
-			auto next_pending = pending.find_first_in(search_base, std::numeric_limits<off_t>::max());
-			continue_button->Enable(next_pending != pending.end());
+			continue_button->Enable(!queue_empty);
 		}
 		
 		status_text += "\n";
@@ -234,31 +263,12 @@ void REHex::StringPanel::update()
 				+ wxNumberFormatter::ToString((long)(strings_count))
 				+ " strings";
 		}
-		else if(!searching)
+		else if(!m_search_pending)
 		{
 			status_text += "No strings found";
 		}
 		
 		this->status_text->SetLabelText(status_text);
-	}
-}
-
-void REHex::StringPanel::mark_dirty(off_t offset, off_t length)
-{
-	ByteRangeSet to_pending;
-	to_pending.set_range(offset, length);
-	
-	ByteRangeSet to_dirty = ByteRangeSet::intersection(to_pending, working);
-	
-	to_pending.clear_ranges(to_dirty.begin(), to_dirty.end());
-	
-	dirty  .set_ranges(  to_dirty.begin(),   to_dirty.end());
-	pending.set_ranges(to_pending.begin(), to_pending.end());
-	
-	if(!pending.empty())
-	{
-		/* Notify any sleeping workers that there is now work to be done. */
-		resume_cv.notify_all();
 	}
 }
 
@@ -273,36 +283,14 @@ void REHex::StringPanel::mark_dirty_pad(off_t offset, off_t length)
 	off_t post_pad = std::min(ideal_pad, (document->buffer_length() - offset));
 	length += post_pad;
 	
-	mark_dirty(offset, length);
-}
-
-void REHex::StringPanel::mark_work_done(off_t offset, off_t length)
-{
-	ByteRangeSet work_done;
-	work_done.set_range(offset, length);
-	
-	ByteRangeSet to_pending = ByteRangeSet::intersection(work_done, dirty);
-	
-	working.clear_range(offset, length);
-	
-	dirty.clear_ranges(to_pending.begin(), to_pending.end());
-	pending.set_ranges(to_pending.begin(), to_pending.end());
-	
-	if(!pending.empty())
-	{
-		/* Notify any sleeping workers that there is now work to be done. */
-		resume_cv.notify_all();
-	}
+	processor.queue_range(offset, length);
 }
 
 off_t REHex::StringPanel::sum_dirty_bytes()
 {
 	/* Merge the all the ranges in dirty, pending and working. */
 	
-	ByteRangeSet merged;
-	merged.set_ranges(dirty.begin(), dirty.end());
-	merged.set_ranges(pending.begin(), pending.end());
-	merged.set_ranges(working.begin(), working.end());
+	ByteRangeSet merged = processor.get_queue();
 	
 	/* Sum the length of the merged ranges. */
 	
@@ -325,18 +313,12 @@ REHex::ByteRangeSet REHex::StringPanel::get_strings()
 
 off_t REHex::StringPanel::get_clean_bytes()
 {
-	std::lock_guard<std::mutex> pl(pause_lock);
 	return sum_clean_bytes();
-}
-
-size_t REHex::StringPanel::get_num_threads()
-{
-	return threads.size();
 }
 
 void REHex::StringPanel::set_encoding(const std::string &encoding_key)
 {
-	pause_threads();
+	processor.pause_threads();
 	
 	int num_encodings = encoding_choice->GetCount();
 	
@@ -364,41 +346,17 @@ void REHex::StringPanel::set_encoding(const std::string &encoding_key)
 	encoding_choice->SetSelection(encoding_idx);
 	this->selected_encoding = encoding;
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty(0, document->buffer_length());
-	}
-	
-	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.clear_all();
-	}
-	
-	start_threads();
-	
-	update_needed = true;
+	restart_search();
 }
 
 void REHex::StringPanel::set_min_string_length(int min_string_length)
 {
-	pause_threads();
+	processor.pause_threads();
 	
 	min_string_length_ctrl->SetValue(min_string_length);
 	this->min_string_length = min_string_length;
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty(0, document->buffer_length());
-	}
-	
-	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.clear_all();
-	}
-	
-	start_threads();
-	
-	update_needed = true;
+	restart_search();
 }
 
 void REHex::StringPanel::select_all()
@@ -455,388 +413,251 @@ void REHex::StringPanel::do_copy(wxString (*get_item_func)(StringPanelListCtrl*,
 	}
 }
 
-void REHex::StringPanel::thread_main()
+void REHex::StringPanel::work_func(off_t window_base, off_t window_length)
 {
-	std::unique_lock<std::mutex> pl(pause_lock);
+	PROFILE_BLOCK("REHex::StringPanel::work_func");
 	
-	ByteRangeSet set_ranges;
-	ByteRangeSet clear_ranges;
+	/* Grow both ends of our window by MIN_STRING_LENGTH bytes to ensure we can match
+	 * strings starting before/after it. Any data that is part of the string beyond our
+	 * expanded window will be merged later.
+	*/
 	
-	auto get_dirty_range = [&]()
+	off_t window_pre = std::min<off_t>(window_base, (min_string_length * MAX_CHAR_SIZE));
+	
+	off_t  window_base_adj   = window_base   - window_pre;
+	size_t window_length_adj = window_length + window_pre + (min_string_length * MAX_CHAR_SIZE);
+	
+	/* Read the data from our window and search for strings in it. */
+	
+	std::vector<unsigned char> data;
+	try {
+		data = document->read_data(window_base_adj, window_length_adj);
+	}
+	catch(const std::exception&)
 	{
-		return pending.find_first_in(search_base, std::numeric_limits<off_t>::max());
-	};
-	
-	while(!threads_exit)
-	{
-		/* Take up to WINDOW_SIZE bytes from the next range in the dirty pool to be
-		 * processed in this thread.
+		/* Failed to read the file. Stick this back in the dirty queue and fetch
+		 * another block to process.
+		 *
+		 * TODO: Somehow de-prioritise this block or delay it becoming available
+		 * again. Permanent I/O errors will result in worker threads trying to read
+		 * the same bad blocks over and over as things stand now.
 		*/
 		
-		auto next_dirty_range = get_dirty_range();
-		if(next_dirty_range == pending.end())
-		{
-			/* Nothing to do.
-			 * Wait until some work is available or we need to pause/stop the thread.
-			*/
-			
-			thread_flush(&set_ranges, &clear_ranges, true);
-			
-			resume_cv.wait(pl, [&]() { return get_dirty_range() != pending.end() || threads_pause || threads_exit; });
-			
-			if(threads_pause)
-			{
-				--running_threads;
-				
-				paused_cv.notify_all();
-				resume_cv.wait(pl, [this]() { return !threads_pause; });
-				
-				++running_threads;
-			}
-			
-			continue;
-		}
+		//working.clear_range(window_base, window_length);
+		//mark_dirty(window_base, window_length);
 		
-		off_t  window_base   = next_dirty_range->offset;
-		size_t window_length = next_dirty_range->length;
-		
-		if(window_base < search_base)
-		{
-			off_t adj = search_base - window_base;
-			assert(adj < next_dirty_range->length);
-			
-			window_base += adj;
-			window_length -= adj;
-			
-		}
-		
-		window_length = std::min<off_t>(window_length, WINDOW_SIZE);
-		
-		pending.clear_range(window_base, window_length);
-		working.set_range(  window_base, window_length);
-		
-		pl.unlock();
-		
-		/* Grow both ends of our window by MIN_STRING_LENGTH bytes to ensure we can match
-		 * strings starting before/after it. Any data that is part of the string beyond our
-		 * expanded window will be merged later.
-		*/
-		
-		off_t window_pre = std::min<off_t>(window_base, (min_string_length * MAX_CHAR_SIZE));
-		
-		off_t  window_base_adj   = window_base   - window_pre;
-		size_t window_length_adj = window_length + window_pre + (min_string_length * MAX_CHAR_SIZE);
-		
-		/* Read the data from our window and search for strings in it. */
-		
-		std::vector<unsigned char> data;
-		try {
-			data = document->read_data(window_base_adj, window_length_adj);
-		}
-		catch(const std::exception&)
-		{
-			/* Failed to read the file. Stick this back in the dirty queue and fetch
-			 * another block to process.
-			 *
-			 * TODO: Somehow de-prioritise this block or delay it becoming available
-			 * again. Permanent I/O errors will result in worker threads trying to read
-			 * the same bad blocks over and over as things stand now.
-			*/
-			
-			pl.lock();
-			
-			working.clear_range(window_base, window_length);
-			mark_dirty(window_base, window_length);
-			
-			continue;
-		}
-		
-		for(size_t i = 0; i < data.size();)
-		{
-			off_t string_base = window_base_adj + i;
-			off_t string_end  = string_base;
-			
-			/* TODO: Align with encoding word size. */
-			
-			bool is_really_string;
-			size_t num_codepoints = 1;
-			
-			auto is_i_string = [&](bool force_advance)
-			{
-				EncodedCharacter ec = selected_encoding->encoder->decode(data.data() + i, data.size() - i);
-				
-				if(ec.valid)
-				{
-					ucs4_t c;
-					u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char().data()), ec.utf8_char().size());
-					
-					bool is_valid = c >= 0x20
-						&& c != 0x7F
-						&& c != 0xFFFD
-						&& !uc_is_property_unassigned_code_value(c)
-						&& !uc_is_property_not_a_character(c)
-						&& (!ignore_cjk || !(uc_is_property_ideographic(c) || uc_is_property_unified_ideograph(c) || uc_is_property_radical(c)));
-					
-					if(force_advance || is_valid == is_really_string)
-					{
-						string_end += ec.encoded_char().size();
-						i          += ec.encoded_char().size();
-					}
-					
-					return is_valid;
-				}
-				else{
-					if(force_advance || !is_really_string)
-					{
-						++string_end;
-						++i;
-					}
-					
-					return false;
-				}
-			};
-			
-			is_really_string = is_i_string(true);
-			
-			while(!threads_pause && !threads_exit && i < data.size() && is_i_string(false) == is_really_string)
-			{
-				++num_codepoints;
-			}
-			
-			if(threads_pause || threads_exit)
-			{
-				/* We are being paused to allow for data being inserted or erased.
-				 * This may invalidate the base and/or length of our window, so we
-				 * mark the window as dirty again from the last point we started
-				 * processing so that it can be adjusted correctly and then resumed
-				 * when processing continues.
-				*/
-				
-				off_t  new_dirty_base   = std::max(window_base, string_base);
-				size_t new_dirty_length = window_length - (new_dirty_base - window_base);
-				
-				/* vvvvvvvv */
-				pl.lock();
-				
-				if(string_base > window_base)
-				{
-					mark_work_done(window_base, (string_base - window_base));
-				}
-				
-				working.clear_range(new_dirty_base, new_dirty_length);
-				mark_dirty(new_dirty_base, new_dirty_length);
-				
-				thread_flush(&set_ranges, &clear_ranges, true);
-				
-				--running_threads;
-				
-				if(threads_exit)
-				{
-					--spawned_threads;
-					return;
-				}
-				
-				paused_cv.notify_all();
-				resume_cv.wait(pl, [this]() { return !threads_pause; });
-				
-				++running_threads;
-				
-				pl.unlock();
-				/* ^^^^^^^^ */
-				
-				/* Window is no longer valid, get a new one. */
-				window_length = 0;
-				break;
-			}
-			
-			off_t clamped_string_base = std::max(string_base, window_base);
-			off_t clamped_string_end  = std::min(string_end,  (off_t)(window_base + window_length));
-			
-			if(clamped_string_base < clamped_string_end)
-			{
-				if(is_really_string && num_codepoints >= (size_t)(min_string_length))
-				{
-					set_ranges.set_range(clamped_string_base, (clamped_string_end - clamped_string_base));
-				}
-				else if(clamped_string_base <= clamped_string_end)
-				{
-					clear_ranges.set_range(clamped_string_base, (clamped_string_end - clamped_string_base));
-				}
-			}
-			
-			thread_flush(&set_ranges, &clear_ranges, false);
-		}
-		
-		pl.lock();
-		
-		mark_work_done(window_base, window_length);
+		return;
 	}
 	
-	thread_flush(&set_ranges, &clear_ranges, true);
+	Batch batch = next_batch();
 	
-	--running_threads;
-	--spawned_threads;
+	for(size_t i = 0; i < data.size();)
+	{
+		off_t string_base = window_base_adj + i;
+		off_t string_end  = string_base;
+		
+		/* TODO: Align with encoding word size. */
+		
+		bool is_really_string;
+		size_t num_codepoints = 1;
+		
+		auto is_i_string = [&](bool force_advance)
+		{
+			EncodedCharacter ec = selected_encoding->encoder->decode(data.data() + i, data.size() - i);
+			
+			if(ec.valid)
+			{
+				ucs4_t c;
+				u8_mbtouc_unsafe(&c, (const uint8_t*)(ec.utf8_char().data()), ec.utf8_char().size());
+				
+				bool is_valid = c >= 0x20
+					&& c != 0x7F
+					&& c != 0xFFFD
+					&& !uc_is_property_unassigned_code_value(c)
+					&& !uc_is_property_not_a_character(c)
+					&& (!ignore_cjk || !(uc_is_property_ideographic(c) || uc_is_property_unified_ideograph(c) || uc_is_property_radical(c)));
+				
+				if(force_advance || is_valid == is_really_string)
+				{
+					string_end += ec.encoded_char().size();
+					i          += ec.encoded_char().size();
+				}
+				
+				return is_valid;
+			}
+			else{
+				if(force_advance || !is_really_string)
+				{
+					++string_end;
+					++i;
+				}
+				
+				return false;
+			}
+		};
+		
+		is_really_string = is_i_string(true);
+		
+		while(i < data.size() && is_i_string(false) == is_really_string)
+		{
+			++num_codepoints;
+		}
+		
+		off_t clamped_string_base = std::max(string_base, window_base);
+		off_t clamped_string_end  = std::min(string_end,  (off_t)(window_base + window_length));
+		
+		if(clamped_string_base < clamped_string_end)
+		{
+			if(is_really_string && num_codepoints >= (size_t)(min_string_length))
+			{
+				batch.ranges_to_set.set_range(clamped_string_base, (clamped_string_end - clamped_string_base));
+			}
+			else if(clamped_string_base <= clamped_string_end)
+			{
+				batch.ranges_to_clear.set_range(clamped_string_base, (clamped_string_end - clamped_string_base));
+			}
+		}
+	}
+	
+	release_batch(std::move(batch));
 }
 
-void REHex::StringPanel::thread_flush(ByteRangeSet *set_ranges, ByteRangeSet *clear_ranges, bool force)
+REHex::StringPanel::Batch REHex::StringPanel::next_batch()
 {
-	if(force || clear_ranges->size() >= MAX_STRINGS_BATCH)
+	std::unique_lock<std::mutex> lock(m_batch_mutex);
+	
+	if(m_batch_queue.empty())
+	{
+		Batch new_batch;
+		new_batch.ttl = MAX_CYCLES_BATCH;
+		
+		return new_batch;
+	}
+	else{
+		Batch batch = std::move(m_batch_queue.front());
+		m_batch_queue.pop();
+		
+		return batch;
+	}
+}
+
+void REHex::StringPanel::release_batch(Batch &&batch)
+{
+	bool ttl_expired = --(batch.ttl) <= 0;
+	
+	flush_batch(&batch, ttl_expired);
+	
+	if(ttl_expired)
+	{
+		batch.ttl = MAX_CYCLES_BATCH;
+	}
+	
+	std::unique_lock<std::mutex> lock(m_batch_mutex);
+	m_batch_queue.push(std::move(batch));
+}
+
+void REHex::StringPanel::flush_batch(Batch *batch, bool force)
+{
+	if((force && !(batch->ranges_to_clear.empty())) || batch->ranges_to_clear.size() >= MAX_STRINGS_BATCH)
 	{
 		std::lock_guard<std::mutex> sl(strings_lock);
 		
-		strings.clear_ranges(clear_ranges->begin(), clear_ranges->end());
-		clear_ranges->clear_all();
+		strings.clear_ranges(batch->ranges_to_clear.begin(), batch->ranges_to_clear.end());
+		batch->ranges_to_clear.clear_all();
 		
 		update_needed = true;
 	}
 	
-	if(force || set_ranges->size() >= MAX_STRINGS_BATCH)
+	if((force && !(batch->ranges_to_set.empty())) || batch->ranges_to_set.size() >= MAX_STRINGS_BATCH)
 	{
 		std::lock_guard<std::mutex> sl(strings_lock);
 		
-		if(!set_ranges->empty())
-		{
-			off_t processed_total = sum_clean_bytes();
-			size_t size_hint = (double)(strings.size()) * ((double)(document->buffer_length()) / (double)(processed_total));
-			
-			if(size_hint > MAX_STRINGS)
-			{
-				size_hint = MAX_STRINGS;
-			}
-			
-			strings.set_ranges(set_ranges->begin(), set_ranges->end(), size_hint);
-			set_ranges->clear_all();
-			
-			update_needed = true;
-		}
+		size_t size_hint = strings.size() + batch->ranges_to_set.size();
+		off_t set_end = batch->ranges_to_set.last().offset + batch->ranges_to_set.last().length;
 		
-		if(strings.size() >= MAX_STRINGS)
-		{
-			/* Reached the string limit, start spinning down. */
-			threads_exit = true;
-		}
+		assert(set_end > 0);
+		
+		size_hint = std::max<size_t>(
+			((double)(size_hint) / ((double)(set_end) / (double)(document->buffer_length()))),
+			MAX_STRINGS);
+		
+		strings.set_ranges(batch->ranges_to_set.begin(), batch->ranges_to_set.end(), size_hint);
+		batch->ranges_to_set.clear_all();
+		
+		update_needed = true;
 	}
 }
 
-void REHex::StringPanel::start_threads()
+void REHex::StringPanel::flush_all_batches()
 {
+	std::unique_lock<std::mutex> lock(m_batch_mutex);
+	
+	for(size_t i = 0; i < m_batch_queue.size(); ++i)
 	{
-		std::lock_guard<std::mutex> sl(strings_lock);
+		Batch batch = std::move(m_batch_queue.front());
+		m_batch_queue.pop();
 		
-		if(strings.size() >= MAX_STRINGS)
-		{
-			/* Already at the strings limit, don't restart threads. */
-			return;
-		}
-	}
-	
-	resume_threads();
-	
-	std::lock_guard<std::mutex> pl(pause_lock);
-	
-	off_t dirty_total = sum_dirty_bytes();
-	
-	if(dirty_total > 0)
-	{
-		threads_exit = false;
+		flush_batch(&batch, true);
 		
-		#if 0
-		if(dirty_total >= (off_t)(UI_THREAD_THRESH))
-		{
-		#endif
-			/* There is more than one "window" worth of data to process, either we are
-			 * still initialising, or a huge amount of data has just changed. We shall
-			 * do our processing in background threads.
-			*/
-			
-			unsigned int max_threads  = std::thread::hardware_concurrency();
-			unsigned int want_threads = dirty_total / WINDOW_SIZE;
-			
-			if(want_threads == 0)
-			{
-				want_threads = 1;
-			}
-			else if(want_threads > max_threads)
-			{
-				want_threads = max_threads;
-			}
-			
-			while(spawned_threads < want_threads)
-			{
-				threads.emplace_back(&REHex::StringPanel::thread_main, this);
-				
-				++spawned_threads;
-				++running_threads;
-			}
-			
-			if(!timer.IsRunning())
-			{
-				timer.Start(100, wxTIMER_CONTINUOUS);
-			}
-		#if 0
-		}
-		else{
-			/* There is very little data to analyse, do it in the UI thread to avoid
-			 * starting and stopping background threads on every changed nibble since
-			 * the context switching gets expensive.
-			*/
-			
-			// TODO
-			thread_main();
-		}
-		#endif
-		
-		spinner->Show();
-		spinner->Play();
+		m_batch_queue.push(std::move(batch));
 	}
 }
 
-void REHex::StringPanel::stop_threads()
+void REHex::StringPanel::start_search()
 {
-	spinner->Stop();
-	spinner->Hide();
-	
-	timer.Stop();
-	
+	if(m_search_pending)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		threads_exit = true;
+		return;
 	}
 	
-	/* Wake any threads that are paused so they can exit. */
-	resume_threads();
+	m_search_pending = true;
 	
-	while(!threads.empty())
-	{
-		threads.front().join();
-		threads.pop_front();
-	}
+	spinner->Show();
+	spinner->Play();
 	
-	/* Process any lingering update. */
+	update_needed = true;
 	update();
 }
 
-void REHex::StringPanel::pause_threads()
+void REHex::StringPanel::suspend_search()
 {
-	std::unique_lock<std::mutex> pl(pause_lock);
-	
-	threads_pause = true;
-	
-	/* Wake any threads that are waiting for work so they can be paused. */
-	resume_cv.notify_all();
-	
-	/* Wait for all threads to pause. */
-	paused_cv.wait(pl, [this]() { return running_threads == 0; });
+	if(m_search_running)
+	{
+		processor.pause_threads();
+		timer.Stop();
+		
+		m_search_running = false;
+	}
 }
 
-void REHex::StringPanel::resume_threads()
+void REHex::StringPanel::stop_search()
 {
+	suspend_search();
+	
+	if(m_search_pending)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		threads_pause = false;
+		spinner->Stop();
+		spinner->Hide();
+		
+		m_search_pending = false;
+	}
+}
+
+void REHex::StringPanel::restart_search()
+{
+	stop_search();
+	
+	reset_button->Disable();
+	
+	search_base = 0;
+	processor.queue_range(0, document->buffer_length());
+	
+	{
+		std::lock_guard<std::mutex> sl(strings_lock);
+		strings.clear_all();
 	}
 	
-	resume_cv.notify_all();
+	start_search();
 }
 
 void REHex::StringPanel::do_export(wxString (*get_item_func)(StringPanelListCtrl*, int))
@@ -887,6 +708,11 @@ void REHex::StringPanel::do_export(wxString (*get_item_func)(StringPanelListCtrl
 	}
 }
 
+bool REHex::StringPanel::search_pending() const
+{
+	return m_search_pending;
+}
+
 wxString REHex::StringPanel::get_item_string(StringPanelListCtrl *list_ctrl, int item_idx)
 {
 	return list_ctrl->OnGetItemText(item_idx, 1);
@@ -899,7 +725,12 @@ wxString REHex::StringPanel::get_item_offset_and_string(StringPanelListCtrl *lis
 
 void REHex::StringPanel::OnDataModifying(OffsetLengthEvent &event)
 {
-	pause_threads();
+	if(m_search_running)
+	{
+		processor.pause_threads();
+	}
+	
+	flush_all_batches();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -907,7 +738,10 @@ void REHex::StringPanel::OnDataModifying(OffsetLengthEvent &event)
 
 void REHex::StringPanel::OnDataModifyAborted(OffsetLengthEvent &event)
 {
-	start_threads();
+	if(m_search_running)
+	{
+		processor.resume_threads();
+	}
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -915,25 +749,22 @@ void REHex::StringPanel::OnDataModifyAborted(OffsetLengthEvent &event)
 
 void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 {
-	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.data_erased(event.offset, event.length);
-	}
+	assert(processor.paused());
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		
-		dirty.data_erased(event.offset, event.length);
-		pending.data_erased(event.offset, event.length);
-		assert(working.empty());
-		
-		mark_dirty_pad(event.offset, 0);
-	}
+	strings.data_erased(event.offset, event.length);
+	processor.data_erased(event.offset, event.length);
 	
-	start_threads();
+	mark_dirty_pad(event.offset, 0);
+	
+	if(m_search_running)
+	{
+		processor.resume_threads();
+	}
+	else{
+		start_search();
+	}
 	
 	update_needed = true;
-	update();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -941,22 +772,22 @@ void REHex::StringPanel::OnDataErase(OffsetLengthEvent &event)
 
 void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 {
+	assert(processor.paused());
+	
+	strings.data_inserted(event.offset, event.length);
+	processor.data_inserted(event.offset, event.length);
+	
+	mark_dirty_pad(event.offset, event.length);
+	
+	if(m_search_running)
 	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.data_inserted(event.offset, event.length);
+		processor.resume_threads();
+	}
+	else{
+		start_search();
 	}
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		
-		dirty.data_inserted(event.offset, event.length);
-		pending.data_inserted(event.offset, event.length);
-		assert(working.empty());
-		
-		mark_dirty_pad(event.offset, event.length);
-	}
-	
-	start_threads();
+	update_needed = true;
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -965,19 +796,15 @@ void REHex::StringPanel::OnDataInsert(OffsetLengthEvent &event)
 void REHex::StringPanel::OnDataOverwrite(OffsetLengthEvent &event)
 {
 	{
-		std::lock_guard<std::mutex> sl(strings_lock);
+		std::unique_lock<std::mutex> sl(strings_lock);
 		strings.clear_range(event.offset, event.length);
 	}
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty_pad(event.offset, event.length);
-	}
+	mark_dirty_pad(event.offset, event.length);
 	
-	start_threads();
+	start_search();
 	
 	update_needed = true;
-	update();
 	
 	/* Continue propogation. */
 	event.Skip();
@@ -1057,17 +884,13 @@ void REHex::StringPanel::OnItemRightClick(wxListEvent &event)
 
 void REHex::StringPanel::OnTimerTick(wxTimerEvent &event)
 {
-	off_t dirty_total;
-	
+	if(!is_visible)
 	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		dirty_total = sum_dirty_bytes();
-	}
-	
-	if(dirty_total == 0 || threads_exit)
-	{
-		/* Processing is finished. Shut down threads. */
-		stop_threads();
+		/* We should only get called once after the panel is hidden. */
+		assert(m_search_running);
+		
+		suspend_search();
+		return;
 	}
 	
 	update();
@@ -1075,114 +898,60 @@ void REHex::StringPanel::OnTimerTick(wxTimerEvent &event)
 
 void REHex::StringPanel::OnEncodingChanged(wxCommandEvent &event)
 {
-	pause_threads();
+	processor.pause_threads();
 	
 	int encoding_idx = event.GetSelection();
 	selected_encoding = (const CharacterEncoding*)(encoding_choice->GetClientData(encoding_idx));
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty(0, document->buffer_length());
-	}
-	
-	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.clear_all();
-	}
-	
-	start_threads();
-	
-	update_needed = true;
+	restart_search();
 }
 
 void REHex::StringPanel::OnMinStringLength(wxSpinEvent &event)
 {
-	pause_threads();
+	processor.pause_threads();
 	
 	min_string_length = event.GetPosition();
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty(0, document->buffer_length());
-	}
-	
-	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.clear_all();
-	}
-	
-	start_threads();
-	
-	update_needed = true;
+	restart_search();
 }
 
 void REHex::StringPanel::OnCJKToggle(wxCommandEvent &event)
 {
-	pause_threads();
+	processor.pause_threads();
 	
 	ignore_cjk = event.IsChecked();
 	
-	{
-		std::lock_guard<std::mutex> pl(pause_lock);
-		mark_dirty(0, document->buffer_length());
-	}
-	
-	{
-		std::lock_guard<std::mutex> sl(strings_lock);
-		strings.clear_all();
-	}
-	
-	start_threads();
-	
-	update_needed = true;
+	restart_search();
 }
 
 void REHex::StringPanel::OnReset(wxCommandEvent &event)
 {
-	pause_threads();
-	
-	if(!strings.empty())
-	{
-		off_t strings_begin = strings.first().offset;
-		off_t strings_end = strings.last().offset + strings.last().length;
-		
-		pending.set_range(strings_begin, (strings_end - strings_begin));
-	}
-	
-	search_base = 0;
-	strings.clear_all();
-	
-	start_threads();
-	
-	reset_button->Disable();
-	
-	update_needed = true;
+	restart_search();
 }
 
 void REHex::StringPanel::OnContinue(wxCommandEvent &event)
 {
-	assert(spawned_threads == 0);
+	assert(!m_search_pending);
 	
-	auto next_pending = pending.find_first_in(search_base, std::numeric_limits<off_t>::max());
-	assert(next_pending != pending.end());
+	auto queue = processor.get_queue();
+	auto next_pending = queue.find_first_in(search_base, std::numeric_limits<off_t>::max());
 	
-	search_base = next_pending->offset;
-	
-	if(!strings.empty())
+	if(next_pending != queue.end())
 	{
-		off_t strings_begin = strings.first().offset;
-		off_t strings_end = strings.last().offset + strings.last().length;
+		search_base = next_pending->offset;
 		
-		pending.set_range(strings_begin, (strings_end - strings_begin));
+		if(!strings.empty())
+		{
+			strings.clear_all();
+		}
 		
-		strings.clear_all();
+		start_search();
+		
+		reset_button->Enable();
 	}
-	
-	start_threads();
-	
-	reset_button->Enable();
-	
-	update_needed = true;
+	else{
+		continue_button->Disable();
+	}
 }
 
 REHex::StringPanel::StringPanelListCtrl::StringPanelListCtrl(StringPanel *parent):

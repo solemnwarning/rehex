@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,16 +28,35 @@
 #ifdef REHEX_PROFILE
 
 std::list<REHex::ProfilingCollector*> *REHex::ProfilingCollector::collectors = NULL;
+thread_local REHex::ProfilingCollector::ThreadGroup REHex::ProfilingCollector::thread_group = REHex::ProfilingCollector::ThreadGroup::UNKNOWN;
 
-std::list<REHex::ProfilingCollector*> REHex::ProfilingCollector::get_collectors()
+void REHex::ProfilingCollector::set_thread_group(ThreadGroup thread_group)
 {
+	/* Thread group may only be set once per thread. */
+	if(REHex::ProfilingCollector::thread_group != REHex::ProfilingCollector::ThreadGroup::UNKNOWN)
+	{
+		abort();
+	}
+	
+	REHex::ProfilingCollector::thread_group = thread_group;
+}
+
+std::list<REHex::ProfilingCollector*> REHex::ProfilingCollector::get_collectors(ThreadGroup group)
+{
+	std::list<ProfilingCollector*> result;
+	
 	if(collectors != NULL)
 	{
-		return *collectors;
+		for(auto it = collectors->begin(); it != collectors->end(); ++it)
+		{
+			if((*it)->tg_stats[ (size_t)(group) ].head_time_bucket != 0)
+			{
+				result.push_back(*it);
+			}
+		}
 	}
-	else{
-		return std::list<ProfilingCollector*>();
-	}
+	
+	return result;
 }
 
 void REHex::ProfilingCollector::reset_collectors()
@@ -59,7 +78,6 @@ uint64_t REHex::ProfilingCollector::get_monotonic_us()
 
 REHex::ProfilingCollector::ProfilingCollector(const std::string &key, ProfilingCollector *parent):
 	key(key),
-	head_time_bucket(0),
 	parent(parent)
 {
 	reset();
@@ -89,17 +107,20 @@ const std::string &REHex::ProfilingCollector::get_key() const
 	return key;
 }
 
-REHex::ProfilingCollector::Stats REHex::ProfilingCollector::accumulate_stats(unsigned int window_duration_ms) const
+REHex::ProfilingCollector::Stats REHex::ProfilingCollector::accumulate_stats(ThreadGroup group, unsigned int window_duration_ms) const
 {
+	const ThreadGroupStats &tgs = tg_stats[ (size_t)(group) ];
+	std::unique_lock<std::mutex> tgs_lock(tgs.mutex);
+	
 	uint64_t now_time_bucket = get_monotonic_us() / (SLOT_DURATION_MS * 1000);
-	assert(now_time_bucket >= head_time_bucket);
+	assert(now_time_bucket >= tgs.head_time_bucket);
 	
 	Stats acc;
 	
-	const Stats *stats_begin = slots + (now_time_bucket == head_time_bucket);
-	const Stats *stats_end = std::min((stats_begin + (window_duration_ms / SLOT_DURATION_MS)), (slots + NUM_SLOTS));
+	const Stats *stats_begin = tgs.slots + (now_time_bucket == tgs.head_time_bucket);
+	const Stats *stats_end = std::min((stats_begin + (window_duration_ms / SLOT_DURATION_MS)), (tgs.slots + NUM_SLOTS));
 	
-	stats_end -= std::min((uint64_t)(stats_end - stats_begin), (now_time_bucket - head_time_bucket));
+	stats_end -= std::min((uint64_t)(stats_end - stats_begin), (now_time_bucket - tgs.head_time_bucket));
 	
 	for(auto s = stats_begin; s != stats_end; ++s)
 	{
@@ -113,33 +134,54 @@ void REHex::ProfilingCollector::record_time(uint64_t begin_time, uint64_t durati
 {
 	uint64_t now_time_bucket = get_monotonic_us() / (SLOT_DURATION_MS * 1000);
 	
-	if(now_time_bucket != head_time_bucket)
+	if(thread_group == ThreadGroup::UNKNOWN)
 	{
-		assert(now_time_bucket > head_time_bucket);
-		uint64_t shift_by = now_time_bucket - head_time_bucket;
+		abort();
+	}
+	else if(thread_group == ThreadGroup::NONE)
+	{
+		return;
+	}
+	
+	ThreadGroupStats &tgs = tg_stats[ (size_t)(thread_group) ];
+	std::unique_lock<std::mutex> tgs_lock(tgs.mutex);
+	
+	if(now_time_bucket != tgs.head_time_bucket)
+	{
+		assert(now_time_bucket > tgs.head_time_bucket);
+		uint64_t shift_by = now_time_bucket - tgs.head_time_bucket;
 		
 		size_t slots_to_keep = 0;
 		if(shift_by < NUM_SLOTS)
 		{
 			slots_to_keep = NUM_SLOTS - shift_by;
-			memmove(slots + shift_by, slots, sizeof(*slots) * slots_to_keep);
+			memmove(tgs.slots + shift_by, tgs.slots, sizeof(*(tgs.slots)) * slots_to_keep);
 		}
 		
-		reset(0, NUM_SLOTS - slots_to_keep);
+		tgs.reset(tgs_lock, 0, NUM_SLOTS - slots_to_keep);
 		
-		head_time_bucket = now_time_bucket;
+		tgs.head_time_bucket = now_time_bucket;
 	}
 	
 	uint64_t begin_time_bucket = begin_time / (SLOT_DURATION_MS * 1000);
 	
-	if(begin_time_bucket <= head_time_bucket && (begin_time_bucket + NUM_SLOTS) > head_time_bucket)
+	if(begin_time_bucket <= tgs.head_time_bucket && (begin_time_bucket + NUM_SLOTS) > tgs.head_time_bucket)
 	{
-		size_t slot_idx = head_time_bucket - begin_time_bucket;
-		slots[slot_idx].record_time(duration);
+		size_t slot_idx = tgs.head_time_bucket - begin_time_bucket;
+		tgs.slots[slot_idx].record_time(duration);
 	}
 }
 
 void REHex::ProfilingCollector::reset(size_t begin_idx, size_t end_idx)
+{
+	for(size_t t = 0; t < (size_t)(ThreadGroup::UNKNOWN); ++t)
+	{
+		std::unique_lock<std::mutex> tgs_lock(tg_stats[t].mutex);
+		tg_stats[t].reset(tgs_lock, begin_idx, end_idx);
+	}
+}
+
+void REHex::ProfilingCollector::ThreadGroupStats::reset(const std::unique_lock<std::mutex> &mutex_guard, size_t begin_idx, size_t end_idx)
 {
 	for(size_t i = begin_idx; i < end_idx; ++i)
 	{
@@ -296,12 +338,12 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 	
 	auto add_duration_btn = [&](const char *label, unsigned int duration_ms, bool enable = false)
 	{
-		wxRadioButton *btn = new wxRadioButton(this, wxID_ANY, label);
+		wxRadioButton *btn = new wxRadioButton(this, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, (enable ? wxRB_GROUP : 0));
 		btn->SetValue(enable);
 		
 		Bind(wxEVT_RADIOBUTTON, [=](wxCommandEvent &event)
 		{
-			model->update(duration_ms);
+			model->set_duration(duration_ms);
 		}, btn->GetId(), btn->GetId());
 		
 		duration_sizer->Add(btn);
@@ -311,6 +353,24 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 	add_duration_btn("15s", 15000);
 	add_duration_btn("30s", 30000);
 	add_duration_btn("1m",  60000);
+	
+	wxBoxSizer *thread_group_sizer = new wxBoxSizer(wxHORIZONTAL);
+	
+	auto add_tg_button = [&](const char *label, ProfilingCollector::ThreadGroup group, bool enable = false)
+	{
+		wxRadioButton *btn = new wxRadioButton(this, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, (enable ? wxRB_GROUP : 0));
+		btn->SetValue(enable);
+		
+		Bind(wxEVT_RADIOBUTTON, [=](wxCommandEvent &event)
+		{
+			model->set_thread_group(group);
+		}, btn->GetId(), btn->GetId());
+		
+		thread_group_sizer->Add(btn);
+	};
+	
+	add_tg_button("Main thread",  ProfilingCollector::ThreadGroup::MAIN, true);
+	add_tg_button("Thread pool",  ProfilingCollector::ThreadGroup::POOL);
 	
 	wxCheckBox *pause_btn = new wxCheckBox(this, wxID_ANY, "Pause");
 	
@@ -330,6 +390,7 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 	sizer->Add(dvc, 1, wxEXPAND);
 	sizer->Add(reset_btn);
 	sizer->Add(duration_sizer);
+	sizer->Add(thread_group_sizer);
 	sizer->Add(pause_btn);
 	SetSizer(sizer);
 }
@@ -337,15 +398,25 @@ REHex::ProfilingWindow::ProfilingWindow(wxWindow *parent):
 REHex::ProfilingDataViewModel::ProfilingDataViewModel():
 	duration_ms(5000) {}
 
-void REHex::ProfilingDataViewModel::update(unsigned int duration_ms)
+void REHex::ProfilingDataViewModel::set_duration(unsigned int duration_ms)
 {
 	this->duration_ms = duration_ms;
 	update();
 }
 
+void REHex::ProfilingDataViewModel::set_thread_group(ProfilingCollector::ThreadGroup group)
+{
+	this->thread_group = group;
+	
+	stats.clear();
+	Cleared();
+	
+	update();
+}
+
 void REHex::ProfilingDataViewModel::update()
 {
-	auto collectors = ProfilingCollector::get_collectors();
+	auto collectors = ProfilingCollector::get_collectors(thread_group);
 	
 	for(auto c = collectors.begin(); c != collectors.end(); ++c)
 	{
@@ -356,7 +427,7 @@ void REHex::ProfilingDataViewModel::update()
 		{
 			/* Update for existing collector. */
 			
-			s->second = s->first->accumulate_stats(duration_ms);
+			s->second = s->first->accumulate_stats(thread_group, duration_ms);
 			
 			stats_elem_t *collector_stats = &(*s);
 			ItemChanged(wxDataViewItem(collector_stats));
@@ -379,7 +450,7 @@ void REHex::ProfilingDataViewModel::update()
 			}
 			
 			bool inserted;
-			std::tie(s, inserted) = stats.emplace(collector, collector->accumulate_stats(duration_ms));
+			std::tie(s, inserted) = stats.emplace(collector, collector->accumulate_stats(thread_group, duration_ms));
 			assert(inserted);
 			
 			stats_elem_t *collector_stats = &(*s);

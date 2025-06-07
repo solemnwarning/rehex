@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -37,9 +37,6 @@ namespace REHex
 			
 			std::stack< std::function<void()> > cleanups;
 			
-			SharedDocumentPointerImpl(std::shared_ptr<T> &document):
-				document(document) {}
-			
 		public:
 			/**
 			 * Sets up a binding with document->Bind() that is automatically undone
@@ -56,8 +53,22 @@ namespace REHex
 				});
 			}
 			
+			const std::shared_ptr<T> &_get_shared_ptr() const
+			{
+				return document;
+			}
+			
 			SharedDocumentPointerImpl(const SharedDocumentPointerImpl<T> &document):
 				document(document.document) {}
+			
+			SharedDocumentPointerImpl(const std::shared_ptr<T> &document):
+				document(document) {}
+			
+			SharedDocumentPointerImpl &operator=(const SharedDocumentPointerImpl<T>&) = delete;
+			
+			/* Allow conversion of SharedDocumentPointerImpl<T> to SharedDocumentPointerImpl<Base> */
+			template<typename U> SharedDocumentPointerImpl(const SharedDocumentPointerImpl<U> &document):
+				document(document._get_shared_ptr()) {}
 			
 			~SharedDocumentPointerImpl()
 			{
@@ -87,23 +98,16 @@ namespace REHex
 			/**
 			 * @brief Construct a new Document and return a SharedDocumentPointer.
 			*/
-			static SharedDocumentPointerImpl<T> make()
+			template<typename... Args> static SharedDocumentPointerImpl<T> make(Args&&... args)
 			{
-				std::shared_ptr<T> s = std::make_shared<T>();
-				return SharedDocumentPointerImpl<T>(s);
-			}
-			
-			/**
-			 * @brief Construct a new Document and return a SharedDocumentPointer.
-			*/
-			static SharedDocumentPointerImpl<T> make(const std::string &filename)
-			{
-				std::shared_ptr<T> s = std::make_shared<T>(filename);
+				std::shared_ptr<T> s = std::make_shared<T>(std::forward<Args>(args)...);
 				return SharedDocumentPointerImpl<T>(s);
 			}
 	};
 	
 	using SharedDocumentPointer = SharedDocumentPointerImpl<Document>;
+	
+	template<typename T> using SharedEvtHandler = SharedDocumentPointerImpl<T>;
 }
 
 #endif /* !REHEX_SHAREDDOCUMENTPOINTER_HPP */

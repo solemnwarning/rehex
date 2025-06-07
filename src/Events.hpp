@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,6 +18,7 @@
 #ifndef REHEX_EVENTS_HPP
 #define REHEX_EVENTS_HPP
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <wx/event.h>
 #include <wx/window.h>
@@ -35,6 +36,8 @@ namespace REHex
 			
 			OffsetLengthEvent(wxWindow *source, wxEventType event, off_t offset, off_t length);
 			OffsetLengthEvent(wxObject *source, wxEventType event, off_t offset, off_t length);
+			
+			std::pair<off_t, off_t> get_clamped_range(off_t clamp_offset, off_t clamp_length) const;
 			
 			virtual wxEvent *Clone() const override;
 	};
@@ -115,21 +118,36 @@ namespace REHex
 	#define EVT_FONTSIZEADJUSTMENT(func) \
 		wx__DECLARE_EVT1(FONT_SIZE_ADJUSTMENT_CHANGED, wxID_ANY, wxEVENT_HANDLER_CAST(FontSizeAdjustmentEventFunction, func))
 	
+	class ScrollUpdateEvent: public wxEvent
+	{
+		public:
+			const int64_t pos;
+			const int64_t max;
+			const int orientation;
+			
+			ScrollUpdateEvent(wxWindow *source, int64_t pos, int64_t max, int orientation);
+			
+			virtual wxEvent *Clone() const override;
+	};
+	
 	wxDECLARE_EVENT(COMMENT_LEFT_CLICK,     BitRangeEvent);
 	wxDECLARE_EVENT(COMMENT_RIGHT_CLICK,    BitRangeEvent);
 	wxDECLARE_EVENT(DATA_RIGHT_CLICK,       wxCommandEvent);
 	
 	wxDECLARE_EVENT(DATA_ERASING,              OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_ERASE,                OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_ERASE_DONE,           OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_ERASE_ABORTED,        OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERTING,            OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERT,               OffsetLengthEvent);
+	wxDECLARE_EVENT(DATA_INSERT_DONE,          OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_INSERT_ABORTED,       OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_OVERWRITING,          OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_OVERWRITE,            OffsetLengthEvent);
 	wxDECLARE_EVENT(DATA_OVERWRITE_ABORTED,    OffsetLengthEvent);
 	
 	wxDECLARE_EVENT(CURSOR_UPDATE,    CursorUpdateEvent);
+	wxDECLARE_EVENT(SCROLL_UPDATE,    ScrollUpdateEvent);
 	
 	wxDECLARE_EVENT(DOCUMENT_TITLE_CHANGED,  DocumentTitleEvent);
 	
@@ -139,6 +157,9 @@ namespace REHex
 	
 	wxDECLARE_EVENT(BULK_UPDATES_FROZEN, wxCommandEvent);
 	wxDECLARE_EVENT(BULK_UPDATES_THAWED, wxCommandEvent);
+	
+	wxDECLARE_EVENT(PROCESSING_START, wxCommandEvent);
+	wxDECLARE_EVENT(PROCESSING_STOP,  wxCommandEvent);
 }
 
 #endif /* !REHEX_EVENTS_HPP */

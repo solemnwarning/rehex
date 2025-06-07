@@ -19,6 +19,7 @@
 
 #include <wx/sizer.h>
 #include <wx/statbmp.h>
+#include <wx/stattext.h>
 
 #include "App.hpp"
 #include "mainwindow.hpp"

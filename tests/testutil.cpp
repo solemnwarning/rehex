@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -79,15 +79,20 @@ bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_m
 
 void write_file(const std::string &filename, const std::vector<unsigned char>& data)
 {
+	write_file(filename, data.data(), data.size());
+}
+
+void write_file(const std::string &filename, const void *data, size_t size)
+{
 	FILE *fh = fopen(filename.c_str(), "wb");
 	if(!fh)
 	{
 		throw std::runtime_error(std::string("Unable to open file ") + filename);
 	}
 	
-	if(data.size() > 0)
+	if(size > 0)
 	{
-		if(fwrite(data.data(), data.size(), 1, fh) != 1)
+		if(fwrite(data, size, 1, fh) != 1)
 		{
 			fclose(fh);
 			throw std::runtime_error(std::string("Unable to write to file ") + filename);
@@ -151,6 +156,16 @@ TempFilename::TempFilename()
 TempFilename::~TempFilename()
 {
 	unlink(tmpfile);
+}
+
+TempFile::TempFile(const void *initial_data, size_t size)
+{
+	write_file(tmpfile, initial_data, size);
+}
+
+TempFile::TempFile(const std::string &initial_data)
+{
+	write_file(tmpfile, initial_data.data(), initial_data.size());
 }
 
 AutoJSON::AutoJSON():

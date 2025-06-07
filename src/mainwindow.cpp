@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -36,6 +36,7 @@
 #include "BytesPerLineDialog.hpp"
 #include "EditCommentDialog.hpp"
 #include "FillRangeDialog.hpp"
+#include "GotoOffsetDialog.hpp"
 #include "IntelHexExport.hpp"
 #include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
@@ -47,6 +48,7 @@
 #include "SettingsDialog.hpp"
 #include "SettingsDialogByteColour.hpp"
 #include "SettingsDialogHighlights.hpp"
+#include "SettingsDialogGeneral.hpp"
 #include "SettingsDialogKeyboard.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ToolPanel.hpp"
@@ -77,6 +79,7 @@ enum {
 	ID_COMPARE_FILE,
 	ID_COMPARE_SELECTION,
 	ID_GOTO_OFFSET,
+	ID_REPEAT_GOTO_OFFSET,
 	ID_OVERWRITE_MODE,
 	ID_WRITE_PROTECT,
 	ID_SAVE_VIEW,
@@ -84,6 +87,8 @@ enum {
 	ID_INLINE_COMMENTS_FULL,
 	ID_INLINE_COMMENTS_SHORT,
 	ID_INLINE_COMMENTS_INDENT,
+	ID_DATA_MAP_SCROLLBAR_HIDDEN,
+	ID_DATA_MAP_SCROLLBAR_ENTROPY,
 	ID_ASM_SYNTAX_INTEL,
 	ID_ASM_SYNTAX_ATT,
 	ID_HIGHLIGHT_SELECTION_MATCH,
@@ -106,6 +111,8 @@ enum {
 	ID_IMPORT_HEX,
 	ID_EXPORT_HEX,
 	ID_AUTO_RELOAD,
+	ID_IMPORT_METADATA,
+	ID_EXPORT_METADATA,
 	
 	ID_SET_COMMENT_CURSOR,
 	ID_SET_COMMENT_SELECTION,
@@ -127,18 +134,20 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_ACTIVATE(REHex::MainWindow::OnWindowActivate)
 	EVT_CHAR_HOOK(REHex::MainWindow::OnCharHook)
 	
-	EVT_MENU(wxID_NEW,        REHex::MainWindow::OnNew)
-	EVT_MENU(wxID_OPEN,       REHex::MainWindow::OnOpen)
-	EVT_MENU(wxID_SAVE,       REHex::MainWindow::OnSave)
-	EVT_MENU(wxID_SAVEAS,     REHex::MainWindow::OnSaveAs)
-	EVT_MENU(wxID_REFRESH,    REHex::MainWindow::OnReload)
-	EVT_MENU(ID_AUTO_RELOAD,  REHex::MainWindow::OnAutoReload)
-	EVT_MENU(ID_IMPORT_HEX,   REHex::MainWindow::OnImportHex)
-	EVT_MENU(ID_EXPORT_HEX,   REHex::MainWindow::OnExportHex)
-	EVT_MENU(wxID_CLOSE,      REHex::MainWindow::OnClose)
-	EVT_MENU(ID_CLOSE_ALL,    REHex::MainWindow::OnCloseAll)
-	EVT_MENU(ID_CLOSE_OTHERS, REHex::MainWindow::OnCloseOthers)
-	EVT_MENU(wxID_EXIT,       REHex::MainWindow::OnExit)
+	EVT_MENU(wxID_NEW,            REHex::MainWindow::OnNew)
+	EVT_MENU(wxID_OPEN,           REHex::MainWindow::OnOpen)
+	EVT_MENU(wxID_SAVE,           REHex::MainWindow::OnSave)
+	EVT_MENU(wxID_SAVEAS,         REHex::MainWindow::OnSaveAs)
+	EVT_MENU(wxID_REFRESH,        REHex::MainWindow::OnReload)
+	EVT_MENU(ID_AUTO_RELOAD,      REHex::MainWindow::OnAutoReload)
+	EVT_MENU(ID_IMPORT_HEX,       REHex::MainWindow::OnImportHex)
+	EVT_MENU(ID_EXPORT_HEX,       REHex::MainWindow::OnExportHex)
+	EVT_MENU(ID_IMPORT_METADATA,  REHex::MainWindow::OnImportMetadata)
+	EVT_MENU(ID_EXPORT_METADATA,  REHex::MainWindow::OnExportMetadata)
+	EVT_MENU(wxID_CLOSE,          REHex::MainWindow::OnClose)
+	EVT_MENU(ID_CLOSE_ALL,        REHex::MainWindow::OnCloseAll)
+	EVT_MENU(ID_CLOSE_OTHERS,     REHex::MainWindow::OnCloseOthers)
+	EVT_MENU(wxID_EXIT,           REHex::MainWindow::OnExit)
 	
 	EVT_MENU(wxID_BACKWARD, REHex::MainWindow::OnCursorPrev)
 	EVT_MENU(wxID_FORWARD,  REHex::MainWindow::OnCursorNext)
@@ -170,7 +179,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_COMPARE_FILE,       REHex::MainWindow::OnCompareFile)
 	EVT_MENU(ID_COMPARE_SELECTION,  REHex::MainWindow::OnCompareSelection)
 	
-	EVT_MENU(ID_GOTO_OFFSET, REHex::MainWindow::OnGotoOffset)
+	EVT_MENU(ID_GOTO_OFFSET,        REHex::MainWindow::OnGotoOffset)
+	EVT_MENU(ID_REPEAT_GOTO_OFFSET, REHex::MainWindow::OnRepeatGotoOffset)
 	
 	EVT_MENU(wxID_PREFERENCES, REHex::MainWindow::OnSettings)
 	
@@ -188,6 +198,9 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_INLINE_COMMENTS_FULL,   REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_SHORT,  REHex::MainWindow::OnInlineCommentsMode)
 	EVT_MENU(ID_INLINE_COMMENTS_INDENT, REHex::MainWindow::OnInlineCommentsMode)
+	
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_HIDDEN,       REHex::MainWindow::OnDataMapScrollbar)
+	EVT_MENU(ID_DATA_MAP_SCROLLBAR_ENTROPY,      REHex::MainWindow::OnDataMapScrollbar)
 	
 	EVT_MENU(ID_ASM_SYNTAX_INTEL, REHex::MainWindow::OnAsmSyntax)
 	EVT_MENU(ID_ASM_SYNTAX_ATT,   REHex::MainWindow::OnAsmSyntax)
@@ -238,6 +251,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_COMMAND(wxID_ANY, REHex::EV_BECAME_CLEAN,      REHex::MainWindow::OnBecameClean)
 	EVT_COMMAND(wxID_ANY, REHex::BACKING_FILE_DELETED, REHex::MainWindow::OnFileDeleted)
 	EVT_COMMAND(wxID_ANY, REHex::BACKING_FILE_MODIFIED, REHex::MainWindow::OnFileModified)
+	EVT_COMMAND(wxID_ANY, REHex::LAST_GOTO_OFFSET_CHANGED,  REHex::MainWindow::OnLastGotoOffsetChanged)
+	EVT_COMMAND(wxID_ANY, REHex::TOOLPANEL_CLOSED, REHex::MainWindow::OnToolPanelClosed)
 	
 	EVT_DOCUMENTTITLE(wxID_ANY, REHex::MainWindow::OnTitleChanged)
 END_EVENT_TABLE()
@@ -286,6 +301,11 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->Append(ID_IMPORT_HEX, "&Import Intel Hex File");
 		file_menu->Append(ID_EXPORT_HEX, "E&xport Intel Hex File");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(ID_IMPORT_METADATA, "Import Metadata");
+		file_menu->Append(ID_EXPORT_METADATA, "Export Metadata");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -345,6 +365,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		edit_menu->AppendSeparator(); /* ---- */
 		
 		edit_menu->Append(ID_GOTO_OFFSET, "Jump to offset...");
+		edit_menu->Append(ID_REPEAT_GOTO_OFFSET, "Repeat last 'Jump to offset'");
 		
 		edit_menu->AppendSeparator(); /* ---- */
 		
@@ -378,6 +399,9 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		inline_comments_menu = new wxMenu;
 		view_menu->AppendSubMenu(inline_comments_menu, "Inline comments");
 		
+		data_map_scrollbar_menu = new wxMenu;
+		view_menu->AppendSubMenu(data_map_scrollbar_menu, "Visual scrollbar");
+		
 		view_menu->AppendCheckItem(ID_HIGHLIGHT_SELECTION_MATCH, "Highlight data matching selection");
 		
 		colour_map_menu = new wxMenu;
@@ -389,12 +413,27 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		inline_comments_menu->AppendSeparator();
 		inline_comments_menu->AppendCheckItem(ID_INLINE_COMMENTS_INDENT, "Nest comments");
 		
+		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_HIDDEN, "Hidden");
+		data_map_scrollbar_menu->AppendRadioItem(ID_DATA_MAP_SCROLLBAR_ENTROPY, "Entropy");
+		
 		tool_panels_menu = new wxMenu;
 		view_menu->AppendSubMenu(tool_panels_menu, "Tool panels");
 		
+		std::vector<const ToolPanelRegistration*> tools;
+		
 		for(auto i = ToolPanelRegistry::begin(); i != ToolPanelRegistry::end(); ++i)
 		{
-			const ToolPanelRegistration *tpr = i->second;
+			tools.emplace_back(i->second);
+		}
+		
+		std::sort(tools.begin(), tools.end(), [](const ToolPanelRegistration *a, const ToolPanelRegistration *b)
+		{
+			return a->label < b->label;
+		});
+		
+		for(auto i = tools.begin(); i != tools.end(); ++i)
+		{
+			const ToolPanelRegistration *tpr = *i;
 			wxMenuItem *itm = tool_panels_menu->AppendCheckItem(wxID_ANY, tpr->label);
 			
 			Bind(wxEVT_MENU, [this, tpr](wxCommandEvent &event)
@@ -677,7 +716,8 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	
 	wxFileName wxfn(filename);
 	wxfn.MakeAbsolute();
-	wxGetApp().recent_files->AddFileToHistory(wxfn.GetFullPath());
+	
+	wxGetApp().recent_files->AddFileToHistory(filename);
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
@@ -687,6 +727,51 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	
 	return tab;
 }
+
+#ifdef __APPLE__
+REHex::Tab *REHex::MainWindow::open_file(MacFileName &&macfn)
+{
+	std::string filename = macfn.GetFileName().GetFullPath().ToStdString();
+	
+	wxGetApp().recent_files->AddFileToHistory(macfn);
+	
+	Tab *tab;
+	try {
+		SharedDocumentPointer doc(SharedDocumentPointer::make(std::move(macfn)));
+		tab = new Tab(notebook, doc);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error opening ") + filename + ":\n" + e.what(),
+					 "Error", wxICON_ERROR, this);
+		return NULL;
+	}
+	
+	/* Discard default "Untitled" tab if not modified. */
+	if(notebook->GetPageCount() == 1)
+	{
+		wxWindow *page = notebook->GetPage(0);
+		assert(page != NULL);
+		
+		auto page_tab = dynamic_cast<Tab*>(page);
+		assert(page_tab != NULL);
+		
+		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
+		{
+			notebook->DeletePage(0);
+		}
+	}
+	
+	notebook->AddPage(tab, tab->doc->get_title(), true);
+	tab->doc_ctrl->SetFocus();
+	
+	TabCreatedEvent event(this, tab);
+	wxPostEvent(this, event);
+	
+	return tab;
+}
+#endif /* __APPLE__ */
 
 REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
 {
@@ -839,10 +924,17 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 
 void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
 {
-	wxFileHistory *recent_files = wxGetApp().recent_files;
-	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
+	auto *recent_files = wxGetApp().recent_files;
 	
+	#ifdef __APPLE__
+	MacFileName macfn = recent_files->GetHistoryMacFile(event.GetId() - recent_files->GetBaseId());
+	open_file(std::move(macfn));
+	
+	#else
+	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
 	open_file(file.ToStdString());
+	
+	#endif
 }
 
 void REHex::MainWindow::OnSave(wxCommandEvent &event)
@@ -1192,6 +1284,98 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnImportMetadata(wxCommandEvent &event)
+{
+	std::string dir;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir = wxfn.GetPath();
+	}
+	else{
+		dir = wxGetApp().get_last_directory();
+	}
+	
+	wxFileDialog openFileDialog(this, "Import Metadata", dir, "", "REHex metadata files (*.rehex-meta)|*.rehex-meta", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = openFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	std::string msg
+		= "Any existing metadata (comments, types, etc) will be replaced.\n"
+		"Proceed with import?";
+	
+	int res = wxMessageBox(msg, "Import Metadata", (wxYES_NO | wxICON_EXCLAMATION), this);
+	if(res == wxNO)
+	{
+		return;
+	}
+	
+	try {
+		active_document()->load_metadata(filename);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error importing metadata:\n") + e.what(),
+			"Error", wxICON_ERROR, this);
+	}
+}
+
+void REHex::MainWindow::OnExportMetadata(wxCommandEvent &event)
+{
+	std::string dir, name;
+	std::string doc_filename = active_document()->get_filename();
+	
+	if(doc_filename != "")
+	{
+		wxFileName wxfn(doc_filename);
+		wxfn.MakeAbsolute();
+		
+		dir  = wxfn.GetPath();
+		name = wxfn.GetName();
+	}
+	else{
+		dir  = wxGetApp().get_last_directory();
+		name = "";
+	}
+	
+	wxFileDialog saveFileDialog(this, "Export Metadata", dir, name, "REHex metadata files (*.rehex-meta)|*.rehex-meta", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	std::string filename = saveFileDialog.GetPath().ToStdString();
+	
+	{
+		wxFileName wxfn(filename);
+		wxString dirname = wxfn.GetPath();
+		
+		wxGetApp().set_last_directory(dirname.ToStdString());
+	}
+	
+	try {
+		active_document()->save_metadata(filename);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error exporting metadata:\n") + e.what(),
+			"Error", wxICON_ERROR, this);
+	}
+}
+
 void REHex::MainWindow::OnClose(wxCommandEvent &event)
 {
 	wxWindow *cpage = notebook->GetCurrentPage();
@@ -1293,64 +1477,36 @@ void REHex::MainWindow::OnCompareSelection(wxCommandEvent &event)
 void REHex::MainWindow::OnGotoOffset(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
+	tab->show_goto_offset_dialog();
+}
+
+void REHex::MainWindow::OnRepeatGotoOffset(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
 	
-	BitOffset current_pos = tab->doc->get_cursor_position();
-	BitOffset max_pos     = BitOffset((tab->doc->buffer_length() - !tab->doc_ctrl->get_insert_mode()), 0);
+	BitOffset last_goto_offset;
+	bool is_relative;
 	
-	NumericEntryDialog<BitOffset>::BaseHint base;
-	switch(wxGetApp().settings->get_goto_offset_base())
+	std::tie(last_goto_offset, is_relative) = tab->get_last_goto_offset();
+	
+	if(last_goto_offset == BitOffset::MIN)
 	{
-		case GotoOffsetBase::AUTO:
-			base = NumericEntryDialog<BitOffset>::BaseHint::AUTO;
-			break;
-		
-		case GotoOffsetBase::OCT:
-			base = NumericEntryDialog<BitOffset>::BaseHint::OCT;
-			break;
-		
-		case GotoOffsetBase::DEC:
-			base = NumericEntryDialog<BitOffset>::BaseHint::DEC;
-			break;
-		
-		case GotoOffsetBase::HEX:
-			base = NumericEntryDialog<BitOffset>::BaseHint::HEX;
-			break;
+		return;
 	}
 	
-	REHex::NumericEntryDialog<BitOffset> ni(this,
-		"Jump to offset",
-		"Prefix offset with -/+ to jump relative to current cursor position",
-		current_pos, 0, max_pos, current_pos, base);
-	
-	int rc = ni.ShowModal();
-	if(rc == wxID_OK)
+	if(is_relative)
 	{
-		base = ni.GetBase();
-		switch(base)
-		{
-			case NumericEntryDialog<BitOffset>::BaseHint::AUTO:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::AUTO);
-				break;
-				
-			case NumericEntryDialog<BitOffset>::BaseHint::OCT:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::OCT);
-				break;
-				
-			case NumericEntryDialog<BitOffset>::BaseHint::DEC:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::DEC);
-				break;
-				
-			case NumericEntryDialog<BitOffset>::BaseHint::HEX:
-				wxGetApp().settings->set_goto_offset_base(GotoOffsetBase::HEX);
-				break;
-				
-			default:
-				/* Unreachable. */
-				abort();
-		}
-		
-		tab->doc->set_cursor_position(ni.GetValue());
+		last_goto_offset += tab->doc->get_cursor_position();
 	}
+	
+	/* Check if desired offset is valid/reachable in the DocumentCtrl. */
+	if(!(tab->doc_ctrl->check_cursor_position(last_goto_offset)))
+	{
+		wxBell();
+		return;
+	}
+	
+	tab->doc->set_cursor_position(last_goto_offset);
 }
 
 void REHex::MainWindow::OnCut(wxCommandEvent &event)
@@ -1546,6 +1702,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	if(dialog == NULL)
 	{
 		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogGeneral()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogKeyboard()));
@@ -1680,6 +1837,20 @@ void REHex::MainWindow::OnDocumentDisplayMode(wxCommandEvent &event)
 	}
 }
 
+void REHex::MainWindow::OnDataMapScrollbar(wxCommandEvent &event)
+{
+	Tab *tab = active_tab();
+	
+	if(data_map_scrollbar_menu->IsChecked(ID_DATA_MAP_SCROLLBAR_HIDDEN))
+	{
+		tab->set_dsm_type(Tab::DataMapScrollbarType::NONE);
+	}
+	else if(data_map_scrollbar_menu->IsChecked(ID_DATA_MAP_SCROLLBAR_ENTROPY))
+	{
+		tab->set_dsm_type(Tab::DataMapScrollbarType::ENTROPY);
+	}
+}
+
 void REHex::MainWindow::OnHighlightSelectionMatch(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1717,11 +1888,14 @@ void REHex::MainWindow::OnShowToolPanel(wxCommandEvent &event, const REHex::Tool
 	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
+	
 	if(event.IsChecked())
 	{
+		assert(!(tab->tool_active(tpr->name)));
 		tab->tool_create(tpr->name, true);
 	}
 	else{
+		assert(tab->tool_active(tpr->name));
 		tab->tool_destroy(tpr->name);
 	}
 }
@@ -1903,6 +2077,18 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 			break;
 	};
 	
+	Tab::DataMapScrollbarType dsm = tab->get_dsm_type();
+	switch(dsm)
+	{
+		case Tab::DataMapScrollbarType::NONE:
+			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_HIDDEN, true);
+			break;
+			
+		case Tab::DataMapScrollbarType::ENTROPY:
+			data_map_scrollbar_menu->Check(ID_DATA_MAP_SCROLLBAR_ENTROPY, true);
+			break;
+	}
+	
 	DocumentDisplayMode ddm = tab->get_document_display_mode();
 	switch(ddm)
 	{
@@ -1929,6 +2115,13 @@ void REHex::MainWindow::OnDocumentChange(wxAuiNotebookEvent& event)
 		
 		tool_panels_menu->Check(menu_id, active);
 	}
+	
+	BitOffset last_goto_offset;
+	bool is_relative;
+	
+	std::tie(last_goto_offset, is_relative) = tab->get_last_goto_offset();
+	
+	edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
 	
 	_update_status_offset(tab);
 	_update_status_selection(tab->doc_ctrl);
@@ -2169,6 +2362,36 @@ void REHex::MainWindow::OnFileModified(wxCommandEvent &event)
 	_update_dirty(event_doc);
 }
 
+void REHex::MainWindow::OnLastGotoOffsetChanged(wxCommandEvent &event)
+{
+	Tab *active_tab = this->active_tab();
+	
+	wxObject *event_src = event.GetEventObject();
+	
+	if(event_src == active_tab)
+	{
+		/* Only enable the menu command if the event originated from the active tab. */
+		
+		BitOffset last_goto_offset;
+		bool is_relative;
+		
+		std::tie(last_goto_offset, is_relative) = active_tab->get_last_goto_offset();
+		
+		edit_menu->Enable(ID_REPEAT_GOTO_OFFSET, last_goto_offset != BitOffset::MIN);
+	}
+}
+
+void REHex::MainWindow::OnToolPanelClosed(wxCommandEvent &event)
+{
+	auto id_it = tool_panel_name_to_tpm_id.find(event.GetString().ToStdString());
+	assert(id_it != tool_panel_name_to_tpm_id.end());
+	
+	if(id_it != tool_panel_name_to_tpm_id.end())
+	{
+		tool_panels_menu->Check(id_it->second, false);
+	}
+}
+
 void REHex::MainWindow::OnByteColourMapsChanged(wxCommandEvent &event)
 {
 	_update_colour_map_menu(active_tab()->doc_ctrl);
@@ -2213,8 +2436,10 @@ void REHex::MainWindow::OnSetHighlight(wxCommandEvent &event)
 	int command_id = event.GetId();
 	int highlight_num = command_id - ID_SET_HIGHLIGHT_1;
 	
+	assert(highlight_num >= 0);
+	
 	const HighlightColourMap highlight_colours = tab->doc->get_highlight_colours();
-	if(highlight_colours.size() < highlight_num)
+	if(highlight_colours.size() < (size_t)(highlight_num))
 	{
 		return;
 	}
@@ -2344,7 +2569,8 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 		BitOffset selection_total = selection.total_bytes();
 		
 		std::string len_text = selection_total.byte_aligned()
-			? (std::to_string(selection_total.byte()) + " bytes")
+			//? (std::to_string(selection_total.byte()) + " bytes")
+			? format_size(selection_total.byte())
 			: (std::to_string(selection_total.byte()) + " bytes, " + std::to_string(selection_total.bit()) + " bits");
 		
 		std::string text = "Selection: " + from_text + " - " + to_text + " (" + len_text + ")";
@@ -2805,21 +3031,22 @@ std::vector<REHex::WindowCommand> REHex::MainWindow::get_template_commands()
 		WindowCommand( "file_close_all",     "Close all",     ID_CLOSE_ALL                        ),
 		WindowCommand( "file_close_others",  "Close others",  ID_CLOSE_OTHERS                     ),
 		
-		WindowCommand( "cursor_prev",        "Previous cursor position",  wxID_BACKWARD,         wxACCEL_ALT, WXK_LEFT             ),
-		WindowCommand( "cursor_next",        "Next cursor position",      wxID_FORWARD,          wxACCEL_ALT, WXK_RIGHT            ),
-		WindowCommand( "undo",               "Undo",                      wxID_UNDO,             wxACCEL_CTRL, 'Z'                 ),
-		WindowCommand( "redo",               "Redo",                      wxID_REDO,             wxACCEL_CTRL | wxACCEL_SHIFT, 'Z' ),
-		WindowCommand( "select_all",         "Select all",                wxID_SELECTALL,        wxACCEL_CTRL, 'A'                 ),
-		WindowCommand( "select_range",       "Select range",              ID_SELECT_RANGE                                          ),
-		WindowCommand( "fill_range",         "Fill range",                ID_FILL_RANGE),
-		WindowCommand( "overwrite_mode",     "Overwrite mode",            ID_OVERWRITE_MODE),
-		WindowCommand( "write_protect",      "Write protect",             ID_WRITE_PROTECT),
-		WindowCommand( "search_text",        "Search for text",           ID_SEARCH_TEXT),
-		WindowCommand( "search_bseq",        "Search for byte sequence",  ID_SEARCH_BSEQ),
-		WindowCommand( "search_value",       "Search for value",          ID_SEARCH_VALUE),
-		WindowCommand( "compare_file",       "Compare whole file",        ID_COMPARE_FILE,       wxACCEL_CTRL,                 'K'),
-		WindowCommand( "compare_selection",  "Compare selection",         ID_COMPARE_SELECTION,  wxACCEL_CTRL | wxACCEL_SHIFT, 'K'),
-		WindowCommand( "goto_offset",        "Jump to offset",            ID_GOTO_OFFSET,        wxACCEL_CTRL,                 'G'),
+		WindowCommand( "cursor_prev",        "Previous cursor position",      wxID_BACKWARD,          wxACCEL_ALT, WXK_LEFT             ),
+		WindowCommand( "cursor_next",        "Next cursor position",          wxID_FORWARD,           wxACCEL_ALT, WXK_RIGHT            ),
+		WindowCommand( "undo",               "Undo",                          wxID_UNDO,              wxACCEL_CTRL, 'Z'                 ),
+		WindowCommand( "redo",               "Redo",                          wxID_REDO,              wxACCEL_CTRL | wxACCEL_SHIFT, 'Z' ),
+		WindowCommand( "select_all",         "Select all",                    wxID_SELECTALL,         wxACCEL_CTRL, 'A'                 ),
+		WindowCommand( "select_range",       "Select range",                  ID_SELECT_RANGE                                          ),
+		WindowCommand( "fill_range",         "Fill range",                    ID_FILL_RANGE),
+		WindowCommand( "overwrite_mode",     "Overwrite mode",                ID_OVERWRITE_MODE),
+		WindowCommand( "write_protect",      "Write protect",                 ID_WRITE_PROTECT),
+		WindowCommand( "search_text",        "Search for text",               ID_SEARCH_TEXT),
+		WindowCommand( "search_bseq",        "Search for byte sequence",      ID_SEARCH_BSEQ),
+		WindowCommand( "search_value",       "Search for value",              ID_SEARCH_VALUE),
+		WindowCommand( "compare_file",       "Compare whole file",            ID_COMPARE_FILE,        wxACCEL_CTRL,                 'K'),
+		WindowCommand( "compare_selection",  "Compare selection",             ID_COMPARE_SELECTION,   wxACCEL_CTRL | wxACCEL_SHIFT, 'K'),
+		WindowCommand( "goto_offset",        "Jump to offset",                ID_GOTO_OFFSET,         wxACCEL_CTRL,                 'G'),
+		WindowCommand( "repeat_goto_offset", "Repeat last 'Jump to offset'",  ID_REPEAT_GOTO_OFFSET,  wxACCEL_CTRL | wxACCEL_SHIFT, 'G'),
 		
 		WindowCommand("set_comment_at_cursor",     "Set comment at cursor position",  ID_SET_COMMENT_CURSOR),
 		WindowCommand("set_comment_on_selection",  "Set comment on selected data",    ID_SET_COMMENT_SELECTION),

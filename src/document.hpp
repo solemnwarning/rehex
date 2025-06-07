@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -34,6 +34,7 @@
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
 #include "HighlightColourMap.hpp"
+#include "MacFileName.hpp"
 #include "util.hpp"
 
 namespace REHex {
@@ -47,6 +48,8 @@ namespace REHex {
 	wxDECLARE_EVENT(EV_HIGHLIGHTS_CHANGED,  wxCommandEvent);
 	wxDECLARE_EVENT(EV_TYPES_CHANGED,       wxCommandEvent);
 	wxDECLARE_EVENT(EV_MAPPINGS_CHANGED,    wxCommandEvent);
+	
+	wxDECLARE_EVENT(EVENT_RECURSION_FIXUP, wxCommandEvent);
 	
 	/**
 	 * @brief Data and metadata of an open file.
@@ -113,7 +116,13 @@ namespace REHex {
 				
 				TypeInfo();
 				TypeInfo(const std::string &name, const json_t *options = NULL);
-				TypeInfo(const TypeInfo &src);
+				
+				TypeInfo(const TypeInfo &typeinfo);
+				TypeInfo &operator=(const TypeInfo &rhs);
+				
+				TypeInfo(TypeInfo &&typeinfo) = delete;
+				TypeInfo &operator=(TypeInfo &&rhs) = delete;
+				
 				~TypeInfo();
 				
 				bool operator==(const TypeInfo &rhs) const;
@@ -130,6 +139,13 @@ namespace REHex {
 			 * @brief Create a Document for an existing file on disk.
 			*/
 			Document(const std::string &filename);
+			
+			#ifdef __APPLE__
+			/**
+			 * @brief Create a Document for an existing file on disk.
+			*/
+			Document(MacFileName &&filename);
+			#endif
 			
 			~Document();
 			
@@ -237,6 +253,17 @@ namespace REHex {
 			void set_highlight_colours(const HighlightColourMap &highlight_colours);
 			
 			/**
+			 * @brief Find or add the described highlight colour.
+			 *
+			 * @param label             Descriptive label for the highlight colour.
+			 * @param primary_colour    Primary colour (wxNullColour for default).
+			 * @param secondary_colour  Secondary colour (wxNullColour for default).
+			 *
+			 * @return ID of existing/created highlight colour, -1 if no slots available.
+			*/
+			int allocate_highlight_colour(const wxString &label, const wxColour &primary_colour = wxNullColour, const wxColour &secondary_colour = wxNullColour);
+			
+			/**
 			 * @brief Get the highlighted byte ranges in the file.
 			*/
 			const BitRangeMap<int> &get_highlights() const;
@@ -327,8 +354,20 @@ namespace REHex {
 			*/
 			void reset_to_clean();
 			
-			json_t *serialise_metadata() const;
+			/**
+			 * @brief Write the metadata (comments, highlights, etc) to a file.
+			*/
+			void save_metadata(const std::string &filename) const;
+			
+			/**
+			 * @brief Replace the document's metadata from a file.
+			*/
+			void load_metadata(const std::string &filename);
+			
+			json_t *serialise_metadata(bool even_if_empty) const;
 			void load_metadata(const json_t *metadata);
+			
+			static std::string find_metadata(const std::string &filename);
 			
 		#ifndef UNIT_TEST
 		private:
@@ -436,7 +475,7 @@ namespace REHex {
 			void _tracked_change(const char *desc, const std::function< void() > &do_func, const std::function< void() > &undo_func);
 			TransOpFunc _op_tracked_change(const std::function< void() > &func, const std::function< void() > &next_func);
 			
-			void _save_metadata(const std::string &filename);
+			void save_metadata_for(const std::string &filename);
 			
 			static BitRangeTree<Comment> _load_comments(const json_t *meta, off_t buffer_length);
 			static BitRangeMap<int> _load_highlights(const json_t *meta, off_t buffer_length, const HighlightColourMap &highlight_colour_map);
@@ -595,6 +634,8 @@ namespace REHex {
 			void transact_begin(const std::string &desc);
 			void transact_commit();
 			void transact_rollback();
+			
+			virtual bool ProcessEvent(wxEvent &event) override;
 	};
 	
 	/**

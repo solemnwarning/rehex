@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,30 @@ function StructValue:new()
 	
 	setmetatable(self, StructValue)
 	return self
+end
+
+function StructValue.__pairs(tbl)
+	-- Iterator function takes the table and an index and returns the next index and associated value
+	-- or nil to end iteration
+	
+	local function stateless_iter(tbl, k)
+		local v
+		k, v = next(tbl, k)
+		
+		-- Skip over any internal variables shoehorned into the struct
+		while k and k:find("^__INTERNAL") ~= nil
+		do
+			k, v = next(tbl, k)
+		end
+		
+		if v ~= nil
+		then
+			return k, v
+		end
+	end
+	
+	-- Return an iterator function, the table, starting point
+	return stateless_iter, tbl, nil
 end
 
 function StructValue:data_range()

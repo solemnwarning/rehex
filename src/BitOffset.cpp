@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -16,6 +16,9 @@
 */
 
 #include "platform.hpp"
+
+#include <sstream>
+#include <stdexcept>
 
 #include "BitOffset.hpp"
 
@@ -63,7 +66,7 @@ REHex::BitOffset REHex::BitOffset::from_json(json_t *json)
 		if(json_is_integer(json_byte) && json_is_integer(json_bit))
 		{
 			int64_t byte = json_integer_value(json_byte);
-			int bit      = json_integer_value(json_bit);
+			int bit      = (int)(json_integer_value(json_bit));
 			
 			if(byte >= INT61_MIN && byte <= 0 && bit >= -7 && bit <= 0)
 			{
@@ -99,4 +102,44 @@ json_t *REHex::BitOffset::to_json() const
 	}
 	
 	return js_offset;
+}
+
+std::string REHex::BitOffset::to_string(NumBase base, NumFormat format) const
+{
+	std::ostringstream ss;
+	
+	switch(base)
+	{
+		case NumBase::DEC:
+			ss << std::dec << byte();
+			break;
+			
+		case NumBase::HEX:
+			if((format & NumFormat::PREFIX) != NumFormat::NONE)
+			{
+				ss << "0x";
+			}
+			
+			ss << std::hex << byte();
+			break;
+			
+		case NumBase::OCT:
+			if((format & NumFormat::PREFIX) != NumFormat::NONE)
+			{
+				ss << "0";
+			}
+			
+			ss << std::oct << byte();
+			break;
+			
+		case NumBase::BIN:
+			throw std::logic_error("REHex::BitOffset::to_string() called with unsupported base (BIN)");
+	}
+	
+	if(!(byte_aligned()))
+	{
+		ss << "+" << bit() << "b";
+	}
+	
+	return ss.str();
 }

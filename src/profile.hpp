@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,6 +22,7 @@
 
 #include <list>
 #include <map>
+#include <mutex>
 #include <stdint.h>
 #include <string>
 #include <wx/dataview.h>
@@ -29,6 +30,9 @@
 #include <wx/longlong.h>
 #include <wx/timer.h>
 #include <wx/window.h>
+
+#define PROFILE_SET_THREAD_GROUP(group) \
+	ProfilingCollector::set_thread_group(ProfilingCollector::ThreadGroup::group);
 
 #define PROFILE_BLOCK(name) \
 	static ProfilingCollector block_collector(name); \
@@ -44,6 +48,15 @@ namespace REHex
 	class ProfilingCollector
 	{
 		public:
+			enum class ThreadGroup
+			{
+				MAIN,
+				POOL,
+				
+				UNKNOWN, /* This must remain at the end of the valid groups. */
+				NONE, /**< Thread is excluded from profiling. */
+			};
+			
 			struct Stats
 			{
 				uint64_t min_time, max_time, total_time;
@@ -61,6 +74,7 @@ namespace REHex
 			
 		private:
 			static std::list<ProfilingCollector*> *collectors;
+			static thread_local ThreadGroup thread_group;
 			
 			std::list<ProfilingCollector*>::iterator this_iter;
 			
@@ -69,8 +83,22 @@ namespace REHex
 			static const uint64_t SLOT_DURATION_MS = 1000;
 			static const size_t NUM_SLOTS = 60;
 			
-			Stats slots[NUM_SLOTS];
-			uint64_t head_time_bucket;
+			struct ThreadGroupStats
+			{
+				mutable std::mutex mutex;
+				
+				Stats slots[NUM_SLOTS];
+				uint64_t head_time_bucket;
+				
+				ThreadGroupStats():
+					head_time_bucket(0) {}
+				
+				void reset(const std::unique_lock<std::mutex> &mutex_guard, size_t begin_idx = 0, size_t end_idx = NUM_SLOTS);
+			};
+			
+			ThreadGroupStats tg_stats[ (size_t)(ThreadGroup::UNKNOWN) ];
+			
+			void reset(size_t begin_idx = 0, size_t end_idx = NUM_SLOTS);
 			
 		public:
 			ProfilingCollector(const std::string &key, ProfilingCollector *parent = NULL);
@@ -80,13 +108,13 @@ namespace REHex
 			
 			const std::string &get_key() const;
 			
-			Stats accumulate_stats(unsigned int window_duration_ms) const;
+			Stats accumulate_stats(ThreadGroup group, unsigned int window_duration_ms) const;
 			
 			void record_time(uint64_t begin_time, uint64_t duration);
 			
-			void reset(size_t begin_idx = 0, size_t end_idx = NUM_SLOTS);
+			static void set_thread_group(ThreadGroup thread_group);
 			
-			static std::list<ProfilingCollector*> get_collectors();
+			static std::list<ProfilingCollector*> get_collectors(ThreadGroup group);
 			static void reset_collectors();
 			
 			static uint64_t get_monotonic_us();
@@ -110,13 +138,15 @@ namespace REHex
 			
 			std::map<ProfilingCollector*, ProfilingCollector::Stats> stats;
 			unsigned int duration_ms;
+			ProfilingCollector::ThreadGroup thread_group;
 			
 			static stats_elem_t *dv_item_to_stats_elem(const wxDataViewItem &item);
 			
 		public:
 			ProfilingDataViewModel();
 			
-			void update(unsigned int duration_ms);
+			void set_duration(unsigned int duration_ms);
+			void set_thread_group(ProfilingCollector::ThreadGroup group);
 			void update();
 			
 			virtual int Compare(const wxDataViewItem &item1, const wxDataViewItem &item2, unsigned int column, bool ascending) const override;
@@ -143,6 +173,7 @@ namespace REHex
 #else /* REHEX_PROFILE */
 
 /* Stub out profiling hook when profiling is disabled. */
+#define PROFILE_SET_THREAD_GROUP(group)
 #define PROFILE_BLOCK(name)
 #define PROFILE_INNER_BLOCK(name)
 

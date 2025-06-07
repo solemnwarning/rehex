@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -933,6 +933,45 @@ local function _builtin_function_SetComment(context, argv)
 	context.interface.set_comment(argv[1][2]:get(), argv[2][2]:get(), argv[3][2]:get())
 end
 
+local function _builtin_function_AllocateHighlightColour(context, argv)
+	local primary_colour
+	local secondary_colour
+	
+	if #argv == 1
+	then
+		primary_colour = wx.wxNullColour
+		secondary_colour = wx.wxNullColour
+	elseif #argv == 3 and _type_is_number(argv[2][1]) and _type_is_number(argv[3][1])
+	then
+		local parse_colour_argument = function(n)
+			local val = argv[n][2]:get()
+			
+			if val < 0 or val > 0xFFFFFF
+			then
+				_template_error(context, "Invalid colour value passed to AllocateHighlightColour")
+			end
+			
+			return wx.wxColour(
+				((val & 0xFF0000) >> 16),
+				((val & 0x00FF00) >> 8),
+				(val & 0x0000FF))
+		end
+		
+		primary_colour = parse_colour_argument(2)
+		secondary_colour = parse_colour_argument(3)
+	else
+		local got_types = table.concat(_map(argv, function(v) return _get_type_name(v[1]) end), ", ")
+		_template_error(context, "Attempt to call function AllocateHighlightColour(<string>, [<int>, <int>]) with incompatible argument types (" .. got_types .. ")")
+	end
+	
+	local idx = context.interface.allocate_highlight_colour(argv[1][2]:get(), primary_colour, secondary_colour)
+	return _builtin_types.int, ImmediateValue:new(idx)
+end
+
+local function _builtin_function_SetHighlight(context, argv)
+	context.interface.set_highlight(argv[1][2]:get(), argv[2][2]:get(), argv[3][2]:get())
+end
+
 -- Table of builtin functions - gets copied into new interpreter contexts
 --
 -- Each key is a function name, the value is a table with the following values:
@@ -1001,6 +1040,9 @@ local _builtin_functions = {
 	StringLengthBytes = { arguments = { _builtin_types.string }, defaults = {}, impl = _builtin_function_StringLengthBytes },
 	
 	SetComment = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.string }, defaults = {}, impl = _builtin_function_SetComment },
+	
+	AllocateHighlightColour = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_AllocateHighlightColour },
+	SetHighlight = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.int }, defaults = {}, impl = _builtin_function_SetHighlight },
 }
 
 --
@@ -1571,6 +1613,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	-- we check for that attribute in this lovely kludge here.
 	
 	local string_charset
+	local highlight_idx
 	
 	if attributes ~= nil
 	then
@@ -1610,6 +1653,19 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				end
 				
 				string_charset = charset_name
+			elseif attr_name == "highlight"
+			then
+				if highlight_idx ~= nil
+				then
+					_template_error(context, "Attribute 'highlight' specified multiple times")
+				end
+				
+				if not _type_is_number(attr_value_type)
+				then
+					_template_error(context, "Unexpected type '" .. _get_type_name(attr_value_type) .. "' used as value for 'highlight' attribute (expected int)")
+				end
+				
+				highlight_idx = attr_value:get()
 			else
 				_template_error(context, "Invalid variable attribute '" .. attr_name .. "' used with type '" .. _get_type_name(array_type_info) .. "'")
 			end
@@ -1677,6 +1733,8 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		
 		type_info = array_type_info
 	end
+	
+	root_value.__INTERNAL_highlight_idx = highlight_idx
 	
 	if initial_value ~= nil
 	then
@@ -2787,10 +2845,40 @@ local function execute(interface, statements)
 		end
 	end
 	
+	local set_highlights = function(set_highlights, name, type_info, value)
+		local do_struct = function(v)
+			for k,m in _sorted_pairs(v)
+			do
+				set_highlights(set_highlights, k, m[1], m[2])
+			end
+		end
+		
+		if value.__INTERNAL_highlight_idx ~= nil
+		then
+			local data_start, data_end = value:data_range()
+			if data_start ~= nil
+			then
+				context.interface.set_highlight(data_start, (data_end - data_start), value.__INTERNAL_highlight_idx)
+			end
+		end
+		
+		if type_info.is_array and type_info.base == "struct"
+		then
+			for i = 1, #value
+			do
+				do_struct(value[i])
+			end
+		elseif type_info.base == "struct"
+		then
+			do_struct(value)
+		end
+	end
+	
 	for k,v in _sorted_pairs(context.global_vars)
 	do
 		set_comments(set_comments, k, v[1], v[2])
 		set_types(set_types, k, v[1], v[2])
+		set_highlights(set_highlights, k, v[1], v[2])
 	end
 end
 

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -23,9 +23,11 @@ BEGIN_EVENT_TABLE(SizeTestPanel, REHex::ToolPanel)
 	EVT_PAINT(SizeTestPanel::OnPaint)
 END_EVENT_TABLE()
 
-SizeTestPanel::SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height, const std::string &name_s):
+SizeTestPanel::SizeTestPanel(wxWindow *parent, int min_width, int min_height, int best_width, int best_height, int max_width, int max_height, const std::string &name_s, const std::string &label_s, Shape shape):
 	ToolPanel(parent),
 	name_s(name_s),
+	label_s(label_s),
+	shape_(shape),
 	min_width(min_width), min_height(min_height),
 	best_width(best_width), best_height(best_height),
 	max_width(max_width), max_height(max_height)
@@ -84,22 +86,22 @@ void SizeTestPanel::OnPaint(wxPaintEvent &event)
 
 static REHex::ToolPanel *short_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 0, 20, 0, 40, 10000, 300, "short_tp");
+	return new SizeTestPanel(parent, 0, 20, 0, 40, 10000, 300, "short_tp", "Short panel", REHex::ToolPanel::TPS_WIDE);
 }
 
 static REHex::ToolPanel *tall_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 0, 200, 0, 250, 10000, 400, "tall_tp");
+	return new SizeTestPanel(parent, 0, 200, 0, 250, 10000, 400, "tall_tp", "Tall panel", REHex::ToolPanel::TPS_WIDE);
 }
 
 static REHex::ToolPanel *narrow_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 20, 0, 40, 0, 250, 10000, "narrow_tp");
+	return new SizeTestPanel(parent, 20, 0, 40, 0, 250, 10000, "narrow_tp", "Narrow panel", REHex::ToolPanel::TPS_TALL);
 }
 
 static REHex::ToolPanel *wide_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
-	return new SizeTestPanel(parent, 200, 0, 250, 0, 400, 10000, "wide_tp");
+	return new SizeTestPanel(parent, 200, 0, 250, 0, 400, 10000, "wide_tp", "Wide panel", REHex::ToolPanel::TPS_TALL);
 }
 
 static REHex::ToolPanelRegistration short_tpr("short_tp", "Short panel", REHex::ToolPanel::TPS_WIDE, &short_factory);

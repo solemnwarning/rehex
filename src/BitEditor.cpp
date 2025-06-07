@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -210,6 +210,16 @@ REHex::BitEditor::BitEditor(wxWindow *parent, SharedDocumentPointer &document, D
 std::string REHex::BitEditor::name() const
 {
 	return "BitEditor";
+}
+
+std::string REHex::BitEditor::label() const
+{
+	return "Bit editor";
+}
+
+REHex::ToolPanel::Shape REHex::BitEditor::shape() const
+{
+	return ToolPanel::TPS_TALL;
 }
 
 void REHex::BitEditor::save_state(wxConfig *config) const

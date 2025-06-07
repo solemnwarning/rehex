@@ -20,7 +20,7 @@ jobs:
 
     - name: Cache Dependencies
       id: cache-dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: mac-dependencies
         key: ${{ runner.os }}-${{ runner.arch }}-${{ github.workspace }}/mac-dependencies-${{ hashFiles('tools/mac-build-dependencies.sh', 'perl-version') }}
@@ -38,7 +38,7 @@ jobs:
           . tools/mac-build-dependencies.sh
           make -f Makefile.osx -j$(sysctl -n hw.logicalcpu) DEBUG=1 check
 
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       with:
         name: rehex-mac.dmg
         path: REHex.dmg

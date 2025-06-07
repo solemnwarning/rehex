@@ -75,17 +75,40 @@ namespace REHex {
 			const wxColour &operator[](int index) const;
 			
 			/**
-			 * @brief Blend two palette colours together.
+			 * @brief Blend two colours together.
 			 *
-			 * @param colour_a_idx Palette index of colour A (0 .. PAL_MAX).
-			 * @param colour_b_idx Palette index of colour B (0 .. PAL_MAX).
+			 * @param bg_idx      Palette index of background colour (0 .. PAL_MAX).
+			 * @param fg_idx      Palette index of foreground colour (0 .. PAL_MAX).
+			 * @param fg_opacity  Opacity of foreground colour (0.0f - 1.0f).
 			*/
-			wxColour get_average_colour(int colour_a_idx, int colour_b_idx) const;
+			wxColour blend_colours(int bg_idx, int fg_idx, float fg_opacity = 0.5f) const;
 			
 			/**
 			 * @brief Blend two colours together.
+			 *
+			 * @param bg_idx      Palette index of background colour (0 .. PAL_MAX).
+			 * @param fg          Foreground colour.
+			 * @param fg_opacity  Opacity of foreground colour (0.0f - 1.0f).
 			*/
-			static wxColour get_average_colour(const wxColour &colour_a, const wxColour &colour_b);
+			wxColour blend_colours(int bg_idx, const wxColour &fg, float fg_opacity = 0.5f) const;
+			
+			/**
+			 * @brief Blend two colours together.
+			 *
+			 * @param bg          Background colour.
+			 * @param fg_idx      Palette index of foreground colour (0 .. PAL_MAX).
+			 * @param fg_opacity  Opacity of foreground colour (0.0f - 1.0f).
+			*/
+			wxColour blend_colours(const wxColour &bg, int fg_idx, float fg_opacity = 0.5f) const;
+			
+			/**
+			 * @brief Blend two colours together.
+			 *
+			 * @param bg          Background colour.
+			 * @param fg          Foreground colour.
+			 * @param fg_opacity  Opacity of foreground colour (0.0f - 1.0f).
+			*/
+			static wxColour blend_colours(const wxColour &bg, const wxColour &fg, float fg_opacity = 0.5f);
 			
 			int get_default_highlight_lightness() const;
 			

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,7 @@
 #include "AppSettings.hpp"
 #include "ConsoleBuffer.hpp"
 #include "IPC.hpp"
+#include "MacFileHistory.hpp"
 #include "mainwindow.hpp"
 #include "ThreadPool.hpp"
 
@@ -49,7 +50,12 @@ namespace REHex {
 			wxConfig *config;
 			AppSettings *settings;
 			
+			#ifdef __APPLE__
+			MacFileHistory *recent_files;
+			#else
 			wxFileHistory *recent_files;
+			#endif
+
 			wxLocale *locale;
 			
 			ConsoleBuffer *console;
@@ -230,6 +236,23 @@ namespace REHex {
 			void bulk_updates_freeze();
 			void bulk_updates_thaw();
 			bool bulk_updates_frozen();
+			
+			#ifdef __APPLE__
+			/**
+			 * @brief Wrapper around the NSHomeDirectory() function.
+			 *
+			 * This function returns the application sandbox directory, or the user's
+			 * home directory if not sandboxed.
+			*/
+			static std::string get_home_directory();
+			#endif
+			
+			#ifdef REHEX_ENABLE_WAYLAND_HACKS
+			/**
+			 * @brief Check if the application is running under Wayland.
+			*/
+			static bool is_wayland_session();
+			#endif
 			
 		private:
 			std::string last_directory;

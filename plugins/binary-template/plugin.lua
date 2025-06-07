@@ -193,6 +193,14 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 				doc:set_comment(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), rehex.Comment.new(text))
 			end,
 			
+			allocate_highlight_colour = function(label, primary_colour, secondary_colour)
+				return doc:allocate_highlight_colour(label, primary_colour, secondary_colour)
+			end,
+			
+			set_highlight = function(offset, length, colour)
+				doc:set_highlight(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), colour)
+			end,
+			
 			read_data = function(offset, length)
 				return doc:read_data(selection_off + rehex.BitOffset(offset, 0), length)
 			end,

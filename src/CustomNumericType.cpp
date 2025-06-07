@@ -426,7 +426,7 @@ bool REHex::CustomNumericTypeRegion::store_value(const std::string &value)
 	try {
 		data = type.parse_value(value);
 	}
-	catch(const std::invalid_argument &e)
+	catch(const std::invalid_argument&)
 	{
 		return false;
 	}

@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{B9C94766-AB26-4158-AF59-DB11E07D81CB}</ProjectGuid>
     <RootNamespace>resources</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.22621.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
@@ -37,19 +37,25 @@
     <PlatformToolset>ClangCL</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -278,6 +284,22 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\diff_fold48.c;..\..\res\diff_fold48.h;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\diff_fold48.c;..\..\res\diff_fold48.h;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\diff_fold48.c;..\..\res\diff_fold48.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_bottom.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\dock_bottom.png dock_bottom_png ..\..\res\dock_bottom.c ..\..\res\dock_bottom.h</Command>
+      <Outputs>..\..\res\dock_bottom.c;..\..\res\dock_bottom.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_left.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\dock_left.png dock_left_png ..\..\res\dock_left.c ..\..\res\dock_left.h</Command>
+      <Outputs>..\..\res\dock_left.c;..\..\res\dock_left.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_right.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\dock_right.png dock_right_png ..\..\res\dock_right.c ..\..\res\dock_right.h</Command>
+      <Outputs>..\..\res\dock_right.c;..\..\res\dock_right.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\dock_top.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\dock_top.png dock_top_png ..\..\res\dock_top.c ..\..\res\dock_top.h</Command>
+      <Outputs>..\..\res\dock_top.c;..\..\res\dock_top.h;%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="..\..\res\shortcut48.png">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\shortcut48.png shortcut48_png ..\..\res\shortcut48.c ..\..\res\shortcut48.h</Command>

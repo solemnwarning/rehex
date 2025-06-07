@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,16 @@
 #include "BitOffset.hpp"
 
 namespace REHex {
+	static constexpr off_t BYTES_PER_KiB = 1024;
+	static constexpr off_t BYTES_PER_MiB = 1024 * BYTES_PER_KiB;
+	static constexpr off_t BYTES_PER_GiB = 1024 * BYTES_PER_MiB;
+	static constexpr off_t BYTES_PER_TiB = 1024 * BYTES_PER_GiB;
+	
+	static constexpr off_t BYTES_PER_kB = 1000;
+	static constexpr off_t BYTES_PER_MB = 1000 * BYTES_PER_kB;
+	static constexpr off_t BYTES_PER_GB = 1000 * BYTES_PER_MB;
+	static constexpr off_t BYTES_PER_TB = 1000 * BYTES_PER_GB;
+	
 	class ParseError: public std::runtime_error
 	{
 		public:
@@ -106,6 +116,34 @@ namespace REHex {
 	
 	std::string format_offset(off_t offset, OffsetBase base, off_t upper_bound = -1);
 	std::string format_offset(BitOffset offset, OffsetBase base, BitOffset upper_bound = BitOffset::INVALID);
+	
+	enum class SizeUnit
+	{
+		B = 1,    /**< Byte (8 bits) */
+		
+		KiB = 11, /**< Kibibyte (1,024 bytes) */
+		MiB,      /**< Mebibyte (1,024 KiB) */
+		GiB,      /**< Gibibyte (1,024 MiB) */
+		TiB,      /**< Tebibyte (1,024 GiB) */
+		
+		kB = 21,  /**< Kilobyte (1,000 bytes) */
+		MB,       /**< Megabyte (1,000 kB) */
+		GB,       /**< Gigabyte (1,000 MB) */
+		TB,       /**< Terabyte (1,000 GB) */
+		
+		AUTO_XiB = 31,  /**< Appropriate "binary" unit (B, KiB, MiB, etc) */
+		AUTO_XB,        /**< Appropriate "decimal" unit (B, kB, MB, etc) */
+	};
+	
+	/**
+	 * @brief Format a size in bytes for display with the users selected units.
+	*/
+	std::string format_size(off_t size_bytes);
+	
+	/**
+	 * @brief Format a size in bytes for display in a specific unit.
+	*/
+	std::string format_size(off_t size_bytes, SizeUnit unit);
 	
 	template<typename T> typename T::iterator const_iterator_to_iterator(typename T::const_iterator &const_iter, T &container)
 	{
@@ -307,11 +345,105 @@ namespace REHex {
 	*/
 	template<> BitOffset add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow);
 	
+	/**
+	 * @brief Multiply two integers together, clamping to the range of the type.
+	 *
+	 * This function multiplies two integer-type values together, if the result would overflow
+	 * or underflow, the result is clamped to the maximum or minimum value representable by the
+	 * type T.
+	 *
+	 * If the "overflow" parameter is non-NULL, whether or not an overflow (or underflow) was
+	 * detected is stored there.
+	*/
+	template<typename T> T multiply_clamp_overflow(T a, T b, bool *overflow = NULL)
+	{
+		constexpr T MAX = std::numeric_limits<T>::max();
+		constexpr T MIN = std::numeric_limits<T>::min();
+		
+		if(a == 0 || b == 0)
+		{
+			return 0;
+		}
+		
+		if(a < 0 && b < 0)
+		{
+			a *= -1;
+			b *= -1;
+		}
+		
+		bool did_overflow;
+		T result;
+		
+		if(a > 0 && b > 0)
+		{
+			if((MAX / a) < b)
+			{
+				result = MAX;
+				did_overflow = true;
+			}
+			else{
+				result = a * b;
+				did_overflow = false;
+			}
+		}
+		else if(a > 0)
+		{
+			if((MIN / a) > b)
+			{
+				result = MIN;
+				did_overflow = true;
+			}
+			else{
+				result = a * b;
+				did_overflow = false;
+			}
+		}
+		else{
+			if((MIN / b) > a)
+			{
+				result = MIN;
+				did_overflow = true;
+			}
+			else{
+				result = a * b;
+				did_overflow = false;
+			}
+		}
+		
+		if(overflow != NULL)
+		{
+			*overflow = did_overflow;
+		}
+		
+		return result;
+	}
+	
 	json_t *colour_to_json(const wxColour &colour);
 	wxColour colour_from_json(const json_t *json);
 	
 	std::string colour_to_string(const wxColour &colour);
 	wxColour colour_from_string(const std::string &s);
+	
+	enum class Edge
+	{
+		LEFT,
+		RIGHT,
+		TOP,
+		BOTTOM,
+	};
+	
+	/**
+	 * @brief Find the nearest edge to a point specified in a rectangle.
+	*/
+	Edge find_nearest_edge(const wxPoint &point, const wxRect &rect);
+	
+	/**
+	 * @brief Create directory and any missing path components.
+	 *
+	 * Creates the directory and any parent directories which don't exist. Returns true if
+	 * the directory now exists (or aready did), false on error.
+	*/
+	bool recursive_mkdir(const std::string &path);
 }
 
 #endif /* !REHEX_UTIL_HPP */

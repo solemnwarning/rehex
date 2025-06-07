@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1090,6 +1090,151 @@ TEST_F(DocumentTest, EraseHighlightUndo)
 	);
 	
 	EXPECT_EQ(doc->get_highlights(), expect_highlights_post);
+}
+
+TEST_F(DocumentTest, AllocateNewHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("soda"), 3);
+	
+	{
+		HighlightColourMap expect_highlight_colours = initial_highlight_colours;
+		
+		auto it1 = expect_highlight_colours.add();
+		it1->second.set_label("soda");
+		
+		EXPECT_EQ(doc->get_highlight_colours(), expect_highlight_colours);
+	}
+}
+
+TEST_F(DocumentTest, AllocateNewExactHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("soda", *wxRED, *wxBLUE), 3);
+	
+	{
+		HighlightColourMap expect_highlight_colours = initial_highlight_colours;
+		
+		auto it1 = expect_highlight_colours.add();
+		it1->second.set_label("soda");
+		it1->second.set_primary_colour(*wxRED);
+		it1->second.set_secondary_colour(*wxBLUE);
+		
+		EXPECT_EQ(doc->get_highlight_colours(), expect_highlight_colours);
+	}
+}
+
+TEST_F(DocumentTest, AllocateExistingHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("expect"), 0);
+	
+	EXPECT_EQ(doc->get_highlight_colours(), initial_highlight_colours);
+}
+
+TEST_F(DocumentTest, AllocateExistingExactHighlightColour)
+{
+	HighlightColourMap initial_highlight_colours;
+	
+	{
+		auto it0 = initial_highlight_colours.add();
+		it0->second.set_label("expect");
+		it0->second.set_primary_colour(*wxRED);
+		it0->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it1 = initial_highlight_colours.add();
+		it1->second.set_label("chunky");
+		it1->second.set_primary_colour(*wxGREEN);
+		it1->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	{
+		auto it2 = initial_highlight_colours.add();
+		it2->second.set_label("chunky");
+		it2->second.set_primary_colour(*wxBLUE);
+		it2->second.set_secondary_colour(*wxWHITE);
+	}
+	
+	doc->set_highlight_colours(initial_highlight_colours);
+	
+	ASSERT_EQ(doc->allocate_highlight_colour("chunky", *wxGREEN, *wxWHITE), 1);
+	ASSERT_EQ(doc->allocate_highlight_colour("chunky", *wxBLUE, *wxWHITE), 2);
+	
+	EXPECT_EQ(doc->get_highlight_colours(), initial_highlight_colours);
 }
 
 TEST_F(DocumentTest, SetVirtMapping)
@@ -3616,7 +3761,7 @@ TEST_F(DocumentTest, ReplaceTextMixed)
 
 TEST_F(DocumentTest, SerialiseMetadataEmptyFile)
 {
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	AutoJSON expect;
 	
 	EXPECT_EQ(got, expect);
@@ -3627,7 +3772,7 @@ TEST_F(DocumentTest, SerialiseMetadataNoMetadata)
 	std::vector<unsigned char> zero_1k(1024, 0);
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	AutoJSON expect;
 	
 	EXPECT_EQ(got, expect);
@@ -3639,7 +3784,7 @@ TEST_F(DocumentTest, SerialiseMetadataWriteProtectedFile)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	doc->set_write_protect(true);
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -3670,7 +3815,7 @@ TEST_F(DocumentTest, SerialiseMetadataComments)
 	doc->set_comment(20,  5, REHex::Document::Comment("industrious"));
 	doc->set_comment(25,  5, REHex::Document::Comment("bury"));
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [
@@ -3766,7 +3911,7 @@ TEST_F(DocumentTest, SerialiseMetadataCommentUnicode)
 	
 	doc->set_comment(0, 10, REHex::Document::Comment(wxString::FromUTF8((const char*)(u8"mundané"))));
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect((const char*)(u8R"({
 		"comments": [
@@ -3889,9 +4034,9 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypes)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "s8");
-	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16");
+	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "u16be");
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -3904,7 +4049,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypes)
 			{
 				"length": 10,
 				"offset": 20,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlight-colours": [
@@ -3939,7 +4084,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypes)
 			{
 				"length": 10,
 				"offset": 20,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -3954,7 +4099,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypes)
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("s8", NULL));
 	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -3974,7 +4119,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 			},
 			{
 				"length": 10,
-				"type": "u16"
+				"type": "u16le"
 			},
 			{
 				"length": 10,
@@ -3983,7 +4128,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 			{
 				"length": 10,
 				"offset": 40,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -3997,7 +4142,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipMissingFields)
 	
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -4034,7 +4179,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
 			{
 				"length": 10,
 				"offset": 40,
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -4048,7 +4193,63 @@ TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidRanges)
 	
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
+	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataDataTypesSkipInvalidTypes)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 4,
+				"offset": -10,
+				"type": "s8"
+			},
+			{
+				"length": -4,
+				"offset": 0,
+				"type": "s8"
+			},
+			{
+				"length": 4,
+				"offset": 1024,
+				"type": "s8"
+			},
+			{
+				"length": 1000,
+				"offset": 100,
+				"type": "s8"
+			},
+			{
+				"length": 10,
+				"offset": 40,
+				"type": "u16be"
+			},
+			{
+				"length": 10,
+				"offset": 60,
+				"type": "badtype"
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 40, 0), Document::TypeInfo("", NULL));
+	expect.set_range(BitOffset(40, 0), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(50, 0), BitOffset(974, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -4060,9 +4261,9 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 2), "s8");
-	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16");
+	doc->set_data_type(BitOffset(20, 6), BitOffset(10, 0), "u16be");
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -4075,7 +4276,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesBitAligned)
 			{
 				"length": 10,
 				"offset": [ 20, 6 ],
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlight-colours": [
@@ -4110,7 +4311,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 			{
 				"length": 10,
 				"offset": [ 20, 6 ],
-				"type": "u16"
+				"type": "u16be"
 			}
 		],
 		"highlights": [],
@@ -4125,7 +4326,7 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 	BitRangeMap<Document::TypeInfo> expect;
 	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 2), Document::TypeInfo("s8", NULL));
 	expect.set_range(BitOffset(10, 2), BitOffset( 10, 4), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), Document::TypeInfo("u16", NULL));
+	expect.set_range(BitOffset(20, 6), BitOffset( 10, 0), Document::TypeInfo("u16be", NULL));
 	expect.set_range(BitOffset(30, 6), BitOffset(993, 2), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
@@ -4139,7 +4340,7 @@ TEST_F(DocumentTest, SerialiseMetadataDataTypesWithOptions)
 	doc->set_data_type(BitOffset( 0, 0), BitOffset(10, 0), "type1", AutoJSON("{ \"foo\": 1 }").json);
 	doc->set_data_type(BitOffset(20, 0), BitOffset(10, 0), "type2", AutoJSON("{ \"foo\": 2 }").json);
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -4188,17 +4389,21 @@ TEST_F(DocumentTest, LoadMetadataDataTypesWithOptions)
 			{
 				"length": 10,
 				"offset": 0,
-				"type": "type1",
+				"type": "custom-number",
 				"options": {
-					"foo": 1
+					"base-type": "UNSIGNED_INT",
+					"endianness": "BIG",
+					"bits": 2
 				}
 			},
 			{
 				"length": 10,
 				"offset": 20,
-				"type": "type2",
+				"type": "custom-number",
 				"options": {
-					"foo": 2
+					"base-type": "UNSIGNED_INT",
+					"endianness": "BIG",
+					"bits": 4
 				}
 			}
 		],
@@ -4212,10 +4417,55 @@ TEST_F(DocumentTest, LoadMetadataDataTypesWithOptions)
 	auto &got = doc->get_data_types();
 	
 	BitRangeMap<Document::TypeInfo> expect;
-	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("type1", AutoJSON("{ \"foo\": 1 }").json));
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("custom-number", AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 2 }").json));
 	expect.set_range(BitOffset(10, 0), BitOffset( 10, 0), Document::TypeInfo("", NULL));
-	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("type2", AutoJSON("{ \"foo\": 2 }").json));
+	expect.set_range(BitOffset(20, 0), BitOffset( 10, 0), Document::TypeInfo("custom-number", AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 4 }").json));
 	expect.set_range(BitOffset(30, 0), BitOffset(994, 0), Document::TypeInfo("", NULL));
+	
+	EXPECT_EQ(got, expect);
+}
+
+TEST_F(DocumentTest, LoadMetadataSkipDataTypesWithInvalidOptions)
+{
+	std::vector<unsigned char> zero_1k(1024, 0);
+	doc->insert_data(0, zero_1k.data(), zero_1k.size());
+	
+	AutoJSON metadata(R"({
+		"comments": [],
+		"data_types": [
+			{
+				"length": 10,
+				"offset": 0,
+				"type": "custom-number",
+				"options": {
+					"base-type": "UNSIGNED_INT",
+					"endianness": "BIG",
+					"bits": 2
+				}
+			},
+			{
+				"length": 10,
+				"offset": 20,
+				"type": "custom-number",
+				"options": {
+					"base-type": "POTATO",
+					"endianness": "BIG",
+					"bits": 4
+				}
+			}
+		],
+		"highlights": [],
+		"virt_mappings": [],
+		"write_protect": false
+	})");
+	
+	doc->load_metadata(metadata.json);
+	
+	auto &got = doc->get_data_types();
+	
+	BitRangeMap<Document::TypeInfo> expect;
+	expect.set_range(BitOffset( 0, 0), BitOffset( 10, 0), Document::TypeInfo("custom-number", AutoJSON("{ \"base-type\": \"UNSIGNED_INT\", \"endianness\": \"BIG\", \"bits\": 2 }").json));
+	expect.set_range(BitOffset(10, 0), BitOffset(1014, 0), Document::TypeInfo("", NULL));
 	
 	EXPECT_EQ(got, expect);
 }
@@ -4228,7 +4478,7 @@ TEST_F(DocumentTest, SerialiseMetadataHighlights)
 	doc->set_highlight(BitOffset( 0, 0), BitOffset(10, 0), 1);
 	doc->set_highlight(BitOffset(20, 2), BitOffset( 0, 4), 2);
 	
-	AutoJSON got(doc->serialise_metadata());
+	AutoJSON got(doc->serialise_metadata(false));
 	
 	AutoJSON expect(R"({
 		"comments": [],
@@ -4385,4 +4635,68 @@ TEST(Document, TypeInfoComparison)
 	/* Check name takes priority over options. */
 	EXPECT_FALSE(Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json) < Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json));
 	EXPECT_TRUE( Document::TypeInfo("a", AutoJSON("{ \"foo\": 2 }").json) < Document::TypeInfo("b", AutoJSON("{ \"foo\": 1 }").json));
+}
+
+TEST(OffsetLengthEvent, RangeBeforeClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 90, 10);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_length, 0);
+}
+
+TEST(OffsetLengthEvent, RangeStraddlesStartOfClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 90, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 100);
+	EXPECT_EQ(clamped_length, 5);
+}
+
+TEST(OffsetLengthEvent, RangeInClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 120, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 120);
+	EXPECT_EQ(clamped_length, 15);
+}
+
+TEST(OffsetLengthEvent, RangeStraddlesEndOfClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 190, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 190);
+	EXPECT_EQ(clamped_length, 10);
+}
+
+TEST(OffsetLengthEvent, RangeAfterClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 200, 15);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_length, 0);
+}
+
+TEST(OffsetLengthEvent, RangeContainsClamped)
+{
+	OffsetLengthEvent event((wxObject*)(NULL), 0, 90, 200);
+	
+	off_t clamped_offset, clamped_length;
+	std::tie(clamped_offset, clamped_length) = event.get_clamped_range(100, 100);
+	
+	EXPECT_EQ(clamped_offset, 100);
+	EXPECT_EQ(clamped_length, 100);
 }

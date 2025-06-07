@@ -77,7 +77,8 @@ hook_cpp_binding_post_includes = ""
 hook_cpp_binding_header_includes =
     "#include \"wxbind/include/wxbinddefs.h\"\n"..
     "#include \"wxluasetup.h\"\n"..
-    "#include \"wxbind/include/wxcore_bind.h\"\n"
+    "#include \"wxbind/include/wxcore_bind.h\"\n"..
+    "#include \"wx/propgrid/property.h\"\n"
 
 -- ----------------------------------------------------------------------------
 -- Set any #includes or other C++ code to be placed verbatim at the top of

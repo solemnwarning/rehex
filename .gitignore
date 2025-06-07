@@ -1,6 +1,8 @@
 *.gcda
 *.gcno
 *.o
+/.cc/
+/compile_commands.json
 /.d/
 /rehex
 
@@ -29,6 +31,15 @@
 /res/diff_fold32.h
 /res/diff_fold48.c
 /res/diff_fold48.h
+
+/res/dock_bottom.c
+/res/dock_bottom.h
+/res/dock_left.c
+/res/dock_left.h
+/res/dock_right.c
+/res/dock_right.h
+/res/dock_top.c
+/res/dock_top.h
 
 /res/document_new32.c
 /res/document_new32.h
@@ -86,6 +97,8 @@
 
 /res/zoom_out16.c
 /res/zoom_out16.h
+
+/res/version-res-defs.h
 
 /src/lua-bindings/.done
 /src/lua-bindings/rehex_bind.cpp

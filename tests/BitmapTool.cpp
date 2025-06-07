@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,6 +33,7 @@ class BitmapToolTest: public ::testing::Test
 		wxFrame frame;
 		
 		SharedDocumentPointer doc;
+		DocumentCtrl *doc_ctrl;
 		BitmapTool *bmtool;
 		
 		BitmapToolTest();
@@ -44,7 +45,13 @@ BitmapToolTest::BitmapToolTest():
 	frame(NULL, wxID_ANY, "REHex Tests"),
 	doc(SharedDocumentPointer::make())
 {
-	bmtool = new BitmapTool(&frame, doc);
+	doc_ctrl = new DocumentCtrl(&frame, doc);
+	
+	/* Need a data region to avoid crashing in DocumentCtrl event handlers. */
+	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(doc, 0, 0, 0) };
+	doc_ctrl->replace_all_regions(regions);
+
+	bmtool = new BitmapTool(&frame, doc, doc_ctrl);
 }
 
 std::string BitmapToolTest::bitmap_to_string(wxBitmap bitmap)

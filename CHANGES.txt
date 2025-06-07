@@ -35,6 +35,9 @@ Version TBC:
 
  * Fix range selection input for checksum/histogram on macOS.
 
+ * Fix selection being prematurely initiated when the mouse is clicked
+   over file data.
+
 Version 0.62.1 (2024-07-24):
 
  * Fix crashes in x86 Windows build on older CPUs.

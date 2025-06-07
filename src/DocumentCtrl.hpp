@@ -712,7 +712,8 @@ namespace REHex {
 			
 			GenericDataRegion::ScreenArea mouse_down_area;
 			BitOffset mouse_down_at_offset;
-			int mouse_down_at_x;
+			int mouse_down_at_x, mouse_down_at_y;
+			bool mouse_selecting;
 			wxTimer mouse_select_timer;
 			BitOffset mouse_shift_initial;
 			

@@ -1854,14 +1854,18 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 					mouse_shift_initial  = old_position;
 					mouse_down_at_offset = old_position;
 					mouse_down_at_x      = rel_x;
+					mouse_down_at_y      = mouse_y;
 					mouse_down_area      = clicked_area;
+					mouse_selecting      = true;
 				}
 				else{
 					clear_selection();
 					
 					mouse_down_at_offset = clicked_offset;
 					mouse_down_at_x      = rel_x;
+					mouse_down_at_y      = mouse_y;
 					mouse_down_area      = clicked_area;
+					mouse_selecting      = false;
 				}
 				
 				CaptureMouse();
@@ -2117,7 +2121,18 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		++region;
 	}
 	
-	if(region != regions.end())
+	if(!mouse_selecting)
+	{
+		int drag_x = wxSystemSettings::GetMetric(wxSYS_DRAG_X);
+		int drag_y = wxSystemSettings::GetMetric(wxSYS_DRAG_Y);
+		
+		if(abs((mouse_down_at_x - scroll_xoff) - mouse_x) > drag_x || abs(mouse_down_at_y - mouse_y) > drag_y)
+		{
+			mouse_selecting = true;
+		}
+	}
+	
+	if(region != regions.end() && mouse_selecting)
 	{
 		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
 		CommentRegion *cr;

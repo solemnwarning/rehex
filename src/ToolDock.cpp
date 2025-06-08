@@ -43,11 +43,13 @@ BEGIN_EVENT_TABLE(REHex::ToolDock, REHex::MultiSplitter)
 	EVT_MOUSE_CAPTURE_LOST(REHex::ToolDock::OnMouseCaptureLost)
 	EVT_MOTION(REHex::ToolDock::OnMotion)
 	EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, REHex::ToolDock::OnNotebookPageChanged)
+	EVT_SIZE(REHex::ToolDock::OnSize)
 END_EVENT_TABLE()
 
 REHex::ToolDock::ToolDock(wxWindow *parent):
 	MultiSplitter(parent),
 	m_main_panel(NULL),
+	m_initial_size_done(false),
 	m_drag_pending(false),
 	m_drag_active(false),
 	m_left_dock_site(NULL),
@@ -339,6 +341,12 @@ void REHex::ToolDock::LoadTools(wxConfig *config, SharedDocumentPointer &documen
 		wxConfigPathChanger scoped_path(config, "frames/");
 		LoadToolFrames(config, document, document_ctrl);
 	}
+	
+	CallAfter([this]()
+	{
+		ApplySizeConstraints();
+		m_initial_size_done = true;
+	});
 }
 
 void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
@@ -1112,6 +1120,16 @@ void REHex::ToolDock::OnNotebookPageChanged(wxNotebookEvent &event)
 	{
 		ApplySizeConstraints();
 	});
+}
+
+void REHex::ToolDock::OnSize(wxSizeEvent &event)
+{
+	if(m_initial_size_done)
+	{
+		ApplySizeConstraints();
+	}
+	
+	event.Skip(); /* Continue propagation. */
 }
 
 BEGIN_EVENT_TABLE(REHex::ToolDock::ToolNotebook, wxNotebook)

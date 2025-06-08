@@ -228,6 +228,8 @@ namespace REHex
 			ToolNotebook *m_top_notebook;
 			ToolNotebook *m_bottom_notebook;
 			
+			bool m_initial_size_done;
+			
 			std::list<ToolFrame*> m_frames;
 			
 			bool m_drag_pending;
@@ -290,6 +292,7 @@ namespace REHex
 			void OnMouseCaptureLost(wxMouseCaptureLostEvent &event);
 			void OnMotion(wxMouseEvent &event);
 			void OnNotebookPageChanged(wxNotebookEvent &event);
+			void OnSize(wxSizeEvent &event);
 			
 		DECLARE_EVENT_TABLE()
 	};

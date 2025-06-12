@@ -69,7 +69,7 @@ ifeq ($(BUILD_TYPE),release)
 endif
 
 EXTRA_APP_BUILD_COMMAND += && windres $(VERSION_RES_DEFS) res/version-res.rc res/version-res.o
-EXTRA_APP_LINK_OBJS := res/version-res.o
+EXTRA_APP_LINK_OBJS := -mwindows res/version-res.o
 
 DISTDIR ?= rehex-$(VERSION)
 

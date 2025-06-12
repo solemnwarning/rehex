@@ -89,6 +89,10 @@ RequestExecutionLevel admin
 ;--------------------------------
 ;Installer Sections
 
+!ifdef SIGN_CMD
+	!finalize '"${SIGN_CMD}" "%1"' = 0
+!endif
+
 Function .onInit
 	${If} ${RunningX64}
 	${AndIf} ${AtLeastWin8.1}
@@ -152,6 +156,10 @@ SectionEnd
 
 ;--------------------------------
 ;Uninstaller Section
+
+!ifdef SIGN_CMD
+	!uninstfinalize '"${SIGN_CMD}" "%1"' = 0
+!endif
 
 Function un.onInit
 	${If} ${RunningX64}

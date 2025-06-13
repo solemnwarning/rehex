@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "BitOffset.hpp"
+#include "profile.hpp"
 #include "shared_mutex.hpp"
 
 namespace REHex
@@ -356,6 +357,8 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 
 template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offset, OT length, const T &value)
 {
+	PROFILE_BLOCK("REHex::RangeMap::set_range()");
+	
 	if(length <= 0)
 	{
 		return;
@@ -378,6 +381,15 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offs
 	{
 		/* ...walking backwards... */
 		auto eb_prev = std::prev(erase_begin);
+		
+		if((eb_prev->first.offset + eb_prev->first.length) == offset && eb_prev->second != value)
+		{
+			/* ...the previous element is adjacent but has a different value, we can
+			 *    leave it untouched.
+			*/
+			
+			break;
+		}
 		
 		if((eb_prev->first.offset + eb_prev->first.length) >= offset)
 		{
@@ -443,33 +455,39 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offs
 		++erase_end;
 	}
 	
+	if((erase_end - erase_begin) == 1 && insert_before.empty() && insert_after.empty())
+	{
+		/* Fast path: overwrite element in-place when we are replacing a single one. */
+		
+		erase_begin->first.offset = offset;
+		erase_begin->first.length = length;
+		erase_begin->second = value;
+		
+		last_get_iter = ranges.end();
+		
+		return;
+	}
+	
 	/* Erase adjacent and/or overlapping ranges. */
 	erase_end = ranges.erase(erase_begin, erase_end);
 	
 	assert(length > 0);
 	
-	if(!insert_before.empty())
+	/* Insert the new range and old intersecting ranges (if applicable). */
+	if(insert_before.empty() && insert_after.empty())
 	{
-		/* Re-insert range with different value immediately before the range beging set
-		 * that was lost above.
-		*/
-		
-		erase_end = ranges.insert(erase_end, insert_before.front());
-		++erase_end;
+		ranges.emplace(erase_end, Range(offset, length), value);
 	}
-	
-	/* Insert new range. */
-	erase_end = ranges.insert(erase_end, std::make_pair(Range(offset, length), value));
-	++erase_end;
-	
-	if(!insert_after.empty())
+	else if(insert_after.empty())
 	{
-		/* Re-insert range with different value immediately after the range beging set
-		 * that was lost above.
-		*/
-		
-		erase_end = ranges.insert(erase_end, insert_after.front());
-		++erase_end;
+		ranges.insert(erase_end, { insert_before.front(), std::make_pair(Range(offset, length), value) });
+	}
+	else if(insert_before.empty())
+	{
+		ranges.insert(erase_end, { std::make_pair(Range(offset, length), value), insert_after.front() });
+	}
+	else{
+		ranges.insert(erase_end, { insert_before.front(), std::make_pair(Range(offset, length), value), insert_after.front() });
 	}
 	
 	last_get_iter = ranges.end();

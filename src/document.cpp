@@ -2608,6 +2608,23 @@ REHex::Document::TypeInfo &REHex::Document::TypeInfo::operator=(const TypeInfo &
 	return *this;
 }
 
+REHex::Document::TypeInfo::TypeInfo(TypeInfo &&typeinfo):
+	name(std::move(typeinfo.name)),
+	options(typeinfo.options)
+{
+	typeinfo.options = NULL;
+}
+
+REHex::Document::TypeInfo &REHex::Document::TypeInfo::operator=(TypeInfo &&rhs)
+{
+	name = std::move(rhs.name);
+	options = rhs.options;
+	
+	rhs.options = NULL;
+	
+	return *this;
+}
+
 REHex::Document::TypeInfo::~TypeInfo()
 {
 	json_decref(options);

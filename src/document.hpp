@@ -120,8 +120,8 @@ namespace REHex {
 				TypeInfo(const TypeInfo &typeinfo);
 				TypeInfo &operator=(const TypeInfo &rhs);
 				
-				TypeInfo(TypeInfo &&typeinfo) = delete;
-				TypeInfo &operator=(TypeInfo &&rhs) = delete;
+				TypeInfo(TypeInfo &&typeinfo);
+				TypeInfo &operator=(TypeInfo &&rhs);
 				
 				~TypeInfo();
 				

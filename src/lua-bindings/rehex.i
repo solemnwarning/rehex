@@ -111,6 +111,7 @@ class REHex::Document: public wxEvtHandler
 	bool set_comment(REHex::BitOffset offset, REHex::BitOffset length, const REHex::Document::Comment &comment);
 	bool set_comment(off_t offset, off_t length, const REHex::Document::Comment &comment);
 	bool set_data_type(REHex::BitOffset offset, REHex::BitOffset length, const wxString &type);
+	bool set_data_type_bulk(LuaTable types);
 	bool set_data_type(off_t offset, off_t length, const wxString &type);
 	bool set_highlight(REHex::BitOffset offset, REHex::BitOffset length, int colour);
 	

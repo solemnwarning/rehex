@@ -315,6 +315,11 @@ namespace REHex {
 			*/
 			bool set_data_type(BitOffset offset, BitOffset length, const std::string &type, const json_t *options = NULL);
 			
+			/**
+			 * @brief Set the data type for multiple ranges of bytes at once.
+			*/
+			bool set_data_type_bulk(std::vector<std::tuple<BitOffset, BitOffset, TypeInfo> > &&types);
+			
 			const CharacterEncoder *get_text_encoder(BitOffset offset) const;
 			
 			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);

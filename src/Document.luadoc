@@ -75,6 +75,26 @@
 --    "f32be"      - 32-bit float (big endian)
 --    "code:i386"  - Machine code (X86)
 
+--- Set the data type of multiple ranges of bytes (or bits).
+-- @function set_data_type_bulk
+--
+-- @param types Table of byte ranges and type information.
+--
+-- @return true on success, false on failure
+--
+-- This function allows setting the type of many byte ranges at once. It is primarily intended to
+-- speed up scripts which set 100,000s of types at a time.
+--
+-- Example usage:
+--
+--     doc:set_data_type_bulk({
+--         -- Mark 128 bytes from 0x400 as 16-bit integers.
+--         { 1024, 0, 128, 0, "u16le" },
+--         
+--         -- Mark 64 bytes from 0x800 plus 4 bits as 32-bit floats.
+--         { 2048, 4, 64, 0, "f32be" },
+--     )
+
 --- Allocate a named highlight colour.
 -- @function allocate_highlight_colour
 --

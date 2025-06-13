@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -899,6 +899,57 @@ TEST(ByteRangeMap, Transform)
 	EXPECT_RANGES(
 		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "front!"),
 		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "wretched!"),
+	);
+}
+
+TEST(ByteRangeMap, SetBulk)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_bulk({
+		{ ByteRangeMap<std::string>::Range(10, 10), "seemly" },
+		{ ByteRangeMap<std::string>::Range(20, 10), "approval" },
+	});
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "seemly"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20, 10), "approval"),
+	);
+}
+
+TEST(ByteRangeMap, SetBulkMerge)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_range(10, 10, "grandfather");
+	brm.set_range(30, 10, "tidy");
+	
+	brm.set_bulk({
+		{ ByteRangeMap<std::string>::Range(10, 10), "food" },
+		{ ByteRangeMap<std::string>::Range(40, 10), "beef" },
+	});
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "food"),
+		std::make_pair(ByteRangeMap<std::string>::Range(30, 10), "tidy"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "beef"),
+	);
+}
+
+TEST(ByteRangeMap, SetBulkOverlap)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_bulk({
+		{ ByteRangeMap<std::string>::Range(15, 10), "redundant" },
+		{ ByteRangeMap<std::string>::Range(10, 10), "disturbed" },
+		{ ByteRangeMap<std::string>::Range(40, 10), "cobweb" },
+	});
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 10), "disturbed"),
+		std::make_pair(ByteRangeMap<std::string>::Range(20,  5), "redundant"),
+		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "cobweb"),
 	);
 }
 

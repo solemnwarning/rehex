@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -183,10 +183,11 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		end
 		
 		local yield_counter = 0
+		local data_types = {}
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
-				doc:set_data_type(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), data_type)
+				table.insert(data_types, { (selection_off:byte() + offset), selection_off:bit(), length, 0, data_type })
 			end,
 			
 			set_comment = function(offset, length, text)
@@ -257,6 +258,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
+			doc:set_data_type_bulk(data_types)
 		end)
 		
 		local end_time = os.time()

@@ -405,3 +405,237 @@ TEST(LuaPluginLoader, SetDataTypeBitAligned)
 	
 	EXPECT_EQ(app.console->get_messages_text(), "");
 }
+
+TEST(LuaPluginLoader, SetDataTypeBulk)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_data_type_bulk({\n"
+			"		{ 0, 0,  2, 0, \"u16le\" },\n"
+			"		{ 2, 0, 12, 0, \"u32le\" },\n"
+			"	})\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeMap<Document::TypeInfo> types = tab->doc->get_data_types();
+		
+		BitRangeMap<Document::TypeInfo> expected_types;
+		expected_types.set_range(BitOffset(0, 0), BitOffset(2, 0), Document::TypeInfo("u16le", NULL));
+		expected_types.set_range(BitOffset(2, 0), BitOffset(12, 0), Document::TypeInfo("u32le", NULL));
+		expected_types.set_range(BitOffset(14, 0), BitOffset(498, 0), Document::TypeInfo("", NULL));
+		
+		EXPECT_EQ(types, expected_types);
+	}
+	
+	EXPECT_EQ(app.console->get_messages_text(), "");
+}
+
+TEST(LuaPluginLoader, SetDataTypeBulkBitAligned)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_data_type_bulk({\n"
+			"		{ 0, 4,  2, 2, \"bitarray\" },\n"
+			"		{ 3, 6, 12, 0, \"u32le\" },\n"
+			"	})\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeMap<Document::TypeInfo> types = tab->doc->get_data_types();
+		
+		BitRangeMap<Document::TypeInfo> expected_types;
+		expected_types.set_range(BitOffset(0, 0), BitOffset(0, 4), Document::TypeInfo("", NULL));
+		expected_types.set_range(BitOffset(0, 4), BitOffset(2, 2), Document::TypeInfo("bitarray", NULL));
+		expected_types.set_range(BitOffset(2, 6), BitOffset(1, 0), Document::TypeInfo("", NULL));
+		expected_types.set_range(BitOffset(3, 6), BitOffset(12, 0), Document::TypeInfo("u32le", NULL));
+		expected_types.set_range(BitOffset(15, 6), BitOffset(496, 2), Document::TypeInfo("", NULL));
+		
+		EXPECT_EQ(types, expected_types);
+	}
+	
+	EXPECT_EQ(app.console->get_messages_text(), "");
+}
+
+TEST(LuaPluginLoader, SetDataTypeBulkNotTable)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_data_type_bulk(1234)\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeMap<Document::TypeInfo> types = tab->doc->get_data_types();
+		
+		BitRangeMap<Document::TypeInfo> expected_types;
+		expected_types.set_range(BitOffset(0, 0), BitOffset(512, 0), Document::TypeInfo("", NULL));
+		
+		EXPECT_EQ(types, expected_types);
+	}
+	
+	EXPECT_NE(app.console->get_messages_text().find("wxLua: Expected a table of tables for parameter 2"), std::string::npos);
+}
+
+TEST(LuaPluginLoader, SetDataTypeBulkNotInnerTable)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_data_type_bulk({ 1234 })\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeMap<Document::TypeInfo> types = tab->doc->get_data_types();
+		
+		BitRangeMap<Document::TypeInfo> expected_types;
+		expected_types.set_range(BitOffset(0, 0), BitOffset(512, 0), Document::TypeInfo("", NULL));
+		
+		EXPECT_EQ(types, expected_types);
+	}
+	
+	EXPECT_NE(app.console->get_messages_text().find("wxLua: Expected a table of tables for parameter 2"), std::string::npos);
+}
+
+TEST(LuaPluginLoader, SetDataTypeBulkBadOffset)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_data_type_bulk({\n"
+			"		{ 0, 4,  2, 2, \"bitarray\" },\n"
+			"		{ \"potato\", 6, 12, 0, \"u32le\" },\n"
+			"	})\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeMap<Document::TypeInfo> types = tab->doc->get_data_types();
+		
+		BitRangeMap<Document::TypeInfo> expected_types;
+		expected_types.set_range(BitOffset(0, 0), BitOffset(512, 0), Document::TypeInfo("", NULL));
+		
+		EXPECT_EQ(types, expected_types);
+	}
+	
+	EXPECT_NE(app.console->get_messages_text().find("wxLua: Expected a 'number' for parameter"), std::string::npos);
+}
+
+TEST(LuaPluginLoader, SetDataTypeBulkMissingParameter)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_data_type_bulk({\n"
+			"		{ 0, 4,  2, 2, \"bitarray\" },\n"
+			"		{ 10, 6, 12, 0 },\n"
+			"	})\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeMap<Document::TypeInfo> types = tab->doc->get_data_types();
+		
+		BitRangeMap<Document::TypeInfo> expected_types;
+		expected_types.set_range(BitOffset(0, 0), BitOffset(512, 0), Document::TypeInfo("", NULL));
+		
+		EXPECT_EQ(types, expected_types);
+	}
+	
+	EXPECT_NE(app.console->get_messages_text().find("wxLua: Expected a table of tables for parameter 2"), std::string::npos);
+}

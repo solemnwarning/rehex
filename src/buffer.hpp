@@ -19,6 +19,7 @@
 #define REHEX_BUFFER_HPP
 
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 #include <string>
 #include <time.h>

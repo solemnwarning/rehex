@@ -14,6 +14,8 @@
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+require 'stable_sort';
+
 local preprocessor = require 'preprocessor';
 local parser = require 'parser';
 local executor = require 'executor';
@@ -184,6 +186,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		local yield_counter = 0
 		local data_types = {}
+		local comments = {}
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
@@ -191,7 +194,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 			end,
 			
 			set_comment = function(offset, length, text)
-				doc:set_comment(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), rehex.Comment.new(text))
+				table.insert(comments, { (selection_off:byte() + offset), selection_off:bit(), length, 0, text })
 			end,
 			
 			allocate_highlight_colour = function(label, primary_colour, secondary_colour)
@@ -258,7 +261,46 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
-			doc:set_data_type_bulk(data_types)
+			
+			table.stable_sort(data_types, function(a, b)
+				return a[1] < b[1]
+			end)
+			
+			local TYPES_PER_BATCH = 50000
+			for i = 1, #data_types, TYPES_PER_BATCH
+			do
+				progress_dialog:Pulse("Processing data types (" .. i .. "/" .. #data_types ..")")
+				wx.wxGetApp():ProcessPendingEvents()
+				
+				if progress_dialog:WasCancelled()
+				then
+					error("Template execution aborted", 0)
+				end
+				
+				local dt_slice = { table.unpack(data_types, i, (i + TYPES_PER_BATCH)) }
+				doc:set_data_type_bulk(dt_slice)
+			end
+			
+			table.stable_sort(comments, function(a, b)
+				return a[1] < b[1]
+			end)
+			
+			local COMMENTS_PER_BATCH = 10000
+			for i = 1, #comments
+			do
+				if (i % COMMENTS_PER_BATCH) == 0
+				then
+					progress_dialog:Pulse("Processing comments (" .. i .. "/" .. #comments ..")")
+					wx.wxGetApp():ProcessPendingEvents()
+					
+					if progress_dialog:WasCancelled()
+					then
+						error("Template execution aborted", 0)
+					end
+				end
+				
+				doc:set_comment(rehex.BitOffset(comments[i][1], comments[i][2]), rehex.BitOffset(comments[i][3], comments[i][4]), rehex.Comment.new(comments[i][5]))
+			end
 		end)
 		
 		local end_time = os.time()

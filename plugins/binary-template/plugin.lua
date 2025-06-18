@@ -184,6 +184,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		local yield_counter = 0
 		local data_types = {}
+		local comments = {}
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
@@ -191,7 +192,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 			end,
 			
 			set_comment = function(offset, length, text)
-				doc:set_comment(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), rehex.Comment.new(text))
+				table.insert(comments, { (selection_off:byte() + offset), selection_off:bit(), length, 0, text })
 			end,
 			
 			allocate_highlight_colour = function(label, primary_colour, secondary_colour)
@@ -259,6 +260,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
 			doc:set_data_type_bulk(data_types)
+			doc:set_comment_bulk(comments)
 		end)
 		
 		local end_time = os.time()

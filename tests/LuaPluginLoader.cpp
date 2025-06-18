@@ -331,6 +331,86 @@ TEST(LuaPluginLoader, SetCommentBitAligned)
 	EXPECT_EQ(app.console->get_messages_text(), "");
 }
 
+TEST(LuaPluginLoader, SetCommentBulk)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_comment_bulk({\n"
+			"		{ 0, 0, 0, 0, \"fear\" },\n"
+			"		{ 2, 0, 8, 0, \"home\" },\n"
+			"	})\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeTree<Document::Comment> comments = tab->doc->get_comments();
+		
+		BitRangeTree<Document::Comment> expected_comments;
+		expected_comments.set(BitOffset(0, 0), BitOffset(0, 0), Document::Comment("fear"));
+		expected_comments.set(BitOffset(2, 0), BitOffset(8, 0), Document::Comment("home"));
+		
+		EXPECT_EQ(comments, expected_comments);
+	}
+	
+	EXPECT_EQ(app.console->get_messages_text(), "");
+}
+
+TEST(LuaPluginLoader, SetCommentBulkBitAligned)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"rehex.OnTabCreated(function(window, tab)\n"
+			"	local doc = tab.doc\n"
+			"	\n"
+			"	doc:set_comment_bulk({\n"
+			"		{ 0, 4, 0, 0, \"sticks\" },\n"
+			"		{ 2, 2, 8, 6, \"billowy\" },\n"
+			"	})\n"
+			"end);\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		MainWindow window(wxDefaultSize);
+		Tab *tab = window.open_file("tests/bin-data.bin");
+		
+		pump_events();
+		
+		const BitRangeTree<Document::Comment> comments = tab->doc->get_comments();
+		
+		BitRangeTree<Document::Comment> expected_comments;
+		expected_comments.set(BitOffset(0, 4), BitOffset(0, 0), Document::Comment("sticks"));
+		expected_comments.set(BitOffset(2, 2), BitOffset(8, 6), Document::Comment("billowy"));
+		
+		EXPECT_EQ(comments, expected_comments);
+	}
+	
+	EXPECT_EQ(app.console->get_messages_text(), "");
+}
+
 TEST(LuaPluginLoader, SetDataType)
 {
 	LuaPluginLoaderInitialiser lpl_init;

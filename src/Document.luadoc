@@ -60,6 +60,24 @@
 --
 -- Existing comments with the same offset and length will be replaced.
 
+--- Set multiple comments at once.
+-- @function set_comment_bulk
+--
+-- @param comments Table of bit ranges and comment strings.
+--
+-- This function allows setting many comments at once. It is primarily intended to speed up scripts
+-- which set 100,000s of comments at a time.
+--
+-- Example usage:
+--
+--     doc:set_comment_bulk({
+--         -- Tag 128 bytes from 0x400 with a comment.
+--         { 1024, 0, 128, 0, "Hello world" },
+--         
+--         -- Tag 64 bytes from 0x800 plus 4 bits with another comment.
+--         { 2048, 4, 64, 0, "Byte alignment is for chumps" },
+--     )
+
 --- Set the data type of a range of bytes (or bits).
 -- @function set_data_type
 --

@@ -14,6 +14,8 @@
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+require 'stable_sort';
+
 local preprocessor = require 'preprocessor';
 local parser = require 'parser';
 local executor = require 'executor';
@@ -213,7 +215,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 			
 			print = function(s) rehex.print_info(s) end,
 			
-			yield = function()
+			yield = function(desc)
 				-- The yield method gets called at least once for every statement
 				-- as it gets executed, don't pump the event loop every time or we
 				-- wind up spending all our time doing that.
@@ -231,7 +233,13 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 				
 				yield_counter = 0
 				
-				progress_dialog:Pulse()
+				if desc ~= nil
+				then
+					progress_dialog:Pulse(desc)
+				else
+					progress_dialog:Pulse()
+				end
+				
 				wx.wxGetApp():ProcessPendingEvents()
 				
 				if progress_dialog:WasCancelled()
@@ -259,7 +267,41 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
-			doc:set_data_type_bulk(data_types)
+			
+			progress_dialog:Pulse("Setting data types...")
+			
+			local sort_counter = 0
+			table.stable_sort(data_types, function(a, b)
+				-- Reduce yield frequency down within sort comparator.
+				if sort_counter < 20
+				then
+					sort_counter = sort_counter + 1
+				else
+					sort_counter = 0
+					interface.yield()
+				end
+				
+				return a[1] < b[1]
+			end)
+			
+			local TYPES_PER_BATCH = 50000
+			for i = 1, #data_types, TYPES_PER_BATCH
+			do
+				progress_dialog:Pulse("Setting data types... (" .. i .. "/" .. #data_types ..")")
+				wx.wxGetApp():ProcessPendingEvents()
+				
+				if progress_dialog:WasCancelled()
+				then
+					error("Template execution aborted", 0)
+				end
+				
+				local dt_slice = { table.unpack(data_types, i, (i + TYPES_PER_BATCH)) }
+				doc:set_data_type_bulk(dt_slice)
+			end
+			
+			progress_dialog:Pulse("Setting comments...")
+			wx.wxGetApp():ProcessPendingEvents()
+			
 			doc:set_comment_bulk(comments)
 		end)
 		

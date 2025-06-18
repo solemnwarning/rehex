@@ -2766,13 +2766,8 @@ local function execute(interface, statements)
 	
 	_exec_statements(context, statements)
 	
-	local set_comments = function(set_comments, name, type_info, value)
-		local do_struct = function(v)
-			for k,m in _sorted_pairs(v)
-			do
-				set_comments(set_comments, k, m[1], m[2])
-			end
-		end
+	local process_variable = function(process_variable, name, type_info, value)
+		interface.yield("Cataloguing variables...")
 		
 		if type_info.is_array and type_info.base == "struct"
 		then
@@ -2780,7 +2775,10 @@ local function execute(interface, statements)
 			
 			for i = 1, #value
 			do
-				do_struct(value[i])
+				for k,m in _sorted_pairs(value[i])
+				do
+					process_variable(process_variable, k, m[1], m[2])
+				end
 				
 				local data_start, data_end = value[i]:data_range()
 				if data_start ~= nil
@@ -2791,65 +2789,37 @@ local function execute(interface, statements)
 		else
 			if type_info.base == "struct"
 			then
-				do_struct(value)
+				for k,m in _sorted_pairs(value)
+				do
+					process_variable(process_variable, k, m[1], m[2])
+				end
+			elseif type_info.rehex_type ~= nil
+			then
+				-- If this is a char array we assume it is a string and don't set the s8 data type
+				-- for the range, else it would be displayed as a list of integers rather than a
+				-- contiguous byte sequence.
+				
+				if value.charset ~= nil
+				then
+					local data_start, data_end = value:data_range()
+					if data_start ~= nil
+					then
+						context.interface.set_data_type(data_start, (data_end - data_start), "text:" .. value.charset)
+					end
+				elseif not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
+				then
+					local data_start, data_end = value:data_range()
+					if data_start ~= nil
+					then
+						context.interface.set_data_type(data_start, (data_end - data_start), type_info.rehex_type)
+					end
+				end
 			end
 			
 			local data_start, data_end = value:data_range()
 			if data_start ~= nil
 			then
 				context.interface.set_comment(data_start, (data_end - data_start), name)
-			end
-		end
-	end
-	
-	local set_types = function(set_types, name, type_info, value)
-		local do_struct = function(v)
-			for k,m in _sorted_pairs(v)
-			do
-				set_types(set_types, k, m[1], m[2])
-			end
-		end
-		
-		if type_info.is_array and type_info.base == "struct"
-		then
-			local elem_type = util.make_nonarray_type(type_info)
-			
-			for i = 1, #value
-			do
-				do_struct(value[i])
-			end
-		elseif type_info.base == "struct"
-		then
-			do_struct(value)
-		elseif type_info.rehex_type ~= nil
-		then
-			-- If this is a char array we assume it is a string and don't set the s8 data type
-			-- for the range, else it would be displayed as a list of integers rather than a
-			-- contiguous byte sequence.
-			
-			if value.charset ~= nil
-			then
-				local data_start, data_end = value:data_range()
-				if data_start ~= nil
-				then
-					context.interface.set_data_type(data_start, (data_end - data_start), "text:" .. value.charset)
-				end
-			elseif not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
-			then
-				local data_start, data_end = value:data_range()
-				if data_start ~= nil
-				then
-					context.interface.set_data_type(data_start, (data_end - data_start), type_info.rehex_type)
-				end
-			end
-		end
-	end
-	
-	local set_highlights = function(set_highlights, name, type_info, value)
-		local do_struct = function(v)
-			for k,m in _sorted_pairs(v)
-			do
-				set_highlights(set_highlights, k, m[1], m[2])
 			end
 		end
 		
@@ -2861,24 +2831,11 @@ local function execute(interface, statements)
 				context.interface.set_highlight(data_start, (data_end - data_start), value.__INTERNAL_highlight_idx)
 			end
 		end
-		
-		if type_info.is_array and type_info.base == "struct"
-		then
-			for i = 1, #value
-			do
-				do_struct(value[i])
-			end
-		elseif type_info.base == "struct"
-		then
-			do_struct(value)
-		end
 	end
 	
 	for k,v in _sorted_pairs(context.global_vars)
 	do
-		set_comments(set_comments, k, v[1], v[2])
-		set_types(set_types, k, v[1], v[2])
-		set_highlights(set_highlights, k, v[1], v[2])
+		process_variable(process_variable, k, v[1], v[2])
 	end
 end
 

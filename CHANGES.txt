@@ -1,3 +1,8 @@
+Version TBA:
+
+ * Improve performance of templates that declare large numbers of file
+   variables.
+
 Version 0.63.0 (2025-06-11):
 
  * Add non-modal "Jump to offset" dialog option (#242).

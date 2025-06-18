@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -13,6 +13,8 @@
 -- You should have received a copy of the GNU General Public License along with
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+require 'stable_sort';
 
 local preprocessor = require 'preprocessor';
 local parser = require 'parser';
@@ -183,14 +185,16 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		end
 		
 		local yield_counter = 0
+		local data_types = {}
+		local comments = {}
 		
 		local interface = {
 			set_data_type = function(offset, length, data_type)
-				doc:set_data_type(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), data_type)
+				table.insert(data_types, { (selection_off:byte() + offset), selection_off:bit(), length, 0, data_type })
 			end,
 			
 			set_comment = function(offset, length, text)
-				doc:set_comment(selection_off + rehex.BitOffset(offset, 0), rehex.BitOffset(length, 0), rehex.Comment.new(text))
+				table.insert(comments, { (selection_off:byte() + offset), selection_off:bit(), length, 0, text })
 			end,
 			
 			allocate_highlight_colour = function(label, primary_colour, secondary_colour)
@@ -211,7 +215,7 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 			
 			print = function(s) rehex.print_info(s) end,
 			
-			yield = function()
+			yield = function(desc)
 				-- The yield method gets called at least once for every statement
 				-- as it gets executed, don't pump the event loop every time or we
 				-- wind up spending all our time doing that.
@@ -229,7 +233,13 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 				
 				yield_counter = 0
 				
-				progress_dialog:Pulse()
+				if desc ~= nil
+				then
+					progress_dialog:Pulse(desc)
+				else
+					progress_dialog:Pulse()
+				end
+				
 				wx.wxGetApp():ProcessPendingEvents()
 				
 				if progress_dialog:WasCancelled()
@@ -257,6 +267,42 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 		
 		local ok, err = pcall(function()
 			executor.execute(interface, parser.parse_text(preprocessor.preprocess_file(template_path)))
+			
+			progress_dialog:Pulse("Setting data types...")
+			
+			local sort_counter = 0
+			table.stable_sort(data_types, function(a, b)
+				-- Reduce yield frequency down within sort comparator.
+				if sort_counter < 20
+				then
+					sort_counter = sort_counter + 1
+				else
+					sort_counter = 0
+					interface.yield()
+				end
+				
+				return a[1] < b[1]
+			end)
+			
+			local TYPES_PER_BATCH = 50000
+			for i = 1, #data_types, TYPES_PER_BATCH
+			do
+				progress_dialog:Pulse("Setting data types... (" .. i .. "/" .. #data_types ..")")
+				wx.wxGetApp():ProcessPendingEvents()
+				
+				if progress_dialog:WasCancelled()
+				then
+					error("Template execution aborted", 0)
+				end
+				
+				local dt_slice = { table.unpack(data_types, i, (i + TYPES_PER_BATCH)) }
+				doc:set_data_type_bulk(dt_slice)
+			end
+			
+			progress_dialog:Pulse("Setting comments...")
+			wx.wxGetApp():ProcessPendingEvents()
+			
+			doc:set_comment_bulk(comments)
 		end)
 		
 		local end_time = os.time()

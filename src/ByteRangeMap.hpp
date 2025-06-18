@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "BitOffset.hpp"
+#include "ByteRangeSet.hpp"
 #include "profile.hpp"
 #include "shared_mutex.hpp"
 
@@ -171,6 +172,18 @@ namespace REHex
 			 * and removed from the set.
 			*/
 			void set_range(OT offset, OT length, const T &value);
+			
+			/**
+			 * @brief Set multiple ranges of bytes in the map at once.
+			 *
+			 * This method provides an optimised version of calling set_range()
+			 * multiple times. Each element in the vector contains the values that
+			 * would be passed to the set_range() method.
+			 *
+			 * If any ranges overlap, the later ones in the list take priority as if
+			 * calling the set_range() method individually.
+			*/
+			void set_bulk(std::vector< std::pair<Range, T> > &&bulk_ranges);
 			
 			/**
 			 * @brief Clear a range of bytes in the map.
@@ -491,6 +504,88 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offs
 	}
 	
 	last_get_iter = ranges.end();
+}
+
+template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_bulk(std::vector< std::pair<Range, T> > &&bulk_ranges)
+{
+	/* Work backwards from the end of bulk_ranges, removing any earlier overlaps. */
+	
+	RangeSet<OT> seen_ranges;
+	for(auto it = bulk_ranges.end(); it != bulk_ranges.begin();)
+	{
+		--it;
+		
+		OT range_off = it->first.offset;
+		OT range_len = it->first.length;
+		
+		auto collision = seen_ranges.find_last_in(range_off, range_len);
+		if(collision != seen_ranges.end())
+		{
+			OT collision_end = collision->offset + collision->length;
+			OT range_end = range_off + range_len;
+			
+			if(range_end > collision_end && range_off < collision->offset)
+			{
+				/* Collision is in the middle of the range to be set.
+				 * Split this range in two around the collision.
+				*/
+				
+				it = bulk_ranges.emplace(it, Range(range_off, (collision->offset - range_off)), it->second);
+				++it;
+				
+				it->first.offset = collision_end;
+				it->first.length = range_end - collision_end;
+			}
+			else if(range_end > collision_end)
+			{
+				/* Collision is from the beginning of the range.
+				 * Move the range up to the end of the collision.
+				*/
+				
+				it->first.offset = collision_end;
+				it->first.length = range_end - collision_end;
+			}
+			else if(range_off < collision->offset)
+			{
+				/* Collision is to the end of the range.
+				 * Truncate the range up to the collision.
+				*/
+				
+				it->first.length = collision->offset - range_off;
+			}
+			else{
+				/* Collision entirely encompasses the range.
+				 * Discard the range.
+				*/
+				
+				it = bulk_ranges.erase(it);
+				continue;
+			}
+		}
+		else{
+			/* No collision found. */
+		}
+		
+		assert(!(seen_ranges.isset_any(it->first.offset, it->first.length)));
+		seen_ranges.set_range(it->first.offset, it->first.length);
+	}
+	
+	/* Sort bulk_ranges by its elements offsets. There should be no overlaps at this point. */
+	
+	std::sort(bulk_ranges.begin(), bulk_ranges.end(), [](const std::pair<Range, T> &a, const std::pair<Range, T> &b)
+	{
+		return a.first.offset < b.first.offset;
+	});
+	
+	/* Call set_range() for each range in order. There are further optimisations that could
+	 * probably be made here, but just ensuring elements are inserted sequentially already nets
+	 * a significant performance boost when populating large sets.
+	*/
+	
+	for(auto it = bulk_ranges.begin(); it != bulk_ranges.end(); ++it)
+	{
+		set_range(it->first.offset, it->first.length, it->second);
+	}
 }
 
 template<typename OT, typename T> void REHex::RangeMap<OT, T>::clear_range(OT offset, OT length)

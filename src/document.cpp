@@ -1255,6 +1255,40 @@ bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const st
 	return true;
 }
 
+bool REHex::Document::set_data_type_bulk(std::vector<std::tuple<BitOffset, BitOffset, TypeInfo> > &&types)
+{
+	std::vector< std::pair<BitRangeMap<TypeInfo>::Range, TypeInfo> > types2;
+	types2.reserve(types.size());
+	
+	for(auto it = types.begin(); it != types.end(); ++it)
+	{
+		BitOffset offset = std::get<0>(*it);
+		BitOffset length = std::get<1>(*it);
+		const TypeInfo &ti = std::get<2>(*it);
+		
+		if(offset < BitOffset::ZERO || length <= BitOffset::ZERO || (offset + length).byte() > buffer_length())
+		{
+			return false;
+		}
+		
+		types2.emplace_back(BitRangeMap<TypeInfo>::Range(offset, length), ti);
+	}
+	
+	_tracked_change("set data type",
+		[this, types2]()
+		{
+			this->types.set_bulk(std::vector< std::pair<BitRangeMap<TypeInfo>::Range, TypeInfo> >(types2));
+			_raise_types_changed();
+		},
+		
+		[]()
+		{
+			/* Data type changes are undone implicitly. */
+		});
+	
+	return true;
+}
+
 const REHex::CharacterEncoder *REHex::Document::get_text_encoder(BitOffset offset) const
 {
 	if(offset < 0 || offset >= buffer_length())

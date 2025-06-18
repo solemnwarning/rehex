@@ -91,11 +91,11 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"set_comment(4, 16, bar)",
 			"set_data_type(4, 16, s32le)",
+			"set_comment(4, 16, bar)",
 			
-			"set_comment(0, 4, foo)",
 			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, foo)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -120,11 +120,11 @@ describe("executor", function()
 		local expect_log = {
 			"set_comment(2, 10, char_array)",
 			
-			"set_comment(0, 1, single_char)",
 			"set_data_type(0, 1, s8)",
+			"set_comment(0, 1, single_char)",
 			
-			"set_comment(1, 1, single_uchar)",
 			"set_data_type(1, 1, u8)",
+			"set_comment(1, 1, single_uchar)",
 			
 			"set_comment(12, 10, uchar_array)",
 		}
@@ -290,11 +290,11 @@ describe("executor", function()
 			"print(a = 0)",
 			"print(b = -1)",
 			
-			"set_comment(0, 1, a)",
 			"set_data_type(0, 1, s8)",
+			"set_comment(0, 1, a)",
 			
-			"set_comment(1, 1, b)",
 			"set_data_type(1, 1, s8)",
+			"set_comment(1, 1, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -323,11 +323,11 @@ describe("executor", function()
 			"print(a = 0)",
 			"print(b = 255)",
 			
-			"set_comment(0, 1, a)",
 			"set_data_type(0, 1, u8)",
+			"set_comment(0, 1, a)",
 			
-			"set_comment(1, 1, b)",
 			"set_data_type(1, 1, u8)",
+			"set_comment(1, 1, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -358,11 +358,11 @@ describe("executor", function()
 			"print(a = 8447)",
 			"print(b = -1)",
 			
-			"set_comment(0, 2, a)",
 			"set_data_type(0, 2, s16le)",
+			"set_comment(0, 2, a)",
 			
-			"set_comment(2, 2, b)",
 			"set_data_type(2, 2, s16le)",
+			"set_comment(2, 2, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -393,11 +393,11 @@ describe("executor", function()
 			"print(a = 8447)",
 			"print(b = -1)",
 			
-			"set_comment(0, 2, a)",
 			"set_data_type(0, 2, s16be)",
+			"set_comment(0, 2, a)",
 			
-			"set_comment(2, 2, b)",
 			"set_data_type(2, 2, s16be)",
+			"set_comment(2, 2, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -428,11 +428,11 @@ describe("executor", function()
 			"print(a = 8447)",
 			"print(b = 65535)",
 			
-			"set_comment(0, 2, a)",
 			"set_data_type(0, 2, u16le)",
+			"set_comment(0, 2, a)",
 			
-			"set_comment(2, 2, b)",
 			"set_data_type(2, 2, u16le)",
+			"set_comment(2, 2, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -463,11 +463,11 @@ describe("executor", function()
 			"print(a = 8447)",
 			"print(b = 65535)",
 			
-			"set_comment(0, 2, a)",
 			"set_data_type(0, 2, u16be)",
+			"set_comment(0, 2, a)",
 			
-			"set_comment(2, 2, b)",
 			"set_data_type(2, 2, u16be)",
+			"set_comment(2, 2, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -498,11 +498,11 @@ describe("executor", function()
 			"print(a = 13417386)",
 			"print(b = -1)",
 			
-			"set_comment(0, 4, a)",
 			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, a)",
 			
-			"set_comment(4, 4, b)",
 			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -533,11 +533,11 @@ describe("executor", function()
 			"print(a = 1025923398570)",
 			"print(b = 18446744073709551615)",
 			
-			"set_comment(0, 8, a)",
 			"set_data_type(0, 8, u64le)",
+			"set_comment(0, 8, a)",
 			
-			"set_comment(8, 8, b)",
 			"set_data_type(8, 8, u64le)",
+			"set_comment(8, 8, b)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -579,8 +579,8 @@ describe("executor", function()
 			"print(a[2] = 3)",
 			"print(a[3] = 4)",
 			
-			"set_comment(0, 16, a)",
 			"set_data_type(0, 16, s32le)",
+			"set_comment(0, 16, a)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -682,17 +682,17 @@ describe("executor", function()
 			"print(x = 3)",
 			"print(y = 4)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a)",
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
 			
+			"set_data_type(8, 4, s32le)",
 			"set_comment(8, 4, x)",
+			"set_data_type(12, 4, s32le)",
 			"set_comment(12, 4, y)",
 			"set_comment(8, 8, b)",
-			"set_data_type(8, 4, s32le)",
-			"set_data_type(12, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -733,19 +733,17 @@ describe("executor", function()
 			"print(x = 3)",
 			"print(y = 4)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a[0])",
 			
+			"set_data_type(8, 4, s32le)",
 			"set_comment(8, 4, x)",
+			"set_data_type(12, 4, s32le)",
 			"set_comment(12, 4, y)",
 			"set_comment(8, 8, a[1])",
-			
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
-			
-			"set_data_type(8, 4, s32le)",
-			"set_data_type(12, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -817,15 +815,14 @@ describe("executor", function()
 			"print(mystruct y.x = 2)",
 			"print(mystruct y.y = 3)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, x)",
+			"set_data_type(8, 4, s32le)",
 			"set_comment(8, 4, y)",
 			"set_comment(4, 8, y)",
 			"set_comment(0, 12, a)",
-			
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
-			"set_data_type(8, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -907,12 +904,11 @@ describe("executor", function()
 			"print(x = 1)",
 			"print(y = 2)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a)",
-			
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -951,18 +947,18 @@ describe("executor", function()
 			"print(x = 3)",
 			"print(y = 4)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a[0])",
+			"set_data_type(8, 4, s32le)",
 			"set_comment(8, 4, x)",
+			"set_data_type(12, 4, s32le)",
 			"set_comment(12, 4, y)",
 			"set_comment(8, 8, a[1])",
-			
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
-			"set_data_type(8, 4, s32le)",
-			"set_data_type(12, 4, s32le)",
 		}
+		
 		
 		assert.are.same(expect_log, log)
 	end)
@@ -997,12 +993,11 @@ describe("executor", function()
 			"print(x = 1)",
 			"print(y = 2)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a)",
-			
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -1085,11 +1080,11 @@ describe("executor", function()
 		local expect_log = {
 			"print(a = 1234, b = 5678, c = hello)",
 			
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a)",
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -3035,8 +3030,8 @@ describe("executor", function()
 			"print(BAR = 1)",
 			"print(BAZ = 2)",
 			"print(e = 1)",
-			"set_comment(0, 4, e)",
 			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, e)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -3079,8 +3074,8 @@ describe("executor", function()
 			"print(BAR = 1)",
 			"print(BAZ = 2)",
 			"print(e = 1)",
-			"set_comment(0, 4, e)",
 			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, e)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -3133,8 +3128,8 @@ describe("executor", function()
 			"print(e[0] = 1)",
 			"print(e[1] = 2)",
 			"print(e[2] = 3)",
-			"set_comment(0, 12, e)",
 			"set_data_type(0, 12, s32le)",
+			"set_comment(0, 12, e)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -5209,8 +5204,8 @@ describe("executor", function()
 			
 			"print(ArrayLength(d) = 2)",
 			
-			"set_comment(0, 8, d)",
 			"set_data_type(0, 8, s32le)",
+			"set_comment(0, 8, d)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -5937,8 +5932,8 @@ describe("executor", function()
 			"print(a = { 1, 2, 3, 4 })",
 			"print(ArrayLength(a) = 6)",
 			"print(a = { 1, 2, 3, 4, 5, 6 })",
-			"set_comment(0, 24, a)",
 			"set_data_type(0, 24, s32le)",
+			"set_comment(0, 24, a)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -6136,26 +6131,26 @@ describe("executor", function()
 			"print(a = { { 1, 2 }, { 3, 4 } })",
 			"print(ArrayLength(a) = 4)",
 			"print(a = { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 } })",
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, a[0])",
+			"set_data_type(8, 4, s32le)",
 			"set_comment(8, 4, x)",
+			"set_data_type(12, 4, s32le)",
 			"set_comment(12, 4, y)",
 			"set_comment(8, 8, a[1])",
+			"set_data_type(16, 4, s32le)",
 			"set_comment(16, 4, x)",
+			"set_data_type(20, 4, s32le)",
 			"set_comment(20, 4, y)",
 			"set_comment(16, 8, a[2])",
+			"set_data_type(24, 4, s32le)",
 			"set_comment(24, 4, x)",
+			"set_data_type(28, 4, s32le)",
 			"set_comment(28, 4, y)",
 			"set_comment(24, 8, a[3])",
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
-			"set_data_type(8, 4, s32le)",
-			"set_data_type(12, 4, s32le)",
-			"set_data_type(16, 4, s32le)",
-			"set_data_type(20, 4, s32le)",
-			"set_data_type(24, 4, s32le)",
-			"set_data_type(28, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -6731,26 +6726,26 @@ describe("executor", function()
 			"print(B ArrayIndex = 1)",
 			"print(B ArrayIndex = 2)",
 			
+			"set_data_type(0, 1, s8)",
 			"set_comment(0, 1, x)",
 			"set_comment(0, 1, b[0])",
+			"set_data_type(1, 1, s8)",
 			"set_comment(1, 1, x)",
 			"set_comment(1, 1, b[1])",
+			"set_data_type(2, 1, s8)",
 			"set_comment(2, 1, x)",
 			"set_comment(2, 1, b[2])",
 			"set_comment(0, 3, a[0])",
+			"set_data_type(3, 1, s8)",
 			"set_comment(3, 1, x)",
 			"set_comment(3, 1, b[0])",
+			"set_data_type(4, 1, s8)",
 			"set_comment(4, 1, x)",
 			"set_comment(4, 1, b[1])",
+			"set_data_type(5, 1, s8)",
 			"set_comment(5, 1, x)",
 			"set_comment(5, 1, b[2])",
 			"set_comment(3, 3, a[1])",
-			"set_data_type(0, 1, s8)",
-			"set_data_type(1, 1, s8)",
-			"set_data_type(2, 1, s8)",
-			"set_data_type(3, 1, s8)",
-			"set_data_type(4, 1, s8)",
-			"set_data_type(5, 1, s8)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -6826,8 +6821,8 @@ describe("executor", function()
 			"print(filevar = 1234)",
 			"print(localvar = 5678)",
 			
-			"set_comment(0, 4, filevar)",
 			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, filevar)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -6903,10 +6898,10 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"set_comment(0, 8, s)",
 			"set_data_type(0, 8, text:ASCII)",
-			"set_comment(8, 8, t)",
+			"set_comment(0, 8, s)",
 			"set_data_type(8, 8, text:ISO-8859-1)",
+			"set_comment(8, 8, t)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -7064,11 +7059,11 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"set_comment(0, 4, s)",
 			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, s)",
 			"set_highlight(0, 4, 1)",
-			"set_comment(4, 4, t)",
 			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, t)",
 			"set_highlight(4, 4, 2)",
 		}
 		
@@ -7096,8 +7091,8 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
-			"set_comment(0, 16, arr)",
 			"set_data_type(0, 16, s32le)",
+			"set_comment(0, 16, arr)",
 			"set_highlight(0, 16, 1)",
 		}
 		
@@ -7128,11 +7123,11 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, s)",
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
 			"set_highlight(0, 8, 1)",
 		}
 		
@@ -7167,13 +7162,13 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_highlight(0, 4, 4)",
+			"set_data_type(4, 4, s32le)",
 			"set_comment(4, 4, y)",
 			"set_comment(0, 8, s)",
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(4, 4, s32le)",
 			"set_highlight(0, 8, 1)",
-			"set_highlight(0, 4, 4)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -7385,13 +7380,13 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
+			"set_data_type(12, 4, s32le)",
 			"set_comment(12, 4, x)",
+			"set_data_type(16, 4, s32le)",
 			"set_comment(16, 4, y)",
+			"set_data_type(20, 4, s32le)",
 			"set_comment(20, 4, z)",
 			"set_comment(12, 12, b)",
-			"set_data_type(12, 4, s32le)",
-			"set_data_type(16, 4, s32le)",
-			"set_data_type(20, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -7422,17 +7417,17 @@ describe("executor", function()
 		})
 		
 		local expect_log = {
+			"set_data_type(0, 4, s32le)",
 			"set_comment(0, 4, x)",
+			"set_data_type(8, 4, s32le)",
 			"set_comment(8, 4, z)",
 			"set_comment(0, 12, a)",
-			"set_data_type(0, 4, s32le)",
-			"set_data_type(8, 4, s32le)",
 			
+			"set_data_type(12, 4, s32le)",
 			"set_comment(12, 4, x)",
+			"set_data_type(20, 4, s32le)",
 			"set_comment(20, 4, z)",
 			"set_comment(12, 12, b)",
-			"set_data_type(12, 4, s32le)",
-			"set_data_type(20, 4, s32le)",
 		}
 		
 		assert.are.same(expect_log, log)
@@ -7676,10 +7671,10 @@ describe("executor", function()
 			"print(OffsetOf(b[0]) = 4)",
 			"print(OffsetOf(b[1]) = 8)",
 			
-			"set_comment(0, 4, a)",
 			"set_data_type(0, 4, s32le)",
-			"set_comment(4, 8, b)",
+			"set_comment(0, 4, a)",
 			"set_data_type(4, 8, s32le)",
+			"set_comment(4, 8, b)",
 		}
 		
 		assert.are.same(expect_log, log)

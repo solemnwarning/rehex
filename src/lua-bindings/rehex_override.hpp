@@ -143,6 +143,69 @@ static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 }
 %end
 
+%override wxLua_REHex_Document_set_data_type_bulk
+static int LUACALL wxLua_REHex_Document_set_data_type_bulk(lua_State *L)
+{
+	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
+	
+	std::vector< std::tuple<REHex::BitOffset, REHex::BitOffset, REHex::Document::TypeInfo> > types_cpp;
+	
+	if(lua_istable(L, 2))
+	{
+		size_t num_types = lua_objlen(L, 2);
+		types_cpp.reserve(num_types);
+		
+		for(size_t i = 0; i < num_types; ++i)
+		{
+			/* Get types[i] and push it onto the Lua stack. */
+			lua_rawgeti(L, 2, (i + 1));
+			
+			if(lua_istable(L, -1) && lua_objlen(L, -1) == 5)
+			{
+				lua_rawgeti(L, -1, 1);
+				off_t offset_byte = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 2);
+				off_t offset_bit = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 3);
+				off_t length_byte = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 4);
+				off_t length_bit = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 5);
+				const wxString type_name = wxlua_getwxStringtype(L, -1);
+				lua_pop(L, 1);
+				
+				types_cpp.emplace_back(
+					REHex::BitOffset(offset_byte, offset_bit),
+					REHex::BitOffset(length_byte, length_bit),
+					REHex::Document::TypeInfo(type_name.ToStdString()));
+			}
+			else{
+				wxlua_argerror(L, 2, wxT("a table of tables"));
+			}
+			
+			/* Pop types[i] off the Lua stack. */
+			lua_pop(L, 1);
+		}
+	}
+	else{
+		wxlua_argerror(L, 2, wxT("a table of tables"));
+	}
+	
+	bool returns = self->set_data_type_bulk(std::move(types_cpp));
+	lua_pushboolean(L, returns);
+	
+	return 1;
+}
+%end
+
 %override wxLua_REHex_Document_read_data
 static int LUACALL wxLua_REHex_Document_read_data(lua_State *L)
 {
@@ -194,6 +257,63 @@ static int LUACALL wxLua_REHex_Document_set_comment1(lua_State *L)
 	lua_pushboolean(L, returns);
 	
 	return 1;
+}
+%end
+
+%override wxLua_REHex_Document_set_comment_bulk
+static int LUACALL wxLua_REHex_Document_set_comment_bulk(lua_State *L)
+{
+	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
+	
+	if(lua_istable(L, 2))
+	{
+		size_t num_comments = lua_objlen(L, 2);
+		
+		for(size_t i = 0; i < num_comments; ++i)
+		{
+			/* Get comments[i] and push it onto the Lua stack. */
+			lua_rawgeti(L, 2, (i + 1));
+			
+			if(lua_istable(L, -1) && lua_objlen(L, -1) == 5)
+			{
+				lua_rawgeti(L, -1, 1);
+				off_t offset_byte = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 2);
+				off_t offset_bit = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 3);
+				off_t length_byte = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 4);
+				off_t length_bit = (off_t)(wxlua_getnumbertype(L, -1));
+				lua_pop(L, 1);
+				
+				lua_rawgeti(L, -1, 5);
+				const wxString comment_text = wxlua_getwxStringtype(L, -1);
+				lua_pop(L, 1);
+				
+				self->set_comment(
+					REHex::BitOffset(offset_byte, offset_bit),
+					REHex::BitOffset(length_byte, length_bit),
+					REHex::Document::Comment(comment_text));
+			}
+			else{
+				wxlua_argerror(L, 2, wxT("a table of tables"));
+			}
+			
+			/* Pop types[i] off the Lua stack. */
+			lua_pop(L, 1);
+		}
+	}
+	else{
+		wxlua_argerror(L, 2, wxT("a table of tables"));
+	}
+	
+	return 0;
 }
 %end
 

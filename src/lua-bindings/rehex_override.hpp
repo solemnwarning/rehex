@@ -148,59 +148,69 @@ static int LUACALL wxLua_REHex_Document_set_data_type_bulk(lua_State *L)
 {
 	REHex::Document *self = (REHex::Document *)wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document);
 	
-	std::vector< std::tuple<REHex::BitOffset, REHex::BitOffset, REHex::Document::TypeInfo> > types_cpp;
+	std::vector< std::tuple<REHex::BitOffset, REHex::BitOffset, REHex::Document::TypeInfo> > *types_cpp
+		= new std::vector< std::tuple<REHex::BitOffset, REHex::BitOffset, REHex::Document::TypeInfo> >();
 	
-	if(lua_istable(L, 2))
-	{
-		size_t num_types = lua_objlen(L, 2);
-		types_cpp.reserve(num_types);
-		
-		for(size_t i = 0; i < num_types; ++i)
+	try {
+		if(lua_istable(L, 2))
 		{
-			/* Get types[i] and push it onto the Lua stack. */
-			lua_rawgeti(L, 2, (i + 1));
+			size_t num_types = lua_objlen(L, 2);
+			types_cpp->reserve(num_types);
 			
-			if(lua_istable(L, -1) && lua_objlen(L, -1) == 5)
+			for(size_t i = 0; i < num_types; ++i)
 			{
-				lua_rawgeti(L, -1, 1);
-				off_t offset_byte = (off_t)(wxlua_getnumbertype(L, -1));
-				lua_pop(L, 1);
+				/* Get types[i] and push it onto the Lua stack. */
+				lua_rawgeti(L, 2, (i + 1));
 				
-				lua_rawgeti(L, -1, 2);
-				off_t offset_bit = (off_t)(wxlua_getnumbertype(L, -1));
-				lua_pop(L, 1);
+				if(lua_istable(L, -1) && lua_objlen(L, -1) == 5)
+				{
+					lua_rawgeti(L, -1, 1);
+					off_t offset_byte = (off_t)(wxlua_getnumbertype(L, -1));
+					lua_pop(L, 1);
+					
+					lua_rawgeti(L, -1, 2);
+					off_t offset_bit = (off_t)(wxlua_getnumbertype(L, -1));
+					lua_pop(L, 1);
+					
+					lua_rawgeti(L, -1, 3);
+					off_t length_byte = (off_t)(wxlua_getnumbertype(L, -1));
+					lua_pop(L, 1);
+					
+					lua_rawgeti(L, -1, 4);
+					off_t length_bit = (off_t)(wxlua_getnumbertype(L, -1));
+					lua_pop(L, 1);
+					
+					lua_rawgeti(L, -1, 5);
+					const wxString type_name = wxlua_getwxStringtype(L, -1);
+					lua_pop(L, 1);
+					
+					types_cpp->emplace_back(
+						REHex::BitOffset(offset_byte, offset_bit),
+						REHex::BitOffset(length_byte, length_bit),
+						REHex::Document::TypeInfo(type_name.ToStdString()));
+				}
+				else{
+					delete types_cpp;
+					wxlua_argerror(L, 2, wxT("a table of tables"));
+				}
 				
-				lua_rawgeti(L, -1, 3);
-				off_t length_byte = (off_t)(wxlua_getnumbertype(L, -1));
+				/* Pop types[i] off the Lua stack. */
 				lua_pop(L, 1);
-				
-				lua_rawgeti(L, -1, 4);
-				off_t length_bit = (off_t)(wxlua_getnumbertype(L, -1));
-				lua_pop(L, 1);
-				
-				lua_rawgeti(L, -1, 5);
-				const wxString type_name = wxlua_getwxStringtype(L, -1);
-				lua_pop(L, 1);
-				
-				types_cpp.emplace_back(
-					REHex::BitOffset(offset_byte, offset_bit),
-					REHex::BitOffset(length_byte, length_bit),
-					REHex::Document::TypeInfo(type_name.ToStdString()));
 			}
-			else{
-				wxlua_argerror(L, 2, wxT("a table of tables"));
-			}
-			
-			/* Pop types[i] off the Lua stack. */
-			lua_pop(L, 1);
 		}
+		else{
+			delete types_cpp;
+			wxlua_argerror(L, 2, wxT("a table of tables"));
+		}
+		
+		bool returns = self->set_data_type_bulk(std::move(*types_cpp));
+		lua_pushboolean(L, returns);
 	}
-	else{
-		wxlua_argerror(L, 2, wxT("a table of tables"));
+	catch(...)
+	{
+		delete types_cpp;
+		lua_pushboolean(L, false);
 	}
-	
-	bool returns = self->set_data_type_bulk(std::move(types_cpp));
-	lua_pushboolean(L, returns);
 	
 	return 1;
 }

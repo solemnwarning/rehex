@@ -5,6 +5,8 @@ Version TBA:
 
  * Fix selecting the byte range encapsulated by a comment (#255).
 
+ * Add "Jump to end" command to comments panel context menu (#254).
+
 Version 0.63.0 (2025-06-11):
 
  * Add non-modal "Jump to offset" dialog option (#242).

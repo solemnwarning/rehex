@@ -44,6 +44,7 @@ enum {
 	ID_EDIT_COMMENT = 1,
 	ID_COPY_COMMENT,
 	ID_GOTO,
+	ID_GOTO_END,
 	ID_SELECT,
 	ID_FILTER_TEXT,
 	ID_REFRESH_TIMER,
@@ -287,7 +288,10 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 	
 	wxMenu menu;
 	
-	menu.Append(ID_GOTO, "&Jump to offset");
+	menu.Append(ID_GOTO, "&Jump to start");
+	
+	menu.Append(ID_GOTO_END, "Jump &to end");
+	menu.Enable(ID_GOTO_END, (key->length > BitOffset::ZERO));
 	
 	menu.Append(ID_SELECT, "&Select bytes");
 	menu.Enable(ID_SELECT, (key->length > 0));
@@ -311,6 +315,17 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				});
 				
 				break;
+				
+			case ID_GOTO_END:
+			{
+				DocumentCtrl::GenericDataRegion *end_dr = document_ctrl->data_region_by_offset(key->offset + key->length - BitOffset(0, 1));
+				if(end_dr != NULL)
+				{
+					document->set_cursor_position(end_dr->last_row_nearest_column(INT_MAX));
+				}
+				
+				break;
+			}
 				
 			case ID_SELECT:
 				document->set_cursor_position(key->offset);

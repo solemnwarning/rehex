@@ -314,7 +314,7 @@ void REHex::CommentTree::OnContextMenu(wxDataViewEvent &event)
 				
 			case ID_SELECT:
 				document->set_cursor_position(key->offset);
-				document_ctrl->set_selection_raw(key->offset, (key->offset + key->length - 1));
+				document_ctrl->set_selection_raw(key->offset, (key->offset + key->length - BitOffset(0, 1)));
 				
 				CallAfter([this]()
 				{

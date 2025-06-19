@@ -204,15 +204,16 @@ static int LUACALL wxLua_REHex_Document_set_data_type_bulk(lua_State *L)
 		}
 		
 		bool returns = self->set_data_type_bulk(std::move(*types_cpp));
-		lua_pushboolean(L, returns);
-	}
-	catch(...)
-	{
+		
 		delete types_cpp;
-		lua_pushboolean(L, false);
+		
+		lua_pushboolean(L, returns);
+		return 1;
 	}
-	
-	return 1;
+	catch(...) {
+		delete types_cpp;
+		throw;
+	}
 }
 %end
 

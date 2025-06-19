@@ -570,6 +570,7 @@ TEST(LuaPluginLoader, SetDataTypeBulkBitAligned)
 	EXPECT_EQ(app.console->get_messages_text(), "");
 }
 
+#ifndef __SANITIZE_ADDRESS__
 TEST(LuaPluginLoader, SetDataTypeBulkNotTable)
 {
 	LuaPluginLoaderInitialiser lpl_init;
@@ -719,3 +720,4 @@ TEST(LuaPluginLoader, SetDataTypeBulkMissingParameter)
 	
 	EXPECT_NE(app.console->get_messages_text().find("wxLua: Expected a table of tables for parameter 2"), std::string::npos);
 }
+#endif

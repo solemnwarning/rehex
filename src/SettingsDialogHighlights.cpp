@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -86,7 +86,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	add_button = new wxButton(this, wxID_ADD);
 	button_sizer->Add(add_button);
 	
-	add_button->Bind(wxEVT_BUTTON, [=,this](wxCommandEvent &event)
+	add_button->Bind(wxEVT_BUTTON, [this, hex_font](wxCommandEvent &event)
 	{
 		assert(colours.size() < HighlightColourMap::MAX_NUM);
 		
@@ -116,7 +116,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	del_button = new wxButton(this, wxID_DELETE);
 	button_sizer->Add(del_button, 0, wxLEFT, SettingsDialog::MARGIN);
 	
-	del_button->Bind(wxEVT_BUTTON, [=,this](wxCommandEvent &event)
+	del_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent &event)
 	{
 		assert(selected_grid_row >= 0);
 		assert(selected_highlight_idx >= 0);
@@ -146,7 +146,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	label_input = new wxTextCtrl(this, wxID_ANY);
 	side_sizer->Add(label_input, 0, (wxBOTTOM | wxEXPAND), SettingsDialog::MARGIN);
 	
-	label_input->Bind(wxEVT_TEXT, [=,this](wxCommandEvent &event)
+	label_input->Bind(wxEVT_TEXT, [this](wxCommandEvent &event)
 	{
 		assert(selected_grid_row >= 0);
 		assert(grid_row_indices[selected_grid_row] == (size_t)(selected_highlight_idx));
@@ -168,7 +168,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	primary_picker = new wxColourPickerCtrl(this, wxID_ANY);
 	side_sizer->Add(primary_picker, 0, wxBOTTOM, SettingsDialog::MARGIN);
 	
-	primary_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [=,this](wxColourPickerEvent &event)
+	primary_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [this](wxColourPickerEvent &event)
 	{
 		assert(selected_grid_row >= 0);
 		assert(grid_row_indices[selected_grid_row] == (size_t)(selected_highlight_idx));
@@ -190,7 +190,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	secondary_picker = new wxColourPickerCtrl(this, wxID_ANY);
 	side_sizer->Add(secondary_picker);
 	
-	secondary_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [=,this](wxColourPickerEvent &event)
+	secondary_picker->Bind(wxEVT_COLOURPICKER_CHANGED, [this](wxColourPickerEvent &event)
 	{
 		assert(selected_grid_row >= 0);
 		assert(grid_row_indices[selected_grid_row] == (size_t)(selected_highlight_idx));
@@ -207,7 +207,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	
 	secondary_picker->Disable();
 	
-	grid->Bind(wxEVT_GRID_SELECT_CELL, [=,this](wxGridEvent &event)
+	grid->Bind(wxEVT_GRID_SELECT_CELL, [this](wxGridEvent &event)
 	{
 		selected_grid_row = event.GetRow();
 		selected_highlight_idx = grid_row_indices[selected_grid_row];
@@ -224,7 +224,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 		secondary_picker->Enable();
 	});
 	
-	grid->Bind(wxEVT_GRID_RANGE_SELECT, [=,this](wxGridRangeSelectEvent &event)
+	grid->Bind(wxEVT_GRID_RANGE_SELECT, [this](wxGridRangeSelectEvent &event)
 	{
 		/* We can't disallow range selections in wxGrid, or Veto them,
 		 * so we clear any when we're told about them.

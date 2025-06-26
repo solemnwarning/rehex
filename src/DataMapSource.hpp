@@ -102,7 +102,6 @@ namespace REHex
 		private:
 			SharedEvtHandler<DataView> view;
 			
-			size_t max_points;
 			double log_multi;
 			
 			std::unique_ptr<HierarchicalByteAccumulator> accumulator;

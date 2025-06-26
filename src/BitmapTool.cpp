@@ -878,7 +878,7 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offs
 			output_col_ptr.Green() = chequerboard_colour;
 			output_col_ptr.Blue()  = chequerboard_colour;
 			
-			if(data.size() <= data_line_offset)
+			if((off_t)(data.size()) <= data_line_offset)
 			{
 				continue;
 			}

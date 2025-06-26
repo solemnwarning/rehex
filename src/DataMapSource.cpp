@@ -27,7 +27,6 @@ static constexpr off_t MIN_SHARD_SIZE = 100;
 
 REHex::EntropyDataMapSource::EntropyDataMapSource(const SharedEvtHandler<DataView> &view, size_t max_points, double log_multi):
 	view(view),
-	max_points(max_points),
 	log_multi(log_multi)
 {
 	accumulator.reset(new HierarchicalByteAccumulator(view, max_points, MIN_SHARD_SIZE));

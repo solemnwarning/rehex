@@ -378,7 +378,14 @@ bool REHex::HierarchicalByteAccumulator::task_func()
 		working.clear_range(chunk_offset, chunk_length);
 		
 		ByteRangeSet work_done;
+		#if defined(__GNUC__) && !defined(__clang__)
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+		#endif
 		work_done.set_range(chunk_offset, chunk_length);
+		#if defined(__GNUC__) && !defined(__clang__)
+		#pragma GCC diagnostic pop
+		#endif
 		
 		ByteRangeSet unblocked = ByteRangeSet::intersection(work_done, blocked);
 		

@@ -69,8 +69,10 @@ REHex::NumericEntryDialog<REHex::BitOffset>::BaseHint REHex::GotoOffsetDialog::g
 			return NumericEntryDialog<BitOffset>::BaseHint::HEX;
 	}
 	
-	#ifdef __GNUC__
+	#if defined(__GNUC__)
 	__builtin_unreachable();
+	#elif defined(_MSC_VER)
+	__assume(false);
 	#endif
 }
 

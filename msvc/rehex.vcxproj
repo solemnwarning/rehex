@@ -489,6 +489,7 @@
     <ClCompile Include="..\src\FileWriter.cpp" />
     <ClCompile Include="..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp" />
+    <ClCompile Include="..\src\FontCharacterCache.cpp" />
     <ClCompile Include="..\src\GotoOffsetDialog.cpp" />
     <ClCompile Include="..\src\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\src\HighlightColourMap.cpp" />

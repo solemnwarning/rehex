@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1573,11 +1573,13 @@ std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DiffWindow::MessageRegion::
 
 int REHex::DiffWindow::MessageRegion::calc_width(REHex::DocumentCtrl &doc_ctrl)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	int offset_column_width = doc_ctrl.get_show_offsets()
 		? doc_ctrl.get_offset_column_width()
 		: 0;
 	
-	int message_width = doc_ctrl.hf_string_width(message.length());
+	int message_width = fcc.fixed_string_width(message.length());
 	
 	return offset_column_width + message_width;
 }
@@ -1589,6 +1591,8 @@ void REHex::DiffWindow::MessageRegion::calc_height(DocumentCtrl &doc_ctrl)
 
 void REHex::DiffWindow::MessageRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	dc.SetFont(doc_ctrl.get_font());
 	
 	dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
@@ -1599,9 +1603,9 @@ void REHex::DiffWindow::MessageRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, in
 	int offset_column_width = doc_ctrl.get_offset_column_width();
 	
 	int virtual_width = doc_ctrl.get_virtual_width();
-	int text_width    = doc_ctrl.hf_string_width(message.length());
-	int text_height   = doc_ctrl.hf_char_height();
-	int char_width    = doc_ctrl.hf_char_width();
+	int text_width    = fcc.fixed_string_width(message.length());
+	int text_height   = fcc.fixed_char_height();
+	int char_width    = fcc.fixed_char_width();
 	
 	int text_x = offset_column_width + ((virtual_width - offset_column_width) / 2) - (text_width / 2);
 	

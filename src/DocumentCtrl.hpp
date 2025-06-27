@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -36,6 +36,7 @@
 #include "CharacterFinder.hpp"
 #include "document.hpp"
 #include "Events.hpp"
+#include "FontCharacterCache.hpp"
 #include "LRUCache.hpp"
 #include "NestedOffsetLengthMap.hpp"
 #include "Palette.hpp"
@@ -408,17 +409,6 @@ namespace REHex {
 				
 				friend DocumentCtrl;
 			};
-
-			struct AlignedCharacter
-			{
-				wxString wx_char;
-				ucs4_t unicode_char;
-				wxSize char_size;
-				int column;
-
-				AlignedCharacter(wxString wx_char, ucs4_t unicode_char, wxSize char_size, int column) :
-					wx_char(wx_char), unicode_char(unicode_char), char_size(char_size), column(column) {}
-			};
 			
 			DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, long style = 0);
 			~DocumentCtrl();
@@ -601,6 +591,15 @@ namespace REHex {
 			wxFont &get_font();
 			
 			/**
+			 * @brief Get the FontCharacterCache object for this DocumentCtrl.
+			 *
+			 * DocumentCtrl maintains a FontCharacterCache instance for the hex font
+			 * for use by any regions within it, returned object reference will remain
+			 * valid until the DocumentCtrl is destroyed.
+			*/
+			const FontCharacterCache &get_fcc() const;
+			
+			/**
 			 * @brief Returns the current vertical scroll position, in lines.
 			*/
 			int64_t get_scroll_yoff() const;
@@ -633,9 +632,7 @@ namespace REHex {
 			void OnIdle(wxIdleEvent &event);
 			void OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event);
 			
-		#ifndef UNIT_TEST
 		private:
-		#endif
 			friend DataRegion;
 			friend CommentRegion;
 			
@@ -656,9 +653,7 @@ namespace REHex {
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
-			
-			/* Size of a character in hex_font. */
-			unsigned char hf_height;
+			FontCharacterCache hex_font_cache;
 			
 			/* Size of the client area in pixels. */
 			int client_width;
@@ -789,74 +784,6 @@ namespace REHex {
 			
 			void linked_scroll_visit_others(const std::function<void(DocumentCtrl*)> &func);
 			
-			static const int PRECOMP_HF_STRING_WIDTH_TO = 512;
-			unsigned int hf_string_width_precomp[PRECOMP_HF_STRING_WIDTH_TO];
-			
-			static const size_t GETTEXTEXTENT_CACHE_SIZE = 4096;
-			LRUCache<ucs4_t, wxSize> hf_gte_cache;
-
-#ifdef REHEX_CACHE_CHARACTER_BITMAPS
-			static const size_t HF_CHAR_BITMAP_CACHE_SIZE = 8192;
-			LRUCache<std::tuple<ucs4_t, unsigned int, unsigned int>, wxBitmap> hf_char_bitmap_cache;
-#endif
-
-#ifdef REHEX_CACHE_STRING_BITMAPS
-			struct StringBitmapCacheKey
-			{
-				int base_col;
-				std::vector<AlignedCharacter> characters;
-				unsigned int packed_fg_colour;
-				unsigned int packed_bg_colour;
-
-				StringBitmapCacheKey(int base_col, std::vector<AlignedCharacter> characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour):
-					base_col(base_col), characters(characters), packed_fg_colour(packed_fg_colour), packed_bg_colour(packed_bg_colour) {}
-
-				bool operator<(const StringBitmapCacheKey &rhs) const
-				{
-					if(base_col != rhs.base_col)
-					{
-						return base_col < rhs.base_col;
-					}
-					
-					for(size_t i = 0;; ++i)
-					{
-						if(i < characters.size() && i < rhs.characters.size())
-						{
-							if(characters[i].unicode_char != rhs.characters[i].unicode_char)
-							{
-								return characters[i].unicode_char < rhs.characters[i].unicode_char;
-							}
-							else if(characters[i].column != rhs.characters[i].column)
-							{
-								return characters[i].column < rhs.characters[i].column;
-							}
-						}
-						else if(i < characters.size())
-						{
-							return false;
-						}
-						else if(i < rhs.characters.size())
-						{
-							return true;
-						}
-						else {
-							break;
-						}
-					}
-
-					if(packed_fg_colour != rhs.packed_fg_colour)
-					{
-						return packed_fg_colour < rhs.packed_fg_colour;
-					}
-
-					return packed_bg_colour < rhs.packed_bg_colour;
-				}
-			};
-
-			static const size_t HF_STRING_BITMAP_CACHE_SIZE = 256;
-			LRUCache<StringBitmapCacheKey, wxBitmap> hf_string_bitmap_cache;
-#endif
-			
 		public:
 			static std::list<wxString> wrap_text(const wxString &text, unsigned int cols);
 			static int wrap_text_height(const wxString &text, unsigned int cols);
@@ -866,19 +793,6 @@ namespace REHex {
 			bool get_cursor_visible();
 			BitOffset get_end_virt_offset() const;
 			bool is_selection_hidden() const;
-			
-			int hf_char_width();
-			int hf_char_height();
-			int hf_string_width(int length);
-			int hf_char_at_x(int x_px);
-
-#ifdef REHEX_CACHE_CHARACTER_BITMAPS
-			wxBitmap hf_char_bitmap(const wxString &wx_char, ucs4_t unicode_char, const wxSize &char_size, const wxColour &foreground_colour, const wxColour &background_colour);
-#endif
-
-#ifdef REHEX_CACHE_STRING_BITMAPS
-			wxBitmap hf_string_bitmap(const std::vector<AlignedCharacter> &characters, int base_col, const wxColour &foreground_colour, const wxColour &background_colour);
-#endif
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

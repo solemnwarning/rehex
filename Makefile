@@ -412,6 +412,7 @@ APP_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/FontCharacterCache.$(BUILD_TYPE).o \
 	src/GotoOffsetDialog.$(BUILD_TYPE).o \
 	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
@@ -527,6 +528,7 @@ TEST_OBJS := \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
+	src/FontCharacterCache.$(BUILD_TYPE).o \
 	src/GotoOffsetDialog.$(BUILD_TYPE).o \
 	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -469,7 +469,7 @@ TEST_F(DocumentCtrlTest, CursorUpWithinRegionAutoWidth)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->get_fcc().fixed_string_width(20), 256));
 	process_size_event();
 	
 	doc_ctrl->set_cursor_position(25);
@@ -591,7 +591,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidth)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->get_fcc().fixed_string_width(20), 256));
 	process_size_event();
 	
 	doc_ctrl->set_cursor_position(63);
@@ -618,7 +618,7 @@ TEST_F(DocumentCtrlTest, CursorUpToPrevRegionAutoWidthClampStartOfLine)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->get_fcc().fixed_string_width(20), 256));
 	process_size_event();
 	
 	doc_ctrl->set_cursor_position(70);
@@ -702,7 +702,7 @@ TEST_F(DocumentCtrlTest, CursorDownWithinRegionAutoWidth)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->get_fcc().fixed_string_width(20), 256));
 	process_size_event();
 	
 	doc_ctrl->set_cursor_position(15);
@@ -824,7 +824,7 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionAutoWidth)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->get_fcc().fixed_string_width(20), 256));
 	process_size_event();
 	
 	doc_ctrl->set_cursor_position(26);
@@ -851,7 +851,7 @@ TEST_F(DocumentCtrlTest, CursorDownToNextRegionAutoWidthClampEndOfLine)
 	doc_ctrl->set_show_ascii(false);
 	
 	/* Set the DocumentCtrl size to fit 10 bytes per line. */
-	doc_ctrl->SetClientSize(wxSize(doc_ctrl->hf_string_width(20), 256));
+	doc_ctrl->SetClientSize(wxSize(doc_ctrl->get_fcc().fixed_string_width(20), 256));
 	process_size_event();
 	
 	doc_ctrl->set_cursor_position(34);
@@ -1083,7 +1083,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpAllDataRegions)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1110,7 +1110,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpMixedRegions)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1136,7 +1136,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpNoDataRegions)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1162,7 +1162,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpLimitScroll)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1188,7 +1188,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpClampStartOfLine)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1214,7 +1214,7 @@ TEST_F(DocumentCtrlTest, CursorPageUpClampEndOfLine)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1240,7 +1240,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownAllDataRegions)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1267,7 +1267,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownMixedRegions)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1293,7 +1293,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownNoDataRegions)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1319,7 +1319,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownLimitScroll)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1345,7 +1345,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownClampStartOfLine)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	
@@ -1371,7 +1371,7 @@ TEST_F(DocumentCtrlTest, CursorPageDownClampEndOfLine)
 	doc_ctrl->set_bytes_per_line(10);
 	
 	/* Set the DocumentCtrl size to fit 5.5 lines on screen. */
-	int line_height = doc_ctrl->hf_char_height();
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
 	doc_ctrl->SetClientSize(1024, (line_height * 5) + (line_height / 2));
 	process_size_event();
 	

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -42,6 +42,8 @@ REHex::BitArrayRegion::BitArrayRegion(SharedDocumentPointer &doc, BitOffset offs
 
 int REHex::BitArrayRegion::calc_width(DocumentCtrl &doc_ctrl)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	int indent_width = doc_ctrl.indent_width(indent_depth);
 	
 	int offset_column_width = doc_ctrl.get_show_offsets()
@@ -84,7 +86,7 @@ int REHex::BitArrayRegion::calc_width(DocumentCtrl &doc_ctrl)
 	
 	return (2 * indent_width)
 		+ offset_column_width
-		+ doc_ctrl.hf_string_width(bytes_per_line_actual * 8);
+		+ fcc.fixed_string_width(bytes_per_line_actual * 8);
 }
 
 void REHex::BitArrayRegion::calc_height(DocumentCtrl &doc_ctrl)
@@ -94,23 +96,25 @@ void REHex::BitArrayRegion::calc_height(DocumentCtrl &doc_ctrl)
 
 void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	BitOffset data_base = d_offset;
 	BitOffset data_length = d_length;
 	BitOffset virt_base = virt_offset;
 	
 	draw_container(doc_ctrl, dc, x, y);
 	
-	int64_t skip_lines = (y < 0 ? (-y / doc_ctrl.hf_char_height()) : 0);
+	int64_t skip_lines = (y < 0 ? (-y / fcc.fixed_char_height()) : 0);
 	off_t skip_bytes  = skip_lines * bytes_per_line_actual;
 	
-	y += skip_lines * doc_ctrl.hf_char_height();
+	y += skip_lines * fcc.fixed_char_height();
 	
 	data_base   += BitOffset::BYTES(skip_bytes);
 	data_length -= BitOffset::BYTES(skip_bytes);
 	virt_base   += BitOffset::BYTES(skip_bytes);
 	
 	wxSize client_size = doc_ctrl.GetClientSize();
-	off_t max_data_in_client_area = bytes_per_line_actual * ((client_size.GetHeight() / doc_ctrl.hf_char_height()) + 1);
+	off_t max_data_in_client_area = bytes_per_line_actual * ((client_size.GetHeight() / fcc.fixed_char_height()) + 1);
 	
 	if(data_length.byte() > max_data_in_client_area)
 	{
@@ -193,12 +197,12 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 			
 			dc.DrawText(offset_str, (x + offset_text_x), y);
 			
-			int offset_vl_x = x + data_text_x - (doc_ctrl.hf_char_width() / 2);
+			int offset_vl_x = x + data_text_x - (fcc.fixed_char_width() / 2);
 			
 			wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
 			
 			dc.SetPen(norm_fg_1px);
-			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
+			dc.DrawLine(offset_vl_x, y, offset_vl_x, y + fcc.fixed_char_height());
 		}
 		
 		BitOffset line_len = std::min(data_remain, BitOffset(bytes_per_line_actual, 0));
@@ -223,7 +227,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 		data_remain -= line_len;
 		virt_cur    += line_len;
 		
-		y += doc_ctrl.hf_char_height();
+		y += fcc.fixed_char_height();
 		
 		alternate_row = !alternate_row;
 	}
@@ -231,6 +235,8 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 
 std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::BitArrayRegion::offset_near_or_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, bool exact)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	BitOffset mouse_line_base = d_offset + BitOffset((mouse_y_lines * bytes_per_line_actual), 0);
 	
 	unsigned int bits_per_group = doc_ctrl.get_bytes_per_group() * 2;
@@ -248,7 +254,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		}
 	}
 	
-	int mouse_x_chars = doc_ctrl.hf_char_at_x(mouse_x_px - bin_base_x);
+	int mouse_x_chars = fcc.fixed_char_at_x(mouse_x_px - bin_base_x);
 	
 	if(bits_per_group > 0)
 	{
@@ -468,16 +474,18 @@ REHex::DocumentCtrl::Rect REHex::BitArrayRegion::calc_offset_bounds(BitOffset of
 	assert(offset >= d_offset);
 	assert(offset <= (d_offset + d_length));
 	
+	const FontCharacterCache &fcc = doc_ctrl->get_fcc();
+	
 	BitOffset line_offset = calc_line_offset(offset);
 	BitOffset offset_within_line = offset - line_offset;
 	
-	int     bit_pos_x_px    = data_text_x + doc_ctrl->hf_string_width(offset_within_line.total_bits());
+	int     bit_pos_x_px    = data_text_x + fcc.fixed_string_width(offset_within_line.total_bits());
 	int64_t bit_pos_y_lines = y_offset + ((line_offset - d_offset).byte() / bytes_per_line_actual);
 	
 	return DocumentCtrl::Rect(
 			bit_pos_x_px,               /* x (pixels) */
 			bit_pos_y_lines,            /* y (lines) */
-			doc_ctrl->hf_char_width(),  /* w (pixels) */
+			fcc.fixed_char_width(),     /* w (pixels) */
 			1);                         /* h (lines) */
 }
 

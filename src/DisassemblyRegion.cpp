@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -104,6 +104,8 @@ void REHex::DisassemblyRegion::OnDataOverwrite(OffsetLengthEvent &event)
 
 int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	int indent_width = doc_ctrl.indent_width(indent_depth);
 	
 	int offset_column_width = doc_ctrl.get_show_offsets()
@@ -121,14 +123,14 @@ int REHex::DisassemblyRegion::calc_width(DocumentCtrl &doc_ctrl)
 	offset_text_x = indent_width;
 	hex_text_x    = offset_text_x + offset_column_width;
 	code_text_x   = hex_text_x
-		+ doc_ctrl.hf_string_width(
+		+ fcc.fixed_string_width(
 			(bytes_per_line * 2)
 			+ ((bytes_per_line - 1) / bytes_per_group)
 			+ 1);
 	ascii_text_x = code_text_x
-		+ doc_ctrl.hf_string_width(longest_disasm + 1);
+		+ fcc.fixed_string_width(longest_disasm + 1);
 	
-	return ascii_text_x + doc_ctrl.hf_string_width(ascii_column_chars) + indent_width;
+	return ascii_text_x + fcc.fixed_string_width(ascii_column_chars) + indent_width;
 }
 
 void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl)
@@ -146,6 +148,8 @@ void REHex::DisassemblyRegion::calc_height(DocumentCtrl &doc_ctrl)
 
 void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	if(arch == CS_ARCH_X86)
 	{
 		AsmSyntax new_preferred_asm_syntax = wxGetApp().settings->get_preferred_asm_syntax();
@@ -176,8 +180,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	draw_container(doc_ctrl, dc, x, y);
 	
-	int hf_char_height = doc_ctrl.hf_char_height();
-	int hf_char_width = doc_ctrl.hf_char_width();
+	int hf_char_height = fcc.fixed_char_height();
+	int hf_char_width = fcc.fixed_char_width();
 	
 	if(doc_ctrl.get_show_offsets())
 	{
@@ -521,6 +525,8 @@ unsigned int REHex::DisassemblyRegion::check()
 
 std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	int64_t processed_lines = this->processed_lines();
 	
 	if(mouse_y_lines < processed_lines)
@@ -540,7 +546,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		{
 			/* Mouse in ASCII area. */
 			
-			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+			unsigned int line_offset = fcc.fixed_char_at_x(mouse_x_px - ascii_text_x);
 			if(line_offset >= instr.second->length)
 			{
 				return std::make_pair(BitOffset::INVALID, SA_NONE);
@@ -552,7 +558,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		{
 			/* Mouse in code area. */
 			
-			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
+			unsigned int char_offset = fcc.fixed_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.second->disasm.length())
 			{
 				return std::make_pair(abs_inst_offset, SA_SPECIAL);
@@ -590,7 +596,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		{
 			/* Mouse in ASCII area. */
 			
-			unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+			unsigned int line_offset = fcc.fixed_char_at_x(mouse_x_px - ascii_text_x);
 			if(line_offset >= line_len)
 			{
 				return std::make_pair(BitOffset::INVALID, SA_NONE);
@@ -620,6 +626,8 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 
 std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::DisassemblyRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	int64_t processed_lines = this->processed_lines();
 	
 	if(mouse_y_lines < processed_lines)
@@ -645,7 +653,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 				return std::make_pair(d_offset + BitOffset(std::max<off_t>((instr_base - 1), 0), 0), SA_ASCII);
 			}
 			else{
-				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+				unsigned int line_offset = fcc.fixed_char_at_x(mouse_x_px - ascii_text_x);
 				
 				off_t real_offset = std::min(
 					(instr_base + line_offset),
@@ -663,7 +671,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 				return std::make_pair(BitOffset(std::max<off_t>((instr.second->offset - 1), 0), 0), SA_SPECIAL);
 			}
 			
-			unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px - code_text_x);
+			unsigned int char_offset = fcc.fixed_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.second->disasm.length())
 			{
 				return std::make_pair(d_offset + BitOffset(instr.second->offset, 0), SA_SPECIAL);
@@ -716,7 +724,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 				return std::make_pair(d_offset + BitOffset(std::max<off_t>((line_base - 1), 0), 0), SA_ASCII);
 			}
 			else{
-				unsigned int line_offset = doc_ctrl.hf_char_at_x(mouse_x_px - ascii_text_x);
+				unsigned int line_offset = fcc.fixed_char_at_x(mouse_x_px - ascii_text_x);
 				
 				off_t real_offset = std::min(
 					(line_base + line_offset),
@@ -1142,6 +1150,8 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset
 	assert(offset >= d_offset);
 	assert(offset <= (d_offset + d_length));
 	
+	const FontCharacterCache &fcc = doc_ctrl->get_fcc();
+	
 	off_t rel_offset = (offset - d_offset).byte();
 	
 	off_t up_off = unprocessed_offset_rel();
@@ -1167,13 +1177,13 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset
 		{
 			return DocumentCtrl::Rect(
 				/* Left X co-ordinate of hex byte. */
-				hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+				hex_text_x + fcc.fixed_string_width((line_off * 2) + (line_off / bytes_per_group)),
 				
 				/* Line number. */
 				(y_offset + instr.second->rel_y_offset),
 				
 				/* Width of hex byte. */
-				doc_ctrl->hf_string_width(2),
+				fcc.fixed_string_width(2),
 				
 				/* Height of instruction (in lines). */
 				1);
@@ -1188,7 +1198,7 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset
 				(y_offset + instr.second->rel_y_offset),
 				
 				/* Width of instruction disassembly. */
-				doc_ctrl->hf_string_width(instr.second->disasm.length()),
+				fcc.fixed_string_width(instr.second->disasm.length()),
 				
 				/* Height of instruction (in lines). */
 				1);
@@ -1198,13 +1208,13 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset
 			
 			return DocumentCtrl::Rect(
 				/* Left X co-ordinate of ASCII character. */
-				ascii_text_x + doc_ctrl->hf_string_width(line_off),
+				ascii_text_x + fcc.fixed_string_width(line_off),
 				
 				/* Line number. */
 				(y_offset + instr.second->rel_y_offset),
 				
 				/* Width of character. */
-				doc_ctrl->hf_char_width(),
+				fcc.fixed_char_width(),
 				
 				/* Height of instruction (in lines). */
 				1);
@@ -1225,13 +1235,13 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset
 		{
 			return DocumentCtrl::Rect(
 				/* Left X co-ordinate of ASCII character. */
-				ascii_text_x + doc_ctrl->hf_string_width(line_off),
+				ascii_text_x + fcc.fixed_string_width(line_off),
 				
 				/* Line number. */
 				(y_offset + processed_lines + up_line),
 				
 				/* Width of character. */
-				doc_ctrl->hf_char_width(),
+				fcc.fixed_char_width(),
 				
 				/* Height of instruction (in lines). */
 				1);
@@ -1239,13 +1249,13 @@ REHex::DocumentCtrl::Rect REHex::DisassemblyRegion::calc_offset_bounds(BitOffset
 		else{
 			return DocumentCtrl::Rect(
 				/* Left X co-ordinate of hex byte. */
-				hex_text_x + doc_ctrl->hf_string_width((line_off * 2) + (line_off / bytes_per_group)),
+				hex_text_x + fcc.fixed_string_width((line_off * 2) + (line_off / bytes_per_group)),
 				
 				/* Line number. */
 				(y_offset + processed_lines + up_line),
 				
 				/* Width of hex byte. */
-				doc_ctrl->hf_string_width(2),
+				fcc.fixed_string_width(2),
 				
 				/* Height (in lines). */
 				1);

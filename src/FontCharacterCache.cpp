@@ -325,7 +325,7 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 		mdc.SelectObject(wxNullBitmap);
 		
 		/* In addition to not working on macOS, creating a mask is expensive. */
-		#ifndef __APPLE__
+		#ifndef REHEX_BROKEN_BITMAP_TRANSPARENCY
 		string_bitmap.SetMask(new wxMask(string_bitmap, bg_colour));
 		#endif
 		

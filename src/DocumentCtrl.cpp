@@ -34,6 +34,7 @@
 #include <wx/dcbuffer.h>
 
 #include "App.hpp"
+#include "BatchedCharacterRenderer.hpp"
 #include "CharacterEncoder.hpp"
 #include "DataType.hpp"
 #include "document.hpp"
@@ -3643,89 +3644,15 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
-	FastRectangleFiller frf(dc);
+	// FastRectangleFiller frf(dc);
+	BatchedCharacterRenderer bcr(dc, fcc, hex_base_x, y);
 	
 	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->hex_view_active();
 	
 	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
-	auto normal_text_colour = [&dc,&alternate_row]()
-	{
-		dc.SetTextForeground((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
-		dc.SetBackgroundMode(wxTRANSPARENT);
-	};
-	
 	const wxPen *insert_cursor_pen = NULL;
 	wxPoint insert_cursor_pt1, insert_cursor_pt2;
-	
-	/* Calling wxDC::DrawText() for each individual character on the screen is
-	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
-	 * area on a per-line basis.
-	 *
-	 * The key of the deferred_drawtext map is the X co-ordinate to render the string
-	 * at (hex_base_x or ascii_base_x) and the foreground colour to use.
-	 *
-	 * The draw_char_deferred() function adds a character to be drawn to the map, while
-	 * prefixing it with any spaces necessary to pad it to the correct column from the
-	 * base X co-ordinate.
-	*/
-	
-	UnsortedMapVector<wxColour, std::string> deferred_drawtext;
-	
-	auto draw_char_deferred = [&](const wxColour &fg_colour, int col, char ch)
-	{
-		PROFILE_INNER_BLOCK("draw_char_deferred");
-		
-		std::string &str = deferred_drawtext[fg_colour];
-		
-		assert(str.length() <= (size_t)(col));
-		
-		str.append((col - str.length()), ' ');
-		str.append(1, ch);
-	};
-	
-	/* Because we need to minimise wxDC::DrawText() calls (see above), we draw any
-	 * background colours ourselves and set the background mode to transparent when
-	 * drawing text, which enables us to skip over characters that shouldn't be
-	 * touched by that particular wxDC::DrawText() call by inserting spaces.
-	*/
-	
-	auto fill_char_bg = [&](int char_x, const wxColour &bg_colour)
-	{
-		PROFILE_INNER_BLOCK("fill_char_bg");
-		
-		/* Abandoned dithering experiment. */
-		#if 0
-		wxBitmap bitmap(2, 2);
-		
-		{
-			wxMemoryDC imagememDC;
-			imagememDC.SelectObject(bitmap);
-			
-			wxBrush bg_brush((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
-			wxBrush fg_brush((*active_palette)[colour_idx]);
-			
-			imagememDC.SetBackground(bg_brush);
-			imagememDC.Clear();
-			
-			imagememDC.SetBrush(fg_brush);
-			imagememDC.SetPen(*wxTRANSPARENT_PEN);
-			
-			if(strong)
-			{
-				imagememDC.DrawRectangle(wxRect(0, 0, 2, 2));
-			}
-			else{
-				imagememDC.DrawRectangle(wxRect(0, 0, 1, 1));
-				imagememDC.DrawRectangle(wxRect(1, 1, 1, 1));
-			}
-		}
-		
-		wxBrush bg_brush(bitmap);
-		#endif
-		
-		frf.fill_rectangle(char_x, y, fcc.fixed_char_width(), fcc.fixed_char_height(), bg_colour);
-	};
 	
 	for(size_t c = pad_bytes, i = 0; i < data_len; ++c, ++i)
 	{
@@ -3749,16 +3676,14 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			
 			if(invert && doc_ctrl->get_cursor_visible())
 			{
-				fill_char_bg(hex_x, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
-				draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
+				bcr.draw_char(hex_x_char, nibble_to_hex[nibble], (*active_palette)[Palette::PAL_INVERT_TEXT_FG], (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			}
 			else if(highlight.enable)
 			{
-				fill_char_bg(hex_x, highlight.bg_colour);
-				draw_char_deferred(highlight.fg_colour, hex_x_char, nibble_to_hex[nibble]);
+				bcr.draw_char(hex_x_char, nibble_to_hex[nibble], highlight.fg_colour, highlight.bg_colour);
 			}
 			else{
-				draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], hex_x_char, nibble_to_hex[nibble]);
+				bcr.draw_char(hex_x_char, nibble_to_hex[nibble], (*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 			}
 			
 			hex_x = hex_base_x + fcc.fixed_string_width(++hex_x_char);
@@ -3840,19 +3765,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		}
 	}
 	
-	frf.flush();
-	
-	normal_text_colour();
-	
-	for(auto dd = deferred_drawtext.begin(); dd != deferred_drawtext.end(); ++dd)
-	{
-		PROFILE_INNER_BLOCK("drawing text");
-		
-		dc.SetTextForeground(dd->first);
-		dc.SetBackgroundMode(wxTRANSPARENT);
-		
-		dc.DrawText(dd->second, hex_base_x, y);
-	}
+	bcr.flush();
 	
 	if(insert_cursor_pen != NULL)
 	{
@@ -3877,7 +3790,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	wxPen selected_bg_1px((*active_palette)[Palette::PAL_SELECTED_TEXT_BG], 1);
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
-	FastRectangleFiller frf(dc);
+	BatchedCharacterRenderer bcr(dc, fcc, ascii_base_x, y);
 	
 	BitOffset cur_off = base_off;
 	
@@ -3898,161 +3811,9 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	size_t consume_chars = 0;
 	
-	/* Calling wxDC::DrawText() for each individual character on the screen is
-	 * painfully slow, so we batch up the wxDC::DrawText() calls for each colour and
-	 * area on a per-line basis.
-	 *
-	 * The key of the deferred_drawtext maps is the X co-ordinate to render the string
-	 * at (hex_base_x or ascii_base_x plus an optional offset) and the foreground colour to
-	 * use.
-	 *
-	 * The value of the deferred_drawtext_fast map is the string to be drawn and the number
-	 * of fixed-width CHARACTERS that have been added so far.
-	 *
-	 * Characters that aren't exactly one character wide (e.g. wide characters) are rendered
-	 * via the deferred_drawtext_slow mechanism instead - they are rendered alone using
-	 * individual DrawText() calls, with platform-dependant caching to reduce the overhead.
-	*/
-
-	struct DeferredDrawTextFastValue
-	{
-		wxString string;
-		int num_chars;
-	};
-	
-	struct DeferredDrawTextSlowKey
-	{
-		int base_col;
-		wxColour fg_colour;
-		wxColour bg_colour;
-		
-		DeferredDrawTextSlowKey(int base_col, const wxColour &fg_colour, const wxColour &bg_colour):
-			base_col(base_col),
-			fg_colour(fg_colour),
-			bg_colour(bg_colour) {}
-		
-		bool operator==(const DeferredDrawTextSlowKey &rhs) const
-		{
-			return base_col == rhs.base_col
-				&& fg_colour == rhs.fg_colour
-				&& bg_colour == rhs.bg_colour;
-		}
-	};
-
-	struct DeferredDrawTextSlowValue
-	{
-		#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-		std::vector<ucs4_t> chars;
-		
-		#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
-		std::vector< std::pair<ucs4_t, wxSize> > chars;
-		
-		#else
-		std::vector<wxString> chars;
-		
-		#endif
-	};
-	
-	UnsortedMapVector<wxColour, DeferredDrawTextFastValue> deferred_drawtext_fast;
-	UnsortedMapVector<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue> deferred_drawtext_slow;
-	
-	#ifdef __APPLE__
-	const DeferredDrawTextSlowKey *deferred_drawtext_slow_last_key = NULL;
-	#endif
-	
 	auto draw_char_deferred = [&](const wxColour &fg_colour, int col, const void *data, size_t data_len, wxColour bg_colour)
 	{
 		PROFILE_INNER_BLOCK("draw_char_deferred");
-		
-		auto defer_monospace_char = [&](const wxString &c)
-		{
-			PROFILE_INNER_BLOCK("defer_monospace_char");
-			
-			#ifdef __APPLE__
-			deferred_drawtext_slow_last_key = NULL;
-			#endif
-			
-			DeferredDrawTextFastValue &v = deferred_drawtext_fast[fg_colour];
-
-			assert(v.num_chars <= col);
-
-			/* Add padding to skip to requested column. */
-			v.string.append((col - v.num_chars), ' ');
-			v.num_chars += col - v.num_chars;
-
-			v.string.append(c);
-			++v.num_chars;
-		};
-
-		auto defer_variable_pitch_char = [&](const wxString &wx_char, ucs4_t unicode_char, wxSize char_size)
-		{
-			PROFILE_INNER_BLOCK("defer_variable_pitch_char");
-			
-			DeferredDrawTextSlowKey k(0, fg_colour, bg_colour);
-			#ifdef __APPLE__
-			/* Okay... wxBitmap masks/transparency don't work on macOS, so if we draw multiple
-			 * contiguous lines interleaved, relying on spaces in the string not being drawn
-			 * what we instead get is the background colour of the most recently drawn line
-			 * overwriting any behind it.
-			 *
-			 * So, on macOS we instead break up deferred_drawtext_slow into chunks of
-			 * contiguous characters, starting a new chunk after changing bg/fg colour or
-			 * drawing characters using the fast path.
-			 *
-			 * Wheeee.
-			*/
-			if(deferred_drawtext_slow_last_key != NULL
-				&& deferred_drawtext_slow_last_key->fg_colour == fg_colour
-				&& deferred_drawtext_slow_last_key->bg_colour == bg_colour)
-			{
-				k.base_col = deferred_drawtext_slow_last_key->base_col;
-			}
-			else{
-				k.base_col = col;
-			}
-			
-			bool inserted;
-			UnsortedMapVector<DeferredDrawTextSlowKey, DeferredDrawTextSlowValue>::iterator ki;
-			std::tie(ki, inserted) = deferred_drawtext_slow.insert(std::make_pair(k, DeferredDrawTextSlowValue()));
-			
-			deferred_drawtext_slow_last_key = &(ki->first);
-			DeferredDrawTextSlowValue &v = ki->second;
-			#else
-			DeferredDrawTextSlowValue &v = deferred_drawtext_slow[k];
-			#endif
-			
-			assert(k.base_col <= col);
-			int rel_col = col - k.base_col;
-			
-			if(v.chars.size() < (rel_col + 1))
-			{
-				#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-				v.chars.resize((rel_col + 1), ' ');
-				
-				#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
-				v.chars.resize((rel_col + 1), std::make_pair(' ', wxDefaultSize));
-				
-				#else
-				v.chars.resize((rel_col + 1), wxEmptyString);
-				
-				#endif
-			}
-			
-			#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-			assert(v.chars[rel_col] == ' ');
-			v.chars[rel_col] = unicode_char;
-			
-			#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
-			assert(v.chars[rel_col].first == ' ');
-			v.chars[rel_col].first = unicode_char;
-			v.chars[rel_col].second = char_size;
-			
-			#else
-			assert(v.chars[rel_col] == wxEmptyString);
-			v.chars[rel_col] = wx_char;
-			
-			#endif
-		};
 		
 		wxRect char_bbox(
 			(ascii_base_x + fcc.fixed_string_width(col)), y,
@@ -4105,39 +3866,36 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 					|| uc_is_property_ignorable_control(c)
 					|| uc_is_property_unassigned_code_value(c)
 					|| uc_is_property_not_a_character(c);
-
+				
 				wxSize decoded_char_size;
-
-				if (!skip && c >= 0x7F /* Assume anything in ASCII is really a fixed-width character in the fixed-width font */)
-				{
-					decoded_char_size = fcc.char_size(c);
-
-					if (decoded_char_size.GetWidth() == 0 || decoded_char_size.GetHeight() == 0 /* Character doesn't occupy any space. */
-						|| decoded_char_size.GetWidth() > fcc.fixed_string_width(ec.encoded_char().size())) /* Character won't fit into available screen space. */
-					{
-						skip = true;
-					}
-
-					char_bbox.width = fcc.fixed_string_width(ec.encoded_char().size());
-					char_bbox.height = decoded_char_size.GetHeight();
-				}
-
+				
 				if (!skip)
 				{
-					if (c > 0x7F)
+					if(c >= 0x7F /* Assume anything in ASCII is really a fixed-width character in the fixed-width font */)
 					{
-						/* If the character isn't in ASCII, fall back to drawing it
-						 * by itself rather than part of a line - we can't trust
-						 * the font not to lie about its width and render the whole
-						 * line wonkily if we start putting any "weird" characters
-						 * in it and I don't know of a better heuristic.
-						*/
-
-						defer_variable_pitch_char(wx_char, c, decoded_char_size);
+						decoded_char_size = fcc.char_size(c);
+						
+						if (decoded_char_size.GetWidth() == 0 || decoded_char_size.GetHeight() == 0 /* Character doesn't occupy any space. */
+							|| decoded_char_size.GetWidth() > fcc.fixed_string_width(ec.encoded_char().size())) /* Character won't fit into available screen space. */
+						{
+							skip = true;
+						}
+						
+						decoded_char_size = wxSize(
+							fcc.fixed_string_width(ec.encoded_char().size()),
+							fcc.fixed_char_height());
+						
+						char_bbox.width = fcc.fixed_string_width(ec.encoded_char().size());
+						char_bbox.height = decoded_char_size.GetHeight();
 					}
-					else {
-						defer_monospace_char(wx_char);
+					else{
+						decoded_char_size = fcc.fixed_char_size();
 					}
+				}
+				
+				if (!skip)
+				{
+					bcr.draw_char(ascii_x_char, c, decoded_char_size, fg_colour, bg_colour);
 				}
 				else {
 					/* Doesn't match the width of "normal" characters in the font.
@@ -4147,16 +3905,16 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 					 * form by the Unicode Consortium, either way, its gonna mess up
 					 * our text alignment if we try drawing it.
 					*/
-
-					defer_monospace_char(".");
+					
+					bcr.draw_char(ascii_x_char, '.', fg_colour, bg_colour);
 				}
 			}
 			else {
 				/* wxWidgets can't decode the (valid) character for some reason.
 				 * Yes, this actually happens for some of them.
 				*/
-
-				defer_monospace_char(".");
+				
+				bcr.draw_char(ascii_x_char, '.', fg_colour, bg_colour);
 			}
 			
 			consume_chars = ec.encoded_char().size() - 1;
@@ -4166,21 +3924,10 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			 * TODO: Highlight this in the interface?
 			*/
 			
-			defer_monospace_char(".");
+			bcr.draw_char(ascii_x_char, '.', fg_colour, bg_colour);
 		}
 		
 		return char_bbox;
-	};
-	
-	/* Because we need to minimise wxDC::DrawText() calls (see above), we draw any
-	 * background colours ourselves and set the background mode to transparent when
-	 * drawing text, which enables us to skip over characters that shouldn't be
-	 * touched by that particular wxDC::DrawText() call by inserting spaces.
-	*/
-	
-	auto fill_char_bg = [&](wxRect char_bbox, const wxColour &bg_colour)
-	{
-		frf.fill_rectangle(char_bbox, bg_colour);
 	};
 	
 	for(size_t i = 0; i < data_len; ++i)
@@ -4196,12 +3943,10 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->get_cursor_visible())
 			{
 				char_bbox = draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
-				fill_char_bg(char_bbox, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			}
 			else if(highlight.enable)
 			{
 				char_bbox = draw_char_deferred(highlight.fg_colour, ascii_x_char, c_data, c_data_len, highlight.bg_colour);
-				fill_char_bg(char_bbox, highlight.bg_colour);
 			}
 			else{
 				char_bbox = draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
@@ -4211,7 +3956,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			if(highlight.enable)
 			{
 				char_bbox = draw_char_deferred(highlight.fg_colour, ascii_x_char, c_data, c_data_len, highlight.bg_colour);
-				fill_char_bg(char_bbox, highlight.bg_colour);
 			}
 			else{
 				char_bbox = draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
@@ -4262,88 +4006,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		}
 	}
 	
-	frf.flush();
-	
-	normal_text_colour();
-
-	/* Fast text rendering path - render fixed-width characters using a single wxDC.DrawText()
-	 * call per foreground colour, leaving gaps for characters drawn in other passes using
-	 * space characters.
-	*/
-	
-	for(auto dd = deferred_drawtext_fast.begin(); dd != deferred_drawtext_fast.end(); ++dd)
-	{
-		PROFILE_INNER_BLOCK("drawing text (fast path)");
-		
-		const wxColour &fg_colour = dd->first;
-
-		dc.SetTextForeground(fg_colour);
-		dc.SetBackgroundMode(wxTRANSPARENT);
-
-		dc.DrawText(dd->second.string, ascii_base_x, y);
-	}
-
-	/* Slow text rendering path - render variable-width characters using a single
-	 * wxDC.DrawText() call for each character so we can align them to the grid of normal
-	 * characters in the font.
-	 *
-	 * There are two (optional) optimisations here:
-	 *
-	 * REHEX_CACHE_CHARACTER_BITMAPS
-	 *
-	 *   Renders the characters into a secondary wxBitmap and caches it so future draws of the
-	 *   same character are just a bitmap blit rather than rendering text every time.
-	 *
-	 *   This offers a significant performance boost on Windows, macOS and Linux and is enabled
-	 *   on all platforms.
-	 *
-	 * REHEX_CACHE_STRING_BITMAPS
-	 *
-	 *   In addition to REHEX_CACHE_CHARACTER_BITMAPS, the individual character bitmaps in each
-	 *   deferred_drawtext_slow are copied into another secondary bitmap, which is again cached
-	 *   and blitted to the DC as a whole line in the future.
-	 *
-	 *   This adds another significant speed boost on Windows and macOS, where it is enabled.
-	 *   There is no significant improvement on Linux, so it isn't enabled there.
-	*/
-	
-	for(auto dd = deferred_drawtext_slow.begin(); dd != deferred_drawtext_slow.end(); ++dd)
-	{
-		PROFILE_INNER_BLOCK("drawing text (slow path)");
-		
-		wxColour fg_colour = dd->first.fg_colour;
-		wxColour bg_colour = dd->first.bg_colour;
-
-		dc.SetTextForeground(fg_colour);
-		dc.SetBackgroundMode(wxTRANSPARENT);
-
-#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-		wxBitmap string_bitmap = fcc.string_bitmap(dd->second.chars, fg_colour, bg_colour);
-		int string_x = ascii_base_x + fcc.fixed_string_width(dd->first.base_col);
-		
-		dc.DrawBitmap(string_bitmap, string_x, y, true);
-#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
-		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
-		{
-			if(c->first != ' ')
-			{
-				wxBitmap char_bitmap = fcc.char_bitmap(c->first, c->second, fg_colour, bg_colour);
-				int char_x = ascii_base_x + fcc.fixed_string_width(c - dd->second.chars.begin());
-				
-				dc.DrawBitmap(char_bitmap, char_x, y);
-			}
-		}
-#else
-		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
-		{
-			if(*c != wxEmptyString)
-			{
-				int char_x = ascii_base_x + fcc.fixed_string_width(c - dd->second.chars.begin());
-				dc.DrawText(*c, char_x, y);
-			}
-		}
-#endif
-	}
+	bcr.flush();
 	
 	if(insert_cursor_pen != NULL)
 	{

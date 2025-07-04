@@ -302,6 +302,10 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	const std::vector<Instruction> *instr_vec = &(instr_first.first);
 	std::vector<Instruction>::const_iterator instr = instr_first.second;
 	
+	bool has_focus = doc_ctrl.HasFocus();
+	bool hex_active = has_focus && doc_ctrl.hex_view_active();
+	bool ascii_active = has_focus && doc_ctrl.ascii_view_active();
+	
 	bool is_last_data_region = (doc_ctrl.get_data_regions().back() == this);
 	
 	while(instr != instr_vec->end() && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
@@ -323,11 +327,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			dc.DrawText(offset_str, x + offset_text_x, y);
 		}
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, abs_inst_offset, alternate, hex_highlight_func, is_last_line);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr->data.data(), instr->length, 0, abs_inst_offset, alternate, hex_active, hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, 0, abs_inst_offset, alternate, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr->data.data(), instr->length, 0, 0, 0, abs_inst_offset, alternate, ascii_active, ascii_highlight_func, is_last_line);
 		}
 		
 		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr->length)) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
@@ -403,11 +407,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		const unsigned char *ldp = data_err ? NULL : line_data.data();
 		size_t ldl = data_err ? line_len : line_data.size();
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, abs_up_off, alternate, hex_highlight_func, is_last_line);
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, ldp, ldl, 0, abs_up_off, alternate, hex_active, hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, 0, abs_up_off, alternate, ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, ldp, ldl, 0, 0, 0, abs_up_off, alternate, ascii_active, ascii_highlight_func, is_last_line);
 		}
 		
 		set_text_attribs(false, false);

@@ -3566,6 +3566,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	int64_t cur_line = y_offset + skip_lines;
 	
+	bool has_focus = doc.HasFocus();
 	bool is_last_data_region = (doc.get_data_regions().back() == this);
 	
 	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final))
@@ -3596,7 +3597,8 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		
 		bool is_last_line = is_last_data_region && (cur_line + 1) == (y_offset + y_lines - indent_final);
 		
-		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, hex_highlight_func, is_last_line);
+		bool hex_active = has_focus && doc.hex_view_active();
+		draw_hex_line(&doc, dc, x + hex_text_x, y, line_data, line_data_len, line_pad_bytes, cur_off, alternate_row, hex_active, hex_highlight_func, is_last_line);
 		
 		if(doc.show_ascii)
 		{
@@ -3611,7 +3613,8 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				? (cur_off - start_char_off).byte()
 				: 0;
 			
-			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_highlight_func, is_last_line);
+			bool ascii_active = has_focus && doc.ascii_view_active();
+			draw_ascii_line(&doc, dc, x + ascii_text_x, y, (start_char_off >= 0 ? line_data + trailing_bytes : NULL), line_data_len - trailing_bytes, line_data_extra_pre, line_data_extra_post, line_pad_bytes + trailing_bytes, cur_off + (off_t)(trailing_bytes), alternate_row, ascii_active, ascii_highlight_func, is_last_line);
 		}
 		
 		cur_off += line_data_len;
@@ -3626,7 +3629,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool view_active, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_hex_line");
 	
@@ -3646,8 +3649,6 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	
 	// FastRectangleFiller frf(dc);
 	BatchedCharacterRenderer bcr(dc, fcc, hex_base_x, y);
-	
-	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->hex_view_active();
 	
 	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
@@ -3690,7 +3691,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		};
 		
 		bool inv_high = false, inv_low = false;
-		if(hex_active)
+		if(view_active)
 		{
 			if(cursor_pos == (cur_off + BitOffset(0, 4)))
 			{
@@ -3715,7 +3716,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		draw_nibble(high_nibble, inv_high, highlight_high);
 		draw_nibble(low_nibble,  inv_low,  highlight_low);
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->get_cursor_visible() && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !hex_active))
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->get_cursor_visible() && doc_ctrl->cursor_state == Document::CSTATE_HEX) || !view_active))
 		{
 			/* Draw insert cursor. */
 			insert_cursor_pen = &norm_fg_1px;
@@ -3723,7 +3724,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			insert_cursor_pt2 = wxPoint(pd_hx, y + fcc.fixed_char_height());
 		}
 		
-		if((cur_off == cursor_pos || (cur_off + BitOffset(0, 4)) == cursor_pos) && !doc_ctrl->insert_mode && !hex_active)
+		if((cur_off == cursor_pos || (cur_off + BitOffset(0, 4)) == cursor_pos) && !doc_ctrl->insert_mode && !view_active)
 		{
 			/* Draw inactive overwrite cursor. */
 			dc.SetBrush(*wxTRANSPARENT_BRUSH);
@@ -3745,9 +3746,9 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	{
 		/* Draw cursor at the end of the file (i.e. after the last byte). */
 		
-		if((doc_ctrl->get_cursor_visible() && doc_ctrl->hex_view_active()) || !hex_active)
+		if((doc_ctrl->get_cursor_visible() && doc_ctrl->hex_view_active()) || !view_active)
 		{
-			if(doc_ctrl->insert_mode || !hex_active)
+			if(doc_ctrl->insert_mode || !view_active)
 			{
 				insert_cursor_pen = &norm_fg_1px;
 				insert_cursor_pt1 = wxPoint(hex_x, y);
@@ -3774,7 +3775,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool view_active, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_ascii_line");
 	
@@ -3793,8 +3794,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	BatchedCharacterRenderer bcr(dc, fcc, ascii_base_x, y);
 	
 	BitOffset cur_off = base_off;
-	
-	bool ascii_active = doc_ctrl->HasFocus() && doc_ctrl->ascii_view_active();
 	
 	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
@@ -3938,7 +3937,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		auto highlight = highlight_at_off(cur_off);
 		
 		wxRect char_bbox;
-		if(ascii_active)
+		if(view_active)
 		{
 			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && doc_ctrl->get_cursor_visible())
 			{
@@ -3970,7 +3969,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			}
 		}
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || !ascii_active))
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || !view_active))
 		{
 			insert_cursor_pen = &norm_fg_1px;
 			insert_cursor_pt1 = wxPoint(ascii_x, y);
@@ -3986,9 +3985,9 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	{
 		/* Draw cursor at the end of the file (i.e. after the last byte). */
 		
-		if((doc_ctrl->get_cursor_visible() && doc_ctrl->ascii_view_active()) || !ascii_active)
+		if((doc_ctrl->get_cursor_visible() && doc_ctrl->ascii_view_active()) || !view_active)
 		{
-			if(doc_ctrl->insert_mode || !ascii_active)
+			if(doc_ctrl->insert_mode || !view_active)
 			{
 				insert_cursor_pen = &norm_fg_1px;
 				insert_cursor_pt1 = wxPoint(ascii_x, y);
@@ -4015,7 +4014,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	}
 }
 
-void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
+void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool view_active, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line)
 {
 	PROFILE_BLOCK("REHex::DocumentCtrl:Region::draw_bin_line");
 	
@@ -4035,8 +4034,6 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	dc.SetBrush(*wxTRANSPARENT_BRUSH);
 	
 	FastRectangleFiller frf(dc);
-	
-	bool hex_active = doc_ctrl->HasFocus() && doc_ctrl->special_view_active();
 	
 	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
@@ -4103,7 +4100,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		*/
 		const int pd_hx = hex_x;
 		
-		bool invert = (cur_off == cursor_pos && hex_active)
+		bool invert = (cur_off == cursor_pos && view_active)
 			? !doc_ctrl->insert_mode || !cur_off.byte_aligned()
 			: false;
 		
@@ -4144,7 +4141,7 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			insert_cursor_pt2 = wxPoint(pd_hx, y + fcc.fixed_char_height());
 		}
 		
-		if(cur_off == cursor_pos && !doc_ctrl->insert_mode && !hex_active)
+		if(cur_off == cursor_pos && !doc_ctrl->insert_mode && !view_active)
 		{
 			/* Draw inactive overwrite cursor. */
 			dc.SetBrush(*wxTRANSPARENT_BRUSH);
@@ -4161,9 +4158,9 @@ void REHex::DocumentCtrl::Region::draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc
 	{
 		/* Draw cursor at the end of the file (i.e. after the last byte). */
 		
-		if((doc_ctrl->get_cursor_visible() && doc_ctrl->hex_view_active()) || !hex_active)
+		if((doc_ctrl->get_cursor_visible() && doc_ctrl->special_view_active()) || !view_active)
 		{
-			if(doc_ctrl->insert_mode || !hex_active)
+			if(doc_ctrl->insert_mode || !view_active)
 			{
 				insert_cursor_pen = &norm_fg_1px;
 				insert_cursor_pt1 = wxPoint(hex_x, y);

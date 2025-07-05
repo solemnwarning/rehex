@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -16,6 +16,8 @@
 */
 
 #include "BufferTest.h"
+
+#include "testutil.hpp"
 
 TEST(Buffer, DefaultConstructor)
 {
@@ -41,9 +43,9 @@ TEST(Buffer, LoadConstructorNonEmptyFile)
 		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C,
 	};
 	
-	write_file(TMPFILE, file_data);
+	TempFile tmpfile(file_data.data(), file_data.size());
 	
-	REHex::Buffer b(TMPFILE, 8);
+	REHex::Buffer b(tmpfile.tmpfile, 8);
 	
 	ASSERT_EQ(b.blocks.size(), 3U) << "Constructor creates correct number of blocks";
 	
@@ -67,10 +69,9 @@ TEST(Buffer, LoadConstructorNonEmptyFile)
 
 TEST(Buffer, LoadConstructorEmptyFile)
 {
-	const std::vector<unsigned char> file_data;
-	write_file(TMPFILE, file_data);
+	TempFile tmpfile(NULL, 0);
 	
-	REHex::Buffer b(TMPFILE, 8);
+	REHex::Buffer b(tmpfile.tmpfile, 8);
 	
 	ASSERT_EQ(b.blocks.size(), 1U) << "Constructor creates correct number of blocks";
 	
@@ -90,9 +91,9 @@ TEST(Buffer, LoadConstructorEmptyFile)
 		0x1B, 0x84, 0x09, 0x76, 0x8D, 0xAC, 0xFC, 0xF8, \
 		0x8B, 0xC8, 0x97, 0x84, 0xC4, 0x26, 0x2C, \
 	}; \
-	write_file(TMPFILE, file_data); \
+	TempFile tmpfile(file_data.data(), file_data.size()); \
 	\
-	REHex::Buffer b(TMPFILE, 8);
+	REHex::Buffer b(tmpfile.tmpfile, 8);
 
 #define READ_DATA_UNLOADED(block_i) \
 { \

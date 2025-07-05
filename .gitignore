@@ -108,7 +108,6 @@
 /src/lua-plugin-preload.c
 /src/lua-plugin-preload.h
 
-/tests/.tmpfile*
 /tests/all-tests
 /tests/all-tests.exe
 /tests/document.t

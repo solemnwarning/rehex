@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,69 +33,68 @@
 #define UNIT_TEST
 #include "../src/buffer.hpp"
 
-#define TMPFILE  "tests/.tmpfile"
-#define TMPFILE2 "tests/.tmpfile2"
-
 #define TEST_BUFFER_MANIP(buffer_manip_code) \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
 	std::vector<unsigned char> got_data = b.read_data(0, 1024); \
 	EXPECT_EQ(got_data, END_DATA) << "Buffer::read_data() returns correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
 	b.write_inplace(); \
-	std::vector<unsigned char> got_data = read_file(TMPFILE); \
+	std::vector<unsigned char> got_data = read_file(tmpfile.tmpfile); \
 	EXPECT_EQ(got_data, END_DATA) << "write_inplace() produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
-	b.write_copy(TMPFILE2); \
-	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
+	TempFilename tmpfile2; \
+	b.write_copy(tmpfile2.tmpfile); \
+	std::vector<unsigned char> got_data = read_file(tmpfile2.tmpfile); \
 	EXPECT_EQ(got_data, END_DATA) << "write_copy() produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
-	b.write_inplace(TMPFILE); \
-	std::vector<unsigned char> got_data = read_file(TMPFILE); \
+	b.write_inplace(tmpfile.tmpfile); \
+	std::vector<unsigned char> got_data = read_file(tmpfile.tmpfile); \
 	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<same file>) produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
-	if(unlink(TMPFILE2) != 0 && errno != ENOENT) { throw std::runtime_error("Unable to unlink temporary file"); } \
-	b.write_inplace(TMPFILE2); \
-	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
+	TempFilename tmpfile2; \
+	if(unlink(tmpfile2.tmpfile) != 0 && errno != ENOENT) { throw std::runtime_error("Unable to unlink temporary file"); } \
+	b.write_inplace(tmpfile2.tmpfile); \
+	std::vector<unsigned char> got_data = read_file(tmpfile2.tmpfile); \
 	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<new file>) produces file with correct data"; \
 } \
 if(END_DATA.size() > 0) \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
 	std::vector<unsigned char> tf2data((END_DATA.size() - 1), 0xFF); \
-	write_file(TMPFILE2, tf2data); \
-	b.write_inplace(TMPFILE2); \
-	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
+	TempFile tmpfile2(tf2data.data(), tf2data.size()); \
+	b.write_inplace(tmpfile2.tmpfile); \
+	std::vector<unsigned char> got_data = read_file(tmpfile2.tmpfile); \
 	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<smaller file>) produces file with correct data"; \
 } \
 { \
-	write_file(TMPFILE, BEGIN_DATA); \
-	REHex::Buffer b(TMPFILE, 8); \
+	TempFile tmpfile(BEGIN_DATA.data(), BEGIN_DATA.size()); \
+	REHex::Buffer b(tmpfile.tmpfile, 8); \
 	buffer_manip_code; \
 	std::vector<unsigned char> tf2data((END_DATA.size() + 1), 0xFF); \
-	write_file(TMPFILE2, tf2data); \
-	b.write_inplace(TMPFILE2); \
-	std::vector<unsigned char> got_data = read_file(TMPFILE2); \
+	TempFile tmpfile2(tf2data.data(), tf2data.size()); \
+	b.write_inplace(tmpfile2.tmpfile); \
+	std::vector<unsigned char> got_data = read_file(tmpfile2.tmpfile); \
 	EXPECT_EQ(got_data, END_DATA) << "write_inplace(<larger file>) produces file with correct data"; \
 }
 

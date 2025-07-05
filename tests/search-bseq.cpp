@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,21 +29,19 @@
 #include "../src/search.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 
-#define TMPFILE  "tests/.tmpfile"
-
 TEST(Search, ByteSequence)
 {
-	FILE *tmp = fopen(TMPFILE, "wb");
-	always_assert(tmp != NULL);
-	for(int c = 0; c < 128; ++c) { fputc(c, tmp); }
-	for(int c = 0; c < 256; ++c) { fputc(c, tmp); }
-	fclose(tmp);
+	std::vector<unsigned char> file_data;
+	for(int c = 0; c < 128; ++c) { file_data.push_back(c); }
+	for(int c = 0; c < 256; ++c) { file_data.push_back(c); }
+	
+	TempFile file(file_data.data(), file_data.size());
 	
 	/* Basic tests */
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x00, 0x01, 0x02 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -53,7 +51,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x20, 0x21, 0x22, 0x23 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
@@ -63,7 +61,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x20, 0x21, 0x22, 0x23 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
@@ -73,7 +71,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xFE, 0xFF };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
@@ -83,7 +81,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		std::vector<unsigned char> search_data;
 		
@@ -97,7 +95,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xAA, 0xAB };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
@@ -107,7 +105,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xAA, 0xAB };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
@@ -117,7 +115,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xAA, 0xAB };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
@@ -129,7 +127,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -141,7 +139,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -153,7 +151,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -165,7 +163,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -177,7 +175,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -189,7 +187,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -203,7 +201,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x03, 0x04, 0x05 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -215,7 +213,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x03, 0x04, 0x05 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -227,7 +225,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -239,7 +237,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -251,7 +249,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -263,7 +261,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -277,7 +275,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x03, 0x04 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
@@ -287,7 +285,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
@@ -297,7 +295,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06, 0x07 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
@@ -307,7 +305,7 @@ TEST(Search, ByteSequence)
 	
 	{
 		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(TMPFILE));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x06, 0x07, 0x08, 0x09 };
 		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));

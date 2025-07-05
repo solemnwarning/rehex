@@ -59,7 +59,7 @@ cmake_language(DEFER CALL add_compile_options "/WX-") # make sure the flag is ad
 # -msse4.2 for everything which normally cl can use. (Otherwise strict sse2 only.)
 # -maes -mpclmul mbedtls
 
-set(arch_flags "-march=pentium-mmx")
+set(arch_flags "-march=pentium4")
 
 if(VCPKG_TARGET_ARCHITECTURE STREQUAL x86)
   string(APPEND arch_flags " -m32 --target=i686-pc-windows-msvc")

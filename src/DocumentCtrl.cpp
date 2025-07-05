@@ -3797,12 +3797,6 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 	
 	BitOffset cursor_pos = doc_ctrl->get_cursor_position();
 	
-	auto normal_text_colour = [&dc,&alternate_row]()
-	{
-		dc.SetTextForeground((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG ]);
-		dc.SetBackgroundMode(wxTRANSPARENT);
-	};
-	
 	const wxPen *insert_cursor_pen = NULL;
 	wxPoint insert_cursor_pt1, insert_cursor_pt2;
 	

@@ -364,6 +364,9 @@
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\FontCharacterCache.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\HierarchicalByteAccumulator.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -470,6 +473,9 @@
       <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\CustomNumericType.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\BatchedCharacterRenderer.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

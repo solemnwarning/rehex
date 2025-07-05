@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -69,6 +69,8 @@ REHex::FixedSizeValueRegion::FixedSizeValueRegion(SharedDocumentPointer &doc, Bi
 
 int REHex::FixedSizeValueRegion::calc_width(DocumentCtrl &doc_ctrl)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	int indent_width = doc_ctrl.indent_width(indent_depth);
 	
 	int offset_column_width = doc_ctrl.get_show_offsets()
@@ -80,7 +82,7 @@ int REHex::FixedSizeValueRegion::calc_width(DocumentCtrl &doc_ctrl)
 	
 	return (2 * indent_width)
 		+ offset_column_width
-		+ doc_ctrl.hf_string_width(TYPE_X_CHAR + TYPE_MAX_LEN + 2 /* <> characters */);
+		+ fcc.fixed_string_width(TYPE_X_CHAR + TYPE_MAX_LEN + 2 /* <> characters */);
 }
 
 void REHex::FixedSizeValueRegion::calc_height(DocumentCtrl &doc_ctrl)
@@ -90,6 +92,8 @@ void REHex::FixedSizeValueRegion::calc_height(DocumentCtrl &doc_ctrl)
 
 void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	BitOffset cursor_pos = doc_ctrl.get_cursor_position();
 	
 	if(input_active && (cursor_pos < d_offset || cursor_pos >= (d_offset + d_length)))
@@ -137,12 +141,12 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 		
 		x += (data_text_x - offset_text_x);
 		
-		int offset_vl_x = x - (doc_ctrl.hf_char_width() / 2);
+		int offset_vl_x = x - (fcc.fixed_char_width() / 2);
 		
 		wxPen norm_fg_1px((*active_palette)[Palette::PAL_NORMAL_TEXT_FG], 1);
 		
 		dc.SetPen(norm_fg_1px);
-		dc.DrawLine(offset_vl_x, y, offset_vl_x, y + doc_ctrl.hf_char_height());
+		dc.DrawLine(offset_vl_x, y, offset_vl_x, y + fcc.fixed_char_height());
 	}
 	
 	auto get_string_to_draw = [&]()
@@ -174,8 +178,8 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 		
 		if(doc_ctrl.get_cursor_visible())
 		{
-			int cursor_x = x + doc_ctrl.hf_string_width(1 + input_pos);
-			dc.DrawLine(cursor_x, y, cursor_x, y + doc_ctrl.hf_char_height());
+			int cursor_x = x + fcc.fixed_string_width(1 + input_pos);
+			dc.DrawLine(cursor_x, y, cursor_x, y + fcc.fixed_char_height());
 		}
 	}
 	else if(partially_selected(&doc_ctrl) && d_length.byte_aligned())
@@ -227,7 +231,7 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 				normal_text();
 			}
 			
-			dc.DrawText(hex_str, x + doc_ctrl.hf_string_width(col), y);
+			dc.DrawText(hex_str, x + fcc.fixed_string_width(col), y);
 			col += 2;
 		}
 	}
@@ -241,10 +245,10 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 		dc.DrawText("[", x, y);
 		
 		inverted_text();
-		dc.DrawText(data_string, (x + doc_ctrl.hf_char_width()), y);
+		dc.DrawText(data_string, (x + fcc.fixed_char_width()), y);
 		
 		normal_text();
-		dc.DrawText("]", (x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
+		dc.DrawText("]", (x + fcc.fixed_string_width(data_string.length() + 1)), y);
 	}
 	else if(region_selection_length > BitOffset::ZERO)
 	{
@@ -258,10 +262,10 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 		dc.DrawText("[", x, y);
 		
 		selected_text();
-		dc.DrawText(data_string, (x + doc_ctrl.hf_char_width()), y);
+		dc.DrawText(data_string, (x + fcc.fixed_char_width()), y);
 		
 		normal_text();
-		dc.DrawText("]", (x + doc_ctrl.hf_string_width(data_string.length() + 1)), y);
+		dc.DrawText("]", (x + fcc.fixed_string_width(data_string.length() + 1)), y);
 	}
 	else{
 		/* No data in our range is selected. Render normally. */
@@ -272,7 +276,7 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 		dc.DrawText("[" + data_string + "]", x, y);
 	}
 	
-	x += doc_ctrl.hf_string_width(TYPE_X_CHAR);
+	x += fcc.fixed_string_width(TYPE_X_CHAR);
 	
 	std::string type_string = std::string("<") + type_label + ">";
 	
@@ -282,6 +286,8 @@ void REHex::FixedSizeValueRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, 
 
 std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::FixedSizeValueRegion::offset_at_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	BitOffset total_selection_first, total_selection_last;
 	std::tie(total_selection_first, total_selection_last) = doc_ctrl.get_selection_raw();
 	
@@ -302,7 +308,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		
 		unsigned int bytes_per_group = doc_ctrl.get_bytes_per_group();
 		
-		unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px);
+		unsigned int char_offset = fcc.fixed_char_at_x(mouse_x_px);
 		if(((char_offset + 1) % ((bytes_per_group * 2) + 1)) == 0)
 		{
 			/* Click was over a space between byte groups. */
@@ -338,8 +344,8 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 			return std::make_pair<off_t, ScreenArea>(-1, SA_NONE);
 		}
 		
-		mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
-		unsigned int char_offset = doc_ctrl.hf_char_at_x(mouse_x_px);
+		mouse_x_px -= data_text_x + fcc.fixed_char_width() /* [ character */;
+		unsigned int char_offset = fcc.fixed_char_at_x(mouse_x_px);
 		
 		if(mouse_x_px >= 0 && char_offset < data_string.length())
 		{
@@ -354,13 +360,15 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 
 std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> REHex::FixedSizeValueRegion::offset_near_xy(DocumentCtrl &doc_ctrl, int mouse_x_px, int64_t mouse_y_lines, ScreenArea type_hint)
 {
+	const FontCharacterCache &fcc = doc_ctrl.get_fcc();
+	
 	if(partially_selected(&doc_ctrl))
 	{
-		mouse_x_px -= data_text_x + doc_ctrl.hf_char_width() /* [ character */;
+		mouse_x_px -= data_text_x + fcc.fixed_char_width() /* [ character */;
 		mouse_x_px = std::max(mouse_x_px, 0);
 		
 		BitOffset mouse_x_bytes = std::min(
-			(d_offset + BitOffset::BYTES(mouse_x_px / doc_ctrl.hf_string_width(2))),
+			(d_offset + BitOffset::BYTES(mouse_x_px / fcc.fixed_string_width(2))),
 			(d_offset + d_length - BitOffset::BITS(1)));
 		
 		return std::make_pair(mouse_x_bytes, SA_SPECIAL);
@@ -458,6 +466,8 @@ REHex::DocumentCtrl::Rect REHex::FixedSizeValueRegion::calc_offset_bounds(BitOff
 	assert(offset >= d_offset);
 	assert(offset <= (d_offset + d_length));
 	
+	const FontCharacterCache &fcc = doc_ctrl->get_fcc();
+	
 	BitOffset total_selection_first, total_selection_last;
 	std::tie(total_selection_first, total_selection_last) = doc_ctrl->get_selection_raw();
 	
@@ -471,12 +481,12 @@ REHex::DocumentCtrl::Rect REHex::FixedSizeValueRegion::calc_offset_bounds(BitOff
 		off_t rel_offset = (offset - d_offset).byte();
 		
 		unsigned int bytes_per_group = doc_ctrl->get_bytes_per_group();
-		int line_x = data_text_x + doc_ctrl->hf_string_width((rel_offset * 2) + (rel_offset / bytes_per_group));
+		int line_x = data_text_x + fcc.fixed_string_width((rel_offset * 2) + (rel_offset / bytes_per_group));
 		
 		return DocumentCtrl::Rect(
 			line_x,                        /* x */
 			y_offset,                      /* y */
-			doc_ctrl->hf_string_width(2),  /* w */
+			fcc.fixed_string_width(2),     /* w */
 			1);                            /* h */
 	}
 	else{
@@ -487,7 +497,7 @@ REHex::DocumentCtrl::Rect REHex::FixedSizeValueRegion::calc_offset_bounds(BitOff
 		return DocumentCtrl::Rect(
 			data_text_x,                                   /* x */
 			y_offset,                                      /* y */
-			doc_ctrl->hf_string_width(MAX_INPUT_LEN + 2),  /* w */
+			fcc.fixed_string_width(MAX_INPUT_LEN + 2),     /* w */
 			1);                                            /* h */
 	}
 }

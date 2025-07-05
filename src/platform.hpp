@@ -39,3 +39,38 @@ typedef int ssize_t;
 #if defined(__linux__) || defined(__FreeBSD__)
 #define REHEX_ENABLE_WAYLAND_HACKS
 #endif
+
+/* Drawing individual characters to the screen using the text drawing APIs is too slow, so we
+ * optimise the common path by drawing whole strings of fixed-width characters, however not all
+ * characters in "fixed width" fonts are actually the same size, so any odd-sized characters are
+ * instead rendered once to a (cached) bitmap with the text drawing APIs, then the bitmap can be
+ * blitted to the screen more quickly.
+ *
+ * This improves performance on all platforms on my testing, so we always enable it.
+*/
+#define REHEX_CACHE_CHARACTER_BITMAPS
+
+#if defined(_WIN32) || defined(__APPLE__)
+/* Blitting individual character bitmaps is slow on Windows/macOS, however we can get reasonable
+ * performance by furthermore blitting character sequences into another cached buffer and then
+ * blitting whole sequences to the screen at once. This optimisation doesn't improve anything on
+ * Linux in my testing.
+*/
+#define REHEX_CACHE_STRING_BITMAPS
+#endif
+
+#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(__WXGTK__)
+/* Cairo is painfully slow at drawing strings, so much so, that drawing more than a few per
+ * line of text on-screen is actually slower than caching individual character bitmaps and
+ * blitting them to the screen one-at-a-time, so we always use the "slow" path on GTK.
+*/
+#define REHEX_FORCE_SLOW_TEXT_PATH
+#endif
+
+#if __APPLE__
+/* Masked or transparent pixels in a wxBitmap don't work on macOS - wxDC.DrawBitmap() will clear
+ * any existing pixels in the DC covered by a "transparent" area of the bitmap will be cleared to
+ * the background colour.
+*/
+#define REHEX_BROKEN_BITMAP_TRANSPARENCY
+#endif

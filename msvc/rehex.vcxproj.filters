@@ -282,6 +282,9 @@
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\FontCharacterCache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\HierarchicalByteAccumulator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -353,6 +356,9 @@
     </ClCompile>
     <ClCompile Include="..\res\dock_top.c">
       <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BatchedCharacterRenderer.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

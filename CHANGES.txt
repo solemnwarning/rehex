@@ -7,6 +7,9 @@ Version TBA:
 
  * Add "Jump to end" command to comments panel context menu (#254).
 
+ * Improve rendering performance and UI responsiveness, particularly
+   when a large number of colours are in use (#257).
+
 Version 0.63.0 (2025-06-11):
 
  * Add non-modal "Jump to offset" dialog option (#242).

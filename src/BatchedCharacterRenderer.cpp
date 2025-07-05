@@ -215,8 +215,12 @@ void REHex::BatchedCharacterRenderer::flush()
 		
 		m_dc.SetTextForeground(fg_colour);
 		m_dc.SetBackgroundMode(wxTRANSPARENT);
-		
-		m_dc.DrawText(dd->second.string, m_base_x, m_base_y);
+
+		size_t first_char = dd->second.string.find_first_not_of(' ');
+		if(first_char != std::string::npos)
+		{
+			m_dc.DrawText(dd->second.string.substr(first_char), (m_base_x + m_cache.fixed_string_width(first_char)), m_base_y);
+		}
 	}
 	
 	#endif

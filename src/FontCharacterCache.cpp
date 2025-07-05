@@ -290,7 +290,7 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 		{
 			PROFILE_INNER_BLOCK("get char bitmap");
 			
-			if(*c == ' ')
+			if(*c == '\0')
 			{
 				char_bitmaps.emplace_back(wxNullBitmap);
 			}

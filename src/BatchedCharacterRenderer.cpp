@@ -121,10 +121,10 @@ wxRect REHex::BatchedCharacterRenderer::draw_char_slow(int column, ucs4_t codepo
 	if(v.chars.size() < (chars_idx + 1))
 	{
 		#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-		v.chars.resize((chars_idx + 1), ' ');
+		v.chars.resize((chars_idx + 1), '\0');
 		
 		#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
-		v.chars.resize((chars_idx + 1), std::make_pair(' ', wxDefaultSize));
+		v.chars.resize((chars_idx + 1), std::make_pair('\0', wxDefaultSize));
 		
 		#else
 		v.chars.resize((chars_idx + 1), wxEmptyString);
@@ -270,7 +270,7 @@ void REHex::BatchedCharacterRenderer::flush()
 		#elif defined(REHEX_CACHE_CHARACTER_BITMAPS)
 		for(auto c = dd->second.chars.begin(); c != dd->second.chars.end(); ++c)
 		{
-			if(c->first != ' ')
+			if(c->first != '\0')
 			{
 				wxBitmap char_bitmap = m_cache.char_bitmap(c->first, c->second, fg_colour, bg_colour);
 				int char_x = m_base_x + m_cache.fixed_string_width(c - dd->second.chars.begin());

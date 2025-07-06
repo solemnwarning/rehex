@@ -70,6 +70,8 @@ BEGIN_EVENT_TABLE(REHex::DocumentCtrl, wxControl)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::DocumentCtrl::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::DocumentCtrl::OnRedrawCursor)
 	EVT_IDLE(REHex::DocumentCtrl::OnIdle)
+	EVT_SET_FOCUS(REHex::DocumentCtrl::OnFocus)
+	EVT_KILL_FOCUS(REHex::DocumentCtrl::OnFocus)
 END_EVENT_TABLE()
 
 REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, long style):
@@ -2230,6 +2232,27 @@ void REHex::DocumentCtrl::OnIdle(wxIdleEvent &event)
 	}
 }
 
+void REHex::DocumentCtrl::OnFocus(wxFocusEvent& event)
+{
+	if(event.GetEventType() == wxEVT_SET_FOCUS)
+	{
+		/* Blink cursor to visibility and reset timer */
+		cursor_visible = true;
+		
+		int caret_on_time = wxGetApp().get_caret_on_time_ms();
+		if(caret_on_time > 0)
+		{
+			redraw_cursor_timer.Start(caret_on_time, wxTIMER_ONE_SHOT);
+		}
+	}
+	else if(event.GetEventType() == wxEVT_KILL_FOCUS)
+	{
+		redraw_cursor_timer.Stop();
+	}
+	
+	Refresh();
+}
+
 std::vector<REHex::DocumentCtrl::GenericDataRegion*>::iterator REHex::DocumentCtrl::_data_region_by_offset(BitOffset offset)
 {
 	/* Find region that encompasses the given offset using binary search. */
@@ -3713,7 +3736,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 		draw_nibble(high_nibble, inv_high, highlight_high);
 		draw_nibble(low_nibble,  inv_low,  highlight_low);
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || !view_active))
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->get_cursor_visible() || !view_active) || !has_focus))
 		{
 			/* Draw insert cursor. */
 			insert_cursor_pen = &norm_fg_1px;
@@ -3963,7 +3986,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 			}
 		}
 		
-		if(cur_off == cursor_pos && doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || !view_active))
+		if(cur_off == cursor_pos && doc_ctrl->insert_mode && ((doc_ctrl->get_cursor_visible() || !view_active) || !has_focus))
 		{
 			insert_cursor_pen = &norm_fg_1px;
 			insert_cursor_pt1 = wxPoint(ascii_x, y);

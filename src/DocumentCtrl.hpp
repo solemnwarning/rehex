@@ -631,6 +631,7 @@ namespace REHex {
 			void OnClearHighlight(wxCommandEvent &event);
 			void OnIdle(wxIdleEvent &event);
 			void OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event);
+			void OnFocus(wxFocusEvent& event);
 			
 		private:
 			friend DataRegion;

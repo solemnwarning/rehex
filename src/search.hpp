@@ -94,7 +94,7 @@ namespace REHex {
 			virtual void not_found_notification();
 			
 		public:
-			void limit_range(off_t range_begin, off_t range_end);
+			void limit_range(off_t range_begin, off_t range_end, OffsetBase fmt_base = OffsetBase::OFFSET_BASE_DEC);
 			void require_alignment(off_t alignment, off_t relative_to_offset = 0);
 			
 			void set_auto_close(bool auto_close);

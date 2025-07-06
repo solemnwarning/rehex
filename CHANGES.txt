@@ -12,6 +12,9 @@ Version TBA:
 
  * Fix searching within a range.
 
+ * Default to selection when a range is selected prior to opening
+   search dialog (#256).
+
 Version 0.63.0 (2025-06-11):
 
  * Add non-modal "Jump to offset" dialog option (#242).

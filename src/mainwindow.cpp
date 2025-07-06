@@ -1429,6 +1429,15 @@ void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
 	assert(tab != NULL);
 	
 	REHex::Search::Text *sd = new REHex::Search::Text(tab, tab->doc);
+	
+	BitOffset selection_offset, selection_length;
+	std::tie(selection_offset, selection_length) = tab->doc_ctrl->get_selection_linear();
+	
+	if(selection_length > BitOffset::ZERO && selection_offset.byte_aligned() && selection_length.byte_aligned())
+	{
+		sd->limit_range(selection_offset.byte(), (selection_offset.byte() + selection_length.byte()), tab->doc_ctrl->get_offset_display_base());
+	}
+	
 	sd->Show(true);
 	
 	tab->search_dialog_register(sd);
@@ -1443,6 +1452,15 @@ void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
 	assert(tab != NULL);
 	
 	REHex::Search::ByteSequence *sd = new REHex::Search::ByteSequence(tab, tab->doc);
+	
+	BitOffset selection_offset, selection_length;
+	std::tie(selection_offset, selection_length) = tab->doc_ctrl->get_selection_linear();
+	
+	if(selection_length > BitOffset::ZERO && selection_offset.byte_aligned() && selection_length.byte_aligned())
+	{
+		sd->limit_range(selection_offset.byte(), (selection_offset.byte() + selection_length.byte()), tab->doc_ctrl->get_offset_display_base());
+	}
+	
 	sd->Show(true);
 	
 	tab->search_dialog_register(sd);
@@ -1457,6 +1475,15 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	assert(tab != NULL);
 	
 	REHex::Search::Value *sd = new REHex::Search::Value(tab, tab->doc);
+	
+	BitOffset selection_offset, selection_length;
+	std::tie(selection_offset, selection_length) = tab->doc_ctrl->get_selection_linear();
+	
+	if(selection_length > BitOffset::ZERO && selection_offset.byte_aligned() && selection_length.byte_aligned())
+	{
+		sd->limit_range(selection_offset.byte(), (selection_offset.byte() + selection_length.byte()), tab->doc_ctrl->get_offset_display_base());
+	}
+	
 	sd->Show(true);
 	
 	tab->search_dialog_register(sd);

@@ -165,12 +165,47 @@ void REHex::Search::not_found_notification()
 	wxMessageBox("Not found", wxMessageBoxCaptionStr, (wxOK | wxICON_INFORMATION | wxCENTRE), this);
 }
 
-void REHex::Search::limit_range(off_t range_begin, off_t range_end)
+void REHex::Search::limit_range(off_t range_begin, off_t range_end, OffsetBase fmt_base)
 {
 	assert(range_begin >= 0);
+	assert(range_end > range_begin);
 	
 	this->range_begin = range_begin;
 	this->range_end   = range_end;
+	
+	char offset_str[24];
+
+	switch(fmt_base)
+	{
+		case OFFSET_BASE_HEX:
+		{
+			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(range_begin));
+			range_begin_tc->SetValue(offset_str);
+
+			snprintf(offset_str, sizeof(offset_str), "0x%llX", (long long unsigned)(range_end - 1));
+			range_end_tc->SetValue(offset_str);
+
+			break;
+		}
+		
+		case OFFSET_BASE_DEC:
+		{
+			snprintf(offset_str, sizeof(offset_str), "0x%lld", (long long)(range_begin));
+			range_begin_tc->SetValue(offset_str);
+
+			snprintf(offset_str, sizeof(offset_str), "0x%lld", (long long)(range_end - 1));
+			range_end_tc->SetValue(offset_str);
+			
+			break;
+		}
+
+		default:
+			assert(false); /* Unreachable. */
+			break;
+	}
+
+	range_cb->SetValue(true);
+	enable_controls();
 }
 
 void REHex::Search::require_alignment(off_t alignment, off_t relative_to_offset)

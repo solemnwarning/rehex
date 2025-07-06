@@ -10,6 +10,8 @@ Version TBA:
  * Improve rendering performance and UI responsiveness, particularly
    when a large number of colours are in use (#257).
 
+ * Fix searching within a range.
+
 Version 0.63.0 (2025-06-11):
 
  * Add non-modal "Jump to offset" dialog option (#242).

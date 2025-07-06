@@ -473,7 +473,7 @@ bool REHex::Search::read_base_window_controls()
 	if(range_cb->GetValue())
 	{
 		read_off_value(&range_begin, range_begin_tc, false, "start of range");
-		read_off_value(&range_begin, range_begin_tc, false, "end of range");
+		read_off_value(&range_end, range_end_tc, false, "end of range");
 		
 		++range_end;
 	}

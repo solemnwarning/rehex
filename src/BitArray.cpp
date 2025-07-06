@@ -185,7 +185,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 		return Highlight(NoHighlight());
 	};
 	
-	bool view_active = doc_ctrl.HasFocus() && doc_ctrl.special_view_active();
+	bool has_focus = doc_ctrl.HasFocus();
 	
 	while(y < client_size.GetHeight() && data_remain > BitOffset::ZERO)
 	{
@@ -223,7 +223,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 			line_data.insert(line_data.end(), begin, end);
 		}
 		
-		draw_bin_line(&doc_ctrl, dc, (x + data_text_x), y, line_data, line_len, 0, data_cur, alternate_row, view_active, highlight_func, false);
+		draw_bin_line(&doc_ctrl, dc, (x + data_text_x), y, line_data, line_len, 0, data_cur, alternate_row, has_focus, doc_ctrl.special_view_active(), highlight_func, false);
 		
 		data_cur    += line_len;
 		data_remain -= line_len;

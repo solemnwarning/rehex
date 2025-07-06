@@ -69,6 +69,8 @@ TEST(ThreadPool, RunTaskParallel)
 	unsigned int times_called = 0; 
 	unsigned int num_active = 0;
 	unsigned int max_active = 0;
+	bool finished = false;
+	unsigned int base_times_called = -1;
 	
 	ThreadPool::TaskHandle task = pool.queue_task([&]()
 	{
@@ -87,18 +89,36 @@ TEST(ThreadPool, RunTaskParallel)
 		lock.lock();
 		
 		--num_active;
-		return times_called >= 10;
+		return finished;
 	}, 4);
-	
+
+	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(max_active >= 4)
+		{
+			base_times_called = times_called;
+			finished = true;
+			break;
+		}
+	}
+
+	mutex.unlock();
+
 	task.join(); /* Wait for task to complete. */
 	
 	/* Parallel tasks can inherently race here, so we test it was called at least as many as
 	 * expected and not excessively so.
 	*/
-	EXPECT_GE(times_called, 10U) << "Task function was called correct number of times";
-	EXPECT_LT(times_called, 14U) << "Task function was called correct number of times";
+	EXPECT_GE(times_called, base_times_called) << "Task function was called correct number of times";
+	EXPECT_LT(times_called, (base_times_called + 4)) << "Task function was called correct number of times";
 	
-	EXPECT_EQ(max_active, 4U) << "Task function was not called in parallel";
+	EXPECT_EQ(max_active, 4U) << "Task function was called in parallel";
 }
 
 TEST(ThreadPool, PauseTask)
@@ -126,12 +146,24 @@ TEST(ThreadPool, PauseTask)
 		--num_active;
 		return finished;
 	}, 4);
-	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	/* Verify some threads started. */
+
 	mutex.lock();
+	
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called > 0 && num_active > 0)
+		{
+			break;
+		}
+	}
+
 	EXPECT_GT(times_called, 0U);
 	EXPECT_GT(num_active, 0U);
 	mutex.unlock();
@@ -154,15 +186,27 @@ TEST(ThreadPool, PauseTask)
 	mutex.unlock();
 	
 	task.resume();
-	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	/* Verify workers are working again. */
-	
+
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called > paused_times_called && num_active > 0)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_GT(times_called, paused_times_called) << "Task function is called after task is resumed";
 	EXPECT_GT(num_active, 0U) << "Task function is called after task is resumed";
+
 	mutex.unlock();
 	
 	finished = true;
@@ -195,13 +239,25 @@ TEST(ThreadPool, FinishTaskEarly)
 		return finished;
 	}, 4);
 	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called > 0 && num_active > 0)
+		{
+			break;
+		}
+	}
 	
 	/* Verify some threads started. */
-	mutex.lock();
 	EXPECT_GT(times_called, 0U);
 	EXPECT_GT(num_active, 0U);
+	
 	mutex.unlock();
 	
 	task.finish();
@@ -251,13 +307,25 @@ TEST(ThreadPool, RestartTask)
 		return true;
 	}, 1);
 	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called >= 1 && num_active == 0 && task.finished())
+		{
+			break;
+		}
+	}
+	
 	EXPECT_EQ(times_called, 1U) << "Task function was called";
 	EXPECT_EQ(num_active, 0U) << "Task function is not running";
 	EXPECT_TRUE(task.finished()) << "Task is finished";
+
 	mutex.unlock();
 	
 	/* Yield for a moment in case the workers are still running. */
@@ -272,13 +340,25 @@ TEST(ThreadPool, RestartTask)
 	/* Restart the task. */
 	task.restart();
 	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called >= 2 && num_active == 0 && task.finished())
+		{
+			break;
+		}
+	}
+	
 	EXPECT_EQ(times_called, 2U) << "Task function was called";
 	EXPECT_EQ(num_active, 0U) << "Task function is not running";
 	EXPECT_TRUE(task.finished()) << "Task is finished";
+
 	mutex.unlock();
 	
 	/* Yield for a moment in case the workers are still running. */
@@ -318,15 +398,27 @@ TEST(ThreadPool, RestartPausedTask)
 		return true;
 	}, 1);
 	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called >= 1 && num_active == 0 && task.finished())
+		{
+			break;
+		}
+	}
+	
 	EXPECT_EQ(times_called, 1U) << "Task function was called";
 	EXPECT_EQ(num_active, 0U) << "Task function is not running";
 	EXPECT_TRUE(task.finished()) << "Task is finished";
-	mutex.unlock();
 	
+	mutex.unlock();
+
 	/* Yield for a moment in case the workers are still running. */
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	
@@ -352,13 +444,25 @@ TEST(ThreadPool, RestartPausedTask)
 	/* Resume the restarted task, execution will finally resume. */
 	task.resume();
 	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(times_called >= 2 && num_active == 0 && task.finished())
+		{
+			break;
+		}
+	}
+
 	EXPECT_EQ(times_called, 2U) << "Task function was called";
 	EXPECT_EQ(num_active, 0U) << "Task function is not running";
 	EXPECT_TRUE(task.finished()) << "Task is finished";
+	
 	mutex.unlock();
 	
 	/* Yield for a moment in case the workers are still running. */
@@ -422,15 +526,27 @@ TEST(ThreadPool, ParallelTasks)
 		--t2_num_active;
 		return t2_finished;
 	}, -1);
-	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(t1_times_called > 0 && t1_max_active > 2 && t2_times_called > 0 && t2_max_active > 2)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_GT(t1_times_called, 0U) << "Task 1 function was called";
 	EXPECT_GT(t1_max_active, 2U) << "Task 1 function was given at least 25% of worker time";
 	EXPECT_GT(t2_times_called, 0U) << "Task 2 function was called";
 	EXPECT_GT(t2_max_active, 2U) << "Task 2 function was given at least 25% of worker time";
+
 	mutex.unlock();
 	
 	t1_finished = true;
@@ -489,27 +605,51 @@ TEST(ThreadPool, ParallelTasksPriority)
 		--t2_num_active;
 		return t2_finished;
 	}, -1, ThreadPool::TaskPriority::NORMAL);
-	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(t1_times_called > 0 && t1_max_active == 8)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_GT(t1_times_called, 0U) << "High priority function was called";
 	EXPECT_EQ(t1_max_active, 8U) << "High priority task was given 100% of worker threads";
 	EXPECT_EQ(t2_times_called, 0U) << "Normal priority function wasn't called while high priority task was active";
 	EXPECT_EQ(t2_max_active, 0U) << "Normal priority function wasn't called while high priority task was active";
+	
 	mutex.unlock();
 	
 	/* Finish the high priority task. */
 	t1_finished = true;
 	task1.join();
-	
-	/* Yield for a moment so the workers can service task 2 for a bit. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	mutex.lock();
+	
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can service task 2 for a bit. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(t2_times_called > 0 && t2_max_active == 8)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_GT(t2_times_called, 0U) << "Normal priority function was called once high priority task finished";
 	EXPECT_EQ(t2_max_active, 8U) << "Normal priority task was given 100% of worker threads";
+	
 	mutex.unlock();
 	
 	t2_finished = true;
@@ -565,27 +705,51 @@ TEST(ThreadPool, ParallelTasksPrioritySpareThreads)
 		--t2_num_active;
 		return t2_finished;
 	}, -1, ThreadPool::TaskPriority::NORMAL);
-	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
+
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(t1_times_called > 0 && t1_max_active >= 6 && t2_times_called > 0 && t2_max_active >= 2)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_GT(t1_times_called, 0U) << "High priority function was called";
 	EXPECT_EQ(t1_max_active, 6U) << "High priority task was executed with requested concurrency";
 	EXPECT_GT(t2_times_called, 0U) << "Normal priority function was called";
 	EXPECT_LE(t2_max_active, 2U) << "Normal priority function was executed on threads not required by high priority task only";
+
 	mutex.unlock();
 	
 	/* Finish the high priority task. */
 	t1_finished = true;
 	task1.join();
 	
-	/* Yield for a moment so the workers can service task 2 for a bit. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can service task 2 for a bit. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(t2_times_called > 0 && t2_max_active >= 8)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_GT(t2_times_called, 0U) << "Normal priority function was called once high priority task finished";
 	EXPECT_EQ(t2_max_active, 8U) << "Normal priority task was given 100% of worker threads";
+
 	mutex.unlock();
 	
 	t2_finished = true;
@@ -620,21 +784,45 @@ TEST(ThreadPool, ChangeTaskConcurrency)
 		return finished;
 	}, 1);
 	
-	/* Yield for a moment so the workers can wake up. */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Yield for a moment so the workers can wake up. */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(max_active >= 1)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_EQ(max_active, 1U) << "Task function was not called in parallel";
+
 	mutex.unlock();
 	
 	/* Scale task up. */
 	task.change_concurrency(4);
 	
-	/* Wait for task to run a bit... */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	
 	mutex.lock();
+
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Wait for task to run a bit... */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(max_active >= 4)
+		{
+			break;
+		}
+	}
+	
 	EXPECT_EQ(max_active, 4U) << "Task function was executed in parallel";
+
 	mutex.unlock();
 	
 	/* Scale down. */
@@ -645,13 +833,22 @@ TEST(ThreadPool, ChangeTaskConcurrency)
 	
 	mutex.lock();
 	max_active = 0;
-	mutex.unlock();
 	
-	/* Wait for max_active to settle... */
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	for(int i = 0; i < 100; ++i)
+	{
+		/* Wait for max_active to settle... */
+		mutex.unlock();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		mutex.lock();
+
+		if(max_active >= 2)
+		{
+			break;
+		}
+	}
 	
-	mutex.lock();
 	EXPECT_EQ(max_active, 2U) << "Task function was executed in parallel";
+
 	mutex.unlock();
 	
 	finished = true;

@@ -127,6 +127,7 @@ Section "Application" SecApp
 	; Registry information for add/remove programs
 	WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\REHex" "DisplayName" "Reverse Engineers' Hex Editor"
 	WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\REHex" "UninstallString" "$INSTDIR\Uninstall.exe"
+	WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\REHex" "QuietUninstallString" "$INSTDIR\Uninstall.exe /S"
 	WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\REHex" "InstallLocation" "$INSTDIR"
 	WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\REHex" "DisplayIcon" "$INSTDIR\rehex.exe"
 	WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\REHex" "Publisher" "Daniel Collins"

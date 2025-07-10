@@ -204,11 +204,7 @@ namespace REHex
 				unsigned int packed_fg_colour;
 				unsigned int packed_bg_colour;
 				
-				#ifdef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
-				StringBitmapCacheKey(const std::vector<ucs4_t> &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour);
-				#else
 				StringBitmapCacheKey(int base_column, const std::vector<ucs4_t> &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour);
-				#endif
 				
 				bool operator<(const StringBitmapCacheKey &rhs) const;
 			};

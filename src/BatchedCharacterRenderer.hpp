@@ -118,14 +118,14 @@ namespace REHex
 			
 			struct DeferredDrawTextSlowKey
 			{
-				#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && defined(REHEX_BROKEN_BITMAP_TRANSPARENCY)
+				#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && (defined(REHEX_BROKEN_BITMAP_TRANSPARENCY) || !(defined(REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS)))
 				int base_column;
 				#endif
 				
 				wxColour fg_colour;
 				wxColour bg_colour;
 				
-				#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && defined(REHEX_BROKEN_BITMAP_TRANSPARENCY)
+				#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && (defined(REHEX_BROKEN_BITMAP_TRANSPARENCY) || !(defined(REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS)))
 				DeferredDrawTextSlowKey(int base_column, const wxColour &fg_colour, const wxColour &bg_colour):
 					base_column(base_column),
 				#else
@@ -137,7 +137,7 @@ namespace REHex
 				bool operator==(const DeferredDrawTextSlowKey &rhs) const
 				{
 					return
-						#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && defined(REHEX_BROKEN_BITMAP_TRANSPARENCY)
+						#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && (defined(REHEX_BROKEN_BITMAP_TRANSPARENCY) || !(defined(REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS)))
 						base_column == rhs.base_column
 						#else
 						true

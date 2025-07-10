@@ -215,11 +215,15 @@ void REHex::BatchedCharacterRenderer::flush()
 		
 		m_dc.SetTextForeground(fg_colour);
 		m_dc.SetBackgroundMode(wxTRANSPARENT);
-
+		
 		size_t first_char = dd->second.string.find_first_not_of(' ');
 		if(first_char != std::string::npos)
 		{
+			#ifdef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
 			m_dc.DrawText(dd->second.string.substr(first_char), (m_base_x + m_cache.fixed_string_width(first_char)), m_base_y);
+			#else
+			m_dc.DrawText(dd->second.string, m_base_x, m_base_y);
+			#endif
 		}
 	}
 	
@@ -257,7 +261,12 @@ void REHex::BatchedCharacterRenderer::flush()
 		wxColour bg_colour = dd->first.bg_colour;
 		
 		#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS)
-		wxBitmap string_bitmap = m_cache.string_bitmap(dd->second.chars, fg_colour, bg_colour);
+		
+		#ifdef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
+		wxBitmap string_bitmap = m_cache.string_bitmap(0, dd->second.chars, fg_colour, bg_colour);
+		#else
+		wxBitmap string_bitmap = m_cache.string_bitmap(dd->first.base_column, dd->second.chars, fg_colour, bg_colour);
+		#endif
 		
 		#if defined(REHEX_CACHE_CHARACTER_BITMAPS) && defined(REHEX_CACHE_STRING_BITMAPS) && defined(REHEX_BROKEN_BITMAP_TRANSPARENCY)
 		int string_x = m_base_x + m_cache.fixed_string_width(dd->first.base_column);

@@ -154,14 +154,22 @@ namespace REHex
 			/**
 			 * @brief Render a string of aligned characters to a bitmap (cached).
 			 *
+			 * @param base_column Column where generated bitmap will be drawn.
 			 * @param characters  List of characters to render in the string.
 			 * @param fg_colour   Foreground colour.
 			 * @param bg_colour   Background colour.
 			 *
 			 * This method renders a sequence of characters into a bitmap, aligned to
 			 * fixed-point character widths.
+			 *
+			 * The base_column parameter is intended for keeping characters correctly
+			 * aligned when the returned bitmap will be blitted into the middle of a
+			 * fixed-width character string. The characters will still be drawn into
+			 * the bitmap from position zero, however their relative offsets will be
+			 * calculated as if they were further along, allowing for platforms whose
+			 * fonts aren't pixel-aligned.
 			*/
-			wxBitmap string_bitmap(const std::vector<ucs4_t> &characters, const wxColour &fg_colour, const wxColour &bg_colour) const;
+			wxBitmap string_bitmap(int base_column, const std::vector<ucs4_t> &characters, const wxColour &fg_colour, const wxColour &bg_colour) const;
 			#endif
 			
 		private:
@@ -188,12 +196,19 @@ namespace REHex
 			#ifdef REHEX_CACHE_STRING_BITMAPS
 			struct StringBitmapCacheKey
 			{
+				#ifndef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
+				int base_column;
+				#endif
+				
 				std::vector<ucs4_t> characters;
 				unsigned int packed_fg_colour;
 				unsigned int packed_bg_colour;
 				
+				#ifdef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
 				StringBitmapCacheKey(const std::vector<ucs4_t> &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour);
-				StringBitmapCacheKey(const std::vector< std::pair<ucs4_t, wxSize> > &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour);
+				#else
+				StringBitmapCacheKey(int base_column, const std::vector<ucs4_t> &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour);
+				#endif
 				
 				bool operator<(const StringBitmapCacheKey &rhs) const;
 			};

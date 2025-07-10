@@ -74,3 +74,11 @@ typedef int ssize_t;
 */
 #define REHEX_BROKEN_BITMAP_TRANSPARENCY
 #endif
+
+#ifndef __APPLE__
+/* If we can assume characters in a string occupy an integer number of pixels, then we can make
+ * some assumptions for improved performance in places... macOS is the only target where I've seen
+ * fractional character pitches, so we'll assume everywhere else is sane.
+*/
+#define REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
+#endif

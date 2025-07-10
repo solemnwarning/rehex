@@ -262,13 +262,17 @@ wxBitmap REHex::FontCharacterCache::char_bitmap(ucs4_t unicode_char, const wxSiz
 #endif
 
 #ifdef REHEX_CACHE_STRING_BITMAPS
-wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &characters, const wxColour &fg_colour, const wxColour &bg_colour) const
+wxBitmap REHex::FontCharacterCache::string_bitmap(int base_column, const std::vector<ucs4_t> &characters, const wxColour &fg_colour, const wxColour &bg_colour) const
 {
 	PROFILE_BLOCK("REHex::FontCharacterCache::get_string_bitmap()");
 	
 	assert(!(characters.empty()));
 	
-	StringBitmapCacheKey cache_key(characters, pack_colour(fg_colour), pack_colour(bg_colour));
+	#ifdef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
+	base_column = 0;
+	#endif
+	
+	StringBitmapCacheKey cache_key(base_column, characters, pack_colour(fg_colour), pack_colour(bg_colour));
 	
 	const wxBitmap *cached_string;
 	{
@@ -282,6 +286,8 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 		
 		std::vector<wxBitmap> char_bitmaps;
 		char_bitmaps.reserve(characters.size());
+		
+		int base_x = fixed_string_width(base_column);
 		
 		int string_w = 0;
 		int string_h = 0;
@@ -297,7 +303,7 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 			else{
 				char_bitmaps.emplace_back(char_bitmap(*c, fg_colour, bg_colour));
 				
-				string_w = fixed_string_width(c - characters.begin()) + char_bitmaps.back().GetWidth();
+				string_w = fixed_string_width(base_column + c - characters.begin()) + char_bitmaps.back().GetWidth();
 				
 				if(char_bitmaps.back().GetHeight() > string_h)
 				{
@@ -305,6 +311,8 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 				}
 			}
 		}
+		
+		string_w -= base_x;
 		
 		wxBitmap string_bitmap(string_w, string_h, wxBITMAP_SCREEN_DEPTH);
 		wxMemoryDC mdc(string_bitmap);
@@ -318,7 +326,7 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 			
 			if(char_bitmaps[i].IsOk())
 			{
-				mdc.DrawBitmap(char_bitmaps[i], fixed_string_width(i), 0, true);
+				mdc.DrawBitmap(char_bitmaps[i], (fixed_string_width(base_column + i) - base_x), 0, true);
 			}
 		}
 		
@@ -336,13 +344,24 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(const std::vector<ucs4_t> &cha
 }
 
 REHex::FontCharacterCache::StringBitmapCacheKey::StringBitmapCacheKey(
-	const std::vector<ucs4_t> &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour):
+	int base_column, const std::vector<ucs4_t> &characters, unsigned int packed_fg_colour, unsigned int packed_bg_colour):
+	#ifndef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
+	base_column(base_column),
+	#endif
 	characters(characters),
 	packed_fg_colour(packed_fg_colour),
 	packed_bg_colour(packed_bg_colour) {}
 
 bool REHex::FontCharacterCache::StringBitmapCacheKey::operator<(const StringBitmapCacheKey &rhs) const
 {
+	#ifndef REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
+	if(base_column != rhs.base_column)
+	{
+		return base_column < rhs.base_column;
+	}
+	else
+	#endif
+	
 	if(characters != rhs.characters)
 	{
 		return characters < rhs.characters;

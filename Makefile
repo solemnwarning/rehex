@@ -27,6 +27,7 @@ BOTAN_PKG    ?= $(call pkg-select-ab,botan-3,botan-2)
 CAPSTONE_PKG ?= capstone
 JANSSON_PKG  ?= jansson
 LUA_PKG      ?= $(call pkg-select-ab,lua5.3,lua)
+JQ           ?= jq
 
 EXE ?= rehex
 EMBED_EXE ?= ./tools/embed
@@ -717,17 +718,17 @@ wxLua/%.cpp: $(WXLUA_BINDINGS)
 # The compile_commands.json fragment for each file is written out under .cc/ and then merged into
 # the top-level compile_commands.json, all are rebuilt when the Makefile(s) are changed.
 
-COMPILE_COMMAND_DEPENDENCIES := $(wildcard Makefile Makefile.*)
+COMPILE_COMMAND_DEPENDENCIES := $(wildcard Makefile Makefile.*) $(JQ)
 COMPILE_COMMAND_INTERMEDIATE_DIR := .cc
 
 .PHONY: compile_commands.json
 compile_commands.json: $(addprefix $(COMPILE_COMMAND_INTERMEDIATE_DIR)/,$(addsuffix .compile_command.json,$(APP_OBJS) $(TEST_OBJS)))
-	cat $^ | jq -s . > $@
+	cat $^ | $(JQ) -s . > $@
 
 # $(call emit-compile-command,$(COMPILE_COMMAND_INTERMEDIATE_DIR)/foo.o.compile_command.json,foo.c,$(CC) $(CFLAGS))
 define emit-compile-command
 	@mkdir -p $(dir $(1))
-	echo "{ \"directory\": $$(pwd | jq -R .), \"file\": $$(echo "$(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | jq -R .), \"command\": $$(echo "$(3) -o $(2) $(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | jq -R .) }" > $(1)
+	echo "{ \"directory\": $$(pwd | $(JQ) -R .), \"file\": $$(echo "$(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | $(JQ) -R .), \"command\": $$(echo "$(3) -o $(2) $(patsubst $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%,%,$(patsubst %.compile_command.json,%,$(2)))" | $(JQ) -R .) }" > $(1)
 endef
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/googletest/src/%.o.compile_command.json: googletest/src/%.cc $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
@@ -750,6 +751,9 @@ $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.cpp $(GTKCONFIG_
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
 	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+
+# Dummy rule for jq on platforms where we rely on a system-provided binary.
+jq:
 
 .PHONY: help/rehex.chm
 help/rehex.chm:

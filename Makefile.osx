@@ -53,6 +53,8 @@ LUA_LIBS        ?= -llua
 
 all: REHex.app
 
+JQ := .cc/jq
+
 include Makefile
 
 src/mainwindow.$(BUILD_TYPE).o: res/backward32.h res/document_new32.h res/document_open32.h res/document_save32.h res/document_save_as32.h res/forward32.h
@@ -112,3 +114,21 @@ REHex.dmg: REHex.app
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
+
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: $(JQ) %.mm $(COMPILE_COMMAND_DEPENDENCIES)
+	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+
+.cc/jq:
+	mkdir -p .cc
+	if [ "$$(uname -m)" = "x86_64" ]; \
+	then \
+		curl -L https://github.com/jqlang/jq/releases/latest/download/jq-macos-amd64 > .cc/jq.tmp \
+			&& chmod 0755 .cc/jq.tmp \
+			&& .cc/jq.tmp --version > /dev/null \
+			&& mv .cc/jq.tmp .cc/jq; \
+	else \
+		curl -L https://github.com/jqlang/jq/releases/latest/download/jq-macos-arm64 > .cc/jq.tmp \
+			&& chmod 0755 .cc/jq.tmp \
+			&& .cc/jq.tmp --version > /dev/null \
+			&& mv .cc/jq.tmp .cc/jq; \
+	fi

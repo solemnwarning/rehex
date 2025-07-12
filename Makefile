@@ -564,57 +564,57 @@ TEST_OBJS := \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
 	src/WindowCommands.$(BUILD_TYPE).o \
-	tests/BitmapTool.o \
-	tests/BitOffset.o \
-	tests/BufferTest1.o \
-	tests/BufferTest2.o \
-	tests/BufferTest3.o \
-	tests/ByteAccumulator.o \
-	tests/ByteColourMap.o \
-	tests/ByteRangeMap.o \
-	tests/ByteRangeSet.o \
-	tests/ByteRangeTree.o \
-	tests/CharacterEncoder.o \
-	tests/CharacterFinder.o \
-	tests/Checksum.o \
-	tests/CommentsDataObject.o \
-	tests/CommentTree.o \
-	tests/ConsoleBuffer.o \
-	tests/CustomNumericType.o \
-	tests/DataType.o \
-	tests/DataView.o \
-	tests/DataHistogramAccumulator.o \
-	tests/DiffWindow.o \
-	tests/DisassemblyRegion.o \
-	tests/Document.o \
-	tests/DocumentCtrl.o \
-	tests/endian_conv.o \
-	tests/FastRectangleFiller.o \
-	tests/FileWriter.o \
-	tests/HierarchicalByteAccumulator.o \
-	tests/HighlightColourMap.o \
-	tests/HSVColour.o \
-	tests/IntelHexExport.o \
-	tests/IntelHexImport.o \
-	tests/LuaPluginLoader.o \
-	tests/main.o \
-	tests/NestedOffsetLengthMap.o \
-	tests/NumericTextCtrl.o \
-	tests/MultiSplitter.o \
-	tests/Range.o \
-	tests/RangeProcessor.o \
-	tests/search-bseq.o \
-	tests/search-text.o \
-	tests/SearchBase.o \
-	tests/SearchValue.o \
-	tests/SafeWindowPointer.o \
-	tests/SharedDocumentPointer.o \
-	tests/StringPanel.o \
-	tests/Tab.o \
-	tests/testutil.o \
-	tests/ThreadPool.o \
-	tests/util.o \
-	tests/WindowCommands.o \
+	tests/BitmapTool.$(BUILD_TYPE).o \
+	tests/BitOffset.$(BUILD_TYPE).o \
+	tests/BufferTest1.$(BUILD_TYPE).o \
+	tests/BufferTest2.$(BUILD_TYPE).o \
+	tests/BufferTest3.$(BUILD_TYPE).o \
+	tests/ByteAccumulator.$(BUILD_TYPE).o \
+	tests/ByteColourMap.$(BUILD_TYPE).o \
+	tests/ByteRangeMap.$(BUILD_TYPE).o \
+	tests/ByteRangeSet.$(BUILD_TYPE).o \
+	tests/ByteRangeTree.$(BUILD_TYPE).o \
+	tests/CharacterEncoder.$(BUILD_TYPE).o \
+	tests/CharacterFinder.$(BUILD_TYPE).o \
+	tests/Checksum.$(BUILD_TYPE).o \
+	tests/CommentsDataObject.$(BUILD_TYPE).o \
+	tests/CommentTree.$(BUILD_TYPE).o \
+	tests/ConsoleBuffer.$(BUILD_TYPE).o \
+	tests/CustomNumericType.$(BUILD_TYPE).o \
+	tests/DataType.$(BUILD_TYPE).o \
+	tests/DataView.$(BUILD_TYPE).o \
+	tests/DataHistogramAccumulator.$(BUILD_TYPE).o \
+	tests/DiffWindow.$(BUILD_TYPE).o \
+	tests/DisassemblyRegion.$(BUILD_TYPE).o \
+	tests/Document.$(BUILD_TYPE).o \
+	tests/DocumentCtrl.$(BUILD_TYPE).o \
+	tests/endian_conv.$(BUILD_TYPE).o \
+	tests/FastRectangleFiller.$(BUILD_TYPE).o \
+	tests/FileWriter.$(BUILD_TYPE).o \
+	tests/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
+	tests/HighlightColourMap.$(BUILD_TYPE).o \
+	tests/HSVColour.$(BUILD_TYPE).o \
+	tests/IntelHexExport.$(BUILD_TYPE).o \
+	tests/IntelHexImport.$(BUILD_TYPE).o \
+	tests/LuaPluginLoader.$(BUILD_TYPE).o \
+	tests/main.$(BUILD_TYPE).o \
+	tests/NestedOffsetLengthMap.$(BUILD_TYPE).o \
+	tests/NumericTextCtrl.$(BUILD_TYPE).o \
+	tests/MultiSplitter.$(BUILD_TYPE).o \
+	tests/Range.$(BUILD_TYPE).o \
+	tests/RangeProcessor.$(BUILD_TYPE).o \
+	tests/search-bseq.$(BUILD_TYPE).o \
+	tests/search-text.$(BUILD_TYPE).o \
+	tests/SearchBase.$(BUILD_TYPE).o \
+	tests/SearchValue.$(BUILD_TYPE).o \
+	tests/SafeWindowPointer.$(BUILD_TYPE).o \
+	tests/SharedDocumentPointer.$(BUILD_TYPE).o \
+	tests/StringPanel.$(BUILD_TYPE).o \
+	tests/Tab.$(BUILD_TYPE).o \
+	tests/testutil.$(BUILD_TYPE).o \
+	tests/ThreadPool.$(BUILD_TYPE).o \
+	tests/util.$(BUILD_TYPE).o \
+	tests/WindowCommands.$(BUILD_TYPE).o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(EXTRA_TEST_OBJS)
@@ -688,7 +688,7 @@ src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.done ;
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-tests/%.o: tests/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+tests/%.$(BUILD_TYPE).o: tests/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)

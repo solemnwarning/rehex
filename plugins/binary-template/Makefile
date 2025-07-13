@@ -1,5 +1,5 @@
 # Binary Template plugin for REHex
-# Copyright (C) 2021-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -30,6 +30,7 @@ INSTALL_FILES := \
 	plugin.lua \
 	preprocessor.lua \
 	lulpeg/lulpeg.lua \
+	stable_sort.lua \
 	templates/riff.bt
 
 prefix      ?= /usr/local

@@ -138,7 +138,7 @@ LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JA
 # Define this for releases
 # NOTE: This *MUST* be of the form a.b.c where each component is an integer to fit the format of
 # macOS version numbers and Windows version info resources.
-# VERSION := x
+VERSION := 0.63.2
 
 ifdef VERSION
 	LONG_VERSION := Version $(VERSION)
@@ -154,8 +154,8 @@ else
 	
 	GIT_COMMIT_TIME ?= $(call shell-or-die,git log -1 --format="%ct")
 	
-	VERSION      := $(GIT_COMMIT_SHA)
-	LONG_VERSION := Snapshot $(GIT_COMMIT_SHA)
+	VERSION      := 8ea16a9885236f50554b619002807a7c941630a1
+	LONG_VERSION := Snapshot 8ea16a9885236f50554b619002807a7c941630a1
 endif
 
 DEPDIR := .d
@@ -850,8 +850,8 @@ else
 	git ls-files | xargs cp --parents -t rehex-$(VERSION)/
 	
 	# Inline any references to the HEAD commit sha/timestamp
-	sed -i -e "s|\$$(GIT_COMMIT_SHA)|$(GIT_COMMIT_SHA)|g" rehex-$(VERSION)/Makefile
-	sed -i -e "s|\$$(GIT_COMMIT_TIME)|$(GIT_COMMIT_TIME)|g" rehex-$(VERSION)/Makefile
+	sed -i -e "s|\$8ea16a9885236f50554b619002807a7c941630a1|8ea16a9885236f50554b619002807a7c941630a1|g" rehex-$(VERSION)/Makefile
+	sed -i -e "s|\$1752418399|1752418399|g" rehex-$(VERSION)/Makefile
 endif
 	
 	# Generate reproducible tarball. All files use git commit timestamp.
@@ -859,7 +859,7 @@ endif
 		LC_ALL=C sort -z | \
 		tar \
 			--format=ustar \
-			--mtime=@$(GIT_COMMIT_TIME) \
+			--mtime=@1752418399 \
 			--owner=0 --group=0 --numeric-owner \
 			--no-recursion --null  -T - \
 			-cf - | \

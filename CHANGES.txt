@@ -1,4 +1,4 @@
-Version TBA:
+Version 0.63.1 (2025-07-13):
 
  * Improve performance of templates that declare large numbers of file
    variables.

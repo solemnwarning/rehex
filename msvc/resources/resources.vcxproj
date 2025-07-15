@@ -168,6 +168,12 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="..\..\res\bg16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\bg16.png bg16_png ..\..\res\bg16.c ..\..\res\bg16.h</Command>
+      <Outputs>..\..\res\bg16.c;..\..\res\bg16.h;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="..\..\res\icon16.png">
       <Command>"$(OutDir)embed.exe" ..\..\res\icon16.png icon16_png ..\..\res\icon16.c ..\..\res\icon16.h</Command>
       <Outputs>..\..\res\icon16.c;..\..\res\icon16.h;%(Outputs)</Outputs>

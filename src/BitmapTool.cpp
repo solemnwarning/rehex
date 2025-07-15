@@ -21,6 +21,8 @@
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/clipbrd.h>
+#include <wx/colourdata.h>
+#include <wx/colordlg.h>
 #include <wx/dataobj.h>
 #include <wx/filename.h>
 #include <wx/rawbmp.h>
@@ -34,6 +36,7 @@
 #include "util.hpp"
 
 #include "../res/actual_size16.h"
+#include "../res/bg16.h"
 #include "../res/fit_to_screen16.h"
 #include "../res/swap_horiz16.h"
 #include "../res/swap_vert16.h"
@@ -63,6 +66,7 @@ enum {
 	ID_ZOOM_IN,
 	ID_ZOOM_OUT,
 	ID_UPDATE_TIMER,
+	ID_BACKGROUND,
 };
 
 /* The minimum interval between updates when rendering the preview bitmap.
@@ -90,6 +94,7 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_TOOL(ID_ACTUAL_SIZE,  REHex::BitmapTool::OnActualSize)
 	EVT_TOOL(ID_ZOOM_IN,      REHex::BitmapTool::OnZoomIn)
 	EVT_TOOL(ID_ZOOM_OUT,     REHex::BitmapTool::OnZoomOut)
+	EVT_TOOL(ID_BACKGROUND,   REHex::BitmapTool::OnBackground)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
 	EVT_IDLE(REHex::BitmapTool::OnIdle)
@@ -145,6 +150,7 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document,
 	row_length(-1),
 	fit_to_screen(true),
 	actual_size(false),
+	bg_colour(wxNullColour),
 	force_bitmap_width(-1),
 	force_bitmap_height(-1),
 	bitmap_update_line(-1),
@@ -227,10 +233,11 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document,
 	
 	toolbar->AddStretchableSpace();
 	
-	toolbar->AddTool(     ID_ZOOM_IN,     "Zoom in",       wxBITMAP_PNG_FROM_DATA(zoom_in16),                     "Zoom in");
-	toolbar->AddTool(     ID_ZOOM_OUT,    "Zoom out",      wxBITMAP_PNG_FROM_DATA(zoom_out16),                    "Zoom out");
-	toolbar->AddCheckTool(ID_SCALE,       "Fit to screen", wxBITMAP_PNG_FROM_DATA(fit_to_screen16), wxNullBitmap, "Fit to screen");
-	toolbar->AddCheckTool(ID_ACTUAL_SIZE, "Actual size",   wxBITMAP_PNG_FROM_DATA(actual_size16),   wxNullBitmap, "Actual size");
+	toolbar->AddTool(     ID_BACKGROUND,  "Set background", wxBITMAP_PNG_FROM_DATA(bg16),                          "Set background");
+	toolbar->AddTool(     ID_ZOOM_IN,     "Zoom in",        wxBITMAP_PNG_FROM_DATA(zoom_in16),                     "Zoom in");
+	toolbar->AddTool(     ID_ZOOM_OUT,    "Zoom out",       wxBITMAP_PNG_FROM_DATA(zoom_out16),                    "Zoom out");
+	toolbar->AddCheckTool(ID_SCALE,       "Fit to screen",  wxBITMAP_PNG_FROM_DATA(fit_to_screen16), wxNullBitmap, "Fit to screen");
+	toolbar->AddCheckTool(ID_ACTUAL_SIZE, "Actual size",    wxBITMAP_PNG_FROM_DATA(actual_size16),   wxNullBitmap, "Actual size");
 	
 	toolbar->ToggleTool(ID_SCALE, fit_to_screen);
 	toolbar->ToggleTool(ID_ACTUAL_SIZE, actual_size);
@@ -867,16 +874,24 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offs
 				input_x = ((width - 1) - input_x);
 			}
 			
-			/* Initialise output to chequerboard pattern. */
-			
-			bool x_even = (output_x % 20) >= 10;
-			bool y_even = (output_y % 20) >= 10;
-			
-			int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
-			
-			output_col_ptr.Red()   = chequerboard_colour;
-			output_col_ptr.Green() = chequerboard_colour;
-			output_col_ptr.Blue()  = chequerboard_colour;
+			if(bg_colour.IsOk())
+			{
+				output_col_ptr.Red() = bg_colour.Red();
+				output_col_ptr.Green() = bg_colour.Green();
+				output_col_ptr.Blue() = bg_colour.Blue();
+			}
+			else{
+				/* Initialise output to chequerboard pattern. */
+				
+				bool x_even = (output_x % 20) >= 10;
+				bool y_even = (output_y % 20) >= 10;
+				
+				int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
+				
+				output_col_ptr.Red()   = chequerboard_colour;
+				output_col_ptr.Green() = chequerboard_colour;
+				output_col_ptr.Blue()  = chequerboard_colour;
+			}
 			
 			if((off_t)(data.size()) <= data_line_offset)
 			{
@@ -1103,6 +1118,35 @@ void REHex::BitmapTool::OnZoomOut(wxCommandEvent &event)
 			break;
 		}
 	}
+}
+
+void REHex::BitmapTool::OnBackground(wxCommandEvent &event)
+{
+	wxMenu menu;
+	
+	wxMenuItem *none = menu.Append(wxID_ANY, "None");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		bg_colour = wxNullColour;
+		update();
+	}, none->GetId(), none->GetId());
+	
+	wxMenuItem *colour = menu.Append(wxID_ANY, "Choose colour...");
+	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
+	{
+		wxColourData cd;
+		cd.SetChooseAlpha(false);
+
+		wxColourDialog dlg(this, &cd);
+
+		if(dlg.ShowModal() == wxID_OK)
+		{
+			bg_colour = dlg.GetColourData().GetColour();
+			update();
+		}
+	}, colour->GetId(), colour->GetId());
+	
+	PopupMenu(&menu);
 }
 
 void REHex::BitmapTool::OnXXX(wxCommandEvent &event)

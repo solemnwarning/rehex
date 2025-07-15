@@ -216,6 +216,7 @@
     <ClCompile Include="..\..\res\ascii24.c" />
     <ClCompile Include="..\..\res\ascii32.c" />
     <ClCompile Include="..\..\res\ascii48.c" />
+    <ClCompile Include="..\..\res\bg16.c" />
     <ClCompile Include="..\..\res\diff_fold16.c" />
     <ClCompile Include="..\..\res\diff_fold24.c" />
     <ClCompile Include="..\..\res\diff_fold32.c" />
@@ -376,6 +377,7 @@
     <ClInclude Include="..\..\res\ascii24.h" />
     <ClInclude Include="..\..\res\ascii32.h" />
     <ClInclude Include="..\..\res\ascii48.h" />
+    <ClInclude Include="..\..\res\bg16.h" />
     <ClInclude Include="..\..\res\diff_fold16.h" />
     <ClInclude Include="..\..\res\diff_fold24.h" />
     <ClInclude Include="..\..\res\diff_fold32.h" />

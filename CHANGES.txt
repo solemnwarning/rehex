@@ -1,3 +1,8 @@
+Version TBC:
+
+ * Add option to change bitmap visualisation image background to a
+   chosen colour (#258).
+
 Version 0.63.2 (2025-07-13):
 
  * Add missing file required for binary template support.

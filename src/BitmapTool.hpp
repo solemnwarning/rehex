@@ -112,6 +112,7 @@ namespace REHex {
 			bool fit_to_screen;
 			bool actual_size;
 			int zoom;
+			wxColour bg_colour;
 			
 			int force_bitmap_width, force_bitmap_height;
 			int bitmap_width, bitmap_height;
@@ -142,6 +143,7 @@ namespace REHex {
 			void OnActualSize(wxCommandEvent &event);
 			void OnZoomIn(wxCommandEvent &event);
 			void OnZoomOut(wxCommandEvent &event);
+			void OnBackground(wxCommandEvent &event);
 			void OnXXX(wxCommandEvent &event);
 			void OnSize(wxSizeEvent &event);
 			void OnIdle(wxIdleEvent &event);

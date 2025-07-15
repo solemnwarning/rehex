@@ -19,6 +19,9 @@
     <CustomBuild Include="..\..\res\ascii48.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\res\bg16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="..\..\res\icon16.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>

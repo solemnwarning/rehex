@@ -360,6 +360,9 @@
     <ClCompile Include="..\src\BatchedCharacterRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\res\bg16.c">
+      <Filter>res</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\AboutDialog.hpp">
@@ -576,6 +579,9 @@
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="..\res\dock_top.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\res\bg16.h">
       <Filter>res</Filter>
     </ClInclude>
   </ItemGroup>

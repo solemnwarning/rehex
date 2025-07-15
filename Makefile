@@ -343,6 +343,7 @@ APP_OBJS := \
 	res/ascii24.o \
 	res/ascii32.o \
 	res/ascii48.o \
+	res/bg16.o \
 	res/diff_fold16.o \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
@@ -469,6 +470,7 @@ TEST_OBJS := \
 	res/ascii24.o \
 	res/ascii32.o \
 	res/ascii48.o \
+	res/bg16.o \
 	res/diff_fold16.o \
 	res/diff_fold24.o \
 	res/diff_fold32.o \
@@ -637,7 +639,7 @@ src/ArtProvider.$(BUILD_TYPE).o: \
 	res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
 src/BitmapTool.$(BUILD_TYPE).o: \
 	res/actual_size16.h res/fit_to_screen16.h res/swap_horiz16.h \
-	res/swap_vert16.h res/zoom_in16.h res/zoom_out16.h
+	res/swap_vert16.h res/zoom_in16.h res/zoom_out16.h res/bg16.h
 src/DataHistogramPanel.$(BUILD_TYPE).o: \
 	res/spinner24.h res/zoom_in16.h res/zoom_out16.h
 src/DiffWindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h

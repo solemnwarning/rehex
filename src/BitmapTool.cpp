@@ -485,7 +485,7 @@ void REHex::BitmapTool::update()
 	delete bitmap;
 	bitmap = new_bitmap;
 	
-	render_region(0, bitmap_lines_per_idle, image_offset, image_width, image_height);
+	render_region<wxNativePixelData>(bitmap, 0, bitmap_lines_per_idle, image_offset, image_width, image_height, true);
 	
 	if(bitmap_lines_per_idle < bitmap_height)
 	{
@@ -787,7 +787,7 @@ void REHex::BitmapTool::update_pixel_fmt()
 	}
 }
 
-void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offset, int width, int height)
+template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, int region_y, int region_h, BitOffset offset, int width, int height, bool fill_bg)
 {
 	int output_width = bitmap->GetWidth();
 	int output_height = bitmap->GetHeight();
@@ -797,13 +797,13 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offs
 	
 	/* Read in the image data, convert the source pixel format and write it to the wxBitmap. */
 	
-	wxNativePixelData bmp_data(*bitmap);
+	PDT bmp_data(*bitmap);
 	assert(bmp_data);
 	
 	std::vector<unsigned char> data;
 	BitOffset data_begin = BitOffset::ZERO, data_end = BitOffset::ZERO;
 	
-	wxNativePixelData::Iterator output_ptr(bmp_data);
+	typename PDT::Iterator output_ptr(bmp_data);
 	output_ptr.OffsetY(bmp_data, region_y);
 	
 	for(int output_y = region_y; output_y < output_height && output_y < region_y + region_h; ++output_y)
@@ -855,7 +855,7 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offs
 		assert((line_off - data_begin).byte_aligned());
 		off_t data_line_offset = (line_off - data_begin).byte();
 		
-		wxNativePixelData::Iterator output_col_ptr = output_ptr;
+		typename PDT::Iterator output_col_ptr = output_ptr;
 		
 		for(int output_x = 0; output_x < output_width; ++output_x, ++output_col_ptr)
 		{
@@ -874,23 +874,26 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offs
 				input_x = ((width - 1) - input_x);
 			}
 			
-			if(bg_colour.IsOk())
+			if(fill_bg)
 			{
-				output_col_ptr.Red() = bg_colour.Red();
-				output_col_ptr.Green() = bg_colour.Green();
-				output_col_ptr.Blue() = bg_colour.Blue();
-			}
-			else{
-				/* Initialise output to chequerboard pattern. */
-				
-				bool x_even = (output_x % 20) >= 10;
-				bool y_even = (output_y % 20) >= 10;
-				
-				int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
-				
-				output_col_ptr.Red()   = chequerboard_colour;
-				output_col_ptr.Green() = chequerboard_colour;
-				output_col_ptr.Blue()  = chequerboard_colour;
+				if(bg_colour.IsOk())
+				{
+					output_col_ptr.Red() = bg_colour.Red();
+					output_col_ptr.Green() = bg_colour.Green();
+					output_col_ptr.Blue() = bg_colour.Blue();
+				}
+				else{
+					/* Initialise output to chequerboard pattern. */
+					
+					bool x_even = (output_x % 20) >= 10;
+					bool y_even = (output_y % 20) >= 10;
+					
+					int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
+					
+					output_col_ptr.Red()   = chequerboard_colour;
+					output_col_ptr.Green() = chequerboard_colour;
+					output_col_ptr.Blue()  = chequerboard_colour;
+				}
 			}
 			
 			if((off_t)(data.size()) <= data_line_offset)
@@ -970,23 +973,32 @@ void REHex::BitmapTool::render_region(int region_y, int region_h, BitOffset offs
 			
 			wxColour colour = colour_fmt_conv(rgb);
 			
-			if(colour.Alpha() != wxALPHA_OPAQUE)
+			if(fill_bg)
 			{
-				/* Blend colours with an alpha channel into the chequerboard. */
+				if(colour.Alpha() != wxALPHA_OPAQUE)
+				{
+					/* Blend colours with an alpha channel into the chequerboard. */
+					
+					double alpha = (double)(colour.Alpha()) / 255.0;
+					
+					int red   = ((double)(colour.Red())   * alpha) + ((double)(output_col_ptr.Red())   * (1.0 - alpha));
+					int green = ((double)(colour.Green()) * alpha) + ((double)(output_col_ptr.Green()) * (1.0 - alpha));
+					int blue  = ((double)(colour.Blue())  * alpha) + ((double)(output_col_ptr.Blue())  * (1.0 - alpha));
+					
+					colour.Set(red, green, blue);
+					
+				}
 				
-				double alpha = (double)(colour.Alpha()) / 255.0;
-				
-				int red   = ((double)(colour.Red())   * alpha) + ((double)(output_col_ptr.Red())   * (1.0 - alpha));
-				int green = ((double)(colour.Green()) * alpha) + ((double)(output_col_ptr.Green()) * (1.0 - alpha));
-				int blue  = ((double)(colour.Blue())  * alpha) + ((double)(output_col_ptr.Blue())  * (1.0 - alpha));
-				
-				colour.Set(red, green, blue);
-				
+				output_col_ptr.Red()   = colour.Red();
+				output_col_ptr.Green() = colour.Green();
+				output_col_ptr.Blue()  = colour.Blue();
 			}
-			
-			output_col_ptr.Red()   = colour.Red();
-			output_col_ptr.Green() = colour.Green();
-			output_col_ptr.Blue()  = colour.Blue();
+			else{
+				output_col_ptr.Red()   = colour.Red();
+				output_col_ptr.Green() = colour.Green();
+				output_col_ptr.Blue()  = colour.Blue();
+				output_col_ptr.Alpha() = colour.Alpha();
+			}
 		}
 		
 		output_ptr.OffsetY(bmp_data, 1);
@@ -1178,7 +1190,7 @@ void REHex::BitmapTool::OnIdle(wxIdleEvent &event)
 {
 	if(bitmap_update_line >= 0)
 	{
-		render_region(bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height);
+		render_region<wxNativePixelData>(bitmap, bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height, true);
 		bitmap_update_line += bitmap_lines_per_idle;
 		
 		s_bitmap->Refresh();
@@ -1199,7 +1211,7 @@ void REHex::BitmapTool::OnUpdateTimer(wxTimerEvent &event)
 {
 	if(bitmap_update_line >= 0)
 	{
-		render_region(bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height);
+		render_region<wxNativePixelData>(bitmap, bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height, true);
 		bitmap_update_line += bitmap_lines_per_idle;
 		
 		s_bitmap->Refresh();
@@ -1219,17 +1231,20 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 {
 	wxMenu menu;
 	
-	wxMenuItem *copy = menu.Append(wxID_ANY, "&Copy preview image");
+	wxMenuItem *copy = menu.Append(wxID_ANY, "&Copy image");
 	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 	{
 		ClipboardGuard cg;
 		if(cg)
 		{
-			wxTheClipboard->SetData(new wxBitmapDataObject(*bitmap));
+			wxBitmap fullsize_bitmap(image_width, image_height, 32);
+			render_region<wxAlphaPixelData>(&fullsize_bitmap, 0, image_height, image_offset, image_width, image_height, false);
+			
+			wxTheClipboard->SetData(new wxBitmapDataObject(fullsize_bitmap));
 		}
 	}, copy->GetId(), copy->GetId());
 	
-	wxMenuItem *save = menu.Append(wxID_ANY, "&Save preview image");
+	wxMenuItem *save = menu.Append(wxID_ANY, "&Save image");
 	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 	{
 		CallAfter([&]()
@@ -1274,7 +1289,10 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 				abort();
 			}
 			
-			bool save_ok = bitmap->SaveFile(save_fn.GetFullPath(), type);
+			wxBitmap fullsize_bitmap(image_width, image_height, 32);
+			render_region<wxAlphaPixelData>(&fullsize_bitmap, 0, image_height, image_offset, image_width, image_height, false);
+			
+			bool save_ok = fullsize_bitmap.SaveFile(save_fn.GetFullPath(), type);
 			if(!save_ok)
 			{
 				wxMessageBox("Unable to save image", "Error", (wxOK | wxICON_ERROR | wxCENTRE), this);

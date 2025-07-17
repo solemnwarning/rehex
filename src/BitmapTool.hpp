@@ -128,7 +128,7 @@ namespace REHex {
 			void reset_row_length_spinner();
 			
 			void update();
-			void render_region(int region_y, int region_h, BitOffset offset, int width, int height);
+			template<typename PDT> void render_region(wxBitmap *bitmap, int region_y, int region_h, BitOffset offset, int width, int height, bool fill_bg);
 			
 			void OnDocumentDestroy(wxWindowDestroyEvent &event);
 			void OnCursorUpdate(CursorUpdateEvent &event);

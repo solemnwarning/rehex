@@ -1135,7 +1135,10 @@ void REHex::BitmapTool::OnBackground(wxCommandEvent &event)
 	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 	{
 		wxColourData cd;
+		
+		#if wxCHECK_VERSION(3,1,0)
 		cd.SetChooseAlpha(false);
+		#endif
 
 		wxColourDialog dlg(this, &cd);
 

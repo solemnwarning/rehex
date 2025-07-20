@@ -11,8 +11,10 @@
 /AppDir/
 /rehex.AppImage
 
-/res/actual_size16.c
-/res/actual_size16.h
+/res/actual_size_dark_16.c
+/res/actual_size_dark_16.h
+/res/actual_size_light_16.c
+/res/actual_size_light_16.h
 
 /res/ascii16.c
 /res/ascii16.h
@@ -53,8 +55,10 @@
 /res/document_save_as32.c
 /res/document_save_as32.h
 
-/res/fit_to_screen16.c
-/res/fit_to_screen16.h
+/res/fit_to_screen_dark_16.c
+/res/fit_to_screen_dark_16.h
+/res/fit_to_screen_light_16.c
+/res/fit_to_screen_light_16.h
 
 /res/icon16.c
 /res/icon16.h
@@ -86,17 +90,25 @@
 /res/spinner24.c
 /res/spinner24.h
 
-/res/swap_horiz16.c
-/res/swap_horiz16.h
+/res/swap_horiz_dark_16.c
+/res/swap_horiz_dark_16.h
+/res/swap_horiz_light_16.c
+/res/swap_horiz_light_16.h
 
-/res/swap_vert16.c
-/res/swap_vert16.h
+/res/swap_vert_dark_16.c
+/res/swap_vert_dark_16.h
+/res/swap_vert_light_16.c
+/res/swap_vert_light_16.h
 
-/res/zoom_in16.c
-/res/zoom_in16.h
+/res/zoom_in_dark_16.c
+/res/zoom_in_dark_16.h
+/res/zoom_in_light_16.c
+/res/zoom_in_light_16.h
 
-/res/zoom_out16.c
-/res/zoom_out16.h
+/res/zoom_out_dark_16.c
+/res/zoom_out_dark_16.h
+/res/zoom_out_light_16.c
+/res/zoom_out_light_16.h
 
 /res/version-res-defs.h
 

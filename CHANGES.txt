@@ -6,6 +6,9 @@ Version TBC:
  * Copy and save full-size image with alpha channel from bitmap
    visualisation instead of the preview image.
 
+ * Add light icons for use with dark themes to bitmap visualisation and
+   histogram views (#262).
+
 Version 0.63.2 (2025-07-13):
 
  * Add missing file required for binary template support.

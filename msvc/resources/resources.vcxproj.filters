@@ -81,22 +81,40 @@
     <CustomBuild Include="..\..\res\spinner24.gif">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\swap_horiz16.png">
+    <CustomBuild Include="..\..\res\swap_horiz_dark_16.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\swap_vert16.png">
+    <CustomBuild Include="..\..\res\swap_horiz_light_16.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\actual_size16.png">
+    <CustomBuild Include="..\..\res\swap_vert_dark_16.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\fit_to_screen16.png">
+    <CustomBuild Include="..\..\res\swap_vert16_light_.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\zoom_in16.png">
+    <CustomBuild Include="..\..\res\actual_size_dark_16.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\zoom_out16.png">
+    <CustomBuild Include="..\..\res\actual_size_light_16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\fit_to_screen_dark_16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\fit_to_screen_light_16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\zoom_in_dark_16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\zoom_in_light_16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\zoom_out_dark_16.png">
+      <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\zoom_out_light_16.png">
       <Filter>Resource Files</Filter>
     </CustomBuild>
   </ItemGroup>

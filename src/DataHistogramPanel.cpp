@@ -31,8 +31,10 @@
 #include "search.hpp"
 
 #include "../res/spinner24.h"
-#include "../res/zoom_in16.h"
-#include "../res/zoom_out16.h"
+#include "../res/zoom_in_dark_16.h"
+#include "../res/zoom_in_light_16.h"
+#include "../res/zoom_out_dark_16.h"
+#include "../res/zoom_out_light_16.h"
 
 namespace REHex
 {
@@ -361,8 +363,11 @@ REHex::DataHistogramPanel::DataHistogramPanel(wxWindow *parent, SharedDocumentPo
 	
 	toolbar->AddControl(spinner);
 	
-	toolbar->AddTool(ID_ZOOM_IN,  "Zoom in",  wxBITMAP_PNG_FROM_DATA(zoom_in16),  "Zoom in");
-	toolbar->AddTool(ID_ZOOM_OUT, "Zoom out", wxBITMAP_PNG_FROM_DATA(zoom_out16), "Zoom out");
+	wxColor btn_bg_colour = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
+	bool light_buttons = Palette::is_colour_light(btn_bg_colour);
+	
+	toolbar->AddTool(ID_ZOOM_IN,  "Zoom in",  (light_buttons ? wxBITMAP_PNG_FROM_DATA(zoom_in_dark_16)  : wxBITMAP_PNG_FROM_DATA(zoom_in_light_16)),  "Zoom in");
+	toolbar->AddTool(ID_ZOOM_OUT, "Zoom out", (light_buttons ? wxBITMAP_PNG_FROM_DATA(zoom_out_dark_16) : wxBITMAP_PNG_FROM_DATA(zoom_in_light_16)), "Zoom out");
 	
 	toolbar->Realize();
 	

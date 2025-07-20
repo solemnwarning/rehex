@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -109,6 +109,11 @@ namespace REHex {
 			 * @param fg_opacity  Opacity of foreground colour (0.0f - 1.0f).
 			*/
 			static wxColour blend_colours(const wxColour &bg, const wxColour &fg, float fg_opacity = 0.5f);
+			
+			/**
+			 * @brief Check if a colour is a light shade.
+			*/
+			static bool is_colour_light(const wxColour &colour);
 			
 			int get_default_highlight_lightness() const;
 			

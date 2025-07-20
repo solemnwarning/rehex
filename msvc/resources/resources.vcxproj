@@ -327,75 +327,69 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\spinner24.c;..\..\res\spinner24.h;%(Outputs)</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\spinner24.c;..\..\res\spinner24.h;%(Outputs)</Outputs>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\swap_horiz16.png">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\swap_horiz16.png swap_horiz16_png ..\..\res\swap_horiz16.c ..\..\res\swap_horiz16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\swap_horiz16.png swap_horiz16_png ..\..\res\swap_horiz16.c ..\..\res\swap_horiz16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\swap_horiz16.png swap_horiz16_png ..\..\res\swap_horiz16.c ..\..\res\swap_horiz16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\swap_horiz16.png swap_horiz16_png ..\..\res\swap_horiz16.c ..\..\res\swap_horiz16.h</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\swap_horiz16.c;..\..\res\swap_horiz16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\swap_horiz16.c;..\..\res\swap_horiz16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\swap_horiz16.c;..\..\res\swap_horiz16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\swap_horiz16.c;..\..\res\swap_horiz16.h;%(Outputs)</Outputs>
+    <CustomBuild Include="..\..\res\swap_horiz_dark_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\swap_horiz_dark_16.png swap_horiz_dark_16_png ..\..\res\swap_horiz_dark_16.c ..\..\res\swap_horiz_dark_16.h</Command>
+      <Outputs>..\..\res\swap_horiz_dark_16.c;..\..\res\swap_horiz_dark_16.h;%(Outputs)</Outputs>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\swap_vert16.png">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\swap_vert16.png swap_vert16_png ..\..\res\swap_vert16.c ..\..\res\swap_vert16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\swap_vert16.png swap_vert16_png ..\..\res\swap_vert16.c ..\..\res\swap_vert16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\swap_vert16.png swap_vert16_png ..\..\res\swap_vert16.c ..\..\res\swap_vert16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\swap_vert16.png swap_vert16_png ..\..\res\swap_vert16.c ..\..\res\swap_vert16.h</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\swap_vert16.c;..\..\res\swap_vert16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\swap_vert16.c;..\..\res\swap_vert16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\swap_vert16.c;..\..\res\swap_vert16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\swap_vert16.c;..\..\res\swap_vert16.h;%(Outputs)</Outputs>
+    <CustomBuild Include="..\..\res\swap_horiz_light_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\swap_horiz_light_16.png swap_horiz_light_16_png ..\..\res\swap_horiz_light_16.c ..\..\res\swap_horiz_light_16.h</Command>
+      <Outputs>..\..\res\swap_horiz_light_16.c;..\..\res\swap_horiz_light_16.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\swap_vert_dark_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\swap_vert_dark_16.png swap_vert_dark_16_png ..\..\res\swap_vert_dark_16.c ..\..\res\swap_vert_dark_16.h</Command>
+      <Outputs>..\..\res\swap_vert_dark_16.c;..\..\res\swap_vert_dark_16.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\res\swap_vert_light_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\swap_vert_light_16.png swap_vert_light_16_png ..\..\res\swap_vert_light_16.c ..\..\res\swap_vert_light_16.h</Command>
+      <Outputs>..\..\res\swap_vert_light_16.c;..\..\res\swap_vert_light_16.h;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\res\actual_size16.png">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\actual_size16.png actual_size16_png ..\..\res\actual_size16.c ..\..\res\actual_size16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\actual_size16.png actual_size16_png ..\..\res\actual_size16.c ..\..\res\actual_size16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\actual_size16.png actual_size16_png ..\..\res\actual_size16.c ..\..\res\actual_size16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\actual_size16.png actual_size16_png ..\..\res\actual_size16.c ..\..\res\actual_size16.h</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\actual_size16.c;..\..\res\actual_size16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\actual_size16.c;..\..\res\actual_size16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\actual_size16.c;..\..\res\actual_size16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\actual_size16.c;..\..\res\actual_size16.h;%(Outputs)</Outputs>
+    <CustomBuild Include="..\..\res\actual_size_dark_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\actual_size_dark_16.png actual_size_dark_16_png ..\..\res\actual_size_dark_16.c ..\..\res\actual_size_dark_16.h</Command>
+      <Outputs>..\..\res\actual_size_dark_16.c;..\..\res\actual_size_dark_16.h;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\res\fit_to_screen16.png">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</ExcludedFromBuild>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\fit_to_screen16.c;..\..\res\fit_to_screen16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\fit_to_screen16.c;..\..\res\fit_to_screen16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\fit_to_screen16.c;..\..\res\fit_to_screen16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\fit_to_screen16.c;..\..\res\fit_to_screen16.h;%(Outputs)</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\fit_to_screen16.png fit_to_screen16_png ..\..\res\fit_to_screen16.c ..\..\res\fit_to_screen16.h</Command>
+    <CustomBuild Include="..\..\res\actual_size_light_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\actual_size_light_16.png actual_size_light_16_png ..\..\res\actual_size_light_16.c ..\..\res\actual_size_light_16.h</Command>
+      <Outputs>..\..\res\actual_size_light_16.c;..\..\res\actual_size_light_16.h;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\res\zoom_in16.png">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\zoom_in16.png zoom_in16_png ..\..\res\zoom_in16.c ..\..\res\zoom_in16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\zoom_in16.png zoom_in16_png ..\..\res\zoom_in16.c ..\..\res\zoom_in16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\zoom_in16.png zoom_in16_png ..\..\res\zoom_in16.c ..\..\res\zoom_in16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\zoom_in16.png zoom_in16_png ..\..\res\zoom_in16.c ..\..\res\zoom_in16.h</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\zoom_in16.c;..\..\res\zoom_in16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\zoom_in16.c;..\..\res\zoom_in16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\zoom_in16.c;..\..\res\zoom_in16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\zoom_in16.c;..\..\res\zoom_in16.h;%(Outputs)</Outputs>
+    <CustomBuild Include="..\..\res\fit_to_screen_dark_16.png">
+      <Outputs>..\..\res\fit_to_screen_dark_16.c;..\..\res\fit_to_screen_dark_16.h;%(Outputs)</Outputs>
+      <Command>"$(OutDir)embed.exe" ..\..\res\fit_to_screen_dark_16.png fit_to_screen_dark_16_png ..\..\res\fit_to_screen_dark_16.c ..\..\res\fit_to_screen_dark_16.h</Command>
     </CustomBuild>
-    <CustomBuild Include="..\..\res\zoom_out16.png">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(OutDir)embed.exe" ..\..\res\zoom_out16.png zoom_out16_png ..\..\res\zoom_out16.c ..\..\res\zoom_out16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(OutDir)embed.exe" ..\..\res\zoom_out16.png zoom_out16_png ..\..\res\zoom_out16.c ..\..\res\zoom_out16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(OutDir)embed.exe" ..\..\res\zoom_out16.png zoom_out16_png ..\..\res\zoom_out16.c ..\..\res\zoom_out16.h</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(OutDir)embed.exe" ..\..\res\zoom_out16.png zoom_out16_png ..\..\res\zoom_out16.c ..\..\res\zoom_out16.h</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\res\zoom_out16.c;..\..\res\zoom_out16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\res\zoom_out16.c;..\..\res\zoom_out16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\res\zoom_out16.c;..\..\res\zoom_out16.h;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\res\zoom_out16.c;..\..\res\zoom_out16.h;%(Outputs)</Outputs>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\res\fit_to_screen_light_16.png">
+      <Outputs>..\..\res\fit_to_screen_light_16.c;..\..\res\fit_to_screen_light_16.h;%(Outputs)</Outputs>
+      <Command>"$(OutDir)embed.exe" ..\..\res\fit_to_screen_light_16.png fit_to_screen_light_16_png ..\..\res\fit_to_screen_light_16.c ..\..\res\fit_to_screen_light_16.h</Command>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\res\zoom_in_dark_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\zoom_in_dark_16.png zoom_in_dark_16_png ..\..\res\zoom_in_dark_16.c ..\..\res\zoom_in_dark_16.h</Command>
+      <Outputs>..\..\res\zoom_in_dark_16.c;..\..\res\zoom_in_dark_16.h;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\res\zoom_in_light_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\zoom_in_light_16.png zoom_in_light_16_png ..\..\res\zoom_in_light_16.c ..\..\res\zoom_in_light_16.h</Command>
+      <Outputs>..\..\res\zoom_in_light_16.c;..\..\res\zoom_in_light_16.h;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\res\zoom_out_dark_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\zoom_out_dark_16.png zoom_out_dark_16_png ..\..\res\zoom_out_dark_16.c ..\..\res\zoom_out_dark_16.h</Command>
+      <Outputs>..\..\res\zoom_out_dark_16.c;..\..\res\zoom_out_dark_16.h;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\res\zoom_out_light_16.png">
+      <Command>"$(OutDir)embed.exe" ..\..\res\zoom_out_light_16.png zoom_out_light_16_png ..\..\res\zoom_out_light_16.c ..\..\res\zoom_out_light_16.h</Command>
+      <Outputs>..\..\res\zoom_out_light_16.c;..\..\res\zoom_out_light_16.h;%(Outputs)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

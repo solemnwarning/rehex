@@ -322,22 +322,40 @@
     <ClCompile Include="..\..\res\diff_fold48.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\res\swap_horiz16.c">
+    <ClCompile Include="..\..\res\swap_horiz_dark_16.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\res\swap_vert16.c">
+    <ClCompile Include="..\..\res\swap_horiz_light_16.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\res\zoom_in16.c">
+    <ClCompile Include="..\..\res\swap_vert_dark_16.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\res\zoom_out16.c">
+    <ClCompile Include="..\..\res\swap_vert_light_16.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\res\actual_size16.c">
+    <ClCompile Include="..\..\res\zoom_in_dark_16.c">
       <Filter>res</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\res\fit_to_screen16.c">
+    <ClCompile Include="..\..\res\zoom_in_light_16.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\zoom_out_dark_16.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\zoom_out_light_16.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\actual_size_dark_16.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\actual_size_light_16.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\fit_to_screen_dark_16.c">
+      <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\res\fit_to_screen_light_16.c">
       <Filter>res</Filter>
     </ClCompile>
     <ClCompile Include="..\..\res\spinner24.c">
@@ -534,22 +552,40 @@
     <ClInclude Include="..\..\res\diff_fold48.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\swap_horiz16.h">
+    <ClInclude Include="..\..\res\swap_horiz_dark_16.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\swap_vert16.h">
+    <ClInclude Include="..\..\res\swap_horiz_light_16.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\zoom_in16.h">
+    <ClInclude Include="..\..\res\swap_vert_dark_16.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\zoom_out16.h">
+    <ClInclude Include="..\..\res\swap_vert_light_16.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\actual_size16.h">
+    <ClInclude Include="..\..\res\zoom_in_dark_16.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\fit_to_screen16.h">
+    <ClInclude Include="..\..\res\zoom_in_light_16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\zoom_out_dark_16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\zoom_out_light_16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\actual_size_dark_16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\actual_size_light_16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\fit_to_screen_dark_16.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\res\fit_to_screen_light_16.h">
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="..\..\res\spinner24.h">

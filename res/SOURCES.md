@@ -4,12 +4,18 @@
 
 ### "Material design icons" by Google
 
-- actual_size16.png
-- fit_to_screen16.png
-- swap_horiz16.png
-- swap_vert16.png
-- zoom_in16.png
-- zoom_out16.png
+- actual_size_dark_16.png
+- actual_size_light_16.png
+- fit_to_screen_dark_16.png
+- fit_to_screen_light_16.png
+- swap_horiz_dark_16.png
+- swap_horiz_light_16.png
+- swap_vert_dark_16.png
+- swap_vert_light_16.png
+- zoom_in_dark_16.png
+- zoom_in_light_16.png
+- zoom_out_dark_16.png
+- zoom_out_light_16.png
 
 ### Tango Icon Library
 

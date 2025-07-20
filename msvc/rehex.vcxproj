@@ -414,7 +414,8 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\res\actual_size16.c" />
+    <ClCompile Include="..\res\actual_size_dark_16.c" />
+    <ClCompile Include="..\res\actual_size_light_16.c" />
     <ClCompile Include="..\res\ascii16.c" />
     <ClCompile Include="..\res\ascii24.c" />
     <ClCompile Include="..\res\ascii32.c" />
@@ -428,7 +429,8 @@
     <ClCompile Include="..\res\dock_left.c" />
     <ClCompile Include="..\res\dock_right.c" />
     <ClCompile Include="..\res\dock_top.c" />
-    <ClCompile Include="..\res\fit_to_screen16.c" />
+    <ClCompile Include="..\res\fit_to_screen_dark_16.c" />
+    <ClCompile Include="..\res\fit_to_screen_light_16.c" />
     <ClCompile Include="..\res\icon128.c" />
     <ClCompile Include="..\res\icon16.c" />
     <ClCompile Include="..\res\icon32.c" />
@@ -441,11 +443,15 @@
     <ClCompile Include="..\res\offsets48.c" />
     <ClCompile Include="..\res\shortcut48.c" />
     <ClCompile Include="..\res\spinner24.c" />
-    <ClCompile Include="..\res\swap_horiz16.c" />
-    <ClCompile Include="..\res\swap_vert16.c" />
+    <ClCompile Include="..\res\swap_horiz_dark_16.c" />
+    <ClCompile Include="..\res\swap_horiz_light_16.c" />
+    <ClCompile Include="..\res\swap_vert_dark_16.c" />
+    <ClCompile Include="..\res\swap_vert_light_16.c" />
     <ClCompile Include="..\res\version.cpp" />
-    <ClCompile Include="..\res\zoom_in16.c" />
-    <ClCompile Include="..\res\zoom_out16.c" />
+    <ClCompile Include="..\res\zoom_in_dark_16.c" />
+    <ClCompile Include="..\res\zoom_in_light_16.c" />
+    <ClCompile Include="..\res\zoom_out_dark_16.c" />
+    <ClCompile Include="..\res\zoom_out_light_16.c" />
     <ClCompile Include="..\src\AboutDialog.cpp" />
     <ClCompile Include="..\src\AppMain.cpp" />
     <ClCompile Include="..\src\AppSettings.cpp" />
@@ -531,7 +537,8 @@
     <ClCompile Include="..\src\WindowCommands.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\res\actual_size16.h" />
+    <ClInclude Include="..\res\actual_size_dark_16.h" />
+    <ClInclude Include="..\res\actual_size_light_16.h" />
     <ClInclude Include="..\res\ascii16.h" />
     <ClInclude Include="..\res\ascii24.h" />
     <ClInclude Include="..\res\ascii32.h" />
@@ -545,7 +552,8 @@
     <ClInclude Include="..\res\dock_left.h" />
     <ClInclude Include="..\res\dock_right.h" />
     <ClInclude Include="..\res\dock_top.h" />
-    <ClInclude Include="..\res\fit_to_screen16.h" />
+    <ClInclude Include="..\res\fit_to_screen_dark_16.h" />
+    <ClInclude Include="..\res\fit_to_screen_light_16.h" />
     <ClInclude Include="..\res\icon128.h" />
     <ClInclude Include="..\res\icon16.h" />
     <ClInclude Include="..\res\icon32.h" />
@@ -558,12 +566,16 @@
     <ClInclude Include="..\res\offsets48.h" />
     <ClInclude Include="..\res\shortcut48.h" />
     <ClInclude Include="..\res\spinner24.h" />
-    <ClInclude Include="..\res\swap_horiz16.h" />
-    <ClInclude Include="..\res\swap_vert16.h" />
+    <ClInclude Include="..\res\swap_horiz_dark_16.h" />
+    <ClInclude Include="..\res\swap_horiz_light_16.h" />
+    <ClInclude Include="..\res\swap_vert_dark_16.h" />
+    <ClInclude Include="..\res\swap_vert_light_16.h" />
     <ClInclude Include="..\res\version.h" />
     <ClInclude Include="..\res\winres.h" />
-    <ClInclude Include="..\res\zoom_in16.h" />
-    <ClInclude Include="..\res\zoom_out16.h" />
+    <ClInclude Include="..\res\zoom_in_dark_16.h" />
+    <ClInclude Include="..\res\zoom_in_light_16.h" />
+    <ClInclude Include="..\res\zoom_out_dark_16.h" />
+    <ClInclude Include="..\res\zoom_out_light_16.h" />
     <ClInclude Include="..\src\AboutDialog.hpp" />
     <ClInclude Include="..\src\App.hpp" />
     <ClInclude Include="..\src\ArtProvider.hpp" />

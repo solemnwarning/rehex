@@ -35,13 +35,19 @@
 #include "NumericTextCtrl.hpp"
 #include "util.hpp"
 
-#include "../res/actual_size16.h"
+#include "../res/actual_size_dark_16.h"
+#include "../res/actual_size_light_16.h"
 #include "../res/bg16.h"
-#include "../res/fit_to_screen16.h"
-#include "../res/swap_horiz16.h"
-#include "../res/swap_vert16.h"
-#include "../res/zoom_in16.h"
-#include "../res/zoom_out16.h"
+#include "../res/fit_to_screen_dark_16.h"
+#include "../res/fit_to_screen_light_16.h"
+#include "../res/swap_horiz_dark_16.h"
+#include "../res/swap_horiz_light_16.h"
+#include "../res/swap_vert_dark_16.h"
+#include "../res/swap_vert_light_16.h"
+#include "../res/zoom_in_dark_16.h"
+#include "../res/zoom_in_light_16.h"
+#include "../res/zoom_out_dark_16.h"
+#include "../res/zoom_out_light_16.h"
 
 static REHex::ToolPanel *BitmapTool_factory(wxWindow *parent, REHex::SharedDocumentPointer &document, REHex::DocumentCtrl *document_ctrl)
 {
@@ -228,16 +234,19 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document,
 	toolbar = new wxToolBar(this, wxID_ANY);
 	sizer->Add(toolbar, 0, wxEXPAND | wxALIGN_LEFT);
 	
-	toolbar->AddCheckTool(ID_FLIP_X, "Flip X", wxBITMAP_PNG_FROM_DATA(swap_horiz16), wxNullBitmap, "Flip X");
-	toolbar->AddCheckTool(ID_FLIP_Y, "Flip Y", wxBITMAP_PNG_FROM_DATA(swap_vert16),  wxNullBitmap, "Flip Y");
+	wxColor btn_bg_colour = wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE);
+	bool light_buttons = Palette::is_colour_light(btn_bg_colour);
+	
+	toolbar->AddCheckTool(ID_FLIP_X, "Flip X", (light_buttons ? wxBITMAP_PNG_FROM_DATA(swap_horiz_dark_16) : wxBITMAP_PNG_FROM_DATA(swap_horiz_light_16)), wxNullBitmap, "Flip X");
+	toolbar->AddCheckTool(ID_FLIP_Y, "Flip Y", (light_buttons ? wxBITMAP_PNG_FROM_DATA(swap_vert_dark_16) : wxBITMAP_PNG_FROM_DATA(swap_vert_light_16)),  wxNullBitmap, "Flip Y");
 	
 	toolbar->AddStretchableSpace();
 	
 	toolbar->AddTool(     ID_BACKGROUND,  "Set background", wxBITMAP_PNG_FROM_DATA(bg16),                          "Set background");
-	toolbar->AddTool(     ID_ZOOM_IN,     "Zoom in",        wxBITMAP_PNG_FROM_DATA(zoom_in16),                     "Zoom in");
-	toolbar->AddTool(     ID_ZOOM_OUT,    "Zoom out",       wxBITMAP_PNG_FROM_DATA(zoom_out16),                    "Zoom out");
-	toolbar->AddCheckTool(ID_SCALE,       "Fit to screen",  wxBITMAP_PNG_FROM_DATA(fit_to_screen16), wxNullBitmap, "Fit to screen");
-	toolbar->AddCheckTool(ID_ACTUAL_SIZE, "Actual size",    wxBITMAP_PNG_FROM_DATA(actual_size16),   wxNullBitmap, "Actual size");
+	toolbar->AddTool(     ID_ZOOM_IN,     "Zoom in",        (light_buttons ? wxBITMAP_PNG_FROM_DATA(zoom_in_dark_16) : wxBITMAP_PNG_FROM_DATA(zoom_in_light_16)),                           "Zoom in");
+	toolbar->AddTool(     ID_ZOOM_OUT,    "Zoom out",       (light_buttons ? wxBITMAP_PNG_FROM_DATA(zoom_out_dark_16) : wxBITMAP_PNG_FROM_DATA(zoom_out_light_16)),                         "Zoom out");
+	toolbar->AddCheckTool(ID_SCALE,       "Fit to screen",  (light_buttons ? wxBITMAP_PNG_FROM_DATA(fit_to_screen_dark_16) : wxBITMAP_PNG_FROM_DATA(fit_to_screen_light_16)), wxNullBitmap, "Fit to screen");
+	toolbar->AddCheckTool(ID_ACTUAL_SIZE, "Actual size",    (light_buttons ? wxBITMAP_PNG_FROM_DATA(actual_size_dark_16) : wxBITMAP_PNG_FROM_DATA(actual_size_light_16)),     wxNullBitmap, "Actual size");
 	
 	toolbar->ToggleTool(ID_SCALE, fit_to_screen);
 	toolbar->ToggleTool(ID_ACTUAL_SIZE, actual_size);

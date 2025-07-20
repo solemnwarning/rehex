@@ -338,7 +338,8 @@ WXFREECHART_OBJS := \
 	wxFreeChart/src/zoompan.$(BUILD_TYPE).o
 
 APP_OBJS := \
-	res/actual_size16.o \
+	res/actual_size_dark_16.o \
+	res/actual_size_light_16.o \
 	res/ascii16.o \
 	res/ascii24.o \
 	res/ascii32.o \
@@ -352,7 +353,8 @@ APP_OBJS := \
 	res/dock_left.o \
 	res/dock_right.o \
 	res/dock_top.o \
-	res/fit_to_screen16.o \
+	res/fit_to_screen_dark_16.o \
+	res/fit_to_screen_light_16.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
@@ -365,10 +367,14 @@ APP_OBJS := \
 	res/offsets48.o \
 	res/shortcut48.o \
 	res/spinner24.o \
-	res/swap_horiz16.o \
-	res/swap_vert16.o \
-	res/zoom_in16.o \
-	res/zoom_out16.o \
+	res/swap_horiz_dark_16.o \
+	res/swap_horiz_light_16.o \
+	res/swap_vert_dark_16.o \
+	res/swap_vert_light_16.o \
+	res/zoom_in_dark_16.o \
+	res/zoom_in_light_16.o \
+	res/zoom_out_dark_16.o \
+	res/zoom_out_light_16.o \
 	src/AboutDialog.$(BUILD_TYPE).o \
 	src/AppMain.$(BUILD_TYPE).o \
 	src/AppSettings.$(BUILD_TYPE).o \
@@ -465,7 +471,8 @@ $(DEFAULT_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
-	res/actual_size16.o \
+	res/actual_size_dark_16.o \
+	res/actual_size_light_16.o \
 	res/ascii16.o \
 	res/ascii24.o \
 	res/ascii32.o \
@@ -479,7 +486,8 @@ TEST_OBJS := \
 	res/dock_left.o \
 	res/dock_right.o \
 	res/dock_top.o \
-	res/fit_to_screen16.o \
+	res/fit_to_screen_dark_16.o \
+	res/fit_to_screen_light_16.o \
 	res/icon16.o \
 	res/icon32.o \
 	res/icon48.o \
@@ -492,10 +500,14 @@ TEST_OBJS := \
 	res/offsets48.o \
 	res/shortcut48.o \
 	res/spinner24.o \
-	res/swap_horiz16.o \
-	res/swap_vert16.o \
-	res/zoom_in16.o \
-	res/zoom_out16.o \
+	res/swap_horiz_dark_16.o \
+	res/swap_horiz_light_16.o \
+	res/swap_vert_dark_16.o \
+	res/swap_vert_light_16.o \
+	res/zoom_in_dark_16.o \
+	res/zoom_in_light_16.o \
+	res/zoom_out_dark_16.o \
+	res/zoom_out_light_16.o \
 	src/AboutDialog.$(BUILD_TYPE).o \
 	src/AppSettings.$(BUILD_TYPE).o \
 	src/AppTestable.$(BUILD_TYPE).o \
@@ -638,10 +650,15 @@ src/ArtProvider.$(BUILD_TYPE).o: \
 	res/diff_fold16.h res/diff_fold24.h res/diff_fold32.h res/diff_fold48.h \
 	res/offsets16.h res/offsets24.h res/offsets32.h res/offsets48.h
 src/BitmapTool.$(BUILD_TYPE).o: \
-	res/actual_size16.h res/fit_to_screen16.h res/swap_horiz16.h \
-	res/swap_vert16.h res/zoom_in16.h res/zoom_out16.h res/bg16.h
+	res/actual_size_dark_16.h res/actual_size_light_16.h \
+	res/fit_to_screen_dark_16.h res/fit_to_screen_light_16.h \
+	res/swap_horiz_dark_16.h res/swap_horiz_light_16.h \
+	res/swap_vert_dark_16.h res/swap_vert_light_16.h \
+	res/zoom_in_dark_16.h res/zoom_in_light_16.h \
+	res/zoom_out_dark_16.h res/zoom_out_light_16.h \
+	res/bg16.h
 src/DataHistogramPanel.$(BUILD_TYPE).o: \
-	res/spinner24.h res/zoom_in16.h res/zoom_out16.h
+	res/spinner24.h res/zoom_in_dark_16.h res/zoom_in_light_16.h res/zoom_out_dark_16.h res/zoom_out_light_16.h
 src/DiffWindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.$(BUILD_TYPE).o: res/license.h
 src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h

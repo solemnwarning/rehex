@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,7 +26,10 @@
 #include "Palette.hpp"
 #include "HSVColour.hpp"
 
-static bool is_light(const wxColour &c) { return ((int)(c.Red()) + (int)(c.Green()) + (int)(c.Blue())) / 3 >= 128; }
+bool REHex::Palette::is_colour_light(const wxColour &colour)
+{
+	return ((int)(colour.Red()) + (int)(colour.Green()) + (int)(colour.Blue())) / 3 >= 128;
+}
 
 REHex::Palette *REHex::active_palette = NULL;
 
@@ -98,7 +101,7 @@ REHex::Palette *REHex::Palette::create_system_palette()
 	std::unique_ptr<Palette> light_palette(create_light_palette());
 	std::unique_ptr<Palette> dark_palette(create_dark_palette());
 	
-	Palette *base_palette = is_light(WINDOW)
+	Palette *base_palette = is_colour_light(WINDOW)
 		? light_palette.get()
 		: dark_palette.get();
 	
@@ -106,7 +109,7 @@ REHex::Palette *REHex::Palette::create_system_palette()
 		WINDOW,      /* PAL_NORMAL_TEXT_BG */
 		WINDOWTEXT,  /* PAL_NORMAL_TEXT_FG */
 		
-		(is_light(WINDOWTEXT)
+		(is_colour_light(WINDOWTEXT)
 			? WINDOWTEXT.ChangeLightness(70)
 			: WINDOWTEXT.ChangeLightness(130)),  /* PAL_ALTERNATE_TEXT_FG */
 		
@@ -116,18 +119,18 @@ REHex::Palette *REHex::Palette::create_system_palette()
 		HIGHLIGHT,      /* PAL_SELECTED_TEXT_BG */
 		HIGHLIGHTTEXT,  /* PAL_SELECTED_TEXT_FG */
 		
-		(is_light(HIGHLIGHT)
+		(is_colour_light(HIGHLIGHT)
 			? HIGHLIGHT.ChangeLightness(70)
 			: HIGHLIGHT.ChangeLightness(130)),  /* PAL_SECONDARY_SELECTED_TEXT_BG */
 		
-		(is_light(HIGHLIGHTTEXT)
+		(is_colour_light(HIGHLIGHTTEXT)
 			? HIGHLIGHTTEXT.ChangeLightness(70)
 			: HIGHLIGHTTEXT.ChangeLightness(130)),  /* PAL_SECONDARY_SELECTED_TEXT_FG */
 		
 		WINDOW,                      /* PAL_DIRTY_TEXT_BG */
 		wxColour(0xFF, 0x00, 0x00),  /* PAL_DIRTY_TEXT_FG */
 		
-		(is_light(WINDOW)
+		(is_colour_light(WINDOW)
 			? WINDOW.ChangeLightness(80)
 			: WINDOW.ChangeLightness(130)),  /* PAL_COMMENT_BG */
 		
@@ -142,7 +145,7 @@ REHex::Palette *REHex::Palette::create_system_palette()
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
 	
-	int default_highlight_lightness = is_light(WINDOW) ? 100 : 80;
+	int default_highlight_lightness = is_colour_light(WINDOW) ? 100 : 80;
 	
 	return new Palette("system", "System colours", colours, default_highlight_lightness);
 }

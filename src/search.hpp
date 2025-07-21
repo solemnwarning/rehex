@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -20,11 +20,14 @@
 
 #include <atomic>
 #include <mutex>
+#include <set>
 #include <string>
 #include <sys/types.h>
 #include <thread>
+#include <vector>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
+#include <wx/combobox.h>
 #include <wx/progdlg.h>
 #include <wx/radiobut.h>
 #include <wx/textctrl.h>
@@ -73,7 +76,7 @@ namespace REHex {
 			
 			SearchDirection search_direction;
 			
-			wxTextCtrl *search_end_focus;
+			wxComboBox *search_end_focus;
 			long search_end_focus_from, search_end_focus_to;
 			
 			wxProgressDialog *progress;
@@ -135,9 +138,12 @@ namespace REHex {
 			
 			std::string initial_encoding; /* Only used during initialisation. */
 			
-			wxTextCtrl *search_for_tc;
+			wxComboBox *search_for_tc;
 			wxCheckBox *case_sensitive_cb;
 			wxChoice *encoding_choice;
+
+			static wxArrayString search_history;
+			static std::set<Search::Text*> instances;
 			
 		public:
 			Text(wxWindow *parent, SharedDocumentPointer &doc, const wxString &search_for = "", bool case_sensitive = true, const std::string &encoding = "ASCII");

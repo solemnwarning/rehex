@@ -337,7 +337,7 @@ void REHex::Search::OnTextEnter(wxCommandEvent &event)
 	 * restore it when the search is finished.
 	*/
 	
-	wxTextCtrl *control = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
+	wxComboBox *control = dynamic_cast<wxComboBox*>(event.GetEventObject());
 	assert(control != NULL);
 	
 	search_end_focus = control;
@@ -616,6 +616,9 @@ void REHex::Search::thread_main(size_t window_size, size_t compare_size)
 	}
 }
 
+wxArrayString REHex::Search::Text::search_history;
+std::set<REHex::Search::Text*> REHex::Search::Text::instances;
+
 REHex::Search::Text::Text(wxWindow *parent, SharedDocumentPointer &doc, const wxString &search_for, bool case_sensitive, const std::string &encoding):
 	Search(parent, doc, "Search for text"),
 	case_sensitive(case_sensitive),
@@ -625,6 +628,8 @@ REHex::Search::Text::Text(wxWindow *parent, SharedDocumentPointer &doc, const wx
 	setup_window();
 	
 	set_search_string(search_for);
+
+	instances.insert(this);
 }
 
 /* NOTE: end_search() is called from subclass destructor rather than base to ensure search is
@@ -633,6 +638,8 @@ REHex::Search::Text::Text(wxWindow *parent, SharedDocumentPointer &doc, const wx
 */
 REHex::Search::Text::~Text()
 {
+	instances.erase(this);
+
 	if(running)
 	{
 		end_search();
@@ -738,7 +745,7 @@ void REHex::Search::Text::setup_window_controls(wxWindow *parent, wxSizer *sizer
 		
 		text_sizer->Add(new wxStaticText(parent, wxID_ANY, "Text: "), 0, wxALIGN_CENTER_VERTICAL);
 		
-		search_for_tc = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+		search_for_tc = new wxComboBox(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, search_history, wxTE_PROCESS_ENTER);
 		text_sizer->Add(search_for_tc, 1);
 		
 		sizer->Add(text_sizer, 0, wxTOP | wxLEFT | wxRIGHT | wxEXPAND, 10);
@@ -823,6 +830,37 @@ bool REHex::Search::Text::read_window_controls()
 	{
 		wxMessageBox("The string cannot be encoded in the chosen character set", "Error", (wxOK | wxICON_EXCLAMATION | wxCENTRE), this);
 		return false;
+	}
+
+	/* Add new search term to history. */
+	search_history.Insert(search_for, 0);
+
+	/* Remove previous instances of the search term from history. */
+	for(size_t i = 1; i < search_history.GetCount();)
+	{
+		if(search_history[i] == search_for)
+		{
+			search_history.RemoveAt(i);
+		}
+		else{
+			++i;
+		}
+	}
+
+	/* Clamp search history size. */
+	while(search_history.GetCount() > 8)
+	{
+		search_history.RemoveAt(search_history.GetCount() - 1);
+	}
+
+	/* Update the suggestions in each open text search dialog. */
+	for(auto it = instances.begin(); it != instances.end(); ++it)
+	{
+		wxComboBox *combo = (*it)->search_for_tc;
+
+		wxString old_string = combo->GetValue();
+		combo->Set(search_history);
+		combo->SetValue(old_string);
 	}
 	
 	return true;

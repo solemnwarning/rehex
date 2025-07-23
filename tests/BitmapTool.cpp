@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <wx/event.h>
 #include <wx/frame.h>
+#include <wx/rawbmp.h>
 
 #include "testutil.hpp"
 #include "../src/BitmapTool.hpp"
@@ -132,11 +133,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePacked)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -176,11 +177,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePackedHalfScale)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
-	bmtool->force_bitmap_size(8, 8);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(8, 8, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -244,11 +245,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePackedDoubleScale)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
-	bmtool->force_bitmap_size(32, 32);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(32, 32, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -297,11 +298,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePackedFlipX)
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
 	bmtool->set_flip_x(true);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -350,11 +351,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePackedFlipY)
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
 	bmtool->set_flip_y(true);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -404,11 +405,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePackedFlipXY)
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
 	bmtool->set_flip_x(true);
 	bmtool->set_flip_y(true);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -457,11 +458,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscalePadded)
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
 	bmtool->set_row_length(4);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -530,11 +531,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscaleOddPixelsPacked)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(18, 18);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
-	bmtool->force_bitmap_size(18, 18);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(18, 18, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 18, 18), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -587,11 +588,11 @@ TEST_F(BitmapToolTest, Format1BPPGreyscaleOddPixelsPadded)
 	bmtool->set_image_size(18, 18);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_1BPP);
 	bmtool->set_row_length(5);
-	bmtool->force_bitmap_size(18, 18);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(18, 18, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 18, 18), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -639,11 +640,11 @@ TEST_F(BitmapToolTest, Format2BPPGreyscalePacked)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_2BPP);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -691,11 +692,11 @@ TEST_F(BitmapToolTest, Format4BPPGreyscalePacked)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_4BPP);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -743,11 +744,11 @@ TEST_F(BitmapToolTest, Format8BPPGreyscalePacked)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(16, 16);
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_8BPP_GREYSCALE);
-	bmtool->force_bitmap_size(16, 16);
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
+
+	wxBitmap bitmap(16, 16, 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, 16, 16), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
 	EXPECT_EQ(bitmap_pixels, EXPECT_PIXELS);
 }
 
@@ -777,12 +778,12 @@ TEST_F(BitmapToolTest, Format24BPPRGBPackedBigImage)
 	bmtool->set_image_offset(0);
 	bmtool->set_image_size(ref_img.GetWidth(), ref_img.GetHeight());
 	bmtool->set_pixel_format(BitmapTool::PIXEL_FMT_24BPP_RGB888);
-	bmtool->force_bitmap_size(ref_img.GetWidth(), ref_img.GetHeight());
-	
-	run_wx_until([&]() { return !bmtool->is_processing(); });
-	
-	std::string bitmap_pixels = bitmap_to_string(bmtool->get_bitmap());
-	
+
+	wxBitmap bitmap(ref_img.GetWidth(), ref_img.GetHeight(), 24);
+	bmtool->render_rect<wxNativePixelData>(&bitmap, wxRect(0, 0, ref_img.GetWidth(), ref_img.GetHeight()), false);
+
+	std::string bitmap_pixels = bitmap_to_string(bitmap);
+
 	/* Too huge to display meaningful failures in the test log. */
 	EXPECT_TRUE(bitmap_pixels == EXPECT_PIXELS);
 }

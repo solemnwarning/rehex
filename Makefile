@@ -438,6 +438,7 @@ APP_OBJS := \
 	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
+	src/ProceduralBitmap.$(BUILD_TYPE).o \
 	src/profile.$(BUILD_TYPE).o \
 	src/RangeChoiceLinear.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
@@ -561,6 +562,7 @@ TEST_OBJS := \
 	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
+	src/ProceduralBitmap.$(BUILD_TYPE).o \
 	src/RangeDialog.$(BUILD_TYPE).o \
 	src/RangeProcessor.$(BUILD_TYPE).o \
 	src/search.$(BUILD_TYPE).o \

@@ -103,8 +103,6 @@ BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_TOOL(ID_BACKGROUND,   REHex::BitmapTool::OnBackground)
 	
 	EVT_SIZE(REHex::BitmapTool::OnSize)
-	EVT_IDLE(REHex::BitmapTool::OnIdle)
-	EVT_TIMER(ID_UPDATE_TIMER, REHex::BitmapTool::OnUpdateTimer)
 END_EVENT_TABLE()
 
 enum {
@@ -155,12 +153,7 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document,
 	image_height(256),
 	row_length(-1),
 	fit_to_screen(true),
-	actual_size(false),
-	bg_colour(wxNullColour),
-	force_bitmap_width(-1),
-	force_bitmap_height(-1),
-	bitmap_update_line(-1),
-	update_timer(this, ID_UPDATE_TIMER)
+	actual_size(false)
 {
 	wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
 	
@@ -251,41 +244,13 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document,
 	toolbar->ToggleTool(ID_SCALE, fit_to_screen);
 	toolbar->ToggleTool(ID_ACTUAL_SIZE, actual_size);
 	
-	bitmap_scrollwin = new wxScrolledWindow(this, wxID_ANY);
-	sizer->Add(bitmap_scrollwin, 1, wxEXPAND | wxALIGN_TOP | wxALIGN_LEFT);
+	m_preview_sizer = new wxBoxSizer(wxHORIZONTAL);
+	sizer->Add(m_preview_sizer, 1, wxEXPAND | wxALIGN_TOP | wxALIGN_LEFT);
 	
-	bitmap_scrollwin->SetScrollRate(10, 10);
+	m_preview = new Preview(this, wxSize(16, 16));
+	m_preview_sizer->Add(m_preview, 1, wxEXPAND | wxALIGN_TOP | wxALIGN_LEFT);
 	
-	bitmap = new wxBitmap(16, 16, 24);
-	
-	wxNativePixelData bmp_data(*bitmap);
-	assert(bmp_data);
-	
-	wxNativePixelData::Iterator output_ptr(bmp_data);
-	
-	for(int output_y = 0; output_y < 16; ++output_y)
-	{
-		wxNativePixelData::Iterator output_col_ptr = output_ptr;
-		
-		for(int output_x = 0; output_x < 16; ++output_x, ++output_col_ptr)
-		{
-			output_col_ptr.Red() = 0;
-			output_col_ptr.Green() = 0;
-			output_col_ptr.Blue() = 0;
-		}
-		
-		output_ptr.OffsetY(bmp_data, 1);
-	}
-	
-	wxSizer *scrollwin_sizer = new wxBoxSizer(wxVERTICAL);
-	
-	s_bitmap = new wxGenericStaticBitmap(bitmap_scrollwin, wxID_ANY, *bitmap);
-	scrollwin_sizer->Add(s_bitmap);
-	
-	bitmap_scrollwin->SetSizer(scrollwin_sizer);
-	bitmap_scrollwin->FitInside();
-	
-	s_bitmap->Bind(wxEVT_RIGHT_DOWN, &REHex::BitmapTool::OnBitmapRightDown, this);
+	m_preview->Bind(wxEVT_RIGHT_DOWN, &REHex::BitmapTool::OnBitmapRightDown, this);
 	
 	SetSizerAndFit(sizer);
 	toolbar->Realize();
@@ -293,10 +258,6 @@ REHex::BitmapTool::BitmapTool(wxWindow *parent, SharedDocumentPointer &document,
 	this->document.auto_cleanup_bind(CURSOR_UPDATE, &REHex::BitmapTool::OnCursorUpdate,    this);
 	
 	update();
-}
-
-REHex::BitmapTool::~BitmapTool() {
-	delete bitmap;
 }
 
 std::string REHex::BitmapTool::name() const
@@ -396,8 +357,6 @@ void REHex::BitmapTool::reset_row_length_spinner()
 
 void REHex::BitmapTool::update()
 {
-	bitmap_update_line = -1;
-	
 	try {
 		image_offset = offset_textctrl->GetValue<BitOffset>(BitOffset::ZERO);
 	}
@@ -421,12 +380,7 @@ void REHex::BitmapTool::update()
 	fit_to_screen = toolbar->GetToolState(ID_SCALE);
 	actual_size = toolbar->GetToolState(ID_ACTUAL_SIZE);
 	
-	if(force_bitmap_width >= 0 && force_bitmap_height >= 0)
-	{
-		bitmap_width = force_bitmap_width;
-		bitmap_height = force_bitmap_height;
-	}
-	else if(actual_size)
+	if(actual_size)
 	{
 		bitmap_width = image_width;
 		bitmap_height = image_height;
@@ -438,17 +392,16 @@ void REHex::BitmapTool::update()
 		/* Figure out how much space is available for the wxStaticBitmap preview.
 		 *
 		 * At the point we are called, our sizer hasn't been resized or updated the layout
-		 * of our child windows. So we need to get the current size of the wxScrolledWindow
-		 * that contains the wxStaticBitmap, and then adjust it by the difference between
-		 * our size and that of the sizer to find what its size will be after resizing
-		 * completes.
+		 * of our child windows. So we need to get the current size of the sizer containing
+		 * the preview, and then adjust it by the difference between our size and that of
+		 * the sizer to find what its size will be after resizing completes.
 		*/
 		
 		wxSize this_size  = GetSize();
 		wxSize sizer_size = GetSizer()->GetSize();
 		
-		int max_w = bitmap_scrollwin->GetSize().GetWidth()  - (sizer_size.GetWidth()  - this_size.GetWidth());
-		int max_h = bitmap_scrollwin->GetSize().GetHeight() - (sizer_size.GetHeight() - this_size.GetHeight());
+		int max_w = m_preview_sizer->GetSize().GetWidth()  - (sizer_size.GetWidth()  - this_size.GetWidth());
+		int max_h = m_preview_sizer->GetSize().GetHeight() - (sizer_size.GetHeight() - this_size.GetHeight());
 		
 		/* Scale the image to fit the available width/height, while preserving aspect ratio. */
 		
@@ -486,26 +439,8 @@ void REHex::BitmapTool::update()
 	toolbar->EnableTool(ID_ZOOM_IN,  ZOOM_LEVELS[LAST_ZOOM_LEVEL_IDX] > zoom);
 	toolbar->EnableTool(ID_ZOOM_OUT, ZOOM_LEVELS[0] < zoom);
 	
-	bitmap_lines_per_idle = (bitmap_width > 1024) ? 20 : 200;
-	
-	wxBitmap *new_bitmap = new wxBitmap(bitmap_width, bitmap_height, 24);
-	s_bitmap->SetBitmap(*new_bitmap);
-	
-	delete bitmap;
-	bitmap = new_bitmap;
-	
-	render_region<wxNativePixelData>(bitmap, 0, bitmap_lines_per_idle, image_offset, image_width, image_height, true);
-	
-	if(bitmap_lines_per_idle < bitmap_height)
-	{
-		bitmap_update_line = bitmap_lines_per_idle;
-		update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
-	}
-	else{
-		update_timer.Stop();
-	}
-	
-	bitmap_scrollwin->SetVirtualSize(s_bitmap->GetSize());
+	m_preview->set_bitmap_size(wxSize(bitmap_width, bitmap_height));
+	GetSizer()->Layout();
 }
 
 /* The following functions take a uint32_t value and extract an X bit wide value whose least
@@ -796,10 +731,13 @@ void REHex::BitmapTool::update_pixel_fmt()
 	}
 }
 
-template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, int region_y, int region_h, BitOffset offset, int width, int height, bool fill_bg)
+template<typename PDT> void REHex::BitmapTool::render_rect(wxBitmap *bitmap, const wxRect &image_rect, bool blend_bg)
 {
 	int output_width = bitmap->GetWidth();
 	int output_height = bitmap->GetHeight();
+
+	int width = image_width;
+	int height = image_height;
 	
 	bool flip_x = toolbar->GetToolState(ID_FLIP_X);
 	bool flip_y = toolbar->GetToolState(ID_FLIP_Y);
@@ -813,19 +751,20 @@ template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, i
 	BitOffset data_begin = BitOffset::ZERO, data_end = BitOffset::ZERO;
 	
 	typename PDT::Iterator output_ptr(bmp_data);
-	output_ptr.OffsetY(bmp_data, region_y);
 	
-	for(int output_y = region_y; output_y < output_height && output_y < region_y + region_h; ++output_y)
+	for(int output_y = 0; output_y < output_height; ++output_y)
 	{
 		int input_y = output_y;
 		
-		if(height != output_height)
+		if(image_rect.GetHeight() != bitmap->GetHeight())
 		{
-			input_y = (double)(input_y) * ((double)(height) / (double)(output_height));
+			input_y = (double)(input_y) * ((double)(image_rect.GetHeight()) / (double)(bitmap->GetHeight()));
 			
 			input_y = std::max(input_y, 0);
 			input_y = std::min(input_y, height - 1);
 		}
+
+		input_y += image_rect.y;
 		
 		if(flip_y)
 		{
@@ -837,8 +776,8 @@ template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, i
 			: (width * pixel_fmt_multi) / pixel_fmt_div;
 		
 		BitOffset line_off = row_length > 0
-			? offset + BitOffset((input_y * line_len), 0)
-			: offset + BitOffset(((width * input_y * pixel_fmt_multi) / pixel_fmt_div), 0);
+			? image_offset + BitOffset((input_y * line_len), 0)
+			: image_offset + BitOffset(((width * input_y * pixel_fmt_multi) / pixel_fmt_div), 0);
 		
 		if(line_off < data_begin || (line_off + BitOffset(line_len, 0)) > data_end)
 		{
@@ -870,39 +809,19 @@ template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, i
 		{
 			int input_x = output_x;
 			
-			if(width != output_width)
+			if(image_rect.GetWidth() != bitmap->GetWidth())
 			{
-				input_x = (double)(input_x) * ((double)(width) / (double)(output_width));
+				input_x = (double)(input_x) * ((double)(image_rect.GetWidth()) / (double)(bitmap->GetWidth()));
 				
 				input_x = std::max(input_x, 0);
 				input_x = std::min(input_x, width - 1);
 			}
 			
+			input_x += image_rect.x;
+			
 			if(flip_x)
 			{
 				input_x = ((width - 1) - input_x);
-			}
-			
-			if(fill_bg)
-			{
-				if(bg_colour.IsOk())
-				{
-					output_col_ptr.Red() = bg_colour.Red();
-					output_col_ptr.Green() = bg_colour.Green();
-					output_col_ptr.Blue() = bg_colour.Blue();
-				}
-				else{
-					/* Initialise output to chequerboard pattern. */
-					
-					bool x_even = (output_x % 20) >= 10;
-					bool y_even = (output_y % 20) >= 10;
-					
-					int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
-					
-					output_col_ptr.Red()   = chequerboard_colour;
-					output_col_ptr.Green() = chequerboard_colour;
-					output_col_ptr.Blue()  = chequerboard_colour;
-				}
 			}
 			
 			if((off_t)(data.size()) <= data_line_offset)
@@ -982,7 +901,7 @@ template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, i
 			
 			wxColour colour = colour_fmt_conv(rgb);
 			
-			if(fill_bg)
+			if(blend_bg)
 			{
 				if(colour.Alpha() != wxALPHA_OPAQUE)
 				{
@@ -1006,7 +925,11 @@ template<typename PDT> void REHex::BitmapTool::render_region(wxBitmap *bitmap, i
 				output_col_ptr.Red()   = colour.Red();
 				output_col_ptr.Green() = colour.Green();
 				output_col_ptr.Blue()  = colour.Blue();
-				output_col_ptr.Alpha() = colour.Alpha();
+				
+				if(bitmap->HasAlpha())
+				{
+					output_col_ptr.Alpha() = colour.Alpha();
+				}
 			}
 		}
 		
@@ -1148,8 +1071,7 @@ void REHex::BitmapTool::OnBackground(wxCommandEvent &event)
 	wxMenuItem *none = menu.Append(wxID_ANY, "None");
 	menu.Bind(wxEVT_MENU, [&](wxCommandEvent &event)
 	{
-		bg_colour = wxNullColour;
-		update();
+		m_preview->set_bg(wxNullColour);
 	}, none->GetId(), none->GetId());
 	
 	wxMenuItem *colour = menu.Append(wxID_ANY, "Choose colour...");
@@ -1165,8 +1087,7 @@ void REHex::BitmapTool::OnBackground(wxCommandEvent &event)
 
 		if(dlg.ShowModal() == wxID_OK)
 		{
-			bg_colour = dlg.GetColourData().GetColour();
-			update();
+			m_preview->set_bg(dlg.GetColourData().GetColour());
 		}
 	}, colour->GetId(), colour->GetId());
 	
@@ -1195,47 +1116,6 @@ void REHex::BitmapTool::OnSize(wxSizeEvent &event)
 	event.Skip();
 }
 
-void REHex::BitmapTool::OnIdle(wxIdleEvent &event)
-{
-	if(bitmap_update_line >= 0)
-	{
-		render_region<wxNativePixelData>(bitmap, bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height, true);
-		bitmap_update_line += bitmap_lines_per_idle;
-		
-		s_bitmap->Refresh();
-		
-		if(bitmap_update_line >= bitmap_height)
-		{
-			update_timer.Stop();
-			bitmap_update_line = -1;
-		}
-		else{
-			update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
-			event.RequestMore();
-		}
-	}
-}
-
-void REHex::BitmapTool::OnUpdateTimer(wxTimerEvent &event)
-{
-	if(bitmap_update_line >= 0)
-	{
-		render_region<wxNativePixelData>(bitmap, bitmap_update_line, bitmap_lines_per_idle, image_offset, image_width, image_height, true);
-		bitmap_update_line += bitmap_lines_per_idle;
-		
-		s_bitmap->Refresh();
-		
-		if(bitmap_update_line >= bitmap_height)
-		{
-			update_timer.Stop();
-			bitmap_update_line = -1;
-		}
-		else{
-			update_timer.Start(UPDATE_TIMER_MS, wxTIMER_ONE_SHOT);
-		}
-	}
-}
-
 void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 {
 	wxMenu menu;
@@ -1247,7 +1127,7 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 		if(cg)
 		{
 			wxBitmap fullsize_bitmap(image_width, image_height, 32);
-			render_region<wxAlphaPixelData>(&fullsize_bitmap, 0, image_height, image_offset, image_width, image_height, false);
+			render_rect<wxAlphaPixelData>(&fullsize_bitmap, wxRect(0, 0, image_width, image_height), false);
 			
 			wxTheClipboard->SetData(new wxBitmapDataObject(fullsize_bitmap));
 		}
@@ -1299,7 +1179,7 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 			}
 			
 			wxBitmap fullsize_bitmap(image_width, image_height, 32);
-			render_region<wxAlphaPixelData>(&fullsize_bitmap, 0, image_height, image_offset, image_width, image_height, false);
+			render_rect<wxAlphaPixelData>(&fullsize_bitmap, wxRect(0, 0, image_width, image_height), false);
 			
 			bool save_ok = fullsize_bitmap.SaveFile(save_fn.GetFullPath(), type);
 			if(!save_ok)
@@ -1308,12 +1188,6 @@ void REHex::BitmapTool::OnBitmapRightDown(wxMouseEvent &event)
 			}
 		});
 	}, save->GetId(), save->GetId());
-	
-	if(bitmap_update_line >= 0)
-	{
-		copy->Enable(false);
-		save->Enable(false);
-	}
 	
 	PopupMenu(&menu);
 }
@@ -1328,6 +1202,11 @@ void REHex::BitmapTool::set_image_size(int width, int height)
 {
 	width_textctrl->SetValue(width);
 	height_textctrl->SetValue(height);
+}
+
+wxSize REHex::BitmapTool::get_image_size() const
+{
+	return wxSize(image_width, image_height);
 }
 
 void REHex::BitmapTool::set_pixel_format(PixelFormat format)
@@ -1383,24 +1262,6 @@ void REHex::BitmapTool::set_pixel_format(PixelFormat format)
 	update();
 }
 
-void REHex::BitmapTool::force_bitmap_size(int width, int height)
-{
-	force_bitmap_width = width;
-	force_bitmap_height = height;
-	
-	update();
-}
-
-bool REHex::BitmapTool::is_processing()
-{
-	return bitmap_update_line >= 0;
-}
-
-wxBitmap REHex::BitmapTool::get_bitmap()
-{
-	return *bitmap;
-}
-
 void REHex::BitmapTool::set_flip_x(bool flip_x)
 {
 	toolbar->ToggleTool(ID_FLIP_X, flip_x);
@@ -1415,4 +1276,87 @@ void REHex::BitmapTool::set_row_length(int row_length)
 {
 	row_packed_cb->SetValue(false);
 	row_length_spinner->SetValue(row_length);
+	this->row_length = row_length;
+}
+
+REHex::BitmapTool::Preview::Preview(BitmapTool *parent, const wxSize &size):
+	ProceduralBitmap(parent, wxID_ANY, size),
+	m_parent(parent),
+	m_bg(wxNullColour) {}
+
+void REHex::BitmapTool::Preview::set_bg(const wxColour &bg)
+{
+	m_bg = bg;
+	Refresh();
+}
+
+wxBitmap REHex::BitmapTool::Preview::render_rect(const wxRect &rect)
+{
+	wxSize image_size = m_parent->get_image_size();
+	wxSize bitmap_size = get_bitmap_size();
+	
+	double ws = (double)(image_size.GetWidth()) / (double)(bitmap_size.GetWidth());
+	double hs = (double)(image_size.GetHeight()) / (double)(bitmap_size.GetHeight());
+	
+	int ix = (double)(rect.x) * ws;
+	ix = std::max(0, ix);
+	ix = std::min(ix, (image_size.GetWidth() - 1));
+	
+	int iw = (double)(rect.width) * ws;
+	iw = std::max(1, iw);
+	iw = std::min(iw, (image_size.GetWidth() - ix));
+	
+	int iy = (double)(rect.y) * hs;
+	iy = std::max(0, iy);
+	iy = std::min(iy, (image_size.GetHeight() - 1));
+	
+	int ih = (double)(rect.height) * hs;
+	ih = std::max(1, ih);
+	ih = std::min(ih, (image_size.GetHeight() - iy));
+	
+	wxRect image_rect(ix, iy, iw, ih);
+	
+	wxBitmap bitmap(rect.GetSize(), wxBITMAP_SCREEN_DEPTH);
+	
+	fill_bg(&bitmap, rect.x, rect.y);
+	m_parent->render_rect<wxNativePixelData>(&bitmap, image_rect, true);
+	
+	return bitmap;
+}
+
+void REHex::BitmapTool::Preview::fill_bg(wxBitmap *bitmap, int base_x, int base_y)
+{
+	wxNativePixelData bmp_data(*bitmap);
+	assert(bmp_data);
+	
+	wxNativePixelData::Iterator output_ptr(bmp_data);
+	
+	for(int y = 0; y < bitmap->GetHeight(); ++y)
+	{
+		wxNativePixelData::Iterator output_col_ptr = output_ptr;
+		
+		for(int x = 0; x < bitmap->GetWidth(); ++x, ++output_col_ptr)
+		{
+			if(m_bg.IsOk())
+			{
+				output_col_ptr.Red() = m_bg.Red();
+				output_col_ptr.Green() = m_bg.Green();
+				output_col_ptr.Blue() = m_bg.Blue();
+			}
+			else{
+				/* Initialise output to chequerboard pattern. */
+				
+				bool x_even = ((base_x + x) % 20) >= 10;
+				bool y_even = ((base_y + y) % 20) >= 10;
+				
+				int chequerboard_colour = (x_even ^ y_even) ? 0x66 : 0x99;
+				
+				output_col_ptr.Red()   = chequerboard_colour;
+				output_col_ptr.Green() = chequerboard_colour;
+				output_col_ptr.Blue()  = chequerboard_colour;
+			}
+		}
+
+		output_ptr.OffsetY(bmp_data, 1);
+	}
 }

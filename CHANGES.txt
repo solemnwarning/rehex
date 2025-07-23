@@ -11,6 +11,10 @@ Version TBC:
 
  * Add search history to text search dialog (#260).
 
+ * Work around crash with large bitmap previews on Linux (#263).
+
+ * Improve performance of bitmap visualisation.
+
 Version 0.63.2 (2025-07-13):
 
  * Add missing file required for binary template support.

@@ -302,6 +302,7 @@
     <ClCompile Include="..\..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\..\src\Palette.cpp" />
     <ClCompile Include="..\..\src\PopupTipWindow.cpp" />
+    <ClCompile Include="..\..\src\ProceduralBitmap.cpp" />
     <ClCompile Include="..\..\src\RangeDialog.cpp" />
     <ClCompile Include="..\..\src\RangeProcessor.cpp" />
     <ClCompile Include="..\..\src\search.cpp" />

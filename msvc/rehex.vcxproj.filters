@@ -249,6 +249,9 @@
     <ClCompile Include="..\src\profile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ProceduralBitmap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\BitEditor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -466,6 +466,9 @@
     <ClCompile Include="..\..\src\PopupTipWindow.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\ProceduralBitmap.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\MultiSplitter.cpp">
       <Filter>src</Filter>
     </ClCompile>

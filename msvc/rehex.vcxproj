@@ -514,6 +514,7 @@
     <ClCompile Include="..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\src\Palette.cpp" />
     <ClCompile Include="..\src\PopupTipWindow.cpp" />
+    <ClCompile Include="..\src\ProceduralBitmap.cpp" />
     <ClCompile Include="..\src\profile.cpp" />
     <ClCompile Include="..\src\RangeChoiceLinear.cpp" />
     <ClCompile Include="..\src\RangeDialog.cpp" />

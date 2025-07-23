@@ -25,6 +25,9 @@
 /res/ascii48.c
 /res/ascii48.h
 
+/res/bg16.c
+/res/bg16.h
+
 /res/diff_fold16.c
 /res/diff_fold16.h
 /res/diff_fold24.c

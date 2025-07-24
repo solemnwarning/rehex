@@ -1234,7 +1234,7 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 		if(((wxTextCtrl*)(start_segment_address))->GetValue() != "")
 		{
 			try {
-				start_segment_address_buf = start_segment_address->GetValue<uint32_t>();
+				start_segment_address_buf = start_segment_address->GetNumValue<uint32_t>();
 			}
 			catch(const NumericTextCtrl::InputError &e)
 			{
@@ -1253,7 +1253,7 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 		if(((wxTextCtrl*)(start_linear_address))->GetValue() != "")
 		{
 			try {
-				start_linear_address_buf = start_linear_address->GetValue<uint32_t>();
+				start_linear_address_buf = start_linear_address->GetNumValue<uint32_t>();
 			}
 			catch(const NumericTextCtrl::InputError &e)
 			{

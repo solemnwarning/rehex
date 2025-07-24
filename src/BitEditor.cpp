@@ -15,8 +15,6 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#define __STDC_FORMAT_MACROS
-
 #include "platform.hpp"
 
 #include <inttypes.h>
@@ -297,7 +295,7 @@ void REHex::BitEditor::update()
 	uint64_t old_val = value + 1;
 	try {
 		int num_value_base = get_num_base();
-		old_val = num_value->GetValue<uint64_t>(0, std::numeric_limits<uint64_t>::max(), 0, num_value_base);
+		old_val = num_value->GetNumValue<uint64_t>(0, std::numeric_limits<uint64_t>::max(), 0, num_value_base);
 	}
 	catch(const REHex::NumericTextCtrl::InputError&) {}
 	
@@ -516,7 +514,7 @@ void REHex::BitEditor::OnValueChange(wxCommandEvent &event)
 	
 	uint64_t new_value;
 	try {
-		new_value = num_value->GetValue<uint64_t>(0, max_value, 0, num_value_base);
+		new_value = num_value->GetNumValue<uint64_t>(0, max_value, 0, num_value_base);
 	}
 	catch(const REHex::NumericTextCtrl::InputError &e)
 	{

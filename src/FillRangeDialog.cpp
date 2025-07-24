@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -194,10 +194,10 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 	try {
 		if(insert_mode_selected)
 		{
-			selection_off = range_from->GetValue<off_t>(0, doc_length);
+			selection_off = range_from->GetNumValue<off_t>(0, doc_length);
 		}
 		else{
-			selection_off = range_from->GetValue<off_t>(0, (doc_length - 1));
+			selection_off = range_from->GetNumValue<off_t>(0, (doc_length - 1));
 		}
 	}
 	catch(const NumericTextCtrl::InputError &e)
@@ -214,11 +214,11 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 		try {
 			if(insert_mode_selected)
 			{
-				off_t selection_to = range_to->GetValue<off_t>(selection_off);
+				off_t selection_to = range_to->GetNumValue<off_t>(selection_off);
 				selection_length = (selection_to - selection_off) + 1;
 			}
 			else{
-				off_t selection_to = range_to->GetValue<off_t>(selection_off, (doc_length - 1));
+				off_t selection_to = range_to->GetNumValue<off_t>(selection_off, (doc_length - 1));
 				selection_length = (selection_to - selection_off) + 1;
 			}
 		}
@@ -235,10 +235,10 @@ void REHex::FillRangeDialog::OnOK(wxCommandEvent &event)
 		try {
 			if(insert_mode_selected)
 			{
-				selection_length = range_len->GetValue<off_t>(0);
+				selection_length = range_len->GetNumValue<off_t>(0);
 			}
 			else{
-				selection_length = range_len->GetValue<off_t>(0, (doc_length - selection_off));
+				selection_length = range_len->GetNumValue<off_t>(0, (doc_length - selection_off));
 			}
 		}
 		catch(const NumericTextCtrl::InputError &e)

@@ -344,7 +344,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::numeric_limits<T>::is_integer, T>::type
-				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
+				GetNumValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base);
@@ -352,7 +352,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::is_same<T, BitOffset>::value, T>::type
-				GetValue(T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
+				GetNumValue(T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base, bit_explicit);

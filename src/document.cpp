@@ -1151,7 +1151,11 @@ int REHex::Document::allocate_highlight_colour(const wxString &label, const wxCo
 	}
 	
 	_tracked_change("change highlight colours",
-		[this, primary_colour, secondary_colour, label, next_highlight_idx]()
+		[this, primary_colour, secondary_colour, label
+			#ifndef NDEBUG
+			, next_highlight_idx
+			#endif
+		]()
 		{
 			auto new_colour_it = highlight_colour_map.add();
 			assert(new_colour_it != highlight_colour_map.end());

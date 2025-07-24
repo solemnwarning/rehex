@@ -15,8 +15,6 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#define __STDC_FORMAT_MACROS
-
 #include "platform.hpp"
 #include <assert.h>
 #include <inttypes.h>

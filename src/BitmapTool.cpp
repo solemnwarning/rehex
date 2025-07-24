@@ -75,12 +75,6 @@ enum {
 	ID_BACKGROUND,
 };
 
-/* The minimum interval between updates when rendering the preview bitmap.
- * This only comes into play if the system is heavily loaded - normally we will
- * render chunks at a time in idle events and reset the timer.
-*/
-static const int UPDATE_TIMER_MS = 250;
-
 BEGIN_EVENT_TABLE(REHex::BitmapTool, wxPanel)
 	EVT_CHOICE(ID_COLOUR_DEPTH,  REHex::BitmapTool::OnDepth)
 	EVT_CHOICE(ID_COLOUR_FORMAT, REHex::BitmapTool::OnFormat)
@@ -358,7 +352,7 @@ void REHex::BitmapTool::reset_row_length_spinner()
 void REHex::BitmapTool::update()
 {
 	try {
-		image_offset = offset_textctrl->GetValue<BitOffset>(BitOffset::ZERO);
+		image_offset = offset_textctrl->GetNumValue<BitOffset>(BitOffset::ZERO);
 	}
 	catch(const NumericTextCtrl::InputError&)
 	{

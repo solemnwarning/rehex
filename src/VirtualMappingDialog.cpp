@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -184,12 +184,12 @@ off_t REHex::VirtualMappingDialog::get_real_base()
 	off_t min = 0;
 	off_t max = std::max<off_t>(0, (document->buffer_length() - 1));;
 	
-	return real_base_input->GetValue<off_t>(min, max);
+	return real_base_input->GetNumValue<off_t>(min, max);
 }
 
 off_t REHex::VirtualMappingDialog::get_virt_base()
 {
-	return virt_base_input->GetValue<off_t>(0);
+	return virt_base_input->GetNumValue<off_t>(0);
 }
 
 off_t REHex::VirtualMappingDialog::get_segment_length(off_t real_base)
@@ -197,7 +197,7 @@ off_t REHex::VirtualMappingDialog::get_segment_length(off_t real_base)
 	off_t min = 1;
 	off_t max = document->buffer_length() - real_base;
 	
-	return segment_length_input->GetValue<off_t>(min, max);
+	return segment_length_input->GetNumValue<off_t>(min, max);
 }
 
 void REHex::VirtualMappingDialog::update_warning()

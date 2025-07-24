@@ -25,7 +25,7 @@
 
 #include "ByteRangeSet.hpp"
 
-static const long long INT61_MIN = -0x1000000000000000LL;
+// static const long long INT61_MIN = -0x1000000000000000LL;
 static const long long INT61_MAX = 0xFFFFFFFFFFFFFFFLL;
 
 template<> off_t REHex::RangeSet<off_t>::MAX()

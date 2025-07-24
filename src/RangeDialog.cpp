@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -219,7 +219,7 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 	BitOffset virt_offset;
 	bool virt_offset_bit;
 	try {
-		virt_offset = range_from->GetValue<BitOffset>(BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, 0, &virt_offset_bit);
+		virt_offset = range_from->GetNumValue<BitOffset>(BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, 0, &virt_offset_bit);
 	}
 	catch(const NumericTextCtrl::InputError &e)
 	{
@@ -243,7 +243,7 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 		BitOffset virt_end_incl;
 		bool virt_end_bit;
 		try {
-			virt_end_incl = range_to->GetValue<BitOffset>(BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, 0, &virt_end_bit);
+			virt_end_incl = range_to->GetNumValue<BitOffset>(BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO, 0, &virt_end_bit);
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{
@@ -266,7 +266,7 @@ void REHex::RangeDialog::OnOK(wxCommandEvent &event)
 	{
 		BitOffset length;
 		try {
-			length = range_len->GetValue<BitOffset>(BitOffset(0, 1));
+			length = range_len->GetNumValue<BitOffset>(BitOffset(0, 1));
 		}
 		catch(const NumericTextCtrl::InputError &e)
 		{

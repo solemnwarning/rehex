@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -195,16 +195,16 @@ namespace REHex {
 				{
 					case BaseHint::AUTO_FORCE:
 					case BaseHint::AUTO:
-						return textbox->GetValue(min_value, max_value, rel_base, 0);
+						return textbox->GetNumValue(min_value, max_value, rel_base, 0);
 						
 					case BaseHint::DEC:
-						return textbox->GetValue(min_value, max_value, rel_base, 10);
+						return textbox->GetNumValue(min_value, max_value, rel_base, 10);
 						
 					case BaseHint::HEX:
-						return textbox->GetValue(min_value, max_value, rel_base, 16);
+						return textbox->GetNumValue(min_value, max_value, rel_base, 16);
 						
 					case BaseHint::OCT:
-						return textbox->GetValue(min_value, max_value, rel_base, 8);
+						return textbox->GetNumValue(min_value, max_value, rel_base, 8);
 				}
 				
 				/* Unreachable. */

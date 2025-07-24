@@ -1,11 +1,11 @@
 /**
     @file CRC.h
     @author Daniel Bahr
-    @version 1.2.0.0
+    @version 1.2.1.0
     @copyright
     @parblock
         CRC++
-        Copyright (c) 2022, Daniel Bahr
+        Copyright (c) 2022-2025, Daniel Bahr
         All rights reserved.
 
         Redistribution and use in source and binary forms, with or without
@@ -57,6 +57,10 @@
 
 #ifndef CRCPP_CRC_H_
 #define CRCPP_CRC_H_
+
+#if __cplusplus >= 201103L && !defined(CRCPP_USE_CPP11)
+#define CRCPP_USE_CPP11
+#endif
 
 #include <climits>  // Includes CHAR_BIT
 #ifdef CRCPP_USE_CPP11
@@ -127,7 +131,7 @@
 #   define crcpp_constexpr const
 #endif
 
-#if defined(WIN32) || defined(_WIN32) || defined(WINCE)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
 /* Disable warning C4127: conditional expression is constant. */
 #pragma warning(push)
 #pragma warning(disable : 4127)
@@ -136,6 +140,20 @@
 #ifdef CRCPP_USE_NAMESPACE
 namespace CRCPP
 {
+#endif
+
+#ifdef CRCPP_USE_CPP11
+crcpp_constexpr int CRCPP_MAJOR_VERSION = 1;
+crcpp_constexpr int CRCPP_MINOR_VERSION = 2;
+crcpp_constexpr int CRCPP_PATCH_VERSION = 1;
+crcpp_constexpr int CRCPP_REVISION_VERSION = 0;
+crcpp_constexpr char CRCPP_COPYRIGHT[] = "Copyright (c) 2022-2025, Daniel Bahr";
+#else
+#define CRCPP_MAJOR_VERSION 1
+#define CRCPP_MINOR_VERSION 2
+#define CRCPP_PATCH_VERSION 1
+#define CRCPP_REVISION_VERSION 0
+#define CRCPP_COPYRIGHT "Copyright (c) 2022-2025, Daniel Bahr"
 #endif
 
 /**
@@ -895,7 +913,7 @@ inline CRCType CRC::CalculateRemainder(const void * data, crcpp_size size, const
     {
         while (size--)
         {
-#if defined(WIN32) || defined(_WIN32) || defined(WINCE)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
     // Disable warning about data loss when doing (remainder >> CHAR_BIT) when
     // remainder is one byte long. The algorithm is still correct in this case,
     // though it's possible that one additional machine instruction will be executed.
@@ -903,7 +921,7 @@ inline CRCType CRC::CalculateRemainder(const void * data, crcpp_size size, const
 #   pragma warning (disable : 4333)
 #endif
             remainder = static_cast<CRCType>((remainder >> CHAR_BIT) ^ lookupTable[static_cast<unsigned char>(remainder ^ *current++)]);
-#if defined(WIN32) || defined(_WIN32) || defined(WINCE)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
 #   pragma warning (pop)
 #endif
         }
@@ -2107,7 +2125,7 @@ inline const CRC::Parameters<crcpp_uint64, 64> & CRC::CRC_64()
 }
 #endif
 
-#if defined(WIN32) || defined(_WIN32) || defined(WINCE)
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER)
 #pragma warning(pop)
 #endif
 

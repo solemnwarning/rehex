@@ -15,6 +15,7 @@
 
 #define wxLUA_USE_wxHelpController 0
 #define wxLUA_USE_wxJoystick 0
+#define wxLUA_USE_wxList 0
 #define wxLUA_USE_wxPropertyGrid 0
 #define wxLUA_USE_wxRegEx 0
 #define wxLUA_USE_wxTranslations 0

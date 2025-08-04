@@ -1052,9 +1052,11 @@ class %delete wxIcon : public wxGDIObject
     int     GetWidth();
     %wxchkver_2_9_5 bool IsOk() const;
     %wxchkver_2_9_5 bool LoadFile(const wxString& name, wxBitmapType type = wxICON_DEFAULT_TYPE, int desiredWidth = -1, int desiredHeight = -1);
+#if WXWIN_COMPATIBILITY_3_0
     void    SetDepth(int d);
     void    SetHeight(int h);
     void    SetWidth(int w);
+#endif
     wxIcon& operator=(const wxIcon& i) const;
     !%wxchkver_2_9_5 bool LoadFile(const wxString& name, wxBitmapType flag);
     bool    Ok(); // %add for compatibility with earlier versions of wxlua
@@ -1149,11 +1151,13 @@ class %delete wxBitmap : public wxGDIObject
     %wxchkver_3_0_0 static wxBitmap NewFromPNGData(const void* data, size_t size);
     // %win static bool RemoveHandler(const wxString& name); // no support for wxBitmapHandler
     %wxchkver_3_0_0 bool SaveFile(const wxString& name, wxBitmapType type, const wxPalette* palette = NULL) const;
+#if WXWIN_COMPATIBILITY_3_0
     void SetDepth(int depth);
     void SetHeight(int height);
+    void SetWidth(int width);
+#endif
     void SetMask(%ungc wxMask* mask);
     %win void SetPalette(const wxPalette& palette);
-    void SetWidth(int width);
     !%wxchkver_3_0_0 bool SaveFile(const wxString& name, wxBitmapType type, wxPalette* palette = NULL);
     !%wxchkver_3_0_0 wxBitmap& operator=(const wxBitmap& b) const;
     !%wxchkver_3_1_2 wxBitmap(const wxImage &image, int depth = wxBITMAP_SCREEN_DEPTH);

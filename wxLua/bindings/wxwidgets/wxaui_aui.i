@@ -370,10 +370,16 @@ class %delete wxAuiNotebookPageArray
     wxAuiNotebookPageArray();
     wxAuiNotebookPageArray(const wxAuiNotebookPageArray& array);
 
+#if WXWIN_COMPATIBILITY_3_0
     void Add(wxAuiNotebookPage* page);
+    void Insert(wxAuiNotebookPage* page, int nIndex);
+#endif
+#if !WXWIN_COMPATIBILITY_3_0
+    void Add(wxAuiNotebookPage& page);
+    void Insert(wxAuiNotebookPage& page, int nIndex);
+#endif
     void Clear();
     int  GetCount() const;
-    void Insert(wxAuiNotebookPage* page, int nIndex);
     bool IsEmpty();
     wxAuiNotebookPage Item(size_t nIndex) const;
     void RemoveAt(size_t nIndex);

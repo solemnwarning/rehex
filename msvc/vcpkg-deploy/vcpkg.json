@@ -1,0 +1,48 @@
+{
+  "dependencies": [
+    {
+      "name": "botan"
+    },
+    {
+      "name": "capstone",
+      "features": [
+        "arm",
+        "arm64",
+        "m680x",
+        "m68k",
+        "mips",
+        "m680x",
+        "ppc",
+        "riscv",
+        "sparc",
+        "wasm",
+        "x86"
+      ]
+    },
+    {
+      "name": "jansson"
+    },
+    {
+      "name": "libiconv"
+    },
+    {
+      "name": "libunistring"
+    },
+    {
+      "name": "lua",
+      "features": [
+        "tools"
+      ]
+    },
+    {
+      "name": "wxwidgets"
+    }
+  ],
+  "builtin-baseline": "903956eff7cb94774a9e805ff573c000afc43e3e",
+  "overrides": [
+    {
+      "name": "wxwidgets",
+      "version": "3.2.8.1#0"
+    }
+  ]
+}

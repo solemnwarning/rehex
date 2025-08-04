@@ -45,9 +45,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Combined|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(ProjectDir)$(Platform)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Combined|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(ProjectDir)$(Platform)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Combined|x64'">
     <ClCompile>
@@ -62,7 +64,7 @@
     </Link>
     <PreBuildEvent>
       <Command>cd "$(SolutionDir)"
-"$(ProjectDir)install_vcpkg_dependencies.bat" x64-windows-static-v143</Command>
+"$(ProjectDir)install_vcpkg_dependencies.bat" x64-windows-static-v143 "$(TargetDir)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Combined|Win32'">
@@ -83,14 +85,20 @@ set REHEX_WINSDK_LIBDIRS=$(UniversalCRT_LibraryPath_x86)$(WindowsSDK_LibraryPath
 set VCPKG_KEEP_ENV_VARS=REHEX_SOLUTION_DIR;REHEX_WINSDK_INCLUDES;REHEX_WINSDK_LIBDIRS
 
 cd "$(SolutionDir)"
-"$(ProjectDir)install_vcpkg_dependencies.bat" x86-windows-static-enlyze
+"$(ProjectDir)install_vcpkg_dependencies.bat" x86-windows-static-enlyze "$(TargetDir)"
 </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="install_vcpkg_dependencies.bat" />
+    <None Include="vcpkg.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  
+  <!-- Clean vcpkg tree https://stackoverflow.com/a/12206011 -->
+  <Target Name="SpicNSpan" AfterTargets="Clean">
+    <RemoveDir Directories="$(TargetDir)"/>
+  </Target>
 </Project>

@@ -98,10 +98,20 @@ static const CSArchitecture known_arch_list[] = {
 	{ "powerpc",     "PowerPC",                     CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN },
 	{ "powerpc64",   "PowerPC (64-bit)",            CS_ARCH_PPC, CS_MODE_64 | CS_MODE_BIG_ENDIAN },
 	{ "powerpc64le", "PowerPC (64-bit) (little endian)",CS_ARCH_PPC, CS_MODE_64 | CS_MODE_LITTLE_ENDIAN },
+
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(5, 0)
+	{ "riscv32", "RISC-V RV32G", CS_ARCH_RISCV, CS_MODE_RISCV32 },
+	{ "riscv64", "RISC-V RV64G", CS_ARCH_RISCV, CS_MODE_RISCV64 },
+	{ "riscvc", "RISC-V Compressed Instruction Set", CS_ARCH_RISCV, CS_MODE_RISCVC },
+	#endif
 	
 	{ "sparc",   "SPARC",                   CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN },
 	{ "sparcel", "SPARC (little endian)",   CS_ARCH_SPARC, CS_MODE_LITTLE_ENDIAN },
 	{ "sparcv9", "SPARC V9 (SPARC64)",      CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN | CS_MODE_V9 },
+
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(5, 0)
+	{ "WASM",   "WebAssembly",   CS_ARCH_WASM, CS_MODE_LITTLE_ENDIAN },
+	#endif
 	
 	{ "x86_16", "X86-16",           CS_ARCH_X86, CS_MODE_16 },
 	{ "i386",   "X86",              CS_ARCH_X86, CS_MODE_32 },

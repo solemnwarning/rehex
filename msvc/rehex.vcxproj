@@ -217,6 +217,12 @@
       <Command>
       </Command>
     </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">
     <ClCompile>
@@ -245,6 +251,12 @@
       <Command>
       </Command>
     </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -270,6 +282,12 @@
       <Command>
       </Command>
     </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">
     <ClCompile>
@@ -294,6 +312,12 @@
       <Command>
       </Command>
     </PreLinkEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -326,6 +350,12 @@
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">
     <ClCompile>
@@ -357,6 +387,12 @@
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -385,6 +421,12 @@
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">
     <ClCompile>
@@ -412,6 +454,12 @@
     <PreBuildEvent>
       <Message>Generating version_msvc.h</Message>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>robocopy /mir "$(SolutionDir)..\plugins" "$(SolutionDir)$(Configuration)\plugins"</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying plugins to build directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\res\actual_size_dark_16.c" />

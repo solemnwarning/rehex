@@ -22,6 +22,9 @@
 
 #include <algorithm>
 #include <wx/bitmap.h>
+#include <wx/dataobj.h>
+#include <wx/dcbuffer.h>
+#include <wx/graphics.h>
 #include <wx/statbmp.h>
 
 #if defined(__WXGTK__) && defined(REHEX_TOOLNOTEBOOK_CUSTOM_CSS)
@@ -30,6 +33,10 @@
 
 #include "App.hpp"
 #include "ToolDock.hpp"
+
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+#include "ProxyDropTarget.hpp"
+#endif
 
 #include "../res/dock_bottom.h"
 #include "../res/dock_left.h"
@@ -52,13 +59,21 @@ REHex::ToolDock::ToolDock(wxWindow *parent):
 	m_initial_size_done(false),
 	m_drag_pending(false),
 	m_drag_active(false),
+	
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 	m_left_dock_site(NULL),
 	m_right_dock_site(NULL),
 	m_top_dock_site(NULL),
 	m_bottom_dock_site(NULL)
-
 #ifdef _WIN32
 	, m_shadow_site(NULL)
+#endif
+#else
+	m_imposter(NULL),
+	m_saved_left_notebook_width(-1),
+	m_saved_right_notebook_width(-1),
+	m_saved_top_notebook_height(-1),
+	m_saved_bottom_notebook_height(-1)
 #endif
 {
 	m_left_notebook = new ToolNotebook(this, wxID_ANY, wxNB_LEFT);
@@ -497,8 +512,225 @@ void REHex::ToolDock::ResetNotebookSize(ToolNotebook *notebook)
 	});
 }
 
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+void REHex::ToolDock::DragDropTool()
+{
+	SetupDockSites();
+
+	/* We use a private data format for the drag-and-drop operation to avoid other
+	 * applications being valid drop targets and skipping the detach operation.
+	*/
+	wxDataFormat format("rehex/toolpanel-drag-and-drop");
+
+	m_imposter->SetDropTarget(new ProxyDropTarget(m_imposter, new wxCustomDataObject(format)));
+
+	m_imposter->Bind(DROP_MOTION, [&](DropEvent &event)
+	{
+		ToolNotebook *dest_notebook;
+
+		if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxTOP))
+		{
+			dest_notebook = m_top_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxBOTTOM))
+		{
+			dest_notebook = m_bottom_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxLEFT))
+		{
+			dest_notebook = m_left_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxRIGHT))
+		{
+			dest_notebook = m_right_notebook;
+		}
+		else{
+			dest_notebook = NULL;
+		}
+
+		if(dest_notebook != NULL)
+		{
+			wxRect shadow_rect = CalculateShadowForNotebook(dest_notebook, m_left_down_tool, false);
+			m_imposter->ShowShadow(shadow_rect);
+			//event.SetResult(wxDragMove);
+		}
+		else{
+			m_imposter->HideShadow();
+			//event.SetResult(wxDragCopy);
+		}
+	});
+
+	m_imposter->Bind(DROP_DROP, [&](DropEvent &event)
+	{
+		ToolNotebook *dest_notebook;
+
+		if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxTOP))
+		{
+			dest_notebook = m_top_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxBOTTOM))
+		{
+			dest_notebook = m_bottom_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxLEFT))
+		{
+			dest_notebook = m_left_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxRIGHT))
+		{
+			dest_notebook = m_right_notebook;
+		}
+		else{
+			event.RejectData();
+			return;
+		}
+
+		if(dest_notebook != NULL)
+		{
+			ToolFrame *frame = FindFrameByTool(m_left_down_tool);
+			ToolNotebook *notebook = FindNotebookByTool(m_left_down_tool);
+			
+			assert(frame == NULL || notebook == NULL);
+			
+			if(dest_notebook != NULL && dest_notebook != notebook)
+			{
+				if(frame != NULL)
+				{
+					frame->RemoveTool(m_left_down_tool);
+					
+					if(frame->GetTools().empty())
+					{
+						frame->Destroy();
+					}
+				}
+				else if(notebook != NULL)
+				{
+					notebook->RemovePage(notebook->FindPage(m_left_down_tool));
+				}
+				
+				m_left_down_tool->Reparent(dest_notebook);
+				dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->label(), true);
+				
+				if(frame != NULL)
+				{
+					frame->Destroy();
+				}
+			}
+		}
+	});
+
+	m_imposter->Bind(DROP_LEAVE, [&](DropEvent &event)
+	{
+		m_imposter->HideShadow();
+	});
+	
+	for(auto fi = m_frames.begin(); fi != m_frames.end(); ++fi)
+	{
+		ToolFrame *frame = *fi;
+
+		Imposter *frame_imposter = frame->GetImposter();
+		assert(frame_imposter != NULL);
+
+		frame_imposter->SetDropTarget(new ProxyDropTarget(frame_imposter, new wxCustomDataObject(format)));
+
+		frame_imposter->Bind(DROP_MOTION, [frame, frame_imposter](DropEvent &event)
+		{
+			if(frame_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxTOP))
+			{
+				frame->ShowShadow();
+			}
+			else{
+				frame->HideShadow();
+			}
+		});
+
+		frame_imposter->Bind(DROP_DROP, [this, frame, frame_imposter](DropEvent &event)
+		{
+			if(frame_imposter->PointerInDropZone(event.GetX(), event.GetY(), wxTOP))
+			{
+				ToolFrame *src_frame = FindFrameByTool(m_left_down_tool);
+				ToolNotebook *notebook = FindNotebookByTool(m_left_down_tool);
+				
+				assert(src_frame == NULL || notebook == NULL);
+				
+				if(src_frame != frame)
+				{
+					if(src_frame != NULL)
+					{
+						src_frame->RemoveTool(m_left_down_tool);
+						
+						if(src_frame->GetTools().empty())
+						{
+							src_frame->Destroy();
+						}
+					}
+					else if(notebook != NULL)
+					{
+						notebook->RemovePage(notebook->FindPage(m_left_down_tool));
+					}
+
+					ToolNotebook *dest_notebook = frame->GetNotebook();
+					
+					m_left_down_tool->Reparent(dest_notebook);
+					dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->label(), true);
+				}
+			}
+			else{
+				event.RejectData();
+			}
+		});
+
+		frame_imposter->Bind(DROP_LEAVE, [&](DropEvent &event)
+		{
+			frame_imposter->HideShadow();
+		});
+	}
+
+	wxCustomDataObject dobj(format);
+	wxDropSource ds(dobj, this);
+	wxDragResult drag_result = ds.DoDragDrop(0);
+
+	/* Dropping the tool outside of a drop zone will detach the tool, so we need to create a
+	 * new ToolFrame for it. GTK returns wxDragCancel if the user released the mouse button
+	 * over somewhere that doesn't accept the data type.
+	*/
+	
+	if(drag_result == wxDragNone || drag_result == wxDragCancel)
+	{
+		ToolNotebook *notebook = FindNotebookByTool(m_left_down_tool);
+		ToolFrame *frame = FindFrameByTool(m_left_down_tool);
+
+		assert(notebook != NULL || frame != NULL);
+
+		if(notebook != NULL)
+		{
+			notebook->RemovePage(notebook->FindPage(m_left_down_tool));
+		}
+		else if(frame != NULL)
+		{
+			frame->RemoveTool(m_left_down_tool);
+
+			if(frame->GetTools().empty())
+			{
+				frame->Destroy();
+			}
+		}
+
+		frame = new ToolFrame(this, &m_frames, wxGetMousePosition(), wxDefaultSize, m_left_down_tool);
+
+		frame->GetNotebook()->Bind(wxEVT_LEFT_DOWN, &REHex::ToolDock::OnNotebookLeftDown, this);
+
+		frame->Show();
+	}
+
+	DestroyDockSites();
+}
+#endif
+
 void REHex::ToolDock::SetupDockSites()
 {
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 	std::vector<wxRect> mask_regions;
 	mask_regions.reserve(m_frames.size());
 	
@@ -534,10 +766,40 @@ void REHex::ToolDock::SetupDockSites()
 		m_bottom_dock_site = new DockSite(this, wxBITMAP_PNG_FROM_DATA(dock_bottom), Anchor::BOTTOM, mask_regions);
 		m_bottom_dock_site->Show();
 	}
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(m_imposter == NULL)
+	{
+		wxBitmap s = window_screenshot(this);
+		
+		m_saved_left_notebook_width    = m_left_notebook  ->IsShown() ? m_left_notebook  ->GetSize().GetWidth()  : -1;
+		m_saved_right_notebook_width   = m_right_notebook ->IsShown() ? m_right_notebook ->GetSize().GetWidth()  : -1;
+		m_saved_top_notebook_height    = m_top_notebook   ->IsShown() ? m_top_notebook   ->GetSize().GetHeight() : -1;
+		m_saved_bottom_notebook_height = m_bottom_notebook->IsShown() ? m_bottom_notebook->GetSize().GetHeight() : -1;
+		
+		/* Hide our children so the imposter can draw on the screen space instead. */
+		m_main_panel->Hide();
+		m_left_notebook->Hide();
+		m_right_notebook->Hide();
+		m_top_notebook->Hide();
+		m_bottom_notebook->Hide();
+		
+		m_imposter = new Imposter(this, s, wxALL, wxPoint(0, 0), s.GetSize());
+	}
+
+	for(auto f_it = m_frames.begin(); f_it != m_frames.end(); ++f_it)
+	{
+		(*f_it)->SetupDockSite();
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 }
 
 void REHex::ToolDock::DestroyDockSites()
 {
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 	if(m_left_dock_site != NULL)
 	{
 		m_left_dock_site->Destroy();
@@ -562,14 +824,150 @@ void REHex::ToolDock::DestroyDockSites()
 		m_bottom_dock_site = NULL;
 	}
 	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(m_imposter != NULL)
+	{
+		m_main_panel->Show();
+
+		auto RestoreNotebook = [&](ToolNotebook *notebook, const wxSize &size)
+		{
+			if(notebook->GetPageCount() > 0)
+			{
+				notebook->Show();
+
+				if(size.GetWidth() >= 0 || size.GetHeight() >= 0)
+				{
+					SetWindowSize(notebook, size);
+				}
+				else{
+					ResetNotebookSize(notebook);
+				}
+			}
+		};
+
+		RestoreNotebook(m_left_notebook, wxSize(m_saved_left_notebook_width, -1));
+		RestoreNotebook(m_right_notebook, wxSize(m_saved_right_notebook_width, -1));
+		RestoreNotebook(m_top_notebook, wxSize(-1, m_saved_top_notebook_height));
+		RestoreNotebook(m_bottom_notebook, wxSize(-1, m_saved_bottom_notebook_height));
+		
+		m_imposter->Destroy();
+		m_imposter = NULL;
+		
+		m_saved_left_notebook_width = -1;
+		m_saved_right_notebook_width = -1;
+		m_saved_top_notebook_height = -1;
+		m_saved_bottom_notebook_height = -1;
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
+
 	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
 	{
 		(*it)->DestroyDockSite();
 	}
 }
 
+wxRect REHex::ToolDock::CalculateShadowForNotebook(ToolNotebook *notebook, ToolPanel *tool, bool screen)
+{
+	if(notebook->IsShown())
+	{
+		return screen
+			? notebook->GetScreenRect()
+			: notebook->GetRect();
+	}
+	else{
+		wxSize client_size = GetClientSize();
+		
+		wxSize min_size = m_left_down_tool->GetEffectiveMinSize();
+		wxSize best_size = m_left_down_tool->GetBestSize();
+		
+		wxRect rect;
+		
+#ifndef REHEX_WINDOW_SCREENSHOT_BROKEN
+		if(notebook == m_left_notebook && m_saved_left_notebook_width >= 0)
+		{
+			rect.x = 0;
+			rect.y = 0;
+			
+			rect.width = m_saved_left_notebook_width;
+			rect.height = client_size.GetHeight();
+		}
+		else if(notebook == m_right_notebook && m_saved_right_notebook_width >= 0)
+		{
+			rect.x = client_size.GetWidth() - m_saved_right_notebook_width;
+			rect.y = 0;
+			
+			rect.width = m_saved_right_notebook_width;
+			rect.height = client_size.GetHeight();
+		}
+		else if(notebook == m_top_notebook && m_saved_top_notebook_height >= 0)
+		{
+			rect.x = 0;
+			rect.y = 0;
+			
+			rect.width = client_size.GetWidth();
+			rect.height = m_saved_top_notebook_height;
+		}
+		else if(notebook == m_bottom_notebook && m_saved_bottom_notebook_height >= 0)
+		{
+			rect.x = 0;
+			rect.y = client_size.GetHeight() - m_saved_bottom_notebook_height;
+			
+			rect.width = client_size.GetWidth();
+			rect.height = m_saved_bottom_notebook_height;
+		}
+		else
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
+		{
+			if(notebook == m_top_notebook || notebook == m_bottom_notebook)
+			{
+				rect.width = client_size.GetWidth();
+				rect.height = std::max(min_size.GetHeight(), best_size.GetHeight());
+			}
+			else{
+				rect.width = std::max(min_size.GetWidth(), best_size.GetWidth());
+				rect.height = client_size.GetHeight();
+			}
+			
+			if(notebook == m_left_notebook || notebook == m_top_notebook)
+			{
+				rect.x = 0;
+				rect.y = 0;
+			}
+			else if(notebook == m_right_notebook)
+			{
+				rect.x = client_size.GetWidth() - rect.width;
+				rect.y = 0;
+			}
+			else if(notebook == m_bottom_notebook)
+			{
+				rect.x = 0;
+				rect.y = client_size.GetHeight() - rect.height;
+			}
+		}
+		
+		if(screen)
+		{
+			wxPoint client_base = ClientToScreen(wxPoint(0, 0));
+			
+			rect.x += client_base.x;
+			rect.y += client_base.y;
+		}
+		
+		return rect;
+	}
+}
+
 void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 {
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+	/* This path shouldn't be hit under Wayland. */
+	assert(!(REHex::App::is_wayland_session()));
+#endif
+	
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 #ifdef _WIN32
 	if(m_shadow_site != NULL)
 	{
@@ -679,10 +1077,52 @@ void REHex::ToolDock::ShowShadow(ToolNotebook *notebook, const wxRect &rect)
 			}
 		}
 	}
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(notebook == m_left_notebook || notebook == m_right_notebook || notebook == m_top_notebook || notebook == m_bottom_notebook)
+	{
+		/* Adjust screen-space co-ordinate to be relative to the Imposter. */
+		
+		wxPoint base = m_imposter->GetScreenPosition();
+		
+		wxRect local_rect = rect;
+		local_rect.Offset(wxPoint(0, 0) - base);
+		
+		m_imposter->ShowShadow(local_rect);
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			(*it)->HideShadow();
+		}
+	}
+	else{
+		m_imposter->HideShadow();
+		
+		for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
+		{
+			if((*it)->GetNotebook() == notebook)
+			{
+				(*it)->ShowShadow();
+			}
+			else{
+				(*it)->HideShadow();
+			}
+		}
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 }
 
 void REHex::ToolDock::HideShadow()
 {
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+	/* This path shouldn't be hit under Wayland. */
+	assert(!(REHex::App::is_wayland_session()));
+#endif
+	
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 #ifdef _WIN32
 	if(m_shadow_site != NULL)
 	{
@@ -690,12 +1130,21 @@ void REHex::ToolDock::HideShadow()
 		m_shadow_site = NULL;
 	}
 
-#else
+#else /* _WIN32 */
 	if(m_left_dock_site != NULL)   { m_left_dock_site  ->HideShadow(); }
 	if(m_right_dock_site != NULL)  { m_right_dock_site ->HideShadow(); }
 	if(m_top_dock_site != NULL)    { m_top_dock_site   ->HideShadow(); }
 	if(m_bottom_dock_site != NULL) { m_bottom_dock_site->HideShadow(); }
-#endif
+#endif /* !_WIN32 */
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(m_imposter != NULL)
+	{
+		m_imposter->HideShadow();
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 	
 	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
 	{
@@ -801,15 +1250,26 @@ REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &
 	}
 	else if(m_dock_notebook != NULL)
 	{
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 		assert(m_dock_site != NULL);
 		
 		if(m_dock_site->PointInImage(screen_point))
 		{
 			return m_dock_notebook;
 		}
-		else{
-			m_dock_notebook = NULL;
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+		assert(m_imposter != NULL);
+		
+		if((m_dock_notebook == m_left_notebook && m_imposter->PointerInDropZone(point.x, point.y, wxLEFT))
+			|| (m_dock_notebook == m_right_notebook && m_imposter->PointerInDropZone(point.x, point.y, wxRIGHT))
+			|| (m_dock_notebook == m_top_notebook && m_imposter->PointerInDropZone(point.x, point.y, wxTOP))
+			|| (m_dock_notebook == m_bottom_notebook && m_imposter->PointerInDropZone(point.x, point.y, wxBOTTOM)))
+		{
+			return m_dock_notebook;
 		}
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
+		
+		m_dock_notebook = NULL;
 	}
 	
 	for(auto it = m_frames.begin(); it != m_frames.end(); ++it)
@@ -827,6 +1287,7 @@ REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &
 		}
 	}
 	
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 	ToolNotebook *dest_notebook = (ToolNotebook*)(FindChildByPoint(point));
 	if(dest_notebook == NULL || dest_notebook != current_notebook)
 	{
@@ -863,20 +1324,39 @@ REHex::ToolDock::ToolNotebook *REHex::ToolDock::FindDockNotebook(const wxPoint &
 		}
 	}
 	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	ToolNotebook *dest_notebook = NULL;
+	
+	if(m_imposter != NULL)
+	{
+		wxPoint imposter_point = m_imposter->ScreenToClient(screen_point);
+		
+		if(m_imposter->PointerInDropZone(imposter_point.x, imposter_point.y, wxLEFT))
+		{
+			dest_notebook = m_left_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(imposter_point.x, imposter_point.y, wxRIGHT))
+		{
+			dest_notebook = m_right_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(imposter_point.x, imposter_point.y, wxTOP))
+		{
+			dest_notebook = m_top_notebook;
+		}
+		else if(m_imposter->PointerInDropZone(imposter_point.x, imposter_point.y, wxBOTTOM))
+		{
+			dest_notebook = m_bottom_notebook;
+		}
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
 	return dest_notebook;
 }
 
 void REHex::ToolDock::OnNotebookLeftDown(wxMouseEvent &event)
 {
-	#ifdef REHEX_ENABLE_WAYLAND_HACKS
-	if(REHex::App::is_wayland_session())
-	{
-		/* Skip toolpanel detaching under Wayland :( */
-		event.Skip();
-		return;
-	}
-	#endif
-	
 	ToolNotebook *notebook = (ToolNotebook*)(event.GetEventObject());
 	// assert(notebook == m_left_notebook || notebook == m_right_notebook || notebook == m_top_notebook || notebook == m_bottom_notebook);
 	
@@ -1000,6 +1480,25 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 			m_drag_frame = NULL;
 			m_dock_notebook = NULL;
 			m_dock_frame = NULL;
+
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+			if(REHex::App::is_wayland_session())
+			{
+				/* Wayland has no global co-ordinate space and doesn't allow an application to
+				 * receive events when the mouse it outside of one of its windows, even when it has
+				 * captured the mouse, so under Wayland we instead implement the tool drag and drop
+				 * as an actual drag and drop operation, we don't do this on all platforms as it
+				 * offers a slightly worse/less experience (detatched tabs can't follow the mouse).
+				*/
+			
+				m_drag_active = false;
+				ReleaseMouse();
+
+				DragDropTool();
+
+				return; // TODO: Should fall through to event.Skip() ?
+			}
+#endif
 		}
 	}
 	
@@ -1016,47 +1515,8 @@ void REHex::ToolDock::OnMotion(wxMouseEvent &event)
 		{
 			if(dest_notebook != notebook)
 			{
-				if(dest_notebook->IsShown())
-				{
-					ShowShadow(dest_notebook, dest_notebook->GetScreenRect());
-				}
-				else{
-					wxPoint client_base = ClientToScreen(wxPoint(0, 0));
-					wxSize client_size = GetClientSize();
-					
-					wxSize min_size = m_left_down_tool->GetEffectiveMinSize();
-					wxSize best_size = m_left_down_tool->GetBestSize();
-					
-					wxRect rect;
-					
-					if(dest_notebook == m_top_notebook || dest_notebook == m_bottom_notebook)
-					{
-						rect.width = client_size.GetWidth();
-						rect.height = std::max(min_size.GetHeight(), best_size.GetHeight());
-					}
-					else{
-						rect.width = std::max(min_size.GetWidth(), best_size.GetWidth());
-						rect.height = client_size.GetHeight();
-					}
-					
-					if(dest_notebook == m_left_notebook || dest_notebook == m_top_notebook)
-					{
-						rect.x = client_base.x;
-						rect.y = client_base.y;
-					}
-					else if(dest_notebook == m_right_notebook)
-					{
-						rect.x = client_base.x + client_size.GetWidth() - rect.width;
-						rect.y = client_base.y;
-					}
-					else if(dest_notebook == m_bottom_notebook)
-					{
-						rect.x = client_base.x;
-						rect.y = client_base.y + client_size.GetHeight() - rect.height;
-					}
-					
-					ShowShadow(dest_notebook, rect);
-				}
+				wxRect shadow_rect = CalculateShadowForNotebook(dest_notebook, m_left_down_tool, true);
+				ShowShadow(dest_notebook, shadow_rect);
 				
 				/* On Windows, the transparent wxPopupWindow isn't redrawn when the frame moves
 				 * around under it and I can't figure out a way to trigger an update that doesn't
@@ -1364,10 +1824,14 @@ REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, std::list<ToolFrame*> *f
 	wxFrame(parent, wxID_ANY, wxEmptyString, position, size,
 		(wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW | wxFRAME_FLOAT_ON_PARENT)),
 	m_frames(frame_order),
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 	m_dock_site(NULL)
 	
 #ifdef _WIN32
 	, m_shadow_site(NULL)
+#endif
+#else
+	m_imposter(NULL)
 #endif
 {
 	m_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -1450,6 +1914,7 @@ std::vector<REHex::ToolPanel*> REHex::ToolDock::ToolFrame::GetTools() const
 	return tools;
 }
 
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 void REHex::ToolDock::ToolFrame::SetupDockSite(const std::vector<wxRect> &mask_regions)
 {
 	if(m_dock_site == NULL)
@@ -1458,18 +1923,46 @@ void REHex::ToolDock::ToolFrame::SetupDockSite(const std::vector<wxRect> &mask_r
 		m_dock_site->Show();
 	}
 }
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+void REHex::ToolDock::ToolFrame::SetupDockSite()
+{
+	if(m_imposter == NULL)
+	{
+		wxBitmap s = window_screenshot(this);
+		
+		m_notebook->Hide();
+		m_imposter = new Imposter(this, s, wxTOP, wxPoint(0, 0), GetClientSize());
+	}
+}
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 
 void REHex::ToolDock::ToolFrame::DestroyDockSite()
 {
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 	if(m_dock_site != NULL)
 	{
 		m_dock_site->Destroy();
 		m_dock_site = NULL;
 	}
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(m_imposter != NULL)
+	{
+		m_imposter->Destroy();
+		m_imposter = NULL;
+		
+		m_notebook->Show();
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 }
 
 void REHex::ToolDock::ToolFrame::ShowShadow()
 {
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 	wxRect shadow_rect = m_notebook->GetScreenRect();
 	
 #ifdef _WIN32
@@ -1484,10 +1977,21 @@ void REHex::ToolDock::ToolFrame::ShowShadow()
 		m_dock_site->ShowShadow(shadow_rect);
 	}
 #endif
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(m_imposter != NULL)
+	{
+		m_imposter->ShowShadow(wxRect(wxPoint(0, 0), m_imposter->GetSize()));
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 }
 
 void REHex::ToolDock::ToolFrame::HideShadow()
 {
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+	
 #ifdef _WIN32
 	if(m_shadow_site != NULL)
 	{
@@ -1500,12 +2004,41 @@ void REHex::ToolDock::ToolFrame::HideShadow()
 		m_dock_site->HideShadow();
 	}
 #endif
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	
+	if(m_imposter != NULL)
+	{
+		m_imposter->HideShadow();
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 }
 
 bool REHex::ToolDock::ToolFrame::ScreenPointInDockImage(const wxPoint &screen_point) const
 {
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 	return m_dock_site != NULL && m_dock_site->PointInImage(screen_point);
+	
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+	if(m_imposter != NULL)
+	{
+		wxPoint local_point = m_imposter->ScreenToClient(screen_point);
+		return m_imposter->PointerInDropZone(local_point.x, local_point.y, wxTOP);
+	}
+	else{
+		return false;
+	}
+	
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 }
+
+#ifndef REHEX_WINDOW_SCREENSHOT_BROKEN
+REHex::ToolDock::Imposter *REHex::ToolDock::ToolFrame::GetImposter()
+{
+	return m_imposter;
+}
+#endif
 
 void REHex::ToolDock::ToolFrame::OnWindowActivate(wxActivateEvent &event)
 {
@@ -1515,6 +2048,8 @@ void REHex::ToolDock::ToolFrame::OnWindowActivate(wxActivateEvent &event)
 	m_frames->erase(it);
 	m_frames->push_front(this);
 }
+
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 
 BEGIN_EVENT_TABLE(REHex::ToolDock::DockSite, wxPopupWindow)
 	EVT_PAINT(REHex::ToolDock::DockSite::OnPaint)
@@ -1701,3 +2236,122 @@ void REHex::ToolDock::DockSite::OnPaint(wxPaintEvent &event)
 		delete gc;
 	}
 }
+
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+
+BEGIN_EVENT_TABLE(REHex::ToolDock::Imposter, wxWindow)
+	EVT_PAINT(REHex::ToolDock::Imposter::OnPaint)
+	EVT_ERASE_BACKGROUND(REHex::ToolDock::Imposter::OnErase)
+END_EVENT_TABLE()
+
+REHex::ToolDock::Imposter::Imposter(wxWindow *parent, const wxBitmap &background, enum wxDirection sides, const wxPoint &pos, const wxSize &size):
+	wxWindow(parent, wxID_ANY, pos, size),
+	m_background(background)
+{
+	static const int MARGIN = 16;
+
+	if((sides & wxTOP) == wxTOP)
+	{
+		m_top_bitmap = wxBITMAP_PNG_FROM_DATA(dock_top);
+
+		m_top_rect.x = (size.GetWidth() / 2) - (m_top_bitmap.GetWidth() / 2);
+		m_top_rect.y = MARGIN;
+		m_top_rect.width = m_top_bitmap.GetWidth();
+		m_top_rect.height = m_top_bitmap.GetHeight();
+	}
+
+	if((sides & wxBOTTOM) == wxBOTTOM)
+	{
+		m_bottom_bitmap = wxBITMAP_PNG_FROM_DATA(dock_bottom);
+
+		m_bottom_rect.x = (size.GetWidth() / 2) - (m_bottom_bitmap.GetWidth() / 2);
+		m_bottom_rect.y = size.GetHeight() - 1 - MARGIN - m_bottom_bitmap.GetHeight();
+		m_bottom_rect.width = m_bottom_bitmap.GetWidth();
+		m_bottom_rect.height = m_bottom_bitmap.GetHeight();
+	}
+
+	if((sides & wxLEFT) == wxLEFT)
+	{
+		m_left_bitmap = wxBITMAP_PNG_FROM_DATA(dock_left);
+
+		m_left_rect.x = MARGIN;
+		m_left_rect.y = (size.GetHeight() / 2) - (m_left_bitmap.GetHeight() / 2);
+		m_left_rect.width = m_left_bitmap.GetWidth();
+		m_left_rect.height = m_left_bitmap.GetHeight();
+	}
+
+	if((sides & wxRIGHT) == wxRIGHT)
+	{
+		m_right_bitmap = wxBITMAP_PNG_FROM_DATA(dock_right);
+
+		m_right_rect.x = size.GetWidth() - 1 - MARGIN - m_right_bitmap.GetWidth();
+		m_right_rect.y = (size.GetHeight() / 2) - (m_right_bitmap.GetHeight() / 2);
+		m_right_rect.width = m_right_bitmap.GetWidth();
+		m_right_rect.height = m_right_bitmap.GetHeight();
+	}
+}
+
+bool REHex::ToolDock::Imposter::PointerInDropZone(wxCoord x, wxCoord y, enum wxDirection edge) const
+{
+	switch(edge)
+	{
+		case wxTOP:    return m_top_rect.Contains(x, y);
+		case wxBOTTOM: return m_bottom_rect.Contains(x, y);
+		case wxLEFT:   return m_left_rect.Contains(x, y);
+		case wxRIGHT:  return m_right_rect.Contains(x, y);
+		default:       return false;
+	}
+}
+
+void REHex::ToolDock::Imposter::ShowShadow(const wxRect &rect)
+{
+	m_shadow_rect = rect;
+	Refresh();
+}
+
+void REHex::ToolDock::Imposter::HideShadow()
+{
+	m_shadow_rect = wxRect();
+	Refresh();
+}
+
+void REHex::ToolDock::Imposter::OnPaint(wxPaintEvent &event)
+{
+	wxBufferedPaintDC dc(this);
+
+	std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
+	if(gc)
+	{
+		gc->DrawBitmap(m_background, 0, 0, m_background.GetWidth(), m_background.GetHeight());
+
+		gc->SetBrush(wxBrush(wxColour(0xF6, 0xD3, 0x2D, 100)));
+		gc->DrawRectangle(m_shadow_rect.x, m_shadow_rect.y, m_shadow_rect.width, m_shadow_rect.height);
+
+		if(m_top_bitmap.IsOk())
+		{
+			gc->DrawBitmap(m_top_bitmap, m_top_rect.x, m_top_rect.y, m_top_rect.width, m_top_rect.height);
+		}
+
+		if(m_bottom_bitmap.IsOk())
+		{
+			gc->DrawBitmap(m_bottom_bitmap, m_bottom_rect.x, m_bottom_rect.y, m_bottom_rect.width, m_bottom_rect.height);
+		}
+
+		if(m_left_bitmap.IsOk())
+		{
+			gc->DrawBitmap(m_left_bitmap, m_left_rect.x, m_left_rect.y, m_left_rect.width, m_left_rect.height);
+		}
+
+		if(m_right_bitmap.IsOk())
+		{
+			gc->DrawBitmap(m_right_bitmap, m_right_rect.x, m_right_rect.y, m_right_rect.width, m_right_rect.height);
+		}
+	}
+}
+
+void REHex::ToolDock::Imposter::OnErase(wxEraseEvent &event)
+{
+	/* Left blank to disable background erase */
+}
+
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */

@@ -973,3 +973,38 @@ void REHex::config_copy(wxConfig *dst, const wxString &dst_path, const wxConfig 
 		}
 	}
 }
+
+#ifndef REHEX_WINDOW_SCREENSHOT_BROKEN
+wxBitmap REHex::window_screenshot(wxWindow *window)
+{
+	/* https://forums.wxwidgets.org/viewtopic.php?p=190848#p190848 */
+	
+	wxClientDC dc(window);
+
+	wxCoord width, height;
+	dc.GetSize(&width, &height);
+
+	wxBitmap screenshot(width, height, wxBITMAP_SCREEN_DEPTH);
+
+	//Create a memory DC that will be used for actually taking the screenshot
+	wxMemoryDC memDC;
+	//Tell the memory DC to use our Bitmap
+	//all drawing action on the memory DC will go to the Bitmap now
+	memDC.SelectObject(screenshot);
+	//Blit (in this case copy) the actual screen on the memory DC
+	//and thus the Bitmap
+	memDC.Blit( 0, //Copy to this X coordinate
+				0, //Copy to this Y coordinate
+				width, //Copy this width
+				height, //Copy this height
+				&dc, //From where do we copy?
+				0, //What's the X offset in the original DC?
+				0  //What's the Y offset in the original DC?
+			);
+	//Select the Bitmap out of the memory DC by selecting a new
+	//uninitialized Bitmap
+	memDC.SelectObject(wxNullBitmap);
+
+	return screenshot;
+}
+#endif

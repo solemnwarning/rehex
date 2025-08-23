@@ -22,6 +22,7 @@
 #include <string>
 #include <wx/bitmap.h>
 #include <wx/config.h>
+#include <wx/dnd.h>
 #include <wx/event.h>
 #include <wx/graphics.h>
 #include <wx/image.h>
@@ -97,7 +98,11 @@ namespace REHex
 				DECLARE_EVENT_TABLE()
 			};
 			
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 			class DockSite;
+#else
+			class Imposter;
+#endif
 			
 			/**
 			 * @brief wxFrame specialisation for holding a detached/floating tool.
@@ -123,13 +128,21 @@ namespace REHex
 					
 					std::vector<ToolPanel*> GetTools() const;
 					
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 					void SetupDockSite(const std::vector<wxRect> &mask_regions);
+#else
+					void SetupDockSite();
+#endif
 					void DestroyDockSite();
 					
 					void ShowShadow();
 					void HideShadow();
 					
 					bool ScreenPointInDockImage(const wxPoint &screen_point) const;
+
+#ifndef REHEX_WINDOW_SCREENSHOT_BROKEN
+					Imposter *GetImposter();
+#endif
 					
 				private:
 					wxBoxSizer *m_sizer;
@@ -137,16 +150,22 @@ namespace REHex
 					
 					std::list<ToolFrame*> *m_frames;
 					
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 					DockSite *m_dock_site;
 					
 #ifdef _WIN32
 					DockSite *m_shadow_site;
+#endif
+#else
+					Imposter *m_imposter;
 #endif
 					
 					void OnWindowActivate(wxActivateEvent &event);
 					
 				DECLARE_EVENT_TABLE()
 			};
+			
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
 			
 			enum class Anchor
 			{
@@ -221,6 +240,44 @@ namespace REHex
 				DECLARE_EVENT_TABLE()
 			};
 			
+#else
+
+			class Imposter: public wxWindow
+			{
+				private:
+					wxBitmap m_background;
+
+					wxBitmap m_top_bitmap;
+					wxRect m_top_rect;
+
+					wxBitmap m_bottom_bitmap;
+					wxRect m_bottom_rect;
+
+					wxBitmap m_left_bitmap;
+					wxRect m_left_rect;
+
+					wxBitmap m_right_bitmap;
+					wxRect m_right_rect;
+
+					wxRect m_shadow_rect;
+
+				public:
+					Imposter(wxWindow *parent, const wxBitmap &background, enum wxDirection sides, const wxPoint &pos, const wxSize &size);
+
+					bool PointerInDropZone(wxCoord x, wxCoord y, enum wxDirection edge) const;
+
+					void ShowShadow(const wxRect &rect);
+					void HideShadow();
+
+				private:
+					void OnPaint(wxPaintEvent &event);
+					void OnErase(wxEraseEvent &event);
+
+				DECLARE_EVENT_TABLE()
+			};
+			
+#endif
+			
 			wxWindow *m_main_panel;
 			
 			ToolNotebook *m_left_notebook;
@@ -239,14 +296,17 @@ namespace REHex
 			ToolFrame *m_drag_frame;
 			
 			ToolNotebook *m_dock_notebook; /**< Notebook the cursor was last seen hovering to dock to. */
-			DockSite *m_dock_site;         /**< DockSite of m_dock_notebook. */
 			ToolFrame *m_dock_frame;       /**< Frame the cursor was last seen hovering to dock to. */
+			
+#ifdef REHEX_WINDOW_SCREENSHOT_BROKEN
+			
+			DockSite *m_dock_site;         /**< DockSite of m_dock_notebook. */
 			
 			DockSite *m_left_dock_site;
 			DockSite *m_right_dock_site;
 			DockSite *m_top_dock_site;
 			DockSite *m_bottom_dock_site;
-
+			
 #ifdef _WIN32
 			/**
 			 * @brief DockSite instance for displaying shadow on Windows.
@@ -258,6 +318,17 @@ namespace REHex
 			*/
 			DockSite *m_shadow_site;
 #endif
+			
+#else /* REHEX_WINDOW_SCREENSHOT_BROKEN */
+			
+			Imposter *m_imposter;
+			
+			int m_saved_left_notebook_width;
+			int m_saved_right_notebook_width;
+			int m_saved_top_notebook_height;
+			int m_saved_bottom_notebook_height;
+			
+#endif /* !REHEX_WINDOW_SCREENSHOT_BROKEN */
 			
 			ToolFrame *FindFrameByTool(ToolPanel *tool);
 			ToolNotebook *FindNotebookByTool(ToolPanel *tool);
@@ -280,9 +351,29 @@ namespace REHex
 			 * its minimum/best size (whichever is larger).
 			*/
 			void ResetNotebookSize(ToolNotebook *notebook);
+
+#ifdef REHEX_ENABLE_WAYLAND_HACKS
+			/**
+			 * @brief Perform a drag-and-drop movement of m_left_down_tool.
+			*/
+			void DragDropTool();
+#endif
 			
 			void SetupDockSites();
 			void DestroyDockSites();
+			
+			/**
+			 * @brief Calculate area to display tool drop shadow.
+			 *
+			 * @param notebook  Notebook where the tool is to be docked.
+			 * @param tool      Tool to be docked.
+			 * @param screen    Return co-ordinates relative to screen (true) or Imposter (false).
+			 *
+			 * This function calculates the rect where a tinted shadow should be drawn when the
+			 * mouse is hovering over a MAIN WINDOW tool docking site. The size will reflect the
+			 * current size of the notebook (if visible) or the min/best size of the tool.
+			*/
+			wxRect CalculateShadowForNotebook(ToolNotebook *notebook, ToolPanel *tool, bool screen);
 			
 			void ShowShadow(ToolNotebook *notebook, const wxRect &rect);
 			void HideShadow();

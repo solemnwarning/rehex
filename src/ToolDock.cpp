@@ -610,11 +610,6 @@ void REHex::ToolDock::DragDropTool()
 				
 				m_left_down_tool->Reparent(dest_notebook);
 				dest_notebook->AddPage(m_left_down_tool, m_left_down_tool->label(), true);
-				
-				if(frame != NULL)
-				{
-					frame->Destroy();
-				}
 			}
 		}
 	});
@@ -680,7 +675,7 @@ void REHex::ToolDock::DragDropTool()
 			}
 		});
 
-		frame_imposter->Bind(DROP_LEAVE, [&](DropEvent &event)
+		frame_imposter->Bind(DROP_LEAVE, [frame_imposter](DropEvent &event)
 		{
 			frame_imposter->HideShadow();
 		});

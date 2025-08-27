@@ -460,13 +460,6 @@ namespace REHex {
 	 * the same or different wxConfig objects.
 	*/
 	void config_copy(wxConfig *dst, const wxString &dst_path, const wxConfig &src, const wxString &src_path);
-
-	#ifndef REHEX_WINDOW_SCREENSHOT_BROKEN
-	/**
-	 * @brief Capture a screenshot of a wxWindow and its children.
-	*/
-	wxBitmap window_screenshot(wxWindow *window);
-	#endif
 }
 
 #endif /* !REHEX_UTIL_HPP */

@@ -117,3 +117,32 @@ void REHex::DropEvent::RejectData()
 	assert(GetEventType() == DROP_DROP);
 	m_accept = false;
 }
+
+REHex::ScopedProxyDropTarget::ScopedProxyDropTarget(wxWindow *window, wxEvtHandler *handler, wxDataObject *data)
+{
+	Add(window, handler, data);
+}
+
+REHex::ScopedProxyDropTarget::~ScopedProxyDropTarget()
+{
+	for(auto it = m_windows.begin(); it != m_windows.end(); ++it)
+	{
+		if(*it)
+		{
+			(*it)->SetDropTarget(NULL);
+		}
+	}
+}
+
+REHex::ProxyDropTarget *REHex::ScopedProxyDropTarget::Add(wxWindow *window, wxEvtHandler *handler, wxDataObject *data)
+{
+	/* wxWidgets will destroy any existing drop target, so we can't restore it afterwards. */
+	assert(window->GetDropTarget() == NULL);
+	
+	ProxyDropTarget *target = new ProxyDropTarget(handler, data);
+	
+	window->SetDropTarget(target);
+	m_windows.emplace_back(window);
+	
+	return target;
+}

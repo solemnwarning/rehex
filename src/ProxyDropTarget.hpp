@@ -18,8 +18,12 @@
 #ifndef REHEX_PROXYDROPTARGET_HPP
 #define REHEX_PROXYDROPTARGET_HPP
 
+#include <vector>
 #include <wx/dnd.h>
 #include <wx/event.h>
+#include <wx/window.h>
+
+#include "SafeWindowPointer.hpp"
 
 namespace REHex
 {
@@ -126,6 +130,57 @@ namespace REHex
 			void RejectData();
 
 		friend ProxyDropTarget;
+	};
+	
+	/**
+	 * @brief Temporary construction/assignment of ProxyDropTarget to window(s).
+	 *
+	 * This class creates ProxyDropTarget objects and temporarily assigns them to windows, removing
+	 * them when the ScopedProxyDropTarget is destroyed.
+	*/
+	class ScopedProxyDropTarget
+	{
+		public:
+			/**
+			 * @brief Create a ScopedProxyDropTarget with no initial windows.
+			*/
+			ScopedProxyDropTarget() = default;
+			
+			/**
+			 * @brief Create a ScopedProxyDropTarget and set up a ProxyDropTarget.
+			 *
+			 * @param window   Window to attach ProxyDropTarget to.
+			 * @param handler  wxEvtHandler to receive events.
+			 * @param data     wxDataObject to receive data.
+			 *
+			 * The window MUST NOT have an existing wxDropTarget assigned.
+			*/
+			ScopedProxyDropTarget(wxWindow *window, wxEvtHandler *handler, wxDataObject *data = NULL);
+			
+			ScopedProxyDropTarget(const ScopedProxyDropTarget&) = delete;
+			ScopedProxyDropTarget &operator=(const ScopedProxyDropTarget&) = delete;
+			
+			ScopedProxyDropTarget(ScopedProxyDropTarget&&) = delete;
+			ScopedProxyDropTarget &operator=(ScopedProxyDropTarget&&) = delete;
+			
+			/**
+			 * @brief Unregister any created drop targets.
+			*/
+			~ScopedProxyDropTarget();
+			
+			/**
+			 * @brief Set up a ProxyDropTarget on a window (can be called multiple times).
+			 *
+			 * @param window   Window to attach ProxyDropTarget to.
+			 * @param handler  wxEvtHandler to receive events.
+			 * @param data     wxDataObject to receive data.
+			 * 
+			 * The window MUST NOT have an existing wxDropTarget assigned.
+			*/
+			ProxyDropTarget *Add(wxWindow *window, wxEvtHandler *handler, wxDataObject *data = NULL);
+			
+		private:
+			std::vector< SafeWindowPointer<wxWindow> > m_windows;
 	};
 }
 

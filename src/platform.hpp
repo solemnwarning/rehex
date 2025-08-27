@@ -82,10 +82,3 @@ typedef int ssize_t;
 */
 #define REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
 #endif
-
-#ifdef __APPLE__
-/* Capturing screenshots by reading back the DC of a wxWindow looks broken on earlier versions of
- * macOS, so we disable anything that depends on it there.
-*/
-#define REHEX_WINDOW_SCREENSHOT_BROKEN
-#endif

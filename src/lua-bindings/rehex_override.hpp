@@ -51,6 +51,63 @@ static int LUACALL wxLua_function_bulk_updates_thaw(lua_State *L)
 }
 %end
 
+%override wxLua_function__verify_signature
+#include <botan/ed25519.h>
+#include <botan/hex.h>
+#include <botan/pubkey.h>
+
+static int LUACALL wxLua_function__verify_signature(lua_State *L)
+{
+	if(!(lua_isstring(L, 3)))
+	{
+		wxlua_argerror(L, 3, wxT("a hex string"));
+		return 0;
+	}
+	
+	std::string pubkey_string(lua_tostring(L, 3), lua_strlen(L, 3));
+
+	if(!(lua_isstring(L, 2)))
+	{
+		wxlua_argerror(L, 2, wxT("a binary string"));
+		return 0;
+	}
+
+	const uint8_t *signature = (const uint8_t*)(lua_tostring(L, 2));
+	size_t signature_len = lua_strlen(L, 2);
+
+	if(!(lua_isstring(L, 1)))
+	{
+		wxlua_argerror(L, 1, wxT("a binary string"));
+		return 0;
+	}
+
+	const uint8_t *message = (const uint8_t*)(lua_tostring(L, 1));
+	size_t message_len = lua_strlen(L, 1);
+
+	uint8_t pubkey_bin[32];
+	try {
+		if(pubkey_string.length() != 64 || Botan::hex_decode(pubkey_bin, pubkey_string) != 32)
+		{
+			luaL_error(L, "Invalid public key");
+			return 0;
+		}
+	}
+	catch(const Botan::Exception &e)
+	{
+		luaL_error(L, "Invalid public key");
+		return 0;
+	}
+
+	Botan::Ed25519_PublicKey pubkey(pubkey_bin, 32);
+	
+	Botan::PK_Verifier verifier(pubkey, "Pure");
+	bool ok = verifier.verify_message(message, message_len, signature, signature_len);
+
+	lua_pushboolean(L, ok);
+	return 1;
+}
+%end
+
 %override wxLua_REHex_App_SetupHookRegistration_constructor
 static int LUACALL wxLua_REHex_App_SetupHookRegistration_constructor(lua_State *L)
 {

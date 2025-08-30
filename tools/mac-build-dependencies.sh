@@ -17,7 +17,7 @@
 _rehex_botan_version="2.19.4"
 _rehex_botan_url="https://botan.randombit.net/releases/Botan-${_rehex_botan_version}.tar.xz"
 _rehex_botan_sha256="5a3a88ef6433e97bcab0efa1ed60c6197e4ada9d9d30bc1c47437bf89b97f276"
-_rehex_botan_build_ident="${_rehex_botan_version}-2"
+_rehex_botan_build_ident="${_rehex_botan_version}-4"
 
 _rehex_capstone_version="5.0.6"
 _rehex_capstone_url="https://github.com/capstone-engine/capstone/releases/download/${_rehex_capstone_version}/capstone-${_rehex_capstone_version}.tar.xz"
@@ -37,7 +37,7 @@ _rehex_libiconv_build_ident="${_rehex_libiconv_version}-1"
 _rehex_libunistring_version="1.3"
 _rehex_libunistring_url="https://ftp.gnu.org/gnu/libunistring/libunistring-${_rehex_libunistring_version}.tar.gz"
 _rehex_libunistring_sha256="8ea8ccf86c09dd801c8cac19878e804e54f707cf69884371130d20bde68386b7"
-_rehex_libunistring_build_ident="${_rehex_libunistring_version}-1"
+_rehex_libunistring_build_ident="${_rehex_libunistring_version}-2"
 
 _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
@@ -165,7 +165,7 @@ then
 	
 			"${_rehex_python}" configure.py \
 				--minimized-build \
-				--enable-modules=md5,sha1,sha2_32,sha2_64 \
+				--enable-modules=md5,sha1,sha2_32,sha2_64,ed25519 \
 				--cpu=x86_64 \
 				--cc-abi-flags="-arch x86_64 -mmacosx-version-min=${_rehex_macos_version_min}" \
 				--prefix="${_rehex_botan_target_dir}" \
@@ -202,7 +202,7 @@ then
 	
 			"${_rehex_python}" configure.py \
 				--minimized-build \
-				--enable-modules=md5,sha1,sha2_32,sha2_64 \
+				--enable-modules=md5,sha1,sha2_32,sha2_64,ed25519 \
 				--cpu=arm64 \
 				--cc-abi-flags="-arch arm64 -mmacosx-version-min=${_rehex_macos_version_min}" \
 				--prefix="${_rehex_botan_target_dir}" \
@@ -682,6 +682,23 @@ diff -ru tests/test-c32tolower.c tests/test-c32tolower.c
            /* U+0429 CYRILLIC CAPITAL LETTER SHCHA */
            mb = for_character ("\247\273", 2);
            ASSERT (mb.nbytes == 2);
+EOF
+		
+		# Patch libunistring to trust the system stdint.h because otherwise it rolls its own which
+		# defines the stdint types as macros, breaking any C++ code which uses them from the std
+		# namespace.
+		patch -p0 <<'EOF'
+--- lib/Makefile.in	2024-10-16 12:33:56.000000000 +0100
++++ lib/Makefile.in	2025-10-07 22:03:11.330572660 +0100
+@@ -10001,7 +10001,7 @@
+ 	rm -f $@-t $@
+ 	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+ 	  echo '#include <stddef.h>'; \
+-	  echo '#if __GLIBC__ >= 2'; \
++	  echo '#if 1'; \
+ 	  echo '#include <stdint.h>'; \
+ 	  echo '#else'; \
+ 	  if test -f /usr/include/stdint.h; then \
 EOF
 		
 		./configure \

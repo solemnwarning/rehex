@@ -24,6 +24,7 @@
 #include "../src/document.hpp"
 #include "../src/search.hpp"
 #include "../src/SharedDocumentPointer.hpp"
+#include "testutil.hpp"
 
 using namespace REHex;
 
@@ -101,12 +102,7 @@ class SearchBaseDummy: public Search
 
 class SearchBaseTest: public ::testing::Test {
 	protected:
-		enum {
-			ID_CHECK_TIMER = 1,
-			ID_TIMEOUT_TIMER,
-		};
-		
-		wxFrame frame;
+		AutoFrame frame;
 		SharedDocumentPointer doc;
 		SearchBaseDummy s;
 		
@@ -116,25 +112,23 @@ class SearchBaseTest: public ::testing::Test {
 		SearchBaseTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
 			doc(SharedDocumentPointer::make()),
-			s(&frame, doc),
-			check_timer(&frame, ID_CHECK_TIMER),
-			timeout_timer(&frame, ID_TIMEOUT_TIMER)
+			s(frame, doc)
 		{
 			const std::vector<unsigned char> DATA(0x8192, 0x00);
 			doc->insert_data(0, DATA.data(), DATA.size());
 			
-			frame.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
+			check_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 			{
 				if(!s.is_running())
 				{
 					wxTheApp->GetMainLoop()->ScheduleExit();
 				}
-			}, ID_CHECK_TIMER, ID_CHECK_TIMER);
+			});
 			
-			frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+			timeout_timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 			{
 				wxTheApp->GetMainLoop()->ScheduleExit();
-			}, ID_TIMEOUT_TIMER, ID_TIMEOUT_TIMER);
+			});
 		}
 		
 		void wait_for_search()

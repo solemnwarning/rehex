@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -40,10 +40,10 @@ TEST(WindowCommandTableTest, BasicTests)
 		ID_COMMAND4,
 	};
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
 	
 	wxMenuBar *menubar = new wxMenuBar;
-	frame.SetMenuBar(menubar);
+	frame->SetMenuBar(menubar);
 	
 	wxMenu *menu = new wxMenu;
 	menubar->Append(menu, "Menu");
@@ -57,7 +57,7 @@ TEST(WindowCommandTableTest, BasicTests)
 		WindowCommand("command1", "Command 1", ID_COMMAND1),
 		WindowCommand("command2", "Command 2", ID_COMMAND2),
 		WindowCommand("command3", "Command 3", ID_COMMAND3, wxACCEL_CTRL, 'C'),
-	}), &frame);
+	}), frame);
 	
 	{
 		std::unique_ptr<wxAcceleratorEntry> command1_accel(command1->GetAccel());
@@ -246,10 +246,10 @@ TEST(WindowCommandTableTest, ReplaceAccelerators)
 		ID_COMMAND4,
 	};
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
 	
 	wxMenuBar *menubar = new wxMenuBar;
-	frame.SetMenuBar(menubar);
+	frame->SetMenuBar(menubar);
 	
 	wxMenu *menu = new wxMenu;
 	menubar->Append(menu, "Menu");
@@ -263,7 +263,7 @@ TEST(WindowCommandTableTest, ReplaceAccelerators)
 		WindowCommand("command1", "Command 1", ID_COMMAND1, wxACCEL_CTRL, 'A'),
 		WindowCommand("command2", "Command 2", ID_COMMAND2, wxACCEL_CTRL, 'B'),
 		WindowCommand("command3", "Command 3", ID_COMMAND3),
-	}), &frame);
+	}), frame);
 	
 	WindowCommandTable wct2(std::vector<WindowCommand>({
 		WindowCommand("command1", "Command 1", ID_COMMAND1),

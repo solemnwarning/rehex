@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,6 +24,7 @@
 #include "../src/document.hpp"
 #include "../src/DocumentCtrl.hpp"
 #include "../src/SharedDocumentPointer.hpp"
+#include "testutil.hpp"
 
 using namespace REHex;
 
@@ -859,8 +860,8 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 	/* Check the region is fully processed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame, doc);
 	
 	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
 	doc_ctrl->replace_all_regions(regions);
@@ -908,8 +909,8 @@ TEST(DisassemblyRegion, CopyInHexView)
 	/* Check the region is fully processed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame, doc);
 	
 	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
 	doc_ctrl->replace_all_regions(regions);
@@ -942,8 +943,8 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 	/* Check the region is fully processed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame, doc);
 	
 	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
 	doc_ctrl->replace_all_regions(regions);
@@ -989,8 +990,8 @@ TEST(DisassemblyRegion, CopyPartialInstruction)
 	/* Check the region is fully processed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0x125BE);
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame, doc);
 	
 	std::vector<DocumentCtrl::Region*> regions(&region, &region + 1);
 	doc_ctrl->replace_all_regions(regions);

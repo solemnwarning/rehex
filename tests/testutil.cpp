@@ -35,32 +35,31 @@
 
 void run_wx_for(unsigned int ms)
 {
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	wxTimer timer(&frame);
+	wxTimer timer;
 	
-	frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+	timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 	{
 		wxTheApp->ExitMainLoop();
-	}, timer.GetId(), timer.GetId());
+	});
 	
 	timer.Start(ms, wxTIMER_ONE_SHOT);
 	wxTheApp->OnRun();
+	
+	timer.Stop();
 }
 
 bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms, unsigned int check_interval_ms)
 {
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	
-	wxTimer timeout_timer(&frame);
-	frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+	wxTimer timeout_timer;
+	timeout_timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 	{
 		wxTheApp->ExitMainLoop();
-	}, timeout_timer.GetId(), timeout_timer.GetId());
+	});
 	
 	bool predicate_returned_true = false;
 	
-	wxTimer check_timer(&frame);
-	frame.Bind(wxEVT_TIMER, [&](wxTimerEvent &event)
+	wxTimer check_timer;
+	check_timer.Bind(wxEVT_TIMER, [&](wxTimerEvent &event)
 	{
 		predicate_returned_true = predicate();
 		
@@ -68,11 +67,14 @@ bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_m
 		{
 			wxTheApp->ExitMainLoop();
 		}
-	}, check_timer.GetId(), check_timer.GetId());
+	});
 	
 	timeout_timer.Start(timeout_ms, wxTIMER_ONE_SHOT);
 	check_timer.Start(check_interval_ms, wxTIMER_CONTINUOUS);
 	wxTheApp->OnRun();
+	
+	check_timer.Stop();
+	timeout_timer.Stop();
 	
 	return predicate_returned_true;
 }

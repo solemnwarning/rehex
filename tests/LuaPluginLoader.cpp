@@ -30,15 +30,15 @@ using namespace REHex;
 
 static void pump_events()
 {
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	wxTimer timer(&frame, wxID_ANY);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	wxTimer timer(frame, wxID_ANY);
 	
-	frame.Bind(wxEVT_IDLE, [](wxIdleEvent &event)
+	frame->Bind(wxEVT_IDLE, [](wxIdleEvent &event)
 	{
 		wxTheApp->ExitMainLoop();
 	});
 	
-	frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+	frame->Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 	{
 		wxTheApp->ExitMainLoop();
 	});

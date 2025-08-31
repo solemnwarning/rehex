@@ -26,18 +26,14 @@
 #include "../src/DocumentCtrl.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 #include "../src/StringPanel.hpp"
+#include "testutil.hpp"
 
 using namespace REHex;
 
 class StringPanelTest: public ::testing::Test
 {
 	protected:
-		enum {
-			ID_CHECK_TIMER = 1,
-			ID_TIMEOUT_TIMER,
-		};
-		
-		wxFrame frame;
+		AutoFrame frame;
 		
 		SharedDocumentPointer doc;
 		DocumentCtrl *main_doc_ctrl;
@@ -49,29 +45,27 @@ class StringPanelTest: public ::testing::Test
 		
 		StringPanelTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
-			doc(SharedDocumentPointer::make()),
-			check_timer(&frame, ID_CHECK_TIMER),
-			timeout_timer(&frame, ID_TIMEOUT_TIMER)
+			doc(SharedDocumentPointer::make())
 		{
-			main_doc_ctrl = new DocumentCtrl(&frame, doc);
+			main_doc_ctrl = new DocumentCtrl(frame, doc);
 			
 			/* Need to put a Region in the DocumentCtrl to avoid crashes. */
 			std::vector<DocumentCtrl::Region*> regions;
 			regions.push_back(new DocumentCtrl::DataRegion(doc, 0, 0, 0));
 			main_doc_ctrl->replace_all_regions(regions);
 			
-			frame.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
+			check_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
 			{
 				if(!string_panel->search_pending())
 				{
 					wxTheApp->ExitMainLoop();
 				}
-			}, ID_CHECK_TIMER, ID_CHECK_TIMER);
+			});
 			
-			frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+			timeout_timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 			{
 				wxTheApp->ExitMainLoop();
-			}, ID_TIMEOUT_TIMER, ID_TIMEOUT_TIMER);
+			});
 		}
 		
 		void wait_for_idle(unsigned int timeout_ms)
@@ -88,7 +82,7 @@ class StringPanelTest: public ::testing::Test
 
 TEST_F(StringPanelTest, EmptyFile)
 {
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -105,7 +99,7 @@ TEST_F(StringPanelTest, TextOnlyFile)
 	const std::vector<unsigned char> DATA((1024 * 1024), 'A');
 	doc->insert_data(0, DATA.data(), DATA.size());
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -128,7 +122,7 @@ TEST_F(StringPanelTest, BinaryOnlyFile)
 	const std::vector<unsigned char> DATA((1024 * 1024), 255);
 	doc->insert_data(0, DATA.data(), DATA.size());
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -155,7 +149,7 @@ TEST_F(StringPanelTest, MixedFile)
 	
 	doc->insert_data(0, data.data(), data.size());
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -185,7 +179,7 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	doc->overwrite_data(128, "cemetery tedious lunchroom", 26);
 	doc->overwrite_data(256, "crazy nutty grass", 17);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -233,7 +227,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	doc->overwrite_data(128, "gold rapid macho", 16);
 	doc->overwrite_data(256, "broad slope peep", 16);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -282,7 +276,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	doc->overwrite_data(128, "gold rapid macho", 16);
 	doc->overwrite_data(256, "broad slope peep", 16);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -329,7 +323,7 @@ TEST_F(StringPanelTest, OverwriteDataCompletesString)
 	
 	doc->overwrite_data(128, "abc", 3);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -375,7 +369,7 @@ TEST_F(StringPanelTest, InsertData)
 	doc->overwrite_data(256, "jog idiotic flight", 18);
 	doc->overwrite_data(512, "knowledge spotty identify", 25);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -427,7 +421,7 @@ TEST_F(StringPanelTest, InsertDataCompletesString)
 	
 	doc->overwrite_data(128, "abc", 3);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -474,7 +468,7 @@ TEST_F(StringPanelTest, EraseData)
 	doc->overwrite_data(256, "rightful group cave",   19);
 	doc->overwrite_data(512, "pumped stick feeble",   19);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -524,7 +518,7 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	doc->overwrite_data(128, "murder lyrical touch", 20);
 	doc->overwrite_data(256, "sturdy books scrape", 19);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -571,7 +565,7 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	doc->overwrite_data(128, "salty peep party", 16);
 	doc->overwrite_data(256, "kettle kneel supply", 19);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -618,7 +612,7 @@ TEST_F(StringPanelTest, EraseDataCompletesString)
 	doc->overwrite_data(128, "abc", 3);
 	doc->overwrite_data(132, "d", 1);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -667,7 +661,7 @@ TEST_F(StringPanelTest, BackToBackModifications)
 	
 	doc->insert_data(0, BIN_DATA.data(), 16 * MiB);
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -751,7 +745,7 @@ TEST_F(StringPanelTest, UTF8)
 	
 	doc->insert_data(0, DATA, sizeof(DATA));
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_encoding("UTF-8");
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
@@ -800,7 +794,7 @@ TEST_F(StringPanelTest, UTF16)
 	
 	doc->insert_data(0, DATA, sizeof(DATA));
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_encoding("UTF-16LE");
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
@@ -832,7 +826,7 @@ TEST_F(StringPanelTest, SelectAllCopyText)
 	
 	doc->insert_data(0, data.data(), data.size());
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
@@ -874,7 +868,7 @@ TEST_F(StringPanelTest, SelectSomeCopyOffsetAndText)
 	
 	doc->insert_data(0, data.data(), data.size());
 	
-	string_panel = new StringPanel(&frame, doc, main_doc_ctrl);
+	string_panel = new StringPanel(frame, doc, main_doc_ctrl);
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	

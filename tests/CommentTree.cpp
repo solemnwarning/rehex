@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -262,8 +262,8 @@ TEST(CommentTree, NoComments)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -283,8 +283,8 @@ TEST(CommentTree, SingleComment)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -311,8 +311,8 @@ TEST(CommentTree, MultipleComments)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -345,8 +345,8 @@ TEST(CommentTree, Heirarchy)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -396,8 +396,8 @@ TEST(CommentTree, EraseRootCommentNoChildren)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -431,8 +431,8 @@ TEST(CommentTree, EraseRootCommentWithChildren)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -492,8 +492,8 @@ TEST(CommentTree, EraseNestedCommentNoChildren)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -523,8 +523,8 @@ TEST(CommentTree, EraseNestedCommentWithChildren)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -558,8 +558,8 @@ TEST(CommentTree, AddCommentRoot)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -595,8 +595,8 @@ TEST(CommentTree, AddNestedComment)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -634,8 +634,8 @@ TEST(CommentTree, AddContainingComment)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -723,8 +723,8 @@ TEST(CommentTree, ModifyComment)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -759,8 +759,8 @@ TEST(CommentTree, SetFilter)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -793,8 +793,8 @@ TEST(CommentTree, ClearFilter)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -841,8 +841,8 @@ TEST(CommentTree, ChangeFilter)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -887,8 +887,8 @@ TEST(CommentTree, FilterMatchesRootNode)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -922,8 +922,8 @@ TEST(CommentTree, FilterMatchesIntermediateNode)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);
@@ -961,8 +961,8 @@ TEST(CommentTree, FilterMatchesDeepNode)
 {
 	SharedDocumentPointer doc(SharedDocumentPointer::make());
 	
-	wxFrame frame(NULL, wxID_ANY, "REHex Tests");
-	DocumentCtrl *doc_ctrl = new DocumentCtrl(&frame, doc);
+	AutoFrame frame(NULL, wxID_ANY, "REHex Tests");
+	DocumentCtrl *doc_ctrl = new DocumentCtrl(frame.frame, doc);
 	
 	unsigned char z1k[1024];
 	memset(z1k, 0, 1024);

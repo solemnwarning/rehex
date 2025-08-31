@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -26,13 +26,14 @@
 #include "../src/DocumentCtrl.hpp"
 #include "../src/SafeWindowPointer.hpp"
 #include "../src/SharedDocumentPointer.hpp"
+#include "testutil.hpp"
 
 using namespace REHex;
 
 class DiffWindowTest: public ::testing::Test
 {
 	protected:
-		wxFrame frame;
+		AutoFrame frame;
 		
 		SharedDocumentPointer doc1;
 		DocumentCtrl *main_doc_ctrl1;
@@ -72,10 +73,10 @@ class DiffWindowTest: public ::testing::Test
 			doc1->insert_data(0, doc1_buf, sizeof(doc1_buf));
 			doc2->insert_data(0, doc2_buf, sizeof(doc2_buf));
 			
-			main_doc_ctrl1 = new DocumentCtrl(&frame, doc1);
-			main_doc_ctrl2 = new DocumentCtrl(&frame, doc2);
+			main_doc_ctrl1 = new DocumentCtrl(frame, doc1);
+			main_doc_ctrl2 = new DocumentCtrl(frame, doc2);
 			
-			diff_window = new DiffWindow(&frame);
+			diff_window = new DiffWindow(frame);
 			diff_window->set_folding(false);
 		}
 };

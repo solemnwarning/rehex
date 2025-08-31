@@ -40,47 +40,47 @@ TEST(Search, ByteSequence)
 	/* Basic tests */
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x00, 0x01, 0x02 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::ByteSequence::find_next() finds byte sequence at start of file";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x20, 0x21, 0x22, 0x23 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
 		
 		EXPECT_EQ(s.find_next(0), 0x20) << "REHEX::Search::ByteSequence::find_next() finds byte sequence in middle of file";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x20, 0x21, 0x22, 0x23 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
 		
 		EXPECT_EQ(s.find_next(0x21), (128 + 0x20)) << "REHEX::Search::ByteSequence::find_next() finds repeated byte sequence in middle of file";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xFE, 0xFF };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
 		
 		EXPECT_EQ(s.find_next(0), (128 + 0xFE)) << "REHEX::Search::ByteSequence::find_next() finds byte sequence at end of file";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		std::vector<unsigned char> search_data;
@@ -88,37 +88,37 @@ TEST(Search, ByteSequence)
 		for(int c = 0; c < 128; ++c) { search_data.push_back(c); }
 		for(int c = 0; c < 256; ++c) { search_data.push_back(c); }
 		
-		REHex::Search::ByteSequence s(&frame, doc, search_data);
+		REHex::Search::ByteSequence s(frame, doc, search_data);
 		
 		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::ByteSequence::find_next() finds byte sequence which is whole file";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xAA, 0xAB };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
 		
 		EXPECT_EQ(s.find_next(128 + 0xA9), (128 + 0xAA)) << "REHEX::Search::ByteSequence::find_next() finds byte sequence starting after from_offset";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xAA, 0xAB };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
 		
 		EXPECT_EQ(s.find_next(128 + 0xAA), 128 + 0xAA) << "REHEX::Search::ByteSequence::find_next() finds byte sequence starting at from_offset";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0xAA, 0xAB };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
 		
 		EXPECT_EQ(s.find_next(128 + 0xAB), -1) << "REHEX::Search::ByteSequence::find_next() doesn't find string starting before from_offset";
 	}
@@ -126,11 +126,11 @@ TEST(Search, ByteSequence)
 	/* Range limiting */
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.limit_range(0x14, 0x14 + 20);
 		
@@ -138,11 +138,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.limit_range(0x10, 0x10 + 20);
 		
@@ -150,11 +150,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.limit_range(0x12, 0x12 + 5);
 		
@@ -162,11 +162,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.limit_range(0x14, 0x14 + 3);
 		
@@ -174,11 +174,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.limit_range(0x15, 0x15 + 20);
 		
@@ -186,11 +186,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x14, 0x15, 0x16 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.limit_range(0x12, 0x12 + 4);
 		
@@ -200,11 +200,11 @@ TEST(Search, ByteSequence)
 	/* Alignment */
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x03, 0x04, 0x05 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.require_alignment(3);
 		
@@ -212,11 +212,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x03, 0x04, 0x05 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.require_alignment(2);
 		
@@ -224,11 +224,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.require_alignment(3, 1);
 		
@@ -236,11 +236,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.require_alignment(2, 1);
 		
@@ -248,11 +248,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.require_alignment(3, 10);
 		
@@ -260,11 +260,11 @@ TEST(Search, ByteSequence)
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		s.require_alignment(4, 10);
 		
@@ -274,41 +274,41 @@ TEST(Search, ByteSequence)
 	/* Window sizing */
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x03, 0x04 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 2));
 		
 		EXPECT_EQ(s.find_next(0, 4), 3) << "REHEX::Search::ByteSequence::find_next() finds byte sequences which span multiple search windows";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 3));
 		
 		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::ByteSequence::find_next() finds byte sequences beyond the first search window";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x04, 0x05, 0x06, 0x07 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
 		
 		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::ByteSequence::find_next() finds byte sequences which span an entire search window";
 	}
 	
 	{
-		wxFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
 		
 		const unsigned char SEARCH_DATA[] = { 0x06, 0x07, 0x08, 0x09 };
-		REHex::Search::ByteSequence s(&frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
+		REHex::Search::ByteSequence s(frame, doc, std::vector<unsigned char>(SEARCH_DATA, SEARCH_DATA + 4));
 		
 		EXPECT_EQ(s.find_next(0, 4), 6) << "REHEX::Search::ByteSequence::find_next() finds search-window-sized byte sequences which span two windows";
 	}

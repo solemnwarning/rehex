@@ -24,13 +24,14 @@
 #include "../src/document.hpp"
 #include "../src/DocumentCtrl.hpp"
 #include "../src/SharedDocumentPointer.hpp"
+#include "testutil.hpp"
 
 using namespace REHex;
 
 class DocumentCtrlTest: public ::testing::Test
 {
 	protected:
-		wxFrame frame;
+		AutoFrame frame;
 		
 		SharedDocumentPointer doc;
 		DocumentCtrl *doc_ctrl;
@@ -45,7 +46,7 @@ DocumentCtrlTest::DocumentCtrlTest():
 	frame(NULL, wxID_ANY, "REHex Tests"),
 	doc(SharedDocumentPointer::make())
 {
-	doc_ctrl = new DocumentCtrl(&frame, doc);
+	doc_ctrl = new DocumentCtrl(frame, doc);
 	
 	/* Need a data region to avoid crashing during wxEVT_SIZE handler. */
 	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(doc, 0, 0, 0) };

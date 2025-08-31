@@ -26,6 +26,7 @@
 #include <wx/timer.h>
 
 #include "../src/ConsoleBuffer.hpp"
+#include "testutil.hpp"
 
 using namespace REHex;
 
@@ -48,20 +49,19 @@ class ConsoleBufferTest: public ::testing::Test
 		ConsoleBuffer cbuffer;
 		std::vector<std::string> events;
 		
-		wxFrame frame;
+		AutoFrame frame;
 		wxTimer timer;
 		
 		ConsoleBufferTest():
 			cbuffer(64),
-			frame(NULL, wxID_ANY, "REHex Tests"),
-			timer(&frame, wxID_ANY)
+			frame(NULL, wxID_ANY, "REHex Tests")
 		{
-			frame.Bind(wxEVT_IDLE, [](wxIdleEvent &event)
+			frame->Bind(wxEVT_IDLE, [](wxIdleEvent &event)
 			{
 				wxTheApp->ExitMainLoop();
 			});
 			
-			frame.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
+			timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 			{
 				wxTheApp->ExitMainLoop();
 			});

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -24,13 +24,14 @@
 #include <wx/wx.h>
 
 #include "../src/NumericTextCtrl.hpp"
+#include "testutil.hpp"
 
 #define GV_RESULT(value_type, string_value, type_value) \
 { \
 	const char *test_name = "GetValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
 	\
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
-	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
+	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
+	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(frame, wxID_ANY); \
 	\
 	tc->SetValue(string_value); \
 	\
@@ -42,8 +43,8 @@
 
 #define GV_THROWS(value_type, string_value, exception_class) \
 { \
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
-	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
+	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
+	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(frame, wxID_ANY); \
 	\
 	tc->SetValue(string_value); \
 	\
@@ -55,8 +56,8 @@
 { \
 	const char *test_name = "GetValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
 	\
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
-	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
+	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
+	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(frame, wxID_ANY); \
 	\
 	tc->SetValue(string_value); \
 	\
@@ -68,8 +69,8 @@
 
 #define GV_THROWS2(value_type, min, max, rel, string_value, exception_class) \
 { \
-	wxFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
-	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(&frame, wxID_ANY); \
+	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
+	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(frame, wxID_ANY); \
 	\
 	tc->SetValue(string_value); \
 	\

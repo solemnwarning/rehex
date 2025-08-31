@@ -104,6 +104,12 @@ class AutoFrame
 		{
 			frame = new wxFrame(parent, id, title, pos, size, style, name);
 		}
+
+		AutoFrame(const AutoFrame&) = delete;
+		AutoFrame &operator=(const AutoFrame&) = delete;
+
+		AutoFrame(AutoFrame &&) = delete;
+		AutoFrame &operator=(AutoFrame&&) = delete;
 		
 		~AutoFrame()
 		{

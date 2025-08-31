@@ -715,6 +715,12 @@ std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::get_selection
 
 void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 {
+	if(regions.empty())
+	{
+		/* Control hasn't been set up yet. */
+		return;
+	}
+
 	wxBufferedPaintDC dc(this);
 	
 	dc.SetFont(hex_font);
@@ -3479,6 +3485,11 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		data_base = d_offset + BitOffset::BYTES(skip_bytes - hsm_pre);
 		
 		data = doc.doc->read_data(data_base, data_to_draw + hsm_pre + hsm_post);
+
+		if(data.size() < hsm_pre)
+		{
+			throw std::runtime_error("unexpected end of file");
+		}
 		
 		data_p = data.data() + hsm_pre;
 		data_remain = std::min<size_t>((data.size() - hsm_pre), data_to_draw);
@@ -3591,8 +3602,13 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	bool has_focus = doc.HasFocus();
 	bool is_last_data_region = (doc.get_data_regions().back() == this);
+
+	BitOffset file_size(doc.doc->buffer_length(), 0);
 	
-	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final))
+	/* NOTE: Checks for cur_off < file_size to avoid running off the end of the file if we happen
+	 * to be doing a paint between the file size changing and the regions being updated.
+	*/
+	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final) && cur_off < file_size)
 	{
 		if(doc.offset_column)
 		{

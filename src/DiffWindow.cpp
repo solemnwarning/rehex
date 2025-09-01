@@ -1539,8 +1539,6 @@ int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 
 REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(BitOffset off) const
 {
-	assert(off.byte_aligned());
-	
 	assert(off >= range->offset);
 	off_t relative_off = off.byte() - range->offset;
 	

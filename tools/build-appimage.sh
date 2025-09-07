@@ -27,7 +27,7 @@ MAKEFLAGS="LUA=lua5.3 -j$(nproc)"
 
 DEPENDS="
 	libbotan-2-dev
-	libcapstone-dev
+	libcapstone-dev/bullseye-backports
 	libgtk-3-dev
 	libjansson-dev
 	liblua5.3-dev

@@ -3608,7 +3608,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	/* NOTE: Checks for cur_off < file_size to avoid running off the end of the file if we happen
 	 * to be doing a paint between the file size changing and the regions being updated.
 	*/
-	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final) && cur_off < file_size)
+	while(y < client_size.GetHeight() && cur_line < (y_offset + y_lines - indent_final) && cur_off <= file_size)
 	{
 		if(doc.offset_column)
 		{

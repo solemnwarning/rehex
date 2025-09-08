@@ -1,4 +1,4 @@
-Version TBC:
+Version 0.63.3 (2025-09-08):
 
  * Add option to change bitmap visualisation image background to a
    chosen colour (#258).
@@ -14,6 +14,16 @@ Version TBC:
  * Work around crash with large bitmap previews on Linux (#263).
 
  * Improve performance of bitmap visualisation.
+
+ * Added missing MOS6502 and Motorola 6800/68k disassembly support for
+   x86 Windows (#264).
+
+ * Added RISC-V and WASM disassembly support (where supported by host
+   Capstone library).
+
+ * Implement tool panel detaching/docking under Wayland (#252).
+
+ * Update detached tool window title when tab is changed.
 
 Version 0.63.2 (2025-07-13):
 

@@ -1490,6 +1490,19 @@ REHex::ToolDock::ToolFrame::ToolFrame(wxWindow *parent, std::list<ToolFrame*> *f
 	}
 	
 	m_frames->push_front(this);
+	
+	m_notebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, [this](wxNotebookEvent &event)
+	{
+		int page_idx = event.GetSelection();
+		if(page_idx != wxNOT_FOUND)
+		{
+			ToolPanel *tool = (ToolPanel*)(m_notebook->GetPage(page_idx));
+			if(tool != NULL)
+			{
+				SetTitle(tool->label());
+			}
+		}
+	});
 }
 
 REHex::ToolDock::ToolFrame::~ToolFrame()

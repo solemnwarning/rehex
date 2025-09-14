@@ -178,7 +178,7 @@ all: $(EXE)
 check: $(TEST_EXE)
 	$(TEST_EXE)
 	
-	for p in $(PLUGINS); \
+	for p in $(filter-out updater,$(PLUGINS)) updater; \
 	do \
 		$(MAKE) -C plugins/$${p} LUA=$(LUA) check || exit $$?; \
 	done

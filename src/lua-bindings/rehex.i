@@ -1,6 +1,7 @@
 #include "../App.hpp"
 #include "../BitOffset.hpp"
 #include "../CharacterEncoder.hpp"
+#include "../Checksum.hpp"
 #include "../document.hpp"
 #include "../mainwindow.hpp"
 
@@ -162,4 +163,17 @@ class REHex::CharacterEncoding
 	
 	static const REHex::CharacterEncoding *encoding_by_key(const wxString &key);
 	static LuaTable all_encodings();
+};
+
+class %delete REHex::ChecksumGenerator
+{
+	REHex::ChecksumGenerator(const wxString &algorithm);
+
+	void update(const wxString &data);
+	void finish();
+	void reset();
+
+	wxString checksum_hex() const;
+
+	static LuaTable algorithms();
 };

@@ -815,3 +815,79 @@ TEST(LuaPluginLoader, VerifySignature)
 	EXPECT_EQ(try_verify(MSG1, "potato", PUBKEY1), "Signature verification failed\n") << "Malformed signature is rejected";
 	EXPECT_EQ(try_verify(MSG2, "potato", PUBKEY2), "Signature verification failed\n") << "Malformed signature is rejected";
 }
+
+TEST(LuaPluginLoader, ChecksumAlgorithms)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		std::string SCRIPT =
+			std::string("")
+			+ "local algos = rehex.Checksum.algorithms()\n"
+			+ "for _, algo in ipairs(algos)\n"
+			+ "do\n"
+			+ "  print(\"name = '\" .. algo.name .. \"' group = '\" .. algo.group .. \"' label = '\" .. algo.label .. \"'\")\n"
+			+ "end\n";
+		
+		TempFile script_file(SCRIPT);
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		pump_events();
+
+		EXPECT_NE(app.console->get_messages_text().find("name = 'CRC-16-ARC' group = 'CRC' label = 'CRC-16 ARC (aka CRC-16 IBM, CRC-16 LHA)'"), std::string::npos);
+		EXPECT_NE(app.console->get_messages_text().find("name = 'MD5' group = '' label = 'MD5'"), std::string::npos);
+	}
+}
+
+TEST(LuaPluginLoader, ChecksumMD5Text)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		std::string SCRIPT =
+			std::string("")
+			+ "local md5 = rehex.Checksum(\"MD5\")\n"
+			+ "md5:update(\"Hello\")\n"
+			+ "md5:update(\" world\")\n"
+			+ "md5:finish()\n"
+			+ "print(md5:checksum_hex())\n";
+		
+		TempFile script_file(SCRIPT);
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		pump_events();
+
+		EXPECT_EQ(app.console->get_messages_text(), "3E25960A79DBC69B674CD4EC67A72C62\n");
+	}
+}
+
+TEST(LuaPluginLoader, ChecksumMD5BinaryData)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		std::string SCRIPT =
+			std::string("")
+			+ "local md5 = rehex.Checksum(\"MD5\")\n"
+			+ "md5:update(\"\\0\\1\\2\\3\")\n"
+			+ "md5:update(\"\\4\\5\\6\\7\\8\\9\")\n"
+			+ "md5:finish()\n"
+			+ "print(md5:checksum_hex())\n";
+		
+		TempFile script_file(SCRIPT);
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		pump_events();
+
+		EXPECT_EQ(app.console->get_messages_text(), "C56BD5480F6E5413CB62A0AD9666613A\n");
+	}
+}

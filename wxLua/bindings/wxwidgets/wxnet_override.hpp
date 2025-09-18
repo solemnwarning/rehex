@@ -135,3 +135,11 @@ static int LUACALL wxLua_wxSocketBase_WriteMsg(lua_State *L)
 }
 %end
 
+%override wxLua_wxWebRequestEvent_GetData
+static int LUACALL wxLua_wxWebRequestEvent_GetData(lua_State *L)
+{
+    wxWebRequestEvent * self = (wxWebRequestEvent *)(wxluaT_getuserdatatype(L, 1, wxluatype_wxWebRequestEvent));
+    lua_pushlstring(L, (const char*)(self->GetDataBuffer()), self->GetDataSize());
+    return 1;
+}
+%end

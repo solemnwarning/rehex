@@ -274,7 +274,8 @@ WXBIND_OBJS := \
 	wxLua/modules/wxbind/src/wxcore_sizer.$(BUILD_TYPE).o \
 	wxLua/modules/wxbind/src/wxcore_windows.$(BUILD_TYPE).o \
 	wxLua/modules/wxbind/src/wxcore_wxlcore.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxpropgrid_bind.$(BUILD_TYPE).o
+	wxLua/modules/wxbind/src/wxpropgrid_bind.$(BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxnet_bind.$(BUILD_TYPE).o
 
 WXFREECHART_OBJS := \
 	wxFreeChart/src/areadraw.$(BUILD_TYPE).o \
@@ -693,7 +694,7 @@ src/lua-bindings/rehex_bind.done: src/lua-bindings/rehex.i src/lua-bindings/rehe
 src/lua-bindings/rehex_bind.cpp src/lua-bindings/rehex_bind.h: src/lua-bindings/rehex_bind.done ;
 
 $(WXLUA_BINDINGS):
-	$(MAKE) -C wxLua/bindings/ wxadv wxaui wxbase wxcore wxlua wxpropgrid LUA=$(LUA)
+	$(MAKE) -C wxLua/bindings/ wxadv wxaui wxbase wxcore wxlua wxpropgrid wxnet LUA=$(LUA)
 	touch $@
 
 src/lua-plugin-preload.done: src/lua-plugin-preload.lua $(EMBED_EXE)

@@ -94,7 +94,8 @@ interface_filepath = wxlua_dir.."bindings/wxwidgets"
 --   The files are loaded from the interface_filepath.
 interface_fileTable =
 {
-    "wxnet_net.i"
+    "wxnet_net.i",
+    "wxnet_webrequest.i",
 }
 
 -- ----------------------------------------------------------------------------

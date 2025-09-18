@@ -19,6 +19,7 @@
 #define wxLUA_USE_wxPropertyGrid 0
 #define wxLUA_USE_wxRegEx 0
 #define wxLUA_USE_wxTranslations 0
+#define wxLUA_USE_wxWebRequest 1
 
 /* Include base wxluasetup.h to initialise anything we haven't set. */
 #include "../wxLua/modules/wxbind/setup/wxluasetup.h"

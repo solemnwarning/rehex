@@ -36,8 +36,9 @@
     <Link>
       <AdditionalLibraryDirectories>$(vcpkgInstallDir)$(vcpkgDebugFolder)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
 
-      <!-- Add wxWidgets base core aui propgrid adv -->
+      <!-- Add wxWidgets base core aui propgrid adv net -->
       <AdditionalDependencies>wxbase32u$(wxDebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxbase32u$(wxDebugSuffix)_net.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_core.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_aui.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>wxmsw32u$(wxDebugSuffix)_propgrid.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -52,6 +53,7 @@
       <!-- Windows dependencies for wxWidgets -->
       <AdditionalDependencies>comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
 
       <!-- Add Botan -->
       <AdditionalDependencies>botan-3.lib;%(AdditionalDependencies)</AdditionalDependencies>

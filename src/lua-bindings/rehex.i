@@ -12,6 +12,7 @@ void bulk_updates_freeze();
 void bulk_updates_thaw();
 
 bool _verify_signature(wxString message, wxString signature, wxString pubkey);
+void _get_version_info();
 
 // TODO: Make this a proper enum class?
 enum REHex::App::SetupPhase

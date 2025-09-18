@@ -108,6 +108,18 @@ static int LUACALL wxLua_function__verify_signature(lua_State *L)
 }
 %end
 
+%override wxLua_function__get_version_info
+#include "../../res/version.h"
+
+static int LUACALL wxLua_function__get_version_info(lua_State *L)
+{
+	lua_pushstring(L, REHEX_VERSION);
+	lua_pushstring(L, REHEX_SHORT_VERSION);
+	lua_pushstring(L, REHEX_BUILD_DATE);
+	return 3;
+}
+%end
+
 %override wxLua_REHex_App_SetupHookRegistration_constructor
 static int LUACALL wxLua_REHex_App_SetupHookRegistration_constructor(lua_State *L)
 {

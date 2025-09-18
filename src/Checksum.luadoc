@@ -1,0 +1,47 @@
+---
+-- A checksum algorithm.
+-- @classmod rehex.Checksum
+--
+-- @usage
+--
+-- local md5 = rehex.Checksum("MD5")
+--
+-- md5:update("Hello world")
+-- md5:finish()
+-- md5:checksum_hex() -- "3E25960A79DBC69B674CD4EC67A72C62"
+--
+-- md5:reset()
+-- md5:update("Hello")
+-- md5:update(" world")
+-- md5:finish()
+-- md5:checksum_hex() -- "3E25960A79DBC69B674CD4EC67A72C62"
+
+--- Get all available algorithms.
+-- @function algorithms
+--
+-- @return A table of algorithm descriptions.
+--
+-- Each element in the returned table is a table describing a checksum
+-- algorithm like the following:
+--
+--    {
+--        ["name"]  = "MD5",   -- Internal name of the algorithm (pass to the Checksum constructor)
+--        ["group"] = "",     -- Descriptive group the algorithm is in (may be empty)
+--        ["label"] = "MD5",  -- Descriptive name of the algorithm
+--    }
+--
+-- **NOTE**: This is a static method/function.
+
+--- Append data to the checksum.
+-- @function update
+--
+-- @param data The data to append.
+
+--- Finalise the checksum.
+-- @function finish
+
+--- Get the computed checksum as a hex string.
+-- @function checksum_hex
+
+--- Reset algorithm for generating a new checksum.
+-- @function reset

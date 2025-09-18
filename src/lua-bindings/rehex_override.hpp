@@ -522,3 +522,74 @@ static int LUACALL wxLua_REHex_CharacterEncoding_all_encodings(lua_State *L)
 	return 1;
 }
 %end
+
+%override wxLua_REHex_ChecksumGenerator_constructor
+static int LUACALL wxLua_REHex_ChecksumGenerator_constructor(lua_State *L)
+{
+	// const wxString algorithm
+	const wxString algorithm = wxlua_getwxStringtype(L, 1);
+
+	const REHex::ChecksumAlgorithm *algo = REHex::ChecksumAlgorithm::by_name(algorithm.ToStdString());
+	if(algo == NULL)
+	{
+		return 0;
+	}
+
+	REHex::ChecksumGenerator* generator = algo->factory();
+
+	// add to tracked memory list
+	wxluaO_addgcobject(L, generator, wxluatype_REHex_ChecksumGenerator);
+	// push the constructed class pointer
+	wxluaT_pushuserdatatype(L, generator, wxluatype_REHex_ChecksumGenerator);
+
+	return 1;
+}
+%end
+
+%override wxLua_REHex_ChecksumGenerator_algorithms
+static int LUACALL wxLua_REHex_ChecksumGenerator_algorithms(lua_State *L)
+{
+	lua_newtable(L);            /* Table to return */
+	lua_Integer table_idx = 1;  /* Next index to use in return table */
+	
+	std::vector<const REHex::ChecksumAlgorithm*> algos = REHex::ChecksumAlgorithm::all_algos();
+	
+	for(auto it = algos.begin(); it != algos.end(); ++it)
+	{
+		lua_pushinteger(L, table_idx++);
+		
+		lua_newtable(L);  /* Table for comment. */
+		
+		lua_pushstring(L, "name");
+		lua_pushstring(L, (*it)->name.c_str());
+		lua_settable(L, -3);
+		
+		lua_pushstring(L, "group");
+		lua_pushstring(L, (*it)->group.c_str());
+		lua_settable(L, -3);
+		
+		lua_pushstring(L, "label");
+		lua_pushstring(L, (*it)->label.c_str());
+		lua_settable(L, -3);
+		
+		/* Push algo table onto return table */
+		lua_settable(L, -3);
+	}
+	
+	return 1;
+}
+%end
+
+%override wxLua_REHex_ChecksumGenerator_update
+static int LUACALL wxLua_REHex_ChecksumGenerator_update(lua_State *L)
+{
+	REHex::ChecksumGenerator * self = (REHex::ChecksumGenerator *)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_ChecksumGenerator));
+
+	const char *data = lua_tostring(L, 2);
+	size_t len = lua_strlen(L, 2);
+
+    self->add_data(data, len);
+
+    return 0;
+}
+%end

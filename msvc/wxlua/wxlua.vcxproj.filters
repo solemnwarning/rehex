@@ -25,6 +25,9 @@
       <Filter>Bindings</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\wxLua\bindings\wxlua\wxlua_rules.lua" />
+    <CustomBuild Include="..\..\wxLua\bindings\wxwidgets\wxnet_rules.lua">
+      <Filter>Bindings</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxpropgrid_bind.cpp">
@@ -139,6 +142,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\wxLua\modules\wxlua\lbitlib.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\wxLua\modules\wxbind\src\wxnet_bind.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

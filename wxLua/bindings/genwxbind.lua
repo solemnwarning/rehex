@@ -1197,6 +1197,7 @@ function InitKeywords()
     preprocConditionTable["wxLUA_USE_wxWave"]                  = "wxLUA_USE_wxWave"
     preprocConditionTable["wxLUA_USE_wxWindowList"]            = "wxLUA_USE_wxWindowList"
     preprocConditionTable["wxLUA_USE_wxWizard"]                = "wxLUA_USE_wxWizard"
+    preprocConditionTable["wxLUA_USE_wxWebRequest"]            = "wxLUA_USE_wxWebRequest"
     preprocConditionTable["wxLUA_USE_wxXML"]                   = "wxLUA_USE_wxXML"
     preprocConditionTable["wxLUA_USE_wxXRC"]                   = "wxLUA_USE_wxXRC"
 

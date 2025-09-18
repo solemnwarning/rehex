@@ -28,6 +28,7 @@
 #include <wxbind/include/wxadv_bind.h>
 #include <wxbind/include/wxaui_bind.h>
 #include <wxbind/include/wxbase_bind.h>
+#include <wxbind/include/wxnet_bind.h>
 #include <wxbind/include/wxbinddefs.h>
 #include <wxlua/wxlua.h>
 
@@ -85,6 +86,7 @@ void REHex::LuaPluginLoader::init()
 		WXLUA_IMPLEMENT_BIND_WXCORE
 		WXLUA_IMPLEMENT_BIND_WXADV
 		WXLUA_IMPLEMENT_BIND_WXAUI
+		WXLUA_IMPLEMENT_BIND_WXNET
 		
 		/* Register wxLua REHex bindings. */
 		wxLuaBinding_rehex_init();

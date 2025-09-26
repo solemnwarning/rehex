@@ -63,7 +63,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd "$(SolutionDir)"
+      <Command>set VCPKG_VISUAL_STUDIO_PATH=$(VsInstallRoot)
+
+cd "$(SolutionDir)"
 "$(ProjectDir)install_vcpkg_dependencies.bat" x64-windows-static-v143 "$(TargetDir)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -83,6 +85,7 @@
 set REHEX_WINSDK_INCLUDES=$(WindowsSDK_IncludePath)
 set REHEX_WINSDK_LIBDIRS=$(UniversalCRT_LibraryPath_x86)$(WindowsSDK_LibraryPath_x86)
 set VCPKG_KEEP_ENV_VARS=REHEX_SOLUTION_DIR;REHEX_WINSDK_INCLUDES;REHEX_WINSDK_LIBDIRS
+set VCPKG_VISUAL_STUDIO_PATH=$(VsInstallRoot)
 
 cd "$(SolutionDir)"
 "$(ProjectDir)install_vcpkg_dependencies.bat" x86-windows-static-enlyze "$(TargetDir)"

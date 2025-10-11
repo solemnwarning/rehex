@@ -111,13 +111,15 @@ class wxDialog : public wxTopLevelWindow
     wxUSE_STATTEXT wxSizer *CreateTextSizer(const wxString &message);
     // virtual bool DoOK() - pocketpc only
     void EndModal(int retCode);
-    // int GetAffirmativeId() const; // - pocketpc only
+    int GetAffirmativeId() const;
+    int GetEscapeId() const;
     int GetReturnCode();
     // wxString GetTitle() const; // - see wxToplevelWindow
     //void Iconize(bool iconize); // - in wxToplevelWindow
     //bool IsIconized() const; // - in wxToplevelWindow
     bool IsModal() const;
-    //void SetAffirmativeId(int affirmativeId);
+    void SetAffirmativeId(int affirmativeId);
+    void SetEscapeId(int escapeId);
     // void SetIcon(const wxIcon& icon) - in wxToplevelWindow
     // void SetModal(const bool flag) - deprecated
     void SetReturnCode(int retCode);

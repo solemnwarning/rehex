@@ -72,6 +72,9 @@ namespace REHex
 			
 			std::map< int, std::shared_ptr<const ByteColourMap> > get_byte_colour_maps() const;
 			void set_byte_colour_maps(const std::map<int, ByteColourMap> &byte_colour_maps);
+
+			int get_default_byte_colour_map() const;
+			void set_default_byte_colour_map(int id);
 			
 			const WindowCommandTable &get_main_window_commands() const;
 			void set_main_window_accelerators(const WindowCommandTable &new_accelerators);
@@ -91,6 +94,7 @@ namespace REHex
 			GotoOffsetBase goto_offset_base;
 			HighlightColourMap highlight_colours;
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
+			int default_byte_colour_map;
 			WindowCommandTable main_window_commands;
 			CursorNavMode cursor_nav_mode;
 			bool goto_offset_modal;

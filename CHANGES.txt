@@ -1,3 +1,7 @@
+Version TBC:
+
+ * Save selected value colour map in default view (#268).
+
 Version 0.63.3 (2025-09-08):
 
  * Add option to change bitmap visualisation image background to a

@@ -1483,6 +1483,20 @@ void REHex::Tab::init_default_doc_view()
 	
 	int dsm_type = config->Read("data-map-scrollbar-type", (int)(data_map_scrollbar_type));
 	set_dsm_type((DataMapScrollbarType)(dsm_type));
+
+	int default_byte_colour_map = wxGetApp().settings->get_default_byte_colour_map();
+	if(default_byte_colour_map >= 0)
+	{
+		auto maps = wxGetApp().settings->get_byte_colour_maps();
+
+		auto map_it = maps.find(default_byte_colour_map);
+		assert(map_it != maps.end());
+
+		if(map_it != maps.end())
+		{
+			doc_ctrl->set_byte_colour_map(map_it->second);
+		}
+	}
 }
 
 void REHex::Tab::init_default_tools()

@@ -2018,6 +2018,24 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	#endif
 	
 	tab->save_view(config);
+
+	/* Find the selected byte colour map (if any) in the map list and save it as the default. The
+	 * default is managed by AppSettings to keep it in sync with the map list.
+	*/
+
+	auto maps = wxGetApp().settings->get_byte_colour_maps();
+	int default_map = -1;
+	
+	for(auto i = maps.begin(); i != maps.end(); ++i)
+	{
+		if(i->second == tab->doc_ctrl->get_byte_colour_map())
+		{
+			default_map = i->first;
+			break;
+		}
+	}
+
+	wxGetApp().settings->set_default_byte_colour_map(default_map);
 }
 
 void REHex::MainWindow::OnGithub(wxCommandEvent &event)

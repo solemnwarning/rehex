@@ -29,6 +29,7 @@ REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
 	goto_offset_base(GotoOffsetBase::AUTO),
 	highlight_colours(HighlightColourMap::defaults()),
+	default_byte_colour_map(-1),
 	main_window_commands(MainWindow::get_template_commands()),
 	cursor_nav_mode(CursorNavMode::BYTE),
 	goto_offset_modal(true),
@@ -153,6 +154,12 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 			wxGetApp().printf_error("Error loading value colour maps: %s\n", e.what());
 		}
 	}
+
+	long default_byte_colour_map = config->ReadLong("default-byte-colour-map", -1);
+	if(default_byte_colour_map == -1 || byte_colour_maps.find(default_byte_colour_map) != byte_colour_maps.end())
+	{
+		this->default_byte_colour_map = default_byte_colour_map;
+	}
 	
 	if(config->HasGroup("main-window-accelerators"))
 	{
@@ -230,6 +237,8 @@ void REHex::AppSettings::write(wxConfig *config)
 			i->second->save(config);
 		}
 	}
+
+	config->Write("default-byte-colour-map", (long)(default_byte_colour_map));
 	
 	{
 		config->DeleteGroup("main-window-accelerators");
@@ -304,6 +313,12 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	{
 		if(byte_colour_maps.find(i->first) == byte_colour_maps.end())
 		{
+			if(i->first == default_byte_colour_map)
+			{
+				/* The default byte colour map has been deleted. */
+				default_byte_colour_map = -1;
+			}
+
 			i = this->byte_colour_maps.erase(i);
 		}
 		else{
@@ -315,6 +330,22 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+int REHex::AppSettings::get_default_byte_colour_map() const
+{
+	return default_byte_colour_map;
+}
+
+void REHex::AppSettings::set_default_byte_colour_map(int id)
+{
+	if(byte_colour_maps.find(id) != byte_colour_maps.end())
+	{
+		default_byte_colour_map = id;
+	}
+	else{
+		default_byte_colour_map = -1;
+	}
 }
 
 const REHex::WindowCommandTable &REHex::AppSettings::get_main_window_commands() const

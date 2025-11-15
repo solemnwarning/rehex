@@ -23,7 +23,6 @@
 #include <set>
 #include <string>
 #include <sys/types.h>
-#include <thread>
 #include <vector>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
@@ -37,6 +36,7 @@
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
 #include "SharedDocumentPointer.hpp"
+#include "ThreadPool.hpp"
 
 namespace REHex {
 	class Search: public wxDialog {
@@ -65,7 +65,7 @@ namespace REHex {
 			wxTextCtrl *ralign_tc;
 			
 			std::mutex lock;
-			std::list<std::thread> threads;
+			ThreadPool::TaskHandle task;
 			std::atomic<off_t> next_window_start;
 			std::atomic<off_t> match_found_at;
 			std::atomic<bool> running;
@@ -122,7 +122,7 @@ namespace REHex {
 		private:
 			void enable_controls();
 			bool read_base_window_controls();
-			void thread_main(size_t window_size, size_t compare_size);
+			bool task_func(size_t window_size, size_t compare_size);
 			
 		/* Stays at the bottom because it changes the protection... */
 		DECLARE_EVENT_TABLE()

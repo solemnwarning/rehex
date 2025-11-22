@@ -80,7 +80,7 @@ END_EVENT_TABLE()
 REHex::Search::Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title):
 	wxDialog(parent, wxID_ANY, title),
 	doc(doc), range_begin(0), range_end(-1), align_to(1), align_from(0), match_found_at(-1), running(false),
-	search_end_focus(NULL),
+	m_saved_focus(NULL),
 	timer(this, ID_TIMER),
 	auto_close(false),
 	auto_wrap(false),
@@ -322,12 +322,14 @@ void REHex::Search::OnTextEnter(wxCommandEvent &event)
 	 * enter in, we stash the control and current selection (includes cursor position) so we can
 	 * restore it when the search is finished.
 	*/
-	
-	wxComboBox *control = dynamic_cast<wxComboBox*>(event.GetEventObject());
+
+	wxWindow *control = dynamic_cast<wxWindow*>(event.GetEventObject());
 	assert(control != NULL);
 	
-	search_end_focus = control;
-	control->GetSelection(&search_end_focus_from, &search_end_focus_to);
+	if(control != NULL)
+	{
+		save_focus(control);
+	}
 	
 	if(wxGetKeyState(WXK_SHIFT))
 	{
@@ -348,13 +350,7 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 	if(progress->WasCancelled())
 	{
 		end_search();
-		
-		if(search_end_focus != NULL)
-		{
-			search_end_focus->SetFocus();
-			search_end_focus->SetSelection(search_end_focus_from, search_end_focus_to);
-			search_end_focus = NULL;
-		}
+		restore_focus();
 		
 		if(auto_close)
 		{
@@ -408,12 +404,7 @@ void REHex::Search::OnTimer(wxTimerEvent &event)
 			}
 		}
 		
-		if(search_end_focus != NULL)
-		{
-			search_end_focus->SetFocus();
-			search_end_focus->SetSelection(search_end_focus_from, search_end_focus_to);
-			search_end_focus = NULL;
-		}
+		restore_focus();
 		
 		if(auto_close)
 		{
@@ -597,6 +588,50 @@ bool REHex::Search::task_func(size_t window_size, size_t compare_size)
 	}
 	
 	return !running;
+}
+
+void REHex::Search::save_focus(wxWindow *control)
+{
+	m_saved_focus = control;
+	
+	wxTextCtrl *tc = dynamic_cast<wxTextCtrl*>(control);
+	if(tc != NULL)
+	{
+		tc->GetSelection(&m_saved_focus_from, &m_saved_focus_to);
+		return;
+	}
+	
+	wxComboBox *cb = dynamic_cast<wxComboBox*>(control);
+	if(cb != NULL)
+	{
+		cb->GetSelection(&m_saved_focus_from, &m_saved_focus_to);
+		return;
+	}
+}
+
+void REHex::Search::restore_focus()
+{
+	if(m_saved_focus == NULL)
+	{
+		return;
+	}
+	
+	m_saved_focus->SetFocus();
+	
+	wxTextCtrl *tc = dynamic_cast<wxTextCtrl*>(m_saved_focus);
+	if(tc != NULL)
+	{
+		tc->SetSelection(m_saved_focus_from, m_saved_focus_to);
+	}
+	else{
+		wxComboBox *cb = dynamic_cast<wxComboBox*>(m_saved_focus);
+		if(cb != NULL)
+		{
+			cb->SetSelection(m_saved_focus_from, m_saved_focus_to);
+		}
+	}
+	
+	m_saved_focus = NULL;
 }
 
 wxArrayString REHex::Search::Text::search_history;

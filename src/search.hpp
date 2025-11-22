@@ -76,8 +76,11 @@ namespace REHex {
 			
 			SearchDirection search_direction;
 			
-			wxComboBox *search_end_focus;
-			long search_end_focus_from, search_end_focus_to;
+			wxWindow *m_saved_focus;
+			long m_saved_focus_from, m_saved_focus_to;
+			
+			void save_focus(wxWindow *control);
+			void restore_focus();
 			
 			wxProgressDialog *progress;
 			wxTimer timer;

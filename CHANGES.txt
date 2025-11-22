@@ -4,6 +4,9 @@ Version TBC:
 
  * Fix blurry text/icons when using DPI scaling under moden Windows (#267).
 
+ * Fix crash when pressing enter in search for value and search for byte
+   sequence dialogs (#272).
+
 Version 0.63.3 (2025-09-08):
 
  * Add option to change bitmap visualisation image background to a

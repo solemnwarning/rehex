@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,6 +25,7 @@
 #include "testutil.hpp"
 
 #include "../src/document.hpp"
+#include "../src/DocumentCtrl.hpp"
 #include "../src/search.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 
@@ -58,8 +59,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "abc");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "abc");
 		
 		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::Text::find_next() finds string at start of file";
 	}
@@ -67,8 +69,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		EXPECT_EQ(s.find_next(0), 3) << "REHEX::Search::Text::find_next() finds string in middle of file";
 	}
@@ -76,8 +79,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "nop");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "nop");
 		
 		EXPECT_EQ(s.find_next(0), 13) << "REHEX::Search::Text::find_next() finds string at end of file";
 	}
@@ -85,8 +89,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "abcdefghijklmnop");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "abcdefghijklmnop");
 		
 		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::Text::find_next() finds string which is whole file";
 	}
@@ -94,8 +99,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		EXPECT_EQ(s.find_next(2), 3) << "REHEX::Search::Text::find_next() finds string starting after from_offset";
 	}
@@ -103,8 +109,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		EXPECT_EQ(s.find_next(3), 3) << "REHEX::Search::Text::find_next() finds string starting at from_offset";
 	}
@@ -112,8 +119,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		EXPECT_EQ(s.find_next(4), -1) << "REHEX::Search::Text::find_next() doesn't find string starting before from_offset";
 	}
@@ -123,8 +131,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "bcd");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "bcd");
 		
 		s.limit_range(1, 15);
 		
@@ -134,8 +143,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		s.limit_range(1, 15);
 		
@@ -145,8 +155,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "mno");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "mno");
 		
 		s.limit_range(1, 15);
 		
@@ -156,8 +167,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "bcdefghijklmno");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "bcdefghijklmno");
 		
 		s.limit_range(1, 15);
 		
@@ -167,8 +179,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "abc");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "abc");
 		
 		s.limit_range(1, 15);
 		
@@ -178,8 +191,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "nop");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "nop");
 		
 		s.limit_range(1, 15);
 		
@@ -191,8 +205,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		s.require_alignment(3);
 		
@@ -202,8 +217,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "def");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
 		
 		s.require_alignment(2);
 		
@@ -213,8 +229,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "efg");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
 		
 		s.require_alignment(3, 1);
 		
@@ -224,8 +241,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "efg");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
 		
 		s.require_alignment(2, 1);
 		
@@ -235,8 +253,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "efg");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
 		
 		s.require_alignment(3, 10);
 		
@@ -246,8 +265,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "efg");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
 		
 		s.require_alignment(2, 3);
 		
@@ -259,8 +279,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "ABC", true);
+		REHex::Search::Text s(frame, doc, doc_ctrl, "ABC", true);
 		
 		EXPECT_EQ(s.find_next(0), -1) << "REHEX::Search::Text::find_next() is case-sensitive when case sensitivity is enabled";
 	}
@@ -268,8 +289,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "ABC", false);
+		REHex::Search::Text s(frame, doc, doc_ctrl, "ABC", false);
 		
 		EXPECT_EQ(s.find_next(0), 0) << "REHEX::Search::Text::find_next() is case-insensitive when case sensitivity is disabled";
 	}
@@ -279,8 +301,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "de");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "de");
 		
 		EXPECT_EQ(s.find_next(0, 4), 3) << "REHEX::Search::Text::find_next() finds strings which span multiple search windows";
 	}
@@ -288,8 +311,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "efg");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
 		
 		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::Text::find_next() finds strings beyond the first search window";
 	}
@@ -297,8 +321,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, "efgh");
+		REHex::Search::Text s(frame, doc, doc_ctrl, "efgh");
 		
 		EXPECT_EQ(s.find_next(0, 4), 4) << "REHEX::Search::Text::find_next() finds strings which span an entire search window";
 	}
@@ -308,19 +333,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), true, "UTF-8");
-		
-		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters";
-		EXPECT_EQ(s.find_next(17), 22) << "REHEX::Search::Text::find_next() matches combining characters";
-		EXPECT_EQ(s.find_next(23), -1) << "REHEX::Search::Text::find_next() matches combining characters";
-	}
-	
-	{
-		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
-		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("n\xCC\x83" /* LATIN SMALL LETTER N (U+006E), COMBINING TILDE (U+0303) */), true, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), true, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters";
 		EXPECT_EQ(s.find_next(17), 22) << "REHEX::Search::Text::find_next() matches combining characters";
@@ -330,8 +345,21 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), false, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("n\xCC\x83" /* LATIN SMALL LETTER N (U+006E), COMBINING TILDE (U+0303) */), true, "UTF-8");
+		
+		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters";
+		EXPECT_EQ(s.find_next(17), 22) << "REHEX::Search::Text::find_next() matches combining characters";
+		EXPECT_EQ(s.find_next(23), -1) << "REHEX::Search::Text::find_next() matches combining characters";
+	}
+	
+	{
+		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
+		
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), false, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 16) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
 		EXPECT_EQ(s.find_next(17), 19) << "REHEX::Search::Text::find_next() matches combining characters (case insensitive)";
@@ -343,8 +371,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("o\xCC\x80\xCC\x83" /* LATIN SMALL LETTER O (U+006E), COMBINING GRAVE ACCENT (U+0300), COMBINING TILDE (U+0303) */), true, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("o\xCC\x80\xCC\x83" /* LATIN SMALL LETTER O (U+006E), COMBINING GRAVE ACCENT (U+0300), COMBINING TILDE (U+0303) */), true, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 26) << "REHEX::Search::Text::find_next() matches multiple combining characters";
 		EXPECT_EQ(s.find_next(27), -1) << "REHEX::Search::Text::find_next() doesn't match out-of-order combining characters";
@@ -353,8 +382,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("o\xCC\x83\xCC\x80" /* LATIN SMALL LETTER O (U+006E), COMBINING TILDE (U+0303), COMBINING GRAVE ACCENT (U+0300) */), true, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("o\xCC\x83\xCC\x80" /* LATIN SMALL LETTER O (U+006E), COMBINING TILDE (U+0303), COMBINING GRAVE ACCENT (U+0300) */), true, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 31) << "REHEX::Search::Text::find_next() matches multiple combining characters";
 		EXPECT_EQ(s.find_next(32), -1) << "REHEX::Search::Text::find_next() doesn't match out-of-order combining characters";
@@ -363,8 +393,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), true, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), true, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 36) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
 		EXPECT_EQ(s.find_next(37), -1) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
@@ -373,8 +404,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), true, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), true, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 52) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
 		EXPECT_EQ(s.find_next(53), -1) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
@@ -383,8 +415,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), false, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), false, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 36) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
 		EXPECT_EQ(s.find_next(37), 52) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
@@ -394,8 +427,9 @@ TEST(Search, Text)
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
-		REHex::Search::Text s(frame, doc, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), false, "UTF-8");
+		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), false, "UTF-8");
 		
 		EXPECT_EQ(s.find_next(0), 36) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";
 		EXPECT_EQ(s.find_next(37), 52) << "REHEX::Search::Text::find_next() handles case-sensitivity on cyrillic characters correctly";

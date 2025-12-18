@@ -617,7 +617,7 @@ void REHex::DataHistogramPanel::OnBucketSelected(wxCommandEvent &event)
 	assert(range_offset.byte_aligned());
 	assert(range_length.byte_aligned());
 	
-	Search::Value *search = new Search::Value(frame, document);
+	Search::Value *search = new Search::Value(frame, document, document_ctrl);
 	search->configure(std::to_string(bucket_idx), Search::Value::FMT_I8);
 	search->limit_range(range_offset.byte(), range_offset.byte() + range_length.byte());
 	search->set_auto_close(true);

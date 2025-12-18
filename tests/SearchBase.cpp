@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,6 +22,7 @@
 #include <wx/frame.h>
 
 #include "../src/document.hpp"
+#include "../src/DocumentCtrl.hpp"
 #include "../src/search.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 #include "testutil.hpp"
@@ -36,12 +37,14 @@ class SearchBaseDummy: public Search
 		int wrap_request_count;
 		bool nothing_found;
 		
-		SearchBaseDummy(wxWindow *parent, SharedDocumentPointer &doc):
-			Search(parent, doc, "Dummy search class"),
+		SearchBaseDummy(wxWindow *parent, SharedDocumentPointer &doc, DocumentCtrl *doc_ctrl):
+			Search(parent, doc, doc_ctrl, "Dummy search class"),
 			should_wrap(false),
 			wrap_requested(false),
 			wrap_request_count(0),
-			nothing_found(false) {}
+			nothing_found(false) {
+				setup_window();
+			}
 		
 		/* NOTE: end_search() is called from subclass destructor rather than base to ensure search
 		 * is stopped before the subclass becomes invalid, else there is a race where the base
@@ -82,6 +85,25 @@ class SearchBaseDummy: public Search
 			return match_found_at;
 		}
 		
+		void enable_multi(size_t max_results)
+		{
+			m_matches_soft_max = max_results;
+			m_find_multiple = true;
+		}
+		
+		std::vector<off_t> get_results()
+		{
+			std::vector<off_t> results_vec;
+			results_vec.reserve(m_matches.size());
+			
+			for(auto it = m_matches.begin(); it != m_matches.end(); ++it)
+			{
+				results_vec.push_back(it->offset);
+			}
+			
+			return results_vec;
+		}
+		
 	protected:
 		virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) override {}
 		virtual bool read_window_controls() override { return false; }
@@ -98,12 +120,19 @@ class SearchBaseDummy: public Search
 		{
 			nothing_found = true;
 		}
+		
+		virtual void too_many_results_notification() override
+		{
+			fprintf(stderr, "Unexpected call to too_many_results_notification()\n");
+			abort();
+		}
 };
 
 class SearchBaseTest: public ::testing::Test {
 	protected:
 		AutoFrame frame;
 		SharedDocumentPointer doc;
+		DocumentCtrl *doc_ctrl;
 		SearchBaseDummy s;
 		
 		wxTimer check_timer;
@@ -112,7 +141,8 @@ class SearchBaseTest: public ::testing::Test {
 		SearchBaseTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
 			doc(SharedDocumentPointer::make()),
-			s(frame, doc)
+			doc_ctrl(new DocumentCtrl(frame, doc)),
+			s(frame, doc, doc_ctrl)
 		{
 			const std::vector<unsigned char> DATA(0x8192, 0x00);
 			doc->insert_data(0, DATA.data(), DATA.size());
@@ -212,6 +242,34 @@ class SearchBaseTest: public ::testing::Test {
 			else{
 				EXPECT_TRUE(s.wrap_requested ^ s.nothing_found);
 			}
+		}
+		
+		void search_multiple(off_t sub_range_begin, off_t sub_range_end, Search::SearchDirection direction, const std::vector<off_t> &expect_match_at, off_t window_size = 128)
+		{
+			/* Starting a search will create a wxProgressDialog, which will install its
+			 * own event loop(!) if one isn't already set up, which there isn't when
+			 * running the tests, furthermore the dialog gets destroyed WITHIN the
+			 * event loop that gets created by wxApp::OnRun() later, and the
+			 * out-of-order event loop setup/destruction leads to a dangling event loop
+			 * pointer! Yay!
+			 *
+			 * So we set up our own event loop just while the dialog is being created
+			 * to avoid that.
+			*/
+			
+			{
+				wxEventLoop loop;
+				wxEventLoopActivator activate(&loop);
+				
+				s.enable_multi(10);
+				s.begin_search(sub_range_begin, sub_range_end, direction, window_size);
+			}
+			
+			wait_for_search();
+			
+			EXPECT_FALSE(s.is_running());
+			EXPECT_EQ(s.get_match(), -1);
+			EXPECT_EQ(s.get_results(), expect_match_at);
 		}
 };
 
@@ -432,4 +490,26 @@ TEST_F(SearchBaseTest, BackwardsZeroLengthRange)
 	s.set_range(1000, 1000);
 	
 	search_for_no_match(1000, 1000, Search::SearchDirection::BACKWARDS);
+}
+
+TEST_F(SearchBaseTest, SearchAll)
+{
+	doc->overwrite_data(1000, "foobar", 6);
+	doc->overwrite_data(1200, "foobar", 6);
+	doc->overwrite_data(1500, "baz",    3);
+	
+	s.set_range(0, 8192);
+	
+	search_multiple(0, 8192, Search::SearchDirection::FORWARDS, { 1000, 1200, 1500 });
+}
+
+TEST_F(SearchBaseTest, SearchAllLimitedRange)
+{
+	doc->overwrite_data(1000, "foobar", 6);
+	doc->overwrite_data(1200, "foobar", 6);
+	doc->overwrite_data(1500, "baz",    3);
+	
+	s.set_range(1200, 8192);
+	
+	search_multiple(1200, 8192, Search::SearchDirection::FORWARDS, { 1200, 1500 });
 }

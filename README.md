@@ -32,17 +32,17 @@ The same packages are also produced for Git commits (look for the tick), if you 
 
 ### Debian
 
-First, you will need to add my APT signing key to your system:
+First, you will need to download my APT signing key to your system:
 
-    sudo wget -O /etc/apt/trusted.gpg.d/solemnwarning-archive-keyring.gpg \
-        https://repos.solemnwarning.net/debian/solemnwarning-archive-keyring.gpg
+    sudo wget -O /etc/apt/keyrings/solemnwarning-archive-keyring.gpg \
+        https://solemnwarning.github.io/solemnwarning-archive-keyring.gpg
 
 Add the following lines to your `/etc/apt/sources.list` file:
 
-    deb http://repos.solemnwarning.net/debian/ CODENAME main
-    deb-src http://repos.solemnwarning.net/debian/ CODENAME main
+    deb [signed-by=/etc/apt/keyrings/solemnwarning-archive-keyring.gpg] http://repos.solemnwarning.net/debian/ CODENAME main
+    deb-src [signed-by=/etc/apt/keyrings/solemnwarning-archive-keyring.gpg] http://repos.solemnwarning.net/debian/ CODENAME main
 
-**NOTE:** Replace `CODENAME` with the version you're running (e.g. `bookworm` or `bullseye`).
+**NOTE:** Replace `CODENAME` with the version you're running (e.g. `trixie` or `bookworm`).
 
 Finally, you can install the package:
 
@@ -51,17 +51,17 @@ Finally, you can install the package:
 
 ### Ubuntu
 
-First, you will need to add my APT signing key to your system:
+First, you will need to download my APT signing key to your system:
 
-    sudo wget -O /etc/apt/trusted.gpg.d/solemnwarning-archive-keyring.gpg \
-        https://repos.solemnwarning.net/ubuntu/solemnwarning-archive-keyring.gpg
+    sudo wget -O /etc/apt/keyrings/solemnwarning-archive-keyring.gpg \
+        https://solemnwarning.github.io/solemnwarning-archive-keyring.gpg
 
 Add the following lines to your `/etc/apt/sources.list` file:
 
-    deb  [arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
-    deb-src  [arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
+    deb [signed-by=/etc/apt/keyrings/solemnwarning-archive-keyring.gpg arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
+    deb-src [signed-by=/etc/apt/keyrings/solemnwarning-archive-keyring.gpg arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
 
-**NOTE:** Replace `CODENAME` with the version you're running (e.g. `focal` for 20.04 or `lunar` for 23.04).
+**NOTE:** Replace `CODENAME` with the version you're running (e.g. `noble` for 24.04 or `questing` for 25.10).
 
 Finally, you can install the package:
 

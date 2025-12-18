@@ -1428,7 +1428,7 @@ void REHex::MainWindow::OnSearchText(wxCommandEvent &event)
 	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::Text *sd = new REHex::Search::Text(tab, tab->doc);
+	REHex::Search::Text *sd = new REHex::Search::Text(tab, tab->doc, tab->doc_ctrl);
 	
 	BitOffset selection_offset, selection_length;
 	std::tie(selection_offset, selection_length) = tab->doc_ctrl->get_selection_linear();
@@ -1451,7 +1451,7 @@ void REHex::MainWindow::OnSearchBSeq(wxCommandEvent &event)
 	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::ByteSequence *sd = new REHex::Search::ByteSequence(tab, tab->doc);
+	REHex::Search::ByteSequence *sd = new REHex::Search::ByteSequence(tab, tab->doc, tab->doc_ctrl);
 	
 	BitOffset selection_offset, selection_length;
 	std::tie(selection_offset, selection_length) = tab->doc_ctrl->get_selection_linear();
@@ -1474,7 +1474,7 @@ void REHex::MainWindow::OnSearchValue(wxCommandEvent &event)
 	auto tab = dynamic_cast<Tab*>(cpage);
 	assert(tab != NULL);
 	
-	REHex::Search::Value *sd = new REHex::Search::Value(tab, tab->doc);
+	REHex::Search::Value *sd = new REHex::Search::Value(tab, tab->doc, tab->doc_ctrl);
 	
 	BitOffset selection_offset, selection_length;
 	std::tie(selection_offset, selection_length) = tab->doc_ctrl->get_selection_linear();

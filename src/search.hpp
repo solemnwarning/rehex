@@ -27,6 +27,7 @@
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/combobox.h>
+#include <wx/listctrl.h>
 #include <wx/progdlg.h>
 #include <wx/radiobut.h>
 #include <wx/textctrl.h>
@@ -35,11 +36,44 @@
 #include "CharacterEncoder.hpp"
 #include "document.hpp"
 #include "NumericTextCtrl.hpp"
+#include "SafeWindowPointer.hpp"
 #include "SharedDocumentPointer.hpp"
 #include "ThreadPool.hpp"
 
 namespace REHex {
+	struct SearchResult
+	{
+		off_t offset;
+		
+		SearchResult(off_t offset): offset(offset) {}
+	};
+	
+	class SearchResults
+	{
+	private:
+		std::vector<SearchResult> m_results;
+		
+	public:
+		void insert(SearchResult &&result);
+		void insert(SearchResults &&results);
+		
+		size_t size() const;
+		const SearchResult &operator[](size_t idx) const;
+	};
+	
 	class Search: public wxDialog {
+		private:
+			class ResultsListCtrl: public wxListCtrl
+			{
+				private:
+					Search *m_search;
+					
+				public:
+					ResultsListCtrl(Search *search);
+					
+					virtual wxString OnGetItemText(long item, long column) const override;
+			};
+			
 		public:
 			enum class SearchDirection { FORWARDS = 1, BACKWARDS = -1 };
 			
@@ -51,6 +85,7 @@ namespace REHex {
 			
 		protected:
 			SharedDocumentPointer doc;
+			SafeWindowPointer<DocumentCtrl> doc_ctrl;
 			
 			off_t range_begin, range_end;
 			off_t align_to, align_from;
@@ -69,6 +104,9 @@ namespace REHex {
 			std::atomic<off_t> next_window_start;
 			std::atomic<off_t> match_found_at;
 			std::atomic<bool> running;
+			
+			bool m_find_multiple;
+			SearchResults m_matches;
 			
 			/* Start and end (inclusive) of current search. */
 			off_t search_base;
@@ -89,8 +127,13 @@ namespace REHex {
 			bool auto_wrap;
 			wxWindow *modal_parent;
 			
+			wxPanel *m_main_panel;
+			wxPanel *m_results_panel;
+			
+			ResultsListCtrl *m_results_lc;
+			
 		protected:
-			Search(wxWindow *parent, SharedDocumentPointer &doc, const char *title);
+			Search(wxWindow *parent, SharedDocumentPointer &doc, DocumentCtrl *doc_ctrl, const char *title);
 			
 			void setup_window();
 			virtual void setup_window_controls(wxWindow *parent, wxSizer *sizer) = 0;
@@ -117,6 +160,9 @@ namespace REHex {
 			void OnCheckBox(wxCommandEvent &event);
 			void OnFindNext(wxCommandEvent &event);
 			void OnFindPrev(wxCommandEvent &event);
+			void OnFindAll(wxCommandEvent &event);
+			void OnFindMore(wxCommandEvent &event);
+			void OnBack(wxCommandEvent &event);
 			void OnTextEnter(wxCommandEvent &event);
 			void OnCancel(wxCommandEvent &event);
 			void OnTimer(wxTimerEvent &event);
@@ -129,6 +175,8 @@ namespace REHex {
 			
 		/* Stays at the bottom because it changes the protection... */
 		DECLARE_EVENT_TABLE()
+		
+		friend ResultsListCtrl;
 	};
 	
 	class Search::Text: public Search
@@ -149,7 +197,7 @@ namespace REHex {
 			static std::set<Search::Text*> instances;
 			
 		public:
-			Text(wxWindow *parent, SharedDocumentPointer &doc, const wxString &search_for = "", bool case_sensitive = true, const std::string &encoding = "ASCII");
+			Text(wxWindow *parent, SharedDocumentPointer &doc, DocumentCtrl *doc_ctrl, const wxString &search_for = "", bool case_sensitive = true, const std::string &encoding = "ASCII");
 			virtual ~Text();
 			
 			virtual bool test(const void *data, size_t data_size);
@@ -170,7 +218,7 @@ namespace REHex {
 			wxTextCtrl *search_for_tc;
 			
 		public:
-			ByteSequence(wxWindow *parent, SharedDocumentPointer &doc, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
+			ByteSequence(wxWindow *parent, SharedDocumentPointer &doc, DocumentCtrl *doc_ctrl, const std::vector<unsigned char> &search_for = std::vector<unsigned char>());
 			virtual ~ByteSequence();
 			
 			virtual bool test(const void *data, size_t data_size);
@@ -196,7 +244,7 @@ namespace REHex {
 			double f64_value, f64_epsilon;
 		
 		public:
-			Value(wxWindow *parent, SharedDocumentPointer &doc);
+			Value(wxWindow *parent, SharedDocumentPointer &doc, DocumentCtrl *doc_ctrl);
 			virtual ~Value();
 			
 			static const unsigned FMT_LE  = (1 << 0);

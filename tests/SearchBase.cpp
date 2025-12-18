@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -22,6 +22,7 @@
 #include <wx/frame.h>
 
 #include "../src/document.hpp"
+#include "../src/DocumentCtrl.hpp"
 #include "../src/search.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 #include "testutil.hpp"
@@ -36,12 +37,14 @@ class SearchBaseDummy: public Search
 		int wrap_request_count;
 		bool nothing_found;
 		
-		SearchBaseDummy(wxWindow *parent, SharedDocumentPointer &doc):
-			Search(parent, doc, "Dummy search class"),
+		SearchBaseDummy(wxWindow *parent, SharedDocumentPointer &doc, DocumentCtrl *doc_ctrl):
+			Search(parent, doc, doc_ctrl, "Dummy search class"),
 			should_wrap(false),
 			wrap_requested(false),
 			wrap_request_count(0),
-			nothing_found(false) {}
+			nothing_found(false) {
+				setup_window();
+			}
 		
 		/* NOTE: end_search() is called from subclass destructor rather than base to ensure search
 		 * is stopped before the subclass becomes invalid, else there is a race where the base
@@ -104,6 +107,7 @@ class SearchBaseTest: public ::testing::Test {
 	protected:
 		AutoFrame frame;
 		SharedDocumentPointer doc;
+		DocumentCtrl *doc_ctrl;
 		SearchBaseDummy s;
 		
 		wxTimer check_timer;
@@ -112,7 +116,8 @@ class SearchBaseTest: public ::testing::Test {
 		SearchBaseTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
 			doc(SharedDocumentPointer::make()),
-			s(frame, doc)
+			doc_ctrl(new DocumentCtrl(frame, doc)),
+			s(frame, doc, doc_ctrl)
 		{
 			const std::vector<unsigned char> DATA(0x8192, 0x00);
 			doc->insert_data(0, DATA.data(), DATA.size());

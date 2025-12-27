@@ -608,8 +608,13 @@ bool wxLuaState::Create(lua_State* L, int state_type)
         // Make the GC a little more aggressive since we push void* data
         // that may be quite large. The upshot is that Lua runs faster.
         // Empirically found by timing: "for i = 1, 1E6 do local p = wx.wxPoint() end"
+#if LUA_VERSION_MAJOR_N > 5 || (LUA_VERSION_MAJOR_N == 5 && LUA_VERSION_MINOR_N >= 5)
+		lua_gc(L, LUA_GCPARAM, LUA_GCPPAUSE, 120);
+		lua_gc(L, LUA_GCPARAM, LUA_GCPSTEPMUL, 400);
+#else
         lua_gc(L, LUA_GCSETPAUSE, 120);
         lua_gc(L, LUA_GCSETSTEPMUL, 400);
+#endif
 
         // Create a new state to push into Lua, the last wxLuaStateRefData will delete it.
         // Note: we call SetRefData() so that we don't increase the ref count.

@@ -1548,8 +1548,8 @@ function ReadInterfaceFile(filename)
     local fileData   = {}
     local linenumber = 0
 
-    for line in io.lines(filename) do
-        line = line:gsub("%s+$","") -- drop all trailing whitespaces not handled by io.lines
+    for orig_line in io.lines(filename) do
+        local line = orig_line:gsub("%s+$","") -- drop all trailing whitespaces not handled by io.lines
         linenumber = linenumber + 1
 
         local lineTable =

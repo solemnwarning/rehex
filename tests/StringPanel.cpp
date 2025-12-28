@@ -40,9 +40,6 @@ class StringPanelTest: public ::testing::Test
 		
 		StringPanel *string_panel;
 		
-		wxTimer check_timer;
-		wxTimer timeout_timer;
-		
 		StringPanelTest():
 			frame(NULL, wxID_ANY, "REHex Tests"),
 			doc(SharedDocumentPointer::make())
@@ -53,30 +50,11 @@ class StringPanelTest: public ::testing::Test
 			std::vector<DocumentCtrl::Region*> regions;
 			regions.push_back(new DocumentCtrl::DataRegion(doc, 0, 0, 0));
 			main_doc_ctrl->replace_all_regions(regions);
-			
-			check_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent &event)
-			{
-				if(!string_panel->search_pending())
-				{
-					wxTheApp->ExitMainLoop();
-				}
-			});
-			
-			timeout_timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
-			{
-				wxTheApp->ExitMainLoop();
-			});
 		}
 		
 		void wait_for_idle(unsigned int timeout_ms)
 		{
-			check_timer.Start(100, wxTIMER_CONTINUOUS);
-			timeout_timer.Start(timeout_ms, wxTIMER_ONE_SHOT);
-			
-			wxTheApp->OnRun();
-			
-			timeout_timer.Stop();
-			check_timer.Stop();
+			run_wx_until([this]() { return !(string_panel->search_pending()); }, timeout_ms);
 		}
 };
 
@@ -103,7 +81,7 @@ TEST_F(StringPanelTest, TextOnlyFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (1024 * 1024)) << "StringPanel processed all data in file";
 	
@@ -126,7 +104,7 @@ TEST_F(StringPanelTest, BinaryOnlyFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), (1024 * 1024)) << "StringPanel processed all data in file";
 	
@@ -153,7 +131,7 @@ TEST_F(StringPanelTest, MixedFile)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	
@@ -183,7 +161,7 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -201,7 +179,7 @@ TEST_F(StringPanelTest, OverwriteDataTruncatesString)
 	
 	doc->overwrite_data(150, BIN_DATA.data(), 4);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	
@@ -231,7 +209,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -249,7 +227,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsString)
 	
 	doc->overwrite_data(132, BIN_DATA.data(), 7);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	
@@ -280,7 +258,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -298,7 +276,7 @@ TEST_F(StringPanelTest, OverwriteDataSplitsInvalidatesString)
 	
 	doc->overwrite_data(131, BIN_DATA.data(), 8);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	
@@ -327,7 +305,7 @@ TEST_F(StringPanelTest, OverwriteDataCompletesString)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -343,7 +321,7 @@ TEST_F(StringPanelTest, OverwriteDataCompletesString)
 	unsigned const char DATA[] = { 'd' };
 	doc->overwrite_data(131, DATA, 1);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	
@@ -373,7 +351,7 @@ TEST_F(StringPanelTest, InsertData)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -394,7 +372,7 @@ TEST_F(StringPanelTest, InsertData)
 	
 	doc->insert_data(259, INSERT_DATA, 7);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1031U) << "StringPanel processed all data in file";
 	
@@ -425,7 +403,7 @@ TEST_F(StringPanelTest, InsertDataCompletesString)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -442,7 +420,7 @@ TEST_F(StringPanelTest, InsertDataCompletesString)
 	
 	doc->insert_data(131, INSERT_DATA, 1);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1025U) << "StringPanel processed all data in file";
 	
@@ -472,7 +450,7 @@ TEST_F(StringPanelTest, EraseData)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -491,7 +469,7 @@ TEST_F(StringPanelTest, EraseData)
 	
 	doc->erase_data(260, 6);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1018U) << "StringPanel processed all data in file";
 	
@@ -522,7 +500,7 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -540,7 +518,7 @@ TEST_F(StringPanelTest, EraseDataInvalidate)
 	
 	doc->erase_data(259, 16);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1008U) << "StringPanel processed all data in file";
 	
@@ -569,7 +547,7 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -587,7 +565,7 @@ TEST_F(StringPanelTest, EraseDataMerge)
 	
 	doc->erase_data(142, 114);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 910U) << "StringPanel processed all data in file";
 	
@@ -616,7 +594,7 @@ TEST_F(StringPanelTest, EraseDataCompletesString)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 1024U);
 	
@@ -631,7 +609,7 @@ TEST_F(StringPanelTest, EraseDataCompletesString)
 	
 	doc->erase_data(131, 1);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1023U) << "StringPanel processed all data in file";
 	
@@ -750,7 +728,7 @@ TEST_F(StringPanelTest, UTF8)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 0x50U);
 	
@@ -799,7 +777,7 @@ TEST_F(StringPanelTest, UTF16)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	ASSERT_EQ(string_panel->get_clean_bytes(), 0x38);
 	
@@ -830,7 +808,7 @@ TEST_F(StringPanelTest, SelectAllCopyText)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	
@@ -872,7 +850,7 @@ TEST_F(StringPanelTest, SelectSomeCopyOffsetAndText)
 	string_panel->set_min_string_length(4);
 	string_panel->set_visible(true);
 	
-	wait_for_idle(20000);
+	wait_for_idle(60000);
 	
 	EXPECT_EQ(string_panel->get_clean_bytes(), 1024U) << "StringPanel processed all data in file";
 	

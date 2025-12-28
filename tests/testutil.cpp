@@ -17,6 +17,7 @@
 
 #include "../src/platform.hpp"
 
+#include <chrono>
 #include <ostream>
 #include <stdexcept>
 #include <stdio.h>
@@ -50,6 +51,11 @@ void run_wx_for(unsigned int ms)
 
 bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_ms, unsigned int check_interval_ms)
 {
+	std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+	
+	std::chrono::steady_clock::time_point last_warn_at = start_time;
+	constexpr int LONG_TEST_WARNING_INTERVAL = 10;
+	
 	wxTimer timeout_timer;
 	timeout_timer.Bind(wxEVT_TIMER, [](wxTimerEvent &event)
 	{
@@ -66,6 +72,15 @@ bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_m
 		if(predicate_returned_true)
 		{
 			wxTheApp->ExitMainLoop();
+		}
+		else{
+			std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+			
+			if((now - last_warn_at) >= std::chrono::seconds(LONG_TEST_WARNING_INTERVAL))
+			{
+				fprintf(stderr, "This operation is taking a while (time out in %u seconds)\n", (unsigned)((timeout_ms - std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count()) / 1000));
+				last_warn_at = now;
+			}
 		}
 	});
 	

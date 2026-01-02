@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -51,7 +51,7 @@ _rehex_luarocks_sha256="56ab9b90f5acbc42eb7a94cf482e6c058a63e8a1effdf572b8b2a632
 _rehex_wxwidgets_version="3.2.8.1"
 _rehex_wxwidgets_url="https://github.com/wxWidgets/wxWidgets/releases/download/v${_rehex_wxwidgets_version}/wxWidgets-${_rehex_wxwidgets_version}.tar.bz2"
 _rehex_wxwidgets_sha256="ad0cf6c18815dcf1a6a89ad3c3d21a306cd7b5d99a602f77372ef1d92cb7d756"
-_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-1"
+_rehex_wxwidgets_build_ident="${_rehex_wxwidgets_version}-2"
 
 _rehex_cpanm_version="1.7044"
 _rehex_cpanm_url="https://cpan.metacpan.org/authors/id/M/MI/MIYAGAWA/App-cpanminus-${_rehex_cpanm_version}.tar.gz"
@@ -798,6 +798,82 @@ then
  
              GetPeer()->Move(0,0,0,0 );
              SetSize( wxSIZE_AUTO_WIDTH, 0 );
+EOF
+
+	# https://github.com/wxWidgets/wxWidgets/commit/c8880e21b166efc0971bf2d6d770c2c17840807e
+	patch -p0 <<'EOF'
+--- include/wx/osx/toolbar.h	2025-05-25 18:15:56
++++ include/wx/osx/toolbar.h	2026-01-02 18:35:00
+@@ -124,6 +124,11 @@
+ #ifdef __WXOSX_IPHONE__
+     WX_UIView m_macToolbar;
+ #endif
++
++private:
++#if wxOSX_USE_NATIVE_TOOLBAR
++    wxString FormatToolId(const wxToolBarToolBase *tool) const;
++#endif
+ };
+ 
+ #endif // wxUSE_TOOLBAR
+--- src/osx/cocoa/toolbar.mm	2025-05-25 18:15:56
++++ src/osx/cocoa/toolbar.mm	2026-01-02 18:38:27
+@@ -439,8 +439,11 @@
+ - (NSToolbarItem*) toolbar:(NSToolbar*) toolbar itemForItemIdentifier:(NSString*) itemIdentifier willBeInsertedIntoToolbar:(BOOL) flag
+ {
+     wxUnusedVar(toolbar);
+-    wxToolBarTool* tool = (wxToolBarTool*) [itemIdentifier longLongValue];
+-    if ( tool )
++
++    // This must be consistent with FormatToolId().
++    wxToolBarTool* tool = nullptr;
++    void* macToolbar;
++    if ( sscanf([itemIdentifier UTF8String], "%p:%p", &macToolbar, &tool) == 2 && tool )
+     {
+         wxNSToolbarItem* item = (wxNSToolbarItem*) tool->GetToolbarItemRef();
+         if ( flag && tool->IsControl() )
+@@ -1239,7 +1242,7 @@
+                     }
+                     else
+                     {
+-                        cfidentifier = wxCFStringRef(wxString::Format("%ld", (long)tool));
++                        cfidentifier = wxCFStringRef(FormatToolId(tool));
+                         nsItemId = cfidentifier.AsNSString();
+                     }
+                     
+@@ -1520,7 +1523,7 @@
+ #if wxOSX_USE_NATIVE_TOOLBAR
+                 if (m_macToolbar != NULL)
+                 {
+-                    wxString identifier = wxString::Format(wxT("%ld"), (long) tool);
++                    wxString identifier = FormatToolId(tool);
+                     wxCFStringRef cfidentifier( identifier, wxFont::GetDefaultEncoding() );
+                     wxNSToolbarItem* item = [[wxNSToolbarItem alloc] initWithItemIdentifier:cfidentifier.AsNSString() ];
+                     [item setImplementation:tool];
+@@ -1549,7 +1552,7 @@
+                 WXWidget view = (WXWidget) tool->GetControl()->GetHandle() ;
+                 wxCHECK_MSG( view, false, wxT("control must be non-NULL") );
+ 
+-                wxString identifier = wxString::Format(wxT("%ld"), (long) tool);
++                wxString identifier = FormatToolId(tool);
+                 wxCFStringRef cfidentifier( identifier, wxFont::GetDefaultEncoding() );
+                 wxNSToolbarItem* item = [[wxNSToolbarItem alloc] initWithItemIdentifier:cfidentifier.AsNSString() ];
+                 [item setImplementation:tool];
+@@ -1706,9 +1709,14 @@
+     wxCHECK_RET( tool, "invalid tool ID" );
+     wxCHECK_RET( m_macToolbar, "toolbar must be non-NULL" );
+ 
+-    wxString identifier = wxString::Format(wxT("%ld"), (long)tool);
++    wxString identifier = FormatToolId(tool);
+     wxCFStringRef cfidentifier(identifier, wxFont::GetDefaultEncoding());
+     [(NSToolbar*)m_macToolbar setSelectedItemIdentifier:cfidentifier.AsNSString()];
++}
++
++wxString wxToolBar::FormatToolId(const wxToolBarToolBase *tool) const
++{
++    return wxString::Format("%p:%p", m_macToolbar, tool);
+ }
+ #endif // wxOSX_USE_NATIVE_TOOLBAR
 EOF
 		
 		_rehex_wxwidgets_arch_flag=

@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -396,6 +396,7 @@ APP_OBJS := \
 	src/ChecksumImpl.$(BUILD_TYPE).o \
 	src/ChecksumPanel.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
+	src/ClipboardUtils.$(BUILD_TYPE).o \
 	src/CodeCtrl.$(BUILD_TYPE).o \
 	src/ColourPickerCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
@@ -528,6 +529,7 @@ TEST_OBJS := \
 	src/Checksum.$(BUILD_TYPE).o \
 	src/ChecksumImpl.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
+	src/ClipboardUtils.$(BUILD_TYPE).o \
 	src/ColourPickerCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \

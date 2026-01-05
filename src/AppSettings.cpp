@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -34,6 +34,9 @@ REHex::AppSettings::AppSettings():
 	cursor_nav_mode(CursorNavMode::BYTE),
 	goto_offset_modal(true),
 	size_unit(SizeUnit::AUTO_XiB)
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	, primary_copy_limit(DEFAULT_PRIMARY_COPY_LIMIT)
+	#endif
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -200,6 +203,10 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 			break;
 	}
 	
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	primary_copy_limit = config->ReadLong("primary-copy-limit", primary_copy_limit);
+	#endif
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -249,6 +256,10 @@ void REHex::AppSettings::write(wxConfig *config)
 	
 	config->Write("goto-offset-modal", goto_offset_modal);
 	config->Write("size-unit", (long)(size_unit));
+	
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	config->Write("primary-copy-limit", (long)(primary_copy_limit));
+	#endif
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -403,6 +414,18 @@ void REHex::AppSettings::set_size_unit(SizeUnit unit)
 {
 	size_unit = unit;
 }
+
+#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+size_t REHex::AppSettings::get_primary_copy_limit() const
+{
+	return primary_copy_limit;
+}
+
+void REHex::AppSettings::set_primary_copy_limit(size_t primary_copy_limit)
+{
+	this->primary_copy_limit = primary_copy_limit;
+}
+#endif
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)
 {

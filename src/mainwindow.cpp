@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -34,6 +34,7 @@
 #include "AboutDialog.hpp"
 #include "App.hpp"
 #include "BytesPerLineDialog.hpp"
+#include "ClipboardUtils.hpp"
 #include "EditCommentDialog.hpp"
 #include "FillRangeDialog.hpp"
 #include "GotoOffsetDialog.hpp"
@@ -1551,76 +1552,7 @@ void REHex::MainWindow::OnCopy(wxCommandEvent &event)
 void REHex::MainWindow::OnPaste(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
-	
-	ClipboardGuard cg;
-	if(cg)
-	{
-		/* If there is a selection and it is entirely contained within a Region, give that
-		 * region the chance to handle the paste event.
-		*/
-		
-		if(tab->doc_ctrl->has_selection())
-		{
-			BitOffset selection_first, selection_last;
-			std::tie(selection_first, selection_last) = tab->doc_ctrl->get_selection_raw();
-			
-			REHex::DocumentCtrl::GenericDataRegion *selection_region = tab->doc_ctrl->data_region_by_offset(selection_first);
-			assert(selection_region != NULL);
-			
-			assert(selection_region->d_offset <= selection_last);
-			assert((selection_region->d_offset + selection_region->d_length) >= selection_first);
-			
-			if((selection_region->d_offset + selection_region->d_length) > selection_last)
-			{
-				if(selection_region->OnPaste(tab->doc_ctrl))
-				{
-					/* Region consumed the paste event. */
-					return;
-				}
-			}
-		}
-		
-		/* Give the region the cursor is in a chance to handle the paste event. */
-		
-		BitOffset cursor_pos = tab->doc_ctrl->get_cursor_position();
-		
-		REHex::DocumentCtrl::GenericDataRegion *cursor_region = tab->doc_ctrl->data_region_by_offset(cursor_pos);
-		assert(cursor_region != NULL);
-		
-		if(cursor_region->OnPaste(tab->doc_ctrl))
-		{
-			/* Region consumed the paste event. */
-			return;
-		}
-		
-		/* No region consumed the event. Fallback to default handling. */
-		
-		if(wxTheClipboard->IsSupported(CommentsDataObject::format))
-		{
-			CommentsDataObject data;
-			wxTheClipboard->GetData(data);
-			
-			auto clipboard_comments = data.get_comments();
-			
-			tab->doc->handle_paste(tab, clipboard_comments);
-		}
-		else if(wxTheClipboard->IsSupported(wxDF_TEXT))
-		{
-			wxTextDataObject data;
-			wxTheClipboard->GetData(data);
-			
-			try {
-				wxString clipboard_text = data.GetText();
-				const wxScopedCharBuffer clipboard_utf8 = clipboard_text.utf8_str();
-				
-				tab->paste_text(std::string(clipboard_utf8.data(), clipboard_utf8.length()));
-			}
-			catch(const std::exception &e)
-			{
-				wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
-			}
-		}
-	}
+	tab->handle_paste(false);
 }
 
 void REHex::MainWindow::OnUndo(wxCommandEvent &event)
@@ -2315,6 +2247,36 @@ void REHex::MainWindow::OnSelectionChange(wxCommandEvent &event)
 		 * active document.
 		*/
 		_update_status_selection(doc_ctrl);
+		
+		#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+		
+		OrderedBitRangeSet selection = doc_ctrl->get_selection_ranges();
+		
+		if(!(selection.empty()))
+		{
+			std::unique_ptr<wxDataObject> copy_data;
+			try {
+				copy_data = clipboard_data_from_doc(active_tab->doc, doc_ctrl, selection, [&](size_t size)
+				{
+					return size <= wxGetApp().settings->get_primary_copy_limit();
+				});
+			}
+			catch(const std::exception &e)
+			{
+				return;
+			}
+			
+			if(copy_data != NULL)
+			{
+				ClipboardGuard cg(true);
+				if(cg)
+				{
+					wxTheClipboard->SetData(copy_data.release());
+				}
+			}
+		}
+		
+		#endif
 	}
 }
 

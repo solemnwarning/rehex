@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,6 +33,7 @@
 #include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "CharacterEncoder.hpp"
+#include "ClipboardUtils.hpp"
 #include "CustomMessageDialog.hpp"
 #include "EditCommentDialog.hpp"
 #include "profile.hpp"
@@ -109,6 +110,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	doc.auto_cleanup_bind(BACKING_FILE_MODIFIED, &REHex::Tab::OnDocumentFileModified, this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
+	doc_ctrl->Bind(wxEVT_MIDDLE_UP, &REHex::Tab::OnDocumentCtrlMiddleUp, this);
 	
 	doc.auto_cleanup_bind(CURSOR_UPDATE,           &REHex::Tab::OnEventToForward<CursorUpdateEvent>,   this);
 	doc.auto_cleanup_bind(EV_UNDO_UPDATE,          &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
@@ -181,6 +183,7 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	doc.auto_cleanup_bind(BACKING_FILE_MODIFIED, &REHex::Tab::OnDocumentFileModified, this);
 	
 	doc_ctrl->Bind(wxEVT_CHAR, &REHex::Tab::OnDocumentCtrlChar, this);
+	doc_ctrl->Bind(wxEVT_MIDDLE_UP, &REHex::Tab::OnDocumentCtrlMiddleUp, this);
 	
 	doc.auto_cleanup_bind(CURSOR_UPDATE,           &REHex::Tab::OnEventToForward<CursorUpdateEvent>,   this);
 	doc.auto_cleanup_bind(EV_UNDO_UPDATE,          &REHex::Tab::OnEventToForward<wxCommandEvent>,      this);
@@ -332,6 +335,79 @@ void REHex::Tab::save_view(wxConfig *config)
 void REHex::Tab::handle_copy(bool cut)
 {
 	copy_from_doc(doc, doc_ctrl, this, cut);
+}
+
+void REHex::Tab::handle_paste(bool primary)
+{
+	ClipboardGuard cg(primary);
+	if(cg)
+	{
+		/* If there is a selection and it is entirely contained within a Region, give that
+		 * region the chance to handle the paste event.
+		*/
+		
+		if(doc_ctrl->has_selection())
+		{
+			BitOffset selection_first, selection_last;
+			std::tie(selection_first, selection_last) = doc_ctrl->get_selection_raw();
+			
+			REHex::DocumentCtrl::GenericDataRegion *selection_region = doc_ctrl->data_region_by_offset(selection_first);
+			assert(selection_region != NULL);
+			
+			assert(selection_region->d_offset <= selection_last);
+			assert((selection_region->d_offset + selection_region->d_length) >= selection_first);
+			
+			if((selection_region->d_offset + selection_region->d_length) > selection_last)
+			{
+				if(selection_region->OnPaste(doc_ctrl))
+				{
+					/* Region consumed the paste event. */
+					return;
+				}
+			}
+		}
+		
+		/* Give the region the cursor is in a chance to handle the paste event. */
+		
+		BitOffset cursor_pos = doc_ctrl->get_cursor_position();
+		
+		REHex::DocumentCtrl::GenericDataRegion *cursor_region = doc_ctrl->data_region_by_offset(cursor_pos);
+		assert(cursor_region != NULL);
+		
+		if(cursor_region->OnPaste(doc_ctrl))
+		{
+			/* Region consumed the paste event. */
+			return;
+		}
+		
+		/* No region consumed the event. Fallback to default handling. */
+		
+		if(wxTheClipboard->IsSupported(CommentsDataObject::format))
+		{
+			CommentsDataObject data;
+			wxTheClipboard->GetData(data);
+			
+			auto clipboard_comments = data.get_comments();
+			
+			doc->handle_paste(this, clipboard_comments);
+		}
+		else if(wxTheClipboard->IsSupported(wxDF_TEXT))
+		{
+			wxTextDataObject data;
+			wxTheClipboard->GetData(data);
+			
+			try {
+				wxString clipboard_text = data.GetText();
+				const wxScopedCharBuffer clipboard_utf8 = clipboard_text.utf8_str();
+				
+				paste_text(std::string(clipboard_utf8.data(), clipboard_utf8.length()));
+			}
+			catch(const std::exception &e)
+			{
+				wxMessageBox(e.what(), "Error", (wxOK | wxICON_ERROR), this);
+			}
+		}
+	}
 }
 
 void REHex::Tab::paste_text(const std::string &text)
@@ -794,6 +870,13 @@ void REHex::Tab::OnDocumentCtrlChar(wxKeyEvent &event)
 	}
 	
 	event.Skip();
+}
+
+void REHex::Tab::OnDocumentCtrlMiddleUp(wxMouseEvent &event)
+{
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	handle_paste(true);
+	#endif
 }
 
 void REHex::Tab::OnCommentLeftClick(BitRangeEvent &event)

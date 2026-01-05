@@ -82,3 +82,8 @@ typedef int ssize_t;
 */
 #define REHEX_ASSUME_INTEGER_CHARACTER_WIDTHS
 #endif
+
+#if !(defined(_WIN32) || defined(__APPLE__))
+/* Enable handling for X11 (and Wayland) "PRIMARY" selection. */
+#define REHEX_ENABLE_PRIMARY_SELECTION
+#endif

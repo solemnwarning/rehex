@@ -267,6 +267,7 @@
     <ClCompile Include="..\..\src\Checksum.cpp" />
     <ClCompile Include="..\..\src\ChecksumImpl.cpp" />
     <ClCompile Include="..\..\src\ClickText.cpp" />
+    <ClCompile Include="..\..\src\ClipboardUtils.cpp" />
     <ClCompile Include="..\..\src\ColourPickerCtrl.cpp" />
     <ClCompile Include="..\..\src\CommentTree.cpp" />
     <ClCompile Include="..\..\src\ConsoleBuffer.cpp" />

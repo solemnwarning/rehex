@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -32,6 +32,7 @@
 #include <wx/stattext.h>
 
 #include "BitmapTool.hpp"
+#include "ClipboardUtils.hpp"
 #include "NumericTextCtrl.hpp"
 #include "util.hpp"
 

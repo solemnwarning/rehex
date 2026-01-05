@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -61,42 +61,6 @@ namespace REHex {
 	{
 		public:
 			ParseErrorEmpty(): ParseError("No number provided") {}
-	};
-	
-	/**
-	 * @brief RAII-style access to the clipboard.
-	 *
-	 * This class provides an RAII-style wrapper around the Open() and Close() methods of the
-	 * wxTheClipboard object.
-	*/
-	class ClipboardGuard
-	{
-		private:
-			bool open;
-			
-		public:
-			/**
-			 * @brief Attempts to open the clipboard. Does not throw an exception on failure.
-			*/
-			ClipboardGuard();
-			
-			/**
-			 * @brief Closes the clipboard, if open.
-			*/
-			~ClipboardGuard();
-			
-			/**
-			 * @brief Close the clipboard early.
-			*/
-			void close();
-			
-			/**
-			 * @brief Check if the clipboard is open.
-			*/
-			operator bool() const
-			{
-				return open;
-			}
 	};
 	
 	std::vector<unsigned char> parse_hex_string(const std::string &hex_string);
@@ -162,9 +126,6 @@ namespace REHex {
 	}
 	
 	class Document;
-	class DocumentCtrl;
-	
-	void copy_from_doc(Document *doc, DocumentCtrl *doc_ctrl, wxWindow *dialog_parent, bool cut);
 	
 	void fake_broken_mouse_capture(wxWindow *window);
 	

@@ -1,0 +1,16 @@
+{
+  "name": "luassert",
+  "version": "1.9.0",
+  "port-version": 1,
+  "description": "Assertion library for Lua.",
+  "homepage": "https://github.com/lunarmodules/luassert/",
+  "license": "MIT",
+  "dependencies": [
+    "lua",
+    "lua-say",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

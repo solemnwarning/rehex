@@ -1,0 +1,26 @@
+{
+  "name": "lua-busted",
+  "version": "2.3.0",
+  "port-version": 1,
+  "description": "busted is a unit testing framework with a focus on being easy to use. busted works with lua >= 5.1, moonscript, terra, and LuaJIT >= 2.0.0.",
+  "homepage": "https://lunarmodules.github.io/busted/",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "lua",
+      "features": [ "tools" ]
+    },
+    "luassert",
+    "luasystem",
+    "lua-cliargs",
+    "lua-dkjson",
+    "lua-mediator",
+    "lua-penlight",
+    "lua-say",
+    "lua-term",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

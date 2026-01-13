@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -362,6 +362,25 @@ bool REHex::Document::is_byte_dirty(BitOffset offset) const
 		
 		i = data_seq.get_range(offset.byte() + 1);
 		if(i != data_seq.end() && i->second != saved_seq)
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+bool REHex::Document::is_range_dirty(BitOffset offset, BitOffset length) const
+{
+	off_t next = offset.byte();
+	off_t end = (offset + length).byte_round_up();
+	
+	for(
+		ByteRangeMap<unsigned int>::const_iterator ds;
+		next < end && (ds = data_seq.get_range_in(next, (end - next))) != data_seq.end();
+		next = ds->first.offset + ds->first.length)
+	{
+		if(ds->second != saved_seq)
 		{
 			return true;
 		}

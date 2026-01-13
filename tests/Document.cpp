@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -397,6 +397,7 @@ TEST_F(DocumentTest, OverwriteBits)
 	ASSERT_FALSE(doc->is_byte_dirty(0));
 	ASSERT_FALSE(doc->is_byte_dirty(1));
 	ASSERT_FALSE(doc->is_byte_dirty(2));
+	ASSERT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(10, 0)));
 	
 	/* Overwrite at beginning of document... */
 	
@@ -2984,6 +2985,8 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_FALSE(doc->is_dirty()) << "New Document is initially clean";
 	EXPECT_FALSE(doc->is_buffer_dirty());
 	
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(100, 0))) << "New Document is initially clean";
+	
 	/* Insert into empty document... */
 	const char *DATA1 = "smoothorangemixed";
 	doc->insert_data(0, (const unsigned char*)(DATA1), strlen(DATA1), -1, Document::CSTATE_CURRENT, "initialise");
@@ -3007,6 +3010,14 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_TRUE(doc->is_buffer_dirty()) << "Document is dirty before saving";
 	EXPECT_RANGE_DIRTY(0, 16, "Document is dirty before saving");
 	
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(100, 0)))   << "Document is dirty before saving";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(0, 0)))    << "is_range_dirty() returns false for zero-length range in modified area";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(0, 1)))     << "Document is dirty before saving";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(1, 0)))     << "Document is dirty before saving";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(15, 7), BitOffset(0, 1)))    << "Document is dirty before saving";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(15, 7), BitOffset(1, 0)))    << "Document is dirty before saving";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(16, 0), BitOffset(100, 0))) << "Document is clean beyond EOF before saving";
+	
 	/* Save the file. */
 	TempFilename tmpfile;
 	doc->save(tmpfile.tmpfile);
@@ -3016,6 +3027,8 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_FALSE(doc->is_dirty()) << "Document is clean after saving";
 	EXPECT_FALSE(doc->is_buffer_dirty()) << "Document is clean after saving";
 	EXPECT_RANGE_CLEAN(0, 16, "Document is clean after saving");
+	
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(100, 0))) << "Document is clean after saving";
 	
 	/* Make some more changes. */
 	
@@ -3042,6 +3055,14 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_RANGE_CLEAN( 5, 11, "Unmodified range clean after making changes");
 	EXPECT_RANGE_DIRTY(16, 13, "Modified range dirty after making changes");
 	
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(100, 0))) << "Document is dirty after making changes";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(1, 0)))   << "Document is dirty after making changes";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(4, 7), BitOffset(0, 1)))   << "Document is dirty after making changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(5, 0), BitOffset(2, 0)))  << "Unmodified range clean after making changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(15, 0), BitOffset(1, 0))) << "Unmodified range clean after making changes";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(16, 0), BitOffset(1, 0)))  << "Document is dirty after making changes";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(16, 0), BitOffset(0, 1)))  << "Document is dirty after making changes";
+	
 	/* Undo everything but the first post-save insert. */
 	doc->undo();
 	doc->undo();
@@ -3054,6 +3075,12 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_RANGE_CLEAN( 0, 16, "Unmodified range clean after undoing changes");
 	EXPECT_RANGE_DIRTY(16, 13, "Modified range dirty after undoing changes");
 	
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(100, 0))) << "Document is dirty after undoing some changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(1, 0)))  << "Unmodified range clean after undoing changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(5, 0), BitOffset(2, 0)))  << "Unmodified range clean after undoing changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(15, 0), BitOffset(1, 0))) << "Unmodified range clean after undoing changes";
+	EXPECT_TRUE(doc->is_range_dirty(BitOffset(16, 0), BitOffset(1, 0)))  << "Document is dirty after undoing some changes";
+	
 	/* Undo remaining post-save change. */
 	doc->undo();
 	
@@ -3062,6 +3089,12 @@ TEST_F(DocumentTest, DirtyState)
 	EXPECT_FALSE(doc->is_dirty()) << "Document is clean after undoing all changes";
 	EXPECT_FALSE(doc->is_buffer_dirty()) << "Document is clean after undoing all changes";
 	EXPECT_RANGE_CLEAN(0, 16, "Unmodified range clean after undoing changes");
+	
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(100, 0))) << "Document is clean after undoing all changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(0, 0), BitOffset(1, 0)))   << "Document is clean after undoing all changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(5, 0), BitOffset(2, 0)))   << "Document is clean after undoing all changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(15, 0), BitOffset(1, 0)))  << "Document is clean after undoing all changes";
+	EXPECT_FALSE(doc->is_range_dirty(BitOffset(16, 0), BitOffset(1, 0)))  << "Document is clean after undoing all changes";
 	
 	/* Redo it all... */
 	doc->redo();

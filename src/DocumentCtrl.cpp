@@ -3567,7 +3567,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	wxSize client_size = doc.GetClientSize();
 	
-	auto highlight_func = [&](BitOffset offset)
+	auto highlight_func = [&](BitOffset offset, BitOffset dirty_check_length)
 	{
 		if(ranges_matching_selection.isset(offset))
 		{
@@ -3576,7 +3576,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				(*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
 		}
 		else{
-			Highlight h = highlight_at_off(offset);
+			Highlight h = highlight_at_off(offset, dirty_check_length);
 			if(h.enable)
 			{
 				return h;
@@ -3620,7 +3620,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			return hex_selection_highlight;
 		}
 		else{
-			return highlight_func(offset);
+			return highlight_func(offset, BitOffset(0, 4));
 		}
 	};
 	
@@ -3637,7 +3637,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			return ascii_selection_highlight;
 		}
 		else{
-			return highlight_func(offset);
+			return highlight_func(offset, BitOffset(1, 0));
 		}
 	};
 	
@@ -4913,7 +4913,7 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegi
 	}
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
 {
 	return NoHighlight();
 }
@@ -4921,7 +4921,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset):
 	DataRegion(document, d_offset, d_length, virt_offset) {}
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
 {
 	const BitRangeMap<int> &highlights = document->get_highlights();
 	
@@ -4937,7 +4937,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 		}
 	}
 	
-	if(document->is_byte_dirty(off))
+	if(document->is_range_dirty(off, dirty_check_length))
 	{
 		return Highlight(
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],

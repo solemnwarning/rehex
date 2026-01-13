@@ -373,7 +373,7 @@ namespace REHex {
 					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					
-					virtual Highlight highlight_at_off(BitOffset off) const;
+					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length) const;
 					
 				private:
 					std::unique_ptr<CharacterFinder> char_finder;
@@ -388,7 +388,7 @@ namespace REHex {
 					DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
 					
 				protected:
-					virtual Highlight highlight_at_off(BitOffset off) const override;
+					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length) const override;
 			};
 			
 			class CommentRegion: public Region

@@ -40,7 +40,7 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
-#ifdef __APPLE__
+#ifdef __WXOSX__
 #include "../res/down32.h"
 #include "../res/up32.h"
 #endif
@@ -110,7 +110,7 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	
 	toolbar->AddSeparator();
 	
-	#ifdef __APPLE__
+	#ifdef __WXOSX__
 	toolbar->AddTool(wxID_UP,   "Previous difference", wxBITMAP_PNG_FROM_DATA(up32),   "Jump to previous difference (Shift+F6)");
 	toolbar->AddTool(wxID_DOWN, "Next difference",     wxBITMAP_PNG_FROM_DATA(down32), "Jump to next difference (F6)");
 	#else

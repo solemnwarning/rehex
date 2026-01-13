@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -227,7 +227,7 @@ namespace REHex {
 			virtual int OnExit() override;
 			virtual int OnRun() override;
 			
-			#ifdef __APPLE__
+			#ifdef __WXOSX__
 			virtual void MacOpenFiles(const wxArrayString &fileNames) override;
 			#endif
 			

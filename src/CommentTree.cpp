@@ -172,7 +172,7 @@ void REHex::CommentTree::refresh_comments()
 	bool changed = model->refresh_comments();
 	if(!changed)
 	{
-		#ifdef __APPLE__
+		#ifdef __WXOSX_COCOA__
 		offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 		text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 		#endif
@@ -235,7 +235,7 @@ void REHex::CommentTree::refresh_comments()
 	
 	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	
-	#elif defined(__APPLE__)
+	#elif defined(__WXOSX_COCOA__)
 	/* wxDataViewColumn::SetWidth() is somewhat expensive on macOS and makes the columns
 	 * twitch around, so we only update the column widths when the maximum depth increases, or
 	 * when a refresh finishes (see above).

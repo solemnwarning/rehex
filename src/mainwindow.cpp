@@ -60,7 +60,7 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
-#ifdef __APPLE__
+#ifdef __WXOSX__
 #include "../res/backward32.h"
 #include "../res/document_new32.h"
 #include "../res/document_open32.h"
@@ -589,7 +589,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 	 * embed 32x32 versions instead.
 	*/
 	
-	#ifdef __APPLE__
+	#ifdef __WXOSX__
 	toolbar->AddTool(wxID_NEW,    "New",     wxBITMAP_PNG_FROM_DATA(document_new32));
 	toolbar->AddTool(wxID_OPEN,   "Open",    wxBITMAP_PNG_FROM_DATA(document_open32));
 	toolbar->AddTool(wxID_SAVE,   "Save",    wxBITMAP_PNG_FROM_DATA(document_save32));

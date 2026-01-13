@@ -16,6 +16,11 @@
 */
 
 #include "platform.hpp"
+
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+
 #include <ctype.h>
 #include <float.h>
 #include <inttypes.h>

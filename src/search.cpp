@@ -37,6 +37,9 @@
 #include "search.hpp"
 #include "util.hpp"
 
+using std::isinf;
+using std::isnan;
+
 /* This MUST come after the wxWidgets headers have been included, else we pull in windows.h BEFORE the wxWidgets
  * headers when building on Windows and this causes unicode-flavoured pointer conversion errors.
 */

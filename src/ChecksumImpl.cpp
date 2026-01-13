@@ -17,6 +17,10 @@
 
 #include "platform.hpp"
 
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+
 #include <assert.h>
 #include <botan/build.h>
 #include <botan/hash.h>

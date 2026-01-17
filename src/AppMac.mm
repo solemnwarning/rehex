@@ -26,6 +26,10 @@
 #undef isset /* I guess they took the comment above to heart. */
 #endif
 
+#ifdef check
+#undef check
+#endif
+
 #include "App.hpp"
 
 #if !wxCHECK_VERSION(3,1,3)

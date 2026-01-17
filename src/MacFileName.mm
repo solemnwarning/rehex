@@ -19,6 +19,14 @@
 
 #include "MacFileName.hpp"
 
+#ifndef NSURLBookmarkResolutionWithSecurityScope
+#define NSURLBookmarkResolutionWithSecurityScope (1 << 10)
+#endif
+
+#ifndef NSURLBookmarkCreationWithSecurityScope
+#define NSURLBookmarkCreationWithSecurityScope (1 << 11)
+#endif
+
 REHex::MacFileName::MacFileName():
 	m_url(nil) {}
 

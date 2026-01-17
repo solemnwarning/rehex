@@ -35,7 +35,7 @@ config-test-flag = $\
 			$(info No),$\
 			$(if $(shell $(CXX) $(CXXFLAGS) -o $(1).bok $(1) $(LDFLAGS) $(LDLIBS) $(2) > /dev/null 2>&1 && echo yes),$\
 				$(info Yes)$(2),$\
-				$(error Unable to compile $(1)))))
+				$(shell $(CXX) $(CXXFLAGS) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS) 1>&2)$(error Unable to compile $(1)))))
 
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
@@ -141,19 +141,16 @@ CFLAGS          := $(BASE_CFLAGS) -std=c99   -I. -Iinclude/ -IwxLua/modules/ -Iw
 CXXFLAGS_NO_GTK := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override  $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
 CXXFLAGS        := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override  $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
-uname_S := $(shell uname -s 2>/dev/null)
-ifeq ($(uname_S),FreeBSD)
-	LDLIBS += -liconv
-endif
-ifeq ($(uname_S),OpenBSD)
-	LDLIBS += -liconv
-endif
-
 LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 
 # Check if we need to link -latomic for std::atomic support routines.
 ifeq ($(need_compiler_flags),1)
 	LDLIBS += $(call config-test-flag,tools/config-test-atomic.cpp,-latomic)
+endif
+
+# Check if we need to link -liconv for iconv functions.
+ifeq ($(need_compiler_flags),1)
+	LDLIBS += $(call config-test-flag,tools/config-test-iconv.cpp,-liconv)
 endif
 
 # Define this for releases

@@ -21,6 +21,21 @@ pkg-select-ab = $\
 		$(if $(filter yes,$(shell pkg-config --exists $(2) && echo yes)),$(2),$\
 			$(error Could not find $(1) or $(2) using pkg-config)))
 
+# Check if additional compile/link flags are required to compile a test program on top of the
+# general flags used to compile the application. Returns empty string it the additional flags
+# weren't required to build the program or the provided flags if they were.
+#
+# Usage: $(call config-test-flag,tools/config-test-xxx.cpp,-lfoo)
+#
+config-test-flag = $\
+	$(if $(wildcard $(1).aok)$(wildcard $(1).bok),, \
+		$(info Checking if we need $(2)...) \
+		$(shell $(CXX) $(CXXFLAGS) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS)      > /dev/null) \
+		$(shell $(CXX) $(CXXFLAGS) -o $(1).bok $(1) $(LDFLAGS) $(LDLIBS) $(2) > /dev/null) \
+		$(if $(wildcard $(1).aok),$(info No),$(if $(wildcard $(1).bok),$(info Yes),)) \
+	) \
+	$(if $(wildcard $(1).aok),,$(if $(wildcard $(1).bok),$(2),))
+
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
 BOTAN_PKG    ?= $(call pkg-select-ab,botan-3,botan-2)
@@ -134,6 +149,11 @@ ifeq ($(uname_S),OpenBSD)
 endif
 
 LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
+
+# Check if we need to link -latomic for std::atomic support routines.
+ifeq ($(need_compiler_flags),1)
+	LDLIBS += $(call config-test-flag,tools/config-test-atomic.cpp,-latomic)
+endif
 
 # Define this for releases
 # NOTE: This *MUST* be of the form a.b.c where each component is an integer to fit the format of

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <AvailabilityMacros.h>
+
 #include "App.hpp"
 #include "MacFileName.hpp"
 #include "MacFileHistory.hpp"
@@ -24,6 +26,7 @@ REHex::MacFileHistory::MacFileHistory(size_t maxFiles, wxWindowID idBase):
 
 void REHex::MacFileHistory::AddFileToHistory(const MacFileName &filename)
 {
+	#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 	wxString bookmark;
 	try {
 		bookmark = filename.CreateBookmark();
@@ -36,6 +39,12 @@ void REHex::MacFileHistory::AddFileToHistory(const MacFileName &filename)
 	
 	wxFileHistory::AddFileToHistory(filename.GetFileName().GetFullPath());
 	m_fileBookmarks.insert(m_fileBookmarks.begin(), bookmark);
+	
+	#else
+	wxFileHistory::AddFileToHistory(filename.GetFileName().GetFullPath());
+	m_fileBookmarks.insert(m_fileBookmarks.begin(), wxEmptyString);
+	
+	#endif
 }
 
 void REHex::MacFileHistory::AddFileToHistory(const wxString &filename)
@@ -51,6 +60,7 @@ void REHex::MacFileHistory::RemoveFileFromHistory(size_t i)
 
 REHex::MacFileName REHex::MacFileHistory::GetHistoryMacFile(size_t index)
 {
+	#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 	if(m_fileBookmarks[index] != wxEmptyString)
 	{
 		/* There is a saved bookmark (presumably with security token), try to restore it. */
@@ -76,6 +86,7 @@ REHex::MacFileName REHex::MacFileHistory::GetHistoryMacFile(size_t index)
 			wxGetApp().printf_error("Unable to restore bookmark from recent files for %s (%s), falling back to filename\n", m_fileHistory[index].ToStdString().c_str(), e.what());
 		}
 	}
+	#endif
 	
 	return MacFileName(wxFileName(m_fileHistory[index]));
 }

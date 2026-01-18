@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -15,6 +15,7 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include <AvailabilityMacros.h>
 #import <Foundation/Foundation.h>
 
 #include "MacFileName.hpp"
@@ -32,6 +33,7 @@ REHex::MacFileName::MacFileName(const wxFileName &filename):
 	m_url = url;
 }
 
+#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 REHex::MacFileName::MacFileName(const wxString &bookmark):
 	m_ssr(true)
 {
@@ -71,6 +73,7 @@ REHex::MacFileName::MacFileName(const wxString &bookmark):
 	[url retain];
 	m_url  = url;
 }
+#endif
 
 REHex::MacFileName::~MacFileName()
 {
@@ -114,6 +117,7 @@ wxFileName REHex::MacFileName::GetFileName() const
 	return wxFileName(wxString([[url path] cStringUsingEncoding:[NSString defaultCStringEncoding]]));
 }
 
+#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 wxString REHex::MacFileName::CreateBookmark() const
 {
 	NSURL *url = (NSURL*)(m_url);
@@ -138,3 +142,4 @@ bool REHex::MacFileName::BookmarkWasStale() const
 {
 	return m_stale;
 }
+#endif

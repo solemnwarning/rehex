@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -17,6 +17,10 @@
 
 #ifndef REHEX_MACFILENAME_HPP
 #define REHEX_MACFILENAME_HPP
+
+#ifdef __APPLE__
+#include <AvailabilityMacros.h>
+#endif
 
 #include <wx/filename.h>
 
@@ -44,6 +48,7 @@ namespace REHex
 		*/
 		MacFileName(const wxFileName &filename);
 		
+		#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 		/**
 		 * @brief Construct an NSURL from a security-scoped bookmark.
 		 *
@@ -54,6 +59,9 @@ namespace REHex
 		 * required.
 		*/
 		MacFileName(const wxString &bookmark);
+		#else
+		MacFileName(const wxString &bookmark) = delete; /* Not available before macOS 10.7 */
+		#endif
 		
 		~MacFileName();
 		
@@ -68,6 +76,7 @@ namespace REHex
 		*/
 		wxFileName GetFileName() const;
 		
+		#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 		/**
 		 * @brief Create a security-scoped bookmark.
 		 *
@@ -83,6 +92,10 @@ namespace REHex
 		 * future use.
 		*/
 		bool BookmarkWasStale() const;
+		#else
+		wxString CreateBookmark() const = delete; /* Not available before macOS 10.7 */
+		bool BookmarkWasStale() const = delete; /* Not available before macOS 10.7 */
+		#endif
 	};
 #endif /* __APPLE__ */
 }

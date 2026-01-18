@@ -134,7 +134,11 @@ wxString REHex::MacFileName::CreateBookmark() const
 	
 	if(bookmark != nil)
 	{
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1090
 		NSString *base64 = [bookmark base64EncodedStringWithOptions:0];
+#else
+		NSString *base64 = [bookmark base64Encoding];
+#endif
 		return [base64 cStringUsingEncoding:[NSString defaultCStringEncoding]];
 	}
 	else{

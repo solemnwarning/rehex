@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -86,6 +86,63 @@ bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)
 	else{
 		return false;
 	}
+}
+
+const void *REHex::IPCConnection::OnRequest(const wxString &topic, const wxString &item, size_t *size, wxIPCFormat format)
+{
+	if(item == "exit" && format == wxIPC_TEXT)
+	{
+		/* Further IPC requests may be received while the close confirmation dialog is
+		 * open, so we need to reject them to avoid creating a second dialog.
+		*/
+		
+		static bool exit_pending = false;
+		
+		if(exit_pending)
+		{
+			*size = strlen("BUSY") + 1;
+			return "BUSY";
+		}
+		
+		exit_pending = true;
+		
+		/* Accumulate open tabs in all windows. */
+		
+		std::list<MainWindow*> windows = MainWindow::get_instances();
+		std::vector<Tab*> all_tabs;
+		
+		for(auto w = windows.begin(); w != windows.end(); ++w)
+		{
+			std::vector<Tab*> window_tabs = (*w)->get_all_tabs();
+			all_tabs.insert(
+				all_tabs.end(),
+				std::make_move_iterator(window_tabs.begin()),
+				std::make_move_iterator(window_tabs.end()));
+		}
+		
+		/* Ask the user for confirmation before closing any unsaved files. */
+		
+		if(windows.front()->confirm_close_tabs(all_tabs))
+		{
+			for(auto w = windows.begin(); w != windows.end(); ++w)
+			{
+				(*w)->Destroy();
+			}
+			
+			exit_pending = false;
+			
+			*size = strlen("OK") + 1;
+			return "OK";
+		}
+		else{
+			exit_pending = false;
+			
+			*size = strlen("REFUSED") + 1;
+			return "REFUSED";
+		}
+	}
+	
+	return NULL;
 }
 
 wxConnectionBase *REHex::IPCServer::OnAcceptConnection(const wxString &topic)

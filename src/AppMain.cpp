@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -66,6 +66,15 @@ bool REHex::App::OnInit()
 	bool process_switches = true;
 	bool compare_mode = false;
 	
+	enum class LaunchMode {
+		OPEN_FILES,
+		COMPARE_FILES,
+		IS_RUNNING,
+		EXIT_RUNNING,
+	};
+	
+	LaunchMode mode = LaunchMode::OPEN_FILES;
+	
 	std::vector<std::string> open_filenames;
 	
 	for(int i = 1; i < argc; ++i)
@@ -79,18 +88,42 @@ bool REHex::App::OnInit()
 			}
 			else if(argv[i] == "--compare")
 			{
-				if(compare_mode)
+				if(mode == LaunchMode::COMPARE_FILES)
 				{
 					fprintf(stderr, "WARNING: Ignoring duplicate '--compare' switch\n");
 				}
 				
-				compare_mode = true;
+				mode = LaunchMode::COMPARE_FILES;
+				continue;
+			}
+			else if(argv[i] == "--is-running")
+			{
+				if(argc > 2)
+				{
+					fprintf(stderr, "Command line option --is-running cannot be used with any other options\n");
+					return false;
+				}
+				
+				mode = LaunchMode::IS_RUNNING;
+				continue;
+			}
+			else if(argv[i] == "--exit-running")
+			{
+				if(argc > 2)
+				{
+					fprintf(stderr, "Command line option --exit-running cannot be used with any other options\n");
+					return false;
+				}
+				
+				mode = LaunchMode::EXIT_RUNNING;
 				continue;
 			}
 			else if(argv[i][0] == '-')
 			{
 				fprintf(stderr, "Unknown command line switch: %s\n", argv[i].ToStdString().c_str());
 				fprintf(stderr, "Usage: %s [--compare] [--] [<filename(s)>]\n", argv[0].ToStdString().c_str());
+				fprintf(stderr, "       %s [--is-running]\n", argv[0].ToStdString().c_str());
+				fprintf(stderr, "       %s [--exit-running]\n", argv[0].ToStdString().c_str());
 				return false;
 			}
 		}
@@ -121,6 +154,8 @@ bool REHex::App::OnInit()
 	{
 		fprintf(stderr, "At least two filenames must be given with --compare switch\n");
 		fprintf(stderr, "Usage: %s [--compare] [--] [<filename(s)>]\n", argv[0].ToStdString().c_str());
+		fprintf(stderr, "       %s [--is-running]\n", argv[0].ToStdString().c_str());
+		fprintf(stderr, "       %s [--exit-running]\n", argv[0].ToStdString().c_str());
 		return false;
 	}
 	
@@ -156,30 +191,52 @@ bool REHex::App::OnInit()
 			quick_exit = true;
 			quick_exit_code = 0;
 			
-			if(compare_mode)
+			switch(mode)
 			{
-				std::vector<std::string> command = { "compare" };
-				
-				for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+				case LaunchMode::OPEN_FILES:
 				{
-					command.push_back(*filename);
-				}
-				
-				std::string encoded_command = encode_command(command);
-				bool ok = ipc->Execute(encoded_command);
-				
-				if(!ok)
-				{
-					quick_exit_code = 1;
-				}
-			}
-			else{
-				for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
-				{
-					std::vector<std::string> command = { "open", *filename };
-					std::string encoded_command = encode_command(command);
+					for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+					{
+						std::vector<std::string> command = { "open", *filename };
+						std::string encoded_command = encode_command(command);
+						
+						ipc->Execute(encoded_command);
+					}
 					
-					ipc->Execute(encoded_command);
+					break;
+				}
+				
+				case LaunchMode::COMPARE_FILES:
+				{
+					std::vector<std::string> command = { "compare" };
+					
+					for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+					{
+						command.push_back(*filename);
+					}
+					
+					std::string encoded_command = encode_command(command);
+					bool ok = ipc->Execute(encoded_command);
+					
+					if(!ok)
+					{
+						quick_exit_code = 1;
+					}
+					
+					break;
+				}
+				
+				case LaunchMode::IS_RUNNING:
+					break;
+					
+				case LaunchMode::EXIT_RUNNING:
+				{
+					size_t response_size;
+					const char *response = (const char*)(ipc->Request("exit", &response_size, wxIPC_TEXT));
+					
+					quick_exit_code = (response != NULL && strncmp(response, "OK", response_size) == 0) ? 0 : 1;
+					
+					break;
 				}
 			}
 			
@@ -187,6 +244,21 @@ bool REHex::App::OnInit()
 			
 			return true;
 		}
+	}
+	
+	if(mode == LaunchMode::IS_RUNNING)
+	{
+		quick_exit = true;
+		quick_exit_code = 1;
+		
+		return true;
+	}
+	else if(mode == LaunchMode::EXIT_RUNNING)
+	{
+		quick_exit = true;
+		quick_exit_code = 0; /* There appears to be no existing instance. */
+		
+		return true;
 	}
 	
 	call_setup_hooks(SetupPhase::EARLY);

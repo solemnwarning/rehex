@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -72,6 +72,11 @@ namespace REHex {
 			 * @brief Gets the currently visible Tab.
 			*/
 			Tab *active_tab();
+			
+			/**
+			 * @brief Gets all of the currently open tabs.
+			*/
+			std::vector<Tab*> get_all_tabs() const;
 			
 			/**
 			 * @brief Gets the Document in the currently visible Tab.
@@ -272,6 +277,8 @@ namespace REHex {
 					SetupHookRegistration &operator=(const SetupHookRegistration &rhs) = delete;
 			};
 			
+			bool confirm_close_tabs(const std::vector<Tab*> &tabs);
+			
 		private:
 			class DropTarget: public wxFileDropTarget
 			{
@@ -314,8 +321,6 @@ namespace REHex {
 			void _update_dirty(REHex::Document *doc);
 			void _update_cpos_buttons(DocumentCtrl *doc_ctrl);
 			void _update_colour_map_menu(DocumentCtrl *doc_ctrl);
-			
-			bool confirm_close_tabs(const std::vector<Tab*> &tabs);
 			
 			void close_tab(Tab *tab);
 			void close_all_tabs();

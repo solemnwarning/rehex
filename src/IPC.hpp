@@ -28,6 +28,7 @@ namespace REHex
 	{
 		public:
 			virtual bool OnExec(const wxString &topic, const wxString &data) override;
+			virtual const void *OnRequest(const wxString &topic, const wxString &item, size_t *size, wxIPCFormat format) override;
 	};
 	
 	class IPCServer: public wxServer

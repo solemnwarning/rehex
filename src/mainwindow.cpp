@@ -2490,6 +2490,27 @@ REHex::Tab *REHex::MainWindow::active_tab()
 	return tab;
 }
 
+std::vector<REHex::Tab*> REHex::MainWindow::get_all_tabs() const
+{
+	size_t num_tabs = notebook->GetPageCount();
+	
+	std::vector<Tab*> all_tabs;
+	all_tabs.reserve(num_tabs);
+	
+	for(size_t i = 0; i < num_tabs; ++i)
+	{
+		wxWindow *page = notebook->GetPage(i);
+		assert(page != NULL);
+		
+		auto p_tab = dynamic_cast<Tab*>(page);
+		assert(p_tab != NULL);
+		
+		all_tabs.push_back(p_tab);
+	}
+	
+	return all_tabs;
+}
+
 REHex::Document *REHex::MainWindow::active_document()
 {
 	return active_tab()->doc;

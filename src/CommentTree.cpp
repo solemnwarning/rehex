@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,7 @@
 #include <gtk/gtk.h>
 #endif
 
+#include "ClipboardUtils.hpp"
 #include "CommentTree.hpp"
 #include "EditCommentDialog.hpp"
 #include "profile.hpp"
@@ -171,7 +172,7 @@ void REHex::CommentTree::refresh_comments()
 	bool changed = model->refresh_comments();
 	if(!changed)
 	{
-		#ifdef __APPLE__
+		#ifdef __WXOSX_COCOA__
 		offset_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 		text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 		#endif
@@ -234,7 +235,7 @@ void REHex::CommentTree::refresh_comments()
 	
 	text_col->SetWidth(wxCOL_WIDTH_AUTOSIZE); /* Refreshes column width */
 	
-	#elif defined(__APPLE__)
+	#elif defined(__WXOSX_COCOA__)
 	/* wxDataViewColumn::SetWidth() is somewhat expensive on macOS and makes the columns
 	 * twitch around, so we only update the column widths when the maximum depth increases, or
 	 * when a refresh finishes (see above).

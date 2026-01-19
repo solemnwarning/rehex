@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,7 @@
 #include "App.hpp"
 #include "ArtProvider.hpp"
 #include "DiffWindow.hpp"
+#include "ClipboardUtils.hpp"
 #include "mainwindow.hpp"
 #include "Palette.hpp"
 #include "SafeWindowPointer.hpp"
@@ -39,7 +40,7 @@
 #include "../res/icon48.h"
 #include "../res/icon64.h"
 
-#ifdef __APPLE__
+#ifdef __WXOSX__
 #include "../res/down32.h"
 #include "../res/up32.h"
 #endif
@@ -109,7 +110,7 @@ REHex::DiffWindow::DiffWindow(wxWindow *parent):
 	
 	toolbar->AddSeparator();
 	
-	#ifdef __APPLE__
+	#ifdef __WXOSX__
 	toolbar->AddTool(wxID_UP,   "Previous difference", wxBITMAP_PNG_FROM_DATA(up32),   "Jump to previous difference (Shift+F6)");
 	toolbar->AddTool(wxID_DOWN, "Next difference",     wxBITMAP_PNG_FROM_DATA(down32), "Jump to next difference (F6)");
 	#else
@@ -1537,7 +1538,7 @@ int REHex::DiffWindow::DiffDataRegion::calc_width(REHex::DocumentCtrl &doc)
 	return width;
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(BitOffset off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
 {
 	assert(off >= range->offset);
 	off_t relative_off = off.byte() - range->offset;

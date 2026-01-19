@@ -1,0 +1,15 @@
+{
+  "name": "lua-mediator",
+  "version": "1.1.2-0",
+  "port-version": 1,
+  "description": "Mediator pattern implementation for pub-sub management.",
+  "homepage": "https://olivinelabs.com/mediator_lua/",
+  "license": "MIT",
+  "dependencies": [
+    "lua",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

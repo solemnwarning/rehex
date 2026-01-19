@@ -207,7 +207,11 @@ class wxStandardPaths // ignore wxStandardPathsBase
     virtual wxString GetDataDir() const;
     virtual wxString GetDocumentsDir() const;
     virtual wxString GetExecutablePath() const;
+
+#if !(defined(__WINDOWS__) ||  defined(__WXMAC__) || defined(__DARWIN__) || defined(__OS2__)) && defined(__UNIX__)
     %wxchkver_3_0_0 && %gtk wxString GetInstallPrefix() const;
+#endif
+
     virtual wxString GetLocalDataDir() const;
     virtual wxString GetPluginsDir() const;
     virtual wxString GetResourcesDir() const;
@@ -218,7 +222,11 @@ class wxStandardPaths // ignore wxStandardPathsBase
     %wxchkver_3_0_0 && %win void IgnoreAppSubDir(const wxString& subdirPattern);
     %wxchkver_3_0_0 && %win void IgnoreAppBuildSubDirs();
     %wxchkver_3_0_0 && %win static wxString MSWGetShellDir(int csidl);
+
+#if !(defined(__WINDOWS__) ||  defined(__WXMAC__) || defined(__DARWIN__) || defined(__OS2__)) && defined(__UNIX__)
     %wxchkver_3_0_0 && %gtk void SetInstallPrefix(const wxString& prefix);
+#endif
+
     %wxchkver_3_0_0 void UseAppInfo(int info);
     %wxchkver_3_1_1 wxStandardPaths::FileLayout GetFileLayout() const; // %override return type
     %wxchkver_3_1_0 wxString GetUserDir(wxStandardPaths::Dir userDir) const; // %override parameter type

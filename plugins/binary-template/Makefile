@@ -63,7 +63,7 @@ all:
 
 .PHONY: check
 check:
-	$(BUSTED) .
+	$(BUSTED) -m "./?.lua" .
 
 .PHONY: install
 install:

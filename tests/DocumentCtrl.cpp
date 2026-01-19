@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -246,6 +246,102 @@ TEST_F(DocumentCtrlTest, GetRegionByYOffset)
 	EXPECT_EQ(
 		doc_ctrl->region_by_y_offset(15),
 		std::next(doc_ctrl->get_regions().begin(), 2));
+}
+
+TEST_F(DocumentCtrlTest, GetRegionLineByMouseY)
+{
+	DocumentCtrl::Region *r1, *r2, *r3;
+	
+	std::vector<DocumentCtrl::Region*> regions;
+	regions.push_back((r1 = new FixedHeightDataRegion(4,  0, 10,  0)));
+	regions.push_back((r2 = new FixedHeightDataRegion(8, 10, 10, 10)));
+	regions.push_back((r3 = new FixedHeightDataRegion(4, 20, 10, 20)));
+	
+	doc_ctrl->replace_all_regions(regions);
+	
+	auto regions_end = doc_ctrl->get_regions().end();
+	
+	int line_height = doc_ctrl->get_fcc().fixed_char_height();
+	
+	/* Set the window height less than the total document and check positions within are translated
+	 * to the correct region and line.
+	*/
+	
+	doc_ctrl->SetClientSize(1024, (10 * line_height));
+	doc_ctrl->set_scroll_yoff(0);
+	
+	std::vector<DocumentCtrl::Region*>::iterator region;
+	int64_t region_line;
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(0 * line_height);
+	EXPECT_EQ(*region, r1);
+	EXPECT_EQ(region_line, 0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(0 * line_height + line_height / 2);
+	EXPECT_EQ(*region, r1);
+	EXPECT_EQ(region_line, 0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(1 * line_height);
+	EXPECT_EQ(*region, r1);
+	EXPECT_EQ(region_line, 1);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(4 * line_height - 1);
+	EXPECT_EQ(*region, r1);
+	EXPECT_EQ(region_line, 3);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(4 * line_height);
+	EXPECT_EQ(*region, r2);
+	EXPECT_EQ(region_line, 0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(10 * line_height - 1);
+	EXPECT_EQ(*region, r2);
+	EXPECT_EQ(region_line, 5);
+	
+	/* One pixel past the end of the client area. */
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(10 * line_height);
+	EXPECT_EQ(region, regions_end);
+	EXPECT_EQ(region_line, -1);
+	
+	/* One pixel before the start of the client area. */
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(-1);
+	EXPECT_EQ(region, regions_end);
+	EXPECT_EQ(region_line, -1);
+	
+	/* Set the window height taller than the total document and check positions within are
+	 * translated to the correct region and line.
+	*/
+	
+	doc_ctrl->SetClientSize(1024, (20 * line_height));
+	doc_ctrl->set_scroll_yoff(0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(0 * line_height);
+	EXPECT_EQ(*region, r1);
+	EXPECT_EQ(region_line, 0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(4 * line_height - 1);
+	EXPECT_EQ(*region, r1);
+	EXPECT_EQ(region_line, 3);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(4 * line_height);
+	EXPECT_EQ(*region, r2);
+	EXPECT_EQ(region_line, 0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(12 * line_height - 1);
+	EXPECT_EQ(*region, r2);
+	EXPECT_EQ(region_line, 7);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(12 * line_height);
+	EXPECT_EQ(*region, r3);
+	EXPECT_EQ(region_line, 0);
+	
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(16 * line_height - 1);
+	EXPECT_EQ(*region, r3);
+	EXPECT_EQ(region_line, 3);
+	
+	/* Within client area, but past end of last region. */
+	std::tie(region, region_line) = doc_ctrl->region_line_by_mouse_y(16 * line_height);
+	EXPECT_EQ(region, regions_end);
+	EXPECT_EQ(region_line, -1);
 }
 
 TEST_F(DocumentCtrlTest, GetDataRegionByOffset)

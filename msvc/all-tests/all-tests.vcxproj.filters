@@ -172,6 +172,9 @@
     <ClCompile Include="..\..\src\ClickText.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\ClipboardUtils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\CommentTree.cpp">
       <Filter>src</Filter>
     </ClCompile>

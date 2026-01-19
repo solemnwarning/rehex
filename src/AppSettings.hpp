@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -72,6 +72,9 @@ namespace REHex
 			
 			std::map< int, std::shared_ptr<const ByteColourMap> > get_byte_colour_maps() const;
 			void set_byte_colour_maps(const std::map<int, ByteColourMap> &byte_colour_maps);
+
+			int get_default_byte_colour_map() const;
+			void set_default_byte_colour_map(int id);
 			
 			const WindowCommandTable &get_main_window_commands() const;
 			void set_main_window_accelerators(const WindowCommandTable &new_accelerators);
@@ -86,15 +89,24 @@ namespace REHex
 			SizeUnit get_size_unit() const;
 			void set_size_unit(SizeUnit unit);
 			
+			#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+			static constexpr size_t DEFAULT_PRIMARY_COPY_LIMIT = 1024;
+			
+			size_t get_primary_copy_limit() const;
+			void set_primary_copy_limit(size_t primary_copy_limit);
+			#endif
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
 			HighlightColourMap highlight_colours;
 			std::map< int, std::shared_ptr<ByteColourMap> > byte_colour_maps;
+			int default_byte_colour_map;
 			WindowCommandTable main_window_commands;
 			CursorNavMode cursor_nav_mode;
 			bool goto_offset_modal;
 			SizeUnit size_unit;
+			size_t primary_copy_limit;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

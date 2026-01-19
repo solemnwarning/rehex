@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -373,7 +373,7 @@ namespace REHex {
 					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					
-					virtual Highlight highlight_at_off(BitOffset off) const;
+					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length) const;
 					
 				private:
 					std::unique_ptr<CharacterFinder> char_finder;
@@ -388,7 +388,7 @@ namespace REHex {
 					DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
 					
 				protected:
-					virtual Highlight highlight_at_off(BitOffset off) const override;
+					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length) const override;
 			};
 			
 			class CommentRegion: public Region
@@ -521,6 +521,16 @@ namespace REHex {
 			GenericDataRegion *data_region_by_offset(BitOffset offset);
 			std::vector<Region*>::iterator region_by_y_offset(int64_t y_offset);
 			
+			/**
+			 * @brief Find the Region and line (within the region) under the mouse pointer.
+			 *
+			 * @param mouse_y_px  The pointer position in DocumentCtrl client area co-ordinates.
+			 *
+			 * @return An iterator into regions and line number (relative to region) on success, or
+			 * regions.end() and a negative lines count if there is no region under the given row.
+			*/
+			std::pair< std::vector<Region*>::iterator, int64_t > region_line_by_mouse_y(int mouse_y_px);
+			
 			std::pair<BitOffset, BitOffset> get_indent_offset_at_line(int64_t line);
 			
 			/**
@@ -624,6 +634,7 @@ namespace REHex {
 			void OnLeftDown(wxMouseEvent &event);
 			void OnLeftUp(wxMouseEvent &event);
 			void OnRightDown(wxMouseEvent &event);
+			void OnMiddleDown(wxMouseEvent &event);
 			void OnMotion(wxMouseEvent &event);
 			void OnSelectTick(wxTimerEvent &event);
 			void OnMotionTick(int mouse_x, int mouse_y);
@@ -721,8 +732,6 @@ namespace REHex {
 			
 			std::vector<GenericDataRegion*>::iterator _data_region_by_offset(BitOffset offset);
 			std::vector<GenericDataRegion*>::iterator _data_region_by_virt_offset(BitOffset offset);
-			
-			std::list<Region*>::iterator _region_by_y_offset(int64_t y_offset);
 			
 			void _make_line_visible(int64_t line);
 			void _make_x_visible(int x_px, int width_px);

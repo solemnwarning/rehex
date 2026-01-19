@@ -1,0 +1,26 @@
+diff --git a/core.c b/core.c
+index 7a14408..554a921 100644
+--- a/core.c
++++ b/core.c
+@@ -7,6 +7,12 @@
+ # include <unistd.h>
+ #endif
+ 
++#ifdef _WIN32
++#define LUAEXPORT __declspec(dllexport)
++#else
++#define LUAEXPORT __attribute__((visibility("default")))
++#endif
++
+ static int
+ lua_isatty(lua_State *L)
+ {
+@@ -16,7 +22,7 @@ lua_isatty(lua_State *L)
+     return 1;
+ }
+ 
+-int
++LUAEXPORT int
+ luaopen_term_core(lua_State *L)
+ {
+     lua_newtable(L);

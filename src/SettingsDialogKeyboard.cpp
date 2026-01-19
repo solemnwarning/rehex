@@ -177,14 +177,14 @@ void REHex::KeyCombinationDialog::update_prompt()
 		
 		if((combination.modifiers & wxACCEL_CTRL) != 0)
 		{
-#ifdef __APPLE__
+#ifdef __WXOSX__
 			prompt += "COMMAND + ";
 #else
 			prompt += "CTRL + ";
 #endif
 		}
 		
-#ifdef __APPLE__
+#ifdef __WXOSX__
 		if((combination.modifiers & wxACCEL_RAW_CTRL) != 0)
 		{
 			prompt += "CTRL + ";
@@ -225,7 +225,7 @@ void REHex::KeyCombinationDialog::OnKeyDown(wxKeyEvent &event)
 			combination.modifiers |= wxACCEL_SHIFT;
 			break;
 			
-#ifdef __APPLE__
+#ifdef __WXOSX__
 		case WXK_RAW_CONTROL:
 			combination.modifiers |= wxACCEL_RAW_CTRL;
 			break;
@@ -268,7 +268,7 @@ void REHex::KeyCombinationDialog::OnKeyUp(wxKeyEvent &event)
 			combination.modifiers &= ~wxACCEL_SHIFT;
 			break;
 			
-#ifdef __APPLE__
+#ifdef __WXOSX__
 		case WXK_RAW_CONTROL:
 			combination.modifiers &= ~wxACCEL_RAW_CTRL;
 			break;

@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -99,6 +99,24 @@ describe("executor", function()
 		}
 		
 		assert.are.same(expect_log, log)
+	end)
+	
+	it("errors on top-level variable redefinition", function()
+		local interface, log = test_interface(string.char(
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					{ "test.bt", 1, "variable", "int", "foo", nil, nil },
+					{ "test.bt", 2, "variable", "int", "foo", nil, nil },
+				})
+			end, "Attempt to redefine variable 'foo' at test.bt:2")
 	end)
 	
 	it("doesn't set data type on char[] variables", function()
@@ -7697,5 +7715,45 @@ describe("executor", function()
 				{ "test.bt", 2, "call", "Printf", { { "test.bt", 2, "str", "OffsetOf(a) = %d" }, { "test.bt", 2, "call", "OffsetOf", { { "test.bt", 2, "ref", { "a" } } } } } },
 			})
 			end, "Attempt to get file offset of a local variable at test.bt:2")
+	end)
+	
+	it("allows top-level variable name reuse within a loop", function()
+		local interface, log = test_interface(string.char(
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			{ "test.bt", 1, "for",
+				{ "test.bt", 1, "local-variable", "int", "i", nil, nil, { "test.bt", 1, "num", 0 } },
+				{ "test.bt", 1, "less-than",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "num", 3 } },
+				{ "test.bt", 1, "assign",
+					{ "test.bt", 1, "ref", { "i" } },
+					{ "test.bt", 1, "add",
+						{ "test.bt", 1, "ref", { "i" } },
+						{ "test.bt", 1, "num", 1 } } },
+				
+				{
+					{ "test.bt", 2, "variable", "int", "foo", nil, nil },
+				} },
+		})
+		
+		local expect_log = {
+			"set_data_type(0, 4, s32le)",
+			"set_comment(0, 4, foo)",
+			
+			"set_data_type(4, 4, s32le)",
+			"set_comment(4, 4, foo)",
+			
+			"set_data_type(8, 4, s32le)",
+			"set_comment(8, 4, foo)",
+		}
+		
+		assert.are.same(expect_log, log)
 	end)
 end)

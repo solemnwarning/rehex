@@ -92,7 +92,7 @@ local function _preprocess_file(filename, context)
 	do
 		line_num = line_num + 1
 		
-		line = string.gsub(line, "\r$", "")
+		local line = string.gsub(line, "\r$", "")
 		
 		if in_comment and line:match("%*/")
 		then

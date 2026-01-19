@@ -16,6 +16,11 @@
 */
 
 #include "platform.hpp"
+
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+
 #include <algorithm>
 #include <assert.h>
 #include <ctype.h>
@@ -66,6 +71,7 @@ BEGIN_EVENT_TABLE(REHex::DocumentCtrl, wxControl)
 	EVT_LEFT_DOWN(REHex::DocumentCtrl::OnLeftDown)
 	EVT_LEFT_UP(REHex::DocumentCtrl::OnLeftUp)
 	EVT_RIGHT_DOWN(REHex::DocumentCtrl::OnRightDown)
+	EVT_MIDDLE_DOWN(REHex::DocumentCtrl::OnMiddleDown)
 	EVT_MOTION(REHex::DocumentCtrl::OnMotion)
 	EVT_TIMER(ID_SELECT_TIMER, REHex::DocumentCtrl::OnSelectTick)
 	EVT_TIMER(ID_REDRAW_CURSOR, REHex::DocumentCtrl::OnRedrawCursor)
@@ -1751,19 +1757,9 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 	int hf_width = hex_font_cache.fixed_char_width();
 	int hf_height = hex_font_cache.fixed_char_height();
 	
-	/* Find the region containing the first visible line. */
-	auto region = region_by_y_offset(scroll_yoff);
-	
-	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
-	
-	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
-	
-	while(region != regions.end() && line_off >= (*region)->y_lines)
-	{
-		line_off -= (*region)->y_lines;
-		++region;
-	}
+	std::vector<Region*>::iterator region;
+	int64_t line_off;
+	std::tie(region, line_off) = region_line_by_mouse_y(mouse_y);
 	
 	if(region != regions.end())
 	{
@@ -1897,19 +1893,9 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	int rel_x   = mouse_x + this->scroll_xoff;
 	int mouse_y = event.GetY();
 	
-	/* Find the region containing the first visible line. */
-	auto region = region_by_y_offset(scroll_yoff);
-	
-	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
-	
-	int64_t line_off = (mouse_y / hf_height) + skip_lines_in_region;
-	
-	while(region != regions.end() && line_off >= (*region)->y_lines)
-	{
-		line_off -= (*region)->y_lines;
-		++region;
-	}
+	std::vector<Region*>::iterator region;
+	int64_t line_off;
+	std::tie(region, line_off) = region_line_by_mouse_y(mouse_y);
 	
 	if(region != regions.end())
 	{
@@ -1980,6 +1966,57 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 	SetFocus();
 }
 
+void REHex::DocumentCtrl::OnMiddleDown(wxMouseEvent &event)
+{
+	int mouse_x = event.GetX();
+	int rel_x   = mouse_x + this->scroll_xoff;
+	int mouse_y = event.GetY();
+	
+	std::vector<Region*>::iterator region;
+	int64_t region_line;
+	std::tie(region, region_line) = region_line_by_mouse_y(mouse_y);
+	
+	if(region != regions.end())
+	{
+		GenericDataRegion *dr = dynamic_cast<GenericDataRegion*>(*region);
+		
+		if(dr != NULL)
+		{
+			BitOffset clicked_offset;
+			GenericDataRegion::ScreenArea clicked_area;
+			
+			std::tie(clicked_offset, clicked_area) = dr->offset_at_xy(*this, rel_x, region_line);
+			
+			if(clicked_offset >= BitOffset(0, 0))
+			{
+				if(clicked_area == GenericDataRegion::SA_HEX)
+				{
+					_set_cursor_position(clicked_offset, Document::CSTATE_HEX);
+				}
+				else if(clicked_area == GenericDataRegion::SA_ASCII)
+				{
+					_set_cursor_position(clicked_offset, Document::CSTATE_ASCII);
+				}
+				else if(clicked_area == GenericDataRegion::SA_SPECIAL)
+				{
+					_set_cursor_position(clicked_offset, Document::CSTATE_SPECIAL);
+				}
+				else{
+					_set_cursor_position(clicked_offset, Document::CSTATE_GOTO);
+				}
+				
+				if(has_selection() && (clicked_offset < selection_begin || clicked_offset > selection_end))
+				{
+					clear_selection();
+				}
+				
+				/* TODO: Limit paint to affected area */
+				Refresh();
+			}
+		}
+	}
+}
+
 void REHex::DocumentCtrl::OnMotion(wxMouseEvent &event)
 {
 	int mouse_x = event.GetX();
@@ -1987,19 +2024,9 @@ void REHex::DocumentCtrl::OnMotion(wxMouseEvent &event)
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
-	/* Find the region containing the first visible line. */
-	auto region = region_by_y_offset(scroll_yoff);
-	
-	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
-	
-	int64_t line_off = (mouse_y / hex_font_cache.fixed_char_height()) + skip_lines_in_region;
-	
-	while(region != regions.end() && line_off >= (*region)->y_lines)
-	{
-		line_off -= (*region)->y_lines;
-		++region;
-	}
+	std::vector<Region*>::iterator region;
+	int64_t line_off;
+	std::tie(region, line_off) = region_line_by_mouse_y(mouse_y);
 	
 	wxCursor cursor = wxNullCursor;
 	
@@ -2069,19 +2096,9 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 	
 	int rel_x = mouse_x + scroll_xoff;
 	
-	/* Find the region containing the first visible line. */
-	auto region = region_by_y_offset(scroll_yoff);
-	
-	/* If we are scrolled past the start of the regiomn, will need to skip some of the first one. */
-	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
-	
-	int64_t line_off = (mouse_y / hex_font_cache.fixed_char_height()) + skip_lines_in_region;
-	
-	while(region != regions.end() && line_off >= (*region)->y_lines)
-	{
-		line_off -= (*region)->y_lines;
-		++region;
-	}
+	std::vector<Region*>::iterator region;
+	int64_t line_off;
+	std::tie(region, line_off) = region_line_by_mouse_y(mouse_y);
 	
 	if(!mouse_selecting)
 	{
@@ -2453,6 +2470,37 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	assert(((*region)->y_offset + (*region)->y_lines) > y_offset || *region == regions.back());
 	
 	return region;
+}
+
+std::pair< std::vector<REHex::DocumentCtrl::Region*>::iterator, int64_t > REHex::DocumentCtrl::region_line_by_mouse_y(int mouse_y_px)
+{
+	if(mouse_y_px < 0 || mouse_y_px >= client_height || regions.empty())
+	{
+		return std::make_pair(regions.end(), -1);
+	}
+	
+	int hf_height = hex_font_cache.fixed_char_height();
+	
+	/* Find the region containing the first visible line. */
+	auto region = region_by_y_offset(scroll_yoff);
+	
+	/* If we are scrolled past the start of the region, will need to skip some of the first one. */
+	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
+	
+	int64_t line_off = (mouse_y_px / hf_height) + skip_lines_in_region;
+	
+	while(region != regions.end() && line_off >= (*region)->y_lines)
+	{
+		line_off -= (*region)->y_lines;
+		++region;
+	}
+	
+	if(region == regions.end())
+	{
+		line_off = -1;
+	}
+	
+	return std::make_pair(region, line_off);
 }
 
 std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::get_indent_offset_at_line(int64_t line)
@@ -3524,7 +3572,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 	
 	wxSize client_size = doc.GetClientSize();
 	
-	auto highlight_func = [&](BitOffset offset)
+	auto highlight_func = [&](BitOffset offset, BitOffset dirty_check_length)
 	{
 		if(ranges_matching_selection.isset(offset))
 		{
@@ -3533,7 +3581,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				(*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
 		}
 		else{
-			Highlight h = highlight_at_off(offset);
+			Highlight h = highlight_at_off(offset, dirty_check_length);
 			if(h.enable)
 			{
 				return h;
@@ -3577,7 +3625,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			return hex_selection_highlight;
 		}
 		else{
-			return highlight_func(offset);
+			return highlight_func(offset, BitOffset(0, 4));
 		}
 	};
 	
@@ -3594,7 +3642,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 			return ascii_selection_highlight;
 		}
 		else{
-			return highlight_func(offset);
+			return highlight_func(offset, BitOffset(1, 0));
 		}
 	};
 	
@@ -4870,7 +4918,7 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegi
 	}
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
 {
 	return NoHighlight();
 }
@@ -4878,7 +4926,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset):
 	DataRegion(document, d_offset, d_length, virt_offset) {}
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
 {
 	const BitRangeMap<int> &highlights = document->get_highlights();
 	
@@ -4894,7 +4942,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 		}
 	}
 	
-	if(document->is_byte_dirty(off))
+	if(document->is_range_dirty(off, dirty_check_length))
 	{
 		return Highlight(
 			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],

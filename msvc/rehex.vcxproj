@@ -473,6 +473,7 @@
     <ClCompile Include="..\src\ChecksumImpl.cpp" />
     <ClCompile Include="..\src\ChecksumPanel.cpp" />
     <ClCompile Include="..\src\ClickText.cpp" />
+    <ClCompile Include="..\src\ClipboardUtils.cpp" />
     <ClCompile Include="..\src\CodeCtrl.cpp" />
     <ClCompile Include="..\src\ColourPickerCtrl.cpp" />
     <ClCompile Include="..\src\CommentTree.cpp" />

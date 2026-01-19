@@ -1,0 +1,15 @@
+{
+  "name": "luasystem",
+  "version": "0.6.3",
+  "port-version": 1,
+  "description": "luasystem is a platform independent system call library for Lua. Supports Unix, Windows, MacOS, Lua >= 5.1 and luajit >= 2.0.0.",
+  "homepage": "https://lunarmodules.github.io/luasystem/",
+  "license": "MIT",
+  "dependencies": [
+    "lua",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

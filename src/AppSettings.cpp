@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,10 +29,14 @@ REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
 	goto_offset_base(GotoOffsetBase::AUTO),
 	highlight_colours(HighlightColourMap::defaults()),
+	default_byte_colour_map(-1),
 	main_window_commands(MainWindow::get_template_commands()),
 	cursor_nav_mode(CursorNavMode::BYTE),
 	goto_offset_modal(true),
 	size_unit(SizeUnit::AUTO_XiB)
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	, primary_copy_limit(DEFAULT_PRIMARY_COPY_LIMIT)
+	#endif
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -153,6 +157,12 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 			wxGetApp().printf_error("Error loading value colour maps: %s\n", e.what());
 		}
 	}
+
+	long default_byte_colour_map = config->ReadLong("default-byte-colour-map", -1);
+	if(default_byte_colour_map == -1 || byte_colour_maps.find(default_byte_colour_map) != byte_colour_maps.end())
+	{
+		this->default_byte_colour_map = default_byte_colour_map;
+	}
 	
 	if(config->HasGroup("main-window-accelerators"))
 	{
@@ -193,6 +203,10 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 			break;
 	}
 	
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	primary_copy_limit = config->ReadLong("primary-copy-limit", primary_copy_limit);
+	#endif
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -230,6 +244,8 @@ void REHex::AppSettings::write(wxConfig *config)
 			i->second->save(config);
 		}
 	}
+
+	config->Write("default-byte-colour-map", (long)(default_byte_colour_map));
 	
 	{
 		config->DeleteGroup("main-window-accelerators");
@@ -240,6 +256,10 @@ void REHex::AppSettings::write(wxConfig *config)
 	
 	config->Write("goto-offset-modal", goto_offset_modal);
 	config->Write("size-unit", (long)(size_unit));
+	
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	config->Write("primary-copy-limit", (long)(primary_copy_limit));
+	#endif
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -304,6 +324,12 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	{
 		if(byte_colour_maps.find(i->first) == byte_colour_maps.end())
 		{
+			if(i->first == default_byte_colour_map)
+			{
+				/* The default byte colour map has been deleted. */
+				default_byte_colour_map = -1;
+			}
+
 			i = this->byte_colour_maps.erase(i);
 		}
 		else{
@@ -315,6 +341,22 @@ void REHex::AppSettings::set_byte_colour_maps(const std::map<int, ByteColourMap>
 	event.SetEventObject(this);
 	
 	wxPostEvent(this, event);
+}
+
+int REHex::AppSettings::get_default_byte_colour_map() const
+{
+	return default_byte_colour_map;
+}
+
+void REHex::AppSettings::set_default_byte_colour_map(int id)
+{
+	if(byte_colour_maps.find(id) != byte_colour_maps.end())
+	{
+		default_byte_colour_map = id;
+	}
+	else{
+		default_byte_colour_map = -1;
+	}
 }
 
 const REHex::WindowCommandTable &REHex::AppSettings::get_main_window_commands() const
@@ -372,6 +414,18 @@ void REHex::AppSettings::set_size_unit(SizeUnit unit)
 {
 	size_unit = unit;
 }
+
+#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+size_t REHex::AppSettings::get_primary_copy_limit() const
+{
+	return primary_copy_limit;
+}
+
+void REHex::AppSettings::set_primary_copy_limit(size_t primary_copy_limit)
+{
+	this->primary_copy_limit = primary_copy_limit;
+}
+#endif
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)
 {

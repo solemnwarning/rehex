@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -132,7 +132,7 @@ void REHex::ToolDock::AddMainPanel(wxWindow *main_panel)
 	AddBelow(m_bottom_notebook, m_main_panel);
 	SetWindowWeight(m_bottom_notebook, 0.0f);
 	
-#ifdef __APPLE__
+#ifdef __WXOSX__
 	/* The default sash size on macOS is ONE pixel wide, and there seems to be several weird
 	 * bugs(?) around the positioning and client area of wxNotebook on macOS, so to get resizing
 	 * working nicely on Mac, we force the sash size to be wider and also capture mouse clicks

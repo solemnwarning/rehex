@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -84,6 +84,7 @@ namespace REHex
 			void save_view(wxConfig *config);
 			
 			void handle_copy(bool cut);
+			void handle_paste(bool primary);
 			void paste_text(const std::string &text);
 			void compare_whole_file();
 			void compare_selection();
@@ -135,6 +136,7 @@ namespace REHex
 			void OnSearchDialogDestroy(wxWindowDestroyEvent &event);
 			
 			void OnDocumentCtrlChar(wxKeyEvent &key);
+			void OnDocumentCtrlMiddleUp(wxMouseEvent &event);
 			
 			void OnCommentLeftClick(BitRangeEvent &event);
 			void OnCommentRightClick(BitRangeEvent &event);

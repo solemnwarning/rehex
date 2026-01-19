@@ -1,5 +1,5 @@
 ---
--- The main application window. Future versions of rehex may support multiple of these.
+-- The main application window(s).
 -- @classmod rehex.MainWindow
 
 --- Get the currently active document.

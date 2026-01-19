@@ -42,6 +42,9 @@
     <ClCompile Include="..\src\ClickText.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\ClipboardUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\CodeCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

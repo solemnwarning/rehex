@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,6 +21,7 @@
 #include <wx/frame.h>
 
 #include "../src/document.hpp"
+#include "../src/DocumentCtrl.hpp"
 #include "../src/search.hpp"
 #include "../src/SharedDocumentPointer.hpp"
 #include "testutil.hpp"
@@ -44,8 +45,9 @@ TEST(SearchValue, SearchForU8)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("100", REHex::Search::Value::FMT_I8);
 	
 	{
@@ -73,8 +75,9 @@ TEST(SearchValue, SearchForS8)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-100", REHex::Search::Value::FMT_I8);
 	
 	{
@@ -102,8 +105,9 @@ TEST(SearchValue, SearchForU16LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("50000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -143,8 +147,9 @@ TEST(SearchValue, SearchForS16LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-2000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -184,8 +189,9 @@ TEST(SearchValue, SearchForU16BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("50000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -235,8 +241,9 @@ TEST(SearchValue, SearchForS16BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-2000", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -286,8 +293,9 @@ TEST(SearchValue, SearchForU16EE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1234", REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -305,8 +313,9 @@ TEST(SearchValue, SearchForU32LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("4000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -351,8 +360,9 @@ TEST(SearchValue, SearchForS32LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-1000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -397,8 +407,9 @@ TEST(SearchValue, SearchForU32BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("4000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -448,8 +459,9 @@ TEST(SearchValue, SearchForS32BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-1000000000", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -499,8 +511,9 @@ TEST(SearchValue, SearchForU32EE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1234", REHex::Search::Value::FMT_I32 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -518,8 +531,9 @@ TEST(SearchValue, SearchForU64LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -569,8 +583,9 @@ TEST(SearchValue, SearchForS64LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -620,8 +635,9 @@ TEST(SearchValue, SearchForU64BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -671,8 +687,9 @@ TEST(SearchValue, SearchForS64BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("-8000000000", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -722,8 +739,9 @@ TEST(SearchValue, SearchForU64EE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1234", REHex::Search::Value::FMT_I64 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -741,8 +759,9 @@ TEST(SearchValue, SearchFor1664EE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("123",
 		REHex::Search::Value::FMT_I16 | REHex::Search::Value::FMT_I64 |
 		REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
@@ -782,8 +801,9 @@ TEST(SearchValue, SearchForF32LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -838,8 +858,9 @@ TEST(SearchValue, SearchForF32Infinity)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("inf", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -874,8 +895,9 @@ TEST(SearchValue, SearchForF32NaN)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("NaN", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -903,8 +925,9 @@ TEST(SearchValue, SearchForF32BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -937,8 +960,9 @@ TEST(SearchValue, SearchForF32EE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1.5", REHex::Search::Value::FMT_F32 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -981,8 +1005,9 @@ TEST(SearchValue, SearchForF64LE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -1037,8 +1062,9 @@ TEST(SearchValue, SearchForF64Infinity)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("inf", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -1073,8 +1099,9 @@ TEST(SearchValue, SearchForF64NaN)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("NaN", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE);
 	
 	{
@@ -1102,8 +1129,9 @@ TEST(SearchValue, SearchForF64BE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_BE);
 	
 	{
@@ -1136,8 +1164,9 @@ TEST(SearchValue, SearchForF64EE)
 {
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
 	REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make());
+	REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 	
-	REHex::Search::Value s(frame, doc);
+	REHex::Search::Value s(frame, doc, doc_ctrl);
 	s.configure("1.5", REHex::Search::Value::FMT_F64 | REHex::Search::Value::FMT_LE | REHex::Search::Value::FMT_BE);
 	
 	{

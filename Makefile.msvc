@@ -18,9 +18,15 @@ MSBUILD ?= MSBuild
 
 ifeq ($(BUILD_ARCH),x86)
 	MSVC_ARCH_DIR :=
+	
+	BUSTED := $(realpath msvc/vcpkg-deploy/Win32/vcpkg_installed/x86-windows-static-enlyze/tools/lua-busted/busted.bat)
+	export BUSTED
 else
 	ifeq ($(BUILD_ARCH),x64)
 		MSVC_ARCH_DIR := x64/
+		
+		BUSTED := $(realpath msvc/vcpkg-deploy/x64/vcpkg_installed/x64-windows-static-v143/tools/lua-busted/busted.bat)
+		export BUSTED
 	else
 		X := $(error BUILD_ARCH must be set to 'x86' or 'x64')
 	endif

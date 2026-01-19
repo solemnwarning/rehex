@@ -1,0 +1,16 @@
+{
+  "name": "lua-penlight",
+  "version": "1.15.0",
+  "port-version": 2,
+  "description": "A set of pure Lua libraries focusing on input data handling (such as reading configuration files), functional programming (such as map, reduce, placeholder expressions,etc), and OS path management. Much of the functionality is inspired by the Python standard libraries.",
+  "homepage": "https://lunarmodules.github.io/Penlight/",
+  "license": "MIT",
+  "dependencies": [
+    "lua",
+    "luafilesystem",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

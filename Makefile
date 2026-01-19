@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -20,6 +20,22 @@ pkg-select-ab = $\
 	$(if $(filter yes,$(shell pkg-config --exists $(1) && echo yes)),$(1),$\
 		$(if $(filter yes,$(shell pkg-config --exists $(2) && echo yes)),$(2),$\
 			$(error Could not find $(1) or $(2) using pkg-config)))
+
+# Check if additional compile/link flags are required to compile a test program on top of the
+# general flags used to compile the application. Returns empty string it the additional flags
+# weren't required to build the program or the provided flags if they were.
+#
+# Usage: $(call config-test-flag,tools/config-test-xxx.cpp,-lfoo)
+#
+config-test-flag = $\
+	$(if $(wildcard $(1).aok)$(wildcard $(1).bok),$\
+		$(if $(wildcard $(1).aok),,$(if $(wildcard $(1).bok),$(2),)),$\
+		$(info Checking if we need $(2)...)$\
+		$(if $(shell $(CXX) $(CXXFLAGS) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS) > /dev/null 2>&1 && echo yes),$\
+			$(info No),$\
+			$(if $(shell $(CXX) $(CXXFLAGS) -o $(1).bok $(1) $(LDFLAGS) $(LDLIBS) $(2) > /dev/null 2>&1 && echo yes),$\
+				$(info Yes)$(2),$\
+				$(shell $(CXX) $(CXXFLAGS) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS) 1>&2)$(error Unable to compile $(1)))))
 
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
@@ -125,15 +141,17 @@ CFLAGS          := $(BASE_CFLAGS) -std=c99   -I. -Iinclude/ -IwxLua/modules/ -Iw
 CXXFLAGS_NO_GTK := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override  $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
 CXXFLAGS        := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override  $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
 
-uname_S := $(shell uname -s 2>/dev/null)
-ifeq ($(uname_S),FreeBSD)
-	LDLIBS += -liconv
-endif
-ifeq ($(uname_S),OpenBSD)
-	LDLIBS += -liconv
+LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
+
+# Check if we need to link -latomic for std::atomic support routines.
+ifeq ($(need_compiler_flags),1)
+	LDLIBS += $(call config-test-flag,tools/config-test-atomic.cpp,-latomic)
 endif
 
-LDLIBS := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
+# Check if we need to link -liconv for iconv functions.
+ifeq ($(need_compiler_flags),1)
+	LDLIBS += $(call config-test-flag,tools/config-test-iconv.cpp,-liconv)
+endif
 
 # Define this for releases
 # NOTE: This *MUST* be of the form a.b.c where each component is an integer to fit the format of
@@ -397,6 +415,7 @@ APP_OBJS := \
 	src/ChecksumImpl.$(BUILD_TYPE).o \
 	src/ChecksumPanel.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
+	src/ClipboardUtils.$(BUILD_TYPE).o \
 	src/CodeCtrl.$(BUILD_TYPE).o \
 	src/ColourPickerCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
@@ -529,6 +548,7 @@ TEST_OBJS := \
 	src/Checksum.$(BUILD_TYPE).o \
 	src/ChecksumImpl.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
+	src/ClipboardUtils.$(BUILD_TYPE).o \
 	src/ColourPickerCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \

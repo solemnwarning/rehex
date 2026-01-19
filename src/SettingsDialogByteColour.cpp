@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -122,7 +122,7 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 				sdbc(sdbc) {}
 			
 		protected:
-			virtual Highlight highlight_at_off(REHex::BitOffset off) const override
+			virtual Highlight highlight_at_off(REHex::BitOffset off, REHex::BitOffset dirty_check_length) const override
 			{
 				assert(off.byte() >= 0);
 				assert(off.byte() <= 255);

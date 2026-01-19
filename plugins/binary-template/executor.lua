@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -1512,6 +1512,23 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 	
 	local dest_tables
 	
+	local dt_add_variable = function(var_name, type_info, value)
+		for _,t in ipairs(dest_tables)
+		do
+			if t == context.global_vars
+			then
+				if t[var_name] == nil
+				then
+					t[var_name] = {}
+				end
+				
+				table.insert(t[var_name], { type_info, value })
+			else
+				t[var_name] = { type_info, value }
+			end
+		end
+	end
+	
 	if not (is_local or is_private) and _can_do_flowctrl_here(context, FLOWCTRL_TYPE_RETURN)
 	then
 		_template_error(context, "Attempt to declare non-local variable inside function")
@@ -1574,10 +1591,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			_template_error(context, "can't assign '" .. _get_type_name(iv_type) .. "' to type '" .. _get_type_name(type_info) .. "'")
 		end
 		
-		for _,t in ipairs(dest_tables)
-		do
-			t[var_name] = { type_info, iv_value }
-		end
+		dt_add_variable(var_name, type_info, iv_value)
 		
 		context.var_stack[var_slot] = { type_info, iv_value, def_filename = statement[1], def_line = statement[2] }
 		
@@ -1680,10 +1694,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 		
 		root_value = expand_value(context, type_info, struct_arg_values, nil)
 		
-		for _,t in ipairs(dest_tables)
-		do
-			t[var_name] = { type_info, root_value }
-		end
+		dt_add_variable(var_name, type_info, root_value)
 	else
 		local ArrayLength_type, ArrayLength_val = _eval_statement(context, array_size)
 		if ArrayLength_type == nil or ArrayLength_type.base ~= "number"
@@ -1699,13 +1710,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 			
 			context.next_variable = context.next_variable + (ArrayLength_val:get() * type_info.length)
 			
-			for _,t in ipairs(dest_tables)
-			do
-				t[var_name] = {
-					array_type_info,
-					root_value
-				}
-			end
+			dt_add_variable(var_name, array_type_info, root_value)
 		else
 			root_value = ArrayValue:new()
 			
@@ -1714,13 +1719,7 @@ local function _decl_variable(context, statement, var_type, var_name, struct_arg
 				root_value.offset = context.next_variable
 			end
 			
-			for _,t in ipairs(dest_tables)
-			do
-				t[var_name] = {
-					array_type_info,
-					root_value
-				}
-			end
+			dt_add_variable(var_name, array_type_info, root_value)
 			
 			for i = 0, ArrayLength_val:get() - 1
 			do
@@ -2730,7 +2729,7 @@ local function execute(interface, statements)
 		stack = {},
 		
 		-- This table holds the top-level "global" (i.e. not "local") variables by name.
-		-- Each element points to a tuple of { type, value } like other rvalues.
+		-- Each element points to an array of { type, value } tuples like other rvalues.
 		global_vars = {},
 		
 		var_stack = {},
@@ -2835,7 +2834,10 @@ local function execute(interface, statements)
 	
 	for k,v in _sorted_pairs(context.global_vars)
 	do
-		process_variable(process_variable, k, v[1], v[2])
+		for _, v2 in ipairs(v)
+		do
+			process_variable(process_variable, k, v2[1], v2[2])
+		end
 	end
 end
 

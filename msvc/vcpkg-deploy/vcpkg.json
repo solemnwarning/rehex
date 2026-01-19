@@ -35,10 +35,13 @@
       ]
     },
     {
+      "name": "lua-busted"
+    },
+    {
       "name": "wxwidgets"
     }
   ],
-  "builtin-baseline": "903956eff7cb94774a9e805ff573c000afc43e3e",
+  "builtin-baseline": "25b458671af03578e6a34edd8f0d1ac85e084df4",
   "overrides": [
     {
       "name": "wxwidgets",

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -191,6 +191,11 @@ namespace REHex {
 			 * @brief Check if the given byte in the backing file has been modified since the last save.
 			*/
 			bool is_byte_dirty(BitOffset offset) const;
+			
+			/**
+			 * @brief Check if any bytes in a range in the backing file has been modified since the last save.
+			*/
+			bool is_range_dirty(BitOffset offset, BitOffset length) const;
 			
 			/**
 			 * @brief Check if the BUFFER has any pending changes to be saved.

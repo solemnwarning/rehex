@@ -140,9 +140,6 @@ describe("Updater.parse_feed", function()
 	end)
 
 	it("rejects feed with malformed JSON", function()
-		local env_os = os.getenv("OS")
-		local pathsep = env_os == "Windows_NT" and "\\" or "/"
-
 		assert.has_error(function()
 			local FEED_WITH_SIG = "{\n" ..
 				"  \"version\": \"https://jsonfeed.org/version/1.1\",\n" ..
@@ -153,7 +150,7 @@ describe("Updater.parse_feed", function()
 				function(msg, sig)
 					return true
 				end)
-			end, "Malformed update feed (." .. pathsep .. "json.lua:185: expected ':' after key at line 3 col 11)")
+			end, "Malformed update feed (./json.lua:185: expected ':' after key at line 3 col 11)")
 	end)
 
 	it("rejects feed with invalid structure", function()

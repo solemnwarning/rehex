@@ -293,6 +293,8 @@ local function appimage_update(url, checksum, version)
 				os.remove(download_path)
 				
 				wx.wxMessageBox("Downloaded file is corrupt", "Update error", wx.wxOK)
+				
+				update_running = false
 				return
 			end
 			
@@ -306,6 +308,8 @@ local function appimage_update(url, checksum, version)
 				progress_dialog = nil
 				
 				wx.wxMessageBox("Error setting permissions on " .. download_path, "Update error", wx.wxOK)
+				
+				update_running = false
 				return
 			end
 
@@ -318,6 +322,8 @@ local function appimage_update(url, checksum, version)
 					progress_dialog = nil
 					
 					wx.wxMessageBox("Error replacing " .. appimage_path, "Update error", wx.wxOK)
+					
+					update_running = false
 					return
 				end
 
@@ -328,6 +334,8 @@ local function appimage_update(url, checksum, version)
 					progress_dialog = nil
 					
 					wx.wxMessageBox("Error replacing " .. appimage_path, "Update error", wx.wxOK)
+					
+					update_running = false
 					return
 				end
 			end
@@ -523,18 +531,17 @@ local function check_now(interactive)
 					if config.method == "AppImage"
 					then
 						appimage_update(update.url, update.sha256sum, update.version)
+						return -- Early exit to avoid clearing update_running
 					else
 						rehex.print_error("Unrecognised update method '" .. config.method .. "'\n")
-						update_running = false
 					end
-				else
-					update_running = false
 				end
 			elseif interactive
 			then
 				wx.wxMessageBox("No updates available", "Update", wx.wxOK)
-				update_running = false
 			end
+			
+			update_running = false
 		end,
 		
 		function(error_desc)

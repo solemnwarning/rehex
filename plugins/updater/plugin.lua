@@ -14,6 +14,8 @@
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+rehex.SHORT_VERSION = "0"
+
 local Updater = require 'updater'
 local config = require 'config'
 
@@ -152,7 +154,7 @@ local function download_file(url, destination, on_success, on_error, on_progress
 
 	if not request:IsOk()
 	then
-		handle_error("Error downloading update")
+		handle_error("Error downloading file")
 		return
 	end
 
@@ -242,22 +244,25 @@ local function download_file(url, destination, on_success, on_error, on_progress
 	return function()
 		cancelled = true
 		request:Cancel()
-		
-		update_running = false
 	end
 end
 
-local function appimage_update(url, checksum, version)
-	local appimage_path = os.getenv("APPIMAGE")
-
-	-- Get offset of final path component in appimage path
-	local appimage_name_idx = appimage_path:find("[^/]+$")
-
-	local appimage_dir = appimage_path:sub(1, (appimage_name_idx - 1))
-
-	local progress_dialog = wx.wxProgressDialog("Downloading update", "Downloading REHex " .. version, 100, wx.NULL, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME | wx.wxPD_REMAINING_TIME)
+--- Download update file to disk with progress dialog.
+--
+-- @param url          Source HTTP(S) URL.
+-- @param destination  Destination file name.
+-- @param checksum     SHA256 checksum as a hex string.
+-- @param description  Description of the update file to download.
+-- @param on_success   Callback to call on success.
+-- @param on_error     Callback for an error downloading or writing the file.
+-- @param on_cancel    Callback for user cancelling the download.
+--
+-- The on_error callback receives a string describing the error.
+--
+local function download_file_with_progress(url, destination, checksum, description, on_success, on_error, on_cancel)
+	local progress_dialog = wx.wxProgressDialog("Downloading update", "Downloading " .. description, 100, wx.NULL, wx.wxPD_CAN_ABORT | wx.wxPD_ELAPSED_TIME | wx.wxPD_REMAINING_TIME)
 	local dialog_timer = wx.wxTimer()
-	
+
 	local request_cancel = nil
 	
 	dialog_timer:Connect(wx.wxEVT_TIMER, function(event)
@@ -270,16 +275,14 @@ local function appimage_update(url, checksum, version)
 			
 			progress_dialog:Destroy()
 			progress_dialog = nil
+
+			on_cancel()
 		end
 	end)
 	
 	dialog_timer:Start(100, wx.wxTIMER_CONTINUOUS)
-
-	-- Download the update appimage to the same directory so we can just rename it
-	local download_name = ".rehex-update-download"
-	local download_path = appimage_dir .. download_name;
 	
-	request_cancel = download_file(url, download_path,
+	request_cancel = download_file(url, destination,
 		-- Download succeeded
 		function(download_checksum)
 			dialog_timer:Stop()
@@ -292,61 +295,14 @@ local function appimage_update(url, checksum, version)
 
 				os.remove(download_path)
 				
-				wx.wxMessageBox("Downloaded file is corrupt", "Update error", wx.wxOK)
-				
-				update_running = false
+				on_error("Downloaded file is corrupt")
 				return
 			end
 			
-			progress_dialog:Update((progress_dialog:GetRange() - 1), "Installing REHex " .. version)
-			
-			-- Copy permissions from current AppImage to new one.
-			local chmod_ok, chmod_etype, chmod_ecode = os.execute("chmod \"$(stat -c '%a' \"$APPIMAGE\")\" \"$(dirname \"$APPIMAGE\")/" .. download_name .. "\"")
-			if not chmod_ok
-			then
-				progress_dialog:Destroy()
-				progress_dialog = nil
-				
-				wx.wxMessageBox("Error setting permissions on " .. download_path, "Update error", wx.wxOK)
-				
-				update_running = false
-				return
-			end
-
-			if false
-			then
-				local ok, err = os.remove(appimage_path)
-				if not ok
-				then
-					progress_dialog:Destroy()
-					progress_dialog = nil
-					
-					wx.wxMessageBox("Error replacing " .. appimage_path, "Update error", wx.wxOK)
-					
-					update_running = false
-					return
-				end
-
-				ok, err = os.rename(download_path, appimage_path)
-				if not ok
-				then
-					progress_dialog:Destroy()
-					progress_dialog = nil
-					
-					wx.wxMessageBox("Error replacing " .. appimage_path, "Update error", wx.wxOK)
-					
-					update_running = false
-					return
-				end
-			end
+			on_success(progress_dialog)
 			
 			progress_dialog:Destroy()
 			progress_dialog = nil
-
-			wx.wxMessageBox("REHex has been updated, restart the application to use the new version", "Update installed", wx.wxOK)
-			
-			update_done = true
-			update_running = false
 		end,
 		
 		-- Download failed
@@ -357,8 +313,7 @@ local function appimage_update(url, checksum, version)
 			progress_dialog:Destroy()
 			progress_dialog = nil
 			
-			wx.wxMessageBox(error_desc, "Update error", wx.wxOK)
-			update_running = false
+			on_error(error_desc)
 		end,
 		
 		-- Downlad progress
@@ -372,13 +327,149 @@ local function appimage_update(url, checksum, version)
 				-- wxWebRequest events before we finish handling wxEVT_WEBREQUEST_DATA, which will
 				-- really screw things up.
 
-				progress_dialog:Update(((received_size / total_size) * (progress_dialog:GetRange() - 1)), ("Downloading REHex " .. version .. " (" .. fmt_size(received_size) .. " / " .. fmt_size(total_size) .. ")"))
+				local range = progress_dialog:GetRange()
+				local progress = (received_size / total_size) * range
+
+				if progress >= range
+				then
+					progress = range - 1
+				end
+
+				progress_dialog:Update(progress, ("Downloading " .. description .. " (" .. fmt_size(received_size) .. " / " .. fmt_size(total_size) .. ")"))
 			else
-				progress_dialog:Pulse(("Downloading REHex " .. version .. " (" .. fmt_size(received_size) .. " / ???)"))
+				progress_dialog:Pulse(("Downloading " .. description .. " (" .. fmt_size(received_size) .. " / ???)"))
 			end
 		end)
 	
 	progress_dialog:Show()
+end
+
+--- Update the application by downloading an updated AppImage and replacing the running one.
+--
+local function appimage_update(url, checksum, version)
+	local appimage_path = os.getenv("APPIMAGE")
+
+	-- Get offset of final path component in appimage path
+	local appimage_name_idx = appimage_path:find("[^/]+$")
+
+	local appimage_dir = appimage_path:sub(1, (appimage_name_idx - 1))
+
+	-- Download the update appimage to the same directory so we can just rename it
+	local download_name = ".rehex-update-download"
+	local download_path = appimage_dir .. download_name;
+
+	download_file_with_progress(url, download_path, checksum, ("REHex " .. version),
+		function(progress_dialog)
+			-- Update was downloaded and verified successfully.
+
+			progress_dialog:Update((progress_dialog:GetRange() - 1), "Installing REHex " .. version)
+			
+			-- Copy permissions from current AppImage to new one.
+
+			local chmod_ok, chmod_etype, chmod_ecode = os.execute("chmod \"$(stat -c '%a' \"$APPIMAGE\")\" \"$(dirname \"$APPIMAGE\")/" .. download_name .. "\"")
+			if not chmod_ok
+			then
+				progress_dialog:Destroy()
+				progress_dialog = nil
+				
+				wx.wxMessageBox("Error setting permissions on " .. download_path, "Update error", wx.wxOK)
+				
+				update_running = false
+				return
+			end
+
+			-- Remove the current AppImage and rename the new one over it.
+
+			local ok, err = os.remove(appimage_path)
+			if not ok
+			then
+				progress_dialog:Destroy()
+				progress_dialog = nil
+					
+				wx.wxMessageBox("Error replacing " .. appimage_path, "Update error", wx.wxOK)
+					
+				update_running = false
+				return
+			end
+
+			ok, err = os.rename(download_path, appimage_path)
+			if not ok
+			then
+				progress_dialog:Destroy()
+				progress_dialog = nil
+					
+				wx.wxMessageBox("Error replacing " .. appimage_path, "Update error", wx.wxOK)
+					
+				update_running = false
+				return
+			end
+			
+			wx.wxMessageBox("REHex has been updated, restart the application to use the new version", "Update installed", wx.wxOK)
+			
+			update_done = true
+			update_running = false
+		end,
+
+		function(error_desc)
+			-- Error during file download/verification.
+
+			wx.wxMessageBox(error_desc, "Update error", wx.wxOK)
+			update_running = false
+		end,
+
+		function()
+			-- User cancelled update.
+
+			update_running = false
+		end)
+end
+
+--- Update the application by downloading and launching an installer executable.
+--
+-- NOTE: Quits the application when launching the installer!
+--
+local function setup_update(url, checksum, version)
+	local temp = wx.wxFileName.GetTempDir()
+	local download_path = temp .. "\\" .. "rehex-" .. version .. "_" .. os.time() .. ".exe"
+
+	download_file_with_progress(url, download_path, checksum, ("REHex " .. version),
+		function(progress_dialog)
+			-- File was downloaded and verified successfully.
+			
+			if rehex.request_exit()
+			then
+				-- Application may exit.
+
+				if wx.wxLaunchDefaultApplication(download_path)
+				then
+					rehex.begin_exit()
+				else
+					wx.wxMessageBox("Error starting installer", "Update error", wx.wxOK)
+					os.remove(download_path)
+				end
+			else
+				-- Application will not exit (e.g. because of unsaved changes).
+
+				wx.wxConfigBase.Get():Write("/plugins/updater/last-download-url", url)
+				wx.wxConfigBase.Get():Write("/plugins/updater/last-download-checksum", checksum)
+				wx.wxConfigBase.Get():Write("/plugins/updater/last-download-file", download_path)
+			end
+
+			update_running = false
+		end,
+		
+		function(error_desc)
+			-- Error during download/verification.
+			
+			wx.wxMessageBox(error_desc, "Update error", wx.wxOK)
+			update_running = false
+		end,
+		
+		function()
+			-- User cancelled download.
+
+			update_running = false
+		end)
 end
 
 --- Get the latest version from the update feed.
@@ -531,6 +622,10 @@ local function check_now(interactive)
 					if config.method == "AppImage"
 					then
 						appimage_update(update.url, update.sha256sum, update.version)
+						return -- Early exit to avoid clearing update_running
+					elseif config.method == "setup"
+					then
+						setup_update(update.url, update.sha256sum, update.version)
 						return -- Early exit to avoid clearing update_running
 					else
 						rehex.print_error("Unrecognised update method '" .. config.method .. "'\n")

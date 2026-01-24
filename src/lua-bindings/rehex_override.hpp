@@ -51,6 +51,24 @@ static int LUACALL wxLua_function_bulk_updates_thaw(lua_State *L)
 }
 %end
 
+%override wxLua_function_request_exit
+static int LUACALL wxLua_function_request_exit(lua_State *L)
+{
+	bool result = wxGetApp().request_exit();
+
+	lua_pushboolean(L, result);
+	return 1;
+}
+%end
+
+%override wxLua_function_begin_exit
+static int LUACALL wxLua_function_begin_exit(lua_State *L)
+{
+	wxGetApp().begin_exit();
+	return 0;
+}
+%end
+
 %override wxLua_function__verify_signature
 #include <botan/ed25519.h>
 #include <botan/hex.h>

@@ -106,29 +106,12 @@ const void *REHex::IPCConnection::OnRequest(const wxString &topic, const wxStrin
 		
 		exit_pending = true;
 		
-		/* Accumulate open tabs in all windows. */
-		
-		std::list<MainWindow*> windows = MainWindow::get_instances();
-		std::vector<Tab*> all_tabs;
-		
-		for(auto w = windows.begin(); w != windows.end(); ++w)
-		{
-			std::vector<Tab*> window_tabs = (*w)->get_all_tabs();
-			all_tabs.insert(
-				all_tabs.end(),
-				std::make_move_iterator(window_tabs.begin()),
-				std::make_move_iterator(window_tabs.end()));
-		}
-		
 		/* Ask the user for confirmation before closing any unsaved files. */
 		
-		if(windows.front()->confirm_close_tabs(all_tabs))
+		if(wxGetApp().request_exit())
 		{
-			for(auto w = windows.begin(); w != windows.end(); ++w)
-			{
-				(*w)->Destroy();
-			}
-			
+			wxGetApp().begin_exit();
+
 			exit_pending = false;
 			
 			*size = strlen("OK") + 1;

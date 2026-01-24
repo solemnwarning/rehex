@@ -132,3 +132,19 @@ rehex.Tab = rehex.REHex_Tab
 
 --- Resume bulk UI updates.
 -- @function bulk_updates_thaw
+
+--- Request application exit.
+-- @function request_exit
+--
+-- @return true if the application may exit, false otherwise.
+--
+-- If any files are open which have not been saved, the user will be prompted to accept
+-- closing or save them, as if they had pressed the close button on the window.
+
+--- Begin unconditional application shut down.
+-- @function begin_exit
+--
+-- This will initiate destruction of all windows, leading to the application exiting.
+--
+-- Callers should generally call request_exit() first and only proceed to call this
+-- method if true is returned.

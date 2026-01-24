@@ -253,6 +253,26 @@ namespace REHex {
 			*/
 			static bool is_wayland_session();
 			#endif
+
+			/**
+			 * @brief Request application exit.
+			 *
+			 * @return true if the application may exit, false otherwise.
+			 *
+			 * If any files are open which have not been saved, the user will be prompted to accept
+			 * closing or save them, as if they had pressed the close button on the window.
+			*/
+			bool request_exit();
+
+			/**
+			 * @brief Begin unconditional application shut down.
+			 *
+			 * This will initiate destruction of all windows, leading to the application exiting.
+			 *
+			 * Callers should generally call request_exit() first and only proceed to call this
+			 * method if true is returned.
+			*/
+			void begin_exit();
 			
 		private:
 			std::string last_directory;

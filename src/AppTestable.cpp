@@ -525,3 +525,34 @@ bool REHex::App::is_wayland_session()
 	return is_wayland;
 }
 #endif
+
+bool REHex::App::request_exit()
+{
+	/* Accumulate open tabs in all windows. */
+
+	std::list<MainWindow*> windows = MainWindow::get_instances();
+	std::vector<Tab*> all_tabs;
+
+	for(auto w = windows.begin(); w != windows.end(); ++w)
+	{
+		std::vector<Tab*> window_tabs = (*w)->get_all_tabs();
+		all_tabs.insert(
+			all_tabs.end(),
+			std::make_move_iterator(window_tabs.begin()),
+			std::make_move_iterator(window_tabs.end()));
+	}
+
+	/* Ask the user for confirmation before closing any unsaved files. */
+
+	return windows.front()->confirm_close_tabs(all_tabs);
+}
+
+void REHex::App::begin_exit()
+{
+	std::list<MainWindow*> windows = MainWindow::get_instances();
+
+	for(auto w = windows.begin(); w != windows.end(); ++w)
+	{
+		(*w)->Destroy();
+	}
+}

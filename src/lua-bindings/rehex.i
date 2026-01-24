@@ -12,6 +12,9 @@ void print_error(const wxString &text);
 void bulk_updates_freeze();
 void bulk_updates_thaw();
 
+bool request_exit();
+void begin_exit();
+
 bool _verify_signature(wxString message, wxString signature, wxString pubkey);
 void _get_version_info();
 

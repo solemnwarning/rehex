@@ -52,6 +52,8 @@ class %delete wxConfigBase : public wxObject
     // You must call "config = Set(wx.NULL); config:delete()"
     static wxConfigBase* Create();
     static void DontCreateOnDemand();
+    static wxConfigBase* Get(bool CreateOnDemand = true);
+    static wxConfigBase* Set(wxConfigBase *pConfig);
 
     bool DeleteAll();
     bool DeleteEntry(const wxString& key, bool bDeleteGroupIfEmpty = true);

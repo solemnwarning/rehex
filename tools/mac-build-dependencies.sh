@@ -42,7 +42,7 @@ _rehex_libunistring_build_ident="${_rehex_libunistring_version}-1"
 _rehex_lua_version="5.3.6"
 _rehex_lua_url="https://www.lua.org/ftp/lua-${_rehex_lua_version}.tar.gz"
 _rehex_lua_sha256="fc5fd69bb8736323f026672b1b7235da613d7177e72558893a0bdcd320466d60"
-_rehex_lua_build_ident="${_rehex_lua_version}-3"
+_rehex_lua_build_ident="${_rehex_lua_version}-7"
 
 _rehex_luarocks_version="3.8.0"
 _rehex_luarocks_url="https://luarocks.org/releases/luarocks-${_rehex_luarocks_version}.tar.gz"
@@ -723,7 +723,9 @@ then
 		tar -xf "${_rehex_lua_tar}" -C "lua-${_rehex_lua_build_ident}${_rehex_arch_suffix}"
 		cd "lua-${_rehex_lua_build_ident}${_rehex_arch_suffix}/lua-${_rehex_lua_version}"
 		
-		make -j$(sysctl -n hw.logicalcpu) macosx MYCFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
+		make -j$(sysctl -n hw.logicalcpu) macosx \
+			MYCFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}" \
+			MYLDFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}"
 		make -j$(sysctl -n hw.logicalcpu) test
 		make -j$(sysctl -n hw.logicalcpu) install INSTALL_TOP="${_rehex_lua_target_dir}"
 		
@@ -751,6 +753,8 @@ then
 		echo "== Installing Busted"
 		
 		"${_rehex_lua_target_dir}/bin/luarocks" \
+			CFLAGS="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min}" \
+			LIBFLAG="${_rehex_arch_flags} -mmacosx-version-min=${_rehex_macos_version_min} -undefined dynamic_lookup -all_load" \
 			--lua-dir="${_rehex_lua_target_dir}" \
 			--tree="${_rehex_lua_target_dir}" \
 			--global \

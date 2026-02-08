@@ -449,7 +449,7 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		view_menu->AppendSubMenu(asm_syntax_menu, "x86 disassembly syntax");
 		
 		asm_syntax_menu->AppendRadioItem(ID_ASM_SYNTAX_INTEL, "Intel");
-		asm_syntax_menu->AppendRadioItem(ID_ASM_SYNTAX_ATT,   "AT&T");
+		asm_syntax_menu->AppendRadioItem(ID_ASM_SYNTAX_ATT,   "AT&&T");
 		
 		switch(wxGetApp().settings->get_preferred_asm_syntax())
 		{

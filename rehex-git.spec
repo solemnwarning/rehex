@@ -88,3 +88,9 @@ rm -rf %{buildroot}
 %{_datadir}/icons/hicolor/512x512/apps/rehex.png
 %{_datadir}/rehex/
 %{_libdir}/rehex/
+
+%changelog
+* Sun Nov 23 2025 Daniel Collins <solemnwarning@solemnwarning.net> - 0.63.4-0%{tilde_dist}
+- Save selected value colour map in default view (#268).
+- Fix blurry text/icons when using DPI scaling under moden Windows (#267).
+- Fix crash when pressing enter in search for value and search for byte sequence dialogs (#272).

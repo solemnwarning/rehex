@@ -107,6 +107,26 @@ static int LUACALL wxLua_REHex_MainWindow_SetupHookRegistration_constructor(lua_
 }
 %end
 
+%override wxLua_REHex_MainWindow_all_windows
+static int LUACALL wxLua_REHex_MainWindow_all_windows(lua_State *L)
+{
+	auto &all_windows = REHex::MainWindow::get_instances();
+	
+	lua_newtable(L);            /* Table to return */
+	lua_Integer table_idx = 1;  /* Next index to use in return table */
+	
+	for(auto e = all_windows.begin(); e != all_windows.end(); ++e)
+	{
+		lua_pushinteger(L, table_idx++);
+		wxluaT_pushuserdatatype(L, *e, wxluatype_REHex_MainWindow);
+		
+		lua_settable(L, -3);
+	}
+	
+	return 1;
+}
+%end
+
 %override wxLua_REHex_Document_get_comments
 static int LUACALL wxLua_REHex_Document_get_comments(lua_State *L)
 {

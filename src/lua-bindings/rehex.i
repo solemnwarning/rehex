@@ -91,6 +91,8 @@ class REHex::MainWindow: public wxFrame
 	
 	REHex::Document *active_document();
 	REHex::Tab *active_tab();
+	
+	static LuaTable all_windows();
 };
 
 struct %delete REHex::Document::Comment

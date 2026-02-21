@@ -49,6 +49,8 @@
 
 namespace REHex {
 	class DocumentCtrl: public wxControl {
+		wxDECLARE_CLASS(DocumentCtrl);
+		
 		public:
 			/**
 			 * @brief An on-screen rectangle in the DocumentCtrl.

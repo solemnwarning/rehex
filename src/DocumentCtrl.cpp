@@ -61,6 +61,8 @@ enum {
 	ID_SELECT_TIMER,
 };
 
+wxIMPLEMENT_CLASS(REHex::DocumentCtrl, wxControl)
+
 BEGIN_EVENT_TABLE(REHex::DocumentCtrl, wxControl)
 	EVT_PAINT(REHex::DocumentCtrl::OnPaint)
 	EVT_ERASE_BACKGROUND(REHex::DocumentCtrl::OnErase)

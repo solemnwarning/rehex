@@ -1,0 +1,227 @@
+commit e4ce307374f9998d92ea03ca12713aba0f30095b
+Author: Vadim Zeitlin <vadim@wxwidgets.org>
+Date:   Fri Feb 13 23:15:31 2026 +0100
+
+    Ensure windows are destroyed before wxApp::OnExit() is called
+    
+    In some circumstances we could call wxApp::OnExit() before destroying
+    the application windows, which violated the documented (and reasonably
+    expected) behaviour.
+    
+    Fix this by adding a wrapper CallOnExit() function which destroys all
+    windows before calling OnExit() and, for good measure, then does it
+    again in case the user-overridden version of this function created more
+    windows when it was called.
+    
+    This also has a nice side effect of freeing the user code from the need
+    to call the base OnExit(), as it is now trivial and doesn't do anything
+    any more.
+    
+    Finally, remove the WX_SUPPRESS_UNUSED_WARN hack from init.cpp and just
+    use scope guard macro instead of an ad hoc helper class.
+    
+    See #26189.
+    
+    Closes #26172.
+
+diff --git a/include/wx/app.h b/include/wx/app.h
+index 5655105041..eec5ba2149 100644
+--- a/include/wx/app.h
++++ b/include/wx/app.h
+@@ -471,6 +471,10 @@ public:
+     // returns true for GUI wxApp subclasses
+     virtual bool IsGUI() const { return false; }
+ 
++    // Perform the always needed cleanup before and after calling possibly
++    // overridden OnExit().
++    int CallOnExit();
++
+ 
+     // command line arguments (public for backwards compatibility)
+     int argc;
+@@ -491,6 +495,13 @@ protected:
+     // called from ProcessPendingEvents()
+     void DeletePendingObjects();
+ 
++    // Perform all delayed cleanup, including deleting the pending objects and
++    // anything else, e.g. the GUI version uses it to delete any remaining
++    // windows too.
++    //
++    // This function is safe to call multiple times.
++    virtual void DoDelayedCleanup();
++
+     // the function which creates the traits object when GetTraits() needs it
+     // for the first time
+     virtual wxAppTraits *CreateTraits();
+@@ -711,6 +722,9 @@ public:
+     }
+ 
+ protected:
++    // Override base class method to do the GUI-specific cleanup too.
++    virtual void DoDelayedCleanup() override;
++
+     // override base class method to use GUI traits
+     virtual wxAppTraits *CreateTraits() wxOVERRIDE;
+ 
+diff --git a/include/wx/msw/mfc.h b/include/wx/msw/mfc.h
+index 39c9ed4693..52f4e316ea 100644
+--- a/include/wx/msw/mfc.h
++++ b/include/wx/msw/mfc.h
+@@ -84,7 +84,7 @@ public:
+         BaseApp::m_pMainWnd = NULL;
+ 
+         if ( wxTheApp )
+-            wxTheApp->OnExit();
++            wxTheApp->CallOnExit();
+ 
+         wxEntryCleanup();
+ 
+diff --git a/src/common/appbase.cpp b/src/common/appbase.cpp
+index 4c30c5fd3d..461554fa0e 100644
+--- a/src/common/appbase.cpp
++++ b/src/common/appbase.cpp
+@@ -323,16 +323,29 @@ void wxAppConsoleBase::OnLaunched()
+ 
+ int wxAppConsoleBase::OnExit()
+ {
+-    // Delete all pending objects first, they might use wxConfig to save their
+-    // state during their destruction.
+-    DeletePendingObjects();
++    return 0;
++}
++
++int wxAppConsoleBase::CallOnExit()
++{
++    // As we're not dispatching any events any more, it should be safe to
++    // delete all pending objects and all still existing TLWs now, as they
++    // won't get any events any more.
++    DoDelayedCleanup();
++
++    const int rc = OnExit();
++
++    // Delete all pending objects again, in case more of them were created
++    // inside OnExit(): they might use wxConfig to save their state during
++    // their destruction.
++    DoDelayedCleanup();
+ 
+ #if wxUSE_CONFIG
+     // Ensure we won't create it on demand any more if we hadn't done it yet.
+     wxConfigBase::DontCreateOnDemand();
+ #endif // wxUSE_CONFIG
+ 
+-    return 0;
++    return rc;
+ }
+ 
+ void wxAppConsoleBase::Exit()
+@@ -663,6 +676,11 @@ void wxAppConsoleBase::DeletePendingObjects()
+     }
+ }
+ 
++void wxAppConsoleBase::DoDelayedCleanup()
++{
++    DeletePendingObjects();
++}
++
+ // ----------------------------------------------------------------------------
+ // exception handling
+ // ----------------------------------------------------------------------------
+diff --git a/src/common/appcmn.cpp b/src/common/appcmn.cpp
+index 6be5402ce2..f6178f87c1 100644
+--- a/src/common/appcmn.cpp
++++ b/src/common/appcmn.cpp
+@@ -139,16 +139,19 @@ void wxAppBase::DeleteAllTLWs()
+     }
+ }
+ 
+-void wxAppBase::CleanUp()
++void wxAppBase::DoDelayedCleanup()
+ {
+-    // Clean up any still pending objects. Normally there shouldn't any as we
+-    // already do this in OnExit(), but this could happen if the user code has
+-    // somehow managed to create more of them since then or just forgot to call
+-    // the base class OnExit().
+-    DeletePendingObjects();
++    wxAppConsole::DoDelayedCleanup();
+ 
+-    // and any remaining TLWs
+     DeleteAllTLWs();
++}
++
++void wxAppBase::CleanUp()
++{
++    // Clean up any still pending objects. Normally there shouldn't any as we
++    // already do this in CallOnExit(), but this could happen if the user code
++    // has somehow managed to create more of them since then.
++    DoDelayedCleanup();
+ 
+     // undo everything we did in Initialize() above
+     wxBitmap::CleanUpHandlers();
+diff --git a/src/common/init.cpp b/src/common/init.cpp
+index 701447951f..1dc21585db 100644
+--- a/src/common/init.cpp
++++ b/src/common/init.cpp
+@@ -27,7 +27,9 @@
+ #endif
+ 
+ #include "wx/init.h"
++
+ #include "wx/atomic.h"
++#include "wx/scopeguard.h"
+ 
+ #include "wx/scopedptr.h"
+ #include "wx/except.h"
+@@ -111,15 +113,6 @@ private:
+     wxAppConsole *m_app;
+ };
+ 
+-// ----------------------------------------------------------------------------
+-// private functions
+-// ----------------------------------------------------------------------------
+-
+-// suppress warnings about unused variables
+-static inline void Use(void *) { }
+-
+-#define WX_SUPPRESS_UNUSED_WARN(x) Use(&x)
+-
+ // ----------------------------------------------------------------------------
+ // initialization data
+ // ----------------------------------------------------------------------------
+@@ -485,13 +478,7 @@ int wxEntryReal(int& argc, wxChar **argv)
+         }
+ 
+         // ensure that OnExit() is called if OnInit() had succeeded
+-        class CallOnExit
+-        {
+-        public:
+-            ~CallOnExit() { wxTheApp->OnExit(); }
+-        } callOnExit;
+-
+-        WX_SUPPRESS_UNUSED_WARN(callOnExit);
++        wxON_BLOCK_EXIT_OBJ0(*wxTheApp, wxAppConsoleBase::CallOnExit);
+ 
+         // app execution
+         return wxTheApp->OnRun();
+diff --git a/src/msw/app.cpp b/src/msw/app.cpp
+index f79a9c9b15..4c6ee9135c 100644
+--- a/src/msw/app.cpp
++++ b/src/msw/app.cpp
+@@ -847,14 +847,10 @@ void wxApp::OnEndSession(wxCloseEvent& WXUNUSED(event))
+     if ( !wxTopLevelWindows.empty() )
+         wxTopLevelWindows[0]->DissociateHandle();
+ 
+-    // Destroy all the remaining TLWs before calling OnExit() to have the same
+-    // sequence of events in this case as in case of the normal shutdown,
+-    // otherwise we could have many problems due to wxApp being already
+-    // destroyed when window cleanup code (in close event handlers or dtor) is
+-    // executed.
+-    DeleteAllTLWs();
+-
+-    const int rc = OnExit();
++    // Note that we survive after this call only because we don't delete any
++    // windows at MSW level, see gs_gotEndSession check in wxWindow dtor, even
++    // though CallOnExit() deletes all C++ top level window objects.
++    const int rc = CallOnExit();
+ 
+     wxEntryCleanup();
+ 

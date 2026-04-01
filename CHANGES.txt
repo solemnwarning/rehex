@@ -30,6 +30,8 @@ Version TBC
 
  * Replace default value colour maps for improved readability.
 
+ * Fix cursor being drawn in value colour maps preferences.
+
 Version 0.63.4 (2025-11-22):
 
  * Save selected value colour map in default view (#268).

@@ -3759,7 +3759,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 				? "0123456789ABCDEF"
 				: "????????????????";
 			
-			if(invert && (!has_focus || doc_ctrl->get_cursor_visible()))
+			if(invert && ((!has_focus && (doc_ctrl->GetWindowStyle() & DCTRL_HIDE_CURSOR) == 0) || doc_ctrl->get_cursor_visible()))
 			{
 				bcr.draw_char(hex_x_char, nibble_to_hex[nibble], (*active_palette)[Palette::PAL_INVERT_TEXT_FG], (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			}
@@ -3808,7 +3808,7 @@ void REHex::DocumentCtrl::Region::draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc
 			insert_cursor_pt2 = wxPoint(pd_hx, y + fcc.fixed_char_height());
 		}
 		
-		if((cur_off == cursor_pos || (cur_off + BitOffset(0, 4)) == cursor_pos) && !doc_ctrl->insert_mode && !view_active)
+		if((cur_off == cursor_pos || (cur_off + BitOffset(0, 4)) == cursor_pos) && !doc_ctrl->insert_mode && !view_active && (doc_ctrl->GetWindowStyle() & DCTRL_HIDE_CURSOR) == 0)
 		{
 			/* Draw inactive overwrite cursor. */
 			
@@ -4023,7 +4023,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 		wxRect char_bbox;
 		if(view_active)
 		{
-			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || !has_focus))
+			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && (doc_ctrl->get_cursor_visible() || (!has_focus && (doc_ctrl->GetWindowStyle() & DCTRL_HIDE_CURSOR) == 0)))
 			{
 				char_bbox = draw_char_deferred((*active_palette)[Palette::PAL_INVERT_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_INVERT_TEXT_BG]);
 			}
@@ -4044,7 +4044,7 @@ void REHex::DocumentCtrl::Region::draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &
 				char_bbox = draw_char_deferred((*active_palette)[alternate_row ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG], ascii_x_char, c_data, c_data_len, (*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 			}
 			
-			if(cur_off == cursor_pos && !doc_ctrl->insert_mode)
+			if(cur_off == cursor_pos && !doc_ctrl->insert_mode && (doc_ctrl->GetWindowStyle() & DCTRL_HIDE_CURSOR) == 0)
 			{
 				inactive_overwrite_rect = char_bbox;
 			}

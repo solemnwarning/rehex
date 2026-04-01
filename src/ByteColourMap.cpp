@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -149,11 +149,13 @@ wxColour REHex::ByteColourMap::Value::get_colour() const
 
 static const std::vector< std::pair<REHex::Palette::ColourIndex, std::string> > SERIALISED_COLOURS = {
 	{ REHex::Palette::PAL_NORMAL_TEXT_FG,     "PAL_NORMAL_TEXT_FG"     },
+	{ REHex::Palette::PAL_ALTERNATE_TEXT_FG,  "PAL_ALTERNATE_TEXT_FG"  },
 	{ REHex::Palette::PAL_CONTRAST_TEXT_1_FG, "PAL_CONTRAST_TEXT_1_FG" },
 	{ REHex::Palette::PAL_CONTRAST_TEXT_2_FG, "PAL_CONTRAST_TEXT_2_FG" },
 	{ REHex::Palette::PAL_CONTRAST_TEXT_3_FG, "PAL_CONTRAST_TEXT_3_FG" },
 	{ REHex::Palette::PAL_CONTRAST_TEXT_4_FG, "PAL_CONTRAST_TEXT_4_FG" },
 	{ REHex::Palette::PAL_CONTRAST_TEXT_5_FG, "PAL_CONTRAST_TEXT_5_FG" },
+	{ REHex::Palette::PAL_CONTRAST_TEXT_6_FG, "PAL_CONTRAST_TEXT_6_FG" },
 };
 
 std::string REHex::ByteColourMap::serialise_colour_index(Colour index)

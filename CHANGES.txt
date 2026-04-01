@@ -26,6 +26,10 @@ Version TBC
 
  * Fix potential crash when calculating CRC checksums.
 
+ * Add more predefined colours to the value colour map palette.
+
+ * Replace default value colour maps for improved readability.
+
 Version 0.63.4 (2025-11-22):
 
  * Save selected value colour map in default view (#268).

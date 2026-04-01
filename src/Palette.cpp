@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -141,6 +141,7 @@ REHex::Palette *REHex::Palette::create_system_palette()
 		(*base_palette)[PAL_CONTRAST_TEXT_3_FG],
 		(*base_palette)[PAL_CONTRAST_TEXT_4_FG],
 		(*base_palette)[PAL_CONTRAST_TEXT_5_FG],
+		(*base_palette)[PAL_CONTRAST_TEXT_6_FG],
 	};
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
@@ -167,25 +168,12 @@ REHex::Palette *REHex::Palette::create_light_palette()
 		wxColour(0xD3, 0xD3, 0xD3),  /* PAL_COMMENT_BG */
 		wxColour(0x00, 0x00, 0x00),  /* PAL_COMMENT_FG */
 		
-		// wxColour(0xEE, 0x3E, 0x34), /* PAL_CONTRAST_TEXT_1_FG */
-		// wxColour(0xFF, 0x00, 0x00),
-		wxColour(0xC0, 0x00, 0x00),
-		
-		// wxColour(0x1D, 0x4F, 0x9C), /* PAL_CONTRAST_TEXT_2_FG */
-		// wxColour(0x00, 0x00, 0xFF),
-		wxColour(0x00, 0x00, 0xC0),
-		
-		// wxColour(0x54, 0xB9, 0x48), /* PAL_CONTRAST_TEXT_3_FG */
-		// wxColour(0x00, 0xC0, 0x00),
-		wxColour(0x00, 0x80, 0x00),
-		
-		// wxColour(0xBD, 0xA0, 0xCC), /* PAL_CONTRAST_TEXT_4_FG */
-		// wxColour(0x80, 0x00, 0x80),
-		wxColour(0xC0, 0x00, 0xC0),
-		
-		// wxColour(0xF0, 0x92, 0x43), /* PAL_CONTRAST_TEXT_5_FG */
-		wxColour(0xFF, 0x80, 0x00),
-		// wxColour(0xC0, 0x58, 0x00),
+		wxColour(0xC0, 0x00, 0x00), /* PAL_CONTRAST_TEXT_1_FG */
+		wxColour(0x00, 0x00, 0xC0), /* PAL_CONTRAST_TEXT_2_FG */
+		wxColour(0x00, 0x80, 0x00), /* PAL_CONTRAST_TEXT_3_FG */
+		wxColour(0xC0, 0x00, 0xC0), /* PAL_CONTRAST_TEXT_4_FG */
+		wxColour(0xFF, 0x80, 0x00), /* PAL_CONTRAST_TEXT_5_FG */
+		wxColour(0xB4, 0xB4, 0xB4), /* PAL_CONTRAST_TEXT_6_FG */
 	};
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");
@@ -210,25 +198,12 @@ REHex::Palette *REHex::Palette::create_dark_palette()
 		wxColour(0x58, 0x58, 0x58),  /* PAL_COMMENT_BG */
 		wxColour(0xFF, 0xFF, 0xFF),  /* PAL_COMMENT_FG */
 		
-		// wxColour(0xEE, 0x3E, 0x34), /* PAL_CONTRAST_TEXT_1_FG */
-		// wxColour(0xFF, 0x00, 0x00),
-		wxColour(0xFF, 0x4D, 0x00),
-		
-		// wxColour(0x1D, 0x4F, 0x9C), /* PAL_CONTRAST_TEXT_2_FG */
-		// wxColour(0x00, 0x00, 0xFF),
-		wxColour(0x00, 0xB2, 0xFF),
-		
-		// wxColour(0x54, 0xB9, 0x48), /* PAL_CONTRAST_TEXT_3_FG */
-		wxColour(0x00, 0xC0, 0x00),
-		// wxColour(0x00, 0x80, 0x00),
-		
+		wxColour(0xFF, 0x4D, 0x00), /* PAL_CONTRAST_TEXT_1_FG */
+		wxColour(0x00, 0xB2, 0xFF), /* PAL_CONTRAST_TEXT_2_FG */
+		wxColour(0x00, 0xC0, 0x00), /* PAL_CONTRAST_TEXT_3_FG */
 		wxColour(0xBD, 0xA0, 0xCC), /* PAL_CONTRAST_TEXT_4_FG */
-		// wxColour(0x80, 0x00, 0x80),
-		// wxColour(0xC0, 0x00, 0xC0),
-		
 		wxColour(0xF0, 0x92, 0x43), /* PAL_CONTRAST_TEXT_5_FG */
-		// wxColour(0xFF, 0x80, 0x00),
-		// wxColour(0xC0, 0x58, 0x00),
+		wxColour(0x61, 0x61, 0x61), /* PAL_CONTRAST_TEXT_6_FG */
 	};
 	
 	static_assert(sizeof(colours) == sizeof(palette), "Correct number of colours for Palette");

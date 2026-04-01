@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -49,8 +49,9 @@ namespace REHex {
 				PAL_CONTRAST_TEXT_3_FG,
 				PAL_CONTRAST_TEXT_4_FG,
 				PAL_CONTRAST_TEXT_5_FG,
+				PAL_CONTRAST_TEXT_6_FG,
 				
-				PAL_MAX = PAL_CONTRAST_TEXT_5_FG,
+				PAL_MAX = PAL_CONTRAST_TEXT_6_FG,
 				
 				PAL_INVALID = 9999,
 			};

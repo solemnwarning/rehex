@@ -166,6 +166,8 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	
 	std::vector<Palette::ColourIndex> pal_colours = {
 		Palette::PAL_NORMAL_TEXT_FG,
+		Palette::PAL_ALTERNATE_TEXT_FG,
+		Palette::PAL_CONTRAST_TEXT_6_FG,
 		Palette::PAL_CONTRAST_TEXT_1_FG,
 		Palette::PAL_CONTRAST_TEXT_2_FG,
 		Palette::PAL_CONTRAST_TEXT_3_FG,

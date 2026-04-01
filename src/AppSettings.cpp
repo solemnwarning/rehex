@@ -49,16 +49,16 @@ REHex::AppSettings::AppSettings():
 	byte_colour_maps[1] = std::make_shared<ByteColourMap>(bcm_types);
 	
 	ByteColourMap bcm_gradient1;
-	bcm_gradient1.set_label("Gradient 1");
+	bcm_gradient1.set_label("Red / Green");
 	
 	bcm_gradient1.set_colour_gradient(0x00, 0xFF,
-		ByteColourMap::Colour(Palette::PAL_NORMAL_TEXT_FG),
-		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_1_FG));
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_1_FG),
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_3_FG));
 	
 	byte_colour_maps[2] = std::make_shared<ByteColourMap>(bcm_gradient1);
 	
 	ByteColourMap bcm_gradient2;
-	bcm_gradient2.set_label("Gradient 2");
+	bcm_gradient2.set_label("Blue / Red");
 	
 	bcm_gradient2.set_colour_gradient(0x00, 0x7E,
 		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_2_FG),
@@ -69,6 +69,34 @@ REHex::AppSettings::AppSettings():
 		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_1_FG));
 	
 	byte_colour_maps[3] = std::make_shared<ByteColourMap>(bcm_gradient2);
+	
+	/* "Rainbow" colour map based on colours chosen by Alice Pellerin:
+	 * https://simonomi.dev/blog/color-code-your-bytes/
+	*/
+	
+	ByteColourMap bcm_rainbow;
+	bcm_rainbow.set_label("Rainbow");
+	
+	bcm_rainbow.set_colour(0x00,
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_6_FG));
+	
+	bcm_rainbow.set_colour_gradient(0x01, 0x3F,
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_1_FG),
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_5_FG));
+	
+	bcm_rainbow.set_colour_gradient(0x40, 0x7F,
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_5_FG),
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_3_FG));
+	
+	bcm_rainbow.set_colour_gradient(0x80, 0xCF,
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_3_FG),
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_2_FG));
+	
+	bcm_rainbow.set_colour_gradient(0xD0, 0xFE,
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_2_FG),
+		ByteColourMap::Colour(Palette::PAL_CONTRAST_TEXT_4_FG));
+	
+	byte_colour_maps[4] = std::make_shared<ByteColourMap>(bcm_rainbow);
 	
 #if 0
 	ByteColourMap bcm_colour_test;

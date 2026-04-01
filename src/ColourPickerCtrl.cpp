@@ -38,7 +38,7 @@ REHex::ColourPickerCtrl::ColourPickerCtrl(wxWindow *parent, wxWindowID id, const
 {
 	wxBoxSizer *top_sizer = new wxBoxSizer(wxVERTICAL);
 	
-	wxGridSizer *sizer = new wxGridSizer(3);
+	wxGridSizer *sizer = new wxGridSizer(4);
 	top_sizer->Add(sizer);
 	
 	for(size_t idx = 0; idx < colours.size(); ++idx)

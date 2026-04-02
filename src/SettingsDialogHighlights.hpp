@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -35,6 +35,7 @@ namespace REHex
 	{
 		private:
 			HighlightColourMap colours;
+			wxFont hex_font;
 			
 			wxGrid *grid;
 			std::vector<size_t> grid_row_indices;
@@ -51,7 +52,7 @@ namespace REHex
 		protected:
 			SettingsDialogHighlights();
 			
-			virtual HighlightColourMap load_colours() const = 0;
+			void load_colours(const HighlightColourMap &colours);
 			virtual void save_colours(const HighlightColourMap &colours) const = 0;
 			
 		public:
@@ -62,17 +63,18 @@ namespace REHex
 			
 			virtual bool validate() override;
 			virtual void save() override;
-			virtual void reset() override;
 	};
 	
 	class SettingsDialogAppHighlights: public SettingsDialogHighlights
 	{
 		protected:
-			virtual HighlightColourMap load_colours() const override;
 			virtual void save_colours(const HighlightColourMap &colours) const override;
 			
 		public:
 			SettingsDialogAppHighlights();
+			
+			virtual bool Create(wxWindow *parent) override;
+			virtual void reset() override;
 	};
 	
 	class SettingsDialogDocHighlights: public SettingsDialogHighlights
@@ -81,11 +83,13 @@ namespace REHex
 			SharedDocumentPointer doc;
 			
 		protected:
-			virtual HighlightColourMap load_colours() const override;
 			virtual void save_colours(const HighlightColourMap &colours) const override;
 			
 		public:
 			SettingsDialogDocHighlights(const SharedDocumentPointer &doc);
+			
+			virtual bool Create(wxWindow *parent) override;
+			virtual void reset() override;
 	};
 }
 

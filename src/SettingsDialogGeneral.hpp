@@ -22,6 +22,7 @@
 #include <wx/radiobut.h>
 #include <wx/spinctrl.h>
 
+#include "AppSettings.hpp"
 #include "SettingsDialog.hpp"
 #include "WindowCommands.hpp"
 
@@ -43,6 +44,8 @@ namespace REHex
 			wxCheckBox *primary_copy_enable;
 			wxSpinCtrl *primary_copy_kb;
 			#endif
+			
+			void load(const AppSettings *settings);
 			
 		public:
 			virtual bool Create(wxWindow *parent) override;

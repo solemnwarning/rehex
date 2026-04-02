@@ -90,13 +90,14 @@ namespace REHex
 			void OnClose(wxCloseEvent &event);
 			void OnTreeSelect(wxTreeEvent &event);
 			void OnHelp(wxCommandEvent &event);
+			void OnDefault(wxCommandEvent &event);
 			void OnOK(wxCommandEvent &event);
 			void OnCancel(wxCommandEvent &event);
 			
 		public:
 			static constexpr int MARGIN = 8;
 			
-			SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels);
+			SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels, bool enable_defaults_button);
 			
 		DECLARE_EVENT_TABLE()
 	};

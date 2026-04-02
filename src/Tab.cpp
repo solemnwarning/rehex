@@ -1159,7 +1159,7 @@ void REHex::Tab::OnDataRightClick(wxCommandEvent &event)
 					std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
 					panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogDocHighlights(doc)));
 					
-					doc_properties.reset(new SettingsDialog(this, doc->get_title() + " - File properties", std::move(panels)));
+					doc_properties.reset(new SettingsDialog(this, doc->get_title() + " - File properties", std::move(panels), false));
 					doc_properties->Show();
 				}
 				else{

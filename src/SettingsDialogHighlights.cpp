@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -30,8 +30,6 @@ REHex::SettingsDialogHighlights::SettingsDialogHighlights():
 
 bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 {
-	colours = load_colours();
-	
 	wxPanel::Create(parent);
 	
 	wxBoxSizer *top_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -58,24 +56,11 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	/* Arbitrary minimum size because the default is FOR ANTS. */
 	grid->SetMinSize(wxSize(300, 100));
 	
-	wxFont hex_font(wxFontInfo().FaceName(wxGetApp().get_font_name()));
+	hex_font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
 	
 	int font_size_adjustment = wxGetApp().get_font_size_adjustment();
 	for(int i = 0; i < font_size_adjustment; ++i) { hex_font.MakeLarger(); }
 	for(int i = 0; i > font_size_adjustment; --i) { hex_font.MakeSmaller(); }
-	
-	for(auto h_it = colours.begin(); h_it != colours.end(); ++h_it)
-	{
-		int grid_row = grid->GetNumberRows();
-		
-		grid->InsertRows(grid_row, 1);
-		grid_row_indices.push_back(h_it->first);
-		
-		grid->SetCellTextColour(grid_row, 0, h_it->second.secondary_colour);
-		grid->SetCellBackgroundColour(grid_row, 0, h_it->second.primary_colour);
-		grid->SetCellValue(grid_row, 0, h_it->second.label);
-		grid->SetCellFont(grid_row, 0, hex_font);
-	}
 	
 	wxBoxSizer *side_sizer = new wxBoxSizer(wxVERTICAL);
 	top_sizer->Add(side_sizer, 0, (wxTOP | wxLEFT), SettingsDialog::MARGIN);
@@ -86,7 +71,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	add_button = new wxButton(this, wxID_ADD);
 	button_sizer->Add(add_button);
 	
-	add_button->Bind(wxEVT_BUTTON, [this, hex_font](wxCommandEvent &event)
+	add_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent &event)
 	{
 		assert(colours.size() < HighlightColourMap::MAX_NUM);
 		
@@ -110,8 +95,6 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 		
 		add_button->Enable(colours.size() < HighlightColourMap::MAX_NUM);
 	});
-	
-	add_button->Enable(colours.size() < HighlightColourMap::MAX_NUM);
 	
 	del_button = new wxButton(this, wxID_DELETE);
 	button_sizer->Add(del_button, 0, wxLEFT, SettingsDialog::MARGIN);
@@ -210,6 +193,13 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	grid->Bind(wxEVT_GRID_SELECT_CELL, [this](wxGridEvent &event)
 	{
 		selected_grid_row = event.GetRow();
+		
+		if((size_t)(selected_grid_row) >= grid_row_indices.size())
+		{
+			/* We're inside load_colours(), do nothing. */
+			return;
+		}
+		
 		selected_highlight_idx = grid_row_indices[selected_grid_row];
 		
 		del_button->Enable();
@@ -243,6 +233,40 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	return true;
 }
 
+void REHex::SettingsDialogHighlights::load_colours(const HighlightColourMap &colours)
+{
+	selected_grid_row = -1;
+	selected_highlight_idx = -1;
+	
+	if(grid->GetNumberRows() > 0)
+	{
+		grid->DeleteRows(0, grid->GetNumberRows());
+		grid_row_indices.clear();
+	}
+	
+	this->colours = colours;
+	
+	for(auto h_it = this->colours.begin(); h_it != this->colours.end(); ++h_it)
+	{
+		int grid_row = grid->GetNumberRows();
+		
+		grid->InsertRows(grid_row, 1);
+		grid_row_indices.push_back(h_it->first);
+		
+		grid->SetCellTextColour(grid_row, 0, h_it->second.secondary_colour);
+		grid->SetCellBackgroundColour(grid_row, 0, h_it->second.primary_colour);
+		grid->SetCellValue(grid_row, 0, h_it->second.label);
+		grid->SetCellFont(grid_row, 0, hex_font);
+	}
+	
+	del_button->Disable();
+	label_input->Disable();
+	primary_picker->Disable();
+	secondary_picker->Disable();
+	
+	add_button->Enable(colours.size() < HighlightColourMap::MAX_NUM);
+}
+
 std::string REHex::SettingsDialogHighlights::label() const
 {
 	return "Highlight colours";
@@ -260,14 +284,15 @@ void REHex::SettingsDialogHighlights::save()
 	save_colours(colours);
 }
 
-void REHex::SettingsDialogHighlights::reset() {}
-
 REHex::SettingsDialogAppHighlights::SettingsDialogAppHighlights():
 	SettingsDialogHighlights() {}
 
-REHex::HighlightColourMap REHex::SettingsDialogAppHighlights::load_colours() const
+bool REHex::SettingsDialogAppHighlights::Create(wxWindow *parent)
 {
-	return wxGetApp().settings->get_highlight_colours();
+	SettingsDialogHighlights::Create(parent);
+	load_colours(wxGetApp().settings->get_highlight_colours());
+	
+	return true;
 }
 
 void REHex::SettingsDialogAppHighlights::save_colours(const HighlightColourMap &colours) const
@@ -275,13 +300,22 @@ void REHex::SettingsDialogAppHighlights::save_colours(const HighlightColourMap &
 	wxGetApp().settings->set_highlight_colours(colours);
 }
 
+void REHex::SettingsDialogAppHighlights::reset()
+{
+	AppSettings default_settings;
+	load_colours(default_settings.get_highlight_colours());
+}
+
 REHex::SettingsDialogDocHighlights::SettingsDialogDocHighlights(const SharedDocumentPointer &doc):
 	SettingsDialogHighlights(),
 	doc(doc) {}
 
-REHex::HighlightColourMap REHex::SettingsDialogDocHighlights::load_colours() const
+bool REHex::SettingsDialogDocHighlights::Create(wxWindow *parent)
 {
-	return doc->get_highlight_colours();
+	SettingsDialogHighlights::Create(parent);
+	load_colours(doc->get_highlight_colours());
+	
+	return true;
 }
 
 void REHex::SettingsDialogDocHighlights::save_colours(const HighlightColourMap &colours) const
@@ -291,3 +325,5 @@ void REHex::SettingsDialogDocHighlights::save_colours(const HighlightColourMap &
 		doc->set_highlight_colours(colours);
 	}
 }
+
+void REHex::SettingsDialogDocHighlights::reset() {}

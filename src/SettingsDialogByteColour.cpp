@@ -434,5 +434,26 @@ void REHex::SettingsDialogByteColour::save()
 
 void REHex::SettingsDialogByteColour::reset()
 {
+	auto default_maps = AppSettings().get_byte_colour_maps();
 	
+	maps.clear();
+	
+	map_choice->Clear();
+	map_choice_keys.clear();
+	
+	for(auto i = default_maps.begin(); i != default_maps.end(); ++i)
+	{
+		maps.emplace(i->first, *(i->second));
+		
+		map_choice->Append(i->second->get_label());
+		map_choice_keys.push_back(i->first);
+		
+		/* Find the highest existing key plus one. */
+		next_map_key = std::max(next_map_key, (i->first + 1));
+	}
+	
+	map_choice->SetSelection(0);
+	map_choice_selected(0);
+	
+	delete_button->Enable(maps.size() > 1);
 }

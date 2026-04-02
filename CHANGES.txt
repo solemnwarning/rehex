@@ -32,6 +32,8 @@ Version TBC
 
  * Fix cursor being drawn in value colour maps preferences.
 
+ * Add reset to defaults button to preferences dialog.
+
 Version 0.63.4 (2025-11-22):
 
  * Save selected value colour map in default view (#268).

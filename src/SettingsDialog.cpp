@@ -29,11 +29,12 @@ BEGIN_EVENT_TABLE(REHex::SettingsDialog, wxDialog)
 	EVT_CLOSE(REHex::SettingsDialog::OnClose)
 	EVT_TREE_SEL_CHANGED(wxID_ANY, REHex::SettingsDialog::OnTreeSelect)
 	EVT_BUTTON(wxID_HELP, REHex::SettingsDialog::OnHelp)
+	EVT_BUTTON(wxID_DEFAULT, REHex::SettingsDialog::OnDefault)
 	EVT_BUTTON(wxID_OK, REHex::SettingsDialog::OnOK)
 	EVT_BUTTON(wxID_CANCEL, REHex::SettingsDialog::OnCancel)
 END_EVENT_TABLE()
 
-REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels):
+REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, std::vector< std::unique_ptr<SettingsDialogPanel> > &&panels, bool enable_defaults_button):
 	wxDialog(parent, wxID_ANY, title),
 	panels(std::move(panels))
 {
@@ -76,8 +77,14 @@ REHex::SettingsDialog::SettingsDialog(wxWindow *parent, const wxString &title, s
 	
 	#ifdef BUILD_HELP
 	wxButton *help_button = new wxButton(this, wxID_HELP);
-	button_sizer->Add(help_button);
+	button_sizer->Add(help_button, 0, wxRIGHT, MARGIN);
 	#endif
+	
+	if(enable_defaults_button)
+	{
+		wxButton *default_button = new wxButton(this, wxID_DEFAULT, "Reset to defaults");
+		button_sizer->Add(default_button);
+	}
 	
 	button_sizer->AddStretchSpacer(1);
 	
@@ -142,6 +149,17 @@ void REHex::SettingsDialog::OnHelp(wxCommandEvent &event)
 		wxGetApp().show_help_page(this, help_page_basename);
 	}
 #endif
+}
+
+void REHex::SettingsDialog::OnDefault(wxCommandEvent &event)
+{
+	std::string message = "Reset '" + selected_panel->label() + "' settings to default values?";
+	std::string caption = "Reset settings";
+	
+	if(wxMessageBox(message, caption, (wxYES_NO | wxCENTER | wxICON_WARNING)) == wxYES)
+	{
+		selected_panel->reset();
+	}
 }
 
 void REHex::SettingsDialog::OnOK(wxCommandEvent &event)

@@ -1666,7 +1666,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogKeyboard()));
 		
-		dialog.reset(new SettingsDialog(this, "Preferences", std::move(panels)));
+		dialog.reset(new SettingsDialog(this, "Preferences", std::move(panels), true));
 		
 		dialog->Show();
 	}

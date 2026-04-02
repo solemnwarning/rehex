@@ -44,17 +44,6 @@ bool REHex::SettingsDialogGeneral::Create(wxWindow *parent)
 	
 	cnm_nibble->SetToolTip("The arrow keys will move the cursor in nibble (half byte) increments");
 	
-	switch(wxGetApp().settings->get_cursor_nav_mode())
-	{
-		case CursorNavMode::BYTE:
-			cnm_byte->SetValue(true);
-			break;
-			
-		case CursorNavMode::NIBBLE:
-			cnm_nibble->SetValue(true);
-			break;
-	}
-	
 	wxBoxSizer *su_sizer = new wxBoxSizer(wxHORIZONTAL);
 	top_sizer->Add(su_sizer, 0, wxBOTTOM, SettingsDialog::MARGIN);
 	
@@ -75,28 +64,9 @@ bool REHex::SettingsDialogGeneral::Create(wxWindow *parent)
 	
 	su_xb->SetToolTip("Sizes will be displayed in units of 1,000 (1,000 bytes = 1 kB, 1,000 kB = 1 MB etc)");
 	
-	switch(wxGetApp().settings->get_size_unit())
-	{
-		case SizeUnit::B:
-			su_byte->SetValue(true);
-			break;
-			
-		case SizeUnit::AUTO_XiB:
-			su_xib->SetValue(true);
-			break;
-			
-		case SizeUnit::AUTO_XB:
-			su_xb->SetValue(true);
-			break;
-			
-		default:
-			break;
-	}
-	
 	goto_offset_modeless = new wxCheckBox(this, wxID_ANY, "Non-modal 'Jump to offset' dialog");
 	top_sizer->Add(goto_offset_modeless, 0, wxBOTTOM, SettingsDialog::MARGIN);
 	
-	goto_offset_modeless->SetValue(!(wxGetApp().settings->get_goto_offset_modal()));
 	goto_offset_modeless->SetToolTip("The 'Jump to offset' dialog will remain open after use and allow interacting with the editor window.");
 	
 	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
@@ -122,24 +92,10 @@ bool REHex::SettingsDialogGeneral::Create(wxWindow *parent)
 		{
 			primary_copy_kb->Enable(event.IsChecked());
 		});
-		
-		size_t primary_copy_limit = wxGetApp().settings->get_primary_copy_limit();
-		
-		if(primary_copy_limit >= 1024)
-		{
-			primary_copy_enable->SetValue(true);
-			primary_copy_kb->Enable();
-			
-			primary_copy_kb->SetValue(primary_copy_limit / 1024);
-		}
-		else{
-			primary_copy_enable->SetValue(false);
-			primary_copy_kb->Disable();
-			
-			primary_copy_kb->SetValue(AppSettings::DEFAULT_PRIMARY_COPY_LIMIT / 1024);
-		}
 	}
 	#endif
+	
+	load(wxGetApp().settings);
 	
 	SetSizerAndFit(top_sizer);
 	
@@ -190,4 +146,61 @@ void REHex::SettingsDialogGeneral::save()
 	#endif
 }
 
-void REHex::SettingsDialogGeneral::reset() {}
+void REHex::SettingsDialogGeneral::reset() {
+	AppSettings default_settings;
+	load(&default_settings);
+}
+
+void REHex::SettingsDialogGeneral::load(const AppSettings *settings)
+{
+	switch(settings->get_cursor_nav_mode())
+	{
+		case CursorNavMode::BYTE:
+			cnm_byte->SetValue(true);
+			break;
+			
+		case CursorNavMode::NIBBLE:
+			cnm_nibble->SetValue(true);
+			break;
+	}
+	
+	switch(settings->get_size_unit())
+	{
+		case SizeUnit::B:
+			su_byte->SetValue(true);
+			break;
+			
+		case SizeUnit::AUTO_XiB:
+			su_xib->SetValue(true);
+			break;
+			
+		case SizeUnit::AUTO_XB:
+			su_xb->SetValue(true);
+			break;
+			
+		default:
+			break;
+	}
+	
+	goto_offset_modeless->SetValue(!(settings->get_goto_offset_modal()));
+	
+	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
+	{
+		size_t primary_copy_limit = settings->get_primary_copy_limit();
+		
+		if(primary_copy_limit >= 1024)
+		{
+			primary_copy_enable->SetValue(true);
+			primary_copy_kb->Enable();
+			
+			primary_copy_kb->SetValue(primary_copy_limit / 1024);
+		}
+		else{
+			primary_copy_enable->SetValue(false);
+			primary_copy_kb->Disable();
+			
+			primary_copy_kb->SetValue(AppSettings::DEFAULT_PRIMARY_COPY_LIMIT / 1024);
+		}
+	}
+	#endif
+}

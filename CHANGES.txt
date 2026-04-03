@@ -1,4 +1,4 @@
-Version TBC
+Version 0.64.0 (2026-04-03):
 
  * Update Lua plugin integration to support Lua 5.5.
 

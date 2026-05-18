@@ -51,6 +51,17 @@ namespace REHex
 		NIBBLE = 2,
 	};
 	
+	enum class DirtyByteDisplayMode
+	{
+		NORMAL = 1,    /**< Do not colour changed bytes differently. */
+		
+		COLOURED = 2,  /**< Colour changed bytes as PAL_DIRTY_TEXT_FG/PAL_DIRTY_TEXT_BG when . */
+		INVERTED = 3,  /**< Colour changed bytes as PAL_DIRTY_TEXT_FG/PAL_DIRTY_TEXT_BG (inverted). */
+		
+		COLOURED_UNLESS_BCM = 4, /**< COLOURED, unless a Value Colour Map is selected, then NORMAL. */
+		INVERTED_UNLESS_BCM = 5, /**< INVERTED, unless a Value Colour Map is selected, then NORMAL. */
+	};
+	
 	class AppSettings: public wxEvtHandler
 	{
 		public:
@@ -96,6 +107,9 @@ namespace REHex
 			void set_primary_copy_limit(size_t primary_copy_limit);
 			#endif
 			
+			DirtyByteDisplayMode get_dirty_byte_display_mode() const;
+			void set_dirty_byte_display_mode(DirtyByteDisplayMode dirty_byte_display_mode);
+			
 		private:
 			AsmSyntax preferred_asm_syntax;
 			GotoOffsetBase goto_offset_base;
@@ -107,6 +121,7 @@ namespace REHex
 			bool goto_offset_modal;
 			SizeUnit size_unit;
 			size_t primary_copy_limit;
+			DirtyByteDisplayMode dirty_byte_display_mode;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

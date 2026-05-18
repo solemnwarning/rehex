@@ -95,6 +95,49 @@ bool REHex::SettingsDialogGeneral::Create(wxWindow *parent)
 	}
 	#endif
 	
+	wxBoxSizer *dbd_sizer = new wxBoxSizer(wxHORIZONTAL);
+	top_sizer->Add(dbd_sizer, 0, wxBOTTOM, SettingsDialog::MARGIN);
+	
+	dbd_sizer->Add(new wxStaticText(this, wxID_ANY, "Colour modified bytes:"), 0, wxALIGN_TOP);
+	
+	wxBoxSizer *dbd_sizerV = new wxBoxSizer(wxVERTICAL);
+	dbd_sizer->Add(dbd_sizerV, 0, wxALIGN_TOP);
+	
+	wxBoxSizer *dbd_sizerH = new wxBoxSizer(wxHORIZONTAL);
+	dbd_sizerV->Add(dbd_sizerH);
+	
+	dbd_disable_vcm = new wxCheckBox(this, wxID_ANY, "Disable when value colour map is in use");
+	dbd_sizerV->Add(dbd_disable_vcm, 0, wxLEFT, SettingsDialog::MARGIN);
+	
+	dbd_disable_vcm->SetToolTip("Display modified bytes the same as unmodified ones when a value colour map is in use");
+	
+	dbd_none = new wxRadioButton(this, wxID_ANY, "No", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	dbd_sizerH->Add(dbd_none, 0, wxLEFT, SettingsDialog::MARGIN);
+	
+	dbd_none->SetToolTip("Display modified bytes the same as unmodified ones");
+	dbd_none->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent &event)
+	{
+		dbd_disable_vcm->Enable(!event.IsChecked());
+	});
+	
+	dbd_yes = new wxRadioButton(this, wxID_ANY, "Yes");
+	dbd_sizerH->Add(dbd_yes, 0, wxLEFT, SettingsDialog::MARGIN);
+	
+	dbd_yes->SetToolTip("Change the text colour of modified bytes");
+	dbd_yes->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent &event)
+	{
+		dbd_disable_vcm->Enable(event.IsChecked());
+	});
+	
+	dbd_invert = new wxRadioButton(this, wxID_ANY, "Yes (inverted)");
+	dbd_sizerH->Add(dbd_invert, 0, wxLEFT, SettingsDialog::MARGIN);
+	
+	dbd_invert->SetToolTip("Change the background colour of modified bytes");
+	dbd_invert->Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent &event)
+	{
+		dbd_disable_vcm->Enable(event.IsChecked());
+	});
+	
 	load(wxGetApp().settings);
 	
 	SetSizerAndFit(top_sizer);
@@ -144,6 +187,27 @@ void REHex::SettingsDialogGeneral::save()
 		wxGetApp().settings->set_primary_copy_limit(0);
 	}
 	#endif
+	
+	if(dbd_none->GetValue())
+	{
+		wxGetApp().settings->set_dirty_byte_display_mode(DirtyByteDisplayMode::NORMAL);
+	}
+	else if(dbd_yes->GetValue() && !(dbd_disable_vcm->GetValue()))
+	{
+		wxGetApp().settings->set_dirty_byte_display_mode(DirtyByteDisplayMode::COLOURED);
+	}
+	else if(dbd_invert->GetValue() && !(dbd_disable_vcm->GetValue()))
+	{
+		wxGetApp().settings->set_dirty_byte_display_mode(DirtyByteDisplayMode::INVERTED);
+	}
+	else if(dbd_yes->GetValue() && dbd_disable_vcm->GetValue())
+	{
+		wxGetApp().settings->set_dirty_byte_display_mode(DirtyByteDisplayMode::COLOURED_UNLESS_BCM);
+	}
+	else if(dbd_invert->GetValue() && dbd_disable_vcm->GetValue())
+	{
+		wxGetApp().settings->set_dirty_byte_display_mode(DirtyByteDisplayMode::INVERTED_UNLESS_BCM);
+	}
 }
 
 void REHex::SettingsDialogGeneral::reset() {
@@ -203,4 +267,37 @@ void REHex::SettingsDialogGeneral::load(const AppSettings *settings)
 		}
 	}
 	#endif
+	
+	switch(settings->get_dirty_byte_display_mode())
+	{
+		case DirtyByteDisplayMode::NORMAL:
+			dbd_none->SetValue(true);
+			dbd_disable_vcm->SetValue(true);
+			dbd_disable_vcm->Disable();
+			break;
+		
+		case DirtyByteDisplayMode::COLOURED:
+			dbd_yes->SetValue(true);
+			dbd_disable_vcm->SetValue(false);
+			dbd_disable_vcm->Enable();
+			break;
+			
+		case DirtyByteDisplayMode::INVERTED:
+			dbd_invert->SetValue(true);
+			dbd_disable_vcm->SetValue(false);
+			dbd_disable_vcm->Enable();
+			break;
+			
+		case DirtyByteDisplayMode::COLOURED_UNLESS_BCM:
+			dbd_yes->SetValue(true);
+			dbd_disable_vcm->SetValue(true);
+			dbd_disable_vcm->Enable();
+			break;
+			
+		case DirtyByteDisplayMode::INVERTED_UNLESS_BCM:
+			dbd_invert->SetValue(true);
+			dbd_disable_vcm->SetValue(true);
+			dbd_disable_vcm->Enable();
+			break;
+	}
 }

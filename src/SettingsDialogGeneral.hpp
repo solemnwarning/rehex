@@ -45,6 +45,12 @@ namespace REHex
 			wxSpinCtrl *primary_copy_kb;
 			#endif
 			
+			wxRadioButton *dbd_none;
+			wxRadioButton *dbd_yes;
+			wxRadioButton *dbd_invert;
+			
+			wxCheckBox *dbd_disable_vcm;
+			
 			void load(const AppSettings *settings);
 			
 		public:

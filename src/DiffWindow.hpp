@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2022 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -118,7 +118,7 @@ namespace REHex {
 					
 				protected:
 					virtual int calc_width(REHex::DocumentCtrl &doc) override;
-					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length) const override;
+					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const override;
 			};
 			
 			class MessageRegion: public DocumentCtrl::Region

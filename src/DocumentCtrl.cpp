@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -3581,7 +3581,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 				(*active_palette)[Palette::PAL_SECONDARY_SELECTED_TEXT_BG]);
 		}
 		else{
-			Highlight h = highlight_at_off(offset, dirty_check_length);
+			Highlight h = highlight_at_off(offset, dirty_check_length, &doc);
 			if(h.enable)
 			{
 				return h;
@@ -4918,7 +4918,7 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegi
 	}
 }
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::highlight_at_off(BitOffset off, BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const
 {
 	return NoHighlight();
 }
@@ -4926,7 +4926,7 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegion::high
 REHex::DocumentCtrl::DataRegionDocHighlight::DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset):
 	DataRegion(document, d_offset, d_length, virt_offset) {}
 
-REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off, BitOffset dirty_check_length) const
+REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHighlight::highlight_at_off(BitOffset off, BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const
 {
 	const BitRangeMap<int> &highlights = document->get_highlights();
 	
@@ -4942,11 +4942,43 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DocumentCtrl::DataRegionDocHig
 		}
 	}
 	
-	if(document->is_range_dirty(off, dirty_check_length))
+	DirtyByteDisplayMode dbd = wxGetApp().settings->get_dirty_byte_display_mode();
+	switch(dbd)
 	{
-		return Highlight(
-			(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
-			(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
+		case DirtyByteDisplayMode::NORMAL:
+			break;
+			
+		case DirtyByteDisplayMode::COLOURED_UNLESS_BCM:
+			if(doc_ctrl->get_byte_colour_map() != nullptr)
+			{
+				break;
+			}
+			
+		case DirtyByteDisplayMode::COLOURED:
+			if(document->is_range_dirty(off, dirty_check_length))
+			{
+				return Highlight(
+					(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
+					(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
+			}
+			
+			break;
+			
+		case DirtyByteDisplayMode::INVERTED_UNLESS_BCM:
+			if(doc_ctrl->get_byte_colour_map() != nullptr)
+			{
+				break;
+			}
+			
+		case DirtyByteDisplayMode::INVERTED:
+			if(document->is_range_dirty(off, dirty_check_length))
+			{
+				return Highlight(
+					(*active_palette)[Palette::PAL_DIRTY_TEXT_BG],
+					(*active_palette)[Palette::PAL_DIRTY_TEXT_FG]);
+			}
+			
+			break;
 	}
 	
 	return NoHighlight();

@@ -33,10 +33,11 @@ REHex::AppSettings::AppSettings():
 	main_window_commands(MainWindow::get_template_commands()),
 	cursor_nav_mode(CursorNavMode::BYTE),
 	goto_offset_modal(true),
-	size_unit(SizeUnit::AUTO_XiB)
+	size_unit(SizeUnit::AUTO_XiB),
 	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
-	, primary_copy_limit(DEFAULT_PRIMARY_COPY_LIMIT)
+	primary_copy_limit(DEFAULT_PRIMARY_COPY_LIMIT),
 	#endif
+	dirty_byte_display_mode(DirtyByteDisplayMode::COLOURED_UNLESS_BCM)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -242,6 +243,20 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 	primary_copy_limit = config->ReadLong("primary-copy-limit", primary_copy_limit);
 	#endif
 	
+	long dbd = config->ReadLong("dirty-byte-display-mode", -1);
+	switch(dbd)
+	{
+		case (long)(DirtyByteDisplayMode::NORMAL):
+		case (long)(DirtyByteDisplayMode::COLOURED):
+		case (long)(DirtyByteDisplayMode::INVERTED):
+		case (long)(DirtyByteDisplayMode::COLOURED_UNLESS_BCM):
+		case (long)(DirtyByteDisplayMode::INVERTED_UNLESS_BCM):
+			this->dirty_byte_display_mode = (DirtyByteDisplayMode)(dbd);
+			
+		default:
+			break;
+	}
+	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
 }
 
@@ -295,6 +310,8 @@ void REHex::AppSettings::write(wxConfig *config)
 	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
 	config->Write("primary-copy-limit", (long)(primary_copy_limit));
 	#endif
+	
+	config->Write("dirty-byte-display-mode", (long)(dirty_byte_display_mode));
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -461,6 +478,16 @@ void REHex::AppSettings::set_primary_copy_limit(size_t primary_copy_limit)
 	this->primary_copy_limit = primary_copy_limit;
 }
 #endif
+
+REHex::DirtyByteDisplayMode REHex::AppSettings::get_dirty_byte_display_mode() const
+{
+	return dirty_byte_display_mode;
+}
+
+void REHex::AppSettings::set_dirty_byte_display_mode(DirtyByteDisplayMode dirty_byte_display_mode)
+{
+	this->dirty_byte_display_mode = dirty_byte_display_mode;
+}
 
 void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)
 {

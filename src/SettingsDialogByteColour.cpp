@@ -122,7 +122,7 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 				sdbc(sdbc) {}
 			
 		protected:
-			virtual Highlight highlight_at_off(REHex::BitOffset off, REHex::BitOffset dirty_check_length) const override
+			virtual Highlight highlight_at_off(REHex::BitOffset off, REHex::BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const override
 			{
 				assert(off.byte() >= 0);
 				assert(off.byte() <= 255);

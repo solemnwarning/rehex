@@ -821,19 +821,19 @@ $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.cp
 jq:
 
 .PHONY: help/rehex.chm
-help/rehex.chm:
-	$(MAKE) -C help/ rehex.chm
+help/rehex.chm: $(EXE)
+	$(MAKE) -C help/ REHEX=../$(EXE) rehex.chm
 
 rehex.chm: help/rehex.chm
 	cp $< $@
 
 .PHONY: help/rehex.htb
-help/rehex.htb:
-	$(MAKE) -C help/ rehex.htb
+help/rehex.htb: $(EXE)
+	$(MAKE) -C help/ REHEX=../$(EXE) rehex.htb
 
 .PHONY: online-help
-online-help:
-	$(MAKE) -C help/ online-help
+online-help: $(EXE)
+	$(MAKE) -C help/ REHEX=../$(EXE) online-help
 
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)
 

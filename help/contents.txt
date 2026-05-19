@@ -15,3 +15,6 @@ bt                   Binary Templates
   bt-types           Types
   bt-funcs           Functions
   bt-preprocessor    Preprocessor
+
+-                   Appendix
+  appendix-types    Data Types

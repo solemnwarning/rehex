@@ -14,6 +14,8 @@
 		<li [% IF !page.children.empty %]class="book"[% END %]>
 		[% IF page.page == template_name %]
 			<b>[% page.title | html %]</b>
+		[% ELSIF page.page == '-' %]
+			[% page.title | html %]
 		[% ELSE %]
 			<a href="[% page.page | html %].html">[% page.title | html %]</a>
 		[% END %]

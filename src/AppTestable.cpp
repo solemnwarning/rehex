@@ -31,7 +31,8 @@
 #include "mainwindow.hpp"
 #include "../res/version.h"
 
-REHex::App::App()
+REHex::App::App():
+	console(NULL)
 {
 	/* Ask wxWidgets to kindly not swallow any uncaught exceptions. */
 	wxSystemOptions::SetOption("catch-unhandled-exceptions", false);
@@ -150,47 +151,84 @@ std::vector<std::string> REHex::App::get_plugin_directories()
 
 void REHex::App::print_debug(const std::string &text)
 {
-	console->print(ConsoleBuffer::Level::DEBUG, text);
+	#ifndef NDEBUG
+	fprintf(stderr, "%s", text.c_str());
+	#endif
+
+	if(console != NULL)
+	{
+		console->print(ConsoleBuffer::Level::DEBUG, text);
+	}
 }
 
 void REHex::App::printf_debug(const char *fmt, ...)
 {
 	va_list argv;
+
+	#ifndef NDEBUG
 	va_start(argv, fmt);
-	
-	console->vprintf(ConsoleBuffer::Level::DEBUG, fmt, argv);
-	
+	vfprintf(stderr, fmt, argv);
 	va_end(argv);
+	#endif
+
+	if(console != NULL)
+	{
+		va_start(argv, fmt);
+		console->vprintf(ConsoleBuffer::Level::DEBUG, fmt, argv);
+		va_end(argv);
+	}
 }
 
 void REHex::App::print_info(const std::string &text)
 {
-	console->print(ConsoleBuffer::Level::INFO, text);
+	fprintf(stderr, "%s", text.c_str());
+
+	if(console != NULL)
+	{
+		console->print(ConsoleBuffer::Level::INFO, text);
+	}
 }
 
 void REHex::App::printf_info(const char *fmt, ...)
 {
 	va_list argv;
+
 	va_start(argv, fmt);
-	
-	console->vprintf(ConsoleBuffer::Level::INFO, fmt, argv);
-	
+	vfprintf(stderr, fmt, argv);
 	va_end(argv);
+	
+	if(console != NULL)
+	{
+		va_start(argv, fmt);
+		console->vprintf(ConsoleBuffer::Level::INFO, fmt, argv);
+		va_end(argv);
+	}
 }
 
 void REHex::App::print_error(const std::string &text)
 {
-	console->print(ConsoleBuffer::Level::ERROR, text);
+	fprintf(stderr, "%s", text.c_str());
+
+	if(console != NULL)
+	{
+		console->print(ConsoleBuffer::Level::ERROR, text);
+	}
 }
 
 void REHex::App::printf_error(const char *fmt, ...)
 {
 	va_list argv;
+
 	va_start(argv, fmt);
-	
-	console->vprintf(ConsoleBuffer::Level::ERROR, fmt, argv);
-	
+	vfprintf(stderr, fmt, argv);
 	va_end(argv);
+
+	if(console != NULL)
+	{
+		va_start(argv, fmt);
+		console->vprintf(ConsoleBuffer::Level::ERROR, fmt, argv);
+		va_end(argv);
+	}
 }
 
 std::multimap<REHex::App::SetupPhase, const REHex::App::SetupHookFunction*> *REHex::App::setup_hooks = NULL;

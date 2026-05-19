@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -152,7 +152,7 @@ static void Initialize_disassembler()
 }
 
 static REHex::App::SetupHookRegistration Initialize_disassembler_hook(
-	REHex::App::SetupPhase::READY,
+	REHex::App::SetupPhase::EARLY,
 	&Initialize_disassembler);
 
 REHex::Disassemble::Disassemble(wxWindow *parent, SharedDocumentPointer &document, DocumentCtrl *document_ctrl):

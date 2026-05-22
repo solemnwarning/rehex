@@ -10,6 +10,7 @@
 #ifndef WXFREECHARTDEFS_H
 #define WXFREECHARTDEFS_H
 
+#include <wx/version.h>
 #include <wx/wxprec.h>
 
 #ifdef __BORLANDC__
@@ -18,6 +19,10 @@
 
 #ifndef WX_PRECOMP
     #include <wx/wx.h>
+#endif
+
+#if !(wxCHECK_VERSION(3, 1, 0))
+#define wxOVERRIDE override
 #endif
 
 // dll impexp macros. Thanks to Mike Sazonov

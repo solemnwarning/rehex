@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "BitOffset.hpp"
-#include "util.hpp"
+#include "MathUtils.hpp"
 
 #ifdef MAX
 #undef MAX /* Fuck you GLib */

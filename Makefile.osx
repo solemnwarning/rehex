@@ -18,7 +18,7 @@ ICONUTIL ?= $(shell which iconutil > /dev/null && echo iconutil)
 PNG2ICNS ?= $(shell which png2icns > /dev/null && echo png2icns)
 MAKEICNS ?= $(shell which makeicns > /dev/null && echo makeicns)
 
-EXTRA_APP_OBJS := \
+EXTRA_APP_OBJS = \
 	res/backward32.o \
 	res/document_new32.o \
 	res/document_open32.o \
@@ -27,11 +27,11 @@ EXTRA_APP_OBJS := \
 	res/down32.o \
 	res/forward32.o \
 	res/up32.o \
-	src/AppMac.o \
-	src/MacFileHistory.o \
-	src/MacFileName.o
+	src/AppMac.$(BUILD_TYPE).o \
+	src/MacFileHistory.$(BUILD_TYPE).o \
+	src/MacFileName.$(BUILD_TYPE).o
 
-EXTRA_TEST_OBJS := \
+EXTRA_TEST_OBJS = \
 	res/backward32.o \
 	res/document_new32.o \
 	res/document_open32.o \
@@ -40,9 +40,9 @@ EXTRA_TEST_OBJS := \
 	res/down32.o \
 	res/forward32.o \
 	res/up32.o \
-	src/AppMac.o \
-	src/MacFileHistory.o \
-	src/MacFileName.o
+	src/AppMac.$(BUILD_TYPE).o \
+	src/MacFileHistory.$(BUILD_TYPE).o \
+	src/MacFileName.$(BUILD_TYPE).o
 
 # Mac OS doesn't come with pkg-config, so default to some reasonable assumptions.
 CAPSTONE_CFLAGS ?=
@@ -51,6 +51,8 @@ JANSSON_CFLAGS  ?=
 JANSSON_LIBS    ?= -ljansson
 LUA_CFLAGS      ?=
 LUA_LIBS        ?= -llua
+
+EXTRA_LUA_LIB_LDFLAGS := -undefined dynamic_lookup
 
 all: REHex.app
 
@@ -119,9 +121,19 @@ REHex.dmg: REHex.app
 	cp -a REHex.app $(DMGTMP)/REHex.app
 	hdiutil create $@ -ov -volname "REHex" -format UDZO -srcfolder $(DMGTMP)
 
-%.o: %.mm
+%.release.o: %.mm $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
-	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(RELEASE_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.debug.o: %.mm $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.profile.o: %.mm $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: $(JQ) %.mm $(COMPILE_COMMAND_DEPENDENCIES)

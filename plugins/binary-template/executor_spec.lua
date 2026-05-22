@@ -14,6 +14,12 @@
 -- this program; if not, write to the Free Software Foundation, Inc., 51
 -- Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+-- executor depends on rehex.ByteRangeSet, which is usually injected by REHex before executing
+-- plugin code, so we must load the implementation from the "rehex_lib" module specifically made
+-- for unit tests and alias it ourselves.
+require 'rehex_lib'
+rehex.ByteRangeSet = rehex.REHex_ByteRangeSet
+
 local executor = require 'executor'
 
 local function test_interface(data)
@@ -60,6 +66,15 @@ local function test_interface(data)
 				"ASCII",
 				"ISO-8859-1",
 				"ISO-8859-2",
+			}
+		end,
+
+		get_valid_types = function()
+			return {
+				"s16le",
+				"s32le",
+				"u16le",
+				"u32le",
 			}
 		end,
 	}
@@ -7755,5 +7770,78 @@ describe("executor", function()
 		}
 		
 		assert.are.same(expect_log, log)
+	end)
+
+	it("allows directly setting data types by calling SetDataType() function", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			-- SetDataType(2, 4, "s32le");
+			{ "test.bt", 2, "call", "SetDataType", { { "test.bt", 2, "num", 2 }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "str", "s32le" } } },
+			
+			-- SetDataType(10, 2, "s16le");
+			{ "test.bt", 3, "call", "SetDataType", { { "test.bt", 3, "num", 10 }, { "test.bt", 3, "num", 2 }, { "test.bt", 3, "str", "s16le" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(2, 4, s32le)",
+			"set_data_type(10, 2, s16le)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+	
+	it("does not overwrite manually set data types with automatic ones", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00
+		))
+		
+		executor.execute(interface, {
+			-- unsigned int x[4];
+			{ "test.bt", 1, "variable", "unsigned int", "x", nil, { "test.bt", 1, "num", 4 }, nil },
+			
+			-- SetDataType(2, 4, "s32le");
+			{ "test.bt", 2, "call", "SetDataType", { { "test.bt", 2, "num", 2 }, { "test.bt", 2, "num", 4 }, { "test.bt", 2, "str", "s32le" } } },
+			
+			-- SetDataType(10, 2, "s16le");
+			{ "test.bt", 3, "call", "SetDataType", { { "test.bt", 3, "num", 10 }, { "test.bt", 3, "num", 2 }, { "test.bt", 3, "str", "s16le" } } },
+		})
+		
+		local expect_log = {
+			"set_data_type(2, 4, s32le)",
+			"set_data_type(10, 2, s16le)",
+			
+			"set_data_type(0, 2, u32le)",
+			"set_data_type(6, 4, u32le)",
+			"set_data_type(12, 4, u32le)",
+			"set_comment(0, 16, x)",
+		}
+		
+		assert.are.same(expect_log, log)
+	end)
+
+	it("errors when an unregistered data type is passed to SetDataType()", function()
+		local interface, log = test_interface(string.char(
+			0x01, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00,
+			0x03, 0x00, 0x00, 0x00,
+			0x02, 0x00, 0x00, 0x00
+		))
+		
+		assert.has_error(
+			function()
+				executor.execute(interface, {
+					-- SetDataType(2, 4, "s32le");
+					{ "test.bt", 1, "call", "SetDataType", { { "test.bt", 1, "num", 2 }, { "test.bt", 1, "num", 4 }, { "test.bt", 1, "str", "s32me" } } },
+				})
+			end, "Unrecognised type 's32me' passed to SetDataType() function at test.bt:1")
 	end)
 end)

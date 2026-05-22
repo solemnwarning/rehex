@@ -508,10 +508,12 @@
     <ClCompile Include="..\src\IPC.cpp" />
     <ClCompile Include="..\src\LicenseDialog.cpp" />
     <ClCompile Include="..\src\LoadingSpinner.cpp" />
-    <ClCompile Include="..\src\lua-bindings\rehex_bind.cpp" />
+    <ClCompile Include="..\src\lua-bindings\rehex_app_bind.cpp" />
+    <ClCompile Include="..\src\lua-bindings\rehex_lib_bind.cpp" />
     <ClCompile Include="..\src\lua-plugin-preload.c" />
     <ClCompile Include="..\src\LuaPluginLoader.cpp" />
     <ClCompile Include="..\src\mainwindow.cpp" />
+    <ClCompile Include="..\src\MathUtils.cpp" />
     <ClCompile Include="..\src\MultiSplitter.cpp" />
     <ClCompile Include="..\src\Palette.cpp" />
     <ClCompile Include="..\src\PopupTipWindow.cpp" />
@@ -627,40 +629,19 @@
     <ResourceCompile Include="..\res\winres.rc" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\src\lua-bindings\rehex_rules.lua">
+    <CustomBuild Include="..\src\lua-bindings\rehex_app_rules.lua">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|Win32'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|Win32'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Debug)|x64'">true</BuildInParallel>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">..\src\lua-bindings\rehex_bind.h;..\src\lua-bindings\rehex_bind.cpp;..\src\lua-bindings\rehex_datatypes.lua;%(Outputs)</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex.i;..\src\lua-bindings\rehex_override.hpp;%(AdditionalInputs)</AdditionalInputs>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BuildInParallel>
-      <BuildInParallel Condition="'$(Configuration)|$(Platform)'=='Profile (Release)|x64'">true</BuildInParallel>
+      <Command>cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_app_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Outputs>..\src\lua-bindings\rehex_app_bind.h;..\src\lua-bindings\rehex_app_bind.cpp;..\src\lua-bindings\rehex_app_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs>..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex_app.i;..\src\lua-bindings\rehex_app_override.hpp;..\src\lua-bindings\rehex_lib_datatypes.lua;%(AdditionalInputs)</AdditionalInputs>
+      <BuildInParallel>true</BuildInParallel>
+    </CustomBuild>
+    <CustomBuild Include="..\src\lua-bindings\rehex_lib_rules.lua">
+      <FileType>Document</FileType>
+      <Command>cd $(SolutionDir).. &amp;&amp; $(luaPath) -e"rulesFilename=\"src/lua-bindings/rehex_lib_rules.lua\"" wxLua/bindings/genwxbind.lua</Command>
+      <Outputs>..\src\lua-bindings\rehex_lib_bind.h;..\src\lua-bindings\rehex_lib_bind.cpp;..\src\lua-bindings\rehex_lib_datatypes.lua;%(Outputs)</Outputs>
+      <AdditionalInputs>..\src\lua-bindings\FuncWrapper.hpp;..\src\lua-bindings\rehex_lib.i;..\src\lua-bindings\rehex_lib_override.hpp;%(AdditionalInputs)</AdditionalInputs>
+      <BuildInParallel>true</BuildInParallel>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

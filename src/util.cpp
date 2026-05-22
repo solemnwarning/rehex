@@ -598,11 +598,6 @@ REHex::CarryBits REHex::memcpy_right(void *dst, const void *src, size_t n, int s
 	return CarryBits(((*src_p & mask_b) << lshift), (mask_b << lshift));
 }
 
-template<> REHex::BitOffset REHex::add_clamp_overflow(BitOffset a, BitOffset b, bool *overflow)
-{
-	return _add_clamp_overflow(a, b, overflow, BitOffset::MIN, BitOffset::MAX, BitOffset::ZERO);
-}
-
 json_t *REHex::colour_to_json(const wxColour &colour)
 {
 	std::string s = colour_to_string(colour);

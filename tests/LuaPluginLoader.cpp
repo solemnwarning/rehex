@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -721,3 +721,114 @@ TEST(LuaPluginLoader, SetDataTypeBulkMissingParameter)
 	EXPECT_NE(app.console->get_messages_text().find("wxLua: Expected a table of tables for parameter 2"), std::string::npos);
 }
 #endif
+
+TEST(LuaPluginLoader, GetDataTypeByName)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"local bitarray = rehex.DataTypeRegistration.get_by_name('bitarray')\n"
+			"print('bitarray is ' .. (bitarray == nil and 'nil' or 'not nil'))\n"
+			"if bitarray ~= nil\n"
+			"then\n"
+			"    print('bitarray.name = ' .. bitarray.name)\n"
+			"    print('bitarray.label = ' .. bitarray.label)\n"
+			"    print('bitarray.groups = ' .. table.concat(bitarray.groups, ', '))\n"
+			"    print('bitarray:configurable() = ' .. (bitarray:configurable() and 'true' or 'false'))\n"
+			"end\n"
+			
+			"local ascii = rehex.DataTypeRegistration.get_by_name('text:ASCII')\n"
+			"print('ascii is ' .. (ascii == nil and 'nil' or 'not nil'))\n"
+			"if ascii ~= nil\n"
+			"then\n"
+			"    print('ascii.name = ' .. ascii.name)\n"
+			"    print('ascii.label = ' .. ascii.label)\n"
+			"    print('ascii.groups = ' .. table.concat(ascii.groups, ', '))\n"
+			"    print('ascii:configurable() = ' .. (ascii:configurable() and 'true' or 'false'))\n"
+			"end\n"
+
+			"local custom_number = rehex.DataTypeRegistration.get_by_name('custom-number')\n"
+			"print('custom_number is ' .. (custom_number == nil and 'nil' or 'not nil'))\n"
+			"if custom_number ~= nil\n"
+			"then\n"
+			"    print('custom_number.name = ' .. custom_number.name)\n"
+			"    print('custom_number.label = ' .. custom_number.label)\n"
+			"    print('custom_number.groups = ' .. table.concat(custom_number.groups, ', '))\n"
+			"    print('custom_number:configurable() = ' .. (custom_number:configurable() and 'true' or 'false'))\n"
+			"end\n"
+
+			"local nosuchtype = rehex.DataTypeRegistration.get_by_name('nosuchtype')\n"
+			"print('nosuchtype is ' .. (nosuchtype == nil and 'nil' or 'not nil'))\n";
+		
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		pump_events();
+		
+		EXPECT_EQ(app.console->get_messages_text(),
+			"bitarray is not nil\n"
+			"bitarray.name = bitarray\n"
+			"bitarray.label = Bit array\n"
+			"bitarray.groups = \n"
+			"bitarray:configurable() = false\n"
+			"ascii is not nil\n"
+			"ascii.name = text:ASCII\n"
+			"ascii.label = US-ASCII (7-bit)\n"
+			"ascii.groups = Text, 8-bit code pages\n"
+			"ascii:configurable() = false\n"
+			"custom_number is not nil\n"
+			"custom_number.name = custom-number\n"
+			"custom_number.label = Custom\n"
+			"custom_number.groups = Number\n"
+			"custom_number:configurable() = true\n"
+			"nosuchtype is nil\n");
+	}
+}
+
+TEST(LuaPluginLoader, GetAllDataTypes)
+{
+	LuaPluginLoaderInitialiser lpl_init;
+	
+	App &app = wxGetApp();
+	app.console->clear();
+	
+	{
+		const char *SCRIPT =
+			"local types = rehex.DataTypeRegistration.get_all()\n"
+			
+			"print('types[bitarray] is ' .. (types['bitarray'] == nil and 'nil' or 'not nil'))\n"
+			"if types['bitarray'] ~= nil\n"
+			"then\n"
+			"    print('types[bitarray].name = ' .. types['bitarray'].name)\n"
+			"    print('types[bitarray].label = ' .. types['bitarray'].label)\n"
+			"end\n"
+			
+			"print('types[text:ASCII] is ' .. (types['text:ASCII'] == nil and 'nil' or 'not nil'))\n"
+			"if types['text:ASCII'] ~= nil\n"
+			"then\n"
+			"    print('types[text:ASCII].name = ' .. types['text:ASCII'].name)\n"
+			"    print('types[text:ASCII].label = ' .. types['text:ASCII'].label)\n"
+			"end\n";
+
+		TempFilename script_file;
+		write_file(script_file.tmpfile, std::vector<unsigned char>((unsigned char*)(SCRIPT), (unsigned char*)(SCRIPT) + strlen(SCRIPT)));
+		
+		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
+		
+		pump_events();
+		
+		EXPECT_EQ(app.console->get_messages_text(),
+			"types[bitarray] is not nil\n"
+			"types[bitarray].name = bitarray\n"
+			"types[bitarray].label = Bit array\n"
+			"types[text:ASCII] is not nil\n"
+			"types[text:ASCII].name = text:ASCII\n"
+			"types[text:ASCII].label = US-ASCII (7-bit)\n");
+	}
+}

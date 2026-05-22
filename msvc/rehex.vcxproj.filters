@@ -165,7 +165,10 @@
     <ClCompile Include="..\src\lua-plugin-preload.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\lua-bindings\rehex_bind.cpp">
+    <ClCompile Include="..\src\lua-bindings\rehex_app_bind.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lua-bindings\rehex_lib_bind.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ConsoleBuffer.cpp">
@@ -386,6 +389,9 @@
     </ClCompile>
     <ClCompile Include="..\res\bg16.c">
       <Filter>res</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\MathUtils.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -641,6 +647,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\src\lua-bindings\rehex_rules.lua" />
+    <CustomBuild Include="..\src\lua-bindings\rehex_app_rules.lua" />
+    <CustomBuild Include="..\src\lua-bindings\rehex_lib_rules.lua" />
   </ItemGroup>
 </Project>

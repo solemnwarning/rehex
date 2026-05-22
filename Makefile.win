@@ -19,6 +19,7 @@ EMBED_EXE      := tools/embed.exe
 GTKCONFIG_EXE  := tools/gtk-config.exe
 EXTRA_APP_OBJS := res/winres.o
 HELP_TARGET    := rehex.chm
+DLL_EXT        := dll
 
 WX_CONFIG ?= wx-config --static
 LDFLAGS   ?= -Wl,-Bstatic
@@ -41,6 +42,10 @@ CFLAGS   += -D_FILE_OFFSET_BITS=64
 CXXFLAGS += -D_FILE_OFFSET_BITS=64
 
 include Makefile
+
+# `pwd -W` is used to get a path formatted for Win32 instead of MinGW.
+REHEX_LUA_LIB_CPATH := $(shell pwd -W)/src/lua-bindings/?.$(LIB_BUILD_TYPE).$(DLL_EXT)
+export REHEX_LUA_LIB_CPATH
 
 # Any embedded quotes passed to windres via -D are lost, so we need to write the version string to
 # a header and include it from the resource rather than passing it directly.

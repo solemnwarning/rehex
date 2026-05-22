@@ -1,0 +1,12 @@
+/rehex_app_bind.cpp
+/rehex_app_bind.done
+/rehex_app_bind.h
+/rehex_app_datatypes.lua
+
+/rehex_lib_bind.cpp
+/rehex_lib_bind.done
+/rehex_lib_bind.h
+/rehex_lib_datatypes.lua
+
+/rehex_lib.debug.so
+/rehex_lib.release.so

@@ -40,6 +40,9 @@ ifeq ($(BUILD_TYPE),release)
 	EXE      := msvc/$(MSVC_ARCH_DIR)Release/rehex.exe
 	TEST_EXE := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
 	
+	REHEX_LUA_LIB_DLL := msvc/$(MSVC_ARCH_DIR)Release/rehex_lib.dll
+	REHEX_LUA_LIB_CPATH := $(shell pwd -W)/msvc/$(MSVC_ARCH_DIR)Release/?.dll
+	
 	# Help is only enabled for Release builds in the VS solution.
 	ifneq ($(BUILD_HELP),0)
 		HELP_TARGET := rehex.chm
@@ -48,6 +51,9 @@ else
 	ifeq ($(BUILD_TYPE),debug)
 		EXE      := msvc/$(MSVC_ARCH_DIR)Debug/rehex.exe
 		TEST_EXE := msvc/$(MSVC_ARCH_DIR)Debug/all-tests.exe
+		
+		REHEX_LUA_LIB_DLL := msvc/$(MSVC_ARCH_DIR)Debug/rehex_lib.dll
+		REHEX_LUA_LIB_CPATH := $(shell pwd -W)/msvc/$(MSVC_ARCH_DIR)Debug/?.dll
 	else
 		X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)')
 	endif
@@ -56,6 +62,7 @@ endif
 need_compiler_flags := 0
 DEFAULT_EXE_TARGET  := DEFAULT_EXE_TARGET_SKIP
 DEFAULT_TEST_TARGET := DEFAULT_TEST_TARGET_SKIP
+DEFAULT_REHEX_LUA_LIB_TARGET := DEFAULT_REHEX_LUA_LIB_TARGET_SKIP
 
 include Makefile
 
@@ -90,6 +97,22 @@ msvc/x64/Release/all-tests.exe:
 .PHONY: msvc/x64/Debug/all-tests.exe
 msvc/x64/Debug/all-tests.exe:
 	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\all-tests /p:Configuration="Debug" /p:Platform="x64"
+
+.PHONY: msvc/Release/rehex_lib.dll
+msvc/Release/rehex_lib.dll:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\rehex_lib /p:Configuration="Release" /p:Platform="x86"
+
+.PHONY: msvc/Debug/rehex_lib.dll
+msvc/Debug/rehex_lib.dll:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\rehex_lib /p:Configuration="Debug" /p:Platform="x86"
+
+.PHONY: msvc/x64/Release/rehex_lib.dll
+msvc/x64/Release/rehex_lib.dll:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\rehex_lib /p:Configuration="Release" /p:Platform="x64"
+
+.PHONY: msvc/x64/Debug/rehex_lib.dll
+msvc/x64/Debug/rehex_lib.dll:
+	MSYS2_ARG_CONV_EXCL="*" "$(MSBUILD)" msvc\\rehex.sln /t:tools\\rehex_lib /p:Configuration="Debug" /p:Platform="x64"
 
 DISTDIR ?= rehex-$(VERSION)
 

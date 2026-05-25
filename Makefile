@@ -948,25 +948,25 @@ define emit-compile-command
 endef
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/googletest/src/%.o.compile_command.json: googletest/src/%.cc $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/)
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -I./googletest/include/ -I./googletest/)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -I./googletest/include/)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.$(BUILD_TYPE).o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -I./googletest/include/)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+	$(call emit-compile-command,$@,$<,$(CC) $(BASE_CFLAGS) $(CFLAGS))
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+	$(call emit-compile-command,$@,$<,$(CC) $(BASE_CFLAGS) $(CFLAGS))
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS))
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS))
 
 # Dummy rule for jq on platforms where we rely on a system-provided binary.
 jq:

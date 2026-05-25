@@ -137,7 +137,7 @@ REHex.dmg: REHex.app
 	$(DEPPOST)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: $(JQ) %.mm $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS))
 
 .cc/jq:
 	mkdir -p .cc

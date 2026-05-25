@@ -5,8 +5,12 @@
 /compile_commands.json
 /.d/
 /rehex
+/rehex_debug
+/rehex_profile
 
 /rehex.exe
+/rehex_debug.exe
+/rehex_profile.exe
 
 /AppDir/
 /rehex.AppImage
@@ -139,7 +143,9 @@
 /src/lua-plugin-preload.h
 
 /tests/all-tests
+/tests/all-tests_debug
 /tests/all-tests.exe
+/tests/all-tests_debug.exe
 /tests/document.t
 /tools/embed
 /tools/embed.exe

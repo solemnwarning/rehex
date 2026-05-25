@@ -14,12 +14,18 @@
 # this program; if not, write to the Free Software Foundation, Inc., 51
 # Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-EXE            := rehex.exe
 EMBED_EXE      := tools/embed.exe
 GTKCONFIG_EXE  := tools/gtk-config.exe
 EXTRA_APP_OBJS := res/winres.o
 HELP_TARGET    := rehex.chm
 DLL_EXT        := dll
+
+RELEASE_EXE := rehex.exe
+DEBUG_EXE   := rehex_debug.exe
+PROFILE_EXE := rehex_profile.exe
+
+RELEASE_TEST_EXE ?= tests/all-tests.exe
+DEBUG_TEST_EXE   ?= tests/all-tests_debug.exe
 
 WX_CONFIG ?= wx-config --static
 LDFLAGS   ?= -Wl,-Bstatic

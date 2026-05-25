@@ -45,14 +45,23 @@ JANSSON_PKG  ?= jansson
 LUA_PKG      ?= $(call pkg-select-ab,lua5.3,lua)
 JQ           ?= jq
 
-EXE ?= rehex
+RELEASE_EXE ?= rehex
+DEBUG_EXE   ?= rehex_debug
+PROFILE_EXE ?= rehex_profile
+
+RELEASE_TEST_EXE ?= tests/all-tests
+DEBUG_TEST_EXE   ?= tests/all-tests_debug
+
 EMBED_EXE ?= ./tools/embed
-TEST_EXE ?= ./tests/all-tests
 GTKCONFIG_EXE ?= ./tools/gtk-config
 HELP_TARGET ?= help/rehex.htb
 
-DEFAULT_EXE_TARGET  ?= $(EXE)
-DEFAULT_TEST_TARGET ?= $(TEST_EXE)
+DEFAULT_RELEASE_EXE_TARGET  ?= $(RELEASE_EXE)
+DEFAULT_DEBUG_EXE_TARGET    ?= $(DEBUG_EXE)
+DEFAULT_PROFILE_EXE_TARGET  ?= $(PROFILE_EXE)
+
+DEFAULT_RELEASE_TEST_EXE_TARGET ?= $(RELEASE_TEST_EXE)
+DEFAULT_DEBUG_TEST_EXE_TARGET   ?= $(DEBUG_TEST_EXE)
 
 # Wrapper around the $(shell) function that aborts the build if the command
 # exits with a nonzero status.
@@ -146,12 +155,21 @@ endif
 
 ifeq ($(BUILD_TYPE),release)
 	LIB_BUILD_TYPE := release
+	
+	EXE := $(RELEASE_EXE)
+	TEST_EXE := $(RELEASE_TEST_EXE)
 else
 	ifeq ($(BUILD_TYPE),debug)
 		LIB_BUILD_TYPE := debug
+		
+		EXE := $(DEBUG_EXE)
+		TEST_EXE := $(DEBUG_TEST_EXE)
 	else
 		ifeq ($(BUILD_TYPE),profile)
 			LIB_BUILD_TYPE := release
+			
+			EXE := $(PROFILE_EXE)
+			TEST_EXE := check_not_supported_for_profile_build
 		else
 			X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)' (should be release, debug or profile))
 		endif
@@ -272,8 +290,8 @@ clean:
 	      res/zoom_out_light_16.c  res/zoom_out_light_16.h \
 	      res/version.o
 	
-	rm -f $(EXE)
-	rm -f $(TEST_EXE)
+	rm -f $(RELEASE_EXE) $(DEBUG_EXE) $(PROFILE_EXE)
+	rm -f $(RELEASE_TEST_EXE) $(DEBUG_TEST_EXE)
 	
 	rm -f $(EMBED_EXE)
 	rm -f $(GTKCONFIG_EXE)
@@ -536,10 +554,20 @@ APP_OBJS := \
 	$(WXFREECHART_OBJS) \
 	$(EXTRA_APP_OBJS)
 
-$(DEFAULT_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+$(DEFAULT_RELEASE_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
 	$(EXTRA_APP_BUILD_COMMAND)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+
+$(DEFAULT_DEBUG_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+	$(EXTRA_APP_BUILD_COMMAND)
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+
+$(DEFAULT_PROFILE_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+	$(EXTRA_APP_BUILD_COMMAND)
+	$(CXX) $(BASE_CXXFLAGS) $(PROFILE_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(PROFILE_CFLAGS) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
@@ -711,9 +739,13 @@ TEST_OBJS := \
 	$(WXBIND_OBJS) \
 	$(EXTRA_TEST_OBJS)
 
-$(DEFAULT_TEST_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+$(DEFAULT_RELEASE_TEST_EXE_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+
+$(DEFAULT_DEBUG_TEST_EXE_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 $(EMBED_EXE): tools/embed.cpp
 	$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -o $@ $<

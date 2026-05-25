@@ -36,10 +36,13 @@ ifeq ($(BUILD_TYPE),)
 	BUILD_TYPE := release
 endif
 
+RELEASE_EXE := msvc/$(MSVC_ARCH_DIR)Release/rehex.exe
+DEBUG_EXE   := msvc/$(MSVC_ARCH_DIR)Debug/rehex.exe
+
+RELEASE_TEST_EXE := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
+DEBUG_TEST_EXE   := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
+
 ifeq ($(BUILD_TYPE),release)	
-	EXE      := msvc/$(MSVC_ARCH_DIR)Release/rehex.exe
-	TEST_EXE := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
-	
 	REHEX_LUA_LIB_DLL := msvc/$(MSVC_ARCH_DIR)Release/rehex_lib.dll
 	REHEX_LUA_LIB_CPATH := $(shell pwd -W)/msvc/$(MSVC_ARCH_DIR)Release/?.dll
 	
@@ -49,9 +52,6 @@ ifeq ($(BUILD_TYPE),release)
 	endif
 else
 	ifeq ($(BUILD_TYPE),debug)
-		EXE      := msvc/$(MSVC_ARCH_DIR)Debug/rehex.exe
-		TEST_EXE := msvc/$(MSVC_ARCH_DIR)Debug/all-tests.exe
-		
 		REHEX_LUA_LIB_DLL := msvc/$(MSVC_ARCH_DIR)Debug/rehex_lib.dll
 		REHEX_LUA_LIB_CPATH := $(shell pwd -W)/msvc/$(MSVC_ARCH_DIR)Debug/?.dll
 	else
@@ -60,9 +60,11 @@ else
 endif
 
 need_compiler_flags := 0
-DEFAULT_EXE_TARGET  := DEFAULT_EXE_TARGET_SKIP
-DEFAULT_TEST_TARGET := DEFAULT_TEST_TARGET_SKIP
-DEFAULT_REHEX_LUA_LIB_TARGET := DEFAULT_REHEX_LUA_LIB_TARGET_SKIP
+DEFAULT_RELEASE_EXE_TARGET      := DEFAULT_RELEASE_EXE_TARGET_SKIP
+DEFAULT_DEBUG_EXE_TARGET        := DEFAULT_DEBUG_EXE_TARGET_SKIP
+DEFAULT_RELEASE_TEST_EXE_TARGET := DEFAULT_RELEASE_TEST_EXE_TARGET_SKIP
+DEFAULT_DEBUG_TEST_EXE_TARGET   := DEFAULT_DEBUG_TEST_EXE_TARGET_SKIP
+DEFAULT_REHEX_LUA_LIB_TARGET    := DEFAULT_REHEX_LUA_LIB_TARGET_SKIP
 
 include Makefile
 

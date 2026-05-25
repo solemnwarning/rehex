@@ -225,6 +225,7 @@ namespace REHex {
 			void show_help_page(wxWindow *error_parent, const std::string &page_name);
 			#endif
 			
+			virtual bool Initialize(int& argc, wxChar **argv) override;
 			virtual bool OnInit() override;
 			virtual int OnExit() override;
 			virtual int OnRun() override;

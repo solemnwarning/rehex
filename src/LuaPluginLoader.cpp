@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -32,7 +32,8 @@
 #include <wxlua/wxlua.h>
 
 #include "App.hpp"
-#include "lua-bindings/rehex_bind.h"
+#include "lua-bindings/rehex_app_bind.h"
+#include "lua-bindings/rehex_lib_bind.h"
 #include "lua-plugin-preload.h"
 #include "LuaPluginLoader.hpp"
 
@@ -87,7 +88,8 @@ void REHex::LuaPluginLoader::init()
 		WXLUA_IMPLEMENT_BIND_WXAUI
 		
 		/* Register wxLua REHex bindings. */
-		wxLuaBinding_rehex_init();
+		wxLuaBinding_rehex_lib_init();
+		wxLuaBinding_rehex_app_init();
 		
 		/* Don't let wxLua do things like printing output or invoking the wxWidgets event loop
 		 * before the App::OnInit() method completes.

@@ -18,20 +18,20 @@
 #include "platform.hpp"
 #include "ArtProvider.hpp"
 
-#include "res/ascii16.h"
-#include "res/ascii24.h"
-#include "res/ascii32.h"
-#include "res/ascii48.h"
+#include "../res/ascii16.h"
+#include "../res/ascii24.h"
+#include "../res/ascii32.h"
+#include "../res/ascii48.h"
 
-#include "res/diff_fold16.h"
-#include "res/diff_fold24.h"
-#include "res/diff_fold32.h"
-#include "res/diff_fold48.h"
+#include "../res/diff_fold16.h"
+#include "../res/diff_fold24.h"
+#include "../res/diff_fold32.h"
+#include "../res/diff_fold48.h"
 
-#include "res/offsets16.h"
-#include "res/offsets24.h"
-#include "res/offsets32.h"
-#include "res/offsets48.h"
+#include "../res/offsets16.h"
+#include "../res/offsets24.h"
+#include "../res/offsets32.h"
+#include "../res/offsets48.h"
 
 const wxArtID REHex::ART_ASCII_ICON      ("rehex-ascii");
 const wxArtID REHex::ART_DIFF_FOLD_ICON  ("rehex-diff-fold");

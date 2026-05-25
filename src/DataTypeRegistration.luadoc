@@ -1,0 +1,40 @@
+---
+-- A registered data type for annotating file data.
+-- @classmod rehex.DataTypeRegistration
+
+--- The fixed identifier for the type (read only).
+rehex.DataTypeRegistration.name = nil
+
+--- The display name for the type (read only).
+rehex.DataTypeRegistration.label = nil
+
+--- Get all available data types.
+-- @function get_all
+--
+-- @return A table of DataTypeRegistration objects.
+--
+-- **NOTE**: This is a static method/function.
+--
+-- @usage
+--
+-- local types = rehex.DataTypeRegistration.get_all()
+-- for name, type in pairs(types)
+-- do
+--     print("name = " .. name .. ", label = " .. types[name].label)
+-- end
+
+--- Get a type by its name.
+-- @function get_by_name
+--
+-- @param name The name of the type ("s32le", "text:ASCII", "code:x86_64", etc)
+--
+-- @return A DataTypeRegistration object, or nil.
+--
+-- **NOTE**: This is a static method/function.
+--
+-- @usage
+--
+-- local ascii_type = rehex.DataTypeRegistration.get_by_name("text:ASCII")
+-- if ascii_type ~= nil
+--     -- yep, ASCII still exists
+-- end

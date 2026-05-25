@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -29,6 +29,7 @@
 
 #include "App.hpp"
 #include "ArtProvider.hpp"
+#include "DataType.hpp"
 #include "DiffWindow.hpp"
 #include "IPC.hpp"
 #include "mainwindow.hpp"
@@ -42,6 +43,81 @@
 #endif
 
 IMPLEMENT_APP(REHex::App);
+
+bool REHex::App::Initialize(int& argc, wxChar **argv)
+{
+	/* We override wxApp::Initialize() and process the --data-types argument here so that it can be
+	 * used to build the manual when running 'make' in environments without an X display set up.
+	*/
+
+	for(int i = 1; i < argc; ++i)
+	{
+		if(wxStrcmp(argv[i], "--data-types") == 0)
+		{
+			if(argc != 2)
+			{
+				fprintf(stderr, "--data-types cannot be used with any other option\n");
+				_Exit(1);
+			}
+
+			/* Need to execute setup hooks so that character sets, instruction sets, etc
+			 * supported by libraries on the system are probed.
+			*/
+
+			call_setup_hooks(SetupPhase::EARLY);
+
+			auto types = DataTypeRegistry::sorted_by_group();
+
+			std::vector<std::string> current_groups;
+
+			for(auto t = types.begin(); t != types.end(); ++t)
+			{
+				if((*t)->configurable())
+				{
+					/* Skip over configurable types at this point since they can't be instantiated
+					 * without providing configuration and there's no API for plugins to do that.
+					*/
+					continue;
+				}
+				
+				while(current_groups.size() > (*t)->groups.size() || current_groups != std::vector<std::string>((*t)->groups.begin(), std::next((*t)->groups.begin(), current_groups.size())))
+				{
+					current_groups.pop_back();
+				}
+
+				while(current_groups.size() < (*t)->groups.size())
+				{
+					current_groups.push_back((*t)->groups[current_groups.size()]);
+					printf("%*s* %s\n",
+						(int)((current_groups.size() - 1) * 4), "",
+						current_groups.back().c_str());
+				}
+
+				static constexpr int LABEL_COLUMN = 22;
+				int label_pad = std::max((LABEL_COLUMN - (int)((*t)->name.length())), 4);
+
+				printf("%*s* %s%*s%s\n",
+					(int)(current_groups.size() * 4), "",
+					(*t)->name.c_str(),
+					label_pad, "",
+					(*t)->label.c_str());
+			}
+
+			fflush(stdout);
+
+			call_setup_hooks(SetupPhase::SHUTDOWN_LATE);
+
+			/* Using exit() here results in recursion and a stack overflow when destroying an
+			 * apparently-uninitialised static wxMutex (i.e. in global destruction) under RHEL 8...
+			 * could be a bug specific to wxWidgets 3.0, or it could just happen to be the previous
+			 * contents of memory, so let's just be "safe" and bypass C library cleanup.
+			*/
+			_Exit(0);
+		}
+	}
+
+	return wxApp::Initialize(argc, argv);
+}
 
 bool REHex::App::OnInit()
 {

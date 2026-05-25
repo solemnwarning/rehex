@@ -933,6 +933,31 @@ local function _builtin_function_SetComment(context, argv)
 	context.interface.set_comment(argv[1][2]:get(), argv[2][2]:get(), argv[3][2]:get())
 end
 
+local function _builtin_function_SetDataType(context, argv)
+	local offset = argv[1][2]:get()
+	local length = argv[2][2]:get()
+	local type = argv[3][2]:get()
+
+	local type_valid = false
+	
+	for j = 1, #context.valid_types
+	do
+		if context.valid_types[j] == type
+		then
+			type_valid = true
+			break
+		end
+	end
+	
+	if not type_valid
+	then
+		_template_error(context, "Unrecognised type '" .. type .. "' passed to SetDataType() function")
+	end
+	
+	context.interface.set_data_type(offset, length, type)
+	context.mask_types:set_range(offset, length)
+end
+
 local function _builtin_function_AllocateHighlightColour(context, argv)
 	local primary_colour
 	local secondary_colour
@@ -1040,6 +1065,7 @@ local _builtin_functions = {
 	StringLengthBytes = { arguments = { _builtin_types.string }, defaults = {}, impl = _builtin_function_StringLengthBytes },
 	
 	SetComment = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.string }, defaults = {}, impl = _builtin_function_SetComment },
+	SetDataType = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.string }, defaults = {}, impl = _builtin_function_SetDataType },
 	
 	AllocateHighlightColour = { arguments = { _builtin_types.string, _variadic_placeholder }, defaults = {}, impl = _builtin_function_AllocateHighlightColour },
 	SetHighlight = { arguments = { _builtin_types.int64_t, _builtin_types.int64_t, _builtin_types.int }, defaults = {}, impl = _builtin_function_SetHighlight },
@@ -2701,6 +2727,24 @@ local function _resolve_types(statements)
 	process_statements(statements)
 end
 
+local function _set_type_except_mask(context, offset, length, type)
+	if not context.mask_types:isset_any(offset, length)
+	then
+		context.interface.set_data_type(offset, length, type)
+	else
+		local brs = rehex.ByteRangeSet.new()
+		brs:set_range(offset, length)
+		brs:clear_ranges(context.mask_types)
+		
+		local ranges_to_set = brs:get_ranges()
+		
+		for _, range in ipairs(ranges_to_set)
+		do
+			context.interface.set_data_type(range.offset, range.length, type)
+		end
+	end
+end
+
 --- External entry point into the interpreter
 -- @function execute
 --
@@ -2737,6 +2781,10 @@ local function execute(interface, statements)
 		
 		next_variable = 0,
 		
+		-- Ranges which have had their type explicitly set using the SetDataType() function and
+		-- should not have a type asserted by file variables.
+		mask_types = rehex.ByteRangeSet.new(),
+		
 		-- Are we currently accessing variables from the file as big endian? Toggled by
 		-- the built-in BigEndian() and LittleEndian() functions.
 		big_endian = false,
@@ -2749,6 +2797,7 @@ local function execute(interface, statements)
 		template_error = _template_error,
 		
 		valid_charsets = interface.get_valid_charsets(),
+		valid_types    = interface.get_valid_types(),
 	}
 	
 	for k, v in pairs(_builtin_functions)
@@ -2803,14 +2852,14 @@ local function execute(interface, statements)
 					local data_start, data_end = value:data_range()
 					if data_start ~= nil
 					then
-						context.interface.set_data_type(data_start, (data_end - data_start), "text:" .. value.charset)
+						_set_type_except_mask(context, data_start, (data_end - data_start), "text:" .. value.charset)
 					end
 				elseif not (type_info.is_array and (type_info.type_key == _builtin_types.char.type_key or type_info.type_key == _builtin_types.uint8_t.type_key))
 				then
 					local data_start, data_end = value:data_range()
 					if data_start ~= nil
 					then
-						context.interface.set_data_type(data_start, (data_end - data_start), type_info.rehex_type)
+						_set_type_except_mask(context, data_start, (data_end - data_start), type_info.rehex_type)
 					end
 				end
 			end

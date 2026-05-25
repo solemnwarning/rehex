@@ -94,6 +94,11 @@ int main(int argc, char **argv)
 	return RUN_ALL_TESTS();
 }
 
+bool REHex::App::Initialize(int& argc, wxChar **argv)
+{
+	return wxApp::Initialize(argc, argv);
+}
+
 bool REHex::App::OnInit()
 {
 	return true;

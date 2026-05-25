@@ -31,11 +31,11 @@ config-test-flag = $\
 	$(if $(wildcard $(1).aok)$(wildcard $(1).bok),$\
 		$(if $(wildcard $(1).aok),,$(if $(wildcard $(1).bok),$(2),)),$\
 		$(info Checking if we need $(2)...)$\
-		$(if $(shell $(CXX) $(CXXFLAGS_NO_GTK) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS_NO_GTK) > /dev/null 2>&1 && echo yes),$\
+		$(if $(shell $(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS_NO_GTK) > /dev/null 2>&1 && echo yes),$\
 			$(info No),$\
-			$(if $(shell $(CXX) $(CXXFLAGS_NO_GTK) -o $(1).bok $(1) $(LDFLAGS) $(LDLIBS_NO_GTK) $(2) > /dev/null 2>&1 && echo yes),$\
+			$(if $(shell $(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -o $(1).bok $(1) $(LDFLAGS) $(LDLIBS_NO_GTK) $(2) > /dev/null 2>&1 && echo yes),$\
 				$(info Yes)$(2),$\
-				$(shell $(CXX) $(CXXFLAGS_NO_GTK) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS_NO_GTK) 1>&2)$(error Unable to compile $(1)))))
+				$(shell $(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -o $(1).aok $(1) $(LDFLAGS) $(LDLIBS_NO_GTK) 1>&2)$(error Unable to compile $(1)))))
 
 LUA          ?= lua
 WX_CONFIG    ?= wx-config
@@ -45,14 +45,23 @@ JANSSON_PKG  ?= jansson
 LUA_PKG      ?= $(call pkg-select-ab,lua5.3,lua)
 JQ           ?= jq
 
-EXE ?= rehex
+RELEASE_EXE ?= rehex
+DEBUG_EXE   ?= rehex_debug
+PROFILE_EXE ?= rehex_profile
+
+RELEASE_TEST_EXE ?= tests/all-tests
+DEBUG_TEST_EXE   ?= tests/all-tests_debug
+
 EMBED_EXE ?= ./tools/embed
-TEST_EXE ?= ./tests/all-tests
 GTKCONFIG_EXE ?= ./tools/gtk-config
 HELP_TARGET ?= help/rehex.htb
 
-DEFAULT_EXE_TARGET  ?= $(EXE)
-DEFAULT_TEST_TARGET ?= $(TEST_EXE)
+DEFAULT_RELEASE_EXE_TARGET  ?= $(RELEASE_EXE)
+DEFAULT_DEBUG_EXE_TARGET    ?= $(DEBUG_EXE)
+DEFAULT_PROFILE_EXE_TARGET  ?= $(PROFILE_EXE)
+
+DEFAULT_RELEASE_TEST_EXE_TARGET ?= $(RELEASE_TEST_EXE)
+DEFAULT_DEBUG_TEST_EXE_TARGET   ?= $(DEBUG_TEST_EXE)
 
 # Wrapper around the $(shell) function that aborts the build if the command
 # exits with a nonzero status.
@@ -67,7 +76,7 @@ shell-or-die = $\
 # having to have our dependencies on build hosts that are going to use a chroot
 # or other container for doing the actual build.
 
-NONCOMPILE_TARGETS=clean distclean dist
+NONCOMPILE_TARGETS=clean clean_config distclean dist
 
 need_compiler_flags ?= 1
 ifneq ($(MAKECMDGOALS),)
@@ -113,33 +122,61 @@ ifeq ($(need_compiler_flags),1)
 	endif
 endif
 
-BASE_CFLAGS := -Wall
+BASE_CFLAGS := -std=c99 -Wall -Iinclude/ -IwxLua/modules/ $(LUA_CFLAGS)
+BASE_CXXFLAGS := $(CXXSTD) -Wall -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS)
 
 DEBUG_CFLAGS   := -ggdb
 RELEASE_CFLAGS := -g -O2 -DNDEBUG
 PROFILE_CFLAGS := $(RELEASE_CFLAGS) -DREHEX_PROFILE
+
+# BUILD_TYPE may be specified by the user to select the build configuration for
+# the application as  a whole, from one of the following:
+#
+# release (default)  - Optimisations enabled, debug assertions disabled.
+# debug              - No optimisations, debug assertions enabled.
+# profile              Release with built-in profiling counters and UI enabled.
+#
+# From BUILD_TYPE, we derive LIB_BUILD_TYPE and DLL_BUILD_TYPE, the first of
+# which is the configuration for building/linking any libraries or other code
+# outside of the application itself, and the latter is the same but with PIC
+# enabled for compiling sources as part of a dynamic library.
+#
+# +------------+----------------+----------------+
+# | BUILD_TYPE | LIB_BUILD_TYPE | DLL_BUILD_TYPE |
+# +------------+----------------+----------------+
+# | release    | release        | release_pic    |
+# | debug      | debug          | debug_pic      |
+# | profile    | release        | release_pic    |
+# +------------+----------------+----------------+
 
 ifeq ($(BUILD_TYPE),)
 	BUILD_TYPE := release
 endif
 
 ifeq ($(BUILD_TYPE),release)
-	BASE_CFLAGS += $(RELEASE_CFLAGS)
+	LIB_BUILD_TYPE := release
+	
+	EXE := $(RELEASE_EXE)
+	TEST_EXE := $(RELEASE_TEST_EXE)
 else
 	ifeq ($(BUILD_TYPE),debug)
-		BASE_CFLAGS += $(DEBUG_CFLAGS)
+		LIB_BUILD_TYPE := debug
+		
+		EXE := $(DEBUG_EXE)
+		TEST_EXE := $(DEBUG_TEST_EXE)
 	else
 		ifeq ($(BUILD_TYPE),profile)
-			BASE_CFLAGS += $(PROFILE_CFLAGS)
+			LIB_BUILD_TYPE := release
+			
+			EXE := $(PROFILE_EXE)
+			TEST_EXE := check_not_supported_for_profile_build
 		else
 			X := $(error unknown BUILD_TYPE '$(BUILD_TYPE)' (should be release, debug or profile))
 		endif
 	endif
 endif
 
-CFLAGS          := $(BASE_CFLAGS) -std=c99   -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/                       $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(CFLAGS)
-CXXFLAGS_NO_GTK := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override  $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(CXXFLAGS)
-CXXFLAGS        := $(BASE_CFLAGS) $(CXXSTD) -I. -Iinclude/ -IwxLua/modules/ -IwxFreeChart/include/ -DwxOVERRIDE=override  $(HELP_CFLAGS) $(BOTAN_CFLAGS) $(CAPSTONE_CFLAGS) $(JANSSON_CFLAGS) $(LUA_CFLAGS) $(WX_CXXFLAGS) $(GTK_CFLAGS) $(CXXFLAGS)
+DLL_BUILD_TYPE := $(LIB_BUILD_TYPE)_pic
 
 LDLIBS_NO_GTK := -lunistring $(WX_LIBS)             $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
 LDLIBS        := -lunistring $(WX_LIBS) $(GTK_LIBS) $(BOTAN_LIBS) $(CAPSTONE_LIBS) $(JANSSON_LIBS) $(LUA_LIBS) $(LDLIBS)
@@ -193,8 +230,14 @@ all: $(EXE)
 # when it needs to recreate them later.
 .SECONDARY:
 
+DLL_EXT ?= so
+
+REHEX_LUA_LIB_DLL ?= src/lua-bindings/rehex_lib.$(LIB_BUILD_TYPE).$(DLL_EXT)
+REHEX_LUA_LIB_CPATH ?= $(shell pwd)/src/lua-bindings/?.$(LIB_BUILD_TYPE).$(DLL_EXT)
+export REHEX_LUA_LIB_CPATH
+
 .PHONY: check
-check: $(TEST_EXE)
+check: $(TEST_EXE) $(REHEX_LUA_LIB_DLL)
 	$(TEST_EXE)
 	
 	for p in $(PLUGINS); \
@@ -204,6 +247,10 @@ check: $(TEST_EXE)
 
 .PHONY: clean
 clean:
+	$(MAKE) BUILD_TYPE=release clean_config
+	$(MAKE) BUILD_TYPE=debug   clean_config
+	$(MAKE) BUILD_TYPE=profile clean_config
+	
 	rm -f res/actual_size_dark_16.c  res/actual_size_dark_16.h \
 	      res/actual_size_light_16.c res/actual_size_light_16.h \
 	      res/ascii16.c   res/ascii16.h \
@@ -243,17 +290,8 @@ clean:
 	      res/zoom_out_light_16.c  res/zoom_out_light_16.h \
 	      res/version.o
 	
-	rm -f $(filter-out %.$(BUILD_TYPE).o,$(APP_OBJS))
-	rm -f $(patsubst %.$(BUILD_TYPE).o,%.debug.o,$(filter %.$(BUILD_TYPE).o,$(APP_OBJS)))
-	rm -f $(patsubst %.$(BUILD_TYPE).o,%.release.o,$(filter %.$(BUILD_TYPE).o,$(APP_OBJS)))
-	rm -f $(patsubst %.$(BUILD_TYPE).o,%.profile.o,$(filter %.$(BUILD_TYPE).o,$(APP_OBJS)))
-	rm -f $(EXE)
-	
-	rm -f $(filter-out %.$(BUILD_TYPE).o,$(TEST_OBJS))
-	rm -f $(patsubst %.$(BUILD_TYPE).o,%.debug.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
-	rm -f $(patsubst %.$(BUILD_TYPE).o,%.release.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
-	rm -f $(patsubst %.$(BUILD_TYPE).o,%.profile.o,$(filter %.$(BUILD_TYPE).o,$(TEST_OBJS)))
-	rm -f $(TEST_EXE)
+	rm -f $(RELEASE_EXE) $(DEBUG_EXE) $(PROFILE_EXE)
+	rm -f $(RELEASE_TEST_EXE) $(DEBUG_TEST_EXE)
 	
 	rm -f $(EMBED_EXE)
 	rm -f $(GTKCONFIG_EXE)
@@ -261,7 +299,10 @@ clean:
 	grep -r "generated by genwxbind.lua" wxLua/ --exclude=genwxbind.lua | cut -d: -f1 | sort | uniq | xargs -r rm
 	rm -f $(WXLUA_BINDINGS)
 	
-	rm -f src/lua-bindings/rehex_bind.done src/lua-bindings/rehex_bind.cpp src/lua-bindings/rehex_bind.h src/lua-bindings/rehex_datatypes.lua
+	rm -f src/lua-bindings/rehex_lib.debug.$(DLL_EXT) src/lua-bindings/rehex_lib.release.$(DLL_EXT)
+	
+	rm -f src/lua-bindings/rehex_app_bind.done src/lua-bindings/rehex_app_bind.cpp src/lua-bindings/rehex_app_bind.h src/lua-bindings/rehex_app_datatypes.lua
+	rm -f src/lua-bindings/rehex_lib_bind.done src/lua-bindings/rehex_lib_bind.cpp src/lua-bindings/rehex_lib_bind.h src/lua-bindings/rehex_lib_datatypes.lua
 	rm -f src/lua-plugin-preload.done src/lua-plugin-preload.c src/lua-plugin-preload.h
 
 	rm -f tools/config-test-atomic.cpp.aok tools/config-test-atomic.cpp.bok
@@ -271,111 +312,115 @@ clean:
 	rm -rf $(COMPILE_COMMAND_INTERMEDIATE_DIR)
 	rm -f compile_commands.json
 
+.PHONY: clean_config
+clean_config:
+	rm -f $(APP_OBJS) $(TEST_OBJS) $(LUA_LIB_OBJS)
+
 .PHONY: distclean
 distclean: clean
 
 WXLUA_OBJS := \
-	wxLua/modules/wxlua/bit.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/lbitlib.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/wxlbind.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/wxlcallb.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/wxllua.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/wxlobject.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/wxlstate.$(BUILD_TYPE).o \
-	wxLua/modules/wxlua/wxlua_bind.$(BUILD_TYPE).o
+	wxLua/modules/wxlua/bit.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/lbitlib.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlbind.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlcallb.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxllua.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlobject.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlstate.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlua_bind.$(LIB_BUILD_TYPE).o
 
 WXBIND_OBJS := \
-	wxLua/modules/wxbind/src/wxadv_bind.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxadv_wxladv.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxaui_bind.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxbase_base.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxbase_bind.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxbase_config.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxbase_data.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxbase_datetime.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxbase_file.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_appframe.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_bind.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_clipdrag.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_controls.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_core.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_defsutils.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_dialogs.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_event.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_gdi.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_geometry.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_graphics.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_help.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_image.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_mdi.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_menutool.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_picker.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_print.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_sizer.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_windows.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxcore_wxlcore.$(BUILD_TYPE).o \
-	wxLua/modules/wxbind/src/wxpropgrid_bind.$(BUILD_TYPE).o
+	wxLua/modules/wxbind/src/wxadv_bind.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxadv_wxladv.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxaui_bind.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_base.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_bind.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_config.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_data.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_datetime.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxbase_file.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_appframe.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_bind.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_clipdrag.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_controls.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_core.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_defsutils.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_dialogs.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_event.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_gdi.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_geometry.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_graphics.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_help.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_image.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_mdi.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_menutool.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_picker.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_print.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_sizer.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_windows.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxcore_wxlcore.$(LIB_BUILD_TYPE).o \
+	wxLua/modules/wxbind/src/wxpropgrid_bind.$(LIB_BUILD_TYPE).o
 
 WXFREECHART_OBJS := \
-	wxFreeChart/src/areadraw.$(BUILD_TYPE).o \
-	wxFreeChart/src/art.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/axis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/categoryaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/compdateaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/dateaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/juliandateaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/labelaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/logarithmicnumberaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axis/numberaxis.$(BUILD_TYPE).o \
-	wxFreeChart/src/axisplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/bars/barplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/bars/barrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/category/categorydataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/category/categoryrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/category/categorysimpledataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/chart.$(BUILD_TYPE).o \
-	wxFreeChart/src/chartpanel.$(BUILD_TYPE).o \
-	wxFreeChart/src/chartsplitpanel.$(BUILD_TYPE).o \
-	wxFreeChart/src/colorscheme.$(BUILD_TYPE).o \
-	wxFreeChart/src/crosshair.$(BUILD_TYPE).o \
-	wxFreeChart/src/dataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/gantt/ganttdataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/gantt/ganttplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/gantt/ganttrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/gantt/ganttsimpledataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/legend.$(BUILD_TYPE).o \
-	wxFreeChart/src/marker.$(BUILD_TYPE).o \
-	wxFreeChart/src/multiplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/movingaverage.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/ohlcbarrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/ohlccandlestickrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/ohlcdataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/ohlcplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/ohlcrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/ohlc/ohlcsimpledataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/pie/pieplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/plot.$(BUILD_TYPE).o \
-	wxFreeChart/src/renderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/symbol.$(BUILD_TYPE).o \
-	wxFreeChart/src/title.$(BUILD_TYPE).o \
-	wxFreeChart/src/tooltips.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/functions/polynom.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/functions/sinefunction.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/juliantimeseriesdataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/timeseriesdataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/vectordataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xyarearenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xydataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xydynamicdataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xyhistorenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xylinerenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xyplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xyrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/xy/xysimpledataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xyz/bubbleplot.$(BUILD_TYPE).o \
-	wxFreeChart/src/xyz/xyzdataset.$(BUILD_TYPE).o \
-	wxFreeChart/src/xyz/xyzrenderer.$(BUILD_TYPE).o \
-	wxFreeChart/src/zoompan.$(BUILD_TYPE).o
+	wxFreeChart/src/areadraw.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/art.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/axis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/categoryaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/compdateaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/dateaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/juliandateaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/labelaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/logarithmicnumberaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axis/numberaxis.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/axisplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/bars/barplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/bars/barrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/category/categorydataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/category/categoryrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/category/categorysimpledataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/chart.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/chartpanel.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/chartsplitpanel.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/colorscheme.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/crosshair.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/dataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttdataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/gantt/ganttsimpledataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/legend.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/marker.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/multiplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/movingaverage.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcbarrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlccandlestickrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcdataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/ohlc/ohlcsimpledataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/pie/pieplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/plot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/renderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/symbol.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/title.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/tooltips.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/functions/polynom.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/functions/sinefunction.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/juliantimeseriesdataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/timeseriesdataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/vectordataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyarearenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xydataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xydynamicdataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyhistorenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xylinerenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xyrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xy/xysimpledataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xyz/bubbleplot.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xyz/xyzdataset.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/xyz/xyzrenderer.$(LIB_BUILD_TYPE).o \
+	wxFreeChart/src/zoompan.$(LIB_BUILD_TYPE).o
 
 APP_OBJS := \
 	res/actual_size_dark_16.o \
@@ -472,10 +517,12 @@ APP_OBJS := \
 	src/IPC.$(BUILD_TYPE).o \
 	src/LicenseDialog.$(BUILD_TYPE).o \
 	src/LoadingSpinner.$(BUILD_TYPE).o \
-	src/lua-bindings/rehex_bind.$(BUILD_TYPE).o \
-	src/lua-plugin-preload.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_app_bind.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_lib_bind.$(BUILD_TYPE).o \
+	src/lua-plugin-preload.o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MathUtils.$(BUILD_TYPE).o \
 	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
@@ -507,10 +554,20 @@ APP_OBJS := \
 	$(WXFREECHART_OBJS) \
 	$(EXTRA_APP_OBJS)
 
-$(DEFAULT_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+$(DEFAULT_RELEASE_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
 	$(EXTRA_APP_BUILD_COMMAND)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+
+$(DEFAULT_DEBUG_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+	$(EXTRA_APP_BUILD_COMMAND)
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+
+$(DEFAULT_PROFILE_EXE_TARGET): $(APP_OBJS) $(GTKCONFIG_EXE)
+	$(EXTRA_APP_BUILD_COMMAND)
+	$(CXX) $(BASE_CXXFLAGS) $(PROFILE_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(PROFILE_CFLAGS) $(CXXFLAGS) -o $@ $(APP_OBJS) $(EXTRA_APP_LINK_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 TEST_OBJS := \
 	googletest/src/gtest-all.o \
@@ -598,10 +655,12 @@ TEST_OBJS := \
 	src/IntelHexImport.$(BUILD_TYPE).o \
 	src/LicenseDialog.$(BUILD_TYPE).o \
 	src/LoadingSpinner.$(BUILD_TYPE).o \
-	src/lua-bindings/rehex_bind.$(BUILD_TYPE).o \
-	src/lua-plugin-preload.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_app_bind.$(BUILD_TYPE).o \
+	src/lua-bindings/rehex_lib_bind.$(BUILD_TYPE).o \
+	src/lua-plugin-preload.o \
 	src/LuaPluginLoader.$(BUILD_TYPE).o \
 	src/mainwindow.$(BUILD_TYPE).o \
+	src/MathUtils.$(BUILD_TYPE).o \
 	src/MultiSplitter.$(BUILD_TYPE).o \
 	src/Palette.$(BUILD_TYPE).o \
 	src/PopupTipWindow.$(BUILD_TYPE).o \
@@ -625,70 +684,74 @@ TEST_OBJS := \
 	src/VirtualMappingDialog.$(BUILD_TYPE).o \
 	src/win32lib.$(BUILD_TYPE).o \
 	src/WindowCommands.$(BUILD_TYPE).o \
-	tests/BitmapTool.$(BUILD_TYPE).o \
-	tests/BitOffset.$(BUILD_TYPE).o \
-	tests/BufferTest1.$(BUILD_TYPE).o \
-	tests/BufferTest2.$(BUILD_TYPE).o \
-	tests/BufferTest3.$(BUILD_TYPE).o \
-	tests/ByteAccumulator.$(BUILD_TYPE).o \
-	tests/ByteColourMap.$(BUILD_TYPE).o \
-	tests/ByteRangeMap.$(BUILD_TYPE).o \
-	tests/ByteRangeSet.$(BUILD_TYPE).o \
-	tests/ByteRangeTree.$(BUILD_TYPE).o \
-	tests/CharacterEncoder.$(BUILD_TYPE).o \
-	tests/CharacterFinder.$(BUILD_TYPE).o \
-	tests/Checksum.$(BUILD_TYPE).o \
-	tests/CommentsDataObject.$(BUILD_TYPE).o \
-	tests/CommentTree.$(BUILD_TYPE).o \
-	tests/ConsoleBuffer.$(BUILD_TYPE).o \
-	tests/CustomNumericType.$(BUILD_TYPE).o \
-	tests/DataType.$(BUILD_TYPE).o \
-	tests/DataView.$(BUILD_TYPE).o \
-	tests/DataHistogramAccumulator.$(BUILD_TYPE).o \
-	tests/DiffWindow.$(BUILD_TYPE).o \
-	tests/DisassemblyRegion.$(BUILD_TYPE).o \
-	tests/Document.$(BUILD_TYPE).o \
-	tests/DocumentCtrl.$(BUILD_TYPE).o \
-	tests/endian_conv.$(BUILD_TYPE).o \
-	tests/FastRectangleFiller.$(BUILD_TYPE).o \
-	tests/FileWriter.$(BUILD_TYPE).o \
-	tests/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
-	tests/HighlightColourMap.$(BUILD_TYPE).o \
-	tests/HSVColour.$(BUILD_TYPE).o \
-	tests/IntelHexExport.$(BUILD_TYPE).o \
-	tests/IntelHexImport.$(BUILD_TYPE).o \
-	tests/LuaPluginLoader.$(BUILD_TYPE).o \
-	tests/main.$(BUILD_TYPE).o \
-	tests/NestedOffsetLengthMap.$(BUILD_TYPE).o \
-	tests/NumericTextCtrl.$(BUILD_TYPE).o \
-	tests/MultiSplitter.$(BUILD_TYPE).o \
-	tests/Range.$(BUILD_TYPE).o \
-	tests/RangeProcessor.$(BUILD_TYPE).o \
-	tests/search-bseq.$(BUILD_TYPE).o \
-	tests/search-text.$(BUILD_TYPE).o \
-	tests/SearchBase.$(BUILD_TYPE).o \
-	tests/SearchValue.$(BUILD_TYPE).o \
-	tests/SafeWindowPointer.$(BUILD_TYPE).o \
-	tests/SharedDocumentPointer.$(BUILD_TYPE).o \
-	tests/StringPanel.$(BUILD_TYPE).o \
-	tests/Tab.$(BUILD_TYPE).o \
-	tests/testutil.$(BUILD_TYPE).o \
-	tests/ThreadPool.$(BUILD_TYPE).o \
-	tests/util.$(BUILD_TYPE).o \
-	tests/WindowCommands.$(BUILD_TYPE).o \
+	tests/BitmapTool.$(LIB_BUILD_TYPE).o \
+	tests/BitOffset.$(LIB_BUILD_TYPE).o \
+	tests/BufferTest1.$(LIB_BUILD_TYPE).o \
+	tests/BufferTest2.$(LIB_BUILD_TYPE).o \
+	tests/BufferTest3.$(LIB_BUILD_TYPE).o \
+	tests/ByteAccumulator.$(LIB_BUILD_TYPE).o \
+	tests/ByteColourMap.$(LIB_BUILD_TYPE).o \
+	tests/ByteRangeMap.$(LIB_BUILD_TYPE).o \
+	tests/ByteRangeSet.$(LIB_BUILD_TYPE).o \
+	tests/ByteRangeTree.$(LIB_BUILD_TYPE).o \
+	tests/CharacterEncoder.$(LIB_BUILD_TYPE).o \
+	tests/CharacterFinder.$(LIB_BUILD_TYPE).o \
+	tests/Checksum.$(LIB_BUILD_TYPE).o \
+	tests/CommentsDataObject.$(LIB_BUILD_TYPE).o \
+	tests/CommentTree.$(LIB_BUILD_TYPE).o \
+	tests/ConsoleBuffer.$(LIB_BUILD_TYPE).o \
+	tests/CustomNumericType.$(LIB_BUILD_TYPE).o \
+	tests/DataType.$(LIB_BUILD_TYPE).o \
+	tests/DataView.$(LIB_BUILD_TYPE).o \
+	tests/DataHistogramAccumulator.$(LIB_BUILD_TYPE).o \
+	tests/DiffWindow.$(LIB_BUILD_TYPE).o \
+	tests/DisassemblyRegion.$(LIB_BUILD_TYPE).o \
+	tests/Document.$(LIB_BUILD_TYPE).o \
+	tests/DocumentCtrl.$(LIB_BUILD_TYPE).o \
+	tests/endian_conv.$(LIB_BUILD_TYPE).o \
+	tests/FastRectangleFiller.$(LIB_BUILD_TYPE).o \
+	tests/FileWriter.$(LIB_BUILD_TYPE).o \
+	tests/HierarchicalByteAccumulator.$(LIB_BUILD_TYPE).o \
+	tests/HighlightColourMap.$(LIB_BUILD_TYPE).o \
+	tests/HSVColour.$(LIB_BUILD_TYPE).o \
+	tests/IntelHexExport.$(LIB_BUILD_TYPE).o \
+	tests/IntelHexImport.$(LIB_BUILD_TYPE).o \
+	tests/LuaPluginLoader.$(LIB_BUILD_TYPE).o \
+	tests/main.$(LIB_BUILD_TYPE).o \
+	tests/NestedOffsetLengthMap.$(LIB_BUILD_TYPE).o \
+	tests/NumericTextCtrl.$(LIB_BUILD_TYPE).o \
+	tests/MultiSplitter.$(LIB_BUILD_TYPE).o \
+	tests/Range.$(LIB_BUILD_TYPE).o \
+	tests/RangeProcessor.$(LIB_BUILD_TYPE).o \
+	tests/search-bseq.$(LIB_BUILD_TYPE).o \
+	tests/search-text.$(LIB_BUILD_TYPE).o \
+	tests/SearchBase.$(LIB_BUILD_TYPE).o \
+	tests/SearchValue.$(LIB_BUILD_TYPE).o \
+	tests/SafeWindowPointer.$(LIB_BUILD_TYPE).o \
+	tests/SharedDocumentPointer.$(LIB_BUILD_TYPE).o \
+	tests/StringPanel.$(LIB_BUILD_TYPE).o \
+	tests/Tab.$(LIB_BUILD_TYPE).o \
+	tests/testutil.$(LIB_BUILD_TYPE).o \
+	tests/ThreadPool.$(LIB_BUILD_TYPE).o \
+	tests/util.$(LIB_BUILD_TYPE).o \
+	tests/WindowCommands.$(LIB_BUILD_TYPE).o \
 	$(WXLUA_OBJS) \
 	$(WXBIND_OBJS) \
 	$(EXTRA_TEST_OBJS)
 
-$(DEFAULT_TEST_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
-	$(CXX) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+$(DEFAULT_RELEASE_TEST_EXE_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
+
+$(DEFAULT_DEBUG_TEST_EXE_TARGET): $(TEST_OBJS) $(GTKCONFIG_EXE)
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -DLONG_VERSION='"$(LONG_VERSION)"' -DSHORT_VERSION='"$(VERSION)"' -DLIBDIR='"$(libdir)"' -DDATADIR='"$(datadir)"' -c -o res/version.o res/version.cpp
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -o $@ $(TEST_OBJS) res/version.o $(LDFLAGS) $(LDLIBS)
 
 $(EMBED_EXE): tools/embed.cpp
-	$(CXX) $(CXXFLAGS_NO_GTK) -o $@ $<
+	$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -o $@ $<
 
 $(GTKCONFIG_EXE): tools/gtk-config.cpp
-	$(CXX) $(CXXFLAGS_NO_GTK) $(WX_CXXFLAGS) -o $@ $<
+	$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -o $@ $<
 
 src/AboutDialog.$(BUILD_TYPE).o: res/icon128.h
 src/ArtProvider.$(BUILD_TYPE).o: \
@@ -707,7 +770,7 @@ src/DataHistogramPanel.$(BUILD_TYPE).o: \
 	res/spinner24.h res/zoom_in_dark_16.h res/zoom_in_light_16.h res/zoom_out_dark_16.h res/zoom_out_light_16.h
 src/DiffWindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/LicenseDialog.$(BUILD_TYPE).o: res/license.h
-src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_bind.h src/lua-plugin-preload.h
+src/LuaPluginLoader.$(BUILD_TYPE).o: src/lua-bindings/rehex_app_bind.h src/lua-bindings/rehex_lib_bind.h src/lua-plugin-preload.h
 src/mainwindow.$(BUILD_TYPE).o: res/icon16.h res/icon32.h res/icon48.h res/icon64.h
 src/SettingsDialogKeyboard.$(BUILD_TYPE).o: res/shortcut48.h
 src/StringPanel.$(BUILD_TYPE).o: res/spinner24.h
@@ -725,14 +788,27 @@ res/%.c res/%.h: res/%.png $(EMBED_EXE)
 res/%.c res/%.h: res/%.gif $(EMBED_EXE)
 	$(EMBED_EXE) $< $*_gif res/$*.c res/$*.h
 
-src/lua-bindings/rehex_bind.done: src/lua-bindings/rehex.i src/lua-bindings/rehex_override.hpp src/lua-bindings/rehex_rules.lua $(WXLUA_BINDINGS)
-	$(LUA) -e"rulesFilename=\"src/lua-bindings/rehex_rules.lua\"" wxLua/bindings/genwxbind.lua
+src/lua-bindings/rehex_app_bind.done: src/lua-bindings/rehex_app.i src/lua-bindings/rehex_app_override.hpp src/lua-bindings/rehex_app_rules.lua src/lua-bindings/rehex_lib_datatypes.lua $(WXLUA_BINDINGS)
+	$(LUA) -e"rulesFilename=\"src/lua-bindings/rehex_app_rules.lua\"" wxLua/bindings/genwxbind.lua
 	
 	# genwxbind.lua may not modify individual files if they are already up to date.
-	touch -c src/lua-bindings/rehex_bind.cpp
-	touch -c src/lua-bindings/rehex_bind.h
+	touch -c src/lua-bindings/rehex_app_bind.cpp
+	touch -c src/lua-bindings/rehex_app_bind.h
 
-src/lua-bindings/rehex_bind.cpp src/lua-bindings/rehex_bind.h: src/lua-bindings/rehex_bind.done ;
+	touch $@
+
+src/lua-bindings/rehex_app_bind.cpp src/lua-bindings/rehex_app_bind.h src/lua-bindings/rehex_app_datatypes.lua: src/lua-bindings/rehex_app_bind.done ;
+
+src/lua-bindings/rehex_lib_bind.done: src/lua-bindings/rehex_lib.i src/lua-bindings/rehex_lib_override.hpp src/lua-bindings/rehex_lib_rules.lua $(WXLUA_BINDINGS)
+	$(LUA) -e"rulesFilename=\"src/lua-bindings/rehex_lib_rules.lua\"" wxLua/bindings/genwxbind.lua
+	
+	# genwxbind.lua may not modify individual files if they are already up to date.
+	touch -c src/lua-bindings/rehex_lib_bind.cpp
+	touch -c src/lua-bindings/rehex_lib_bind.h
+
+	touch $@
+
+src/lua-bindings/rehex_lib_bind.cpp src/lua-bindings/rehex_lib_bind.h src/lua-bindings/rehex_lib_datatypes.lua: src/lua-bindings/rehex_lib_bind.done ;
 
 $(WXLUA_BINDINGS):
 	$(MAKE) -C wxLua/bindings/ wxadv wxaui wxbase wxcore wxlua wxpropgrid LUA=$(LUA)
@@ -744,34 +820,109 @@ src/lua-plugin-preload.done: src/lua-plugin-preload.lua $(EMBED_EXE)
 
 src/lua-plugin-preload.c src/lua-plugin-preload.h: src/lua-plugin-preload.done ;
 
-%.o: %.c $(WXLUA_BINDINGS)
+LUA_LIB_OBJS := \
+	src/BitOffset.$(DLL_BUILD_TYPE).o \
+	src/ByteRangeSet.$(DLL_BUILD_TYPE).o \
+	src/MathUtils.$(DLL_BUILD_TYPE).o \
+	src/lua-bindings/rehex_lib_bind.$(DLL_BUILD_TYPE).o \
+	src/lua-bindings/rehex_lib_module.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/bit.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/lbitlib.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlbind.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlcallb.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxllua.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlobject.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlstate.$(DLL_BUILD_TYPE).o \
+	wxLua/modules/wxlua/wxlua_bind.$(DLL_BUILD_TYPE).o
+
+DEFAULT_REHEX_LUA_LIB_TARGET ?= $(REHEX_LUA_LIB_DLL)
+
+$(DEFAULT_REHEX_LUA_LIB_TARGET): $(LUA_LIB_OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(EXTRA_LUA_LIB_LDFLAGS) -fPIC -shared -o $@ $^ $(LDLIBS)
+
+tests/%.release.o: tests/%.cpp $(WXLUA_BINDINGS)
 	$(DEPPRE)
-	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-%.$(BUILD_TYPE).o: %.c $(WXLUA_BINDINGS)
+tests/%.debug.o: tests/%.cpp $(WXLUA_BINDINGS)
 	$(DEPPRE)
-	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-tests/%.$(BUILD_TYPE).o: tests/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+wxLua/%.release.o: wxLua/%.c $(WXLUA_BINDINGS)
 	$(DEPPRE)
-	$(CXX) $(CXXFLAGS) -I./googletest/include/ $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(BASE_CFLAGS) $(RELEASE_CFLAGS) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-wxLua/%.$(BUILD_TYPE).o: wxLua/%.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+wxLua/%.debug.o: wxLua/%.c $(WXLUA_BINDINGS)
 	$(DEPPRE)
-	$(CXX) $(CXXFLAGS) -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
+	$(CC) $(BASE_CFLAGS) $(DEBUG_CFLAGS) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-googletest/src/%.o: googletest/src/%.cc $(GTKCONFIG_EXE)
+wxLua/%.release_pic.o: wxLua/%.c $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CC) $(BASE_CFLAGS) $(RELEASE_CFLAGS) $(CFLAGS) -fPIC $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+wxLua/%.debug_pic.o: wxLua/%.c $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CC) $(BASE_CFLAGS) $(DEBUG_CFLAGS) $(CFLAGS) -fPIC $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+wxLua/%.release.o: wxLua/%.cpp $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+wxLua/%.debug.o: wxLua/%.cpp $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+wxLua/%.release_pic.o: wxLua/%.cpp $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(RELEASE_CFLAGS) $(CXXFLAGS) -fPIC -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+wxLua/%.debug_pic.o: wxLua/%.cpp $(WXLUA_BINDINGS)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(DEBUG_CFLAGS) $(CXXFLAGS) -fPIC -Wno-deprecated-declarations $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+googletest/src/%.o: googletest/src/%.cc
 	$(DEPPRE)
 	$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/ $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-%.$(BUILD_TYPE).o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+%.release.o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
 	$(DEPPRE)
-	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(RELEASE_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.debug.o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.profile.o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.release_pic.o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(RELEASE_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) -fPIC $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.debug_pic.o: %.cpp $(WXLUA_BINDINGS) $(GTKCONFIG_EXE)
+	$(DEPPRE)
+	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(DEBUG_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) -fPIC $(DEPFLAGS) -c -o $@ $<
+	$(DEPPOST)
+
+%.o: %.c
+	$(DEPPRE)
+	$(CC) $(BASE_CFLAGS) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
 wxLua/%.cpp: $(WXLUA_BINDINGS)
@@ -797,43 +948,43 @@ define emit-compile-command
 endef
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/googletest/src/%.o.compile_command.json: googletest/src/%.cc $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/ -I./googletest/)
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -I./googletest/include/ -I./googletest/)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -I./googletest/include/)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/tests/%.$(BUILD_TYPE).o.compile_command.json: tests/%.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS) -I./googletest/include/)
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS) -I./googletest/include/)
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+	$(call emit-compile-command,$@,$<,$(CC) $(BASE_CFLAGS) $(CFLAGS))
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.c $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CC) $(CFLAGS))
+	$(call emit-compile-command,$@,$<,$(CC) $(BASE_CFLAGS) $(CFLAGS))
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS))
 
 $(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: %.cpp $(GTKCONFIG_EXE) $(COMPILE_COMMAND_DEPENDENCIES)
-	$(call emit-compile-command,$@,$<,$(CXX) $(CXXFLAGS))
+	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS))
 
 # Dummy rule for jq on platforms where we rely on a system-provided binary.
 jq:
 
 .PHONY: help/rehex.chm
-help/rehex.chm:
-	$(MAKE) -C help/ rehex.chm
+help/rehex.chm: $(EXE)
+	$(MAKE) -C help/ REHEX=../$(EXE) rehex.chm
 
 rehex.chm: help/rehex.chm
 	cp $< $@
 
 .PHONY: help/rehex.htb
-help/rehex.htb:
-	$(MAKE) -C help/ rehex.htb
+help/rehex.htb: $(EXE)
+	$(MAKE) -C help/ REHEX=../$(EXE) rehex.htb
 
 .PHONY: online-help
-online-help:
-	$(MAKE) -C help/ online-help
+online-help: $(EXE)
+	$(MAKE) -C help/ REHEX=../$(EXE) online-help
 
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)
 

@@ -453,3 +453,53 @@ static int LUACALL wxLua_REHex_CharacterEncoding_all_encodings(lua_State *L)
 	return 1;
 }
 %end
+
+%override wxLua_REHex_DataTypeRegistration_Get_groups
+static int LUACALL wxLua_REHex_DataTypeRegistration_Get_groups(lua_State *L)
+{
+	REHex::DataTypeRegistration *self = (REHex::DataTypeRegistration *)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_DataTypeRegistration));
+	
+	lua_newtable(L);            /* Table to return */
+	lua_Integer table_idx = 1;  /* Next index to use in return table */
+	
+	for(auto g = self->groups.begin(); g != self->groups.end(); ++g)
+	{
+		lua_pushinteger(L, table_idx++);
+		wxlua_pushwxString(L, *g);
+		
+		lua_settable(L, -3);
+	}
+	
+	return 1;
+}
+%end
+
+
+%override wxLua_REHex_DataTypeRegistration_get_all
+static int LUACALL wxLua_REHex_DataTypeRegistration_get_all(lua_State *L)
+{
+	lua_newtable(L);  /* Table to return */
+	
+	for(auto dtr = REHex::DataTypeRegistry::begin(); dtr != REHex::DataTypeRegistry::end(); ++dtr)
+	{
+		wxlua_pushwxString(L, dtr->first);
+		wxluaT_pushuserdatatype(L, dtr->second, wxluatype_REHex_DataTypeRegistration);
+		
+		lua_settable(L, -3);
+	}
+	
+	return 1;
+}
+%end
+
+%override wxLua_REHex_DataTypeRegistration_get_by_name
+static int LUACALL wxLua_REHex_DataTypeRegistration_get_by_name(lua_State *L)
+{
+	const wxString name = wxlua_getwxStringtype(L, 1);
+	
+	const REHex::DataTypeRegistration* returns = REHex::DataTypeRegistry::get_registration(name.ToStdString());
+	wxluaT_pushuserdatatype(L, returns, wxluatype_REHex_DataTypeRegistration);
+	
+	return 1;
+}
+%end

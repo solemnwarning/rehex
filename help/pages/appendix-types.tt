@@ -1,0 +1,29 @@
+[% WRAPPER page.tt
+   title = "Appendix: List of Data Types"
+%]
+
+[% PROCESS types.def.tt %]
+
+[% BLOCK process_types %]
+<ul>
+[% FOREACH type IN types %]
+[% IF type.defined('group') %]
+<li>[% type.group | html %][% INCLUDE process_types types = type.types %]</li>
+[% ELSE %]
+<li><code>[% type.name | html %][% nbsp = '&nbsp;'; nbsp.repeat(24 - type.name.length) %]</code>[% type.label | html %]</li>
+[% END %]
+[% END %]
+</ul>
+[% END %]
+
+<h2>Appendix: List of Data Types</h2>
+
+<p>
+This page lists all data types supported by this build of REHex along with their internal names, primarily intended as a reference for plugin developers.
+</p>
+
+<p>
+[% INCLUDE process_types types = REHEX_DATA_TYPES %]
+</p>
+
+[% END %]

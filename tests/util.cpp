@@ -20,6 +20,7 @@
 
 #include <wx/numformatter.h>
 
+#include "../src/MathUtils.hpp"
 #include "../src/util.hpp"
 
 #define PARSE_ASCII_NIBBLE_OK(c, expect) \

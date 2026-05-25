@@ -299,4 +299,17 @@ Sets a highlight colour on a range of bytes in the document. Use the <code>Alloc
 Specifying <code>-1</code> for the <code>colour_idx</code> parameter will clear an existing highlight.
 </p>
 
+<hr>
+[% WRAPPER "code.tt" -%]
+[% WRAPPER "code-type.tt" %]void[% END %] SetDataType([% WRAPPER "code-type.tt" %]int64_t[% END %] offset, [% WRAPPER "code-type.tt" %]int64_t[% END %] length, [% WRAPPER "code-type.tt" %]string[% END %] type)
+[%- END %]
+
+<p>
+Specifies the data type of a range of bytes in the document. See <a href="appendix-types.[% page_ext %]">Appendix: List of Data Types</a> for a list of data types supported in this version of REHex.
+</p>
+
+<p>
+Any data type annotations made with this function will override ones made by declaring variables in the template.
+</p>
+
 [% END %]

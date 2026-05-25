@@ -238,7 +238,10 @@
     <ClCompile Include="..\..\src\RangeProcessor.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\lua-bindings\rehex_bind.cpp">
+    <ClCompile Include="..\..\src\lua-bindings\rehex_app_bind.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\lua-bindings\rehex_lib_bind.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\search.cpp">
@@ -505,6 +508,9 @@
     <ClCompile Include="..\..\res\bg16.c">
       <Filter>res</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\MathUtils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\res\ascii16.h">
@@ -585,9 +591,6 @@
     <ClInclude Include="..\..\res\actual_size_dark_16.h">
       <Filter>res</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\res\actual_size_light_16.h">
-      <Filter>res</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\res\fit_to_screen_dark_16.h">
       <Filter>res</Filter>
     </ClInclude>
@@ -621,11 +624,11 @@
     <ClInclude Include="..\..\res\bg16.h">
       <Filter>res</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\res\actual_size_light_.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\src\lua-bindings\rehex_rules.lua">
-      <Filter>src</Filter>
-    </CustomBuild>
+    <CustomBuild Include="..\..\src\lua-bindings\rehex_app_rules.lua" />
+    <CustomBuild Include="..\..\src\lua-bindings\rehex_lib_rules.lua" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\res\winres.rc">

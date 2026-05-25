@@ -1,5 +1,5 @@
 -- Binary Template plugin for REHex
--- Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+-- Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 --
 -- This program is free software; you can redistribute it and/or modify it
 -- under the terms of the GNU General Public License version 2 as published by
@@ -258,6 +258,22 @@ rehex.AddToToolsMenu("Execute binary template / script...", function(window)
 				end
 				
 				return valid_charsets
+			end,
+
+			get_valid_types = function()
+				local all_types = rehex.DataTypeRegistration.get_all()
+				local valid_types = {}
+
+				for k, v in pairs(all_types)
+				do
+					-- Skip over types which require configuration
+					if not v:configurable()
+					then
+						table.insert(valid_types, k)
+					end
+				end
+
+				return valid_types
 			end,
 		}
 		

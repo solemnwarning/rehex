@@ -63,7 +63,7 @@ all:
 
 .PHONY: check
 check:
-	$(BUSTED) -m "./?.lua" .
+	$(BUSTED) -m "./?.lua" --cpath="$$REHEX_LUA_LIB_CPATH" .
 
 .PHONY: install
 install:

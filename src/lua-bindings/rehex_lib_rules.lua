@@ -11,7 +11,7 @@ hook_lua_namespace = "rehex"
 -- Set the unique C++ "namespace" for the bindings, not a real namespace, but
 --   a string used in declared C++ objects to prevent duplicate names.
 --   See wxLuaBinding::GetBindingName().
-hook_cpp_namespace = "rehex"
+hook_cpp_namespace = "rehex_lib"
 
 -- ============================================================================
 -- Set the directory to output the bindings to, both C++ header and source files
@@ -67,7 +67,6 @@ hook_cpp_binding_includes = "#include \"../platform.hpp\"\n"
 --   #includes of every generated cpp file or "" for none
 hook_cpp_binding_post_includes =
     "#include \"../BitOffset.hpp\"\n" ..
-    "#include \"FuncWrapper.hpp\"\n" ..
     "\n" ..
     "static void push_BitOffset(lua_State *L, REHex::BitOffset value)\n" ..
     "{\n" ..
@@ -101,14 +100,14 @@ interface_filepath = "./src/lua-bindings/"
 --   The files are loaded from the interface_filepath.
 interface_fileTable =
 {
-    "rehex.i"
+    "rehex_lib.i"
 }
 
 -- ----------------------------------------------------------------------------
 -- A list of files that contain bindings that need to be overridden or empty
 --   table {} for none.
 --   The files are loaded from the interface_filepath.
-override_fileTable =  { "rehex_override.hpp" }
+override_fileTable =  { "rehex_lib_override.hpp" }
 
 -- ============================================================================
 -- A table containing filenames of XXX_datatype.lua from other wrappers to

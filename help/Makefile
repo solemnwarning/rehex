@@ -1,5 +1,5 @@
 # Reverse Engineer's Hex Editor
-# Copyright (C) 2022-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+# Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License version 2 as published by
@@ -17,7 +17,10 @@
 HHC ?= "C:\Program Files (x86)\HTML Help Workshop\hhc.exe"
 PERL ?= perl
 
+REHEX ?= ../rehex
+
 PAGES := \
+	appendix-types \
 	bitedit \
 	bitmap \
 	bt \
@@ -48,6 +51,7 @@ clean:
 	rm -rf chm/output/
 	rm -rf wx/output/
 	rm -rf online/output/
+	rm -f pages/types.def.tt
 
 CHM_PAGE_EXT := htm
 
@@ -102,5 +106,10 @@ online-help: $(ONLINE_TARGETS)
 online/output/%.$(ONLINE_PAGE_EXT): pages/%.tt contents.txt
 	@mkdir -p online/output/ $(shell dirname .d/$@.d)
 	$(PERL) template.pl --define page_ext=$(ONLINE_PAGE_EXT) --include online/templates --include pages --dep-file .d/$@.d --dep-target $@ $* > $@
+
+pages/appendix-types.tt: pages/types.def.tt
+
+pages/types.def.tt: gen-types.pl $(REHEX)
+	$(PERL) gen-types.pl $(REHEX) > $@
 
 include $(shell test -d .d/ && find .d/ -name '*.d' -type f)

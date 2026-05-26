@@ -236,9 +236,12 @@ REHEX_LUA_LIB_DLL ?= src/lua-bindings/rehex_lib.$(LIB_BUILD_TYPE).$(DLL_EXT)
 REHEX_LUA_LIB_CPATH ?= $(shell pwd)/src/lua-bindings/?.$(LIB_BUILD_TYPE).$(DLL_EXT)
 export REHEX_LUA_LIB_CPATH
 
+tools/gtest-multi: tools/gtest-multi.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 .PHONY: check
-check: $(TEST_EXE) $(REHEX_LUA_LIB_DLL)
-	$(TEST_EXE)
+check: $(TEST_EXE) $(REHEX_LUA_LIB_DLL) tools/gtest-multi
+	tools/gtest-multi $(TEST_EXE)
 	
 	for p in $(PLUGINS); \
 	do \

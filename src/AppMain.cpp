@@ -26,6 +26,7 @@
 #include <wx/fs_zip.h>
 #include <wx/log.h>
 #include <wx/stdpaths.h>
+#include <wx/wfstream.h>
 
 #include "App.hpp"
 #include "ArtProvider.hpp"
@@ -410,6 +411,18 @@ bool REHex::App::OnInit()
 		if(tab != NULL)
 		{
 			opened_a_file = true;
+		}
+	}
+	
+	if(access("/tmp/foo.rehex-workspace", F_OK) == 0)
+	{
+		wxFileInputStream is("/tmp/foo.rehex-workspace");
+		wxFileConfig c(is);
+		
+		auto w = MainWindow::deserialise_windows(&c);
+		for(auto it = w.begin(); it != w.end(); ++it)
+		{
+			(*it)->Show();
 		}
 	}
 	

@@ -42,6 +42,7 @@
 
 #include "App.hpp"
 #include "buffer.hpp"
+#include "FileWriter.hpp"
 #include "MacFileName.hpp"
 #include "profile.hpp"
 #include "win32lib.hpp"
@@ -651,6 +652,46 @@ void REHex::Buffer::write_copy(const std::string &filename)
 	}
 	
 	fclose(out);
+}
+
+void REHex::Buffer::serialise(const std::string &filename)
+{
+	std::unique_lock<shared_mutex> l(general_lock);
+	
+	FileWriter w(filename.c_str());
+	
+	{
+		char f_magic[] = { 'B', 'U', 'F', '1' };
+		w.write(f_magic, sizeof(f_magic));
+	}
+	
+	for(auto b = blocks.begin(); b != blocks.end(); ++b)
+	{
+		char b_magic[] = { 'B', 'L', 'C', 'K' };
+		w.write(b_magic, sizeof(b_magic));
+		
+		if(b->state == Block::State::DIRTY)
+		{
+			w.write<int32_t>(23 + b->virt_length);
+		}
+		else{
+			w.write<int32_t>(23);
+		}
+		
+		w.write<int64_t>(b->real_offset);
+		w.write<int32_t>(b->virt_length);
+		
+		if(b->state == Block::State::DIRTY)
+		{
+			w.write<int8_t>('D');
+			w.write(b->data.data(), b->virt_length);
+		}
+		else{
+			w.write<int8_t>('C');
+		}
+	}
+	
+	w.commit();
 }
 
 off_t REHex::Buffer::length()

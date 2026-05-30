@@ -379,6 +379,11 @@ namespace REHex {
 			
 			static std::string find_metadata(const std::string &filename);
 			
+			void serialise(const std::string &filename)
+			{
+				buffer->serialise(filename);
+			}
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif

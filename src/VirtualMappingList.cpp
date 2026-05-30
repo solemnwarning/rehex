@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -107,12 +107,12 @@ REHex::ToolPanel::Shape REHex::VirtualMappingList::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::VirtualMappingList::save_state(wxConfig *config) const
+void REHex::VirtualMappingList::save_state(wxConfigBase *config) const
 {
 	/* No state to save. */
 }
 
-void REHex::VirtualMappingList::load_state(wxConfig *config)
+void REHex::VirtualMappingList::load_state(wxConfigBase *config)
 {
 	/* No state to load. */
 }

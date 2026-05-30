@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2019 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2019-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -82,12 +82,12 @@ namespace REHex {
 			 * Saves the current configuration and/or state of the ToolPanel in a
 			 * wxConfig so it can be restored later.
 			*/
-			virtual void save_state(wxConfig *config) const = 0;
+			virtual void save_state(wxConfigBase *config) const = 0;
 			
 			/**
 			 * @brief Restore a state previously saved by save_state().
 			*/
-			virtual void load_state(wxConfig *config) = 0;
+			virtual void load_state(wxConfigBase *config) = 0;
 			
 			/**
 			 * @brief Called when the ToolPanel becomes visible.

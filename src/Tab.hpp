@@ -62,8 +62,8 @@ namespace REHex
 	class Tab: public wxPanel
 	{
 		public:
-			Tab(wxWindow *parent);
-			Tab(wxWindow *parent, SharedDocumentPointer &document);
+			Tab(wxWindow *parent, wxConfigBase *view = NULL);
+			Tab(wxWindow *parent, SharedDocumentPointer &document, wxConfigBase *view = NULL);
 			
 			virtual ~Tab();
 			
@@ -81,7 +81,7 @@ namespace REHex
 			
 			void set_parent_window_active(bool parent_window_active);
 			
-			void save_view(wxConfig *config);
+			void save_view(wxConfigBase *config);
 			
 			void handle_copy(bool cut);
 			void handle_paste(bool primary);
@@ -177,8 +177,8 @@ namespace REHex
 			int hsplit_clamp_sash(int sash_position);
 			int vsplit_clamp_sash(int sash_position);
 			
-			void init_default_doc_view();
-			void init_default_tools();
+			void init_default_doc_view(wxConfigBase *view);
+			void init_default_tools(wxConfigBase *view);
 			
 			void compare_range(off_t offset, off_t length);
 			

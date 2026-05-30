@@ -55,6 +55,11 @@ namespace REHex
 			*/
 			void write(const void *data, size_t size);
 			
+			template<typename T> void write(const T &value)
+			{
+				write(&value, sizeof(value));
+			}
+			
 			/**
 			 * @brief Commit any outstanding writes to the file and close.
 			 *

@@ -276,12 +276,12 @@ REHex::ToolPanel::Shape REHex::BitmapTool::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::BitmapTool::save_state(wxConfig *config) const
+void REHex::BitmapTool::save_state(wxConfigBase *config) const
 {
 	// TODO
 }
 
-void REHex::BitmapTool::load_state(wxConfig *config)
+void REHex::BitmapTool::load_state(wxConfigBase *config)
 {
 	// TODO
 }

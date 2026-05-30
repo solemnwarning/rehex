@@ -25,6 +25,7 @@
 #include <time.h>
 #include <vector>
 #include <wx/event.h>
+#include <wx/stream.h>
 #include <wx/timer.h>
 
 #ifdef _WIN32
@@ -301,6 +302,8 @@ namespace REHex {
 			 * Throws on I/O errors.
 			*/
 			void write_copy(const std::string &filename);
+			
+			void serialise(const std::string &filename);
 			
 			/**
 			 * @brief Get the length of the Buffer.

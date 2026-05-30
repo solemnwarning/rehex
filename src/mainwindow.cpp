@@ -30,6 +30,8 @@
 #include <wx/msgdlg.h>
 #include <wx/aui/auibook.h>
 #include <wx/numdlg.h>
+#include <wx/sstream.h>
+#include <wx/wfstream.h>
 
 #include "AboutDialog.hpp"
 #include "App.hpp"
@@ -113,6 +115,8 @@ enum {
 	ID_AUTO_RELOAD,
 	ID_IMPORT_METADATA,
 	ID_EXPORT_METADATA,
+	ID_SAVE_WORKSPACE,
+	ID_LOAD_WORKSPACE,
 	
 	ID_SET_COMMENT_CURSOR,
 	ID_SET_COMMENT_SELECTION,
@@ -140,6 +144,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_SAVEAS,         REHex::MainWindow::OnSaveAs)
 	EVT_MENU(wxID_REFRESH,        REHex::MainWindow::OnReload)
 	EVT_MENU(ID_AUTO_RELOAD,      REHex::MainWindow::OnAutoReload)
+	EVT_MENU(ID_SAVE_WORKSPACE,   REHex::MainWindow::OnSaveWorkspace)
 	EVT_MENU(ID_IMPORT_HEX,       REHex::MainWindow::OnImportHex)
 	EVT_MENU(ID_EXPORT_HEX,       REHex::MainWindow::OnExportHex)
 	EVT_MENU(ID_IMPORT_METADATA,  REHex::MainWindow::OnImportMetadata)
@@ -293,6 +298,10 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->Append(wxID_REFRESH, "&Reload");
 		file_menu->AppendCheckItem(ID_AUTO_RELOAD, "Reload automatically", "Reload the file automatically when it is modified");
+		
+		file_menu->AppendSeparator(); /* ---- */
+		
+		file_menu->Append(ID_SAVE_WORKSPACE, "Save workspace");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -654,12 +663,12 @@ void REHex::MainWindow::new_file()
 	wxPostEvent(this, event);
 }
 
-REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
+REHex::Tab *REHex::MainWindow::open_file(const std::string &filename, wxConfigBase *view)
 {
 	Tab *tab;
 	try {
 		SharedDocumentPointer doc(SharedDocumentPointer::make(filename));
-		tab = new Tab(notebook, doc);
+		tab = new Tab(notebook, doc, view);
 	}
 	catch(const std::exception &e)
 	{
@@ -990,6 +999,19 @@ void REHex::MainWindow::OnAutoReload(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	tab->set_auto_reload(event.IsChecked());
+}
+
+void REHex::MainWindow::OnSaveWorkspace(wxCommandEvent &event)
+{
+	std::vector<MainWindow*> all_windows(instances.begin(), instances.end());
+	
+	wxStringInputStream is(wxEmptyString);
+	wxFileConfig c(is);
+	
+	serialise_windows(all_windows, &c);
+	
+	wxFileOutputStream os("/tmp/foo.rehex-workspace");
+	c.Save(os);
 }
 
 void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
@@ -3022,6 +3044,102 @@ std::vector<REHex::WindowCommand> REHex::MainWindow::get_template_commands()
 		WindowCommand("set_highlight_6",  "Set highlight 6",  ID_SET_HIGHLIGHT_6,  wxACCEL_CTRL, '6'),
 		WindowCommand("remove_highlight", "Remove highlight", ID_REMOVE_HIGHLIGHT, wxACCEL_CTRL, '0'),
 	});
+}
+
+void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &windows, wxConfigBase *dst_config)
+{
+	for(size_t i = 0; i < windows.size(); ++i)
+	{
+		char path[32];
+		snprintf(path, sizeof(path), "window%zu/", i);
+		wxConfigPathChanger pc(dst_config, path);
+		
+		MainWindow *window = windows[i];
+		
+		#ifndef __APPLE__
+		// Save our current window size
+		wxSize size = window->GetSize();
+		dst_config->Write("window-width", size.x);
+		dst_config->Write("window-height", size.y);
+		
+		bool maximised = window->IsMaximized();
+		dst_config->Write("window-maximised", maximised);
+		#endif
+		
+		size_t num_tabs = window->notebook->GetPageCount();
+		for(size_t t = 0; t < num_tabs; ++t)
+		{
+			char t_path[32];
+			snprintf(t_path, sizeof(t_path), "tab%zu/", t);
+			wxConfigPathChanger t_pc(dst_config, t_path);
+			
+			wxWindow *page = window->notebook->GetPage(t);
+			assert(page != NULL);
+			
+			Tab *tab = dynamic_cast<Tab*>(page);
+			assert(tab != NULL);
+			
+			dst_config->Write("filename", wxString(tab->doc->get_filename()));
+			
+			tab->save_view(dst_config);
+			
+			char b[256];
+			snprintf(b, 256, "/tmp/buffer.%zu.%zu", i, t);
+			
+			tab->doc->serialise(b);
+		}
+	}
+}
+
+std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(wxConfigBase *src_config)
+{
+	std::vector<REHex::MainWindow*> new_windows;
+	
+	for(int i = 0;; ++i)
+	{
+		char path[32];
+		snprintf(path, sizeof(path), "window%d/", i);
+		
+		if(!(src_config->HasGroup(path)))
+		{
+			break;
+		}
+		
+		wxConfigPathChanger pc(src_config, path);
+		
+		wxSize size = wxDefaultSize;
+		
+		#ifndef __APPLE__
+		// Save our current window size
+		size.SetWidth(src_config->ReadLong("window-width", size.GetWidth()));
+		size.SetHeight(src_config->ReadLong("window-height", size.GetHeight()));
+		
+		// TODO
+		// bool maximised = window->IsMaximized();
+		// dst_config->Write("window-maximised", maximised);
+		#endif
+		
+		MainWindow *window = new MainWindow(size);
+		
+		for(int t = 0;; ++t)
+		{
+			char t_path[32];
+			snprintf(t_path, sizeof(t_path), "tab%d/", t);
+			
+			if(!(src_config->HasGroup(t_path)))
+			{
+				break;
+			}
+			
+			wxConfigPathChanger t_pc(src_config, t_path);
+			
+			Tab *tab = window->open_file(src_config->Read("filename", wxEmptyString).ToStdString(), src_config);
+		}
+		
+		new_windows.push_back(window);
+	}
+	
+	return new_windows;
 }
 
 REHex::MainWindow::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):

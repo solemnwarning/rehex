@@ -50,13 +50,13 @@ namespace REHex {
 			/**
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
-			Tab *open_file(const std::string &filename);
+			Tab *open_file(const std::string &filename, wxConfigBase *view = NULL);
 			
 			#ifdef __APPLE__
 			/**
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
-			Tab *open_file(MacFileName &&filename);
+			Tab *open_file(MacFileName &&filename, wxConfigBase *view = NULL);
 			#endif
 			
 			Tab *import_hex_file(const std::string &filename);
@@ -97,6 +97,7 @@ namespace REHex {
 			void OnSaveAs(wxCommandEvent &event);
 			void OnReload(wxCommandEvent &event);
 			void OnAutoReload(wxCommandEvent &event);
+			void OnSaveWorkspace(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
 			void OnImportMetadata(wxCommandEvent &event);
@@ -243,6 +244,9 @@ namespace REHex {
 			 * from most recently activated (e.g. top of Z order) to least.
 			*/
 			static const std::list<MainWindow*> &get_instances();
+			
+			static void serialise_windows(const std::vector<MainWindow*> &windows, wxConfigBase *dst_config);
+			static std::vector<MainWindow*> deserialise_windows(wxConfigBase *src_config);
 			
 			/**
 			 * @brief Performs RAII-style MainWindow setup hook registration.

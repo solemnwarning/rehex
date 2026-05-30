@@ -138,12 +138,12 @@ REHex::ToolPanel::Shape REHex::CommentTree::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::CommentTree::save_state(wxConfig *config) const
+void REHex::CommentTree::save_state(wxConfigBase *config) const
 {
 	/* No state to save. */
 }
 
-void REHex::CommentTree::load_state(wxConfig *config)
+void REHex::CommentTree::load_state(wxConfigBase *config)
 {
 	/* No state to load. */
 }

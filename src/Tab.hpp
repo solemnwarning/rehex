@@ -81,7 +81,7 @@ namespace REHex
 			
 			void set_parent_window_active(bool parent_window_active);
 			
-			void save_view(wxConfig *config);
+			void save_view(wxConfigBase *config);
 			
 			void handle_copy(bool cut);
 			void handle_paste(bool primary);

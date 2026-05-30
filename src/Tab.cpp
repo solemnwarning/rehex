@@ -319,11 +319,8 @@ void REHex::Tab::set_parent_window_active(bool parent_window_active)
 	}
 }
 
-void REHex::Tab::save_view(wxConfig *config)
+void REHex::Tab::save_view(wxConfigBase *config)
 {
-	// Ensure we are in the correct node
-	config->SetPath("/default-view/");
-	
 	config->Write("bytes-per-line", doc_ctrl->get_bytes_per_line());
 	config->Write("bytes-per-group", doc_ctrl->get_bytes_per_group());
 	config->Write("show-offsets", doc_ctrl->get_show_offsets());

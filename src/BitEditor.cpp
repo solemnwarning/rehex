@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -222,13 +222,13 @@ REHex::ToolPanel::Shape REHex::BitEditor::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::BitEditor::save_state(wxConfig *config) const
+void REHex::BitEditor::save_state(wxConfigBase *config) const
 {
 	bool big_endian = (endian->GetSelection() == 0);
 	config->Write("big-endian", big_endian);
 }
 
-void REHex::BitEditor::load_state(wxConfig *config)
+void REHex::BitEditor::load_state(wxConfigBase *config)
 {
 	bool big_endian = config->Read("big-endian", (endian->GetSelection() == 0));
 	if(big_endian)

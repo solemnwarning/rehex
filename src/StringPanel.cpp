@@ -184,12 +184,12 @@ REHex::ToolPanel::Shape REHex::StringPanel::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::StringPanel::save_state(wxConfig *config) const
+void REHex::StringPanel::save_state(wxConfigBase *config) const
 {
 	/* TODO */
 }
 
-void REHex::StringPanel::load_state(wxConfig *config)
+void REHex::StringPanel::load_state(wxConfigBase *config)
 {
 	/* TODO */
 }

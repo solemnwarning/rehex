@@ -143,3 +143,8 @@ bool REHex::MacFileName::BookmarkWasStale() const
 	return m_stale;
 }
 #endif
+
+REHex::MacFileName::operator bool() const
+{
+	return m_url != nil;
+}

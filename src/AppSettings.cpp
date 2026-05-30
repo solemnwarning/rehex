@@ -62,7 +62,8 @@ REHex::AppSettings::AppSettings():
 	primary_copy_limit(DEFAULT_PRIMARY_COPY_LIMIT),
 	#endif
 	dirty_byte_display_mode(DirtyByteDisplayMode::COLOURED_UNLESS_BCM),
-	primary_font(get_default_primary_font())
+	primary_font(get_default_primary_font()),
+	auto_save_state(false)
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -287,6 +288,8 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 	primary_font = ScaledFont(
 		config->Read("primary-font-name", primary_font.name()).ToStdString(),
 		config->ReadDouble("primary-font-scale", primary_font.scale()));
+
+	auto_save_state = config->ReadBool("auto-save-state", auto_save_state);
 }
 
 REHex::AppSettings::~AppSettings()
@@ -344,6 +347,8 @@ void REHex::AppSettings::write(wxConfig *config)
 
 	config->Write("primary-font-name", wxString(primary_font.name()));
 	config->Write("primary-font-scale", primary_font.scale());
+
+	config->Write("auto-save-state", auto_save_state);
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -570,6 +575,16 @@ std::vector<std::string> REHex::AppSettings::get_primary_font_faces()
 	}
 
 	return font_names2;
+}
+
+bool REHex::AppSettings::get_auto_save_state() const
+{
+	return auto_save_state;
+}
+
+void REHex::AppSettings::set_auto_save_state(bool auto_save_state)
+{
+	this->auto_save_state = auto_save_state;
 }
 
 REHex::ScaledFont::ScaledFont(const std::string &name, float scale):

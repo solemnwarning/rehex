@@ -216,13 +216,13 @@ REHex::ToolPanel::Shape REHex::Disassemble::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::Disassemble::save_state(wxConfig *config) const
+void REHex::Disassemble::save_state(wxConfigBase *config) const
 {
 	const char *triple = arch_list[ arch->GetSelection() ].triple;
 	config->Write("arch", triple);
 }
 
-void REHex::Disassemble::load_state(wxConfig *config)
+void REHex::Disassemble::load_state(wxConfigBase *config)
 {
 	std::string cur_triple = arch_list[ arch->GetSelection() ].triple;
 	std::string new_triple = config->Read("arch", cur_triple).ToStdString();

@@ -43,8 +43,8 @@ class SizeTestPanel: public REHex::ToolPanel
 		virtual std::string label() const override { return label_s; }
 		virtual Shape shape() const override { return shape_; }
 		
-		virtual void save_state(wxConfig *config) const override {}
-		virtual void load_state(wxConfig *config) override {}
+		virtual void save_state(wxConfigBase *config) const override {}
+		virtual void load_state(wxConfigBase *config) override {}
 		virtual void update() override {}
 		
 	DECLARE_EVENT_TABLE()

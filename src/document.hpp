@@ -33,6 +33,7 @@
 #include "ByteRangeSet.hpp"
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
+#include "FileWriter.hpp"
 #include "HighlightColourMap.hpp"
 #include "MacFileName.hpp"
 #include "util.hpp"
@@ -139,6 +140,8 @@ namespace REHex {
 			 * @brief Create a Document for an existing file on disk.
 			*/
 			Document(const std::string &filename);
+
+			Document(std::unique_ptr<Buffer> &&buffer);
 			
 			#ifdef __APPLE__
 			/**
@@ -379,6 +382,10 @@ namespace REHex {
 			
 			static std::string find_metadata(const std::string &filename);
 			
+			void serialise(FileWriter *file);
+
+			static std::unique_ptr<Document> deserialise(FileReader *file);
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif
@@ -428,7 +435,6 @@ namespace REHex {
 			void transact_step(const TransOpFunc &op, const std::string &desc);
 			
 			Buffer *buffer;
-			std::string filename;
 			bool write_protect;
 			
 			void _forward_buffer_events();

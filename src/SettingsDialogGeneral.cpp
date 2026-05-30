@@ -137,6 +137,9 @@ bool REHex::SettingsDialogGeneral::Create(wxWindow *parent)
 	{
 		dbd_disable_vcm->Enable(event.IsChecked());
 	});
+
+	auto_save_state = new wxCheckBox(this, wxID_ANY, "Save editor state and exit and restore at launch");
+	top_sizer->Add(auto_save_state, 0, wxBOTTOM, SettingsDialog::MARGIN);
 	
 	load(wxGetApp().settings);
 	
@@ -208,6 +211,8 @@ void REHex::SettingsDialogGeneral::save()
 	{
 		wxGetApp().settings->set_dirty_byte_display_mode(DirtyByteDisplayMode::INVERTED_UNLESS_BCM);
 	}
+
+	wxGetApp().settings->set_auto_save_state(auto_save_state->GetValue());
 }
 
 void REHex::SettingsDialogGeneral::reset() {
@@ -300,4 +305,6 @@ void REHex::SettingsDialogGeneral::load(const AppSettings *settings)
 			dbd_disable_vcm->Enable();
 			break;
 	}
+
+	auto_save_state->SetValue(settings->get_auto_save_state());
 }

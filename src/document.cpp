@@ -77,7 +77,6 @@ REHex::Document::Document():
 }
 
 REHex::Document::Document(const std::string &filename):
-	filename(filename),
 	write_protect(false),
 	current_seq(0),
 	buffer_seq(0),
@@ -108,9 +107,46 @@ REHex::Document::Document(const std::string &filename):
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
 
+REHex::Document::Document(std::unique_ptr<Buffer> &&buffer):
+	write_protect(false),
+	current_seq(0),
+	buffer_seq(0),
+	saved_seq(0),
+	highlight_colour_map(HighlightColourMap::defaults()),
+	cursor_state(CSTATE_HEX),
+	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
+	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
+	types_changed_buffer(this, EV_TYPES_CHANGED),
+	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
+{
+	this->buffer = buffer.release();
+	
+	data_seq.set_range   (0, this->buffer->length(), 0);
+	types.set_range      (0, this->buffer->length(), TypeInfo(""));
+
+	std::string filename = this->buffer->get_filename();
+	if(filename.empty())
+	{
+		title  = "Untitled";
+	}
+	else{
+		size_t last_slash = filename.find_last_of("/\\");
+		title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	}
+	
+	std::string meta_filename = find_metadata(filename);
+	if(!(meta_filename.empty()))
+	{
+		_load_metadata(meta_filename);
+	}
+	
+	_forward_buffer_events();
+	
+	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
+}
+
 #ifdef __APPLE__
 REHex::Document::Document(MacFileName &&filename):
-	filename(filename.GetFileName().GetFullPath().ToStdString()),
 	write_protect(false),
 	current_seq(0),
 	buffer_seq(0),
@@ -127,10 +163,10 @@ REHex::Document::Document(MacFileName &&filename):
 	data_seq.set_range   (0, buffer->length(), 0);
 	types.set_range      (0, buffer->length(), TypeInfo(""));
 	
-	size_t last_slash = this->filename.find_last_of("/\\");
-	title = (last_slash != std::string::npos ? this->filename.substr(last_slash + 1) : this->filename);
+	/* wxFileName::GetFullName() returns the name+extension but no directory parts. */
+	title = filename.GetFileName().GetFullName().ToStdString();
 	
-	std::string meta_filename = find_metadata(this->filename);
+	std::string meta_filename = find_metadata(filename.GetFileName().GetFullPath().ToStdString());
 	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
@@ -172,6 +208,7 @@ void REHex::Document::reload()
 	/* Ensure no transaction is in progress. */
 	assert(undo_stack.empty() || undo_stack.back().complete);
 	
+	std::string filename = buffer->get_filename();
 	if(filename.empty())
 	{
 		throw std::logic_error("Attempt to reload document with no backing file");
@@ -286,7 +323,7 @@ void REHex::Document::save()
 		buffer->write_inplace();
 	}
 	
-	save_metadata_for(filename);
+	save_metadata_for(buffer->get_filename());
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -303,7 +340,6 @@ void REHex::Document::save(const std::string &filename)
 	bool externally_changed = file_deleted() || file_modified();
 	
 	buffer->write_inplace(filename);
-	this->filename = filename;
 	
 	size_t last_slash = filename.find_last_of("/\\");
 	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
@@ -338,7 +374,7 @@ void REHex::Document::set_title(const std::string &title)
 
 std::string REHex::Document::get_filename()
 {
-	return filename;
+	return buffer->get_filename();
 }
 
 bool REHex::Document::is_dirty()
@@ -2502,6 +2538,98 @@ void REHex::Document::load_metadata(const json_t *metadata)
 	
 	json_t *write_protect = json_object_get(metadata, "write_protect");
 	set_write_protect(json_is_true(write_protect));
+}
+
+void REHex::Document::serialise(FileWriter *file)
+{
+	file->write_tlv("BUFF", [&]()
+	{
+		buffer->serialise(file);
+	});
+
+	file->write_tlv("TITL", title.data(), title.length());
+
+	json_t *metadata = serialise_metadata(false);
+	if(metadata != NULL)
+	{
+		char *metadata_json = json_dumps(metadata, JSON_COMPACT | JSON_SORT_KEYS);
+
+		json_decref(metadata);
+		metadata = NULL;
+
+		if(metadata_json == NULL)
+		{
+			throw std::bad_alloc();
+		}
+
+		file->write_tlv("META", metadata_json, strlen(metadata_json));
+
+		free(metadata_json);
+	}
+
+	for(auto it = data_seq.begin(); it != data_seq.end(); ++it)
+	{
+		if(it->second != saved_seq)
+		{
+			int64_t data[] = {
+				(int64_t)(htole64(it->first.offset)),
+				(int64_t)(htole64(it->first.length)),
+			};
+			
+			file->write_tlv("DBYT", data, sizeof(data));
+		}
+	}
+}
+
+std::unique_ptr<REHex::Document> REHex::Document::deserialise(FileReader *file)
+{
+	std::unique_ptr<Buffer> buffer;
+	std::string title;
+	std::unique_ptr<json_t, void(*)(json_t*)> metadata(nullptr, json_decref);
+	ByteRangeSet dirty_ranges;
+
+	while(file->read_tlv([&](const FourCC &type, uint32_t length)
+	{
+		if(type == "BUFF")
+		{
+			buffer = Buffer::deserialise(file);
+		}
+		else if(type == "TITL")
+		{
+			std::vector<char> buf(length);
+			file->read(buf.data(), length, length);
+
+			title = std::string(buf.data(), length);
+		}
+		else if(type == "META")
+		{
+			metadata = file->read_json();
+		}
+		else if(type == "DBYT")
+		{
+			int64_t offset = le64toh(file->read<int64_t>());
+			int64_t length = le64toh(file->read<int64_t>());
+
+			dirty_ranges.set_range(offset, length);
+		}
+	})) {}
+
+	std::unique_ptr<Document> document(new Document(std::move(buffer)));
+	document->title = title;
+
+	if(metadata != NULL)
+	{
+		document->load_metadata(metadata.get());
+	}
+
+	document->current_seq = 1;
+	for(auto it = dirty_ranges.begin(); it != dirty_ranges.end(); ++it)
+	{
+		document->data_seq.set_range(it->offset, it->length, 1);
+	}
+	
+	return document;
+	
 }
 
 void REHex::Document::_raise_comment_modified()

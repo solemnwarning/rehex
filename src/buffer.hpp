@@ -25,6 +25,7 @@
 #include <time.h>
 #include <vector>
 #include <wx/event.h>
+#include <wx/stream.h>
 #include <wx/timer.h>
 
 #ifdef _WIN32
@@ -32,6 +33,8 @@
 #endif
 
 #include "BitOffset.hpp"
+#include "FileReader.hpp"
+#include "FileWriter.hpp"
 #include "MacFileName.hpp"
 #include "shared_mutex.hpp"
 
@@ -303,6 +306,20 @@ namespace REHex {
 			void write_copy(const std::string &filename);
 			
 			/**
+			 * @brief Serialise Buffer object to a file.
+			 *
+			 * Writes out the current state of the Buffer object including any changed blocks and
+			 * the modification time of the file so that it can be restored without any data loss
+			 * after restarting the application.
+			*/
+			void serialise(FileWriter *file);
+			
+			/**
+			 * @brief Recreate a previously-serialised Buffer object.
+			*/
+			static std::unique_ptr<Buffer> deserialise(FileReader *file);
+			
+			/**
 			 * @brief Get the length of the Buffer.
 			*/
 			off_t length();
@@ -405,6 +422,8 @@ namespace REHex {
 			 * @brief Returns true if the backing file has been modified externally.
 			*/
 			bool file_modified() const;
+
+			std::string get_filename() const;
 	};
 }
 

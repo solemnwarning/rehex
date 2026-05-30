@@ -504,6 +504,7 @@ APP_OBJS := \
 	src/DocumentCtrl.$(BUILD_TYPE).o \
 	src/EditCommentDialog.$(BUILD_TYPE).o \
 	src/Events.$(BUILD_TYPE).o \
+	src/FileReader.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
@@ -644,6 +645,7 @@ TEST_OBJS := \
 	src/DocumentCtrl.$(BUILD_TYPE).o \
 	src/EditCommentDialog.$(BUILD_TYPE).o \
 	src/Events.$(BUILD_TYPE).o \
+	src/FileReader.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
@@ -712,7 +714,9 @@ TEST_OBJS := \
 	tests/DocumentCtrl.$(LIB_BUILD_TYPE).o \
 	tests/endian_conv.$(LIB_BUILD_TYPE).o \
 	tests/FastRectangleFiller.$(LIB_BUILD_TYPE).o \
+	tests/FileReader.$(LIB_BUILD_TYPE).o \
 	tests/FileWriter.$(LIB_BUILD_TYPE).o \
+	tests/FourCC.$(LIB_BUILD_TYPE).o \
 	tests/HierarchicalByteAccumulator.$(LIB_BUILD_TYPE).o \
 	tests/HighlightColourMap.$(LIB_BUILD_TYPE).o \
 	tests/HSVColour.$(LIB_BUILD_TYPE).o \

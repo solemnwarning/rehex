@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <list>
+#include <portable_endian.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
@@ -42,6 +43,8 @@
 
 #include "App.hpp"
 #include "buffer.hpp"
+#include "FileReader.hpp"
+#include "FileWriter.hpp"
 #include "MacFileName.hpp"
 #include "profile.hpp"
 #include "win32lib.hpp"
@@ -586,6 +589,10 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	
 	handles[0].fh = wfh;
 	this->filename = filename;
+
+	#ifdef __APPLE__
+	this->file_access_guard = MacFileName(wxFileName(filename));
+	#endif
 	
 	if(updating_file)
 	{
@@ -651,6 +658,213 @@ void REHex::Buffer::write_copy(const std::string &filename)
 	}
 	
 	fclose(out);
+}
+
+void REHex::Buffer::serialise(FileWriter *file)
+{
+	std::unique_lock<shared_mutex> l(general_lock);
+	
+	if(!(filename.empty()))
+	{
+		file->write_tlv("FNAM", filename.data(), filename.length());
+	}
+	
+	#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+	if(file_access_guard)
+	{
+		wxString bookmark;
+		try {
+			bookmark = file_access_guard.CreateBookmark();
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Unable to create bookmark for %s (%s), file may not be accessible after restart\n", file_access_guard.GetFileName().GetFullPath().ToStdString().c_str(), e.what());
+		}
+		
+		if(!bookmark.empty())
+		{
+			file->write_tlv("BMRK", bookmark.data(), bookmark.length());
+		}
+	}
+	#endif
+	
+	file->write_tlv("MTIM", [&]()
+	{
+		file->write<int64_t>(htole64(last_mtime.tv_sec));
+		file->write<int32_t>(htole32(last_mtime.tv_nsec));
+	});
+	
+	if(_file_deleted)
+	{
+		file->write_tlv("FDEL", NULL, 0);
+	}
+	else if(_file_modified)
+	{
+		file->write_tlv("FMOD", NULL, 0);
+	}
+	
+	for(auto b = blocks.begin(); b != blocks.end(); ++b)
+	{
+		file->write_tlv("BLCK", [&]()
+		{
+			file->write<int64_t>(htole64(b->real_offset));
+			file->write<int32_t>(htole32(b->virt_length));
+		});
+	}
+	
+	for(auto b = blocks.begin(); b != blocks.end(); ++b)
+	{
+		if(b->state == Block::State::DIRTY)
+		{
+			file->write_tlv("DBLK", [&]()
+			{
+				file->write<int64_t>(htole64(b->virt_offset));
+				file->write(b->data.data(), b->virt_length);
+			});
+		}
+	}
+}
+
+std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(FileReader *file)
+{
+	std::unique_ptr<Buffer> buffer;
+	buffer.reset(new Buffer());
+	
+	buffer->blocks.clear();
+	
+	#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+	wxString filename_bookmark;
+	#endif
+	
+	int64_t next_virt_off = 0;
+	
+	while(file->read_tlv([&](const FourCC &type, uint32_t length)
+	{
+		if(type == "FNAM")
+		{
+			std::vector<char> buf(length);
+			file->read(buf.data(), length, length);
+			
+			buffer->filename = std::string(buf.data(), length);
+		}
+		#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+		else if(type == "BMRK")
+		{
+			std::vector<char> buf(length);
+			file->read(buf.data(), length, length);
+			
+			filename_bookmark = wxString(buf.data(), length);
+		}
+		#endif
+		else if(type == "MTIM")
+		{
+			buffer->last_mtime.tv_sec = le64toh(file->read<int64_t>());
+			buffer->last_mtime.tv_nsec = le32toh(file->read<int32_t>());
+		}
+		else if(type == "FDEL")
+		{
+			buffer->_file_deleted = true;
+		}
+		else if(type == "FMOD")
+		{
+			buffer->_file_modified = true;
+		}
+		else if(type == "BLCK")
+		{
+			int64_t real_offset = le64toh(file->read<int64_t>());
+			int32_t virt_length = le32toh(file->read<int32_t>());
+			
+			Block block(next_virt_off, virt_length);
+			block.real_offset = real_offset;
+			
+			buffer->blocks.emplace_back(std::move(block));
+			next_virt_off += virt_length;
+		}
+		else if(type == "DBLK")
+		{
+			int64_t virt_offset = le64toh(file->read<int64_t>());
+			int64_t virt_length = length - 8;
+
+			Block *block;
+			if((virt_offset + virt_length) == buffer->_length())
+			{
+				block = &(buffer->blocks.back());
+			}
+			else{
+				block = buffer->_block_by_virt_offset(virt_offset);
+			}
+
+			if(block == NULL || block->virt_offset != virt_offset || block->virt_length != virt_length)
+			{
+				throw std::runtime_error("Error deserialising Buffer: Invalid dirty block");
+			}
+			
+			block->data.resize(virt_length);
+			file->read(block->data.data(), virt_length, virt_length);
+			
+			block->state = Block::State::DIRTY;
+		}
+	})) {}
+	
+	#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+	if(!buffer->filename.empty() && !filename_bookmark.empty())
+	{
+		try {
+			buffer->file_access_guard = MacFileName(filename_bookmark);
+		}
+		catch(const std::exception &e)
+		{
+			wxGetApp().printf_error("Unable to restore bookmark for %s (%s), file may not be accessible\n", buffer->filename.c_str(), e.what());
+		}
+		
+		if(buffer->file_access_guard)
+		{
+			buffer->filename = buffer->file_access_guard.GetFileName().GetFullPath().ToStdString();
+		}
+	}
+	#endif
+	
+	if(buffer->blocks.empty())
+	{
+		throw std::runtime_error("Error deserialising Buffer: No blocks found");
+	}
+	
+	if(!(buffer->filename.empty()) && !(buffer->_file_deleted))
+	{
+		FILE *inode_fh = fopen(buffer->filename.c_str(), "rb");
+		if(inode_fh == NULL)
+		{
+			buffer->_file_deleted = true;
+			return buffer;
+		}
+		
+		struct stat st;
+		if(fstat(fileno(inode_fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+		{
+			fclose(inode_fh);
+			
+			buffer->_file_deleted = true;
+			return buffer;
+		}
+		
+		buffer->handles[0].fh = inode_fh;
+		
+		if(!(buffer->_file_modified))
+		{
+			FileTime current_mtime = _get_file_mtime(inode_fh, buffer->filename);
+			
+			if(current_mtime == buffer->last_mtime)
+			{
+				/* File not modified - check again later. */
+				buffer->timer.Start(FILE_CHECK_INTERVAL_MS, wxTIMER_ONE_SHOT);
+			}
+			else{
+				buffer->_file_modified = true;
+			}
+		}
+	}
+	
+	return buffer;
 }
 
 off_t REHex::Buffer::length()
@@ -1090,6 +1304,11 @@ bool REHex::Buffer::file_deleted() const
 bool REHex::Buffer::file_modified() const
 {
 	return _file_modified;
+}
+
+std::string REHex::Buffer::get_filename() const
+{
+	return filename;
 }
 
 REHex::Buffer::Block::Block(off_t offset, off_t length):

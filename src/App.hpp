@@ -222,6 +222,11 @@ namespace REHex {
 			*/
 			static bool is_wayland_session();
 			#endif
+
+			/**
+			 * @brief Get the directory where application state data should be stored.
+			*/
+			static std::string get_state_directory();
 			
 		private:
 			std::string last_directory;

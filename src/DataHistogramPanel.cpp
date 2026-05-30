@@ -400,10 +400,10 @@ REHex::ToolPanel::Shape REHex::DataHistogramPanel::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::DataHistogramPanel::save_state(wxConfig *config) const
+void REHex::DataHistogramPanel::save_state(wxConfigBase *config) const
 {}
 
-void REHex::DataHistogramPanel::load_state(wxConfig *config)
+void REHex::DataHistogramPanel::load_state(wxConfigBase *config)
 {}
 
 wxSize REHex::DataHistogramPanel::DoGetBestClientSize() const

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -68,8 +68,8 @@ namespace REHex
 			void DestroyTool(const std::string &name);
 			bool ToolExists(const std::string &name) const;
 			
-			void SaveTools(wxConfig *config) const;
-			void LoadTools(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			void SaveTools(wxConfigBase *config) const;
+			void LoadTools(wxConfigBase *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			/**
 			 * @brief Hide any detached tools.
@@ -495,11 +495,11 @@ namespace REHex
 			
 			void DestroyTool(ToolPanel *tool);
 			
-			static void SaveToolsFromNotebook(wxConfig *config, ToolNotebook *notebook);
-			void LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			static void SaveToolsFromNotebook(wxConfigBase *config, ToolNotebook *notebook);
+			void LoadToolsIntoNotebook(wxConfigBase *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
-			void SaveToolFrames(wxConfig *config) const;
-			void LoadToolFrames(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
+			void SaveToolFrames(wxConfigBase *config) const;
+			void LoadToolFrames(wxConfigBase *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl);
 			
 			/**
 			 * @brief Reset the size of a notebook to its default size.

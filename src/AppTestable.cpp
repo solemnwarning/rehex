@@ -268,7 +268,7 @@ REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 		 *
 		 * The "Unblock" tickbox under the file's Properties dialog does the same thing.
 		*/
-		DeleteFile((chm_path + ":Zone.Identifier").wc_str());
+		DeleteFileW((chm_path + ":Zone.Identifier").wc_str());
 		
 		help_loaded = help_controller->Initialize(chm_path);
 		
@@ -539,3 +539,26 @@ bool REHex::App::is_wayland_session()
 	return is_wayland;
 }
 #endif
+
+std::string REHex::App::get_state_directory()
+{
+#if defined(_WIN32) || defined(__APPLE__)
+	return wxStandardPaths::Get().GetUserDataDir().ToStdString();
+#else
+	const char *XDG_STATE_HOME = getenv("XDG_STATE_HOME");
+	if(XDG_STATE_HOME != NULL && strcmp(XDG_STATE_HOME, "") != 0)
+	{
+		return std::string(XDG_STATE_HOME) + "/rehex/";
+	}
+	else{
+		const char *HOME = getenv("HOME");
+		if(HOME != NULL && strcmp(HOME, "") != 0)
+		{
+			return std::string(HOME) + "/.local/state/rehex/";
+		}
+		else{
+			return "/tmp/rehex/";
+		}
+	}
+#endif
+}

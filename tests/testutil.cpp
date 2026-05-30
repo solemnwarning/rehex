@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <ostream>
+#include <random>
 #include <stdexcept>
 #include <stdio.h>
 #include <vector>
@@ -145,6 +146,24 @@ std::vector<unsigned char> read_file(const std::string &filename)
 	fclose(fh);
 	
 	return data;
+}
+
+std::vector<unsigned char> data_pattern(size_t offset, size_t length)
+{
+	static std::minstd_rand rng(1234);
+	static std::vector<unsigned char> pool;
+
+	if(pool.size() < (offset + length))
+	{
+		pool.reserve(offset + length);
+
+		for(size_t i = pool.size(); i < (offset + length); ++i)
+		{
+			pool.push_back(rng() & 0xFF);
+		}
+	}
+
+	return std::vector<unsigned char>(std::next(pool.begin(), offset), std::next(pool.begin(), (offset + length)));
 }
 
 TempFilename::TempFilename()

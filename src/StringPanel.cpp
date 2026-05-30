@@ -184,12 +184,12 @@ REHex::ToolPanel::Shape REHex::StringPanel::shape() const
 	return ToolPanel::TPS_TALL;
 }
 
-void REHex::StringPanel::save_state(wxConfig *config) const
+void REHex::StringPanel::save_state(wxConfigBase *config) const
 {
 	/* TODO */
 }
 
-void REHex::StringPanel::load_state(wxConfig *config)
+void REHex::StringPanel::load_state(wxConfigBase *config)
 {
 	/* TODO */
 }
@@ -664,11 +664,11 @@ void REHex::StringPanel::restart_search()
 void REHex::StringPanel::do_export(wxString (*get_item_func)(StringPanelListCtrl*, int))
 {
 	std::string dir;
-	std::string doc_filename = document->get_filename();
+	FileName doc_filename = document->get_filename();
 	
-	if(doc_filename != "")
+	if(doc_filename.IsOk())
 	{
-		wxFileName wxfn(doc_filename);
+		wxFileName wxfn(doc_filename.GetFullPath());
 		wxfn.MakeAbsolute();
 		
 		dir  = wxfn.GetPath();

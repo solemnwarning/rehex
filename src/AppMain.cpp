@@ -26,6 +26,7 @@
 #include <wx/fs_zip.h>
 #include <wx/log.h>
 #include <wx/stdpaths.h>
+#include <wx/wfstream.h>
 
 #include "App.hpp"
 #include "ArtProvider.hpp"
@@ -376,59 +377,80 @@ bool REHex::App::OnInit()
 	}
 	
 	Bind(EVT_PAGE_DROPPED, &REHex::App::OnTabDropped, this);
+	Bind(wxEVT_END_SESSION, &REHex::App::OnEndSession, this);
 	
 	call_setup_hooks(SetupPhase::READY);
-	
-	wxSize windowSize(740, 540);
-	
-	#ifndef __APPLE__
-	config->Read("/default-view/window-width", &windowSize.x, windowSize.x);
-	config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
-	#endif
-	
-	window = new REHex::MainWindow(windowSize);
-	
-	#ifndef __APPLE__
-	bool maximise = config->ReadBool("/default-view/window-maximised", false);
-	window->Maximize(maximise);
-	#endif
-	
-	if(compare_mode)
+
+	std::string auto_workspace = get_state_directory() + "/auto.rehex-workspace";
+	bool restored_workspace = false;
+
+	if(wxFileName::FileExists(auto_workspace))
 	{
-		DiffWindow::instance = new DiffWindow(NULL);
-		DiffWindow::instance->set_invisible_owner_window(window);
-		DiffWindow::instance->Show(true);
-	}
-	else{
-		window->Show();
+		FileReader fr(auto_workspace.c_str());
+
+		std::vector<MainWindow*> windows = MainWindow::deserialise_windows(&fr);
+		for(auto i = windows.begin(); i != windows.end(); ++i)
+		{
+			(*i)->Show();
+		}
+
+		restored_workspace = true;
+		unlink(auto_workspace.c_str());
 	}
 	
-	bool opened_a_file = false;
-	
-	for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+	if(!restored_workspace || !(open_filenames.empty()))
 	{
-		Tab *tab = window->open_file(wxFileName(*filename));
+		wxSize windowSize(740, 540);
+		
+		#ifndef __APPLE__
+		config->Read("/default-view/window-width", &windowSize.x, windowSize.x);
+		config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
+		#endif
+		
+		window = new REHex::MainWindow(windowSize);
+		
+		#ifndef __APPLE__
+		bool maximise = config->ReadBool("/default-view/window-maximised", false);
+		window->Maximize(maximise);
+		#endif
+		
 		if(compare_mode)
 		{
+			DiffWindow::instance = new DiffWindow(NULL);
+			DiffWindow::instance->set_invisible_owner_window(window);
+			DiffWindow::instance->Show(true);
+		}
+		else{
+			window->Show();
+		}
+		
+		bool opened_a_file = false;
+		
+		for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+		{
+			Tab *tab = window->open_file(wxFileName(*filename));
+			if(compare_mode)
+			{
+				if(tab != NULL)
+				{
+					DiffWindow::instance->add_range(DiffWindow::Range(tab->doc, tab->doc_ctrl, 0, tab->doc->buffer_length()));
+				}
+				else{
+					/* Failed to open a file with --compare specified. */
+					return false;
+				}
+			}
+			
 			if(tab != NULL)
 			{
-				DiffWindow::instance->add_range(DiffWindow::Range(tab->doc, tab->doc_ctrl, 0, tab->doc->buffer_length()));
-			}
-			else{
-				/* Failed to open a file with --compare specified. */
-				return false;
+				opened_a_file = true;
 			}
 		}
 		
-		if(tab != NULL)
+		if(!opened_a_file)
 		{
-			opened_a_file = true;
+			window->new_file();
 		}
-	}
-	
-	if(!opened_a_file)
-	{
-		window->new_file();
 	}
 	
 	if(ipc_params_ok)
@@ -529,4 +551,35 @@ void REHex::App::OnTabDropped(DetachedPageEvent &event)
 	window->SetPosition(mouse_position);
 	window->insert_tab(tab, -1);
 	window->Show();
+}
+
+void REHex::App::OnEndSession(wxCloseEvent &event)
+{
+	std::list<MainWindow*> all_windows = MainWindow::get_instances();
+
+	if(settings->get_auto_save_state())
+	{
+		std::string state_dir = App::get_state_directory();
+
+		if(wxFileName::Mkdir(state_dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+		{
+			try {
+				FileWriter workspace((state_dir + "/auto.rehex-workspace").c_str());
+				MainWindow::serialise_windows(std::vector<MainWindow*>(all_windows.begin(), all_windows.end()), &workspace);
+
+				workspace.commit();
+			}
+			catch(const std::exception &e)
+			{
+				printf_error("Error saving session: %s\n", e.what());
+			}
+		}
+	}
+
+	for(auto w = all_windows.begin(); w != all_windows.end(); ++w)
+	{
+		(*w)->Destroy();
+	}
+	
+	event.Skip();
 }

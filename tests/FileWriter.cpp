@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -74,4 +74,67 @@ TEST(FileWriterTest, WriteFileNoCommit)
 	}
 	
 	EXPECT_FALSE(wxFileExists(tfn.tmpfile)) << "FileWriter does not write file when destroyed without a call to commit()";
+}
+
+TEST(FileWriterTest, WriteTLV)
+{
+	TempFilename tfn;
+	
+	{
+		FileWriter fw(tfn.tmpfile);
+		fw.write("hello world\n", 12);
+		
+		fw.write_tlv("ABCD", [&]()
+		{
+			fw.write("foobar\n", 7);
+			fw.write("foobaz\n", 7);
+		});
+		
+		fw.write_tlv("XYZ ", [&]()
+		{
+			fw.write("second thing", 12);
+		});
+		
+		fw.commit();
+	}
+	
+	const char EXPECTED_DATA[] =
+		"hello world\n"
+		"ABCD" "\x0E\x00\x00\x00" "foobar\nfoobaz\n"
+		"XYZ " "\x0C\x00\x00\x00" "second thing";
+	
+	EXPECT_EQ(read_file(tfn.tmpfile), std::string(EXPECTED_DATA, (sizeof(EXPECTED_DATA) - 1)));
+}
+
+TEST(FileWriterTest, WriteNestedTLV)
+{
+	TempFilename tfn;
+	
+	{
+		FileWriter fw(tfn.tmpfile);
+		fw.write("hello world\n", 12);
+		
+		fw.write_tlv("ABCD", [&]()
+		{
+			fw.write("foobar\n", 7);
+			
+			fw.write_tlv("XYZ ", [&]()
+			{
+				fw.write("second thing", 12);
+			});
+			
+			fw.write("foobaz\n", 7);
+		});
+		
+		fw.commit();
+	}
+	
+	const char EXPECTED_DATA[] =
+		"hello world\n"
+		"ABCD" "\x22\x00\x00\x00"
+			"foobar\n"
+			"XYZ " "\x0C\x00\x00\x00" "second thing"
+			"foobaz\n";
+	
+	EXPECT_EQ(read_file(tfn.tmpfile), std::string(EXPECTED_DATA, (sizeof(EXPECTED_DATA) - 1)));
 }

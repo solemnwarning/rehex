@@ -87,3 +87,7 @@ typedef int ssize_t;
 /* Enable handling for X11 (and Wayland) "PRIMARY" selection. */
 #define REHEX_ENABLE_PRIMARY_SELECTION
 #endif
+
+#ifdef _WIN32
+#include <WinSock2.h>
+#endif

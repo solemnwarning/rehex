@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <exception>
 #include <inttypes.h>
+#include <memory>
 #include <stack>
 #include <tuple>
 #include <vector>
@@ -70,7 +71,7 @@ BEGIN_EVENT_TABLE(REHex::Tab, wxPanel)
 	EVT_COMMAND(wxID_ANY, REHex::DATA_RIGHT_CLICK, REHex::Tab::OnDataRightClick)
 END_EVENT_TABLE()
 
-REHex::Tab::Tab(wxWindow *parent):
+REHex::Tab::Tab(wxWindow *parent, wxConfigBase *view):
 	wxPanel(parent),
 	doc(SharedDocumentPointer::make()),
 	inline_comment_mode(ICM_FULL_INDENT),
@@ -125,14 +126,14 @@ REHex::Tab::Tab(wxWindow *parent):
 	
 	repopulate_regions();
 	
-	init_default_doc_view();
+	init_default_doc_view(view);
 	doc_ctrl->set_insert_mode(true);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(tool_dock, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	init_default_tools();
+	init_default_tools(view);
 	
 	wxGetApp().Bind(BULK_UPDATES_FROZEN, &REHex::Tab::OnBulkUpdatesFrozen, this);
 	wxGetApp().Bind(BULK_UPDATES_THAWED, &REHex::Tab::OnBulkUpdatesThawed, this);
@@ -143,7 +144,7 @@ REHex::Tab::Tab(wxWindow *parent):
 	});
 }
 
-REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
+REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document, wxConfigBase *view):
 	wxPanel(parent),
 	doc(document),
 	inline_comment_mode(ICM_FULL_INDENT),
@@ -198,13 +199,13 @@ REHex::Tab::Tab(wxWindow *parent, SharedDocumentPointer &document):
 	
 	repopulate_regions();
 	
-	init_default_doc_view();
+	init_default_doc_view(view);
 	
 	wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 	sizer->Add(tool_dock, 1, wxEXPAND);
 	SetSizerAndFit(sizer);
 	
-	init_default_tools();
+	init_default_tools(view);
 	
 	wxGetApp().Bind(BULK_UPDATES_FROZEN, &REHex::Tab::OnBulkUpdatesFrozen, this);
 	wxGetApp().Bind(BULK_UPDATES_THAWED, &REHex::Tab::OnBulkUpdatesThawed, this);
@@ -319,11 +320,8 @@ void REHex::Tab::set_parent_window_active(bool parent_window_active)
 	}
 }
 
-void REHex::Tab::save_view(wxConfig *config)
+void REHex::Tab::save_view(wxConfigBase *config)
 {
-	// Ensure we are in the correct node
-	config->SetPath("/default-view/");
-	
 	config->Write("bytes-per-line", doc_ctrl->get_bytes_per_line());
 	config->Write("bytes-per-group", doc_ctrl->get_bytes_per_group());
 	config->Write("show-offsets", doc_ctrl->get_show_offsets());
@@ -1404,7 +1402,7 @@ void REHex::Tab::file_deleted_dialog()
 	
 	wxMessageDialog confirm(
 		this,
-		(wxString("The file ") + doc->get_filename() + " has been deleted from disk."),
+		(wxString("The file ") + doc->get_filename().GetFullPath().ToStdString() + " has been deleted from disk."),
 		"File deleted",
 		(wxYES_NO | wxCANCEL | wxCENTER));
 	
@@ -1478,7 +1476,7 @@ void REHex::Tab::file_modified_dialog()
 	{
 		wxMessageDialog confirm(
 			this,
-			(wxString("The file ") + doc->get_filename() + " has been modified externally AND in the editor.\n"
+			(wxString("The file ") + doc->get_filename().GetFullPath().ToStdString() + " has been modified externally AND in the editor.\n"
 				+ "DISCARD YOUR CHANGES and reload the file?"),
 			"File modified",
 			(wxYES_NO | wxICON_EXCLAMATION | wxCENTER));
@@ -1547,31 +1545,35 @@ void REHex::Tab::OnBulkUpdatesThawed(wxCommandEvent &event)
 	event.Skip();
 }
 
-void REHex::Tab::init_default_doc_view()
+void REHex::Tab::init_default_doc_view(wxConfigBase *view)
 {
-	wxConfig *config = wxGetApp().config;
-	config->SetPath("/default-view/");
+	std::unique_ptr<wxConfigPathChanger> pc;
+	if(view == NULL)
+	{
+		view = wxGetApp().config;
+		pc.reset(new wxConfigPathChanger(view, "/default-view/"));
+	}
 	
-	doc_ctrl->set_bytes_per_line(             config->ReadLong("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
-	doc_ctrl->set_bytes_per_group(            config->Read    ("bytes-per-group",            doc_ctrl->get_bytes_per_group()));
-	doc_ctrl->set_show_offsets(               config->ReadBool("show-offsets",               doc_ctrl->get_show_offsets()));
-	doc_ctrl->set_show_ascii(                 config->ReadBool("show-ascii",                 doc_ctrl->get_show_ascii()));
-	doc_ctrl->set_highlight_selection_match(  config->ReadBool("highlight-selection-match",  doc_ctrl->get_highlight_selection_match()));
+	doc_ctrl->set_bytes_per_line(             view->ReadLong("bytes-per-line",             doc_ctrl->get_bytes_per_line()));
+	doc_ctrl->set_bytes_per_group(            view->Read    ("bytes-per-group",            doc_ctrl->get_bytes_per_group()));
+	doc_ctrl->set_show_offsets(               view->ReadBool("show-offsets",               doc_ctrl->get_show_offsets()));
+	doc_ctrl->set_show_ascii(                 view->ReadBool("show-ascii",                 doc_ctrl->get_show_ascii()));
+	doc_ctrl->set_highlight_selection_match(  view->ReadBool("highlight-selection-match",  doc_ctrl->get_highlight_selection_match()));
 	
-	int inline_comments = config->Read("inline-comments", (int)(inline_comment_mode));
+	int inline_comments = view->Read("inline-comments", (int)(inline_comment_mode));
 	if(inline_comments >= 0 && inline_comments <= ICM_MAX)
 	{
 		inline_comment_mode = (InlineCommentMode)(inline_comments);
 		repopulate_regions();
 	}
 	
-	int offset_display_base = config->Read("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
+	int offset_display_base = view->Read("offset-display-base", (int)(doc_ctrl->get_offset_display_base()));
 	if(offset_display_base >= OFFSET_BASE_MIN && offset_display_base <= OFFSET_BASE_MAX)
 	{
 		doc_ctrl->set_offset_display_base((OffsetBase)(offset_display_base));
 	}
 	
-	int dsm_type = config->Read("data-map-scrollbar-type", (int)(data_map_scrollbar_type));
+	int dsm_type = view->Read("data-map-scrollbar-type", (int)(data_map_scrollbar_type));
 	set_dsm_type((DataMapScrollbarType)(dsm_type));
 
 	int default_byte_colour_map = wxGetApp().settings->get_default_byte_colour_map();
@@ -1589,12 +1591,18 @@ void REHex::Tab::init_default_doc_view()
 	}
 }
 
-void REHex::Tab::init_default_tools()
+void REHex::Tab::init_default_tools(wxConfigBase *view)
 {
-	wxConfig *config = wxGetApp().config;
+	std::unique_ptr<wxConfigPathChanger> pc;
+	if(view == NULL)
+	{
+		view = wxGetApp().config;
+		pc.reset(new wxConfigPathChanger(view, "/default-view/"));
+	}
 	
-	wxConfigPathChanger scoped_path(config, "/default-view/tools/");
-	tool_dock->LoadTools(config, doc, doc_ctrl);
+	wxConfigPathChanger scoped_path(view, "tools/");
+	
+	tool_dock->LoadTools(view, doc, doc_ctrl);
 }
 
 void REHex::Tab::repopulate_regions()

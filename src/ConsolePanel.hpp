@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  * Copyright (C) 2020 Mark Jansen <mark.jansen@reactos.org>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -37,8 +37,8 @@ namespace REHex
 			virtual std::string label() const override;
 			virtual Shape shape() const override;
 			
-			virtual void save_state(wxConfig *config) const override;
-			virtual void load_state(wxConfig *config) override;
+			virtual void save_state(wxConfigBase *config) const override;
+			virtual void load_state(wxConfigBase *config) override;
 			virtual void update() override;
 			
 			virtual wxSize DoGetBestClientSize() const override;

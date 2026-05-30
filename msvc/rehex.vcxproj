@@ -495,6 +495,7 @@
     <ClCompile Include="..\src\DocumentCtrl.cpp" />
     <ClCompile Include="..\src\EditCommentDialog.cpp" />
     <ClCompile Include="..\src\Events.cpp" />
+    <ClCompile Include="..\src\FileReader.cpp" />
     <ClCompile Include="..\src\FileWriter.cpp" />
     <ClCompile Include="..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp" />

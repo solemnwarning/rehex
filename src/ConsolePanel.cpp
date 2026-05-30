@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2021-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2021-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  * Copyright (C) 2020 Mark Jansen <mark.jansen@reactos.org>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -76,8 +76,8 @@ REHex::ToolPanel::Shape REHex::ConsolePanel::shape() const
 	return ToolPanel::TPS_WIDE;
 }
 
-void REHex::ConsolePanel::save_state(wxConfig *config) const {}
-void REHex::ConsolePanel::load_state(wxConfig *config) {}
+void REHex::ConsolePanel::save_state(wxConfigBase *config) const {}
+void REHex::ConsolePanel::load_state(wxConfigBase *config) {}
 
 wxSize REHex::ConsolePanel::DoGetBestClientSize() const
 {

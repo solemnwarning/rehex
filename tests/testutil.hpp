@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -47,6 +47,14 @@ bool run_wx_until(const std::function<bool()> &predicate, unsigned int timeout_m
 void write_file(const std::string &filename, const std::vector<unsigned char>& data);
 void write_file(const std::string &filename, const void *data, size_t size);
 std::vector<unsigned char> read_file(const std::string &filename);
+
+/**
+ * @brief Obtain a reproducible sequence of psuedorandom bytes.
+ *
+ * @param offset  Offset into the sequence to start reading from.
+ * @param length  Number of bytes to read.
+*/
+std::vector<unsigned char> data_pattern(size_t offset, size_t length);
 
 class TempFilename
 {

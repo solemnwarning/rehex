@@ -117,6 +117,17 @@ REHex::MacFileName::MacFileNameImpl::MacFileNameImpl(const wxString &bookmark, c
 }
 #endif
 
+bool REHex::MacFileName::IsOk() const
+{
+	if(m_impl)
+	{
+		return m_impl->GetFileName().IsOk();
+	}
+	else{
+		return false;
+	}
+}
+
 wxString REHex::MacFileName::GetFullName() const
 {
 	if(m_impl)

@@ -396,11 +396,11 @@ void REHex::fake_broken_mouse_capture(wxWindow *window)
 std::string REHex::document_save_as_dialog(wxWindow *modal_parent, Document *document)
 {
 	std::string dir, name;
-	std::string doc_filename = document->get_filename();
+	FileName doc_filename = document->get_filename();
 	
-	if(doc_filename != "")
+	if(doc_filename.IsOk())
 	{
-		wxFileName wxfn(doc_filename);
+		wxFileName wxfn(doc_filename.GetFullPath());
 		wxfn.MakeAbsolute();
 		
 		dir  = wxfn.GetPath();

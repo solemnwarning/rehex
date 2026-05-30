@@ -25,6 +25,7 @@
 #include <time.h>
 #include <vector>
 #include <wx/event.h>
+#include <wx/stream.h>
 #include <wx/timer.h>
 
 #ifdef _WIN32
@@ -33,6 +34,8 @@
 
 #include "BitOffset.hpp"
 #include "FileName.hpp"
+#include "FileReader.hpp"
+#include "FileWriter.hpp"
 #include "shared_mutex.hpp"
 
 namespace REHex {
@@ -68,6 +71,7 @@ namespace REHex {
 					Handle *handle;
 					
 				public:
+					HandlePtr();
 					HandlePtr(Buffer *buffer, Handle *handle, const std::unique_lock<std::mutex> &hm_guard);
 					~HandlePtr();
 					
@@ -78,6 +82,8 @@ namespace REHex {
 					HandlePtr &operator=(HandlePtr&&);
 					
 					operator FILE*() const;
+
+					explicit operator bool() const;
 			};
 			
 			/**
@@ -244,7 +250,7 @@ namespace REHex {
 			/**
 			 * @brief Create an empty Buffer with no backing file.
 			*/
-			Buffer();
+			Buffer(off_t block_size = DEFAULT_BLOCK_SIZE);
 			
 			/**
 			 * @brief Create a Buffer with a backing file on disk.
@@ -290,6 +296,20 @@ namespace REHex {
 			 * Throws on I/O errors.
 			*/
 			void write_copy(const std::string &filename);
+			
+			/**
+			 * @brief Serialise Buffer object to a file.
+			 *
+			 * Writes out the current state of the Buffer object including any changed blocks and
+			 * the modification time of the file so that it can be restored without any data loss
+			 * after restarting the application.
+			*/
+			void serialise(FileWriter *file);
+			
+			/**
+			 * @brief Recreate a previously-serialised Buffer object.
+			*/
+			static std::unique_ptr<Buffer> deserialise(FileReader *file);
 			
 			/**
 			 * @brief Get the length of the Buffer.
@@ -394,6 +414,8 @@ namespace REHex {
 			 * @brief Returns true if the backing file has been modified externally.
 			*/
 			bool file_modified() const;
+
+			FileName get_filename() const;
 	};
 }
 

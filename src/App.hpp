@@ -222,6 +222,11 @@ namespace REHex {
 			*/
 			static bool is_wayland_session();
 			#endif
+
+			/**
+			 * @brief Get the directory where application state data should be stored.
+			*/
+			static std::string get_state_directory();
 			
 		private:
 			std::string last_directory;
@@ -237,6 +242,7 @@ namespace REHex {
 			void call_setup_hooks(SetupPhase phase);
 			
 			void OnTabDropped(DetachedPageEvent &event);
+			void OnEndSession(wxCloseEvent &event);
 			
 			IPCServer *ipc_server;
 			

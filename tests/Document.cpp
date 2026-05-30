@@ -4648,6 +4648,79 @@ TEST_F(DocumentTest, LoadMetadataDataHighlightsCustomColours)
 	}
 }
 
+TEST_F(DocumentTest, SerialiseDocumentWithoutBackingFile)
+{
+	static const char *REFERENCE_DATA = "cough rob greedy";
+
+	doc->insert_data(0, REFERENCE_DATA, strlen(REFERENCE_DATA));
+	doc->set_comment(4, 10, REHex::Document::Comment("save cave mend"));
+
+	TempFilename tfn;
+	
+	{
+		FileWriter fw(tfn.tmpfile);
+		doc->serialise(&fw);
+		fw.commit();
+	}
+
+	std::unique_ptr<Document> doc2;
+
+	{
+		FileReader fr(tfn.tmpfile);
+		doc2 = Document::deserialise(&fr);
+	}
+
+	std::vector<unsigned char> data = doc2->read_data(0, 256);
+
+	EXPECT_EQ(
+		std::string((const char*)(data.data()), data.size()),
+		std::string(REFERENCE_DATA, strlen(REFERENCE_DATA)));
+	
+	EXPECT_EQ(doc2->get_comments(), doc->get_comments());
+
+	EXPECT_FALSE(doc2->get_filename().IsOk());
+
+	EXPECT_TRUE(doc->is_dirty());
+}
+
+TEST_F(DocumentTest, SerialiseDocumentWithBackingFile)
+{
+	static const char *REFERENCE_DATA = "cough rob greedy";
+
+	doc->insert_data(0, REFERENCE_DATA, strlen(REFERENCE_DATA));
+	doc->set_comment(4, 10, REHex::Document::Comment("save cave mend"));
+
+	TempFilename tfn1, tfn2;
+
+	doc->save(wxFileName(tfn1.tmpfile));
+	
+	{
+		FileWriter fw(tfn2.tmpfile);
+		doc->serialise(&fw);
+		fw.commit();
+	}
+
+	std::unique_ptr<Document> doc2;
+
+	{
+		FileReader fr(tfn2.tmpfile);
+		doc2 = Document::deserialise(&fr);
+	}
+
+	std::vector<unsigned char> data = doc2->read_data(0, 256);
+
+	EXPECT_EQ(
+		std::string((const char*)(data.data()), data.size()),
+		std::string(REFERENCE_DATA, strlen(REFERENCE_DATA)));
+	
+	EXPECT_EQ(doc2->get_comments(), doc->get_comments());
+
+	EXPECT_TRUE(doc2->get_filename().IsOk());
+	EXPECT_EQ(doc2->get_filename().GetFullPath(), wxFileName(tfn1.tmpfile).GetFullPath());
+
+	EXPECT_FALSE(doc->is_dirty());
+}
+
 TEST(Document, TypeInfoComparison)
 {
 	/* Check name comparison. */

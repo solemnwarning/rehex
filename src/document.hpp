@@ -34,6 +34,7 @@
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
 #include "FileName.hpp"
+#include "FileWriter.hpp"
 #include "HighlightColourMap.hpp"
 #include "util.hpp"
 
@@ -139,6 +140,8 @@ namespace REHex {
 			 * @brief Create a Document for an existing file on disk.
 			*/
 			Document(const FileName &filename);
+
+			Document(std::unique_ptr<Buffer> &&buffer);
 			
 			~Document();
 			
@@ -173,7 +176,7 @@ namespace REHex {
 			/**
 			 * @brief Get the filename of the document, or an empty string if there is no backing file.
 			*/
-			std::string get_filename();
+			FileName get_filename();
 			
 			/**
 			 * @brief Check if the document has any pending changes to be saved.
@@ -372,6 +375,10 @@ namespace REHex {
 			
 			static std::string find_metadata(const std::string &filename);
 			
+			void serialise(FileWriter *file);
+
+			static std::unique_ptr<Document> deserialise(FileReader *file);
+			
 		#ifndef UNIT_TEST
 		private:
 		#endif
@@ -421,7 +428,6 @@ namespace REHex {
 			void transact_step(const TransOpFunc &op, const std::string &desc);
 			
 			Buffer *buffer;
-			FileName filename;
 			bool write_protect;
 			
 			void _forward_buffer_events();

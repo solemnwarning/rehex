@@ -27,6 +27,8 @@
 
 #include "DetachableNotebook.hpp"
 #include "Events.hpp"
+#include "FileReader.hpp"
+#include "FileWriter.hpp"
 #include "MacFileName.hpp"
 #include "Tab.hpp"
 #include "ToolPanel.hpp"
@@ -50,7 +52,7 @@ namespace REHex {
 			/**
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
-			Tab *open_file(const FileName &filename);
+			Tab *open_file(const FileName &filename, wxConfigBase *view = NULL);
 			
 			Tab *import_hex_file(const std::string &filename);
 			
@@ -90,6 +92,7 @@ namespace REHex {
 			void OnSaveAs(wxCommandEvent &event);
 			void OnReload(wxCommandEvent &event);
 			void OnAutoReload(wxCommandEvent &event);
+			void OnSaveWorkspace(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
 			void OnImportMetadata(wxCommandEvent &event);
@@ -141,6 +144,10 @@ namespace REHex {
 			void OnDonate(wxCommandEvent &event);
 			void OnHelp(wxCommandEvent &event);
 			void OnAbout(wxCommandEvent &event);
+			
+			#ifndef NDEBUG
+			void OnSimulateEndSession(wxCommandEvent &event);
+			#endif
 			
 			void OnDocumentChange(wxAuiNotebookEvent &event);
 			void OnDocumentClose(wxAuiNotebookEvent &event);
@@ -236,6 +243,9 @@ namespace REHex {
 			 * from most recently activated (e.g. top of Z order) to least.
 			*/
 			static const std::list<MainWindow*> &get_instances();
+			
+			static void serialise_windows(const std::vector<MainWindow*> &windows, FileWriter *file);
+			static std::vector<MainWindow*> deserialise_windows(FileReader *file);
 			
 			/**
 			 * @brief Performs RAII-style MainWindow setup hook registration.

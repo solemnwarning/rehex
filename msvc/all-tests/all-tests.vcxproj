@@ -284,6 +284,7 @@
     <ClCompile Include="..\..\src\DocumentCtrl.cpp" />
     <ClCompile Include="..\..\src\EditCommentDialog.cpp" />
     <ClCompile Include="..\..\src\Events.cpp" />
+    <ClCompile Include="..\..\src\FileReader.cpp" />
     <ClCompile Include="..\..\src\FileWriter.cpp" />
     <ClCompile Include="..\..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\..\src\FixedSizeValueRegion.cpp" />
@@ -350,7 +351,9 @@
     <ClCompile Include="..\..\tests\DocumentCtrl.cpp" />
     <ClCompile Include="..\..\tests\endian_conv.cpp" />
     <ClCompile Include="..\..\tests\FastRectangleFiller.cpp" />
+    <ClCompile Include="..\..\tests\FileReader.cpp" />
     <ClCompile Include="..\..\tests\FileWriter.cpp" />
+    <ClCompile Include="..\..\tests\FourCC.cpp" />
     <ClCompile Include="..\..\tests\HierarchicalByteAccumulator.cpp" />
     <ClCompile Include="..\..\tests\HighlightColourMap.cpp" />
     <ClCompile Include="..\..\tests\HSVColour.cpp" />

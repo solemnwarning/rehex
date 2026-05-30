@@ -503,3 +503,15 @@ static int LUACALL wxLua_REHex_DataTypeRegistration_get_by_name(lua_State *L)
 	return 1;
 }
 %end
+
+%override wxLua_REHex_Document_get_filename
+static int LUACALL wxLua_REHex_Document_get_filename(lua_State *L)
+{
+    REHex::Document *self = (REHex::Document*)(wxluaT_getuserdatatype(L, 1, wxluatype_REHex_Document));
+
+    wxString returns = self->get_filename().GetFullPath();
+    wxlua_pushwxString(L, returns);
+
+    return 1;
+}
+%end

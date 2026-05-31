@@ -1,0 +1,13 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "cStandard": "c99",
+            "cppStandard": "c++11",
+            "compileCommands": [
+                "${workspaceFolder}/compile_commands.json"
+            ]
+        }
+    ],
+    "version": 4
+}

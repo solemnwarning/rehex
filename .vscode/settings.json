@@ -1,0 +1,21 @@
+{
+    "editor.insertSpaces": false,
+    "explorer.excludeGitIgnore": true,
+    "git.ignoreLimitWarning": true,
+    "makefile.configureOnOpen": false,
+    "search.useParentIgnoreFiles": true
+    
+    "testMate.cpp.test.parallelExecutionLimit": 16,
+    "testMate.cpp.test.advancedExecutables": [
+        {
+            "pattern": "tests/all-tests",
+            "cwd": "${workspaceFolder}",
+            "parallelizationLimit": 16
+        },
+        {
+            "pattern": "tests/all-tests_debug",
+            "cwd": "${workspaceFolder}",
+            "parallelizationLimit": 16
+        }
+    ]
+}

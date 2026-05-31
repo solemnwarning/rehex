@@ -1,0 +1,85 @@
+{
+    "version":"2.0.0",
+
+    "tasks": [
+        {
+            "label": "Generate compile_commands.json",
+            "type": "shell",
+            "command": "make -j$(nproc) compile_commands.json",
+            "problemMatcher": [],
+            "group": "none",
+            "presentation": {
+                "reveal":"always",
+                "panel":"shared"
+            },
+            "runOptions": {
+                "runOn": "folderOpen",
+            },
+        },
+        {
+            "label": "Build (Debug)",
+            "type": "shell",
+            "command": "make -j$(nproc) BUILD_TYPE=debug",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+        },
+        {
+            "label": "Build (Release)",
+            "type": "shell",
+            "command": "make -j$(nproc) BUILD_TYPE=release",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+        },
+        {
+            "label": "Build (Profile)",
+            "type": "shell",
+            "command": "make -j$(nproc) BUILD_TYPE=profile",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+        },
+        {
+            "label": "Build tests (Debug)",
+            "type": "shell",
+            "command": "make -j$(nproc) BUILD_TYPE=debug tests/all-tests_debug",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+        },
+        {
+            "label": "Build tests (Release)",
+            "type": "shell",
+            "command": "make -j$(nproc) BUILD_TYPE=release tests/all-tests",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "group": "build",
+        },
+        {
+            "label": "Build tests",
+            "problemMatcher": [],
+            "dependsOn": [ "Build tests (Debug)", "Build tests (Release)" ],
+            "dependsOrder": "sequence",
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "command": "make clean",
+            "problemMatcher": [],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        }
+    ]
+}

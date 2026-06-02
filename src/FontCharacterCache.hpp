@@ -25,6 +25,7 @@
 #include <wx/font.h>
 #include <wx/gdicmn.h>
 #include <wx/string.h>
+#include <wx/version.h>
 #include <wx/window.h>
 
 #include "LRUCache.hpp"
@@ -217,7 +218,9 @@ namespace REHex
 			mutable LRUCache<StringBitmapCacheKey, wxBitmap> m_string_bitmap_cache;
 			#endif
 
+#if wxCHECK_VERSION(3, 1, 3)
 			void OnDPIChanged(wxDPIChangedEvent &event);
+#endif
 	};
 }
 

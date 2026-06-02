@@ -101,7 +101,14 @@ wxFont REHex::FontCharacterCache::get_font() const
 
 void REHex::FontCharacterCache::reset()
 {
-	wxClientDC dc(m_window);
+#if wxCHECK_VERSION(3, 1, 6)
+	wxBitmap tmp_bitmap;
+	tmp_bitmap.CreateWithDIPSize(wxSize(16, 16), m_window->GetDPIScaleFactor(), wxBITMAP_SCREEN_DEPTH);
+#else
+	wxBitmap tmp_bitmap(16, 16, wxBITMAP_SCREEN_DEPTH);
+#endif
+
+	wxMemoryDC dc(tmp_bitmap);
 	
 	dc.SetFont(m_font);
 	
@@ -198,7 +205,14 @@ wxSize REHex::FontCharacterCache::char_size(ucs4_t c) const
 		return *s;
 	}
 	else {
-		wxClientDC dc(m_window);
+#if wxCHECK_VERSION(3, 1, 6)
+		wxBitmap tmp_bitmap;
+		tmp_bitmap.CreateWithDIPSize(wxSize(16, 16), m_window->GetDPIScaleFactor(), wxBITMAP_SCREEN_DEPTH);
+#else
+		wxBitmap tmp_bitmap(16, 16, wxBITMAP_SCREEN_DEPTH);
+#endif
+
+		wxMemoryDC dc(tmp_bitmap);
 		
 		dc.SetFont(m_font);
 		
@@ -403,6 +417,7 @@ bool REHex::FontCharacterCache::StringBitmapCacheKey::operator<(const StringBitm
 }
 #endif
 
+#if wxCHECK_VERSION(3, 1, 3)
 void REHex::FontCharacterCache::OnDPIChanged(wxDPIChangedEvent &event)
 {
 	/* Clear cached sizes/bitmaps. */
@@ -410,3 +425,4 @@ void REHex::FontCharacterCache::OnDPIChanged(wxDPIChangedEvent &event)
 
 	event.Skip(); /* Continue propagation. */
 }
+#endif

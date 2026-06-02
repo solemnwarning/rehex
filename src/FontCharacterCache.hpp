@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -25,6 +25,7 @@
 #include <wx/font.h>
 #include <wx/gdicmn.h>
 #include <wx/string.h>
+#include <wx/window.h>
 
 #include "LRUCache.hpp"
 
@@ -39,15 +40,17 @@ namespace REHex
 			/**
 			 * @brief Set up a FontCharacterCache with the system default font.
 			*/
-			FontCharacterCache();
+			FontCharacterCache(wxWindow *window);
 			
 			/**
 			 * @brief Set up a FontCharacterCache with a specific font.
 			*/
-			FontCharacterCache(const wxFont &font);
+			FontCharacterCache(wxWindow *window, const wxFont &font);
 			
 			FontCharacterCache(const FontCharacterCache&) = delete;
 			FontCharacterCache &operator=(const FontCharacterCache&) = delete;
+
+			~FontCharacterCache();
 			
 			/**
 			 * @brief Change the font and reset the cache.
@@ -173,6 +176,7 @@ namespace REHex
 			#endif
 			
 		private:
+			wxWindow *m_window;
 			wxFont m_font;
 			
 			int m_char_height;
@@ -212,6 +216,8 @@ namespace REHex
 			static const size_t STRING_BITMAP_CACHE_SIZE = 256;
 			mutable LRUCache<StringBitmapCacheKey, wxBitmap> m_string_bitmap_cache;
 			#endif
+
+			void OnDPIChanged(wxDPIChangedEvent &event);
 	};
 }
 

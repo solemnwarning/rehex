@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2025-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,8 +19,10 @@
 
 #include <algorithm>
 #include <unistr.h>
+#include <wx/dcclient.h>
 #include <wx/dcmemory.h>
 #include <wx/settings.h>
+#include <wx/version.h>
 
 #include "FontCharacterCache.hpp"
 #include "profile.hpp"
@@ -39,7 +41,8 @@ static wxString wxString_FromUnicodeChar(ucs4_t c)
 	return wxString::FromUTF8Unchecked(c_utf8, c_utf8_len);
 }
 
-REHex::FontCharacterCache::FontCharacterCache():
+REHex::FontCharacterCache::FontCharacterCache(wxWindow *window):
+	m_window(window),
 	m_font(wxSystemSettings::GetFont(wxSYS_OEM_FIXED_FONT)),
 	m_char_size_cache(CHAR_SIZE_CACHE_SIZE)
 	
@@ -51,10 +54,15 @@ REHex::FontCharacterCache::FontCharacterCache():
 	, m_string_bitmap_cache(STRING_BITMAP_CACHE_SIZE)
 	#endif
 {
+#if wxCHECK_VERSION(3, 1, 3)
+	m_window->Bind(wxEVT_DPI_CHANGED, &FontCharacterCache::OnDPIChanged, this);
+#endif
+
 	reset();
 }
 
-REHex::FontCharacterCache::FontCharacterCache(const wxFont &font):
+REHex::FontCharacterCache::FontCharacterCache(wxWindow *window, const wxFont &font):
+	m_window(window),
 	m_font(font),
 	m_char_size_cache(CHAR_SIZE_CACHE_SIZE)
 	
@@ -66,7 +74,18 @@ REHex::FontCharacterCache::FontCharacterCache(const wxFont &font):
 	, m_string_bitmap_cache(STRING_BITMAP_CACHE_SIZE)
 	#endif
 {
+#if wxCHECK_VERSION(3, 1, 3)
+	m_window->Bind(wxEVT_DPI_CHANGED, &FontCharacterCache::OnDPIChanged, this);
+#endif
+
 	reset();
+}
+
+REHex::FontCharacterCache::~FontCharacterCache()
+{
+#if wxCHECK_VERSION(3, 1, 3)
+	m_window->Unbind(wxEVT_DPI_CHANGED, &FontCharacterCache::OnDPIChanged, this);
+#endif
 }
 
 void REHex::FontCharacterCache::set_font(const wxFont &font)
@@ -82,8 +101,7 @@ wxFont REHex::FontCharacterCache::get_font() const
 
 void REHex::FontCharacterCache::reset()
 {
-	wxBitmap tmp_bitmap(16, 16, wxBITMAP_SCREEN_DEPTH);
-	wxMemoryDC dc(tmp_bitmap);
+	wxClientDC dc(m_window);
 	
 	dc.SetFont(m_font);
 	
@@ -180,8 +198,7 @@ wxSize REHex::FontCharacterCache::char_size(ucs4_t c) const
 		return *s;
 	}
 	else {
-		wxBitmap tmp_bitmap(16, 16, wxBITMAP_SCREEN_DEPTH);
-		wxMemoryDC dc(tmp_bitmap);
+		wxClientDC dc(m_window);
 		
 		dc.SetFont(m_font);
 		
@@ -236,8 +253,13 @@ wxBitmap REHex::FontCharacterCache::char_bitmap(ucs4_t unicode_char, const wxSiz
 		 * - https://forums.wxwidgets.org/viewtopic.php?p=185332#p185332
 		*/
 		
-		wxBitmap char_bitmap(char_size, wxBITMAP_SCREEN_DEPTH);
+#if wxCHECK_VERSION(3, 1, 6)
+		wxBitmap char_bitmap;
+		char_bitmap.CreateWithDIPSize(char_size, m_window->GetDPIScaleFactor(), wxBITMAP_SCREEN_DEPTH);
 		wxMemoryDC mdc(char_bitmap);
+#else
+		wxBitmap char_bitmap(char_size, wxBITMAP_SCREEN_DEPTH);
+#endif
 		
 		mdc.SetFont(m_font);
 		
@@ -314,8 +336,13 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(int base_column, const std::ve
 		
 		string_w -= base_x;
 		
-		wxBitmap string_bitmap(string_w, string_h, wxBITMAP_SCREEN_DEPTH);
+#if wxCHECK_VERSION(3, 1, 6)
+		wxBitmap string_bitmap;
+		string_bitmap.CreateWithDIPSize(wxSize(string_w, string_h), m_window->GetDPIScaleFactor(), wxBITMAP_SCREEN_DEPTH);
 		wxMemoryDC mdc(string_bitmap);
+#else
+		wxBitmap string_bitmap(string_w, string_h, wxBITMAP_SCREEN_DEPTH);
+#endif
 		
 		mdc.SetBackground(wxBrush(bg_colour));
 		mdc.Clear();
@@ -375,3 +402,11 @@ bool REHex::FontCharacterCache::StringBitmapCacheKey::operator<(const StringBitm
 	}
 }
 #endif
+
+void REHex::FontCharacterCache::OnDPIChanged(wxDPIChangedEvent &event)
+{
+	/* Clear cached sizes/bitmaps. */
+	reset();
+
+	event.Skip(); /* Continue propagation. */
+}

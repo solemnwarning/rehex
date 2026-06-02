@@ -270,10 +270,11 @@ wxBitmap REHex::FontCharacterCache::char_bitmap(ucs4_t unicode_char, const wxSiz
 #if wxCHECK_VERSION(3, 1, 6)
 		wxBitmap char_bitmap;
 		char_bitmap.CreateWithDIPSize(char_size, m_window->GetDPIScaleFactor(), wxBITMAP_SCREEN_DEPTH);
-		wxMemoryDC mdc(char_bitmap);
 #else
 		wxBitmap char_bitmap(char_size, wxBITMAP_SCREEN_DEPTH);
 #endif
+
+		wxMemoryDC mdc(char_bitmap);
 		
 		mdc.SetFont(m_font);
 		
@@ -353,11 +354,12 @@ wxBitmap REHex::FontCharacterCache::string_bitmap(int base_column, const std::ve
 #if wxCHECK_VERSION(3, 1, 6)
 		wxBitmap string_bitmap;
 		string_bitmap.CreateWithDIPSize(wxSize(string_w, string_h), m_window->GetDPIScaleFactor(), wxBITMAP_SCREEN_DEPTH);
-		wxMemoryDC mdc(string_bitmap);
 #else
 		wxBitmap string_bitmap(string_w, string_h, wxBITMAP_SCREEN_DEPTH);
 #endif
 		
+		wxMemoryDC mdc(string_bitmap);
+
 		mdc.SetBackground(wxBrush(bg_colour));
 		mdc.Clear();
 		

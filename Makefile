@@ -535,6 +535,7 @@ APP_OBJS := \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
+	src/SettingsDialogFont.$(BUILD_TYPE).o \
 	src/SettingsDialogGeneral.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
@@ -671,6 +672,7 @@ TEST_OBJS := \
 	src/search.$(BUILD_TYPE).o \
 	src/SettingsDialog.$(BUILD_TYPE).o \
 	src/SettingsDialogByteColour.$(BUILD_TYPE).o \
+	src/SettingsDialogFont.$(BUILD_TYPE).o \
 	src/SettingsDialogGeneral.$(BUILD_TYPE).o \
 	src/SettingsDialogHighlights.$(BUILD_TYPE).o \
 	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \

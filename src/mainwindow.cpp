@@ -48,6 +48,7 @@
 #include "search.hpp"
 #include "SettingsDialog.hpp"
 #include "SettingsDialogByteColour.hpp"
+#include "SettingsDialogFont.hpp"
 #include "SettingsDialogHighlights.hpp"
 #include "SettingsDialogGeneral.hpp"
 #include "SettingsDialogKeyboard.hpp"
@@ -102,8 +103,6 @@ enum {
 	ID_SYSTEM_PALETTE,
 	ID_LIGHT_PALETTE,
 	ID_DARK_PALETTE,
-	ID_FSA_INCREASE,
-	ID_FSA_DECREASE,
 	ID_CLOSE_ALL,
 	ID_CLOSE_OTHERS,
 	ID_GITHUB,
@@ -213,9 +212,6 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(ID_SYSTEM_PALETTE, REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_LIGHT_PALETTE,  REHex::MainWindow::OnPalette)
 	EVT_MENU(ID_DARK_PALETTE,   REHex::MainWindow::OnPalette)
-	
-	EVT_MENU(ID_FSA_INCREASE, REHex::MainWindow::OnFSAIncrease)
-	EVT_MENU(ID_FSA_DECREASE, REHex::MainWindow::OnFSADecrease)
 	
 	EVT_MENU(ID_HEX_OFFSETS,   REHex::MainWindow::OnHexOffsets)
 	EVT_MENU(ID_DEC_OFFSETS,   REHex::MainWindow::OnDecOffsets)
@@ -494,33 +490,6 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		{
 			palette_menu->Check(ID_SYSTEM_PALETTE, true);
 		}
-		
-		view_menu->AppendSeparator(); /* ---- */
-		
-		wxMenu *font_menu = new wxMenu;
-		view_menu->AppendSubMenu(font_menu, "Select font");
-		
-		wxArrayString font_names = wxFontEnumerator::GetFacenames(wxFONTENCODING_SYSTEM, true);
-		
-		for(size_t i = 0; i < font_names.GetCount(); ++i)
-		{
-			std::string font_name = font_names[i].ToStdString();
-			
-			wxMenuItem *itm = font_menu->AppendRadioItem(wxID_ANY, font_name);
-			if(font_name == wxGetApp().get_font_name())
-			{
-				itm->Check(true);
-			}
-			
-			Bind(wxEVT_MENU, [font_name, itm](wxCommandEvent &event)
-			{
-				wxGetApp().set_font_name(font_name);
-				itm->Check(true);
-			}, itm->GetId(), itm->GetId());
-		}
-		
-		view_menu->Append(ID_FSA_INCREASE, "Increase font size");
-		view_menu->Append(ID_FSA_DECREASE, "Decrease font size");
 		
 		view_menu->AppendSeparator();  /* ---- */
 		
@@ -1662,6 +1631,7 @@ void REHex::MainWindow::OnSettings(wxCommandEvent &event)
 	{
 		std::vector< std::unique_ptr<SettingsDialogPanel> > panels;
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogGeneral()));
+		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogFont()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogByteColour()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogAppHighlights()));
 		panels.push_back(std::unique_ptr<SettingsDialogPanel>(new SettingsDialogKeyboard()));
@@ -1887,18 +1857,6 @@ void REHex::MainWindow::OnPalette(wxCommandEvent &event)
 	Refresh();
 }
 
-void REHex::MainWindow::OnFSAIncrease(wxCommandEvent &event)
-{
-	App &app = wxGetApp();
-	app.set_font_size_adjustment(app.get_font_size_adjustment() + 1);
-}
-
-void REHex::MainWindow::OnFSADecrease(wxCommandEvent &event)
-{
-	App &app = wxGetApp();
-	app.set_font_size_adjustment(app.get_font_size_adjustment() - 1);
-}
-
 void REHex::MainWindow::OnHexOffsets(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
@@ -1932,8 +1890,6 @@ void REHex::MainWindow::OnSaveView(wxCommandEvent &event)
 	// Save the active theme
 	config->SetPath("/");
 	config->Write("theme", wxString(active_palette->get_name()));
-	config->Write("font-size-adjustment", (long)(wxGetApp().get_font_size_adjustment()));
-	config->Write("font-name", wxString(wxGetApp().get_font_name()));
 	
 	// Clean out all previous settings
 	config->DeleteGroup("/default-view/");

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -45,7 +45,7 @@ END_EVENT_TABLE()
 
 REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	wxControl(parent, id, wxDefaultPosition, wxDefaultSize, (wxVSCROLL | wxHSCROLL | wxWANTS_CHARS)),
-	font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
+	font(wxGetApp().settings->get_primary_font().create_font()),
 	all_lines_byte_aligned(true),
 	max_line_width(0),
 	offset_display_base(OFFSET_BASE_HEX),
@@ -59,14 +59,7 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 	selection_begin(-1, -1),
 	selection_end(-1, -1)
 {
-	App &app = wxGetApp();
-	
-	app.Bind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::CodeCtrl::OnFontSizeAdjustmentChanged, this);
-	
-	int font_size_adjustment = app.get_font_size_adjustment();
-	
-	while(font_size_adjustment > 0) { font.MakeLarger(); --font_size_adjustment; }
-	while(font_size_adjustment < 0) { font.MakeSmaller(); ++font_size_adjustment; }
+	wxGetApp().settings->Bind(PRIMARY_FONT_CHANGED, &REHex::CodeCtrl::OnFontChanged, this);
 	
 	assert(font.IsFixedWidth());
 	
@@ -83,7 +76,7 @@ REHex::CodeCtrl::CodeCtrl(wxWindow *parent, wxWindowID id):
 
 REHex::CodeCtrl::~CodeCtrl()
 {
-	wxGetApp().Unbind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::CodeCtrl::OnFontSizeAdjustmentChanged, this);
+	wxGetApp().settings->Unbind(PRIMARY_FONT_CHANGED, &REHex::CodeCtrl::OnFontChanged, this);
 }
 
 void REHex::CodeCtrl::append_line(BitOffset offset, const std::string &text, bool active)
@@ -398,12 +391,9 @@ void REHex::CodeCtrl::OnSize(wxSizeEvent &event)
 	update_scrollbars();
 }
 
-void REHex::CodeCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event)
+void REHex::CodeCtrl::OnFontChanged(wxCommandEvent &event)
 {
-	font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
-	
-	for(int i = 0; i < event.font_size_adjustment; ++i) { font.MakeLarger(); }
-	for(int i = 0; i > event.font_size_adjustment; --i) { font.MakeSmaller(); }
+	font = wxGetApp().settings->get_primary_font().create_font();
 	
 	assert(font.IsFixedWidth());
 	

@@ -18,6 +18,8 @@
 #ifndef REHEX_MATHUTILS_HPP
 #define REHEX_MATHUTILS_HPP
 
+#include <assert.h>
+#include <cmath>
 #include <limits>
 
 #include "BitOffset.hpp"
@@ -175,6 +177,20 @@ namespace REHex {
 		}
 		
 		return result;
+	}
+
+	/**
+	 * @brief Round a floating point number to a number of decimal places.
+	 *
+	 * @param num     Number to round.
+	 * @param places  Number of decimal places to round to.
+	 */
+	template<typename T> T decimal_round(T num, int places)
+	{
+		assert(places >= 0);
+
+		T div = pow(10.0f, places);
+		return std::round(num * div) / div;
 	}
 }
 

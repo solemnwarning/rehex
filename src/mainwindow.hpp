@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -140,8 +140,6 @@ namespace REHex {
 			void OnColourMap(wxCommandEvent &event);
 			void OnShowToolPanel(wxCommandEvent &event, const REHex::ToolPanelRegistration *tpr);
 			void OnPalette(wxCommandEvent &event);
-			void OnFSAIncrease(wxCommandEvent &event);
-			void OnFSADecrease(wxCommandEvent &event);
 			void OnHexOffsets(wxCommandEvent &event);
 			void OnDecOffsets(wxCommandEvent &event);
 			void OnSaveView(wxCommandEvent &event);

@@ -83,8 +83,8 @@ END_EVENT_TABLE()
 REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, long style):
 	wxControl(),
 	doc(doc),
-	hex_font(wxFontInfo().FaceName(wxGetApp().get_font_name())),
-	hex_font_cache(this),
+	hex_font(wxGetApp().settings->get_primary_font().create_font()),
+	hex_font_cache(this, hex_font),
 	linked_scroll_prev(NULL),
 	linked_scroll_next(NULL),
 	selection_begin(BitOffset::INVALID),
@@ -92,16 +92,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, 
 	redraw_cursor_timer(this, ID_REDRAW_CURSOR),
 	mouse_select_timer(this, ID_SELECT_TIMER)
 {
-	App &app = wxGetApp();
-	
-	app.Bind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::DocumentCtrl::OnFontSizeAdjustmentChanged, this);
-	
-	int font_size_adjustment = app.get_font_size_adjustment();
-	
-	while(font_size_adjustment > 0) { hex_font.MakeLarger(); --font_size_adjustment; }
-	while(font_size_adjustment < 0) { hex_font.MakeSmaller(); ++font_size_adjustment; }
-	
-	hex_font_cache.set_font(hex_font);
+	wxGetApp().settings->Bind(PRIMARY_FONT_CHANGED, &REHex::DocumentCtrl::OnFontChanged, this);
 	
 	/* The background style MUST be set before the control is created. */
 	SetBackgroundStyle(wxBG_STYLE_PAINT);
@@ -155,23 +146,23 @@ REHex::DocumentCtrl::~DocumentCtrl()
 		delete *region;
 	}
 	
-	wxGetApp().Unbind(FONT_SIZE_ADJUSTMENT_CHANGED, &REHex::DocumentCtrl::OnFontSizeAdjustmentChanged, this);
+	wxGetApp().settings->Unbind(PRIMARY_FONT_CHANGED, &REHex::DocumentCtrl::OnFontChanged, this);
 }
 
-void REHex::DocumentCtrl::OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event)
+void REHex::DocumentCtrl::OnFontChanged(wxCommandEvent &event)
 {
-	hex_font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
-	
-	for(int i = 0; i < event.font_size_adjustment; ++i) { hex_font.MakeLarger(); }
-	for(int i = 0; i > event.font_size_adjustment; --i) { hex_font.MakeSmaller(); }
-	
+	set_font(wxGetApp().settings->get_primary_font().create_font());
+	event.Skip();
+}
+
+void REHex::DocumentCtrl::set_font(const wxFont &font)
+{
 	assert(hex_font.IsFixedWidth());
-	
+
+	hex_font = font;
 	hex_font_cache.set_font(hex_font);
 	
 	_handle_width_change();
-	
-	event.Skip();
 }
 
 int REHex::DocumentCtrl::get_bytes_per_line()

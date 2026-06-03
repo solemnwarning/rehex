@@ -56,11 +56,7 @@ bool REHex::SettingsDialogHighlights::Create(wxWindow *parent)
 	/* Arbitrary minimum size because the default is FOR ANTS. */
 	grid->SetMinSize(wxSize(300, 100));
 	
-	hex_font = wxFont(wxFontInfo().FaceName(wxGetApp().get_font_name()));
-	
-	int font_size_adjustment = wxGetApp().get_font_size_adjustment();
-	for(int i = 0; i < font_size_adjustment; ++i) { hex_font.MakeLarger(); }
-	for(int i = 0; i > font_size_adjustment; --i) { hex_font.MakeSmaller(); }
+	hex_font = wxGetApp().settings->get_primary_font().create_font();
 	
 	wxBoxSizer *side_sizer = new wxBoxSizer(wxVERTICAL);
 	top_sizer->Add(side_sizer, 0, (wxTOP | wxLEFT), SettingsDialog::MARGIN);

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -100,24 +100,6 @@ namespace REHex
 	#define EVT_DOCUMENTTITLE(id, func) \
 		wx__DECLARE_EVT1(DOCUMENT_TITLE_CHANGED, id, wxEVENT_HANDLER_CAST(DocumentTitleEventFunction, func))
 	
-	/**
-	 * @brief Event raised by the App when the font size adjustment is changed.
-	*/
-	class FontSizeAdjustmentEvent: public wxEvent
-	{
-		public:
-			const int font_size_adjustment; /**< @brief The new font size adjustment value. */
-			
-			FontSizeAdjustmentEvent(int font_size_adjustment);
-			
-			virtual wxEvent *Clone() const override;
-	};
-	
-	typedef void (wxEvtHandler::*FontSizeAdjustmentEventFunction)(FontSizeAdjustmentEvent&);
-	
-	#define EVT_FONTSIZEADJUSTMENT(func) \
-		wx__DECLARE_EVT1(FONT_SIZE_ADJUSTMENT_CHANGED, wxID_ANY, wxEVENT_HANDLER_CAST(FontSizeAdjustmentEventFunction, func))
-	
 	class ScrollUpdateEvent: public wxEvent
 	{
 		public:
@@ -150,8 +132,6 @@ namespace REHex
 	wxDECLARE_EVENT(SCROLL_UPDATE,    ScrollUpdateEvent);
 	
 	wxDECLARE_EVENT(DOCUMENT_TITLE_CHANGED,  DocumentTitleEvent);
-	
-	wxDECLARE_EVENT(FONT_SIZE_ADJUSTMENT_CHANGED, FontSizeAdjustmentEvent);
 	
 	wxDECLARE_EVENT(PALETTE_CHANGED, wxCommandEvent);
 	

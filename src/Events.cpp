@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -38,8 +38,6 @@ wxDEFINE_EVENT(REHex::CURSOR_UPDATE,    REHex::CursorUpdateEvent);
 wxDEFINE_EVENT(REHex::SCROLL_UPDATE,    REHex::ScrollUpdateEvent);
 
 wxDEFINE_EVENT(REHex::DOCUMENT_TITLE_CHANGED,  REHex::DocumentTitleEvent);
-
-wxDEFINE_EVENT(REHex::FONT_SIZE_ADJUSTMENT_CHANGED, REHex::FontSizeAdjustmentEvent);
 
 wxDEFINE_EVENT(REHex::PALETTE_CHANGED, wxCommandEvent);
 
@@ -139,15 +137,6 @@ REHex::DocumentTitleEvent::DocumentTitleEvent(wxObject *source, const std::strin
 wxEvent *REHex::DocumentTitleEvent::Clone() const
 {
 	return new DocumentTitleEvent(*this);
-}
-
-REHex::FontSizeAdjustmentEvent::FontSizeAdjustmentEvent(int font_size_adjustment):
-	wxEvent(wxID_NONE, FONT_SIZE_ADJUSTMENT_CHANGED),
-	font_size_adjustment(font_size_adjustment) {}
-
-wxEvent *REHex::FontSizeAdjustmentEvent::Clone() const
-{
-	return new FontSizeAdjustmentEvent(font_size_adjustment);
 }
 
 REHex::ScrollUpdateEvent::ScrollUpdateEvent(wxWindow *source, int64_t pos, int64_t max, int orientation):

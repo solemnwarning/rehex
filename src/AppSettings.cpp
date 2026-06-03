@@ -17,13 +17,37 @@
 
 #include "platform.hpp"
 
+#include <wx/fontenum.h>
+#include <wx/fontutil.h>
+#include <wx/version.h>
+#include <utility>
+
 #include "App.hpp"
 #include "AppSettings.hpp"
 #include "mainwindow.hpp"
 
+/* Font scale presets are based on the zoom level increments in Firefox. */
+const float REHex::PRESET_FONT_SCALES[] = {
+	0.50,
+	0.67,
+	0.80,
+	0.90,
+	1.00,
+	1.10,
+	1.20,
+	1.20,
+	1.33,
+	1.50,
+	1.70,
+	2.00,
+};
+
+const size_t REHex::NUM_PRESET_FONT_SCALES = sizeof(REHex::PRESET_FONT_SCALES) / sizeof(*REHex::PRESET_FONT_SCALES);
+
 wxDEFINE_EVENT(REHex::PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::BYTE_COLOUR_MAPS_CHANGED, wxCommandEvent);
 wxDEFINE_EVENT(REHex::MAIN_WINDOW_ACCELERATORS_CHANGED, wxCommandEvent);
+wxDEFINE_EVENT(REHex::PRIMARY_FONT_CHANGED, wxCommandEvent);
 
 REHex::AppSettings::AppSettings():
 	preferred_asm_syntax(AsmSyntax::INTEL),
@@ -37,7 +61,8 @@ REHex::AppSettings::AppSettings():
 	#ifdef REHEX_ENABLE_PRIMARY_SELECTION
 	primary_copy_limit(DEFAULT_PRIMARY_COPY_LIMIT),
 	#endif
-	dirty_byte_display_mode(DirtyByteDisplayMode::COLOURED_UNLESS_BCM)
+	dirty_byte_display_mode(DirtyByteDisplayMode::COLOURED_UNLESS_BCM),
+	primary_font(get_default_primary_font())
 {
 	ByteColourMap bcm_types;
 	bcm_types.set_label("ASCII Values");
@@ -258,6 +283,10 @@ REHex::AppSettings::AppSettings(wxConfig *config): AppSettings()
 	}
 	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::AppSettings::OnColourPaletteChanged, this);
+
+	primary_font = ScaledFont(
+		config->Read("primary-font-name", primary_font.name()).ToStdString(),
+		config->ReadDouble("primary-font-scale", primary_font.scale()));
 }
 
 REHex::AppSettings::~AppSettings()
@@ -312,6 +341,9 @@ void REHex::AppSettings::write(wxConfig *config)
 	#endif
 	
 	config->Write("dirty-byte-display-mode", (long)(dirty_byte_display_mode));
+
+	config->Write("primary-font-name", wxString(primary_font.name()));
+	config->Write("primary-font-scale", primary_font.scale());
 }
 
 REHex::AsmSyntax REHex::AppSettings::get_preferred_asm_syntax() const
@@ -493,4 +525,76 @@ void REHex::AppSettings::OnColourPaletteChanged(wxCommandEvent &event)
 {
 	highlight_colours.set_default_lightness(active_palette->get_default_highlight_lightness());
 	event.Skip();
+}
+
+REHex::ScaledFont REHex::AppSettings::get_primary_font() const
+{
+	return primary_font;
+}
+
+void REHex::AppSettings::set_primary_font(const ScaledFont &font)
+{
+	assert(font.create_font().IsFixedWidth());
+
+	primary_font = font;
+
+	wxCommandEvent event(PRIMARY_FONT_CHANGED);
+	event.SetEventObject(this);
+
+	wxPostEvent(this, event);
+}
+
+REHex::ScaledFont REHex::AppSettings::get_default_primary_font()
+{
+	wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
+	
+	#ifdef __APPLE__
+	std::string font_name = default_font.GetNativeFontInfo()->GetFaceName().ToStdString();
+	#else
+	std::string font_name = default_font.GetFaceName().ToStdString();
+	#endif
+	
+	return ScaledFont(font_name, 1.0f);
+}
+
+std::vector<std::string> REHex::AppSettings::get_primary_font_faces()
+{
+	wxArrayString font_names = wxFontEnumerator::GetFacenames(wxFONTENCODING_SYSTEM, true);
+
+	std::vector<std::string> font_names2;
+	font_names2.reserve(font_names.Count());
+
+	for(size_t i = 0; i < font_names.Count(); ++i)
+	{
+		font_names2.emplace_back(font_names[i].ToStdString());
+	}
+
+	return font_names2;
+}
+
+REHex::ScaledFont::ScaledFont(const std::string &name, float scale):
+	m_name(name),
+	m_scale(scale) {}
+
+std::string REHex::ScaledFont::name() const
+{
+	return m_name;
+}
+
+float REHex::ScaledFont::scale() const
+{
+	return m_scale;
+}
+
+wxFont REHex::ScaledFont::create_font() const
+{
+	wxFont font(wxFontInfo().FaceName(m_name));
+
+#if wxCHECK_VERSION(3, 1, 2)
+	font.SetFractionalPointSize(font.GetFractionalPointSize() * m_scale);
+#else
+	font.SetPointSize((int)((float)(font.GetPointSize()) * m_scale));
+#endif
+
+	return font;
 }

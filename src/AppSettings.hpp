@@ -21,6 +21,7 @@
 #include <map>
 #include <memory>
 #include <wx/config.h>
+#include <wx/font.h>
 #include <wx/wx.h>
 
 #include "BitOffset.hpp"
@@ -60,6 +61,27 @@ namespace REHex
 		
 		COLOURED_UNLESS_BCM = 4, /**< COLOURED, unless a Value Colour Map is selected, then NORMAL. */
 		INVERTED_UNLESS_BCM = 5, /**< INVERTED, unless a Value Colour Map is selected, then NORMAL. */
+	};
+
+	extern const float PRESET_FONT_SCALES[];
+	extern const size_t NUM_PRESET_FONT_SCALES;
+
+	static constexpr float MIN_FONT_SCALE = 0.25;
+	static constexpr float MAX_FONT_SCALE = 4.0;
+
+	class ScaledFont
+	{
+		public:
+			ScaledFont(const std::string &name, float scale);
+
+			std::string name() const;
+			float scale() const;
+
+			wxFont create_font() const;
+
+		private:
+			std::string m_name;
+			float m_scale;
 	};
 	
 	class AppSettings: public wxEvtHandler
@@ -109,6 +131,26 @@ namespace REHex
 			
 			DirtyByteDisplayMode get_dirty_byte_display_mode() const;
 			void set_dirty_byte_display_mode(DirtyByteDisplayMode dirty_byte_display_mode);
+
+			/**
+			 * @brief Get the (fixed-pitch) font to use for drawing data.
+			*/
+			ScaledFont get_primary_font() const;
+
+			/**
+			 * @brief Set the primary font.
+			*/
+			void set_primary_font(const ScaledFont &font);
+
+			/**
+			 * @brief Get the default primary font.
+			*/
+			static ScaledFont get_default_primary_font();
+
+			/**
+			 * @brief Get the list of available font faces for the primary font.
+			*/
+			static std::vector<std::string> get_primary_font_faces();
 			
 		private:
 			AsmSyntax preferred_asm_syntax;
@@ -122,6 +164,7 @@ namespace REHex
 			SizeUnit size_unit;
 			size_t primary_copy_limit;
 			DirtyByteDisplayMode dirty_byte_display_mode;
+			ScaledFont primary_font;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};
@@ -129,6 +172,7 @@ namespace REHex
 	wxDECLARE_EVENT(PREFERRED_ASM_SYNTAX_CHANGED, wxCommandEvent);
 	wxDECLARE_EVENT(BYTE_COLOUR_MAPS_CHANGED, wxCommandEvent);
 	wxDECLARE_EVENT(MAIN_WINDOW_ACCELERATORS_CHANGED, wxCommandEvent);
+	wxDECLARE_EVENT(PRIMARY_FONT_CHANGED, wxCommandEvent);
 }
 
 #endif /* !REHEX_APPSETTINGS_HPP */

@@ -35,37 +35,12 @@ void REHex::App::_test_setup_hooks(SetupPhase phase)
 	call_setup_hooks(phase);
 }
 
-struct Cleanup
-{
-	~Cleanup()
-	{
-		delete REHex::active_palette;
-		delete wxGetApp().recent_files;
-		delete wxGetApp().settings;
-		delete wxGetApp().config;
-		delete wxGetApp().console;
-	}
-};
-
 int main(int argc, char **argv)
 {
 	REHex::App *app = new REHex::App();
 	
 	wxApp::SetInstance(app);
 	wxInitializer wxinit;
-	
-	wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
-	
-	#ifdef __APPLE__
-	/* wxWidgets 3.1 on Mac returns an empty string from wxFont::GetFaceName() at this
-	 * point for whatever reason, but it works fine later on....
-	*/
-	app->set_font_name(default_font.GetNativeFontInfo()->GetFaceName().ToStdString());
-	#else
-	app->set_font_name(default_font.GetFaceName().ToStdString());
-	#endif
-	
-	app->set_font_size_adjustment(0);
 	
 	app->bulk_updates_freeze_count = 0;
 	app->console = new REHex::ConsoleBuffer();
@@ -85,13 +60,20 @@ int main(int argc, char **argv)
 	REHex::ArtProvider::init();
 	
 	REHex::active_palette = REHex::Palette::create_system_palette();
-	Cleanup cleanup;
 	
 	testing::InitGoogleTest(&argc, argv);
 	
 	app->_test_setup_hooks(REHex::App::SetupPhase::SHUTDOWN_LATE);
 	
-	return RUN_ALL_TESTS();
+	int result = RUN_ALL_TESTS();
+
+	app->CleanUp();
+	app->OnExit();
+	
+	wxApp::SetInstance(NULL);
+	delete app;
+
+	return result;
 }
 
 bool REHex::App::Initialize(int& argc, wxChar **argv)
@@ -106,7 +88,13 @@ bool REHex::App::OnInit()
 
 int REHex::App::OnExit()
 {
-	return 0;
+	delete active_palette;
+	delete recent_files;
+	delete settings;
+	delete config;
+	delete console;
+
+	return wxApp::OnExit();
 }
 
 int REHex::App::OnRun()

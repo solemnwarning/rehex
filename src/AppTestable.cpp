@@ -48,37 +48,6 @@ void REHex::App::set_last_directory(const std::string &last_directory)
 	this->last_directory = last_directory;
 }
 
-int REHex::App::get_font_size_adjustment() const
-{
-	return font_size_adjustment;
-}
-
-void REHex::App::set_font_size_adjustment(int font_size_adjustment)
-{
-	this->font_size_adjustment = font_size_adjustment;
-	
-	FontSizeAdjustmentEvent event(font_size_adjustment);
-	ProcessEvent(event);
-}
-
-std::string REHex::App::get_font_name() const
-{
-	return font_name;
-}
-
-void REHex::App::set_font_name(const std::string &font_name)
-{
-	wxFont test_font(wxFontInfo().FaceName(wxString(font_name)));
-	
-	if(test_font.IsFixedWidth())
-	{
-		this->font_name = font_name;
-		
-		FontSizeAdjustmentEvent event(font_size_adjustment);
-		ProcessEvent(event);
-	}
-}
-
 std::vector<std::string> REHex::App::get_plugin_directories()
 {
 	std::vector<std::string> plugin_directories;

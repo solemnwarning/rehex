@@ -460,6 +460,8 @@ namespace REHex {
 			
 			void linked_scroll_insert_self_after(DocumentCtrl *p);
 			void linked_scroll_remove_self();
+
+			void set_font(const wxFont &font);
 			
 			/**
 			 * @brief Set the selection range.
@@ -641,7 +643,7 @@ namespace REHex {
 			void OnRedrawCursor(wxTimerEvent &event);
 			void OnClearHighlight(wxCommandEvent &event);
 			void OnIdle(wxIdleEvent &event);
-			void OnFontSizeAdjustmentChanged(FontSizeAdjustmentEvent &event);
+			void OnFontChanged(wxCommandEvent &event);
 			void OnFocus(wxFocusEvent& event);
 			
 		private:

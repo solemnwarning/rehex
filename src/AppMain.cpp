@@ -33,6 +33,7 @@
 #include "DiffWindow.hpp"
 #include "IPC.hpp"
 #include "mainwindow.hpp"
+#include "MathUtils.hpp"
 #include "Palette.hpp"
 #include "profile.hpp"
 #include "../res/version.h"
@@ -281,26 +282,25 @@ bool REHex::App::OnInit()
 	config->SetPath("/");
 	
 	wxConfig::Set(config);
+
+	if(config->HasEntry("font-name"))
+	{
+		config->Write("primary-font-name", config->Read("font-name"));
+		config->DeleteEntry("font-name");
+	}
+
+	if(config->HasEntry("font-size-adjustment"))
+	{
+		int font_size_adjustment = config->ReadLong("font-size-adjustment", 0);
+		float scale = decimal_round(pow(1.2f, font_size_adjustment), 2);
+
+		config->Write("primary-font-scale", scale);
+		config->DeleteEntry("font-size-adjustment");
+	}
 	
 	settings = new AppSettings(config);
 	
 	last_directory = config->Read("last-directory", "");
-	font_size_adjustment = config->ReadLong("font-size-adjustment", 0);
-	
-	{
-		wxFont default_font(wxFontInfo().Family(wxFONTFAMILY_MODERN));
-		
-		#ifdef __APPLE__
-		/* wxWidgets 3.1 on Mac returns an empty string from wxFont::GetFaceName() at this
-		 * point for whatever reason, but it works fine later on....
-		*/
-		font_name = default_font.GetNativeFontInfo()->GetFaceName();
-		#else
-		font_name = default_font.GetFaceName();
-		#endif
-		
-		set_font_name(config->Read("font-name", font_name).ToStdString());
-	}
 	
 	/* Display default tool panels if a default view hasn't been configured. */
 	if(!config->HasGroup("/default-view/"))

@@ -74,40 +74,6 @@ namespace REHex {
 			void set_last_directory(const std::string &last_directory);
 			
 			/**
-			 * @brief Get the current "font size adjustment" setting.
-			 *
-			 * The font size adjustment indicates how fonts in the application should
-			 * be scaled - the default setting is zero, positive values should make any
-			 * fonts increasingly larger and negative ones increasingly smaller.
-			*/
-			int get_font_size_adjustment() const;
-			
-			/**
-			 * @brief Set the "font size adjustment" setting.
-			 *
-			 * Replaces the "font size adjustment" setting and raises a
-			 * FontSizeAdjustmentEvent event.
-			 *
-			 * The font size adjustment indicates how fonts in the application should
-			 * be scaled - the default setting is zero, positive values should make any
-			 * fonts increasingly larger and negative ones increasingly smaller.
-			*/
-			void set_font_size_adjustment(int font_size_adjustment);
-			
-			/**
-			 * @brief Get the selected font face name.
-			*/
-			std::string get_font_name() const;
-			
-			/**
-			 * @brief Set the font face name.
-			 *
-			 * Updates the selected font face name and raises a FontSizeAdjustmentEvent
-			 * event, but only if the font is monospace.
-			*/
-			void set_font_name(const std::string &font_name);
-			
-			/**
 			 * @brief Get a list of directories to search for plugins.
 			*/
 			std::vector<std::string> get_plugin_directories();
@@ -259,8 +225,6 @@ namespace REHex {
 			
 		private:
 			std::string last_directory;
-			int font_size_adjustment;
-			std::string font_name;
 			
 			MainWindow *window;
 			

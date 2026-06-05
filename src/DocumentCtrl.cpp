@@ -84,7 +84,6 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, 
 	wxControl(),
 	doc(doc),
 	hex_font(wxGetApp().settings->get_primary_font().create_font()),
-	hex_font_cache(this, hex_font),
 	linked_scroll_prev(NULL),
 	linked_scroll_next(NULL),
 	selection_begin(BitOffset::INVALID),
@@ -119,6 +118,8 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, 
 	cursor_state      = Document::CSTATE_HEX;
 	
 	assert(hex_font.IsFixedWidth());
+
+	hex_font_cache.reset(new FontCharacterCache(this, hex_font));
 	
 	int caret_on_time = wxGetApp().get_caret_on_time_ms();
 	if(caret_on_time > 0)
@@ -131,7 +132,7 @@ REHex::DocumentCtrl::DocumentCtrl(wxWindow *parent, SharedDocumentPointer &doc, 
 	SetDoubleBuffered(true);
 	#endif
 	
-	SetMinClientSize(wxSize(hex_font_cache.fixed_string_width(10), (hex_font_cache.fixed_char_height() * 20)));
+	SetMinClientSize(wxSize(hex_font_cache->fixed_string_width(10), (hex_font_cache->fixed_char_height() * 20)));
 }
 
 REHex::DocumentCtrl::~DocumentCtrl()
@@ -160,7 +161,7 @@ void REHex::DocumentCtrl::set_font(const wxFont &font)
 	assert(hex_font.IsFixedWidth());
 
 	hex_font = font;
-	hex_font_cache.set_font(hex_font);
+	hex_font_cache->set_font(hex_font);
 	
 	_handle_width_change();
 }
@@ -739,7 +740,7 @@ void REHex::DocumentCtrl::OnPaint(wxPaintEvent &event)
 		assert(y_px >= 0);
 		
 		y_px -= scroll_yoff;
-		y_px *= hex_font_cache.fixed_char_height();
+		y_px *= hex_font_cache->fixed_char_height();
 		
 		(*region)->draw(*this, dc, x_px, y_px);
 	}
@@ -811,7 +812,7 @@ void REHex::DocumentCtrl::OnSize(wxSizeEvent &event)
 	/* Clamp to 1 if window is too small to display a single whole line, to avoid edge casey
 	 * crashing in the scrolling code.
 	*/
-	visible_lines = std::max((client_height / hex_font_cache.fixed_char_height()), 1);
+	visible_lines = std::max((client_height / hex_font_cache->fixed_char_height()), 1);
 	
 	if(width_changed)
 	{
@@ -840,20 +841,20 @@ void REHex::DocumentCtrl::_handle_width_change()
 		{
 			if(offset_display_base == OFFSET_BASE_HEX)
 			{
-				offset_column_width = hex_font_cache.fixed_string_width(18 + 3);
+				offset_column_width = hex_font_cache->fixed_string_width(18 + 3);
 			}
 			else{
-				offset_column_width = hex_font_cache.fixed_string_width(20 + 3);
+				offset_column_width = hex_font_cache->fixed_string_width(20 + 3);
 			}
 		}
 		else{
 			if(offset_display_base == OFFSET_BASE_HEX)
 			{
-				offset_column_width = hex_font_cache.fixed_string_width(10 + 3);
+				offset_column_width = hex_font_cache->fixed_string_width(10 + 3);
 			}
 			else{
 				int offWidth = snprintf(nullptr, 0, "%" PRId64, (int64_t)(end_virt_offset.byte()));
-				offset_column_width = hex_font_cache.fixed_string_width(offWidth + 3);
+				offset_column_width = hex_font_cache->fixed_string_width(offWidth + 3);
 			}
 		}
 	}
@@ -1307,11 +1308,11 @@ void REHex::DocumentCtrl::OnScroll(wxScrollWinEvent &event)
 		}
 		else if(event.GetEventType() == wxEVT_SCROLLWIN_LINEUP)
 		{
-			scroll_xoff -= hex_font_cache.fixed_char_width();
+			scroll_xoff -= hex_font_cache->fixed_char_width();
 		}
 		else if(event.GetEventType() == wxEVT_SCROLLWIN_LINEDOWN)
 		{
-			scroll_xoff += hex_font_cache.fixed_char_width();
+			scroll_xoff += hex_font_cache->fixed_char_width();
 		}
 		else if(event.GetEventType() == wxEVT_SCROLLWIN_PAGEUP)   {}
 		else if(event.GetEventType() == wxEVT_SCROLLWIN_PAGEDOWN) {}
@@ -1365,7 +1366,7 @@ void REHex::DocumentCtrl::OnWheel(wxMouseEvent &event)
 	}
 	else if(axis == wxMOUSE_WHEEL_HORIZONTAL)
 	{
-		ticks_per_delta *= hex_font_cache.fixed_char_width();
+		ticks_per_delta *= hex_font_cache->fixed_char_width();
 		
 		wheel_horiz_accum += event.GetWheelRotation();
 		
@@ -1746,8 +1747,8 @@ void REHex::DocumentCtrl::OnLeftDown(wxMouseEvent &event)
 	int rel_x   = mouse_x + this->scroll_xoff;
 	int mouse_y = event.GetY();
 	
-	int hf_width = hex_font_cache.fixed_char_width();
-	int hf_height = hex_font_cache.fixed_char_height();
+	int hf_width = hex_font_cache->fixed_char_width();
+	int hf_height = hex_font_cache->fixed_char_height();
 	
 	std::vector<Region*>::iterator region;
 	int64_t line_off;
@@ -1877,7 +1878,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 		mouse_down_area = GenericDataRegion::SA_NONE;
 	}
 	
-	int hf_height = hex_font_cache.fixed_char_height();
+	int hf_height = hex_font_cache->fixed_char_height();
 	
 	wxClientDC dc(this);
 	
@@ -1939,7 +1940,7 @@ void REHex::DocumentCtrl::OnRightDown(wxMouseEvent &event)
 			 * comment text.
 			*/
 			
-			int hf_width = hex_font_cache.fixed_char_width();
+			int hf_width = hex_font_cache->fixed_char_width();
 			int indent_width = this->indent_width(cr->indent_depth);
 			
 			if(
@@ -2024,7 +2025,7 @@ void REHex::DocumentCtrl::OnMotion(wxMouseEvent &event)
 	
 	if(region != regions.end())
 	{
-		cursor = (*region)->cursor_for_point(*this, rel_x, line_off, (mouse_y % hex_font_cache.fixed_char_height()));
+		cursor = (*region)->cursor_for_point(*this, rel_x, line_off, (mouse_y % hex_font_cache->fixed_char_height()));
 	}
 	
 	SetCursor(cursor);
@@ -2070,14 +2071,14 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 		
 		if(mouse_y < 0)
 		{
-			scroll_yoff -= std::min((int64_t)(abs(mouse_y) / hex_font_cache.fixed_char_height() + 1), scroll_yoff);
+			scroll_yoff -= std::min((int64_t)(abs(mouse_y) / hex_font_cache->fixed_char_height() + 1), scroll_yoff);
 			_update_vscroll_pos();
 			
 			mouse_y = 0;
 		}
 		else if(mouse_y >= client_height)
 		{
-			scroll_yoff += std::min((int64_t)((mouse_y - client_height) / hex_font_cache.fixed_char_height() + 1), (scroll_yoff_max - scroll_yoff));
+			scroll_yoff += std::min((int64_t)((mouse_y - client_height) / hex_font_cache->fixed_char_height() + 1), (scroll_yoff_max - scroll_yoff));
 			_update_vscroll_pos();
 			
 			mouse_y = client_height - 1;
@@ -2137,7 +2138,7 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 					new_sel_end = end_plus_one - BitOffset::BITS(1);
 				}
 				
-				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hex_font_cache.fixed_char_width() / 2))
+				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hex_font_cache->fixed_char_width() / 2))
 				{
 					clear_selection();
 				}
@@ -2166,7 +2167,7 @@ void REHex::DocumentCtrl::OnMotionTick(int mouse_x, int mouse_y)
 					new_sel_end   = mouse_down_at_offset;
 				}
 				
-				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hex_font_cache.fixed_char_width() / 2))
+				if(new_sel_begin == new_sel_end && abs(rel_x - mouse_down_at_x) < (hex_font_cache->fixed_char_width() / 2))
 				{
 					clear_selection();
 				}
@@ -2471,7 +2472,7 @@ std::pair< std::vector<REHex::DocumentCtrl::Region*>::iterator, int64_t > REHex:
 		return std::make_pair(regions.end(), -1);
 	}
 	
-	int hf_height = hex_font_cache.fixed_char_height();
+	int hf_height = hex_font_cache->fixed_char_height();
 	
 	/* Find the region containing the first visible line. */
 	auto region = region_by_y_offset(scroll_yoff);
@@ -2907,7 +2908,7 @@ int REHex::DocumentCtrl::wrap_text_height(const wxString &text, unsigned int col
 
 int REHex::DocumentCtrl::indent_width(int depth)
 {
-	return hex_font_cache.fixed_char_width() * depth;
+	return hex_font_cache->fixed_char_width() * depth;
 }
 
 int REHex::DocumentCtrl::get_offset_column_width()
@@ -3150,7 +3151,7 @@ wxFont &REHex::DocumentCtrl::get_font()
 
 const REHex::FontCharacterCache &REHex::DocumentCtrl::get_fcc() const
 {
-	return hex_font_cache;
+	return *hex_font_cache;
 }
 
 int64_t REHex::DocumentCtrl::get_scroll_yoff() const

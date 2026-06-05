@@ -667,7 +667,7 @@ namespace REHex {
 			
 			/* Fixed-width font used for drawing hex data. */
 			wxFont hex_font;
-			FontCharacterCache hex_font_cache;
+			std::unique_ptr<FontCharacterCache> hex_font_cache;
 			
 			/* Size of the client area in pixels. */
 			int client_width;

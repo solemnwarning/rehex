@@ -504,6 +504,7 @@ APP_OBJS := \
 	src/DocumentCtrl.$(BUILD_TYPE).o \
 	src/EditCommentDialog.$(BUILD_TYPE).o \
 	src/Events.$(BUILD_TYPE).o \
+	src/FileReader.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \

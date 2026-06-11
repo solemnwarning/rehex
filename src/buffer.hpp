@@ -303,7 +303,19 @@ namespace REHex {
 			*/
 			void write_copy(const std::string &filename);
 			
+			/**
+			 * @brief Serialise Buffer object to a file.
+			 *
+			 * Writes out the current state of the Buffer object including any changed blocks and
+			 * the modification time of the file so that it can be restored without any data loss
+			 * after restarting the application.
+			*/
 			void serialise(const std::string &filename);
+			
+			/**
+			 * @brief Recreate a previously-serialised Buffer object.
+			*/
+			static std::unique_ptr<Buffer> deserialise(const std::string &filename);
 			
 			/**
 			 * @brief Get the length of the Buffer.

@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <list>
+#include <portable_endian.h>
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
@@ -42,6 +43,7 @@
 
 #include "App.hpp"
 #include "buffer.hpp"
+#include "FileReader.hpp"
 #include "FileWriter.hpp"
 #include "MacFileName.hpp"
 #include "profile.hpp"
@@ -660,38 +662,200 @@ void REHex::Buffer::serialise(const std::string &filename)
 	
 	FileWriter w(filename.c_str());
 	
+	for(int i = 0; i < 8; ++i)
 	{
-		char f_magic[] = { 'B', 'U', 'F', '1' };
-		w.write(f_magic, sizeof(f_magic));
+		w.write("RHB1", 4);
+	}
+	
+	if(!(filename.empty()))
+	{
+		w.write("FNAM", 4);
+		w.write<uint32_t>(htole32(filename.length()));
+		w.write(filename.data(), filename.length());
+	}
+	
+	w.write("MTIM", 4);
+	w.write<uint32_t>(htole32(12));
+	w.write<int64_t>(htole64(last_mtime.tv_sec));
+	w.write<int32_t>(htole32(last_mtime.tv_nsec));
+	
+	if(_file_deleted)
+	{
+		w.write("FDEL", 4);
+		w.write<uint32_t>(htole32(0));
+	}
+	else if(_file_modified)
+	{
+		w.write("FMOD", 4);
+		w.write<uint32_t>(htole32(0));
 	}
 	
 	for(auto b = blocks.begin(); b != blocks.end(); ++b)
 	{
-		char b_magic[] = { 'B', 'L', 'C', 'K' };
-		w.write(b_magic, sizeof(b_magic));
+		w.write("BLCK", 4);
 		
+		w.write<uint32_t>(htole32(12));
+		
+		w.write<int64_t>(htole64(b->real_offset));
+		w.write<int32_t>(htole32(b->virt_length));
+	}
+	
+	for(auto b = blocks.begin(); b != blocks.end(); ++b)
+	{
 		if(b->state == Block::State::DIRTY)
 		{
-			w.write<int32_t>(23 + b->virt_length);
-		}
-		else{
-			w.write<int32_t>(23);
-		}
-		
-		w.write<int64_t>(b->real_offset);
-		w.write<int32_t>(b->virt_length);
-		
-		if(b->state == Block::State::DIRTY)
-		{
-			w.write<int8_t>('D');
+			w.write("DBLK", 4);
+			
+			w.write<uint32_t>(htole32(8 + b->virt_length));
+			w.write<int64_t>(htole64(b->virt_offset));
 			w.write(b->data.data(), b->virt_length);
-		}
-		else{
-			w.write<int8_t>('C');
 		}
 	}
 	
 	w.commit();
+}
+
+std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(const std::string &filename)
+{
+	std::unique_ptr<Buffer> buffer;
+	buffer.reset(new Buffer());
+	
+	FileReader r(filename.c_str());
+	char type[4];
+	
+	for(int i = 0; i < 8; ++i)
+	{
+		r.read(type, 4, 4);
+		
+		if(memcmp(type, "RHB1", 4) != 0)
+		{
+			throw false; // TODO
+		}
+	}
+	
+	buffer->blocks.clear();
+	
+	int64_t next_virt_off = 0;
+	
+	while(r.read(type, 4, 4))
+	{
+		if(memcmp(type, "FNAM", 4) == 0)
+		{
+			uint32_t len = le32toh(r.read<uint32_t>());
+			std::vector<char> buf(len);
+			r.read(buf.data(), len, len);
+			
+			buffer->filename = std::string(buf.data(), len);
+		}
+		else if(memcmp(type, "MTIM", 4) == 0)
+		{
+			uint32_t len = le32toh(r.read<uint32_t>());
+			if(len < 12)
+			{
+				throw 1;
+			}
+			
+			buffer->last_mtime.tv_sec = le64toh(r.read<int64_t>());
+			buffer->last_mtime.tv_nsec = le32toh(r.read<int32_t>());
+			r.skip(len - 12);
+		}
+		else if(memcmp(type, "FDEL", 4) == 0)
+		{
+			uint32_t len = le32toh(r.read<uint32_t>());
+			r.skip(len);
+			
+			buffer->_file_deleted = true;
+		}
+		else if(memcmp(type, "FMOD", 4) == 0)
+		{
+			uint32_t len = le32toh(r.read<uint32_t>());
+			r.skip(len);
+			
+			buffer->_file_modified = true;
+		}
+		else if(memcmp(type, "BLCK", 4) == 0)
+		{
+			uint32_t len = le32toh(r.read<uint32_t>());
+			if(len < 20)
+			{
+				throw false; // TODO
+			}
+			
+			int64_t real_offset = le64toh(r.read<int64_t>());
+			int32_t virt_length = le32toh(r.read<int32_t>());
+			
+			Block block(next_virt_off, virt_length);
+			block.real_offset = real_offset;
+			
+			buffer->blocks.emplace_back(std::move(block));
+			next_virt_off += virt_length;
+		}
+		else if(memcmp(type, "DBLK", 4) == 0)
+		{
+			uint32_t len = le32toh(r.read<uint32_t>());
+			if(len < 8)
+			{
+				throw false; // TODO
+			}
+			
+			int64_t virt_offset = le64toh(r.read<int64_t>());
+			int64_t virt_length = len - 8;
+			
+			Block *block = buffer->_block_by_virt_offset(virt_offset);
+			if(block == NULL || block->virt_offset != virt_offset || block->virt_length != virt_length)
+			{
+				throw false; // TODO
+			}
+			
+			block->data.resize(virt_length);
+			r.read(block->data.data(), virt_length, virt_length);
+			
+			block->state = Block::State::DIRTY;
+		}
+	}
+	
+	if(buffer->blocks.empty())
+	{
+		throw false; // TODO
+	}
+	
+	if(!(buffer->_file_deleted))
+	{
+		FILE *inode_fh = fopen(filename.c_str(), "rb");
+		if(inode_fh == NULL)
+		{
+			// throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
+			buffer->_file_deleted = true;
+			return buffer;
+		}
+		
+		struct stat st;
+		if(fstat(fileno(inode_fh), &st) == 0 && !S_ISREG(st.st_mode) && !S_ISBLK(st.st_mode))
+		{
+			fclose(inode_fh);
+			// throw std::runtime_error(std::string("Could not open file: Not a regular file"));
+			buffer->_file_deleted = true;
+			return buffer;
+		}
+		
+		buffer->handles[0].fh = inode_fh;
+		
+		if(!(buffer->_file_modified))
+		{
+			FileTime current_mtime = _get_file_mtime(inode_fh, buffer->filename);
+			
+			if(current_mtime == buffer->last_mtime)
+			{
+				/* File not modified - check again later. */
+				buffer->timer.Start(FILE_CHECK_INTERVAL_MS, wxTIMER_ONE_SHOT);
+			}
+			else{
+				buffer->_file_modified = true;
+			}
+		}
+	}
+	
+	return buffer;
 }
 
 off_t REHex::Buffer::length()

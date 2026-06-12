@@ -1,6 +1,6 @@
 # ![rehex logo](res/icon64.png) Reverse Engineers' Hex Editor
 
-A cross-platform (Windows, Linux, Mac, BSD) hex editor for reverse engineering, and everything else.
+A cross-platform (Windows, Linux, macOS, BSD) hex editor for reverse engineering, and everything else.
 
 An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manual/](https://solemnwarning.net/rehex/manual/).
 
@@ -10,15 +10,15 @@ An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manu
 * Decoding of integer/floating point value types
 * Inline disassembly of machine code
 * Highlighting and annotation of ranges of bytes
-* Side by side comparision of whole files or selections
+* Side by side comparison of whole files or selections
 * Lua scripting support ([API reference](http://www.solemnwarning.net/rehex/luadoc/))
 * Virtual address mapping support
 * Support for common text encodings (ASCII, Unicode, ISO-8859-X, etc)
-* Import and export of Intel HEX files.
-* Bitmap data visualisation.
-* Binary Templates for automatically annotating data (similar to 010 Editor).
-* Bit editing/manipulation.
-* Checksumming of files/selections.
+* Import and export of Intel HEX files
+* Bitmap data visualisation
+* Binary Templates for automatically annotating data (similar to 010 Editor)
+* Bit editing/manipulation
+* Checksumming of files/selections
 
 ![inline comments + data types demo](doc/comments-types.gif)
 
@@ -26,7 +26,7 @@ An online copy of the manual can be accessed here: [solemnwarning.net/rehex/manu
 
 ## Installation
 
-The [Releases](https://github.com/solemnwarning/rehex/releases) page has standalone packages for Windows and Mac, as well as installable packages for popular Linux distributions, or you can install them from a distribution package repository as described below.
+The [Releases](https://github.com/solemnwarning/rehex/releases) page has standalone packages for Windows and macOS, as well as installable packages for popular Linux distributions, or you can install them from a distribution package repository as described below.
 
 The same packages are also produced for Git commits (look for the tick), if you want to try the development/unreleased versions.
 
@@ -61,7 +61,7 @@ Add the following lines to your `/etc/apt/sources.list` file:
     deb [signed-by=/etc/apt/keyrings/solemnwarning-archive-keyring.gpg arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
     deb-src [signed-by=/etc/apt/keyrings/solemnwarning-archive-keyring.gpg arch=amd64] http://repos.solemnwarning.net/ubuntu/ CODENAME main
 
-**NOTE:** Replace `CODENAME` with the version you're running (e.g. `noble` for 24.04 or `questing` for 25.10).
+**NOTE:** Replace `CODENAME` with the version you're running (e.g. `noble` for 24.04 or `resolute` for 26.04).
 
 Finally, you can install the package:
 
@@ -101,4 +101,4 @@ Compiling REHex from source is described in [COMPILING.md](COMPILING.md).
 
 ## Feedback
 
-If you find any bugs or have suggestions for improvements or new features, please open an issue on Github.
+If you find any bugs or have suggestions for improvements or new features, please open an issue on GitHub.

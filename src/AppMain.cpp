@@ -43,6 +43,10 @@
 #include <objbase.h>
 #endif
 
+#ifdef __WXGTK__
+#include <glib.h>
+#endif
+
 IMPLEMENT_APP(REHex::App);
 
 bool REHex::App::Initialize(int& argc, wxChar **argv)
@@ -124,6 +128,15 @@ bool REHex::App::OnInit()
 {
 	#ifdef REHEX_PROFILE
 	ProfilingCollector::set_thread_group(ProfilingCollector::ThreadGroup::MAIN);
+	#endif
+	
+	SetAppName("rehex");
+	SetAppDisplayName("REHex");
+	SetClassName("rehex");
+
+	#ifdef __WXGTK__
+	/* Ensure X11 window class is correctly set. */
+	g_set_prgname("rehex");
 	#endif
 	
 	bulk_updates_freeze_count = 0;

@@ -50,14 +50,7 @@ namespace REHex {
 			/**
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
-			Tab *open_file(const std::string &filename);
-			
-			#ifdef __APPLE__
-			/**
-			 * @brief Create a new tab with a file loaded from disk.
-			*/
-			Tab *open_file(MacFileName &&filename);
-			#endif
+			Tab *open_file(const FileName &filename);
 			
 			Tab *import_hex_file(const std::string &filename);
 			

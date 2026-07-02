@@ -3020,7 +3020,7 @@ TEST_F(DocumentTest, DirtyState)
 	
 	/* Save the file. */
 	TempFilename tmpfile;
-	doc->save(tmpfile.tmpfile);
+	doc->save(wxFileName(tmpfile.tmpfile));
 	
 	EXPECT_EVENTS();
 	
@@ -3216,7 +3216,7 @@ TEST_F(DocumentTest, DirtyStateBitAligned)
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	
 	TempFilename tmpfile;
-	doc->save(tmpfile.tmpfile);
+	doc->save(wxFileName(tmpfile.tmpfile));
 	
 	events.clear();
 	

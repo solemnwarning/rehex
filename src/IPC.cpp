@@ -56,7 +56,7 @@ bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)
 		MainWindow *window = MainWindow::get_instances().front();
 		window->Show();
 		
-		Tab *tab = window->open_file(command[1]);
+		Tab *tab = window->open_file(wxFileName(command[1]));
 		return tab != NULL;
 	}
 	else if(command.size() >= 3 && command[0] == "compare")
@@ -66,7 +66,7 @@ bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)
 		
 		for(size_t i = 1; i < command.size(); ++i)
 		{
-			Tab *tab = window->open_file(command[i]);
+			Tab *tab = window->open_file(wxFileName(command[i]));
 			if(tab != NULL)
 			{
 				diff->add_range(DiffWindow::Range(tab->doc, tab->doc_ctrl, 0, tab->doc->buffer_length()));

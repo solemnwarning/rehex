@@ -654,7 +654,7 @@ void REHex::MainWindow::new_file()
 	wxPostEvent(this, event);
 }
 
-REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
+REHex::Tab *REHex::MainWindow::open_file(const FileName &filename)
 {
 	Tab *tab;
 	try {
@@ -664,7 +664,7 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	catch(const std::exception &e)
 	{
 		wxMessageBox(
-			std::string("Error opening ") + filename + ":\n" + e.what(),
+			std::string("Error opening ") + filename.GetFullPath().ToStdString() + ":\n" + e.what(),
 			"Error", wxICON_ERROR, this);
 		return NULL;
 	}
@@ -684,10 +684,11 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 		}
 	}
 	
-	wxFileName wxfn(filename);
-	wxfn.MakeAbsolute();
-	
+	#ifdef __APPLE__
 	wxGetApp().recent_files->AddFileToHistory(filename);
+	#else
+	wxGetApp().recent_files->AddFileToHistory(filename.GetFullPath());
+	#endif
 	
 	notebook->AddPage(tab, tab->doc->get_title(), true);
 	tab->doc_ctrl->SetFocus();
@@ -697,51 +698,6 @@ REHex::Tab *REHex::MainWindow::open_file(const std::string &filename)
 	
 	return tab;
 }
-
-#ifdef __APPLE__
-REHex::Tab *REHex::MainWindow::open_file(MacFileName &&macfn)
-{
-	std::string filename = macfn.GetFileName().GetFullPath().ToStdString();
-	
-	wxGetApp().recent_files->AddFileToHistory(macfn);
-	
-	Tab *tab;
-	try {
-		SharedDocumentPointer doc(SharedDocumentPointer::make(std::move(macfn)));
-		tab = new Tab(notebook, doc);
-	}
-	catch(const std::exception &e)
-	{
-		wxMessageBox(
-			std::string("Error opening ") + filename + ":\n" + e.what(),
-					 "Error", wxICON_ERROR, this);
-		return NULL;
-	}
-	
-	/* Discard default "Untitled" tab if not modified. */
-	if(notebook->GetPageCount() == 1)
-	{
-		wxWindow *page = notebook->GetPage(0);
-		assert(page != NULL);
-		
-		auto page_tab = dynamic_cast<Tab*>(page);
-		assert(page_tab != NULL);
-		
-		if(page_tab->doc->get_filename() == "" && page_tab->doc->get_title() == "Untitled" && !page_tab->doc->is_dirty())
-		{
-			notebook->DeletePage(0);
-		}
-	}
-	
-	notebook->AddPage(tab, tab->doc->get_title(), true);
-	tab->doc_ctrl->SetFocus();
-	
-	TabCreatedEvent event(this, tab);
-	wxPostEvent(this, event);
-	
-	return tab;
-}
-#endif /* __APPLE__ */
 
 REHex::Tab *REHex::MainWindow::import_hex_file(const std::string &filename)
 {
@@ -889,7 +845,7 @@ void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
 	
-	open_file(filename);
+	open_file(wxFileName(filename));
 }
 
 void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
@@ -898,11 +854,11 @@ void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
 	
 	#ifdef __APPLE__
 	MacFileName macfn = recent_files->GetHistoryMacFile(event.GetId() - recent_files->GetBaseId());
-	open_file(std::move(macfn));
+	open_file(macfn);
 	
 	#else
 	wxString file = recent_files->GetHistoryFile(event.GetId() - recent_files->GetBaseId());
-	open_file(file.ToStdString());
+	open_file(wxFileName(file));
 	
 	#endif
 }
@@ -945,7 +901,7 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 	}
 	
 	try {
-		tab->doc->save(filename);
+		tab->doc->save(wxFileName(filename));
 	}
 	catch(const std::exception &e)
 	{
@@ -2931,7 +2887,7 @@ bool REHex::MainWindow::DropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxAr
 {
 	for(size_t i = 0; i < filenames.GetCount(); ++i)
 	{
-		window->open_file(filenames[i].ToStdString());
+		window->open_file(wxFileName(filenames[i]));
 	}
 	
 	return true;

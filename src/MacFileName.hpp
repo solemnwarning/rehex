@@ -22,61 +22,72 @@
 #include <AvailabilityMacros.h>
 #endif
 
+#include <memory>
 #include <wx/filename.h>
+
+#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+#define REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+#endif
 
 namespace REHex
 {
 #ifdef __APPLE__
 	/**
-	 * @brief Wrapper for NSURL and security-scoped bookmarks.
+	 * @brief wxFileName look-alike with macOS security-scoped bookmark handling.
+	 *
+	 * This class holds a filename in an NSURL object and presents a wxFileName-like API for
+	 * accessing it, and allows for creating/restoring "security scoped bookmarks" which are
+	 * required for persisting filesystem access grants under the macOS application sandbox.
+	 *
+	 * Cross-platform code should use the FileName typedef, which will be MacFileName on macOS
+	 * and wxFileName on other platforms.
 	*/
 	class MacFileName
 	{
 	private:
-		void *m_url;   /**< Pointer to NSURL object. */
-		bool m_ssr;    /**< Was this created from a security-scoped bookmark? */
-		bool m_stale;  /**< Was this created from a stale bookmark? */
+		/**
+		 * @brief MacFileName implementation object.
+		 *
+		 * This class provides the actual implementation of MacFileName, the main class holds an
+		 * instance of this in a shared_ptr to allow copying without having to create additional
+		 * NSURL objects and use of C# symbols from the implementation file.
+		*/
+		class MacFileNameImpl;
+
+		std::shared_ptr<MacFileNameImpl> m_impl; /**< Pointer to implementation object. */
 		
 	public:
 		/**
 		 * @brief Construct a MacFileName with no backing NSURL object.
 		*/
-		MacFileName();
+		MacFileName() = default;
 		
 		/**
 		 * @brief Construct an NSURL from an accessible filesystem path.
 		*/
 		MacFileName(const wxFileName &filename);
 		
-		#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+		#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		/**
-		 * @brief Construct an NSURL from a security-scoped bookmark.
+		 * @brief Construct an instance from a security-scoped bookmark.
 		 *
-		 * This method creates an NSURL from a Base64-encoded security-scoped bookmark previously
-		 * created by the CreateBookmark() method and makes the file available.
+		 * This method creates an instance from a Base64-encoded security-scoped bookmark
+		 * previously created by the CreateBookmark() method and makes the file available using
+		 * normal filesystem APIs.
 		 *
 		 * The MacFileName object must not be destroyed until access to the file is no longer
 		 * required.
 		*/
-		MacFileName(const wxString &bookmark);
+		static MacFileName CreateFromBookmark(const wxString &bookmark);
 		#else
-		MacFileName(const wxString &bookmark) = delete; /* Not available before macOS 10.7 */
+		static MacFileName CreateFromBookmark(const wxString &bookmark) = delete; /* Not available before macOS 10.7 */
 		#endif
+
+		wxString GetFullName() const;
+
+		wxString GetFullPath() const;
 		
-		~MacFileName();
-		
-		MacFileName(const MacFileName&) = delete;
-		MacFileName &operator=(const MacFileName&) = delete;
-		
-		MacFileName(MacFileName&&);
-		MacFileName &operator=(MacFileName&&);
-		
-		/**
-		 * @brief Get the resolved filesystem path for accessing the file.
-		*/
-		wxFileName GetFileName() const;
-		
-		#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+		#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		/**
 		 * @brief Create a security-scoped bookmark.
 		 *

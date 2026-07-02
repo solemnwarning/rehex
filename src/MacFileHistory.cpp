@@ -15,6 +15,8 @@
  * Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "platform.hpp"
+
 #include <AvailabilityMacros.h>
 
 #include "App.hpp"
@@ -60,13 +62,13 @@ void REHex::MacFileHistory::RemoveFileFromHistory(size_t i)
 
 REHex::MacFileName REHex::MacFileHistory::GetHistoryMacFile(size_t index)
 {
-	#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
+	#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 	if(m_fileBookmarks[index] != wxEmptyString)
 	{
 		/* There is a saved bookmark (presumably with security token), try to restore it. */
 		
 		try {
-			MacFileName macfn = MacFileName(m_fileBookmarks[index]);
+			MacFileName macfn = MacFileName::CreateFromBookmark(m_fileBookmarks[index]);
 			
 			if(macfn.BookmarkWasStale())
 			{

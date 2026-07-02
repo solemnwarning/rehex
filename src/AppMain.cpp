@@ -407,7 +407,7 @@ bool REHex::App::OnInit()
 	
 	for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
 	{
-		Tab *tab = window->open_file(*filename);
+		Tab *tab = window->open_file(wxFileName(*filename));
 		if(compare_mode)
 		{
 			if(tab != NULL)

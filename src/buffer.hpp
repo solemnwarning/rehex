@@ -32,7 +32,7 @@
 #endif
 
 #include "BitOffset.hpp"
-#include "MacFileName.hpp"
+#include "FileName.hpp"
 #include "shared_mutex.hpp"
 
 namespace REHex {
@@ -101,11 +101,7 @@ namespace REHex {
 			std::mutex handles_mutex;
 			std::condition_variable handle_released;
 			
-			std::string filename;
-			
-			#ifdef __APPLE__
-			MacFileName file_access_guard;
-			#endif
+			FileName filename;
 			
 			/**
 			 * All public APIs synchronise access using the general_lock mutex.
@@ -253,14 +249,7 @@ namespace REHex {
 			/**
 			 * @brief Create a Buffer with a backing file on disk.
 			*/
-			Buffer(const std::string &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
-			
-			#ifdef __APPLE__
-			/**
-			 * @brief Create a Buffer with a backing file on disk.
-			*/
-			Buffer(MacFileName &&filename, off_t block_size = DEFAULT_BLOCK_SIZE);
-			#endif
+			Buffer(const FileName &filename, off_t block_size = DEFAULT_BLOCK_SIZE);
 			
 			~Buffer();
 			
@@ -288,7 +277,7 @@ namespace REHex {
 			 *
 			 * Throws on I/O errors.
 			*/
-			void write_inplace(const std::string &filename);
+			void write_inplace(const FileName &filename);
 			
 			/**
 			 * @brief Write out buffer to a file.

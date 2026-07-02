@@ -76,7 +76,7 @@ REHex::Document::Document():
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
 
-REHex::Document::Document(const std::string &filename):
+REHex::Document::Document(const FileName &filename):
 	filename(filename),
 	write_protect(false),
 	current_seq(0),
@@ -94,10 +94,9 @@ REHex::Document::Document(const std::string &filename):
 	data_seq.set_range   (0, buffer->length(), 0);
 	types.set_range      (0, buffer->length(), TypeInfo(""));
 	
-	size_t last_slash = filename.find_last_of("/\\");
-	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	title = filename.GetFullName();
 	
-	std::string meta_filename = find_metadata(filename);
+	std::string meta_filename = find_metadata(filename.GetFullPath().ToStdString());
 	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
@@ -107,40 +106,6 @@ REHex::Document::Document(const std::string &filename):
 	
 	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
 }
-
-#ifdef __APPLE__
-REHex::Document::Document(MacFileName &&filename):
-	filename(filename.GetFileName().GetFullPath().ToStdString()),
-	write_protect(false),
-	current_seq(0),
-	buffer_seq(0),
-	saved_seq(0),
-	highlight_colour_map(HighlightColourMap::defaults()),
-	cursor_state(CSTATE_HEX),
-	comment_modified_buffer(this, EV_COMMENT_MODIFIED),
-	highlights_changed_buffer(this, EV_HIGHLIGHTS_CHANGED),
-	types_changed_buffer(this, EV_TYPES_CHANGED),
-	mappings_changed_buffer(this, EV_MAPPINGS_CHANGED)
-{
-	buffer = new Buffer(std::move(filename));
-	
-	data_seq.set_range   (0, buffer->length(), 0);
-	types.set_range      (0, buffer->length(), TypeInfo(""));
-	
-	size_t last_slash = this->filename.find_last_of("/\\");
-	title = (last_slash != std::string::npos ? this->filename.substr(last_slash + 1) : this->filename);
-	
-	std::string meta_filename = find_metadata(this->filename);
-	if(!(meta_filename.empty()))
-	{
-		_load_metadata(meta_filename);
-	}
-	
-	_forward_buffer_events();
-	
-	wxGetApp().Bind(PALETTE_CHANGED, &REHex::Document::OnColourPaletteChanged, this);
-}
-#endif /* __APPLE__ */
 
 void REHex::Document::_forward_buffer_events()
 {
@@ -172,7 +137,7 @@ void REHex::Document::reload()
 	/* Ensure no transaction is in progress. */
 	assert(undo_stack.empty() || undo_stack.back().complete);
 	
-	if(filename.empty())
+	if(filename.GetFullPath() == "")
 	{
 		throw std::logic_error("Attempt to reload document with no backing file");
 	}
@@ -253,10 +218,9 @@ void REHex::Document::reload()
 	real_to_virt_segs.clear();
 	virt_to_real_segs.clear();
 	
-	size_t last_slash = filename.find_last_of("/\\");
-	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	title = filename.GetFullName();
 	
-	std::string meta_filename = find_metadata(filename);
+	std::string meta_filename = find_metadata(filename.GetFullPath().ToStdString());
 	if(!(meta_filename.empty()))
 	{
 		_load_metadata(meta_filename);
@@ -286,7 +250,7 @@ void REHex::Document::save()
 		buffer->write_inplace();
 	}
 	
-	save_metadata_for(filename);
+	save_metadata_for(filename.GetFullPath().ToStdString());
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -298,17 +262,16 @@ void REHex::Document::save()
 	}
 }
 
-void REHex::Document::save(const std::string &filename)
+void REHex::Document::save(const FileName &filename)
 {
 	bool externally_changed = file_deleted() || file_modified();
 	
 	buffer->write_inplace(filename);
 	this->filename = filename;
 	
-	size_t last_slash = filename.find_last_of("/\\");
-	title = (last_slash != std::string::npos ? filename.substr(last_slash + 1) : filename);
+	title = filename.GetFullName().ToStdString();
 	
-	save_metadata_for(filename);
+	save_metadata_for(filename.GetFullPath().ToStdString());
 	
 	if(current_seq != saved_seq || externally_changed)
 	{
@@ -338,7 +301,7 @@ void REHex::Document::set_title(const std::string &title)
 
 std::string REHex::Document::get_filename()
 {
-	return filename;
+	return filename.GetFullPath().ToStdString();
 }
 
 bool REHex::Document::is_dirty()

@@ -20,21 +20,64 @@
 
 #include "MacFileName.hpp"
 
-REHex::MacFileName::MacFileName():
-	m_url(nil) {}
+class REHex::MacFileName::MacFileNameImpl
+{
+	private:
+		NSURL* m_url;  /**< Pointer to NSURL object. */
+
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+		bool m_ssr;    /**< Was this created from a security-scoped bookmark? */
+		bool m_stale;  /**< Was this created from a stale bookmark? */
+#endif
+
+	public:
+		MacFileNameImpl(const wxFileName &filename);
+
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+		class BookmarkTag {};
+		MacFileNameImpl(const wxString &bookmark, const BookmarkTag&);
+#endif
+
+		MacFileNameImpl(const MacFileNameImpl&) = delete;
+		MacFileNameImpl &operator=(const MacFileNameImpl&) = delete;
+
+		MacFileNameImpl(MacFileNameImpl&&) = delete;
+		MacFileNameImpl &operator=(MacFileNameImpl&&) = delete;
+
+		~MacFileNameImpl();
+
+		wxFileName GetFileName() const;
+		
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+		wxString CreateBookmark() const;
+		bool BookmarkWasStale() const;
+#endif
+};
 
 REHex::MacFileName::MacFileName(const wxFileName &filename):
-	m_ssr(false),
-	m_stale(false)
+	m_impl(std::make_shared<MacFileNameImpl>(filename)) {}
+
+REHex::MacFileName::MacFileNameImpl::MacFileNameImpl(const wxFileName &filename)
 {
-	NSURL *url = [NSURL fileURLWithPath:[NSString stringWithCString:filename.GetFullPath().ToStdString().c_str() encoding:[NSString defaultCStringEncoding]]];
-	[url retain];
-	
-	m_url = url;
+	m_url = [NSURL fileURLWithPath:[NSString stringWithCString:filename.GetFullPath().ToStdString().c_str() encoding:[NSString defaultCStringEncoding]]];
+	[m_url retain];
+
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+	m_ssr = false;
+	m_stale = false;
+#endif
 }
 
-#if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
-REHex::MacFileName::MacFileName(const wxString &bookmark):
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+REHex::MacFileName REHex::MacFileName::CreateFromBookmark(const wxString &bookmark)
+{
+	MacFileName self;
+	self.m_impl = std::make_shared<MacFileNameImpl>(bookmark, MacFileNameImpl::BookmarkTag());
+
+	return self;
+}
+
+REHex::MacFileName::MacFileNameImpl::MacFileNameImpl(const wxString &bookmark, const BookmarkTag&):
 	m_ssr(true)
 {
 	/* We need to construct an NSData object to call the initWithBase64EncodedString() method to
@@ -50,7 +93,7 @@ REHex::MacFileName::MacFileName(const wxString &bookmark):
 	
 	BOOL is_stale;
 	NSError *error;
-	NSURL *url = [NSURL URLByResolvingBookmarkData: actual_data
+	m_url = [NSURL URLByResolvingBookmarkData: actual_data
 		options: NSURLBookmarkResolutionWithSecurityScope
 		relativeToURL: nil
 		bookmarkDataIsStale: &is_stale
@@ -58,72 +101,65 @@ REHex::MacFileName::MacFileName(const wxString &bookmark):
 	
 	[data release];
 	
-	if(url == nil)
+	if(m_url == nil)
 	{
 		throw std::runtime_error("Unable to restore saved bookmark");
 	}
 	
 	m_stale = !!is_stale;
 	
-	if(![url startAccessingSecurityScopedResource])
+	if(![m_url startAccessingSecurityScopedResource])
 	{
 		throw std::runtime_error("Unable to access file");
 	}
 	
-	[url retain];
-	m_url  = url;
+	[m_url retain];
 }
 #endif
 
-REHex::MacFileName::~MacFileName()
+wxString REHex::MacFileName::GetFullName() const
 {
-	NSURL *url = (NSURL*)(m_url);
-	
-	if(url != nil)
+	if(m_impl)
 	{
-		if(m_ssr)
-		{
-			[url stopAccessingSecurityScopedResource];
-			m_ssr = false;
-		}
-		
-		[url release];
+		return m_impl->GetFileName().GetFullName();
+	}
+	else{
+		return wxFileName().GetFullName();
 	}
 }
 
-REHex::MacFileName::MacFileName(MacFileName &&mfn)
+wxString REHex::MacFileName::GetFullPath() const
 {
-	m_url = mfn.m_url;
-	m_ssr = mfn.m_ssr;
-	m_stale = mfn.m_stale;
-	
-	mfn.m_url = NULL;
+	if(m_impl)
+	{
+		return m_impl->GetFileName().GetFullPath();
+	}
+	else{
+		return wxFileName().GetFullPath();
+	}
 }
 
-REHex::MacFileName &REHex::MacFileName::operator=(MacFileName &&mfn)
+wxFileName REHex::MacFileName::MacFileNameImpl::GetFileName() const
 {
-	m_url = mfn.m_url;
-	m_ssr = mfn.m_ssr;
-	m_stale = mfn.m_stale;
-	
-	mfn.m_url = NULL;
-	
-	return *this;
-}
-
-wxFileName REHex::MacFileName::GetFileName() const
-{
-	NSURL *url = (NSURL*)(m_url);
-	return wxFileName(wxString([[url path] cStringUsingEncoding:[NSString defaultCStringEncoding]]));
+	return wxFileName(wxString([[m_url path] cStringUsingEncoding:[NSString defaultCStringEncoding]]));
 }
 
 #if defined(MAC_OS_X_VERSION_10_7) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7
 wxString REHex::MacFileName::CreateBookmark() const
 {
-	NSURL *url = (NSURL*)(m_url);
-	
+	if(m_impl)
+	{
+		return m_impl->CreateBookmark();
+	}
+	else{
+		throw std::logic_error("REHex::MacFileName::CreateBookmark() called on default-constructed object");
+	}
+}
+
+wxString REHex::MacFileName::MacFileNameImpl::CreateBookmark() const
+{
 	NSError *error;
-	NSData *bookmark = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+	NSData *bookmark = [m_url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
 		includingResourceValuesForKeys:nil
 		relativeToURL:nil
 		error:&error];
@@ -140,6 +176,30 @@ wxString REHex::MacFileName::CreateBookmark() const
 
 bool REHex::MacFileName::BookmarkWasStale() const
 {
+	if(m_impl)
+	{
+		return m_impl->BookmarkWasStale();
+	}
+	else{
+		throw std::logic_error("REHex::MacFileName::BookmarkWasStale() called on default-constructed object");
+	}
+}
+
+bool REHex::MacFileName::MacFileNameImpl::BookmarkWasStale() const
+{
 	return m_stale;
 }
 #endif
+
+REHex::MacFileName::MacFileNameImpl::~MacFileNameImpl()
+{
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+	if(m_ssr)
+	{
+		[m_url stopAccessingSecurityScopedResource];
+		m_ssr = false;
+	}
+#endif
+	
+	[m_url release];
+}

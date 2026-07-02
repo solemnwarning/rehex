@@ -58,7 +58,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "abc");
@@ -68,7 +68,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -78,7 +78,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "nop");
@@ -88,7 +88,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "abcdefghijklmnop");
@@ -98,7 +98,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -108,7 +108,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -118,7 +118,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -130,7 +130,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "bcd");
@@ -142,7 +142,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -154,7 +154,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "mno");
@@ -166,7 +166,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "bcdefghijklmno");
@@ -178,7 +178,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "abc");
@@ -190,7 +190,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "nop");
@@ -204,7 +204,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -216,7 +216,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "def");
@@ -228,7 +228,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
@@ -240,7 +240,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
@@ -252,7 +252,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
@@ -264,7 +264,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
@@ -278,7 +278,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "ABC", true);
@@ -288,7 +288,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "ABC", false);
@@ -300,7 +300,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "de");
@@ -310,7 +310,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "efg");
@@ -320,7 +320,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, "efgh");
@@ -332,7 +332,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), true, "UTF-8");
@@ -344,7 +344,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("n\xCC\x83" /* LATIN SMALL LETTER N (U+006E), COMBINING TILDE (U+0303) */), true, "UTF-8");
@@ -356,7 +356,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xC3\xB1" /* LATIN SMALL LETTER N WITH TILDE (U+00F1) */), false, "UTF-8");
@@ -370,7 +370,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("o\xCC\x80\xCC\x83" /* LATIN SMALL LETTER O (U+006E), COMBINING GRAVE ACCENT (U+0300), COMBINING TILDE (U+0303) */), true, "UTF-8");
@@ -381,7 +381,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("o\xCC\x83\xCC\x80" /* LATIN SMALL LETTER O (U+006E), COMBINING TILDE (U+0303), COMBINING GRAVE ACCENT (U+0300) */), true, "UTF-8");
@@ -392,7 +392,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), true, "UTF-8");
@@ -403,7 +403,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), true, "UTF-8");
@@ -414,7 +414,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\x90\xd0\x91\xd0\x92\xd0\x93\xd0\x94\xd0\x95\xd0\x96\xd0\x97" /* "АБВГДЕЖЗ" */), false, "UTF-8");
@@ -426,7 +426,7 @@ TEST(Search, Text)
 	
 	{
 		AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests"));
-		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(file.tmpfile));
+		REHex::SharedDocumentPointer doc(REHex::SharedDocumentPointer::make(wxFileName(file.tmpfile)));
 		REHex::DocumentCtrl *doc_ctrl = new REHex::DocumentCtrl(frame, doc);
 		
 		REHex::Search::Text s(frame, doc, doc_ctrl, wxString::FromUTF8("\xd0\xb0\xd0\xb1\xd0\xb2\xd0\xb3\xd0\xb4\xd0\xb5\xd0\xb6\xd0\xb7" /* "абвгдежз" */), false, "UTF-8");

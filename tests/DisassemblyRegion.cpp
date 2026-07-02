@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -31,7 +31,7 @@ using namespace REHex;
 TEST(DisassemblyRegion, ProcessFile)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -159,7 +159,7 @@ TEST(DisassemblyRegion, ProcessFile)
 TEST(DisassemblyRegion, InstructionByOffset)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -301,7 +301,7 @@ TEST(DisassemblyRegion, InstructionByOffset)
 TEST(DisassemblyRegion, InstructionByLine)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -416,7 +416,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 9, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -698,7 +698,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -727,7 +727,7 @@ TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
 TEST(DisassemblyRegion, OverwriteDataAtStart)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -754,7 +754,7 @@ TEST(DisassemblyRegion, OverwriteDataAtStart)
 TEST(DisassemblyRegion, OverwriteDataInRegion)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -781,7 +781,7 @@ TEST(DisassemblyRegion, OverwriteDataInRegion)
 TEST(DisassemblyRegion, OverwriteDataAtEnd)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -812,7 +812,7 @@ TEST(DisassemblyRegion, OverwriteDataAtEnd)
 TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
@@ -843,7 +843,7 @@ TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 TEST(DisassemblyRegion, CopyWholeInstructions)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
@@ -892,7 +892,7 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 TEST(DisassemblyRegion, CopyInHexView)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
@@ -926,7 +926,7 @@ TEST(DisassemblyRegion, CopyInHexView)
 TEST(DisassemblyRegion, CopyPartialInstructions)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
@@ -973,7 +973,7 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 TEST(DisassemblyRegion, CopyPartialInstruction)
 {
 	/* Open test executable. */
-	SharedDocumentPointer doc(SharedDocumentPointer::make("tests/ls.x86_64"));
+	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
 	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);

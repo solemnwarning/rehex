@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -45,7 +45,7 @@ TEST(Buffer, LoadConstructorNonEmptyFile)
 	
 	TempFile tmpfile(file_data.data(), file_data.size());
 	
-	REHex::Buffer b(tmpfile.tmpfile, 8);
+	REHex::Buffer b(wxFileName(tmpfile.tmpfile), 8);
 	
 	ASSERT_EQ(b.blocks.size(), 3U) << "Constructor creates correct number of blocks";
 	
@@ -71,7 +71,7 @@ TEST(Buffer, LoadConstructorEmptyFile)
 {
 	TempFile tmpfile(NULL, 0);
 	
-	REHex::Buffer b(tmpfile.tmpfile, 8);
+	REHex::Buffer b(wxFileName(tmpfile.tmpfile), 8);
 	
 	ASSERT_EQ(b.blocks.size(), 1U) << "Constructor creates correct number of blocks";
 	
@@ -93,7 +93,7 @@ TEST(Buffer, LoadConstructorEmptyFile)
 	}; \
 	TempFile tmpfile(file_data.data(), file_data.size()); \
 	\
-	REHex::Buffer b(tmpfile.tmpfile, 8);
+	REHex::Buffer b(wxFileName(tmpfile.tmpfile), 8);
 
 #define READ_DATA_UNLOADED(block_i) \
 { \

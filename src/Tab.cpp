@@ -1438,7 +1438,7 @@ void REHex::Tab::file_deleted_dialog()
 			}
 			
 			try {
-				doc->save(new_filename);
+				doc->save(wxFileName(new_filename));
 			}
 			catch(const std::exception &e)
 			{

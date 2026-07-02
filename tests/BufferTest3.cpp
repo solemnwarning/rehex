@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2017-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2017-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -662,7 +662,7 @@ TEST(Buffer, DeleteBackingFileAndRestore)
 	
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	b.read_data(0, 1024); /* Buffer file. */
 	
 	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
@@ -695,7 +695,7 @@ TEST(Buffer, ReplaceBackingFileAndRestore)
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	write_file(f2.tmpfile, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	b.read_data(0, 1024); /* Buffer file. */
 	
 	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
@@ -729,7 +729,7 @@ TEST(Buffer, ReplaceBackingFileAndReload)
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	write_file(f2.tmpfile, std::vector<unsigned char>({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	b.read_data(0, 1024); /* Buffer file. */
 	
 	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
@@ -762,7 +762,7 @@ TEST(Buffer, ModifyBackingFileAndReload)
 	TempFilename f1;
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	b.read_data(0, 1024); /* Buffer file. */
 	
 	run_wx_for(REHex::Buffer::FILE_CHECK_INTERVAL_MS * 2);
@@ -793,7 +793,7 @@ TEST(Buffer, ReadBitsWholeFile)
 	TempFilename f1;
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	
 	std::vector<bool> bits = b.read_bits(REHex::BitOffset(0, 0), 100);
 	
@@ -816,7 +816,7 @@ TEST(Buffer, ReadBitsFromFile)
 	TempFilename f1;
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	
 	std::vector<bool> bits = b.read_bits(REHex::BitOffset(1, 2), 15);
 	
@@ -839,7 +839,7 @@ TEST(Buffer, ReadBitsAtEOF)
 	TempFilename f1;
 	write_file(f1.tmpfile, std::vector<unsigned char>({ 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 }));
 	
-	REHex::Buffer b(f1.tmpfile);
+	REHex::Buffer b(wxFileName(f1.tmpfile));
 	
 	std::vector<bool> bits = b.read_bits(REHex::BitOffset(7, 5), 15);
 	

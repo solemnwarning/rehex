@@ -202,7 +202,7 @@ REHex::Buffer::HandlePtr REHex::Buffer::acquire_read_handle()
 	{
 		assert(handles[0].fh != NULL);
 		
-		handle->fh = reopen_file(handles[0].fh, filename);
+		handle->fh = reopen_file(handles[0].fh, filename.GetFullPath().ToStdString());
 		if(handle->fh != NULL)
 		{
 			/* We successfuly opened a new handle to the file. */
@@ -295,7 +295,7 @@ REHex::Buffer::Buffer():
 	timer.Bind(wxEVT_TIMER, &REHex::Buffer::OnTimerTick, this);
 }
 
-REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
+REHex::Buffer::Buffer(const FileName &filename, off_t block_size):
 	filename(filename),
 	_file_deleted(false),
 	_file_modified(false),
@@ -303,7 +303,7 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 {
 	timer.Bind(wxEVT_TIMER, &REHex::Buffer::OnTimerTick, this);
 	
-	handles[0].fh = fopen(filename.c_str(), "rb");
+	handles[0].fh = fopen(filename.GetFullPath().c_str(), "rb");
 	if(handles[0].fh == NULL)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
@@ -319,14 +319,6 @@ REHex::Buffer::Buffer(const std::string &filename, off_t block_size):
 	reload();
 }
 
-#ifdef __APPLE__
-REHex::Buffer::Buffer(MacFileName &&filename, off_t block_size):
-	Buffer(filename.GetFileName().GetFullPath().ToStdString())
-{
-	file_access_guard = std::move(filename);
-}
-#endif
-
 REHex::Buffer::~Buffer()
 {
 	close_handles();
@@ -337,7 +329,7 @@ void REHex::Buffer::reload()
 	std::unique_lock<shared_mutex> l(general_lock);
 	
 	/* Re-open file (in case file has been replaced) */
-	FILE *inode_fh = fopen(filename.c_str(), "rb");
+	FILE *inode_fh = fopen(filename.GetFullPath().c_str(), "rb");
 	if(inode_fh == NULL)
 	{
 		throw std::runtime_error(std::string("Could not open file: ") + strerror(errno));
@@ -379,7 +371,7 @@ void REHex::Buffer::_reinit_blocks(off_t file_length)
 {
 	_file_deleted  = false;
 	_file_modified = false;
-	last_mtime     = _get_file_mtime(handles[0].fh, filename);
+	last_mtime     = _get_file_mtime(handles[0].fh, filename.GetFullPath().ToStdString());
 	
 	/* Clear any existing blocks and references. */
 	
@@ -404,7 +396,7 @@ void REHex::Buffer::write_inplace()
 	write_inplace(filename);
 }
 
-void REHex::Buffer::write_inplace(const std::string &filename)
+void REHex::Buffer::write_inplace(const FileName &filename)
 {
 	std::unique_lock<shared_mutex> l(general_lock);
 	
@@ -413,9 +405,9 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	 * us write at arbitrary positions.
 	*/
 	#ifdef _WIN32
-	int fd = open(filename.c_str(), (O_RDWR | O_CREAT | O_NOCTTY | _O_BINARY), 0666);
+	int fd = open(filename.GetFullPath().c_str(), (O_RDWR | O_CREAT | O_NOCTTY | _O_BINARY), 0666);
 	#else
-	int fd = open(filename.c_str(), (O_RDWR | O_CREAT | O_NOCTTY), 0666);
+	int fd = open(filename.GetFullPath().c_str(), (O_RDWR | O_CREAT | O_NOCTTY), 0666);
 	#endif
 	if(fd == -1)
 	{
@@ -481,7 +473,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	}
 	
 	/* Are we updating the file we originally read data in from? */
-	bool updating_file = (handles[0].fh != NULL && _same_file(handles[0].fh, this->filename, wfh, filename));
+	bool updating_file = (handles[0].fh != NULL && _same_file(handles[0].fh, this->filename.GetFullPath().ToStdString(), wfh, filename.GetFullPath().ToStdString()));
 	
 	std::list<Block*> pending;
 	for(auto b = blocks.begin(); b != blocks.end(); ++b)
@@ -591,7 +583,7 @@ void REHex::Buffer::write_inplace(const std::string &filename)
 	{
 		_file_deleted  = false;
 		_file_modified = false;
-		last_mtime     = _get_file_mtime(handles[0].fh, filename);
+		last_mtime     = _get_file_mtime(handles[0].fh, filename.GetFullPath().ToStdString());
 		
 		while(last_accessed_blocks.size() > MAX_CLEAN_BLOCKS)
 		{
@@ -1041,11 +1033,13 @@ void REHex::Buffer::OnTimerTick(wxTimerEvent &event)
 	assert(handles[0].fh != NULL);
 	assert(!_file_deleted);
 	assert(!_file_modified);
+
+	wxString full_path = filename.GetFullPath();
 	
-	FILE *inode_fh = fopen(filename.c_str(), "rb");
+	FILE *inode_fh = fopen(full_path.c_str(), "rb");
 	if(inode_fh != NULL)
 	{
-		_file_deleted = !_same_file(handles[0].fh, filename, inode_fh, filename);
+		_file_deleted = !_same_file(handles[0].fh, full_path.ToStdString(), inode_fh, full_path.ToStdString());
 	}
 	else{
 		/* Assume file has been deleted if we can't open it. */
@@ -1065,7 +1059,7 @@ void REHex::Buffer::OnTimerTick(wxTimerEvent &event)
 		return;
 	}
 	
-	FileTime inode_mtime = _get_file_mtime(inode_fh, filename);
+	FileTime inode_mtime = _get_file_mtime(inode_fh, filename.GetFullPath().ToStdString());
 	fclose(inode_fh);
 	
 	if(inode_mtime != last_mtime)

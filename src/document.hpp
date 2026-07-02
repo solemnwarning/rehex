@@ -33,8 +33,8 @@
 #include "ByteRangeSet.hpp"
 #include "ByteRangeTree.hpp"
 #include "CharacterEncoder.hpp"
+#include "FileName.hpp"
 #include "HighlightColourMap.hpp"
-#include "MacFileName.hpp"
 #include "util.hpp"
 
 namespace REHex {
@@ -138,14 +138,7 @@ namespace REHex {
 			/**
 			 * @brief Create a Document for an existing file on disk.
 			*/
-			Document(const std::string &filename);
-			
-			#ifdef __APPLE__
-			/**
-			 * @brief Create a Document for an existing file on disk.
-			*/
-			Document(MacFileName &&filename);
-			#endif
+			Document(const FileName &filename);
 			
 			~Document();
 			
@@ -162,7 +155,7 @@ namespace REHex {
 			/**
 			 * @brief Save the file to a new path.
 			*/
-			void save(const std::string &filename);
+			void save(const FileName &filename);
 			
 			/**
 			 * @brief Get the user-visible title of the document.
@@ -428,7 +421,7 @@ namespace REHex {
 			void transact_step(const TransOpFunc &op, const std::string &desc);
 			
 			Buffer *buffer;
-			std::string filename;
+			FileName filename;
 			bool write_protect;
 			
 			void _forward_buffer_events();

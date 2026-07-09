@@ -227,6 +227,11 @@ namespace REHex {
 			 * @brief Get the directory where application state data should be stored.
 			*/
 			static std::string get_state_directory();
+
+			/**
+			 * @brief Get the path to the workspace that will be restored at startup.
+			*/
+			static wxFileName get_auto_workspace();
 			
 		private:
 			std::string last_directory;

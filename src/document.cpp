@@ -336,7 +336,7 @@ void REHex::Document::set_title(const std::string &title)
 	ProcessEvent(document_title_event);
 }
 
-REHex::FileName REHex::Document::get_filename()
+REHex::FileName REHex::Document::get_filename() const
 {
 	return buffer->get_filename();
 }

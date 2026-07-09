@@ -149,6 +149,7 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_MENU(wxID_REFRESH,        REHex::MainWindow::OnReload)
 	EVT_MENU(ID_AUTO_RELOAD,      REHex::MainWindow::OnAutoReload)
 	EVT_MENU(ID_SAVE_WORKSPACE,   REHex::MainWindow::OnSaveWorkspace)
+	EVT_MENU(ID_LOAD_WORKSPACE,   REHex::MainWindow::OnLoadWorkspace)
 	EVT_MENU(ID_IMPORT_HEX,       REHex::MainWindow::OnImportHex)
 	EVT_MENU(ID_EXPORT_HEX,       REHex::MainWindow::OnExportHex)
 	EVT_MENU(ID_IMPORT_METADATA,  REHex::MainWindow::OnImportMetadata)
@@ -274,8 +275,8 @@ const std::list<REHex::MainWindow*> &REHex::MainWindow::get_instances()
 	return instances;
 }
 
-REHex::MainWindow::MainWindow(const wxSize& size):
-	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", wxDefaultPosition, size),
+REHex::MainWindow::MainWindow(const wxPoint &position, const wxSize& size):
+	wxFrame(NULL, wxID_ANY, "Reverse Engineers' Hex Editor", position, size),
 	menu_bar(NULL),
 	file_menu(NULL),
 	edit_menu(NULL),
@@ -309,7 +310,8 @@ REHex::MainWindow::MainWindow(const wxSize& size):
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
-		file_menu->Append(ID_SAVE_WORKSPACE, "Save workspace");
+		file_menu->Append(ID_LOAD_WORKSPACE, "Open Workspace");
+		file_menu->Append(ID_SAVE_WORKSPACE, "Save Workspace");
 		
 		file_menu->AppendSeparator(); /* ---- */
 		
@@ -793,14 +795,20 @@ void REHex::MainWindow::OnWindowClose(wxCloseEvent &event)
 
 	if(wxGetApp().settings->get_auto_save_state() && instances.size() == 1)
 	{
-		std::string state_dir = App::get_state_directory();
+		wxFileName workspace_path = App::get_auto_workspace();
 
-		if(wxFileName::Mkdir(state_dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+		if(wxFileName::Mkdir(workspace_path.GetPath(), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
 		{
-			FileWriter workspace((state_dir + "/auto.rehex-workspace").c_str());
-			serialise_windows({ this }, &workspace);
+			try {
+				FileWriter workspace(workspace_path.GetFullPath().mb_str());
+				serialise_windows({ this }, false, &workspace);
 
-			workspace.commit();
+				workspace.commit();
+			}
+			catch(const std::exception &e)
+			{
+				wxGetApp().printf_error("Error saving session: %s\n", e.what());
+			}
 		}
 	}
 	
@@ -855,34 +863,14 @@ void REHex::MainWindow::OnNew(wxCommandEvent &event)
 
 void REHex::MainWindow::OnOpen(wxCommandEvent &event)
 {
-	std::string dir;
-	FileName doc_filename = active_document()->get_filename();
-	
-	if(doc_filename.IsOk())
+	wxFileName filename = show_file_dialog(this, "Open File", active_document(), false, "", (wxFD_OPEN | wxFD_FILE_MUST_EXIST));
+	if(!(filename.IsOk()))
 	{
-		wxFileName wxfn(doc_filename.GetFullPath());
-		wxfn.MakeAbsolute();
-		
-		dir = wxfn.GetPath();
-	}
-	else{
-		dir = wxGetApp().get_last_directory();
-	}
-	
-	wxFileDialog openFileDialog(this, "Open File", dir, "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		/* Cancelled. */
 		return;
-	
-	std::string filename = openFileDialog.GetPath().ToStdString();
-	
-	{
-		wxFileName wxfn(filename);
-		wxString dirname = wxfn.GetPath();
-		
-		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
-	
-	open_file(wxFileName(filename));
+
+	open_file(filename);
 }
 
 void REHex::MainWindow::OnRecentOpen(wxCommandEvent &event)
@@ -930,15 +918,15 @@ void REHex::MainWindow::OnSaveAs(wxCommandEvent &event)
 {
 	Tab *tab = active_tab();
 	
-	std::string filename = document_save_as_dialog(this, tab->doc);
-	if(filename == "")
+	wxFileName filename = show_file_dialog(this, "Save As", tab->doc, true, "", (wxFD_SAVE | wxFD_OVERWRITE_PROMPT));
+	if(!(filename.IsOk()))
 	{
 		/* Cancelled. */
 		return;
 	}
 	
 	try {
-		tab->doc->save(wxFileName(filename));
+		tab->doc->save(filename);
 	}
 	catch(const std::exception &e)
 	{
@@ -987,51 +975,65 @@ void REHex::MainWindow::OnAutoReload(wxCommandEvent &event)
 
 void REHex::MainWindow::OnSaveWorkspace(wxCommandEvent &event)
 {
-	std::vector<MainWindow*> all_windows(instances.begin(), instances.end());
+	wxFileName filename = show_file_dialog(this, "Save Workspace", active_document(), false, "REHex workspace files (*.rehex-workspace)|*.rehex-workspace", (wxFD_SAVE | wxFD_OVERWRITE_PROMPT));
+	if(!(filename.IsOk()))
+	{
+		/* Cancelled. */
+		return;
+	}
 
 	try {
-	FileWriter file("/tmp/foo.rehex-workspace");
-	
-	serialise_windows(all_windows, &file);
-	
-	file.commit();
+		FileWriter file(filename.GetFullPath().mb_str());
+		serialise_windows({ this }, false, &file);
+		
+		file.commit();
 	}
 	catch(const std::exception &e)
 	{
-		fprintf(stderr, "%s\n", e.what());
+		wxMessageBox(
+			std::string("Error saving workspace: ") + e.what(),
+			"Error", wxICON_ERROR, this);
+	}
+}
+
+void REHex::MainWindow::OnLoadWorkspace(wxCommandEvent &event)
+{
+	wxFileName filename = show_file_dialog(this, "Load Workspace", active_document(), false, "REHex workspace files (*.rehex-workspace)|*.rehex-workspace", (wxFD_OPEN | wxFD_FILE_MUST_EXIST));
+	if(!(filename.IsOk()))
+	{
+		/* Cancelled. */
+		return;
+	}
+
+	std::vector<MainWindow*> new_windows;
+	try {
+		FileReader file(filename.GetFullPath().mb_str());
+		new_windows = deserialise_windows(&file);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error restoring workspace: ") + e.what(),
+			"Error", wxICON_ERROR, this);
+		return;
+	}
+
+	for(auto w = new_windows.begin(); w != new_windows.end(); ++w)
+	{
+		(*w)->Show();
 	}
 }
 
 void REHex::MainWindow::OnImportHex(wxCommandEvent &event)
 {
-	std::string dir;
-	FileName doc_filename = active_document()->get_filename();
-	
-	if(doc_filename.IsOk())
+	wxFileName filename = show_file_dialog(this, "Import Hex File", active_document(), false, "", (wxFD_OPEN | wxFD_FILE_MUST_EXIST));
+	if(!(filename.IsOk()))
 	{
-		wxFileName wxfn(doc_filename.GetFullPath());
-		wxfn.MakeAbsolute();
-		
-		dir = wxfn.GetPath();
-	}
-	else{
-		dir = wxGetApp().get_last_directory();
-	}
-	
-	wxFileDialog openFileDialog(this, "Import Hex File", dir, "", "", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		/* Cancelled. */
 		return;
-	
-	std::string filename = openFileDialog.GetPath().ToStdString();
-	
-	{
-		wxFileName wxfn(filename);
-		wxString dirname = wxfn.GetPath();
-		
-		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
 	
-	import_hex_file(filename);
+	import_hex_file(filename.GetFullPath().ToStdString());
 }
 
 void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
@@ -1040,33 +1042,11 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 	
 	/* === Get export filename === */
 	
-	std::string dir, name;
-	FileName doc_filename = active_document()->get_filename();
-	
-	if(doc_filename.IsOk())
+	wxFileName filename = show_file_dialog(this, "Export Hex File", tab->doc, true, "", (wxFD_SAVE | wxFD_OVERWRITE_PROMPT));
+	if(!(filename.IsOk()))
 	{
-		wxFileName wxfn(doc_filename.GetFullPath());
-		wxfn.MakeAbsolute();
-		
-		dir  = wxfn.GetPath();
-		name = wxfn.GetFullName();
-	}
-	else{
-		dir  = wxGetApp().get_last_directory();
-		name = "";
-	}
-	
-	wxFileDialog saveFileDialog(this, "Export Hex File", dir, name, "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		/* Cancelled. */
 		return;
-	
-	std::string filename = saveFileDialog.GetPath().ToStdString();
-	
-	{
-		wxFileName wxfn(filename);
-		wxString dirname = wxfn.GetPath();
-		
-		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
 	
 	/* === Get export settings === */
@@ -1253,7 +1233,7 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 	}
 	
 	try {
-		write_hex_file(filename, tab->doc, use_segments, address_mode, start_segment_address_ptr, start_linear_address_ptr);
+		write_hex_file(filename.GetFullPath().ToStdString(), tab->doc, use_segments, address_mode, start_segment_address_ptr, start_linear_address_ptr);
 	}
 	catch(const std::exception &e)
 	{
@@ -1266,31 +1246,11 @@ void REHex::MainWindow::OnExportHex(wxCommandEvent &event)
 
 void REHex::MainWindow::OnImportMetadata(wxCommandEvent &event)
 {
-	std::string dir;
-	FileName doc_filename = active_document()->get_filename();
-	
-	if(doc_filename.IsOk())
+	wxFileName filename = show_file_dialog(this, "Import Metadata", active_document(), false, "REHex metadata files (*.rehex-meta)|*.rehex-meta", (wxFD_OPEN | wxFD_FILE_MUST_EXIST));
+	if(!(filename.IsOk()))
 	{
-		wxFileName wxfn(doc_filename.GetFullPath());
-		wxfn.MakeAbsolute();
-		
-		dir = wxfn.GetPath();
-	}
-	else{
-		dir = wxGetApp().get_last_directory();
-	}
-	
-	wxFileDialog openFileDialog(this, "Import Metadata", dir, "", "REHex metadata files (*.rehex-meta)|*.rehex-meta", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-	if(openFileDialog.ShowModal() == wxID_CANCEL)
+		/* Cancelled. */
 		return;
-	
-	std::string filename = openFileDialog.GetPath().ToStdString();
-	
-	{
-		wxFileName wxfn(filename);
-		wxString dirname = wxfn.GetPath();
-		
-		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
 	
 	std::string msg
@@ -1304,7 +1264,7 @@ void REHex::MainWindow::OnImportMetadata(wxCommandEvent &event)
 	}
 	
 	try {
-		active_document()->load_metadata(filename);
+		active_document()->load_metadata(filename.GetFullPath().ToStdString());
 	}
 	catch(const std::exception &e)
 	{
@@ -1316,37 +1276,15 @@ void REHex::MainWindow::OnImportMetadata(wxCommandEvent &event)
 
 void REHex::MainWindow::OnExportMetadata(wxCommandEvent &event)
 {
-	std::string dir, name;
-	FileName doc_filename = active_document()->get_filename();
-	
-	if(doc_filename.IsOk())
+	wxFileName filename = show_file_dialog(this, "Import Metadata", active_document(), false, "REHex metadata files (*.rehex-meta)|*.rehex-meta", (wxFD_SAVE | wxFD_OVERWRITE_PROMPT));
+	if(!(filename.IsOk()))
 	{
-		wxFileName wxfn(doc_filename.GetFullPath());
-		wxfn.MakeAbsolute();
-		
-		dir  = wxfn.GetPath();
-		name = wxfn.GetName();
-	}
-	else{
-		dir  = wxGetApp().get_last_directory();
-		name = "";
-	}
-	
-	wxFileDialog saveFileDialog(this, "Export Metadata", dir, name, "REHex metadata files (*.rehex-meta)|*.rehex-meta", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-	if(saveFileDialog.ShowModal() == wxID_CANCEL)
+		/* Cancelled. */
 		return;
-	
-	std::string filename = saveFileDialog.GetPath().ToStdString();
-	
-	{
-		wxFileName wxfn(filename);
-		wxString dirname = wxfn.GetPath();
-		
-		wxGetApp().set_last_directory(dirname.ToStdString());
 	}
 	
 	try {
-		active_document()->save_metadata(filename);
+		active_document()->save_metadata(filename.GetFullPath().ToStdString());
 	}
 	catch(const std::exception &e)
 	{
@@ -1385,7 +1323,51 @@ void REHex::MainWindow::OnCloseOthers(wxCommandEvent &event)
 
 void REHex::MainWindow::OnExit(wxCommandEvent &event)
 {
-	Close();
+	std::vector<Tab*> closing_tabs;
+	
+	for(auto w = instances.begin(); w != instances.end(); ++w)
+	{
+		size_t num_tabs = (*w)->notebook->GetPageCount();
+		for(size_t i = 0; i < num_tabs; ++i)
+		{
+			wxWindow *page = (*w)->notebook->GetPage(i);
+			assert(page != NULL);
+			
+			auto p_tab = dynamic_cast<Tab*>(page);
+			assert(p_tab != NULL);
+			
+			closing_tabs.push_back(p_tab);
+		}
+	}
+	
+	if(!confirm_close_tabs(closing_tabs))
+	{
+		return;
+	}
+
+	if(wxGetApp().settings->get_auto_save_state())
+	{
+		wxFileName workspace_path = App::get_auto_workspace();
+
+		if(wxFileName::Mkdir(workspace_path.GetPath(), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+		{
+			try {
+				FileWriter workspace(workspace_path.GetFullPath().mb_str());
+				serialise_windows(std::vector<MainWindow*>(instances.begin(), instances.end()), false, &workspace);
+
+				workspace.commit();
+			}
+			catch(const std::exception &e)
+			{
+				wxGetApp().printf_error("Error saving session: %s\n", e.what());
+			}
+		}
+	}
+	
+	for(auto w = instances.begin(); w != instances.end(); ++w)
+	{
+		(*w)->Destroy();
+	}
 }
 
 void REHex::MainWindow::OnCursorPrev(wxCommandEvent &event)
@@ -3041,7 +3023,7 @@ std::vector<REHex::WindowCommand> REHex::MainWindow::get_template_commands()
 	});
 }
 
-void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &windows, FileWriter *file)
+void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &windows, bool full_state, FileWriter *file)
 {
 	for(size_t i = 0; i < windows.size(); ++i)
 	{
@@ -3053,14 +3035,27 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 			wxSize size = window->GetSize();
 			file->write_tlv("SIZE", [&]()
 			{
-				file->write<int32_t>(size.x);
-				file->write<int32_t>(size.y);
+				file->write<uint32_t>(htole32(size.x));
+				file->write<uint32_t>(htole32(size.y));
 			});
 			
 			bool maximised = window->IsMaximized();
 			if(maximised)
 			{
 				file->write_tlv("WMAX", []() {});
+			}
+
+			#ifdef REHEX_ENABLE_WAYLAND_HACKS
+			if(!(App::is_wayland_session()))
+			#endif
+			{
+				wxPoint position = window->GetPosition();
+
+				file->write_tlv("POS ", [&]()
+				{
+					file->write<uint32_t>(htole32(position.x));
+					file->write<uint32_t>(htole32(position.y));
+				});
 			}
 			#endif
 			
@@ -3087,13 +3082,19 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 					continue;
 				}
 
+				if(!full_state && !(tab->doc->get_filename().IsOk()))
+				{
+					/* Skip documents with no backing file when saving a workspace. */
+					continue;
+				}
+
 				file->write_tlv("TAB ", [&]()
 				{
 					file->write("VIEW", 4);
 					file->write<uint32_t>(htole32(os.TellO()));
 					file->write(os.GetOutputStreamBuffer()->GetBufferStart(), os.TellO());
 					
-					if(tab->doc->is_dirty())
+					if(full_state && tab->doc->is_dirty())
 					{
 						file->write_tlv("DOC ", [&]()
 						{
@@ -3138,6 +3139,7 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 		{
 			wxSize window_size = wxDefaultSize;
 			bool window_maximise = false;
+			wxPoint window_pos = wxDefaultPosition;
 
 			MainWindow *window = NULL;
 
@@ -3145,18 +3147,23 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 			{
 				if(type == "SIZE")
 				{
-					window_size.x = file->read<int32_t>();
-					window_size.y = file->read<int32_t>();
+					window_size.x = le32toh(file->read<uint32_t>());
+					window_size.y = le32toh(file->read<uint32_t>());
 				}
 				else if(type == "WMAX")
 				{
 					window_maximise = true;
 				}
+				else if(type == "POS ")
+				{
+					window_pos.x = le32toh(file->read<uint32_t>());
+					window_pos.y = le32toh(file->read<uint32_t>());
+				}
 				else if(type == "TAB ")
 				{
 					if(window == NULL)
 					{
-						window = new MainWindow(window_size);
+						window = new MainWindow(window_pos, window_size);
 
 						if(window_maximise)
 						{
@@ -3231,7 +3238,10 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 				}
 			})) {}
 
-			new_windows.push_back(window);
+			if(window != NULL)
+			{
+				new_windows.push_back(window);
+			}
 		}
 	})) {}
 	

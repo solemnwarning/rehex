@@ -37,7 +37,7 @@ static REHex::MainWindow *new_window()
 	wxGetApp().config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
 	#endif
 	
-	return new REHex::MainWindow(windowSize);
+	return new REHex::MainWindow(wxDefaultPosition, windowSize);
 }
 
 bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)

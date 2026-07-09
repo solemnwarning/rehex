@@ -176,7 +176,7 @@ namespace REHex {
 			/**
 			 * @brief Get the filename of the document, or an empty string if there is no backing file.
 			*/
-			FileName get_filename();
+			FileName get_filename() const;
 			
 			/**
 			 * @brief Check if the document has any pending changes to be saved.

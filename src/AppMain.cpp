@@ -381,21 +381,21 @@ bool REHex::App::OnInit()
 	
 	call_setup_hooks(SetupPhase::READY);
 
-	std::string auto_workspace = get_state_directory() + "/auto.rehex-workspace";
+	wxFileName auto_workspace = get_auto_workspace();
 	bool restored_workspace = false;
 
-	if(wxFileName::FileExists(auto_workspace))
+	if(auto_workspace.FileExists())
 	{
-		FileReader fr(auto_workspace.c_str());
+		FileReader fr(auto_workspace.GetFullPath().mb_str());
 
 		std::vector<MainWindow*> windows = MainWindow::deserialise_windows(&fr);
 		for(auto i = windows.begin(); i != windows.end(); ++i)
 		{
 			(*i)->Show();
+			restored_workspace = true;
 		}
 
-		restored_workspace = true;
-		unlink(auto_workspace.c_str());
+		unlink(auto_workspace.GetFullPath().mb_str());
 	}
 	
 	if(!restored_workspace || !(open_filenames.empty()))
@@ -407,7 +407,7 @@ bool REHex::App::OnInit()
 		config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
 		#endif
 		
-		window = new REHex::MainWindow(windowSize);
+		window = new REHex::MainWindow(wxDefaultPosition, windowSize);
 		
 		#ifndef __APPLE__
 		bool maximise = config->ReadBool("/default-view/window-maximised", false);
@@ -546,7 +546,7 @@ void REHex::App::OnTabDropped(DetachedPageEvent &event)
 	Tab *tab = dynamic_cast<Tab*>(event.page);
 	assert(tab != NULL);
 	
-	MainWindow *window = new MainWindow(wxDefaultSize);
+	MainWindow *window = new MainWindow(wxDefaultPosition, wxDefaultSize);
 	window->SetClientSize(tab->GetParent()->GetSize());
 	window->SetPosition(mouse_position);
 	window->insert_tab(tab, -1);
@@ -557,22 +557,19 @@ void REHex::App::OnEndSession(wxCloseEvent &event)
 {
 	std::list<MainWindow*> all_windows = MainWindow::get_instances();
 
-	if(settings->get_auto_save_state())
+	wxFileName workspace_path = get_auto_workspace();
+
+	if(wxFileName::Mkdir(workspace_path.GetPath(), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
 	{
-		std::string state_dir = App::get_state_directory();
+		try {
+			FileWriter workspace(workspace_path.GetFullPath().mb_str());
+			MainWindow::serialise_windows(std::vector<MainWindow*>(all_windows.begin(), all_windows.end()), true, &workspace);
 
-		if(wxFileName::Mkdir(state_dir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+			workspace.commit();
+		}
+		catch(const std::exception &e)
 		{
-			try {
-				FileWriter workspace((state_dir + "/auto.rehex-workspace").c_str());
-				MainWindow::serialise_windows(std::vector<MainWindow*>(all_windows.begin(), all_windows.end()), &workspace);
-
-				workspace.commit();
-			}
-			catch(const std::exception &e)
-			{
-				printf_error("Error saving session: %s\n", e.what());
-			}
+			printf_error("Error saving session: %s\n", e.what());
 		}
 	}
 

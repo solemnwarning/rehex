@@ -562,3 +562,8 @@ std::string REHex::App::get_state_directory()
 	}
 #endif
 }
+
+wxFileName REHex::App::get_auto_workspace()
+{
+	return wxFileName(get_state_directory(), "auto.rehex-workspace");
+}

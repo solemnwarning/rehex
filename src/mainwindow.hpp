@@ -41,7 +41,7 @@ namespace REHex {
 	class MainWindow: public wxFrame
 	{
 		public:
-			MainWindow(const wxSize& size);
+			MainWindow(const wxPoint &position, const wxSize& size);
 			virtual ~MainWindow();
 			
 			/**
@@ -93,6 +93,7 @@ namespace REHex {
 			void OnReload(wxCommandEvent &event);
 			void OnAutoReload(wxCommandEvent &event);
 			void OnSaveWorkspace(wxCommandEvent &event);
+			void OnLoadWorkspace(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
 			void OnImportMetadata(wxCommandEvent &event);
@@ -244,7 +245,7 @@ namespace REHex {
 			*/
 			static const std::list<MainWindow*> &get_instances();
 			
-			static void serialise_windows(const std::vector<MainWindow*> &windows, FileWriter *file);
+			static void serialise_windows(const std::vector<MainWindow*> &windows, bool full_state, FileWriter *file);
 			static std::vector<MainWindow*> deserialise_windows(FileReader *file);
 			
 			/**

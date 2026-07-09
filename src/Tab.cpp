@@ -1428,15 +1428,15 @@ void REHex::Tab::file_deleted_dialog()
 		
 		case wxID_NO:
 		{
-			std::string new_filename = document_save_as_dialog(this, doc);
-			if(new_filename == "")
+			wxFileName new_filename = show_file_dialog(this, "Save As", doc, true, "", (wxFD_SAVE | wxFD_OVERWRITE_PROMPT));
+			if(!(new_filename.IsOk()))
 			{
 				/* Cancelled. */
 				return;
 			}
 			
 			try {
-				doc->save(wxFileName(new_filename));
+				doc->save(new_filename);
 			}
 			catch(const std::exception &e)
 			{

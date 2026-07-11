@@ -388,14 +388,21 @@ bool REHex::App::OnInit()
 	{
 		FileReader fr(auto_workspace.GetFullPath().mb_str());
 
-		std::vector<MainWindow*> windows = MainWindow::deserialise_windows(&fr);
+		std::vector<MainWindow*> windows;
+		try {
+			windows = MainWindow::deserialise_windows(&fr);
+			unlink(auto_workspace.GetFullPath().mb_str());
+		}
+		catch(const std::exception &e)
+		{
+			printf_error("Error restoring session: %s\n", e.what());
+		}
+
 		for(auto i = windows.begin(); i != windows.end(); ++i)
 		{
 			(*i)->Show();
 			restored_workspace = true;
 		}
-
-		unlink(auto_workspace.GetFullPath().mb_str());
 	}
 	
 	if(!restored_workspace || !(open_filenames.empty()))

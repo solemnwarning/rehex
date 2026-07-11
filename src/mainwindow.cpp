@@ -3025,6 +3025,8 @@ std::vector<REHex::WindowCommand> REHex::MainWindow::get_template_commands()
 
 void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &windows, bool full_state, FileWriter *file)
 {
+	file->write("REHEX.WORKSPACE1", 16);
+
 	for(size_t i = 0; i < windows.size(); ++i)
 	{
 		MainWindow *window = windows[i];
@@ -3090,9 +3092,10 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 
 				file->write_tlv("TAB ", [&]()
 				{
-					file->write("VIEW", 4);
-					file->write<uint32_t>(htole32(os.TellO()));
-					file->write(os.GetOutputStreamBuffer()->GetBufferStart(), os.TellO());
+					file->write_tlv("VIEW", [&]()
+					{
+						file->write(os.GetOutputStreamBuffer()->GetBufferStart(), os.TellO());
+					});
 					
 					if(full_state && tab->doc->is_dirty())
 					{
@@ -3131,7 +3134,16 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 
 std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReader *file)
 {
-	std::vector<REHex::MainWindow*> new_windows;
+	char signature[16];
+	file->read(signature, 16, 16);
+
+	if(memcmp(signature, "REHEX.WORKSPACE1", 16) != 0)
+	{
+		throw std::runtime_error("Invalid or corrupt workspace file");
+	}
+
+	auto deleter = [](MainWindow *w) { w->Destroy(); };
+	std::vector< std::unique_ptr<MainWindow, decltype(deleter)> > new_windows;
 	
 	while(file->read_tlv([&](const FourCC &type, uint32_t length)
 	{
@@ -3141,10 +3153,11 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 			bool window_maximise = false;
 			wxPoint window_pos = wxDefaultPosition;
 
-			MainWindow *window = NULL;
+			std::unique_ptr<MainWindow, decltype(deleter)> window(NULL, deleter);
 
 			while(file->read_tlv([&](const FourCC &type, uint32_t length)
 			{
+#ifndef __APPLE__
 				if(type == "SIZE")
 				{
 					window_size.x = le32toh(file->read<uint32_t>());
@@ -3159,11 +3172,13 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 					window_pos.x = le32toh(file->read<uint32_t>());
 					window_pos.y = le32toh(file->read<uint32_t>());
 				}
-				else if(type == "TAB ")
+				else
+#endif
+				if(type == "TAB ")
 				{
 					if(window == NULL)
 					{
-						window = new MainWindow(window_pos, window_size);
+						window.reset(new MainWindow(window_pos, window_size));
 
 						if(window_maximise)
 						{
@@ -3233,19 +3248,27 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 					window->notebook->AddPage(tab, tab->doc->get_title(), true);
 					tab->doc_ctrl->SetFocus();
 					
-					TabCreatedEvent event(window, tab);
-					wxPostEvent(window, event);
+					TabCreatedEvent event(window.get(), tab);
+					wxPostEvent(window.get(), event);
 				}
 			})) {}
 
 			if(window != NULL)
 			{
-				new_windows.push_back(window);
+				new_windows.push_back(std::move(window));
 			}
 		}
 	})) {}
+
+	std::vector<MainWindow*> ret_windows;
+	ret_windows.reserve(new_windows.size());
+
+	for(auto w = new_windows.begin(); w != new_windows.end(); ++w)
+	{
+		ret_windows.emplace_back(w->release());
+	}
 	
-	return new_windows;
+	return ret_windows;
 }
 
 REHex::MainWindow::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):

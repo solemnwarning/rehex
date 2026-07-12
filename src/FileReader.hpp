@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string>
+#include <wx/filename.h>
 
 #include "FourCC.hpp"
 
@@ -99,6 +100,11 @@ namespace REHex
 			 * @brief Skip over some data in the file.
 			 */
 			void skip(size_t num_bytes);
+			
+			/**
+			 * @brief Get the name of the file being read.
+			*/
+			wxFileName get_filename() const;
 	};
 }
 

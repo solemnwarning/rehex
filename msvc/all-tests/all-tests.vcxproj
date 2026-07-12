@@ -318,6 +318,7 @@
     <ClCompile Include="..\..\src\SettingsDialogKeyboard.cpp" />
     <ClCompile Include="..\..\src\StringPanel.cpp" />
     <ClCompile Include="..\..\src\Tab.cpp" />
+    <ClCompile Include="..\..\src\TempDirectory.cpp" />
     <ClCompile Include="..\..\src\textentrydialog.cpp" />
     <ClCompile Include="..\..\src\ThreadPool.cpp" />
     <ClCompile Include="..\..\src\ToolPanel.cpp" />

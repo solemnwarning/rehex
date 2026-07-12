@@ -22,6 +22,7 @@
 
 #include "../src/FileReader.hpp"
 #include "../src/FileWriter.hpp"
+#include "../src/TempDirectory.hpp"
 
 TEST(Buffer, InsertEmptyFile)
 {
@@ -893,15 +894,17 @@ TEST(Buffer, SerialiseEmptyBufferNoFile)
 
 TEST(Buffer, SerialiseEmptyBufferWithFile)
 {
-	TempFilename bfile;
-	write_file(bfile.tmpfile, NULL, 0);
-
-	TempFilename sfile;
+	REHex::TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "data.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
+	
+	write_file(data_file, NULL, 0);
 	
 	{
-		REHex::Buffer b1(wxFileName(bfile.tmpfile));
+		REHex::Buffer b1{wxFileName(data_file)};
 
-		REHex::FileWriter w(sfile.tmpfile);
+		REHex::FileWriter w(serialised_file.c_str());
 		b1.serialise(&w);
 		w.commit();
 	}
@@ -909,14 +912,14 @@ TEST(Buffer, SerialiseEmptyBufferWithFile)
 	std::unique_ptr<REHex::Buffer> b2;
 
 	{
-		REHex::FileReader r(sfile.tmpfile);
+		REHex::FileReader r(serialised_file.c_str());
 		b2 = REHex::Buffer::deserialise(&r);
 	}
 
 	EXPECT_EQ(0, b2->length());
 
 	EXPECT_TRUE(b2->get_filename().IsOk());
-	EXPECT_EQ(std::string(bfile.tmpfile), b2->get_filename().GetFullPath().ToStdString());
+	EXPECT_EQ(data_file, b2->get_filename().GetFullPath().ToStdString());
 
 	EXPECT_FALSE(b2->file_modified());
 	EXPECT_FALSE(b2->file_deleted());
@@ -924,33 +927,35 @@ TEST(Buffer, SerialiseEmptyBufferWithFile)
 
 TEST(Buffer, SerialiseEmptyBufferWithModifiedFile)
 {
-	TempFilename bfile;
-	write_file(bfile.tmpfile, NULL, 0);
-
-	TempFilename sfile;
+	REHex::TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "data.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
+	
+	write_file(data_file, NULL, 0);
 	
 	{
-		REHex::Buffer b1(wxFileName(bfile.tmpfile));
+		REHex::Buffer b1{ wxFileName(data_file) };
 
-		REHex::FileWriter w(sfile.tmpfile);
+		REHex::FileWriter w(serialised_file.c_str());
 		b1.serialise(&w);
 		w.commit();
 	}
 
 	std::this_thread::sleep_for(std::chrono::seconds(2));
-	write_file(bfile.tmpfile, "Hello world", strlen("Hello world"));
+	write_file(data_file, "Hello world", strlen("Hello world"));
 
 	std::unique_ptr<REHex::Buffer> b2;
 
 	{
-		REHex::FileReader r(sfile.tmpfile);
+		REHex::FileReader r(serialised_file.c_str());
 		b2 = REHex::Buffer::deserialise(&r);
 	}
 
 	EXPECT_EQ(0, b2->length());
 
 	EXPECT_TRUE(b2->get_filename().IsOk());
-	EXPECT_EQ(std::string(bfile.tmpfile), b2->get_filename().GetFullPath().ToStdString());
+	EXPECT_EQ(data_file, b2->get_filename().GetFullPath().ToStdString());
 
 	EXPECT_TRUE(b2->file_modified());
 	EXPECT_FALSE(b2->file_deleted());
@@ -958,32 +963,34 @@ TEST(Buffer, SerialiseEmptyBufferWithModifiedFile)
 
 TEST(Buffer, SerialiseEmptyBufferWithDeletedFile)
 {
-	TempFilename bfile;
-	write_file(bfile.tmpfile, NULL, 0);
-
-	TempFilename sfile;
+	REHex::TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "data.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
+	
+	write_file(data_file, NULL, 0);
 	
 	{
-		REHex::Buffer b1(wxFileName(bfile.tmpfile));
+		REHex::Buffer b1{ wxFileName(data_file) };
 
-		REHex::FileWriter w(sfile.tmpfile);
+		REHex::FileWriter w(serialised_file.c_str());
 		b1.serialise(&w);
 		w.commit();
 	}
 
-	unlink(bfile.tmpfile);
+	unlink(data_file.c_str());
 
 	std::unique_ptr<REHex::Buffer> b2;
 
 	{
-		REHex::FileReader r(sfile.tmpfile);
+		REHex::FileReader r(serialised_file.c_str());
 		b2 = REHex::Buffer::deserialise(&r);
 	}
 
 	EXPECT_EQ(0, b2->length());
 
 	EXPECT_TRUE(b2->get_filename().IsOk());
-	EXPECT_EQ(std::string(bfile.tmpfile), b2->get_filename().GetFullPath().ToStdString());
+	EXPECT_EQ(data_file, b2->get_filename().GetFullPath().ToStdString());
 
 	EXPECT_FALSE(b2->file_modified());
 	EXPECT_TRUE(b2->file_deleted());
@@ -1032,29 +1039,31 @@ TEST(Buffer, SerialiseModifiedBufferWithFile)
 	static const char REFERENCE_DATA1[] = "cactus want mature";
 	static const char REFERENCE_DATA2[] = "impulse untidy provide";
 
-	TempFilename bfile;
-	write_file(bfile.tmpfile, data_pattern(0, (1024 * 1024)));
-
-	TempFilename sfile;
+	REHex::TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "data.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
+	
+	write_file(data_file, data_pattern(0, (1024 * 1024)));
 	
 	{
-		REHex::Buffer b1(wxFileName(bfile.tmpfile), 1024);
+		REHex::Buffer b1(wxFileName(data_file), 1024);
 
 		b1.overwrite_data(0, (const unsigned char*)(REFERENCE_DATA1), sizeof(REFERENCE_DATA1));
 		b1.insert_data(2048, (const unsigned char*)(REFERENCE_DATA2), sizeof(REFERENCE_DATA2));
 
-		REHex::FileWriter w(sfile.tmpfile);
+		REHex::FileWriter w(serialised_file.c_str());
 		b1.serialise(&w);
 		w.commit();
 	}
 
-	std::vector<unsigned char> file_data = read_file(bfile.tmpfile);
+	std::vector<unsigned char> file_data = read_file(data_file);
 	EXPECT_EQ(data_pattern(0, (1024 * 1024)), file_data);
 
 	std::unique_ptr<REHex::Buffer> b2;
 
 	{
-		REHex::FileReader r(sfile.tmpfile);
+		REHex::FileReader r(serialised_file.c_str());
 		b2 = REHex::Buffer::deserialise(&r);
 	}
 
@@ -1077,7 +1086,7 @@ TEST(Buffer, SerialiseModifiedBufferWithFile)
 		b2->read_data(REHex::BitOffset(8192, 0), 1024));
 
 	EXPECT_TRUE(b2->get_filename().IsOk());
-	EXPECT_EQ(std::string(bfile.tmpfile), b2->get_filename().GetFullPath().ToStdString());
+	EXPECT_EQ(data_file, b2->get_filename().GetFullPath().ToStdString());
 
 	EXPECT_FALSE(b2->file_modified());
 	EXPECT_FALSE(b2->file_deleted());
@@ -1093,7 +1102,7 @@ TEST(Buffer, SerialiseModifiedBufferWithFile)
 
 	EXPECT_EQ(
 		expect_file_data,
-		read_file(bfile.tmpfile));
+		read_file(data_file));
 }
 
 TEST(Buffer, SerialiseModifiedBufferWithDeletedFile)
@@ -1105,31 +1114,33 @@ TEST(Buffer, SerialiseModifiedBufferWithDeletedFile)
 	static const char REFERENCE_DATA1[] = "cactus want mature";
 	static const char REFERENCE_DATA2[] = "impulse untidy provide";
 
-	TempFilename bfile;
-	write_file(bfile.tmpfile, data_pattern(0, (1024 * 1024)));
-
-	TempFilename sfile;
+	REHex::TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "data.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
+	
+	write_file(data_file, data_pattern(0, (1024 * 1024)));
 	
 	{
-		REHex::Buffer b1(wxFileName(bfile.tmpfile), 1024);
+		REHex::Buffer b1(wxFileName(data_file), 1024);
 
 		b1.overwrite_data(0, (const unsigned char*)(REFERENCE_DATA1), sizeof(REFERENCE_DATA1));
 		b1.insert_data(2048, (const unsigned char*)(REFERENCE_DATA2), sizeof(REFERENCE_DATA2));
 
-		REHex::FileWriter w(sfile.tmpfile);
+		REHex::FileWriter w(serialised_file.c_str());
 		b1.serialise(&w);
 		w.commit();
 	}
 
-	std::vector<unsigned char> file_data = read_file(bfile.tmpfile);
+	std::vector<unsigned char> file_data = read_file(data_file);
 	EXPECT_EQ(data_pattern(0, (1024 * 1024)), file_data);
 
-	unlink(bfile.tmpfile);
+	unlink(data_file.c_str());
 
 	std::unique_ptr<REHex::Buffer> b2;
 
 	{
-		REHex::FileReader r(sfile.tmpfile);
+		REHex::FileReader r(serialised_file.c_str());
 		b2 = REHex::Buffer::deserialise(&r);
 	}
 
@@ -1151,7 +1162,7 @@ TEST(Buffer, SerialiseModifiedBufferWithDeletedFile)
 	EXPECT_THROW({ b2->read_data(REHex::BitOffset(8192, 0), 1024); }, std::runtime_error);
 
 	EXPECT_TRUE(b2->get_filename().IsOk());
-	EXPECT_EQ(std::string(bfile.tmpfile), b2->get_filename().GetFullPath().ToStdString());
+	EXPECT_EQ(data_file, b2->get_filename().GetFullPath().ToStdString());
 
 	EXPECT_FALSE(b2->file_modified());
 	EXPECT_TRUE(b2->file_deleted());
@@ -1165,44 +1176,48 @@ TEST(Buffer, SerialiseFullyModifiedBufferWithDeletedFile)
 	/* Initialise a file with random data, overwrite all data in the buffer and then serialise, which should include
 	 * the entire (new) file in the deserialised instance, allowing reading the entire file and writing it out again.
 	*/
+	
+	REHex::TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "data.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
 
-	TempFilename bfile;
-	write_file(bfile.tmpfile, data_pattern(0, (1024 * 1024)));
+	write_file(data_file, data_pattern(0, (1024 * 1024)));
 
 	TempFilename sfile;
 	
 	{
-		REHex::Buffer b1(wxFileName(bfile.tmpfile), 1024);
+		REHex::Buffer b1(wxFileName(data_file), 1024);
 
 		std::vector<unsigned char> new_data = data_pattern(1024, (1024 * 1024));
 		b1.overwrite_data(0, new_data.data(), new_data.size());
 
-		REHex::FileWriter w(sfile.tmpfile);
+		REHex::FileWriter w(serialised_file.c_str());
 		b1.serialise(&w);
 		w.commit();
 	}
 
-	std::vector<unsigned char> file_data = read_file(bfile.tmpfile);
+	std::vector<unsigned char> file_data = read_file(data_file);
 	EXPECT_EQ(data_pattern(0, (1024 * 1024)), file_data);
 
-	unlink(bfile.tmpfile);
+	unlink(data_file.c_str());
 
 	std::unique_ptr<REHex::Buffer> b2;
 
 	{
-		REHex::FileReader r(sfile.tmpfile);
+		REHex::FileReader r(serialised_file.c_str());
 		b2 = REHex::Buffer::deserialise(&r);
 	}
 
 	EXPECT_EQ(data_pattern(1024, (1024 * 1024)), b2->read_data(0, (1024 * 1024)));
 
 	EXPECT_TRUE(b2->get_filename().IsOk());
-	EXPECT_EQ(std::string(bfile.tmpfile), b2->get_filename().GetFullPath().ToStdString());
+	EXPECT_EQ(data_file, b2->get_filename().GetFullPath().ToStdString());
 
 	EXPECT_FALSE(b2->file_modified());
 	EXPECT_TRUE(b2->file_deleted());
 
 	b2->write_inplace();
 
-	EXPECT_EQ(data_pattern(1024, (1024 * 1024)), read_file(bfile.tmpfile));
+	EXPECT_EQ(data_pattern(1024, (1024 * 1024)), read_file(data_file));
 }

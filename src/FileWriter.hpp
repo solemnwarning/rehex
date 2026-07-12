@@ -21,6 +21,7 @@
 #include <functional>
 #include <stdio.h>
 #include <string>
+#include <wx/filename.h>
 
 #include "FourCC.hpp"
 
@@ -97,6 +98,15 @@ namespace REHex
 			 * undefined behaviour.
 			*/
 			void commit();
+			
+			/**
+			 * @brief Get the name of the file being created.
+			 *
+			 * NOTE: The returned name is where the file will be accessible after the commit()
+			 * method has been called, before that point there may be nothing there or it may even
+			 * be a different file.
+			*/
+			wxFileName get_filename() const;
 	};
 }
 

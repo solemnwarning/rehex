@@ -126,3 +126,11 @@ void REHex::FileWriter::commit()
 	
 	fh = NULL;
 }
+
+wxFileName REHex::FileWriter::get_filename() const
+{
+	wxFileName fn(filename);
+	fn.MakeAbsolute();
+	
+	return fn;
+}

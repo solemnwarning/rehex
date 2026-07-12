@@ -182,3 +182,11 @@ void REHex::FileReader::skip(size_t num_bytes)
 
 	position += num_bytes;
 }
+
+wxFileName REHex::FileReader::get_filename() const
+{
+	wxFileName fn(filename);
+	fn.MakeAbsolute();
+	
+	return fn;
+}

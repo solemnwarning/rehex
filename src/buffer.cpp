@@ -665,9 +665,14 @@ void REHex::Buffer::serialise(FileWriter *file)
 {
 	std::unique_lock<shared_mutex> l(general_lock);
 	
-	std::string path = filename.GetFullPath().ToStdString();
-	if(!(path.empty()))
+	if(filename.IsOk())
 	{
+		wxFileName wxfn(filename.GetFullPath());
+		wxfn.MakeAbsolute();
+		
+		wxfn.MakeRelativeTo(file->get_filename().GetPath());
+		
+		std::string path = wxfn.GetFullPath().ToStdString();
 		file->write_tlv("FNAM", path.data(), path.length());
 
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARK
@@ -746,7 +751,14 @@ std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(FileReader *file)
 			std::vector<char> buf(length);
 			file->read(buf.data(), length, length);
 			
-			filename = wxString(buf.data(), length);
+			wxFileName wxfn(wxString(buf.data(), length));
+			
+			if(wxfn.IsRelative())
+			{
+				wxfn = wxFileName(file->get_filename()).GetPathWithSep() + wxfn.GetFullPath();
+			}
+			
+			filename = wxfn.GetFullPath();
 		}
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		else if(type == "BMRK")

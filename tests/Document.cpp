@@ -28,6 +28,7 @@
 
 #include "../src/document.hpp"
 #include "../src/Events.hpp"
+#include "../src/TempDirectory.hpp"
 
 static const char *IPSUM =
 	"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"
@@ -4689,13 +4690,16 @@ TEST_F(DocumentTest, SerialiseDocumentWithBackingFile)
 
 	doc->insert_data(0, REFERENCE_DATA, strlen(REFERENCE_DATA));
 	doc->set_comment(4, 10, REHex::Document::Comment("save cave mend"));
+	
+	TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "file.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
 
-	TempFilename tfn1, tfn2;
-
-	doc->save(wxFileName(tfn1.tmpfile));
+	doc->save(wxFileName(data_file));
 	
 	{
-		FileWriter fw(tfn2.tmpfile);
+		FileWriter fw(serialised_file.c_str());
 		doc->serialise(&fw);
 		fw.commit();
 	}
@@ -4703,7 +4707,7 @@ TEST_F(DocumentTest, SerialiseDocumentWithBackingFile)
 	std::unique_ptr<Document> doc2;
 
 	{
-		FileReader fr(tfn2.tmpfile);
+		FileReader fr(serialised_file.c_str());
 		doc2 = Document::deserialise(&fr);
 	}
 
@@ -4716,7 +4720,7 @@ TEST_F(DocumentTest, SerialiseDocumentWithBackingFile)
 	EXPECT_EQ(doc2->get_comments(), doc->get_comments());
 
 	EXPECT_TRUE(doc2->get_filename().IsOk());
-	EXPECT_EQ(doc2->get_filename().GetFullPath(), wxFileName(tfn1.tmpfile).GetFullPath());
+	EXPECT_EQ(doc2->get_filename().GetFullPath().ToStdString(), data_file);
 
 	EXPECT_FALSE(doc->is_dirty());
 }

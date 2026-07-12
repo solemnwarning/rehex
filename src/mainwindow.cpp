@@ -3106,8 +3106,13 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 					}
 					else{
 						FileName filename = tab->doc->get_filename();
+						
+						wxFileName wxfn(filename.GetFullPath());
+						wxfn.MakeAbsolute();
 
-						std::string path = filename.GetFullPath().ToStdString();
+						wxfn.MakeRelativeTo(file->get_filename().GetPath());
+						
+						std::string path = wxfn.GetFullPath().ToStdString();
 						file->write_tlv("FILE", path.data(), path.length());
 
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
@@ -3210,7 +3215,14 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 							std::vector<char> buf(length);
 							file->read(buf.data(), length, length);
 
-							filename = wxFileName(wxString(buf.data(), length));
+							wxFileName wxfn(wxString(buf.data(), length));
+							
+							if(wxfn.IsRelative())
+							{
+								wxfn = wxFileName(file->get_filename()).GetPathWithSep() + wxfn.GetFullPath();
+							}
+							
+							filename = wxfn;
 						}
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 						else if(type == "BMRK")

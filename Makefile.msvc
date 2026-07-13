@@ -40,7 +40,7 @@ RELEASE_EXE := msvc/$(MSVC_ARCH_DIR)Release/rehex.exe
 DEBUG_EXE   := msvc/$(MSVC_ARCH_DIR)Debug/rehex.exe
 
 RELEASE_TEST_EXE := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
-DEBUG_TEST_EXE   := msvc/$(MSVC_ARCH_DIR)Release/all-tests.exe
+DEBUG_TEST_EXE   := msvc/$(MSVC_ARCH_DIR)Debug/all-tests.exe
 
 ifeq ($(BUILD_TYPE),release)	
 	REHEX_LUA_LIB_DLL := msvc/$(MSVC_ARCH_DIR)Release/rehex_lib.dll

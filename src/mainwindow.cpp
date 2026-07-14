@@ -2947,7 +2947,15 @@ bool REHex::MainWindow::DropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxAr
 {
 	for(size_t i = 0; i < filenames.GetCount(); ++i)
 	{
-		window->open_file(wxFileName(filenames[i]));
+		wxFileName filename(filenames[i]);
+
+		if(filename.GetExt().IsSameAs("rehex-workspace", false))
+		{
+			wxGetApp().load_workspace(filename);
+		}
+		else{
+			window->open_file(filename);
+		}
 	}
 	
 	return true;

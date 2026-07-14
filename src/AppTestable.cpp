@@ -492,7 +492,15 @@ void REHex::App::MacOpenFiles(const wxArrayString &filenames)
 	
 	for(size_t i = 0; i < n_files; ++i)
 	{
-		window->open_file(wxFileName(filenames[i]));
+		wxFileName filename(filenames[i]);
+
+		if(filename.GetExt().IsSameAs("rehex-workspace", false))
+		{
+			load_workspace(filename);
+		}
+		else{
+			window->open_file(filename);
+		}
 	}
 }
 #endif

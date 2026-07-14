@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2022-2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2022-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -53,11 +53,19 @@ bool REHex::IPCConnection::OnExec(const wxString &topic, const wxString &data)
 	
 	if(command.size() == 2 && command[0] == "open")
 	{
-		MainWindow *window = MainWindow::get_instances().front();
-		window->Show();
-		
-		Tab *tab = window->open_file(wxFileName(command[1]));
-		return tab != NULL;
+		wxFileName filename(command[1]);
+
+		if(filename.GetExt().IsSameAs("rehex-workspace", false))
+		{
+			return wxGetApp().load_workspace(filename);
+		}
+		else{
+			MainWindow *window = MainWindow::get_instances().front();
+			window->Show();
+			
+			Tab *tab = window->open_file(wxFileName(command[1]));
+			return tab != NULL;
+		}
 	}
 	else if(command.size() >= 3 && command[0] == "compare")
 	{

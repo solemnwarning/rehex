@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 #include <wx/config.h>
+#include <wx/filename.h>
 #include <wx/filehistory.h>
 #include <wx/help.h>
 #include <wx/intl.h>
@@ -232,6 +233,13 @@ namespace REHex {
 			 * @brief Get the path to the workspace that will be restored at startup.
 			*/
 			static wxFileName get_auto_workspace();
+
+			/**
+			 * @brief Load a workspace and restore all windows within.
+			 *
+			 * @return true if the workspace file was loaded successfully.
+			*/
+			bool load_workspace(const wxFileName &filename);
 			
 		private:
 			std::string last_directory;

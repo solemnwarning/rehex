@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 
+#include <numeric>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string>
@@ -566,4 +567,43 @@ std::string REHex::App::get_state_directory()
 wxFileName REHex::App::get_auto_workspace()
 {
 	return wxFileName(get_state_directory(), "auto.rehex-workspace");
+}
+
+bool REHex::App::load_workspace(const wxFileName &filename)
+{
+	std::vector<MainWindow*> windows;
+	std::vector<std::string> missing_files;
+
+	try {
+		FileReader fr(filename.GetFullPath().mb_str().data());
+		std::tie(windows, missing_files) = MainWindow::deserialise_windows(&fr);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error loading workspace ") + filename.GetFullPath().ToStdString() + ": " + e.what(),
+			"Error", wxICON_ERROR, MainWindow::get_instances().front());
+		
+		return false;
+	}
+
+	for(auto i = windows.begin(); i != windows.end(); ++i)
+	{
+		(*i)->Show();
+	}
+
+	if(!(missing_files.empty()))
+	{
+		std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
+			missing_files.begin(), missing_files.end(),
+			"Unable to re-open the following files:\n",
+			[](const std::string &a, const std::string &b)
+			{
+				return a + "\n" + b;
+			});
+
+		wxMessageBox(message, "Error", wxICON_ERROR, (windows.empty() ? MainWindow::get_instances().front() : windows.back()));
+	}
+
+	return true;
 }

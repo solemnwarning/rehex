@@ -20,6 +20,7 @@
 
 #include <list>
 #include <map>
+#include <utility>
 #include <vector>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
@@ -245,8 +246,38 @@ namespace REHex {
 			*/
 			static const std::list<MainWindow*> &get_instances();
 			
+			/**
+			 * @brief Save MainWindow instance(s) for later restoration.
+			 *
+			 * @param windows     List of windows to include in the workspace.
+			 * @param full_state  Whether to serialise unsaved changes to files.
+			 * @param file        File to write the workspace to.
+			 *
+			 * Creates a "workspace" file containing one or more windows which can be used to
+			 * restore the session using the deserialise_windows() method later.
+			 *
+			 * If full_state is true, the workspace will include internal application state and
+			 * unsaved changes, so the application can be (almost) completely restored to a point
+			 * in time, this should only be done when the application is about to exit because any
+			 * further changes to the open files may invalidate the serialised open files.
+			 *
+			 * When a workspace is explicitly saved by the user, full_state should be false and we
+			 * will only serialise the *names* of any opened files, discarding any tabs without a
+			 * backing file and any unsaved changes.
+			*/
 			static void serialise_windows(const std::vector<MainWindow*> &windows, bool full_state, FileWriter *file);
-			static std::vector<MainWindow*> deserialise_windows(FileReader *file);
+
+			/**
+			 * @brief Restore previously serialised windows.
+			 *
+			 * Reconstructs a number of MainWindow instances previously serialised by the
+			 * serialise_windows() method and returns pointers to them in the first member of the
+			 * return value.
+			 *
+			 * If any individual files cannot be re-opened (e.g. because they were deleted), their
+			 * names are returned in a second vector.
+			*/
+			static std::pair< std::vector<MainWindow*>, std::vector<std::string> > deserialise_windows(FileReader *file);
 			
 			/**
 			 * @brief Performs RAII-style MainWindow setup hook registration.

@@ -17,7 +17,9 @@
 
 #include "platform.hpp"
 
+#include <numeric>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <wx/event.h>
 #include <wx/filename.h>
@@ -389,8 +391,10 @@ bool REHex::App::OnInit()
 		FileReader fr(auto_workspace.GetFullPath().mb_str());
 
 		std::vector<MainWindow*> windows;
+		std::vector<std::string> missing_files;
+
 		try {
-			windows = MainWindow::deserialise_windows(&fr);
+			std::tie(windows, missing_files) = MainWindow::deserialise_windows(&fr);
 			unlink(auto_workspace.GetFullPath().mb_str());
 		}
 		catch(const std::exception &e)
@@ -402,6 +406,19 @@ bool REHex::App::OnInit()
 		{
 			(*i)->Show();
 			restored_workspace = true;
+		}
+
+		if(!(missing_files.empty()))
+		{
+			std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
+				missing_files.begin(), missing_files.end(),
+				"Unable to re-open the following files:\n",
+				[](const std::string &a, const std::string &b)
+				{
+					return a + "\n" + b;
+				});
+
+			wxMessageBox(message, "Error", wxICON_ERROR, (windows.empty() ? NULL : windows.back()));
 		}
 	}
 	

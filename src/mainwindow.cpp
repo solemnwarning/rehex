@@ -20,7 +20,9 @@
 #include <limits>
 #include <memory>
 #include <new>
+#include <numeric>
 #include <portable_endian.h>
+#include <tuple>
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
@@ -1006,9 +1008,11 @@ void REHex::MainWindow::OnLoadWorkspace(wxCommandEvent &event)
 	}
 
 	std::vector<MainWindow*> new_windows;
+	std::vector<std::string> missing_files;
+
 	try {
 		FileReader file(filename.GetFullPath().mb_str());
-		new_windows = deserialise_windows(&file);
+		std::tie(new_windows, missing_files) = deserialise_windows(&file);
 	}
 	catch(const std::exception &e)
 	{
@@ -1021,6 +1025,19 @@ void REHex::MainWindow::OnLoadWorkspace(wxCommandEvent &event)
 	for(auto w = new_windows.begin(); w != new_windows.end(); ++w)
 	{
 		(*w)->Show();
+	}
+
+	if(!(missing_files.empty()))
+	{
+		std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
+			missing_files.begin(), missing_files.end(),
+			"Unable to re-open the following files:\n",
+			[](const std::string &a, const std::string &b)
+			{
+				return a + "\n" + b;
+			});
+
+		wxMessageBox(message, "Error", wxICON_ERROR, (new_windows.empty() ? this : new_windows.back()));
 	}
 }
 
@@ -3137,7 +3154,7 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 	}
 }
 
-std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReader *file)
+std::pair< std::vector<REHex::MainWindow*>, std::vector<std::string> > REHex::MainWindow::deserialise_windows(FileReader *file)
 {
 	char signature[16];
 	file->read(signature, 16, 16);
@@ -3149,6 +3166,8 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 
 	auto deleter = [](MainWindow *w) { w->Destroy(); };
 	std::vector< std::unique_ptr<MainWindow, decltype(deleter)> > new_windows;
+
+	std::vector<std::string> error_files;
 	
 	while(file->read_tlv([&](const FourCC &type, uint32_t length)
 	{
@@ -3245,27 +3264,37 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 					{
 						if(filename.IsOk())
 						{
-							doc = std::make_shared<Document>(filename);
+							try {
+								doc = std::make_shared<Document>(filename);
+							}
+							catch(const std::exception &e)
+							{
+								wxGetApp().printf_error("Unable to re-open %s: %s\n", filename.GetFullPath().mb_str().data(), e.what());
+								error_files.push_back(filename.GetFullPath().ToStdString());
+							}
 						}
 						else{
 							throw std::runtime_error("No DOC or FILE record in serialised tab");
 						}
 					}
 
-					wxMemoryInputStream is(view_data.data(), view_data.size());
-					wxFileConfig view_config(is);
+					if(doc != NULL)
+					{
+						wxMemoryInputStream is(view_data.data(), view_data.size());
+						wxFileConfig view_config(is);
 
-					SharedDocumentPointer sdp(doc);
-					Tab *tab = new Tab(window->notebook, sdp, &view_config);
-					window->notebook->AddPage(tab, tab->doc->get_title(), true);
-					tab->doc_ctrl->SetFocus();
-					
-					TabCreatedEvent event(window.get(), tab);
-					wxPostEvent(window.get(), event);
+						SharedDocumentPointer sdp(doc);
+						Tab *tab = new Tab(window->notebook, sdp, &view_config);
+						window->notebook->AddPage(tab, tab->doc->get_title(), true);
+						tab->doc_ctrl->SetFocus();
+						
+						TabCreatedEvent event(window.get(), tab);
+						wxPostEvent(window.get(), event);
+					}
 				}
 			})) {}
 
-			if(window != NULL)
+			if(window != NULL && window->notebook->GetPageCount() > 0)
 			{
 				new_windows.push_back(std::move(window));
 			}
@@ -3280,7 +3309,7 @@ std::vector<REHex::MainWindow*> REHex::MainWindow::deserialise_windows(FileReade
 		ret_windows.emplace_back(w->release());
 	}
 	
-	return ret_windows;
+	return { ret_windows, error_files };
 }
 
 REHex::MainWindow::SetupHookRegistration::SetupHookRegistration(SetupPhase phase, const SetupHookFunction &func):

@@ -109,7 +109,25 @@ REHex::TempDirectory::TempDirectory()
 	
 	if(mkdtemp(buf.data()) == buf.data())
 	{
+		/* Filthy hack alert: The default tempdir path on macOS goes through a symlink, and when
+		 * some of the serialisation tests pass that through an NSURL bookmark, the path is
+		 * canonicalised and no longer matches our m_path verbatim, which breaks the test, so we
+		 * canonicalise the path ourselves now to make the tests pass.
+		*/
+		
+#ifdef __APPLE__
+		char *resolved_path = realpath(buf.data(), NULL);
+		if(resolved_path == NULL)
+		{
+			int err = errno;
+			throw std::runtime_error(std::string("Unable to resolve temporary directory path: ") + strerror(err));
+		}
+
+		m_path = std::string(resolved_path) + "/";
+		free(resolved_path);
+#else
 		m_path = std::string(buf.data()) + "/";
+#endif
 	}
 	else{
 		throw std::runtime_error(std::string("Unable to create temporary directory: ") + strerror(errno));

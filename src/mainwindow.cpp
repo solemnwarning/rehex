@@ -943,7 +943,7 @@ void REHex::MainWindow::OnReload(wxCommandEvent &event)
 {
 	Document *doc = active_document();
 	
-	assert(!doc->get_filename().IsOk());
+	assert(doc->get_filename().IsOk());
 	
 	if(doc->is_dirty())
 	{
@@ -3137,20 +3137,20 @@ void REHex::MainWindow::serialise_windows(const std::vector<MainWindow*> &window
 
 						wxfn.MakeRelativeTo(file->get_filename().GetPath());
 						
-						std::string path = wxfn.GetFullPath().ToStdString();
+						wxCharBuffer path = wxfn.GetFullPath().ToUTF8();
 						file->write_tlv("FILE", path.data(), path.length());
 
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
-						std::string bookmark;
+						wxCharBuffer bookmark;
 						try {
-							bookmark = filename.CreateBookmark().ToStdString();
+							bookmark = filename.CreateBookmark().ToUTF8();
 						}
 						catch(const std::exception &e)
 						{
 							wxGetApp().printf_error("Unable to create bookmark for %s (%s), file may not be accessible after restart\n", filename.GetFullPath().ToStdString().c_str(), e.what());
 						}
 
-						if(!(bookmark.empty()))
+						if(bookmark.data() != NULL)
 						{
 							file->write_tlv("BMRK", bookmark.data(), bookmark.length());
 						}
@@ -3222,10 +3222,6 @@ std::pair< std::vector<REHex::MainWindow*>, std::vector<std::string> > REHex::Ma
 					std::shared_ptr<Document> doc;
 					FileName filename;
 
-#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
-					wxString bookmark;
-#endif
-
 					while(file->read_tlv([&](const FourCC &type, uint32_t length)
 					{
 						if(type == "VIEW")
@@ -3242,13 +3238,13 @@ std::pair< std::vector<REHex::MainWindow*>, std::vector<std::string> > REHex::Ma
 							std::vector<char> buf(length);
 							file->read(buf.data(), length, length);
 
-							wxFileName wxfn(wxString(buf.data(), length));
-							
+							wxFileName wxfn(wxString::FromUTF8(buf.data(), length));
+
 							if(wxfn.IsRelative())
 							{
 								wxfn = wxFileName(file->get_filename()).GetPathWithSep() + wxfn.GetFullPath();
 							}
-							
+
 							filename = wxfn;
 						}
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
@@ -3256,6 +3252,8 @@ std::pair< std::vector<REHex::MainWindow*>, std::vector<std::string> > REHex::Ma
 						{
 							std::vector<char> buf(length);
 							file->read(buf.data(), length, length);
+
+							wxString bookmark = wxString::FromUTF8(buf.data(), length);
 
 							try {
 								filename = MacFileName::CreateFromBookmark(bookmark);

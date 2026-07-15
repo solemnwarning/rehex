@@ -84,10 +84,10 @@ namespace REHex
 		#endif
 
 		bool IsOk() const;
-
+		bool IsRelative() const;
 		wxString GetFullName() const;
-
 		wxString GetFullPath() const;
+		wxString GetPathWithSep() const;
 		
 		#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		/**

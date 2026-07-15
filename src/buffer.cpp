@@ -672,21 +672,20 @@ void REHex::Buffer::serialise(FileWriter *file)
 		
 		wxfn.MakeRelativeTo(file->get_filename().GetPath());
 		
-		std::string path = wxfn.GetFullPath().ToStdString();
+		wxCharBuffer path = wxfn.GetFullPath().ToUTF8();
 		file->write_tlv("FNAM", path.data(), path.length());
 
-#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARK
-
-		wxString bookmark;
+#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
+		wxCharBuffer bookmark;
 		try {
-			bookmark = file_access_guard.CreateBookmark();
+			bookmark = filename.CreateBookmark().ToUTF8();
 		}
 		catch(const std::exception &e)
 		{
-			wxGetApp().printf_error("Unable to create bookmark for %s (%s), file may not be accessible after restart\n", file_access_guard.GetFileName().GetFullPath().ToStdString().c_str(), e.what());
+			wxGetApp().printf_error("Unable to create bookmark for %s (%s), file may not be accessible after restart\n", filename.GetFullPath().mb_str().data(), e.what());
 		}
 		
-		if(!bookmark.empty())
+		if(bookmark.data() != NULL)
 		{
 			file->write_tlv("BMRK", bookmark.data(), bookmark.length());
 		}
@@ -736,11 +735,6 @@ std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(FileReader *file)
 	buffer.reset(new Buffer());
 	
 	buffer->blocks.clear();
-
-	wxString filename;
-	#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
-	wxString filename_bookmark;
-	#endif
 	
 	int64_t next_virt_off = 0;
 	
@@ -751,14 +745,14 @@ std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(FileReader *file)
 			std::vector<char> buf(length);
 			file->read(buf.data(), length, length);
 			
-			wxFileName wxfn(wxString(buf.data(), length));
+			wxFileName wxfn(wxString::FromUTF8(buf.data(), length));
 			
 			if(wxfn.IsRelative())
 			{
 				wxfn = wxFileName(file->get_filename()).GetPathWithSep() + wxfn.GetFullPath();
 			}
-			
-			filename = wxfn.GetFullPath();
+
+			buffer->filename = wxfn;
 		}
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		else if(type == "BMRK")
@@ -766,7 +760,15 @@ std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(FileReader *file)
 			std::vector<char> buf(length);
 			file->read(buf.data(), length, length);
 			
-			filename_bookmark = wxString(buf.data(), length);
+			wxString bookmark = wxString::FromUTF8(buf.data(), length);
+
+			try {
+				buffer->filename = MacFileName::CreateFromBookmark(bookmark);
+			}
+			catch(const std::exception &e)
+			{
+				wxGetApp().printf_error("Unable to restore bookmark (%s), file may not be accessible\n", e.what());
+			}
 		}
 #endif
 		else if(type == "MTIM")
@@ -818,31 +820,6 @@ std::unique_ptr<REHex::Buffer> REHex::Buffer::deserialise(FileReader *file)
 			block->state = Block::State::DIRTY;
 		}
 	})) {}
-	
-	#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
-	if(!filename_bookmark.empty())
-	{
-		try {
-			buffer->filename = MacFileName::CreateFromBookmark(filename_bookmark);
-		}
-		catch(const std::exception &e)
-		{
-			if(filename.empty())
-			{
-				wxGetApp().printf_error("Unable to restore bookmark for (%s), file may not be accessible\n", e.what());
-			}
-			else{
-				wxGetApp().printf_error("Unable to restore bookmark for %s (%s), file may not be accessible\n", filename.ToStdString().c_str(), e.what());
-				buffer->filename = wxFileName(filename);
-			}
-		}
-	}
-	else
-	#endif
-	if(!filename.empty())
-	{
-		buffer->filename = wxFileName(filename);
-	}
 	
 	if(buffer->blocks.empty())
 	{

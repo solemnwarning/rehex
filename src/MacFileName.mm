@@ -25,6 +25,12 @@ class REHex::MacFileName::MacFileNameImpl
 	private:
 		NSURL* m_url;  /**< Pointer to NSURL object. */
 
+		/* TODO: Store a wxFileName too and use it for filename operations.
+		 *
+		 * NSURL helpfully chops off leading ../ portions in some contexts which leads to this
+		 * class behaving differently from wxFileName when relative paths are in use.
+		*/
+
 #ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		bool m_ssr;    /**< Was this created from a security-scoped bookmark? */
 		bool m_stale;  /**< Was this created from a stale bookmark? */
@@ -128,6 +134,17 @@ bool REHex::MacFileName::IsOk() const
 	}
 }
 
+bool REHex::MacFileName::IsRelative() const
+{
+	if(m_impl)
+	{
+		return m_impl->GetFileName().IsRelative();
+	}
+	else{
+		return false;
+	}
+}
+
 wxString REHex::MacFileName::GetFullName() const
 {
 	if(m_impl)
@@ -147,6 +164,17 @@ wxString REHex::MacFileName::GetFullPath() const
 	}
 	else{
 		return wxFileName().GetFullPath();
+	}
+}
+
+wxString REHex::MacFileName::GetPathWithSep() const
+{
+	if(m_impl)
+	{
+		return m_impl->GetFileName().GetPathWithSep();
+	}
+	else{
+		return wxFileName().GetPathWithSep();
 	}
 }
 

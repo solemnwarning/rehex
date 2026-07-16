@@ -1027,6 +1027,22 @@ void REHex::MainWindow::OnLoadWorkspace(wxCommandEvent &event)
 		(*w)->Show();
 	}
 
+	/* If no files were opened in this window, go ahead and destroy it. */
+
+	if(!(new_windows.empty()) && notebook->GetPageCount() == 1)
+	{
+		wxWindow *page = notebook->GetPage(0);
+		assert(page != NULL);
+		
+		assert(dynamic_cast<Tab*>(page) != NULL);
+		Tab *tab = (Tab*)(page);
+		
+		if(!(tab->doc->is_dirty()) && !(tab->doc->get_filename().IsOk()))
+		{
+			Destroy();
+		}
+	}
+
 	if(!(missing_files.empty()))
 	{
 		std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
@@ -2951,7 +2967,13 @@ bool REHex::MainWindow::DropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxAr
 
 		if(filename.GetExt().IsSameAs("rehex-workspace", false))
 		{
-			wxGetApp().load_workspace(filename);
+			/* We defer the load_workspace() call until after this event because it may wish to
+			 * destroy our window, which would lead to a crash if done within this function.
+			*/
+			window->CallAfter([filename]()
+			{
+				wxGetApp().load_workspace(filename);
+			});
 		}
 		else{
 			window->open_file(filename);

@@ -579,6 +579,8 @@ wxFileName REHex::App::get_auto_workspace()
 
 bool REHex::App::load_workspace(const wxFileName &filename)
 {
+	MainWindow *front_window = MainWindow::get_instances().front();
+
 	std::vector<MainWindow*> windows;
 	std::vector<std::string> missing_files;
 
@@ -600,6 +602,23 @@ bool REHex::App::load_workspace(const wxFileName &filename)
 		(*i)->Show();
 	}
 
+	/* If no files were opened in the previous window, go ahead and destroy it. */
+
+	if(!(windows.empty()) && front_window->get_notebook()->GetPageCount() == 1)
+	{
+		wxWindow *page = front_window->get_notebook()->GetPage(0);
+		assert(page != NULL);
+		
+		assert(dynamic_cast<Tab*>(page) != NULL);
+		Tab *tab = (Tab*)(page);
+		
+		if(!(tab->doc->is_dirty()) && !(tab->doc->get_filename().IsOk()))
+		{
+			front_window->Destroy();
+			front_window = NULL;
+		}
+	}
+
 	if(!(missing_files.empty()))
 	{
 		std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
@@ -610,7 +629,7 @@ bool REHex::App::load_workspace(const wxFileName &filename)
 				return a + "\n" + b;
 			});
 
-		wxMessageBox(message, "Error", wxICON_ERROR, (windows.empty() ? MainWindow::get_instances().front() : windows.back()));
+		wxMessageBox(message, "Error", wxICON_ERROR, (windows.empty() ? front_window : windows.back()));
 	}
 
 	return true;

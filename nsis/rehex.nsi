@@ -149,10 +149,21 @@ Section "Application" SecApp
 	
 	; Start Menu
 	CreateShortCut "$SMPROGRAMS\Reverse Engineers' Hex Editor.lnk" "$INSTDIR\rehex.exe"
+
+	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\rehex.exe" "" "$INSTDIR\rehex.exe"
 	
-	; Add REHex to the "Open with..." list for all file types.
-	WriteRegStr HKEY_CLASSES_ROOT "Applications\net.solemnwarning.rehex\shell\open\command" "" "$\"$INSTDIR\rehex.exe$\" $\"%1$\""
-	WriteRegNone HKEY_CLASSES_ROOT "*\OpenWithProgIDs" "net.solemnwarning.rehex"
+	; Add REHex to the "Open with..." list for all file types (doesn't seem to work reliably).
+	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex\shell\open\command" "" "$\"$INSTDIR\rehex.exe$\" $\"%1$\""
+	WriteRegNone HKEY_LOCAL_MACHINE "SOFTWARE\Classes\*\OpenWithProgIDs" "net.solemnwarning.rehex"
+
+	; Delete application entry from older versions.
+	DeleteRegKey HKEY_LOCAL_MACHINE "SOFTWARE\Classes\Applications\net.solemnwarning.rehex"
+
+	; Set up file type and association for workspace files.
+	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex.workspace" "" "Reverse Engineers' Hex Editor Workspace"
+	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex.workspace\shell\open\command" "" "$\"$INSTDIR\rehex.exe$\" $\"%1$\""
+	WriteRegNone HKEY_LOCAL_MACHINE "SOFTWARE\Classes\.rehex-workspace\OpenWithProgIDs" "net.solemnwarning.rehex.workspace"
+	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\.rehex-workspace" "" "net.solemnwarning.rehex.workspace"
 SectionEnd
 
 ;--------------------------------
@@ -173,8 +184,11 @@ FunctionEnd
 Section "Uninstall"
 	Delete "$SMPROGRAMS\Reverse Engineers' Hex Editor.lnk"
 	
-	DeleteRegValue HKEY_CLASSES_ROOT "*\OpenWithProgIDs" "net.solemnwarning.rehex"
-	DeleteRegKey HKEY_CLASSES_ROOT "Applications\net.solemnwarning.rehex"
+	DeleteRegValue HKEY_LOCAL_MACHINE "SOFTWARE\Classes\*\OpenWithProgIDs" "net.solemnwarning.rehex"
+	DeleteRegKey HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex"
+
+	DeleteRegKey HKEY_LOCAL_MACHINE "SOFTWARE\Classes\.rehex-workspace"
+	DeleteRegKey HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex.workspace"
 	
 	; Generate and embed list of files/directories from the distribution for deletion.
 	!system "UnFiles.cmd build\arch-indep build\uninstall-files.nsh" = 0

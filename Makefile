@@ -1028,6 +1028,9 @@ install: $(EXE) $(HELP_TARGET)
 	
 	mkdir -p $(DESTDIR)$(datarootdir)/applications
 	install -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+
+	mkdir -p $(DESTDIR)$(datarootdir)/mime/packages
+	install -m 0644 res/rehex-workspace.xml $(DESTDIR)$(datarootdir)/mime/packages/rehex-workspace.xml
 	
 ifneq ($(BUILD_HELP),0)
 	mkdir -p $(DESTDIR)$(datadir)/rehex
@@ -1049,6 +1052,7 @@ uninstall:
 	rm -f $(DESTDIR)$(datadir)/rehex/rehex.htb
 	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(datadir)/rehex/
 	rm -f $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+	rm -f $(DESTDIR)$(datarootdir)/mime/packages/rehex-workspace.xml
 	
 	for s in 16 32 48 64 128 256 512; \
 	do \

@@ -8,3 +8,4 @@ Exec=rehex %F
 Terminal=false
 Categories=Utility;
 StartupWMClass=rehex
+MimeType=application/vnd.solemnwarning.rehex-workspace

@@ -61,8 +61,13 @@ static const CSArchitecture known_arch_list[] = {
 	{ "armeb", "ARM (big endian)",  CS_ARCH_ARM, CS_MODE_ARM | CS_MODE_BIG_ENDIAN },
 	/* Add THUMB? */
 	
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(6, 0)
+	{ "aarch64",    "AArch64 (ARM64)",              CS_ARCH_AARCH64, CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN },
+	{ "aarch64_be", "AArch64 (ARM64, big endian)",  CS_ARCH_AARCH64, CS_MODE_ARM | CS_MODE_BIG_ENDIAN },
+	#else
 	{ "aarch64",    "AArch64 (ARM64)",              CS_ARCH_ARM64, CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN },
 	{ "aarch64_be", "AArch64 (ARM64, big endian)",  CS_ARCH_ARM64, CS_MODE_ARM | CS_MODE_BIG_ENDIAN },
+	#endif
 	
 	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(4, 0)
 	{ "m680x-6301",  "Hitachi 6301/6303",  CS_ARCH_M680X,  CS_MODE_M680X_6301 },
@@ -102,6 +107,11 @@ static const CSArchitecture known_arch_list[] = {
 	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(5, 0)
 	{ "riscv32", "RISC-V RV32G", CS_ARCH_RISCV, CS_MODE_RISCV32 },
 	{ "riscv64", "RISC-V RV64G", CS_ARCH_RISCV, CS_MODE_RISCV64 },
+	#endif
+
+	#if CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(6, 0)
+	{ "riscvc", "RISC-V Compressed Instruction Set", CS_ARCH_RISCV, CS_MODE_RISCV_C },
+	#elif CS_MAKE_VERSION(CS_API_MAJOR, CS_API_MINOR) >= CS_MAKE_VERSION(5, 0)
 	{ "riscvc", "RISC-V Compressed Instruction Set", CS_ARCH_RISCV, CS_MODE_RISCVC },
 	#endif
 	

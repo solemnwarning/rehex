@@ -1028,6 +1028,12 @@ install: $(EXE) $(HELP_TARGET)
 	
 	mkdir -p $(DESTDIR)$(datarootdir)/applications
 	install -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+	
+	for s in 16 32 48 64 128 256 512; \
+	do \
+		mkdir -p $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/mimetypes; \
+		install -m 0644 res/workspace/workspace$${s}.png $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/mimetypes/application-vnd.solemnwarning.rehex-workspace.png; \
+	done
 
 	mkdir -p $(DESTDIR)$(datarootdir)/mime/packages
 	install -m 0644 res/rehex-workspace.xml $(DESTDIR)$(datarootdir)/mime/packages/rehex-workspace.xml
@@ -1056,6 +1062,7 @@ uninstall:
 	
 	for s in 16 32 48 64 128 256 512; \
 	do \
+		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/mimetypes/application-vnd.solemnwarning.rehex-workspace.png; \
 		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
 	done
 	

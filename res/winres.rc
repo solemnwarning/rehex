@@ -8,5 +8,6 @@
 
 #include "winres.h"
 
-REHEX_MANIFEST  RT_MANIFEST  "rehex.exe.manifest"
-REHEX_ICON      ICON         "icon.ico"
+REHEX_MANIFEST        RT_MANIFEST  "rehex.exe.manifest"
+REHEX_ICON            ICON         "icon.ico"
+REHEX_WORKSPACE_ICON  ICON         "workspace/workspace.ico"

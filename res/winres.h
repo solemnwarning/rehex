@@ -1,2 +1,3 @@
 #define REHEX_MANIFEST 1
 #define REHEX_ICON 2
+#define REHEX_WORKSPACE_ICON 3

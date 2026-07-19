@@ -22,6 +22,9 @@
 ; !define LANG_ENGLISH 0x0809
 !define LANG_ENGLISH 0x0409
 
+!define SHCNE_ASSOCCHANGED 0x08000000
+!define SHCNF_IDLIST 0
+
 !system "if exist build ( rmdir /s /q build )" = 0
 !system "mkdir build" = 0
 
@@ -161,9 +164,13 @@ Section "Application" SecApp
 
 	; Set up file type and association for workspace files.
 	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex.workspace" "" "Reverse Engineers' Hex Editor Workspace"
+	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex.workspace\DefaultIcon" "" "$INSTDIR\rehex.exe,-3"
 	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\net.solemnwarning.rehex.workspace\shell\open\command" "" "$\"$INSTDIR\rehex.exe$\" $\"%1$\""
 	WriteRegNone HKEY_LOCAL_MACHINE "SOFTWARE\Classes\.rehex-workspace\OpenWithProgIDs" "net.solemnwarning.rehex.workspace"
 	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Classes\.rehex-workspace" "" "net.solemnwarning.rehex.workspace"
+	
+	; Refresh cached file icons/associations in Explorer.
+	System::Call "shell32.dll::SHChangeNotify(i, i, i, i) v (${SHCNE_ASSOCCHANGED}, ${SHCNF_IDLIST}, 0, 0)"
 SectionEnd
 
 ;--------------------------------
@@ -199,4 +206,7 @@ Section "Uninstall"
 	Delete "$INSTDIR\Uninstall.exe"
 	
 	RMDir "$INSTDIR"
+	
+	; Refresh cached file icons/associations in Explorer.
+	System::Call "shell32.dll::SHChangeNotify(i, i, i, i) v (${SHCNE_ASSOCCHANGED}, ${SHCNF_IDLIST}, 0, 0)"
 SectionEnd

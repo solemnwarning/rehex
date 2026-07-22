@@ -270,6 +270,8 @@ BEGIN_EVENT_TABLE(REHex::MainWindow, wxFrame)
 	EVT_DOCUMENTTITLE(wxID_ANY, REHex::MainWindow::OnTitleChanged)
 END_EVENT_TABLE()
 
+const wxSize REHex::MainWindow::DEFAULT_SIZE(740, 540);
+
 std::list<REHex::MainWindow*> REHex::MainWindow::instances;
 
 const std::list<REHex::MainWindow*> &REHex::MainWindow::get_instances()
@@ -3203,7 +3205,7 @@ std::pair< std::vector<REHex::MainWindow*>, std::vector<std::string> > REHex::Ma
 	{
 		if(type == "WIND")
 		{
-			wxSize window_size = wxDefaultSize;
+			wxSize window_size = DEFAULT_SIZE;
 			bool window_maximise = false;
 			wxPoint window_pos = wxDefaultPosition;
 

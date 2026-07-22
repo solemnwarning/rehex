@@ -30,7 +30,7 @@
 
 static REHex::MainWindow *new_window()
 {
-	wxSize windowSize(740, 540);
+	wxSize windowSize = REHex::MainWindow::DEFAULT_SIZE;
 	
 	#ifndef __APPLE__
 	wxGetApp().config->Read("/default-view/window-width", &windowSize.x, windowSize.x);

@@ -42,6 +42,11 @@ namespace REHex {
 	class MainWindow: public wxFrame
 	{
 		public:
+			/**
+			 * @brief Initial default size of a MainWindow.
+			*/
+			static const wxSize DEFAULT_SIZE;
+			
 			MainWindow(const wxPoint &position, const wxSize& size);
 			virtual ~MainWindow();
 			

@@ -467,7 +467,7 @@ bool REHex::App::OnInit()
 	
 	if(!restored_workspace || !(open_filenames.empty()))
 	{
-		wxSize windowSize(740, 540);
+		wxSize windowSize = MainWindow::DEFAULT_SIZE;
 		
 		#ifndef __APPLE__
 		config->Read("/default-view/window-width", &windowSize.x, windowSize.x);

@@ -86,6 +86,14 @@ rm -rf %{buildroot}
 %{_datadir}/icons/hicolor/128x128/apps/rehex.png
 %{_datadir}/icons/hicolor/256x256/apps/rehex.png
 %{_datadir}/icons/hicolor/512x512/apps/rehex.png
+%{_datadir}/icons/hicolor/16x16/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/icons/hicolor/32x32/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/icons/hicolor/48x48/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/icons/hicolor/64x64/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/icons/hicolor/128x128/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/icons/hicolor/256x256/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/icons/hicolor/512x512/mimetypes/application-vnd.solemnwarning.rehex-workspace.png
+%{_datadir}/mime/packages/rehex-workspace.xml
 %{_datadir}/rehex/
 %{_libdir}/rehex/
 

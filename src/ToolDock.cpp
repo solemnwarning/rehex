@@ -253,7 +253,7 @@ void REHex::ToolDock::UnhideFrames()
 	}
 }
 
-void REHex::ToolDock::SaveTools(wxConfig *config) const
+void REHex::ToolDock::SaveTools(wxConfigBase *config) const
 {
 	{
 		wxConfigPathChanger scoped_path(config, "left/");
@@ -281,7 +281,7 @@ void REHex::ToolDock::SaveTools(wxConfig *config) const
 	}
 }
 
-void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, ToolNotebook *notebook)
+void REHex::ToolDock::SaveToolsFromNotebook(wxConfigBase *config, ToolNotebook *notebook)
 {
 	size_t num_pages = notebook->GetPageCount();
 	
@@ -308,7 +308,7 @@ void REHex::ToolDock::SaveToolsFromNotebook(wxConfig *config, ToolNotebook *note
 	}
 }
 
-void REHex::ToolDock::SaveToolFrames(wxConfig *config) const
+void REHex::ToolDock::SaveToolFrames(wxConfigBase *config) const
 {
 	size_t fi = 0;
 	for(auto fit = m_frames.begin(); fit != m_frames.end(); ++fit, ++fi)
@@ -344,7 +344,7 @@ void REHex::ToolDock::SaveToolFrames(wxConfig *config) const
 	}
 }
 
-void REHex::ToolDock::LoadTools(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
+void REHex::ToolDock::LoadTools(wxConfigBase *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
 {
 	{
 		wxConfigPathChanger scoped_path(config, "left/");
@@ -378,7 +378,7 @@ void REHex::ToolDock::LoadTools(wxConfig *config, SharedDocumentPointer &documen
 	});
 }
 
-void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
+void REHex::ToolDock::LoadToolsIntoNotebook(wxConfigBase *config, ToolNotebook *notebook, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
 {
 	for(size_t i = 0;; ++i)
 	{
@@ -444,7 +444,7 @@ void REHex::ToolDock::LoadToolsIntoNotebook(wxConfig *config, ToolNotebook *note
 	}
 }
 
-void REHex::ToolDock::LoadToolFrames(wxConfig *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
+void REHex::ToolDock::LoadToolFrames(wxConfigBase *config, SharedDocumentPointer &document, DocumentCtrl *document_ctrl)
 {
 	for(size_t fi = 0;; ++fi)
 	{

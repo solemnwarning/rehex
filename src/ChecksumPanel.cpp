@@ -122,8 +122,8 @@ REHex::ToolPanel::Shape REHex::ChecksumPanel::shape() const
 	return ToolPanel::TPS_WIDE;
 }
 
-void REHex::ChecksumPanel::save_state(wxConfig *config) const {}
-void REHex::ChecksumPanel::load_state(wxConfig *config) {}
+void REHex::ChecksumPanel::save_state(wxConfigBase *config) const {}
+void REHex::ChecksumPanel::load_state(wxConfigBase *config) {}
 
 wxSize REHex::ChecksumPanel::DoGetBestClientSize() const
 {

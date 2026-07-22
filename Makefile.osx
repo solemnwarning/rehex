@@ -136,7 +136,7 @@ REHex.dmg: REHex.app
 	$(CXX) $(BASE_CXXFLAGS) $(GTK_CFLAGS) $(PROFILE_CFLAGS) $(HELP_CFLAGS) $(CXXFLAGS) $(DEPFLAGS) -c -o $@ $<
 	$(DEPPOST)
 
-$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.o.compile_command.json: $(JQ) %.mm $(COMPILE_COMMAND_DEPENDENCIES)
+$(COMPILE_COMMAND_INTERMEDIATE_DIR)/%.$(BUILD_TYPE).o.compile_command.json: $(JQ) %.mm $(COMPILE_COMMAND_DEPENDENCIES)
 	$(call emit-compile-command,$@,$<,$(CXX) $(BASE_CXXFLAGS) $(CXXFLAGS))
 
 .cc/jq:

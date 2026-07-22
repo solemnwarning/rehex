@@ -28,6 +28,7 @@
 
 #include "../src/document.hpp"
 #include "../src/Events.hpp"
+#include "../src/TempDirectory.hpp"
 
 static const char *IPSUM =
 	"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor"
@@ -4646,6 +4647,82 @@ TEST_F(DocumentTest, LoadMetadataDataHighlightsCustomColours)
 		
 		EXPECT_EQ(got_highlights, expect_highlights);
 	}
+}
+
+TEST_F(DocumentTest, SerialiseDocumentWithoutBackingFile)
+{
+	static const char *REFERENCE_DATA = "cough rob greedy";
+
+	doc->insert_data(0, REFERENCE_DATA, strlen(REFERENCE_DATA));
+	doc->set_comment(4, 10, REHex::Document::Comment("save cave mend"));
+
+	TempFilename tfn;
+	
+	{
+		FileWriter fw(tfn.tmpfile);
+		doc->serialise(&fw);
+		fw.commit();
+	}
+
+	std::unique_ptr<Document> doc2;
+
+	{
+		FileReader fr(tfn.tmpfile);
+		doc2 = Document::deserialise(&fr);
+	}
+
+	std::vector<unsigned char> data = doc2->read_data(0, 256);
+
+	EXPECT_EQ(
+		std::string((const char*)(data.data()), data.size()),
+		std::string(REFERENCE_DATA, strlen(REFERENCE_DATA)));
+	
+	EXPECT_EQ(doc2->get_comments(), doc->get_comments());
+
+	EXPECT_FALSE(doc2->get_filename().IsOk());
+
+	EXPECT_TRUE(doc->is_dirty());
+}
+
+TEST_F(DocumentTest, SerialiseDocumentWithBackingFile)
+{
+	static const char *REFERENCE_DATA = "cough rob greedy";
+
+	doc->insert_data(0, REFERENCE_DATA, strlen(REFERENCE_DATA));
+	doc->set_comment(4, 10, REHex::Document::Comment("save cave mend"));
+	
+	TempDirectory tempdir;
+	
+	std::string data_file = tempdir.path() + "file.bin";
+	std::string serialised_file = tempdir.path() + "serialised.bin";
+
+	doc->save(wxFileName(data_file));
+	
+	{
+		FileWriter fw(serialised_file.c_str());
+		doc->serialise(&fw);
+		fw.commit();
+	}
+
+	std::unique_ptr<Document> doc2;
+
+	{
+		FileReader fr(serialised_file.c_str());
+		doc2 = Document::deserialise(&fr);
+	}
+
+	std::vector<unsigned char> data = doc2->read_data(0, 256);
+
+	EXPECT_EQ(
+		std::string((const char*)(data.data()), data.size()),
+		std::string(REFERENCE_DATA, strlen(REFERENCE_DATA)));
+	
+	EXPECT_EQ(doc2->get_comments(), doc->get_comments());
+
+	EXPECT_TRUE(doc2->get_filename().IsOk());
+	EXPECT_EQ(doc2->get_filename().GetFullPath().ToStdString(), data_file);
+
+	EXPECT_FALSE(doc->is_dirty());
 }
 
 TEST(Document, TypeInfoComparison)

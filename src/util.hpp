@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include <wx/config.h>
+#include <wx/filename.h>
 #include <wx/window.h>
 
 #include "BitOffset.hpp"
@@ -129,7 +130,17 @@ namespace REHex {
 	
 	void fake_broken_mouse_capture(wxWindow *window);
 	
-	std::string document_save_as_dialog(wxWindow *modal_parent, Document *document);
+	/**
+	 * @brief Display a file picker dialog.
+	 *
+	 * @param parent         Parent window for modal dialog.
+	 * @param message        File picker message/title.
+	 * @param dir_document   If this Document has a backing file, default to its directory.
+	 * @param file_document  If true, also populate the default file name from the Document.
+	 * @param wildcard       File picker wildcard (see wxFileDialog).
+	 * @param style          Dialog style flags (see wxFileDialog).
+	*/
+	wxFileName show_file_dialog(wxWindow *parent, const wxString &message, const Document *dir_document, bool file_document, const wxString &wildcard, long style);
 	
 	struct CarryBits
 	{

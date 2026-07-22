@@ -119,7 +119,7 @@ TEST(LuaPluginLoader, ReadData)
 	{
 		LuaPlugin p = LuaPluginLoader::load_plugin("tests/read-test-1.lua");
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -144,7 +144,7 @@ TEST(LuaPluginLoader, ReadDataOffset)
 	{
 		LuaPlugin p = LuaPluginLoader::load_plugin("tests/read-test-2.lua");
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		window.open_file(wxFileName(wxFileName("tests/bin-data.bin")));
 		
 		pump_events();
@@ -169,7 +169,7 @@ TEST(LuaPluginLoader, ReadDataLimitLength)
 	{
 		LuaPlugin p = LuaPluginLoader::load_plugin("tests/read-test-3.lua");
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -279,7 +279,7 @@ TEST(LuaPluginLoader, SetComment)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -315,7 +315,7 @@ TEST(LuaPluginLoader, SetCommentBitAligned)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -354,7 +354,7 @@ TEST(LuaPluginLoader, SetCommentBulk)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -394,7 +394,7 @@ TEST(LuaPluginLoader, SetCommentBulkBitAligned)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -431,7 +431,7 @@ TEST(LuaPluginLoader, SetDataType)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -468,7 +468,7 @@ TEST(LuaPluginLoader, SetDataTypeBitAligned)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -509,7 +509,7 @@ TEST(LuaPluginLoader, SetDataTypeBulk)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -550,7 +550,7 @@ TEST(LuaPluginLoader, SetDataTypeBulkBitAligned)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -591,7 +591,7 @@ TEST(LuaPluginLoader, SetDataTypeBulkNotTable)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -627,7 +627,7 @@ TEST(LuaPluginLoader, SetDataTypeBulkNotInnerTable)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -666,7 +666,7 @@ TEST(LuaPluginLoader, SetDataTypeBulkBadOffset)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();
@@ -705,7 +705,7 @@ TEST(LuaPluginLoader, SetDataTypeBulkMissingParameter)
 		
 		LuaPlugin p = LuaPluginLoader::load_plugin(script_file.tmpfile);
 		
-		MainWindow window(wxDefaultSize);
+		MainWindow window(wxDefaultPosition, wxDefaultSize);
 		Tab *tab = window.open_file(wxFileName("tests/bin-data.bin"));
 		
 		pump_events();

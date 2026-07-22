@@ -393,36 +393,36 @@ void REHex::fake_broken_mouse_capture(wxWindow *window)
 	new GenuineImmitationMouseCapture(window);
 }
 
-std::string REHex::document_save_as_dialog(wxWindow *modal_parent, Document *document)
+wxFileName REHex::show_file_dialog(wxWindow *parent, const wxString &message, const Document *dir_document, bool file_document, const wxString &wildcard, long style)
 {
-	std::string dir, name;
-	std::string doc_filename = document->get_filename();
-	
-	if(doc_filename != "")
+	wxString dir = wxGetApp().get_last_directory();
+	wxString name = "";
+
+	if(dir_document != NULL)
 	{
-		wxFileName wxfn(doc_filename);
-		wxfn.MakeAbsolute();
-		
-		dir  = wxfn.GetPath();
-		name = wxfn.GetFullName();
-	}
-	else{
-		dir  = wxGetApp().get_last_directory();
-		name = "";
+		FileName doc_filename = dir_document->get_filename();
+	
+		if(doc_filename.IsOk())
+		{
+			wxFileName wxfn(doc_filename.GetFullPath());
+			wxfn.MakeAbsolute();
+			
+			dir  = wxfn.GetPath();
+
+			if(file_document)
+			{
+				name = wxfn.GetFullName();
+			}
+		}
 	}
 	
-	wxFileDialog saveFileDialog(modal_parent, "Save As", dir, name, "", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
-	if(saveFileDialog.ShowModal() == wxID_CANCEL)
-		return "";
+	wxFileDialog file_dialog(parent, message, dir, name, wildcard, style);
+	if(file_dialog.ShowModal() == wxID_CANCEL)
+		return wxFileName();
 	
-	std::string filename = saveFileDialog.GetPath().ToStdString();
-	
-	{
-		wxFileName wxfn(filename);
-		wxString dirname = wxfn.GetPath();
-		
-		wxGetApp().set_last_directory(dirname.ToStdString());
-	}
+	wxFileName filename(file_dialog.GetPath());
+
+	wxGetApp().set_last_directory(filename.GetPath().ToStdString());
 	
 	return filename;
 }

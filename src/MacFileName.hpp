@@ -83,9 +83,11 @@ namespace REHex
 		static MacFileName CreateFromBookmark(const wxString &bookmark) = delete; /* Not available before macOS 10.7 */
 		#endif
 
+		bool IsOk() const;
+		bool IsRelative() const;
 		wxString GetFullName() const;
-
 		wxString GetFullPath() const;
+		wxString GetPathWithSep() const;
 		
 		#ifdef REHEX_MACFILENAME_ENABLE_SS_BOOKMARKS
 		/**
@@ -107,6 +109,11 @@ namespace REHex
 		wxString CreateBookmark() const = delete; /* Not available before macOS 10.7 */
 		bool BookmarkWasStale() const = delete; /* Not available before macOS 10.7 */
 		#endif
+
+		/**
+		 * @brief Check if the object has a backing NSURL.
+		*/
+		explicit operator bool() const;
 	};
 #endif /* __APPLE__ */
 }

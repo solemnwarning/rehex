@@ -28,6 +28,7 @@
 - forward32.png
 - shortcut48.png
 - up32.png
+- workspace/bookmark.svg (derived from actions-bookmark-new.png)
 
 ### GNOME Desktop Icons
 

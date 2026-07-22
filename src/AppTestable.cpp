@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 
+#include <numeric>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string>
@@ -268,7 +269,7 @@ REHex::HelpController *REHex::App::get_help_controller(wxWindow *error_parent)
 		 *
 		 * The "Unblock" tickbox under the file's Properties dialog does the same thing.
 		*/
-		DeleteFile((chm_path + ":Zone.Identifier").wc_str());
+		DeleteFileW((chm_path + ":Zone.Identifier").wc_str());
 		
 		help_loaded = help_controller->Initialize(chm_path);
 		
@@ -491,7 +492,15 @@ void REHex::App::MacOpenFiles(const wxArrayString &filenames)
 	
 	for(size_t i = 0; i < n_files; ++i)
 	{
-		window->open_file(wxFileName(filenames[i]));
+		wxFileName filename(filenames[i]);
+
+		if(filename.GetExt().IsSameAs("rehex-workspace", false))
+		{
+			load_workspace(filename);
+		}
+		else{
+			window->open_file(filename);
+		}
 	}
 }
 #endif
@@ -539,3 +548,89 @@ bool REHex::App::is_wayland_session()
 	return is_wayland;
 }
 #endif
+
+std::string REHex::App::get_state_directory()
+{
+#if defined(_WIN32) || defined(__APPLE__)
+	return wxStandardPaths::Get().GetUserDataDir().ToStdString();
+#else
+	const char *XDG_STATE_HOME = getenv("XDG_STATE_HOME");
+	if(XDG_STATE_HOME != NULL && strcmp(XDG_STATE_HOME, "") != 0)
+	{
+		return std::string(XDG_STATE_HOME) + "/rehex/";
+	}
+	else{
+		const char *HOME = getenv("HOME");
+		if(HOME != NULL && strcmp(HOME, "") != 0)
+		{
+			return std::string(HOME) + "/.local/state/rehex/";
+		}
+		else{
+			return "/tmp/rehex/";
+		}
+	}
+#endif
+}
+
+wxFileName REHex::App::get_auto_workspace()
+{
+	return wxFileName(get_state_directory(), "auto.rehex-workspace");
+}
+
+bool REHex::App::load_workspace(const wxFileName &filename)
+{
+	MainWindow *front_window = MainWindow::get_instances().front();
+
+	std::vector<MainWindow*> windows;
+	std::vector<std::string> missing_files;
+
+	try {
+		FileReader fr(filename.GetFullPath().mb_str().data());
+		std::tie(windows, missing_files) = MainWindow::deserialise_windows(&fr);
+	}
+	catch(const std::exception &e)
+	{
+		wxMessageBox(
+			std::string("Error loading workspace ") + filename.GetFullPath().ToStdString() + ": " + e.what(),
+			"Error", wxICON_ERROR, MainWindow::get_instances().front());
+		
+		return false;
+	}
+
+	for(auto i = windows.begin(); i != windows.end(); ++i)
+	{
+		(*i)->Show();
+	}
+
+	/* If no files were opened in the previous window, go ahead and destroy it. */
+
+	if(!(windows.empty()) && front_window->get_notebook()->GetPageCount() == 1)
+	{
+		wxWindow *page = front_window->get_notebook()->GetPage(0);
+		assert(page != NULL);
+		
+		assert(dynamic_cast<Tab*>(page) != NULL);
+		Tab *tab = (Tab*)(page);
+		
+		if(!(tab->doc->is_dirty()) && !(tab->doc->get_filename().IsOk()))
+		{
+			front_window->Destroy();
+			front_window = NULL;
+		}
+	}
+
+	if(!(missing_files.empty()))
+	{
+		std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
+			missing_files.begin(), missing_files.end(),
+			"Unable to re-open the following files:\n",
+			[](const std::string &a, const std::string &b)
+			{
+				return a + "\n" + b;
+			});
+
+		wxMessageBox(message, "Error", wxICON_ERROR, (windows.empty() ? front_window : windows.back()));
+	}
+
+	return true;
+}

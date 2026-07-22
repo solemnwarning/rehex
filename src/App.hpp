@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 #include <wx/config.h>
+#include <wx/filename.h>
 #include <wx/filehistory.h>
 #include <wx/help.h>
 #include <wx/intl.h>
@@ -222,6 +223,23 @@ namespace REHex {
 			*/
 			static bool is_wayland_session();
 			#endif
+
+			/**
+			 * @brief Get the directory where application state data should be stored.
+			*/
+			static std::string get_state_directory();
+
+			/**
+			 * @brief Get the path to the workspace that will be restored at startup.
+			*/
+			static wxFileName get_auto_workspace();
+
+			/**
+			 * @brief Load a workspace and restore all windows within.
+			 *
+			 * @return true if the workspace file was loaded successfully.
+			*/
+			bool load_workspace(const wxFileName &filename);
 			
 		private:
 			std::string last_directory;
@@ -237,6 +255,7 @@ namespace REHex {
 			void call_setup_hooks(SetupPhase phase);
 			
 			void OnTabDropped(DetachedPageEvent &event);
+			void OnEndSession(wxCloseEvent &event);
 			
 			IPCServer *ipc_server;
 			

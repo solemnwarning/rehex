@@ -50,6 +50,8 @@ namespace REHex
 			wxRadioButton *dbd_invert;
 			
 			wxCheckBox *dbd_disable_vcm;
+
+			wxCheckBox *auto_save_state;
 			
 			void load(const AppSettings *settings);
 			

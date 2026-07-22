@@ -151,6 +151,16 @@ namespace REHex
 			 * @brief Get the list of available font faces for the primary font.
 			*/
 			static std::vector<std::string> get_primary_font_faces();
+
+			/**
+			 * @brief Get whether the application state should be saved on exit.
+			*/
+			bool get_auto_save_state() const;
+
+			/**
+			 * @brief Set whether the application state should be saved on exit.
+			*/
+			void set_auto_save_state(bool auto_save_state);
 			
 		private:
 			AsmSyntax preferred_asm_syntax;
@@ -165,6 +175,7 @@ namespace REHex
 			size_t primary_copy_limit;
 			DirtyByteDisplayMode dirty_byte_display_mode;
 			ScaledFont primary_font;
+			bool auto_save_state;
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
 	};

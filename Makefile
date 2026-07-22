@@ -504,6 +504,7 @@ APP_OBJS := \
 	src/DocumentCtrl.$(BUILD_TYPE).o \
 	src/EditCommentDialog.$(BUILD_TYPE).o \
 	src/Events.$(BUILD_TYPE).o \
+	src/FileReader.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
@@ -542,6 +543,7 @@ APP_OBJS := \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
+	src/TempDirectory.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
 	src/ToolDock.$(BUILD_TYPE).o \
@@ -644,6 +646,7 @@ TEST_OBJS := \
 	src/DocumentCtrl.$(BUILD_TYPE).o \
 	src/EditCommentDialog.$(BUILD_TYPE).o \
 	src/Events.$(BUILD_TYPE).o \
+	src/FileReader.$(BUILD_TYPE).o \
 	src/FileWriter.$(BUILD_TYPE).o \
 	src/FillRangeDialog.$(BUILD_TYPE).o \
 	src/FixedSizeValueRegion.$(BUILD_TYPE).o \
@@ -678,6 +681,7 @@ TEST_OBJS := \
 	src/SettingsDialogKeyboard.$(BUILD_TYPE).o \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
+	src/TempDirectory.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \
@@ -712,7 +716,9 @@ TEST_OBJS := \
 	tests/DocumentCtrl.$(LIB_BUILD_TYPE).o \
 	tests/endian_conv.$(LIB_BUILD_TYPE).o \
 	tests/FastRectangleFiller.$(LIB_BUILD_TYPE).o \
+	tests/FileReader.$(LIB_BUILD_TYPE).o \
 	tests/FileWriter.$(LIB_BUILD_TYPE).o \
+	tests/FourCC.$(LIB_BUILD_TYPE).o \
 	tests/HierarchicalByteAccumulator.$(LIB_BUILD_TYPE).o \
 	tests/HighlightColourMap.$(LIB_BUILD_TYPE).o \
 	tests/HSVColour.$(LIB_BUILD_TYPE).o \
@@ -1023,6 +1029,15 @@ install: $(EXE) $(HELP_TARGET)
 	mkdir -p $(DESTDIR)$(datarootdir)/applications
 	install -m 0644 res/rehex.desktop $(DESTDIR)$(datarootdir)/applications/rehex.desktop
 	
+	for s in 16 32 48 64 128 256 512; \
+	do \
+		mkdir -p $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/mimetypes; \
+		install -m 0644 res/workspace/workspace$${s}.png $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/mimetypes/application-vnd.solemnwarning.rehex-workspace.png; \
+	done
+
+	mkdir -p $(DESTDIR)$(datarootdir)/mime/packages
+	install -m 0644 res/rehex-workspace.xml $(DESTDIR)$(datarootdir)/mime/packages/rehex-workspace.xml
+	
 ifneq ($(BUILD_HELP),0)
 	mkdir -p $(DESTDIR)$(datadir)/rehex
 	install -m 0644 help/rehex.htb $(DESTDIR)$(datadir)/rehex/rehex.htb
@@ -1043,9 +1058,11 @@ uninstall:
 	rm -f $(DESTDIR)$(datadir)/rehex/rehex.htb
 	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(datadir)/rehex/
 	rm -f $(DESTDIR)$(datarootdir)/applications/rehex.desktop
+	rm -f $(DESTDIR)$(datarootdir)/mime/packages/rehex-workspace.xml
 	
 	for s in 16 32 48 64 128 256 512; \
 	do \
+		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/mimetypes/application-vnd.solemnwarning.rehex-workspace.png; \
 		rm -f $(DESTDIR)$(datarootdir)/icons/hicolor/$${s}x$${s}/apps/rehex.png; \
 	done
 	

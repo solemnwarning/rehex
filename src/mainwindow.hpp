@@ -20,6 +20,7 @@
 
 #include <list>
 #include <map>
+#include <utility>
 #include <vector>
 #include <wx/aui/auibook.h>
 #include <wx/dnd.h>
@@ -27,6 +28,8 @@
 
 #include "DetachableNotebook.hpp"
 #include "Events.hpp"
+#include "FileReader.hpp"
+#include "FileWriter.hpp"
 #include "MacFileName.hpp"
 #include "Tab.hpp"
 #include "ToolPanel.hpp"
@@ -39,7 +42,12 @@ namespace REHex {
 	class MainWindow: public wxFrame
 	{
 		public:
-			MainWindow(const wxSize& size);
+			/**
+			 * @brief Initial default size of a MainWindow.
+			*/
+			static const wxSize DEFAULT_SIZE;
+			
+			MainWindow(const wxPoint &position, const wxSize& size);
 			virtual ~MainWindow();
 			
 			/**
@@ -50,7 +58,7 @@ namespace REHex {
 			/**
 			 * @brief Create a new tab with a file loaded from disk.
 			*/
-			Tab *open_file(const FileName &filename);
+			Tab *open_file(const FileName &filename, wxConfigBase *view = NULL);
 			
 			Tab *import_hex_file(const std::string &filename);
 			
@@ -90,6 +98,8 @@ namespace REHex {
 			void OnSaveAs(wxCommandEvent &event);
 			void OnReload(wxCommandEvent &event);
 			void OnAutoReload(wxCommandEvent &event);
+			void OnSaveWorkspace(wxCommandEvent &event);
+			void OnLoadWorkspace(wxCommandEvent &event);
 			void OnImportHex(wxCommandEvent &event);
 			void OnExportHex(wxCommandEvent &event);
 			void OnImportMetadata(wxCommandEvent &event);
@@ -141,6 +151,10 @@ namespace REHex {
 			void OnDonate(wxCommandEvent &event);
 			void OnHelp(wxCommandEvent &event);
 			void OnAbout(wxCommandEvent &event);
+			
+			#ifndef NDEBUG
+			void OnSimulateEndSession(wxCommandEvent &event);
+			#endif
 			
 			void OnDocumentChange(wxAuiNotebookEvent &event);
 			void OnDocumentClose(wxAuiNotebookEvent &event);
@@ -236,6 +250,39 @@ namespace REHex {
 			 * from most recently activated (e.g. top of Z order) to least.
 			*/
 			static const std::list<MainWindow*> &get_instances();
+			
+			/**
+			 * @brief Save MainWindow instance(s) for later restoration.
+			 *
+			 * @param windows     List of windows to include in the workspace.
+			 * @param full_state  Whether to serialise unsaved changes to files.
+			 * @param file        File to write the workspace to.
+			 *
+			 * Creates a "workspace" file containing one or more windows which can be used to
+			 * restore the session using the deserialise_windows() method later.
+			 *
+			 * If full_state is true, the workspace will include internal application state and
+			 * unsaved changes, so the application can be (almost) completely restored to a point
+			 * in time, this should only be done when the application is about to exit because any
+			 * further changes to the open files may invalidate the serialised open files.
+			 *
+			 * When a workspace is explicitly saved by the user, full_state should be false and we
+			 * will only serialise the *names* of any opened files, discarding any tabs without a
+			 * backing file and any unsaved changes.
+			*/
+			static void serialise_windows(const std::vector<MainWindow*> &windows, bool full_state, FileWriter *file);
+
+			/**
+			 * @brief Restore previously serialised windows.
+			 *
+			 * Reconstructs a number of MainWindow instances previously serialised by the
+			 * serialise_windows() method and returns pointers to them in the first member of the
+			 * return value.
+			 *
+			 * If any individual files cannot be re-opened (e.g. because they were deleted), their
+			 * names are returned in a second vector.
+			*/
+			static std::pair< std::vector<MainWindow*>, std::vector<std::string> > deserialise_windows(FileReader *file);
 			
 			/**
 			 * @brief Performs RAII-style MainWindow setup hook registration.

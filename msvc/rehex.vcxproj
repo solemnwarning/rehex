@@ -495,6 +495,7 @@
     <ClCompile Include="..\src\DocumentCtrl.cpp" />
     <ClCompile Include="..\src\EditCommentDialog.cpp" />
     <ClCompile Include="..\src\Events.cpp" />
+    <ClCompile Include="..\src\FileReader.cpp" />
     <ClCompile Include="..\src\FileWriter.cpp" />
     <ClCompile Include="..\src\FillRangeDialog.cpp" />
     <ClCompile Include="..\src\FixedSizeValueRegion.cpp" />
@@ -531,6 +532,7 @@
     <ClCompile Include="..\src\SettingsDialogKeyboard.cpp" />
     <ClCompile Include="..\src\StringPanel.cpp" />
     <ClCompile Include="..\src\Tab.cpp" />
+    <ClCompile Include="..\src\TempDirectory.cpp" />
     <ClCompile Include="..\src\textentrydialog.cpp" />
     <ClCompile Include="..\src\ThreadPool.cpp" />
     <ClCompile Include="..\src\ToolPanel.cpp" />

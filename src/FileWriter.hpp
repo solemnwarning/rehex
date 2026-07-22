@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -18,8 +18,12 @@
 #ifndef REHEX_FILEWRITER_HPP
 #define REHEX_FILEWRITER_HPP
 
+#include <functional>
 #include <stdio.h>
 #include <string>
+#include <wx/filename.h>
+
+#include "FourCC.hpp"
 
 namespace REHex
 {
@@ -39,6 +43,10 @@ namespace REHex
 		private:
 			std::string filename;
 			FILE *fh;
+
+			off_t tell() const;
+
+			void seek(off_t offset);
 		
 		public:
 			/**
@@ -56,12 +64,49 @@ namespace REHex
 			void write(const void *data, size_t size);
 			
 			/**
+			 * @brief Write a value to the file.
+			 *
+			 * Throws on error. Calling write() after a previous error or call to
+			 * commit() is undefined behaviour.
+			*/
+			template<typename T> void write(const T &value)
+			{
+				write(&value, sizeof(value));
+			}
+			
+			/**
+			 * @brief Encapsulate some data with a type and length header.
+			 *
+			 * @brief type  Four byte type identifying the data record.
+			 * @brief func  Function which will write data within the record.
+			 */
+			void write_tlv(const FourCC &type, const std::function<void()> &func);
+
+			/**
+			 * @brief Encapsulate some data with a type and length header.
+			 *
+			 * @brief type  Four byte type identifying the data record.
+			 * @brief data  Data pointer.
+			 * @brief size  Size of data.
+			*/
+			void write_tlv(const FourCC &type, const void *data, size_t size);
+			
+			/**
 			 * @brief Commit any outstanding writes to the file and close.
 			 *
 			 * Throws on error. Calling after a previous error or call to commit() is
 			 * undefined behaviour.
 			*/
 			void commit();
+			
+			/**
+			 * @brief Get the name of the file being created.
+			 *
+			 * NOTE: The returned name is where the file will be accessible after the commit()
+			 * method has been called, before that point there may be nothing there or it may even
+			 * be a different file.
+			*/
+			wxFileName get_filename() const;
 	};
 }
 

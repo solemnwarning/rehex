@@ -17,7 +17,9 @@
 
 #include "platform.hpp"
 
+#include <numeric>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <wx/event.h>
 #include <wx/filename.h>
@@ -26,6 +28,7 @@
 #include <wx/fs_zip.h>
 #include <wx/log.h>
 #include <wx/stdpaths.h>
+#include <wx/wfstream.h>
 
 #include "App.hpp"
 #include "ArtProvider.hpp"
@@ -376,59 +379,145 @@ bool REHex::App::OnInit()
 	}
 	
 	Bind(EVT_PAGE_DROPPED, &REHex::App::OnTabDropped, this);
+	Bind(wxEVT_END_SESSION, &REHex::App::OnEndSession, this);
 	
 	call_setup_hooks(SetupPhase::READY);
-	
-	wxSize windowSize(740, 540);
-	
-	#ifndef __APPLE__
-	config->Read("/default-view/window-width", &windowSize.x, windowSize.x);
-	config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
-	#endif
-	
-	window = new REHex::MainWindow(windowSize);
-	
-	#ifndef __APPLE__
-	bool maximise = config->ReadBool("/default-view/window-maximised", false);
-	window->Maximize(maximise);
-	#endif
-	
-	if(compare_mode)
+
+	/* Split out any *.rehex-workspace filenames into a separate list. */
+
+	std::vector<std::string> workspace_filenames;
+	std::copy_if(
+		open_filenames.begin(), open_filenames.end(), std::back_inserter(workspace_filenames),
+		[](const std::string &filename)
+		{
+			return wxFileName(filename).GetExt().IsSameAs("rehex-workspace", false);
+		});
+
+	open_filenames.erase(
+		std::remove_if(
+			open_filenames.begin(), open_filenames.end(),
+			[](const std::string &filename)
+			{
+				return wxFileName(filename).GetExt().IsSameAs("rehex-workspace", false);
+			}),
+		open_filenames.end());
+
+	std::vector<MainWindow*> windows;
+	std::vector<std::string> missing_files;
+
+	auto load_workspace = [&](const std::string &filename)
 	{
-		DiffWindow::instance = new DiffWindow(NULL);
-		DiffWindow::instance->set_invisible_owner_window(window);
-		DiffWindow::instance->Show(true);
-	}
-	else{
-		window->Show();
-	}
-	
-	bool opened_a_file = false;
-	
-	for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+		FileReader fr(filename.c_str());
+
+		std::vector<MainWindow*> ws_windows;
+		std::vector<std::string> ws_missing_files;
+
+		std::tie(ws_windows, ws_missing_files) = MainWindow::deserialise_windows(&fr);
+
+		windows.insert(windows.end(), ws_windows.begin(), ws_windows.end());
+		missing_files.insert(missing_files.end(), ws_missing_files.begin(), ws_missing_files.end());
+	};
+
+	wxFileName auto_workspace = get_auto_workspace();
+	bool restored_workspace = false;
+
+	if(auto_workspace.FileExists())
 	{
-		Tab *tab = window->open_file(wxFileName(*filename));
+		try {
+			load_workspace(auto_workspace.GetFullPath().ToStdString());
+			unlink(auto_workspace.GetFullPath().mb_str());
+		}
+		catch(const std::exception &e)
+		{
+			printf_error("Error restoring session: %s\n", e.what());
+		}
+	}
+
+	for(auto w = workspace_filenames.begin(); w != workspace_filenames.end(); ++w)
+	{
+		try {
+			load_workspace(*w);
+		}
+		catch(const std::exception &e)
+		{
+			wxMessageBox(
+				std::string("Error loading workspace ") + *w + ": " + e.what(),
+				"Error", wxICON_ERROR, NULL);
+		}
+	}
+
+	for(auto i = windows.begin(); i != windows.end(); ++i)
+	{
+		(*i)->Show();
+		restored_workspace = true;
+	}
+
+	if(!(missing_files.empty()))
+	{
+		std::string message = std::accumulate<std::vector<std::string>::iterator, std::string>(
+			missing_files.begin(), missing_files.end(),
+			"Unable to re-open the following files:\n",
+			[](const std::string &a, const std::string &b)
+			{
+				return a + "\n" + b;
+			});
+
+		wxMessageBox(message, "Error", wxICON_ERROR, (windows.empty() ? NULL : windows.back()));
+	}
+	
+	if(!restored_workspace || !(open_filenames.empty()))
+	{
+		wxSize windowSize = MainWindow::DEFAULT_SIZE;
+		
+		#ifndef __APPLE__
+		config->Read("/default-view/window-width", &windowSize.x, windowSize.x);
+		config->Read("/default-view/window-height", &windowSize.y, windowSize.y);
+		#endif
+		
+		window = new REHex::MainWindow(wxDefaultPosition, windowSize);
+		
+		#ifndef __APPLE__
+		bool maximise = config->ReadBool("/default-view/window-maximised", false);
+		window->Maximize(maximise);
+		#endif
+		
 		if(compare_mode)
 		{
+			DiffWindow::instance = new DiffWindow(NULL);
+			DiffWindow::instance->set_invisible_owner_window(window);
+			DiffWindow::instance->Show(true);
+		}
+		else{
+			window->Show();
+		}
+		
+		bool opened_a_file = false;
+		
+		for(auto filename = open_filenames.begin(); filename != open_filenames.end(); ++filename)
+		{
+			Tab *tab = window->open_file(wxFileName(*filename));
+			if(compare_mode)
+			{
+				if(tab != NULL)
+				{
+					DiffWindow::instance->add_range(DiffWindow::Range(tab->doc, tab->doc_ctrl, 0, tab->doc->buffer_length()));
+				}
+				else{
+					/* Failed to open a file with --compare specified. */
+					return false;
+				}
+			}
+			
 			if(tab != NULL)
 			{
-				DiffWindow::instance->add_range(DiffWindow::Range(tab->doc, tab->doc_ctrl, 0, tab->doc->buffer_length()));
-			}
-			else{
-				/* Failed to open a file with --compare specified. */
-				return false;
+				opened_a_file = true;
 			}
 		}
 		
-		if(tab != NULL)
+		if(!opened_a_file)
 		{
-			opened_a_file = true;
+			window->new_file();
 		}
-	}
-	
-	if(!opened_a_file)
-	{
-		window->new_file();
 	}
 	
 	if(ipc_params_ok)
@@ -524,9 +613,37 @@ void REHex::App::OnTabDropped(DetachedPageEvent &event)
 	Tab *tab = dynamic_cast<Tab*>(event.page);
 	assert(tab != NULL);
 	
-	MainWindow *window = new MainWindow(wxDefaultSize);
+	MainWindow *window = new MainWindow(wxDefaultPosition, wxDefaultSize);
 	window->SetClientSize(tab->GetParent()->GetSize());
 	window->SetPosition(mouse_position);
 	window->insert_tab(tab, -1);
 	window->Show();
+}
+
+void REHex::App::OnEndSession(wxCloseEvent &event)
+{
+	std::list<MainWindow*> all_windows = MainWindow::get_instances();
+
+	wxFileName workspace_path = get_auto_workspace();
+
+	if(wxFileName::Mkdir(workspace_path.GetPath(), wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL))
+	{
+		try {
+			FileWriter workspace(workspace_path.GetFullPath().mb_str());
+			MainWindow::serialise_windows(std::vector<MainWindow*>(all_windows.begin(), all_windows.end()), true, &workspace);
+
+			workspace.commit();
+		}
+		catch(const std::exception &e)
+		{
+			printf_error("Error saving session: %s\n", e.what());
+		}
+	}
+
+	for(auto w = all_windows.begin(); w != all_windows.end(); ++w)
+	{
+		(*w)->Destroy();
+	}
+	
+	event.Skip();
 }

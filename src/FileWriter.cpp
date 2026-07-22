@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -19,7 +19,9 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <portable_endian.h>
 #include <stdexcept>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -53,7 +55,7 @@ void REHex::FileWriter::write(const void *data, size_t size)
 {
 	assert(fh != NULL);
 	
-	if(fwrite(data, size, 1, fh) != 1)
+	if(size > 0 && fwrite(data, size, 1, fh) != 1)
 	{
 		int fwrite_errno = errno;
 		
@@ -63,6 +65,51 @@ void REHex::FileWriter::write(const void *data, size_t size)
 		unlink(filename.c_str());
 		
 		throw std::runtime_error(std::string("Error writing to ") + filename + ": " + strerror(fwrite_errno));
+	}
+}
+
+void REHex::FileWriter::write_tlv(const FourCC &type, const std::function<void()> &func)
+{
+	write(type.string(), 4);
+
+	off_t length_off = tell();
+	write<uint32_t>(0xFFFFFFFF);
+
+	func();
+
+	off_t data_end = tell();
+
+	seek(length_off);
+	write<uint32_t>(htole32(data_end - length_off - 4));
+
+	seek(data_end);
+}
+
+void REHex::FileWriter::write_tlv(const FourCC &type, const void *data, size_t size)
+{
+	write(type.string(), 4);
+	write<uint32_t>(htole32(size));
+	write(data, size);
+}
+
+off_t REHex::FileWriter::tell() const
+{
+	off_t position = ftello(fh);
+	if(position == -1)
+	{
+		int err = errno;
+		throw std::runtime_error(std::string("ftello: ") + strerror(err));
+	}
+
+	return position;
+}
+
+void REHex::FileWriter::seek(off_t offset)
+{
+	if(fseeko(fh, offset, SEEK_SET) != 0)
+	{
+		int err = errno;
+		throw std::runtime_error(std::string("fseeko: ") + strerror(err));
 	}
 }
 
@@ -78,4 +125,12 @@ void REHex::FileWriter::commit()
 	}
 	
 	fh = NULL;
+}
+
+wxFileName REHex::FileWriter::get_filename() const
+{
+	wxFileName fn(filename);
+	fn.MakeAbsolute();
+	
+	return fn;
 }

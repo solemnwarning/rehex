@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,7 +28,7 @@
 
 #define GV_RESULT(value_type, string_value, type_value) \
 { \
-	const char *test_name = "GetValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
+	const char *test_name = "GetNumericValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
 	\
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
 	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(frame, wxID_ANY); \
@@ -36,7 +36,7 @@
 	tc->SetValue(string_value); \
 	\
 	EXPECT_NO_THROW({ \
-		value_type v = tc->GetValue<value_type>(); \
+		value_type v = tc->GetNumericValue<value_type>(); \
 		EXPECT_EQ(v, type_value) << test_name; \
 	}) << test_name; \
 }
@@ -48,13 +48,13 @@
 	\
 	tc->SetValue(string_value); \
 	\
-	EXPECT_THROW({ tc->GetValue<value_type>(); }, exception_class) << \
-		"GetValue<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
+	EXPECT_THROW({ tc->GetNumericValue<value_type>(); }, exception_class) << \
+		"GetNumericValue<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
 }
 
 #define GV_RESULT2(value_type, min, max, rel, string_value, type_value) \
 { \
-	const char *test_name = "GetValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
+	const char *test_name = "GetNumericValue<" #value_type "> on a value of " #string_value " returns " #type_value; \
 	\
 	AutoFrame frame(NULL, wxID_ANY, wxT("Unit tests")); \
 	REHex::NumericTextCtrl *tc = new REHex::NumericTextCtrl(frame, wxID_ANY); \
@@ -62,7 +62,7 @@
 	tc->SetValue(string_value); \
 	\
 	EXPECT_NO_THROW({ \
-		value_type v = tc->GetValue<value_type>(min, max, rel); \
+		value_type v = tc->GetNumericValue<value_type>(min, max, rel); \
 		EXPECT_EQ(v, type_value) << test_name; \
 	}) << test_name; \
 }
@@ -74,8 +74,8 @@
 	\
 	tc->SetValue(string_value); \
 	\
-	EXPECT_THROW({ tc->GetValue<value_type>(min, max, rel); }, exception_class) << \
-		"GetValue<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
+	EXPECT_THROW({ tc->GetNumericValue<value_type>(min, max, rel); }, exception_class) << \
+		"GetNumericValue<" #value_type "> on a value of \"" string_value "\" throws " #exception_class; \
 }
 
 TEST(NumericTextCtrl, GetValue)

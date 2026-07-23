@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -344,7 +344,7 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::numeric_limits<T>::is_integer, T>::type
-				GetValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
+				GetNumericValue(T min = std::numeric_limits<T>::min(), T max = std::numeric_limits<T>::max(), T rel_base = 0, int base = 0)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base);
@@ -352,13 +352,19 @@ namespace REHex {
 			
 			template<typename T>
 				typename std::enable_if<std::is_same<T, BitOffset>::value, T>::type
-				GetValue(T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
+				GetNumericValue(T min = BitOffset::MIN, T max = BitOffset::MAX, T rel_base = BitOffset::ZERO, int base = 0, bool *bit_explicit = NULL)
 			{
 				std::string sval = wxTextCtrl::GetValue().ToStdString();
 				return ParseValue<T>(sval, min, max, rel_base, base, bit_explicit);
 			}
 			
 			wxString GetStringValue() const
+			{
+				return wxTextCtrl::GetValue();
+			}
+
+		private:
+			virtual wxString GetValue() const override
 			{
 				return wxTextCtrl::GetValue();
 			}

@@ -359,7 +359,7 @@ void REHex::BitmapTool::reset_row_length_spinner()
 void REHex::BitmapTool::update()
 {
 	try {
-		image_offset = offset_textctrl->GetValue<BitOffset>(BitOffset::ZERO);
+		image_offset = offset_textctrl->GetNumericValue<BitOffset>(BitOffset::ZERO);
 	}
 	catch(const NumericTextCtrl::InputError&)
 	{

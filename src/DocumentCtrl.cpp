@@ -3527,7 +3527,7 @@ void REHex::DocumentCtrl::DataRegion::draw(REHex::DocumentCtrl &doc, wxDC &dc, i
 		
 		data = doc.doc->read_data(data_base, data_to_draw + hsm_pre + hsm_post);
 
-		if(data.size() < hsm_pre)
+		if((off_t)(data.size()) < hsm_pre)
 		{
 			throw std::runtime_error("unexpected end of file");
 		}

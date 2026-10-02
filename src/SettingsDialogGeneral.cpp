@@ -52,7 +52,7 @@ bool REHex::SettingsDialogGeneral::Create(wxWindow *parent)
 	su_byte = new wxRadioButton(this, wxID_ANY, "Bytes", wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 	su_sizer->Add(su_byte, 0, (wxALIGN_CENTER_VERTICAL | wxLEFT), SettingsDialog::MARGIN);
 	
-	su_byte->SetToolTip("Sizes will always be displayed in bytes");
+	su_byte->SetToolTip("Sizes will always be displayed in bytes only");
 	
 	su_xib = new wxRadioButton(this, wxID_ANY, "KiB, MiB, etc");
 	su_sizer->Add(su_xib, 0, (wxALIGN_CENTER_VERTICAL | wxLEFT), SettingsDialog::MARGIN);

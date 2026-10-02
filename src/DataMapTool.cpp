@@ -367,7 +367,7 @@ void REHex::DataMapTool::update_tip(const wxPoint &bitmap_mouse_point)
 		wxString tip_text = format_offset(cursor_off, document_ctrl->get_offset_display_base()) + "\n"
 			+ format_offset(elem_first_off, document_ctrl->get_offset_display_base()) + " - "
 			+ format_offset(elem_last_off, document_ctrl->get_offset_display_base())
-			+ " (" + format_size(dm_it->first.length.byte()) + ")\n"
+			+ " (" + format_size(dm_it->first.length.byte(), document_ctrl->get_offset_display_base()) + ")\n"
 			+ dm_it->second.description;
 		
 		if(m_tip_window != NULL)

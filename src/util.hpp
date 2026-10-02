@@ -104,12 +104,12 @@ namespace REHex {
 	/**
 	 * @brief Format a size in bytes for display with the users selected units.
 	*/
-	std::string format_size(off_t size_bytes);
+	std::string format_size(off_t size_bytes, OffsetBase bytes_base);
 	
 	/**
 	 * @brief Format a size in bytes for display in a specific unit.
 	*/
-	std::string format_size(off_t size_bytes, SizeUnit unit);
+	std::string format_size(off_t size_bytes, SizeUnit unit, OffsetBase bytes_base);
 	
 	template<typename T> typename T::iterator const_iterator_to_iterator(typename T::const_iterator &const_iter, T &container)
 	{

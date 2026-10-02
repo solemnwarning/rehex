@@ -622,7 +622,61 @@ REHex::MainWindow::MainWindow(const wxPoint &position, const wxSize& size):
 	notebook_bad_bitmap = artp.GetBitmap(wxART_MISSING_IMAGE, wxART_MENU);
 	assert(!notebook_bad_bitmap.IsSameAs(wxNullBitmap));
 	
-	CreateStatusBar(3);
+	wxStatusBar *sb = CreateStatusBar(3);
+	
+	{
+		/* Set the relative widths of the status bar fields:
+		 * Offset - 25%
+		 * Selection - 50%
+		 * Overwrite - 25%
+		*/
+	
+		int field_widths[] = { -1, -2, -1 };
+		sb->SetStatusWidths(3, field_widths);
+	}
+	
+	sb->Bind(wxEVT_LEFT_DOWN, [this, sb](wxMouseEvent &event)
+	{
+		wxRect rect0;
+		bool rect0_ok = sb->GetFieldRect(0, rect0);
+		assert(rect0_ok);
+		
+		wxRect rect1;
+		bool rect1_ok = sb->GetFieldRect(1, rect1);
+		assert(rect1_ok);
+		
+		wxRect rect2;
+		bool rect2_ok = sb->GetFieldRect(2, rect2);
+		assert(rect2_ok);
+		
+		if((rect0_ok && rect0.Contains(event.GetPosition())) || (rect1_ok && rect1.Contains(event.GetPosition())))
+		{
+			Tab *tab = active_tab();
+			
+			OffsetBase base = tab->doc_ctrl->get_offset_display_base();
+			
+			if(base == OFFSET_BASE_DEC)
+			{
+				tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_HEX);
+				view_menu->Check(ID_HEX_OFFSETS, true);
+			}
+			else if(base == OFFSET_BASE_HEX)
+			{
+				tab->doc_ctrl->set_offset_display_base(OFFSET_BASE_DEC);
+				view_menu->Check(ID_DEC_OFFSETS, true);
+			}
+			
+			_update_status_offset(tab);
+			_update_status_selection(tab->doc_ctrl);
+		}
+		else if(rect2_ok && rect2.Contains(event.GetPosition()))
+		{
+			Tab *tab = active_tab();
+			tab->doc_ctrl->set_insert_mode(!tab->doc_ctrl->get_insert_mode());
+		}
+		
+		event.Skip();
+	});
 	
 	SetDropTarget(new DropTarget(this));
 	
@@ -2566,9 +2620,8 @@ void REHex::MainWindow::_update_status_selection(REHex::DocumentCtrl *doc_ctrl)
 		BitOffset selection_total = selection.total_bytes();
 		
 		std::string len_text = selection_total.byte_aligned()
-			//? (std::to_string(selection_total.byte()) + " bytes")
-			? format_size(selection_total.byte())
-			: (std::to_string(selection_total.byte()) + " bytes, " + std::to_string(selection_total.bit()) + " bits");
+			? format_size(selection_total.byte(), doc_ctrl->get_offset_display_base())
+			: (format_size(selection_total.byte(), SizeUnit::B, doc_ctrl->get_offset_display_base()) + " + " + std::to_string(selection_total.bit()) + " bits");
 		
 		std::string text = "Selection: " + from_text + " - " + to_text + " (" + len_text + ")";
 		SetStatusText(text, 1);

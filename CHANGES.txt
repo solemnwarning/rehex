@@ -15,6 +15,10 @@ Version TBC
 
  * Close all windows when the "Exit" command is selected.
 
+ * Improve display of selection length in status bar and allow toggling
+   offset/length base or insert/overwrite by clicking appropriate area
+   of status bar (#289).
+
 Version 0.64.0 (2026-04-03):
 
  * Update Lua plugin integration to support Lua 5.5.

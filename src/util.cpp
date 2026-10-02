@@ -218,20 +218,42 @@ std::string REHex::format_offset(BitOffset offset, OffsetBase base, BitOffset up
 	return fmt_out;
 }
 
-std::string REHex::format_size(off_t size_bytes)
+std::string REHex::format_size(off_t size_bytes, OffsetBase bytes_base)
 {
-	return format_size(size_bytes, wxGetApp().settings->get_size_unit());
+	return format_size(size_bytes, wxGetApp().settings->get_size_unit(), bytes_base);
 }
 
-std::string REHex::format_size(off_t size_bytes, SizeUnit unit)
+std::string REHex::format_size(off_t size_bytes, SizeUnit unit, OffsetBase bytes_base)
 {
 	const char *unit_sym = NULL;
 	off_t unit_div = 0;
+	bool prepend_bytes = false;
+	
+	auto fmt_bytes = [&]()
+	{
+		if(bytes_base == OFFSET_BASE_DEC)
+		{
+			return (wxNumberFormatter::ToString(size_bytes) + " bytes").ToStdString();
+		}
+		else{
+			assert(bytes_base == OFFSET_BASE_HEX);
+			
+			if(size_bytes <= 0xFFFF)
+			{
+				char x[16];
+				snprintf(x, sizeof(x), "0x%X bytes", (unsigned)(size_bytes));
+				return std::string(x);
+			}
+			else{
+				return format_offset(size_bytes, bytes_base) + " bytes";
+			}
+		}
+	};
 	
 	switch(unit)
 	{
 		case SizeUnit::B: B:
-			return (wxNumberFormatter::ToString(size_bytes) + " bytes").ToStdString();
+			return fmt_bytes();
 			
 		case SizeUnit::KiB: KiB:
 			unit_sym = "KiB";
@@ -254,6 +276,8 @@ std::string REHex::format_size(off_t size_bytes, SizeUnit unit)
 			break;
 			
 		case SizeUnit::AUTO_XiB:
+			prepend_bytes = true;
+			
 			if(size_bytes >= BYTES_PER_TiB || size_bytes <= -BYTES_PER_TiB)       goto TiB;
 			else if(size_bytes >= BYTES_PER_GiB || size_bytes <= -BYTES_PER_GiB)  goto GiB;
 			else if(size_bytes >= BYTES_PER_MiB || size_bytes <= -BYTES_PER_MiB)  goto MiB;
@@ -281,6 +305,8 @@ std::string REHex::format_size(off_t size_bytes, SizeUnit unit)
 			break;
 			
 		case SizeUnit::AUTO_XB:
+			prepend_bytes = true;
+			
 			if(size_bytes >= BYTES_PER_TB || size_bytes <= -BYTES_PER_TB)       goto TB;
 			else if(size_bytes >= BYTES_PER_GB || size_bytes <= -BYTES_PER_GB)  goto GB;
 			else if(size_bytes >= BYTES_PER_MB || size_bytes <= -BYTES_PER_MB)  goto MB;
@@ -288,19 +314,14 @@ std::string REHex::format_size(off_t size_bytes, SizeUnit unit)
 			else                                                                goto B;
 	};
 	
-	#if 0
-	snprintf(size_s, sizeof(size_s), "%zd.%02d %s",
-		(size_bytes / unit_div),
-		(int)(abs(((size_bytes % unit_div) * 100) / unit_div)),
-		unit_sym);
-	snprintf(size_s, sizeof(size_s), "%s%s%02d %s",
-		wxNumberFormatter::ToString(size_bytes / unit_div).mb_str().data(),
-		wxString(wxNumberFormatter::GetDecimalSeparator()).mb_str().data(),
-		(int)(abs(((size_bytes % unit_div) * 100) / unit_div)),
-		unit_sym);
-	#endif
+	std::string str = (wxNumberFormatter::ToString(((double)(size_bytes) / (double)(unit_div)), 2) + " " + unit_sym).ToStdString();
 	
-	return (wxNumberFormatter::ToString(((double)(size_bytes) / (double)(unit_div)), 2) + " " + unit_sym).ToStdString();
+	if(prepend_bytes)
+	{
+		str = fmt_bytes() + ", " + str;
+	}
+	
+	return str;
 }
 
 class GenuineImmitationMouseCapture

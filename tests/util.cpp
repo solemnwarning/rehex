@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2018-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2018-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -152,89 +152,96 @@ TEST(Util, format_size)
 	bool thousands_separator_used = wxNumberFormatter::GetThousandsSeparatorIfUsed(&thousands_separator);
 	auto strip = [&](const std::string &input)
 	{
-		if(thousands_separator_used)
+		std::string output;
+		
+		for(auto it = input.begin(); it != input.end(); ++it)
 		{
-			std::string output;
-			
-			for(auto it = input.begin(); it != input.end(); ++it)
+			if(*it != ',' && (!thousands_separator_used || *it != thousands_separator))
 			{
-				if(*it != thousands_separator)
-				{
-					output.push_back(*it);
-				}
+				output.push_back(*it);
 			}
-			
-			return output;
 		}
-		else{
-			return input;
-		}
+		
+		return output;
 	};
 	
 	/* 100B */
-	EXPECT_EQ(strip(format_size(100, SizeUnit::B)),        "100 bytes");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::KiB)),      "0.10 KiB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::MiB)),      "0.00 MiB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::GiB)),      "0.00 GiB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::TiB)),      "0.00 TiB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::kB)),       "0.10 kB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::MB)),       "0.00 MB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::GB)),       "0.00 GB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::TB)),       "0.00 TB");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::AUTO_XiB)), "100 bytes");
-	EXPECT_EQ(strip(format_size(100, SizeUnit::AUTO_XB)),  "100 bytes");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::B,        OFFSET_BASE_DEC)), "100 bytes");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::KiB,      OFFSET_BASE_DEC)), "0.10 KiB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::MiB,      OFFSET_BASE_DEC)), "0.00 MiB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::GiB,      OFFSET_BASE_DEC)), "0.00 GiB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::TiB,      OFFSET_BASE_DEC)), "0.00 TiB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::kB,       OFFSET_BASE_DEC)), "0.10 kB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::MB,       OFFSET_BASE_DEC)), "0.00 MB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::GB,       OFFSET_BASE_DEC)), "0.00 GB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::TB,       OFFSET_BASE_DEC)), "0.00 TB");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::AUTO_XiB, OFFSET_BASE_DEC)), "100 bytes");
+	EXPECT_EQ(strip(format_size(100, SizeUnit::AUTO_XB,  OFFSET_BASE_DEC)), "100 bytes");
+	
+	/* 32KiB */
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::B,        OFFSET_BASE_HEX)), "0x8000 bytes");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::KiB,      OFFSET_BASE_HEX)), "32.00 KiB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::MiB,      OFFSET_BASE_HEX)), "0.03 MiB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::GiB,      OFFSET_BASE_HEX)), "0.00 GiB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::TiB,      OFFSET_BASE_HEX)), "0.00 TiB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::kB,       OFFSET_BASE_HEX)), "32.77 kB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::MB,       OFFSET_BASE_HEX)), "0.03 MB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::GB,       OFFSET_BASE_HEX)), "0.00 GB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::TB,       OFFSET_BASE_HEX)), "0.00 TB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::AUTO_XiB, OFFSET_BASE_HEX)), "0x8000 bytes 32.00 KiB");
+	EXPECT_EQ(strip(format_size(32768, SizeUnit::AUTO_XB,  OFFSET_BASE_HEX)), "0x8000 bytes 32.77 kB");
 	
 	/* 1.00 MiB */
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::B)),        "1048576 bytes");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::KiB)),      "1024.00 KiB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::MiB)),      "1.00 MiB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::GiB)),      "0.00 GiB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::TiB)),      "0.00 TiB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::kB)),       "1048.58 kB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::MB)),       "1.05 MB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::GB)),       "0.00 GB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::TB)),       "0.00 TB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::AUTO_XiB)), "1.00 MiB");
-	EXPECT_EQ(strip(format_size(1048576, SizeUnit::AUTO_XB)),  "1.05 MB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::B,        OFFSET_BASE_HEX)), "0010:0000 bytes");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::KiB,      OFFSET_BASE_HEX)), "1024.00 KiB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::MiB,      OFFSET_BASE_HEX)), "1.00 MiB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::GiB,      OFFSET_BASE_HEX)), "0.00 GiB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::TiB,      OFFSET_BASE_HEX)), "0.00 TiB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::kB,       OFFSET_BASE_HEX)), "1048.58 kB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::MB,       OFFSET_BASE_HEX)), "1.05 MB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::GB,       OFFSET_BASE_HEX)), "0.00 GB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::TB,       OFFSET_BASE_HEX)), "0.00 TB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::AUTO_XiB, OFFSET_BASE_HEX)), "0010:0000 bytes 1.00 MiB");
+	EXPECT_EQ(strip(format_size(1048576, SizeUnit::AUTO_XB,  OFFSET_BASE_HEX)), "0010:0000 bytes 1.05 MB");
 	
 	/* 1.50 MiB */
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::B)),        "1572864 bytes");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::KiB)),      "1536.00 KiB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::MiB)),      "1.50 MiB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::GiB)),      "0.00 GiB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::TiB)),      "0.00 TiB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::kB)),       "1572.86 kB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::MB)),       "1.57 MB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::GB)),       "0.00 GB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::TB)),       "0.00 TB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::AUTO_XiB)), "1.50 MiB");
-	EXPECT_EQ(strip(format_size(1572864, SizeUnit::AUTO_XB)),  "1.57 MB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::B,        OFFSET_BASE_DEC)), "1572864 bytes");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::KiB,      OFFSET_BASE_DEC)), "1536.00 KiB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::MiB,      OFFSET_BASE_DEC)), "1.50 MiB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::GiB,      OFFSET_BASE_DEC)), "0.00 GiB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::TiB,      OFFSET_BASE_DEC)), "0.00 TiB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::kB,       OFFSET_BASE_DEC)), "1572.86 kB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::MB,       OFFSET_BASE_DEC)), "1.57 MB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::GB,       OFFSET_BASE_DEC)), "0.00 GB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::TB,       OFFSET_BASE_DEC)), "0.00 TB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::AUTO_XiB, OFFSET_BASE_DEC)), "1572864 bytes 1.50 MiB");
+	EXPECT_EQ(strip(format_size(1572864, SizeUnit::AUTO_XB,  OFFSET_BASE_DEC)), "1572864 bytes 1.57 MB");
 	
 	/* 1GB */
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::B)),        "1000000000 bytes");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::KiB)),      "976562.50 KiB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::MiB)),      "953.67 MiB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::GiB)),      "0.93 GiB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::TiB)),      "0.00 TiB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::kB)),       "1000000.00 kB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::MB)),       "1000.00 MB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::GB)),       "1.00 GB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::TB)),       "0.00 TB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::AUTO_XiB)), "953.67 MiB");
-	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::AUTO_XB)),  "1.00 GB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::B,        OFFSET_BASE_DEC)), "1000000000 bytes");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::KiB,      OFFSET_BASE_DEC)), "976562.50 KiB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::MiB,      OFFSET_BASE_DEC)), "953.67 MiB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::GiB,      OFFSET_BASE_DEC)), "0.93 GiB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::TiB,      OFFSET_BASE_DEC)), "0.00 TiB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::kB,       OFFSET_BASE_DEC)), "1000000.00 kB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::MB,       OFFSET_BASE_DEC)), "1000.00 MB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::GB,       OFFSET_BASE_DEC)), "1.00 GB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::TB,       OFFSET_BASE_DEC)), "0.00 TB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::AUTO_XiB, OFFSET_BASE_DEC)), "1000000000 bytes 953.67 MiB");
+	EXPECT_EQ(strip(format_size(1000000000, SizeUnit::AUTO_XB,  OFFSET_BASE_DEC)), "1000000000 bytes 1.00 GB");
 	
 	/* 1.5TB */
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::B)),        "1500000000000 bytes");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::KiB)),      "1464843750.00 KiB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::MiB)),      "1430511.47 MiB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::GiB)),      "1396.98 GiB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::TiB)),      "1.36 TiB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::kB)),       "1500000000.00 kB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::MB)),       "1500000.00 MB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::GB)),       "1500.00 GB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::TB)),       "1.50 TB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::AUTO_XiB)), "1.36 TiB");
-	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::AUTO_XB)),  "1.50 TB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::B,        OFFSET_BASE_HEX)), "0000015D:3EF79800 bytes");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::KiB,      OFFSET_BASE_HEX)), "1464843750.00 KiB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::MiB,      OFFSET_BASE_HEX)), "1430511.47 MiB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::GiB,      OFFSET_BASE_HEX)), "1396.98 GiB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::TiB,      OFFSET_BASE_HEX)), "1.36 TiB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::kB,       OFFSET_BASE_HEX)), "1500000000.00 kB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::MB,       OFFSET_BASE_HEX)), "1500000.00 MB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::GB,       OFFSET_BASE_HEX)), "1500.00 GB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::TB,       OFFSET_BASE_HEX)), "1.50 TB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::AUTO_XiB, OFFSET_BASE_HEX)), "0000015D:3EF79800 bytes 1.36 TiB");
+	EXPECT_EQ(strip(format_size(1500000000000, SizeUnit::AUTO_XB,  OFFSET_BASE_HEX)), "0000015D:3EF79800 bytes 1.50 TB");
 }
 
 #define TEST_ADD_CLAMP_OVERFLOW(T, a, b, result, expect_overflow) \

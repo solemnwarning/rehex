@@ -149,9 +149,9 @@ static void Initialize_disassembler()
 				REHex::DataType()
 					.WithWordSize(REHex::BitOffset(1, 0))
 					.WithVariableSizeRegion(
-						[desc](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
+						[desc](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const REHex::DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func)
 						{
-							return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, desc.arch, desc.mode);
+							return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, text_colour_func, desc.arch, desc.mode);
 						}));
 		}
 		else

@@ -28,13 +28,18 @@
 
 using namespace REHex;
 
+static TextColour NULL_HIGHLIGHT_FUNC(BitOffset offset, BitOffset length)
+{
+	return TextColour::INVALID();
+}
+
 TEST(DisassemblyRegion, ProcessFile)
 {
 	/* Open test executable. */
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Ensure no data is initially processed. */
 	
@@ -162,7 +167,7 @@ TEST(DisassemblyRegion, InstructionByOffset)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Check the region is unprocessed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
@@ -304,7 +309,7 @@ TEST(DisassemblyRegion, InstructionByLine)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Check the region is unprocessed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
@@ -419,7 +424,7 @@ TEST(DisassemblyRegion, InstructionSpanningEndOfRegion)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 9, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 9, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	region->check();
 	region->check();
@@ -509,7 +514,7 @@ TEST(DisassemblyRegion, InvalidInstructionAMD64)
 	doc->insert_data(0, DATA, sizeof(DATA));
 	
 	/* Create region covering our test data */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0, 15, 0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0, 15, 0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	/* Check the region is unprocessed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
@@ -617,7 +622,7 @@ TEST(DisassemblyRegion, InvalidInstructionARM64)
 	doc->insert_data(0, DATA, sizeof(DATA));
 	
 	/* Create region covering our test data */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0, 18, 0, CS_ARCH_ARM64, (cs_mode)(CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN)));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0, 18, 0, NULL_HIGHLIGHT_FUNC, CS_ARCH_ARM64, (cs_mode)(CS_MODE_ARM | CS_MODE_LITTLE_ENDIAN)));
 	
 	/* Check the region is unprocessed. */
 	ASSERT_EQ(region->unprocessed_offset_rel(), 0);
@@ -701,7 +706,7 @@ TEST(DisassemblyRegion, OverwriteDataBeforeRegion)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
@@ -730,7 +735,7 @@ TEST(DisassemblyRegion, OverwriteDataAtStart)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
@@ -757,7 +762,7 @@ TEST(DisassemblyRegion, OverwriteDataInRegion)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
@@ -784,7 +789,7 @@ TEST(DisassemblyRegion, OverwriteDataAtEnd)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
@@ -815,7 +820,7 @@ TEST(DisassemblyRegion, OverwriteDataAfterRegion)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64));
+	std::unique_ptr<DisassemblyRegion> region(new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64));
 	
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
 	EXPECT_TRUE(region->check() & DocumentCtrl::Region::PROCESSING);
@@ -846,7 +851,7 @@ TEST(DisassemblyRegion, CopyWholeInstructions)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64);
 	
 	region->check();
 	region->check();
@@ -895,7 +900,7 @@ TEST(DisassemblyRegion, CopyInHexView)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64);
 	
 	region->check();
 	region->check();
@@ -929,7 +934,7 @@ TEST(DisassemblyRegion, CopyPartialInstructions)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64);
 	
 	region->check();
 	region->check();
@@ -976,7 +981,7 @@ TEST(DisassemblyRegion, CopyPartialInstruction)
 	SharedDocumentPointer doc(SharedDocumentPointer::make(wxFileName("tests/ls.x86_64")));
 	
 	/* Create region covering the entire .text section */
-	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, CS_ARCH_X86, CS_MODE_64);
+	DisassemblyRegion* region = new DisassemblyRegion(doc, 0x46F0, 0x125BE, 0x46F0, NULL_HIGHLIGHT_FUNC, CS_ARCH_X86, CS_MODE_64);
 	
 	region->check();
 	region->check();

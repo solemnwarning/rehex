@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -28,6 +28,7 @@ namespace REHex {
 	{
 		protected:
 			SharedDocumentPointer doc;
+			RangeTextColourFunction text_colour_func;
 			
 		private:
 			int offset_text_x;  /**< Virtual X coord of left edge of offsets, in pixels. */
@@ -42,7 +43,7 @@ namespace REHex {
 			BitOffset calc_line_end(BitOffset offset_within_line) const;
 			
 		public:
-			BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset);
+			BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const RangeTextColourFunction &text_colour_func);
 			
 			virtual int calc_width(DocumentCtrl &doc_ctrl) override;
 			virtual void calc_height(DocumentCtrl &doc_ctrl) override;

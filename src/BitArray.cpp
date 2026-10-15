@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -21,9 +21,9 @@
 #include "BitArray.hpp"
 #include "DataType.hpp"
 
-static REHex::DocumentCtrl::Region *BitArrayRegion_factory(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
+static REHex::DocumentCtrl::Region *BitArrayRegion_factory(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const REHex::DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func)
 {
-	return new REHex::BitArrayRegion(doc, offset, length, virt_offset);
+	return new REHex::BitArrayRegion(doc, offset, length, virt_offset, text_colour_func);
 }
 
 static REHex::StaticDataTypeRegistration BitArrayTypeReg(
@@ -32,9 +32,10 @@ static REHex::StaticDataTypeRegistration BitArrayTypeReg(
 		.WithWordSize(REHex::BitOffset(0, 1))
 		.WithVariableSizeRegion(&BitArrayRegion_factory));
 	
-REHex::BitArrayRegion::BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset):
+REHex::BitArrayRegion::BitArrayRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const RangeTextColourFunction &text_colour_func):
 	GenericDataRegion(offset, length, virt_offset, virt_offset),
 	doc(doc),
+	text_colour_func(text_colour_func),
 	offset_text_x(-1),
 	data_text_x(-1),
 	bytes_per_line_actual(8) /* Arbitrary initial value */
@@ -223,7 +224,7 @@ void REHex::BitArrayRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_
 			line_data.insert(line_data.end(), begin, end);
 		}
 		
-		draw_bin_line(&doc_ctrl, dc, (x + data_text_x), y, line_data, line_len, 0, data_cur, alternate_row, has_focus, doc_ctrl.special_view_active(), highlight_func, false);
+		draw_bin_line(&doc_ctrl, dc, (x + data_text_x), y, line_data, line_len, 0, data_cur, alternate_row, has_focus, doc_ctrl.special_view_active(), [this](BitOffset offset) { return text_colour_func(offset, BitOffset(0, 1)); }, false);
 		
 		data_cur    += line_len;
 		data_remain -= line_len;

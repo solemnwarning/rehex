@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -37,8 +37,8 @@ namespace REHex
 	template<typename T> class NumericDataTypeRegion: public FixedSizeValueRegion
 	{
 		protected:
-			NumericDataTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const std::string &type_label):
-				FixedSizeValueRegion(doc, offset, length, virt_offset, type_label)
+			NumericDataTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func, const std::string &type_label):
+				FixedSizeValueRegion(doc, offset, length, virt_offset, text_colour_func, type_label)
 			{
 				assert(length == sizeof(T));
 			}
@@ -48,7 +48,7 @@ namespace REHex
 		class NAME: public NumericDataTypeRegion<T> \
 		{ \
 			public: \
-				NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset); \
+				NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func); \
 				\
 			protected: \
 				virtual std::string load_value() const override; \

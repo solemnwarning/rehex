@@ -1615,6 +1615,64 @@ void REHex::Tab::repopulate_regions()
 		return;
 	}
 	
+	DocumentCtrl::GenericDataRegion::RangeTextColourFunction text_colour_func = [this](BitOffset offset, BitOffset length)
+	{
+		const BitRangeMap<int> &highlights = doc->get_highlights();
+		
+		auto highlight = highlights.get_range(offset);
+		if(highlight != highlights.end())
+		{
+			const HighlightColourMap &highlight_colours = doc->get_highlight_colours();
+			
+			auto hc = highlight_colours.find(highlight->second);
+			if(hc != highlight_colours.end())
+			{
+				return TextColour(hc->second.secondary_colour, hc->second.primary_colour);
+			}
+		}
+		
+		DirtyByteDisplayMode dbd = wxGetApp().settings->get_dirty_byte_display_mode();
+		switch(dbd)
+		{
+			case DirtyByteDisplayMode::NORMAL:
+				break;
+				
+			case DirtyByteDisplayMode::COLOURED_UNLESS_BCM:
+				if(doc_ctrl->get_byte_colour_map() != nullptr)
+				{
+					break;
+				}
+				
+			case DirtyByteDisplayMode::COLOURED:
+				if(doc->is_range_dirty(offset, length))
+				{
+					return TextColour(
+						(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
+						(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
+				}
+				
+				break;
+				
+			case DirtyByteDisplayMode::INVERTED_UNLESS_BCM:
+				if(doc_ctrl->get_byte_colour_map() != nullptr)
+				{
+					break;
+				}
+				
+			case DirtyByteDisplayMode::INVERTED:
+				if(doc->is_range_dirty(offset, length))
+				{
+					return TextColour(
+						(*active_palette)[Palette::PAL_DIRTY_TEXT_BG],
+						(*active_palette)[Palette::PAL_DIRTY_TEXT_FG]);
+				}
+				
+				break;
+		}
+		
+		return TextColour::INVALID();
+	};
+	
 	std::vector<DocumentCtrl::Region*> regions;
 	
 	if(document_display_mode == DDM_VIRTUAL)
@@ -1639,7 +1697,7 @@ void REHex::Tab::repopulate_regions()
 				off_t virt_offset_base = i->first.offset;
 				off_t length = i->first.length;
 				
-				std::vector<DocumentCtrl::Region*> v_regions = compute_regions(doc, real_offset_base, virt_offset_base, length, inline_comment_mode);
+				std::vector<DocumentCtrl::Region*> v_regions = compute_regions(doc, real_offset_base, virt_offset_base, length, inline_comment_mode, text_colour_func);
 				regions.insert(regions.end(), v_regions.begin(), v_regions.end());
 			}
 		}
@@ -1650,23 +1708,23 @@ void REHex::Tab::repopulate_regions()
 		
 		PROFILE_INNER_BLOCK("prepare regions (file)");
 		
-		std::vector<DocumentCtrl::Region*> file_regions = compute_regions(doc, 0, 0, doc->buffer_length(), inline_comment_mode);
+		std::vector<DocumentCtrl::Region*> file_regions = compute_regions(doc, 0, 0, doc->buffer_length(), inline_comment_mode, text_colour_func);
 		
 		if(file_regions.empty())
 		{
 			assert(doc->buffer_length() == 0);
 			
 			/* Empty buffers need a data region too! */
-			file_regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, 0, 0, 0));
+			file_regions.push_back(new DocumentCtrl::DataRegion(doc, 0, 0, 0, text_colour_func));
 		}
-		else if(dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(file_regions.back()) == NULL)
+		else if(dynamic_cast<DocumentCtrl::DataRegion*>(file_regions.back()) == NULL)
 		{
-			/* End region isn't a DataRegionDocHighlight - means its a comment or a custom
-			 * data region type. Push one on the end so there's somewhere to put the cursor to
-			 * insert more data at the end.
+			/* End region isn't a DataRegion - means its a comment or a custom data region type.
+			 * Push one on the end so there's somewhere to put the cursor to insert more data at
+			 * the end.
 			*/
 			
-			file_regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, doc->buffer_length(), 0, doc->buffer_length()));
+			file_regions.push_back(new DocumentCtrl::DataRegion(doc, doc->buffer_length(), 0, doc->buffer_length(), text_colour_func));
 		}
 		
 		regions.insert(regions.end(), file_regions.begin(), file_regions.end());
@@ -1699,7 +1757,7 @@ void REHex::Tab::repopulate_regions_thaw()
 	}
 }
 
-std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode)
+std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode, const DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func)
 {
 	auto &comments = doc->get_comments();
 	auto &types = doc->get_data_types();
@@ -1828,7 +1886,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			
 			assert(dr_length > BitOffset::ZERO);
 			
-			regions.push_back(dt->region_factory(doc, next_data, dr_length, next_virt));
+			regions.push_back(dt->region_factory(doc, next_data, dr_length, next_virt, text_colour_func));
 		}
 		else{
 			/* DataRegion only allows whole-byte lengths, so if we have any spare bits
@@ -1837,7 +1895,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 			
 			if(dr_length < BitOffset(1, 0))
 			{
-				regions.push_back(new BitArrayRegion(doc, next_data, dr_length, next_virt));
+				regions.push_back(new BitArrayRegion(doc, next_data, dr_length, next_virt, text_colour_func));
 			}
 			else{
 				if(!dr_length.byte_aligned())
@@ -1845,7 +1903,7 @@ std::vector<REHex::DocumentCtrl::Region*> REHex::Tab::compute_regions(SharedDocu
 					dr_length = BitOffset(dr_length.byte(), 0);
 				}
 				
-				regions.push_back(new DocumentCtrl::DataRegionDocHighlight(doc, next_data, dr_length, next_virt));
+				regions.push_back(new DocumentCtrl::DataRegion(doc, next_data, dr_length, next_virt, text_colour_func));
 			}
 		}
 		

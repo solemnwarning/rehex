@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,9 +33,10 @@
 static const off_t SOFT_IR_LIMIT = 10240; /* 100KiB */
 static const size_t INSTRUCTION_CACHE_LIMIT = 250000;
 
-REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, cs_arch arch, cs_mode mode):
+REHex::DisassemblyRegion::DisassemblyRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func, cs_arch arch, cs_mode mode):
 	GenericDataRegion(offset, length, virt_offset, virt_offset),
 	doc(doc),
+	text_colour_func(text_colour_func),
 	arch(arch),
 	preferred_asm_syntax(AsmSyntax::INTEL)
 {
@@ -207,35 +208,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	BitOffset selection_off, selection_len;
 	std::tie(selection_off, selection_len) = doc_ctrl.get_selection_in_region(this);
 	
-	auto base_highlight_func = [&](BitOffset offset)
-	{
-		/* TODO: Support secondary selection. */
-		
-		const BitRangeMap<int> &highlights = doc->get_highlights();
-		
-		auto highlight = highlights.get_range(offset);
-		if(highlight != highlights.end())
-		{
-			const HighlightColourMap &highlight_colours = doc->get_highlight_colours();
-			
-			auto hc = highlight_colours.find(highlight->second);
-			if(hc != highlight_colours.end())
-			{
-				return Highlight(hc->second.secondary_colour, hc->second.primary_colour);
-			}
-		}
-		
-		if(doc->is_byte_dirty(offset))
-		{
-			return Highlight(
-				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
-				(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
-		}
-		
-		return (Highlight)(NoHighlight());
-	};
-	
-	const Highlight hex_selection_highlight(
+	const TextColour hex_selection_highlight(
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.hex_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
@@ -248,11 +221,11 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			return hex_selection_highlight;
 		}
 		else{
-			return base_highlight_func(offset);
+			return text_colour_func(offset, BitOffset(0, 4));
 		}
 	};
 	
-	const Highlight ascii_selection_highlight(
+	const TextColour ascii_selection_highlight(
 		(*active_palette)[Palette::PAL_SELECTED_TEXT_FG],
 		(doc_ctrl.ascii_view_active()
 			? (*active_palette)[Palette::PAL_SELECTED_TEXT_BG]
@@ -265,12 +238,12 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			return ascii_selection_highlight;
 		}
 		else{
-			return base_highlight_func(offset);
+			return text_colour_func(offset, BitOffset(1, 0));
 		}
 	};
 
 	
-	auto set_text_attribs = [&](bool invert, bool selected)
+	auto set_text_attribs = [&](bool invert, bool selected, const BitOffset *inst_offset = NULL, const off_t *inst_length = NULL)
 	{
 		dc.SetFont(doc_ctrl.get_font());
 		dc.SetBackgroundMode(wxSOLID);
@@ -290,6 +263,20 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			dc.SetTextBackground(selected_bg_colour);
 		}
 		else{
+			if(inst_offset != NULL)
+			{
+				assert(inst_length != NULL);
+				
+				TextColour inst_colour = text_colour_func(*inst_offset, *inst_length);
+				if(inst_colour)
+				{
+					dc.SetTextForeground(inst_colour.fg_colour);
+					dc.SetTextBackground(inst_colour.bg_colour);
+					
+					return;
+				}
+			}
+			
 			dc.SetTextForeground((*active_palette)[alternate ? Palette::PAL_ALTERNATE_TEXT_FG : Palette::PAL_NORMAL_TEXT_FG]);
 			dc.SetTextBackground((*active_palette)[Palette::PAL_NORMAL_TEXT_BG]);
 		}
@@ -335,7 +322,8 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr->length)) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
 		bool selected = selection_len > 0 && selection_off <= abs_inst_offset && (selection_off + selection_len) >= (abs_inst_offset + BitOffset::BYTES(instr->length));
 		
-		set_text_attribs(invert, selected);
+		BitOffset actual_instr_offset = d_offset + instr->offset;
+		set_text_attribs(invert, selected, &actual_instr_offset, &(instr->length));
 		
 		dc.DrawText(instr->disasm, x + code_text_x, y);
 		

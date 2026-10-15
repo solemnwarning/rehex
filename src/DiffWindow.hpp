@@ -107,20 +107,6 @@ namespace REHex {
 			static DiffWindow *instance;
 			
 		private:
-			class DiffDataRegion: public DocumentCtrl::DataRegion
-			{
-				private:
-					DiffWindow *diff_window;
-					Range *range;
-					
-				public:
-					DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range);
-					
-				protected:
-					virtual int calc_width(REHex::DocumentCtrl &doc) override;
-					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const override;
-			};
-			
 			class MessageRegion: public DocumentCtrl::Region
 			{
 				private:
@@ -129,8 +115,10 @@ namespace REHex {
 					off_t data_offset;
 					std::string message;
 					
+					bool m_datum;
+					
 				public:
-					MessageRegion(Document *document, off_t data_offset, const std::string &message);
+					MessageRegion(Document *document, off_t data_offset, const std::string &message, bool is_datum);
 					
 					virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc, int64_t y_lines_rel) override;
 					
@@ -138,6 +126,7 @@ namespace REHex {
 					virtual int calc_width(REHex::DocumentCtrl &doc_ctrl) override;
 					virtual void calc_height(DocumentCtrl &doc_ctrl) override;
 					virtual void draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) override;
+					virtual bool is_datum() const override;
 			};
 			
 			class InvisibleDataRegion: public DocumentCtrl::DataRegion

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -70,7 +70,7 @@ namespace REHex
 			bool partially_selected(DocumentCtrl *doc_ctrl);
 			
 		protected:
-			FixedSizeValueRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const std::string &type_label);
+			FixedSizeValueRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func, const std::string &type_label);
 			
 			/**
 			 * @brief Load the value from the file for display.

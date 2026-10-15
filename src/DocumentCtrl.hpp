@@ -97,6 +97,19 @@ namespace REHex {
 					*/
 					virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel) = 0;
 					
+					/**
+					 * @brief Check if this region is used for position synchronisation.
+					 *
+					 * If this method returns true, the vertical offset (y_offset) of it and the
+					 * corresponding region in each linked DocumentCtrl will be padded as necessary
+					 * to ensure alignment.
+					 *
+					 * The default implementation always returns false.
+					 *
+					 * The datum-ness of a region MUST NOT change.
+					*/
+					virtual bool is_datum() const;
+					
 				protected:
 					Region(BitOffset indent_offset, BitOffset indent_length);
 					
@@ -142,9 +155,9 @@ namespace REHex {
 						NoHighlight(): Highlight() {}
 					};
 					
-					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool has_focus, bool view_active, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
-					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool has_focus, bool view_active, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
-					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool has_focus, bool view_active, const std::function<Highlight(BitOffset)> &highlight_at_off, bool is_last_line);
+					static void draw_hex_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool has_focus, bool view_active, const std::function<TextColour(BitOffset)> &highlight_at_off, bool is_last_line);
+					static void draw_ascii_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const unsigned char *data, size_t data_len, size_t data_extra_pre, size_t data_extra_post, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool has_focus, bool view_active, const std::function<TextColour(BitOffset)> &highlight_at_off, bool is_last_line);
+					static void draw_bin_line(DocumentCtrl *doc_ctrl, wxDC &dc, int x, int y, const std::vector<bool> &data, BitOffset data_len, unsigned int pad_bytes, BitOffset base_off, bool alternate_row, bool has_focus, bool view_active, const std::function<TextColour(BitOffset)> &highlight_at_off, bool is_last_line);
 					
 					/**
 					 * @brief Calculate offset of byte at X co-ordinate.
@@ -174,6 +187,8 @@ namespace REHex {
 					GenericDataRegion(BitOffset d_offset, BitOffset d_length, BitOffset virt_offset, BitOffset indent_offset);
 					
 				public:
+					typedef std::function<TextColour(BitOffset offset, BitOffset length)> RangeTextColourFunction;
+					
 					const BitOffset d_offset;
 					const BitOffset d_length;
 					
@@ -329,6 +344,7 @@ namespace REHex {
 			{
 				protected:
 					SharedDocumentPointer document;
+					RangeTextColourFunction text_colour_func;
 					
 					int offset_text_x;  /* Virtual X coord of left edge of offsets. */
 					int hex_text_x;     /* Virtual X coord of left edge of hex data. */
@@ -338,7 +354,7 @@ namespace REHex {
 					unsigned int first_line_pad_bytes;   /* Number of bytes to pad first line with. */
 					
 				public:
-					DataRegion(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
+					DataRegion(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset, const RangeTextColourFunction &text_colour_func);
 					
 					int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes) const;
 					static int calc_width_for_bytes(DocumentCtrl &doc_ctrl, unsigned int line_bytes, int indent_depth);
@@ -373,22 +389,11 @@ namespace REHex {
 					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					
-					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const;
-					
 				private:
 					std::unique_ptr<CharacterFinder> char_finder;
 					std::pair<BitOffset,off_t> get_char_at(BitOffset offset);
 					
 				friend DocumentCtrl;
-			};
-			
-			class DataRegionDocHighlight: public DataRegion
-			{
-				public:
-					DataRegionDocHighlight(SharedDocumentPointer &document, BitOffset d_offset, BitOffset d_length, BitOffset virt_offset);
-					
-				protected:
-					virtual Highlight highlight_at_off(BitOffset off, BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const override;
 			};
 			
 			class CommentRegion: public Region
@@ -661,6 +666,9 @@ namespace REHex {
 			
 			/** List of iterators into data_regions, sorted by virt_offset. */
 			std::vector< std::vector<GenericDataRegion*>::iterator > data_regions_sorted_virt;
+			
+			/** List of iterators into regions where the Region::is_datum() method returned true. */
+			std::vector< std::vector<Region*>::iterator > datum_regions;
 			
 			/** Maximum virtual offset in data regions (plus one). */
 			BitOffset end_virt_offset;

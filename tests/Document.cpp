@@ -26,6 +26,7 @@
 
 #include "testutil.hpp"
 
+#include "../src/DataType.hpp"
 #include "../src/document.hpp"
 #include "../src/Events.hpp"
 #include "../src/TempDirectory.hpp"
@@ -4368,6 +4369,36 @@ TEST_F(DocumentTest, LoadMetadataDataTypesBitAligned)
 
 TEST_F(DocumentTest, SerialiseMetadataDataTypesWithOptions)
 {
+	ConfigurableDataTypeRegistration type1(
+		"type1", "Type 1", {},
+		
+		/* configurator */
+		[](wxWindow *parent)
+		{
+			return (json_t*)(NULL);
+		},
+		
+		/* type factory */
+		[](const json_t *options)
+		{
+			return DataType();
+		});
+	
+	ConfigurableDataTypeRegistration type2(
+		"type2", "Type 2", {},
+		
+		/* configurator */
+		[](wxWindow *parent)
+		{
+			return (json_t*)(NULL);
+		},
+		
+		/* type factory */
+		[](const json_t *options)
+		{
+			return DataType();
+		});
+	
 	std::vector<unsigned char> zero_1k(1024, 0);
 	doc->insert_data(0, zero_1k.data(), zero_1k.size());
 	

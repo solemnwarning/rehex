@@ -707,6 +707,7 @@ TEST_OBJS := \
 	tests/CommentTree.$(LIB_BUILD_TYPE).o \
 	tests/ConsoleBuffer.$(LIB_BUILD_TYPE).o \
 	tests/CustomNumericType.$(LIB_BUILD_TYPE).o \
+	tests/DataAnalyser.$(LIB_BUILD_TYPE).o \
 	tests/DataType.$(LIB_BUILD_TYPE).o \
 	tests/DataView.$(LIB_BUILD_TYPE).o \
 	tests/DataHistogramAccumulator.$(LIB_BUILD_TYPE).o \

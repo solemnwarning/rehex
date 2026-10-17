@@ -1259,16 +1259,52 @@ bool REHex::Document::set_data_type(BitOffset offset, BitOffset length, const st
 	
 	TypeInfo type_info(type, options);
 	
-	_tracked_change("set data type",
-		[this, offset, length, type_info]()
+	BitOffset da_offset = offset;
+	BitOffset da_length = length;
+	
+	if(offset > BitOffset::ZERO)
+	{
+		auto prev_adjacent_type = types.get_range(offset - BitOffset(0, 1));
+		if(prev_adjacent_type != types.end() && prev_adjacent_type->second == type_info)
 		{
+			/* Range is immediately preceeded by one which already has the same TypeInfo, so we
+			 * must blat any existing analyser covering it so that a new merged one is created.
+			*/
+			
+			da_offset -= BitOffset(0, 1);
+			da_length += BitOffset(0, 1);
+		}
+	}
+	
+	{
+		auto next_adjacent_type = types.get_range(offset + length);
+		if(next_adjacent_type != types.end() && next_adjacent_type->second == type_info)
+		{
+			/* Range is immediately followed by one which already has the same TypeInfo, so we
+			 * must blat any existing analyser covering it so that a new merged one is created.
+			*/
+			
+			da_length += BitOffset(0, 1);
+		}
+	}
+	
+	auto replaced_types = types.get_slice(offset, length);
+	
+	_tracked_change("set data type",
+		[this, offset, length, type_info, da_offset, da_length]()
+		{
+			destroy_analysers(da_offset, da_length);
 			types.set_range(offset, length, type_info);
+			create_analysers();
 			_raise_types_changed();
 		},
 		
-		[]()
+		[this, replaced_types, da_offset, da_length]()
 		{
-			/* Data type changes are undone implicitly. */
+			destroy_analysers(da_offset, da_length);
+			types.set_slice(replaced_types);
+			create_analysers();
+			_raise_types_changed();
 		});
 	
 	return true;
@@ -1278,6 +1314,8 @@ bool REHex::Document::set_data_type_bulk(std::vector<std::tuple<BitOffset, BitOf
 {
 	std::vector< std::pair<BitRangeMap<TypeInfo>::Range, TypeInfo> > types2;
 	types2.reserve(types.size());
+	
+	BitRangeMap<TypeInfo> replaced_types;
 	
 	for(auto it = types.begin(); it != types.end(); ++it)
 	{
@@ -1291,18 +1329,25 @@ bool REHex::Document::set_data_type_bulk(std::vector<std::tuple<BitOffset, BitOf
 		}
 		
 		types2.emplace_back(BitRangeMap<TypeInfo>::Range(offset, length), ti);
+		
+		replaced_types.set_slice(this->types.get_slice(offset, length));
 	}
 	
 	_tracked_change("set data type",
 		[this, types2]()
 		{
-			this->types.set_bulk(std::vector< std::pair<BitRangeMap<TypeInfo>::Range, TypeInfo> >(types2));
+			destroy_analysers(BitOffset::ZERO, BitOffset::MAX);
+			this->types.set_bulk(std::vector< std::pair<BitRangeMap<TypeInfo>::Range, TypeInfo> >(types2)); // XXX
+			create_analysers();
 			_raise_types_changed();
 		},
 		
-		[]()
+		[this, replaced_types]()
 		{
-			/* Data type changes are undone implicitly. */
+			destroy_analysers(BitOffset::ZERO, BitOffset::MAX);
+			this->types.set_slice(replaced_types);
+			create_analysers();
+			_raise_types_changed();
 		});
 	
 	return true;
@@ -1331,6 +1376,18 @@ const REHex::CharacterEncoder *REHex::Document::get_text_encoder(BitOffset offse
 	
 	static REHex::CharacterEncoderASCII ascii_encoder;
 	return &ascii_encoder;
+}
+
+REHex::DataAnalyser *REHex::Document::get_analyser(BitOffset offset) const
+{
+	auto it = m_analysers.get_range(offset);
+	if(it != m_analysers.end())
+	{
+		return it->second.get();
+	}
+	else{
+		return NULL;
+	}
 }
 
 bool REHex::Document::set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length)
@@ -1585,12 +1642,6 @@ void REHex::Document::undo()
 		highlight_colour_map = trans.old_highlight_colours;
 		highlights   = trans.old_highlights;
 		
-		if(types != trans.old_types)
-		{
-			types = trans.old_types;
-			_raise_types_changed();
-		}
-		
 		if(real_to_virt_segs != trans.old_real_to_virt_segs || virt_to_real_segs != trans.old_virt_to_real_segs)
 		{
 			real_to_virt_segs = trans.old_real_to_virt_segs;
@@ -1794,6 +1845,8 @@ void REHex::Document::_UNTRACKED_overwrite_data(BitOffset offset, const unsigned
 	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= byte_offset);
 	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (byte_offset + byte_length));
 	
+	pause_analysers(BitOffset(byte_offset, 0), BitOffset(byte_length, 0));
+	
 	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, byte_offset, byte_length);
 	ProcessEvent(data_overwriting_event);
 	
@@ -1811,6 +1864,8 @@ void REHex::Document::_UNTRACKED_overwrite_data(BitOffset offset, const unsigned
 		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, byte_offset, byte_length);
 		ProcessEvent(data_overwrite_aborted_event);
 	}
+	
+	resume_analysers(BitOffset(byte_offset, 0), BitOffset(byte_length, 0));
 }
 
 void REHex::Document::_UNTRACKED_overwrite_bits(BitOffset offset, const std::vector<bool> &data, const ByteRangeMap<unsigned int> &data_seq_slice)
@@ -1824,6 +1879,8 @@ void REHex::Document::_UNTRACKED_overwrite_bits(BitOffset offset, const std::vec
 	
 	assert(data_seq_slice.empty() || data_seq_slice.front().first.offset <= byte_offset);
 	assert(data_seq_slice.empty() || (data_seq_slice.back().first.offset + data_seq_slice.back().first.length) >= (byte_offset + byte_length));
+	
+	pause_analysers(BitOffset(byte_offset, 0), BitOffset(byte_length, 0));
 	
 	OffsetLengthEvent data_overwriting_event(this, DATA_OVERWRITING, byte_offset, byte_length);
 	ProcessEvent(data_overwriting_event);
@@ -1842,6 +1899,8 @@ void REHex::Document::_UNTRACKED_overwrite_bits(BitOffset offset, const std::vec
 		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, byte_offset, byte_length);
 		ProcessEvent(data_overwrite_aborted_event);
 	}
+	
+	resume_analysers(BitOffset(byte_offset, 0), BitOffset(byte_length, 0));
 }
 
 /* Insert some data into the Buffer and update our own data structures. */
@@ -1853,6 +1912,16 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 	OffsetLengthEvent data_inserting_event(this, DATA_INSERTING, offset, length);
 	ProcessEvent(data_inserting_event);
 	
+	{
+		auto it = m_analysers.get_range(offset);
+		if(it != m_analysers.end())
+		{
+			m_analysers.erase(it);
+		}
+	}
+	
+	pause_analysers(offset, BitOffset::MAX);
+	
 	bool ok = buffer->insert_data(offset, data, length);
 	assert(ok);
 	
@@ -1863,6 +1932,42 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		
 		types.data_inserted(offset, length);
 		types.set_range(offset, length, TypeInfo(""));
+		
+		{
+			auto it = m_analysers.end();
+			
+			if(it != m_analysers.begin())
+			{
+				--it;
+				
+				std::vector< std::tuple<BitOffset, BitOffset, std::unique_ptr<DataAnalyser> > > tmp;
+				
+				while(it->first.offset.byte() >= offset)
+				{
+					BitOffset analyser_offset = it->first.offset + BitOffset(length, 0);
+					BitOffset analyser_length = it->first.length;
+					
+					std::unique_ptr<DataAnalyser> analyser;
+					std::tie(analyser, it) = m_analysers.remove_erase(it);
+					
+					analyser->rebase(analyser_offset);
+					tmp.emplace_back(analyser_offset, analyser_length, std::move(analyser));
+					
+					if(it == m_analysers.begin())
+					{
+						break;
+					}
+					else{
+						--it;
+					}
+				}
+				
+				for(auto it = tmp.begin(); it != tmp.end(); ++it)
+				{
+					m_analysers.insert(std::get<0>(*it), std::get<1>(*it), std::move(std::get<2>(*it)));
+				}
+			}
+		}
 		
 		OffsetLengthEvent data_insert_event(this, DATA_INSERT, offset, length);
 		ProcessEvent(data_insert_event);
@@ -1886,6 +1991,9 @@ void REHex::Document::_UNTRACKED_insert_data(off_t offset, const unsigned char *
 		OffsetLengthEvent data_insert_aborted_event(this, DATA_INSERT_ABORTED, offset, length);
 		ProcessEvent(data_insert_aborted_event);
 	}
+	
+	resume_analysers(offset, BitOffset::MAX);
+	create_analysers();
 }
 
 void REHex::Document::_update_mappings_data_inserted(off_t offset, off_t length)
@@ -1965,6 +2073,11 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 	OffsetLengthEvent data_erasing_event(this, DATA_ERASING, offset, length);
 	ProcessEvent(data_erasing_event);
 	
+	destroy_analysers(offset, length);
+	pause_analysers(offset, BitOffset::MAX);
+	
+	// TODO: Check for adjacent analysers
+	
 	bool ok = buffer->erase_data(offset, length);
 	assert(ok);
 	
@@ -1973,6 +2086,14 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		data_seq.data_erased(offset, length);
 		
 		types.data_erased(offset, length);
+		
+		for(auto it = m_analysers.get_range_in(offset, BitOffset::MAX); it != m_analysers.end(); ++it)
+		{
+			assert(it->first.offset >= (offset + length));
+			it->second->rebase(it->first.offset - length);
+		}
+		
+		m_analysers.data_erased(offset, length);
 		
 		OffsetLengthEvent data_erase_event(this, DATA_ERASE, offset, length);
 		ProcessEvent(data_erase_event);
@@ -2002,6 +2123,9 @@ void REHex::Document::_UNTRACKED_erase_data(off_t offset, off_t length)
 		OffsetLengthEvent data_erase_aborted_event(this, DATA_ERASE_ABORTED, offset, length);
 		ProcessEvent(data_erase_aborted_event);
 	}
+	
+	resume_analysers(offset, BitOffset::MAX);
+	create_analysers();
 }
 
 bool REHex::Document::_virt_to_real_segs_data_erased(off_t offset, off_t length)
@@ -2644,6 +2768,76 @@ void REHex::Document::OnColourPaletteChanged(wxCommandEvent &event)
 {
 	highlight_colour_map.set_default_lightness(active_palette->get_default_highlight_lightness());
 	event.Skip();
+}
+
+void REHex::Document::create_analysers()
+{
+	for(auto it = types.begin(); it != types.end(); ++it)
+	{
+		if(it->second.name == "")
+		{
+			/* No assigned data type. */
+			continue;
+		}
+		
+		auto existing_analyser = m_analysers.get_range_in(it->first.offset, it->first.length);
+		if(existing_analyser != m_analysers.end())
+		{
+			assert(existing_analyser->first.offset == it->first.offset);
+			assert(existing_analyser->first.length == it->first.length);
+			
+			continue;
+		}
+		
+		const DataTypeRegistration *treg = DataTypeRegistry::get_registration(it->second.name);
+		assert(treg != NULL);
+		
+		if(treg != NULL)
+		{
+			std::shared_ptr<const DataType> dtype = treg->get_type(it->second.options);
+			
+			if(dtype->analyser_factory)
+			{
+				std::unique_ptr<DataAnalyser> analyser = dtype->analyser_factory(this, it->first.offset, it->first.length);
+				m_analysers.insert(it->first.offset, it->first.length, std::move(analyser));
+			}
+		}
+	}
+}
+
+void REHex::Document::destroy_analysers(BitOffset offset, BitOffset length)
+{
+	auto it = m_analysers.get_range_in(offset, length);
+	BitOffset end = add_clamp_overflow(offset, length);
+	
+	while(it != m_analysers.end() && it->first.offset < end)
+	{
+		it = m_analysers.erase(it);
+	}
+}
+
+void REHex::Document::pause_analysers(BitOffset offset, BitOffset length)
+{
+	auto it = m_analysers.get_range_in(offset, length);
+	BitOffset end = add_clamp_overflow(offset, length);
+	
+	while(it != m_analysers.end() && it->first.offset < end)
+	{
+		it->second->pause();
+		++it;
+	}
+}
+
+void REHex::Document::resume_analysers(BitOffset offset, BitOffset length)
+{
+	auto it = m_analysers.get_range_in(offset, length);
+	BitOffset end = add_clamp_overflow(offset, length);
+	
+	while(it != m_analysers.end() && it->first.offset < end)
+	{
+		it->second->resume();
+		++it;
+	}
 }
 
 bool REHex::Document::ProcessEvent(wxEvent &event)

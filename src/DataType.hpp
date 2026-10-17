@@ -109,6 +109,54 @@ namespace REHex
 	typedef std::function<DocumentCtrl::Region*(SharedDocumentPointer &document, BitOffset offset, BitOffset length, BitOffset virt_offset, const DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func)> RegionFactoryFunction;
 	
 	/**
+	 * @brief Data type analyser class.
+	 *
+	 * An implementation of this class performs background analysis of a range of bytes annotated
+	 * with a data type, such as finding and caching boundaries of variable-length records within
+	 * the data block.
+	 *
+	 * This class is instantiated by Document for each annotated range of bytes in the document and
+	 * destroyed or recreated as necessary when types are changed, notably:
+	 *
+	 * - When the data type of one or more bytes in the region is changed.
+	 * - When the type of bytes adjacent to the region are changed to the same type.
+	 * - When bytes within the region are inserted or removed from the file.
+	 *
+	 * DataAnalyser class implementations should be idempotent and handle being destroyed at any
+	 * time. Implementations do not need to worry about handling data type changes, insertions or
+	 * removals because Document will automatically destroy the DataAnalyser and create a new
+	 * instance. Implementations DO need to detect and handle overwrites within their assigned
+	 * region.
+	*/
+	class DataAnalyser
+	{
+		public:
+			virtual ~DataAnalyser() = default;
+			
+			/**
+			 * @brief Pause ongoing analysis.
+			 *
+			 * Pause any ongoing analysis, comitting or discarding any pending analysis
+			 * before returning.
+			*/
+			virtual void pause() = 0;
+			
+			/**
+			 * @brief Resume analysis.
+			*/
+			virtual void resume() = 0;
+			
+			/**
+			 * @brief Change the base offset.
+			 *
+			 * This method will be called when the position of already-analysed data is changed
+			 * by data before it being inserted/erased. This method will only be called when
+			 * analysis is paused.
+			*/
+			virtual void rebase(BitOffset offset);
+	};
+	
+	/**
 	 * @brief An instance of a data type.
 	 *
 	 * This class describes the characteristics of the data and how to interact with it. These
@@ -156,6 +204,16 @@ namespace REHex
 			*/
 			const CharacterEncoder *encoder;
 			
+			typedef std::function< std::unique_ptr<DataAnalyser>(Document *document, BitOffset offset, BitOffset length)> DataAnalyserFactoryFunction;
+			
+			/**
+			 * @brief DataAnalyser class factory function.
+			 *
+			 * This function creates a DataAnalyser class for processing a block of data
+			 * using this data type. If not specified, none will be created.
+			*/
+			DataAnalyserFactoryFunction analyser_factory;
+			
 			/**
 			 * @brief Initialise a DataType with nothing set.
 			*/
@@ -183,6 +241,11 @@ namespace REHex
 			 * of the DataType object.
 			*/
 			DataType WithCharacterEncoder(const CharacterEncoder *encoder);
+			
+			/**
+			 * @brief Specify a DataAnalyser factory function.
+			*/
+			DataType WithDataAnalyser(const DataAnalyserFactoryFunction &analyser_factory);
 	};
 	
 	/**

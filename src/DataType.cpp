@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -184,6 +184,16 @@ REHex::DataType REHex::DataType::WithCharacterEncoder(const CharacterEncoder *en
 	return dt_copy;
 }
 
+REHex::DataType REHex::DataType::WithDataAnalyser(const DataAnalyserFactoryFunction &analyser_factory)
+{
+	assert(analyser_factory);
+	
+	DataType dt_copy(*this);
+	dt_copy.analyser_factory = analyser_factory;
+	
+	return dt_copy;
+}
+
 REHex::StaticDataTypeRegistration::StaticDataTypeRegistration(const std::string &name, const std::string &label, const std::vector<std::string> &groups, DataType type):
 	DataTypeRegistration(name, label, groups),
 	m_type(std::make_shared<DataType>(type))
@@ -239,3 +249,5 @@ json_t *REHex::ConfigurableDataTypeRegistration::configure(wxWindow *parent) con
 {
 	return m_configurator(parent);
 }
+
+void REHex::DataAnalyser::rebase(BitOffset offset) {}

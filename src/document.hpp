@@ -52,6 +52,8 @@ namespace REHex {
 	
 	wxDECLARE_EVENT(EVENT_RECURSION_FIXUP, wxCommandEvent);
 	
+	class DataAnalyser;
+	
 	/**
 	 * @brief Data and metadata of an open file.
 	 *
@@ -323,6 +325,16 @@ namespace REHex {
 			
 			const CharacterEncoder *get_text_encoder(BitOffset offset) const;
 			
+			/**
+			 * @brief Get the DataAnalyser instance covering a specific offset.
+			 *
+			 * Returns a borrowed pointer which will remain valid until an operation is carried out
+			 * on the Document which may destroy analysers (e.g. setting type or inserting data).
+			 *
+			 * Returns NULL if the type at the offset does not implement a DataAnalyser class.
+			*/
+			DataAnalyser *get_analyser(BitOffset offset) const;
+			
 			bool set_virt_mapping(off_t real_offset, off_t virt_offset, off_t length);
 			void clear_virt_mapping_r(off_t real_offset, off_t length);
 			void clear_virt_mapping_v(off_t virt_offset, off_t length);
@@ -406,7 +418,6 @@ namespace REHex {
 				BitRangeTree<Comment> old_comments;
 				HighlightColourMap old_highlight_colours;
 				BitRangeMap<int> old_highlights;
-				BitRangeMap<TypeInfo> old_types;
 				
 				ByteRangeMap<off_t> old_real_to_virt_segs;
 				ByteRangeMap<off_t> old_virt_to_real_segs;
@@ -420,7 +431,6 @@ namespace REHex {
 					old_comments(doc->get_comments()),
 					old_highlight_colours(doc->get_highlight_colours()),
 					old_highlights(doc->get_highlights()),
-					old_types(doc->get_data_types()),
 					old_real_to_virt_segs(doc->get_real_to_virt_segs()),
 					old_virt_to_real_segs(doc->get_virt_to_real_segs()) {}
 			};
@@ -527,6 +537,28 @@ namespace REHex {
 			void _raise_mappings_changed();
 			
 			void OnColourPaletteChanged(wxCommandEvent &event);
+			
+			BitRangeMap< std::unique_ptr<DataAnalyser> > m_analysers;
+			
+			/**
+			 * @brief Create any missing DataAnalyser objects.
+			*/
+			void create_analysers();
+			
+			/**
+			 * @brief Destroy any DataAnalyser objects intersecting a range of bytes.
+			*/
+			void destroy_analysers(BitOffset offset, BitOffset length);
+			
+			/**
+			 * @brief Pause all DataAnalyser objects intersecting a range of bytes.
+			*/
+			void pause_analysers(BitOffset offset, BitOffset length);
+			
+			/**
+			 * @brief Resume all DataAnalyser objects intersecting a range of bytes.
+			*/
+			void resume_analysers(BitOffset offset, BitOffset length);
 			
 		public:
 			/**

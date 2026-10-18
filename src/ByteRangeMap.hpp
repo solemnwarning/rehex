@@ -96,6 +96,20 @@ namespace REHex
 			}
 			
 		private:
+			template<typename OT2 = OT>
+			static constexpr typename std::enable_if<std::is_same<OT2, off_t>::value, OT>::type
+			OT_INCREMENT()
+			{
+				return 1;
+			}
+			
+			template<typename OT2 = OT>
+			static constexpr typename std::enable_if<std::is_same<OT2, BitOffset>::value, OT>::type
+			OT_INCREMENT()
+			{
+				return BitOffset(0, 1);
+			}
+			
 			T default_value;
 			
 			std::vector< std::pair<Range, T> > ranges;
@@ -265,6 +279,7 @@ namespace REHex
 			void clear() { ranges.clear(); }
 			
 		private:
+			const_iterator get_range_impl(OT offset) const;
 			bool data_inserted_impl(OT offset, OT length);
 			bool data_erased_impl(OT offset, OT length);
 
@@ -328,15 +343,28 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 {
 	{
 		shared_lock lock_guard(lgi_mutex);
+		const_iterator lgi = last_get_iter;
+		lock_guard.unlock();
 		
-		if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
+		if(lgi != ranges.end() && lgi->first.offset <= offset && (lgi->first.offset + lgi->first.length) > offset)
 		{
-			return last_get_iter;
+			/* Detect conditions where the actual get_range() algorithm can return the wrong
+			 * element which would otherwise be unnoticed when the correct one happens to be cached
+			 * in last_get_iter.
+			*/
+			assert(get_range_impl(offset) == lgi);
+			
+			return lgi;
 		}
 	}
 	
+	return get_range_impl(offset);
+}
+
+template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::get_range_impl(OT offset) const
+{
 	/* Starting from the first element after us (or the end of the vector)... */
-	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + 1), 0), T()), &elem_key_less);
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + OT_INCREMENT()), 0), T()), &elem_key_less);
 	
 	/* ...check to see if there is an element prior... */
 	if(i != ranges.begin())

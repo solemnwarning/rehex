@@ -930,6 +930,24 @@ template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(
 	{
 		auto erase_last = std::prev(erase_end);
 		
+		if(erase_begin != ranges.begin() && erase_end != ranges.end())
+		{
+			auto erase_prev = std::prev(erase_begin);
+			
+			if((erase_prev->first.offset + erase_prev->first.length) == offset
+				&& (offset + length) == erase_end->first.offset
+				&& erase_prev->second == erase_end->second)
+			{
+				/* The range that was erased is immediately preceeded and followed by identical
+				 * values which should be merged, so roll them into our erase range.
+				*/
+				
+				erase_begin = erase_prev;
+				erase_last = erase_end;
+				++erase_end;
+			}
+		}
+		
 		OT begin = std::min(erase_begin->first.offset, offset);
 		OT end   = erase_last->first.offset + erase_last->first.length;
 		

@@ -698,6 +698,45 @@ TEST(ByteRangeMap, DataErasedOverlappingMultipleRangesMerge)
 	);
 }
 
+TEST(ByteRangeMap, DataErasedMergesNewlyAdjacentSameValues)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_range( 5,  2, "summer");
+	brm.set_range(10, 20, "spotty");
+	brm.set_range(40, 10, "broken");
+	brm.set_range(60, 10, "spotty");
+	brm.set_range(80,  5, "rinse");
+	
+	brm.data_erased(30, 30);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range( 5,  2), "summer"),
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 30), "spotty"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50,  5), "rinse"),
+	);
+}
+
+TEST(ByteRangeMap, DataErasedDoesNotMergeNewlyAdjacentDistinctValues)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_range( 5,  2, "summer");
+	brm.set_range(10, 20, "spotty");
+	brm.set_range(40, 10, "broken");
+	brm.set_range(60, 10, "spotty2");
+	brm.set_range(80,  5, "rinse");
+	
+	brm.data_erased(30, 30);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range( 5,  2), "summer"),
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "spotty"),
+		std::make_pair(ByteRangeMap<std::string>::Range(30, 10), "spotty2"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50,  5), "rinse"),
+	);
+}
+
 TEST(ByteRangeMap, GetSliceNoMatch)
 {
 	ByteRangeMap<std::string> source;

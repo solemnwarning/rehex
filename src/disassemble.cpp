@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "App.hpp"
+#include "CodeAnalyser.hpp"
 #include "DataType.hpp"
 #include "disassemble.hpp"
 #include "DisassemblyRegion.hpp"
@@ -151,7 +152,12 @@ static void Initialize_disassembler()
 					.WithVariableSizeRegion(
 						[desc](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const REHex::DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func)
 						{
-							return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, text_colour_func, desc.arch, desc.mode);
+							return new REHex::DisassemblyRegion(doc, offset, length, virt_offset, text_colour_func);
+						})
+					.WithDataAnalyser(
+						[desc](REHex::Document *doc, REHex::BitOffset offset, REHex::BitOffset length)
+						{
+							return std::unique_ptr<REHex::DataAnalyser>(new REHex::CodeAnalyser(doc, offset, length, desc.arch, desc.mode));
 						}));
 		}
 		else

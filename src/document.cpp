@@ -2576,24 +2576,42 @@ void REHex::Document::load_metadata(const std::string &filename)
 		throw std::runtime_error(json_err.text);
 	}
 	
-	wxGetApp().bulk_updates_freeze();
+	std::shared_ptr<json_t> meta_guard(meta, [](json_t *p) { json_decref(p); });
 	
-	ScopedTransaction t(this, "Import metadata");
-	load_metadata(meta);
-	t.commit();
+	BitRangeMap<TypeInfo> old_types = types;
 	
-	/* Fire off every metadata change signal. This will trigger an unnecessary amount of
-	 * processing, but there's no way to coalesce these together (yet).
-	*/
-	
-	_raise_comment_modified();
-	_raise_highlights_changed();
-	_raise_types_changed();
-	_raise_mappings_changed();
-	
-	wxGetApp().bulk_updates_thaw();
-	
-	json_decref(meta);
+	_tracked_change("Import metadata",
+		[this, meta_guard]()
+		{
+			wxGetApp().bulk_updates_freeze();
+			
+			load_metadata(meta_guard.get());
+			
+			/* Fire off every metadata change signal. This will trigger an unnecessary amount of
+			 * processing, but there's no way to coalesce these together (yet).
+			*/
+			
+			_raise_comment_modified();
+			_raise_highlights_changed();
+			_raise_types_changed();
+			_raise_mappings_changed();
+			
+			wxGetApp().bulk_updates_thaw();
+		},
+		
+		[this, old_types]()
+		{
+			wxGetApp().bulk_updates_freeze();
+			
+			destroy_analysers(BitOffset::ZERO, BitOffset::MAX);
+			types = old_types;
+			create_analysers();
+			
+			/* Types aren't managed by the undo system - we need to signal the rollback ourselves. */
+			_raise_types_changed();
+			
+			wxGetApp().bulk_updates_thaw();
+		});
 }
 
 void REHex::Document::_load_metadata(const std::string &filename)
@@ -2662,6 +2680,9 @@ void REHex::Document::load_metadata(const json_t *metadata)
 	
 	json_t *write_protect = json_object_get(metadata, "write_protect");
 	set_write_protect(json_is_true(write_protect));
+	
+	destroy_analysers(BitOffset::ZERO, BitOffset::MAX);
+	create_analysers();
 }
 
 void REHex::Document::serialise(FileWriter *file)

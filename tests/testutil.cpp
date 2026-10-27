@@ -244,3 +244,73 @@ std::ostream& operator<<(std::ostream& os, const AutoJSON &json)
 {
 	return os << json.serialise();
 }
+
+ThreadPoolJammer::ThreadPoolJammer(REHex::ThreadPool *pool):
+	m_exit(false),
+	m_waiting(0),
+	m_yield(0)
+{
+	m_waiting = pool->num_threads();
+	
+	/* Create unlimited concurrency task to occupy all threads. */
+	
+	m_task = pool->queue_task([this]()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		
+		assert(m_waiting > 0);
+		--m_waiting;
+		
+		m_cv.notify_all();
+		
+		m_cv.wait(lock, [this]()
+		{
+			return m_exit || m_yield > 0;
+		});
+		
+		if(m_yield)
+		{
+			++m_waiting;
+			--m_yield;
+			
+			m_cv.notify_all();
+			
+			return false;
+		}
+		else{
+			return true;
+		}
+	}, -1);
+	
+	/* Wait until threads are occupied. */
+	std::unique_lock<std::mutex> lock(m_mutex);
+	m_cv.wait(lock, [&]() { return m_waiting == 0; });
+}
+
+ThreadPoolJammer::~ThreadPoolJammer()
+{
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_exit = true;
+	}
+	
+	m_cv.notify_all();
+	
+	m_task.join();
+}
+
+void ThreadPoolJammer::yield(int count)
+{
+	assert(m_yield == 0);
+	
+	std::unique_lock<std::mutex> lock(m_mutex);
+	
+	m_yield = count;
+	
+	m_cv.notify_all();
+	
+	m_cv.wait(lock, [&]()
+	{
+		return m_yield == 0 && m_waiting == 0;
+	});
+}

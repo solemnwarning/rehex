@@ -18,7 +18,6 @@
 #ifndef REHEX_DISASSEMBLYREGION_HPP
 #define REHEX_DISASSEMBLYREGION_HPP
 
-#include <capstone/capstone.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -28,6 +27,7 @@
 
 #include "AppSettings.hpp"
 #include "ByteRangeSet.hpp"
+#include "CodeAnalyser.hpp"
 #include "DocumentCtrl.hpp"
 #include "Events.hpp"
 #include "SharedDocumentPointer.hpp"
@@ -36,102 +36,35 @@ namespace REHex
 {
 	class DisassemblyRegion: public DocumentCtrl::GenericDataRegion
 	{
-		public:
-			struct Instruction {
-				off_t offset;  /**< Offset of instruction, relative to d_offset. */
-				off_t length;
-				std::vector<unsigned char> data;
-				std::string disasm;
-				int64_t rel_y_offset;
-			};
-			
-			/**
-			 * @brief A range of whole instructions in the file.
-			*/
-			struct InstructionRange
-			{
-				off_t offset;  /**< Offset to range within file, relative to d_offset. */
-				off_t length;  /**< Length of range within file. */
-				
-				off_t longest_instruction;  /**< Longest instruction in the range, in bytes. */
-				size_t longest_disasm;      /**< Longest disassembled instruction, in characters. */
-				
-				int64_t rel_y_offset;  /**< Y position where this range's disassembly starts in the DisassemblyRegion. */
-				int64_t y_lines;       /**< Length of this range's disassembly, in lines. */
-			};
-			
 		private:
 			SharedDocumentPointer doc;
 			RangeTextColourFunction text_colour_func;
-			
-			cs_arch arch;
-			size_t disassembler;
 			
 			int offset_text_x;  /**< X co-ordinate of left edge of offsets. */
 			int hex_text_x;     /**< X co-ordinate of left edge of hex data. */
 			int code_text_x;    /**< X co-ordinate of left edge of disassembly. */
 			int ascii_text_x;
 			
-			ByteRangeSet dirty;                       /**< Bytes which are waiting to be analysed, relative to d_offset */
-			std::vector<InstructionRange> processed;  /**< Ranges of up-to-date analysed code. */
-			std::vector<Instruction> instructions;    /**< Cached disassembled instructions. */
-			
 			off_t longest_instruction;
 			size_t longest_disasm;
 			
 			AsmSyntax preferred_asm_syntax;
 			
-			void disasm_instruction(const uint8_t **code, size_t *size, uint64_t *address, cs_insn *insn);
+			CodeAnalyser *get_analyser();
 			
-			void OnDataOverwrite(OffsetLengthEvent &event);
+			struct AnalysisPosition
+			{
+				BitOffset offset;
+				int64_t line;
+			};
+			
+			AnalysisPosition get_analysis_position(CodeAnalyser *analyser) const;
 			
 		public:
-			off_t unprocessed_offset_rel() const;
-			BitOffset unprocessed_offset_abs() const;
-			
-			off_t unprocessed_bytes() const;
-			int64_t processed_lines() const;
-			
 			off_t max_bytes_per_line() const;
 			
-			/**
-			 * @brief Find the element in processed which encompasses an offset.
-			 * @returns Iterator to matching element, or end iterator if none match.
-			*/
-			std::vector<InstructionRange>::const_iterator processed_by_rel_offset(off_t rel_offset);
-			
-			/**
-			 * @brief Find the element in processed which encompasses a line.
-			 * @returns Iterator to matching element, or end iterator if none match.
-			*/
-			std::vector<InstructionRange>::const_iterator processed_by_line(int64_t rel_line);
-			
-			/**
-			 * @brief Find the Instruction which encompasses an offset.
-			 * @returns Reference to vector and iterator to element, or end iterator on error.
-			 *
-			 * NOTE: This method may disassemble an InstructionRange if the requested
-			 * Instruction hasn't been cached, and may invalidate references/iterators
-			 * returned by previous calls.
-			*/
-			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_rel_offset(off_t rel_offset);
-			
-			/**
-			 * @brief Find the Instruction on the given line.
-			 * @returns Reference to vector and iterator to element, or end iterator on error.
-			 *
-			 * NOTE: This method may disassemble an InstructionRange if the requested
-			 * Instruction hasn't been cached, and may invalidate references/iterators
-			 * returned by previous calls.
-			*/
-			std::pair<const std::vector<Instruction>&, std::vector<Instruction>::const_iterator> instruction_by_line(int64_t rel_line);
-			
-			DisassemblyRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func, cs_arch arch, cs_mode mode);
-			~DisassemblyRegion();
-			
-			/* For unit testing. */
-			const ByteRangeSet &get_dirty() const { return dirty; }
-			const std::vector<InstructionRange> &get_processed() const { return processed; }
+			DisassemblyRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func);
+			virtual ~DisassemblyRegion() override = default;
 			
 			virtual int calc_width(DocumentCtrl &doc_ctrl) override;
 			virtual void calc_height(DocumentCtrl &doc_ctrl) override;

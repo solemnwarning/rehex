@@ -482,6 +482,7 @@ APP_OBJS := \
 	src/ChecksumPanel.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
 	src/ClipboardUtils.$(BUILD_TYPE).o \
+	src/CodeAnalyser.$(BUILD_TYPE).o \
 	src/CodeCtrl.$(BUILD_TYPE).o \
 	src/ColourPickerCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
@@ -630,6 +631,8 @@ TEST_OBJS := \
 	src/ChecksumImpl.$(BUILD_TYPE).o \
 	src/ClickText.$(BUILD_TYPE).o \
 	src/ClipboardUtils.$(BUILD_TYPE).o \
+	src/CodeAnalyser.$(BUILD_TYPE).o \
+	src/CodeCtrl.$(BUILD_TYPE).o \
 	src/ColourPickerCtrl.$(BUILD_TYPE).o \
 	src/CommentTree.$(BUILD_TYPE).o \
 	src/ConsoleBuffer.$(BUILD_TYPE).o \
@@ -641,6 +644,7 @@ TEST_OBJS := \
 	src/DataView.$(BUILD_TYPE).o \
 	src/DetachableNotebook.$(BUILD_TYPE).o \
 	src/DiffWindow.$(BUILD_TYPE).o \
+	src/disassemble.$(BUILD_TYPE).o \
 	src/DisassemblyRegion.$(BUILD_TYPE).o \
 	src/document.$(BUILD_TYPE).o \
 	src/DocumentCtrl.$(BUILD_TYPE).o \
@@ -703,6 +707,7 @@ TEST_OBJS := \
 	tests/CharacterEncoder.$(LIB_BUILD_TYPE).o \
 	tests/CharacterFinder.$(LIB_BUILD_TYPE).o \
 	tests/Checksum.$(LIB_BUILD_TYPE).o \
+	tests/CodeAnalyser.$(LIB_BUILD_TYPE).o \
 	tests/CommentsDataObject.$(LIB_BUILD_TYPE).o \
 	tests/CommentTree.$(LIB_BUILD_TYPE).o \
 	tests/ConsoleBuffer.$(LIB_BUILD_TYPE).o \

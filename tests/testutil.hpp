@@ -18,12 +18,16 @@
 #ifndef REHEX_TESTUTIL_HPP
 #define REHEX_TESTUTIL_HPP
 
+#include <condition_variable>
 #include <functional>
 #include <jansson.h>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 #include <wx/frame.h>
+
+#include "../src/ThreadPool.hpp"
 
 #ifdef _WIN32
 #define CONFIG_EOL "\r\n"
@@ -137,5 +141,27 @@ class AutoFrame
 
 /* Used by Google Test to print out JSON data. */
 std::ostream& operator<<(std::ostream& os, const AutoJSON &json);
+
+/**
+ * @brief Utility class to jam up a ThreadPool so nothing else can run.
+*/
+class ThreadPoolJammer
+{
+	public:
+		ThreadPoolJammer(REHex::ThreadPool *pool);
+		~ThreadPoolJammer();
+		
+		void yield(int count);
+		
+	private:
+		std::mutex m_mutex;
+		std::condition_variable m_cv;
+		
+		bool m_exit;
+		int m_waiting;
+		int m_yield;
+		
+		REHex::ThreadPool::TaskHandle m_task;
+};
 
 #endif /* !REHEX_TESTUTIL_HPP */

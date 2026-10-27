@@ -2582,6 +2582,8 @@ void REHex::Document::load_metadata(const std::string &filename)
 	load_metadata(meta);
 	t.commit();
 	
+	// TODO: Force recreation of all analysers if this is undone
+	
 	/* Fire off every metadata change signal. This will trigger an unnecessary amount of
 	 * processing, but there's no way to coalesce these together (yet).
 	*/
@@ -2662,6 +2664,9 @@ void REHex::Document::load_metadata(const json_t *metadata)
 	
 	json_t *write_protect = json_object_get(metadata, "write_protect");
 	set_write_protect(json_is_true(write_protect));
+	
+	destroy_analysers(BitOffset::ZERO, BitOffset::MAX);
+	create_analysers();
 }
 
 void REHex::Document::serialise(FileWriter *file)

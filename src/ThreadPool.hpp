@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2023-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2023-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -202,6 +202,11 @@ namespace REHex
 			 * Stops all workers, then spins up the new desired number of workers.
 			*/
 			void rescale(unsigned int num_threads);
+			
+			/**
+			 * @brief Get the number of worker threads.
+			*/
+			unsigned int num_threads() const;
 			
 			/**
 			 * @brief Queue a task to be run on one or more worker threads.

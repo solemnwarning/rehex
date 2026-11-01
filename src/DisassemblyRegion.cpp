@@ -254,7 +254,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, (instr_data + pad_bytes), (instr_length - pad_bytes), 0, 0, pad_bytes, (abs_inst_offset + BitOffset(pad_bytes, 0)), alternate, has_focus, doc_ctrl.ascii_view_active(), ascii_highlight_func, is_last_line);
 		}
 		
-		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr_length)) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
+		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr_length)) && (!has_focus || doc_ctrl.get_cursor_visible()) && doc_ctrl.special_view_active();
 		bool selected = selection_len > 0 && selection_off <= abs_inst_offset && (selection_off + selection_len) >= (abs_inst_offset + BitOffset::BYTES(instr_length));
 		
 		BitOffset actual_instr_offset = abs_inst_offset;

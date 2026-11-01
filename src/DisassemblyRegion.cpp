@@ -221,11 +221,15 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		BitOffset abs_inst_offset = instr.offset();
 		BitOffset rel_inst_offset = abs_inst_offset - d_offset;
 		
+		uint8_t pad_bytes = instr.offset() < d_offset
+			? (d_offset - instr.offset()).byte()
+			: 0;
+		
 		if(doc_ctrl.get_show_offsets())
 		{
 			/* Draw the offsets to the left */
 			
-			BitOffset display_offset = virt_offset + rel_inst_offset;
+			BitOffset display_offset = virt_offset + rel_inst_offset + BitOffset(pad_bytes, 0);
 			
 			std::string offset_str = format_offset(display_offset, doc_ctrl.get_offset_display_base(), doc_ctrl.get_end_virt_offset());
 			
@@ -235,12 +239,19 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		
 		const unsigned char *instr_data = (const unsigned char*)(instr.instruction());
 		off_t instr_length = instr.length();
+		bool instr_trunc = false;
 		
-		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, instr_data, instr_length, 0, abs_inst_offset, alternate, has_focus, doc_ctrl.hex_view_active(), hex_highlight_func, is_last_line);
+		if((instr.offset() + BitOffset(instr_length, 0)) > (d_offset + d_length))
+		{
+			instr_length = ((d_offset + d_length) - instr.offset()).byte();
+			instr_trunc = true;
+		}
+		
+		draw_hex_line(&doc_ctrl, dc, x + hex_text_x, y, (instr_data + pad_bytes), (instr_length - pad_bytes), pad_bytes, (abs_inst_offset + BitOffset(pad_bytes, 0)), alternate, has_focus, doc_ctrl.hex_view_active(), hex_highlight_func, is_last_line);
 		
 		if(doc_ctrl.get_show_ascii())
 		{
-			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, instr_data, instr_length, 0, 0, 0, abs_inst_offset, alternate, has_focus, doc_ctrl.ascii_view_active(), ascii_highlight_func, is_last_line);
+			draw_ascii_line(&doc_ctrl, dc, x + ascii_text_x, y, (instr_data + pad_bytes), (instr_length - pad_bytes), 0, 0, pad_bytes, (abs_inst_offset + BitOffset(pad_bytes, 0)), alternate, has_focus, doc_ctrl.ascii_view_active(), ascii_highlight_func, is_last_line);
 		}
 		
 		bool invert = cursor_pos >= abs_inst_offset && cursor_pos < (abs_inst_offset + BitOffset::BYTES(instr_length)) && doc_ctrl.get_cursor_visible() && doc_ctrl.special_view_active();
@@ -249,7 +260,13 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 		BitOffset actual_instr_offset = abs_inst_offset;
 		set_text_attribs(invert, selected, &actual_instr_offset, &instr_length);
 		
-		dc.DrawText(instr.assembly(), x + code_text_x, y);
+		if(pad_bytes > 0 || instr_trunc)
+		{
+			dc.DrawText("<truncated instruction>", x + code_text_x, y);
+		}
+		else{
+			dc.DrawText(instr.assembly(), x + code_text_x, y);
+		}
 		
 		y += hf_char_height;
 		++line_num;
@@ -386,7 +403,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 			/* Mouse in ASCII area. */
 			
 			unsigned int line_offset = fcc.fixed_char_at_x(mouse_x_px - ascii_text_x);
-			if(line_offset >= instr.length())
+			if(line_offset >= instr.length() || (instr.offset() + BitOffset(line_offset, 0)) > (d_offset + d_length))
 			{
 				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
@@ -407,7 +424,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		{
 			/* Mouse in hex area. */
 			int line_offset = offset_at_x_hex(&doc_ctrl, (mouse_x_px - hex_text_x));
-			if(line_offset < 0 || line_offset >= instr.length())
+			if(line_offset < 0 || line_offset >= instr.length() || (instr.offset() + BitOffset(line_offset, 0)) > (d_offset + d_length))
 			{
 				return std::make_pair(BitOffset::INVALID, SA_NONE);
 			}
@@ -484,7 +501,7 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 		}
 		
 		off_t instr_base = (instr.offset() - d_offset).byte();
-		off_t instr_end  = instr_base + instr.length();
+		off_t instr_end  = std::min((instr_base + instr.length()), d_length.byte());
 		
 		if(doc_ctrl.get_show_ascii() && ((mouse_x_px >= ascii_text_x && type_hint == SA_NONE) || type_hint == SA_ASCII))
 		{
@@ -513,14 +530,21 @@ std::pair<REHex::BitOffset, REHex::DocumentCtrl::GenericDataRegion::ScreenArea> 
 				return std::make_pair(BitOffset(std::max<off_t>((instr_base - 1), 0), 0), SA_SPECIAL);
 			}
 			
+			BitOffset off;
+			
 			unsigned int char_offset = fcc.fixed_char_at_x(mouse_x_px - code_text_x);
 			if(char_offset < instr.assembly().length())
 			{
-				return std::make_pair(d_offset + BitOffset(instr_base, 0), SA_SPECIAL);
+				off = d_offset + BitOffset(instr_base, 0);
 			}
 			else{
-				return std::make_pair(d_offset + BitOffset((instr_base + instr.length() - 1), 0), SA_SPECIAL);
+				off = d_offset + BitOffset((instr_base + instr.length() - 1), 0);
 			}
+			
+			off = std::max(off, d_offset);
+			off = std::min(off, (d_offset + d_length - BitOffset(1, 0)));
+			
+			return std::make_pair(off, SA_SPECIAL);
 		}
 		else if((mouse_x_px >= hex_text_x && type_hint == SA_NONE) || type_hint == SA_HEX)
 		{
@@ -724,9 +748,9 @@ REHex::BitOffset REHex::DisassemblyRegion::cursor_up_from(BitOffset pos, ScreenA
 		
 		BitOffset goto_off = std::min(
 			(prev_instr.offset() + (pos - instr.offset())),
-			(prev_instr.offset() + BitOffset((instr.length() - 1), 0)));
+			(prev_instr.offset() + BitOffset((prev_instr.length() - 1), 0)));
 		
-		return goto_off;
+		return std::max(goto_off, d_offset);
 	}
 	else if(pos < (ap.offset + BitOffset(up_bytes_per_line, 0)))
 	{
@@ -755,7 +779,7 @@ REHex::BitOffset REHex::DisassemblyRegion::cursor_up_from(BitOffset pos, ScreenA
 					(instr.offset() + (pos - ap.offset)),
 					(instr.offset() + BitOffset((instr.length() - 1), 0)));
 				
-				return goto_off;
+				return std::max(goto_off, d_offset);
 			}
 		}
 	}
@@ -799,16 +823,19 @@ REHex::BitOffset REHex::DisassemblyRegion::cursor_down_from(BitOffset pos, Scree
 		{
 			/* On last line in disassembly. */
 			
-			return std::min(
-				std::min(
-					/* Same byte offset on next line. */
-					(next_instr_offset + (pos - instr.offset())),
-					
-					/* Last byte on next line. */
-					(next_instr_offset + BitOffset((up_bytes_per_line - 1), 0))),
+			return std::max(
+				d_offset,
 				
-				/* Last byte in this region. */
-				(d_offset + d_length - BitOffset(1, 0)));
+				std::min(
+					std::min(
+						/* Same byte offset on next line. */
+						(next_instr_offset + (pos - instr.offset())),
+						
+						/* Last byte on next line. */
+						(next_instr_offset + BitOffset((up_bytes_per_line - 1), 0))),
+					
+					/* Last byte in this region. */
+					(d_offset + d_length - BitOffset(1, 0))));
 		}
 		
 		CodeAnalyser::Instruction next_instr = analyser->instruction_by_abs_offset(next_instr_offset);
@@ -823,12 +850,15 @@ REHex::BitOffset REHex::DisassemblyRegion::cursor_down_from(BitOffset pos, Scree
 			return next_instr.offset();
 		}
 		else{
-			return std::min(
-				/* Same byte offset in next instruction. */
-				(next_instr.offset() + (pos - instr.offset())),
+			return std::max(
+				d_offset,
 				
-				/* Last byte in next instruction. */
-				(next_instr.offset() + BitOffset((next_instr.length() - 1), 0)));
+				std::min(
+					/* Same byte offset in next instruction. */
+					(next_instr.offset() + (pos - instr.offset())),
+					
+					/* Last byte in next instruction. */
+					(next_instr.offset() + BitOffset((next_instr.length() - 1), 0))));
 		}
 	}
 	else{
@@ -877,7 +907,7 @@ REHex::BitOffset REHex::DisassemblyRegion::cursor_home_from(BitOffset pos, Scree
 			return pos;
 		}
 		
-		return instr.offset();
+		return std::max(d_offset, instr.offset());
 	}
 	else{
 		/* Move to start of unprocessed line. */
@@ -982,12 +1012,15 @@ REHex::BitOffset REHex::DisassemblyRegion::nth_row_nearest_column(int64_t row, i
 			return d_offset;
 		}
 		
-		return std::min(
-			/* Requested column byte offset within instruction. */
-			(instr.offset() + BitOffset(column, 0)),
+		return std::max(
+			d_offset,
 			
-			/* Last byte within instruction. */
-			(instr.offset() + BitOffset((instr.length() - 1), 0)));
+			std::min(
+				/* Requested column byte offset within instruction. */
+				(instr.offset() + BitOffset(column, 0)),
+				
+				/* Last byte within instruction. */
+				(instr.offset() + BitOffset((instr.length() - 1), 0))));
 	}
 	else{
 		/* Line isn't processed yet. */

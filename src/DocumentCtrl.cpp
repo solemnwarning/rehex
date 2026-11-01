@@ -2515,26 +2515,27 @@ std::pair< std::vector<REHex::DocumentCtrl::Region*>::iterator, int64_t > REHex:
 	
 	int hf_height = hex_font_cache->fixed_char_height();
 	
-	/* Find the region containing the first visible line. */
-	auto region = region_by_y_offset(scroll_yoff);
+	int64_t abs_mouse_line = scroll_yoff + (int64_t)(mouse_y_px / hf_height);
 	
-	/* If we are scrolled past the start of the region, will need to skip some of the first one. */
-	int64_t skip_lines_in_region = (this->scroll_yoff - (*region)->y_offset);
-	
-	int64_t line_off = (mouse_y_px / hf_height) + skip_lines_in_region;
-	
-	while(region != regions.end() && line_off >= (*region)->y_lines)
-	{
-		line_off -= (*region)->y_lines;
-		++region;
-	}
-	
+	/* Find the region under the mouse pointer. */
+	auto region = region_by_y_offset(abs_mouse_line);
 	if(region == regions.end())
 	{
-		line_off = -1;
+		return std::make_pair(regions.end(), -1);
 	}
 	
-	return std::make_pair(region, line_off);
+	/* Compute the line under the mouse pointer relative to the start of the region. */
+	int64_t rel_mouse_line = abs_mouse_line - (*region)->y_offset;
+	assert(rel_mouse_line >= 0);
+	
+	if(rel_mouse_line >= (*region)->y_lines)
+	{
+		/* Mouse pointer is beyond the bottom of the region. */
+		return std::make_pair(regions.end(), -1);
+	}
+	else{
+		return std::make_pair(region, rel_mouse_line);
+	}
 }
 
 std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::get_indent_offset_at_line(int64_t line)

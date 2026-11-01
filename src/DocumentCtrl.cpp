@@ -1217,7 +1217,9 @@ REHex::DocumentCtrl::FuzzyScrollPosition REHex::DocumentCtrl::get_scroll_positio
 				fsp.data_offset_valid = true;
 			}
 			else{
-				fsp.data_offset       = dr->nth_row_nearest_column((scroll_yoff - dr->y_offset), 0);
+				int64_t clamped_row = std::min((scroll_yoff - dr->y_offset), (dr->y_lines - 1));
+				
+				fsp.data_offset       = dr->nth_row_nearest_column(clamped_row, 0);
 				fsp.data_offset_line  = 0;
 				fsp.data_offset_valid = true;
 			}
@@ -2499,7 +2501,7 @@ std::vector<REHex::DocumentCtrl::Region*>::iterator REHex::DocumentCtrl::region_
 	--region;
 	
 	assert((*region)->y_offset <= y_offset);
-	assert(((*region)->y_offset + (*region)->y_lines) > y_offset || *region == regions.back());
+	assert(((*region)->y_offset + (*region)->y_lines) > y_offset || *region == regions.back() || (*(std::next(region)))->y_offset > y_offset);
 	
 	return region;
 }

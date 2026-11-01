@@ -175,6 +175,7 @@ REHex::DiffWindow::~DiffWindow()
 			d->second->Unbind(EV_DISP_SETTING_CHANGED,  &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 		}
 		
+		d->first->Unbind(EV_TYPES_CHANGED, &REHex::DiffWindow::OnDocumentTypesChange, this);
 		d->first->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
 		d->first->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		d->first->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
@@ -286,6 +287,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 		new_range->doc->Bind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
 		new_range->doc->Bind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		new_range->doc->Bind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
+		new_range->doc->Bind(EV_TYPES_CHANGED, &REHex::DiffWindow::OnDocumentTypesChange, this);
 		
 		new_range->main_doc_ctrl->Bind(EV_DISP_SETTING_CHANGED, &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 	}
@@ -393,6 +395,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 			range_mdc->Unbind(EV_DISP_SETTING_CHANGED, &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 		}
 		
+		range_doc->Unbind(EV_TYPES_CHANGED, &REHex::DiffWindow::OnDocumentTypesChange, this);
 		range_doc->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
 		range_doc->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		range_doc->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
@@ -1337,6 +1340,23 @@ void REHex::DiffWindow::OnDocumentDisplaySettingsChange(wxCommandEvent &event)
 	resize_splitters();
 	
 	event.Skip();
+}
+
+void REHex::DiffWindow::OnDocumentTypesChange(wxCommandEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	assert(dynamic_cast<Document*>(src) != NULL);
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r->doc == src)
+		{
+			doc_update(&*r);
+			break;
+		}
+	}
+	
+	event.Skip(); /* Continue propagation. */
 }
 
 void REHex::DiffWindow::OnNotebookClosed(wxAuiNotebookEvent &event)

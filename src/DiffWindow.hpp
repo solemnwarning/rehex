@@ -193,6 +193,7 @@ namespace REHex {
 			void OnDocumentDataInsert(OffsetLengthEvent &event);
 			void OnDocumentDataOverwrite(OffsetLengthEvent &event);
 			void OnDocumentDisplaySettingsChange(wxCommandEvent &event);
+			void OnDocumentTypesChange(wxCommandEvent &event);
 			void OnNotebookClosed(wxAuiNotebookEvent &event);
 			void OnCursorUpdate(CursorUpdateEvent &event);
 			void OnDataRightClick(wxCommandEvent &event);

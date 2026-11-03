@@ -214,7 +214,7 @@ void REHex::DisassemblyRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, int x, int
 	
 	bool is_last_data_region = (doc_ctrl.get_data_regions().back() == this);
 	
-	while((instr = analyser->instruction_by_line(d_offset, line_num)) && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
+	while((instr = analyser->instruction_by_line(d_offset, line_num)) && instr.offset() < (d_offset + d_length) && y < client_size.GetHeight() && line_num < (y_lines - indent_final))
 	{
 		bool is_last_line = is_last_data_region && (line_num + 1) == (y_lines - indent_final);
 		

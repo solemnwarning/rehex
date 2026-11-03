@@ -1912,6 +1912,24 @@ void REHex::Document::_UNTRACKED_overwrite_bits(BitOffset offset, const std::vec
 		
 		OffsetLengthEvent data_overwrite_event(this, DATA_OVERWRITE, byte_offset, byte_length);
 		ProcessEvent(data_overwrite_event);
+		
+		{
+			BitOffset bits_length((data.size() / 8), (data.size() % 8));
+			auto it = m_analysers.get_range_in(offset, bits_length);
+			BitOffset end = add_clamp_overflow(offset, bits_length);
+			
+			while(it != m_analysers.end() && it->first.offset < end)
+			{
+				BitRange overlap = BitRange::intersection(BitRange(offset, bits_length), BitRange(it->first.offset, it->first.length));
+				assert(!overlap.empty());
+				
+				assert(overlap.offset >= it->first.offset);
+				assert((overlap.length - (overlap.offset - it->first.offset)) <= it->first.length);
+				
+				it->second->refresh((overlap.offset - it->first.offset), overlap.length);
+				++it;
+			}
+		}
 	}
 	else{
 		OffsetLengthEvent data_overwrite_aborted_event(this, DATA_OVERWRITE_ABORTED, byte_offset, byte_length);

@@ -442,3 +442,199 @@ TEST(CodeAnalyser, InvalidInstructionARM64)
 		".byte   0x15",
 		0x15);
 }
+
+class CodeAnalyserFenceTest: public ::testing::Test
+{
+	public:
+		SharedDocumentPointer doc;
+		std::unique_ptr<CodeAnalyser> analyser;
+		
+		CodeAnalyserFenceTest():
+			doc(SharedDocumentPointer::make())
+		{
+			const unsigned char DATA[] = {
+				0x90, 0x90, 0x90, 0x90,
+				0x90, 0x90, 0x90, 0x90,
+				0x90, 0x90, 0x90, 0x90,
+				0x90, 0x90, 0x90, 0x90,
+				
+				0x83, 0xC4, 0x04, 0x90, /* 83C404 = add esp, 4 */
+				0x83, 0xEB, 0x05, 0x90, /* 83EB05 = sub ebx, 5
+				                         *   EB05 = jmp 0x1c */
+				
+				0x90, 0x90, 0x90, 0x90,
+				0x90, 0x90, 0x90, 0x90,
+			};
+			
+			doc->insert_data(0, DATA, sizeof(DATA));
+			
+			/* Create CodeAnalyser covering our test data */
+			analyser.reset(new CodeAnalyser(doc, 12, 16, CS_ARCH_X86, CS_MODE_32));
+		}
+		
+		void wait()
+		{
+			while(analyser->get_analysis_position().offset < 28)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+			}
+		}
+		
+		std::string disassemble()
+		{
+			std::string disassembly;
+			
+			for(int i = 0;; ++i)
+			{
+				CodeAnalyser::Instruction instr = analyser->instruction_by_line(12, i);
+				if(instr)
+				{
+					char s[256];
+					snprintf(s, sizeof(s), "%04X    %s\n", (unsigned)(instr.offset().byte()), instr.assembly().c_str());
+					
+					disassembly += s;
+				}
+				else{
+					break;
+				}
+			}
+			
+			return disassembly;
+		}
+};
+
+TEST_F(CodeAnalyserFenceTest, FenceForZeroLengthComments)
+{
+	wait();
+	
+	EXPECT_EQ(analyser->accumulate_fences(), std::vector<off_t>({}));
+	
+	EXPECT_EQ(disassemble(),
+		"000C    nop     \n"
+		"000D    nop     \n"
+		"000E    nop     \n"
+		"000F    nop     \n"
+		"0010    add     esp, 4\n"
+		"0013    nop     \n"
+		"0014    sub     ebx, 5\n"
+		"0017    nop     \n"
+		"0018    nop     \n"
+		"0019    nop     \n"
+		"001A    nop     \n"
+		"001B    nop     \n");
+	
+	doc->set_comment(12, 0, Document::Comment("Comment 1"));
+	doc->set_comment(13, 0, Document::Comment("Comment 2"));
+	doc->set_comment(21, 0, Document::Comment("Comment 3"));
+	doc->set_comment(27, 0, Document::Comment("Comment 4"));
+	doc->set_comment(28, 0, Document::Comment("Comment 5"));
+	
+	wait();
+	
+	EXPECT_EQ(analyser->accumulate_fences(), std::vector<off_t>({ 1, 9, 15 }));
+	
+	EXPECT_EQ(disassemble(),
+		"000C    nop     \n"
+		"000D    nop     \n"
+		"000E    nop     \n"
+		"000F    nop     \n"
+		"0010    add     esp, 4\n"
+		"0013    nop     \n"
+		"0014    .byte   0x83\n"
+		"0015    jmp     0x1c\n"
+		"0017    nop     \n"
+		"0018    nop     \n"
+		"0019    nop     \n"
+		"001A    nop     \n"
+		"001B    nop     \n");
+}
+
+TEST_F(CodeAnalyserFenceTest, FencesForNonzeroLengthComments)
+{
+	wait();
+	
+	EXPECT_EQ(analyser->accumulate_fences(), std::vector<off_t>({}));
+	
+	EXPECT_EQ(disassemble(),
+		"000C    nop     \n"
+		"000D    nop     \n"
+		"000E    nop     \n"
+		"000F    nop     \n"
+		"0010    add     esp, 4\n"
+		"0013    nop     \n"
+		"0014    sub     ebx, 5\n"
+		"0017    nop     \n"
+		"0018    nop     \n"
+		"0019    nop     \n"
+		"001A    nop     \n"
+		"001B    nop     \n");
+	
+	doc->set_comment(16, 5, Document::Comment("Comment 1"));
+	doc->set_comment(24, 2, Document::Comment("Comment 2"));
+	
+	wait();
+	
+	EXPECT_EQ(analyser->accumulate_fences(), std::vector<off_t>({ 4, 9, 12, 14 }));
+	
+	EXPECT_EQ(disassemble(),
+		"000C    nop     \n"
+		"000D    nop     \n"
+		"000E    nop     \n"
+		"000F    nop     \n"
+		"0010    add     esp, 4\n"
+		"0013    nop     \n"
+		"0014    .byte   0x83\n"
+		"0015    jmp     0x1c\n"
+		"0017    nop     \n"
+		"0018    nop     \n"
+		"0019    nop     \n"
+		"001A    nop     \n"
+		"001B    nop     \n");
+}
+
+TEST_F(CodeAnalyserFenceTest, FencesForNestedComments)
+{
+	wait();
+	
+	EXPECT_EQ(analyser->accumulate_fences(), std::vector<off_t>({}));
+	
+	EXPECT_EQ(disassemble(),
+		"000C    nop     \n"
+		"000D    nop     \n"
+		"000E    nop     \n"
+		"000F    nop     \n"
+		"0010    add     esp, 4\n"
+		"0013    nop     \n"
+		"0014    sub     ebx, 5\n"
+		"0017    nop     \n"
+		"0018    nop     \n"
+		"0019    nop     \n"
+		"001A    nop     \n"
+		"001B    nop     \n");
+	
+	doc->set_comment( 2, 28, Document::Comment("Comment 1"));
+	doc->set_comment(14, 10, Document::Comment("Comment 1.1"));
+	doc->set_comment(14,  0, Document::Comment("Comment 1.1.0"));
+	doc->set_comment(16,  5, Document::Comment("Comment 1.1.1"));
+	doc->set_comment(24,  2, Document::Comment("Comment 1.2"));
+	doc->set_comment(24,  0, Document::Comment("Comment 1.2"));
+	
+	wait();
+	
+	EXPECT_EQ(analyser->accumulate_fences(), std::vector<off_t>({ 2, 4, 9, 12, 14 }));
+	
+	EXPECT_EQ(disassemble(),
+		"000C    nop     \n"
+		"000D    nop     \n"
+		"000E    nop     \n"
+		"000F    nop     \n"
+		"0010    add     esp, 4\n"
+		"0013    nop     \n"
+		"0014    .byte   0x83\n"
+		"0015    jmp     0x1c\n"
+		"0017    nop     \n"
+		"0018    nop     \n"
+		"0019    nop     \n"
+		"001A    nop     \n"
+		"001B    nop     \n");
+}

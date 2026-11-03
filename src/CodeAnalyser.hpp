@@ -222,6 +222,11 @@ namespace REHex
 			CodeAnalyser(Document *doc, BitOffset offset, BitOffset length, cs_arch arch, cs_mode mode);
 			virtual ~CodeAnalyser() override;
 			
+			/**
+			 * @brief Accumulate list of "fence points" relative to m_base_offset.
+			*/
+			std::vector<off_t> accumulate_fences();
+			
 			virtual void pause() override;
 			virtual void resume() override;
 			virtual void refresh(BitOffset offset, BitOffset length) override;
@@ -256,6 +261,14 @@ namespace REHex
 			 * NOTE: Caller MUST hold m_processed_mutex during this call.
 			*/
 			std::vector<CachedInstruction>::const_iterator cached_instruction_by_rel_offset(off_t rel_offset);
+			
+			/**
+			 * Sorted list of "fence points" relative to m_base_offset where instructions cannot
+			 * span and disassembly should be restarted (e.g. due to a comment).
+			*/
+			std::vector<off_t> m_fences;
+			
+			void OnDocumentCommentsChanged(wxCommandEvent &event);
 	};
 }
 

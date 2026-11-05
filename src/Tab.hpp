@@ -113,7 +113,7 @@ namespace REHex
 			void set_dsm_type(DataMapScrollbarType dsm_type);
 			
 			/* Public for use by unit tests. */
-			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode);
+			static std::vector<DocumentCtrl::Region*> compute_regions(SharedDocumentPointer doc, BitOffset real_offset_base, BitOffset virt_offset_base, BitOffset length, InlineCommentMode inline_comment_mode, const DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func);
 			
 		private:
 			InlineCommentMode inline_comment_mode;

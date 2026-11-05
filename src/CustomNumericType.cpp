@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2024-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -153,9 +153,9 @@ REHex::DataType REHex::CustomNumericType::get_DataType() const
 	
 	return DataType()
 		.WithWordSize(BitOffset::from_int64(bits))
-		.WithFixedSizeRegion([type](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset)
+		.WithFixedSizeRegion([type](REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func)
 		{
-			return new CustomNumericTypeRegion(doc, offset, length, virt_offset, type);
+			return new CustomNumericTypeRegion(doc, offset, length, virt_offset, text_colour_func, type);
 		}, REHex::BitOffset((bits / 8), (bits % 8)));
 }
 
@@ -405,8 +405,8 @@ void REHex::CustomNumericTypeDialog::OnSizeChange(wxSpinEvent &event)
 	endianness_choice->Enable((event.GetPosition() % 8) == 0);
 }
 
-REHex::CustomNumericTypeRegion::CustomNumericTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const CustomNumericType &type):
-	FixedSizeValueRegion(doc, offset, length, virt_offset, type.get_description()),
+REHex::CustomNumericTypeRegion::CustomNumericTypeRegion(SharedDocumentPointer &doc, BitOffset offset, BitOffset length, BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func, const CustomNumericType &type):
+	FixedSizeValueRegion(doc, offset, length, virt_offset, text_colour_func, type.get_description()),
 	type(type) {}
 
 std::string REHex::CustomNumericTypeRegion::load_value() const

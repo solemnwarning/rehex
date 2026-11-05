@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -39,8 +39,8 @@
 #include "endian_conv.hpp"
 
 #define IMPLEMENT_NDTR_CLASS(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
-		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func): \
+		NumericDataTypeRegion(doc, offset, length, virt_offset, text_colour_func, LABEL) {} \
 	\
 	std::string REHex::NAME::load_value() const \
 	{ \
@@ -71,9 +71,9 @@
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const REHex::DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func) \
 	{ \
-		return new REHex::NAME(doc, offset, length, virt_offset); \
+		return new REHex::NAME(doc, offset, length, virt_offset, text_colour_func); \
 	}
 
 IMPLEMENT_NDTR_CLASS(U8DataRegion, uint8_t, "u8", "%" PRIu8, (uint8_t), (uint8_t), u8_factory)
@@ -179,8 +179,8 @@ static REHex::StaticDataTypeRegistration s64be_dtr(
 		.WithFixedSizeRegion(&s64be_factory, REHex::BitOffset(sizeof(int64_t), 0)));
 
 #define IMPLEMENT_NDTR_CLASS_FLOAT(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
-		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func): \
+		NumericDataTypeRegion(doc, offset, length, virt_offset, text_colour_func, LABEL) {} \
 	\
 	std::string REHex::NAME::load_value() const \
 	{ \
@@ -221,9 +221,9 @@ static REHex::StaticDataTypeRegistration s64be_dtr(
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const REHex::DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func) \
 	{ \
-		return new REHex::NAME(doc, offset, length, virt_offset); \
+		return new REHex::NAME(doc, offset, length, virt_offset, text_colour_func); \
 	}
 
 IMPLEMENT_NDTR_CLASS_FLOAT(F32LEDataRegion, float,  "f32le", "%.9g", leXXXtoh, htoleXXX, f32le_factory)
@@ -242,8 +242,8 @@ static REHex::StaticDataTypeRegistration f32be_dtr(
 		.WithFixedSizeRegion(&f32be_factory, REHex::BitOffset(sizeof(float), 0)));
 
 #define IMPLEMENT_NDTR_CLASS_DOUBLE(NAME, T, LABEL, FMT, XTOH, HTOX, FACTORY_FUNC) \
-	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset): \
-		NumericDataTypeRegion(doc, offset, length, virt_offset, LABEL) {} \
+	REHex::NAME::NAME(SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const GenericDataRegion::RangeTextColourFunction &text_colour_func): \
+		NumericDataTypeRegion(doc, offset, length, virt_offset, text_colour_func, LABEL) {} \
 	\
 	std::string REHex::NAME::load_value() const \
 	{ \
@@ -284,9 +284,9 @@ static REHex::StaticDataTypeRegistration f32be_dtr(
 		return true; \
 	} \
 	\
-	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset) \
+	static REHex::DocumentCtrl::Region *FACTORY_FUNC(REHex::SharedDocumentPointer &doc, REHex::BitOffset offset, REHex::BitOffset length, REHex::BitOffset virt_offset, const REHex::DocumentCtrl::GenericDataRegion::RangeTextColourFunction &text_colour_func) \
 	{ \
-		return new REHex::NAME(doc, offset, length, virt_offset); \
+		return new REHex::NAME(doc, offset, length, virt_offset, text_colour_func); \
 	}
 
 IMPLEMENT_NDTR_CLASS_DOUBLE(F64LEDataRegion, double, "f64le", "%.9g", leXXXtoh, htoleXXX, f64le_factory)

@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -698,6 +698,45 @@ TEST(ByteRangeMap, DataErasedOverlappingMultipleRangesMerge)
 	);
 }
 
+TEST(ByteRangeMap, DataErasedMergesNewlyAdjacentSameValues)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_range( 5,  2, "summer");
+	brm.set_range(10, 20, "spotty");
+	brm.set_range(40, 10, "broken");
+	brm.set_range(60, 10, "spotty");
+	brm.set_range(80,  5, "rinse");
+	
+	brm.data_erased(30, 30);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range( 5,  2), "summer"),
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 30), "spotty"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50,  5), "rinse"),
+	);
+}
+
+TEST(ByteRangeMap, DataErasedDoesNotMergeNewlyAdjacentDistinctValues)
+{
+	ByteRangeMap<std::string> brm;
+	
+	brm.set_range( 5,  2, "summer");
+	brm.set_range(10, 20, "spotty");
+	brm.set_range(40, 10, "broken");
+	brm.set_range(60, 10, "spotty2");
+	brm.set_range(80,  5, "rinse");
+	
+	brm.data_erased(30, 30);
+	
+	EXPECT_RANGES(
+		std::make_pair(ByteRangeMap<std::string>::Range( 5,  2), "summer"),
+		std::make_pair(ByteRangeMap<std::string>::Range(10, 20), "spotty"),
+		std::make_pair(ByteRangeMap<std::string>::Range(30, 10), "spotty2"),
+		std::make_pair(ByteRangeMap<std::string>::Range(50,  5), "rinse"),
+	);
+}
+
 TEST(ByteRangeMap, GetSliceNoMatch)
 {
 	ByteRangeMap<std::string> source;
@@ -951,6 +990,37 @@ TEST(ByteRangeMap, SetBulkOverlap)
 		std::make_pair(ByteRangeMap<std::string>::Range(20,  5), "redundant"),
 		std::make_pair(ByteRangeMap<std::string>::Range(40, 10), "cobweb"),
 	);
+}
+
+TEST(BitRangeMap, GetRange)
+{
+	const std::vector< std::pair<BitRangeMap<std::string>::Range, std::string> > RANGES = {
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(10, 2), BitOffset(20, 0)), "veil"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(40, 0), BitOffset( 1, 3)), "suggest"),
+		std::make_pair(BitRangeMap<std::string>::Range(BitOffset(41, 3), BitOffset( 0, 3)), "cobweb"),
+	};
+	
+	BitRangeMap<std::string> brm(RANGES.begin(), RANGES.end());
+	
+	EXPECT_EQ(brm.get_range(BitOffset(9, 2)), brm.end());
+	EXPECT_EQ(brm.get_range(BitOffset(10, 0)), brm.end());
+	EXPECT_EQ(brm.get_range(BitOffset(10, 1)), brm.end());
+	EXPECT_EQ(brm.get_range(BitOffset(10, 2)), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(BitOffset(29, 0)), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(BitOffset(29, 1)), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(BitOffset(29, 2)), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(BitOffset(30, 0)), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(BitOffset(30, 1)), std::next(brm.begin(), 0));
+	EXPECT_EQ(brm.get_range(BitOffset(30, 2)), brm.end());
+	EXPECT_EQ(brm.get_range(BitOffset(39, 0)), brm.end());
+	EXPECT_EQ(brm.get_range(BitOffset(39, 7)), brm.end());
+	EXPECT_EQ(brm.get_range(BitOffset(40, 0)), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range(BitOffset(41, 0)), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range(BitOffset(41, 2)), std::next(brm.begin(), 1));
+	EXPECT_EQ(brm.get_range(BitOffset(41, 3)), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range(BitOffset(41, 4)), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range(BitOffset(41, 5)), std::next(brm.begin(), 2));
+	EXPECT_EQ(brm.get_range(BitOffset(41, 6)), brm.end());
 }
 
 TEST(BitRangeMap, SetRange)

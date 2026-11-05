@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -96,6 +96,20 @@ namespace REHex
 			}
 			
 		private:
+			template<typename OT2 = OT>
+			static constexpr typename std::enable_if<std::is_same<OT2, off_t>::value, OT>::type
+			OT_INCREMENT()
+			{
+				return 1;
+			}
+			
+			template<typename OT2 = OT>
+			static constexpr typename std::enable_if<std::is_same<OT2, BitOffset>::value, OT>::type
+			OT_INCREMENT()
+			{
+				return BitOffset(0, 1);
+			}
+			
 			T default_value;
 			
 			std::vector< std::pair<Range, T> > ranges;
@@ -110,8 +124,14 @@ namespace REHex
 			/**
 			 * @brief Construct an empty map.
 			*/
-			RangeMap(const T &default_value = T()):
+			RangeMap(const T &default_value):
 				default_value(default_value),
+				last_get_iter(ranges.end()) {}
+			
+			/**
+			 * @brief Construct an empty map.
+			*/
+			RangeMap():
 				last_get_iter(ranges.end()) {}
 			
 			RangeMap(const RangeMap &src):
@@ -174,6 +194,14 @@ namespace REHex
 			void set_range(OT offset, OT length, const T &value);
 			
 			/**
+			 * @brief Insert an element directly into the map.
+			 *
+			 * This method adds a value into an unoccupied range in the map. There must not be any
+			 * existing value occupying the range.
+			*/
+			template<typename VT> const_iterator insert(OT offset, OT length, VT &&value);
+			
+			/**
 			 * @brief Set multiple ranges of bytes in the map at once.
 			 *
 			 * This method provides an optimised version of calling set_range()
@@ -193,6 +221,17 @@ namespace REHex
 			 * outside of the range will be preserved.
 			*/
 			void clear_range(OT offset, OT length);
+			
+			/**
+			 * @brief Remove an element from the map.
+			 * @return Iterator to element after erased element.
+			*/
+			const_iterator erase(const_iterator it);
+			
+			/**
+			 * @brief Remove an element from the map, taking ownership of the value.
+			*/
+			std::pair<T, const_iterator> remove_erase(const_iterator it);
 			
 			/**
 			 * @brief Get a subset of the ranges defined in the map.
@@ -240,6 +279,7 @@ namespace REHex
 			void clear() { ranges.clear(); }
 			
 		private:
+			const_iterator get_range_impl(OT offset) const;
 			bool data_inserted_impl(OT offset, OT length);
 			bool data_erased_impl(OT offset, OT length);
 
@@ -303,15 +343,28 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 {
 	{
 		shared_lock lock_guard(lgi_mutex);
+		const_iterator lgi = last_get_iter;
+		lock_guard.unlock();
 		
-		if(last_get_iter != ranges.end() && last_get_iter->first.offset <= offset && (last_get_iter->first.offset + last_get_iter->first.length) > offset)
+		if(lgi != ranges.end() && lgi->first.offset <= offset && (lgi->first.offset + lgi->first.length) > offset)
 		{
-			return last_get_iter;
+			/* Detect conditions where the actual get_range() algorithm can return the wrong
+			 * element which would otherwise be unnoticed when the correct one happens to be cached
+			 * in last_get_iter.
+			*/
+			assert(get_range_impl(offset) == lgi);
+			
+			return lgi;
 		}
 	}
 	
+	return get_range_impl(offset);
+}
+
+template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::get_range_impl(OT offset) const
+{
 	/* Starting from the first element after us (or the end of the vector)... */
-	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + 1), 0), default_value), &elem_key_less);
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + OT_INCREMENT()), 0), T()), &elem_key_less);
 	
 	/* ...check to see if there is an element prior... */
 	if(i != ranges.begin())
@@ -343,7 +396,7 @@ template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterato
 		return ranges.end();
 	}
 	
-	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), default_value), &elem_key_less);
+	auto i = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range(offset, 0), T()), &elem_key_less);
 	
 	if(i != ranges.begin())
 	{
@@ -506,6 +559,36 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_range(OT offs
 	last_get_iter = ranges.end();
 }
 
+template<typename OT, typename T> template<typename VT> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::insert(OT offset, OT length, VT &&value)
+{
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), T()), &elem_key_less);
+	
+	#ifndef NDEBUG
+	assert(next == ranges.end() || next->first.offset >= (offset + length));
+	
+	if(next != ranges.end() && next->first.offset == (offset + length))
+	{
+		assert(next->second != value);
+	}
+	
+	if(next != ranges.begin())
+	{
+		auto prev = std::prev(next);
+		assert((prev->first.offset + prev->first.length) <= offset);
+		
+		if((prev->first.offset + prev->first.length) == offset)
+		{
+			assert(prev->second != value);
+		}
+	}
+	#endif
+	
+	auto it = ranges.emplace(next, std::make_pair<Range, VT>(Range(offset, length), std::move(value)));
+	last_get_iter = ranges.end();
+	
+	return it;
+}
+
 template<typename OT, typename T> void REHex::RangeMap<OT, T>::set_bulk(std::vector< std::pair<Range, T> > &&bulk_ranges)
 {
 	/* Work backwards from the end of bulk_ranges, removing any earlier overlaps. */
@@ -600,7 +683,7 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::clear_range(OT of
 	*/
 	
 	/* Starting from the first element after us (or the end of the vector)... */
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value), &elem_key_less);
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), T()), &elem_key_less);
 	
 	typename std::vector< std::pair<Range, T> >::iterator erase_begin = next;
 	typename std::vector< std::pair<Range, T> >::iterator erase_end   = next;
@@ -664,6 +747,27 @@ template<typename OT, typename T> void REHex::RangeMap<OT, T>::clear_range(OT of
 	}
 	
 	last_get_iter = ranges.end();
+}
+
+template<typename OT, typename T> typename REHex::RangeMap<OT, T>::const_iterator REHex::RangeMap<OT, T>::erase(const_iterator it)
+{
+	auto next = ranges.erase(it);
+	
+	last_get_iter = ranges.end();
+	
+	return next;
+}
+
+template<typename OT, typename T> std::pair<T, typename REHex::RangeMap<OT, T>::const_iterator> REHex::RangeMap<OT, T>::remove_erase(const_iterator it)
+{
+	auto nc_it = const_iterator_to_iterator(it, ranges);
+	
+	T value = std::move(nc_it->second);
+	const_iterator next = ranges.erase(it);
+	
+	last_get_iter = ranges.end();
+	
+	return std::make_pair<T, const_iterator>(std::move(value), std::move(next));
 }
 
 template<typename OT, typename T> REHex::RangeMap<OT, T> REHex::RangeMap<OT, T>::get_slice(OT offset, OT length) const
@@ -798,7 +902,7 @@ template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(
 {
 	/* Find the range of elements overlapping the range to be erased. */
 	
-	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), default_value), &elem_key_less);
+	auto next = std::lower_bound(ranges.begin(), ranges.end(), std::make_pair(Range((offset + length), 0), T()), &elem_key_less);
 	
 	typename std::vector< std::pair<Range, T> >::iterator erase_begin = next;
 	typename std::vector< std::pair<Range, T> >::iterator erase_end   = next;
@@ -826,11 +930,31 @@ template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(
 	{
 		auto erase_last = std::prev(erase_end);
 		
+		if(erase_begin != ranges.begin() && erase_end != ranges.end())
+		{
+			auto erase_prev = std::prev(erase_begin);
+			
+			if((erase_prev->first.offset + erase_prev->first.length) == offset
+				&& (offset + length) == erase_end->first.offset
+				&& erase_prev->second == erase_end->second)
+			{
+				/* The range that was erased is immediately preceeded and followed by identical
+				 * values which should be merged, so roll them into our erase range.
+				*/
+				
+				erase_begin = erase_prev;
+				erase_last = erase_end;
+				++erase_end;
+			}
+		}
+		
 		OT begin = std::min(erase_begin->first.offset, offset);
 		OT end   = erase_last->first.offset + erase_last->first.length;
 		
-		T begin_value = erase_begin->second;
-		T last_value  = erase_last->second;
+		bool begin_eq_last = erase_begin->second == erase_last->second;
+		
+		T begin_value = std::move(erase_begin->second);
+		T last_value  = begin_eq_last ? T() : std::move(erase_last->second);
 		
 		erase_end = ranges.erase(erase_begin, erase_end);
 		
@@ -838,28 +962,28 @@ template<typename OT, typename T> bool REHex::RangeMap<OT, T>::data_erased_impl(
 		{
 			end -= length;
 			
-			if(begin_value == last_value)
+			if(begin_eq_last)
 			{
-				erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (end - begin)), begin_value));
+				erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (end - begin)), std::move(begin_value)));
 				++erase_end;
 			}
 			else{
 				if(begin < offset)
 				{
-					erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (offset - begin)), begin_value));
+					erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (offset - begin)), std::move(begin_value)));
 					++erase_end;
 				}
 				
 				assert(offset < end);
 				
-				erase_end = ranges.insert(erase_end, std::make_pair(Range(offset, (end - offset)), last_value));
+				erase_end = ranges.insert(erase_end, std::make_pair(Range(offset, (end - offset)), std::move(last_value)));
 				++erase_end;
 			}
 		}
 		else if(begin < offset)
 		{
 			end = offset;
-			erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (end - begin)), begin_value));
+			erase_end = ranges.insert(erase_end, std::make_pair(Range(begin, (end - begin)), std::move(begin_value)));
 			++erase_end;
 		}
 		

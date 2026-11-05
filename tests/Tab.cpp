@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2024 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -33,6 +33,11 @@
 
 using namespace REHex;
 
+static TextColour NULL_HIGHLIGHT_FUNC(BitOffset offset, BitOffset length)
+{
+	return TextColour::INVALID();
+}
+
 static std::vector<std::string> stringify_regions(const std::vector<DocumentCtrl::Region*> &regions)
 {
 	std::vector<std::string> s_regions;
@@ -42,7 +47,7 @@ static std::vector<std::string> stringify_regions(const std::vector<DocumentCtrl
 		char buf[256];
 		
 		DocumentCtrl::CommentRegion          *cr   = dynamic_cast<DocumentCtrl::CommentRegion*>(*r);
-		DocumentCtrl::DataRegionDocHighlight *drdh = dynamic_cast<DocumentCtrl::DataRegionDocHighlight*>(*r);
+		DocumentCtrl::DataRegion *drdh = dynamic_cast<DocumentCtrl::DataRegion*>(*r);
 		
 		S16LEDataRegion *s16le = dynamic_cast<S16LEDataRegion*>(*r);
 		S64LEDataRegion *s64le = dynamic_cast<S64LEDataRegion*>(*r);
@@ -56,7 +61,7 @@ static std::vector<std::string> stringify_regions(const std::vector<DocumentCtrl
 		else if(drdh != NULL)
 		{
 			snprintf(buf, sizeof(buf),
-				"DataRegionDocHighlight(d_offset = %ld+%db, d_length = %ld+%db, indent_offset = %ld+%db, indent_length = %ld+%db)",
+				"DataRegion(d_offset = %ld+%db, d_length = %ld+%db, indent_offset = %ld+%db, indent_length = %ld+%db)",
 				(long)(drdh->d_offset.byte()), drdh->d_offset.bit(), (long)(drdh->d_length.byte()), drdh->d_length.bit(), (long)(drdh->indent_offset.byte()), drdh->indent_offset.bit(), (long)(drdh->indent_length.byte()), drdh->indent_length.bit());
 		}
 		else if(s16le != NULL)
@@ -102,7 +107,7 @@ TEST(Tab, ComputeRegionsEmptyFile)
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 0+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 0+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -116,12 +121,12 @@ TEST(Tab, ComputeRegionsNoComments)
 	const std::vector<unsigned char> ZERO_4K(4096);
 	doc->insert_data(0, ZERO_4K.data(), ZERO_4K.size());
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 4096+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 4096+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -141,22 +146,22 @@ TEST(Tab, ComputeRegionsFlatComments)
 	doc->set_comment(1152,  64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  64, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'unite', truncate = 0)",
 		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'release', truncate = 0)",
 		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 0+0b, c_text = 'uncle', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 0+0b, c_text = 'scarecrow', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 896+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1152+0b, d_length = 896+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 2048.0, c_length = 64.0, indent_offset = 2048+0b, indent_length = 0+0b, c_text = 'crowded', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -176,7 +181,7 @@ TEST(Tab, ComputeRegionsShortComments)
 	doc->set_comment( 128,  64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  64, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_SHORT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_SHORT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -184,13 +189,13 @@ TEST(Tab, ComputeRegionsShortComments)
 		"CommentRegion(c_offset = 0.0, c_length = 128.0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'unite', truncate = 1)",
 		"CommentRegion(c_offset = 0.0, c_length = 64.0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'release', truncate = 1)",
 		"CommentRegion(c_offset = 0.0, c_length = 0.0, indent_offset = 0+0b, indent_length = 0+0b, c_text = 'robin', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 64+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 64+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 64.0, c_length = 64.0, indent_offset = 64+0b, indent_length = 0+0b, c_text = 'uncle', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 64+0b, d_length = 64+0b, indent_offset = 64+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 64+0b, d_length = 64+0b, indent_offset = 64+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 128.0, c_length = 64.0, indent_offset = 128+0b, indent_length = 0+0b, c_text = 'scarecrow', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 128+0b, d_length = 1920+0b, indent_offset = 128+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 128+0b, d_length = 1920+0b, indent_offset = 128+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 2048.0, c_length = 64.0, indent_offset = 2048+0b, indent_length = 0+0b, c_text = 'crowded', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -205,12 +210,12 @@ TEST(Tab, ComputeRegionsHiddenComments)
 	
 	doc->set_comment(1024, 128, REHex::Document::Comment("unite"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_HIDDEN);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_HIDDEN, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 4096+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 4096+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -230,23 +235,23 @@ TEST(Tab, ComputeRegionsNestedComments)
 	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 0)",
 		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 0)",
 		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 2048.0, c_length = 2048.0, indent_offset = 2048+0b, indent_length = 2048+0b, c_text = 'crowded', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -266,24 +271,24 @@ TEST(Tab, ComputeRegionsNestedShortComments)
 	doc->set_comment(1152,  64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  64, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_SHORT_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_SHORT_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 1)",
 		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 1)",
 		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 2048.0, c_length = 64.0, indent_offset = 2048+0b, indent_length = 64+0b, c_text = 'crowded', truncate = 1)",
-		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 64+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 2112+0b, d_length = 1984+0b, indent_offset = 2112+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 2048+0b, d_length = 64+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 2112+0b, d_length = 1984+0b, indent_offset = 2112+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -303,19 +308,19 @@ TEST(Tab, ComputeRegionsClampStart)
 	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 1050, 1050, (doc->buffer_length() - 1050), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 1050, 1050, (doc->buffer_length() - 1050), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 1050+0b, d_length = 38+0b, indent_offset = 1050+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1050+0b, d_length = 38+0b, indent_offset = 1050+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 64+0b, c_text = 'scarecrow', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1152+0b, d_length = 64+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1216+0b, d_length = 832+0b, indent_offset = 1216+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 2048.0, c_length = 2048.0, indent_offset = 2048+0b, indent_length = 2048+0b, c_text = 'crowded', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 2048+0b, d_length = 2048+0b, indent_offset = 2048+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -335,20 +340,20 @@ TEST(Tab, ComputeRegionsClampEnd)
 	doc->set_comment(1152,    64, REHex::Document::Comment("scarecrow"));
 	doc->set_comment(2048,  2048, REHex::Document::Comment("crowded"));
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, 1200, ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, 1200, ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 1024+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1024.0, c_length = 128.0, indent_offset = 1024+0b, indent_length = 128+0b, c_text = 'unite', truncate = 0)",
 		"CommentRegion(c_offset = 1024.0, c_length = 64.0, indent_offset = 1024+0b, indent_length = 64+0b, c_text = 'release', truncate = 0)",
 		"CommentRegion(c_offset = 1024.0, c_length = 0.0, indent_offset = 1024+0b, indent_length = 0+0b, c_text = 'robin', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1024+0b, d_length = 64+0b, indent_offset = 1024+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1088.0, c_length = 64.0, indent_offset = 1088+0b, indent_length = 64+0b, c_text = 'uncle', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1088+0b, d_length = 64+0b, indent_offset = 1088+0b, indent_length = 0+0b)",
 		"CommentRegion(c_offset = 1152.0, c_length = 64.0, indent_offset = 1152+0b, indent_length = 48+0b, c_text = 'scarecrow', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 1152+0b, d_length = 48+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 1152+0b, d_length = 48+0b, indent_offset = 1152+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -364,16 +369,16 @@ TEST(Tab, ComputeRegionsDataTypes)
 	doc->set_data_type(128, 2, "s16le");
 	doc->set_data_type(132, 8, "s64le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 128+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 128+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 128+0b, d_length = 2+0b, indent_offset = 128+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 130+0b, d_length = 2+0b, indent_offset = 130+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 130+0b, d_length = 2+0b, indent_offset = 130+0b, indent_length = 0+0b)",
 		"S64LEDataRegion(d_offset = 132+0b, d_length = 8+0b, indent_offset = 132+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 140+0b, d_length = 3956+0b, indent_offset = 140+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 140+0b, d_length = 3956+0b, indent_offset = 140+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -388,17 +393,17 @@ TEST(Tab, ComputeRegionsDataTypesRepeated)
 	
 	doc->set_data_type(128, 8, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 128+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 128+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 128+0b, d_length = 2+0b, indent_offset = 128+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 130+0b, d_length = 2+0b, indent_offset = 130+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 132+0b, d_length = 2+0b, indent_offset = 132+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 134+0b, d_length = 2+0b, indent_offset = 134+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 136+0b, d_length = 3960+0b, indent_offset = 136+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 136+0b, d_length = 3960+0b, indent_offset = 136+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -414,19 +419,19 @@ TEST(Tab, ComputeRegionsDataTypesNestedInComment)
 	doc->set_comment(126, 8, REHex::Document::Comment("special"));
 	doc->set_data_type(128, 2, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 126+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 126+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
 		"CommentRegion(c_offset = 126.0, c_length = 8.0, indent_offset = 126+0b, indent_length = 8+0b, c_text = 'special', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 126+0b, d_length = 2+0b, indent_offset = 126+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 126+0b, d_length = 2+0b, indent_offset = 126+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 128+0b, d_length = 2+0b, indent_offset = 128+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 130+0b, d_length = 4+0b, indent_offset = 130+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 130+0b, d_length = 4+0b, indent_offset = 130+0b, indent_length = 0+0b)",
 		
-		"DataRegionDocHighlight(d_offset = 134+0b, d_length = 3962+0b, indent_offset = 134+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 134+0b, d_length = 3962+0b, indent_offset = 134+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -442,19 +447,19 @@ TEST(Tab, ComputeRegionsDataTypesNestedAtStartOfComment)
 	doc->set_comment(140, 10, REHex::Document::Comment("gusty"));
 	doc->set_data_type(140, 4, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 140+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 140+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
 		"CommentRegion(c_offset = 140.0, c_length = 10.0, indent_offset = 140+0b, indent_length = 10+0b, c_text = 'gusty', truncate = 0)",
 		"S16LEDataRegion(d_offset = 140+0b, d_length = 2+0b, indent_offset = 140+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 142+0b, d_length = 2+0b, indent_offset = 142+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 144+0b, d_length = 6+0b, indent_offset = 144+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 144+0b, d_length = 6+0b, indent_offset = 144+0b, indent_length = 0+0b)",
 		
-		"DataRegionDocHighlight(d_offset = 150+0b, d_length = 3946+0b, indent_offset = 150+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 150+0b, d_length = 3946+0b, indent_offset = 150+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -470,18 +475,18 @@ TEST(Tab, ComputeRegionsDataTypesNestedAtEndOfComment)
 	doc->set_comment(160, 10, REHex::Document::Comment("call"));
 	doc->set_data_type(168, 2, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 160+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 160+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
 		"CommentRegion(c_offset = 160.0, c_length = 10.0, indent_offset = 160+0b, indent_length = 10+0b, c_text = 'call', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 160+0b, d_length = 8+0b, indent_offset = 160+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 160+0b, d_length = 8+0b, indent_offset = 160+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 168+0b, d_length = 2+0b, indent_offset = 168+0b, indent_length = 0+0b)",
 		
-		"DataRegionDocHighlight(d_offset = 170+0b, d_length = 3926+0b, indent_offset = 170+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 170+0b, d_length = 3926+0b, indent_offset = 170+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -497,17 +502,17 @@ TEST(Tab, ComputeRegionsDataTypesNestedOccupyingWholeComment)
 	doc->set_comment(180, 2, REHex::Document::Comment("wind"));
 	doc->set_data_type(180, 2, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 180+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 180+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
 		"CommentRegion(c_offset = 180.0, c_length = 2.0, indent_offset = 180+0b, indent_length = 2+0b, c_text = 'wind', truncate = 0)",
 		"S16LEDataRegion(d_offset = 180+0b, d_length = 2+0b, indent_offset = 180+0b, indent_length = 0+0b)",
 		
-		"DataRegionDocHighlight(d_offset = 182+0b, d_length = 3914+0b, indent_offset = 182+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 182+0b, d_length = 3914+0b, indent_offset = 182+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -524,24 +529,24 @@ TEST(Tab, ComputeRegionsDataTypesNestedMultipleInComment)
 	doc->set_data_type(260, 2, "s16le");
 	doc->set_data_type(270, 8, "s16le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
 	const std::vector<std::string> EXPECT_REGIONS = {
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 256+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 256+0b, indent_offset = 0+0b, indent_length = 0+0b)",
 		
 		"CommentRegion(c_offset = 256.0, c_length = 64.0, indent_offset = 256+0b, indent_length = 64+0b, c_text = 'sister', truncate = 0)",
-		"DataRegionDocHighlight(d_offset = 256+0b, d_length = 4+0b, indent_offset = 256+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 256+0b, d_length = 4+0b, indent_offset = 256+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 260+0b, d_length = 2+0b, indent_offset = 260+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 262+0b, d_length = 8+0b, indent_offset = 262+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 262+0b, d_length = 8+0b, indent_offset = 262+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 270+0b, d_length = 2+0b, indent_offset = 270+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 272+0b, d_length = 2+0b, indent_offset = 272+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 274+0b, d_length = 2+0b, indent_offset = 274+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 276+0b, d_length = 2+0b, indent_offset = 276+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 278+0b, d_length = 42+0b, indent_offset = 278+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 278+0b, d_length = 42+0b, indent_offset = 278+0b, indent_length = 0+0b)",
 		
-		"DataRegionDocHighlight(d_offset = 320+0b, d_length = 3776+0b, indent_offset = 320+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 320+0b, d_length = 3776+0b, indent_offset = 320+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";
@@ -558,7 +563,7 @@ TEST(Tab, ComputeRegionsDataTypesNotFixedSizeMultiple)
 	doc->set_data_type(132,  3, "s16le");
 	doc->set_data_type(140, 23, "s64le");
 	
-	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT);
+	std::vector<DocumentCtrl::Region*> regions = Tab::compute_regions(doc, 0, 0, doc->buffer_length(), ICM_FULL_INDENT, NULL_HIGHLIGHT_FUNC);
 	std::vector<std::string> s_regions = stringify_regions(regions);
 	free_regions(regions);
 	
@@ -568,16 +573,16 @@ TEST(Tab, ComputeRegionsDataTypesNotFixedSizeMultiple)
 		 * metadata has been corrupted anyway.
 		*/
 		
-		"DataRegionDocHighlight(d_offset = 0+0b, d_length = 128+0b, indent_offset = 0+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 128+0b, d_length = 1+0b, indent_offset = 128+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 129+0b, d_length = 3+0b, indent_offset = 129+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 0+0b, d_length = 128+0b, indent_offset = 0+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 128+0b, d_length = 1+0b, indent_offset = 128+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 129+0b, d_length = 3+0b, indent_offset = 129+0b, indent_length = 0+0b)",
 		"S16LEDataRegion(d_offset = 132+0b, d_length = 2+0b, indent_offset = 132+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 134+0b, d_length = 1+0b, indent_offset = 134+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 135+0b, d_length = 5+0b, indent_offset = 135+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 134+0b, d_length = 1+0b, indent_offset = 134+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 135+0b, d_length = 5+0b, indent_offset = 135+0b, indent_length = 0+0b)",
 		"S64LEDataRegion(d_offset = 140+0b, d_length = 8+0b, indent_offset = 140+0b, indent_length = 0+0b)",
 		"S64LEDataRegion(d_offset = 148+0b, d_length = 8+0b, indent_offset = 148+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 156+0b, d_length = 7+0b, indent_offset = 156+0b, indent_length = 0+0b)",
-		"DataRegionDocHighlight(d_offset = 163+0b, d_length = 3933+0b, indent_offset = 163+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 156+0b, d_length = 7+0b, indent_offset = 156+0b, indent_length = 0+0b)",
+		"DataRegion(d_offset = 163+0b, d_length = 3933+0b, indent_offset = 163+0b, indent_length = 0+0b)",
 	};
 	
 	EXPECT_EQ(s_regions, EXPECT_REGIONS) << "REHex::Tab::compute_regions() returned correct regions";

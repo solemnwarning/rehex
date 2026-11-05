@@ -100,7 +100,7 @@ bool REHex::SettingsDialogFont::Create(wxWindow *parent)
 	ddc_sizer->Add(dummy_doc_ctrl, 1, (wxRIGHT | wxBOTTOM | wxLEFT | wxEXPAND), SettingsDialog::MARGIN);
 	
 	std::vector<DocumentCtrl::Region*> regions;
-	regions.push_back(new DocumentCtrl::DataRegion(dummy_doc, 0, 256, 0));
+	regions.push_back(new DocumentCtrl::DataRegion(dummy_doc, 0, 256, 0, [](BitOffset offset, BitOffset length) { return TextColour::INVALID(); }));
 	
 	dummy_doc_ctrl->replace_all_regions(regions);
 	

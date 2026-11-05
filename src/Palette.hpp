@@ -23,6 +23,35 @@
 
 namespace REHex {
 	/**
+	 * @brief Combined foreground and background colour object.
+	*/
+	struct TextColour
+	{
+		wxColour fg_colour; /**< Foreground colour. */
+		wxColour bg_colour; /**< Background colour. */
+		
+		TextColour(const wxColour &fg_colour, const wxColour &bg_colour):
+			fg_colour(fg_colour),
+			bg_colour(bg_colour) {}
+		
+		/**
+		 * @brief Return a TextColour with both colours set to wxNullColour.
+		*/
+		static TextColour INVALID()
+		{
+			return TextColour(wxNullColour, wxNullColour);
+		}
+		
+		/**
+		 * @brief Check if both colours are valid.
+		*/
+		explicit operator bool() const
+		{
+			return fg_colour.IsOk() && bg_colour.IsOk();
+		}
+	};
+	
+	/**
 	 * @brief Colour palette to use when drawing custom controls.
 	*/
 	class Palette

@@ -49,7 +49,7 @@ BitmapToolTest::BitmapToolTest():
 	doc_ctrl = new DocumentCtrl(frame, doc);
 	
 	/* Need a data region to avoid crashing in DocumentCtrl event handlers. */
-	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(doc, 0, 0, 0) };
+	std::vector<DocumentCtrl::Region*> regions = { new DocumentCtrl::DataRegion(doc, 0, 0, 0, [](BitOffset offset, BitOffset length) { return TextColour::INVALID(); }) };
 	doc_ctrl->replace_all_regions(regions);
 
 	bmtool = new BitmapTool(frame, doc, doc_ctrl);

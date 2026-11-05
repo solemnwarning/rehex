@@ -175,6 +175,7 @@ REHex::DiffWindow::~DiffWindow()
 			d->second->Unbind(EV_DISP_SETTING_CHANGED,  &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 		}
 		
+		d->first->Unbind(EV_TYPES_CHANGED, &REHex::DiffWindow::OnDocumentTypesChange, this);
 		d->first->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
 		d->first->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		d->first->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
@@ -286,6 +287,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::add_range(const
 		new_range->doc->Bind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
 		new_range->doc->Bind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		new_range->doc->Bind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
+		new_range->doc->Bind(EV_TYPES_CHANGED, &REHex::DiffWindow::OnDocumentTypesChange, this);
 		
 		new_range->main_doc_ctrl->Bind(EV_DISP_SETTING_CHANGED, &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 	}
@@ -376,7 +378,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 		*/
 
 		std::vector<DocumentCtrl::Region*> regions;
-		regions.push_back(new DocumentCtrl::DataRegion(range->doc, 0, 0, 0));
+		regions.push_back(new DocumentCtrl::DataRegion(range->doc, 0, 0, 0, [](BitOffset offset, BitOffset length) { return TextColour::INVALID(); }));
 
 		range->doc_ctrl->replace_all_regions(regions);
 	}
@@ -393,6 +395,7 @@ std::list<REHex::DiffWindow::Range>::iterator REHex::DiffWindow::remove_range(st
 			range_mdc->Unbind(EV_DISP_SETTING_CHANGED, &REHex::DiffWindow::OnDocumentDisplaySettingsChange,  this);
 		}
 		
+		range_doc->Unbind(EV_TYPES_CHANGED, &REHex::DiffWindow::OnDocumentTypesChange, this);
 		range_doc->Unbind(DATA_OVERWRITE, &REHex::DiffWindow::OnDocumentDataOverwrite, this);
 		range_doc->Unbind(DATA_INSERT,    &REHex::DiffWindow::OnDocumentDataInsert,    this);
 		range_doc->Unbind(DATA_ERASE,     &REHex::DiffWindow::OnDocumentDataErase,     this);
@@ -445,6 +448,27 @@ void REHex::DiffWindow::set_folding(bool enable_folding)
 
 void REHex::DiffWindow::doc_update(Range *range)
 {
+	DocumentCtrl::GenericDataRegion::RangeTextColourFunction text_colour_func = [this, range](BitOffset offset, BitOffset length)
+	{
+		assert(offset >= range->offset);
+		off_t relative_off = offset.byte() - range->offset;
+		
+		if(offsets_pending.isset(offset.byte()))
+		{
+			process_now(offset.byte(), 2048 /* Probably enough to process screen in one go. */);
+		}
+		
+		if(offsets_different.isset(relative_off))
+		{
+			return TextColour(
+				(*active_palette)[Palette::PAL_DIRTY_TEXT_FG],
+				(*active_palette)[Palette::PAL_DIRTY_TEXT_BG]);
+		}
+		else{
+			return TextColour::INVALID();
+		}
+	};
+	
 	std::vector<DocumentCtrl::Region*> regions;
 	
 	off_t CONTEXT_BYTES = 64;
@@ -492,18 +516,20 @@ void REHex::DiffWindow::doc_update(Range *range)
 			
 			if(is_pending)
 			{
-				regions.push_back(new MessageRegion(range->doc, (range->offset + base), "Processing..."));
+				regions.push_back(new MessageRegion(range->doc, (range->offset + base), "Processing...", false));
 			}
 			else if(is_different)
 			{
-				regions.push_back(new DiffDataRegion((range->offset + base), length, this, range));
+				auto sub_regions = REHex::Tab::compute_regions(range->doc, (range->offset + base), (range->offset + base), length, InlineCommentMode::ICM_HIDDEN, text_colour_func);
+				regions.insert(regions.end(), sub_regions.begin(), sub_regions.end());
+				
 				has_data_region = true;
 			}
 			else{
 				char text[64];
 				snprintf(text, sizeof(text), "[ %jd identical bytes ]", (intmax_t)(length));
 				
-				regions.push_back(new MessageRegion(range->doc, (range->offset + base), text));
+				regions.push_back(new MessageRegion(range->doc, (range->offset + base), text, true));
 			}
 			
 			base += length;
@@ -521,7 +547,7 @@ void REHex::DiffWindow::doc_update(Range *range)
 		}
 	}
 	else{
-		regions.push_back(new DiffDataRegion(range->offset, range->length, this, range));
+		regions = REHex::Tab::compute_regions(range->doc, range->offset, range->offset, range->length, InlineCommentMode::ICM_HIDDEN, text_colour_func);
 	}
 	
 	range->doc_ctrl->replace_all_regions(regions);
@@ -592,7 +618,6 @@ void REHex::DiffWindow::recalc_bytes_per_line()
 	
 	for(auto r = ranges.begin(); r != ranges.end(); ++r)
 	{
-		assert(bytes_per_line > 0);
 		r->doc_ctrl->set_bytes_per_line(bytes_per_line);
 	}
 }
@@ -1317,6 +1342,23 @@ void REHex::DiffWindow::OnDocumentDisplaySettingsChange(wxCommandEvent &event)
 	event.Skip();
 }
 
+void REHex::DiffWindow::OnDocumentTypesChange(wxCommandEvent &event)
+{
+	wxObject *src = event.GetEventObject();
+	assert(dynamic_cast<Document*>(src) != NULL);
+	
+	for(auto r = ranges.begin(); r != ranges.end(); ++r)
+	{
+		if(r->doc == src)
+		{
+			doc_update(&*r);
+			break;
+		}
+	}
+	
+	event.Skip(); /* Continue propagation. */
+}
+
 void REHex::DiffWindow::OnNotebookClosed(wxAuiNotebookEvent &event)
 {
 	auto nb_range = std::find_if(ranges.begin(), ranges.end(), [event](const Range &range) { return range.notebook == event.GetEventObject(); });
@@ -1525,6 +1567,7 @@ void REHex::DiffWindow::OnWindowClose(wxCloseEvent &event)
 	event.Skip();
 }
 
+#if 0
 REHex::DiffWindow::DiffDataRegion::DiffDataRegion(off_t d_offset, off_t d_length, DiffWindow *diff_window, Range *range):
 	DataRegion(range->doc, d_offset, d_length, d_offset), diff_window(diff_window), range(range) {}
 
@@ -1558,12 +1601,14 @@ REHex::DocumentCtrl::DataRegion::Highlight REHex::DiffWindow::DiffDataRegion::hi
 		return NoHighlight();
 	}
 }
+#endif
 
-REHex::DiffWindow::MessageRegion::MessageRegion(Document *document, off_t data_offset, const std::string &message):
+REHex::DiffWindow::MessageRegion::MessageRegion(Document *document, off_t data_offset, const std::string &message, bool is_datum):
 	Region(data_offset, 0),
 	document(document),
 	data_offset(data_offset),
-	message(message) {}
+	message(message),
+	m_datum(is_datum) {}
 
 std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DiffWindow::MessageRegion::indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel)
 {
@@ -1625,7 +1670,12 @@ void REHex::DiffWindow::MessageRegion::draw(DocumentCtrl &doc_ctrl, wxDC &dc, in
 	dc.DrawText(message, x + text_x, y + (text_height / 2));
 }
 
+bool REHex::DiffWindow::MessageRegion::is_datum() const
+{
+	return m_datum;
+}
+
 REHex::DiffWindow::InvisibleDataRegion::InvisibleDataRegion(SharedDocumentPointer &document, off_t d_offset, off_t d_length):
-	DataRegion(document, d_offset, d_length, d_offset) {}
+	DataRegion(document, d_offset, d_length, d_offset, [](BitOffset offset, BitOffset length) { return TextColour::INVALID(); }) {}
 
 void REHex::DiffWindow::InvisibleDataRegion::draw(REHex::DocumentCtrl &doc_ctrl, wxDC &dc, int x, int64_t y) {}

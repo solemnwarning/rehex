@@ -1,5 +1,5 @@
 /* Reverse Engineer's Hex Editor
- * Copyright (C) 2020-2025 Daniel Collins <solemnwarning@solemnwarning.net>
+ * Copyright (C) 2020-2026 Daniel Collins <solemnwarning@solemnwarning.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -48,7 +48,7 @@ class StringPanelTest: public ::testing::Test
 			
 			/* Need to put a Region in the DocumentCtrl to avoid crashes. */
 			std::vector<DocumentCtrl::Region*> regions;
-			regions.push_back(new DocumentCtrl::DataRegion(doc, 0, 0, 0));
+			regions.push_back(new DocumentCtrl::DataRegion(doc, 0, 0, 0, [](BitOffset offset, BitOffset length) { return TextColour::INVALID(); }));
 			main_doc_ctrl->replace_all_regions(regions);
 		}
 		

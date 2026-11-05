@@ -111,40 +111,28 @@ bool REHex::SettingsDialogByteColour::Create(wxWindow *parent)
 	dummy_doc_ctrl->SetMinClientSize(
 		wxSize(dummy_doc_ctrl->get_fcc().fixed_string_width(16 * 4), (dummy_doc_ctrl->get_fcc().fixed_char_height() * 16)));
 	
-	class Foo: public REHex::DocumentCtrl::DataRegion
+	DocumentCtrl::GenericDataRegion::RangeTextColourFunction text_colour_func = [this](BitOffset off, BitOffset length)
 	{
-		private:
-			const REHex::SettingsDialogByteColour *sdbc;
+		assert(off.byte() >= 0);
+		assert(off.byte() <= 255);
+		
+		if(selected_map != maps.end())
+		{
+			wxColour fg_colour = selected_map->second.get_colour(off.byte());
 			
-		public:
-			Foo(REHex::SharedDocumentPointer &document, REHex::BitOffset d_offset, REHex::BitOffset d_length, REHex::BitOffset virt_offset, const REHex::SettingsDialogByteColour *sdbc):
-				DataRegion(document, d_offset, d_length, virt_offset),
-				sdbc(sdbc) {}
-			
-		protected:
-			virtual Highlight highlight_at_off(REHex::BitOffset off, REHex::BitOffset dirty_check_length, DocumentCtrl *doc_ctrl) const override
-			{
-				assert(off.byte() >= 0);
-				assert(off.byte() <= 255);
-				
-				if(sdbc->selected_map != sdbc->maps.end())
-				{
-					wxColour fg_colour = sdbc->selected_map->second.get_colour(off.byte());
-					
-					return Highlight(
-						fg_colour,
-						(*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
-				}
-				else{
-					return Highlight(
-						(*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG],
-						(*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
-				}
-			}
+			return TextColour(
+				fg_colour,
+				(*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
+		}
+		else{
+			return TextColour(
+				(*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_FG],
+				(*REHex::active_palette)[REHex::Palette::PAL_NORMAL_TEXT_BG]);
+		}
 	};
 	
 	std::vector<DocumentCtrl::Region*> regions;
-	regions.push_back(new Foo(dummy_doc, 0, 256, 0, this));
+	regions.push_back(new DocumentCtrl::DataRegion(dummy_doc, 0, 256, 0, text_colour_func));
 	
 	dummy_doc_ctrl->replace_all_regions(regions);
 	

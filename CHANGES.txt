@@ -19,6 +19,8 @@ Version TBC
    offset/length base or insert/overwrite by clicking appropriate area
    of status bar (#289).
 
+ * Display annotated data types when comparing files (#161).
+
 Version 0.64.0 (2026-04-03):
 
  * Update Lua plugin integration to support Lua 5.5.

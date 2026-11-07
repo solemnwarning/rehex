@@ -41,6 +41,7 @@
 #include "NestedOffsetLengthMap.hpp"
 #include "Palette.hpp"
 #include "SharedDocumentPointer.hpp"
+#include "Table.hpp"
 #include "util.hpp"
 
 /* DocumentCtrl style flags */
@@ -177,6 +178,8 @@ namespace REHex {
 					 * -1 if the co-ordinate is negative.
 					*/
 					static int offset_near_x_hex(DocumentCtrl *doc_ctrl, int rel_x);
+					
+					virtual void tabulate(REHex::DocumentCtrl *doc_ctrl, TableOStream &tabstream, int64_t y, int64_t max_rows) {}
 					
 				friend DocumentCtrl;
 			};
@@ -389,6 +392,8 @@ namespace REHex {
 					virtual Rect calc_offset_bounds(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					virtual ScreenArea screen_areas_at_offset(BitOffset offset, DocumentCtrl *doc_ctrl) override;
 					
+					virtual void tabulate(REHex::DocumentCtrl *doc_ctrl, TableOStream &tabstream, int64_t y, int64_t max_rows) override;
+					
 				private:
 					std::unique_ptr<CharacterFinder> char_finder;
 					std::pair<BitOffset,off_t> get_char_at(BitOffset offset);
@@ -409,6 +414,8 @@ namespace REHex {
 				virtual void draw(REHex::DocumentCtrl &doc, wxDC &dc, int x, int64_t y) override;
 				virtual wxCursor cursor_for_point(REHex::DocumentCtrl &doc, int x, int64_t y_lines, int y_px) override;
 				virtual std::pair<BitOffset, BitOffset> indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel) override;
+				
+				virtual void tabulate(REHex::DocumentCtrl *doc_ctrl, TableOStream &tabstream, int64_t y, int64_t max_rows) override;
 				
 				CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length);
 				
@@ -813,6 +820,8 @@ namespace REHex {
 			bool get_cursor_visible();
 			BitOffset get_end_virt_offset() const;
 			bool is_selection_hidden() const;
+			
+			void tabulate(TableOStream &tabstream, int64_t y, int64_t max_rows);
 			
 			/* Stays at the bottom because it changes the protection... */
 			DECLARE_EVENT_TABLE()

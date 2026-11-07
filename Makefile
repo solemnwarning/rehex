@@ -514,6 +514,7 @@ APP_OBJS := \
 	src/HierarchicalByteAccumulator.$(BUILD_TYPE).o \
 	src/HighlightColourMap.$(BUILD_TYPE).o \
 	src/HSVColour.$(BUILD_TYPE).o \
+	src/HTMLTableFormatter.$(BUILD_TYPE).o \
 	src/IntelHexExport.$(BUILD_TYPE).o \
 	src/IntelHexImport.$(BUILD_TYPE).o \
 	src/IPC.$(BUILD_TYPE).o \
@@ -544,6 +545,7 @@ APP_OBJS := \
 	src/StringPanel.$(BUILD_TYPE).o \
 	src/textentrydialog.$(BUILD_TYPE).o \
 	src/Tab.$(BUILD_TYPE).o \
+	src/TableJoiner.$(BUILD_TYPE).o \
 	src/TempDirectory.$(BUILD_TYPE).o \
 	src/ThreadPool.$(BUILD_TYPE).o \
 	src/ToolPanel.$(BUILD_TYPE).o \

@@ -17,6 +17,7 @@
 
 #include "platform.hpp"
 #include <exception>
+#include <fstream>
 #include <limits>
 #include <memory>
 #include <new>
@@ -45,6 +46,7 @@
 #include "EditCommentDialog.hpp"
 #include "FillRangeDialog.hpp"
 #include "GotoOffsetDialog.hpp"
+#include "HTMLTableFormatter.hpp"
 #include "IntelHexExport.hpp"
 #include "IntelHexImport.hpp"
 #include "mainwindow.hpp"
@@ -2026,8 +2028,19 @@ void REHex::MainWindow::OnHelp(wxCommandEvent &event)
 
 void REHex::MainWindow::OnAbout(wxCommandEvent &event)
 {
+	/*
 	REHex::AboutDialog about(this);
 	about.ShowModal();
+	*/
+	
+	std::ofstream f("test.html");
+	HTMLTableFormatter h(f);
+	
+	f << "<html>\n<body>\n<table style=\"font-family:monospace;\">\n";
+	
+	active_tab()->doc_ctrl->tabulate(h, 0, 999999999);
+	
+	f << "</table>\n</body>\n</html>\n";
 }
 
 #ifndef NDEBUG

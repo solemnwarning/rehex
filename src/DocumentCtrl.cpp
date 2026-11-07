@@ -3260,6 +3260,19 @@ void REHex::DocumentCtrl::set_scroll_yoff_clamped(int64_t scroll_yoff)
 	this->scroll_yoff = scroll_yoff;
 }
 
+void REHex::DocumentCtrl::tabulate(TableOStream &tabstream, int64_t y, int64_t max_rows)
+{
+	for(int yi = y; yi < (y + max_rows) && yi < (regions.back()->y_offset + regions.back()->y_lines); ++yi)
+	{
+		auto r = region_by_y_offset(yi);
+		
+		if(r != regions.end() && yi < ((*r)->y_offset + (*r)->y_lines))
+		{
+			(*r)->tabulate(this, tabstream, yi, 1);
+		}
+	}
+}
+
 REHex::DocumentCtrl::Region::Region(BitOffset indent_offset, BitOffset indent_length):
 	indent_depth(0),
 	indent_final(0),
@@ -4975,6 +4988,72 @@ REHex::DocumentCtrl::GenericDataRegion::ScreenArea REHex::DocumentCtrl::DataRegi
 	}
 }
 
+void REHex::DocumentCtrl::DataRegion::tabulate(REHex::DocumentCtrl *doc_ctrl, TableOStream &tabstream, int64_t y, int64_t max_rows)
+{
+	assert(y >= y_offset);
+	
+	BitOffset offset = d_offset;
+	
+	if(y > y_offset)
+	{
+		offset += BitOffset(((y - y_offset) * doc_ctrl->bytes_per_line), 0);
+		offset -= BitOffset(first_line_pad_bytes, 0);
+	}
+	
+	for(int64_t row = y; row < (y + max_rows) && offset < (d_offset + d_length); ++row)
+	{
+		off_t max_line_length = doc_ctrl->bytes_per_line;
+		if(y == y_offset)
+		{
+			max_line_length -= first_line_pad_bytes;
+		}
+		
+		off_t line_length = std::min((d_length - (offset - d_offset)).byte(), max_line_length);
+		
+		Table::Row r;
+		r << (Table::Cell() << Table::TextFragment(format_offset(offset, doc_ctrl->offset_display_base, doc_ctrl->end_virt_offset)));
+		
+		std::vector<unsigned char> line_data = document->read_data(offset, line_length);
+		
+		const char *HEX = "0123456789ABCEDF";
+		
+		Table::Cell hex_cell, text_cell;
+		int dc = 0;
+		
+		if(y == y_offset && first_line_pad_bytes > 0)
+		{
+			dc = first_line_pad_bytes;
+			hex_cell << Table::TextFragment(std::string((first_line_pad_bytes * 2), ' '));
+			text_cell << Table::TextFragment(std::string(first_line_pad_bytes, ' '));
+			
+			if(doc_ctrl->bytes_per_group > 0)
+			{
+				hex_cell << Table::TextFragment(std::string(((first_line_pad_bytes - 1) / doc_ctrl->bytes_per_group) , ' '));
+			}
+		}
+		
+		for(size_t line_off = 0; line_off < line_data.size(); ++line_off, ++dc)
+		{
+			if(doc_ctrl->bytes_per_group > 0 && dc > 0 && (dc % doc_ctrl->bytes_per_group) == 0)
+			{
+				hex_cell << Table::TextFragment(std::string(1, ' '));
+			}
+			
+			hex_cell << Table::TextFragment(std::string(1, HEX[ (line_data[line_off] & 0xF0) >> 4 ]));
+			hex_cell << Table::TextFragment(std::string(1, HEX[ (line_data[line_off] & 0x0F) ]));
+			
+			text_cell << Table::TextFragment(".");
+		}
+		
+		r << hex_cell;
+		r << text_cell;
+		
+		tabstream << r;
+		
+		offset += BitOffset(line_length, 0);
+	}
+}
+
 REHex::DocumentCtrl::CommentRegion::CommentRegion(BitOffset c_offset, BitOffset c_length, const wxString &c_text, bool truncate, BitOffset indent_offset, BitOffset indent_length):
 	Region(indent_offset, indent_length),
 	c_offset(c_offset),
@@ -5093,6 +5172,14 @@ wxCursor REHex::DocumentCtrl::CommentRegion::cursor_for_point(REHex::DocumentCtr
 std::pair<REHex::BitOffset, REHex::BitOffset> REHex::DocumentCtrl::CommentRegion::indent_offset_at_y(DocumentCtrl &doc_ctrl, int64_t y_lines_rel)
 {
 	return std::make_pair(indent_offset, indent_offset);
+}
+
+void REHex::DocumentCtrl::CommentRegion::tabulate(REHex::DocumentCtrl *doc_ctrl, TableOStream &tabstream, int64_t y, int64_t max_rows)
+{
+	if(y == y_offset)
+	{
+		tabstream << (Table::Row() << (Table::Cell() << Table::TextFragment(c_text.utf8_str().data())));
+	}
 }
 
 std::pair<REHex::BitOffset, off_t> REHex::DocumentCtrl::DataRegion::get_char_at(BitOffset offset)

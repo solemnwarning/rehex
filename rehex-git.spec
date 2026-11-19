@@ -38,7 +38,13 @@ Requires: wxGTK3
 BuildRequires: botan-devel
 BuildRequires: pkgconfig
 %else
+
+%if 0%{?fedora} >= 44
+BuildRequires: botan3-devel
+%else
 BuildRequires: botan2-devel
+%endif
+
 BuildRequires: luarocks
 BuildRequires: pkgconf
 %endif
@@ -98,6 +104,9 @@ rm -rf %{buildroot}
 %{_libdir}/rehex/
 
 %changelog
+* Thu Nov 19 2026 Daniel Collins <solemnwarning@solemnwarning.net> - 0.64.0-0+1%{tilde_dist}
+- Depend on Botan 3.x when building Fedora >= 44 packages.
+
 * Sat Apr 04 2026 Daniel Collins <solemnwarning@solemnwarning.net> - 0.64.0-0%{tilde_dist}
 - Update Lua plugin integration to support Lua 5.5.
 - Add "Find all occurences" option to search dialogs (#18).

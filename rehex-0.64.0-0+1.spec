@@ -1,0 +1,122 @@
+%define base_version 0.64.0
+%define tilde_dist %(echo %{?dist} | tr '.' '~')
+
+Name:     rehex
+Version:  %{base_version}
+Release:  0+1%{tilde_dist}
+Summary:  Reverse Engineers' Hex Editor
+
+License:  GPLv2
+URL:      https://www.github.com/solemnwarning/rehex/
+Source0:  rehex-%{base_version}.tar.gz
+
+BuildRequires: capstone-devel
+BuildRequires: gcc-c++
+BuildRequires: jansson-devel
+BuildRequires: libunistring-devel
+BuildRequires: lua
+BuildRequires: lua-devel
+BuildRequires: make
+BuildRequires: perl-Template-Toolkit
+BuildRequires: xorg-x11-server-Xvfb
+
+Requires: jansson
+
+%if 0%{?fedora} >= 39
+BuildRequires: wxGTK-devel
+Requires: wxGTK
+%else
+BuildRequires: wxGTK3-devel
+Requires: wxGTK3
+%endif
+
+%define base_make_flags DEBUG_CFLAGS="-DNDEBUG -ggdb" LUA_PKG=lua bindir=%{_bindir} datarootdir=%{_datadir} libdir=%{_libdir}
+
+%if 0%{?el7}
+# Build with -fpermissive to work around GCC bug #56480 on RHEL 7.
+%define extra_make_flags WX_CONFIG=wx-config-3.0 PLUGINS=exe CXX="g++ -fpermissive" BOTAN_PKG=botan-1.10
+BuildRequires: botan-devel
+BuildRequires: pkgconfig
+%else
+
+%if 0%{?fedora} >= 44
+BuildRequires: botan3-devel
+%else
+BuildRequires: botan2-devel
+%endif
+
+BuildRequires: luarocks
+BuildRequires: pkgconf
+%endif
+
+%description
+
+%prep
+%setup -q -n rehex-%{base_version}
+
+%build
+
+%if 0%{?el7}
+# No need to install busted on EL7
+%else
+luarocks --tree="$(pwd)/lua-libs" install busted
+
+%if 0%{?el8}
+%define lua_env_vars BUSTED="$(pwd)/lua-libs/bin/busted" LUA_PATH="$(pwd)/lua-libs/share/lua/5.3/?.lua;$(pwd)/lua-libs/share/lua/5.3/?/init.lua;;" LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.3/?.so"
+%else
+%define lua_env_vars BUSTED="$(pwd)/lua-libs/bin/busted" LUA_PATH="$(pwd)/lua-libs/share/lua/5.4/?.lua;$(pwd)/lua-libs/share/lua/5.4/?/init.lua;;" LUA_CPATH="$(pwd)/lua-libs/lib64/lua/5.4/?.so"
+%endif
+%endif
+
+%{?lua_env_vars} make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags}
+
+%check
+%{?lua_env_vars} xvfb-run -a -e xvfb-run.err make %{?_smp_mflags} %{base_make_flags} %{?extra_make_flags} check
+cat xvfb-run.err
+
+%install
+rm -rf %{buildroot}
+%{?lua_env_vars} make %{base_make_flags} %{?extra_make_flags} DESTDIR=%{buildroot} install
+
+%clean
+rm -rf %{buildroot}
+
+%files
+%defattr(-,root,root,-)
+%{_bindir}/rehex
+%{_datadir}/applications/rehex.desktop
+%{_datadir}/icons/hicolor/16x16/apps/rehex.png
+%{_datadir}/icons/hicolor/32x32/apps/rehex.png
+%{_datadir}/icons/hicolor/48x48/apps/rehex.png
+%{_datadir}/icons/hicolor/64x64/apps/rehex.png
+%{_datadir}/icons/hicolor/128x128/apps/rehex.png
+%{_datadir}/icons/hicolor/256x256/apps/rehex.png
+%{_datadir}/icons/hicolor/512x512/apps/rehex.png
+%{_datadir}/rehex/
+%{_libdir}/rehex/
+
+%changelog
+* Thu Nov 19 2026 Daniel Collins <solemnwarning@solemnwarning.net> - 0.64.0-0+1%{tilde_dist}
+- Depend on Botan 3.x when building Fedora >= 44 packages.
+
+* Sat Apr 04 2026 Daniel Collins <solemnwarning@solemnwarning.net> - 0.64.0-0%{tilde_dist}
+- Update Lua plugin integration to support Lua 5.5.
+- Add "Find all occurences" option to search dialogs (#18).
+- Add support for "PRIMARY" selections on Linux/BSD (#20).
+- Fix unchanged bytes being highlighted as changed (#274).
+- Correctly annotate template variables repeated using a loop (#269).
+- Fix display of AT&T disassembly syntax menu option.
+- Fix crash when backspace is pressed at start of file (#282).
+- Fix cursor jumping to the wrong position when inserting data at the end of the file.
+- Fix backspace inserting characters into the file when editing text.
+- Fix cursor jumping to the wrong position when using backspace to delete the last byte of the file in insert mode.
+- Fix potential crash when calculating CRC checksums.
+- Add more predefined colours to the value colour map palette.
+- Replace default value colour maps for improved readability.
+- Fix cursor being drawn in value colour maps preferences.
+- Add reset to defaults button to preferences dialog.
+
+* Sun Nov 23 2025 Daniel Collins <solemnwarning@solemnwarning.net> - 0.63.4-0%{tilde_dist}
+- Save selected value colour map in default view (#268).
+- Fix blurry text/icons when using DPI scaling under moden Windows (#267).
+- Fix crash when pressing enter in search for value and search for byte sequence dialogs (#272).
